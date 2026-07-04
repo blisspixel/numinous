@@ -39,12 +39,15 @@ excluded from the coverage gate, see `docs/QUALITY.md`).
 
 ## 3. See it work (the three faces)
 
-**Terminal (ASCII):**
+**Terminal (ASCII), including the live animated view:**
 ```
 cargo run --bin numinous -- rooms
 cargo run --bin numinous -- describe times-tables
 cargo run --bin numinous -- render chaos-game --width 50 --height 25
+cargo run --bin numinous -- play times-tables      # live, animating; Ctrl+C to stop
 ```
+`play` is the closest thing to "running the app" today (a live, animating room in
+the terminal). The windowed GUI is the next milestone (0.2); see `ROADMAP.md`.
 
 **Images:** every room to a PNG, plus a single contact sheet of all of them:
 ```
