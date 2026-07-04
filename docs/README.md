@@ -2,7 +2,7 @@
 
 The map of the blueprint. Seventeen docs plus this index. Use the reading paths to find your way in, and the **single-source-of-truth map** to keep things tidy: every topic has exactly one home doc that owns it; every other doc links to that home rather than restating it. If you find yourself duplicating a concept, stop and link instead.
 
-Status: **pre-production, heading to 0.1.** Nothing is built yet; these docs are the plan. See `ROADMAP.md`.
+Status: **0.1 in progress.** The headless core, the CLI face, the MCP face, and five rooms are built and green (see `../CHANGELOG.md` and the Progress section of `ROADMAP.md`); the wgpu render, audio, and GUI shell are still ahead. These docs remain the plan of record; where code exists, the docs describe the intended full system, not only what is implemented yet.
 
 ## Reading paths (start by who you are)
 

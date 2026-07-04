@@ -38,3 +38,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   at the golden angle the seeds pack into a sunflower spiral, and `t` detunes it.
 - Fifth room, `galton-board` (Chance & Order): thousands of coin-flip balls tally
   into a bell curve (the Central Limit Theorem); `t` biases the coin.
+
+### Changed
+- Robustness hardening (from an independent code review): `Canvas` clamps its
+  dimensions so an absurd size request cannot abort the process; the Galton Board
+  caps its simulated bins and stretches them across wide canvases, so a huge-width
+  render stays fast instead of hanging; `Canvas::line` steps in `i64` to avoid
+  coordinate overflow; the CLI no longer uses `expect()` in a production path; and
+  an `rng` doc comment was corrected. No behavior change for normal sizes.

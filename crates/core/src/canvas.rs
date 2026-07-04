@@ -16,14 +16,23 @@ pub struct Canvas {
     cells: Vec<char>,
 }
 
+/// The largest canvas dimension, in cells. ASCII output never needs more, and
+/// the cap keeps an absurd request (from a face or an agent) from attempting a
+/// multi-gigabyte allocation that would abort the process.
+const MAX_DIM: usize = 2048;
+
 impl Canvas {
     /// Create a blank canvas of the given size, filled with spaces.
+    ///
+    /// Each dimension is clamped to [`MAX_DIM`] so any request is safe.
     #[must_use]
     pub fn new(width: usize, height: usize) -> Self {
+        let width = width.min(MAX_DIM);
+        let height = height.min(MAX_DIM);
         Self {
             width,
             height,
-            cells: vec![' '; width.saturating_mul(height)],
+            cells: vec![' '; width * height],
         }
     }
 
@@ -53,15 +62,18 @@ impl Canvas {
     /// Draw a straight line between two integer points using Bresenham's
     /// algorithm. Endpoints outside the canvas are clipped by [`Canvas::plot`].
     pub fn line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, c: char) {
-        let dx = (x1 - x0).abs();
-        let dy = -(y1 - y0).abs();
-        let sx = if x0 < x1 { 1 } else { -1 };
-        let sy = if y0 < y1 { 1 } else { -1 };
+        // Step in i64 so extreme coordinates cannot overflow the arithmetic.
+        // Callers (the rooms) always pass coordinates within the canvas.
+        let (x1i, y1i) = (i64::from(x1), i64::from(y1));
+        let dx = (x1i - i64::from(x0)).abs();
+        let dy = -(y1i - i64::from(y0)).abs();
+        let sx: i64 = if x0 < x1 { 1 } else { -1 };
+        let sy: i64 = if y0 < y1 { 1 } else { -1 };
         let mut err = dx + dy;
-        let (mut x, mut y) = (x0, y0);
+        let (mut x, mut y) = (i64::from(x0), i64::from(y0));
         loop {
-            self.plot(x, y, c);
-            if x == x1 && y == y1 {
+            self.plot(x as i32, y as i32, c);
+            if x == x1i && y == y1i {
                 break;
             }
             let e2 = 2 * err;
@@ -134,5 +146,21 @@ mod tests {
             canvas.line(1, 1, 18, 8, '*');
         }
         assert_eq!(a.to_text(), b.to_text());
+    }
+
+    #[test]
+    fn new_clamps_oversized_dimensions() {
+        let c = Canvas::new(usize::MAX, 3);
+        assert!(c.width() <= super::MAX_DIM);
+        assert_eq!(c.height(), 3);
+    }
+
+    #[test]
+    fn line_with_large_but_bounded_coordinates_does_not_overflow() {
+        let mut c = Canvas::new(8, 8);
+        // Endpoints far outside the canvas are clipped by plot; the i64 stepping
+        // must not overflow. Kept within a small span so it terminates quickly.
+        c.line(-100, -100, 100, 100, '*');
+        assert!(c.ink_count() > 0);
     }
 }
