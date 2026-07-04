@@ -5,6 +5,7 @@ pub mod cellular_automata;
 pub mod chaos_game;
 pub mod collatz;
 pub mod galton_board;
+pub mod game_of_life;
 pub mod golden_angle;
 pub mod lissajous;
 pub mod prime_spirals;
