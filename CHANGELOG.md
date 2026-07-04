@@ -38,6 +38,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   at the golden angle the seeds pack into a sunflower spiral, and `t` detunes it.
 - Fifth room, `galton-board` (Chance & Order): thousands of coin-flip balls tally
   into a bell curve (the Central Limit Theorem); `t` biases the coin.
+- Sixth room, `lissajous` (Waves & Sound, a fourth Wing): two perpendicular
+  oscillations trace a figure that is stable at simple frequency ratios; `t`
+  sweeps the second frequency.
 
 ### Changed
 - Robustness hardening (from an independent code review): `Canvas` clamps its
