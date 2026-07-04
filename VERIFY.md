@@ -37,7 +37,15 @@ Expected right now: **format and clippy clean, ~124 tests pass, coverage ~95%
 lines** (the `gpu` and `audio` crates are integration-tested on hardware and
 excluded from the coverage gate, see `docs/QUALITY.md`).
 
-## 3. See it work (the three faces)
+## 3. Run the windowed app
+
+```
+cargo run --bin numinous-app
+```
+Opens a real window showing a room animating in full color. Left/right arrows
+switch rooms, space pauses, escape quits. This is the start of the GUI (0.2).
+
+## 4. See it work (the other faces)
 
 **Terminal (ASCII), including the live animated view:**
 ```
@@ -84,7 +92,7 @@ it newline-delimited requests on stdin, for example:
 Run `cargo run --bin numinous-mcp` and paste those lines; it replies with the
 tool list and an ASCII render of the room as text.
 
-## 4. Where things are
+## 5. Where things are
 
 - `crates/core` the headless engine: the `Room` trait, `Surface` (ASCII `Canvas`
   and pixel `Raster`), the registry, RNG, and `SoundSpec`, plus the nine rooms.
@@ -94,9 +102,10 @@ tool list and an ASCII render of the room as text.
   running record of what shipped; `ROADMAP.md` the version-gated plan.
 - `.agent/` (gitignored) the working log; `renders/` (gitignored) generated output.
 
-## 5. What is done vs pending
+## 6. What is done vs pending
 
-Done and verifiable now: the headless engine, nine rooms across four wings, three
-faces (terminal / image / agent), per-room colors and sounds, adaptive GPU and
-audio hello-worlds, and the quality gates. Pending (see `ROADMAP.md`): the
-windowed GUI (0.2), GPU-accelerated real-time room rendering, and the music radio.
+Done and verifiable now: the headless engine, nine rooms across four wings, four
+faces (windowed app / terminal / image + sound / agent), per-room colors and
+sounds, adaptive GPU and audio hello-worlds, and the quality gates. Pending (see
+`ROADMAP.md`): making the windowed app the full interactive Cabinet with live
+sound, GPU-accelerated real-time rendering, and the music radio.

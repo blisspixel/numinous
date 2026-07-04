@@ -101,6 +101,7 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 - **`crates/core`**: the `Room` trait (with `reveal()`), a deterministic ASCII `Canvas`, a seeded `SplitMix64` RNG, the registry, and **nine rooms** across four Wings, Times Tables, Golden Angle, Prime Spirals (Number & Pattern); Cellular Automata, Chaos Game, Collatz (Emergence); Galton Board, Buffon's Needle (Chance & Order); and Lissajous (Waves & Sound).
 - **`faces/cli`** (`numinous`): `rooms`, `describe`, `render` (rooms drawn as ASCII in the terminal), with `--json`.
 - **`faces/mcp`** (`numinous-mcp`): a JSON-RPC 2.0 stdio server so an agent can `list_rooms`, `describe_room`, `reveal_room`, and `play_room` (getting the render back as text).
+- **`faces/app`** (`numinous-app`): a real windowed app (winit + softbuffer) that shows a room animating in full color; left/right switch rooms, space pauses, escape quits. `cargo run --bin numinous-app`.
 - **Engineering**: edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, a house-style guard, an 80%-line coverage gate, and CI across three OSes.
 
 - **`crates/gpu`**: an adaptive **wgpu** context that picks the machine's GPU (AMD / NVIDIA / Intel / Apple across Vulkan / Metal / DX12, with a CPU fallback) and renders offscreen with no window. A first compute-shader workload renders the Mandelbrot set to a PNG, verified on the dev laptop's AMD Radeon 780M.

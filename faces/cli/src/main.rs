@@ -507,4 +507,16 @@ mod tests {
         let b = super::play_frame(room.as_ref(), 0.6, 40, 20);
         assert_ne!(a, b, "the frame should animate as t changes");
     }
+
+    #[test]
+    fn render_png_to_an_unwritable_path_is_error() {
+        let bad = std::path::Path::new("no_such_dir_zzz/x.png");
+        assert!(super::render_png("times-tables", 8, 8, 0.0, bad).is_err());
+    }
+
+    #[test]
+    fn sonify_to_an_unwritable_path_is_error() {
+        let bad = std::path::Path::new("no_such_dir_zzz/x.wav");
+        assert!(super::sonify_wav("lissajous", 0.0, bad).is_err());
+    }
 }

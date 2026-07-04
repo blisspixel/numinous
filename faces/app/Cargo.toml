@@ -1,0 +1,20 @@
+[package]
+name = "numinous-app"
+description = "Numinous windowed app: a real window showing a room, animating in full color."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "numinous-app"
+path = "src/main.rs"
+
+[dependencies]
+numinous-core = { workspace = true }
+winit = "0.30"
+softbuffer = "0.4"
+
+[lints]
+workspace = true
