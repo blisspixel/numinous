@@ -5,4 +5,5 @@ pub mod chaos_game;
 pub mod galton_board;
 pub mod golden_angle;
 pub mod lissajous;
+pub mod prime_spirals;
 pub mod times_tables;

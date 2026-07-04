@@ -41,6 +41,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - Sixth room, `lissajous` (Waves & Sound, a fourth Wing): two perpendicular
   oscillations trace a figure that is stable at simple frequency ratios; `t`
   sweeps the second frequency.
+- Seventh room, `prime-spirals` (Number & Pattern): the Ulam spiral; primes light
+  up and fall into diagonal streaks; `t` shifts the starting number.
 
 ### Changed
 - Robustness hardening (from an independent code review): `Canvas` clamps its
