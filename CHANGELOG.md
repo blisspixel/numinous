@@ -121,7 +121,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   "name the math behind this mystery render" game, shared by every face so the
   CLI, the app, and agents over MCP can all play the same seeded round.
 - `docs/PLAYFUL.md`: the design of the games and the Studio (Guess the Shape,
-  Shape to Function via Fourier epicycles, the high-Wolfram ethos) across faces.
+  Shape to Function via Fourier epicycles, the high-Wolfram ethos) across faces,
+  plus the four-personas design (PhD nerd, stoner, aesthete, gamer).
+- Two more mini-games, each seeded and shared across faces via the core:
+  - Crack the Code (`crates/core` `codebreaker`, `numinous crack`): defuse a
+    math-clued bomb, Bulls and Cows with a digit-sum-and-parity opening clue.
+  - Talk to the Aliens (`crates/core` `aliens`, `numinous aliens`): continue the
+    first-contact number sequences (primes, Fibonacci, powers of two, and more).
 
 ### Changed
 - Rooms render through `Surface` instead of a concrete `Canvas` (the `render`

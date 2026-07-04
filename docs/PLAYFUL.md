@@ -10,6 +10,27 @@ This doc collects the fun surfaces. The engine that powers them (rooms, the
 `Surface` abstraction, `SoundSpec`, deterministic RNG) is in `docs/ARCHITECTURE.md`;
 the version gating is in `docs/ROADMAP.md`.
 
+## Four doors into the same room
+
+The same build has to land for four very different people at once, and the trick
+is that they are all looking at the same math, just entering through different
+doors:
+
+- **The PhD nerd** goes as deep as the idea allows, and the depth is real, the
+  reveal is true, the reference is correct. Engage the genius-level layer and it
+  rewards you; the seahorse valley really is there at the bottom of the zoom.
+- **The stoner** puts it in The Show, gets high, and watches fractals breathe for
+  three hours. No goals, no reading, just an acid-trip visual that happens to be
+  exact mathematics.
+- **The aesthete** is here for the pretty: the accent colors, the sunflower, the
+  rose curves, the glow. It has to be beautiful before it is anything else.
+- **The gamer** wants to *do* something: crack the code before it blows, guess the
+  shape, out-think the aliens, chase a streak, chill and play.
+
+No door is the "right" one, and you can switch doors mid-session. Everyone leaves
+having felt the power and beauty of math on a level they did not before, whether
+or not they ever noticed they were learning. That is the whole design.
+
 ## Principles
 
 - **Deterministic seeds.** Everything fun is built from a seed, so any moment can
@@ -43,6 +64,26 @@ Where it goes next:
   animate away.
 - **Human vs agent.** An MCP `quiz` tool hands an agent the same round; leaderboard
   across minds.
+
+### Mini-games with a story (built: `numinous crack`, `numinous aliens`)
+
+Small, self-contained games that wrap a real math skill in a scene, so the gamer
+plays and the nerd notices the math underneath:
+
+- **Crack the Code / defuse the bomb** (built). A hidden numeric code, a true math
+  clue to open (digit sum and parity), and a countdown of attempts. Each guess
+  reports locked and loose digits, Bulls and Cows; run out and it goes off. The
+  logic is in `crates/core/src/codebreaker.rs`, so it plays anywhere.
+- **Talk to the Aliens** (built). They transmit the start of a famous sequence
+  (primes, Fibonacci, powers of two, triangular, squares) and you answer the next
+  term to prove you speak math; these are the actual sequences proposed for first
+  contact. Logic in `crates/core/src/aliens.rs`.
+- **Next in this drawer:** a Turing-test channel (tell the human from the machine
+  by their math), Nim and other solved games with the winning strategy revealed,
+  a "primes or not" reflex game, an Ulam-spiral treasure hunt.
+
+Each is deterministic from a seed and lives in the core, so the CLI, the app, and
+an agent over MCP host the same game and can compare scores.
 
 ### Shape to Function (planned: the Studio)
 
