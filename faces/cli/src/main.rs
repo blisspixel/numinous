@@ -60,6 +60,17 @@ enum Command {
         #[arg(long)]
         out: Option<PathBuf>,
     },
+    /// Render a room's sound to a WAV file (everything is an instrument).
+    Sonify {
+        /// Room id, e.g. "lissajous".
+        id: String,
+        /// Phase in [0, 1).
+        #[arg(long, default_value_t = 0.0)]
+        t: f64,
+        /// Write a WAV audio file to this path.
+        #[arg(long)]
+        out: PathBuf,
+    },
 }
 
 fn main() -> ExitCode {
@@ -79,6 +90,7 @@ fn main() -> ExitCode {
             Some(path) => emit(render_png(&id, width, height, t, &path)),
             None => emit(render_report(&id, width, height, t)),
         },
+        Command::Sonify { id, t, out } => emit(sonify_wav(&id, t, &out)),
     }
 }
 
@@ -167,6 +179,37 @@ fn render_png(
         .write_image_data(&raster.to_rgba())
         .map_err(|e| format!("png write failed: {e}"))?;
     Ok(format!("wrote {} ({w}x{h})\n", path.display()))
+}
+
+/// Render a room's sound to a 16-bit mono WAV at `path`, returning a status message.
+fn sonify_wav(id: &str, t: f64, path: &Path) -> Result<String, String> {
+    let room = room_by_id(id).ok_or_else(|| not_found_message(id))?;
+    let spec = room.sound(t);
+    let sample_rate = 44_100u32;
+    let samples = spec.render(sample_rate);
+
+    let wav_spec = hound::WavSpec {
+        channels: 1,
+        sample_rate,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    let mut writer = hound::WavWriter::create(path, wav_spec)
+        .map_err(|e| format!("could not create {}: {e}", path.display()))?;
+    for sample in &samples {
+        writer
+            .write_sample((sample * f32::from(i16::MAX)) as i16)
+            .map_err(|e| format!("wav write failed: {e}"))?;
+    }
+    writer
+        .finalize()
+        .map_err(|e| format!("wav finalize failed: {e}"))?;
+    Ok(format!(
+        "wrote {} ({:.1}s, {} notes)\n",
+        path.display(),
+        spec.duration,
+        spec.notes.len()
+    ))
 }
 
 fn not_found_message(id: &str) -> String {
@@ -288,5 +331,22 @@ mod tests {
     fn render_png_unknown_room_is_error() {
         let path = std::env::temp_dir().join("numinous_cli_should_not_exist.png");
         assert!(super::render_png("no-such-room", 10, 10, 0.0, &path).is_err());
+    }
+
+    #[test]
+    fn sonify_wav_writes_a_non_empty_file() {
+        let mut path = std::env::temp_dir();
+        path.push("numinous_cli_sonify_test.wav");
+        let message = super::sonify_wav("lissajous", 0.0, &path).expect("sonify");
+        assert!(message.contains("wrote"));
+        let size = std::fs::metadata(&path).expect("file exists").len();
+        assert!(size > 0, "wav should not be empty");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn sonify_unknown_room_is_error() {
+        let path = std::env::temp_dir().join("numinous_cli_no.wav");
+        assert!(super::sonify_wav("no-such-room", 0.0, &path).is_err());
     }
 }
