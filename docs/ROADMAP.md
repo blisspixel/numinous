@@ -24,9 +24,9 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
 - **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry); the CLI face (`numinous`) and the MCP face (`numinous-mcp`); **nine rooms across four Wings** (Number & Pattern: Times Tables, Golden Angle, Prime Spirals; Emergence: Cellular Automata, Chaos Game, Collatz; Chance & Order: Galton Board, Buffon's Needle; Waves & Sound: Lissajous); the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% coverage gate, three-OS CI). All green: fmt, clippy, tests, and coverage above 96%.
-- **Done (GPU path):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, and an offscreen compute-shader render of the Mandelbrot set to a PNG, verified on the dev laptop's AMD Radeon 780M.
-- **In progress (0.1 remainder):** cpal audio (system default device) "hear" hello-world, and rendering the existing rooms through the GPU path (a shared geometry model), then the GUI Cabinet shell.
-- **Next:** cpal audio, then 0.2 the GUI vertical slice.
+- **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
+- **In progress (0.1 remainder):** rendering the existing rooms through the GPU path and sonifying them through the audio path (a shared geometry model feeding both), then the GUI Cabinet shell.
+- **Next:** the shared geometry model (rooms to GPU + audio), then 0.2 the GUI vertical slice.
 
 ## Pre-1.0 (the 0.x line): earning the right to 1.0
 

@@ -10,8 +10,9 @@
 /lcov.info
 *.profraw
 
-# Generated render outputs (the app writes these; they are not source).
+# Generated render and audio outputs (the app writes these; they are not source).
 /mandelbrot.png
+/tone.wav
 /renders/
 
 # Cargo.lock IS committed (this is an application workspace); do not ignore it.
