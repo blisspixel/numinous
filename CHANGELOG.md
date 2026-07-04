@@ -82,6 +82,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   the fastest way to eyeball the whole collection.
 - Verification kit: `VERIFY.md` plus `scripts/verify.ps1` and `scripts/verify.sh`
   run every gate and regenerate all images and sounds in one command.
+- `numinous play <room>` animates a room live in the terminal (the Watch mode of
+  the Teletype face), sweeping its phase until Ctrl+C. The per-frame builder is a
+  pure, tested function.
 
 ### Changed
 - Rooms render through `Surface` instead of a concrete `Canvas` (the `render`

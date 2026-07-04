@@ -9,12 +9,13 @@
 //! stays a thin shell that prints and sets the exit code.
 
 use std::fs::File;
-use std::io::BufWriter;
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::time::Duration;
 
 use clap::{Parser, Subcommand};
-use numinous_core::{Canvas, Raster, RoomMeta, Surface, all_rooms, room_by_id};
+use numinous_core::{Canvas, Raster, Room, RoomMeta, Surface, all_rooms, room_by_id};
 
 #[derive(Parser)]
 #[command(
@@ -95,6 +96,20 @@ enum Command {
         #[arg(long, default_value_t = 320)]
         tile: usize,
     },
+    /// Play a room live in the terminal, animating its phase (Ctrl+C to stop).
+    Play {
+        /// Room id, e.g. "times-tables".
+        id: String,
+        /// Frames per second.
+        #[arg(long, default_value_t = 12.0)]
+        fps: f64,
+        /// Canvas width in columns.
+        #[arg(long, default_value_t = 80)]
+        width: usize,
+        /// Canvas height in rows.
+        #[arg(long, default_value_t = 36)]
+        height: usize,
+    },
 }
 
 fn main() -> ExitCode {
@@ -117,6 +132,12 @@ fn main() -> ExitCode {
         Command::Sonify { id, t, out } => emit(sonify_wav(&id, t, &out)),
         Command::Gallery { dir, width, height } => emit(gallery(&dir, width, height)),
         Command::ContactSheet { out, cols, tile } => emit(contact_sheet(&out, cols, tile)),
+        Command::Play {
+            id,
+            fps,
+            width,
+            height,
+        } => play(&id, fps, width, height),
     }
 }
 
@@ -282,6 +303,36 @@ fn gallery(dir: &Path, width: usize, height: usize) -> Result<String, String> {
     Ok(format!("wrote {count} room images to {}\n", dir.display()))
 }
 
+/// Build one terminal frame: clear the screen, render the room, and add a status
+/// line. Pure and testable; the animation loop just prints these in sequence.
+fn play_frame(room: &dyn Room, t: f64, width: usize, height: usize) -> String {
+    let mut canvas = Canvas::new(width, height);
+    room.render(&mut canvas, t);
+    // \x1b[2J clears the screen, \x1b[H moves the cursor home.
+    format!(
+        "\x1b[2J\x1b[H{}\n[{}]  t = {t:.2}   (Ctrl+C to stop)\n",
+        canvas.to_text(),
+        room.meta().title
+    )
+}
+
+/// Animate a room in the terminal, sweeping its phase, until interrupted.
+fn play(id: &str, fps: f64, width: usize, height: usize) -> ExitCode {
+    let Some(room) = room_by_id(id) else {
+        eprint!("{}", not_found_message(id));
+        return ExitCode::FAILURE;
+    };
+    let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
+    let mut stdout = std::io::stdout();
+    let mut t = 0.0f64;
+    loop {
+        let _ = write!(stdout, "{}", play_frame(room.as_ref(), t, width, height));
+        let _ = stdout.flush();
+        std::thread::sleep(frame_time);
+        t = if t + 0.01 >= 1.0 { 0.0 } else { t + 0.01 };
+    }
+}
+
 fn not_found_message(id: &str) -> String {
     let known: Vec<&str> = all_rooms().iter().map(|r| r.meta().id).collect();
     format!(
@@ -439,5 +490,21 @@ mod tests {
         let size = std::fs::metadata(&path).expect("file exists").len();
         assert!(size > 0);
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn play_frame_shows_the_room() {
+        let room = numinous_core::room_by_id("times-tables").expect("room");
+        let frame = super::play_frame(room.as_ref(), 0.0, 30, 15);
+        assert!(frame.contains("Times Tables"));
+        assert!(frame.contains('*'));
+    }
+
+    #[test]
+    fn play_frame_changes_with_phase() {
+        let room = numinous_core::room_by_id("times-tables").expect("room");
+        let a = super::play_frame(room.as_ref(), 0.0, 40, 20);
+        let b = super::play_frame(room.as_ref(), 0.6, 40, 20);
+        assert_ne!(a, b, "the frame should animate as t changes");
     }
 }
