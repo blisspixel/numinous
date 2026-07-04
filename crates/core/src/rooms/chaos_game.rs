@@ -42,6 +42,7 @@ impl Room for ChaosGame {
             wing: "Emergence",
             blurb: "Jump halfway to a random corner of a triangle, over and over, and pure chance \
                     resolves into a perfect Sierpinski fractal. t tunes the jump fraction.",
+            accent: [40, 200, 170],
         }
     }
 

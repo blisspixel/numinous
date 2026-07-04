@@ -46,6 +46,7 @@ impl Room for GoldenAngle {
             blurb: "Place seeds one at a time, each turned a fixed angle from the last; at the \
                     golden angle they pack into a flawless sunflower, and a nudge shatters it. \
                     t detunes the angle.",
+            accent: [210, 160, 40],
         }
     }
 
@@ -60,15 +61,16 @@ impl Room for GoldenAngle {
         let (cx, cy) = (fw / 2.0, fh / 2.0);
 
         let seeds = (width * height / 3).clamp(50, 4000);
-        // Scale so the outermost seed just fits: max radius = scale * sqrt(seeds).
-        let scale = (fw / 2.0).min(fh) / (seeds as f64).sqrt();
+        // Scale so the outermost seed just fits both extents (y uses the surface
+        // aspect: 0.5 for tall terminal cells, 1.0 for square pixels).
+        let aspect = canvas.char_aspect();
+        let scale = (fw / 2.0).min(fh / (2.0 * aspect)) / (seeds as f64).sqrt();
 
         for k in 0..seeds {
             let theta = k as f64 * step;
             let radius = scale * (k as f64).sqrt();
             let x = cx + radius * theta.cos();
-            // Halve y to correct for tall terminal cells.
-            let y = cy + radius * theta.sin() * 0.5;
+            let y = cy + radius * theta.sin() * aspect;
             canvas.plot(x.round() as i32, y.round() as i32, '*');
         }
     }

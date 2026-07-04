@@ -11,35 +11,53 @@ use crate::surface::{MAX_DIM, Surface};
 /// The near-black background (the Numinous stage).
 const BACKGROUND: [u8; 3] = [10, 11, 15];
 
-/// The color added per hit for each mark glyph.
-fn ink(mark: char) -> [u8; 3] {
-    match mark {
-        '#' => [80, 200, 255], // highlighted strokes, brighter
-        '-' => [18, 22, 38],   // faint structure (for example floor lines)
-        _ => [36, 120, 180],   // the default accent
-    }
+/// The accent used when a room does not specify one.
+const DEFAULT_ACCENT: [u8; 3] = [36, 120, 180];
+
+/// Scale a color by `factor`, clamping each channel to 255.
+fn scale(color: [u8; 3], factor: f32) -> [u8; 3] {
+    let ch = |c: u8| (f32::from(c) * factor).round().clamp(0.0, 255.0) as u8;
+    [ch(color[0]), ch(color[1]), ch(color[2])]
 }
 
-/// A fixed-size RGB pixel buffer that rooms draw into.
+/// A fixed-size RGB pixel buffer that rooms draw into, in a room's accent color.
 #[derive(Debug, Clone)]
 pub struct Raster {
     width: usize,
     height: usize,
+    accent: [u8; 3],
     pixels: Vec<[u8; 3]>,
 }
 
 impl Raster {
-    /// Create a raster filled with the background color.
+    /// Create a raster filled with the background color, using the default accent.
     ///
     /// Each dimension is clamped to a safe maximum so any request is safe.
     #[must_use]
     pub fn new(width: usize, height: usize) -> Self {
+        Self::with_accent(width, height, DEFAULT_ACCENT)
+    }
+
+    /// Create a raster that draws in the given accent color.
+    #[must_use]
+    pub fn with_accent(width: usize, height: usize, accent: [u8; 3]) -> Self {
         let width = width.min(MAX_DIM);
         let height = height.min(MAX_DIM);
         Self {
             width,
             height,
+            accent,
             pixels: vec![BACKGROUND; width * height],
+        }
+    }
+
+    /// The color added for a mark: the accent, a brighter accent for `'#'`, or a
+    /// faint structural gray for `'-'`.
+    fn ink(&self, mark: char) -> [u8; 3] {
+        match mark {
+            '#' => scale(self.accent, 1.7),
+            '-' => [16, 20, 34],
+            _ => self.accent,
         }
     }
 
@@ -76,8 +94,8 @@ impl Surface for Raster {
         }
         let (x, y) = (x as usize, y as usize);
         if x < self.width && y < self.height {
+            let add = self.ink(mark);
             let pixel = &mut self.pixels[y * self.width + x];
-            let add = ink(mark);
             for i in 0..3 {
                 pixel[i] = pixel[i].saturating_add(add[i]);
             }
@@ -128,5 +146,22 @@ mod tests {
         let mut r = Raster::new(10, 10);
         r.line(0, 0, 9, 9, '#');
         assert!(r.lit_count() >= 10);
+    }
+
+    #[test]
+    fn with_accent_draws_in_the_given_color() {
+        let mut r = Raster::with_accent(2, 2, [200, 0, 0]);
+        r.plot(0, 0, '*');
+        let bytes = r.to_rgba();
+        assert!(bytes[0] > BACKGROUND[0] + 100, "red channel should be lit");
+        assert!(
+            bytes[2] <= BACKGROUND[2] + 1,
+            "blue channel should stay dark"
+        );
+    }
+
+    #[test]
+    fn pixels_have_square_aspect() {
+        assert!((Raster::new(4, 4).char_aspect() - 1.0).abs() < 1e-9);
     }
 }

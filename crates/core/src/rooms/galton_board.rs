@@ -63,6 +63,7 @@ impl Room for GaltonBoard {
             wing: "Chance & Order",
             blurb: "Drop thousands of balls through pegs, each a coin flip left or right, and pure \
                     chaos piles into the same bell curve every time. t biases the coin.",
+            accent: [80, 120, 220],
         }
     }
 

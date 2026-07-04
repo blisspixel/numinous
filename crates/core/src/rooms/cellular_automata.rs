@@ -42,6 +42,7 @@ impl Room for CellularAutomata {
             wing: "Emergence",
             blurb: "One line of cells and one tiny rule per cell; sweep t across notable rules, \
                     where Rule 90 draws a Sierpinski triangle and Rule 30 pours out chaos.",
+            accent: [70, 200, 100],
         }
     }
 

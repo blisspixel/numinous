@@ -67,6 +67,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   once and is shared by every surface.
 - PNG output: `numinous render <room> --out image.png` renders any room to a real
   image (additive glow on a near-black stage), verified on the dev laptop.
+- Per-surface aspect (`Surface::char_aspect`): circular rooms render round on
+  square pixels while staying correct in the terminal (characters are tall).
+- Per-room accent colors (`RoomMeta.accent`): each room has a signature color the
+  `Raster` draws in, so image renders are distinct and on-brand.
 
 ### Changed
 - Rooms render through `Surface` instead of a concrete `Canvas` (the `render`

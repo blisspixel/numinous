@@ -62,6 +62,11 @@ impl Surface for Canvas {
         self.height
     }
 
+    fn char_aspect(&self) -> f64 {
+        // Terminal characters are about twice as tall as wide.
+        0.5
+    }
+
     fn plot(&mut self, x: i32, y: i32, mark: char) {
         if x < 0 || y < 0 {
             return;
@@ -126,5 +131,10 @@ mod tests {
         let mut c = Canvas::new(8, 8);
         c.line(-100, -100, 100, 100, '*');
         assert!(c.ink_count() > 0);
+    }
+
+    #[test]
+    fn characters_are_tall_so_aspect_is_one_half() {
+        assert!((Canvas::new(4, 4).char_aspect() - 0.5).abs() < 1e-9);
     }
 }

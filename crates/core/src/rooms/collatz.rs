@@ -41,6 +41,7 @@ impl Room for Collatz {
             wing: "Emergence",
             blurb: "Halve it if even, triple it and add one if odd, and repeat; every number \
                     always crashes to 1, eventually. t picks the number; watch its wild journey.",
+            accent: [220, 130, 50],
         }
     }
 

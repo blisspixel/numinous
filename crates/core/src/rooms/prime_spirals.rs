@@ -37,6 +37,7 @@ impl Room for PrimeSpirals {
             wing: "Number & Pattern",
             blurb: "Write the whole numbers in a spiral and light up the primes; the most \
                     patternless numbers we know snap into diagonal streaks. t shifts the start.",
+            accent: [190, 70, 170],
         }
     }
 

@@ -151,7 +151,7 @@ fn render_png(
     path: &Path,
 ) -> Result<String, String> {
     let room = room_by_id(id).ok_or_else(|| not_found_message(id))?;
-    let mut raster = Raster::new(width, height);
+    let mut raster = Raster::with_accent(width, height, room.meta().accent);
     room.render(&mut raster, t);
 
     let (w, h) = (raster.width(), raster.height());
