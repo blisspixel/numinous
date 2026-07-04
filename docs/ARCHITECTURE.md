@@ -112,6 +112,16 @@ There are two ways to author a room, and they target the same engine primitives 
 
 We **dogfood**: most rooms start as Studio programs and only drop to the native trait when they need to. This keeps the Studio continuously exercised by our own room-building, and means the runtime that powers the Studio (expression/pattern evaluation, the one-expression-to-sight-and-sound binding) is **engine-foundational and built early** (Phase 0 to 1), not a late add. Untrusted Studio code must be sandboxed (no filesystem/network, resource limits, GPU work only through the safe pipeline), a hard requirement tracked in `QUALITY.md`.
 
+### Extensibility, and the safety of untrusted extensions
+
+The design goal: **anyone can add a room, level, or phenomenon**, and doing so can never harm the person running it. The `Room` trait plus the `Surface` abstraction (already built) are the stable extension seam; adding a "level" means producing a `Room` and registering it. Extensions come in three tiers of increasing power and matching protection:
+
+- **Tier 0, first-party (trusted):** native Rust rooms, compiled in and code-reviewed. Full power; the trust comes from review.
+- **Tier 1, the Studio DSL (safe by construction):** a room expressed as declarative patterns / expressions, not arbitrary code. It cannot perform IO or reach the system at all; the host interprets it. Most "I have an idea for a level" contributions live here, and they are safe with no sandbox heroics because there is nothing dangerous to express. This is the primary path for community content.
+- **Tier 2, compiled plugins (untrusted, sandboxed):** for contributors who need real code beyond the DSL, extensions ship as **WebAssembly** modules run in a capability sandbox (a WASM runtime such as Wasmtime). The layers of protection: no ambient authority (no filesystem, network, clock, or syscalls), only the explicit host API we hand in (the `Surface` drawing calls, seeded RNG, parameters); **memory and execution limits** (fuel metering, so a bad module cannot hang or exhaust memory); determinism (no wall-clock or true randomness); and GPU access only through the safe pipeline, never raw. A malicious or buggy module can waste its own bounded budget and produce an ugly frame, and nothing worse.
+
+Curation (a beauty and correctness review before content is *featured*) is a quality gate, not the safety mechanism: safety comes from the sandbox, so even unreviewed Tier-2 modules are harmless to run. This is what makes "let anyone extend it" compatible with "it just works and is safe" (see `STUDIO.md`, `ROADMAP.md` Phase 4, and the sandbox requirements in `QUALITY.md`).
+
 ## Module architecture (Rust workspace)
 
 ```
