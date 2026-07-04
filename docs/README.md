@@ -35,6 +35,7 @@ Status: **0.1 in progress.** The headless core, the CLI face, the MCP face, and 
 - `ARCHITECTURE.md` the stack (Rust + wgpu), the language scorecard, the Room contract, the module graph, packaging.
 - `INTERFACES.md` the three faces over a headless core (App, CLI, MCP) and the UX we are going for in each.
 - `DIGITAL_MINDS.md` designing Numinous to be fun, thought-provoking, and connecting for digital minds treated as peers.
+- `PLAYFUL.md` the games and the Studio (Guess the Shape, Shape to Function, the high-Wolfram ethos) across every face.
 
 **Build and process**
 - `ROADMAP.md` the version-gated plan (0.x, 1.0, 2.0+), defined by quality bars, not dates.

@@ -117,6 +117,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   `x -> r*x*(1-x)`, order splitting into chaos; `t` zooms into the cascade.
 - `langtons-ant` (Emergence): an ant that makes chaos for ten thousand steps then
   builds a highway; `t` runs the clock.
+- Guess the Shape quiz (`crates/core` `quiz`, `numinous quiz`): a deterministic
+  "name the math behind this mystery render" game, shared by every face so the
+  CLI, the app, and agents over MCP can all play the same seeded round.
+- `docs/PLAYFUL.md`: the design of the games and the Studio (Guess the Shape,
+  Shape to Function via Fourier epicycles, the high-Wolfram ethos) across faces.
 
 ### Changed
 - Rooms render through `Surface` instead of a concrete `Canvas` (the `render`

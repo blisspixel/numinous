@@ -9,7 +9,7 @@
 //! stays a thin shell that prints and sets the exit code.
 
 use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::{BufRead, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Duration;
@@ -110,6 +110,21 @@ enum Command {
         #[arg(long, default_value_t = 36)]
         height: usize,
     },
+    /// Play "guess the shape": name the room behind a mystery render.
+    Quiz {
+        /// Number of rounds.
+        #[arg(long, default_value_t = 5)]
+        rounds: usize,
+        /// Seed (the same seed gives the same quiz).
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        /// Mystery render width in columns.
+        #[arg(long, default_value_t = 54)]
+        width: usize,
+        /// Mystery render height in rows.
+        #[arg(long, default_value_t = 22)]
+        height: usize,
+    },
 }
 
 fn main() -> ExitCode {
@@ -138,6 +153,12 @@ fn main() -> ExitCode {
             width,
             height,
         } => play(&id, fps, width, height),
+        Command::Quiz {
+            rounds,
+            seed,
+            width,
+            height,
+        } => quiz(rounds, seed, width, height),
     }
 }
 
@@ -311,6 +332,60 @@ fn gallery(dir: &Path, width: usize, height: usize) -> Result<String, String> {
         count += 1;
     }
     Ok(format!("wrote {count} room images to {}\n", dir.display()))
+}
+
+/// A closing remark for a quiz score. Pure, so it is unit-tested.
+fn quiz_remark(score: usize, rounds: usize) -> &'static str {
+    if rounds == 0 {
+        return "Play a round!";
+    }
+    match score * 100 / rounds {
+        100 => "Flawless. You see the math behind the shape.",
+        60..=99 => "Sharp eye.",
+        _ => "The shapes are sneaky. Play again.",
+    }
+}
+
+/// Play the interactive "guess the shape" quiz, reading guesses from stdin.
+fn quiz(rounds: usize, seed: u64, width: usize, height: usize) -> ExitCode {
+    let stdin = std::io::stdin();
+    let mut input = stdin.lock();
+    let mut score = 0usize;
+    println!("Guess the shape. Name the math behind each mystery render.\n");
+    for round in 0..rounds {
+        let r = numinous_core::build_round(seed, round as u64, width, height);
+        println!("Mystery #{} of {rounds}:", round + 1);
+        print!("{}", r.art);
+        println!();
+        for choice in &r.choices {
+            println!("  {}) {}", choice.letter, choice.title);
+        }
+        print!("Your answer: ");
+        let _ = std::io::stdout().flush();
+        let mut line = String::new();
+        if input.read_line(&mut line).unwrap_or(0) == 0 {
+            println!();
+            break;
+        }
+        let guess = line.trim().chars().next().map(|c| c.to_ascii_uppercase());
+        if guess == Some(r.answer) {
+            score += 1;
+            println!(
+                "Correct! It is {}.\n  {}\n",
+                r.answer_title, r.answer_reveal
+            );
+        } else {
+            println!(
+                "Not quite. It was {} ({}).\n  {}\n",
+                r.answer, r.answer_title, r.answer_reveal
+            );
+        }
+    }
+    println!(
+        "Final score: {score}/{rounds}. {}",
+        quiz_remark(score, rounds)
+    );
+    ExitCode::SUCCESS
 }
 
 /// Build one terminal frame: clear the screen, render the room, and add a status
@@ -528,5 +603,13 @@ mod tests {
     fn sonify_to_an_unwritable_path_is_error() {
         let bad = std::path::Path::new("no_such_dir_zzz/x.wav");
         assert!(super::sonify_wav("lissajous", 0.0, bad).is_err());
+    }
+
+    #[test]
+    fn quiz_remark_scales_with_score() {
+        assert!(super::quiz_remark(5, 5).contains("Flawless"));
+        assert!(super::quiz_remark(4, 5).contains("Sharp"));
+        assert!(super::quiz_remark(0, 5).contains("sneaky"));
+        assert_eq!(super::quiz_remark(0, 0), "Play a round!");
     }
 }
