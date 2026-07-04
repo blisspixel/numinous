@@ -78,6 +78,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   plays its orbit as a melody. `numinous sonify <room> --out file.wav` writes it.
 - `numinous gallery --dir <dir>` renders every room to a PNG at once, a showcase
   and a beauty-QA sweep of the whole collection.
+- `numinous contact-sheet` tiles every room into one image (via `Raster::blit`),
+  the fastest way to eyeball the whole collection.
+- Verification kit: `VERIFY.md` plus `scripts/verify.ps1` and `scripts/verify.sh`
+  run every gate and regenerate all images and sounds in one command.
 
 ### Changed
 - Rooms render through `Surface` instead of a concrete `Canvas` (the `render`
