@@ -125,6 +125,27 @@ enum Command {
         #[arg(long, default_value_t = 22)]
         height: usize,
     },
+    /// Crack the Code: defuse a math-clued bomb before your attempts run out.
+    Crack {
+        /// Seed (the same seed gives the same code).
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        /// Number of digits in the code.
+        #[arg(long, default_value_t = 4)]
+        digits: usize,
+        /// Attempts before the bomb blows.
+        #[arg(long, default_value_t = 8)]
+        attempts: usize,
+    },
+    /// Talk to the Aliens: continue the number sequence they transmit.
+    Aliens {
+        /// Seed (the same seed gives the same transmission).
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        /// Number of signals.
+        #[arg(long, default_value_t = 5)]
+        rounds: usize,
+    },
 }
 
 fn main() -> ExitCode {
@@ -159,6 +180,12 @@ fn main() -> ExitCode {
             width,
             height,
         } => quiz(rounds, seed, width, height),
+        Command::Crack {
+            seed,
+            digits,
+            attempts,
+        } => crack(seed, digits, attempts),
+        Command::Aliens { seed, rounds } => aliens(seed, rounds),
     }
 }
 
@@ -332,6 +359,82 @@ fn gallery(dir: &Path, width: usize, height: usize) -> Result<String, String> {
         count += 1;
     }
     Ok(format!("wrote {count} room images to {}\n", dir.display()))
+}
+
+/// Play Crack the Code: defuse a math-clued bomb from stdin guesses.
+fn crack(seed: u64, digits: usize, attempts: usize) -> ExitCode {
+    let secret = numinous_core::secret_code(seed, digits);
+    let stdin = std::io::stdin();
+    let mut input = stdin.lock();
+    println!("A bomb. {digits} digits, {attempts} attempts before it blows.");
+    println!("Clue: {}\n", numinous_core::hint(&secret));
+    let mut attempt = 0usize;
+    while attempt < attempts {
+        print!("Wire {}/{attempts} > ", attempt + 1);
+        let _ = std::io::stdout().flush();
+        let mut line = String::new();
+        if input.read_line(&mut line).unwrap_or(0) == 0 {
+            println!();
+            break;
+        }
+        let guess: Vec<u8> = line
+            .trim()
+            .chars()
+            .filter(char::is_ascii_digit)
+            .map(|c| c as u8 - b'0')
+            .collect();
+        if guess.len() != digits {
+            println!("  Enter exactly {digits} digits.");
+            continue;
+        }
+        attempt += 1;
+        let feedback = numinous_core::grade(&secret, &guess);
+        if feedback.locked == digits {
+            println!(
+                "\nDEFUSED with {} attempts to spare. You cracked it.",
+                attempts - attempt
+            );
+            return ExitCode::SUCCESS;
+        }
+        println!("  {} locked, {} loose.", feedback.locked, feedback.loose);
+    }
+    let code: String = secret.iter().map(|&d| char::from(b'0' + d)).collect();
+    println!("\nBOOM. The code was {code}.");
+    ExitCode::FAILURE
+}
+
+/// Play Talk to the Aliens: continue the transmitted sequences from stdin.
+fn aliens(seed: u64, rounds: usize) -> ExitCode {
+    let stdin = std::io::stdin();
+    let mut input = stdin.lock();
+    let mut score = 0usize;
+    println!("A transmission. They speak only in numbers. Prove you understand.\n");
+    for round in 0..rounds {
+        let message = numinous_core::alien_message(seed.wrapping_add(round as u64), 5);
+        let shown: Vec<String> = message.terms.iter().map(u64::to_string).collect();
+        println!("Signal #{}: {}, ...?", round + 1, shown.join(", "));
+        print!("The next number > ");
+        let _ = std::io::stdout().flush();
+        let mut line = String::new();
+        if input.read_line(&mut line).unwrap_or(0) == 0 {
+            println!();
+            break;
+        }
+        if line.trim().parse::<u64>().ok() == Some(message.answer) {
+            score += 1;
+            println!(
+                "Contact. It was {} ({}).\n  {}\n",
+                message.answer, message.name, message.explanation
+            );
+        } else {
+            println!(
+                "Silence. It was {} ({}).\n  {}\n",
+                message.answer, message.name, message.explanation
+            );
+        }
+    }
+    println!("You understood {score}/{rounds} of their language.");
+    ExitCode::SUCCESS
 }
 
 /// A closing remark for a quiz score. Pure, so it is unit-tested.

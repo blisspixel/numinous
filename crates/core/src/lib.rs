@@ -14,7 +14,9 @@
 // documentation bar (see docs/ENGINEERING.md).
 #![deny(missing_docs)]
 
+pub mod aliens;
 pub mod canvas;
+pub mod codebreaker;
 pub mod font;
 pub mod quiz;
 pub mod raster;
@@ -25,7 +27,9 @@ pub mod rooms;
 pub mod sound;
 pub mod surface;
 
+pub use aliens::{AlienMessage, alien_message};
 pub use canvas::Canvas;
+pub use codebreaker::{Feedback, grade, hint, secret_code};
 pub use font::{draw_text, text_width, wrap_text};
 pub use quiz::{QuizChoice, QuizRound, build_round};
 pub use raster::Raster;
