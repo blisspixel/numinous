@@ -11,6 +11,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   `Raster`, using `winit` for the window and `softbuffer` for a
   toolkit-free pixel blit. Left/right switch rooms, space pauses, escape quits.
   Cross-platform (macOS/Linux/Windows); verified launching on the dev laptop.
+- Live sound in the windowed app: a `LoopPlayer` (`crates/audio`) loops the
+  visible room's `SoundSpec` through the system default device, updated when you
+  switch rooms, so the app is audiovisual (you see and hear the same room).
 - Headless core (`crates/core`): the `Room` trait, a deterministic ASCII `Canvas`
   with Bresenham line drawing, the room registry, and the flagship Times Tables
   room (modular multiplication on a circle).
