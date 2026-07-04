@@ -16,6 +16,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   switch rooms, so the app is audiovisual (you see and hear the same room).
 - Mouse-drag phase scrubbing in the app: drag horizontally to sweep the room's
   phase directly (pausing the auto-animation), with the sound following the drag.
+- On-screen HUD: a tiny 5x7 bitmap font (`crates/core` `font`, no external font
+  dependency) draws the room title in the window, and the `i` key toggles the
+  room's reveal (word-wrapped) over the visualization in the room's accent color.
+  A `font_preview` example renders the glyphs to the terminal.
 - Headless core (`crates/core`): the `Room` trait, a deterministic ASCII `Canvas`
   with Bresenham line drawing, the room registry, and the flagship Times Tables
   room (modular multiplication on a circle).

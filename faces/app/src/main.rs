@@ -32,6 +32,7 @@ struct App {
     t: f64,
     paused: bool,
     dragging: bool,
+    show_info: bool,
 }
 
 impl App {
@@ -45,6 +46,7 @@ impl App {
             t: 0.0,
             paused: false,
             dragging: false,
+            show_info: false,
         }
     }
 
@@ -59,7 +61,7 @@ impl App {
 
     fn title(&self) -> String {
         format!(
-            "Numinous  |  {}  (drag: scrub, left/right: switch, space: pause, esc: quit)",
+            "Numinous  |  {}  (drag: scrub, left/right: switch, i: reveal, space: pause, esc: quit)",
             self.rooms[self.current].meta().title
         )
     }
@@ -90,6 +92,35 @@ impl App {
         let room = &self.rooms[self.current];
         let mut raster = Raster::with_accent(width, height, room.meta().accent);
         room.render(&mut raster, self.t);
+
+        // HUD: the room title always, and the reveal when toggled with the 'i' key.
+        let scale = (width as i32 / 400).clamp(1, 4);
+        numinous_core::draw_text(
+            &mut raster,
+            &room.meta().title.to_uppercase(),
+            10,
+            10,
+            scale + 1,
+            '#',
+        );
+        if self.show_info {
+            let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
+            let line_height = 9 * scale;
+            for (i, line) in numinous_core::wrap_text(&room.reveal().to_uppercase(), columns)
+                .iter()
+                .enumerate()
+            {
+                numinous_core::draw_text(
+                    &mut raster,
+                    line,
+                    10,
+                    10 + (2 + i as i32) * line_height,
+                    scale,
+                    '#',
+                );
+            }
+        }
+
         let rgba = raster.to_rgba();
         let (rw, rh) = (raster.width(), raster.height());
 
@@ -150,6 +181,7 @@ impl ApplicationHandler for App {
                 Key::Named(NamedKey::ArrowRight) => self.switch(1),
                 Key::Named(NamedKey::ArrowLeft) => self.switch(-1),
                 Key::Named(NamedKey::Space) => self.paused = !self.paused,
+                Key::Character(s) if s.as_str() == "i" => self.show_info = !self.show_info,
                 _ => {}
             },
             WindowEvent::MouseInput {
