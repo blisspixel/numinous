@@ -1,0 +1,127 @@
+//! Times Tables: modular multiplication on a circle. The flagship room.
+//!
+//! Place `N` points evenly on a circle and, from each point `n`, draw a chord to
+//! point `round(n * k) mod N`. At `k = 2` a cardioid blooms out of nothing but
+//! the two-times table; sweeping `k` upward morphs it through nephroids and
+//! nested lobes. See `docs/ROOMS.md` and `docs/INSIGHTS.md`.
+
+use std::f64::consts::{FRAC_PI_2, TAU};
+
+use crate::canvas::Canvas;
+use crate::room::{Room, RoomMeta};
+
+/// Number of points placed around the circle. Higher is smoother and denser.
+const POINTS: usize = 240;
+/// The multiplier `k` at phase `t = 0` (the two-times table, a cardioid).
+const K_MIN: f64 = 2.0;
+/// How far `k` sweeps across the phase range `[0, 1)`.
+const K_SWEEP: f64 = 8.0;
+
+/// The Times Tables room.
+#[derive(Debug, Default)]
+pub struct TimesTables;
+
+impl TimesTables {
+    /// Create the room.
+    #[must_use]
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Room for TimesTables {
+    fn meta(&self) -> RoomMeta {
+        RoomMeta {
+            id: "times-tables",
+            title: "Times Tables",
+            wing: "Number & Pattern",
+            blurb: "From each point n on a circle, draw a chord to point (n times k); \
+                    a cardioid blooms out of the two-times table.",
+        }
+    }
+
+    fn render_ascii(&self, canvas: &mut Canvas, t: f64) {
+        let multiplier = K_MIN + K_SWEEP * t.clamp(0.0, 1.0);
+
+        let width = canvas.width() as f64;
+        let height = canvas.height() as f64;
+        let cx = width / 2.0;
+        let cy = height / 2.0;
+        // Terminal cells are about twice as tall as wide, so squash y by half to
+        // keep the circle looking round; fit within both extents with a margin.
+        let radius = (width / 2.0).min(height) * 0.9;
+
+        let point = |i: usize| -> (i32, i32) {
+            let angle = (i as f64 / POINTS as f64) * TAU - FRAC_PI_2;
+            let x = cx + radius * angle.cos();
+            let y = cy + radius * angle.sin() * 0.5;
+            (x.round() as i32, y.round() as i32)
+        };
+
+        for n in 0..POINTS {
+            let target = ((n as f64) * multiplier).round() as usize % POINTS;
+            let (x0, y0) = point(n);
+            let (x1, y1) = point(target);
+            canvas.line(x0, y0, x1, y1, '*');
+        }
+    }
+
+    fn reveal(&self) -> &'static str {
+        "You drew a heart with the two-times table. That cardioid is the exact \
+         outline of the Mandelbrot set's main body: a homework grid and the most \
+         complex object in mathematics trace the same shape."
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TimesTables;
+    use crate::canvas::Canvas;
+    use crate::room::Room;
+
+    #[test]
+    fn meta_is_stable() {
+        let m = TimesTables::new().meta();
+        assert_eq!(m.id, "times-tables");
+        assert_eq!(m.wing, "Number & Pattern");
+    }
+
+    #[test]
+    fn reveal_names_the_connection() {
+        assert!(TimesTables::new().reveal().contains("Mandelbrot"));
+    }
+
+    #[test]
+    fn render_is_deterministic() {
+        let room = TimesTables::new();
+        let mut a = Canvas::new(80, 40);
+        let mut b = Canvas::new(80, 40);
+        room.render_ascii(&mut a, 0.0);
+        room.render_ascii(&mut b, 0.0);
+        assert_eq!(a.to_text(), b.to_text());
+    }
+
+    #[test]
+    fn render_produces_ink() {
+        let room = TimesTables::new();
+        let mut canvas = Canvas::new(80, 40);
+        room.render_ascii(&mut canvas, 0.0);
+        assert!(canvas.ink_count() > 0, "the cardioid should draw something");
+    }
+
+    #[test]
+    fn extreme_phase_values_do_not_panic() {
+        let room = TimesTables::new();
+        let mut canvas = Canvas::new(40, 20);
+        for t in [-5.0, 0.0, 0.5, 0.999, 5.0] {
+            room.render_ascii(&mut canvas, t);
+        }
+    }
+
+    #[test]
+    fn tiny_canvas_does_not_panic() {
+        let room = TimesTables::new();
+        let mut canvas = Canvas::new(1, 1);
+        room.render_ascii(&mut canvas, 0.3);
+    }
+}

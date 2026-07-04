@@ -1,0 +1,19 @@
+[package]
+name = "numinous-mcp"
+description = "Numinous MCP server: the face that lets AI agents and digital minds learn and play."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "numinous-mcp"
+path = "src/main.rs"
+
+[dependencies]
+numinous-core = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

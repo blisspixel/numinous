@@ -1,0 +1,16 @@
+[package]
+name = "numinous-core"
+description = "Numinous headless core: the Room trait, the room registry, and a deterministic ASCII canvas."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+# The core is intentionally dependency-free std-only Rust: it is the windowless
+# engine every face builds on. GPU (wgpu), audio (cpal), and the Studio runtime
+# are layered on in later increments.
+[dependencies]
+
+[lints]
+workspace = true

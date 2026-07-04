@@ -1,0 +1,3 @@
+# Formatting is not up for per-PR debate; rustfmt decides. Stable-only options.
+edition = "2024"
+max_width = 100
