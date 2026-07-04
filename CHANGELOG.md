@@ -104,6 +104,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   the Teletype face), sweeping its phase until Ctrl+C. The per-frame builder is a
   pure, tested function.
 
+- New wing, Fractals and the Infinite, with three rooms:
+  - `mandelbrot`: escape-time render of the Mandelbrot set; `t` zooms toward the
+    seahorse valley.
+  - `julia`: the Julia family with the same iteration but a fixed, morphing `c`;
+    `t` walks `c` around a circle.
+  - `barnsley-fern`: an iterated function system that grows a fern from four
+    random affine maps; `t` grows it by adding points.
+
 ### Changed
 - Rooms render through `Surface` instead of a concrete `Canvas` (the `render`
   method replaces `render_ascii`), which is what lets one room target both the

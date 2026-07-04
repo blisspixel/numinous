@@ -20,6 +20,9 @@ pub fn all_rooms() -> Vec<Box<dyn Room>> {
         Box::new(rooms::collatz::Collatz::new()),
         Box::new(rooms::buffon_needle::BuffonNeedle::new()),
         Box::new(rooms::game_of_life::GameOfLife::new()),
+        Box::new(rooms::mandelbrot::Mandelbrot::new()),
+        Box::new(rooms::julia::Julia::new()),
+        Box::new(rooms::barnsley_fern::BarnsleyFern::new()),
     ]
 }
 
