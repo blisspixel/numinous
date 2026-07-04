@@ -15,12 +15,16 @@
 #![deny(missing_docs)]
 
 pub mod canvas;
+pub mod raster;
 pub mod registry;
 pub mod rng;
 pub mod room;
 pub mod rooms;
+pub mod surface;
 
 pub use canvas::Canvas;
+pub use raster::Raster;
 pub use registry::{all_rooms, room_by_id};
 pub use rng::SplitMix64;
 pub use room::{Room, RoomMeta};
+pub use surface::Surface;

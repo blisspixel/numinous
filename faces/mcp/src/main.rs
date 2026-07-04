@@ -216,7 +216,7 @@ fn play_room_tool(args: &Value) -> Value {
     match room_by_id(id) {
         Some(room) => {
             let mut canvas = Canvas::new(width, height);
-            room.render_ascii(&mut canvas, t);
+            room.render(&mut canvas, t);
             tool_text(&format!(
                 "{} at t={t:.3}:\n\n{}",
                 room.meta().title,

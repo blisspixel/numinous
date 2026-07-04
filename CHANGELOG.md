@@ -61,7 +61,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   48 kHz, stereo). CI installs ALSA headers on Linux; the crate is excluded from
   the coverage gate (integration-tested on hardware).
 
+- A `Surface` drawing abstraction (`crates/core`): rooms render through
+  `&mut dyn Surface`, so the same room logic draws to the ASCII `Canvas` and to an
+  RGBA `Raster` (CPU, deterministic, no GPU). The Bresenham line drawing lives
+  once and is shared by every surface.
+- PNG output: `numinous render <room> --out image.png` renders any room to a real
+  image (additive glow on a near-black stage), verified on the dev laptop.
+
 ### Changed
+- Rooms render through `Surface` instead of a concrete `Canvas` (the `render`
+  method replaces `render_ascii`), which is what lets one room target both the
+  terminal and an image (and, later, the GPU).
 - Robustness hardening (from an independent code review): `Canvas` clamps its
   dimensions so an absurd size request cannot abort the process; the Galton Board
   caps its simulated bins and stretches them across wide canvases, so a huge-width

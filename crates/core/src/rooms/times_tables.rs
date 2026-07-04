@@ -7,8 +7,8 @@
 
 use std::f64::consts::{FRAC_PI_2, TAU};
 
-use crate::canvas::Canvas;
 use crate::room::{Room, RoomMeta};
+use crate::surface::Surface;
 
 /// Number of points placed around the circle. Higher is smoother and denser.
 const POINTS: usize = 240;
@@ -40,7 +40,7 @@ impl Room for TimesTables {
         }
     }
 
-    fn render_ascii(&self, canvas: &mut Canvas, t: f64) {
+    fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let multiplier = K_MIN + K_SWEEP * t.clamp(0.0, 1.0);
 
         let width = canvas.width() as f64;
@@ -96,8 +96,8 @@ mod tests {
         let room = TimesTables::new();
         let mut a = Canvas::new(80, 40);
         let mut b = Canvas::new(80, 40);
-        room.render_ascii(&mut a, 0.0);
-        room.render_ascii(&mut b, 0.0);
+        room.render(&mut a, 0.0);
+        room.render(&mut b, 0.0);
         assert_eq!(a.to_text(), b.to_text());
     }
 
@@ -105,7 +105,7 @@ mod tests {
     fn render_produces_ink() {
         let room = TimesTables::new();
         let mut canvas = Canvas::new(80, 40);
-        room.render_ascii(&mut canvas, 0.0);
+        room.render(&mut canvas, 0.0);
         assert!(canvas.ink_count() > 0, "the cardioid should draw something");
     }
 
@@ -114,7 +114,7 @@ mod tests {
         let room = TimesTables::new();
         let mut canvas = Canvas::new(40, 20);
         for t in [-5.0, 0.0, 0.5, 0.999, 5.0] {
-            room.render_ascii(&mut canvas, t);
+            room.render(&mut canvas, t);
         }
     }
 
@@ -122,6 +122,6 @@ mod tests {
     fn tiny_canvas_does_not_panic() {
         let room = TimesTables::new();
         let mut canvas = Canvas::new(1, 1);
-        room.render_ascii(&mut canvas, 0.3);
+        room.render(&mut canvas, 0.3);
     }
 }

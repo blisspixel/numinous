@@ -8,8 +8,8 @@
 
 use std::f64::consts::PI;
 
-use crate::canvas::Canvas;
 use crate::room::{Room, RoomMeta};
+use crate::surface::Surface;
 
 /// How far `t` can push the angle away from golden, in radians. A small nudge is
 /// enough to visibly break the packing.
@@ -49,7 +49,7 @@ impl Room for GoldenAngle {
         }
     }
 
-    fn render_ascii(&self, canvas: &mut Canvas, t: f64) {
+    fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();
         let height = canvas.height();
         if width == 0 || height == 0 {
@@ -102,8 +102,8 @@ mod tests {
         let room = GoldenAngle::new();
         let mut a = Canvas::new(40, 30);
         let mut b = Canvas::new(40, 30);
-        room.render_ascii(&mut a, 0.0);
-        room.render_ascii(&mut b, 0.0);
+        room.render(&mut a, 0.0);
+        room.render(&mut b, 0.0);
         assert_eq!(a.to_text(), b.to_text());
     }
 
@@ -111,7 +111,7 @@ mod tests {
     fn render_produces_ink() {
         let room = GoldenAngle::new();
         let mut canvas = Canvas::new(40, 30);
-        room.render_ascii(&mut canvas, 0.0);
+        room.render(&mut canvas, 0.0);
         assert!(canvas.ink_count() > 10);
     }
 
@@ -119,10 +119,10 @@ mod tests {
     fn zero_sized_and_extreme_inputs_do_not_panic() {
         let room = GoldenAngle::new();
         let mut empty = Canvas::new(0, 0);
-        room.render_ascii(&mut empty, 0.5);
+        room.render(&mut empty, 0.5);
         let mut canvas = Canvas::new(6, 6);
         for t in [-2.0, 0.0, 0.999, 3.0] {
-            room.render_ascii(&mut canvas, t);
+            room.render(&mut canvas, t);
         }
     }
 

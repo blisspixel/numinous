@@ -5,9 +5,9 @@
 //! triangle in the rule, yet a perfect Sierpinski fractal appears. `t` tunes the
 //! jump fraction (0.5 is the iconic value). See `docs/ROOMS.md`.
 
-use crate::canvas::Canvas;
 use crate::rng::SplitMix64;
 use crate::room::{Room, RoomMeta};
+use crate::surface::Surface;
 
 /// Fixed seed so the render reproduces exactly (determinism, see `docs/QUALITY.md`).
 const SEED: u64 = 0x0DDB_1A5E_5EED_1234;
@@ -45,7 +45,7 @@ impl Room for ChaosGame {
         }
     }
 
-    fn render_ascii(&self, canvas: &mut Canvas, t: f64) {
+    fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();
         let height = canvas.height();
         if width == 0 || height == 0 {
@@ -98,8 +98,8 @@ mod tests {
         let room = ChaosGame::new();
         let mut a = Canvas::new(48, 24);
         let mut b = Canvas::new(48, 24);
-        room.render_ascii(&mut a, 0.0);
-        room.render_ascii(&mut b, 0.0);
+        room.render(&mut a, 0.0);
+        room.render(&mut b, 0.0);
         assert_eq!(a.to_text(), b.to_text());
     }
 
@@ -107,7 +107,7 @@ mod tests {
     fn render_produces_ink() {
         let room = ChaosGame::new();
         let mut canvas = Canvas::new(48, 24);
-        room.render_ascii(&mut canvas, 0.0);
+        room.render(&mut canvas, 0.0);
         assert!(canvas.ink_count() > 10);
     }
 
@@ -115,10 +115,10 @@ mod tests {
     fn zero_sized_and_extreme_inputs_do_not_panic() {
         let room = ChaosGame::new();
         let mut empty = Canvas::new(0, 0);
-        room.render_ascii(&mut empty, 0.5);
+        room.render(&mut empty, 0.5);
         let mut canvas = Canvas::new(8, 8);
         for t in [-3.0, 0.0, 0.999, 4.0] {
-            room.render_ascii(&mut canvas, t);
+            room.render(&mut canvas, t);
         }
     }
 

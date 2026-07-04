@@ -8,10 +8,13 @@
 //! text to emit, so they can be unit-tested without capturing stdout; `main`
 //! stays a thin shell that prints and sets the exit code.
 
+use std::fs::File;
+use std::io::BufWriter;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use numinous_core::{Canvas, RoomMeta, all_rooms, room_by_id};
+use numinous_core::{Canvas, Raster, RoomMeta, Surface, all_rooms, room_by_id};
 
 #[derive(Parser)]
 #[command(
@@ -40,19 +43,22 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Render a room as ASCII in the terminal (the Teletype face).
+    /// Render a room as ASCII in the terminal, or as a PNG image with --out.
     Render {
         /// Room id, e.g. "times-tables".
         id: String,
-        /// Canvas width in columns.
+        /// Width in columns (ASCII) or pixels (PNG).
         #[arg(long, default_value_t = 80)]
         width: usize,
-        /// Canvas height in rows.
+        /// Height in rows (ASCII) or pixels (PNG).
         #[arg(long, default_value_t = 40)]
         height: usize,
         /// Phase in [0, 1): for Times Tables this sweeps the multiplier.
         #[arg(long, default_value_t = 0.0)]
         t: f64,
+        /// Write a PNG image to this path instead of ASCII to the terminal.
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
 }
 
@@ -68,7 +74,11 @@ fn main() -> ExitCode {
             width,
             height,
             t,
-        } => emit(render_report(&id, width, height, t)),
+            out,
+        } => match out {
+            Some(path) => emit(render_png(&id, width, height, t, &path)),
+            None => emit(render_report(&id, width, height, t)),
+        },
     }
 }
 
@@ -128,8 +138,35 @@ fn describe_report(id: &str, json: bool) -> Result<String, String> {
 fn render_report(id: &str, width: usize, height: usize, t: f64) -> Result<String, String> {
     let room = room_by_id(id).ok_or_else(|| not_found_message(id))?;
     let mut canvas = Canvas::new(width, height);
-    room.render_ascii(&mut canvas, t);
+    room.render(&mut canvas, t);
     Ok(canvas.to_text())
+}
+
+/// Render a room to a PNG image at `path`, returning a status message.
+fn render_png(
+    id: &str,
+    width: usize,
+    height: usize,
+    t: f64,
+    path: &Path,
+) -> Result<String, String> {
+    let room = room_by_id(id).ok_or_else(|| not_found_message(id))?;
+    let mut raster = Raster::new(width, height);
+    room.render(&mut raster, t);
+
+    let (w, h) = (raster.width(), raster.height());
+    let file =
+        File::create(path).map_err(|e| format!("could not create {}: {e}", path.display()))?;
+    let mut encoder = png::Encoder::new(BufWriter::new(file), w as u32, h as u32);
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder
+        .write_header()
+        .map_err(|e| format!("png header failed: {e}"))?;
+    writer
+        .write_image_data(&raster.to_rgba())
+        .map_err(|e| format!("png write failed: {e}"))?;
+    Ok(format!("wrote {} ({w}x{h})\n", path.display()))
 }
 
 fn not_found_message(id: &str) -> String {
@@ -234,5 +271,22 @@ mod tests {
     #[test]
     fn not_found_message_lists_known_rooms() {
         assert!(not_found_message("x").contains("times-tables"));
+    }
+
+    #[test]
+    fn render_png_writes_a_non_empty_file() {
+        let mut path = std::env::temp_dir();
+        path.push("numinous_cli_render_test.png");
+        let message = super::render_png("times-tables", 64, 48, 0.0, &path).expect("render png");
+        assert!(message.contains("wrote"));
+        let size = std::fs::metadata(&path).expect("file exists").len();
+        assert!(size > 0, "png should not be empty");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn render_png_unknown_room_is_error() {
+        let path = std::env::temp_dir().join("numinous_cli_should_not_exist.png");
+        assert!(super::render_png("no-such-room", 10, 10, 0.0, &path).is_err());
     }
 }
