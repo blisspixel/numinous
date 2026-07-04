@@ -76,6 +76,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   testable). `Room::sound` defaults to a rising tone; Lissajous plays its two
   frequencies as a chord, Times Tables pitches with the multiplier, and Collatz
   plays its orbit as a melody. `numinous sonify <room> --out file.wav` writes it.
+- `numinous gallery --dir <dir>` renders every room to a PNG at once, a showcase
+  and a beauty-QA sweep of the whole collection.
 
 ### Changed
 - Rooms render through `Surface` instead of a concrete `Canvas` (the `render`

@@ -71,6 +71,18 @@ enum Command {
         #[arg(long)]
         out: PathBuf,
     },
+    /// Render every room to a PNG image in a directory (a showcase and beauty-QA).
+    Gallery {
+        /// Directory to write the images into.
+        #[arg(long, default_value = "renders")]
+        dir: PathBuf,
+        /// Image width in pixels.
+        #[arg(long, default_value_t = 800)]
+        width: usize,
+        /// Image height in pixels.
+        #[arg(long, default_value_t = 800)]
+        height: usize,
+    },
 }
 
 fn main() -> ExitCode {
@@ -91,6 +103,7 @@ fn main() -> ExitCode {
             None => emit(render_report(&id, width, height, t)),
         },
         Command::Sonify { id, t, out } => emit(sonify_wav(&id, t, &out)),
+        Command::Gallery { dir, width, height } => emit(gallery(&dir, width, height)),
     }
 }
 
@@ -210,6 +223,19 @@ fn sonify_wav(id: &str, t: f64, path: &Path) -> Result<String, String> {
         spec.duration,
         spec.notes.len()
     ))
+}
+
+/// Render every room to `<dir>/<id>.png`, returning a status message.
+fn gallery(dir: &Path, width: usize, height: usize) -> Result<String, String> {
+    std::fs::create_dir_all(dir).map_err(|e| format!("could not create {}: {e}", dir.display()))?;
+    let mut count = 0usize;
+    for room in all_rooms() {
+        let id = room.meta().id;
+        let path = dir.join(format!("{id}.png"));
+        render_png(id, width, height, 0.0, &path)?;
+        count += 1;
+    }
+    Ok(format!("wrote {count} room images to {}\n", dir.display()))
 }
 
 fn not_found_message(id: &str) -> String {
@@ -348,5 +374,16 @@ mod tests {
     fn sonify_unknown_room_is_error() {
         let path = std::env::temp_dir().join("numinous_cli_no.wav");
         assert!(super::sonify_wav("no-such-room", 0.0, &path).is_err());
+    }
+
+    #[test]
+    fn gallery_writes_one_image_per_room() {
+        let dir = std::env::temp_dir().join("numinous_gallery_test");
+        let _ = std::fs::remove_dir_all(&dir);
+        let message = super::gallery(&dir, 40, 40).expect("gallery");
+        assert!(message.contains("wrote"));
+        let files = std::fs::read_dir(&dir).expect("dir exists").count();
+        assert_eq!(files, numinous_core::all_rooms().len());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
