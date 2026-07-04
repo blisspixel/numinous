@@ -146,6 +146,22 @@ enum Command {
         #[arg(long, default_value_t = 5)]
         rounds: usize,
     },
+    /// List the sims and their levers.
+    Sims,
+    /// Run a sim: render it and read the outcome. Set levers with --set name=value.
+    Sim {
+        /// Sim id, e.g. "tribbles".
+        id: String,
+        /// Set a lever, repeatable: --set breeding-rate=2.9.
+        #[arg(long = "set")]
+        set: Vec<String>,
+        /// Render width in columns.
+        #[arg(long, default_value_t = 70)]
+        width: usize,
+        /// Render height in rows.
+        #[arg(long, default_value_t = 24)]
+        height: usize,
+    },
 }
 
 fn main() -> ExitCode {
@@ -186,7 +202,63 @@ fn main() -> ExitCode {
             attempts,
         } => crack(seed, digits, attempts),
         Command::Aliens { seed, rounds } => aliens(seed, rounds),
+        Command::Sims => {
+            print!("{}", sims_report());
+            ExitCode::SUCCESS
+        }
+        Command::Sim {
+            id,
+            set,
+            width,
+            height,
+        } => emit(sim_run(&id, &set, width, height)),
     }
+}
+
+/// The list of sims and their levers.
+fn sims_report() -> String {
+    let lines: Vec<String> = numinous_core::all_sims()
+        .iter()
+        .map(|sim| {
+            let meta = sim.meta();
+            let levers: Vec<String> = meta
+                .levers
+                .iter()
+                .map(|l| format!("{}=[{}..{}] {}", l.name, l.min, l.max, l.unit))
+                .collect();
+            format!(
+                "{:<12} {}\n  levers: {}",
+                meta.id,
+                meta.title,
+                levers.join(", ")
+            )
+        })
+        .collect();
+    format!("{}\n", lines.join("\n\n"))
+}
+
+/// Render a sim with the given lever settings and return its picture and readout.
+fn sim_run(id: &str, sets: &[String], width: usize, height: usize) -> Result<String, String> {
+    let sim = numinous_core::sim_by_id(id)
+        .ok_or_else(|| format!("no sim named '{id}'. Try: numinous sims\n"))?;
+    let meta = sim.meta();
+    let mut params = numinous_core::default_params(&meta);
+    for entry in sets {
+        let (name, value) = entry
+            .split_once('=')
+            .ok_or_else(|| format!("--set expects name=value, got '{entry}'\n"))?;
+        let index = meta
+            .levers
+            .iter()
+            .position(|l| l.name == name)
+            .ok_or_else(|| format!("'{id}' has no lever '{name}'. Try: numinous sims\n"))?;
+        params[index] = value
+            .parse()
+            .map_err(|_| format!("'{value}' is not a number\n"))?;
+    }
+    let mut canvas = Canvas::new(width, height);
+    sim.render(&mut canvas, &params);
+    Ok(format!("{}\n{}\n", canvas.to_text(), sim.readout(&params)))
 }
 
 /// Print a report to stdout, or its error to stderr, and map to an exit code.
@@ -714,5 +786,26 @@ mod tests {
         assert!(super::quiz_remark(4, 5).contains("Sharp"));
         assert!(super::quiz_remark(0, 5).contains("sneaky"));
         assert_eq!(super::quiz_remark(0, 0), "Play a round!");
+    }
+
+    #[test]
+    fn sims_report_lists_the_sims_with_levers() {
+        let out = super::sims_report();
+        assert!(out.contains("tribbles"));
+        assert!(out.contains("levers"));
+    }
+
+    #[test]
+    fn sim_run_renders_and_reads_out() {
+        let out = super::sim_run("wing", &["angle-of-attack=20".to_string()], 40, 12).expect("run");
+        assert!(out.contains("STALL"), "got: {out}");
+    }
+
+    #[test]
+    fn sim_run_rejects_bad_input() {
+        assert!(super::sim_run("nope", &[], 10, 10).is_err());
+        assert!(super::sim_run("wing", &["nope=1".to_string()], 10, 10).is_err());
+        assert!(super::sim_run("wing", &["angle-of-attack=abc".to_string()], 10, 10).is_err());
+        assert!(super::sim_run("wing", &["missing-equals".to_string()], 10, 10).is_err());
     }
 }

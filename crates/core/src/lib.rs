@@ -24,6 +24,8 @@ pub mod registry;
 pub mod rng;
 pub mod room;
 pub mod rooms;
+pub mod sim;
+pub mod sims;
 pub mod sound;
 pub mod surface;
 
@@ -36,5 +38,7 @@ pub use raster::Raster;
 pub use registry::{all_rooms, room_by_id};
 pub use rng::SplitMix64;
 pub use room::{Room, RoomMeta};
+pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
+pub use sims::{all_sims, sim_by_id};
 pub use sound::{Note, SoundSpec};
 pub use surface::Surface;
