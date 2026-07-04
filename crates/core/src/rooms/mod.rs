@@ -4,4 +4,5 @@ pub mod cellular_automata;
 pub mod chaos_game;
 pub mod galton_board;
 pub mod golden_angle;
+pub mod lissajous;
 pub mod times_tables;
