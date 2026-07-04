@@ -15,6 +15,7 @@
 #![deny(missing_docs)]
 
 pub mod canvas;
+pub mod font;
 pub mod raster;
 pub mod registry;
 pub mod rng;
@@ -24,6 +25,7 @@ pub mod sound;
 pub mod surface;
 
 pub use canvas::Canvas;
+pub use font::{draw_text, text_width, wrap_text};
 pub use raster::Raster;
 pub use registry::{all_rooms, room_by_id};
 pub use rng::SplitMix64;
