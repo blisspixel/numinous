@@ -96,7 +96,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   grid; `t` sweeps the generation, so the life evolves; verified with still-life
   and blinker (oscillator) tests.
 - `numinous contact-sheet` tiles every room into one image (via `Raster::blit`),
-  the fastest way to eyeball the whole collection.
+  the fastest way to eyeball the whole collection; each tile is labeled with the
+  room name using the bitmap font.
 - Verification kit: `VERIFY.md` plus `scripts/verify.ps1` and `scripts/verify.sh`
   run every gate and regenerate all images and sounds in one command.
 - `numinous play <room>` animates a room live in the terminal (the Watch mode of

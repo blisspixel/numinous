@@ -15,7 +15,7 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
-use numinous_core::{Canvas, Raster, Room, RoomMeta, Surface, all_rooms, room_by_id};
+use numinous_core::{Canvas, Raster, Room, RoomMeta, Surface, all_rooms, draw_text, room_by_id};
 
 #[derive(Parser)]
 #[command(
@@ -244,10 +244,20 @@ fn contact_sheet(path: &Path, cols: usize, tile: usize) -> Result<String, String
     let cols = cols.max(1);
     let rows = rooms.len().div_ceil(cols);
     let mut sheet = Raster::new(cols * tile, rows * tile);
+    let label_scale = (tile as i32 / 160).clamp(1, 3);
     for (i, room) in rooms.iter().enumerate() {
         let mut cell = Raster::with_accent(tile, tile, room.meta().accent);
         room.render(&mut cell, 0.0);
-        sheet.blit(&cell, (i % cols) * tile, (i / cols) * tile);
+        let (x, y) = ((i % cols) * tile, (i / cols) * tile);
+        sheet.blit(&cell, x, y);
+        draw_text(
+            &mut sheet,
+            &room.meta().title.to_uppercase(),
+            x as i32 + 8,
+            y as i32 + 8,
+            label_scale,
+            '#',
+        );
     }
     write_png(path, &sheet)?;
     Ok(format!(
