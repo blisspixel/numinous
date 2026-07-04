@@ -54,6 +54,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   compute-shader workload renders the Mandelbrot set to a PNG, verified on the
   dev laptop's AMD Radeon 780M via Vulkan. The GPU crate is excluded from the
   coverage gate because it is integration-tested on real hardware.
+- Audio (`crates/audio`): adaptive `cpal` output on the system default device,
+  following the machine's sound settings across WASAPI, CoreAudio, and ALSA, with
+  pure, tested sine synthesis kept separate from device I/O. A tone hello-world
+  plays a 440 Hz sine and writes a WAV, verified on the dev laptop (Realtek at
+  48 kHz, stereo). CI installs ALSA headers on Linux; the crate is excluded from
+  the coverage gate (integration-tested on hardware).
 
 ### Changed
 - Robustness hardening (from an independent code review): `Canvas` clamps its

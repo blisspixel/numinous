@@ -104,8 +104,9 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 - **Engineering**: edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, a house-style guard, an 80%-line coverage gate, and CI across three OSes.
 
 - **`crates/gpu`**: an adaptive **wgpu** context that picks the machine's GPU (AMD / NVIDIA / Intel / Apple across Vulkan / Metal / DX12, with a CPU fallback) and renders offscreen with no window. A first compute-shader workload renders the Mandelbrot set to a PNG, verified on the dev laptop's AMD Radeon 780M.
+- **`crates/audio`**: adaptive **cpal** output on the system default device (WASAPI / CoreAudio / ALSA), with pure, tested sine synthesis. A tone hello-world plays a 440 Hz sine and writes a WAV, verified on the dev laptop.
 
-Still ahead in 0.1: **cpal** audio (system default device), rendering the existing rooms through the GPU path, then **0.2 The Vertical Slice** (the GUI flagship room, to prove the feel). The version-gated plan, with 1.0 and 2.0+ defined by quality bars rather than dates, is in [`docs/ROADMAP.md`](docs/ROADMAP.md). Recent changes are in [`CHANGELOG.md`](CHANGELOG.md).
+Still ahead in 0.1: rendering the existing rooms through the GPU path and sonifying them through the audio path (a shared geometry model), then **0.2 The Vertical Slice** (the GUI flagship room, to prove the feel). The version-gated plan, with 1.0 and 2.0+ defined by quality bars rather than dates, is in [`docs/ROADMAP.md`](docs/ROADMAP.md). Recent changes are in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Name
 
