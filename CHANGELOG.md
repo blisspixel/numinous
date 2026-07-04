@@ -36,3 +36,5 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   triangle corner resolves into a Sierpinski fractal, drawn from a fixed seed.
 - Fourth room, `golden-angle` (Number & Pattern): Vogel's phyllotaxis model;
   at the golden angle the seeds pack into a sunflower spiral, and `t` detunes it.
+- Fifth room, `galton-board` (Chance & Order): thousands of coin-flip balls tally
+  into a bell curve (the Central Limit Theorem); `t` biases the coin.
