@@ -34,3 +34,5 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   for rooms, so renders and tests are deterministic.
 - Third room, `chaos-game` (Emergence): repeatedly jumping halfway to a random
   triangle corner resolves into a Sierpinski fractal, drawn from a fixed seed.
+- Fourth room, `golden-angle` (Number & Pattern): Vogel's phyllotaxis model;
+  at the golden angle the seeds pack into a sunflower spiral, and `t` detunes it.
