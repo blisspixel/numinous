@@ -180,4 +180,11 @@ mod tests {
                 .contains("Central Limit Theorem")
         );
     }
+
+    #[test]
+    fn sound_uses_the_default_tone() {
+        // Galton does not override sound, so it gets the default single tone.
+        let spec = GaltonBoard::new().sound(0.0);
+        assert_eq!(spec.notes.len(), 1);
+    }
 }

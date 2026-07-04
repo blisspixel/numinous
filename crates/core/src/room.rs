@@ -5,6 +5,7 @@
 //! audio, parameters, challenges, and reveals join the trait as those systems
 //! come online.
 
+use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
 /// Static, human- and agent-readable description of a room.
@@ -41,4 +42,12 @@ pub trait Room {
     /// The revelation: the short, true insight that reframes what the player
     /// just did (see `docs/INSIGHTS.md`). Surfaced only when asked, never pushed.
     fn reveal(&self) -> &'static str;
+
+    /// This room's sound at phase `t` (the "everything is an instrument" pillar,
+    /// see `docs/SOUND.md`). The default is a single tone that rises with `t`;
+    /// rooms override this to give their own voice.
+    fn sound(&self, t: f64) -> SoundSpec {
+        let octaves = t.clamp(0.0, 1.0) as f32;
+        SoundSpec::tone(220.0 * 2.0_f32.powf(octaves), 1.5, 0.3)
+    }
 }

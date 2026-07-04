@@ -6,6 +6,7 @@
 //! falls. `t` picks the number. See `docs/ROOMS.md` and `docs/INSIGHTS.md`.
 
 use crate::room::{Room, RoomMeta};
+use crate::sound::{Note, SoundSpec};
 use crate::surface::Surface;
 
 /// The starting number at `t = 0` (27 is famous for its long, wild orbit).
@@ -79,6 +80,26 @@ impl Room for Collatz {
         "Every number ever tested falls to 1. Nobody on Earth can prove they all \
          do. It looks like a rule a child could follow, and it has defeated every \
          mathematician for 90 years. You are playing with an open mystery."
+    }
+
+    fn sound(&self, t: f64) -> SoundSpec {
+        // Play the orbit: each value a note, pitched by its log2, stepping in time.
+        let orbit = collatz_orbit(Self::start_for(t));
+        let max = orbit.iter().copied().max().unwrap_or(1);
+        let log_max = (max as f32).log2().max(1.0);
+        let step = 0.09_f32;
+        let notes: Vec<Note> = orbit
+            .iter()
+            .enumerate()
+            .map(|(i, &value)| Note {
+                freq: 220.0 * 2.0_f32.powf((value as f32).log2() / log_max),
+                start: i as f32 * step,
+                dur: step * 1.6,
+                amp: 0.25,
+            })
+            .collect();
+        let duration = orbit.len() as f32 * step + 0.3;
+        SoundSpec { duration, notes }
     }
 }
 
@@ -156,5 +177,13 @@ mod tests {
     #[test]
     fn reveal_names_the_mystery() {
         assert!(Collatz::new().reveal().contains("prove they all"));
+    }
+
+    #[test]
+    fn sound_follows_the_orbit() {
+        // The orbit of 27 is long, so its melody has many notes.
+        let spec = Collatz::new().sound(0.0);
+        assert!(spec.notes.len() > 5);
+        assert!(spec.duration > 0.0);
     }
 }

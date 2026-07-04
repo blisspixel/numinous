@@ -71,6 +71,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   square pixels while staying correct in the terminal (characters are tall).
 - Per-room accent colors (`RoomMeta.accent`): each room has a signature color the
   `Raster` draws in, so image renders are distinct and on-brand.
+- Room sonification (`crates/core` `SoundSpec`): every room can describe its own
+  sound as timed sine notes, rendered to samples device-free (deterministic,
+  testable). `Room::sound` defaults to a rising tone; Lissajous plays its two
+  frequencies as a chord, Times Tables pitches with the multiplier, and Collatz
+  plays its orbit as a melody. `numinous sonify <room> --out file.wav` writes it.
 
 ### Changed
 - Rooms render through `Surface` instead of a concrete `Canvas` (the `render`

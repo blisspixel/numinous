@@ -8,6 +8,7 @@
 use std::f64::consts::{FRAC_PI_2, TAU};
 
 use crate::room::{Room, RoomMeta};
+use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
 /// The fixed x-axis frequency; `t` sweeps the y-axis frequency against it.
@@ -86,6 +87,12 @@ impl Room for Lissajous {
          a 2:3 ratio is a perfect fifth. You are not drawing a curve, you are \
          seeing a chord. This is exactly what old oscilloscopes showed."
     }
+
+    fn sound(&self, t: f64) -> SoundSpec {
+        // The two axis frequencies played together: the figure you see is this chord.
+        let fy = Self::freq_y_for(t) as f32;
+        SoundSpec::chord(&[110.0 * FREQ_X as f32, 110.0 * fy], 1.5, 0.25)
+    }
 }
 
 #[cfg(test)]
@@ -141,5 +148,11 @@ mod tests {
     #[test]
     fn reveal_names_the_interval() {
         assert!(Lissajous::new().reveal().contains("perfect fifth"));
+    }
+
+    #[test]
+    fn sound_is_a_two_note_chord() {
+        let spec = Lissajous::new().sound(0.0);
+        assert_eq!(spec.notes.len(), 2);
     }
 }

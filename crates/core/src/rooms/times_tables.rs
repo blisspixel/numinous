@@ -8,6 +8,7 @@
 use std::f64::consts::{FRAC_PI_2, TAU};
 
 use crate::room::{Room, RoomMeta};
+use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
 /// Number of points placed around the circle. Higher is smoother and denser.
@@ -74,6 +75,12 @@ impl Room for TimesTables {
          outline of the Mandelbrot set's main body: a homework grid and the most \
          complex object in mathematics trace the same shape."
     }
+
+    fn sound(&self, t: f64) -> SoundSpec {
+        // Pitch rises with the multiplier k; landing on a whole number sounds clean.
+        let k = (K_MIN + K_SWEEP * t.clamp(0.0, 1.0)) as f32;
+        SoundSpec::tone(110.0 * k, 1.5, 0.3)
+    }
 }
 
 #[cfg(test)]
@@ -92,6 +99,13 @@ mod tests {
     #[test]
     fn reveal_names_the_connection() {
         assert!(TimesTables::new().reveal().contains("Mandelbrot"));
+    }
+
+    #[test]
+    fn sound_is_a_single_tone() {
+        let spec = TimesTables::new().sound(0.0);
+        assert_eq!(spec.notes.len(), 1);
+        assert!(spec.notes[0].freq > 0.0);
     }
 
     #[test]
