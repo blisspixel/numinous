@@ -98,7 +98,7 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 
 **0.1 in progress.** The headless core and two of the three faces are built and green (Rust 1.96.0): fmt clean, clippy `-D warnings` clean, tests passing, line coverage above 90% with an enforced gate. What exists today:
 
-- **`crates/core`**: the `Room` trait (with `reveal()`), a deterministic ASCII `Canvas`, a seeded `SplitMix64` RNG, the registry, and **five rooms** across three Wings, Times Tables, Cellular Automata, Chaos Game, Golden Angle (Number & Pattern / Emergence), and Galton Board (Chance & Order).
+- **`crates/core`**: the `Room` trait (with `reveal()`), a deterministic ASCII `Canvas`, a seeded `SplitMix64` RNG, the registry, and **nine rooms** across four Wings, Times Tables, Golden Angle, Prime Spirals (Number & Pattern); Cellular Automata, Chaos Game, Collatz (Emergence); Galton Board, Buffon's Needle (Chance & Order); and Lissajous (Waves & Sound).
 - **`faces/cli`** (`numinous`): `rooms`, `describe`, `render` (rooms drawn as ASCII in the terminal), with `--json`.
 - **`faces/mcp`** (`numinous-mcp`): a JSON-RPC 2.0 stdio server so an agent can `list_rooms`, `describe_room`, `reveal_room`, and `play_room` (getting the render back as text).
 - **Engineering**: edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, a house-style guard, an 80%-line coverage gate, and CI across three OSes.

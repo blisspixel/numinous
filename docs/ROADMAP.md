@@ -23,9 +23,9 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry); the CLI face (`numinous`) and the MCP face (`numinous-mcp`); five rooms (Times Tables, Cellular Automata, Chaos Game, Golden Angle, Galton Board) across three Wings; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% coverage gate, three-OS CI). All green: fmt, clippy, tests, and coverage above 90%.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry); the CLI face (`numinous`) and the MCP face (`numinous-mcp`); **nine rooms across four Wings** (Number & Pattern: Times Tables, Golden Angle, Prime Spirals; Emergence: Cellular Automata, Chaos Game, Collatz; Chance & Order: Galton Board, Buffon's Needle; Waves & Sound: Lissajous); the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% coverage gate, three-OS CI). All green: fmt, clippy, tests, and coverage above 96%.
 - **In progress (0.1 remainder):** the wgpu offscreen render and cpal audio "see and hear" hello-world, and the GUI Cabinet shell.
-- **Next:** more CPU-verifiable rooms (Lissajous, Prime Spirals, Collatz, Buffon's Needle), then 0.2 the GUI vertical slice.
+- **Next:** the wgpu + cpal path (needs a confirmed headless verification route), then 0.2 the GUI vertical slice.
 
 ## Pre-1.0 (the 0.x line): earning the right to 1.0
 
