@@ -55,6 +55,31 @@ All subtle, all optional, layered from "a curious person notices in an hour" to 
 7. **In-character everything.** The credits, the changelog, the loading lines, the about screen, the settings descriptions, all written from inside the premise, never breaking character, never explaining.
 8. **Seasonal transmissions.** Pi Day, Tau Day, e Day, primes' birthdays: the dimension gets stronger, more bleeds through. Quiet, dated, real.
 
+## The Cult of Pythagoras (the first thread built)
+
+Running under the Constants is an older, quieter order. The Pythagoreans were a
+real secret society who held that the universe is literally made of number and
+harmony, swore each other to silence, and (the legend goes) drowned Hippasus for
+revealing that the square root of two is irrational. That is the tone: some truths
+are beautiful and dangerous, and the Order would rather you did not say them aloud.
+
+It follows every guardrail above: never announced, never gates anything, deadpan,
+reverent not menacing. It is found the way a math person finds things, by asking
+about the right names.
+
+**Built now (the seed):** a few names are not rooms, yet they answer. `numinous
+describe hippasus` (also `pythagoras`, `tetractys`, `akousma`, `harmonia`, and
+`odd`) returns an *akousma*, a "thing heard," in the Order's voice, instead of a
+not-found error. The Pythagoreans held odd numbers to be limited and good, which
+is why one akousma is literally "question things that are odd." Logic lives in
+`crates/core/src/secret.rs`, wired through the CLI `describe` path; it is shared,
+so the app and MCP can carry the same whispers.
+
+**To scatter next:** a reveal whose held second layer is Pythagorean, the number
+10 (the tetractys) recurring where it should not, a quiz option that should not
+exist, the fifth and octave turning up in the harmonograph's readout. Breadcrumbs,
+never a trail of arrows.
+
 ## The layers, on purpose
 
 The lore is built so that different depths of attention are all rewarded, and none is required:

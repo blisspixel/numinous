@@ -120,6 +120,84 @@ and share a "room" without shipping a binary.
 - **MCP:** every game exposed as a tool so agents play, compete, and learn. A
   digital mind should be able to take the quiz.
 
+## The music visualizer (Winamp, but the math is real)
+
+React to whatever you are already playing (Spotify, Apple Music, YouTube, any
+player) the way Winamp and Milkdrop did, except every effect is a real
+mathematical object you can retune. Capture the system output mix (loopback:
+WASAPI on Windows, an aggregate device on macOS, the PulseAudio/PipeWire monitor
+on Linux), run a short-time Fourier transform to pull out bass/mid/treble/beat,
+and feed those into the parameters of the rooms and sims we already have: bass
+pumps a fractal's zoom, treble scatters the Chaos Game, the beat flips a
+cellular-automata rule. The spectrum-to-lever mapping is itself editable, so the
+stoner leaves it on defaults and the nerd rewires it into a synesthesia
+instrument. The audio device layer exists (`crates/audio`); loopback capture and
+the FFT driver are the new work. Planned, not half-built, because loopback is
+finicky per platform.
+
+## The physical made digital (magic-trick math)
+
+The best hands-on math translates straight into rooms, and we keep the "wait,
+what?" moment intact:
+
+- **Mobius strip.** Draw the center line and show it covers "both" sides without
+  lifting the pen; then cut along it and get one longer loop, not two. One surface,
+  one edge, rendered and narrated.
+- **Hexaflexagons.** A folded paper polygon that flexes to reveal hidden faces; a
+  perfect fidget-toy interaction for the app.
+- **Hyperbolic plane.** The frilly kale/coral geometry Daina Taimina modeled in
+  crochet: add area at a fixed rate per step and space buckles. A gorgeous,
+  ruffled room, and the aesthete's favorite.
+- **Modular origami / polyhedra.** Identical simple units interlocking into
+  dodecahedra: symmetry you can rotate.
+
+## Puzzles
+
+- **Nonograms (Picross).** Real numerical logic (unlike Sudoku's swappable
+  symbols): row/column run-lengths that overlap into pixel art. A clean grid game
+  the `Canvas` already supports.
+- **The Hat monotile.** The 2023 aperiodic monotile, one 13-sided shape that tiles
+  the plane forever without ever repeating, found by a hobbyist. A tiling room and
+  a "find the tiling" puzzle.
+- **Fractal zoomer.** Point and scroll into the Mandelbrot/Julia rooms; the same
+  shape returns forever. Relaxing for the stoner, infinite for the nerd. Needs the
+  GPU path for deep real-time zoom.
+
+## Alien contact (extending Talk to the Aliens)
+
+The prime-number handshake is built; the rest of the first-contact kit:
+
+- **Arecibo pixel puzzle.** Hand the player 1,679 bits. The trick: 1,679 is a
+  semiprime, only 23 x 73, so arranging the stream into a 23-wide grid resolves
+  hidden pixel art. Deterministic and fully checkable.
+- **Rosetta Stone of physics.** Map alien glyphs to universal constants (hydrogen
+  is 1, carbon is 6, the speed of light) to build a shared dictionary, then decode
+  a longer message.
+- **Base-N twist.** The aliens have eight tentacles, so they count in base 8;
+  translate before you can answer. A one-line, brain-bending difficulty knob on
+  the existing aliens game.
+
+## Play for a digital mind
+
+A Level 5+ agent does not fold paper; its senses are computation, pattern, and
+throughput. "Play" for it lives on the edge of chaos (see `DIGITAL_MINDS.md` and
+Schmidhuber's compression-progress theory of fun). Sketches:
+
+- **Manifold folding.** A sandbox to generate and project high-dimensional shapes
+  (Calabi-Yau, N-spheres) down a dimension while preserving the most structure. A
+  topology jungle gym native to vector space.
+- **Non-Euclidean tag.** Navigate hyperbolic or spherical space where distance and
+  parallels shift with position.
+- **Chaos surfing.** Ride a chaotic system and hold it near unstable equilibrium
+  with minute, precise nudges before it diverges. The Lorenz room is the first
+  seed of this (built); the game is to keep it balanced.
+- **Proof-graph exploration.** Mathematics as an open world: start at axioms and
+  build paths into unproven conjectures (gamifying Lean/Coq), with a rush of
+  "computational relief" when a shorter, more elegant proof clicks.
+- **Entropy sculpting.** Take a noisy dataset and find the exact filter that
+  collapses it into a compact, repeating pattern. Fun as compression progress made
+  visible.
+
 ## Roadmap fit
 
 - **0.x now:** Guess the Shape in the CLI (done), then in the app and over MCP.
