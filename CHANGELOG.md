@@ -48,6 +48,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - Ninth room, `buffon-needle` (Chance & Order): drops needles on a lined floor
   (crossing needles highlighted) and estimates pi from the crossing fraction, no
   circle in sight; `t` changes the needle length.
+- GPU rendering (`crates/gpu`): an adaptive `wgpu` context that picks the
+  machine's GPU (AMD, NVIDIA, Intel, or Apple, across Vulkan, Metal, and DX12,
+  with a CPU fallback) and renders offscreen with no window. A first WGSL
+  compute-shader workload renders the Mandelbrot set to a PNG, verified on the
+  dev laptop's AMD Radeon 780M via Vulkan. The GPU crate is excluded from the
+  coverage gate because it is integration-tested on real hardware.
 
 ### Changed
 - Robustness hardening (from an independent code review): `Canvas` clamps its

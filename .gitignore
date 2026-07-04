@@ -10,6 +10,10 @@
 /lcov.info
 *.profraw
 
+# Generated render outputs (the app writes these; they are not source).
+/mandelbrot.png
+/renders/
+
 # Cargo.lock IS committed (this is an application workspace); do not ignore it.
 
 # OS / editor cruft.
