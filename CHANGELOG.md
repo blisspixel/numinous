@@ -111,6 +111,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
     `t` walks `c` around a circle.
   - `barnsley-fern`: an iterated function system that grows a fern from four
     random affine maps; `t` grows it by adding points.
+- `harmonograph` (Waves & Sound): the curve a decaying two-pendulum machine
+  draws; `t` detunes the frequencies.
+- New wing, Chaos & Order, with `logistic-map`: the bifurcation diagram of
+  `x -> r*x*(1-x)`, order splitting into chaos; `t` zooms into the cascade.
+- `langtons-ant` (Emergence): an ant that makes chaos for ten thousand steps then
+  builds a highway; `t` runs the clock.
 
 ### Changed
 - Rooms render through `Surface` instead of a concrete `Canvas` (the `render`
