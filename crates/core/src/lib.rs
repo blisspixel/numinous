@@ -1,0 +1,24 @@
+//! Numinous headless core.
+//!
+//! This is the windowless engine that all three faces (App, CLI, MCP) build on
+//! (see `docs/INTERFACES.md`). It owns the [`Room`] contract, the room
+//! [`registry`], and a deterministic ASCII [`Canvas`].
+//!
+//! In this first increment the core is intentionally std-only and renders rooms
+//! as deterministic ASCII, which the CLI shows in the terminal and which agents
+//! can read as text. GPU rendering (`wgpu`), real-time audio (`cpal`), and the
+//! Studio runtime are layered on top of this contract in later increments; see
+//! `docs/ARCHITECTURE.md` and `docs/ROADMAP.md`.
+
+// The core is the library that everything depends on; hold it to the strictest
+// documentation bar (see docs/ENGINEERING.md).
+#![deny(missing_docs)]
+
+pub mod canvas;
+pub mod registry;
+pub mod room;
+pub mod rooms;
+
+pub use canvas::Canvas;
+pub use registry::{all_rooms, room_by_id};
+pub use room::{Room, RoomMeta};

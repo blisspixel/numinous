@@ -1,0 +1,36 @@
+# Numinous workspace.
+# Code-quality standards, version pins, and CI gates: see docs/ENGINEERING.md.
+[workspace]
+resolver = "3"
+members = ["crates/core", "faces/cli", "faces/mcp"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+# Placeholder license: confirm the project's license before any public release.
+license = "MIT OR Apache-2.0"
+rust-version = "1.85" # MSRV floor: edition 2024 requires >= 1.85. Pin exact stable in rust-toolchain.toml.
+repository = "https://github.com/pueo/numinous"
+
+[workspace.dependencies]
+# Internal crates.
+numinous-core = { path = "crates/core" }
+# Third-party (pin to latest GA at kickoff; see docs/ENGINEERING.md).
+clap = { version = "4", features = ["derive"] }
+serde_json = "1"
+
+# Lints applied to every crate via `[lints] workspace = true`.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+# TODO(0.2): promote clippy::pedantic to warn once the codebase is clean under it (see docs/ENGINEERING.md).
+
+# Release profile: documented, tuned for the shipped binary.
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"

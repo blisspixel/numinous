@@ -1,0 +1,20 @@
+# Rust build artifacts.
+/target
+**/*.rs.bk
+
+# Agent working files and local logs (never tracked).
+/.agent/
+/logs/
+
+# Coverage output.
+/lcov.info
+*.profraw
+
+# Cargo.lock IS committed (this is an application workspace); do not ignore it.
+
+# OS / editor cruft.
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
