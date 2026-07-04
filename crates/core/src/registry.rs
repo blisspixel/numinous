@@ -18,6 +18,7 @@ pub fn all_rooms() -> Vec<Box<dyn Room>> {
         Box::new(rooms::lissajous::Lissajous::new()),
         Box::new(rooms::prime_spirals::PrimeSpirals::new()),
         Box::new(rooms::collatz::Collatz::new()),
+        Box::new(rooms::buffon_needle::BuffonNeedle::new()),
     ]
 }
 
