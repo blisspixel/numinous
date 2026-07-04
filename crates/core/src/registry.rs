@@ -12,6 +12,7 @@ pub fn all_rooms() -> Vec<Box<dyn Room>> {
     vec![
         Box::new(rooms::times_tables::TimesTables::new()),
         Box::new(rooms::cellular_automata::CellularAutomata::new()),
+        Box::new(rooms::chaos_game::ChaosGame::new()),
     ]
 }
 

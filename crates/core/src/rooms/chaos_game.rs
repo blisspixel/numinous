@@ -1,0 +1,129 @@
+//! Chaos Game: a Sierpinski triangle drawn by pure chance.
+//!
+//! Start somewhere, then repeatedly pick a random corner of a triangle and move
+//! a fixed fraction of the way toward it, leaving a dot each time. There is no
+//! triangle in the rule, yet a perfect Sierpinski fractal appears. `t` tunes the
+//! jump fraction (0.5 is the iconic value). See `docs/ROOMS.md`.
+
+use crate::canvas::Canvas;
+use crate::rng::SplitMix64;
+use crate::room::{Room, RoomMeta};
+
+/// Fixed seed so the render reproduces exactly (determinism, see `docs/QUALITY.md`).
+const SEED: u64 = 0x0DDB_1A5E_5EED_1234;
+/// Iterations per cell, capped so large canvases stay fast.
+const ITERS_PER_CELL: usize = 6;
+const MAX_ITERS: usize = 300_000;
+/// Discard the first few points so the transient toward the attractor does not show.
+const WARMUP: usize = 16;
+
+/// The Chaos Game room.
+#[derive(Debug, Default)]
+pub struct ChaosGame;
+
+impl ChaosGame {
+    /// Create the room.
+    #[must_use]
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// The jump fraction selected by phase `t`; 0.5 (the Sierpinski value) at `t = 0`.
+    fn ratio_for(t: f64) -> f64 {
+        0.5 + 0.12 * t.clamp(0.0, 1.0)
+    }
+}
+
+impl Room for ChaosGame {
+    fn meta(&self) -> RoomMeta {
+        RoomMeta {
+            id: "chaos-game",
+            title: "Chaos Game",
+            wing: "Emergence",
+            blurb: "Jump halfway to a random corner of a triangle, over and over, and pure chance \
+                    resolves into a perfect Sierpinski fractal. t tunes the jump fraction.",
+        }
+    }
+
+    fn render_ascii(&self, canvas: &mut Canvas, t: f64) {
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
+        }
+        let ratio = Self::ratio_for(t);
+        let (fw, fh) = (width as f64, height as f64);
+        let vertices = [
+            (fw / 2.0, 0.0),      // apex
+            (0.0, fh - 1.0),      // bottom left
+            (fw - 1.0, fh - 1.0), // bottom right
+        ];
+
+        let mut rng = SplitMix64::new(SEED);
+        let (mut px, mut py) = (fw / 2.0, fh / 2.0);
+        let iterations = width
+            .saturating_mul(height)
+            .saturating_mul(ITERS_PER_CELL)
+            .min(MAX_ITERS);
+        for i in 0..iterations {
+            let corner = vertices[rng.below(3) as usize];
+            px = px * (1.0 - ratio) + corner.0 * ratio;
+            py = py * (1.0 - ratio) + corner.1 * ratio;
+            if i >= WARMUP {
+                canvas.plot(px.round() as i32, py.round() as i32, '*');
+            }
+        }
+    }
+
+    fn reveal(&self) -> &'static str {
+        "Every dot landed at random, and there is no triangle anywhere in the \
+         rule, only 'jump halfway to a random corner'. Yet a perfect Sierpinski \
+         fractal appears every time. Randomness has a shape."
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ChaosGame;
+    use crate::canvas::Canvas;
+    use crate::room::Room;
+
+    #[test]
+    fn ratio_is_one_half_at_zero() {
+        assert!((ChaosGame::ratio_for(0.0) - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn render_is_deterministic() {
+        let room = ChaosGame::new();
+        let mut a = Canvas::new(48, 24);
+        let mut b = Canvas::new(48, 24);
+        room.render_ascii(&mut a, 0.0);
+        room.render_ascii(&mut b, 0.0);
+        assert_eq!(a.to_text(), b.to_text());
+    }
+
+    #[test]
+    fn render_produces_ink() {
+        let room = ChaosGame::new();
+        let mut canvas = Canvas::new(48, 24);
+        room.render_ascii(&mut canvas, 0.0);
+        assert!(canvas.ink_count() > 10);
+    }
+
+    #[test]
+    fn zero_sized_and_extreme_inputs_do_not_panic() {
+        let room = ChaosGame::new();
+        let mut empty = Canvas::new(0, 0);
+        room.render_ascii(&mut empty, 0.5);
+        let mut canvas = Canvas::new(8, 8);
+        for t in [-3.0, 0.0, 0.999, 4.0] {
+            room.render_ascii(&mut canvas, t);
+        }
+    }
+
+    #[test]
+    fn reveal_mentions_the_shape_of_randomness() {
+        assert!(ChaosGame::new().reveal().contains("Sierpinski"));
+    }
+}
