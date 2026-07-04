@@ -23,6 +23,9 @@ pub fn all_rooms() -> Vec<Box<dyn Room>> {
         Box::new(rooms::mandelbrot::Mandelbrot::new()),
         Box::new(rooms::julia::Julia::new()),
         Box::new(rooms::barnsley_fern::BarnsleyFern::new()),
+        Box::new(rooms::harmonograph::Harmonograph::new()),
+        Box::new(rooms::logistic_map::LogisticMap::new()),
+        Box::new(rooms::langtons_ant::LangtonsAnt::new()),
     ]
 }
 
