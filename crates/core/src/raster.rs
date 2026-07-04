@@ -77,6 +77,24 @@ impl Raster {
     pub fn lit_count(&self) -> usize {
         self.pixels.iter().filter(|&&p| p != BACKGROUND).count()
     }
+
+    /// Copy another raster's pixels into this one with its top-left at `(x, y)`,
+    /// clipping anything that falls outside. Used to tile rooms into a sheet.
+    pub fn blit(&mut self, other: &Raster, x: usize, y: usize) {
+        for oy in 0..other.height {
+            let ty = y + oy;
+            if ty >= self.height {
+                break;
+            }
+            for ox in 0..other.width {
+                let tx = x + ox;
+                if tx >= self.width {
+                    break;
+                }
+                self.pixels[ty * self.width + tx] = other.pixels[oy * other.width + ox];
+            }
+        }
+    }
 }
 
 impl Surface for Raster {
@@ -163,5 +181,17 @@ mod tests {
     #[test]
     fn pixels_have_square_aspect() {
         assert!((Raster::new(4, 4).char_aspect() - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn blit_copies_a_tile_and_clips() {
+        let mut tile = Raster::new(2, 2);
+        tile.plot(0, 0, '*');
+        tile.plot(1, 1, '*');
+        let mut sheet = Raster::new(4, 4);
+        sheet.blit(&tile, 1, 1); // places the two lit pixels at (1,1) and (2,2)
+        assert_eq!(sheet.lit_count(), 2);
+        sheet.blit(&tile, 3, 3); // partly off the edge: only (3,3) lands
+        assert_eq!(sheet.lit_count(), 3);
     }
 }

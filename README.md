@@ -108,6 +108,8 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 
 Still ahead in 0.1: rendering the existing rooms through the GPU path and sonifying them through the audio path (a shared geometry model), then **0.2 The Vertical Slice** (the GUI flagship room, to prove the feel). The version-gated plan, with 1.0 and 2.0+ defined by quality bars rather than dates, is in [`docs/ROADMAP.md`](docs/ROADMAP.md). Recent changes are in [`CHANGELOG.md`](CHANGELOG.md).
 
+**To check it yourself:** see [`VERIFY.md`](VERIFY.md), or run `scripts\verify.ps1` (Windows) or `bash scripts/verify.sh` (macOS/Linux). It runs every gate and regenerates the images and sounds into `renders/` (start with `renders/contact.png`).
+
 ## Name
 
 `Numinous` is the working title. Shortlist we're choosing from: **Numinous**, **Aleph**, **Manifold**, **Æther**, **Lemniscate**, **Eureka**. Pick lives in [`docs/VISION.md`](docs/VISION.md).

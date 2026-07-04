@@ -83,6 +83,18 @@ enum Command {
         #[arg(long, default_value_t = 800)]
         height: usize,
     },
+    /// Render every room into one tiled contact-sheet image.
+    ContactSheet {
+        /// Where to write the sheet.
+        #[arg(long, default_value = "renders/contact.png")]
+        out: PathBuf,
+        /// Number of columns in the grid.
+        #[arg(long, default_value_t = 3)]
+        cols: usize,
+        /// Size of each room tile in pixels.
+        #[arg(long, default_value_t = 320)]
+        tile: usize,
+    },
 }
 
 fn main() -> ExitCode {
@@ -104,6 +116,7 @@ fn main() -> ExitCode {
         },
         Command::Sonify { id, t, out } => emit(sonify_wav(&id, t, &out)),
         Command::Gallery { dir, width, height } => emit(gallery(&dir, width, height)),
+        Command::ContactSheet { out, cols, tile } => emit(contact_sheet(&out, cols, tile)),
     }
 }
 
@@ -178,7 +191,17 @@ fn render_png(
     let room = room_by_id(id).ok_or_else(|| not_found_message(id))?;
     let mut raster = Raster::with_accent(width, height, room.meta().accent);
     room.render(&mut raster, t);
+    write_png(path, &raster)?;
+    Ok(format!(
+        "wrote {} ({}x{})\n",
+        path.display(),
+        raster.width(),
+        raster.height()
+    ))
+}
 
+/// Encode a raster as an RGBA PNG at `path`.
+fn write_png(path: &Path, raster: &Raster) -> Result<(), String> {
     let (w, h) = (raster.width(), raster.height());
     let file =
         File::create(path).map_err(|e| format!("could not create {}: {e}", path.display()))?;
@@ -191,7 +214,28 @@ fn render_png(
     writer
         .write_image_data(&raster.to_rgba())
         .map_err(|e| format!("png write failed: {e}"))?;
-    Ok(format!("wrote {} ({w}x{h})\n", path.display()))
+    Ok(())
+}
+
+/// Render every room into one tiled contact-sheet PNG.
+fn contact_sheet(path: &Path, cols: usize, tile: usize) -> Result<String, String> {
+    let rooms = all_rooms();
+    let cols = cols.max(1);
+    let rows = rooms.len().div_ceil(cols);
+    let mut sheet = Raster::new(cols * tile, rows * tile);
+    for (i, room) in rooms.iter().enumerate() {
+        let mut cell = Raster::with_accent(tile, tile, room.meta().accent);
+        room.render(&mut cell, 0.0);
+        sheet.blit(&cell, (i % cols) * tile, (i / cols) * tile);
+    }
+    write_png(path, &sheet)?;
+    Ok(format!(
+        "wrote contact sheet {} ({} rooms, {}x{})\n",
+        path.display(),
+        rooms.len(),
+        cols * tile,
+        rows * tile
+    ))
 }
 
 /// Render a room's sound to a 16-bit mono WAV at `path`, returning a status message.
@@ -385,5 +429,15 @@ mod tests {
         let files = std::fs::read_dir(&dir).expect("dir exists").count();
         assert_eq!(files, numinous_core::all_rooms().len());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn contact_sheet_writes_a_non_empty_file() {
+        let path = std::env::temp_dir().join("numinous_contact_test.png");
+        let message = super::contact_sheet(&path, 3, 32).expect("contact sheet");
+        assert!(message.contains("contact sheet"));
+        let size = std::fs::metadata(&path).expect("file exists").len();
+        assert!(size > 0);
+        let _ = std::fs::remove_file(&path);
     }
 }
