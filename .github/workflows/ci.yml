@@ -18,7 +18,7 @@ jobs:
         with:
           components: rustfmt, clippy
       - name: Install ALSA (for cpal)
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-dev
       - name: Format check
         run: cargo fmt --all --check
       - name: Clippy (deny warnings)
@@ -50,13 +50,13 @@ jobs:
         with:
           components: llvm-tools-preview
       - name: Install ALSA (for cpal)
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-dev
       - uses: taiki-e/install-action@cargo-llvm-cov
-      # The gpu and audio crates are integration-tested on real hardware (they
-      # need a GPU adapter and an audio device, which headless CI lacks), so they
-      # are excluded from the line-coverage gate.
+      # The gpu, audio, and app crates are integration-tested on real hardware
+      # (they need a GPU adapter, an audio device, or a window, which headless CI
+      # lacks), so they are excluded from the line-coverage gate.
       - name: Coverage gate
-        run: cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex 'crates[\\/](gpu|audio)[\\/]'
+        run: cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)|faces[\\/]app)[\\/]'
 
   build:
     name: build (${{ matrix.os }})
@@ -70,5 +70,5 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Install ALSA (Linux, for cpal)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-dev
       - run: cargo build --workspace --locked

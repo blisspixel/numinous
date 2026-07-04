@@ -6,6 +6,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Windowed app (`faces/app`, binary `numinous-app`): a real, resizable window
+  that shows a room animating in full color, rendered on the CPU via the shared
+  `Raster`, using `winit` for the window and `softbuffer` for a
+  toolkit-free pixel blit. Left/right switch rooms, space pauses, escape quits.
+  Cross-platform (macOS/Linux/Windows); verified launching on the dev laptop.
 - Headless core (`crates/core`): the `Room` trait, a deterministic ASCII `Canvas`
   with Bresenham line drawing, the room registry, and the flagship Times Tables
   room (modular multiplication on a circle).
