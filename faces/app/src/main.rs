@@ -26,6 +26,7 @@ const T_STEP: f64 = 0.004;
 struct App {
     window: Option<Rc<Window>>,
     surface: Option<softbuffer::Surface<Rc<Window>, Rc<Window>>>,
+    player: Option<numinous_audio::LoopPlayer>,
     rooms: Vec<Box<dyn Room>>,
     current: usize,
     t: f64,
@@ -37,10 +38,20 @@ impl App {
         Self {
             window: None,
             surface: None,
+            player: None,
             rooms: all_rooms(),
             current: 0,
             t: 0.0,
             paused: false,
+        }
+    }
+
+    /// Render the current room's sound at the current phase and send it to the
+    /// looping player, so the room you see is the room you hear.
+    fn update_audio(&self) {
+        if let Some(player) = &self.player {
+            let spec = self.rooms[self.current].sound(self.t);
+            player.set_samples(spec.render(player.sample_rate()));
         }
     }
 
@@ -58,6 +69,7 @@ impl App {
         if let Some(window) = &self.window {
             window.set_title(&self.title());
         }
+        self.update_audio();
     }
 
     fn draw(&mut self) {
@@ -115,6 +127,8 @@ impl ApplicationHandler for App {
         };
         self.window = Some(window);
         self.surface = Some(surface);
+        self.player = numinous_audio::LoopPlayer::new().ok();
+        self.update_audio();
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {

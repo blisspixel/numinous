@@ -7,6 +7,7 @@
 //! separate. See `docs/SOUND.md` and `docs/ARCHITECTURE.md`.
 
 use std::f32::consts::TAU;
+use std::sync::{Arc, Mutex};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
@@ -129,9 +130,115 @@ pub fn synthesize_sine(frequency: f32, sample_rate: u32, count: usize) -> Vec<f3
         .collect()
 }
 
+/// The looping sample buffer shared with the audio callback.
+struct LoopState {
+    samples: Vec<f32>,
+    pos: usize,
+}
+
+/// Read the next looping sample and advance the position; silence if empty.
+fn read_loop(state: &mut LoopState) -> f32 {
+    if state.samples.is_empty() {
+        return 0.0;
+    }
+    let value = state.samples[state.pos];
+    state.pos = (state.pos + 1) % state.samples.len();
+    value
+}
+
+/// Plays a sample buffer on the default device, looping, in the background.
+///
+/// Swap the buffer at any time with [`LoopPlayer::set_samples`] (for example
+/// when the visible room changes). The stream keeps running until the player is
+/// dropped.
+pub struct LoopPlayer {
+    _context: AudioContext,
+    _stream: cpal::Stream,
+    sample_rate: u32,
+    state: Arc<Mutex<LoopState>>,
+}
+
+impl LoopPlayer {
+    /// Open the default device and start a silent looping stream.
+    ///
+    /// # Errors
+    /// Returns an error string if the device or stream cannot be set up.
+    pub fn new() -> Result<Self, String> {
+        let context = AudioContext::new()?;
+        let sample_rate = context.sample_rate();
+        let channels = context.channels() as usize;
+        let config: cpal::StreamConfig = context.config.clone().into();
+        let state = Arc::new(Mutex::new(LoopState {
+            samples: Vec::new(),
+            pos: 0,
+        }));
+        let callback_state = state.clone();
+        let err_fn = |e| eprintln!("audio stream error: {e}");
+
+        let stream = match context.config.sample_format() {
+            cpal::SampleFormat::F32 => context.device.build_output_stream(
+                &config,
+                move |data: &mut [f32], _| {
+                    if let Ok(mut s) = callback_state.lock() {
+                        for frame in data.chunks_mut(channels) {
+                            let value = read_loop(&mut s);
+                            for out in frame {
+                                *out = value;
+                            }
+                        }
+                    }
+                },
+                err_fn,
+                None,
+            ),
+            cpal::SampleFormat::I16 => context.device.build_output_stream(
+                &config,
+                move |data: &mut [i16], _| {
+                    if let Ok(mut s) = callback_state.lock() {
+                        for frame in data.chunks_mut(channels) {
+                            let value = (read_loop(&mut s) * f32::from(i16::MAX)) as i16;
+                            for out in frame {
+                                *out = value;
+                            }
+                        }
+                    }
+                },
+                err_fn,
+                None,
+            ),
+            other => return Err(format!("unsupported sample format: {other:?}")),
+        }
+        .map_err(|e| format!("could not build stream: {e}"))?;
+        stream
+            .play()
+            .map_err(|e| format!("could not start stream: {e}"))?;
+
+        Ok(Self {
+            _context: context,
+            _stream: stream,
+            sample_rate,
+            state,
+        })
+    }
+
+    /// The device sample rate, so callers can render sounds at the right pitch.
+    #[must_use]
+    pub fn sample_rate(&self) -> u32 {
+        self.sample_rate
+    }
+
+    /// Replace the looping buffer (restarting from the beginning).
+    pub fn set_samples(&self, samples: Vec<f32>) {
+        if let Ok(mut s) = self.state.lock() {
+            s.samples = samples;
+            s.pos = 0;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{AMPLITUDE, synthesize_sine};
+    use super::{AMPLITUDE, LoopState, read_loop, synthesize_sine};
 
     #[test]
     fn synthesize_has_the_requested_length() {
@@ -164,5 +271,23 @@ mod tests {
             "value after one cycle was {}",
             samples[100]
         );
+    }
+
+    #[test]
+    fn read_loop_wraps_and_handles_empty() {
+        let mut empty = LoopState {
+            samples: vec![],
+            pos: 0,
+        };
+        assert_eq!(read_loop(&mut empty), 0.0);
+
+        let mut s = LoopState {
+            samples: vec![0.1, 0.2, 0.3],
+            pos: 0,
+        };
+        assert!((read_loop(&mut s) - 0.1).abs() < 1e-6);
+        assert!((read_loop(&mut s) - 0.2).abs() < 1e-6);
+        assert!((read_loop(&mut s) - 0.3).abs() < 1e-6);
+        assert!((read_loop(&mut s) - 0.1).abs() < 1e-6, "should wrap");
     }
 }

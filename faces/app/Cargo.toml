@@ -13,6 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 numinous-core = { workspace = true }
+numinous-audio = { path = "../../crates/audio" }
 winit = "0.30"
 softbuffer = "0.4"
 
