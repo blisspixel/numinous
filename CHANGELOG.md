@@ -43,6 +43,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   sweeps the second frequency.
 - Seventh room, `prime-spirals` (Number & Pattern): the Ulam spiral; primes light
   up and fall into diagonal streaks; `t` shifts the starting number.
+- Eighth room, `collatz` (Emergence): plots the log-scaled orbit of a starting
+  number as it falls to 1 (the unproven 3n+1 conjecture); `t` picks the number.
 
 ### Changed
 - Robustness hardening (from an independent code review): `Canvas` clamps its
