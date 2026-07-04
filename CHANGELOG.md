@@ -30,3 +30,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - Second room, `cellular-automata` (Emergence): elementary Wolfram rules on a
   line, rendered as a space-time diagram; Rule 90 draws a Sierpinski triangle.
   It appears automatically in the CLI and MCP faces through the registry.
+- Deterministic RNG (`crate::rng::SplitMix64`): seeded, reproducible randomness
+  for rooms, so renders and tests are deterministic.
+- Third room, `chaos-game` (Emergence): repeatedly jumping halfway to a random
+  triangle corner resolves into a Sierpinski fractal, drawn from a fixed seed.

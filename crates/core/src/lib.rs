@@ -16,9 +16,11 @@
 
 pub mod canvas;
 pub mod registry;
+pub mod rng;
 pub mod room;
 pub mod rooms;
 
 pub use canvas::Canvas;
 pub use registry::{all_rooms, room_by_id};
+pub use rng::SplitMix64;
 pub use room::{Room, RoomMeta};
