@@ -13,6 +13,7 @@ pub mod julia;
 pub mod langtons_ant;
 pub mod lissajous;
 pub mod logistic_map;
+pub mod lorenz;
 pub mod mandelbrot;
 pub mod prime_spirals;
 pub mod times_tables;

@@ -295,7 +295,13 @@ fn rooms_report(json: bool) -> String {
 
 /// One room's description, or a guiding error if the id is unknown.
 fn describe_report(id: &str, json: bool) -> Result<String, String> {
-    let room = room_by_id(id).ok_or_else(|| not_found_message(id))?;
+    let Some(room) = room_by_id(id) else {
+        // Not every name in the world is a room. A few of them answer anyway.
+        return match numinous_core::akousma(id) {
+            Some(whisper) => Ok(format!("{whisper}\n")),
+            None => Err(not_found_message(id)),
+        };
+    };
     let m = room.meta();
     Ok(if json {
         let mut value = meta_json(&m);
@@ -799,6 +805,13 @@ mod tests {
     fn sim_run_renders_and_reads_out() {
         let out = super::sim_run("wing", &["angle-of-attack=20".to_string()], 40, 12).expect("run");
         assert!(out.contains("STALL"), "got: {out}");
+    }
+
+    #[test]
+    fn describe_whispers_for_the_hidden_names() {
+        let out = super::describe_report("hippasus", false).expect("a whisper");
+        assert!(out.to_lowercase().contains("sea"), "got: {out}");
+        assert!(super::describe_report("not-a-room-nor-secret", false).is_err());
     }
 
     #[test]

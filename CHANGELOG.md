@@ -123,6 +123,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - `docs/PLAYFUL.md`: the design of the games and the Studio (Guess the Shape,
   Shape to Function via Fourier epicycles, the high-Wolfram ethos) across faces,
   plus the four-personas design (PhD nerd, stoner, aesthete, gamer).
+- `lorenz` (Chaos & Order): the Lorenz attractor and the butterfly effect; `t`
+  sweeps the parameter through the onset of chaos. Now 18 rooms across 6 wings.
+- A hidden Cult of Pythagoras easter egg (`crates/core` `secret`): a few unlisted
+  names (`hippasus`, `tetractys`, `pythagoras`, `harmonia`, `odd`, ...) answer
+  `numinous describe` with an akousma in the Order's voice instead of a not-found
+  error. Never announced; found by knowing. See `docs/LORE.md`.
+- Design capture in `docs/PLAYFUL.md`: the music visualizer plan (system-audio
+  loopback plus FFT driving room parameters), the physical-made-digital rooms
+  (Mobius, hexaflexagon, hyperbolic plane), the puzzle set (Nonograms, the Hat
+  monotile, fractal zoomer), the alien-contact kit (Arecibo, Rosetta, base-N), and
+  the digital-mind playground (manifold folding, chaos surfing, proof graphs).
 - Two more mini-games, each seeded and shared across faces via the core:
   - Crack the Code (`crates/core` `codebreaker`, `numinous crack`): defuse a
     math-clued bomb, Bulls and Cows with a digit-sum-and-parity opening clue.
