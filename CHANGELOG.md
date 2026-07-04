@@ -129,6 +129,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   - Talk to the Aliens (`crates/core` `aliens`, `numinous aliens`): continue the
     first-contact number sequences (primes, Fibonacci, powers of two, and more).
 
+- Sims (`crates/core` `sim`): a multi-lever interactive-simulation abstraction
+  (each lever has a range, default, and unit), separate from the single-knob
+  Room. A sim renders a picture and returns a plain-language readout of the
+  outcome (the optimization or the joke). Registry, `numinous sims` to list, and
+  `numinous sim <id> --set lever=value` to run. First three sims:
+  - `tribbles`: a logistic population that goes from a purring carpet to
+    boom-and-bust chaos when you crank the breeding rate.
+  - `wing`: lift versus angle of attack with a real stall past fifteen degrees
+    ("you are now a lawn dart").
+  - `black-hole`: Schwarzschild radius, time dilation, and spaghettification, with
+    an event horizon and photon ring drawn to scale.
+
 ### Changed
 - Rooms render through `Surface` instead of a concrete `Canvas` (the `render`
   method replaces `render_ascii`), which is what lets one room target both the
