@@ -30,7 +30,8 @@ impl SplitMix64 {
 
     /// Return the next value uniformly in `[0.0, 1.0)`.
     pub fn next_f64(&mut self) -> f64 {
-        // Take the top 53 bits so every representable double in the range is reachable.
+        // Use the top 53 bits: the result is one of the 2^53 evenly spaced
+        // multiples of 2^-53 in [0, 1), which is uniform to full double precision.
         (self.next_u64() >> 11) as f64 / (1u64 << 53) as f64
     }
 

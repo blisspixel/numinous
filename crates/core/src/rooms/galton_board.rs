@@ -15,6 +15,9 @@ const SEED: u64 = 0x6A17_0B04_5EED_ABCD;
 const BALLS: usize = 20_000;
 /// How far `t` biases the coin away from fair.
 const MAX_BIAS: f64 = 0.25;
+/// Cap on the simulated bin count, so the work stays bounded no matter how wide
+/// the canvas is. Wider canvases stretch this many bins across their columns.
+const MAX_SIM_BINS: usize = 256;
 
 /// The Galton Board room.
 #[derive(Debug, Default)]
@@ -69,12 +72,17 @@ impl Room for GaltonBoard {
         if width == 0 || height == 0 {
             return;
         }
-        let counts = Self::histogram(width, t);
+        let sim_bins = width.min(MAX_SIM_BINS);
+        let counts = Self::histogram(sim_bins, t);
         let max = counts.iter().copied().max().unwrap_or(0);
         if max == 0 {
             return;
         }
-        for (x, &count) in counts.iter().enumerate() {
+        for x in 0..width {
+            // Map the canvas column onto a simulated bin. This is the identity
+            // when the canvas fits, and stretches the bins across wider canvases.
+            let bin = (x * sim_bins / width).min(sim_bins - 1);
+            let count = counts[bin];
             let bar = ((count as f64 / max as f64) * height as f64).round() as usize;
             for row in 0..bar {
                 canvas.plot(x as i32, (height - 1 - row) as i32, '*');
@@ -139,6 +147,15 @@ mod tests {
     fn render_produces_ink() {
         let room = GaltonBoard::new();
         let mut canvas = Canvas::new(41, 16);
+        room.render_ascii(&mut canvas, 0.0);
+        assert!(canvas.ink_count() > 10);
+    }
+
+    #[test]
+    fn wide_canvas_stays_bounded_and_fills() {
+        // Wider than MAX_SIM_BINS: exercises the stretch path and stays fast.
+        let room = GaltonBoard::new();
+        let mut canvas = Canvas::new(600, 12);
         room.render_ascii(&mut canvas, 0.0);
         assert!(canvas.ink_count() > 10);
     }

@@ -150,8 +150,10 @@ fn meta_json(m: &RoomMeta) -> serde_json::Value {
 }
 
 fn to_pretty(value: &serde_json::Value) -> String {
-    // Serializing an already-constructed Value cannot fail.
-    serde_json::to_string_pretty(value).expect("serializing a JSON value cannot fail")
+    // Pretty-print, falling back to the compact form. Serializing an
+    // already-constructed Value does not fail in practice; this avoids any
+    // explicit panic in a production path.
+    serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
 }
 
 #[cfg(test)]
