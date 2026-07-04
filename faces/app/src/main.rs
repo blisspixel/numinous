@@ -12,7 +12,7 @@ use std::rc::Rc;
 
 use numinous_core::{Raster, Room, Surface, all_rooms};
 use winit::application::ApplicationHandler;
-use winit::event::{ElementState, KeyEvent, WindowEvent};
+use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::{Window, WindowId};
@@ -31,6 +31,7 @@ struct App {
     current: usize,
     t: f64,
     paused: bool,
+    dragging: bool,
 }
 
 impl App {
@@ -43,6 +44,7 @@ impl App {
             current: 0,
             t: 0.0,
             paused: false,
+            dragging: false,
         }
     }
 
@@ -57,7 +59,7 @@ impl App {
 
     fn title(&self) -> String {
         format!(
-            "Numinous  |  {}  (left/right: switch, space: pause, esc: quit)",
+            "Numinous  |  {}  (drag: scrub, left/right: switch, space: pause, esc: quit)",
             self.rooms[self.current].meta().title
         )
     }
@@ -150,12 +152,27 @@ impl ApplicationHandler for App {
                 Key::Named(NamedKey::Space) => self.paused = !self.paused,
                 _ => {}
             },
+            WindowEvent::MouseInput {
+                state,
+                button: MouseButton::Left,
+                ..
+            } => {
+                // Drag horizontally to scrub the room's phase directly.
+                self.dragging = state == ElementState::Pressed;
+            }
+            WindowEvent::CursorMoved { position, .. } if self.dragging => {
+                if let Some(window) = &self.window {
+                    let w = f64::from(window.inner_size().width.max(1));
+                    self.t = (position.x / w).clamp(0.0, 0.999);
+                    self.update_audio();
+                }
+            }
             _ => {}
         }
     }
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
-        if !self.paused {
+        if !self.paused && !self.dragging {
             self.t = if self.t + T_STEP >= 1.0 {
                 0.0
             } else {
