@@ -48,8 +48,10 @@ jobs:
         with:
           components: llvm-tools-preview
       - uses: taiki-e/install-action@cargo-llvm-cov
+      # The GPU crate is integration-tested on real hardware (it needs an adapter,
+      # which headless CI lacks), so it is excluded from the line-coverage gate.
       - name: Coverage gate
-        run: cargo llvm-cov --workspace --fail-under-lines 80
+        run: cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex 'crates[\\/]gpu[\\/]'
 
   build:
     name: build (${{ matrix.os }})

@@ -103,7 +103,9 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 - **`faces/mcp`** (`numinous-mcp`): a JSON-RPC 2.0 stdio server so an agent can `list_rooms`, `describe_room`, `reveal_room`, and `play_room` (getting the render back as text).
 - **Engineering**: edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, a house-style guard, an 80%-line coverage gate, and CI across three OSes.
 
-Still ahead in 0.1: the **wgpu** offscreen render and **cpal** audio "see and hear" hello-world, then **0.2 The Vertical Slice** (the GUI flagship room, to prove the feel). The version-gated plan, with 1.0 and 2.0+ defined by quality bars rather than dates, is in [`docs/ROADMAP.md`](docs/ROADMAP.md). Recent changes are in [`CHANGELOG.md`](CHANGELOG.md).
+- **`crates/gpu`**: an adaptive **wgpu** context that picks the machine's GPU (AMD / NVIDIA / Intel / Apple across Vulkan / Metal / DX12, with a CPU fallback) and renders offscreen with no window. A first compute-shader workload renders the Mandelbrot set to a PNG, verified on the dev laptop's AMD Radeon 780M.
+
+Still ahead in 0.1: **cpal** audio (system default device), rendering the existing rooms through the GPU path, then **0.2 The Vertical Slice** (the GUI flagship room, to prove the feel). The version-gated plan, with 1.0 and 2.0+ defined by quality bars rather than dates, is in [`docs/ROADMAP.md`](docs/ROADMAP.md). Recent changes are in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Name
 
