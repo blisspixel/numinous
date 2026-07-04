@@ -37,6 +37,7 @@ impl Room for TimesTables {
             wing: "Number & Pattern",
             blurb: "From each point n on a circle, draw a chord to point (n times k); \
                     a cardioid blooms out of the two-times table.",
+            accent: [40, 150, 190],
         }
     }
 
@@ -47,14 +48,16 @@ impl Room for TimesTables {
         let height = canvas.height() as f64;
         let cx = width / 2.0;
         let cy = height / 2.0;
-        // Terminal cells are about twice as tall as wide, so squash y by half to
-        // keep the circle looking round; fit within both extents with a margin.
-        let radius = (width / 2.0).min(height) * 0.9;
+        // Squash y by the surface's aspect (0.5 for tall terminal cells, 1.0 for
+        // square pixels) so the circle stays round on any surface.
+        let aspect = canvas.char_aspect();
+        // Fit both extents: x uses width/2, y uses radius*aspect <= height/2.
+        let radius = (width / 2.0).min(height / (2.0 * aspect)) * 0.9;
 
         let point = |i: usize| -> (i32, i32) {
             let angle = (i as f64 / POINTS as f64) * TAU - FRAC_PI_2;
             let x = cx + radius * angle.cos();
-            let y = cy + radius * angle.sin() * 0.5;
+            let y = cy + radius * angle.sin() * aspect;
             (x.round() as i32, y.round() as i32)
         };
 

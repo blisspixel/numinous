@@ -51,6 +51,7 @@ impl Room for Lissajous {
             wing: "Waves & Sound",
             blurb: "Two perpendicular oscillations, one per axis; a simple frequency ratio traces a \
                     stable figure and off-ratio it tumbles. t sweeps the second frequency.",
+            accent: [230, 90, 130],
         }
     }
 

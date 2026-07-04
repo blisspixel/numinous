@@ -67,6 +67,7 @@ impl Room for BuffonNeedle {
             wing: "Chance & Order",
             blurb: "Drop needles on a lined floor and count how many cross a line; the count \
                     secretly holds pi, with no circle in sight. t changes the needle length.",
+            accent: [140, 100, 230],
         }
     }
 

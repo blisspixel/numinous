@@ -18,6 +18,9 @@ pub struct RoomMeta {
     pub wing: &'static str,
     /// One-line description of what the room does.
     pub blurb: &'static str,
+    /// The room's signature accent color as `[r, g, b]`, added per stroke on the
+    /// near-black stage so overlapping strokes glow (see `docs/VISUALS.md`).
+    pub accent: [u8; 3],
 }
 
 /// A playable mathematical phenomenon.

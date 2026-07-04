@@ -21,6 +21,15 @@ pub trait Surface {
     /// Height in cells or pixels.
     fn height(&self) -> usize;
 
+    /// The vertical scale a room should apply to keep a round shape round.
+    ///
+    /// Pixel surfaces return `1.0`; the ASCII `Canvas` returns `0.5` because a
+    /// text character is about twice as tall as it is wide. A room drawing a
+    /// circle multiplies its y extent by this instead of hardcoding a factor.
+    fn char_aspect(&self) -> f64 {
+        1.0
+    }
+
     /// Mark a single point, clipping if out of bounds.
     fn plot(&mut self, x: i32, y: i32, mark: char);
 
