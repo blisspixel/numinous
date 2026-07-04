@@ -6,8 +6,8 @@
 //! triangle; Rule 30 pours out chaos; Rule 110 is Turing-complete. See
 //! `docs/ROOMS.md` and `docs/INSIGHTS.md`.
 
-use crate::canvas::Canvas;
 use crate::room::{Room, RoomMeta};
+use crate::surface::Surface;
 
 /// A curated tour of notable elementary rules, indexed by phase `t`.
 ///
@@ -45,7 +45,7 @@ impl Room for CellularAutomata {
         }
     }
 
-    fn render_ascii(&self, canvas: &mut Canvas, t: f64) {
+    fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();
         let height = canvas.height();
         if width == 0 || height == 0 {
@@ -113,8 +113,8 @@ mod tests {
         let room = CellularAutomata::new();
         let mut a = Canvas::new(41, 21);
         let mut b = Canvas::new(41, 21);
-        room.render_ascii(&mut a, 0.0);
-        room.render_ascii(&mut b, 0.0);
+        room.render(&mut a, 0.0);
+        room.render(&mut b, 0.0);
         assert_eq!(a.to_text(), b.to_text());
     }
 
@@ -122,7 +122,7 @@ mod tests {
     fn render_produces_ink() {
         let room = CellularAutomata::new();
         let mut canvas = Canvas::new(41, 21);
-        room.render_ascii(&mut canvas, 0.0);
+        room.render(&mut canvas, 0.0);
         assert!(canvas.ink_count() > 1);
     }
 
@@ -130,10 +130,10 @@ mod tests {
     fn zero_sized_and_extreme_inputs_do_not_panic() {
         let room = CellularAutomata::new();
         let mut empty = Canvas::new(0, 0);
-        room.render_ascii(&mut empty, 0.5);
+        room.render(&mut empty, 0.5);
         let mut canvas = Canvas::new(10, 10);
         for t in [-1.0, 0.0, 0.999, 2.0] {
-            room.render_ascii(&mut canvas, t);
+            room.render(&mut canvas, t);
         }
     }
 

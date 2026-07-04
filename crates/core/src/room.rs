@@ -5,7 +5,7 @@
 //! audio, parameters, challenges, and reveals join the trait as those systems
 //! come online.
 
-use crate::canvas::Canvas;
+use crate::surface::Surface;
 
 /// Static, human- and agent-readable description of a room.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,11 +28,12 @@ pub trait Room {
     /// This room's static metadata.
     fn meta(&self) -> RoomMeta;
 
-    /// Render a single deterministic frame into `canvas`.
+    /// Render a single deterministic frame into `surface`.
     ///
-    /// `t` is a normalized phase in `[0.0, 1.0)`; implementations should clamp
-    /// defensively and never panic on any value.
-    fn render_ascii(&self, canvas: &mut Canvas, t: f64);
+    /// The surface may be an ASCII `Canvas`, a pixel `Raster`, or any other
+    /// target. `t` is a normalized phase in `[0.0, 1.0)`; implementations should
+    /// clamp defensively and never panic on any value or surface size.
+    fn render(&self, surface: &mut dyn Surface, t: f64);
 
     /// The revelation: the short, true insight that reframes what the player
     /// just did (see `docs/INSIGHTS.md`). Surfaced only when asked, never pushed.

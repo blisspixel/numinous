@@ -5,8 +5,8 @@
 //! do. This room plots the (log-scaled) trajectory of a starting number as it
 //! falls. `t` picks the number. See `docs/ROOMS.md` and `docs/INSIGHTS.md`.
 
-use crate::canvas::Canvas;
 use crate::room::{Room, RoomMeta};
+use crate::surface::Surface;
 
 /// The starting number at `t = 0` (27 is famous for its long, wild orbit).
 const START_MIN: u64 = 27;
@@ -44,7 +44,7 @@ impl Room for Collatz {
         }
     }
 
-    fn render_ascii(&self, canvas: &mut Canvas, t: f64) {
+    fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let width = canvas.width();
         let height = canvas.height();
         if width == 0 || height == 0 {
@@ -128,8 +128,8 @@ mod tests {
         let room = Collatz::new();
         let mut a = Canvas::new(60, 20);
         let mut b = Canvas::new(60, 20);
-        room.render_ascii(&mut a, 0.0);
-        room.render_ascii(&mut b, 0.0);
+        room.render(&mut a, 0.0);
+        room.render(&mut b, 0.0);
         assert_eq!(a.to_text(), b.to_text());
     }
 
@@ -137,7 +137,7 @@ mod tests {
     fn render_produces_ink() {
         let room = Collatz::new();
         let mut canvas = Canvas::new(60, 20);
-        room.render_ascii(&mut canvas, 0.0);
+        room.render(&mut canvas, 0.0);
         assert!(canvas.ink_count() > 10);
     }
 
@@ -145,10 +145,10 @@ mod tests {
     fn zero_sized_and_extreme_inputs_do_not_panic() {
         let room = Collatz::new();
         let mut empty = Canvas::new(0, 0);
-        room.render_ascii(&mut empty, 0.5);
+        room.render(&mut empty, 0.5);
         let mut canvas = Canvas::new(5, 5);
         for t in [-2.0, 0.0, 0.999, 3.0] {
-            room.render_ascii(&mut canvas, t);
+            room.render(&mut canvas, t);
         }
     }
 

@@ -25,8 +25,9 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 - **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry); the CLI face (`numinous`) and the MCP face (`numinous-mcp`); **nine rooms across four Wings** (Number & Pattern: Times Tables, Golden Angle, Prime Spirals; Emergence: Cellular Automata, Chaos Game, Collatz; Chance & Order: Galton Board, Buffon's Needle; Waves & Sound: Lissajous); the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% coverage gate, three-OS CI). All green: fmt, clippy, tests, and coverage above 96%.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
-- **In progress (0.1 remainder):** rendering the existing rooms through the GPU path and sonifying them through the audio path (a shared geometry model feeding both), then the GUI Cabinet shell.
-- **Next:** the shared geometry model (rooms to GPU + audio), then 0.2 the GUI vertical slice.
+- **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
+- **In progress (0.1 remainder):** GPU-accelerating the room `Surface` (a `Raster`-on-`wgpu` path) and sonifying rooms through the audio path, then the GUI Cabinet shell.
+- **Next:** per-surface aspect handling (so pixel output is not vertically squashed), then 0.2 the GUI vertical slice.
 
 ## Pre-1.0 (the 0.x line): earning the right to 1.0
 
