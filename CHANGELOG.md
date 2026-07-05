@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The roadmap now names the game (`docs/ROADMAP.md`): a dedicated RPG-spine
+  workstream held to the Vampire Survivors bar, what is built (levels, lore,
+  locks, trophies, dailies, scores) and what is owed in priority order (the
+  Gauntlet run arc, choice-on-level-up, juice, streaks, synergies), with an
+  explicit exit bar (unprompted one-more-run behavior, math never the toll);
+  the 1.0 definition gains the matching clause, and the progress section
+  reflects the actual current state.
 - The trophy case (`crates/core` `trophies`, `numinous trophies`): fifteen
   deadpan achievements computed purely from the evidence (the journey and the
   score table), no separate bookkeeping, no way to hold one unearned. Earned
