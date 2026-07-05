@@ -45,6 +45,8 @@ struct App {
     studio_expr: Option<numinous_core::Expr>,
     /// The current parse error, shown gently under the input.
     studio_error: Option<String>,
+    /// GPU fractal renderer, when this machine has one (CPU raster otherwise).
+    gpu: Option<numinous_gpu::FractalRenderer>,
 }
 
 impl App {
@@ -64,6 +66,41 @@ impl App {
             studio_text: String::from("sin(a*x) + x/3"),
             studio_expr: numinous_core::parse("sin(a*x) + x/3").ok(),
             studio_error: None,
+            gpu: None,
+        }
+    }
+
+    /// GPU-render the current room if it has a real-time GPU path (the deep
+    /// fractal zooms), returning the RGBA frame; `None` means draw on the CPU.
+    fn gpu_frame(&mut self, width: usize, height: usize) -> Option<Vec<u8>> {
+        use std::f64::consts::TAU;
+        let id = self.rooms[self.current].meta().id;
+        let gpu = self.gpu.as_mut()?;
+        let (w, h) = (width as u32, height as u32);
+        match id {
+            "mandelbrot" => {
+                // Zoom from the whole set deep into the seahorse valley.
+                let zoom = 3.0 * 0.001_f64.powf(self.t) as f32;
+                Some(gpu.render(
+                    w,
+                    h,
+                    -0.745,
+                    0.113,
+                    zoom,
+                    400,
+                    numinous_gpu::Fractal::Mandelbrot,
+                ))
+            }
+            "julia" => {
+                // c walks a circle, morphing the set in real time.
+                let theta = TAU * self.t;
+                let c = numinous_gpu::Fractal::Julia {
+                    cx: (0.7885 * theta.cos()) as f32,
+                    cy: (0.7885 * theta.sin()) as f32,
+                };
+                Some(gpu.render(w, h, 0.0, 0.0, 3.2, 300, c))
+            }
+            _ => None,
         }
     }
 
@@ -189,7 +226,15 @@ impl App {
         };
         let (width, height) = (w.get() as usize, h.get() as usize);
 
-        // Render the frame fully before borrowing the window surface.
+        // Render the frame fully before borrowing the window surface. Fractal
+        // rooms take the GPU path when one exists (full-bleed, no HUD); all else
+        // draws on the CPU raster.
+        if !self.studio
+            && let Some(rgba) = self.gpu_frame(width, height)
+        {
+            self.blit(&rgba, width, height, width, height);
+            return;
+        }
         let room = &self.rooms[self.current];
         let mut raster = if self.studio {
             let mut raster = Raster::with_accent(width, height, [120, 220, 190]);
@@ -234,8 +279,17 @@ impl App {
 
         let rgba = raster.to_rgba();
         let (rw, rh) = (raster.width(), raster.height());
+        self.blit(&rgba, rw, rh, width, height);
+    }
 
-        // Now borrow the surface and blit.
+    /// Copy an RGBA frame (`rw` x `rh`) onto the window surface (`width` x `height`).
+    fn blit(&mut self, rgba: &[u8], rw: usize, rh: usize, width: usize, height: usize) {
+        let (Some(w), Some(h)) = (
+            NonZeroU32::new(width as u32),
+            NonZeroU32::new(height as u32),
+        ) else {
+            return;
+        };
         let Some(surface) = self.surface.as_mut() else {
             return;
         };
@@ -279,6 +333,7 @@ impl ApplicationHandler for App {
         self.window = Some(window);
         self.surface = Some(surface);
         self.player = numinous_audio::LoopPlayer::new().ok();
+        self.gpu = numinous_gpu::FractalRenderer::new().ok();
         self.update_audio();
     }
 
