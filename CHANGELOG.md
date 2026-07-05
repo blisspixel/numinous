@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Structured tool output (MCP, per the 2025-06-18 spec): munch and quiz grades
+  and the journey now return structuredContent alongside the prose, machine-
+  readable scores, verdicts, and progression, so agents, harnesses, and future
+  leaderboards consume results without parsing sentences.
+- `docs/AGENT_PLAY.md` gains a July 2026 survey of MCP-game conventions
+  (PokeAgent's living leaderboard, MCPlayerOne, the turn-based reference shape,
+  elicitation and sampling as the frontier, MCP-Atlas) and what each means here.
 - Munch (`crates/core` `munchers`, `numinous munch`, MCP `munch`): Number
   Munchers reborn. A seeded board of numbers and a rule (eat the primes, the
   multiples of n, the perfect squares); right bites +10, wrong bites -5, a

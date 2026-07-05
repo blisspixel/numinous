@@ -533,15 +533,22 @@ fn quiz_tool(args: &Value) -> Value {
     match args.get("guess").and_then(Value::as_str) {
         Some(guess) => {
             let letter = guess.trim().chars().next().map(|c| c.to_ascii_uppercase());
-            let verdict = if letter == Some(quiz.answer) {
-                "Correct!"
-            } else {
-                "Not quite."
-            };
-            tool_text(&format!(
-                "{verdict} The answer was {} ({}).\n\n{}",
-                quiz.answer, quiz.answer_title, quiz.answer_reveal
-            ))
+            let correct = letter == Some(quiz.answer);
+            let verdict = if correct { "Correct!" } else { "Not quite." };
+            tool_structured(
+                &format!(
+                    "{verdict} The answer was {} ({}).\n\n{}",
+                    quiz.answer, quiz.answer_title, quiz.answer_reveal
+                ),
+                json!({
+                    "game": "quiz",
+                    "seed": seed,
+                    "round": round,
+                    "correct": correct,
+                    "answer": quiz.answer.to_string(),
+                    "answerTitle": quiz.answer_title
+                }),
+            )
         }
         None => {
             let choices: Vec<String> = quiz
@@ -578,10 +585,22 @@ fn munch_tool(args: &Value) -> Value {
             } else {
                 "Munched."
             };
-            tool_text(&format!(
-                "{verdict} {} eaten, {} bad bites, {} left behind. Score: {} (seed {seed}, round {round}).",
-                outcome.hits, outcome.bad_bites, outcome.left_behind, outcome.score
-            ))
+            tool_structured(
+                &format!(
+                    "{verdict} {} eaten, {} bad bites, {} left behind. Score: {} (seed {seed}, round {round}).",
+                    outcome.hits, outcome.bad_bites, outcome.left_behind, outcome.score
+                ),
+                json!({
+                    "game": "munch",
+                    "seed": seed,
+                    "round": round,
+                    "hits": outcome.hits,
+                    "badBites": outcome.bad_bites,
+                    "leftBehind": outcome.left_behind,
+                    "perfect": outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0,
+                    "score": outcome.score
+                }),
+            )
         }
         None => tool_text(&format!(
             "{}\n{}\nCall munch again with your bites (1-based cell numbers).",
@@ -602,18 +621,31 @@ fn journey_tool(path: &std::path::Path) -> Value {
             wall.push_str(&format!("  LOCKED  LV {level:>2}  ???\n"));
         }
     }
-    tool_text(&format!(
-        "LV {:>2}  [{}]  {} XP\n\n{}\n\n{} of {} stars lit. {} answered well. {} heard.\n{}\n\n{wall}",
-        journey.level(),
-        journey.level_bar(20),
-        journey.sparks(),
-        numinous_core::constellation(&journey, 60, 18),
-        journey.visited.len(),
-        all_rooms().len(),
-        journey.wins,
-        journey.secrets,
-        journey.rank().name()
-    ))
+    tool_structured(
+        &format!(
+            "LV {:>2}  [{}]  {} XP\n\n{}\n\n{} of {} stars lit. {} answered well. {} heard.\n{}\n\n{wall}",
+            journey.level(),
+            journey.level_bar(20),
+            journey.sparks(),
+            numinous_core::constellation(&journey, 60, 18),
+            journey.visited.len(),
+            all_rooms().len(),
+            journey.wins,
+            journey.secrets,
+            journey.rank().name()
+        ),
+        json!({
+            "level": journey.level(),
+            "maxLevel": numinous_core::MAX_LEVEL,
+            "xp": journey.sparks(),
+            "starsLit": journey.visited.len(),
+            "starsTotal": all_rooms().len(),
+            "wins": journey.wins,
+            "plays": journey.plays,
+            "secrets": journey.secrets,
+            "rank": journey.rank().name()
+        }),
+    )
 }
 
 /// The `plot_expression` tool: an agent creates in the Studio.
@@ -716,6 +748,17 @@ fn tool_text(text: &str) -> Value {
     json!({ "content": [ { "type": "text", "text": text } ], "isError": false })
 }
 
+/// A successful tool result carrying text plus machine-readable structured
+/// content (per the 2025-06-18 spec), so agents and leaderboards can consume
+/// scores and state without parsing prose.
+fn tool_structured(text: &str, structured: Value) -> Value {
+    json!({
+        "content": [ { "type": "text", "text": text } ],
+        "structuredContent": structured,
+        "isError": false
+    })
+}
+
 /// A tool result that reports an error to the model (guiding, not fatal).
 fn tool_error(text: &str) -> Value {
     json!({ "content": [ { "type": "text", "text": text } ], "isError": true })
@@ -761,6 +804,29 @@ mod tests {
         assert!(names.contains(&"explain_joke"));
         assert!(names.contains(&"journey"));
         assert!(names.contains(&"munch"));
+    }
+
+    #[test]
+    fn game_results_carry_structured_content_for_leaderboards() {
+        let all: Vec<u64> = (1..=30).collect();
+        let munched = handle_request(&json!({
+            "jsonrpc":"2.0","id":70,"method":"tools/call",
+            "params":{"name":"munch","arguments":{"seed":7,"round":0,"bites":all}}
+        }))
+        .expect("tools/call must respond");
+        let s = &munched["result"]["structuredContent"];
+        assert_eq!(s["game"], "munch");
+        assert!(s["score"].is_i64() || s["score"].is_u64());
+        assert_eq!(s["leftBehind"], 0);
+
+        let quizzed = handle_request(&json!({
+            "jsonrpc":"2.0","id":71,"method":"tools/call",
+            "params":{"name":"quiz","arguments":{"seed":7,"round":0,"guess":"A"}}
+        }))
+        .expect("tools/call must respond");
+        let s = &quizzed["result"]["structuredContent"];
+        assert!(s["correct"].is_boolean());
+        assert!(s["answerTitle"].is_string());
     }
 
     #[test]
