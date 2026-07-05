@@ -1318,9 +1318,19 @@ fn munch(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
             );
         } else {
             println!(
-                "{} eaten, {} bad bites, {} left behind. +{} points.\n",
+                "{} eaten, {} bad bites, {} left behind. +{} points.",
                 outcome.hits, outcome.bad_bites, outcome.left_behind, outcome.score
             );
+            // The dense feedback: exactly which judgments went wrong.
+            if !outcome.wrongly_eaten.is_empty() {
+                let bad: Vec<String> = outcome.wrongly_eaten.iter().map(u64::to_string).collect();
+                println!("  Not {}: {}.", board.rule.describe(), bad.join(", "));
+            }
+            if !outcome.missed.is_empty() {
+                let missed: Vec<String> = outcome.missed.iter().map(u64::to_string).collect();
+                println!("  You walked past: {}.", missed.join(", "));
+            }
+            println!();
         }
         total += outcome.score;
     }

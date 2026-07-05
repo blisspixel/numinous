@@ -67,8 +67,10 @@ pub struct Board {
     pub rule: Rule,
 }
 
-/// The graded outcome of a set of bites.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The graded outcome of a set of bites, dense enough to learn from: not just
+/// the counts but the numbers themselves, so a player (or an agent mining its
+/// own trajectory) can see exactly which judgments were wrong.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Munched {
     /// Right bites: numbers eaten that fit the rule.
     pub hits: u32,
@@ -78,6 +80,10 @@ pub struct Munched {
     pub left_behind: u32,
     /// The score: hits and bonus minus penalties, floored at zero.
     pub score: i64,
+    /// The numbers wrongly eaten (the bad judgments, by value).
+    pub wrongly_eaten: Vec<u64>,
+    /// The fitting numbers left uneaten (the misses, by value).
+    pub missed: Vec<u64>,
 }
 
 /// Trial-division primality, plenty for board-sized numbers.
@@ -126,16 +132,18 @@ pub fn grade(board: &Board, bites: &[usize]) -> Munched {
         }
     }
     let mut hits = 0u32;
-    let mut bad_bites = 0u32;
-    let mut left_behind = 0u32;
+    let mut wrongly_eaten = Vec::new();
+    let mut missed = Vec::new();
     for (i, &value) in board.numbers.iter().enumerate() {
         match (board.rule.fits(value), eaten[i]) {
             (true, true) => hits += 1,
-            (true, false) => left_behind += 1,
-            (false, true) => bad_bites += 1,
+            (true, false) => missed.push(value),
+            (false, true) => wrongly_eaten.push(value),
             (false, false) => {}
         }
     }
+    let bad_bites = wrongly_eaten.len() as u32;
+    let left_behind = missed.len() as u32;
     let mut score = i64::from(hits) * HIT_POINTS - i64::from(bad_bites) * MISS_PENALTY;
     if left_behind == 0 && bad_bites == 0 && hits > 0 {
         score += PERFECT_BONUS;
@@ -145,6 +153,8 @@ pub fn grade(board: &Board, bites: &[usize]) -> Munched {
         bad_bites,
         left_behind,
         score: score.max(0),
+        wrongly_eaten,
+        missed,
     }
 }
 
@@ -205,6 +215,9 @@ mod tests {
             (1, 1, 1)
         );
         assert_eq!(sloppy.score, 10 - 5);
+        // Dense feedback: the exact numbers, not just the counts.
+        assert_eq!(sloppy.wrongly_eaten, vec![4]);
+        assert_eq!(sloppy.missed, vec![5]);
         // All wrong bites floor at zero, never negative.
         let awful = grade(&board, &[1, 3]);
         assert_eq!(awful.score, 0);

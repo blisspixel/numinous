@@ -79,6 +79,26 @@ survey found, and what each finding means for us:
   over 36 servers). Flat schemas, guiding errors, and deterministic behavior
   make a server usable in that world; we hold to all three.
 
+## Lessons from agentic-RL research (OPID, June 2026)
+
+OPID (On-Policy Skill Distillation for Agentic RL, arXiv:2606.26790) trains
+agents by mining their own completed trajectories for reusable skills, because
+outcome-only rewards are too sparse a signal to learn from efficiently. We are
+the environment, not the trainer, but the design duties transfer directly:
+
+- **Dense feedback is on us.** An environment that only says win or lose
+  starves the learner (human or agent). Adopted: Munch now names the exact
+  numbers wrongly eaten and the fits walked past, in prose and in structured
+  content; Crack was already dense (locked/loose per guess). Standing rule:
+  every game states not just the score but which judgments were wrong.
+- **Trajectories must be worth mining.** Deterministic seeds already make
+  every run replayable; result recaps should carry enough detail that a
+  learner can extract episode-level workflow lessons from them.
+- **Flag the critical moment.** OPID's step-level skills concentrate on
+  decisive states. For games, the post-round recap should point at the
+  decisive move (the bite that broke a perfect run, the guess that cracked the
+  code), which is also simply what a good coach does for a human.
+
 ## Next for agent play
 
 - Challenge gradients: "find the stall angle to one decimal" style optimization

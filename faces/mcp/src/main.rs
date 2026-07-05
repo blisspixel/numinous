@@ -632,6 +632,8 @@ fn munch_tool(args: &Value) -> Value {
                     "hits": outcome.hits,
                     "badBites": outcome.bad_bites,
                     "leftBehind": outcome.left_behind,
+                    "wronglyEaten": outcome.wrongly_eaten,
+                    "missed": outcome.missed,
                     "perfect": outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0,
                     "score": outcome.score
                 }),
