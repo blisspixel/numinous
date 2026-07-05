@@ -78,6 +78,15 @@ impl Raster {
         self.pixels.iter().filter(|&&p| p != BACKGROUND).count()
     }
 
+    /// Replace this raster's pixels from an RGBA byte buffer (alpha ignored;
+    /// extra or missing bytes are tolerated). Brings a post-processed frame,
+    /// for example a visual era, back onto a raster.
+    pub fn set_rgba(&mut self, rgba: &[u8]) {
+        for (pixel, bytes) in self.pixels.iter_mut().zip(rgba.chunks_exact(4)) {
+            *pixel = [bytes[0], bytes[1], bytes[2]];
+        }
+    }
+
     /// Copy another raster's pixels into this one with its top-left at `(x, y)`,
     /// clipping anything that falls outside. Used to tile rooms into a sheet.
     pub fn blit(&mut self, other: &Raster, x: usize, y: usize) {

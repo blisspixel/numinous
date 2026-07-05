@@ -47,6 +47,8 @@ struct App {
     studio_error: Option<String>,
     /// GPU fractal renderer, when this machine has one (CPU raster otherwise).
     gpu: Option<numinous_gpu::FractalRenderer>,
+    /// The visual era ('e' cycles: phosphor, 8-bit, vector, modern).
+    era: numinous_core::Era,
 }
 
 impl App {
@@ -67,6 +69,7 @@ impl App {
             studio_expr: numinous_core::parse("sin(a*x) + x/3").ok(),
             studio_error: None,
             gpu: None,
+            era: numinous_core::Era::default(),
         }
     }
 
@@ -142,8 +145,13 @@ impl App {
                 self.rooms[self.current].meta().title
             )
         } else {
+            let era = if self.era == numinous_core::Era::Modern {
+                String::new()
+            } else {
+                format!("  |  {}", self.era.name())
+            };
             format!(
-                "Numinous  |  {}  (drag: scrub, arrows: switch, i: reveal, s: the show, tab: studio, esc: quit)",
+                "Numinous  |  {}{era}  (drag: scrub, arrows: switch, i: reveal, e: era, s: the show, tab: studio, esc: quit)",
                 self.rooms[self.current].meta().title
             )
         }
@@ -230,8 +238,9 @@ impl App {
         // rooms take the GPU path when one exists (full-bleed, no HUD); all else
         // draws on the CPU raster.
         if !self.studio
-            && let Some(rgba) = self.gpu_frame(width, height)
+            && let Some(mut rgba) = self.gpu_frame(width, height)
         {
+            self.era.apply(&mut rgba, width, height);
             self.blit(&rgba, width, height, width, height);
             return;
         }
@@ -277,8 +286,9 @@ impl App {
             }
         }
 
-        let rgba = raster.to_rgba();
+        let mut rgba = raster.to_rgba();
         let (rw, rh) = (raster.width(), raster.height());
+        self.era.apply(&mut rgba, rw, rh);
         self.blit(&rgba, rw, rh, width, height);
     }
 
@@ -382,6 +392,12 @@ impl ApplicationHandler for App {
                         Key::Named(NamedKey::Space) => self.paused = !self.paused,
                         Key::Character(s) if s.as_str() == "i" => {
                             self.show_info = !self.show_info;
+                        }
+                        Key::Character(s) if s.as_str() == "e" => {
+                            self.era = self.era.next();
+                            if let Some(window) = &self.window {
+                                window.set_title(&self.title());
+                            }
                         }
                         Key::Character(s) if s.as_str() == "s" => {
                             self.the_show = !self.the_show;
