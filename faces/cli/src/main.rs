@@ -144,6 +144,9 @@ enum Command {
         /// Play today's shared puzzle (everyone gets the same one).
         #[arg(long)]
         daily: bool,
+        /// Hard mode: six shapes to tell apart (opens at LV 3).
+        #[arg(long)]
+        hard: bool,
         /// Mystery render width in columns.
         #[arg(long, default_value_t = 54)]
         width: usize,
@@ -197,6 +200,8 @@ enum Command {
         #[arg(long, default_value_t = 5)]
         rounds: usize,
     },
+    /// The answer. (Opens at LV 42.)
+    Answer,
     /// List the sims and their levers.
     Sims,
     /// Run a sim: render it and read the outcome. Set levers with --set name=value.
@@ -382,9 +387,23 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             rounds,
             seed,
             daily,
+            hard,
             width,
             height,
-        } => quiz(rounds, pick_seed(seed, daily), width, height, journey),
+        } => {
+            if hard && still_locked(journey, 3, "quiz --hard") {
+                return ExitCode::FAILURE;
+            }
+            let choices = if hard { 6 } else { 4 };
+            quiz(
+                rounds,
+                pick_seed(seed, daily),
+                width,
+                height,
+                choices,
+                journey,
+            )
+        }
         Command::Jokes { index } => {
             print!("{}", jokes_report(index));
             ExitCode::SUCCESS
@@ -398,14 +417,31 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             daily,
             digits,
             attempts,
-        } => crack(pick_seed(seed, daily), digits, attempts, journey),
+        } => {
+            if digits > 4 && still_locked(journey, 5, "crack --digits 5+") {
+                return ExitCode::FAILURE;
+            }
+            crack(pick_seed(seed, daily), digits, attempts, journey)
+        }
         Command::Seti {
             seed,
             daily,
             channels,
             rounds,
-        } => seti(pick_seed(seed, daily), channels, rounds, journey),
+        } => {
+            if channels > 4 && still_locked(journey, 7, "seti --channels 5+") {
+                return ExitCode::FAILURE;
+            }
+            seti(pick_seed(seed, daily), channels, rounds, journey)
+        }
         Command::Aliens { seed, rounds } => aliens(seed, rounds, journey),
+        Command::Answer => {
+            if still_locked(journey, numinous_core::MAX_LEVEL, "the answer") {
+                return ExitCode::FAILURE;
+            }
+            println!("{}", answer_text());
+            ExitCode::SUCCESS
+        }
         Command::Sims => {
             print!("{}", sims_report());
             ExitCode::SUCCESS
@@ -415,7 +451,10 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             set,
             width,
             height,
-        } => emit(sim_run(&id, &set, width, height)),
+        } => {
+            journey.play();
+            emit(sim_run(&id, &set, width, height))
+        }
         Command::Plot {
             expr,
             xmin,
@@ -427,7 +466,10 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             width,
             height,
         } => {
+            journey.play();
             if animate {
+                // The loop never returns; persist the play before it starts.
+                let _ = std::fs::write(journey_path(), journey.to_text());
                 plot_animate(&expr, xmin, xmax, amin, amax, width, height)
             } else {
                 emit(plot_report(&expr, xmin, xmax, a, width, height))
@@ -439,7 +481,10 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             xmax,
             notes,
             out,
-        } => emit(sing_wav(&expr, xmin, xmax, notes, &out)),
+        } => {
+            journey.play();
+            emit(sing_wav(&expr, xmin, xmax, notes, &out))
+        }
     }
 }
 
@@ -745,8 +790,19 @@ fn render_report(
 
 /// Your constellation and standing, shown plainly and explained never.
 fn journey_report(journey: &Journey) -> String {
+    let mut wall = String::new();
+    for &(level, name, what) in numinous_core::UNLOCKS {
+        if journey.level() >= level {
+            wall.push_str(&format!("  OPEN    LV {level:>2}  {name}: {what}\n"));
+        } else {
+            wall.push_str(&format!("  LOCKED  LV {level:>2}  ???\n"));
+        }
+    }
     format!(
-        "{}\n\n{} of {} stars lit. {} answered well. {} heard.\n{}\n",
+        "LV {:>2}  [{}]  {} XP\n\n{}\n\n{} of {} stars lit. {} answered well. {} heard.\n{}\n\n{wall}",
+        journey.level(),
+        journey.level_bar(20),
+        journey.sparks(),
         numinous_core::constellation(journey, 60, 18),
         journey.visited.len(),
         all_rooms().len(),
@@ -754,6 +810,18 @@ fn journey_report(journey: &Journey) -> String {
         journey.secrets,
         journey.rank().name()
     )
+}
+
+/// True (and says so) if `what` is still locked at this journey's level.
+fn still_locked(journey: &Journey, need: u32, what: &str) -> bool {
+    if journey.level() >= need {
+        return false;
+    }
+    println!(
+        "LOCKED. {what} opens at LV {need}. You are LV {}. Keep playing.",
+        journey.level()
+    );
+    true
 }
 
 /// Render a room to a PNG image at `path`, returning a status message.
@@ -874,6 +942,7 @@ fn gallery(dir: &Path, width: usize, height: usize) -> Result<String, String> {
 
 /// Play Crack the Code: defuse a math-clued bomb from stdin guesses.
 fn crack(seed: u64, digits: usize, attempts: usize, journey: &mut Journey) -> ExitCode {
+    journey.play();
     let secret = numinous_core::secret_code(seed, digits);
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
@@ -925,6 +994,7 @@ fn seti(seed: u64, channels: usize, rounds: usize, journey: &mut Journey) -> Exi
     );
     for round in 0..rounds {
         let scan = numinous_core::build_scan(seed.wrapping_add(round as u64), channels);
+        journey.play();
         println!("Scan #{}:", round + 1);
         for channel in &scan.channels {
             println!(
@@ -966,6 +1036,7 @@ fn aliens(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
     println!("A transmission. They speak only in numbers. Prove you understand.\n");
     for round in 0..rounds {
         let message = numinous_core::alien_message(seed.wrapping_add(round as u64), 5);
+        journey.play();
         let shown: Vec<String> = message
             .terms
             .iter()
@@ -1023,6 +1094,17 @@ fn pick_seed(seed: u64, daily: bool) -> u64 {
     }
 }
 
+/// What waits at LV 42. It was never a red herring for you.
+fn answer_text() -> &'static str {
+    "42.\n\n\
+     You knew that. What you know now that you did not at LV 1: 42 is the third \
+     primary pseudoperfect number, the number of partitions of 10, the sum of the \
+     first three odd cubes shifted by nothing at all, and the only number the \
+     Order refuses to comment on. You were told it was a red herring. It was, \
+     until you carried one and two and three and four all the way here.\n\n\
+     The answer was the playing. Level cap reached. The math keeps going."
+}
+
 /// The jokes, listed or dissected.
 fn jokes_report(index: Option<usize>) -> String {
     match index {
@@ -1061,13 +1143,21 @@ fn quiz_remark(score: usize, rounds: usize) -> &'static str {
 }
 
 /// Play the interactive "guess the shape" quiz, reading guesses from stdin.
-fn quiz(rounds: usize, seed: u64, width: usize, height: usize, journey: &mut Journey) -> ExitCode {
+fn quiz(
+    rounds: usize,
+    seed: u64,
+    width: usize,
+    height: usize,
+    choices: usize,
+    journey: &mut Journey,
+) -> ExitCode {
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
     let mut score = 0usize;
     println!("Guess the shape. Name the math behind each mystery render.\n");
     for round in 0..rounds {
-        let r = numinous_core::build_round(seed, round as u64, width, height);
+        let r = numinous_core::build_round_sized(seed, round as u64, width, height, choices);
+        journey.play();
         println!("Mystery #{} of {rounds}:", round + 1);
         print!("{}", r.art);
         println!();
