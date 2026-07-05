@@ -44,8 +44,9 @@ cargo run --bin numinous-app
 ```
 Opens a real window showing a room animating in full color, with its sound.
 Controls: arrows switch rooms, drag scrubs the phase, `i` toggles the reveal,
-`s` starts The Show (lean back: the collection plays itself), `tab` opens the
-Studio (type math, watch and hear it live), space pauses, escape quits. The
+`s` starts The Show (lean back: the collection plays itself), `e` cycles the
+visual era (phosphor, 8-bit, vector, modern), `tab` opens the Studio (type
+math, watch and hear it live), space pauses, escape quits. The
 Mandelbrot and Julia rooms render on the GPU when the machine has one (deep
 zoom, real-time morphing); everything else draws on the CPU.
 
@@ -58,6 +59,7 @@ cargo run --bin numinous -- describe times-tables
 cargo run --bin numinous -- render chaos-game --width 50 --height 25
 cargo run --bin numinous -- render mandelbrot --color --t 0.2   # 24-bit color in the terminal
 cargo run --bin numinous -- watch julia            # full color, animating, WITH SOUND; Ctrl+C
+cargo run --bin numinous -- watch lorenz --era phosphor   # the same math on 1978 glass
 cargo run --bin numinous -- play times-tables      # classic ASCII animation
 ```
 `watch` needs a terminal with 24-bit color (Windows Terminal, iTerm2, kitty, most

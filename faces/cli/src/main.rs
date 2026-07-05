@@ -66,6 +66,9 @@ enum Command {
         /// Render in full 24-bit color in the terminal (two pixels per cell).
         #[arg(long)]
         color: bool,
+        /// Visual era for color output: phosphor, 8bit, vector, or modern.
+        #[arg(long, default_value = "modern")]
+        era: String,
     },
     /// Watch a room in full color in the terminal, with its sound, live.
     Watch {
@@ -83,6 +86,9 @@ enum Command {
         /// Silence: skip the live audio.
         #[arg(long)]
         mute: bool,
+        /// Visual era: phosphor, 8bit, vector, or modern.
+        #[arg(long, default_value = "modern")]
+        era: String,
     },
     /// Render a room's sound to a WAV file (everything is an instrument).
     Sonify {
@@ -402,13 +408,25 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             t,
             out,
             color,
+            era,
         } => {
             if find_room(&id, allow_hidden).is_some() {
                 journey.visit(&id);
             }
+            let Some(era) = numinous_core::Era::parse(&era) else {
+                eprintln!("Unknown era '{era}'. Eras: phosphor, 8bit, vector, modern.");
+                return ExitCode::FAILURE;
+            };
             match out {
                 Some(path) => emit(render_png(&id, width, height, t, &path, allow_hidden)),
-                None if color => emit(render_color_report(&id, width, height, t, allow_hidden)),
+                None if color => emit(render_color_report(
+                    &id,
+                    width,
+                    height,
+                    t,
+                    allow_hidden,
+                    era,
+                )),
                 None => emit(render_report(&id, width, height, t, allow_hidden)),
             }
         }
@@ -418,13 +436,18 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             width,
             height,
             mute,
+            era,
         } => {
             if find_room(&id, allow_hidden).is_some() {
                 journey.visit(&id);
                 // The loop never returns; persist the visit before it starts.
                 let _ = std::fs::write(journey_path(), journey.to_text());
             }
-            watch(&id, fps, width, height, mute, allow_hidden)
+            let Some(era) = numinous_core::Era::parse(&era) else {
+                eprintln!("Unknown era '{era}'. Eras: phosphor, 8bit, vector, modern.");
+                return ExitCode::FAILURE;
+            };
+            watch(&id, fps, width, height, mute, allow_hidden, era)
         }
         Command::Sonify { id, t, out } => {
             if find_room(&id, allow_hidden).is_some() {
@@ -810,26 +833,44 @@ fn render_color_report(
     height: usize,
     t: f64,
     allow_hidden: bool,
+    era: numinous_core::Era,
 ) -> Result<String, String> {
     let room = find_room(id, allow_hidden).ok_or_else(|| not_found_message(id))?;
     let mut raster = Raster::with_accent(width, height, room.meta().accent);
     room.render(&mut raster, t);
-    Ok(numinous_core::to_ansi(&raster))
+    Ok(ansi_in_era(&raster, era))
+}
+
+/// Encode a raster as truecolor ANSI after applying a visual era.
+fn ansi_in_era(raster: &Raster, era: numinous_core::Era) -> String {
+    let (w, h) = (raster.width(), raster.height());
+    let mut rgba = raster.to_rgba();
+    era.apply(&mut rgba, w, h);
+    let mut styled = Raster::new(w, h);
+    styled.set_rgba(&rgba);
+    numinous_core::to_ansi(&styled)
 }
 
 /// One truecolor frame of a room with a status line, for the watch loop.
-fn watch_frame(room: &dyn Room, t: f64, width: usize, height: usize) -> String {
+fn watch_frame(
+    room: &dyn Room,
+    t: f64,
+    width: usize,
+    height: usize,
+    era: numinous_core::Era,
+) -> String {
     let mut raster = Raster::with_accent(width, height, room.meta().accent);
     room.render(&mut raster, t);
     format!(
         "\x1b[H{}\x1b[0m{}  t = {t:.2}   (Ctrl+C to stop)\x1b[K\n",
-        numinous_core::to_ansi(&raster),
+        ansi_in_era(&raster, era),
         room.meta().title
     )
 }
 
 /// Watch a room in full color in the terminal, its sound playing, until
 /// interrupted. The whole audiovisual experience with no window at all.
+#[allow(clippy::too_many_arguments)]
 fn watch(
     id: &str,
     fps: f64,
@@ -837,6 +878,7 @@ fn watch(
     height: usize,
     mute: bool,
     allow_hidden: bool,
+    era: numinous_core::Era,
 ) -> ExitCode {
     let Some(room) = find_room(id, allow_hidden) else {
         eprint!("{}", not_found_message(id));
@@ -854,7 +896,11 @@ fn watch(
     let mut t = 0.0f64;
     let mut frame = 0u64;
     loop {
-        let _ = write!(stdout, "{}", watch_frame(room.as_ref(), t, width, height));
+        let _ = write!(
+            stdout,
+            "{}",
+            watch_frame(room.as_ref(), t, width, height, era)
+        );
         let _ = stdout.flush();
         // Refresh the room's voice a few times per sweep.
         if frame % 24 == 0
@@ -1657,16 +1703,49 @@ mod tests {
 
     #[test]
     fn render_color_report_emits_truecolor() {
-        let out =
-            super::render_color_report("times-tables", 20, 20, 0.0, false).expect("color render");
+        let out = super::render_color_report(
+            "times-tables",
+            20,
+            20,
+            0.0,
+            false,
+            numinous_core::Era::Modern,
+        )
+        .expect("color render");
         assert!(out.contains("\x1b[38;2;"), "has truecolor escapes");
-        assert!(super::render_color_report("nope", 20, 20, 0.0, false).is_err());
+        assert!(
+            super::render_color_report("nope", 20, 20, 0.0, false, numinous_core::Era::Modern)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn eras_change_the_color_frame() {
+        let modern = super::render_color_report(
+            "chaos-game",
+            20,
+            20,
+            0.0,
+            false,
+            numinous_core::Era::Modern,
+        )
+        .expect("render");
+        let phosphor = super::render_color_report(
+            "chaos-game",
+            20,
+            20,
+            0.0,
+            false,
+            numinous_core::Era::Phosphor,
+        )
+        .expect("render");
+        assert_ne!(modern, phosphor);
     }
 
     #[test]
     fn watch_frame_paints_in_place_with_a_status_line() {
         let room = numinous_core::room_by_id("chaos-game").expect("room");
-        let frame = super::watch_frame(room.as_ref(), 0.5, 24, 16);
+        let frame = super::watch_frame(room.as_ref(), 0.5, 24, 16, numinous_core::Era::Modern);
         assert!(
             frame.starts_with("\x1b[H"),
             "repaints from home, no flicker"

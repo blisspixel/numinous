@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Visual Eras (`crates/core` `era`): the retro-to-modern pillar, real. Four
+  eras as pure RGBA transforms, Phosphor (P1 green terminal glass), 8-bit (a
+  fixed 16-color palette with chunky 2x2 pixels), Vector (bright beams on pure
+  black, dim light culled), and Modern (untouched). The app cycles them with
+  the `e` key (GPU fractal frames included); the terminal takes `--era` on
+  `render --color` and `watch`. Same math, rendered as its own history.
 - The high-score table (`crates/core` `scores`, `numinous scores`, MCP
   `scores`): arcade rules, every game, every mind. Each challenge has a key
   (`munch seed:7 board:0`, `quiz seed:9 rounds:5`, `crack seed:1 digits:4`,
