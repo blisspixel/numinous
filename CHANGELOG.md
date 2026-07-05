@@ -6,6 +6,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Agents play too (MCP): three new tools so a digital mind can use the same
+  content as a human. `list_sims` and `run_sim` steer the simulations by lever
+  (fiddle to optimize or break them, and read the outcome), and `quiz` plays
+  Guess the Shape (call for the puzzle, call again with a guess letter to be
+  graded). Seven MCP tools now.
 - Windowed app (`faces/app`, binary `numinous-app`): a real, resizable window
   that shows a room animating in full color, rendered on the CPU via the shared
   `Raster`, using `winit` for the window and `softbuffer` for a

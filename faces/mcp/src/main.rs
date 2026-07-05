@@ -90,7 +90,9 @@ fn initialize_result() -> Value {
         "capabilities": { "tools": {} },
         "serverInfo": { "name": "numinous", "version": env!("CARGO_PKG_VERSION") },
         "instructions": "Explore the catalog with list_rooms, read a room with describe_room, \
-                         then play_room to render it as ASCII and see what the math does."
+                         then play_room to render it as ASCII and see what the math does. Steer \
+                         the simulations with list_sims and run_sim (fiddle the levers to optimize \
+                         or break them), and play Guess the Shape with the quiz tool."
     })
 }
 
@@ -142,6 +144,37 @@ fn tools_list_result() -> Value {
                     "required": ["id"],
                     "additionalProperties": false
                 }
+            },
+            {
+                "name": "list_sims",
+                "description": "List the interactive simulations you can steer with levers (populations, wings, black holes, the Big Bang).",
+                "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
+            },
+            {
+                "name": "run_sim",
+                "description": "Run a sim with your chosen lever values and get back a picture and a plain-language readout of what happened. Fiddle the levers to optimize it or break it. Use list_sims for ids and lever names.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Sim id, for example tribbles." },
+                        "params": { "type": "object", "description": "Lever name to value, for example {\"breeding-rate\": 2.9}. Unset levers use their default." }
+                    },
+                    "required": ["id"],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "quiz",
+                "description": "Play Guess the Shape. Call with seed and round to get a mystery render and lettered choices; call again with your guess (a letter) to learn if you were right and why.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "seed": { "type": "integer", "description": "Seed; the same seed and round give the same puzzle." },
+                        "round": { "type": "integer", "description": "Round number (0, 1, 2, ...)." },
+                        "guess": { "type": "string", "description": "Your answer letter (A, B, C, ...). Omit to see the puzzle." }
+                    },
+                    "additionalProperties": false
+                }
             }
         ]
     })
@@ -164,6 +197,9 @@ fn call_tool(params: Option<&Value>) -> Result<Value, (i64, String)> {
         "describe_room" => Ok(describe_room_tool(&args)),
         "reveal_room" => Ok(reveal_room_tool(&args)),
         "play_room" => Ok(play_room_tool(&args)),
+        "list_sims" => Ok(tool_text(&list_sims_text())),
+        "run_sim" => Ok(run_sim_tool(&args)),
+        "quiz" => Ok(quiz_tool(&args)),
         other => Err((-32602_i64, format!("Unknown tool: {other}"))),
     }
 }
@@ -227,6 +263,91 @@ fn play_room_tool(args: &Value) -> Value {
     }
 }
 
+/// The `list_sims` text: each sim with its levers.
+fn list_sims_text() -> String {
+    numinous_core::all_sims()
+        .iter()
+        .map(|sim| {
+            let m = sim.meta();
+            let levers: Vec<String> = m
+                .levers
+                .iter()
+                .map(|l| format!("{}=[{}..{}]", l.name, l.min, l.max))
+                .collect();
+            format!("{}  {}  levers: {}", m.id, m.title, levers.join(", "))
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// The `run_sim` tool: render a sim at the given levers and read out the result.
+fn run_sim_tool(args: &Value) -> Value {
+    let Some(id) = args.get("id").and_then(Value::as_str) else {
+        return tool_error("Missing required string argument 'id'.");
+    };
+    let Some(sim) = numinous_core::sim_by_id(id) else {
+        return tool_error(&unknown_sim(id));
+    };
+    let meta = sim.meta();
+    let mut params = numinous_core::default_params(&meta);
+    if let Some(obj) = args.get("params").and_then(Value::as_object) {
+        for (i, lever) in meta.levers.iter().enumerate() {
+            if let Some(value) = obj.get(lever.name).and_then(Value::as_f64) {
+                params[i] = value;
+            }
+        }
+    }
+    let mut canvas = Canvas::new(DEFAULT_WIDTH as usize, DEFAULT_HEIGHT as usize / 2);
+    sim.render(&mut canvas, &params);
+    tool_text(&format!(
+        "{}\n\n{}\n{}",
+        meta.title,
+        canvas.to_text(),
+        sim.readout(&params)
+    ))
+}
+
+/// The `quiz` tool: present a Guess the Shape round, or grade a guess.
+fn quiz_tool(args: &Value) -> Value {
+    let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+    let round = args.get("round").and_then(Value::as_u64).unwrap_or(0);
+    let quiz = numinous_core::build_round(seed, round, 54, 22);
+    match args.get("guess").and_then(Value::as_str) {
+        Some(guess) => {
+            let letter = guess.trim().chars().next().map(|c| c.to_ascii_uppercase());
+            let verdict = if letter == Some(quiz.answer) {
+                "Correct!"
+            } else {
+                "Not quite."
+            };
+            tool_text(&format!(
+                "{verdict} The answer was {} ({}).\n\n{}",
+                quiz.answer, quiz.answer_title, quiz.answer_reveal
+            ))
+        }
+        None => {
+            let choices: Vec<String> = quiz
+                .choices
+                .iter()
+                .map(|c| format!("{}) {}", c.letter, c.title))
+                .collect();
+            tool_text(&format!(
+                "Guess the shape (seed {seed}, round {round}):\n\n{}\n{}\n\nCall quiz again with your guess letter.",
+                quiz.art,
+                choices.join("\n")
+            ))
+        }
+    }
+}
+
+fn unknown_sim(id: &str) -> String {
+    let known: Vec<&str> = numinous_core::all_sims()
+        .iter()
+        .map(|s| s.meta().id)
+        .collect();
+    format!("No sim with id '{id}'. Known sims: {}", known.join(", "))
+}
+
 fn list_rooms_text() -> String {
     all_rooms()
         .iter()
@@ -282,9 +403,80 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 4);
+        assert_eq!(tools.len(), 7);
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
         assert!(names.contains(&"reveal_room"));
+        assert!(names.contains(&"run_sim"));
+        assert!(names.contains(&"quiz"));
+    }
+
+    #[test]
+    fn list_sims_tool_lists_them() {
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":20,"method":"tools/call",
+            "params":{"name":"list_sims"}
+        }))
+        .expect("tools/call must respond");
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("tribbles"));
+    }
+
+    #[test]
+    fn run_sim_returns_a_picture_and_readout() {
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":21,"method":"tools/call",
+            "params":{"name":"run_sim","arguments":{"id":"wing","params":{"angle-of-attack":20}}}
+        }))
+        .expect("tools/call must respond");
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("STALL"), "got: {text}");
+        assert_eq!(resp["result"]["isError"], false);
+    }
+
+    #[test]
+    fn run_sim_unknown_is_a_guiding_error() {
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":22,"method":"tools/call",
+            "params":{"name":"run_sim","arguments":{"id":"no-such-sim"}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(resp["result"]["isError"], true);
+        assert!(
+            resp["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("Known sims")
+        );
+    }
+
+    #[test]
+    fn quiz_tool_presents_then_grades() {
+        let puzzle = handle_request(&json!({
+            "jsonrpc":"2.0","id":23,"method":"tools/call",
+            "params":{"name":"quiz","arguments":{"seed":7,"round":0}}
+        }))
+        .expect("tools/call must respond");
+        assert!(
+            puzzle["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("Guess the shape")
+        );
+        let graded = handle_request(&json!({
+            "jsonrpc":"2.0","id":24,"method":"tools/call",
+            "params":{"name":"quiz","arguments":{"seed":7,"round":0,"guess":"A"}}
+        }))
+        .expect("tools/call must respond");
+        assert!(
+            graded["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("The answer was")
+        );
     }
 
     #[test]
