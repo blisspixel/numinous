@@ -6,6 +6,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Dense game feedback (a lesson from agentic-RL research, OPID
+  arXiv:2606.26790, written into `docs/AGENT_PLAY.md`): Munch now names the
+  exact numbers wrongly eaten and the fits walked past, in the terminal and in
+  MCP structured content, so a kid learns which primes got away and an agent
+  mining its own trajectory gets real supervision instead of a bare score.
 - The Full Map (`docs/ROOMS.md`): all of mathematics as play, a coverage
   checklist across nine branches (number, algebra and symmetry, geometry and
   topology, analysis, chance, discrete structure, computation and logic,
