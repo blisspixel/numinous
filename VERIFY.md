@@ -42,8 +42,12 @@ excluded from the coverage gate, see `docs/QUALITY.md`).
 ```
 cargo run --bin numinous-app
 ```
-Opens a real window showing a room animating in full color. Left/right arrows
-switch rooms, space pauses, escape quits. This is the start of the GUI (0.2).
+Opens a real window showing a room animating in full color, with its sound.
+Controls: arrows switch rooms, drag scrubs the phase, `i` toggles the reveal,
+`s` starts The Show (lean back: the collection plays itself), `tab` opens the
+Studio (type math, watch and hear it live), space pauses, escape quits. The
+Mandelbrot and Julia rooms render on the GPU when the machine has one (deep
+zoom, real-time morphing); everything else draws on the CPU.
 
 ## 4. See it work (the other faces)
 
