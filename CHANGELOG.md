@@ -10,6 +10,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   sweeps slowly, and when a room finishes its sweep the app drifts into the next
   one, the whole collection playing itself for hours, with sound. Press `s` again
   to take the controls back.
+- GPU real-time fractals in the app: a persistent `FractalRenderer`
+  (`crates/gpu`, pipeline built once, buffers reused per frame; the WGSL shader
+  gains a Julia mode) drives the Mandelbrot and Julia rooms in the window, so the
+  Mandelbrot zooms deep into the seahorse valley and the Julia set morphs in real
+  time at full window resolution, on whatever GPU the machine has, falling back
+  to the CPU raster when there is none. Verified live on the dev laptop's AMD
+  Radeon 780M (Vulkan).
 - The Studio in the window (`tab` key): type math and watch it live. The curve
   redraws in color on every keystroke (the last good parse stays alive while you
   edit, errors shown gently), the parameter `a` sweeps itself with the clock so

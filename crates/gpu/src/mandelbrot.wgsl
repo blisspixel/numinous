@@ -1,15 +1,21 @@
-// Mandelbrot escape-time, computed per pixel into a packed RGBA storage buffer.
-// A first real GPU-compute workload proving the portable path (see lib.rs).
+// Escape-time fractals, computed per pixel into a packed RGBA storage buffer.
+// mode 0: Mandelbrot (z starts at 0, c is the pixel).
+// mode 1: Julia (z starts at the pixel, c is a constant).
+// The portable GPU-compute path (see lib.rs).
 
 struct Params {
     width: u32,
     height: u32,
     max_iter: u32,
-    _pad0: u32,
+    mode: u32,
     center_x: f32,
     center_y: f32,
     scale: f32,
     _pad1: f32,
+    c_x: f32,
+    c_y: f32,
+    _pad2: f32,
+    _pad3: f32,
 };
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -23,11 +29,20 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let aspect = f32(params.width) / f32(params.height);
     let u = f32(gid.x) / f32(params.width) - 0.5;
     let v = f32(gid.y) / f32(params.height) - 0.5;
-    let cx = params.center_x + u * params.scale * aspect;
-    let cy = params.center_y + v * params.scale;
+    let px = params.center_x + u * params.scale * aspect;
+    let py = params.center_y + v * params.scale;
 
     var zx = 0.0;
     var zy = 0.0;
+    var cx = px;
+    var cy = py;
+    if (params.mode == 1u) {
+        zx = px;
+        zy = py;
+        cx = params.c_x;
+        cy = params.c_y;
+    }
+
     var i = 0u;
     loop {
         if (i >= params.max_iter) { break; }
