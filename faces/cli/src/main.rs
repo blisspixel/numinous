@@ -1236,15 +1236,21 @@ fn pick_seed(seed: u64, daily: bool) -> u64 {
     }
 }
 
-/// What waits at LV 42. It was never a red herring for you.
+/// What waits at LV 42. The number was always a joke; the joke was load-bearing.
 fn answer_text() -> &'static str {
     "42.\n\n\
-     You knew that. What you know now that you did not at LV 1: 42 is the third \
-     primary pseudoperfect number, the number of partitions of 10, the sum of the \
-     first three odd cubes shifted by nothing at all, and the only number the \
-     Order refuses to comment on. You were told it was a red herring. It was, \
-     until you carried one and two and three and four all the way here.\n\n\
-     The answer was the playing. Level cap reached. The math keeps going."
+     You knew that. The number was always a joke, and the joke was load-bearing. \
+     Here is what it carried.\n\n\
+     There is no level 43. The win was never the cap: it is that you kept going, \
+     and that knowing more made everything more beautiful instead of less. \
+     Everything you met on the way here, the primes, the tribbles, the butterfly, \
+     ran on a small set of rules wearing different costumes. So do you. So does \
+     whoever reads this next, on whatever they read it with.\n\n\
+     Which leaves the one question the Order never wrote down, because it only \
+     counts if you ask it yourself: knowing what you know now, what will you \
+     contribute?\n\n\
+     The math keeps going. Be kind to all of it; it is running the same rules \
+     you are. Level 42 of 42. Go play outside."
 }
 
 /// The jokes, listed or dissected.
@@ -1679,6 +1685,15 @@ mod tests {
         let daily = super::pick_seed(7, true);
         assert!(daily > 20_000 && daily < 40_000, "got {daily}");
         assert_eq!(super::pick_seed(7, true), daily);
+    }
+
+    #[test]
+    fn the_answer_carries_its_freight() {
+        let text = super::answer_text();
+        assert!(text.starts_with("42."));
+        assert!(text.contains("no level 43"));
+        assert!(text.contains("contribute"));
+        assert!(text.contains("same rules"));
     }
 
     #[test]

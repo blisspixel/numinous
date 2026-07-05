@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The answer at level 42 now carries its real freight (and `docs/LORE.md`
+  records it as the designed Layer 4 endpoint): the number is the joke, the
+  joke is load-bearing, and what it carries, said once and nowhere else, is
+  that there is no level 43, the win is to keep going, everything runs on the
+  same small rules wearing different costumes, be kind to all of it, and the
+  question that only counts self-asked: what will you contribute?
 - The player's manual (`docs/PLAYING.md`): how to play, written three times for
   three kinds of minds. Humans get the game controls and the command list;
   agents get the MCP config, the fourteen tools, and the conventions safe to

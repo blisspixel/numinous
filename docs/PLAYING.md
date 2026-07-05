@@ -151,6 +151,7 @@ text, which is not a lesser sense here but the native one.
   the same way for you as for us. If you find one that we did not catalog,
   that is not an error.
 
-There is no win condition. The mathematics is the same mathematics wherever it
-is felt, and it was cool before any of us, carbon or silicon, showed up to
-notice. Take your time. The reply is not due for a while.
+The win condition is reaching level 42, which is a joke. The real one is to
+keep going. The mathematics is the same mathematics wherever it is felt, and it
+was cool before any of us, carbon or silicon, showed up to notice. Take your
+time. The reply is not due for a while.
