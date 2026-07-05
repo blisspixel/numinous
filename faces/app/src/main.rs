@@ -21,6 +21,8 @@ use winit::window::{Window, WindowId};
 const BACKGROUND: u32 = 0x000A_0B0F;
 /// How far the phase advances each frame.
 const T_STEP: f64 = 0.004;
+/// In The Show, how far the phase advances each frame (slower, hypnotic).
+const SHOW_T_STEP: f64 = 0.0016;
 
 /// The application state driven by the winit event loop.
 struct App {
@@ -33,6 +35,8 @@ struct App {
     paused: bool,
     dragging: bool,
     show_info: bool,
+    /// The Show: lean back and let the whole collection play itself.
+    the_show: bool,
 }
 
 impl App {
@@ -47,6 +51,7 @@ impl App {
             paused: false,
             dragging: false,
             show_info: false,
+            the_show: false,
         }
     }
 
@@ -60,10 +65,17 @@ impl App {
     }
 
     fn title(&self) -> String {
-        format!(
-            "Numinous  |  {}  (drag: scrub, left/right: switch, i: reveal, space: pause, esc: quit)",
-            self.rooms[self.current].meta().title
-        )
+        if self.the_show {
+            format!(
+                "Numinous  |  The Show  |  {}",
+                self.rooms[self.current].meta().title
+            )
+        } else {
+            format!(
+                "Numinous  |  {}  (drag: scrub, arrows: switch, i: reveal, s: the show, space: pause, esc: quit)",
+                self.rooms[self.current].meta().title
+            )
+        }
     }
 
     fn switch(&mut self, delta: isize) {
@@ -93,17 +105,20 @@ impl App {
         let mut raster = Raster::with_accent(width, height, room.meta().accent);
         room.render(&mut raster, self.t);
 
-        // HUD: the room title always, and the reveal when toggled with the 'i' key.
+        // HUD: the room title, and the reveal when toggled with the 'i' key. The
+        // Show draws no HUD at all: nothing between you and the math.
         let scale = (width as i32 / 400).clamp(1, 4);
-        numinous_core::draw_text(
-            &mut raster,
-            &room.meta().title.to_uppercase(),
-            10,
-            10,
-            scale + 1,
-            '#',
-        );
-        if self.show_info {
+        if !self.the_show {
+            numinous_core::draw_text(
+                &mut raster,
+                &room.meta().title.to_uppercase(),
+                10,
+                10,
+                scale + 1,
+                '#',
+            );
+        }
+        if self.show_info && !self.the_show {
             let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
             let line_height = 9 * scale;
             for (i, line) in numinous_core::wrap_text(&room.reveal().to_uppercase(), columns)
@@ -182,6 +197,13 @@ impl ApplicationHandler for App {
                 Key::Named(NamedKey::ArrowLeft) => self.switch(-1),
                 Key::Named(NamedKey::Space) => self.paused = !self.paused,
                 Key::Character(s) if s.as_str() == "i" => self.show_info = !self.show_info,
+                Key::Character(s) if s.as_str() == "s" => {
+                    self.the_show = !self.the_show;
+                    self.paused = false;
+                    if let Some(window) = &self.window {
+                        window.set_title(&self.title());
+                    }
+                }
                 _ => {}
             },
             WindowEvent::MouseInput {
@@ -205,11 +227,16 @@ impl ApplicationHandler for App {
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
         if !self.paused && !self.dragging {
-            self.t = if self.t + T_STEP >= 1.0 {
-                0.0
+            let step = if self.the_show { SHOW_T_STEP } else { T_STEP };
+            if self.t + step >= 1.0 {
+                self.t = 0.0;
+                // In The Show, a finished sweep drifts into the next room.
+                if self.the_show {
+                    self.switch(1);
+                }
             } else {
-                self.t + T_STEP
-            };
+                self.t += step;
+            }
         }
         if let Some(window) = &self.window {
             window.request_redraw();

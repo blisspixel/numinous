@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The Show (windowed app, `s` key): lean-back mode. The HUD disappears, the phase
+  sweeps slowly, and when a room finishes its sweep the app drifts into the next
+  one, the whole collection playing itself for hours, with sound. Press `s` again
+  to take the controls back.
 - The Studio's expression engine (`crates/core` `studio`): a small, safe
   recursive-descent parser and evaluator for single-variable expressions in `x`
   (`+ - * / ^`, unary minus, `sin cos tan exp ln abs sqrt`, and `pi`/`e`), the
