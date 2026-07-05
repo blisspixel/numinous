@@ -43,6 +43,13 @@ pub trait Room {
     /// just did (see `docs/INSIGHTS.md`). Surfaced only when asked, never pushed.
     fn reveal(&self) -> &'static str;
 
+    /// The phase this room is proudest of: what the gallery, the contact
+    /// sheet, and any other postcard should show. Found by looking (the beauty
+    /// QA loop in `docs/QUALITY.md`); defaults to the start of the sweep.
+    fn postcard_t(&self) -> f64 {
+        0.0
+    }
+
     /// Deeper cuts, in order of depth: true, retellable, math-teacher-grade
     /// gems that unlock as the journey deepens (the faces choose thresholds;
     /// see `docs/PLAYFUL.md`). The knowledge is the loot. Empty by default.

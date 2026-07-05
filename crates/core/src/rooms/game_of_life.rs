@@ -67,6 +67,10 @@ impl Room for GameOfLife {
         }
     }
 
+    fn postcard_t(&self) -> f64 {
+        0.35
+    }
+
     fn reveal(&self) -> &'static str {
         "Those four rules are enough to build a working computer. People have \
          built Tetris, and the Game of Life itself, running inside the Game of \

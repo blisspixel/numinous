@@ -1012,7 +1012,7 @@ fn contact_sheet(path: &Path, cols: usize, tile: usize) -> Result<String, String
     let label_scale = (tile as i32 / 160).clamp(1, 3);
     for (i, room) in rooms.iter().enumerate() {
         let mut cell = Raster::with_accent(tile, tile, room.meta().accent);
-        room.render(&mut cell, 0.0);
+        room.render(&mut cell, room.postcard_t());
         let (x, y) = ((i % cols) * tile, (i / cols) * tile);
         sheet.blit(&cell, x, y);
         draw_text(
@@ -1075,7 +1075,7 @@ fn gallery(dir: &Path, width: usize, height: usize) -> Result<String, String> {
     for room in all_rooms() {
         let id = room.meta().id;
         let path = dir.join(format!("{id}.png"));
-        render_png(id, width, height, 0.0, &path, false)?;
+        render_png(id, width, height, room.postcard_t(), &path, false)?;
         count += 1;
     }
     Ok(format!("wrote {count} room images to {}\n", dir.display()))

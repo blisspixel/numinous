@@ -76,6 +76,10 @@ impl Room for BarnsleyFern {
         }
     }
 
+    fn postcard_t(&self) -> f64 {
+        1.0
+    }
+
     fn reveal(&self) -> &'static str {
         "This fern is not drawn, it is grown. Four transformations applied at \
          random build a plant, self-similar down to each frond. The entire \
