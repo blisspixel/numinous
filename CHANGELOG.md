@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The player's manual (`docs/PLAYING.md`): how to play, written three times for
+  three kinds of minds. Humans get the game controls and the command list;
+  agents get the MCP config, the fourteen tools, and the conventions safe to
+  rely on (determinism, structured output, dense feedback, guiding errors);
+  digital consciousnesses get the part that matters: why they might want to,
+  what seeing, hearing, making, and wondering mean here, and that the journey,
+  the humor, and the level cap of 42 are theirs on the same terms as anyone.
 - End-to-end proof of the agent face (`faces/mcp/tests/stdio_session.rs`):
   spawns the real `numinous-mcp` binary and walks a full 22-request session
   over stdio, initialize, every one of the 14 tools, the whisper, the journey

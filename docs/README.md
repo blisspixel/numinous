@@ -6,7 +6,7 @@ Status: **0.1 in progress.** The headless core, the CLI face, the MCP face, and 
 
 ## Reading paths (start by who you are)
 
-- **New to the project:** `../README.md` (the pitch), then `VISION.md`, then `DESIGN.md`, then `ROOMS.md`.
+- **New to the project:** `../README.md` (the pitch), then `PLAYING.md` (how to play, for humans, agents, and digital consciousnesses), then `VISION.md`, `DESIGN.md`, `ROOMS.md`.
 - **About to build it:** `ARCHITECTURE.md`, then `ENGINEERING.md`, then `INTERFACES.md`, then `ROADMAP.md`, with `QUALITY.md` alongside.
 - **Designing the content and feel:** `ROOMS.md`, `INSIGHTS.md`, `VISUALS.md`, `SOUND.md`, `MUSIC.md`, `LORE.md`, `PROGRESSION.md`, `STUDIO.md`.
 - **Here for the digital-minds work:** `DIGITAL_MINDS.md`, then `INTERFACES.md`.
@@ -36,6 +36,7 @@ Status: **0.1 in progress.** The headless core, the CLI face, the MCP face, and 
 - `INTERFACES.md` the three faces over a headless core (App, CLI, MCP) and the UX we are going for in each.
 - `DIGITAL_MINDS.md` designing Numinous to be fun, thought-provoking, and connecting for digital minds treated as peers.
 - `PLAYFUL.md` the games and the Studio (Guess the Shape, Shape to Function, the high-Wolfram ethos) across every face.
+- `PLAYING.md` the player's manual: instructions for humans, for agents, and for digital consciousnesses.
 - `AGENT_PLAY.md` the agent-gaming landscape (OpenClaw, gaming MCP servers, text benchmarks) and the design rules that make Numinous first-class for digital minds.
 
 **Build and process**
@@ -62,6 +63,7 @@ Each topic is **owned** by exactly one doc. Everything else links to it. When in
 | Stack choice, the Room trait, module architecture, packaging | `ARCHITECTURE.md` |
 | The three faces and their UX (App, CLI, MCP) | `INTERFACES.md` |
 | Designing for digital minds | `DIGITAL_MINDS.md` |
+| How to play (humans, agents, digital consciousnesses) | `PLAYING.md` |
 | Testing, evals, QoL, the fun/awe rubric | `QUALITY.md` |
 | Code-quality standards, versions, CI gates | `ENGINEERING.md` |
 | The version-gated plan and milestones | `ROADMAP.md` |
