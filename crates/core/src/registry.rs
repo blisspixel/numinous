@@ -27,6 +27,7 @@ pub fn all_rooms() -> Vec<Box<dyn Room>> {
         Box::new(rooms::logistic_map::LogisticMap::new()),
         Box::new(rooms::langtons_ant::LangtonsAnt::new()),
         Box::new(rooms::lorenz::Lorenz::new()),
+        Box::new(rooms::arecibo::Arecibo::new()),
     ]
 }
 

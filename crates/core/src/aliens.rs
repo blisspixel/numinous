@@ -21,6 +21,28 @@ pub struct AlienMessage {
     pub answer: u64,
     /// The explanation, revealed after the guess.
     pub explanation: &'static str,
+    /// The base the aliens count in (10 for decimal; 8 if they have tentacles).
+    pub base: u32,
+}
+
+/// Render `value` in `base` (2 to 16); falls back to decimal outside that range.
+#[must_use]
+pub fn to_base(mut value: u64, base: u32) -> String {
+    if !(2..=16).contains(&base) {
+        return value.to_string();
+    }
+    if value == 0 {
+        return "0".to_string();
+    }
+    const DIGITS: &[u8; 16] = b"0123456789abcdef";
+    let radix = u64::from(base);
+    let mut out = Vec::new();
+    while value > 0 {
+        out.push(DIGITS[(value % radix) as usize]);
+        value /= radix;
+    }
+    out.reverse();
+    String::from_utf8(out).unwrap_or_default()
 }
 
 /// A sequence the aliens might speak: its name, an explanation, and a generator
@@ -121,11 +143,14 @@ pub fn alien_message(seed: u64, shown: usize) -> AlienMessage {
     let shown = shown.max(2);
     let (name, explanation, generator) = SEQUENCES[(rng.below(SEQUENCES.len() as u64)) as usize];
     let terms = (0..shown).map(generator).collect();
+    // Mostly decimal, but sometimes the aliens have a different number of fingers.
+    let base = [10u32, 10, 10, 8, 2, 16][(rng.below(6)) as usize];
     AlienMessage {
         name,
         terms,
         answer: generator(shown),
         explanation,
+        base,
     }
 }
 
@@ -133,8 +158,17 @@ pub fn alien_message(seed: u64, shown: usize) -> AlienMessage {
 mod tests {
     use super::{
         alien_message, is_prime, nth_fibonacci, nth_power_of_two, nth_prime, nth_square,
-        nth_triangular,
+        nth_triangular, to_base,
     };
+
+    #[test]
+    fn to_base_converts_correctly() {
+        assert_eq!(to_base(255, 16), "ff");
+        assert_eq!(to_base(8, 2), "1000");
+        assert_eq!(to_base(64, 8), "100");
+        assert_eq!(to_base(13, 10), "13");
+        assert_eq!(to_base(0, 2), "0");
+    }
 
     #[test]
     fn sequences_start_correctly() {
