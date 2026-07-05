@@ -56,7 +56,9 @@ numinous scores                   the high-score table
 numinous journey                  your constellation, level, and locks
 ```
 
-Playing anything earns XP. Levels run 1 to 42, and everything that opens along
+Playing anything earns XP. Every level-up is announced with that number's own
+lore line (each of the 42 has one) and whatever it unlocked. Levels run 1 to
+42, and everything that opens along
 the way is an extra, never a toll. Wrong answers still teach: every game tells
 you exactly which judgments were wrong, and every room will explain itself if
 you ask (`numinous describe <room>`). Some things are not listed anywhere. If

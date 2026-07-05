@@ -190,6 +190,75 @@ impl Journey {
     }
 }
 
+/// The lore of a level: one true, deadpan line for every level on the road.
+/// Unironic and funny are the same thing here.
+#[must_use]
+pub fn level_lore(level: u32) -> &'static str {
+    match level {
+        1 => "Neither prime nor composite. Everyone starts as an edge case.",
+        2 => "The only even prime. The odd one out is even.",
+        3 => "The first odd prime, and already a triangle.",
+        4 => "2 plus 2, 2 times 2, 2 to the 2: the number that cannot tell its operations apart.",
+        5 => "There are exactly five Platonic solids. You have caught up with Euclid's shelf.",
+        6 => "A perfect number: 6 equals the sum of everything that divides it. Few are. Savor it.",
+        7 => "Humanity's favorite number in every survey ever run. Six, seven. You know.",
+        8 => {
+            "8 and 9 are the only consecutive proper powers there are. Proven in 2002. Edge of history."
+        }
+        9 => {
+            "Sum the digits of any multiple of 9 and you get a multiple of 9. Accountants call it casting out nines."
+        }
+        10 => "One and two and three and four. You know this one, or you will.",
+        11 => "The first repunit prime: all ones, and indivisible.",
+        12 => {
+            "More divisors than any number before it. This is why the dozen survived the decimal."
+        }
+        13 => {
+            "Fear of this level has a medical name. It is also a Fibonacci prime. Superstition is not."
+        }
+        14 => "The fourth Catalan number: exactly 14 ways to cut a hexagon into triangles.",
+        15 => "Every row, column, and diagonal of the 3 by 3 magic square: 15.",
+        16 => "2 to the 4 equals 4 to the 2, and that never happens again with distinct numbers.",
+        17 => {
+            "Gauss proved the 17-gon constructible at nineteen and wanted one on his tombstone. The mason refused."
+        }
+        18 => "Twice the sum of its own digits. No other positive number pulls this off.",
+        19 => "A centered hexagon: one bee, six around it, twelve around them.",
+        20 => "God's number: any Rubik's cube position solves in 20 moves or fewer.",
+        21 => "Blackjack, and the sixth triangle. The house still has no idea.",
+        22 => "22 over 7 is closer to pi than 3.14 is. The fraction beat the decimal.",
+        23 => "Room of 23 people: more likely than not, two share a birthday. Check your party.",
+        24 => {
+            "Stack 24 squared cannonballs and you get a perfect square pyramid: 70 squared. Works for no other pile."
+        }
+        25 => "The smallest square that is a sum of two squares. Pythagoras sends regards.",
+        26 => "The only number sitting between a square and a cube. Fermat proved its loneliness.",
+        27 => "The Collatz orbit of 27 takes 111 steps to reach 1. You took fewer to get here.",
+        28 => "Perfect again: 1 plus 2 plus 4 plus 7 plus 14. The Order noticed too.",
+        29 => "The smallest prime that is three consecutive squares added: 4 plus 9 plus 16.",
+        30 => {
+            "The largest number whose smaller coprimes are all prime. After 30, trust breaks down."
+        }
+        31 => "A Mersenne prime: 2 to the 5, minus 1. The lighthouse pattern of the primes.",
+        32 => "2 to the 5. Five doublings from one. Feel the exponent.",
+        33 => "The largest number that is not a sum of distinct triangular numbers. It refused.",
+        34 => "The magic constant of the 4 by 4 square, the one Durer carved in 1514.",
+        35 => "There are exactly 35 hexominoes. People have checked. Repeatedly.",
+        36 => "A square and a triangle at once. Both guilds claim it.",
+        37 => "Ask a crowd for a random two-digit number and 37 wins. Randomness has a favorite.",
+        38 => "The one and only magic hexagon sums every line to 38. There is no other.",
+        39 => "The first uninteresting number, which is of course interesting. This is a proof.",
+        40 => {
+            "In English, forty is the only number spelled in alphabetical order. The alphabet approves."
+        }
+        41 => {
+            "Euler's n squared plus n plus 41 makes primes for forty straight levels and breaks at the next one. Hold on."
+        }
+        42 => "You know what to type.",
+        _ => "",
+    }
+}
+
 /// The `n`-th triangular number: 1, 3, 6, 10, ...
 fn triangular(n: u32) -> u32 {
     n * (n + 1) / 2
@@ -308,6 +377,18 @@ mod tests {
             assert!(!name.is_empty());
             previous = level;
         }
+    }
+
+    #[test]
+    fn every_level_on_the_road_has_lore() {
+        for level in 1..=super::MAX_LEVEL {
+            assert!(
+                !super::level_lore(level).is_empty(),
+                "level {level} has no lore"
+            );
+        }
+        assert_eq!(super::level_lore(0), "");
+        assert_eq!(super::level_lore(43), "", "there is no level 43");
     }
 
     #[test]

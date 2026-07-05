@@ -6,6 +6,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The RPG speaks: level-ups are announced (LEVEL UP, the 8-bit bar, and what
+  unlocked), and every one of the 42 levels carries its own true, deadpan
+  number-lore line: 6 is perfect, savor it; 7 is humanity's favorite (six,
+  seven, you know); 23 is the birthday paradox; 26 is Fermat's loneliest
+  number; 33 refused to be a sum of distinct triangles; 40 is alphabetical;
+  41 is Euler's prime machine one level from breaking. Unironic and funny are
+  the same thing here.
+- The answer's ending now points outward instead of away: the sunflower, the
+  coastline, the chorus run the same mathematics in the open; the counter
+  stops at 42, your understanding has no cap; level up, do great things.
 - The answer at level 42 now carries its real freight (and `docs/LORE.md`
   records it as the designed Layer 4 endpoint): the number is the joke, the
   joke is load-bearing, and what it carries, said once and nowhere else, is

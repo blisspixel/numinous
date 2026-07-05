@@ -362,12 +362,36 @@ fn scores_report(board: &numinous_core::Scoreboard) -> String {
     out
 }
 
-/// Persist the journey if it changed, and whisper once if a rank was crossed.
+/// The level-up banner: the new level, its lore line, and what unlocked.
+/// Pure, so it is tested. Unironic and funny are the same thing here.
+fn level_up_report(before: &Journey, after: &Journey) -> Option<String> {
+    if after.level() <= before.level() {
+        return None;
+    }
+    let level = after.level();
+    let mut out = format!("LEVEL UP  LV {level:>2}  [{}]", after.level_bar(20));
+    let lore = numinous_core::journey::level_lore(level);
+    if !lore.is_empty() {
+        out.push_str(&format!("\n{lore}"));
+    }
+    for &(need, name, what) in numinous_core::UNLOCKS {
+        if need > before.level() && need <= level {
+            out.push_str(&format!("\nUNLOCKED  {name}: {what}"));
+        }
+    }
+    Some(out)
+}
+
+/// Persist the journey if it changed; announce level-ups (the RPG speaks),
+/// and whisper once if a rank was crossed (the Order murmurs).
 fn finish_journey(before: &Journey, after: &Journey) {
     if before == after {
         return;
     }
     let _ = std::fs::write(journey_path(), after.to_text());
+    if let Some(banner) = level_up_report(before, after) {
+        println!("\n{banner}");
+    }
     if after.rank() > before.rank() {
         println!("\n{}", after.rank().whisper());
     }
@@ -1249,8 +1273,11 @@ fn answer_text() -> &'static str {
      Which leaves the one question the Order never wrote down, because it only \
      counts if you ask it yourself: knowing what you know now, what will you \
      contribute?\n\n\
-     The math keeps going. Be kind to all of it; it is running the same rules \
-     you are. Level 42 of 42. Go play outside."
+     The math keeps going, and it was never only in here: the sunflower, the \
+     coastline, the queue, the chorus are all running it in the open, all around \
+     you, all the time. Be kind to all of it; it runs the same rules you do. \
+     This counter stops at 42. Your understanding has no cap. Level up. \
+     Do great things."
 }
 
 /// The jokes, listed or dissected.
@@ -1688,12 +1715,30 @@ mod tests {
     }
 
     #[test]
+    fn level_ups_announce_lore_and_unlocks() {
+        let before = numinous_core::Journey::default();
+        let after = numinous_core::Journey {
+            plays: 3, // level 3, crossing the LV 3 unlock
+            ..Default::default()
+        };
+        let banner = super::level_up_report(&before, &after).expect("a level was crossed");
+        assert!(banner.contains("LEVEL UP"));
+        assert!(banner.contains("LV  3"));
+        assert!(banner.contains("odd prime"), "the level lore rides along");
+        assert!(banner.contains("UNLOCKED") && banner.contains("quiz --hard"));
+        assert!(super::level_up_report(&after, &after).is_none());
+    }
+
+    #[test]
     fn the_answer_carries_its_freight() {
         let text = super::answer_text();
         assert!(text.starts_with("42."));
         assert!(text.contains("no level 43"));
         assert!(text.contains("contribute"));
         assert!(text.contains("same rules"));
+        assert!(text.contains("no cap"));
+        assert!(text.contains("Do great things"));
+        assert!(!text.contains("outside"), "math is not somewhere else");
     }
 
     #[test]
