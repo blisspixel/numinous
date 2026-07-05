@@ -88,6 +88,10 @@ impl Room for Julia {
         }
     }
 
+    fn postcard_t(&self) -> f64 {
+        0.55
+    }
+
     fn reveal(&self) -> &'static str {
         "There is one Julia set for every point in the plane, an uncountable \
          infinity of them. Whether each one is a single connected piece or a \

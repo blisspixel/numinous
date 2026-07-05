@@ -68,6 +68,21 @@ mod tests {
     }
 
     #[test]
+    fn every_room_postcard_has_ink() {
+        // The beauty-QA invariant: no room may present an empty postcard.
+        use crate::canvas::Canvas;
+        for room in all_rooms() {
+            let mut canvas = Canvas::new(60, 40);
+            room.render(&mut canvas, room.postcard_t());
+            assert!(
+                canvas.ink_count() > 10,
+                "{} is blank at its postcard phase",
+                room.meta().id
+            );
+        }
+    }
+
+    #[test]
     fn lookup_by_id_works_and_misses_are_none() {
         assert!(room_by_id("times-tables").is_some());
         assert!(room_by_id("no-such-room").is_none());

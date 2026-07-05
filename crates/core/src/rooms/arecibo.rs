@@ -88,6 +88,10 @@ impl Room for Arecibo {
         }
     }
 
+    fn postcard_t(&self) -> f64 {
+        0.42
+    }
+
     fn reveal(&self) -> &'static str {
         "This message is 143 bits, and 143 is 11 times 13 and nothing else, so \
          there is exactly one grid it fits. Any species that could factor it would \

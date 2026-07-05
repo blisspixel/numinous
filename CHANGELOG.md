@@ -6,6 +6,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Postcard phases (`Room::postcard_t`), from the first full beauty-QA loop
+  (render every room, look at it, judge fun/beauty/truth, fix): each room now
+  tells the gallery and contact sheet its proudest moment. Found and fixed:
+  Langton's Ant presented a literally black void (zero steps) and now shows
+  chaos plus the highway; Julia presented near-invisible dust and now shows a
+  connected set; the fern fills in at full growth; Life shows emergent
+  structures instead of raw soup; Arecibo decodes instead of shearing. A new
+  registry test enforces the invariant forever: no room may present a blank
+  postcard.
+- Fullscreen/windowed robustness verified end to end: scripted keystrokes
+  toggle fullscreen on, back to windowed, then era and room switches, with the
+  app alive throughout.
 - Game-native controls (from first-user feedback: a Counter-Strike or Minecraft
   player should instantly get it): A/D strafe rooms, 1-9 jump to a room like
   weapon slots, W/S run time faster or slower, the mouse wheel scrubs, E

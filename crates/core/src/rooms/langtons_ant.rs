@@ -86,6 +86,10 @@ impl Room for LangtonsAnt {
         }
     }
 
+    fn postcard_t(&self) -> f64 {
+        0.97
+    }
+
     fn reveal(&self) -> &'static str {
         "No matter how you scatter the starting squares, the ant always ends up \
          building the same highway. That its path is always eventually orderly is \
