@@ -36,6 +36,7 @@ Status: **0.1 in progress.** The headless core, the CLI face, the MCP face, and 
 - `INTERFACES.md` the three faces over a headless core (App, CLI, MCP) and the UX we are going for in each.
 - `DIGITAL_MINDS.md` designing Numinous to be fun, thought-provoking, and connecting for digital minds treated as peers.
 - `PLAYFUL.md` the games and the Studio (Guess the Shape, Shape to Function, the high-Wolfram ethos) across every face.
+- `AGENT_PLAY.md` the agent-gaming landscape (OpenClaw, gaming MCP servers, text benchmarks) and the design rules that make Numinous first-class for digital minds.
 
 **Build and process**
 - `ROADMAP.md` the version-gated plan (0.x, 1.0, 2.0+), defined by quality bars, not dates.

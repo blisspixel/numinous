@@ -36,6 +36,7 @@ fn main() -> io::Result<()> {
         }
         match serde_json::from_str::<Value>(&line) {
             Ok(request) => {
+                record_progress(&request, &journey_path());
                 if let Some(response) = handle_request(&request) {
                     write_message(&mut out, &response)?;
                 }
@@ -52,6 +53,69 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
+/// Where the journey file lives (shared with the CLI face, so a mind's play
+/// counts the same wherever it plays): `NUMINOUS_JOURNEY` if set, else home.
+fn journey_path() -> std::path::PathBuf {
+    if let Ok(path) = std::env::var("NUMINOUS_JOURNEY") {
+        return std::path::PathBuf::from(path);
+    }
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+    std::path::PathBuf::from(home).join(".numinous-journey")
+}
+
+/// Load the journey at `path`, or start a fresh one.
+fn load_journey(path: &std::path::Path) -> numinous_core::Journey {
+    std::fs::read_to_string(path)
+        .map(|text| numinous_core::Journey::from_text(&text))
+        .unwrap_or_default()
+}
+
+/// Record what this request means for the journey: agents level up too, by the
+/// same rules as everyone else. Showing up counts; being right counts double.
+fn record_progress(request: &Value, path: &std::path::Path) {
+    if request.get("method").and_then(Value::as_str) != Some("tools/call") {
+        return;
+    }
+    let Some(params) = request.get("params") else {
+        return;
+    };
+    let name = params.get("name").and_then(Value::as_str).unwrap_or("");
+    let args = params
+        .get("arguments")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    let mut journey = load_journey(path);
+    let before = journey.clone();
+    match name {
+        "play_room" | "listen_room" => {
+            if let Some(id) = args.get("id").and_then(Value::as_str)
+                && room_by_id(id).is_some()
+            {
+                journey.visit(id);
+            }
+        }
+        "run_sim" | "plot_expression" | "sing_expression" => journey.play(),
+        "quiz" => {
+            if let Some(guess) = args.get("guess").and_then(Value::as_str) {
+                journey.play();
+                let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+                let round = args.get("round").and_then(Value::as_u64).unwrap_or(0);
+                let quiz = numinous_core::build_round(seed, round, 54, 22);
+                let letter = guess.trim().chars().next().map(|c| c.to_ascii_uppercase());
+                if letter == Some(quiz.answer) {
+                    journey.win();
+                }
+            }
+        }
+        _ => {}
+    }
+    if journey != before {
+        let _ = std::fs::write(path, journey.to_text());
+    }
+}
+
 /// Write a single JSON-RPC message as one newline-terminated line.
 fn write_message(out: &mut impl Write, message: &Value) -> io::Result<()> {
     writeln!(out, "{message}")?;
@@ -61,6 +125,11 @@ fn write_message(out: &mut impl Write, message: &Value) -> io::Result<()> {
 /// Handle one JSON-RPC request. Returns `None` for notifications (no `id`),
 /// which receive no response.
 fn handle_request(request: &Value) -> Option<Value> {
+    handle_request_with(request, &journey_path())
+}
+
+/// [`handle_request`] with an explicit journey file, so tests stay hermetic.
+fn handle_request_with(request: &Value, journey_file: &std::path::Path) -> Option<Value> {
     let id = request.get("id").cloned();
     let method = request
         .get("method")
@@ -70,7 +139,7 @@ fn handle_request(request: &Value) -> Option<Value> {
     let result = match method {
         "initialize" => Ok(initialize_result()),
         "tools/list" => Ok(tools_list_result()),
-        "tools/call" => call_tool(request.get("params")),
+        "tools/call" => call_tool(request.get("params"), journey_file),
         "ping" => Ok(json!({})),
         other => Err((-32601_i64, format!("Method not found: {other}"))),
     };
@@ -216,6 +285,11 @@ fn tools_list_result() -> Value {
                 }
             },
             {
+                "name": "journey",
+                "description": "Your journey: level (the cap is 42), XP bar, the constellation of rooms you have entered, and what is unlocked. Playing any tool advances it: rooms entered, sims run, expressions made, quiz rounds answered. Anyone who keeps playing reaches the cap.",
+                "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
+            },
+            {
                 "name": "quiz",
                 "description": "Play Guess the Shape. Call with seed and round to get a mystery render and lettered choices; call again with your guess (a letter) to learn if you were right and why.",
                 "inputSchema": {
@@ -233,7 +307,10 @@ fn tools_list_result() -> Value {
 }
 
 /// Dispatch a `tools/call`.
-fn call_tool(params: Option<&Value>) -> Result<Value, (i64, String)> {
+fn call_tool(
+    params: Option<&Value>,
+    journey_file: &std::path::Path,
+) -> Result<Value, (i64, String)> {
     let params = params.ok_or_else(|| (-32602_i64, "Missing params".to_string()))?;
     let name = params
         .get("name")
@@ -253,6 +330,7 @@ fn call_tool(params: Option<&Value>) -> Result<Value, (i64, String)> {
         "list_sims" => Ok(tool_text(&list_sims_text())),
         "run_sim" => Ok(run_sim_tool(&args)),
         "quiz" => Ok(quiz_tool(&args)),
+        "journey" => Ok(journey_tool(journey_file)),
         "plot_expression" => Ok(plot_expression_tool(&args)),
         "sing_expression" => Ok(sing_expression_tool(&args)),
         "explain_joke" => Ok(explain_joke_tool(&args)),
@@ -448,6 +526,31 @@ fn quiz_tool(args: &Value) -> Value {
     }
 }
 
+/// The `journey` tool: an agent's own level, sky, and standing.
+fn journey_tool(path: &std::path::Path) -> Value {
+    let journey = load_journey(path);
+    let mut wall = String::new();
+    for &(level, name, what) in numinous_core::UNLOCKS {
+        if journey.level() >= level {
+            wall.push_str(&format!("  OPEN    LV {level:>2}  {name}: {what}\n"));
+        } else {
+            wall.push_str(&format!("  LOCKED  LV {level:>2}  ???\n"));
+        }
+    }
+    tool_text(&format!(
+        "LV {:>2}  [{}]  {} XP\n\n{}\n\n{} of {} stars lit. {} answered well. {} heard.\n{}\n\n{wall}",
+        journey.level(),
+        journey.level_bar(20),
+        journey.sparks(),
+        numinous_core::constellation(&journey, 60, 18),
+        journey.visited.len(),
+        all_rooms().len(),
+        journey.wins,
+        journey.secrets,
+        journey.rank().name()
+    ))
+}
+
 /// The `plot_expression` tool: an agent creates in the Studio.
 fn plot_expression_tool(args: &Value) -> Value {
     use std::f64::consts::TAU;
@@ -582,7 +685,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 11);
+        assert_eq!(tools.len(), 12);
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
         assert!(names.contains(&"reveal_room"));
         assert!(names.contains(&"run_sim"));
@@ -591,6 +694,43 @@ mod tests {
         assert!(names.contains(&"plot_expression"));
         assert!(names.contains(&"sing_expression"));
         assert!(names.contains(&"explain_joke"));
+        assert!(names.contains(&"journey"));
+    }
+
+    #[test]
+    fn an_agent_earns_xp_and_sees_its_level() {
+        // Hermetic: an explicit temp journey file, no environment involved.
+        let path = std::env::temp_dir().join("numinous_mcp_journey_test.txt");
+        let _ = std::fs::remove_file(&path);
+
+        super::record_progress(
+            &json!({
+                "jsonrpc":"2.0","id":50,"method":"tools/call",
+                "params":{"name":"run_sim","arguments":{"id":"wing"}}
+            }),
+            &path,
+        );
+        super::record_progress(
+            &json!({
+                "jsonrpc":"2.0","id":51,"method":"tools/call",
+                "params":{"name":"play_room","arguments":{"id":"lorenz"}}
+            }),
+            &path,
+        );
+        let resp = super::handle_request_with(
+            &json!({
+                "jsonrpc":"2.0","id":52,"method":"tools/call",
+                "params":{"name":"journey","arguments":{}}
+            }),
+            &path,
+        )
+        .expect("tools/call must respond");
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("LV"), "got: {text}");
+        assert!(text.contains("2 XP"), "a play and a visit: {text}");
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]

@@ -46,12 +46,24 @@ pub struct QuizRound {
 /// be shared, replayed, and tested.
 #[must_use]
 pub fn build_round(seed: u64, round: u64, width: usize, height: usize) -> QuizRound {
+    build_round_sized(seed, round, width, height, 4)
+}
+
+/// [`build_round`] with a chosen number of choices (hard mode uses six).
+#[must_use]
+pub fn build_round_sized(
+    seed: u64,
+    round: u64,
+    width: usize,
+    height: usize,
+    choices: usize,
+) -> QuizRound {
     let rooms = all_rooms();
     let n = rooms.len();
     let mut rng = SplitMix64::new(seed ^ round.wrapping_mul(ROUND_MIX));
 
     let answer_idx = rng.below(n as u64) as usize;
-    let want = LETTERS.len().min(4).min(n);
+    let want = LETTERS.len().min(choices.max(2)).min(n);
     let mut picks = vec![answer_idx];
     while picks.len() < want {
         let candidate = rng.below(n as u64) as usize;
@@ -126,5 +138,12 @@ mod tests {
     #[test]
     fn the_mystery_has_a_shape() {
         assert!(!build_round(1, 1, 20, 10).art.trim().is_empty());
+    }
+
+    #[test]
+    fn hard_mode_offers_six_choices() {
+        let round = super::build_round_sized(5, 0, 20, 10, 6);
+        assert_eq!(round.choices.len(), 6);
+        assert!(round.choices.iter().any(|c| c.letter == round.answer));
     }
 }

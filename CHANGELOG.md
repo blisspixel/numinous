@@ -6,6 +6,22 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Levels, 1 to 42 (`journey` gains `level()`, an 8-bit XP bar, and `plays`):
+  XP comes from showing up, rooms entered, rounds played, sims run, curves
+  made, with a little extra for being right and for secrets, so a teenager, the
+  world's best mathematician, and an AI agent all reach the cap the same way:
+  by playing. Level thresholds are triangular numbers; the cap is 42.
+- Locks that open (`UNLOCKS`): visible, RPG-style, gating extras never basics.
+  LV 3 opens `quiz --hard` (six shapes), LV 5 longer bomb codes, LV 7 a wider
+  SETI sky, and LV 42 opens `numinous answer`, which finally stops being a red
+  herring. `numinous journey` shows the wall: OPEN by name, LOCKED as `???`.
+- Agents level too: the MCP server records the same journey (rooms seen, sims
+  run, expressions made, quiz rounds answered) into the same file, and a new
+  `journey` tool shows an agent its own level, bar, constellation, and locks.
+  Twelve MCP tools.
+- `docs/AGENT_PLAY.md`: the agent-gaming landscape (OpenClaw and the MCP
+  ecosystem, gaming MCP servers, text benchmarks) and the five design rules that
+  make Numinous first-class for digital minds.
 - The Journey (`crates/core` `journey`, `numinous journey`): quiet roguelike
   progression. Play accumulates a private local record: rooms entered light
   stars in a shared-sky constellation, wins and secrets add weight, and the
