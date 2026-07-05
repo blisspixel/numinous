@@ -33,9 +33,9 @@ cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex 'crates
 bash scripts/check-style.sh
 ```
 
-Expected right now: **format and clippy clean, ~124 tests pass, coverage ~95%
-lines** (the `gpu` and `audio` crates are integration-tested on hardware and
-excluded from the coverage gate, see `docs/QUALITY.md`).
+Expected right now: **format and clippy clean, 300+ tests pass, coverage ~90%
+lines** (the `gpu`, `audio`, and `app` crates are integration-tested on real
+hardware and excluded from the coverage gate, see `docs/QUALITY.md`).
 
 ## 3. Run the windowed app
 
@@ -103,8 +103,9 @@ tool list and an ASCII render of the room as text.
 
 ## 5. Where things are
 
-- `crates/core` the headless engine: the `Room` trait, `Surface` (ASCII `Canvas`
-  and pixel `Raster`), the registry, RNG, and `SoundSpec`, plus the nine rooms.
+- `crates/core` the headless engine: rooms (19 across 7 wings), sims, games,
+  the Studio expression engine, the journey and scores, sound, eras, and the
+  drawing surfaces.
 - `crates/gpu` adaptive wgpu rendering; `crates/audio` adaptive cpal output.
 - `faces/cli` the `numinous` binary; `faces/mcp` the `numinous-mcp` server.
 - `docs/` the full design and plan (start at `docs/README.md`); `CHANGELOG.md` the
@@ -113,8 +114,10 @@ tool list and an ASCII render of the room as text.
 
 ## 6. What is done vs pending
 
-Done and verifiable now: the headless engine, nine rooms across four wings, four
-faces (windowed app / terminal / image + sound / agent), per-room colors and
-sounds, adaptive GPU and audio hello-worlds, and the quality gates. Pending (see
-`ROADMAP.md`): making the windowed app the full interactive Cabinet with live
-sound, GPU-accelerated real-time rendering, and the music radio.
+Done and verifiable now: 19 rooms across 7 wings (plus one that is not listed),
+6 sims, 5 games with a shared high-score table and daily seeds, the Studio
+(plot, animate, sing, in the terminal and the window), the Journey (levels to
+42, ranks, locks, deep cuts), Visual Eras, GPU real-time fractals, live sound
+everywhere, and 14 MCP tools so agents play the same content. Pending (see
+`ROADMAP.md`): the music engines (chiptune, radio), more GPU room paths, and
+games inside the window.
