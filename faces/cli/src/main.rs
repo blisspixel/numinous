@@ -15,7 +15,10 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
-use numinous_core::{Canvas, Raster, Room, RoomMeta, Surface, all_rooms, draw_text, room_by_id};
+use numinous_core::{
+    Canvas, Journey, Rank, Raster, Room, RoomMeta, Surface, all_rooms, draw_text,
+    hidden_room_by_id, room_by_id,
+};
 
 #[derive(Parser)]
 #[command(
@@ -153,6 +156,8 @@ enum Command {
         /// Which specimen to dissect (omit to list them).
         index: Option<usize>,
     },
+    /// Your constellation: where you have been, and what it has made of you.
+    Journey,
     /// Crack the Code: defuse a math-clued bomb before your attempts run out.
     Crack {
         /// Seed (the same seed gives the same code).
@@ -257,12 +262,71 @@ enum Command {
 }
 
 fn main() -> ExitCode {
-    match Cli::parse().command {
+    let mut journey = load_journey();
+    let before = journey.clone();
+    let code = run(Cli::parse().command, &mut journey);
+    finish_journey(&before, &journey);
+    code
+}
+
+/// Where the journey file lives: `NUMINOUS_JOURNEY` if set, else the home
+/// directory, else the current directory.
+fn journey_path() -> PathBuf {
+    if let Ok(path) = std::env::var("NUMINOUS_JOURNEY") {
+        return PathBuf::from(path);
+    }
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+    PathBuf::from(home).join(".numinous-journey")
+}
+
+/// Load the journey, or start a fresh one.
+fn load_journey() -> Journey {
+    std::fs::read_to_string(journey_path())
+        .map(|text| Journey::from_text(&text))
+        .unwrap_or_default()
+}
+
+/// Persist the journey if it changed, and whisper once if a rank was crossed.
+fn finish_journey(before: &Journey, after: &Journey) {
+    if before == after {
+        return;
+    }
+    let _ = std::fs::write(journey_path(), after.to_text());
+    if after.rank() > before.rank() {
+        println!("\n{}", after.rank().whisper());
+    }
+}
+
+/// Find a room: the catalog always; the unlisted ones only for those judged
+/// ready. An unready caller gets an ordinary not-found, no acknowledgment.
+fn find_room(id: &str, allow_hidden: bool) -> Option<Box<dyn Room>> {
+    room_by_id(id).or_else(|| {
+        if allow_hidden {
+            hidden_room_by_id(id)
+        } else {
+            None
+        }
+    })
+}
+
+/// Run one command, recording the journey as it goes.
+fn run(command: Command, journey: &mut Journey) -> ExitCode {
+    let allow_hidden = journey.rank() >= Rank::Mathematikos;
+    match command {
         Command::Rooms { json } => {
             print!("{}", rooms_report(json));
             ExitCode::SUCCESS
         }
-        Command::Describe { id, json } => emit(describe_report(&id, json)),
+        Command::Describe { id, json } => {
+            let report = describe_report(&id, json, allow_hidden);
+            if report.is_ok() && find_room(&id, allow_hidden).is_none() {
+                // The name was not a room, yet it answered: a secret heard.
+                journey.secret();
+            }
+            emit(report)
+        }
         Command::Render {
             id,
             width,
@@ -270,19 +334,36 @@ fn main() -> ExitCode {
             t,
             out,
             color,
-        } => match out {
-            Some(path) => emit(render_png(&id, width, height, t, &path)),
-            None if color => emit(render_color_report(&id, width, height, t)),
-            None => emit(render_report(&id, width, height, t)),
-        },
+        } => {
+            if find_room(&id, allow_hidden).is_some() {
+                journey.visit(&id);
+            }
+            match out {
+                Some(path) => emit(render_png(&id, width, height, t, &path, allow_hidden)),
+                None if color => emit(render_color_report(&id, width, height, t, allow_hidden)),
+                None => emit(render_report(&id, width, height, t, allow_hidden)),
+            }
+        }
         Command::Watch {
             id,
             fps,
             width,
             height,
             mute,
-        } => watch(&id, fps, width, height, mute),
-        Command::Sonify { id, t, out } => emit(sonify_wav(&id, t, &out)),
+        } => {
+            if find_room(&id, allow_hidden).is_some() {
+                journey.visit(&id);
+                // The loop never returns; persist the visit before it starts.
+                let _ = std::fs::write(journey_path(), journey.to_text());
+            }
+            watch(&id, fps, width, height, mute, allow_hidden)
+        }
+        Command::Sonify { id, t, out } => {
+            if find_room(&id, allow_hidden).is_some() {
+                journey.visit(&id);
+            }
+            emit(sonify_wav(&id, t, &out, allow_hidden))
+        }
         Command::Gallery { dir, width, height } => emit(gallery(&dir, width, height)),
         Command::ContactSheet { out, cols, tile } => emit(contact_sheet(&out, cols, tile)),
         Command::Play {
@@ -290,16 +371,26 @@ fn main() -> ExitCode {
             fps,
             width,
             height,
-        } => play(&id, fps, width, height),
+        } => {
+            if find_room(&id, allow_hidden).is_some() {
+                journey.visit(&id);
+                let _ = std::fs::write(journey_path(), journey.to_text());
+            }
+            play(&id, fps, width, height, allow_hidden)
+        }
         Command::Quiz {
             rounds,
             seed,
             daily,
             width,
             height,
-        } => quiz(rounds, pick_seed(seed, daily), width, height),
+        } => quiz(rounds, pick_seed(seed, daily), width, height, journey),
         Command::Jokes { index } => {
             print!("{}", jokes_report(index));
+            ExitCode::SUCCESS
+        }
+        Command::Journey => {
+            print!("{}", journey_report(journey));
             ExitCode::SUCCESS
         }
         Command::Crack {
@@ -307,14 +398,14 @@ fn main() -> ExitCode {
             daily,
             digits,
             attempts,
-        } => crack(pick_seed(seed, daily), digits, attempts),
+        } => crack(pick_seed(seed, daily), digits, attempts, journey),
         Command::Seti {
             seed,
             daily,
             channels,
             rounds,
-        } => seti(pick_seed(seed, daily), channels, rounds),
-        Command::Aliens { seed, rounds } => aliens(seed, rounds),
+        } => seti(pick_seed(seed, daily), channels, rounds, journey),
+        Command::Aliens { seed, rounds } => aliens(seed, rounds, journey),
         Command::Sims => {
             print!("{}", sims_report());
             ExitCode::SUCCESS
@@ -541,10 +632,16 @@ fn rooms_report(json: bool) -> String {
 }
 
 /// One room's description, or a guiding error if the id is unknown.
-fn describe_report(id: &str, json: bool) -> Result<String, String> {
-    let Some(room) = room_by_id(id) else {
-        // Not every name in the world is a room. A few of them answer anyway.
-        return match numinous_core::akousma(id) {
+fn describe_report(id: &str, json: bool, allow_hidden: bool) -> Result<String, String> {
+    let Some(room) = find_room(id, allow_hidden) else {
+        // Not every name in the world is a room. A few of them answer anyway,
+        // and a few more answer only for those who have been listening a while.
+        let whisper = numinous_core::akousma(id).or_else(|| {
+            allow_hidden
+                .then(|| numinous_core::deep_akousma(id))
+                .flatten()
+        });
+        return match whisper {
             Some(whisper) => Ok(format!("{whisper}\n")),
             None => Err(not_found_message(id)),
         };
@@ -567,8 +664,14 @@ fn describe_report(id: &str, json: bool) -> Result<String, String> {
 }
 
 /// A room rendered in truecolor ANSI (two pixels per terminal cell).
-fn render_color_report(id: &str, width: usize, height: usize, t: f64) -> Result<String, String> {
-    let room = room_by_id(id).ok_or_else(|| not_found_message(id))?;
+fn render_color_report(
+    id: &str,
+    width: usize,
+    height: usize,
+    t: f64,
+    allow_hidden: bool,
+) -> Result<String, String> {
+    let room = find_room(id, allow_hidden).ok_or_else(|| not_found_message(id))?;
     let mut raster = Raster::with_accent(width, height, room.meta().accent);
     room.render(&mut raster, t);
     Ok(numinous_core::to_ansi(&raster))
@@ -587,8 +690,15 @@ fn watch_frame(room: &dyn Room, t: f64, width: usize, height: usize) -> String {
 
 /// Watch a room in full color in the terminal, its sound playing, until
 /// interrupted. The whole audiovisual experience with no window at all.
-fn watch(id: &str, fps: f64, width: usize, height: usize, mute: bool) -> ExitCode {
-    let Some(room) = room_by_id(id) else {
+fn watch(
+    id: &str,
+    fps: f64,
+    width: usize,
+    height: usize,
+    mute: bool,
+    allow_hidden: bool,
+) -> ExitCode {
+    let Some(room) = find_room(id, allow_hidden) else {
         eprint!("{}", not_found_message(id));
         return ExitCode::FAILURE;
     };
@@ -620,11 +730,30 @@ fn watch(id: &str, fps: f64, width: usize, height: usize, mute: bool) -> ExitCod
 }
 
 /// A room rendered to ASCII, or a guiding error if the id is unknown.
-fn render_report(id: &str, width: usize, height: usize, t: f64) -> Result<String, String> {
-    let room = room_by_id(id).ok_or_else(|| not_found_message(id))?;
+fn render_report(
+    id: &str,
+    width: usize,
+    height: usize,
+    t: f64,
+    allow_hidden: bool,
+) -> Result<String, String> {
+    let room = find_room(id, allow_hidden).ok_or_else(|| not_found_message(id))?;
     let mut canvas = Canvas::new(width, height);
     room.render(&mut canvas, t);
     Ok(canvas.to_text())
+}
+
+/// Your constellation and standing, shown plainly and explained never.
+fn journey_report(journey: &Journey) -> String {
+    format!(
+        "{}\n\n{} of {} stars lit. {} answered well. {} heard.\n{}\n",
+        numinous_core::constellation(journey, 60, 18),
+        journey.visited.len(),
+        all_rooms().len(),
+        journey.wins,
+        journey.secrets,
+        journey.rank().name()
+    )
 }
 
 /// Render a room to a PNG image at `path`, returning a status message.
@@ -634,8 +763,9 @@ fn render_png(
     height: usize,
     t: f64,
     path: &Path,
+    allow_hidden: bool,
 ) -> Result<String, String> {
-    let room = room_by_id(id).ok_or_else(|| not_found_message(id))?;
+    let room = find_room(id, allow_hidden).ok_or_else(|| not_found_message(id))?;
     let mut raster = Raster::with_accent(width, height, room.meta().accent);
     room.render(&mut raster, t);
     write_png(path, &raster)?;
@@ -696,8 +826,8 @@ fn contact_sheet(path: &Path, cols: usize, tile: usize) -> Result<String, String
 }
 
 /// Render a room's sound to a 16-bit mono WAV at `path`, returning a status message.
-fn sonify_wav(id: &str, t: f64, path: &Path) -> Result<String, String> {
-    let room = room_by_id(id).ok_or_else(|| not_found_message(id))?;
+fn sonify_wav(id: &str, t: f64, path: &Path, allow_hidden: bool) -> Result<String, String> {
+    let room = find_room(id, allow_hidden).ok_or_else(|| not_found_message(id))?;
     let spec = room.sound(t);
     let sample_rate = 44_100u32;
     write_wav(path, &spec.render(sample_rate), sample_rate)?;
@@ -736,14 +866,14 @@ fn gallery(dir: &Path, width: usize, height: usize) -> Result<String, String> {
     for room in all_rooms() {
         let id = room.meta().id;
         let path = dir.join(format!("{id}.png"));
-        render_png(id, width, height, 0.0, &path)?;
+        render_png(id, width, height, 0.0, &path, false)?;
         count += 1;
     }
     Ok(format!("wrote {count} room images to {}\n", dir.display()))
 }
 
 /// Play Crack the Code: defuse a math-clued bomb from stdin guesses.
-fn crack(seed: u64, digits: usize, attempts: usize) -> ExitCode {
+fn crack(seed: u64, digits: usize, attempts: usize, journey: &mut Journey) -> ExitCode {
     let secret = numinous_core::secret_code(seed, digits);
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
@@ -771,6 +901,7 @@ fn crack(seed: u64, digits: usize, attempts: usize) -> ExitCode {
         attempt += 1;
         let feedback = numinous_core::grade(&secret, &guess);
         if feedback.locked == digits {
+            journey.win();
             println!(
                 "\nDEFUSED with {} attempts to spare. You cracked it.",
                 attempts - attempt
@@ -785,7 +916,7 @@ fn crack(seed: u64, digits: usize, attempts: usize) -> ExitCode {
 }
 
 /// Play SETI: scan channels of static and pick the artificial signal.
-fn seti(seed: u64, channels: usize, rounds: usize) -> ExitCode {
+fn seti(seed: u64, channels: usize, rounds: usize, journey: &mut Journey) -> ExitCode {
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
     let mut score = 0usize;
@@ -811,6 +942,7 @@ fn seti(seed: u64, channels: usize, rounds: usize) -> ExitCode {
         let guess = line.trim().chars().next().map(|c| c.to_ascii_uppercase());
         if guess == Some(scan.answer) {
             score += 1;
+            journey.win();
             println!(
                 "Contact. {} at {} was counting in primes. That is not nature.\n",
                 scan.answer, scan.answer_frequency
@@ -827,7 +959,7 @@ fn seti(seed: u64, channels: usize, rounds: usize) -> ExitCode {
 }
 
 /// Play Talk to the Aliens: continue the transmitted sequences from stdin.
-fn aliens(seed: u64, rounds: usize) -> ExitCode {
+fn aliens(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
     let mut score = 0usize;
@@ -860,6 +992,7 @@ fn aliens(seed: u64, rounds: usize) -> ExitCode {
         let answer = numinous_core::to_base(message.answer, message.base);
         if u64::from_str_radix(line.trim(), message.base).ok() == Some(message.answer) {
             score += 1;
+            journey.win();
             println!(
                 "Contact. It was {answer} ({}).\n  {}\n",
                 message.name, message.explanation
@@ -928,7 +1061,7 @@ fn quiz_remark(score: usize, rounds: usize) -> &'static str {
 }
 
 /// Play the interactive "guess the shape" quiz, reading guesses from stdin.
-fn quiz(rounds: usize, seed: u64, width: usize, height: usize) -> ExitCode {
+fn quiz(rounds: usize, seed: u64, width: usize, height: usize, journey: &mut Journey) -> ExitCode {
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
     let mut score = 0usize;
@@ -951,6 +1084,7 @@ fn quiz(rounds: usize, seed: u64, width: usize, height: usize) -> ExitCode {
         let guess = line.trim().chars().next().map(|c| c.to_ascii_uppercase());
         if guess == Some(r.answer) {
             score += 1;
+            journey.win();
             println!(
                 "Correct! It is {}.\n  {}\n",
                 r.answer_title, r.answer_reveal
@@ -983,8 +1117,8 @@ fn play_frame(room: &dyn Room, t: f64, width: usize, height: usize) -> String {
 }
 
 /// Animate a room in the terminal, sweeping its phase, until interrupted.
-fn play(id: &str, fps: f64, width: usize, height: usize) -> ExitCode {
-    let Some(room) = room_by_id(id) else {
+fn play(id: &str, fps: f64, width: usize, height: usize, allow_hidden: bool) -> ExitCode {
+    let Some(room) = find_room(id, allow_hidden) else {
         eprint!("{}", not_found_message(id));
         return ExitCode::FAILURE;
     };
@@ -1043,27 +1177,27 @@ mod tests {
 
     #[test]
     fn describe_known_room_reports_its_wing() {
-        let text = describe_report("times-tables", false).expect("known room");
+        let text = describe_report("times-tables", false, false).expect("known room");
         assert!(text.contains("Number & Pattern"));
     }
 
     #[test]
     fn describe_json_carries_the_id() {
-        let text = describe_report("times-tables", true).expect("known room");
+        let text = describe_report("times-tables", true, false).expect("known room");
         let value: Value = serde_json::from_str(&text).expect("valid json");
         assert_eq!(value["id"], "times-tables");
     }
 
     #[test]
     fn describe_includes_the_reveal() {
-        let text = describe_report("times-tables", false).expect("known room");
+        let text = describe_report("times-tables", false, false).expect("known room");
         assert!(text.contains("Reveal:"));
         assert!(text.contains("Mandelbrot"));
     }
 
     #[test]
     fn describe_json_includes_the_reveal() {
-        let text = describe_report("times-tables", true).expect("known room");
+        let text = describe_report("times-tables", true, false).expect("known room");
         let value: Value = serde_json::from_str(&text).expect("valid json");
         assert!(
             value["reveal"]
@@ -1074,19 +1208,19 @@ mod tests {
 
     #[test]
     fn describe_unknown_room_guides_the_user() {
-        let err = describe_report("no-such-room", false).expect_err("unknown room");
+        let err = describe_report("no-such-room", false, false).expect_err("unknown room");
         assert!(err.contains("Known rooms"));
     }
 
     #[test]
     fn render_known_room_has_ink() {
-        let text = render_report("times-tables", 40, 20, 0.0).expect("known room");
+        let text = render_report("times-tables", 40, 20, 0.0, false).expect("known room");
         assert!(text.contains('*'));
     }
 
     #[test]
     fn render_unknown_room_is_error() {
-        assert!(render_report("no-such-room", 10, 10, 0.0).is_err());
+        assert!(render_report("no-such-room", 10, 10, 0.0, false).is_err());
     }
 
     #[test]
@@ -1107,7 +1241,8 @@ mod tests {
     fn render_png_writes_a_non_empty_file() {
         let mut path = std::env::temp_dir();
         path.push("numinous_cli_render_test.png");
-        let message = super::render_png("times-tables", 64, 48, 0.0, &path).expect("render png");
+        let message =
+            super::render_png("times-tables", 64, 48, 0.0, &path, false).expect("render png");
         assert!(message.contains("wrote"));
         let size = std::fs::metadata(&path).expect("file exists").len();
         assert!(size > 0, "png should not be empty");
@@ -1117,14 +1252,14 @@ mod tests {
     #[test]
     fn render_png_unknown_room_is_error() {
         let path = std::env::temp_dir().join("numinous_cli_should_not_exist.png");
-        assert!(super::render_png("no-such-room", 10, 10, 0.0, &path).is_err());
+        assert!(super::render_png("no-such-room", 10, 10, 0.0, &path, false).is_err());
     }
 
     #[test]
     fn sonify_wav_writes_a_non_empty_file() {
         let mut path = std::env::temp_dir();
         path.push("numinous_cli_sonify_test.wav");
-        let message = super::sonify_wav("lissajous", 0.0, &path).expect("sonify");
+        let message = super::sonify_wav("lissajous", 0.0, &path, false).expect("sonify");
         assert!(message.contains("wrote"));
         let size = std::fs::metadata(&path).expect("file exists").len();
         assert!(size > 0, "wav should not be empty");
@@ -1134,7 +1269,7 @@ mod tests {
     #[test]
     fn sonify_unknown_room_is_error() {
         let path = std::env::temp_dir().join("numinous_cli_no.wav");
-        assert!(super::sonify_wav("no-such-room", 0.0, &path).is_err());
+        assert!(super::sonify_wav("no-such-room", 0.0, &path, false).is_err());
     }
 
     #[test]
@@ -1177,13 +1312,48 @@ mod tests {
     #[test]
     fn render_png_to_an_unwritable_path_is_error() {
         let bad = std::path::Path::new("no_such_dir_zzz/x.png");
-        assert!(super::render_png("times-tables", 8, 8, 0.0, bad).is_err());
+        assert!(super::render_png("times-tables", 8, 8, 0.0, bad, false).is_err());
     }
 
     #[test]
     fn sonify_to_an_unwritable_path_is_error() {
         let bad = std::path::Path::new("no_such_dir_zzz/x.wav");
-        assert!(super::sonify_wav("lissajous", 0.0, bad).is_err());
+        assert!(super::sonify_wav("lissajous", 0.0, bad, false).is_err());
+    }
+
+    #[test]
+    fn the_hidden_room_answers_only_to_rank() {
+        assert!(super::find_room("tetractys", false).is_none());
+        assert!(super::find_room("tetractys", true).is_some());
+        // Catalog rooms are open to everyone.
+        assert!(super::find_room("lorenz", false).is_some());
+        // The unready get the ordinary not-found, no special acknowledgment.
+        let err = super::render_report("tetractys", 10, 10, 0.0, false).unwrap_err();
+        assert!(err.contains("Known rooms"), "an ordinary miss: {err}");
+        assert!(!err.contains("Order"), "nothing is given away");
+        // The ready see the figure.
+        let ok = super::render_report("tetractys", 30, 20, 0.0, true).expect("the figure");
+        assert!(ok.contains('#'));
+    }
+
+    #[test]
+    fn deep_whispers_require_standing() {
+        assert!(super::describe_report("curtain", false, false).is_err());
+        let deep = super::describe_report("curtain", false, true).expect("a deeper whisper");
+        assert!(deep.contains("veil"), "got: {deep}");
+    }
+
+    #[test]
+    fn journey_report_shows_the_sky_and_the_rank() {
+        let mut journey = numinous_core::Journey::default();
+        let fresh = super::journey_report(&journey);
+        assert!(fresh.contains("0 of"));
+        assert!(fresh.contains("Outsider"));
+        journey.visit("lorenz");
+        let one = super::journey_report(&journey);
+        assert!(one.contains("1 of"));
+        assert!(one.contains("Akousmatikos"));
+        assert!(one.contains('#'), "a lit star");
     }
 
     #[test]
@@ -1227,9 +1397,10 @@ mod tests {
 
     #[test]
     fn render_color_report_emits_truecolor() {
-        let out = super::render_color_report("times-tables", 20, 20, 0.0).expect("color render");
+        let out =
+            super::render_color_report("times-tables", 20, 20, 0.0, false).expect("color render");
         assert!(out.contains("\x1b[38;2;"), "has truecolor escapes");
-        assert!(super::render_color_report("nope", 20, 20, 0.0).is_err());
+        assert!(super::render_color_report("nope", 20, 20, 0.0, false).is_err());
     }
 
     #[test]
@@ -1282,9 +1453,9 @@ mod tests {
 
     #[test]
     fn describe_whispers_for_the_hidden_names() {
-        let out = super::describe_report("hippasus", false).expect("a whisper");
+        let out = super::describe_report("hippasus", false, false).expect("a whisper");
         assert!(out.to_lowercase().contains("sea"), "got: {out}");
-        assert!(super::describe_report("not-a-room-nor-secret", false).is_err());
+        assert!(super::describe_report("not-a-room-nor-secret", false, false).is_err());
     }
 
     #[test]

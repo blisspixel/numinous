@@ -17,4 +17,5 @@ pub mod logistic_map;
 pub mod lorenz;
 pub mod mandelbrot;
 pub mod prime_spirals;
+pub mod tetractys;
 pub mod times_tables;
