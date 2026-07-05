@@ -72,6 +72,30 @@ fn load_journey(path: &std::path::Path) -> numinous_core::Journey {
         .unwrap_or_default()
 }
 
+/// Where the high-score table lives (shared with the CLI face, same keys, so
+/// humans and agents compete on the same boards).
+fn scores_path() -> std::path::PathBuf {
+    if let Ok(path) = std::env::var("NUMINOUS_SCORES") {
+        return std::path::PathBuf::from(path);
+    }
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+    std::path::PathBuf::from(home).join(".numinous-scores")
+}
+
+/// Record a score at `path`, keeping the best. Returns true on a new record.
+fn post_score(path: &std::path::Path, key: &str, score: i64) -> bool {
+    let mut board = std::fs::read_to_string(path)
+        .map(|text| numinous_core::Scoreboard::from_text(&text))
+        .unwrap_or_default();
+    let record = board.record(key, score);
+    if record {
+        let _ = std::fs::write(path, board.to_text());
+    }
+    record
+}
+
 /// Record what this request means for the journey: agents level up too, by the
 /// same rules as everyone else. Showing up counts; being right counts double.
 fn record_progress(request: &Value, path: &std::path::Path) {
@@ -110,6 +134,11 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                     .map(|n| (n - 1) as usize)
                     .collect();
                 let outcome = numinous_core::grade_munch(&board, &bites);
+                post_score(
+                    &scores_path(),
+                    &format!("munch seed:{seed} board:{round}"),
+                    outcome.score,
+                );
                 if outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0 {
                     journey.win();
                 }
@@ -316,6 +345,11 @@ fn tools_list_result() -> Value {
                 }
             },
             {
+                "name": "scores",
+                "description": "The high-score table: best runs across every game, arcade rules. Keys like munch seed:7 board:0 mean the same board for every mind, so compare directly.",
+                "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
+            },
+            {
                 "name": "journey",
                 "description": "Your journey: level (the cap is 42), XP bar, the constellation of rooms you have entered, and what is unlocked. Playing any tool advances it: rooms entered, sims run, expressions made, quiz rounds answered. Anyone who keeps playing reaches the cap.",
                 "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
@@ -363,6 +397,7 @@ fn call_tool(
         "quiz" => Ok(quiz_tool(&args)),
         "munch" => Ok(munch_tool(&args)),
         "journey" => Ok(journey_tool(journey_file)),
+        "scores" => Ok(scores_tool(&scores_path())),
         "plot_expression" => Ok(plot_expression_tool(&args)),
         "sing_expression" => Ok(sing_expression_tool(&args)),
         "explain_joke" => Ok(explain_joke_tool(&args)),
@@ -610,6 +645,23 @@ fn munch_tool(args: &Value) -> Value {
     }
 }
 
+/// The `scores` tool: the shared high-score table, prose and structured.
+fn scores_tool(path: &std::path::Path) -> Value {
+    let board = std::fs::read_to_string(path)
+        .map(|text| numinous_core::Scoreboard::from_text(&text))
+        .unwrap_or_default();
+    if board.entries.is_empty() {
+        return tool_text("No scores yet. Post one: munch, quiz.");
+    }
+    let mut lines = vec!["HIGH SCORES".to_string()];
+    let mut structured = Vec::new();
+    for (rank, (key, score)) in board.top(15).iter().enumerate() {
+        lines.push(format!("  {:>2}.  {score:>6}  {key}", rank + 1));
+        structured.push(json!({ "rank": rank + 1, "key": key, "score": score }));
+    }
+    tool_structured(&lines.join("\n"), json!({ "top": structured }))
+}
+
 /// The `journey` tool: an agent's own level, sky, and standing.
 fn journey_tool(path: &std::path::Path) -> Value {
     let journey = load_journey(path);
@@ -793,7 +845,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 13);
+        assert_eq!(tools.len(), 14);
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
         assert!(names.contains(&"reveal_room"));
         assert!(names.contains(&"run_sim"));
@@ -804,6 +856,22 @@ mod tests {
         assert!(names.contains(&"explain_joke"));
         assert!(names.contains(&"journey"));
         assert!(names.contains(&"munch"));
+        assert!(names.contains(&"scores"));
+    }
+
+    #[test]
+    fn scores_post_and_rank_across_minds() {
+        let path = std::env::temp_dir().join("numinous_mcp_scores_test.txt");
+        let _ = std::fs::remove_file(&path);
+        assert!(super::post_score(&path, "munch seed:7 board:0", 40));
+        assert!(!super::post_score(&path, "munch seed:7 board:0", 10));
+        assert!(super::post_score(&path, "munch seed:7 board:0", 90));
+        let resp = super::scores_tool(&path);
+        let text = resp["content"][0]["text"].as_str().unwrap_or_default();
+        assert!(text.contains("HIGH SCORES"));
+        assert!(text.contains("90"));
+        assert_eq!(resp["structuredContent"]["top"][0]["score"], 90);
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
