@@ -60,6 +60,26 @@ enum Command {
         /// Write a PNG image to this path instead of ASCII to the terminal.
         #[arg(long)]
         out: Option<PathBuf>,
+        /// Render in full 24-bit color in the terminal (two pixels per cell).
+        #[arg(long)]
+        color: bool,
+    },
+    /// Watch a room in full color in the terminal, with its sound, live.
+    Watch {
+        /// Room id, e.g. "mandelbrot".
+        id: String,
+        /// Frames per second.
+        #[arg(long, default_value_t = 20.0)]
+        fps: f64,
+        /// Frame width in pixels (columns).
+        #[arg(long, default_value_t = 100)]
+        width: usize,
+        /// Frame height in pixels (two per terminal row).
+        #[arg(long, default_value_t = 56)]
+        height: usize,
+        /// Silence: skip the live audio.
+        #[arg(long)]
+        mute: bool,
     },
     /// Render a room's sound to a WAV file (everything is an instrument).
     Sonify {
@@ -235,10 +255,19 @@ fn main() -> ExitCode {
             height,
             t,
             out,
+            color,
         } => match out {
             Some(path) => emit(render_png(&id, width, height, t, &path)),
+            None if color => emit(render_color_report(&id, width, height, t)),
             None => emit(render_report(&id, width, height, t)),
         },
+        Command::Watch {
+            id,
+            fps,
+            width,
+            height,
+            mute,
+        } => watch(&id, fps, width, height, mute),
         Command::Sonify { id, t, out } => emit(sonify_wav(&id, t, &out)),
         Command::Gallery { dir, width, height } => emit(gallery(&dir, width, height)),
         Command::ContactSheet { out, cols, tile } => emit(contact_sheet(&out, cols, tile)),
@@ -514,6 +543,59 @@ fn describe_report(id: &str, json: bool) -> Result<String, String> {
             room.reveal()
         )
     })
+}
+
+/// A room rendered in truecolor ANSI (two pixels per terminal cell).
+fn render_color_report(id: &str, width: usize, height: usize, t: f64) -> Result<String, String> {
+    let room = room_by_id(id).ok_or_else(|| not_found_message(id))?;
+    let mut raster = Raster::with_accent(width, height, room.meta().accent);
+    room.render(&mut raster, t);
+    Ok(numinous_core::to_ansi(&raster))
+}
+
+/// One truecolor frame of a room with a status line, for the watch loop.
+fn watch_frame(room: &dyn Room, t: f64, width: usize, height: usize) -> String {
+    let mut raster = Raster::with_accent(width, height, room.meta().accent);
+    room.render(&mut raster, t);
+    format!(
+        "\x1b[H{}\x1b[0m{}  t = {t:.2}   (Ctrl+C to stop)\x1b[K\n",
+        numinous_core::to_ansi(&raster),
+        room.meta().title
+    )
+}
+
+/// Watch a room in full color in the terminal, its sound playing, until
+/// interrupted. The whole audiovisual experience with no window at all.
+fn watch(id: &str, fps: f64, width: usize, height: usize, mute: bool) -> ExitCode {
+    let Some(room) = room_by_id(id) else {
+        eprint!("{}", not_found_message(id));
+        return ExitCode::FAILURE;
+    };
+    let player = if mute {
+        None
+    } else {
+        numinous_audio::LoopPlayer::new().ok()
+    };
+    let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
+    let mut stdout = std::io::stdout();
+    // Clear once; frames then repaint in place (no flicker).
+    let _ = write!(stdout, "\x1b[2J");
+    let mut t = 0.0f64;
+    let mut frame = 0u64;
+    loop {
+        let _ = write!(stdout, "{}", watch_frame(room.as_ref(), t, width, height));
+        let _ = stdout.flush();
+        // Refresh the room's voice a few times per sweep.
+        if frame % 24 == 0
+            && let Some(player) = &player
+        {
+            let spec = room.sound(t);
+            player.set_samples(spec.render(player.sample_rate()));
+        }
+        std::thread::sleep(frame_time);
+        t = if t + 0.005 >= 1.0 { 0.0 } else { t + 0.005 };
+        frame += 1;
+    }
 }
 
 /// A room rendered to ASCII, or a guiding error if the id is unknown.
@@ -1062,6 +1144,25 @@ mod tests {
     fn sim_run_renders_and_reads_out() {
         let out = super::sim_run("wing", &["angle-of-attack=20".to_string()], 40, 12).expect("run");
         assert!(out.contains("STALL"), "got: {out}");
+    }
+
+    #[test]
+    fn render_color_report_emits_truecolor() {
+        let out = super::render_color_report("times-tables", 20, 20, 0.0).expect("color render");
+        assert!(out.contains("\x1b[38;2;"), "has truecolor escapes");
+        assert!(super::render_color_report("nope", 20, 20, 0.0).is_err());
+    }
+
+    #[test]
+    fn watch_frame_paints_in_place_with_a_status_line() {
+        let room = numinous_core::room_by_id("chaos-game").expect("room");
+        let frame = super::watch_frame(room.as_ref(), 0.5, 24, 16);
+        assert!(
+            frame.starts_with("\x1b[H"),
+            "repaints from home, no flicker"
+        );
+        assert!(frame.contains("Chaos Game"));
+        assert!(frame.contains("t = 0.50"));
     }
 
     #[test]

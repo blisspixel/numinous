@@ -6,6 +6,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The terminal becomes a framebuffer (`crates/core` `ansi`): truecolor rendering
+  packs two 24-bit pixels into every character cell via the half-block trick,
+  with color-run compression, so any modern terminal shows real full-color
+  images. `numinous render <room> --color` draws one; `numinous watch <room>` is
+  the flagship: a room animating in full color in the terminal at 20 fps **with
+  its sound playing live**, a complete audiovisual instrument with no window
+  (add `--mute` for silence). Verified at 47 frames per 3 seconds.
+- A text mind can hear (MCP `listen_room`): a room's sound at any phase returned
+  as readable notation, each note's pitch in Hz and note name (A4, C5), timing,
+  and loudness, sensory substitution for audio, in the spirit of
+  `docs/DIGITAL_MINDS.md`.
+- The hidden names whisper over MCP too: `describe_room` on the unlisted names
+  answers in the Order's voice instead of erroring, so agents can stumble into
+  the same secret humans do.
 - The Show (windowed app, `s` key): lean-back mode. The HUD disappears, the phase
   sweeps slowly, and when a room finishes its sweep the app drifts into the next
   one, the whole collection playing itself for hours, with sound. Press `s` again

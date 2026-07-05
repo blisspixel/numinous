@@ -51,15 +51,18 @@ zoom, real-time morphing); everything else draws on the CPU.
 
 ## 4. See it work (the other faces)
 
-**Terminal (ASCII), including the live animated view:**
+**Terminal, including full color and the live audiovisual view:**
 ```
 cargo run --bin numinous -- rooms
 cargo run --bin numinous -- describe times-tables
 cargo run --bin numinous -- render chaos-game --width 50 --height 25
-cargo run --bin numinous -- play times-tables      # live, animating; Ctrl+C to stop
+cargo run --bin numinous -- render mandelbrot --color --t 0.2   # 24-bit color in the terminal
+cargo run --bin numinous -- watch julia            # full color, animating, WITH SOUND; Ctrl+C
+cargo run --bin numinous -- play times-tables      # classic ASCII animation
 ```
-`play` is the closest thing to "running the app" today (a live, animating room in
-the terminal). The windowed GUI is the next milestone (0.2); see `ROADMAP.md`.
+`watch` needs a terminal with 24-bit color (Windows Terminal, iTerm2, kitty, most
+Linux emulators); it paints two pixels per character cell and plays the room's
+sound live. Add `--mute` for silence.
 
 **Images:** every room to a PNG, plus a single contact sheet of all of them:
 ```

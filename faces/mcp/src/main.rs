@@ -146,6 +146,19 @@ fn tools_list_result() -> Value {
                 }
             },
             {
+                "name": "listen_room",
+                "description": "Hear a room: its sound at phase t returned as readable notation (each note's pitch, timing, and loudness), so you can perceive the audio as structure. Pitch is written as Hz and as a note name.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Room id, for example lissajous." },
+                        "t": { "type": "number", "description": "Phase in [0,1)." }
+                    },
+                    "required": ["id"],
+                    "additionalProperties": false
+                }
+            },
+            {
                 "name": "list_sims",
                 "description": "List the interactive simulations you can steer with levers (populations, wings, black holes, the Big Bang).",
                 "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
@@ -197,6 +210,7 @@ fn call_tool(params: Option<&Value>) -> Result<Value, (i64, String)> {
         "describe_room" => Ok(describe_room_tool(&args)),
         "reveal_room" => Ok(reveal_room_tool(&args)),
         "play_room" => Ok(play_room_tool(&args)),
+        "listen_room" => Ok(listen_room_tool(&args)),
         "list_sims" => Ok(tool_text(&list_sims_text())),
         "run_sim" => Ok(run_sim_tool(&args)),
         "quiz" => Ok(quiz_tool(&args)),
@@ -220,8 +234,60 @@ fn describe_room_tool(args: &Value) -> Value {
                 room.reveal()
             ))
         }
-        None => tool_error(&unknown_room(id)),
+        // Not every name is a room. A few of them answer anyway.
+        None => match numinous_core::akousma(id) {
+            Some(whisper) => tool_text(whisper),
+            None => tool_error(&unknown_room(id)),
+        },
     }
+}
+
+/// The nearest note name (twelve-tone, A4 = 440 Hz) for a frequency.
+fn note_name(freq: f32) -> String {
+    if freq <= 0.0 {
+        return "-".to_string();
+    }
+    const NAMES: [&str; 12] = [
+        "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#",
+    ];
+    let semitones_from_a4 = (12.0 * (freq / 440.0).log2()).round() as i64;
+    let index = semitones_from_a4.rem_euclid(12) as usize;
+    // A4 is nine semitones above C4; convert to octave numbering.
+    let octave = 4 + (semitones_from_a4 + 9).div_euclid(12);
+    format!("{}{}", NAMES[index], octave)
+}
+
+/// The `listen_room` tool: the room's sound as notation a mind can read.
+fn listen_room_tool(args: &Value) -> Value {
+    let Some(id) = args.get("id").and_then(Value::as_str) else {
+        return tool_error("Missing required string argument 'id'.");
+    };
+    let t = args.get("t").and_then(Value::as_f64).unwrap_or(0.0);
+    let Some(room) = room_by_id(id) else {
+        return tool_error(&unknown_room(id));
+    };
+    let spec = room.sound(t);
+    let mut lines = vec![format!(
+        "{} at t={t:.3}: {:.1}s of sound, {} notes.",
+        room.meta().title,
+        spec.duration,
+        spec.notes.len()
+    )];
+    for (i, note) in spec.notes.iter().take(64).enumerate() {
+        lines.push(format!(
+            "  note {:>2}: {:>7.1} Hz ({:>3})  at {:>5.2}s  for {:.2}s  amp {:.2}",
+            i + 1,
+            note.freq,
+            note_name(note.freq),
+            note.start,
+            note.dur,
+            note.amp
+        ));
+    }
+    if spec.notes.len() > 64 {
+        lines.push(format!("  ... and {} more notes.", spec.notes.len() - 64));
+    }
+    tool_text(&lines.join("\n"))
 }
 
 /// The `reveal_room` tool: return just the room's revelation (the learn surface).
@@ -403,11 +469,52 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 7);
+        assert_eq!(tools.len(), 8);
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
         assert!(names.contains(&"reveal_room"));
         assert!(names.contains(&"run_sim"));
         assert!(names.contains(&"quiz"));
+        assert!(names.contains(&"listen_room"));
+    }
+
+    #[test]
+    fn listen_room_returns_readable_notation() {
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":30,"method":"tools/call",
+            "params":{"name":"listen_room","arguments":{"id":"lissajous","t":0.0}}
+        }))
+        .expect("tools/call must respond");
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("Hz"), "got: {text}");
+        assert!(
+            text.contains("2 notes"),
+            "the lissajous chord has two notes"
+        );
+        assert_eq!(resp["result"]["isError"], false);
+    }
+
+    #[test]
+    fn note_names_are_correct() {
+        assert_eq!(super::note_name(440.0), "A4");
+        assert_eq!(super::note_name(880.0), "A5");
+        assert_eq!(super::note_name(261.63), "C4");
+        assert_eq!(super::note_name(0.0), "-");
+    }
+
+    #[test]
+    fn hidden_names_whisper_over_mcp_too() {
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":31,"method":"tools/call",
+            "params":{"name":"describe_room","arguments":{"id":"hippasus"}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(resp["result"]["isError"], false);
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("sea"), "got: {text}");
     }
 
     #[test]

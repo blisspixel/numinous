@@ -15,6 +15,7 @@
 #![deny(missing_docs)]
 
 pub mod aliens;
+pub mod ansi;
 pub mod canvas;
 pub mod codebreaker;
 pub mod font;
@@ -33,6 +34,7 @@ pub mod studio;
 pub mod surface;
 
 pub use aliens::{AlienMessage, alien_message, to_base};
+pub use ansi::to_ansi;
 pub use canvas::Canvas;
 pub use codebreaker::{Feedback, grade, hint, secret_code};
 pub use font::{draw_text, text_width, wrap_text};
