@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Trophy pings (the juice item from the roadmap's RPG queue): trophies now
+  announce themselves the moment the evidence exists, TROPHY EARNED with the
+  name and the deed, stacking with NEW BEST, LEVEL UP, the level lore, the
+  unlock, and the Order's whisper into one clean end-of-run cascade. Computed
+  by before/after evidence comparison, so nothing pings twice and nothing
+  pings unearned.
 - Second beauty-QA round, this time over the app's screens as well as the
   rooms (a QA-mirror example composes the frames headlessly and writes PNGs
   for review). Found and fixed: the help menu was near-illegible (tiny type
