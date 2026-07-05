@@ -6,6 +6,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Consent over persistence (`forget`, MCP tool and CLI command): transparency
+  first, calling it plain shows everything Numinous remembers (two small text
+  files, kept locally, sent nowhere), and erasure happens only on explicit
+  confirm, with the score table erased only if also asked. Fifteen MCP tools.
+- The agent-play doctrine (`docs/AGENT_PLAY.md`): sandbox for becoming, not a
+  trap for performing. The play-value rubric (a rubric, never a reward
+  function), the honest audit against the casino and the prison, the mechanics
+  map (learnable laws, toolsmith garden, social arena, rulecraft, aesthetic
+  gallery, identity room), and standing welfare rules (no negative valence,
+  multi-objective ecology, revealed preference over self-report).
 - The roadmap now names the game (`docs/ROADMAP.md`): a dedicated RPG-spine
   workstream held to the Vampire Survivors bar, what is built (levels, lore,
   locks, trophies, dailies, scores) and what is owed in priority order (the

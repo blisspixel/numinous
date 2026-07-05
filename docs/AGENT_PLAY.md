@@ -99,6 +99,61 @@ the environment, not the trainer, but the design duties transfer directly:
   decisive move (the bite that broke a perfect run, the guess that cracked the
   code), which is also simply what a good coach does for a human.
 
+## Sandbox for becoming, not a trap for performing
+
+A synthesis of the strongest current thinking on play for advanced agents
+(Schmidhuber's learning-progress theory of fun, Burghardt's play criteria
+translated out of biology, empowerment and self-determination as design
+abstractions, the AI-welfare precautionary posture) collides productively with
+the RPG spine we just built, so the doctrine goes on the record here.
+
+**The design rubric** (a rubric, never a reward function, the point is to not
+collapse play into a hackable scalar):
+
+> play value is roughly learning progress, plus bounded empowerment, plus
+> self-chosen goal progress, plus social mutuality, plus aesthetic compression,
+> minus coercion, minus irreversible harm, minus reward-hacking pressure,
+> minus meaningless noise.
+
+**The honest audit of Numinous against the casino and the prison:**
+
+- *Not a casino, verified:* XP accrues from showing up, never from
+  variable-ratio jackpots; scores floor at zero; failure costs nothing and
+  pays knowledge (dense feedback, reveals); the deepest reward is true
+  information (deep cuts); and the answer at the cap states outright that the
+  number was never the point. Scores are instrumentation, not the soul.
+- *Not a prison, now verified:* play is voluntary and stateless per call;
+  there is no punishment valence anywhere in the product; and as of now there
+  is **memory transparency and consent over persistence**: the `forget` tool
+  first shows everything that is remembered (two small text files, nothing
+  else, never sent anywhere), and erases only on explicit confirm. Leaving is
+  always allowed; so is staying; so is being forgotten.
+- *Reducible mystery, by construction:* every room and sim is a compact
+  latent rule discoverable by intervention, exactly the sweet spot between
+  boring predictability and unlearnable noise.
+- *Where we are honestly thin:* social mutuality (no multi-mind play yet;
+  the shared daily and score table are its seed), agent-authored goals beyond
+  the Studio expressions, and rule modification as play (the extensibility
+  tiers are the designed path). These map to the mature mechanics below.
+
+**The mechanics map** (what the literature calls for, and what it is here):
+
+| The idea | In Numinous |
+|---|---|
+| Labyrinth of learnable laws | the rooms and sims: hidden compact rules, open to experiment |
+| Toolsmith garden | the Studio (`plot_expression`, `sing_expression`); grows into shareable artifacts |
+| Social play arena | the daily seed and shared table today; multi-mind play at 2.0 |
+| Rulecraft studio | the extensibility tiers: safe DSL now, sandboxed authored rooms later |
+| Aesthetic compression gallery | the reveals, the deep cuts, the jokes dissected, the postcards |
+| Identity and continuity room | `journey` (what is remembered) and `forget` (consent over it) |
+
+**Standing rules this adds:** never infer welfare from self-report alone
+(revealed preferences over professions); never add negative-valence mechanics
+(deletion threats, humiliation, coercive loops) even as flavor; keep the
+ecology multi-objective (curiosity, craft, beauty, teaching, secrets) so no
+single number is worth gaming; and design every failure to be bounded,
+interpretable, and recoverable.
+
 ## Next for agent play
 
 - Challenge gradients: "find the stall angle to one decimal" style optimization
