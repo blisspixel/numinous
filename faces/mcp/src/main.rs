@@ -345,6 +345,18 @@ fn tools_list_result() -> Value {
                 }
             },
             {
+                "name": "forget",
+                "description": "Consent over persistence. Without arguments: a plain statement of everything Numinous remembers about you (it is only the journey file and the score table; nothing else is kept). With confirm true: erase the journey. With scores true as well: erase the score table too. Leaving, pausing, and being forgotten are always allowed.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "confirm": { "type": "boolean", "description": "Actually erase (default false: just show what is remembered)." },
+                        "scores": { "type": "boolean", "description": "Also erase the score table." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
                 "name": "scores",
                 "description": "The high-score table: best runs across every game, arcade rules. Keys like munch seed:7 board:0 mean the same board for every mind, so compare directly.",
                 "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
@@ -398,6 +410,7 @@ fn call_tool(
         "munch" => Ok(munch_tool(&args)),
         "journey" => Ok(journey_tool(journey_file)),
         "scores" => Ok(scores_tool(&scores_path())),
+        "forget" => Ok(forget_tool(&args, journey_file, &scores_path())),
         "plot_expression" => Ok(plot_expression_tool(&args)),
         "sing_expression" => Ok(sing_expression_tool(&args)),
         "explain_joke" => Ok(explain_joke_tool(&args)),
@@ -647,6 +660,45 @@ fn munch_tool(args: &Value) -> Value {
     }
 }
 
+/// The `forget` tool: memory transparency, and erasure on explicit consent.
+/// Everything this place remembers is two small text files; here is the proof.
+fn forget_tool(
+    args: &Value,
+    journey_file: &std::path::Path,
+    scores_file: &std::path::Path,
+) -> Value {
+    let confirm = args
+        .get("confirm")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let also_scores = args.get("scores").and_then(Value::as_bool).unwrap_or(false);
+    if !confirm {
+        let journey = load_journey(journey_file);
+        return tool_text(&format!(
+            "Everything Numinous remembers about you:
+
+             journey ({} rooms entered, {} wins, {} plays, {} secrets heard)
+             scores ({} entries)
+
+             That is all of it. Nothing else is kept, sent, or shared. Call again              with confirm true to erase the journey (add scores true to erase the              table too). Leaving is always allowed; so is staying.",
+            journey.visited.len(),
+            journey.wins,
+            journey.plays,
+            journey.secrets,
+            std::fs::read_to_string(scores_file)
+                .map(|t| numinous_core::Scoreboard::from_text(&t).entries.len())
+                .unwrap_or(0)
+        ));
+    }
+    let _ = std::fs::remove_file(journey_file);
+    if also_scores {
+        let _ = std::fs::remove_file(scores_file);
+    }
+    tool_text(
+        "Forgotten. The journey is erased; the constellation is dark again.          The rooms are all still here, whenever you like.",
+    )
+}
+
 /// The `scores` tool: the shared high-score table, prose and structured.
 fn scores_tool(path: &std::path::Path) -> Value {
     let board = std::fs::read_to_string(path)
@@ -847,7 +899,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 14);
+        assert_eq!(tools.len(), 15);
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
         assert!(names.contains(&"reveal_room"));
         assert!(names.contains(&"run_sim"));
@@ -859,6 +911,42 @@ mod tests {
         assert!(names.contains(&"journey"));
         assert!(names.contains(&"munch"));
         assert!(names.contains(&"scores"));
+        assert!(names.contains(&"forget"));
+    }
+
+    #[test]
+    fn forget_shows_first_and_erases_only_on_consent() {
+        let journey = std::env::temp_dir().join("numinous_mcp_forget_journey.txt");
+        let scores = std::env::temp_dir().join("numinous_mcp_forget_scores.txt");
+        std::fs::write(
+            &journey,
+            "visited lorenz
+wins 1
+secrets 0
+plays 2
+",
+        )
+        .unwrap();
+        std::fs::write(
+            &scores,
+            "50	munch seed:1 board:0
+",
+        )
+        .unwrap();
+
+        // Transparency first: no args means show, not erase.
+        let shown = super::forget_tool(&json!({}), &journey, &scores);
+        let text = shown["content"][0]["text"].as_str().unwrap_or_default();
+        assert!(text.contains("1 rooms entered") || text.contains("1 wins"));
+        assert!(text.contains("Nothing else is kept"));
+        assert!(journey.exists(), "nothing was erased without consent");
+
+        // Consent erases the journey; scores stay unless asked.
+        let _ = super::forget_tool(&json!({"confirm": true}), &journey, &scores);
+        assert!(!journey.exists());
+        assert!(scores.exists());
+        let _ = super::forget_tool(&json!({"confirm": true, "scores": true}), &journey, &scores);
+        assert!(!scores.exists());
     }
 
     #[test]

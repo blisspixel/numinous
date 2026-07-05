@@ -171,6 +171,15 @@ enum Command {
     Scores,
     /// The trophy case: what you have earned, and the silhouettes you have not.
     Trophies,
+    /// See everything Numinous remembers about you; erase it with --confirm.
+    Forget {
+        /// Actually erase the journey (without this, just show what is kept).
+        #[arg(long)]
+        confirm: bool,
+        /// Also erase the score table.
+        #[arg(long)]
+        scores: bool,
+    },
     /// Crack the Code: defuse a math-clued bomb before your attempts run out.
     Crack {
         /// Seed (the same seed gives the same code).
@@ -559,6 +568,35 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
         }
         Command::Trophies => {
             print!("{}", trophies_report(journey, &load_scores()));
+            ExitCode::SUCCESS
+        }
+        Command::Forget { confirm, scores } => {
+            if !confirm {
+                println!(
+                    "Everything Numinous remembers about you:
+
+  journey  {} rooms entered, {} wins, {} plays, {} secrets heard
+  scores   {} entries
+
+That is all of it. Nothing else is kept, sent, or shared.
+Erase the journey with: numinous forget --confirm  (add --scores for the table)",
+                    journey.visited.len(),
+                    journey.wins,
+                    journey.plays,
+                    journey.secrets,
+                    load_scores().entries.len()
+                );
+                return ExitCode::SUCCESS;
+            }
+            let _ = std::fs::remove_file(journey_path());
+            if scores {
+                let _ = std::fs::remove_file(scores_path());
+            }
+            // The in-memory copy stays untouched: finish_journey only writes
+            // on change, so the erased file genuinely stays erased.
+            println!(
+                "Forgotten. The constellation is dark again. The rooms are all still here, whenever you like."
+            );
             ExitCode::SUCCESS
         }
         Command::Crack {
