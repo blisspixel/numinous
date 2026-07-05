@@ -69,6 +69,38 @@ Is it fun, do you learn by playing, does it show math is neat? Door by door:
   mechanism, deadpan. Also serves the digital mind, and any human who enjoys
   watching a frog get dissected.
 
+## The kid principle
+
+A kid can play this and have fun even if some of the math does not connect yet,
+because the play carries itself: munching numbers feels good before primes mean
+anything, the bomb is tense before parity is a word, the fractal is gorgeous
+before iteration is a concept. The math is always there to be picked up, and the
+game never stops to check whether you picked it up. Insight is loot, not a
+prerequisite. This is a hard guardrail for every game we add.
+
+## Three shapes of play
+
+- **The campaign** is the Journey: LV 1 to 42, locks opening, deep cuts
+  unlocking, the constellation filling in. It is a campaign without a script:
+  the arc is your own accumulating play.
+- **The watchable** is The Show and `numinous watch`: a run you can lean back
+  on, the let's-play you put on a second monitor. (A recorded demo-reel mode,
+  a run that replays a seed hands-free, is a natural next step.)
+- **The scored freestyle** is Munch and the dailies: seeded boards, hard
+  numbers, compare totals with a friend or an AI. Skill expresses itself; the
+  floor is still fun.
+
+## Scored, competitive, human versus AI (built: Munch)
+
+`numinous munch` is Number Munchers reborn: a seeded board of numbers and a
+rule (eat the primes, the multiples of 7, the perfect squares). Right bites
++10, wrong bites -5, a perfect clear +20. The exact same seed gives the exact
+same boards to a human in a terminal and to an agent over the MCP `munch`
+tool, so totals are directly comparable: the first game here where a kid, a
+retired math teacher, and a digital mind can compete on even terms, and the
+kid might win. `--daily` makes it a shared league. Perfect clears count as
+wins on the journey; every board counts as a play.
+
 ## Principles
 
 - **Deterministic seeds.** Everything fun is built from a seed, so any moment can

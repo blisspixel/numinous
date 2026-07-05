@@ -97,6 +97,24 @@ fn record_progress(request: &Value, path: &std::path::Path) {
             }
         }
         "run_sim" | "plot_expression" | "sing_expression" => journey.play(),
+        "munch" => {
+            if let Some(raw) = args.get("bites").and_then(Value::as_array) {
+                journey.play();
+                let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+                let round = args.get("round").and_then(Value::as_u64).unwrap_or(0);
+                let board = numinous_core::build_board(seed, round);
+                let bites: Vec<usize> = raw
+                    .iter()
+                    .filter_map(Value::as_u64)
+                    .filter(|&n| n >= 1)
+                    .map(|n| (n - 1) as usize)
+                    .collect();
+                let outcome = numinous_core::grade_munch(&board, &bites);
+                if outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0 {
+                    journey.win();
+                }
+            }
+        }
         "quiz" => {
             if let Some(guess) = args.get("guess").and_then(Value::as_str) {
                 journey.play();
@@ -285,6 +303,19 @@ fn tools_list_result() -> Value {
                 }
             },
             {
+                "name": "munch",
+                "description": "Munch: a seeded board of numbers and a rule (eat the primes, the multiples, the squares). Call with seed and round to see the board; call again with bites (1-based cell numbers) to be scored: +10 a hit, -5 a bad bite, +20 for a perfect clear. Same seed, same board, for humans and AIs alike: compare totals.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "seed": { "type": "integer", "description": "Seed; the same seed and round give the same board." },
+                        "round": { "type": "integer", "description": "Round number (0, 1, 2, ...)." },
+                        "bites": { "type": "array", "items": { "type": "integer" }, "description": "The 1-based cell numbers you eat. Omit to see the board." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
                 "name": "journey",
                 "description": "Your journey: level (the cap is 42), XP bar, the constellation of rooms you have entered, and what is unlocked. Playing any tool advances it: rooms entered, sims run, expressions made, quiz rounds answered. Anyone who keeps playing reaches the cap.",
                 "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
@@ -330,6 +361,7 @@ fn call_tool(
         "list_sims" => Ok(tool_text(&list_sims_text())),
         "run_sim" => Ok(run_sim_tool(&args)),
         "quiz" => Ok(quiz_tool(&args)),
+        "munch" => Ok(munch_tool(&args)),
         "journey" => Ok(journey_tool(journey_file)),
         "plot_expression" => Ok(plot_expression_tool(&args)),
         "sing_expression" => Ok(sing_expression_tool(&args)),
@@ -526,6 +558,39 @@ fn quiz_tool(args: &Value) -> Value {
     }
 }
 
+/// The `munch` tool: present a board, or grade a set of bites.
+fn munch_tool(args: &Value) -> Value {
+    let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+    let round = args.get("round").and_then(Value::as_u64).unwrap_or(0);
+    let board = numinous_core::build_board(seed, round);
+    match args.get("bites").and_then(Value::as_array) {
+        Some(raw) => {
+            let bites: Vec<usize> = raw
+                .iter()
+                .filter_map(Value::as_u64)
+                .filter(|&n| n >= 1)
+                .map(|n| (n - 1) as usize)
+                .collect();
+            let outcome = numinous_core::grade_munch(&board, &bites);
+            let verdict = if outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0
+            {
+                "PERFECT."
+            } else {
+                "Munched."
+            };
+            tool_text(&format!(
+                "{verdict} {} eaten, {} bad bites, {} left behind. Score: {} (seed {seed}, round {round}).",
+                outcome.hits, outcome.bad_bites, outcome.left_behind, outcome.score
+            ))
+        }
+        None => tool_text(&format!(
+            "{}\n{}\nCall munch again with your bites (1-based cell numbers).",
+            board.rule.describe(),
+            numinous_core::board_text(&board)
+        )),
+    }
+}
+
 /// The `journey` tool: an agent's own level, sky, and standing.
 fn journey_tool(path: &std::path::Path) -> Value {
     let journey = load_journey(path);
@@ -685,7 +750,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 12);
+        assert_eq!(tools.len(), 13);
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
         assert!(names.contains(&"reveal_room"));
         assert!(names.contains(&"run_sim"));
@@ -695,6 +760,34 @@ mod tests {
         assert!(names.contains(&"sing_expression"));
         assert!(names.contains(&"explain_joke"));
         assert!(names.contains(&"journey"));
+        assert!(names.contains(&"munch"));
+    }
+
+    #[test]
+    fn munch_presents_then_grades_the_same_board_for_everyone() {
+        let shown = handle_request(&json!({
+            "jsonrpc":"2.0","id":60,"method":"tools/call",
+            "params":{"name":"munch","arguments":{"seed":7,"round":0}}
+        }))
+        .expect("tools/call must respond");
+        let text = shown["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("Eat the"), "got: {text}");
+        assert!(text.contains("[ 1]"));
+
+        // Eat everything: hits plus every possible bad bite, scored deterministically.
+        let all: Vec<u64> = (1..=30).collect();
+        let graded = handle_request(&json!({
+            "jsonrpc":"2.0","id":61,"method":"tools/call",
+            "params":{"name":"munch","arguments":{"seed":7,"round":0,"bites":all}}
+        }))
+        .expect("tools/call must respond");
+        let text = graded["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("Score:"), "got: {text}");
+        assert!(text.contains("0 left behind"));
     }
 
     #[test]

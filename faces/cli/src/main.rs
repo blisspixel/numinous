@@ -200,6 +200,18 @@ enum Command {
         #[arg(long, default_value_t = 5)]
         rounds: usize,
     },
+    /// Munch: eat the numbers that fit the rule. Scored; compare with anyone.
+    Munch {
+        /// Seed (the same seed gives the same boards, human or AI).
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        /// Play today's shared boards.
+        #[arg(long)]
+        daily: bool,
+        /// Number of boards.
+        #[arg(long, default_value_t = 3)]
+        rounds: usize,
+    },
     /// The answer. (Opens at LV 42.)
     Answer,
     /// List the sims and their levers.
@@ -435,6 +447,11 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             seti(pick_seed(seed, daily), channels, rounds, journey)
         }
         Command::Aliens { seed, rounds } => aliens(seed, rounds, journey),
+        Command::Munch {
+            seed,
+            daily,
+            rounds,
+        } => munch(pick_seed(seed, daily), rounds, journey),
         Command::Answer => {
             if still_locked(journey, numinous_core::MAX_LEVEL, "the answer") {
                 return ExitCode::FAILURE;
@@ -1163,6 +1180,49 @@ fn quiz_remark(score: usize, rounds: usize) -> &'static str {
         60..=99 => "Sharp eye.",
         _ => "The shapes are sneaky. Play again.",
     }
+}
+
+/// Play Munch: eat the numbers that fit the rule, round by round, scored.
+fn munch(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
+    let stdin = std::io::stdin();
+    let mut input = stdin.lock();
+    let mut total = 0i64;
+    println!("MUNCH. Eat by cell number, e.g. \"1 7 22\". Wrong bites cost you.\n");
+    for round in 0..rounds {
+        let board = numinous_core::build_board(seed, round as u64);
+        journey.play();
+        println!("Board {} of {rounds}: {}", round + 1, board.rule.describe());
+        print!("{}", numinous_core::board_text(&board));
+        print!("Your bites > ");
+        let _ = std::io::stdout().flush();
+        let mut line = String::new();
+        if input.read_line(&mut line).unwrap_or(0) == 0 {
+            println!();
+            break;
+        }
+        let bites: Vec<usize> = line
+            .split_whitespace()
+            .filter_map(|w| w.parse::<usize>().ok())
+            .filter(|&n| n >= 1)
+            .map(|n| n - 1)
+            .collect();
+        let outcome = numinous_core::grade_munch(&board, &bites);
+        if outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0 {
+            journey.win();
+            println!(
+                "PERFECT. {} eaten, nothing wasted. +{} points.\n",
+                outcome.hits, outcome.score
+            );
+        } else {
+            println!(
+                "{} eaten, {} bad bites, {} left behind. +{} points.\n",
+                outcome.hits, outcome.bad_bites, outcome.left_behind, outcome.score
+            );
+        }
+        total += outcome.score;
+    }
+    println!("Final score: {total} (seed {seed}). Beat that, or make an AI try.");
+    ExitCode::SUCCESS
 }
 
 /// Play the interactive "guess the shape" quiz, reading guesses from stdin.
