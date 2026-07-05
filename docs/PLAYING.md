@@ -47,6 +47,7 @@ numinous sing "sin(x) + x/3" --out song.wav
 and `--daily` gives the whole world one shared puzzle a day.
 
 ```
+numinous gauntlet --daily         one run: four games, a combo, one number
 numinous munch --daily            eat the numbers that fit the rule
 numinous quiz                     name the math behind a mystery shape
 numinous seti                     find the artificial signal in the static

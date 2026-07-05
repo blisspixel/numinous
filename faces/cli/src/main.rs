@@ -231,6 +231,15 @@ enum Command {
         #[arg(long, default_value_t = 3)]
         rounds: usize,
     },
+    /// The Gauntlet: one run, four games, a combo, one number at the end.
+    Gauntlet {
+        /// Seed (the same seed is the same run, for anyone).
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        /// Run today's shared gauntlet.
+        #[arg(long)]
+        daily: bool,
+    },
     /// The answer. (Opens at LV 42.)
     Answer,
     /// List the sims and their levers.
@@ -627,6 +636,7 @@ Erase the journey with: numinous forget --confirm  (add --scores for the table)"
             daily,
             rounds,
         } => munch(pick_seed(seed, daily), rounds, journey),
+        Command::Gauntlet { seed, daily } => gauntlet(pick_seed(seed, daily), journey),
         Command::Answer => {
             if still_locked(journey, numinous_core::MAX_LEVEL, "the answer") {
                 return ExitCode::FAILURE;
@@ -1390,6 +1400,179 @@ fn quiz_remark(score: usize, rounds: usize) -> &'static str {
     }
 }
 
+/// Combo math for the Gauntlet: cleared stages multiply what follows.
+/// The multiplier starts at 1, rises by 1 after every cleared stage, and falls
+/// back to 1 after a miss. Pure, so it is tested.
+fn gauntlet_total(stage_scores: &[i64], cleared: &[bool]) -> i64 {
+    let mut total = 0i64;
+    let mut combo = 1i64;
+    for (score, &clear) in stage_scores.iter().zip(cleared) {
+        total += score * combo;
+        combo = if clear { combo + 1 } else { 1 };
+    }
+    total
+}
+
+/// One line of stdin, uppercased first char, for quick answers.
+fn read_letter(input: &mut impl BufRead) -> Option<char> {
+    let mut line = String::new();
+    if input.read_line(&mut line).unwrap_or(0) == 0 {
+        return None;
+    }
+    line.trim().chars().next().map(|c| c.to_ascii_uppercase())
+}
+
+/// The Gauntlet: munch board, mystery shape, sky scan, bomb code, one run.
+/// Opt-in, bounded, and over in minutes: a shape for a session, not a trap.
+fn gauntlet(seed: u64, journey: &mut Journey) -> ExitCode {
+    let stdin = std::io::stdin();
+    let mut input = stdin.lock();
+    let mut stage_scores = Vec::new();
+    let mut cleared = Vec::new();
+    println!(
+        "THE GAUNTLET  seed {seed}. Four stages. Clears build your combo.
+"
+    );
+
+    // Stage 1: one munch board.
+    let board = numinous_core::build_board(seed, 0);
+    journey.play();
+    println!("STAGE 1 of 4  MUNCH: {}", board.rule.describe());
+    print!("{}", numinous_core::board_text(&board));
+    print!("Your bites > ");
+    let _ = std::io::stdout().flush();
+    let mut line = String::new();
+    if input.read_line(&mut line).unwrap_or(0) == 0 {
+        return ExitCode::SUCCESS;
+    }
+    let bites: Vec<usize> = line
+        .split_whitespace()
+        .filter_map(|w| w.parse::<usize>().ok())
+        .filter(|&n| n >= 1)
+        .map(|n| n - 1)
+        .collect();
+    let outcome = numinous_core::grade_munch(&board, &bites);
+    let clear = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
+    if clear {
+        journey.win();
+    }
+    println!(
+        "  +{} points{}
+",
+        outcome.score,
+        if clear { "  CLEAN" } else { "" }
+    );
+    stage_scores.push(outcome.score);
+    cleared.push(clear);
+
+    // Stage 2: one mystery shape.
+    let round = numinous_core::build_round(seed, 1, 44, 18);
+    journey.play();
+    println!("STAGE 2 of 4  THE SHAPE:");
+    print!("{}", round.art);
+    for choice in &round.choices {
+        println!("  {}) {}", choice.letter, choice.title);
+    }
+    print!("Your answer > ");
+    let _ = std::io::stdout().flush();
+    let guess = read_letter(&mut input);
+    let clear = guess == Some(round.answer);
+    if clear {
+        journey.win();
+    }
+    let points = if clear { 25 } else { 0 };
+    println!(
+        "  It was {} ({}). +{points} points{}
+",
+        round.answer,
+        round.answer_title,
+        if clear { "  CLEAN" } else { "" }
+    );
+    stage_scores.push(points);
+    cleared.push(clear);
+
+    // Stage 3: one sky scan.
+    let scan = numinous_core::build_scan(seed, 4);
+    journey.play();
+    println!("STAGE 3 of 4  THE SKY:");
+    for channel in &scan.channels {
+        println!(
+            "  {})  {:>10}  |{}|",
+            channel.letter, channel.frequency, channel.trace
+        );
+    }
+    print!("Which is a mind > ");
+    let _ = std::io::stdout().flush();
+    let guess = read_letter(&mut input);
+    let clear = guess == Some(scan.answer);
+    if clear {
+        journey.win();
+    }
+    let points = if clear { 25 } else { 0 };
+    println!(
+        "  The signal was {}. +{points} points{}
+",
+        scan.answer,
+        if clear { "  CLEAN" } else { "" }
+    );
+    stage_scores.push(points);
+    cleared.push(clear);
+
+    // Stage 4: the bomb, four digits, five tries.
+    let secret = numinous_core::secret_code(seed, 4);
+    journey.play();
+    println!("STAGE 4 of 4  THE BOMB. Four digits, five tries.");
+    println!("  Clue: {}", numinous_core::hint(&secret));
+    let mut points = 0i64;
+    let mut clear = false;
+    for attempt in 1..=5 {
+        print!("Wire {attempt}/5 > ");
+        let _ = std::io::stdout().flush();
+        let mut line = String::new();
+        if input.read_line(&mut line).unwrap_or(0) == 0 {
+            break;
+        }
+        let guess: Vec<u8> = line
+            .trim()
+            .chars()
+            .filter(char::is_ascii_digit)
+            .map(|c| c as u8 - b'0')
+            .collect();
+        if guess.len() != 4 {
+            println!("  Four digits.");
+            continue;
+        }
+        let feedback = numinous_core::grade(&secret, &guess);
+        if feedback.locked == 4 {
+            clear = true;
+            points = 10 * (5 - i64::from(attempt as u8));
+            journey.win();
+            println!(
+                "  DEFUSED. +{points} points  CLEAN
+"
+            );
+            break;
+        }
+        println!("  {} locked, {} loose.", feedback.locked, feedback.loose);
+    }
+    if !clear {
+        let code: String = secret.iter().map(|&d| char::from(b'0' + d)).collect();
+        println!(
+            "  BOOM. It was {code}. +0 points
+"
+        );
+    }
+    stage_scores.push(points);
+    cleared.push(clear);
+
+    // The one honest number.
+    let total = gauntlet_total(&stage_scores, &cleared);
+    let clears = cleared.iter().filter(|&&c| c).count();
+    post_score(&format!("gauntlet seed:{seed}"), total);
+    println!("RUN COMPLETE  {clears}/4 clean  TOTAL {total}  (gauntlet seed:{seed})");
+    ExitCode::SUCCESS
+}
+
 /// Play Munch: eat the numbers that fit the rule, round by round, scored.
 fn munch(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
     let stdin = std::io::stdin();
@@ -1762,6 +1945,23 @@ mod tests {
         assert!(one.contains("1 of"));
         assert!(one.contains("Akousmatikos"));
         assert!(one.contains('#'), "a lit star");
+    }
+
+    #[test]
+    fn gauntlet_combo_multiplies_clears_and_forgives_misses() {
+        // All four cleared: 10*1 + 25*2 + 25*3 + 40*4 = 295.
+        assert_eq!(
+            super::gauntlet_total(&[10, 25, 25, 40], &[true, true, true, true]),
+            295
+        );
+        // A miss resets the combo: 10*1 + 0*2 + 25*1 + 40*2 = 115.
+        assert_eq!(
+            super::gauntlet_total(&[10, 0, 25, 40], &[true, false, true, true]),
+            115
+        );
+        // Nothing cleared, nothing multiplied.
+        assert_eq!(super::gauntlet_total(&[5, 0, 0, 0], &[false; 4]), 5);
+        assert_eq!(super::gauntlet_total(&[], &[]), 0);
     }
 
     #[test]

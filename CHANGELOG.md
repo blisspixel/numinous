@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The Gauntlet (`numinous gauntlet`, with `--daily`): the session arc. One
+  seeded run through four stages, a munch board, a mystery shape, a sky scan,
+  and the bomb, where clean stages build a combo multiplier and a miss resets
+  it, ending in one honest number posted to the table as `gauntlet seed:N`.
+  Opt-in, bounded, over in minutes: a shape for a session, not a trap. Combo
+  math pure and tested.
 - Consent over persistence (`forget`, MCP tool and CLI command): transparency
   first, calling it plain shows everything Numinous remembers (two small text
   files, kept locally, sent nowhere), and erasure happens only on explicit
