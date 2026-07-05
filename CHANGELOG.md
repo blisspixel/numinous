@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- App UX pass (from first-user feedback): the controls are now on the glass, a
+  help overlay is visible at launch (`h` brings it back) and a persistent hint
+  bar sits at the bottom; `m` mutes and unmutes. The sound stopped hurting:
+  the default voice dropped an octave and softened, Times Tables plays in a
+  friendly register, the app renders audio quieter still, and the loop now
+  follows the animation sweep instead of droning on one tone.
 - Visual Eras (`crates/core` `era`): the retro-to-modern pillar, real. Four
   eras as pure RGBA transforms, Phosphor (P1 green terminal glass), 8-bit (a
   fixed 16-color palette with chunky 2x2 pixels), Vector (bright beams on pure

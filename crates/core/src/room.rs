@@ -55,6 +55,6 @@ pub trait Room {
     /// rooms override this to give their own voice.
     fn sound(&self, t: f64) -> SoundSpec {
         let octaves = t.clamp(0.0, 1.0) as f32;
-        SoundSpec::tone(220.0 * 2.0_f32.powf(octaves), 1.5, 0.3)
+        SoundSpec::tone(110.0 * 2.0_f32.powf(octaves), 1.5, 0.2)
     }
 }

@@ -90,7 +90,7 @@ impl Room for TimesTables {
     fn sound(&self, t: f64) -> SoundSpec {
         // Pitch rises with the multiplier k; landing on a whole number sounds clean.
         let k = (K_MIN + K_SWEEP * t.clamp(0.0, 1.0)) as f32;
-        SoundSpec::tone(110.0 * k, 1.5, 0.3)
+        SoundSpec::tone(55.0 * k, 1.5, 0.2)
     }
 }
 
