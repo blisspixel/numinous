@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The high-score table (`crates/core` `scores`, `numinous scores`, MCP
+  `scores`): arcade rules, every game, every mind. Each challenge has a key
+  (`munch seed:7 board:0`, `quiz seed:9 rounds:5`, `crack seed:1 digits:4`,
+  ...) meaning the same thing wherever it is played, and the table keeps the
+  best score per key. Munch posts per board from both faces, quiz/seti/aliens
+  post per session, crack posts attempts-to-spare; beating a record prints NEW
+  BEST. The MCP tool returns the table with structured content. Fourteen tools.
 - Structured tool output (MCP, per the 2025-06-18 spec): munch and quiz grades
   and the journey now return structuredContent alongside the prose, machine-
   readable scores, verdicts, and progression, so agents, harnesses, and future

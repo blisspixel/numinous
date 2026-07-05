@@ -161,6 +161,8 @@ enum Command {
     },
     /// Your constellation: where you have been, and what it has made of you.
     Journey,
+    /// The high-score table: best runs across every game.
+    Scores,
     /// Crack the Code: defuse a math-clued bomb before your attempts run out.
     Crack {
         /// Seed (the same seed gives the same code).
@@ -305,6 +307,55 @@ fn load_journey() -> Journey {
         .unwrap_or_default()
 }
 
+/// Where the high-score table lives: `NUMINOUS_SCORES` if set, else home.
+fn scores_path() -> PathBuf {
+    if let Ok(path) = std::env::var("NUMINOUS_SCORES") {
+        return PathBuf::from(path);
+    }
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+    PathBuf::from(home).join(".numinous-scores")
+}
+
+/// Load the high-score table, or start a fresh one.
+fn load_scores() -> numinous_core::Scoreboard {
+    std::fs::read_to_string(scores_path())
+        .map(|text| numinous_core::Scoreboard::from_text(&text))
+        .unwrap_or_default()
+}
+
+/// Record a score; announce and persist when a record falls.
+fn post_score(key: &str, score: i64) {
+    let mut board = load_scores();
+    if board.record(key, score) {
+        let _ = std::fs::write(scores_path(), board.to_text());
+        println!("NEW BEST: {key} = {score}");
+    }
+}
+
+/// The table, arcade style.
+fn scores_report(board: &numinous_core::Scoreboard) -> String {
+    if board.entries.is_empty() {
+        return "No scores yet. Play something: munch, quiz, seti, aliens, crack.
+"
+        .to_string();
+    }
+    let mut out = String::from(
+        "HIGH SCORES
+
+",
+    );
+    for (rank, (key, score)) in board.top(15).iter().enumerate() {
+        out.push_str(&format!(
+            "  {:>2}.  {score:>6}  {key}
+",
+            rank + 1
+        ));
+    }
+    out
+}
+
 /// Persist the journey if it changed, and whisper once if a rank was crossed.
 fn finish_journey(before: &Journey, after: &Journey) {
     if before == after {
@@ -422,6 +473,10 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
         }
         Command::Journey => {
             print!("{}", journey_report(journey));
+            ExitCode::SUCCESS
+        }
+        Command::Scores => {
+            print!("{}", scores_report(&load_scores()));
             ExitCode::SUCCESS
         }
         Command::Crack {
@@ -1011,10 +1066,9 @@ fn crack(seed: u64, digits: usize, attempts: usize, journey: &mut Journey) -> Ex
         let feedback = numinous_core::grade(&secret, &guess);
         if feedback.locked == digits {
             journey.win();
-            println!(
-                "\nDEFUSED with {} attempts to spare. You cracked it.",
-                attempts - attempt
-            );
+            let spare = (attempts - attempt) as i64;
+            post_score(&format!("crack seed:{seed} digits:{digits}"), spare);
+            println!("\nDEFUSED with {spare} attempts to spare. You cracked it.");
             return ExitCode::SUCCESS;
         }
         println!("  {} locked, {} loose.", feedback.locked, feedback.loose);
@@ -1064,6 +1118,7 @@ fn seti(seed: u64, channels: usize, rounds: usize, journey: &mut Journey) -> Exi
             );
         }
     }
+    post_score(&format!("seti seed:{seed} rounds:{rounds}"), score as i64);
     println!("You found {score}/{rounds}. Now open a channel and say hello: numinous aliens.");
     ExitCode::SUCCESS
 }
@@ -1115,6 +1170,7 @@ fn aliens(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
             );
         }
     }
+    post_score(&format!("aliens seed:{seed} rounds:{rounds}"), score as i64);
     println!("You understood {score}/{rounds} of their language.");
     ExitCode::SUCCESS
 }
@@ -1207,6 +1263,7 @@ fn munch(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
             .map(|n| n - 1)
             .collect();
         let outcome = numinous_core::grade_munch(&board, &bites);
+        post_score(&format!("munch seed:{seed} board:{round}"), outcome.score);
         if outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0 {
             journey.win();
             println!(
@@ -1269,6 +1326,7 @@ fn quiz(
             );
         }
     }
+    post_score(&format!("quiz seed:{seed} rounds:{rounds}"), score as i64);
     println!(
         "Final score: {score}/{rounds}. {}",
         quiz_remark(score, rounds)
@@ -1542,6 +1600,20 @@ mod tests {
         assert!(one.contains("1 of"));
         assert!(one.contains("Akousmatikos"));
         assert!(one.contains('#'), "a lit star");
+    }
+
+    #[test]
+    fn scores_report_lists_best_first_or_invites_play() {
+        let empty = super::scores_report(&numinous_core::Scoreboard::default());
+        assert!(empty.contains("No scores yet"));
+        let mut board = numinous_core::Scoreboard::default();
+        board.record("munch seed:7 board:0", 80);
+        board.record("quiz seed:1 rounds:5", 4);
+        let table = super::scores_report(&board);
+        assert!(table.contains("HIGH SCORES"));
+        let munch_pos = table.find("munch").unwrap();
+        let quiz_pos = table.find("quiz").unwrap();
+        assert!(munch_pos < quiz_pos, "higher score listed first");
     }
 
     #[test]
