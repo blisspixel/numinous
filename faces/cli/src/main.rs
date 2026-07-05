@@ -169,6 +169,8 @@ enum Command {
     Journey,
     /// The high-score table: best runs across every game.
     Scores,
+    /// The trophy case: what you have earned, and the silhouettes you have not.
+    Trophies,
     /// Crack the Code: defuse a math-clued bomb before your attempts run out.
     Crack {
         /// Seed (the same seed gives the same code).
@@ -338,6 +340,35 @@ fn post_score(key: &str, score: i64) {
         let _ = std::fs::write(scores_path(), board.to_text());
         println!("NEW BEST: {key} = {score}");
     }
+}
+
+/// The trophy case, arcade style: earned trophies shine, the rest are
+/// silhouettes with their conditions showing, so the case begs to be filled.
+fn trophies_report(journey: &Journey, board: &numinous_core::Scoreboard) -> String {
+    let case = numinous_core::trophies(journey, board);
+    let earned = case.iter().filter(|t| t.earned).count();
+    let mut out = format!(
+        "TROPHIES  {earned} of {}
+
+",
+        case.len()
+    );
+    for trophy in &case {
+        if trophy.earned {
+            out.push_str(&format!(
+                "  [#] {:<24} {}
+",
+                trophy.name, trophy.what
+            ));
+        } else {
+            out.push_str(&format!(
+                "  [ ] {:<24} {}
+",
+                "???", trophy.what
+            ));
+        }
+    }
+    out
 }
 
 /// The table, arcade style.
@@ -524,6 +555,10 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
         }
         Command::Scores => {
             print!("{}", scores_report(&load_scores()));
+            ExitCode::SUCCESS
+        }
+        Command::Trophies => {
+            print!("{}", trophies_report(journey, &load_scores()));
             ExitCode::SUCCESS
         }
         Command::Crack {
@@ -1689,6 +1724,17 @@ mod tests {
         assert!(one.contains("1 of"));
         assert!(one.contains("Akousmatikos"));
         assert!(one.contains('#'), "a lit star");
+    }
+
+    #[test]
+    fn the_trophy_case_shines_and_silhouettes() {
+        let mut journey = numinous_core::Journey::default();
+        journey.visit("lorenz");
+        let case = super::trophies_report(&journey, &numinous_core::Scoreboard::default());
+        assert!(case.contains("TROPHIES  1 of"));
+        assert!(case.contains("First Light"));
+        assert!(case.contains("???"), "the silhouettes beckon");
+        assert!(!case.contains("Cartographer"), "unearned names stay hidden");
     }
 
     #[test]

@@ -54,6 +54,7 @@ numinous aliens                   answer the transmission
 numinous crack                    defuse the bomb before your guesses run out
 numinous scores                   the high-score table
 numinous journey                  your constellation, level, and locks
+numinous trophies                 the case: what you earned, what still waits
 ```
 
 Playing anything earns XP. Every level-up is announced with that number's own

@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The trophy case (`crates/core` `trophies`, `numinous trophies`): fifteen
+  deadpan achievements computed purely from the evidence (the journey and the
+  score table), no separate bookkeeping, no way to hold one unearned. Earned
+  trophies shine with their names (First Light, Six Seven, Behind the Curtain,
+  Century, Bomb Squad, The Answer); the rest are silhouettes showing only
+  their conditions, because wanting to fill the case is half the engine.
 - The RPG speaks: level-ups are announced (LEVEL UP, the 8-bit bar, and what
   unlocked), and every one of the 42 levels carries its own true, deadpan
   number-lore line: 6 is perfect, savor it; 7 is humanity's favorite (six,
