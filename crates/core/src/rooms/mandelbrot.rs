@@ -92,6 +92,18 @@ impl Room for Mandelbrot {
          and tiny copies of the whole set hide infinitely deep inside it. All of \
          it comes from squaring a number and adding a constant."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Nobody knows the exact area of this set. It is about 1.5065918849, \
+             measured by throwing billions of points at it, and there is no known \
+             closed form. One of the most famous objects in mathematics, and we \
+             cannot tell you how big it is.",
+            "Shishikura proved in 1991 that the boundary you are zooming along has \
+             Hausdorff dimension exactly 2: a curve so wrinkled it is, in the fractal \
+             sense, as thick as the plane it lives in.",
+        ]
+    }
 }
 
 #[cfg(test)]

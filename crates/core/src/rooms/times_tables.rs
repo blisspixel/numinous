@@ -76,6 +76,17 @@ impl Room for TimesTables {
          complex object in mathematics trace the same shape."
     }
 
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Change the multiplier and the curve changes family: times 2 draws a \
+             cardioid, times 3 a nephroid, and times n a curve with n minus 1 cusps. \
+             The whole zoo is one rule with the dial turned.",
+            "The strings you see are modular arithmetic, the same math that lets an \
+             accountant check a ledger by casting out nines and lets your bank card \
+             verify itself with a check digit. The pretty curve and the checksum are \
+             the same idea.",
+        ]
+    }
     fn sound(&self, t: f64) -> SoundSpec {
         // Pitch rises with the multiplier k; landing on a whole number sounds clean.
         let k = (K_MIN + K_SWEEP * t.clamp(0.0, 1.0)) as f32;

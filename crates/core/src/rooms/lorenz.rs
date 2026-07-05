@@ -97,6 +97,18 @@ impl Room for Lorenz {
          watching the forecast diverge completely. That is the butterfly effect: \
          perfectly determined, and still impossible to predict."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "The name butterfly effect comes from the title of Lorenz's 1972 talk: \
+             does the flap of a butterfly's wings in Brazil set off a tornado in \
+             Texas? A colleague picked the title for him. The butterfly is the most \
+             famous thing a session chair ever wrote.",
+            "The attractor's fractal dimension is about 2.06: more than a surface, \
+             less than a volume. The trajectory needs just a hair more than two \
+             dimensions to never cross itself, and that hair is where chaos lives.",
+        ]
+    }
 }
 
 #[cfg(test)]

@@ -90,6 +90,17 @@ impl Room for PrimeSpirals {
          in a spiral and they line up in diagonal streaks nobody has fully \
          explained. There is a pattern in the most patternless thing we know."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Stanislaw Ulam found this in 1963 by doodling numbers in a grid during a \
+             boring conference talk. Some of the best mathematics starts as not \
+             paying attention.",
+            "Euler's polynomial n squared plus n plus 41 produces primes for every n \
+             from 0 to 39, and quadratics like it are exactly why the primes fall \
+             into diagonal streaks here. Nobody has fully explained the streaks.",
+        ]
+    }
 }
 
 /// Return whether `n` is prime, by trial division.

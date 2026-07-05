@@ -82,6 +82,17 @@ impl Room for Collatz {
          mathematician for 90 years. You are playing with an open mystery."
     }
 
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Every starting number up to two to the sixty-eighth power has been \
+             checked by computer. All of them reach 1. That is overwhelming evidence \
+             and it proves nothing, which is the whole lesson.",
+            "Erdos said mathematics is not yet ripe for such questions and offered \
+             five hundred dollars for a proof. Terence Tao proved in 2019 that almost \
+             all orbits get almost as low as you like, which is agonizingly close and \
+             still not it.",
+        ]
+    }
     fn sound(&self, t: f64) -> SoundSpec {
         // Play the orbit: each value a note, pitched by its log2, stepping in time.
         let orbit = collatz_orbit(Self::start_for(t));
