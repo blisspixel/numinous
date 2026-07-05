@@ -37,6 +37,7 @@ pub mod sims;
 pub mod sound;
 pub mod studio;
 pub mod surface;
+pub mod trophies;
 
 pub use aliens::{AlienMessage, alien_message, to_base};
 pub use ansi::to_ansi;
@@ -60,3 +61,4 @@ pub use sims::{all_sims, sim_by_id};
 pub use sound::{Note, SoundSpec};
 pub use studio::{Expr, eval, parse, plot_text, to_melody};
 pub use surface::Surface;
+pub use trophies::{Trophy, trophies};
