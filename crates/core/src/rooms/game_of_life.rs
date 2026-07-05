@@ -72,6 +72,18 @@ impl Room for GameOfLife {
          built Tetris, and the Game of Life itself, running inside the Game of \
          Life. It is not a toy, it is a universe."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Conway bet fifty dollars that no pattern could grow forever. Bill \
+             Gosper's glider gun, found in 1970, fires a glider every thirty \
+             generations, forever. Conway paid.",
+            "Whether a Life pattern eventually dies is undecidable: no algorithm can \
+             answer it for every pattern, for the same reason no program can decide \
+             whether every other program halts. The toy grid inherits the deepest \
+             limit in computer science.",
+        ]
+    }
 }
 
 /// The initial soup, seeded deterministically.

@@ -43,6 +43,13 @@ pub trait Room {
     /// just did (see `docs/INSIGHTS.md`). Surfaced only when asked, never pushed.
     fn reveal(&self) -> &'static str;
 
+    /// Deeper cuts, in order of depth: true, retellable, math-teacher-grade
+    /// gems that unlock as the journey deepens (the faces choose thresholds;
+    /// see `docs/PLAYFUL.md`). The knowledge is the loot. Empty by default.
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[]
+    }
+
     /// This room's sound at phase `t` (the "everything is an instrument" pillar,
     /// see `docs/SOUND.md`). The default is a single tone that rises with `t`;
     /// rooms override this to give their own voice.

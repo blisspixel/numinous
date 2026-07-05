@@ -93,6 +93,18 @@ impl Room for Julia {
          infinity of them. Whether each one is a single connected piece or a \
          cloud of dust is decided by that point's place in the Mandelbrot set."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Gaston Julia and Pierre Fatou mapped these sets between 1917 and 1919 \
+             with no computer, by pure reasoning about iteration. Julia did much of \
+             the work while recovering from losing his nose in the First World War.",
+            "Run Newton's method to find the roots of an equation and color each \
+             starting point by which root it lands on: the boundaries between the \
+             basins are Julia sets. The fractal was hiding inside the calculus \
+             classroom the whole time.",
+        ]
+    }
 }
 
 #[cfg(test)]

@@ -81,6 +81,19 @@ impl Room for GoldenAngle {
          so the seeds never line up and never waste space. Evolution found the \
          same number the mathematicians did."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Phi's continued fraction is one over one plus one over one plus one over \
+             one, all ones, forever, which makes it provably the hardest number to \
+             approximate with fractions. That is what most irrational actually means, \
+             and why the seeds never line up.",
+            "Count the spirals in a real sunflower and you get consecutive Fibonacci \
+             numbers, 34 one way and 55 the other, because ratios of consecutive \
+             Fibonacci numbers are the best rational approximations to phi. The \
+             flower is doing number theory.",
+        ]
+    }
 }
 
 #[cfg(test)]

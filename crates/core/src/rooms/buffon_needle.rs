@@ -115,6 +115,18 @@ impl Room for BuffonNeedle {
          method, which helped design the atom bomb and powers modern finance and AI.\
          You can compute the universe by throwing dice."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Buffon posed this in 1777 as a gambling question about floorboards. It \
+             is the first problem in what is now called geometric probability, and \
+             the ancestor of every Monte Carlo simulation run today.",
+            "In 1901 Lazzarini reported pi as 355 over 113 after exactly 3408 throws, \
+             an implausibly perfect result. He almost certainly stopped the moment \
+             the estimate looked good, which makes him a cautionary tale in every \
+             statistics course since.",
+        ]
+    }
 }
 
 /// Whether a needle whose center sits at `center` (in strips of width `spacing`)

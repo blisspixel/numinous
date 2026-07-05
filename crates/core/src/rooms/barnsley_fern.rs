@@ -81,6 +81,18 @@ impl Room for BarnsleyFern {
          random build a plant, self-similar down to each frond. The entire \
          genome of this fern fits on an index card."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Barnsley's collage theorem runs the trick backward: given any image, it \
+             tells you how to find transformations whose attractor approximates it. \
+             This became fractal image compression, which shipped on CD-ROM \
+             encyclopedias in the nineties.",
+            "The fern needs the probabilities as much as the maps: pick the four \
+             transformations uniformly and the fern grows stunted and patchy. The 85 \
+             percent rule is what fills the frond evenly. Randomness, tuned.",
+        ]
+    }
 }
 
 #[cfg(test)]

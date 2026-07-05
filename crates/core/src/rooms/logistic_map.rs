@@ -69,6 +69,17 @@ impl Room for LogisticMap {
          equation, for dripping taps, and for heartbeats: Feigenbaum's constant, \
          4.669. A single number governs how simple things fall apart."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Feigenbaum found 4.669 in 1975 with an HP-65 pocket calculator, \
+             computing between its keystrokes by hand. The constant now bears his \
+             name and appears in systems he never touched.",
+            "The constant is universal: any map with one smooth hump cascades into \
+             chaos at the same ratio, and it has been measured in dripping faucets \
+             and fluttering flames. One number, everywhere order breaks.",
+        ]
+    }
 }
 
 #[cfg(test)]

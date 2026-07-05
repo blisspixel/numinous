@@ -71,6 +71,17 @@ impl Room for CellularAutomata {
          was good enough to ship as a random number generator. A one-line rule \
          with the power of a universe."
     }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Rule 30's chaos was good enough that Mathematica shipped it as a random \
+             number generator for years. A one-line rule out-randomed human \
+             engineering.",
+            "Cambridge North railway station is clad in panels patterned by Rule 30. \
+             Thousands of commuters walk past a Turing-adjacent computation every \
+             morning and think it is decoration.",
+        ]
+    }
 }
 
 /// Advance an elementary cellular automaton by one generation.

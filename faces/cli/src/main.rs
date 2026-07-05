@@ -325,7 +325,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             ExitCode::SUCCESS
         }
         Command::Describe { id, json } => {
-            let report = describe_report(&id, json, allow_hidden);
+            let report = describe_report(&id, json, allow_hidden, journey.level());
             if report.is_ok() && find_room(&id, allow_hidden).is_none() {
                 // The name was not a room, yet it answered: a secret heard.
                 journey.secret();
@@ -676,8 +676,11 @@ fn rooms_report(json: bool) -> String {
     }
 }
 
+/// The levels at which a room's first and second deep cuts unlock.
+const CUT_LEVELS: [u32; 2] = [5, 12];
+
 /// One room's description, or a guiding error if the id is unknown.
-fn describe_report(id: &str, json: bool, allow_hidden: bool) -> Result<String, String> {
+fn describe_report(id: &str, json: bool, allow_hidden: bool, level: u32) -> Result<String, String> {
     let Some(room) = find_room(id, allow_hidden) else {
         // Not every name in the world is a room. A few of them answer anyway,
         // and a few more answer only for those who have been listening a while.
@@ -691,14 +694,34 @@ fn describe_report(id: &str, json: bool, allow_hidden: bool) -> Result<String, S
             None => Err(not_found_message(id)),
         };
     };
+    // The knowledge is the loot: deeper cuts unlock as the journey deepens.
+    let mut cuts = String::new();
+    let mut unlocked = Vec::new();
+    for (i, cut) in room.deep_cuts().iter().enumerate() {
+        let need = CUT_LEVELS.get(i).copied().unwrap_or(u32::MAX);
+        if level >= need {
+            let label = if i == 0 { "Deeper" } else { "Deeper still" };
+            cuts.push_str(&format!("\n{label}: {cut}\n"));
+            unlocked.push((*cut).to_string());
+        } else {
+            cuts.push_str(&format!("\nLOCKED: a deeper cut opens at LV {need}.\n"));
+            break;
+        }
+    }
     let m = room.meta();
     Ok(if json {
         let mut value = meta_json(&m);
         value["reveal"] = serde_json::Value::String(room.reveal().to_string());
+        value["deep_cuts"] = serde_json::Value::Array(
+            unlocked
+                .into_iter()
+                .map(serde_json::Value::String)
+                .collect(),
+        );
         format!("{}\n", to_pretty(&value))
     } else {
         format!(
-            "{} ({})\nWing: {}\n\n{}\n\nReveal: {}\n",
+            "{} ({})\nWing: {}\n\n{}\n\nReveal: {}\n{cuts}",
             m.title,
             m.id,
             m.wing,
@@ -1267,27 +1290,27 @@ mod tests {
 
     #[test]
     fn describe_known_room_reports_its_wing() {
-        let text = describe_report("times-tables", false, false).expect("known room");
+        let text = describe_report("times-tables", false, false, 1).expect("known room");
         assert!(text.contains("Number & Pattern"));
     }
 
     #[test]
     fn describe_json_carries_the_id() {
-        let text = describe_report("times-tables", true, false).expect("known room");
+        let text = describe_report("times-tables", true, false, 1).expect("known room");
         let value: Value = serde_json::from_str(&text).expect("valid json");
         assert_eq!(value["id"], "times-tables");
     }
 
     #[test]
     fn describe_includes_the_reveal() {
-        let text = describe_report("times-tables", false, false).expect("known room");
+        let text = describe_report("times-tables", false, false, 1).expect("known room");
         assert!(text.contains("Reveal:"));
         assert!(text.contains("Mandelbrot"));
     }
 
     #[test]
     fn describe_json_includes_the_reveal() {
-        let text = describe_report("times-tables", true, false).expect("known room");
+        let text = describe_report("times-tables", true, false, 1).expect("known room");
         let value: Value = serde_json::from_str(&text).expect("valid json");
         assert!(
             value["reveal"]
@@ -1298,7 +1321,7 @@ mod tests {
 
     #[test]
     fn describe_unknown_room_guides_the_user() {
-        let err = describe_report("no-such-room", false, false).expect_err("unknown room");
+        let err = describe_report("no-such-room", false, false, 1).expect_err("unknown room");
         assert!(err.contains("Known rooms"));
     }
 
@@ -1427,9 +1450,24 @@ mod tests {
     }
 
     #[test]
+    fn deep_cuts_unlock_with_level() {
+        let low = super::describe_report("mandelbrot", false, false, 1).expect("describe");
+        assert!(
+            low.contains("LOCKED: a deeper cut opens at LV 5"),
+            "got: {low}"
+        );
+        assert!(!low.contains("Shishikura"));
+        let mid = super::describe_report("mandelbrot", false, false, 5).expect("describe");
+        assert!(mid.contains("Deeper:"));
+        assert!(mid.contains("LOCKED: a deeper cut opens at LV 12"));
+        let high = super::describe_report("mandelbrot", false, false, 12).expect("describe");
+        assert!(high.contains("Deeper still:") && high.contains("Shishikura"));
+    }
+
+    #[test]
     fn deep_whispers_require_standing() {
-        assert!(super::describe_report("curtain", false, false).is_err());
-        let deep = super::describe_report("curtain", false, true).expect("a deeper whisper");
+        assert!(super::describe_report("curtain", false, false, 1).is_err());
+        let deep = super::describe_report("curtain", false, true, 10).expect("a deeper whisper");
         assert!(deep.contains("veil"), "got: {deep}");
     }
 
@@ -1543,9 +1581,9 @@ mod tests {
 
     #[test]
     fn describe_whispers_for_the_hidden_names() {
-        let out = super::describe_report("hippasus", false, false).expect("a whisper");
+        let out = super::describe_report("hippasus", false, false, 1).expect("a whisper");
         assert!(out.to_lowercase().contains("sea"), "got: {out}");
-        assert!(super::describe_report("not-a-room-nor-secret", false, false).is_err());
+        assert!(super::describe_report("not-a-room-nor-secret", false, false, 1).is_err());
     }
 
     #[test]
