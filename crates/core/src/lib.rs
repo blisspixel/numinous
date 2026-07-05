@@ -29,6 +29,7 @@ pub mod seti;
 pub mod sim;
 pub mod sims;
 pub mod sound;
+pub mod studio;
 pub mod surface;
 
 pub use aliens::{AlienMessage, alien_message, to_base};
@@ -45,4 +46,5 @@ pub use seti::{SetiChannel, SetiScan, build_scan};
 pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
 pub use sims::{all_sims, sim_by_id};
 pub use sound::{Note, SoundSpec};
+pub use studio::{Expr, eval, parse};
 pub use surface::Surface;
