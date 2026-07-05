@@ -78,6 +78,17 @@ impl Raster {
         self.pixels.iter().filter(|&&p| p != BACKGROUND).count()
     }
 
+    /// Dim every pixel to `keep` percent of its brightness, a backdrop for
+    /// overlay text so menus stay legible over busy rooms.
+    pub fn dim(&mut self, keep: u32) {
+        let keep = keep.min(100);
+        for pixel in &mut self.pixels {
+            for channel in pixel.iter_mut() {
+                *channel = ((u32::from(*channel) * keep) / 100) as u8;
+            }
+        }
+    }
+
     /// Replace this raster's pixels from an RGBA byte buffer (alpha ignored;
     /// extra or missing bytes are tolerated). Brings a post-processed frame,
     /// for example a visual era, back onto a raster.
@@ -190,6 +201,20 @@ mod tests {
     #[test]
     fn pixels_have_square_aspect() {
         assert!((Raster::new(4, 4).char_aspect() - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn dim_darkens_and_clamps() {
+        let mut raster = Raster::new(2, 2);
+        raster.plot(0, 0, '#');
+        let bright = raster.to_rgba()[0];
+        raster.dim(25);
+        let dimmed = raster.to_rgba()[0];
+        assert!(
+            dimmed < bright / 2,
+            "should darken hard: {bright} -> {dimmed}"
+        );
+        raster.dim(150); // clamped to 100: no brightening, no overflow
     }
 
     #[test]

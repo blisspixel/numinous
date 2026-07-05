@@ -71,7 +71,17 @@ impl Room for GoldenAngle {
             let radius = scale * (k as f64).sqrt();
             let x = cx + radius * theta.cos();
             let y = cy + radius * theta.sin() * aspect;
-            canvas.plot(x.round() as i32, y.round() as i32, '*');
+            // Seeds are small discs that scale with the surface, so the
+            // sunflower reads at terminal size and at window size alike.
+            let seed_radius = (width / 250) as i32;
+            let (cx, cy) = (x.round() as i32, y.round() as i32);
+            for dy in -seed_radius..=seed_radius {
+                for dx in -seed_radius..=seed_radius {
+                    if dx * dx + dy * dy <= seed_radius * seed_radius {
+                        canvas.plot(cx + dx, cy + dy, '*');
+                    }
+                }
+            }
         }
     }
 

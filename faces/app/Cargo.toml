@@ -18,5 +18,8 @@ numinous-gpu = { path = "../../crates/gpu" }
 winit = "0.30"
 softbuffer = "0.4"
 
+[dev-dependencies]
+png = "0.17"
+
 [lints]
 workspace = true

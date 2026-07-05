@@ -491,7 +491,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 return ExitCode::FAILURE;
             };
             match out {
-                Some(path) => emit(render_png(&id, width, height, t, &path, allow_hidden)),
+                Some(path) => emit(render_png(&id, width, height, t, &path, allow_hidden, era)),
                 None if color => emit(render_color_report(
                     &id,
                     width,
@@ -1073,6 +1073,7 @@ fn still_locked(journey: &Journey, need: u32, what: &str) -> bool {
 }
 
 /// Render a room to a PNG image at `path`, returning a status message.
+#[allow(clippy::too_many_arguments)]
 fn render_png(
     id: &str,
     width: usize,
@@ -1080,10 +1081,17 @@ fn render_png(
     t: f64,
     path: &Path,
     allow_hidden: bool,
+    era: numinous_core::Era,
 ) -> Result<String, String> {
     let room = find_room(id, allow_hidden).ok_or_else(|| not_found_message(id))?;
     let mut raster = Raster::with_accent(width, height, room.meta().accent);
     room.render(&mut raster, t);
+    if era != numinous_core::Era::Modern {
+        let (w, h) = (raster.width(), raster.height());
+        let mut rgba = raster.to_rgba();
+        era.apply(&mut rgba, w, h);
+        raster.set_rgba(&rgba);
+    }
     write_png(path, &raster)?;
     Ok(format!(
         "wrote {} ({}x{})\n",
@@ -1182,7 +1190,15 @@ fn gallery(dir: &Path, width: usize, height: usize) -> Result<String, String> {
     for room in all_rooms() {
         let id = room.meta().id;
         let path = dir.join(format!("{id}.png"));
-        render_png(id, width, height, room.postcard_t(), &path, false)?;
+        render_png(
+            id,
+            width,
+            height,
+            room.postcard_t(),
+            &path,
+            false,
+            numinous_core::Era::Modern,
+        )?;
         count += 1;
     }
     Ok(format!("wrote {count} room images to {}\n", dir.display()))
@@ -1817,8 +1833,16 @@ mod tests {
     fn render_png_writes_a_non_empty_file() {
         let mut path = std::env::temp_dir();
         path.push("numinous_cli_render_test.png");
-        let message =
-            super::render_png("times-tables", 64, 48, 0.0, &path, false).expect("render png");
+        let message = super::render_png(
+            "times-tables",
+            64,
+            48,
+            0.0,
+            &path,
+            false,
+            numinous_core::Era::Modern,
+        )
+        .expect("render png");
         assert!(message.contains("wrote"));
         let size = std::fs::metadata(&path).expect("file exists").len();
         assert!(size > 0, "png should not be empty");
@@ -1828,7 +1852,18 @@ mod tests {
     #[test]
     fn render_png_unknown_room_is_error() {
         let path = std::env::temp_dir().join("numinous_cli_should_not_exist.png");
-        assert!(super::render_png("no-such-room", 10, 10, 0.0, &path, false).is_err());
+        assert!(
+            super::render_png(
+                "no-such-room",
+                10,
+                10,
+                0.0,
+                &path,
+                false,
+                numinous_core::Era::Modern
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -1888,7 +1923,18 @@ mod tests {
     #[test]
     fn render_png_to_an_unwritable_path_is_error() {
         let bad = std::path::Path::new("no_such_dir_zzz/x.png");
-        assert!(super::render_png("times-tables", 8, 8, 0.0, bad, false).is_err());
+        assert!(
+            super::render_png(
+                "times-tables",
+                8,
+                8,
+                0.0,
+                bad,
+                false,
+                numinous_core::Era::Modern
+            )
+            .is_err()
+        );
     }
 
     #[test]

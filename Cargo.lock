@@ -1218,6 +1218,7 @@ dependencies = [
  "numinous-audio",
  "numinous-core",
  "numinous-gpu",
+ "png",
  "softbuffer",
  "winit",
 ]

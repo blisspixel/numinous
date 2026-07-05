@@ -6,6 +6,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Second beauty-QA round, this time over the app's screens as well as the
+  rooms (a QA-mirror example composes the frames headlessly and writes PNGs
+  for review). Found and fixed: the help menu was near-illegible (tiny type
+  over a busy room), it now dims the room to a ghost and draws at menu scale,
+  a proper game pause menu; the bitmap font was missing the math glyphs the
+  Studio types (+ * = ^ < > [ ] %), now present; the Golden Angle's seeds were
+  single pixels that vanished at window size, they now scale with resolution
+  and the spiral families finally pop; and eras render into PNGs too
+  (`render --era`). Raster gains `dim`. Noted for later: the vector era is
+  weakest on filled rooms (edge detection would fix it).
 - The Gauntlet (`numinous gauntlet`, with `--daily`): the session arc. One
   seeded run through four stages, a munch board, a mystery shape, a sky scan,
   and the bomb, where clean stages build a combo multiplier and a miss resets
