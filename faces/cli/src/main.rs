@@ -174,9 +174,9 @@ enum Command {
         #[arg(long, default_value_t = 24)]
         height: usize,
     },
-    /// Plot a function of x, e.g. numinous plot "sin(3*x) + x/2".
+    /// Plot a function of x, e.g. numinous plot "sin(a*x)". Use a for a knob.
     Plot {
-        /// The expression in x (functions: sin cos tan exp ln abs sqrt; constants pi e).
+        /// The expression in x and a (funcs: sin cos tan exp ln abs sqrt; consts pi e).
         expr: String,
         /// Left edge of the x range.
         #[arg(long, default_value_t = -std::f64::consts::TAU)]
@@ -184,12 +184,41 @@ enum Command {
         /// Right edge of the x range.
         #[arg(long, default_value_t = std::f64::consts::TAU)]
         xmax: f64,
+        /// Value of the parameter a (constant unless animating).
+        #[arg(long, default_value_t = 1.0)]
+        a: f64,
+        /// Animate: sweep a from amin to amax, Ctrl+C to stop.
+        #[arg(long)]
+        animate: bool,
+        /// Start of the a sweep when animating.
+        #[arg(long, default_value_t = 0.0)]
+        amin: f64,
+        /// End of the a sweep when animating.
+        #[arg(long, default_value_t = std::f64::consts::TAU)]
+        amax: f64,
         /// Plot width in columns.
         #[arg(long, default_value_t = 72)]
         width: usize,
         /// Plot height in rows.
         #[arg(long, default_value_t = 24)]
         height: usize,
+    },
+    /// Sing a function: turn y = f(x) into a melody and write a WAV.
+    Sing {
+        /// The expression in x.
+        expr: String,
+        /// Left edge of the x range.
+        #[arg(long, default_value_t = -std::f64::consts::TAU)]
+        xmin: f64,
+        /// Right edge of the x range.
+        #[arg(long, default_value_t = std::f64::consts::TAU)]
+        xmax: f64,
+        /// Number of notes.
+        #[arg(long, default_value_t = 48)]
+        notes: usize,
+        /// Write a WAV audio file to this path.
+        #[arg(long)]
+        out: PathBuf,
     },
 }
 
@@ -250,17 +279,95 @@ fn main() -> ExitCode {
             expr,
             xmin,
             xmax,
+            a,
+            animate,
+            amin,
+            amax,
             width,
             height,
-        } => emit(plot_report(&expr, xmin, xmax, width, height)),
+        } => {
+            if animate {
+                plot_animate(&expr, xmin, xmax, amin, amax, width, height)
+            } else {
+                emit(plot_report(&expr, xmin, xmax, a, width, height))
+            }
+        }
+        Command::Sing {
+            expr,
+            xmin,
+            xmax,
+            notes,
+            out,
+        } => emit(sing_wav(&expr, xmin, xmax, notes, &out)),
     }
 }
 
-/// Plot `source` as y = f(x) over `[xmin, xmax]`, auto-scaling y.
+/// Animate a plot in the terminal, sweeping the parameter `a`, until interrupted.
+fn plot_animate(
+    source: &str,
+    xmin: f64,
+    xmax: f64,
+    amin: f64,
+    amax: f64,
+    width: usize,
+    height: usize,
+) -> ExitCode {
+    let frame_time = Duration::from_secs_f64(1.0 / 12.0);
+    let mut stdout = std::io::stdout();
+    let mut phase = 0.0_f64;
+    loop {
+        let a = amin + (amax - amin) * phase;
+        match plot_report(source, xmin, xmax, a, width, height) {
+            Ok(text) => {
+                let _ = write!(
+                    stdout,
+                    "\x1b[2J\x1b[H{text}\na = {a:.3}   (Ctrl+C to stop)\n"
+                );
+                let _ = stdout.flush();
+            }
+            Err(message) => {
+                eprint!("{message}");
+                return ExitCode::FAILURE;
+            }
+        }
+        std::thread::sleep(frame_time);
+        phase = if phase + 0.02 >= 1.0 {
+            0.0
+        } else {
+            phase + 0.02
+        };
+    }
+}
+
+/// Turn `source` into a melody over `[xmin, xmax]` and write it as a WAV.
+fn sing_wav(
+    source: &str,
+    xmin: f64,
+    xmax: f64,
+    notes: usize,
+    path: &Path,
+) -> Result<String, String> {
+    let expr = numinous_core::parse(source)?;
+    if xmax <= xmin {
+        return Err("need xmax > xmin\n".to_string());
+    }
+    let sample_rate = 44_100u32;
+    let spec = numinous_core::to_melody(&expr, xmin, xmax, notes, 0.0);
+    write_wav(path, &spec.render(sample_rate), sample_rate)?;
+    Ok(format!(
+        "wrote {} ({:.1}s, {} notes) from y = {source}\n",
+        path.display(),
+        spec.duration,
+        spec.notes.len()
+    ))
+}
+
+/// Plot `source` as y = f(x, a) over `[xmin, xmax]`, auto-scaling y.
 fn plot_report(
     source: &str,
     xmin: f64,
     xmax: f64,
+    a: f64,
     width: usize,
     height: usize,
 ) -> Result<String, String> {
@@ -271,7 +378,7 @@ fn plot_report(
     let samples: Vec<(f64, f64)> = (0..width)
         .map(|i| {
             let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
-            (x, numinous_core::eval(&expr, x))
+            (x, numinous_core::eval(&expr, x, a))
         })
         .filter(|(_, y)| y.is_finite())
         .collect();
@@ -490,8 +597,17 @@ fn sonify_wav(id: &str, t: f64, path: &Path) -> Result<String, String> {
     let room = room_by_id(id).ok_or_else(|| not_found_message(id))?;
     let spec = room.sound(t);
     let sample_rate = 44_100u32;
-    let samples = spec.render(sample_rate);
+    write_wav(path, &spec.render(sample_rate), sample_rate)?;
+    Ok(format!(
+        "wrote {} ({:.1}s, {} notes)\n",
+        path.display(),
+        spec.duration,
+        spec.notes.len()
+    ))
+}
 
+/// Write mono 16-bit samples to a WAV file at `path`.
+fn write_wav(path: &Path, samples: &[f32], sample_rate: u32) -> Result<(), String> {
     let wav_spec = hound::WavSpec {
         channels: 1,
         sample_rate,
@@ -500,20 +616,14 @@ fn sonify_wav(id: &str, t: f64, path: &Path) -> Result<String, String> {
     };
     let mut writer = hound::WavWriter::create(path, wav_spec)
         .map_err(|e| format!("could not create {}: {e}", path.display()))?;
-    for sample in &samples {
+    for sample in samples {
         writer
             .write_sample((sample * f32::from(i16::MAX)) as i16)
             .map_err(|e| format!("wav write failed: {e}"))?;
     }
     writer
         .finalize()
-        .map_err(|e| format!("wav finalize failed: {e}"))?;
-    Ok(format!(
-        "wrote {} ({:.1}s, {} notes)\n",
-        path.display(),
-        spec.duration,
-        spec.notes.len()
-    ))
+        .map_err(|e| format!("wav finalize failed: {e}"))
 }
 
 /// Render every room to `<dir>/<id>.png`, returning a status message.
@@ -956,15 +1066,38 @@ mod tests {
 
     #[test]
     fn plot_report_draws_a_known_function() {
-        let out = super::plot_report("x", -1.0, 1.0, 24, 8).expect("plot");
+        let out = super::plot_report("x", -1.0, 1.0, 0.0, 24, 8).expect("plot");
         assert!(out.contains("y = x"));
         assert!(out.contains('#'));
     }
 
     #[test]
+    fn plot_report_uses_the_parameter() {
+        // With a=0 the line is flat; with a large a it spans more, so ink differs.
+        let flat = super::plot_report("a * x", -1.0, 1.0, 0.0, 24, 8).expect("plot");
+        let steep = super::plot_report("a * x", -1.0, 1.0, 5.0, 24, 8).expect("plot");
+        assert_ne!(flat, steep);
+    }
+
+    #[test]
     fn plot_report_rejects_bad_input() {
-        assert!(super::plot_report("sin(", -1.0, 1.0, 24, 8).is_err());
-        assert!(super::plot_report("x", 1.0, 1.0, 24, 8).is_err()); // xmax not > xmin
+        assert!(super::plot_report("sin(", -1.0, 1.0, 0.0, 24, 8).is_err());
+        assert!(super::plot_report("x", 1.0, 1.0, 0.0, 24, 8).is_err()); // xmax not > xmin
+    }
+
+    #[test]
+    fn sing_wav_writes_a_melody() {
+        let path = std::env::temp_dir().join("numinous_sing_test.wav");
+        let message = super::sing_wav("sin(x)", -3.0, 3.0, 16, &path).expect("sing");
+        assert!(message.contains("wrote"));
+        assert!(std::fs::metadata(&path).expect("file").len() > 0);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn sing_wav_rejects_a_bad_expression() {
+        let path = std::env::temp_dir().join("numinous_sing_bad.wav");
+        assert!(super::sing_wav("nope(", -1.0, 1.0, 8, &path).is_err());
     }
 
     #[test]

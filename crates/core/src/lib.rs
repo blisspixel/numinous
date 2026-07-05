@@ -46,5 +46,5 @@ pub use seti::{SetiChannel, SetiScan, build_scan};
 pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
 pub use sims::{all_sims, sim_by_id};
 pub use sound::{Note, SoundSpec};
-pub use studio::{Expr, eval, parse};
+pub use studio::{Expr, eval, parse, to_melody};
 pub use surface::Surface;

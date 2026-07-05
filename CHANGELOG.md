@@ -12,6 +12,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   Tier 1 safe-DSL seed of the creative graphing calculator. `numinous plot
   "sin(3*x) + x/2"` parses it and draws the curve; the engine is unit-tested for
   precedence, associativity, functions, and errors.
+- Studio grows: the engine gains an animation parameter `a`, so `numinous plot
+  "sin(a*x)" --animate` sweeps the knob live in the terminal; and `numinous sing
+  "sin(x) + x/3" --out song.wav` turns a function into a melody (value to pitch
+  over x as time). You can now see, animate, and hear an expression.
 - Agents play too (MCP): three new tools so a digital mind can use the same
   content as a human. `list_sims` and `run_sim` steer the simulations by lever
   (fiddle to optimize or break them, and read the outcome), and `quiz` plays

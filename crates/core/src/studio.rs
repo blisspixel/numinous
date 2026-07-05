@@ -8,6 +8,8 @@
 
 use std::f64::consts::{E, PI};
 
+use crate::sound::{Note, SoundSpec};
+
 /// A parsed expression tree over the single variable `x`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -15,6 +17,8 @@ pub enum Expr {
     Num(f64),
     /// The variable `x`.
     Var,
+    /// The animation parameter `a`.
+    Param,
     /// Unary negation.
     Neg(Box<Expr>),
     /// A binary operation.
@@ -57,35 +61,75 @@ pub enum Func {
     Sqrt,
 }
 
-/// Evaluate a parsed expression at a given `x`.
+/// Evaluate a parsed expression at variable `x` and parameter `a`.
 #[must_use]
-pub fn eval(expr: &Expr, x: f64) -> f64 {
+pub fn eval(expr: &Expr, x: f64, a: f64) -> f64 {
     match expr {
         Expr::Num(n) => *n,
         Expr::Var => x,
-        Expr::Neg(a) => -eval(a, x),
-        Expr::Bin(op, a, b) => {
-            let (a, b) = (eval(a, x), eval(b, x));
+        Expr::Param => a,
+        Expr::Neg(inner) => -eval(inner, x, a),
+        Expr::Bin(op, lhs, rhs) => {
+            let (lhs, rhs) = (eval(lhs, x, a), eval(rhs, x, a));
             match op {
-                Op::Add => a + b,
-                Op::Sub => a - b,
-                Op::Mul => a * b,
-                Op::Div => a / b,
-                Op::Pow => a.powf(b),
+                Op::Add => lhs + rhs,
+                Op::Sub => lhs - rhs,
+                Op::Mul => lhs * rhs,
+                Op::Div => lhs / rhs,
+                Op::Pow => lhs.powf(rhs),
             }
         }
-        Expr::Call(func, a) => {
-            let a = eval(a, x);
+        Expr::Call(func, arg) => {
+            let arg = eval(arg, x, a);
             match func {
-                Func::Sin => a.sin(),
-                Func::Cos => a.cos(),
-                Func::Tan => a.tan(),
-                Func::Exp => a.exp(),
-                Func::Ln => a.ln(),
-                Func::Abs => a.abs(),
-                Func::Sqrt => a.sqrt(),
+                Func::Sin => arg.sin(),
+                Func::Cos => arg.cos(),
+                Func::Tan => arg.tan(),
+                Func::Exp => arg.exp(),
+                Func::Ln => arg.ln(),
+                Func::Abs => arg.abs(),
+                Func::Sqrt => arg.sqrt(),
             }
         }
+    }
+}
+
+/// Turn an expression into a melody: sample `y = f(x)` across `[xmin, xmax]` and
+/// map each value to a pitch, stepping through time. You hear the curve.
+#[must_use]
+pub fn to_melody(expr: &Expr, xmin: f64, xmax: f64, notes: usize, a: f64) -> SoundSpec {
+    let notes = notes.max(1);
+    let step = 0.12_f32;
+    let denom = (notes as f64 - 1.0).max(1.0);
+    let samples: Vec<f64> = (0..notes)
+        .map(|i| eval(expr, xmin + (xmax - xmin) * i as f64 / denom, a))
+        .filter(|y| y.is_finite())
+        .collect();
+    if samples.is_empty() {
+        return SoundSpec {
+            duration: step,
+            notes: Vec::new(),
+        };
+    }
+    let ymin = samples.iter().copied().fold(f64::INFINITY, f64::min);
+    let ymax = samples.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let span = (ymax - ymin).max(1e-9);
+    let note_vec: Vec<Note> = samples
+        .iter()
+        .enumerate()
+        .map(|(i, &y)| {
+            let norm = ((y - ymin) / span) as f32; // 0..1
+            Note {
+                freq: 220.0 * 2.0_f32.powf(norm * 2.0), // two octaves, 220..880 Hz
+                start: i as f32 * step,
+                dur: step * 1.4,
+                amp: 0.3,
+            }
+        })
+        .collect();
+    SoundSpec {
+        duration: note_vec.len() as f32 * step + 0.3,
+        notes: note_vec,
     }
 }
 
@@ -267,6 +311,7 @@ impl Parser {
         } else {
             match name {
                 "x" => Ok(Expr::Var),
+                "a" => Ok(Expr::Param),
                 "pi" => Ok(Expr::Num(PI)),
                 "e" => Ok(Expr::Num(E)),
                 other => Err(format!("unknown name '{other}'")),
@@ -280,7 +325,7 @@ mod tests {
     use super::{eval, parse};
 
     fn at(source: &str, x: f64) -> f64 {
-        eval(&parse(source).expect("parse"), x)
+        eval(&parse(source).expect("parse"), x, 0.0)
     }
 
     #[test]
@@ -308,6 +353,21 @@ mod tests {
         assert!((at("sqrt(x)", 16.0) - 4.0).abs() < 1e-9);
         assert!((at("pi", 0.0) - std::f64::consts::PI).abs() < 1e-9);
         assert!((at("ln(e)", 0.0) - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn the_parameter_a_is_read() {
+        let expr = parse("a * x").expect("parse");
+        assert!((eval(&expr, 3.0, 2.0) - 6.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_function_becomes_a_rising_melody() {
+        let expr = parse("x").expect("parse");
+        let spec = super::to_melody(&expr, -1.0, 1.0, 8, 0.0);
+        assert_eq!(spec.notes.len(), 8);
+        assert!(spec.duration > 0.0);
+        assert!(spec.notes.last().unwrap().freq > spec.notes[0].freq);
     }
 
     #[test]
