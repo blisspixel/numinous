@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- End-to-end proof of the agent face (`faces/mcp/tests/stdio_session.rs`):
+  spawns the real `numinous-mcp` binary and walks a full 22-request session
+  over stdio, initialize, every one of the 14 tools, the whisper, the journey
+  earning XP within the session, the munch score posting to the table, ping,
+  and both JSON-RPC error codes; a second test proves malformed input gets a
+  parse error and the server keeps serving. Hermetic via env-pointed journey
+  and score files.
 - Dense game feedback (a lesson from agentic-RL research, OPID
   arXiv:2606.26790, written into `docs/AGENT_PLAY.md`): Munch now names the
   exact numbers wrongly eaten and the fits walked past, in the terminal and in
