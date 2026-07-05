@@ -69,6 +69,43 @@ Is it fun, do you learn by playing, does it show math is neat? Door by door:
   mechanism, deadpan. Also serves the digital mind, and any human who enjoys
   watching a frog get dissected.
 
+## Math as experience (the research, and the bar)
+
+What the fun research actually says, distilled from flow theory, self-
+determination theory, and game-based-learning studies, plus Papert's
+constructionism and Lockhart's math-as-art:
+
+- **Flow needs three things**: challenge matched to skill, clear goals, and
+  immediate feedback. Every room and game here must give all three; the sims
+  (turn a lever, see the outcome instantly) are the purest case.
+- **Intrinsic beats extrinsic**: people learn when the activity is its own
+  reward (autonomy, competence, connection). Our XP is pacing, never payment;
+  there are no gold stars, only deeper cuts.
+- **Papert's law**: you learn math by living in a place where math is the
+  material you build with (his Mathland), not by being told about it. Numinous
+  is an attempted Mathland.
+- **The concept must be the verb.** The deepest design rule we hold: an
+  advanced concept is learned when it is the *mechanic*, not the *content*.
+  Nobody solves calculus here; someone plays a thing and accumulation was the
+  controls.
+
+**Experience rooms** (the queue this implies; each is an advanced concept as a
+verb, per the reverse-calculus brief):
+
+- **The Pour** (integration): tilt a curve and watch area pour into it like
+  water; the fill level traces the antiderivative. Reverse the pour and you
+  are differentiating. You feel the fundamental theorem before hearing it.
+- **Slope Rider** (differentiation): ride the tangent line down a curve like a
+  skateboard; your speed IS the derivative; inflection points are the jumps.
+- **The Epicycle Draw** (Fourier): draw any shape; circles-on-circles rebuild
+  it before your eyes; the frequencies are handed to you afterward.
+- **The Calm Axes** (eigenvectors): grab and shear a grid; two directions
+  refuse to turn; you found the eigenvectors with your hands.
+- **Zeno's Runner** (limits): sprint half the remaining distance per tap and
+  watch the wall arrive anyway.
+- **The Braid** (group theory): swap strands, discover which sequences undo
+  which, and meet noncommutativity as a knot in your hands.
+
 ## The kid principle
 
 A kid can play this and have fun even if some of the math does not connect yet,
