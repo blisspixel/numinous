@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The Full Map (`docs/ROOMS.md`): all of mathematics as play, a coverage
+  checklist across nine branches (number, algebra and symmetry, geometry and
+  topology, analysis, chance, discrete structure, computation and logic,
+  decision, dynamics), every entry filtered by the two laws (the concept is
+  the verb; the play carries itself), each marked built or queued. A branch is
+  covered when a kid can play its entry and a professor can nod at it, and
+  neither one is bored.
 - Postcard phases (`Room::postcard_t`), from the first full beauty-QA loop
   (render every room, look at it, judge fun/beauty/truth, fix): each room now
   tells the gallery and contact sheet its proudest moment. Found and fixed:
