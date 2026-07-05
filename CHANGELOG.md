@@ -6,6 +6,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The Journey (`crates/core` `journey`, `numinous journey`): quiet roguelike
+  progression. Play accumulates a private local record: rooms entered light
+  stars in a shared-sky constellation, wins and secrets add weight, and the
+  record confers rank in the Order (Outsider, Akousmatikos, Mathematikos,
+  Kanonikos, Dekas) at triangular-number thresholds. Crossing a rank prints one
+  deadpan line. Rank never gates the base experience; it opens hidden layers:
+  at Mathematikos the deeper akousmata answer, and one unlisted room renders for
+  those who learned its name. Below rank, the ordinary not-found; nothing is
+  acknowledged. See `docs/LORE.md`.
 - The five-doors design and honest audit (`docs/PLAYFUL.md`): the digital mind,
   the stoner gamer, the design expert, the PhD nerd, and the alien, and what
   each one gets today versus next. Three gaps closed with it:

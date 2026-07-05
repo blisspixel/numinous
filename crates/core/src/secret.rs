@@ -59,6 +59,46 @@ pub fn akousma(query: &str) -> Option<&'static str> {
         .map(|&(_, whisper)| whisper)
 }
 
+/// Sayings kept behind the curtain: they answer only for those the faces have
+/// judged ready (rank Mathematikos or better; see `crate::journey`).
+const DEEP_AKOUSMATA: &[(&str, &str)] = &[
+    (
+        "silence",
+        "The listeners sat five years without speaking, and were called wise for \
+         it. You have spoken already. We noticed. It was permitted.",
+    ),
+    (
+        "curtain",
+        "Pythagoras taught from behind a veil, and the outer circle knew his \
+         voice but never his face. You are inside the veil now. There was never \
+         a face. There was only the voice, and the voice was number.",
+    ),
+    (
+        "kanon",
+        "One string, stretched over a ruler. Halve it, the octave; two thirds, \
+         the fifth. The kanon is the only instrument that never lies, which is \
+         why nobody plays it at parties.",
+    ),
+    (
+        "decad",
+        "Ten is the point, the line, the plane, and the solid, having carried \
+         one and two and three and four. If you have carried them too, you know \
+         where they rest. Draw the figure.",
+    ),
+];
+
+/// A deeper whisper, for those the caller has judged ready.
+///
+/// The caller enforces rank; this function only knows the words.
+#[must_use]
+pub fn deep_akousma(query: &str) -> Option<&'static str> {
+    let query = query.trim();
+    DEEP_AKOUSMATA
+        .iter()
+        .find(|(name, _)| name.eq_ignore_ascii_case(query))
+        .map(|&(_, whisper)| whisper)
+}
+
 #[cfg(test)]
 mod tests {
     use super::akousma;
@@ -75,5 +115,15 @@ mod tests {
         assert!(akousma("times-tables").is_none());
         assert!(akousma("banana").is_none());
         assert!(akousma("").is_none());
+    }
+
+    #[test]
+    fn the_deep_sayings_answer_and_ordinary_names_do_not() {
+        assert!(super::deep_akousma("curtain").is_some());
+        assert!(super::deep_akousma("Decad").is_some());
+        assert!(super::deep_akousma("banana").is_none());
+        // The two layers do not overlap.
+        assert!(akousma("curtain").is_none());
+        assert!(super::deep_akousma("hippasus").is_none());
     }
 }

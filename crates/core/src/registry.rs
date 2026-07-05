@@ -37,6 +37,17 @@ pub fn room_by_id(id: &str) -> Option<Box<dyn Room>> {
     all_rooms().into_iter().find(|room| room.meta().id == id)
 }
 
+/// The rooms that are not in the catalog. Never listed, never announced; the
+/// faces decide who may enter (by rank, see `crate::journey`). Calling this a
+/// registry function is already saying too much.
+#[must_use]
+pub fn hidden_room_by_id(id: &str) -> Option<Box<dyn Room>> {
+    match id {
+        "tetractys" => Some(Box::new(rooms::tetractys::Tetractys::new())),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{all_rooms, room_by_id};

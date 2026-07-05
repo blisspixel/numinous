@@ -80,6 +80,31 @@ so the app and MCP can carry the same whispers.
 exist, the fifth and octave turning up in the harmonograph's readout. Breadcrumbs,
 never a trail of arrows.
 
+## The Journey (built): progression as quiet initiation
+
+The RPG layer, built to the guardrails. A local, private record (the journey
+file) accumulates as you play: rooms entered light stars in a constellation
+(`numinous journey` shows the sky; positions are hashed from room ids, so
+everyone shares the same sky and only your light differs), games won and secrets
+heard add weight. The record confers **rank in the Order**, using the school's
+real structure: Outsider, then **Akousmatikos** (a listener, behind the
+curtain), then **Mathematikos** (a learner, within), then **Kanonikos** (a
+theorist of the monochord), then **Dekas** (the ten itself). Thresholds are
+triangular numbers, because of course they are. Crossing a rank prints one
+deadpan line and explains nothing.
+
+What rank does, and does not do:
+
+- **It never gates the base experience.** Every room, sim, game, and Studio
+  feature works identically at every rank, forever.
+- **It opens hidden layers.** At Mathematikos, the deeper akousmata begin to
+  answer (`silence`, `curtain`, `kanon`, `decad`), and one unlisted room will
+  render for you if you have learned its name. The base tetractys whisper has
+  been saying "four rows, ten points" all along; the decad whisper ends "draw
+  the figure." Breadcrumbs, never arrows.
+- **The unready are not teased.** Asking for a hidden thing below rank returns
+  the ordinary not-found. Nothing acknowledges that there was anything to find.
+
 ## The layers, on purpose
 
 The lore is built so that different depths of attention are all rewarded, and none is required:
