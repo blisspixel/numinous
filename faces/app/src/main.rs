@@ -49,6 +49,12 @@ struct App {
     gpu: Option<numinous_gpu::FractalRenderer>,
     /// The visual era ('e' cycles: phosphor, 8-bit, vector, modern).
     era: numinous_core::Era,
+    /// Sound off ('m' toggles).
+    muted: bool,
+    /// The help overlay ('h' toggles; shown at launch so nobody is lost).
+    show_help: bool,
+    /// Frame counter, used to refresh the audio as the phase sweeps.
+    frame: u64,
 }
 
 impl App {
@@ -70,6 +76,9 @@ impl App {
             studio_error: None,
             gpu: None,
             era: numinous_core::Era::default(),
+            muted: false,
+            show_help: true,
+            frame: 0,
         }
     }
 
@@ -132,10 +141,21 @@ impl App {
     /// Render the current room's sound at the current phase and send it to the
     /// looping player, so the room you see is the room you hear.
     fn update_audio(&self) {
-        if let Some(player) = &self.player {
-            let spec = self.rooms[self.current].sound(self.t);
-            player.set_samples(spec.render(player.sample_rate()));
+        let Some(player) = &self.player else {
+            return;
+        };
+        if self.muted {
+            player.set_samples(Vec::new());
+            return;
         }
+        let spec = self.rooms[self.current].sound(self.t);
+        // Rendered a notch quieter than the raw spec: this loops for a while.
+        let samples: Vec<f32> = spec
+            .render(player.sample_rate())
+            .into_iter()
+            .map(|s| s * 0.6)
+            .collect();
+        player.set_samples(samples);
     }
 
     fn title(&self) -> String {
@@ -286,6 +306,47 @@ impl App {
             }
         }
 
+        // The help overlay (launch state, 'h' to bring back), and a hint bar so
+        // nobody has to guess the controls.
+        if self.show_help && !self.the_show {
+            let lines = [
+                "ARROWS  CHANGE ROOM",
+                "DRAG    SCRUB TIME",
+                "E       CHANGE ERA",
+                "I       WHY IT MATTERS",
+                "S       THE SHOW: SIT BACK",
+                "TAB     THE STUDIO: TYPE MATH",
+                "M       SOUND ON / OFF",
+                "SPACE   PAUSE",
+                "H       HIDE THIS",
+            ];
+            let line_height = 11 * scale;
+            let top = (height as i32 / 2) - (lines.len() as i32 * line_height) / 2;
+            for (i, line) in lines.iter().enumerate() {
+                numinous_core::draw_text(
+                    &mut raster,
+                    line,
+                    width as i32 / 6,
+                    top + i as i32 * line_height,
+                    scale,
+                    '#',
+                );
+            }
+        } else if !self.the_show {
+            let mut hint = String::from("H HELP   M SOUND   E ERA");
+            if self.muted {
+                hint.push_str("   (MUTED)");
+            }
+            numinous_core::draw_text(
+                &mut raster,
+                &hint,
+                10,
+                height as i32 - 10 * scale,
+                scale,
+                '-',
+            );
+        }
+
         let mut rgba = raster.to_rgba();
         let (rw, rh) = (raster.width(), raster.height());
         self.era.apply(&mut rgba, rw, rh);
@@ -393,6 +454,13 @@ impl ApplicationHandler for App {
                         Key::Character(s) if s.as_str() == "i" => {
                             self.show_info = !self.show_info;
                         }
+                        Key::Character(s) if s.as_str() == "m" => {
+                            self.muted = !self.muted;
+                            self.update_audio();
+                        }
+                        Key::Character(s) if s.as_str() == "h" => {
+                            self.show_help = !self.show_help;
+                        }
                         Key::Character(s) if s.as_str() == "e" => {
                             self.era = self.era.next();
                             if let Some(window) = &self.window {
@@ -440,6 +508,11 @@ impl ApplicationHandler for App {
                 }
             } else {
                 self.t += step;
+            }
+            // The sound follows the sweep instead of droning on one tone.
+            self.frame += 1;
+            if self.frame % 120 == 0 && !self.studio {
+                self.update_audio();
             }
         }
         if let Some(window) = &self.window {
