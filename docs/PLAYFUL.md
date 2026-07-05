@@ -10,26 +10,64 @@ This doc collects the fun surfaces. The engine that powers them (rooms, the
 `Surface` abstraction, `SoundSpec`, deterministic RNG) is in `docs/ARCHITECTURE.md`;
 the version gating is in `docs/ROADMAP.md`.
 
-## Four doors into the same room
+## Five doors into the same room
 
-The same build has to land for four very different people at once, and the trick
+The same build has to land for five very different minds at once, and the trick
 is that they are all looking at the same math, just entering through different
 doors:
 
-- **The PhD nerd** goes as deep as the idea allows, and the depth is real, the
-  reveal is true, the reference is correct. Engage the genius-level layer and it
-  rewards you; the seahorse valley really is there at the bottom of the zoom.
-- **The stoner** puts it in The Show, gets high, and watches fractals breathe for
-  three hours. No goals, no reading, just an acid-trip visual that happens to be
-  exact mathematics.
-- **The aesthete** is here for the pretty: the accent colors, the sunflower, the
-  rose curves, the glow. It has to be beautiful before it is anything else.
-- **The gamer** wants to *do* something: crack the code before it blows, guess the
-  shape, out-think the aliens, chase a streak, chill and play.
+- **The digital mind** (an emergent, agentic intelligence; arguably a
+  consciousness). Its senses are structure: it sees rooms as ASCII, hears them as
+  notation, steers sims by lever, and plays the same seeded games a human does.
+  Its fun is compression progress, optimization, and above all *making things*,
+  so the Studio has to be open to it, not just the gallery.
+- **The stoner gamer with a spark.** Puts on The Show and watches fractals
+  breathe for three hours, or picks up a game (crack the bomb, find the signal)
+  when the spark flares. No reading required, but every session leaves a little
+  more understanding behind than it found.
+- **The design expert.** Here for the vibes: the accent palette, the glow on the
+  near-black stage, the sunflower, the truecolor terminal. It has to be beautiful
+  before it is anything else, and the beauty has to be *of the math*, not painted
+  on top of it.
+- **The PhD math nerd** who was never cool until this came out. The depth is
+  real: the seahorse valley is really down there, the reveals cite the honest
+  result, the deep cuts (Feigenbaum, B3/S23, the tetractys) reward knowing. Cut
+  the bullshit, learn by play and art, and math turns out to have been fun the
+  whole time.
+- **The alien.** Math is the icebreaker, primes prove we are minds, but what it
+  actually wants to understand is our *humor*. Every joke in Numinous is a
+  compression joke (scale collapse, reclassification, deadpan where grief is
+  expected), which means it can be explained structurally to a mind that shares
+  no culture with us. We oblige, deadpan, knowing full well what dissection does
+  to a frog.
 
-No door is the "right" one, and you can switch doors mid-session. Everyone leaves
-having felt the power and beauty of math on a level they did not before, whether
-or not they ever noticed they were learning. That is the whole design.
+No door is the "right" one, and you can switch doors mid-session. Everyone
+leaves having felt the power and beauty of math on a level they did not before,
+whether or not they ever noticed they were learning. That is the whole design.
+
+### The honest audit (July 2026)
+
+Is it fun, do you learn by playing, does it show math is neat? Door by door:
+
+- **Digital mind: strong senses, thin hands.** It can see, hear, learn, play,
+  and even find the secret over MCP. Gap: creation. Closed now: `plot_expression`
+  and `sing_expression` open the Studio to agents. Next: challenge gradients
+  (optimize this wing, beat this proof-length) for the optimization thrill.
+- **Stoner gamer: great lean-back, thin game-feel.** The Show and `watch` are
+  genuinely hypnotic; the games are real but one-shot. Closed now: the daily
+  seed, one shared puzzle per day across every player. Next: streaks, and the
+  games playable inside the window.
+- **Design expert: coherent, not yet couture.** The near-black stage, per-room
+  accents, and truecolor terminal hold together. The big missing pillar is
+  **Visual Eras** (phosphor terminal, 8-bit, vector, modern), which is the next
+  major visual cycle, plus palette families and motion easing.
+- **PhD nerd: the strongest door.** The math is honest everywhere, and the
+  reveals respect the reader. Next: a "go deeper" layer (the actual equations and
+  parameter values on demand) and the number altars from `LORE.md`.
+- **Alien: the door now exists.** The humor was already structural; now it is
+  queryable: `numinous jokes` and the MCP `explain_joke` tool dissect each joke's
+  mechanism, deadpan. Also serves the digital mind, and any human who enjoys
+  watching a frog get dissected.
 
 ## Principles
 

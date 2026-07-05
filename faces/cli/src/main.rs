@@ -138,6 +138,9 @@ enum Command {
         /// Seed (the same seed gives the same quiz).
         #[arg(long, default_value_t = 1)]
         seed: u64,
+        /// Play today's shared puzzle (everyone gets the same one).
+        #[arg(long)]
+        daily: bool,
         /// Mystery render width in columns.
         #[arg(long, default_value_t = 54)]
         width: usize,
@@ -145,11 +148,19 @@ enum Command {
         #[arg(long, default_value_t = 22)]
         height: usize,
     },
+    /// The jokes that live in Numinous, dissected (a frog dies for science).
+    Jokes {
+        /// Which specimen to dissect (omit to list them).
+        index: Option<usize>,
+    },
     /// Crack the Code: defuse a math-clued bomb before your attempts run out.
     Crack {
         /// Seed (the same seed gives the same code).
         #[arg(long, default_value_t = 1)]
         seed: u64,
+        /// Play today's shared code (everyone gets the same one).
+        #[arg(long)]
+        daily: bool,
         /// Number of digits in the code.
         #[arg(long, default_value_t = 4)]
         digits: usize,
@@ -162,6 +173,9 @@ enum Command {
         /// Seed (the same seed gives the same scan).
         #[arg(long, default_value_t = 1)]
         seed: u64,
+        /// Scan today's shared sky (everyone gets the same one).
+        #[arg(long)]
+        daily: bool,
         /// Channels per scan.
         #[arg(long, default_value_t = 4)]
         channels: usize,
@@ -280,19 +294,26 @@ fn main() -> ExitCode {
         Command::Quiz {
             rounds,
             seed,
+            daily,
             width,
             height,
-        } => quiz(rounds, seed, width, height),
+        } => quiz(rounds, pick_seed(seed, daily), width, height),
+        Command::Jokes { index } => {
+            print!("{}", jokes_report(index));
+            ExitCode::SUCCESS
+        }
         Command::Crack {
             seed,
+            daily,
             digits,
             attempts,
-        } => crack(seed, digits, attempts),
+        } => crack(pick_seed(seed, daily), digits, attempts),
         Command::Seti {
             seed,
+            daily,
             channels,
             rounds,
-        } => seti(seed, channels, rounds),
+        } => seti(pick_seed(seed, daily), channels, rounds),
         Command::Aliens { seed, rounds } => aliens(seed, rounds),
         Command::Sims => {
             print!("{}", sims_report());
@@ -854,6 +875,46 @@ fn aliens(seed: u64, rounds: usize) -> ExitCode {
     ExitCode::SUCCESS
 }
 
+/// The seed to play with: the explicit one, or today's shared seed with
+/// `--daily` (the same for every player on the same calendar day, UTC).
+fn pick_seed(seed: u64, daily: bool) -> u64 {
+    if daily {
+        let days = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() / 86_400)
+            .unwrap_or(0);
+        println!("Daily challenge (day {days}). Everyone gets this one.\n");
+        days
+    } else {
+        seed
+    }
+}
+
+/// The jokes, listed or dissected.
+fn jokes_report(index: Option<usize>) -> String {
+    match index {
+        Some(i) => match numinous_core::explain_joke(i) {
+            Some(joke) => format!(
+                "Specimen {i}: \"{}\"\nHabitat: {}.\nMechanism: {}\n",
+                joke.text, joke.habitat, joke.mechanism
+            ),
+            None => format!(
+                "No specimen {i}. There are {} catalogued jokes.\n",
+                numinous_core::jokes().len()
+            ),
+        },
+        None => {
+            let mut lines =
+                vec!["The catalogued jokes (a joke explained is a frog dissected):".to_string()];
+            for (i, joke) in numinous_core::jokes().iter().enumerate() {
+                lines.push(format!("  {i}: \"{}\"  ({})", joke.text, joke.habitat));
+            }
+            lines.push("Dissect one with: numinous jokes <index>\n".to_string());
+            lines.join("\n")
+        }
+    }
+}
+
 /// A closing remark for a quiz score. Pure, so it is unit-tested.
 fn quiz_remark(score: usize, rounds: usize) -> &'static str {
     if rounds == 0 {
@@ -1123,6 +1184,24 @@ mod tests {
     fn sonify_to_an_unwritable_path_is_error() {
         let bad = std::path::Path::new("no_such_dir_zzz/x.wav");
         assert!(super::sonify_wav("lissajous", 0.0, bad).is_err());
+    }
+
+    #[test]
+    fn pick_seed_honors_the_explicit_seed() {
+        assert_eq!(super::pick_seed(7, false), 7);
+        // The daily seed is a day count: small, positive, stable within a run.
+        let daily = super::pick_seed(7, true);
+        assert!(daily > 20_000 && daily < 40_000, "got {daily}");
+        assert_eq!(super::pick_seed(7, true), daily);
+    }
+
+    #[test]
+    fn jokes_report_lists_and_dissects() {
+        let list = super::jokes_report(None);
+        assert!(list.contains("frog"));
+        let one = super::jokes_report(Some(0));
+        assert!(one.contains("Mechanism:"));
+        assert!(super::jokes_report(Some(999)).contains("No specimen"));
     }
 
     #[test]
