@@ -130,6 +130,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   `t` hunts for the width and the hidden picture snaps into focus. 19 rooms.
 - Base-N aliens: Talk to the Aliens transmissions can arrive in base 2, 8, or 16
   (a different number of fingers), so you translate before you answer.
+- SETI detection game (`crates/core` `seti`, `numinous seti`): the step before
+  talking. Scan channels of static near the hydrogen line and pick the one
+  artificial signal (counting in primes) out of the regular pulsars and noise;
+  nature makes rhythms, but only minds count in primes.
 - A hidden Cult of Pythagoras easter egg (`crates/core` `secret`): a few unlisted
   names (`hippasus`, `tetractys`, `pythagoras`, `harmonia`, `odd`, ...) answer
   `numinous describe` with an akousma in the Order's voice instead of a not-found

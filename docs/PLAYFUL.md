@@ -165,7 +165,11 @@ what?" moment intact:
 
 ## Alien contact (extending Talk to the Aliens)
 
-The prime-number handshake is built; the rest of the first-contact kit:
+First you have to find them. **SETI** (built, `numinous seti`) is the detection
+step: scan channels of static near the hydrogen line and pick the one artificial
+signal, the one counting in primes, out of the regular pulsars (nature) and the
+noise. Only then do you open a channel. The prime-number handshake and the rest
+of the first-contact kit follow:
 
 - **Arecibo pixel puzzle.** Hand the player 1,679 bits. The trick: 1,679 is a
   semiprime, only 23 x 73, so arranging the stream into a 23-wide grid resolves

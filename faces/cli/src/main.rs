@@ -137,6 +137,18 @@ enum Command {
         #[arg(long, default_value_t = 8)]
         attempts: usize,
     },
+    /// SETI: scan the static and find the one channel that is not natural.
+    Seti {
+        /// Seed (the same seed gives the same scan).
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        /// Channels per scan.
+        #[arg(long, default_value_t = 4)]
+        channels: usize,
+        /// Number of scans.
+        #[arg(long, default_value_t = 4)]
+        rounds: usize,
+    },
     /// Talk to the Aliens: continue the number sequence they transmit.
     Aliens {
         /// Seed (the same seed gives the same transmission).
@@ -201,6 +213,11 @@ fn main() -> ExitCode {
             digits,
             attempts,
         } => crack(seed, digits, attempts),
+        Command::Seti {
+            seed,
+            channels,
+            rounds,
+        } => seti(seed, channels, rounds),
         Command::Aliens { seed, rounds } => aliens(seed, rounds),
         Command::Sims => {
             print!("{}", sims_report());
@@ -479,6 +496,48 @@ fn crack(seed: u64, digits: usize, attempts: usize) -> ExitCode {
     let code: String = secret.iter().map(|&d| char::from(b'0' + d)).collect();
     println!("\nBOOM. The code was {code}.");
     ExitCode::FAILURE
+}
+
+/// Play SETI: scan channels of static and pick the artificial signal.
+fn seti(seed: u64, channels: usize, rounds: usize) -> ExitCode {
+    let stdin = std::io::stdin();
+    let mut input = stdin.lock();
+    let mut score = 0usize;
+    println!(
+        "Listening near the hydrogen line. Nature makes rhythms; only minds count in primes.\n"
+    );
+    for round in 0..rounds {
+        let scan = numinous_core::build_scan(seed.wrapping_add(round as u64), channels);
+        println!("Scan #{}:", round + 1);
+        for channel in &scan.channels {
+            println!(
+                "  {})  {:>10}  |{}|",
+                channel.letter, channel.frequency, channel.trace
+            );
+        }
+        print!("Which channel is a transmission? ");
+        let _ = std::io::stdout().flush();
+        let mut line = String::new();
+        if input.read_line(&mut line).unwrap_or(0) == 0 {
+            println!();
+            break;
+        }
+        let guess = line.trim().chars().next().map(|c| c.to_ascii_uppercase());
+        if guess == Some(scan.answer) {
+            score += 1;
+            println!(
+                "Contact. {} at {} was counting in primes. That is not nature.\n",
+                scan.answer, scan.answer_frequency
+            );
+        } else {
+            println!(
+                "Static. The signal was {} at {}, counting 2, 3, 5, 7, 11.\n",
+                scan.answer, scan.answer_frequency
+            );
+        }
+    }
+    println!("You found {score}/{rounds}. Now open a channel and say hello: numinous aliens.");
+    ExitCode::SUCCESS
 }
 
 /// Play Talk to the Aliens: continue the transmitted sequences from stdin.
