@@ -6,6 +6,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Munch (`crates/core` `munchers`, `numinous munch`, MCP `munch`): Number
+  Munchers reborn. A seeded board of numbers and a rule (eat the primes, the
+  multiples of n, the perfect squares); right bites +10, wrong bites -5, a
+  perfect clear +20. The same seed gives the same boards to a human in the
+  terminal and an agent over MCP, so scores are directly comparable, the first
+  head-to-head game across minds. `--daily` makes it a shared league; perfect
+  clears count as journey wins. Thirteen MCP tools.
+- `docs/PLAYFUL.md` gains the kid principle (the play carries itself even when
+  the math has not connected yet; insight is loot, not a prerequisite) and the
+  three shapes of play (the campaign, the watchable, the scored freestyle).
 - Levels, 1 to 42 (`journey` gains `level()`, an 8-bit XP bar, and `plays`):
   XP comes from showing up, rooms entered, rounds played, sims run, curves
   made, with a little extra for being right and for secrets, so a teenager, the
