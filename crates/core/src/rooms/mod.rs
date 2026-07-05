@@ -1,5 +1,6 @@
 //! Built-in rooms. Each module implements the [`crate::room::Room`] contract.
 
+pub mod arecibo;
 pub mod barnsley_fern;
 pub mod buffon_needle;
 pub mod cellular_automata;

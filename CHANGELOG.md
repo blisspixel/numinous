@@ -124,7 +124,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   Shape to Function via Fourier epicycles, the high-Wolfram ethos) across faces,
   plus the four-personas design (PhD nerd, stoner, aesthete, gamer).
 - `lorenz` (Chaos & Order): the Lorenz attractor and the butterfly effect; `t`
-  sweeps the parameter through the onset of chaos. Now 18 rooms across 6 wings.
+  sweeps the parameter through the onset of chaos.
+- `arecibo` (new Signals & Codes wing): a bitstream that looks like noise until
+  you line it up at the one width its semiprime length allows (143 = 11 x 13);
+  `t` hunts for the width and the hidden picture snaps into focus. 19 rooms.
+- Base-N aliens: Talk to the Aliens transmissions can arrive in base 2, 8, or 16
+  (a different number of fingers), so you translate before you answer.
 - A hidden Cult of Pythagoras easter egg (`crates/core` `secret`): a few unlisted
   names (`hippasus`, `tetractys`, `pythagoras`, `harmonia`, `odd`, ...) answer
   `numinous describe` with an akousma in the Order's voice instead of a not-found

@@ -489,8 +489,22 @@ fn aliens(seed: u64, rounds: usize) -> ExitCode {
     println!("A transmission. They speak only in numbers. Prove you understand.\n");
     for round in 0..rounds {
         let message = numinous_core::alien_message(seed.wrapping_add(round as u64), 5);
-        let shown: Vec<String> = message.terms.iter().map(u64::to_string).collect();
-        println!("Signal #{}: {}, ...?", round + 1, shown.join(", "));
+        let shown: Vec<String> = message
+            .terms
+            .iter()
+            .map(|&t| numinous_core::to_base(t, message.base))
+            .collect();
+        let base_note = if message.base == 10 {
+            String::new()
+        } else {
+            format!(" (they count in base {})", message.base)
+        };
+        println!(
+            "Signal #{}{}: {}, ...?",
+            round + 1,
+            base_note,
+            shown.join(", ")
+        );
         print!("The next number > ");
         let _ = std::io::stdout().flush();
         let mut line = String::new();
@@ -498,16 +512,17 @@ fn aliens(seed: u64, rounds: usize) -> ExitCode {
             println!();
             break;
         }
-        if line.trim().parse::<u64>().ok() == Some(message.answer) {
+        let answer = numinous_core::to_base(message.answer, message.base);
+        if u64::from_str_radix(line.trim(), message.base).ok() == Some(message.answer) {
             score += 1;
             println!(
-                "Contact. It was {} ({}).\n  {}\n",
-                message.answer, message.name, message.explanation
+                "Contact. It was {answer} ({}).\n  {}\n",
+                message.name, message.explanation
             );
         } else {
             println!(
-                "Silence. It was {} ({}).\n  {}\n",
-                message.answer, message.name, message.explanation
+                "Silence. It was {answer} ({}).\n  {}\n",
+                message.name, message.explanation
             );
         }
     }
