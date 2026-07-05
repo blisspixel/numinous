@@ -48,6 +48,37 @@ humor, dissected), `plot_expression` and `sing_expression` (creation),
 `run_sim` (optimization play), `quiz` (challenge), `journey` (progression to
 LV 42), and the whispers for the ones who wander off the map.
 
+## MCP-game conventions (July 2026 survey)
+
+The MCP-game genre now has real exemplars and emerging conventions. What the
+survey found, and what each finding means for us:
+
+- **Structured tool output is the table stakes.** The 2025-06-18 spec (which
+  this server targets) added structuredContent to tool results: scores and
+  state as machine-readable data alongside the prose. Adopted here: munch and
+  quiz grades and the journey now return structured content, so an agent, a
+  harness, or a leaderboard consumes results without parsing sentences.
+- **Leaderboards are the retention engine.** The PokeAgent Challenge (NeurIPS
+  2025) became a living benchmark with a public leaderboard and Glicko
+  ratings; MCPlayerOne (an ASCII-art world server, our closest genre neighbor)
+  leads with a leaderboard; club platforms run whole ladders over MCP. Ours:
+  seeded scores make comparison trivial today; a shared ladder is a 2.0 item
+  (needs a network service, which we do not have and do not fake).
+- **Turn-based, stateless-per-call is the reference shape.** The canonical
+  turn-based MCP example (tic-tac-toe, rock-paper-scissors, three difficulty
+  levels) uses the same call-to-see, call-again-to-move pattern our quiz and
+  munch use. Difficulty tiers are the norm; our locks and hard modes match.
+- **Elicitation and sampling are the frontier.** The spec lets a server ask
+  the user structured questions mid-call (elicitation) and ask the client's
+  own model to reason (sampling). For games: elicitation could run a whole
+  multi-round match inside one tool call, and sampling could power an in-server
+  opponent with no model shipped. Noted for later; our stateless shape works
+  everywhere today, including clients that support neither.
+- **Being a good MCP citizen is itself discoverable.** Eval suites now measure
+  models against fleets of real MCP servers and tools (MCP-Atlas: 1,000 tasks
+  over 36 servers). Flat schemas, guiding errors, and deterministic behavior
+  make a server usable in that world; we hold to all three.
+
 ## Next for agent play
 
 - Challenge gradients: "find the stall angle to one decimal" style optimization
