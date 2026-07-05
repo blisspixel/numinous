@@ -10,6 +10,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   sweeps slowly, and when a room finishes its sweep the app drifts into the next
   one, the whole collection playing itself for hours, with sound. Press `s` again
   to take the controls back.
+- The Studio in the window (`tab` key): type math and watch it live. The curve
+  redraws in color on every keystroke (the last good parse stays alive while you
+  edit, errors shown gently), the parameter `a` sweeps itself with the clock so
+  the shape breathes, and the expression's melody plays as you shape it.
 - The Studio's expression engine (`crates/core` `studio`): a small, safe
   recursive-descent parser and evaluator for single-variable expressions in `x`
   (`+ - * / ^`, unary minus, `sin cos tan exp ln abs sqrt`, and `pi`/`e`), the
