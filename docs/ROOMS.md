@@ -221,3 +221,90 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 **Boss rooms (high-risk, save for later):** Sizes of Infinity, Hyperbolic Space.
 
 **Living document.** New phenomena welcome anytime, the bar to add a room is: *can a stranger feel awe in 10 seconds with zero words, and is there a Reveal that reframes it?* If yes, it's a candidate.
+
+
+---
+
+# The Full Map: all of mathematics, as play
+
+The coverage promise: every major branch of mathematics gets at least one
+experience, and no experience is allowed to be homework. Two laws filter every
+entry (see `PLAYFUL.md`): **the concept must be the verb** (you do the math,
+you are not told it), and **the kid principle** (the play carries itself even
+if the concept never consciously lands). If an idea cannot pass both, it does
+not ship, however important the syllabus thinks it is.
+
+Status marks: [x] built, [~] partially built, [ ] queued.
+
+## Number
+- [x] **Modular arithmetic** — Times Tables: strings on a circle bloom into a cardioid.
+- [x] **Primes** — the Ulam spiral; SETI (only minds count in primes); Munch (eat them).
+- [x] **Continued fractions / irrationality** — the Golden Angle: detune the sunflower and it shatters.
+- [x] **Number bases** — the aliens count on eight tentacles.
+- [x] **Open conjectures as toys** — Collatz: play with an unsolved problem.
+- [ ] **Cardinality of infinities** — Hilbert's Hotel as a management game: always room for one more bus, until the reals check in and the front desk breaks. You feel the difference between countable and not.
+- [ ] **Benford's law** — a fraud-detective game: two ledgers, one cooked; the leading digits snitch.
+- [ ] **RSA in miniature** — extend Crack the Code: multiply two primes and watch why the bomb squad cannot reverse it.
+
+## Algebra and symmetry
+- [ ] **Group theory** — The Braid: swap strands, learn what undoes what; noncommutativity as a knot in your hands.
+- [ ] **Wallpaper symmetry** — a stamp toy that snaps your doodles into each of the 17 wallpaper groups; you discover there are only 17 by running out.
+- [ ] **Newton fractals** — polynomial roots as basins: aim, release, and see which root catches you; the boundaries are the surprise.
+- [x] **Complex numbers** — the entire Fractals wing runs on them, unannounced.
+- [ ] **Eigenvectors** — The Calm Axes: shear a grid with your hands; two directions refuse to turn.
+
+## Geometry and topology
+- [ ] **Aperiodic tiling** — the Hat monotile: tile forever, never repeat (the 2023 result as a jigsaw).
+- [ ] **Hyperbolic space** — the crochet-coral plane: more room than the room has; parallel lines diverge under your cursor.
+- [ ] **Mobius strip** — draw the center line, cover both sides without lifting; cut it and gasp.
+- [ ] **Knots** — tangle and untangle; discover some tangles are truly different, not just stubborn.
+- [ ] **Four-color map** — race to color a map with five, then four, then try three and fail forever.
+- [ ] **Voronoi** — drop wells in a desert and watch territories crystallize; every point served by its nearest well.
+- [x] **Phyllotaxis / packing** — the Golden Angle again (geometry door this time).
+
+## Change (analysis)
+- [ ] **Integration** — The Pour: area pours like water; the fill level traces the antiderivative; reverse the pour and you are differentiating.
+- [ ] **Differentiation** — Slope Rider: ride the tangent; your speed is the derivative; inflections are the jumps.
+- [ ] **Limits** — Zeno's Runner: sprint half the remaining distance per tap; the wall arrives anyway.
+- [ ] **Fourier** — the Epicycle Draw: any shape you doodle, rebuilt by circles on circles.
+- [x] **Differential equations** — Lorenz: three equations, weather, the butterfly.
+- [x] **Exponential growth and equilibrium** — Tribbles; the Big Bang's omega; e hides in both.
+- [ ] **Taylor series** — a zoom toy: every smooth curve becomes its own tangent parabola, cubic, quartic, as you add terms with a slider; sin(x) assembles itself out of polynomials.
+
+## Chance
+- [x] **Central limit theorem** — the Galton board's bell.
+- [x] **Monte Carlo** — Buffon's needles estimate pi with no circle in sight.
+- [ ] **Bayes** — a lie-detector game: update your suspicion die-roll by die-roll; feel evidence accumulate instead of computing it.
+- [ ] **Random walks** — the drunkard: stumble n steps, end up sqrt(n) from the bar, every time, on average.
+- [ ] **Birthday paradox** — a party-filling toy: watch the collision arrive absurdly early; bet against it and lose.
+- [ ] **Markov chains** — a weather machine with dials: today decides tomorrow; find the steady state by feel.
+
+## Structure (discrete)
+- [ ] **Graph theory** — the Bridges of Konigsberg as a walking puzzle; fail, then learn you were always going to fail, and why (degree parity, never named).
+- [ ] **Pigeonhole** — a party trick generator: guaranteed handshake-twins in any crowd of a certain size.
+- [ ] **Ramsey** — the party of six: find strangers or friends; order is unavoidable, chaos is impossible.
+- [ ] **Traveling salesman** — route the pizza drone; beat the greedy algorithm; meet hardness personally.
+
+## Computation and logic
+- [x] **Universality** — Rule 110 and Life (the reveals and deep cuts carry it).
+- [x] **Undecidability** — Life's deep cut; the halting problem, worn lightly.
+- [x] **Information as structure** — Arecibo (a semiprime is a picture frame); SETI; the codes games.
+- [ ] **Sorting, visible** — race the algorithms as animated bar-ballets with sound; quicksort against bubble sort is a horse race.
+- [ ] **Entropy** — a compression toy: your keyboard mashing versus Shakespeare versus pi's digits; which squeezes smallest and why.
+- [x] **Godel, strange loops** — the lore layer's deep water (LORE.md), never a lecture.
+
+## Decision (games and fairness)
+- [ ] **Nim** — play it, lose repeatedly, then be handed the xor secret and become unbeatable; the transfer of power is the lesson.
+- [ ] **Prisoner's dilemma** — an iterated tournament against strategies with personalities; tit-for-tat wins hearts.
+- [ ] **Voting paradoxes** — run the same three-candidate election under five systems and crown five different winners.
+- [ ] **Fair division** — cut the cake: I-cut-you-choose, then envy-free for three; fairness as a mechanic, not a sermon.
+
+## Motion and dynamics
+- [x] **Deterministic chaos** — the logistic cascade; Lorenz; Langton's Ant.
+- [ ] **Double pendulum** — grab it, drop it, and watch two of them disagree from a pixel of difference.
+- [ ] **Three-body problem** — place three suns and try to make them dance forever; grief teaches what "no closed-form solution" means.
+- [x] **Resonance and harmony** — Lissajous, the harmonograph, every room's sound; the kanon whisper.
+
+The wings stay feelings, not branches; this map is the coverage checklist
+behind them. A branch is covered when a kid can play its entry and a professor
+can nod at it, and neither one is bored.
