@@ -312,6 +312,9 @@ impl App {
         // The help overlay (launch state, 'h' to bring back), and a hint bar so
         // nobody has to guess the controls.
         if self.show_help && !self.the_show {
+            // The menu owns the screen: dim the room hard so the text reads.
+            raster.dim(22);
+            let menu_scale = (width as i32 / 300).clamp(2, 4);
             let lines = [
                 "A / D      PREV / NEXT ROOM",
                 "1 - 9      JUMP TO ROOM",
@@ -326,15 +329,15 @@ impl App {
                 "B          THE SHOW: SIT BACK",
                 "ESC        CLOSE MENU (X QUITS)",
             ];
-            let line_height = 11 * scale;
+            let line_height = 11 * menu_scale;
             let top = (height as i32 / 2) - (lines.len() as i32 * line_height) / 2;
             for (i, line) in lines.iter().enumerate() {
                 numinous_core::draw_text(
                     &mut raster,
                     line,
-                    width as i32 / 6,
+                    width as i32 / 8,
                     top + i as i32 * line_height,
-                    scale,
+                    menu_scale,
                     '#',
                 );
             }
