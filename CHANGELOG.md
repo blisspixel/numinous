@@ -6,6 +6,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The five-doors design and honest audit (`docs/PLAYFUL.md`): the digital mind,
+  the stoner gamer, the design expert, the PhD nerd, and the alien, and what
+  each one gets today versus next. Three gaps closed with it:
+  - Agents create (MCP `plot_expression`, `sing_expression`): the Studio is open
+    to digital minds, plot your own function, hear it as notation. Eleven tools.
+  - The daily challenge (`--daily` on `quiz`, `seti`, `crack`): one shared seeded
+    puzzle per UTC day, the same for every player.
+  - The humor, dissected (`crates/core` `humor`, `numinous jokes`, MCP
+    `explain_joke`): each joke catalogued with its habitat and its mechanism
+    stated structurally, for the alien, the agent, and anyone who enjoys frog
+    dissection. The dissection warning is itself part of the joke.
 - The terminal becomes a framebuffer (`crates/core` `ansi`): truecolor rendering
   packs two 24-bit pixels into every character cell via the half-block trick,
   with color-run compression, so any modern terminal shows real full-color

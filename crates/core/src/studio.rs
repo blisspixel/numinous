@@ -133,6 +133,55 @@ pub fn to_melody(expr: &Expr, xmin: f64, xmax: f64, notes: usize, a: f64) -> Sou
     }
 }
 
+/// Plot `source` as ASCII over `[xmin, xmax]` at parameter `a`, auto-scaling y.
+/// Returns the picture and the y range it covered.
+///
+/// # Errors
+/// Returns a message if the expression does not parse, the ranges are invalid,
+/// or the function is undefined across the whole range.
+pub fn plot_text(
+    source: &str,
+    xmin: f64,
+    xmax: f64,
+    a: f64,
+    width: usize,
+    height: usize,
+) -> Result<(String, f64, f64), String> {
+    let expr = parse(source)?;
+    if width < 2 || height < 2 || xmax <= xmin {
+        return Err("need width >= 2, height >= 2, and xmax > xmin".to_string());
+    }
+    let samples: Vec<(f64, f64)> = (0..width)
+        .map(|i| {
+            let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
+            (x, eval(&expr, x, a))
+        })
+        .filter(|(_, y)| y.is_finite())
+        .collect();
+    if samples.is_empty() {
+        return Err("nothing to plot: the function is undefined across this range".to_string());
+    }
+    let ymin = samples.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
+    let ymax = samples
+        .iter()
+        .map(|p| p.1)
+        .fold(f64::NEG_INFINITY, f64::max);
+    let yspan = (ymax - ymin).max(1e-9);
+
+    let mut canvas = crate::canvas::Canvas::new(width, height);
+    let mut previous: Option<(i32, i32)> = None;
+    for &(x, y) in &samples {
+        let sx = ((x - xmin) / (xmax - xmin) * (width as f64 - 1.0)) as i32;
+        let sy = ((height as f64 - 1.0) - (y - ymin) / yspan * (height as f64 - 1.0)) as i32;
+        if let Some((px, py)) = previous {
+            use crate::surface::Surface;
+            canvas.line(px, py, sx, sy, '#');
+        }
+        previous = Some((sx, sy));
+    }
+    Ok((canvas.to_text(), ymin, ymax))
+}
+
 /// Parse an expression in `x`, or return a human-readable error.
 ///
 /// # Errors
@@ -368,6 +417,15 @@ mod tests {
         assert_eq!(spec.notes.len(), 8);
         assert!(spec.duration > 0.0);
         assert!(spec.notes.last().unwrap().freq > spec.notes[0].freq);
+    }
+
+    #[test]
+    fn plot_text_draws_and_reports_the_range() {
+        let (text, ymin, ymax) = super::plot_text("x", -1.0, 1.0, 0.0, 24, 8).expect("plot");
+        assert!(text.contains('#'));
+        assert!((ymin - -1.0).abs() < 0.1 && (ymax - 1.0).abs() < 0.1);
+        assert!(super::plot_text("sin(", -1.0, 1.0, 0.0, 24, 8).is_err());
+        assert!(super::plot_text("x", 1.0, -1.0, 0.0, 24, 8).is_err());
     }
 
     #[test]

@@ -177,6 +177,45 @@ fn tools_list_result() -> Value {
                 }
             },
             {
+                "name": "plot_expression",
+                "description": "Create in the Studio: plot your own function of x (and optional knob a) and see the curve as ASCII. Functions: sin cos tan exp ln abs sqrt; constants pi, e. Example: sin(3*x) + x/2.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "expr": { "type": "string", "description": "The expression in x, for example sin(3*x) + x/2." },
+                        "xmin": { "type": "number", "description": "Left edge of x (default -tau)." },
+                        "xmax": { "type": "number", "description": "Right edge of x (default tau)." },
+                        "a": { "type": "number", "description": "Value of the knob a (default 1)." }
+                    },
+                    "required": ["expr"],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "sing_expression",
+                "description": "Hear your own function: the curve y = f(x) becomes a melody (value maps to pitch over x as time), returned as readable notation.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "expr": { "type": "string", "description": "The expression in x." },
+                        "notes": { "type": "integer", "description": "Number of notes (default 24)." }
+                    },
+                    "required": ["expr"],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "explain_joke",
+                "description": "The humor, dissected: list the jokes that live in Numinous, or pass an index to get one joke's mechanism stated structurally (for minds that share no culture with us). A joke explained is a frog dissected; we proceed anyway.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "index": { "type": "integer", "description": "Which specimen (0-based). Omit to list them all." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
                 "name": "quiz",
                 "description": "Play Guess the Shape. Call with seed and round to get a mystery render and lettered choices; call again with your guess (a letter) to learn if you were right and why.",
                 "inputSchema": {
@@ -214,6 +253,9 @@ fn call_tool(params: Option<&Value>) -> Result<Value, (i64, String)> {
         "list_sims" => Ok(tool_text(&list_sims_text())),
         "run_sim" => Ok(run_sim_tool(&args)),
         "quiz" => Ok(quiz_tool(&args)),
+        "plot_expression" => Ok(plot_expression_tool(&args)),
+        "sing_expression" => Ok(sing_expression_tool(&args)),
+        "explain_joke" => Ok(explain_joke_tool(&args)),
         other => Err((-32602_i64, format!("Unknown tool: {other}"))),
     }
 }
@@ -406,6 +448,77 @@ fn quiz_tool(args: &Value) -> Value {
     }
 }
 
+/// The `plot_expression` tool: an agent creates in the Studio.
+fn plot_expression_tool(args: &Value) -> Value {
+    use std::f64::consts::TAU;
+    let Some(expr) = args.get("expr").and_then(Value::as_str) else {
+        return tool_error("Missing required string argument 'expr'.");
+    };
+    let xmin = args.get("xmin").and_then(Value::as_f64).unwrap_or(-TAU);
+    let xmax = args.get("xmax").and_then(Value::as_f64).unwrap_or(TAU);
+    let a = args.get("a").and_then(Value::as_f64).unwrap_or(1.0);
+    match numinous_core::plot_text(expr, xmin, xmax, a, 72, 26) {
+        Ok((text, ymin, ymax)) => tool_text(&format!(
+            "y = {expr}    x in [{xmin:.3}, {xmax:.3}]    y in [{ymin:.3}, {ymax:.3}]\n\n{text}"
+        )),
+        Err(message) => tool_error(&message),
+    }
+}
+
+/// The `sing_expression` tool: an agent's function becomes readable music.
+fn sing_expression_tool(args: &Value) -> Value {
+    use std::f64::consts::TAU;
+    let Some(source) = args.get("expr").and_then(Value::as_str) else {
+        return tool_error("Missing required string argument 'expr'.");
+    };
+    let notes = args.get("notes").and_then(Value::as_u64).unwrap_or(24) as usize;
+    let expr = match numinous_core::parse(source) {
+        Ok(expr) => expr,
+        Err(message) => return tool_error(&message),
+    };
+    let spec = numinous_core::to_melody(&expr, -TAU, TAU, notes.clamp(1, 64), 1.0);
+    let mut lines = vec![format!(
+        "y = {source} as a melody: {:.1}s, {} notes.",
+        spec.duration,
+        spec.notes.len()
+    )];
+    for (i, note) in spec.notes.iter().enumerate() {
+        lines.push(format!(
+            "  note {:>2}: {:>7.1} Hz ({:>3})  at {:>5.2}s",
+            i + 1,
+            note.freq,
+            note_name(note.freq),
+            note.start
+        ));
+    }
+    tool_text(&lines.join("\n"))
+}
+
+/// The `explain_joke` tool: humor as structure, for the alien and the agent.
+fn explain_joke_tool(args: &Value) -> Value {
+    match args.get("index").and_then(Value::as_u64) {
+        Some(index) => match numinous_core::explain_joke(index as usize) {
+            Some(joke) => tool_text(&format!(
+                "Specimen {index}: \"{}\"\nHabitat: {}.\nMechanism: {}",
+                joke.text, joke.habitat, joke.mechanism
+            )),
+            None => tool_error(&format!(
+                "No specimen {index}. There are {} catalogued jokes.",
+                numinous_core::jokes().len()
+            )),
+        },
+        None => {
+            let mut lines =
+                vec!["The catalogued jokes (a joke explained is a frog dissected):".to_string()];
+            for (i, joke) in numinous_core::jokes().iter().enumerate() {
+                lines.push(format!("  {i}: \"{}\"  ({})", joke.text, joke.habitat));
+            }
+            lines.push("Call again with an index for the dissection.".to_string());
+            tool_text(&lines.join("\n"))
+        }
+    }
+}
+
 fn unknown_sim(id: &str) -> String {
     let known: Vec<&str> = numinous_core::all_sims()
         .iter()
@@ -469,12 +582,73 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 8);
+        assert_eq!(tools.len(), 11);
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
         assert!(names.contains(&"reveal_room"));
         assert!(names.contains(&"run_sim"));
         assert!(names.contains(&"quiz"));
         assert!(names.contains(&"listen_room"));
+        assert!(names.contains(&"plot_expression"));
+        assert!(names.contains(&"sing_expression"));
+        assert!(names.contains(&"explain_joke"));
+    }
+
+    #[test]
+    fn an_agent_can_create_in_the_studio() {
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":40,"method":"tools/call",
+            "params":{"name":"plot_expression","arguments":{"expr":"sin(3*x) + x/2"}}
+        }))
+        .expect("tools/call must respond");
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains('#'), "the curve has ink");
+        assert_eq!(resp["result"]["isError"], false);
+
+        let bad = handle_request(&json!({
+            "jsonrpc":"2.0","id":41,"method":"tools/call",
+            "params":{"name":"plot_expression","arguments":{"expr":"sin("}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(bad["result"]["isError"], true);
+    }
+
+    #[test]
+    fn an_agent_can_sing_its_own_function() {
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":42,"method":"tools/call",
+            "params":{"name":"sing_expression","arguments":{"expr":"x","notes":8}}
+        }))
+        .expect("tools/call must respond");
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("8 notes"), "got: {text}");
+        assert!(text.contains("Hz"));
+    }
+
+    #[test]
+    fn the_jokes_can_be_dissected() {
+        let list = handle_request(&json!({
+            "jsonrpc":"2.0","id":43,"method":"tools/call",
+            "params":{"name":"explain_joke","arguments":{}}
+        }))
+        .expect("tools/call must respond");
+        let text = list["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("frog"), "the warning is part of the joke");
+
+        let one = handle_request(&json!({
+            "jsonrpc":"2.0","id":44,"method":"tools/call",
+            "params":{"name":"explain_joke","arguments":{"index":1}}
+        }))
+        .expect("tools/call must respond");
+        let text = one["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("Mechanism:"), "got: {text}");
     }
 
     #[test]
