@@ -156,6 +156,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
     ("you are now a lawn dart").
   - `black-hole`: Schwarzschild radius, time dilation, and spaghettification, with
     an event horizon and photon ring drawn to scale.
+  - `supernova`: the star's mass decides its corpse, white dwarf, neutron star,
+    or black hole (Chandrasekhar and TOV limits).
+  - `big-bang`: the density omega decides the fate, expand forever, flat, or a Big
+    Crunch (a numerically integrated Friedmann scale factor).
+  - `carburetor`: tune the air-fuel mix from flooded (too rich) to backfiring (too
+    lean); best power at 12.6:1, cleanest at 14.7:1.
 
 ### Changed
 - Rooms render through `Surface` instead of a concrete `Canvas` (the `render`

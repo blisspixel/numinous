@@ -1,6 +1,9 @@
 //! Built-in sims. Each module implements the [`crate::sim::Sim`] contract.
 
+pub mod big_bang;
 pub mod black_hole;
+pub mod carburetor;
+pub mod supernova;
 pub mod tribbles;
 pub mod wing;
 
@@ -12,7 +15,10 @@ pub fn all_sims() -> Vec<Box<dyn Sim>> {
     vec![
         Box::new(tribbles::Tribbles::new()),
         Box::new(wing::Wing::new()),
+        Box::new(carburetor::Carburetor::new()),
         Box::new(black_hole::BlackHole::new()),
+        Box::new(supernova::Supernova::new()),
+        Box::new(big_bang::BigBang::new()),
     ]
 }
 
