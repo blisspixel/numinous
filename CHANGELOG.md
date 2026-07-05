@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Game-native controls (from first-user feedback: a Counter-Strike or Minecraft
+  player should instantly get it): A/D strafe rooms, 1-9 jump to a room like
+  weapon slots, W/S run time faster or slower, the mouse wheel scrubs, E
+  inspects the math, Q swaps the era, R restarts the sweep, F goes fullscreen,
+  B starts The Show, and Esc opens the menu (the help overlay) instead of rage
+  quitting; the window's close button quits. Gamepad support is the natural
+  next step of this layout.
 - App UX pass (from first-user feedback): the controls are now on the glass, a
   help overlay is visible at launch (`h` brings it back) and a persistent hint
   bar sits at the bottom; `m` mutes and unmutes. The sound stopped hurting:

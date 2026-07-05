@@ -55,6 +55,8 @@ struct App {
     show_help: bool,
     /// Frame counter, used to refresh the audio as the phase sweeps.
     frame: u64,
+    /// Time speed multiplier (W faster, S slower), like sprint and sneak.
+    time_scale: f64,
 }
 
 impl App {
@@ -79,6 +81,7 @@ impl App {
             muted: false,
             show_help: true,
             frame: 0,
+            time_scale: 1.0,
         }
     }
 
@@ -171,7 +174,7 @@ impl App {
                 format!("  |  {}", self.era.name())
             };
             format!(
-                "Numinous  |  {}{era}  (drag: scrub, arrows: switch, i: reveal, e: era, s: the show, tab: studio, esc: quit)",
+                "Numinous  |  {}{era}  (esc: menu)",
                 self.rooms[self.current].meta().title
             )
         }
@@ -310,15 +313,18 @@ impl App {
         // nobody has to guess the controls.
         if self.show_help && !self.the_show {
             let lines = [
-                "ARROWS  CHANGE ROOM",
-                "DRAG    SCRUB TIME",
-                "E       CHANGE ERA",
-                "I       WHY IT MATTERS",
-                "S       THE SHOW: SIT BACK",
-                "TAB     THE STUDIO: TYPE MATH",
-                "M       SOUND ON / OFF",
-                "SPACE   PAUSE",
-                "H       HIDE THIS",
+                "A / D      PREV / NEXT ROOM",
+                "1 - 9      JUMP TO ROOM",
+                "W / S      TIME FASTER / SLOWER",
+                "MOUSE      DRAG OR WHEEL TO SCRUB",
+                "E          INSPECT THE MATH",
+                "Q          SWAP ERA",
+                "R          RESTART SWEEP",
+                "F          FULLSCREEN",
+                "M          SOUND      SPACE  PAUSE",
+                "TAB        THE STUDIO",
+                "B          THE SHOW: SIT BACK",
+                "ESC        CLOSE MENU (X QUITS)",
             ];
             let line_height = 11 * scale;
             let top = (height as i32 / 2) - (lines.len() as i32 * line_height) / 2;
@@ -333,7 +339,7 @@ impl App {
                 );
             }
         } else if !self.the_show {
-            let mut hint = String::from("H HELP   M SOUND   E ERA");
+            let mut hint = String::from("ESC MENU   M SOUND   Q ERA   E INSPECT");
             if self.muted {
                 hint.push_str("   (MUTED)");
             }
@@ -443,35 +449,94 @@ impl ApplicationHandler for App {
                     }
                 } else {
                     match logical_key {
-                        Key::Named(NamedKey::Escape) => event_loop.exit(),
+                        // Esc is the menu, like every game since Doom. Quit from
+                        // the window's close button.
+                        Key::Named(NamedKey::Escape) => {
+                            self.show_help = !self.show_help;
+                        }
                         Key::Named(NamedKey::Tab) => {
                             self.studio = true;
                             self.studio_reparse();
                         }
+                        // A/D strafe between rooms; arrows still work.
                         Key::Named(NamedKey::ArrowRight) => self.switch(1),
                         Key::Named(NamedKey::ArrowLeft) => self.switch(-1),
+                        Key::Character(c) if c.as_str() == "d" => self.switch(1),
+                        Key::Character(c) if c.as_str() == "a" => self.switch(-1),
+                        // W/S run time faster or slower.
+                        Key::Named(NamedKey::ArrowUp) => {
+                            self.time_scale = (self.time_scale * 2.0).min(8.0);
+                        }
+                        Key::Named(NamedKey::ArrowDown) => {
+                            self.time_scale = (self.time_scale / 2.0).max(0.25);
+                        }
+                        Key::Character(c) if c.as_str() == "w" => {
+                            self.time_scale = (self.time_scale * 2.0).min(8.0);
+                        }
+                        Key::Character(c) if c.as_str() == "s" => {
+                            self.time_scale = (self.time_scale / 2.0).max(0.25);
+                        }
                         Key::Named(NamedKey::Space) => self.paused = !self.paused,
-                        Key::Character(s) if s.as_str() == "i" => {
+                        // E inspects, like use in every shooter.
+                        Key::Character(c) if c.as_str() == "e" => {
                             self.show_info = !self.show_info;
                         }
-                        Key::Character(s) if s.as_str() == "m" => {
-                            self.muted = !self.muted;
-                            self.update_audio();
-                        }
-                        Key::Character(s) if s.as_str() == "h" => {
-                            self.show_help = !self.show_help;
-                        }
-                        Key::Character(s) if s.as_str() == "e" => {
+                        // Q swaps the era, like swapping weapons.
+                        Key::Character(c) if c.as_str() == "q" => {
                             self.era = self.era.next();
                             if let Some(window) = &self.window {
                                 window.set_title(&self.title());
                             }
                         }
-                        Key::Character(s) if s.as_str() == "s" => {
+                        // R reloads the sweep.
+                        Key::Character(c) if c.as_str() == "r" => {
+                            self.t = 0.0;
+                            self.update_audio();
+                        }
+                        // F goes fullscreen.
+                        Key::Character(c) if c.as_str() == "f" => {
+                            if let Some(window) = &self.window {
+                                if window.fullscreen().is_some() {
+                                    window.set_fullscreen(None);
+                                } else {
+                                    window.set_fullscreen(Some(
+                                        winit::window::Fullscreen::Borderless(None),
+                                    ));
+                                }
+                            }
+                        }
+                        Key::Character(c) if c.as_str() == "m" => {
+                            self.muted = !self.muted;
+                            self.update_audio();
+                        }
+                        Key::Character(c) if c.as_str() == "h" => {
+                            self.show_help = !self.show_help;
+                        }
+                        // B for the big show (lean back).
+                        Key::Character(c) if c.as_str() == "b" => {
                             self.the_show = !self.the_show;
                             self.paused = false;
                             if let Some(window) = &self.window {
                                 window.set_title(&self.title());
+                            }
+                        }
+                        // Number keys are room slots, like weapon slots.
+                        Key::Character(c)
+                            if c.len() == 1 && c.chars().all(|ch| ch.is_ascii_digit()) =>
+                        {
+                            let digit = c.chars().next().unwrap_or('1');
+                            let slot = if digit == '0' {
+                                9
+                            } else {
+                                (digit as usize - '1' as usize) % 10
+                            };
+                            if slot < self.rooms.len() {
+                                self.current = slot;
+                                self.t = 0.0;
+                                if let Some(window) = &self.window {
+                                    window.set_title(&self.title());
+                                }
+                                self.update_audio();
                             }
                         }
                         _ => {}
@@ -486,6 +551,14 @@ impl ApplicationHandler for App {
                 // Drag horizontally to scrub the room's phase directly.
                 self.dragging = state == ElementState::Pressed;
             }
+            WindowEvent::MouseWheel { delta, .. } if !self.studio => {
+                let lines = match delta {
+                    winit::event::MouseScrollDelta::LineDelta(_, y) => f64::from(y),
+                    winit::event::MouseScrollDelta::PixelDelta(p) => p.y / 40.0,
+                };
+                self.t = (self.t + lines * 0.02).rem_euclid(1.0);
+                self.update_audio();
+            }
             WindowEvent::CursorMoved { position, .. } if self.dragging => {
                 if let Some(window) = &self.window {
                     let w = f64::from(window.inner_size().width.max(1));
@@ -499,7 +572,8 @@ impl ApplicationHandler for App {
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
         if !self.paused && !self.dragging {
-            let step = if self.the_show { SHOW_T_STEP } else { T_STEP };
+            let base = if self.the_show { SHOW_T_STEP } else { T_STEP };
+            let step = base * self.time_scale;
             if self.t + step >= 1.0 {
                 self.t = 0.0;
                 // In The Show, a finished sweep drifts into the next room.
