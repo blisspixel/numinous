@@ -94,7 +94,11 @@ rotating circles, and we play back both the drawing and the stack of circles tha
 recreate it, then hand you the series. Adjacent toys: fitting a parametric curve,
 guessing a symbolic form for a point cloud, "what times table draws this heart."
 
-### Function to Shape (planned: the Studio)
+### Function to Shape (the Studio; first slice built)
+
+The first slice is live: a safe expression engine (`crates/core/src/studio.rs`)
+parses and evaluates single-variable math in `x`, and `numinous plot "sin(3*x) +
+x/2"` draws the curve. Next it grows into the full instrument.
 
 The graphing calculator reimagined as an instrument. You type a system, parametric,
 complex, an IFS, a cellular rule, and it comes alive with color and sound in real

@@ -174,6 +174,23 @@ enum Command {
         #[arg(long, default_value_t = 24)]
         height: usize,
     },
+    /// Plot a function of x, e.g. numinous plot "sin(3*x) + x/2".
+    Plot {
+        /// The expression in x (functions: sin cos tan exp ln abs sqrt; constants pi e).
+        expr: String,
+        /// Left edge of the x range.
+        #[arg(long, default_value_t = -std::f64::consts::TAU)]
+        xmin: f64,
+        /// Right edge of the x range.
+        #[arg(long, default_value_t = std::f64::consts::TAU)]
+        xmax: f64,
+        /// Plot width in columns.
+        #[arg(long, default_value_t = 72)]
+        width: usize,
+        /// Plot height in rows.
+        #[arg(long, default_value_t = 24)]
+        height: usize,
+    },
 }
 
 fn main() -> ExitCode {
@@ -229,7 +246,63 @@ fn main() -> ExitCode {
             width,
             height,
         } => emit(sim_run(&id, &set, width, height)),
+        Command::Plot {
+            expr,
+            xmin,
+            xmax,
+            width,
+            height,
+        } => emit(plot_report(&expr, xmin, xmax, width, height)),
     }
+}
+
+/// Plot `source` as y = f(x) over `[xmin, xmax]`, auto-scaling y.
+fn plot_report(
+    source: &str,
+    xmin: f64,
+    xmax: f64,
+    width: usize,
+    height: usize,
+) -> Result<String, String> {
+    let expr = numinous_core::parse(source)?;
+    if width < 2 || height < 2 || xmax <= xmin {
+        return Err("need width >= 2, height >= 2, and xmax > xmin\n".to_string());
+    }
+    let samples: Vec<(f64, f64)> = (0..width)
+        .map(|i| {
+            let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
+            (x, numinous_core::eval(&expr, x))
+        })
+        .filter(|(_, y)| y.is_finite())
+        .collect();
+    if samples.is_empty() {
+        return Err("nothing to plot: the function is undefined across this range\n".to_string());
+    }
+    let ymin = samples.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
+    let ymax = samples
+        .iter()
+        .map(|p| p.1)
+        .fold(f64::NEG_INFINITY, f64::max);
+    let yspan = (ymax - ymin).max(1e-9);
+
+    let mut canvas = Canvas::new(width, height);
+    let to_screen = |x: f64, y: f64| -> (i32, i32) {
+        let sx = ((x - xmin) / (xmax - xmin) * (width as f64 - 1.0)) as i32;
+        let sy = ((height as f64 - 1.0) - (y - ymin) / yspan * (height as f64 - 1.0)) as i32;
+        (sx, sy)
+    };
+    let mut previous: Option<(i32, i32)> = None;
+    for &(x, y) in &samples {
+        let (sx, sy) = to_screen(x, y);
+        if let Some((px, py)) = previous {
+            canvas.line(px, py, sx, sy, '#');
+        }
+        previous = Some((sx, sy));
+    }
+    Ok(format!(
+        "y = {source}    x in [{xmin:.3}, {xmax:.3}]    y in [{ymin:.3}, {ymax:.3}]\n\n{}",
+        canvas.to_text()
+    ))
 }
 
 /// The list of sims and their levers.
@@ -879,6 +952,19 @@ mod tests {
     fn sim_run_renders_and_reads_out() {
         let out = super::sim_run("wing", &["angle-of-attack=20".to_string()], 40, 12).expect("run");
         assert!(out.contains("STALL"), "got: {out}");
+    }
+
+    #[test]
+    fn plot_report_draws_a_known_function() {
+        let out = super::plot_report("x", -1.0, 1.0, 24, 8).expect("plot");
+        assert!(out.contains("y = x"));
+        assert!(out.contains('#'));
+    }
+
+    #[test]
+    fn plot_report_rejects_bad_input() {
+        assert!(super::plot_report("sin(", -1.0, 1.0, 24, 8).is_err());
+        assert!(super::plot_report("x", 1.0, 1.0, 24, 8).is_err()); // xmax not > xmin
     }
 
     #[test]

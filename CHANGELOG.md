@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The Studio's expression engine (`crates/core` `studio`): a small, safe
+  recursive-descent parser and evaluator for single-variable expressions in `x`
+  (`+ - * / ^`, unary minus, `sin cos tan exp ln abs sqrt`, and `pi`/`e`), the
+  Tier 1 safe-DSL seed of the creative graphing calculator. `numinous plot
+  "sin(3*x) + x/2"` parses it and draws the curve; the engine is unit-tested for
+  precedence, associativity, functions, and errors.
 - Agents play too (MCP): three new tools so a digital mind can use the same
   content as a human. `list_sims` and `run_sim` steer the simulations by lever
   (fiddle to optimize or break them, and read the outcome), and `quiz` plays
