@@ -62,10 +62,18 @@ fn a_full_agent_session_walks_every_tool() {
         call(3, "list_rooms", json!({})),
         call(4, "describe_room", json!({"id":"mandelbrot"})),
         call(5, "reveal_room", json!({"id":"times-tables"})),
-        call(6, "play_room", json!({"id":"lorenz","t":0.7,"width":50,"height":24})),
+        call(
+            6,
+            "play_room",
+            json!({"id":"lorenz","t":0.7,"width":50,"height":24}),
+        ),
         call(7, "listen_room", json!({"id":"lissajous","t":0.0})),
         call(8, "list_sims", json!({})),
-        call(9, "run_sim", json!({"id":"wing","params":{"angle-of-attack":20}})),
+        call(
+            9,
+            "run_sim",
+            json!({"id":"wing","params":{"angle-of-attack":20}}),
+        ),
         call(10, "quiz", json!({"seed":7,"round":0})),
         call(11, "quiz", json!({"seed":7,"round":0,"guess":"A"})),
         call(12, "plot_expression", json!({"expr":"sin(3*x) + x/2"})),
@@ -148,6 +156,9 @@ fn malformed_input_gets_a_parse_error_and_the_server_keeps_going() {
         .collect();
     assert_eq!(lines.len(), 2);
     assert_eq!(lines[0]["error"]["code"], -32700, "parse error reported");
-    assert!(lines[1]["result"].is_object(), "and the server kept serving");
+    assert!(
+        lines[1]["result"].is_object(),
+        "and the server kept serving"
+    );
     let _ = std::fs::remove_file(&journey);
 }
