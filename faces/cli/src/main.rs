@@ -309,9 +309,35 @@ enum Command {
 fn main() -> ExitCode {
     let mut journey = load_journey();
     let before = journey.clone();
+    let earned_before = earned_names(&before, &load_scores());
     let code = run(Cli::parse().command, &mut journey);
-    finish_journey(&before, &journey);
+    finish_journey(&before, &journey, &earned_before);
     code
+}
+
+/// The names of the trophies currently earned, for before/after comparison.
+fn earned_names(
+    journey: &Journey,
+    board: &numinous_core::Scoreboard,
+) -> std::collections::BTreeSet<&'static str> {
+    numinous_core::trophies(journey, board)
+        .into_iter()
+        .filter(|t| t.earned)
+        .map(|t| t.name)
+        .collect()
+}
+
+/// The ping lines for trophies earned since `before`. Pure, so it is tested.
+fn trophy_pings(
+    before: &std::collections::BTreeSet<&'static str>,
+    journey: &Journey,
+    board: &numinous_core::Scoreboard,
+) -> Vec<String> {
+    numinous_core::trophies(journey, board)
+        .into_iter()
+        .filter(|t| t.earned && !before.contains(t.name))
+        .map(|t| format!("TROPHY EARNED  {}: {}", t.name, t.what))
+        .collect()
 }
 
 /// Where the journey file lives: `NUMINOUS_JOURNEY` if set, else the home
@@ -433,11 +459,21 @@ fn level_up_report(before: &Journey, after: &Journey) -> Option<String> {
 
 /// Persist the journey if it changed; announce level-ups (the RPG speaks),
 /// and whisper once if a rank was crossed (the Order murmurs).
-fn finish_journey(before: &Journey, after: &Journey) {
+fn finish_journey(
+    before: &Journey,
+    after: &Journey,
+    earned_before: &std::collections::BTreeSet<&'static str>,
+) {
     if before == after {
         return;
     }
     let _ = std::fs::write(journey_path(), after.to_text());
+    for ping in trophy_pings(earned_before, after, &load_scores()) {
+        println!(
+            "
+{ping}"
+        );
+    }
     if let Some(banner) = level_up_report(before, after) {
         println!("\n{banner}");
     }
@@ -2042,6 +2078,24 @@ mod tests {
         let daily = super::pick_seed(7, true);
         assert!(daily > 20_000 && daily < 40_000, "got {daily}");
         assert_eq!(super::pick_seed(7, true), daily);
+    }
+
+    #[test]
+    fn trophies_ping_the_moment_they_are_earned() {
+        let empty = numinous_core::Scoreboard::default();
+        let before_journey = numinous_core::Journey::default();
+        let before = super::earned_names(&before_journey, &empty);
+        assert!(before.is_empty());
+        let mut after = numinous_core::Journey::default();
+        after.visit("lorenz");
+        after.wins = 1;
+        let pings = super::trophy_pings(&before, &after, &empty);
+        assert_eq!(pings.len(), 2, "first light and first blood: {pings:?}");
+        assert!(pings.iter().any(|p| p.contains("First Light")));
+        assert!(pings.iter().any(|p| p.contains("First Blood")));
+        // Already-earned trophies never ping again.
+        let now = super::earned_names(&after, &empty);
+        assert!(super::trophy_pings(&now, &after, &empty).is_empty());
     }
 
     #[test]
