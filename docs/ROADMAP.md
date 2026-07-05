@@ -28,8 +28,9 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
 - **Done (sound):** every room describes its own sound (`SoundSpec` + `Room::sound`); `numinous sonify <room> --out file.wav` and `numinous play <room>` (live animated terminal).
-- **In progress (0.1 remainder):** GPU-accelerating the room raster for real-time, and wiring live sound into the windowed app.
-- **Next:** per-surface aspect handling (so pixel output is not vertically squashed), then 0.2 the GUI vertical slice.
+- **Done (the 0.2 vertical slice, in substance):** the windowed app is a full experience: live per-room sound, mouse scrubbing, an on-screen HUD with reveals, The Show (lean-back auto-play of the whole collection), the Studio in the window (type math, watch and hear it live), and GPU real-time fractals (a persistent `wgpu` pipeline drives the Mandelbrot deep zoom and the morphing Julia at window resolution, with CPU fallback; verified on the dev laptop's Radeon 780M).
+- **Done (content and play):** 19 rooms across 7 wings; 6 lever-driven sims (tribbles, wing, carburetor, black hole, supernova, big bang); 4 games (SETI, Talk to the Aliens, Guess the Shape, Crack the Code); the Studio expression engine (`plot`, `--animate`, `sing`); agents playing the sims and quiz over MCP; the first lore seed hidden where it belongs.
+- **Next:** GPU paths for more rooms, the games inside the window, the music engines (chiptune and radio), and more rooms toward the full collection.
 
 ## Pre-1.0 (the 0.x line): earning the right to 1.0
 
