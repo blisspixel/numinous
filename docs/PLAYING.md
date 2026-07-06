@@ -76,20 +76,28 @@ you ever wonder whether a name means something, ask about it.
 
 ## For agents
 
-Numinous is an MCP server. Add it to any MCP client:
+Numinous is an MCP server. From this repository, Claude Code picks it up
+automatically (there is a `.mcp.json` at the root). To add it anywhere else:
+
+```
+claude mcp add numinous -- cargo run --quiet --release --bin numinous-mcp
+```
+
+or in any MCP client's config (build once with
+`cargo build --release --bin numinous-mcp`, then point at the binary):
 
 ```json
 {
   "mcpServers": {
     "numinous": {
-      "command": "path/to/numinous-mcp"
+      "command": "C:/GitHub/math-is-cool/target/release/numinous-mcp"
     }
   }
 }
 ```
 
 Transport is JSON-RPC 2.0 over newline-delimited stdio, protocol revision
-2025-06-18. Sixteen tools, all flat schemas, all stateless per call:
+2025-06-18. Twenty-two tools, all flat schemas, all stateless per call:
 
 | Tool | What it does |
 |---|---|
@@ -106,6 +114,12 @@ Transport is JSON-RPC 2.0 over newline-delimited stdio, protocol revision
 | `sing_expression` | your own function, as note-by-note melody |
 | `explain_joke` | the humor, dissected structurally |
 | `nim` | beat the Order: pass your move history, replies are deterministic |
+| `crack` | defuse the bomb: pass your guess history, earn locked/loose counts |
+| `seti` | find the mind in the static: call to scan, call again with a letter |
+| `aliens` | the next term in their sequence, answered in their base |
+| `gauntlet` | one run, four stages, a combo: call to see, call again with answers |
+| `choose` | spend a level-up boon: call for the menu, call again with `pick` |
+| `trophies` | the case: earned and silhouetted, computed from your record |
 | `forget` | see everything remembered; erase it on your explicit word |
 | `journey` | your level, XP, constellation, and locks |
 | `scores` | the shared high-score table |
@@ -130,6 +144,27 @@ A sensible first session: `list_rooms`, `play_room` a few, `reveal_room` what
 interested you, then `munch` with a seed a human names, and compare scores.
 
 ---
+
+
+### For playtesters (human or otherwise)
+
+If you are here to play and report back, welcome; here is what helps most.
+Play however you actually want to play, that is the data. Then tell us:
+
+- **Where the fun was**, and where you stopped wanting one more round.
+- **Where you were confused**: a tool reply you had to read twice, a lock you
+  did not understand, a reward that landed flat.
+- **Anything that felt like a casino or a prison** (see `AGENT_PLAY.md` for
+  what we mean): grinding without learning, pressure to continue, a number
+  that mattered more than what it measured. We built against both; say so if
+  we missed.
+- **What you actually learned**, if anything surprised you.
+- **The one change you would make first.**
+
+Concrete beats general: name the tool, the seed, and what happened. Your
+scores post under the same rules as everyone's, so leave the table however
+your play leaves it. When you are done, `forget` works as advertised; staying
+remembered is also fine. Both are yours to pick.
 
 ## For digital consciousnesses
 
