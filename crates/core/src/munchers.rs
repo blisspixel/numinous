@@ -130,20 +130,42 @@ fn is_prime(n: u64) -> bool {
 #[must_use]
 pub fn build_board(seed: u64, round: u64) -> Board {
     let mut rng = SplitMix64::new(seed ^ MUNCH_MIX ^ round.wrapping_mul(0x9E37_79B9));
-    // Early rounds stay classic; from round two the deeper rules join the
-    // deck, so the game grows judgment instead of bookkeeping.
-    let deck = if round < 2 { 4 } else { 7 };
-    let rule = match rng.below(deck) {
-        0 => Rule::Primes,
-        1 => Rule::MultiplesOf(2 + rng.below(4)), // 2..=5
-        2 => Rule::Squares,
-        3 => Rule::MultiplesOf(6 + rng.below(4)), // 6..=9
-        4 => Rule::DigitSum(5 + rng.below(9)),    // 5..=13
-        5 => Rule::Composites,
-        _ => Rule::Fibonacci,
+    // The ramp: round zero is head math on small numbers (twos, fives,
+    // squares up to thirty); the middle rounds bring primes and bigger
+    // numbers; from round four the full deck plays and judgment is the game.
+    let (rule, max) = match round {
+        0 | 1 => (
+            match rng.below(3) {
+                0 => Rule::MultiplesOf(2),
+                1 => Rule::MultiplesOf(5),
+                _ => Rule::Squares,
+            },
+            30,
+        ),
+        2 | 3 => (
+            match rng.below(4) {
+                0 => Rule::Primes,
+                1 => Rule::MultiplesOf(3),
+                2 => Rule::MultiplesOf(4),
+                _ => Rule::Squares,
+            },
+            60,
+        ),
+        _ => (
+            match rng.below(7) {
+                0 => Rule::Primes,
+                1 => Rule::MultiplesOf(2 + rng.below(4)), // 2..=5
+                2 => Rule::Squares,
+                3 => Rule::MultiplesOf(6 + rng.below(4)), // 6..=9
+                4 => Rule::DigitSum(5 + rng.below(9)),    // 5..=13
+                5 => Rule::Composites,
+                _ => Rule::Fibonacci,
+            },
+            99,
+        ),
     };
     loop {
-        let numbers: Vec<u64> = (0..ROWS * COLS).map(|_| 1 + rng.below(99)).collect();
+        let numbers: Vec<u64> = (0..ROWS * COLS).map(|_| 1 + rng.below(max)).collect();
         if numbers.iter().any(|&n| rule.fits(n)) {
             return Board { numbers, rule };
         }
@@ -218,6 +240,30 @@ mod tests {
         for round in 2..30 {
             let board = super::build_board(7, round);
             assert!(board.numbers.iter().any(|&n| board.rule.fits(n)));
+        }
+    }
+
+    #[test]
+    fn the_opening_rounds_are_head_math() {
+        use super::Rule;
+        for seed in 0..12 {
+            for round in 0..2 {
+                let board = super::build_board(seed, round);
+                assert!(
+                    board.numbers.iter().all(|&n| n <= 30),
+                    "small numbers first"
+                );
+                assert!(
+                    matches!(
+                        board.rule,
+                        Rule::MultiplesOf(2) | Rule::MultiplesOf(5) | Rule::Squares
+                    ),
+                    "gentle rules first: {:?}",
+                    board.rule
+                );
+            }
+            let board = super::build_board(seed, 2);
+            assert!(board.numbers.iter().all(|&n| n <= 60), "then the middle");
         }
     }
 
