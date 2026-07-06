@@ -58,7 +58,53 @@ pub fn build_round_sized(
     height: usize,
     choices: usize,
 ) -> QuizRound {
-    let rooms = all_rooms();
+    build_round_pool(seed, round, width, height, choices, &[])
+}
+
+/// The most visually distinctive rooms: the gentle opening hand for a brand
+/// new player, so the first rounds are wins waiting to happen.
+pub const ICONIC: [&str; 8] = [
+    "times-tables",
+    "golden-angle",
+    "mandelbrot",
+    "game-of-life",
+    "voronoi",
+    "random-walk",
+    "double-pendulum",
+    "zeno",
+];
+
+/// [`build_round_sized`] restricted to a pool of room ids (empty = all).
+/// Unknown ids are ignored; a pool that filters to fewer than two rooms
+/// falls back to the whole catalog.
+#[must_use]
+pub fn build_round_pool(
+    seed: u64,
+    round: u64,
+    width: usize,
+    height: usize,
+    choices: usize,
+    pool: &[&str],
+) -> QuizRound {
+    let mut rooms = all_rooms();
+    if !pool.is_empty() {
+        let filtered: Vec<usize> = (0..rooms.len())
+            .filter(|&i| pool.contains(&rooms[i].meta().id))
+            .collect();
+        if filtered.len() >= 2 {
+            let mut keep = filtered.into_iter();
+            let mut next = keep.next();
+            let mut index = 0;
+            rooms.retain(|_| {
+                let keep_this = next == Some(index);
+                if keep_this {
+                    next = keep.next();
+                }
+                index += 1;
+                keep_this
+            });
+        }
+    }
     let n = rooms.len();
     let mut rng = SplitMix64::new(seed ^ round.wrapping_mul(ROUND_MIX));
 
@@ -144,6 +190,20 @@ mod tests {
     #[test]
     fn the_mystery_has_a_shape() {
         assert!(!build_round(1, 1, 20, 10).art.trim().is_empty());
+    }
+
+    #[test]
+    fn the_opening_hand_stays_iconic() {
+        for round in 0..12 {
+            let r = super::build_round_pool(9, round, 20, 10, 3, &super::ICONIC);
+            assert_eq!(r.choices.len(), 3);
+            for c in &r.choices {
+                assert!(super::ICONIC.contains(&c.id), "{} is iconic", c.id);
+            }
+        }
+        // A bogus pool falls back to the whole catalog rather than panicking.
+        let r = super::build_round_pool(9, 0, 20, 10, 4, &["not-a-room"]);
+        assert_eq!(r.choices.len(), 4);
     }
 
     #[test]
