@@ -18,6 +18,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   live instead of restarting the record.
 
 ### Added
+- The Munch arcade, session one of docs/ARCADE.md, built to the bar: you are
+  the Muncher (@), hunted across the board by the Vexations, the Order's
+  lesser spirits: the Tracker (greedy pursuit), the Drifter (random walk),
+  and the Editor, which never chases but rewrites numbers where it walks, so
+  camping decays the world. Turn discipline (you act, they step) keeps every
+  run deterministic and replayable. Capture costs a life and scatters the
+  board; three lives end the run; clearing a board levels up with one more
+  spirit and a deeper rule band. Six core laws tested (pursuit never loses
+  ground, the world decays, walls hold, cells feed once, clears advance,
+  capture kills at zero). CLI: numinous arcade (--daily), in the play
+  picker, scored as arcade seed:N, with the ? concept: you are outrunning
+  two failure modes of optimization.
+- The radio library doubled: 34 tracks, 118.6 minutes on air (trance 12,
+  chill 11, arcade 11), all new tracks full stereo with unround runtimes.
 - Crash observability: the windowed app runs in the GUI subsystem where a
   panic would vanish silently; every panic now appends its message and
   file:line to ~/.numinous-crash.log, so any crash report is triageable
