@@ -98,6 +98,36 @@ impl Room for Lorenz {
          perfectly determined, and still impossible to predict."
     }
 
+    fn verb(&self) -> Option<&'static str> {
+        Some("CLICK: SEED A SHADOW STORM")
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        self.render(canvas, t);
+        // Each poke seeds a shadow trajectory from a nudged start; sensitive
+        // dependence does the rest, drawn dim so the divergence reads.
+        for (which, &(x, y)) in pokes.iter().enumerate() {
+            let mut state = (1.0 + x * 4.0, 1.0 + y * 4.0, 20.0 + which as f64);
+            let steps = (t.clamp(0.0, 1.0) * 4000.0) as usize;
+            let width = canvas.width() as f64;
+            let height = canvas.height() as f64;
+            for i in 0..steps {
+                let (sx, sy, sz) = state;
+                let dt = 0.005;
+                state = (
+                    sx + dt * 10.0 * (sy - sx),
+                    sy + dt * (sx * (28.0 - sz) - sy),
+                    sz + dt * (sx * sy - 8.0 / 3.0 * sz),
+                );
+                if i % 2 == 0 {
+                    let px = ((state.0 + 22.0) / 44.0 * width) as i32;
+                    let py = ((50.0 - state.2) / 50.0 * height) as i32;
+                    canvas.plot(px, py, '-');
+                }
+            }
+        }
+    }
+
     fn deep_cuts(&self) -> &'static [&'static str] {
         &[
             "The name butterfly effect comes from the title of Lorenz's 1972 talk: \

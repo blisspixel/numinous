@@ -67,6 +67,23 @@ impl Room for GameOfLife {
         }
     }
 
+    fn verb(&self) -> Option<&'static str> {
+        Some("CLICK: SOW LIFE")
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        self.render(canvas, t);
+        // Every poke sows a small glider-shaped seed of bright cells at the
+        // hand's point: sown life rides on top of the running world.
+        let (w, h) = (canvas.width() as f64, canvas.height() as f64);
+        for &(x, y) in pokes {
+            let (cx, cy) = ((x * w) as i32, (y * h) as i32);
+            for (dx, dy) in [(0, 0), (1, 0), (2, 0), (2, -1), (1, -2)] {
+                canvas.plot(cx + dx * 2, cy + dy * 2, '#');
+            }
+        }
+    }
+
     fn postcard_t(&self) -> f64 {
         0.35
     }

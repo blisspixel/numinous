@@ -82,6 +82,8 @@ struct App {
     show_journey: bool,
     /// Where the mouse last was, for clicking cells and choices.
     mouse: (f64, f64),
+    /// The hands in the current room: normalized poke points (R clears).
+    pokes: Vec<(f64, f64)>,
     /// The radio: Some(index into STATIONS) when a cached station plays.
     radio: Option<usize>,
     /// The loaded station track, if any.
@@ -197,6 +199,7 @@ impl App {
             tune: Vec::new(),
             show_journey: false,
             mouse: (0.0, 0.0),
+            pokes: Vec::new(),
             room_card: 240,
             radio: None,
             radio_track: Vec::new(),
@@ -944,6 +947,7 @@ impl App {
         self.current = (((self.current as isize + delta) % n + n) % n) as usize;
         self.t = 0.0;
         self.room_card = 240;
+        self.pokes.clear();
         self.tune.clear();
         if let Some(window) = &self.window {
             window.set_title(&self.title());
@@ -1076,7 +1080,7 @@ impl App {
             raster
         } else {
             let mut raster = Raster::with_accent(width, height, room.meta().accent);
-            room.render(&mut raster, self.t);
+            room.render_poked(&mut raster, self.t, &self.pokes);
             raster
         };
 
@@ -1147,6 +1151,16 @@ impl App {
                 && self.banner.is_none()
             {
                 let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
+                if let Some(verb) = room.verb() {
+                    numinous_core::draw_text(
+                        &mut raster,
+                        verb,
+                        10,
+                        height as i32 - 39 * scale,
+                        scale,
+                        '#',
+                    );
+                }
                 for (i, line) in
                     numinous_core::wrap_text(&room.meta().blurb.to_uppercase(), columns)
                         .iter()
@@ -2125,6 +2139,7 @@ impl ApplicationHandler for App {
                         // R reloads the sweep.
                         Key::Character(c) if c.as_str() == "r" => {
                             self.t = 0.0;
+                            self.pokes.clear();
                             self.update_audio();
                         }
                         // F goes fullscreen.
@@ -2250,6 +2265,25 @@ impl ApplicationHandler for App {
             } => {
                 if state == ElementState::Pressed && (self.munch.is_some() || self.quiz.is_some()) {
                     self.click();
+                } else if state == ElementState::Pressed
+                    && !self.studio
+                    && !self.show_help
+                    && !self.show_journey
+                    && self.arcade.is_none()
+                    && self.nim.is_none()
+                    && self.gauntlet.is_none()
+                    && self.rooms[self.current].verb().is_some()
+                {
+                    // The poke: the room answers the hand.
+                    if let Some(window) = &self.window {
+                        let size = window.inner_size();
+                        let (w, h) = (f64::from(size.width.max(1)), f64::from(size.height.max(1)));
+                        let (mx, my) = self.mouse;
+                        self.pokes.push((mx / w, my / h));
+                        if self.pokes.len() > 12 {
+                            self.pokes.remove(0);
+                        }
+                    }
                 } else {
                     // Drag horizontally to scrub the room's phase directly.
                     self.dragging = state == ElementState::Pressed;

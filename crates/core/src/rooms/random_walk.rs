@@ -122,6 +122,44 @@ impl Room for RandomWalk {
         ]
     }
 
+    fn verb(&self) -> Option<&'static str> {
+        Some("CLICK: PLANT A WALKER")
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        self.render(canvas, t);
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
+        }
+        let steps = Self::steps_for(t).max(1);
+        let aspect = canvas.char_aspect();
+        let scale = (width as f64 / 2.0).min(height as f64 / (2.0 * aspect)) * 0.6
+            / (MAX_STEPS as f64).sqrt();
+        // Each planted walker stumbles from the hand's point, bright.
+        for (which, &(x, y)) in pokes.iter().enumerate() {
+            let path = walk(1000 + which as u64, steps);
+            let (ox, oy) = (x * width as f64, y * height as f64);
+            for (i, &(px, py)) in path.iter().enumerate() {
+                if i % 5 == 0 {
+                    canvas.plot(
+                        (ox + px * scale) as i32,
+                        (oy + py * scale * aspect) as i32,
+                        '*',
+                    );
+                }
+            }
+            if let Some(&(px, py)) = path.last() {
+                canvas.plot(
+                    (ox + px * scale) as i32,
+                    (oy + py * scale * aspect) as i32,
+                    '#',
+                );
+            }
+        }
+    }
+
     fn postcard_t(&self) -> f64 {
         0.85
     }
