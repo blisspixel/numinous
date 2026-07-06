@@ -352,7 +352,7 @@ impl App {
                 flash: None,
             },
             scan: numinous_core::build_scan(seed, 4),
-            secret: numinous_core::secret_code(seed, 4),
+            secret: numinous_core::secret_code(seed ^ 0x0000_6A17_0000_0B0B, 4),
             wire: String::new(),
             wire_lines: Vec::new(),
             scores: Vec::new(),

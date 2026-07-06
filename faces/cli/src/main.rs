@@ -1859,7 +1859,7 @@ fn gauntlet(seed: u64, journey: &mut Journey) -> ExitCode {
     cleared.push(clear);
 
     // Stage 4: the bomb, four digits, five tries.
-    let secret = numinous_core::secret_code(seed, 4);
+    let secret = numinous_core::secret_code(seed ^ 0x0000_6A17_0000_0B0B, 4);
     journey.play();
     println!("STAGE 4 of 4  THE BOMB. Four digits, five tries.");
     println!("  Clue: {}", numinous_core::hint(&secret));
