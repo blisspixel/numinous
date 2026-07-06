@@ -18,6 +18,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   live instead of restarting the record.
 
 ### Added
+- Crash observability: the windowed app runs in the GUI subsystem where a
+  panic would vanish silently; every panic now appends its message and
+  file:line to ~/.numinous-crash.log, so any crash report is triageable
+  from one file. VERIFY says where to look.
 - Three games from the ideation shortlist, built to the bar:
   - **Hackenbush** (`numinous hackenbush`): cut red grass against the Order,
     whose blue play IS Conway's arithmetic, it computes the surreal value of
