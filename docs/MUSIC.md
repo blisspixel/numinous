@@ -47,7 +47,15 @@ The centerpiece of the programmatic engine, and the beating heart of the **Studi
 
 ## Engine B: The Radio (ElevenLabs-powered stations, GTA-style)
 
-> Status: v0 shipped. The dial lives in `crates/core/src/radio.rs` (three
+> Status: v1 live. Three stations, 30+ original tracks and climbing (about
+> two hours on air), full stereo, varied unround runtimes dealt from each
+> station's rotation deck, wall-clock live sync (you tune in mid-broadcast),
+> per-track briefs from the house identity plus a card. The dial: Y in the
+> app, - and = for volume; `numinous radio` lists rotations; `numinous tune2
+> <station> --count N` grows them. Next: crossfade on rotation, the Comedy
+> Channel, cost guardrails.
+>
+> (v0 status, kept for the record:) v0 shipped. The dial lives in `crates/core/src/radio.rs` (three
 > stations with full producer briefs: NUMINA FM trance at 132 BPM, THE
 > ATTRACTOR chillwave at 84, EIGHT BIT SUNRISE synthwave at 118, all
 > instrumental by contract, tested). `numinous radio` shows the dial;
