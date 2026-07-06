@@ -121,6 +121,43 @@ impl Room for Voronoi {
         ]
     }
 
+    fn verb(&self) -> Option<&'static str> {
+        Some("CLICK: DROP A WELL")
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
+        }
+        // The player's wells join the desert: every border renegotiates.
+        let mut wells = sites(t);
+        wells.extend(
+            pokes
+                .iter()
+                .map(|&(x, y)| (x.clamp(0.0, 1.0), y.clamp(0.0, 1.0))),
+        );
+        let eps = 2.4 / width.max(height) as f64;
+        for py in 0..height {
+            for px in 0..width {
+                let x = (px as f64 + 0.5) / width as f64;
+                let y = (py as f64 + 0.5) / height as f64;
+                let (best, second) = two_nearest(&wells, x, y);
+                if second.sqrt() - best.sqrt() < eps {
+                    canvas.plot(px as i32, py as i32, '*');
+                }
+            }
+        }
+        for &(wx, wy) in &wells {
+            let px = (wx * width as f64) as i32;
+            let py = (wy * height as f64) as i32;
+            canvas.plot(px, py, '#');
+            canvas.plot(px + 1, py, '#');
+            canvas.plot(px, py + 1, '#');
+        }
+    }
+
     fn postcard_t(&self) -> f64 {
         0.3
     }

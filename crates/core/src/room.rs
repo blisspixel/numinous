@@ -50,6 +50,21 @@ pub trait Room {
         0.0
     }
 
+    /// The verb: what a hand can do here, named for the arrival card
+    /// ("CLICK: DROP A STORM"). None means the room only performs.
+    fn verb(&self) -> Option<&'static str> {
+        None
+    }
+
+    /// Render with hands in the scene: `pokes` are normalized (x, y) points
+    /// the player has placed, newest last. Rooms that answer override this;
+    /// the default performs exactly as `render`, so nothing changes until a
+    /// room chooses to listen.
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        let _ = pokes;
+        self.render(canvas, t);
+    }
+
     /// Deeper cuts, in order of depth: true, retellable, math-teacher-grade
     /// gems that unlock as the journey deepens (the faces choose thresholds;
     /// see `docs/PLAYFUL.md`). The knowledge is the loot. Empty by default.
