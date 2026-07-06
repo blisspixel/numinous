@@ -45,6 +45,8 @@ your hands already know it:
 **Or live in the terminal.** Everything also runs in a terminal, in full color:
 
 ```
+numinous                          the front door: today's room, your level, the verbs
+numinous play                     pick a game; numinous play munch deals today's board
 numinous watch julia              full-color animation, with sound
 numinous watch lorenz --era phosphor
 numinous play times-tables        classic ASCII
