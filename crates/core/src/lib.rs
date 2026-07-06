@@ -22,6 +22,8 @@ pub mod codebreaker;
 pub mod era;
 pub mod font;
 pub mod humor;
+pub mod insights;
+pub use insights::{INSIGHTS, insight};
 pub mod journey;
 pub mod munchers;
 pub mod nim;
