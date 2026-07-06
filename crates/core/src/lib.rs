@@ -60,7 +60,7 @@ pub use nim::{
     the_secret as nim_secret,
 };
 pub use quiz::{QuizChoice, QuizRound, build_round, build_round_sized};
-pub use radio::{STATIONS, Station, brief_for, station};
+pub use radio::{STATIONS, Station, brief_for, length_for, station};
 pub use raster::Raster;
 pub use registry::{all_rooms, hidden_room_by_id, room_by_id};
 pub use resonance::{Resonance, resonances};
