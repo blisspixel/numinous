@@ -682,6 +682,24 @@ impl App {
                 }
             ));
         }
+        // The dial speaks on screen, especially when the station is silent.
+        let st = &numinous_core::STATIONS[i];
+        self.banner = Some((
+            if self.radio_paths.is_empty() {
+                vec![
+                    format!("RADIO: {}", st.name),
+                    "NO TRACKS CACHED YET".to_string(),
+                    format!("IN A TERMINAL: NUMINOUS TUNE2 {}", st.id.to_uppercase()),
+                ]
+            } else {
+                vec![format!(
+                    "RADIO: {}  ({} ON ROTATION)",
+                    st.name,
+                    self.radio_paths.len()
+                )]
+            },
+            180,
+        ));
         self.update_audio();
     }
 
