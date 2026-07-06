@@ -69,7 +69,8 @@ is absent anymore; everything on this list makes an existing organ stronger.
 ## The list, in order
 
 > Progress: items 1 (first serving), 2, 3, 5, and the phosphor half of 8 are
-> built. Motifs (4), Open Problems (6), citations (7), crossfade, the
+> built. Open Problems opened (Goldbach); Engine B v0 shipped (the dial, the
+> fetch pipeline, Y in the app). Motifs (4), citations (7), crossfade, the
 > visualizer, gamepad, and the spark cap remain.
 
 

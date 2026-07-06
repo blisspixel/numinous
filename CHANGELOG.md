@@ -6,6 +6,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Music Engine B, the radio, v0: three stations with real producer briefs in
+  the core (NUMINA FM melodic trance, THE ATTRACTOR chillwave, EIGHT BIT
+  SUNRISE synthwave; all instrumental by contract, briefs tested for tempo
+  and vocals clauses). `numinous radio` shows the dial; `numinous tune2
+  <station>` generates a track via ElevenLabs Music (raw PCM, wrapped to
+  WAV, cached in ~/.numinous-radio/) with guiding errors when the key or
+  tower is missing. In the app, Y turns the dial; a cached station becomes
+  the musical bed with the room's voice riding on top.
 - The Open Problems wing opens with Goldbach's Comet: every even number to
   600 plotted by its count of two-prime sums, growing with t, banded exactly
   as Hardy-Littlewood predicts, with the floor it must never touch marked

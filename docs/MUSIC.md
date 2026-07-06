@@ -47,6 +47,19 @@ The centerpiece of the programmatic engine, and the beating heart of the **Studi
 
 ## Engine B: The Radio (ElevenLabs-powered stations, GTA-style)
 
+> Status: v0 shipped. The dial lives in `crates/core/src/radio.rs` (three
+> stations with full producer briefs: NUMINA FM trance at 132 BPM, THE
+> ATTRACTOR chillwave at 84, EIGHT BIT SUNRISE synthwave at 118, all
+> instrumental by contract, tested). `numinous radio` shows the dial;
+> `numinous tune2 <station> --seconds 120` calls ElevenLabs Music
+> (`POST /v1/music?output_format=pcm_44100`, `ELEVENLABS_API_KEY` env),
+> receives raw PCM, and caches `~/.numinous-radio/<station>.wav`. In the
+> app, Y turns the dial: off, then station by station; a cached station
+> becomes the bed and the room's voice rides on top, ducked, one bus.
+> Next: multiple tracks per station with rotation, the Comedy Channel
+> (needs its writer), crossfade on dial turns, and cost guardrails
+> (a track of 2 minutes is a paid API call; cache hard, regenerate rarely).
+
 The counterpoint to the generative engine: curated, produced, *songs* and *talk radio*, delivered as a set of **stations** you tune between like the radio in a GTA game. Where Engine A is the math singing, Engine B is the world the math lives in having a personality.
 
 Powered by the **ElevenLabs API** (music generation for tracks, voice/TTS for DJs, idents, and ads).
