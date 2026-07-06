@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"]
 //! Numinous windowed app.
 //!
 //! Opens a real window and shows a room animating in full color, rendered on the
@@ -81,6 +82,8 @@ struct App {
     radio: Option<usize>,
     /// The loaded station track, if any.
     radio_track: Vec<f32>,
+    /// Frames left on the arrival card (the room explaining itself).
+    room_card: u64,
     /// The tuned station's playlist on disk, in rotation order.
     radio_paths: Vec<std::path::PathBuf>,
     /// Which playlist entry is on the air.
@@ -179,6 +182,7 @@ impl App {
             tune: Vec::new(),
             show_journey: false,
             mouse: (0.0, 0.0),
+            room_card: 360,
             radio: None,
             radio_track: Vec::new(),
             radio_paths: Vec::new(),
@@ -827,6 +831,7 @@ impl App {
         let n = self.rooms.len() as isize;
         self.current = (((self.current as isize + delta) % n + n) % n) as usize;
         self.t = 0.0;
+        self.room_card = 360;
         self.tune.clear();
         if let Some(window) = &self.window {
             window.set_title(&self.title());
@@ -996,6 +1001,34 @@ impl App {
                 scale + 1,
                 '#',
             );
+            // The arrival card: the room explains itself for a few seconds,
+            // then gets out of the way. E brings the full story anytime.
+            if self.room_card > 0 && !self.show_info && !self.show_help {
+                let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
+                for (i, line) in
+                    numinous_core::wrap_text(&room.meta().blurb.to_uppercase(), columns)
+                        .iter()
+                        .take(3)
+                        .enumerate()
+                {
+                    numinous_core::draw_text(
+                        &mut raster,
+                        line,
+                        10,
+                        10 + (2 + i as i32) * 9 * scale,
+                        scale,
+                        '#',
+                    );
+                }
+                numinous_core::draw_text(
+                    &mut raster,
+                    "(E FOR THE WHOLE STORY)",
+                    10,
+                    10 + 5 * 9 * scale,
+                    scale,
+                    '-',
+                );
+            }
             // The level, top right: the game in one glance.
             let level = format!("LV {}", self.journey.level());
             let lx = width as i32 - (level.len() as i32 * 6 * scale) - 10;
@@ -1969,6 +2002,9 @@ impl ApplicationHandler for App {
                 self.radio_index = (self.radio_index + 1) % self.radio_paths.len();
                 self.radio_play(0.0);
                 self.update_audio();
+            }
+            if self.room_card > 0 {
+                self.room_card -= 1;
             }
             if let Some((_, frames)) = &mut self.banner {
                 *frames -= 1;

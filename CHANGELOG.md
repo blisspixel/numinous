@@ -6,6 +6,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Fixed
+- No more second window: the app now builds for the Windows GUI subsystem,
+  so launching it opens the game and nothing else (the console ghost was
+  the default subsystem tagging along).
+- Rooms explain themselves on arrival: entering a room shows its one-line
+  story for a few seconds, then gets out of the way (E still brings the
+  full reveal anytime). The visuals are no longer unexplained.
+- Munch got its difficulty ramp: rounds one and two are head math (twos,
+  fives, and squares on numbers up to 30), the middle rounds bring primes
+  up to 60, and from round five the full deck and the full range play.
+  Tested per round band. The window game deals round zero: kid-safe.
 - The radio actually plays its records now: the periodic audio refresh was
   resetting the loop buffer every couple of seconds, restarting the track
   endlessly (which left you hearing mostly the chiptune bed). While a
