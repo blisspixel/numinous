@@ -41,6 +41,7 @@ numinous watch lorenz --era phosphor
 numinous play times-tables        classic ASCII
 numinous plot "sin(a*x)" --animate
 numinous sing "sin(x) + x/3" --out song.wav
+numinous tune --seed 7 --out chip.wav   a seeded chiptune (Music Engine A)
 ```
 
 **Play the games.** All seeded: the same seed is the same puzzle for everyone,

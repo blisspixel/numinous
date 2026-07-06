@@ -295,6 +295,18 @@ enum Command {
         #[arg(long, default_value_t = 24)]
         height: usize,
     },
+    /// Compose a seeded chiptune and write it as a WAV (Music Engine A).
+    Tune {
+        /// Seed (the same seed is the same tune, forever).
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        /// Length in bars of eight steps.
+        #[arg(long, default_value_t = 8)]
+        bars: usize,
+        /// Write the WAV here.
+        #[arg(long)]
+        out: PathBuf,
+    },
     /// Sing a function: turn y = f(x) into a melody and write a WAV.
     Sing {
         /// The expression in x.
@@ -726,6 +738,10 @@ Erase the journey with: numinous forget --confirm  (add --scores for the table)"
                 emit(plot_report(&expr, xmin, xmax, a, width, height))
             }
         }
+        Command::Tune { seed, bars, out } => {
+            journey.play();
+            emit(tune_wav(seed, bars, &out))
+        }
         Command::Sing {
             expr,
             xmin,
@@ -774,6 +790,18 @@ fn plot_animate(
             phase + 0.02
         };
     }
+}
+
+/// Compose the seeded chiptune and write it to a WAV file.
+fn tune_wav(seed: u64, bars: usize, path: &Path) -> Result<String, String> {
+    let pattern = numinous_core::compose(seed, bars);
+    let sample_rate = 44_100u32;
+    write_wav(path, &pattern.render(sample_rate), sample_rate)?;
+    Ok(format!(
+        "wrote {} ({:.1}s, seed {seed}): the chip speaks\n",
+        path.display(),
+        pattern.seconds()
+    ))
 }
 
 /// Turn `source` into a melody over `[xmin, xmax]` and write it as a WAV.
@@ -2470,6 +2498,15 @@ mod tests {
     fn plot_report_rejects_bad_input() {
         assert!(super::plot_report("sin(", -1.0, 1.0, 0.0, 24, 8).is_err());
         assert!(super::plot_report("x", 1.0, 1.0, 0.0, 24, 8).is_err()); // xmax not > xmin
+    }
+
+    #[test]
+    fn tune_wav_writes_a_chiptune() {
+        let path = std::env::temp_dir().join("numinous_tune_test.wav");
+        let message = super::tune_wav(7, 2, &path).expect("tune");
+        assert!(message.contains("chip"));
+        assert!(std::fs::metadata(&path).expect("file").len() > 1000);
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
