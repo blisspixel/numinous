@@ -28,7 +28,7 @@ use numinous_core::{
 )]
 struct Cli {
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
 }
 
 #[derive(Subcommand)]
@@ -150,8 +150,9 @@ enum Command {
     },
     /// Play a room live in the terminal, animating its phase (Ctrl+C to stop).
     Play {
-        /// Room id, e.g. "times-tables".
-        id: String,
+        /// What to play: a game (munch, quiz, nim, crack, seti, aliens,
+        /// gauntlet, bench) or a room id to animate. Nothing lists the games.
+        id: Option<String>,
         /// Frames per second.
         #[arg(long, default_value_t = 12.0)]
         fps: f64,
@@ -369,9 +370,54 @@ fn main() -> ExitCode {
     let mut journey = load_journey();
     let before = journey.clone();
     let earned_before = earned_names(&before, &load_scores());
-    let code = run(Cli::parse().command, &mut journey);
+    let code = match Cli::parse().command {
+        Some(command) => run(command, &mut journey),
+        None => home(&journey),
+    };
     finish_journey(&before, &journey, &earned_before);
     code
+}
+
+/// The front door: what `numinous`, alone, opens onto. Today's room in full
+/// color, who you are, and the handful of verbs that matter.
+fn home(journey: &Journey) -> ExitCode {
+    let rooms = all_rooms();
+    let day = pick_day();
+    let room = &rooms[(day as usize) % rooms.len()];
+    let mut raster = Raster::with_accent(72, 44, room.meta().accent);
+    room.render(&mut raster, room.postcard_t());
+    print!("{}\x1b[0m", numinous_core::to_ansi(&raster));
+    println!("{}  ({})", room.meta().title, room.meta().wing);
+    println!(
+        "\nNUMINOUS   LV {:>2}  [{}]{}",
+        journey.level(),
+        journey.level_bar(16),
+        if journey.streak > 1 {
+            format!("   streak {}", journey.streak)
+        } else {
+            String::new()
+        }
+    );
+    println!(
+        "\n  numinous play              pick a game (munch, quiz, nim, the gauntlet...)
+  numinous play munch        or name it and go; --daily rides the shared seed
+  numinous tour              sit back: every room, full color, narrated
+  numinous watch {:<12} any one room, live, with its sound
+  numinous radio             the music stations (Y in the app tunes them)
+  numinous journey           your constellation, level, locks, resonances
+  numinous rooms             the whole catalog; describe <room> for the story
+\nEverything answers --help. The window version is numinous-app.",
+        room.meta().id
+    );
+    ExitCode::SUCCESS
+}
+
+/// Days since the epoch: the shared daily clock.
+fn pick_day() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() / 86_400)
+        .unwrap_or(1)
 }
 
 /// The names of the trophies currently earned, for before/after comparison.
@@ -649,11 +695,39 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             width,
             height,
         } => {
-            if find_room(&id, allow_hidden).is_some() {
-                journey.visit(&id);
-                let _ = std::fs::write(journey_path(), journey.to_text());
+            let Some(id) = id else {
+                println!(
+                    "Pick a game:\n
+  numinous play munch        eat the numbers that fit the rule
+  numinous play quiz         name the math from its shape
+  numinous play nim          beat the Order, earn its secret
+  numinous play crack        defuse the bomb
+  numinous play seti         find the mind in the static
+  numinous play aliens       answer in their base
+  numinous play gauntlet     one run, four games, a combo, one number
+  numinous play bench        five fixed gauntlets: compare minds
+\nAdd --daily on a game's own command for the shared seed (numinous munch --daily).
+Or name a room to watch it as ASCII: numinous play lorenz"
+                );
+                return ExitCode::SUCCESS;
+            };
+            match id.as_str() {
+                "munch" => munch(pick_day(), 3, journey),
+                "quiz" => quiz(3, pick_day(), 44, 18, 4, journey),
+                "nim" => nim(pick_day(), journey),
+                "crack" => crack(pick_day(), 4, 8, journey),
+                "seti" => seti(pick_day(), 4, 3, journey),
+                "aliens" => aliens(pick_day(), 3, journey),
+                "gauntlet" => gauntlet(pick_day(), journey),
+                "bench" => bench(journey),
+                _ => {
+                    if find_room(&id, allow_hidden).is_some() {
+                        journey.visit(&id);
+                        let _ = std::fs::write(journey_path(), journey.to_text());
+                    }
+                    play(&id, fps, width, height, allow_hidden)
+                }
             }
-            play(&id, fps, width, height, allow_hidden)
         }
         Command::Quiz {
             rounds,
@@ -1311,7 +1385,7 @@ fn watch(
     loop {
         let _ = write!(
             stdout,
-            "{}",
+            "{}[J",
             watch_frame(room.as_ref(), t, width, height, era)
         );
         let _ = stdout.flush();
@@ -1369,7 +1443,7 @@ fn tour(
                 } else {
                     screen.push_str("\x1b[K\n");
                 }
-                let _ = write!(stdout, "{screen}");
+                let _ = write!(stdout, "{screen}\x1b[J");
                 let _ = stdout.flush();
                 if frame % 24 == 0
                     && let Some(player) = &player

@@ -37,6 +37,18 @@ Expected right now: **format and clippy clean, 370+ tests pass, coverage ~90%
 lines** (the `gpu`, `audio`, and `app` crates are integration-tested on real
 hardware and excluded from the coverage gate, see `docs/QUALITY.md`).
 
+## 2b. Put `numinous` on your PATH (once)
+
+```
+cargo install --path faces/cli --force
+```
+
+Then the CLI is just the word, anywhere: `numinous` alone opens the front
+door (today's room in color, your level, the verbs that matter);
+`numinous play` lists the games; `numinous play munch` deals today's board.
+The examples below use `cargo run` so they work before installing; after
+installing, `numinous <anything>` is equivalent.
+
 ## 3. Run the windowed app
 
 ```
