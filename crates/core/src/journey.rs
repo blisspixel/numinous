@@ -24,6 +24,9 @@ pub struct Journey {
     pub secrets: u32,
     /// Rounds played, sims run, curves plotted: showing up counts.
     pub plays: u32,
+    /// Boons redeemed: early unlocks chosen at level-ups (for example
+    /// `cut:mandelbrot:0`). Choices shape the order; levels still open all.
+    pub chosen: BTreeSet<String>,
 }
 
 /// The level cap. The answer to how far you can go.
@@ -150,16 +153,25 @@ impl Journey {
         self.plays += 1;
     }
 
+    /// Boons waiting to be chosen: every level past the first banks one, and
+    /// each redemption spends one. Never expires; never nags.
+    #[must_use]
+    pub fn boons_available(&self) -> u32 {
+        (self.level() - 1).saturating_sub(self.chosen.len() as u32)
+    }
+
     /// Serialize to the journey file format (plain lines, stable order).
     #[must_use]
     pub fn to_text(&self) -> String {
         let visited: Vec<&str> = self.visited.iter().map(String::as_str).collect();
+        let chosen: Vec<&str> = self.chosen.iter().map(String::as_str).collect();
         format!(
-            "visited {}\nwins {}\nsecrets {}\nplays {}\n",
+            "visited {}\nwins {}\nsecrets {}\nplays {}\nchosen {}\n",
             visited.join(" "),
             self.wins,
             self.secrets,
-            self.plays
+            self.plays,
+            chosen.join(" ")
         )
     }
 
@@ -183,11 +195,63 @@ impl Journey {
                 Some("plays") => {
                     journey.plays = parts.next().and_then(|v| v.parse().ok()).unwrap_or(0);
                 }
+                Some("chosen") => {
+                    journey.chosen = parts.map(str::to_string).collect();
+                }
                 _ => {}
             }
         }
         journey
     }
+}
+
+/// A boon on offer: an early unlock the player may choose at a level-up.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Boon {
+    /// The redemption id stored in the journey (for example `cut:lorenz:0`).
+    pub id: String,
+    /// How the offer reads on the menu.
+    pub label: String,
+}
+
+/// The levels at which a room's deep cuts unlock by level alone.
+/// (Kept in sync with the faces; boons open them early, levels open them all.)
+pub const CUT_LEVELS: [u32; 2] = [5, 12];
+
+/// Up to three boons on offer: rooms whose next deep cut is still locked at
+/// this level and not already chosen. Deterministic for a given journey, and
+/// reshuffled per redemption, so the menu is stable until you choose.
+#[must_use]
+pub fn boon_options(journey: &Journey) -> Vec<Boon> {
+    let level = journey.level();
+    let mut candidates = Vec::new();
+    for room in all_rooms() {
+        let id = room.meta().id;
+        for (i, _) in room.deep_cuts().iter().enumerate() {
+            let by_level = CUT_LEVELS.get(i).copied().unwrap_or(u32::MAX);
+            let token = format!("cut:{id}:{i}");
+            if level < by_level && !journey.chosen.contains(&token) {
+                let depth = if i == 0 {
+                    "a deeper cut"
+                } else {
+                    "a deeper cut still"
+                };
+                candidates.push(Boon {
+                    id: token,
+                    label: format!("{}: {depth}, ahead of LV {by_level}", room.meta().title),
+                });
+                break; // only the next cut per room is on offer
+            }
+        }
+    }
+    // Deterministic 3-of-n, reshuffled by how many boons have been redeemed.
+    let mut rng = SplitMix64::new(0xB007 ^ journey.chosen.len() as u64);
+    let mut picks = Vec::new();
+    while picks.len() < 3 && !candidates.is_empty() {
+        let index = (rng.below(candidates.len() as u64)) as usize;
+        picks.push(candidates.swap_remove(index));
+    }
+    picks
 }
 
 /// The lore of a level: one true, deadpan line for every level on the road.
@@ -377,6 +441,44 @@ mod tests {
             assert!(!name.is_empty());
             previous = level;
         }
+    }
+
+    #[test]
+    fn boons_bank_per_level_and_spend_per_choice() {
+        let mut journey = Journey {
+            plays: 3, // level 3: two levels past the first
+            ..Default::default()
+        };
+        assert_eq!(journey.boons_available(), 2);
+        journey.chosen.insert("cut:lorenz:0".to_string());
+        assert_eq!(journey.boons_available(), 1);
+        // Round-trips through the file format.
+        let back = Journey::from_text(&journey.to_text());
+        assert_eq!(back, journey);
+    }
+
+    #[test]
+    fn boon_options_offer_three_locked_cuts_and_respect_choices() {
+        let journey = Journey {
+            plays: 3,
+            ..Default::default()
+        };
+        let options = super::boon_options(&journey);
+        assert_eq!(options.len(), 3);
+        for boon in &options {
+            assert!(boon.id.starts_with("cut:"));
+            assert!(boon.label.contains("ahead of LV"));
+        }
+        // Deterministic until a choice is made.
+        assert_eq!(options, super::boon_options(&journey));
+        // A choice removes that option from future menus.
+        let mut chosen = journey.clone();
+        chosen.chosen.insert(options[0].id.clone());
+        assert!(
+            super::boon_options(&chosen)
+                .iter()
+                .all(|b| b.id != options[0].id)
+        );
     }
 
     #[test]

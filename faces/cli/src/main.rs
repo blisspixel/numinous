@@ -167,6 +167,8 @@ enum Command {
     },
     /// Your constellation: where you have been, and what it has made of you.
     Journey,
+    /// Spend a banked boon: pick one of three deep cuts to open early.
+    Choose,
     /// The high-score table: best runs across every game.
     Scores,
     /// The trophy case: what you have earned, and the silhouettes you have not.
@@ -449,6 +451,9 @@ fn level_up_report(before: &Journey, after: &Journey) -> Option<String> {
     if !lore.is_empty() {
         out.push_str(&format!("\n{lore}"));
     }
+    if after.boons_available() > 0 {
+        out.push_str("\nBOON BANKED  choose what opens early: numinous choose");
+    }
     for &(need, name, what) in numinous_core::UNLOCKS {
         if need > before.level() && need <= level {
             out.push_str(&format!("\nUNLOCKED  {name}: {what}"));
@@ -503,7 +508,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             ExitCode::SUCCESS
         }
         Command::Describe { id, json } => {
-            let report = describe_report(&id, json, allow_hidden, journey.level());
+            let report = describe_report(&id, json, allow_hidden, journey);
             if report.is_ok() && find_room(&id, allow_hidden).is_none() {
                 // The name was not a room, yet it answered: a secret heard.
                 journey.secret();
@@ -607,6 +612,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             print!("{}", journey_report(journey));
             ExitCode::SUCCESS
         }
+        Command::Choose => choose(journey),
         Command::Scores => {
             print!("{}", scores_report(&load_scores()));
             ExitCode::SUCCESS
@@ -918,7 +924,13 @@ fn rooms_report(json: bool) -> String {
 const CUT_LEVELS: [u32; 2] = [5, 12];
 
 /// One room's description, or a guiding error if the id is unknown.
-fn describe_report(id: &str, json: bool, allow_hidden: bool, level: u32) -> Result<String, String> {
+fn describe_report(
+    id: &str,
+    json: bool,
+    allow_hidden: bool,
+    journey: &Journey,
+) -> Result<String, String> {
+    let level = journey.level();
     let Some(room) = find_room(id, allow_hidden) else {
         // Not every name in the world is a room. A few of them answer anyway,
         // and a few more answer only for those who have been listening a while.
@@ -937,7 +949,8 @@ fn describe_report(id: &str, json: bool, allow_hidden: bool, level: u32) -> Resu
     let mut unlocked = Vec::new();
     for (i, cut) in room.deep_cuts().iter().enumerate() {
         let need = CUT_LEVELS.get(i).copied().unwrap_or(u32::MAX);
-        if level >= need {
+        let by_boon = journey.chosen.contains(&format!("cut:{id}:{i}"));
+        if level >= need || by_boon {
             let label = if i == 0 { "Deeper" } else { "Deeper still" };
             cuts.push_str(&format!("\n{label}: {cut}\n"));
             unlocked.push((*cut).to_string());
@@ -1070,6 +1083,49 @@ fn render_report(
     let mut canvas = Canvas::new(width, height);
     room.render(&mut canvas, t);
     Ok(canvas.to_text())
+}
+
+/// Spend a banked boon: pick one of three deep cuts to open ahead of level.
+/// Choices shape the order of knowledge; levels still open everything.
+fn choose(journey: &mut Journey) -> ExitCode {
+    if journey.boons_available() == 0 {
+        println!("No boon waiting. Level up first; every level banks one.");
+        return ExitCode::SUCCESS;
+    }
+    let options = numinous_core::boon_options(journey);
+    if options.is_empty() {
+        println!("Nothing left to open early. The road will do the rest.");
+        return ExitCode::SUCCESS;
+    }
+    println!(
+        "BOON  {} banked. Choose what opens early:\n",
+        journey.boons_available()
+    );
+    for (i, boon) in options.iter().enumerate() {
+        println!("  {}) {}", i + 1, boon.label);
+    }
+    print!("\nYour pick > ");
+    let _ = std::io::stdout().flush();
+    let mut line = String::new();
+    if std::io::stdin().lock().read_line(&mut line).unwrap_or(0) == 0 {
+        println!();
+        return ExitCode::SUCCESS;
+    }
+    let digits: String = line.chars().filter(char::is_ascii_digit).collect();
+    let Some(pick) = digits
+        .parse::<usize>()
+        .ok()
+        .and_then(|n| n.checked_sub(1))
+        .and_then(|i| options.get(i))
+    else {
+        println!("That was not on the menu. The boon stays banked.");
+        return ExitCode::SUCCESS;
+    };
+    journey.chosen.insert(pick.id.clone());
+    let room = pick.id.split(':').nth(1).unwrap_or("");
+    println!("\nCHOSEN. {}", pick.label);
+    println!("Read it now: numinous describe {room}");
+    ExitCode::SUCCESS
 }
 
 /// Your constellation and standing, shown plainly and explained never.
@@ -1308,7 +1364,10 @@ fn seti(seed: u64, channels: usize, rounds: usize, journey: &mut Journey) -> Exi
             println!();
             break;
         }
-        let guess = line.trim().chars().next().map(|c| c.to_ascii_uppercase());
+        let guess = line
+            .chars()
+            .find(char::is_ascii_alphanumeric)
+            .map(|c| c.to_ascii_uppercase());
         if guess == Some(scan.answer) {
             score += 1;
             journey.win();
@@ -1361,7 +1420,8 @@ fn aliens(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
             break;
         }
         let answer = numinous_core::to_base(message.answer, message.base);
-        if u64::from_str_radix(line.trim(), message.base).ok() == Some(message.answer) {
+        let cleaned: String = line.chars().filter(char::is_ascii_alphanumeric).collect();
+        if u64::from_str_radix(&cleaned, message.base).ok() == Some(message.answer) {
             score += 1;
             journey.win();
             println!(
@@ -1471,7 +1531,9 @@ fn read_letter(input: &mut impl BufRead) -> Option<char> {
     if input.read_line(&mut line).unwrap_or(0) == 0 {
         return None;
     }
-    line.trim().chars().next().map(|c| c.to_ascii_uppercase())
+    line.chars()
+        .find(char::is_ascii_alphanumeric)
+        .map(|c| c.to_ascii_uppercase())
 }
 
 /// The Gauntlet: munch board, mystery shape, sky scan, bomb code, one run.
@@ -1708,7 +1770,10 @@ fn quiz(
             println!();
             break;
         }
-        let guess = line.trim().chars().next().map(|c| c.to_ascii_uppercase());
+        let guess = line
+            .chars()
+            .find(char::is_ascii_alphanumeric)
+            .map(|c| c.to_ascii_uppercase());
         if guess == Some(r.answer) {
             score += 1;
             journey.win();
@@ -1805,27 +1870,51 @@ mod tests {
 
     #[test]
     fn describe_known_room_reports_its_wing() {
-        let text = describe_report("times-tables", false, false, 1).expect("known room");
+        let text = describe_report(
+            "times-tables",
+            false,
+            false,
+            &numinous_core::Journey::default(),
+        )
+        .expect("known room");
         assert!(text.contains("Number & Pattern"));
     }
 
     #[test]
     fn describe_json_carries_the_id() {
-        let text = describe_report("times-tables", true, false, 1).expect("known room");
+        let text = describe_report(
+            "times-tables",
+            true,
+            false,
+            &numinous_core::Journey::default(),
+        )
+        .expect("known room");
         let value: Value = serde_json::from_str(&text).expect("valid json");
         assert_eq!(value["id"], "times-tables");
     }
 
     #[test]
     fn describe_includes_the_reveal() {
-        let text = describe_report("times-tables", false, false, 1).expect("known room");
+        let text = describe_report(
+            "times-tables",
+            false,
+            false,
+            &numinous_core::Journey::default(),
+        )
+        .expect("known room");
         assert!(text.contains("Reveal:"));
         assert!(text.contains("Mandelbrot"));
     }
 
     #[test]
     fn describe_json_includes_the_reveal() {
-        let text = describe_report("times-tables", true, false, 1).expect("known room");
+        let text = describe_report(
+            "times-tables",
+            true,
+            false,
+            &numinous_core::Journey::default(),
+        )
+        .expect("known room");
         let value: Value = serde_json::from_str(&text).expect("valid json");
         assert!(
             value["reveal"]
@@ -1836,7 +1925,13 @@ mod tests {
 
     #[test]
     fn describe_unknown_room_guides_the_user() {
-        let err = describe_report("no-such-room", false, false, 1).expect_err("unknown room");
+        let err = describe_report(
+            "no-such-room",
+            false,
+            false,
+            &numinous_core::Journey::default(),
+        )
+        .expect_err("unknown room");
         assert!(err.contains("Known rooms"));
     }
 
@@ -1996,23 +2091,71 @@ mod tests {
 
     #[test]
     fn deep_cuts_unlock_with_level() {
-        let low = super::describe_report("mandelbrot", false, false, 1).expect("describe");
+        let low = super::describe_report(
+            "mandelbrot",
+            false,
+            false,
+            &numinous_core::Journey::default(),
+        )
+        .expect("describe");
         assert!(
             low.contains("LOCKED: a deeper cut opens at LV 5"),
             "got: {low}"
         );
         assert!(!low.contains("Shishikura"));
-        let mid = super::describe_report("mandelbrot", false, false, 5).expect("describe");
+        let mid = super::describe_report(
+            "mandelbrot",
+            false,
+            false,
+            &numinous_core::Journey {
+                plays: 10,
+                ..Default::default()
+            },
+        )
+        .expect("describe");
         assert!(mid.contains("Deeper:"));
         assert!(mid.contains("LOCKED: a deeper cut opens at LV 12"));
-        let high = super::describe_report("mandelbrot", false, false, 12).expect("describe");
+        let high = super::describe_report(
+            "mandelbrot",
+            false,
+            false,
+            &numinous_core::Journey {
+                plays: 66,
+                ..Default::default()
+            },
+        )
+        .expect("describe");
         assert!(high.contains("Deeper still:") && high.contains("Shishikura"));
     }
 
     #[test]
+    fn a_boon_opens_a_cut_ahead_of_level() {
+        let mut journey = numinous_core::Journey::default(); // level 1
+        journey.chosen.insert("cut:mandelbrot:0".to_string());
+        let text = super::describe_report("mandelbrot", false, false, &journey).expect("describe");
+        assert!(text.contains("Deeper:"), "the chosen cut is open: {text}");
+        assert!(
+            text.contains("LOCKED: a deeper cut opens at LV 12"),
+            "the second cut still waits: {text}"
+        );
+    }
+
+    #[test]
     fn deep_whispers_require_standing() {
-        assert!(super::describe_report("curtain", false, false, 1).is_err());
-        let deep = super::describe_report("curtain", false, true, 10).expect("a deeper whisper");
+        assert!(
+            super::describe_report("curtain", false, false, &numinous_core::Journey::default())
+                .is_err()
+        );
+        let deep = super::describe_report(
+            "curtain",
+            false,
+            true,
+            &numinous_core::Journey {
+                plays: 10,
+                ..Default::default()
+            },
+        )
+        .expect("a deeper whisper");
         assert!(deep.contains("veil"), "got: {deep}");
     }
 
@@ -2246,9 +2389,19 @@ mod tests {
 
     #[test]
     fn describe_whispers_for_the_hidden_names() {
-        let out = super::describe_report("hippasus", false, false, 1).expect("a whisper");
+        let out =
+            super::describe_report("hippasus", false, false, &numinous_core::Journey::default())
+                .expect("a whisper");
         assert!(out.to_lowercase().contains("sea"), "got: {out}");
-        assert!(super::describe_report("not-a-room-nor-secret", false, false, 1).is_err());
+        assert!(
+            super::describe_report(
+                "not-a-room-nor-secret",
+                false,
+                false,
+                &numinous_core::Journey::default()
+            )
+            .is_err()
+        );
     }
 
     #[test]

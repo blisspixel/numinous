@@ -6,6 +6,19 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Boons: choice on level-up, the genre's soul, held to the doctrine. Every
+  level past the first banks a boon (never expires, never nags); `numinous
+  choose` offers a deterministic pick-one-of-three, and what you choose is
+  which knowledge arrives early: a room's deep cut opened ahead of its level.
+  Levels still open everything eventually, so the choice shapes the order and
+  gates nothing. The LEVEL UP banner announces BOON BANKED; describe honors
+  boon-opened cuts; the journey file carries your choices.
+
+### Fixed
+- All game input parsing hardened against byte-order marks and stray bytes
+  (PowerShell pipes prepend a BOM): letters are the first alphanumeric, picks
+  and codes keep digits only, alien answers keep alphanumerics for base-N.
+  First guesses in piped sessions no longer silently miss.
 - Trophy pings (the juice item from the roadmap's RPG queue): trophies now
   announce themselves the moment the evidence exists, TROPHY EARNED with the
   name and the deed, stacking with NEW BEST, LEVEL UP, the level lore, the
