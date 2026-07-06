@@ -31,6 +31,12 @@ pub enum Rule {
     MultiplesOf(u64),
     /// Perfect squares.
     Squares,
+    /// Numbers whose digits sum to `n`.
+    DigitSum(u64),
+    /// Numbers with at least two prime factors (not prime, not one).
+    Composites,
+    /// Fibonacci numbers.
+    Fibonacci,
 }
 
 impl Rule {
@@ -41,6 +47,9 @@ impl Rule {
             Rule::Primes => "Eat the PRIMES".to_string(),
             Rule::MultiplesOf(n) => format!("Eat the MULTIPLES OF {n}"),
             Rule::Squares => "Eat the PERFECT SQUARES".to_string(),
+            Rule::DigitSum(n) => format!("Eat where the DIGITS SUM TO {n}"),
+            Rule::Composites => "Eat the COMPOSITES (not prime, not one)".to_string(),
+            Rule::Fibonacci => "Eat the FIBONACCI NUMBERS".to_string(),
         }
     }
 
@@ -53,6 +62,19 @@ impl Rule {
             Rule::Squares => {
                 let root = value.isqrt();
                 root * root == value
+            }
+            Rule::DigitSum(n) => {
+                let mut sum = 0;
+                let mut v = value;
+                while v > 0 {
+                    sum += v % 10;
+                    v /= 10;
+                }
+                sum == n
+            }
+            Rule::Composites => value > 1 && !is_prime(value),
+            Rule::Fibonacci => {
+                matches!(value, 1 | 2 | 3 | 5 | 8 | 13 | 21 | 34 | 55 | 89)
             }
         }
     }
@@ -108,11 +130,17 @@ fn is_prime(n: u64) -> bool {
 #[must_use]
 pub fn build_board(seed: u64, round: u64) -> Board {
     let mut rng = SplitMix64::new(seed ^ MUNCH_MIX ^ round.wrapping_mul(0x9E37_79B9));
-    let rule = match rng.below(4) {
+    // Early rounds stay classic; from round two the deeper rules join the
+    // deck, so the game grows judgment instead of bookkeeping.
+    let deck = if round < 2 { 4 } else { 7 };
+    let rule = match rng.below(deck) {
         0 => Rule::Primes,
         1 => Rule::MultiplesOf(2 + rng.below(4)), // 2..=5
         2 => Rule::Squares,
-        _ => Rule::MultiplesOf(6 + rng.below(4)), // 6..=9
+        3 => Rule::MultiplesOf(6 + rng.below(4)), // 6..=9
+        4 => Rule::DigitSum(5 + rng.below(9)),    // 5..=13
+        5 => Rule::Composites,
+        _ => Rule::Fibonacci,
     };
     loop {
         let numbers: Vec<u64> = (0..ROWS * COLS).map(|_| 1 + rng.below(99)).collect();
@@ -177,6 +205,22 @@ pub fn board_text(board: &Board) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_deeper_rules_judge_correctly() {
+        use super::Rule;
+        assert!(Rule::DigitSum(9).fits(45), "4 + 5 = 9");
+        assert!(!Rule::DigitSum(9).fits(46));
+        assert!(Rule::Composites.fits(91), "91 = 7 x 13, the classic trap");
+        assert!(!Rule::Composites.fits(89), "89 is prime");
+        assert!(!Rule::Composites.fits(1), "one is neither");
+        assert!(Rule::Fibonacci.fits(89));
+        assert!(!Rule::Fibonacci.fits(90));
+        for round in 2..30 {
+            let board = super::build_board(7, round);
+            assert!(board.numbers.iter().any(|&n| board.rule.fits(n)));
+        }
+    }
+
     use super::{Board, Rule, build_board, grade, is_prime};
 
     #[test]

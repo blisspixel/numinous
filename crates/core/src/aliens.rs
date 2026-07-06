@@ -144,7 +144,7 @@ pub fn alien_message(seed: u64, shown: usize) -> AlienMessage {
     let (name, explanation, generator) = SEQUENCES[(rng.below(SEQUENCES.len() as u64)) as usize];
     let terms = (0..shown).map(generator).collect();
     // Mostly decimal, but sometimes the aliens have a different number of fingers.
-    let base = [10u32, 10, 10, 8, 2, 16][(rng.below(6)) as usize];
+    let base = [10u32, 10, 8, 2, 16, 12][(rng.below(6)) as usize];
     AlienMessage {
         name,
         terms,
