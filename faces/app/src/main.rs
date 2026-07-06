@@ -1918,7 +1918,39 @@ impl ApplicationHandler for App {
         };
         self.window = Some(window);
         self.surface = Some(surface);
-        self.player = numinous_audio::LoopPlayer::new().ok();
+        self.player = match numinous_audio::LoopPlayer::new() {
+            Ok(player) => Some(player),
+            Err(error) => {
+                // Silence must never be a mystery: say it on screen and in
+                // the crash log, then keep running visual-only.
+                self.banner = Some((
+                    vec![
+                        "SOUND DEVICE UNAVAILABLE".to_string(),
+                        error.clone().to_uppercase(),
+                    ],
+                    600,
+                ));
+                let home = std::env::var("HOME")
+                    .or_else(|_| std::env::var("USERPROFILE"))
+                    .unwrap_or_else(|_| ".".to_string());
+                let path = std::path::PathBuf::from(home).join(".numinous-crash.log");
+                use std::io::Write as _;
+                if let Ok(mut file) = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(path)
+                {
+                    let _ = file.write_all(
+                        format!(
+                            "audio open failed: {error}
+"
+                        )
+                        .as_bytes(),
+                    );
+                }
+                None
+            }
+        };
         self.gpu = numinous_gpu::FractalRenderer::new().ok();
         if std::env::var("NUMINOUS_MUTE").is_ok() {
             self.muted = true;
