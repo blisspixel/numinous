@@ -18,6 +18,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   live instead of restarting the record.
 
 ### Added
+- The roadmap carries the honest scorecard: the build sits at roughly 0.6
+  against the nine 1.0 gates, each gate estimated with what is missing named
+  plainly, and the six main things between here and First Light listed in
+  order (the poke, room motifs, human playtests, cross-platform proof, the
+  visualizer and Studio sharing, hardening).
 - The quiz stopped repeating itself: stepping out and back in (or
   relaunching the app) restarted the round counter at zero against the same
   daily seed, dealing identical puzzles. The round number is now the

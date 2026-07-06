@@ -92,6 +92,40 @@ The workstreams, each built to the 1.0 bar:
 
 ---
 
+## Where we stand (July 2026): the honest scorecard
+
+Scored against the nine 1.0 gates below, the build sits at roughly **0.6**:
+the structure is complete (28 rooms across 10 wings, 7 games on four shapes
+of play, the full RPG spine, 22 MCP tools, both music engines live, 411
+tests) and the remaining distance is quality density, not missing systems.
+
+| 1.0 gate | Estimate | What is missing |
+|---|---|---|
+| Complete coherent collection | 85% | Full Map open boxes (hexaflexagons, Hat tile, more Open Problems) |
+| Every room slaps | 60% | the poke: rooms are watchable, not yet playable |
+| Full sensory identity | 70% | Engine A2 room motifs, the visualizer, era grain beyond phosphor |
+| Three faces genuinely good | 85% | app module refactor; the rest is real |
+| Meta and lore alive | 90% | subtle and working |
+| Real creative surface | 65% | Studio works; no save or share of creations |
+| Rigor provable | 75% | never built off Windows; accessibility not started |
+| Plays like a game | 80% | one-more-run pull needs real human playtests |
+| Beautiful and honest throughout | 75% | frame bugs still surface in live use |
+
+**The six main things between here and 1.0, in order:**
+
+1. **Playable rooms (the poke)**, the founder's directive above; feeds the
+   "every room slaps" gate directly and is the largest fun-per-effort item.
+2. **Engine A2 room motifs**: every room's voice becomes a short phrase in
+   its own key; `listen_room` returns real notation. Three panel seats asked.
+3. **Real human playtests**: the exit criterion is empirical (a kid, an
+   adult; "loses an hour, comes back next week"); only the founder and one
+   AI have played. Each session generates the next fix list.
+4. **Cross-platform proof**: one build and run on macOS or Linux; the
+   stacks are portable by design and unverified in practice.
+5. **The visualizer and Studio save/share**: the two remaining promises.
+6. **Hardening**: app refactor into modules, accessibility pass, era grain,
+   gamepad, Show crossfade.
+
 ## 1.0 "First Light": the definition
 
 1.0 is not a feature list, it is a **bar**. We call it 1.0 only when *all* of the following are true. This is the "exceptionally well" gate.
