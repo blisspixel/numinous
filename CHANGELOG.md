@@ -18,6 +18,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   live instead of restarting the record.
 
 ### Added
+- The CLI got its front door: bare `numinous` opens onto today's room in
+  full color, your level bar and streak, and the seven verbs that matter.
+  `numinous play` lists the games; `numinous play munch` (or quiz, nim,
+  crack, seti, aliens, gauntlet, bench) deals today's seed immediately; a
+  room name still animates that room. `cargo install --path faces/cli`
+  makes it one word anywhere.
+
+### Fixed
+- The tour and watch no longer leave ghosts: repaints now clear to the end
+  of the screen, so a long reveal line can never linger under the next
+  room's shorter frame.
 - The roadmap carries the honest scorecard: the build sits at roughly 0.6
   against the nine 1.0 gates, each gate estimated with what is missing named
   plainly, and the six main things between here and First Light listed in
