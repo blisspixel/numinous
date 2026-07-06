@@ -57,6 +57,28 @@ pub fn concept(game: &str) -> Option<&'static str> {
              run on this same asymmetry, which is why consistency beats \
              brilliance across almost any long run."
         }
+        "hackenbush" => {
+            "THE CONCEPT: games as numbers. Every garden here has an exact value: \
+             one red blade is 1, red with blue on top is exactly 1/2. Add the \
+             stalks: positive means Red wins, and the best move is the one that \
+             keeps the sum on your side. Conway pushed this until games became a \
+             number system bigger than the reals, the surreal numbers."
+        }
+        "party" => {
+            "THE CONCEPT: Ramsey theory. Total disorder is impossible: among any \
+             six guests there must be three mutual friends or three mutual \
+             strangers, however the handshakes fall. Five guests can escape (the \
+             pentagon knows the trick); six cannot, and no cleverness saves you. \
+             Structure is not optional at scale; it is a law."
+        }
+        "fifteen" => {
+            "THE CONCEPT: parity, the invisible coin. Count the pairs of tiles \
+             that are out of order and where the hole sits: their combined \
+             evenness never changes, no matter how you slide. Half of all \
+             scrambles are on the wrong side of that coin and no sequence of \
+             legal moves can ever cross over. Invariants are how you prove a \
+             thing is impossible without trying everything."
+        }
         _ => return None,
     })
 }
@@ -68,7 +90,16 @@ mod tests {
     #[test]
     fn every_game_has_its_concept_and_says_its_name() {
         for game in [
-            "munch", "quiz", "nim", "crack", "seti", "aliens", "gauntlet",
+            "munch",
+            "quiz",
+            "nim",
+            "crack",
+            "seti",
+            "aliens",
+            "gauntlet",
+            "hackenbush",
+            "party",
+            "fifteen",
         ] {
             let text = concept(game).expect(game);
             assert!(text.starts_with("THE CONCEPT:"), "{game} names its idea");

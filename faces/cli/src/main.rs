@@ -257,6 +257,23 @@ enum Command {
         #[arg(long, default_value_t = 3)]
         rounds: usize,
     },
+    /// Hackenbush: cut grass against the Order. The grass is made of numbers.
+    Hackenbush {
+        /// Seed (the same seed grows the same garden).
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+    },
+    /// The Party Problem: avoid a one-color triangle. Five escape; six never.
+    Party,
+    /// Fifteen's Bet: solvable or stuck forever? Learn to smell parity.
+    Fifteen {
+        /// Seed (the same seed deals the same scrambles).
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        /// How many scrambles to call.
+        #[arg(long, default_value_t = 5)]
+        rounds: u64,
+    },
     /// Nim: three heaps against the Order. Lose, learn, become unbeatable.
     Nim {
         /// Seed (the same seed is the same heaps).
@@ -728,6 +745,9 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
   numinous play crack        guess the code; LOCKED right place, LOOSE right digit wrong place
   numinous play seti         radio channels of static; only a mind counts in primes
   numinous play aliens       they send a number sequence; answer the next, in THEIR base
+  numinous play hackenbush   cut grass vs the Order; the grass is secretly made of numbers
+  numinous play party        shade handshakes, dodge triangles; five escape, six never
+  numinous play fifteen      call each scramble solvable or stuck; parity is the tell
   numinous play gauntlet     one run through four of the above; clean stages build a combo
   numinous play bench        five fixed gauntlets, one composite number: compare any two minds
 \nAdd --daily on a game's own command for the shared seed (numinous munch --daily).
@@ -740,6 +760,9 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                 "munch" => munch(seed, 3, journey),
                 "quiz" => quiz(3, seed, 44, 18, 4, journey),
                 "nim" => nim(seed, journey),
+                "hackenbush" => hackenbush(seed, journey),
+                "party" => party(journey),
+                "fifteen" => fifteen(seed, 5, journey),
                 "crack" => crack(seed, 4, 8, journey),
                 "seti" => seti(seed, 4, 3, journey),
                 "aliens" => aliens(seed, 3, journey),
@@ -849,6 +872,9 @@ Erase the journey with: numinous forget --confirm  (add --scores for the table)"
             daily,
             rounds,
         } => munch(pick_seed(seed, daily, journey), rounds, journey),
+        Command::Hackenbush { seed } => hackenbush(seed, journey),
+        Command::Party => party(journey),
+        Command::Fifteen { seed, rounds } => fifteen(seed, rounds, journey),
         Command::Nim { seed } => nim(seed, journey),
         Command::Gauntlet { seed, daily } => gauntlet(pick_seed(seed, daily, journey), journey),
         Command::Answer => {
@@ -2043,6 +2069,242 @@ fn quiz_remark(score: usize, rounds: usize) -> &'static str {
         60..=99 => "Sharp eye.",
         _ => "The shapes are sneaky. Play again.",
     }
+}
+
+/// Draw the garden: stalks as columns, red and blue in truecolor.
+fn garden_text(stalks: &numinous_core::hackenbush::Stalks) -> String {
+    use numinous_core::hackenbush::Color;
+    let tallest = stalks.iter().map(Vec::len).max().unwrap_or(0);
+    let mut out = String::new();
+    for row in (0..tallest).rev() {
+        out.push_str("   ");
+        for stalk in stalks {
+            match stalk.get(row) {
+                Some(Color::Red) => out.push_str("\x1b[91m R \x1b[0m"),
+                Some(Color::Blue) => out.push_str("\x1b[94m B \x1b[0m"),
+                None => out.push_str("   "),
+            }
+            out.push(' ');
+        }
+        out.push('\n');
+    }
+    out.push_str("   ");
+    for (i, _) in stalks.iter().enumerate() {
+        out.push_str(&format!("={}= ", i + 1));
+    }
+    out.push('\n');
+    out
+}
+
+/// Hackenbush against the Order: cut red, it cuts blue, last cutter wins.
+fn hackenbush(seed: u64, journey: &mut Journey) -> ExitCode {
+    use numinous_core::hackenbush as hb;
+    let stdin = std::io::stdin();
+    let mut input = stdin.lock();
+    let mut stalks = hb::new_garden(seed);
+    journey.play();
+    println!("HACKENBUSH  seed {seed}. Cut a RED segment; everything above it falls.");
+    println!("The Order cuts blue. Whoever cannot cut, loses. Answer: stalk height");
+    println!("(1 1 cuts stalk 1 at the ground). This garden is winnable. (? explains)");
+    loop {
+        println!("\n{}", garden_text(&stalks));
+        if !hb::can_move(&stalks, hb::Color::Red) {
+            println!("No red left to cut. The Order takes the garden. (It was arithmetic.)");
+            return ExitCode::SUCCESS;
+        }
+        print!("stalk height > ");
+        let _ = std::io::stdout().flush();
+        let mut line = String::new();
+        if input.read_line(&mut line).unwrap_or(0) == 0 {
+            println!();
+            return ExitCode::SUCCESS;
+        }
+        if asked_why(&line, "hackenbush") {
+            continue;
+        }
+        let nums: Vec<usize> = line
+            .split_whitespace()
+            .filter_map(|w| w.parse().ok())
+            .collect();
+        let (Some(&stalk), Some(&height)) = (nums.first(), nums.get(1)) else {
+            println!("  Two numbers: which stalk, which height (both from 1).");
+            continue;
+        };
+        if stalk == 0 || height == 0 || !hb::cut(&mut stalks, stalk - 1, height - 1, hb::Color::Red)
+        {
+            println!("  That is not a red segment you can reach.");
+            continue;
+        }
+        if !hb::can_move(&stalks, hb::Color::Blue) {
+            journey.win();
+            post_score(&format!("hackenbush seed:{seed}"), 1);
+            println!("\nThe Order has nothing left to cut. It concedes, and keeps its word:");
+            println!("\n{}", hb::the_secret());
+            return ExitCode::SUCCESS;
+        }
+        let (bi, bh) = hb::order_move(&stalks).expect("blue can move");
+        let _ = hb::cut(&mut stalks, bi, bh, hb::Color::Blue);
+        println!("  The Order cuts stalk {} at height {}.", bi + 1, bh + 1);
+    }
+}
+
+/// The Party Problem: round one, five guests (escapable); round two, six.
+fn party(journey: &mut Journey) -> ExitCode {
+    use numinous_core::party::{Party, Shade};
+    let stdin = std::io::stdin();
+    let mut input = stdin.lock();
+    println!("THE PARTY PROBLEM. Shade every handshake red or blue WITHOUT making");
+    println!("a triangle of one color. Answer like: 1 3 r   (guests 1 and 3, red).");
+    println!("Round one: five guests. It can be done. (? explains)\n");
+    for (round, guests) in [(1usize, 5usize), (2, 6)] {
+        journey.play();
+        let mut p = Party::new(guests);
+        println!(
+            "ROUND {round}: {guests} guests, {} handshakes.",
+            p.edges.len()
+        );
+        loop {
+            // The matrix of handshakes so far.
+            print!("     ");
+            for b in 1..=guests {
+                print!(" {b}");
+            }
+            println!();
+            for a in 0..guests {
+                print!("   {} ", a + 1);
+                for b in 0..guests {
+                    if b <= a {
+                        print!("  ");
+                        continue;
+                    }
+                    let mark =
+                        match numinous_core::party::edge_index(guests, a, b).map(|i| p.edges[i]) {
+                            Some(Shade::Red) => "\x1b[91mR\x1b[0m",
+                            Some(Shade::Blue) => "\x1b[94mB\x1b[0m",
+                            _ => ".",
+                        };
+                    print!(" {mark}");
+                }
+                println!();
+            }
+            print!("handshake > ");
+            let _ = std::io::stdout().flush();
+            let mut line = String::new();
+            if input.read_line(&mut line).unwrap_or(0) == 0 {
+                println!();
+                return ExitCode::SUCCESS;
+            }
+            if asked_why(&line, "party") {
+                continue;
+            }
+            let words: Vec<&str> = line.split_whitespace().collect();
+            let (Some(a), Some(b), Some(color)) = (
+                words.first().and_then(|w| w.parse::<usize>().ok()),
+                words.get(1).and_then(|w| w.parse::<usize>().ok()),
+                words.get(2),
+            ) else {
+                println!("  Like this: 1 3 r   or   2 5 b");
+                continue;
+            };
+            let shade = if color.starts_with('r') || color.starts_with('R') {
+                Shade::Red
+            } else {
+                Shade::Blue
+            };
+            if a == 0 || b == 0 || !p.shade(a - 1, b - 1, shade) {
+                println!("  That handshake is not open.");
+                continue;
+            }
+            if let Some((x, y, z, _)) = p.mono_triangle() {
+                println!(
+                    "\nA one-color triangle: guests {}, {}, {}. {} handshakes survived.",
+                    x + 1,
+                    y + 1,
+                    z + 1,
+                    p.shaded() - 1
+                );
+                if guests == 6 {
+                    println!(
+                        "It was never possible. Among six, three mutual friends or three\n\
+                         mutual strangers MUST exist: R(3,3) = 6. You just felt a theorem."
+                    );
+                } else {
+                    println!(
+                        "Five guests CAN escape. The pentagon knows: ring one color, star the other."
+                    );
+                }
+                break;
+            }
+            if p.complete() {
+                journey.win();
+                post_score(&format!("party guests:{guests}"), p.shaded() as i64);
+                println!(
+                    "\nEvery handshake shaded, no triangle. You escaped with all {}.",
+                    p.shaded()
+                );
+                if guests == 5 {
+                    println!("Now try six. (Ramsey is waiting.)\n");
+                }
+                break;
+            }
+        }
+    }
+    ExitCode::SUCCESS
+}
+
+/// Fifteen's Bet: call each scramble solvable or stuck forever.
+fn fifteen(seed: u64, rounds: u64, journey: &mut Journey) -> ExitCode {
+    use numinous_core::fifteen as ff;
+    let stdin = std::io::stdin();
+    let mut input = stdin.lock();
+    let mut called = 0u64;
+    println!("FIFTEEN'S BET. Half of all scrambles can never be solved, and one");
+    println!("invisible quantity decides which. Call each one: S(olvable) or U(nsolvable).");
+    println!("(? explains)\n");
+    for n in 0..rounds {
+        journey.play();
+        let tiles = ff::deal(seed, n);
+        println!(
+            "SCRAMBLE {} of {rounds}:\n{}",
+            n + 1,
+            ff::board_text(&tiles)
+        );
+        let verdict = loop {
+            print!("S or U > ");
+            let _ = std::io::stdout().flush();
+            let mut line = String::new();
+            if input.read_line(&mut line).unwrap_or(0) == 0 {
+                println!();
+                return ExitCode::SUCCESS;
+            }
+            if asked_why(&line, "fifteen") {
+                continue;
+            }
+            match line
+                .chars()
+                .find(char::is_ascii_alphanumeric)
+                .map(|c| c.to_ascii_uppercase())
+            {
+                Some('S') => break true,
+                Some('U') => break false,
+                _ => println!("  S or U."),
+            }
+        };
+        let truth = ff::solvable(&tiles);
+        if verdict == truth {
+            called += 1;
+            journey.win();
+            println!("  Called it. {}\n", ff::why(&tiles));
+        } else {
+            println!("  No: {}\n", ff::why(&tiles));
+        }
+    }
+    post_score(
+        &format!("fifteen seed:{seed} rounds:{rounds}"),
+        called as i64,
+    );
+    println!("{called} of {rounds} called. Parity is learnable; deal again.");
+    ExitCode::SUCCESS
 }
 
 /// Draw the heaps as rows of stones.
