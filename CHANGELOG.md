@@ -6,6 +6,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The panel (`docs/PANEL.md`): a five-seat review of the whole build, a kid,
+  a PhD, a stoner creative, the chair, and an AGI seat quoting the real AI
+  playtest verbatim (verdict: "yes, I would play again... the number was
+  never the point, and unusually for a game, this one means it"). Its
+  synthesis: the structure is complete; what is missing is depth where the
+  hands touch. The roadmap's Next list is now the panel's ordered list:
+  juice, mouse, munch rule variety, room motifs, save-postcard, the Open
+  Problems wing, further reading, era grain, then the visualizer and radio.
 - The watchable game, fully built out for all three minds: `numinous tour`
   is the Show for the terminal (every room takes the stage in turn, full
   color and sound, a title card as it arrives and its reveal as the curtain
