@@ -69,6 +69,8 @@ struct App {
     munch: Option<MunchPlay>,
     /// Nim, when playing in the window.
     nim: Option<NimPlay>,
+    /// The Gauntlet, when running in the window.
+    gauntlet: Option<GauntletPlay>,
     /// The chiptune bed for the current room, rendered once per room.
     tune: Vec<f32>,
     /// The journey overlay ('j' toggles): level, rank, trophies, resonances.
@@ -95,6 +97,25 @@ struct MunchPlay {
     bites: std::collections::BTreeSet<usize>,
     /// After Enter: the graded outcome, shown until a key.
     graded: Option<numinous_core::Munched>,
+}
+
+/// The in-window Gauntlet: four stages riding the other games' state.
+struct GauntletPlay {
+    seed: u64,
+    /// 0 munch, 1 shape, 2 sky, 3 bomb, 4 done.
+    stage: usize,
+    munch: MunchPlay,
+    quiz: QuizPlay,
+    scan: numinous_core::SetiScan,
+    secret: Vec<u8>,
+    /// The bomb keypad: what is typed, and the feedback so far.
+    wire: String,
+    wire_lines: Vec<String>,
+    /// Stage scores and clean flags, in order.
+    scores: Vec<i64>,
+    cleared: Vec<bool>,
+    /// The running narration line.
+    message: String,
 }
 
 /// The in-window Nim: the heaps, your aim, and the Order's last word.
@@ -142,6 +163,7 @@ impl App {
             quiz: None,
             munch: None,
             nim: None,
+            gauntlet: None,
             tune: Vec::new(),
             show_journey: false,
             journey_file: journey_path(),
@@ -309,6 +331,187 @@ impl App {
             play.selected = play.heaps.iter().position(|&h| h > 0).unwrap_or(0);
         }
         play.take = play.take.min(play.heaps[play.selected].max(1));
+    }
+
+    /// Start the Gauntlet: today's run, four stages, a combo.
+    fn gauntlet_start(&mut self) {
+        let seed = Self::daily_seed();
+        self.gauntlet = Some(GauntletPlay {
+            seed,
+            stage: 0,
+            munch: MunchPlay {
+                board: numinous_core::build_board(seed, 0),
+                seed,
+                cursor: 0,
+                bites: std::collections::BTreeSet::new(),
+                graded: None,
+            },
+            quiz: QuizPlay {
+                round: numinous_core::build_round(seed, 1, 10, 10),
+                number: 1,
+                flash: None,
+            },
+            scan: numinous_core::build_scan(seed, 4),
+            secret: numinous_core::secret_code(seed, 4),
+            wire: String::new(),
+            wire_lines: Vec::new(),
+            scores: Vec::new(),
+            cleared: Vec::new(),
+            message: String::from("STAGE 1 OF 4  MUNCH. CLEAN STAGES BUILD YOUR COMBO."),
+        });
+    }
+
+    /// Bank a gauntlet stage: score, clean flag, journey, and the narration.
+    fn gauntlet_bank(&mut self, points: i64, clean: bool, what: &str) {
+        self.journey.play();
+        if clean {
+            self.journey.win();
+        }
+        self.journey_changed();
+        let Some(run) = self.gauntlet.as_mut() else {
+            return;
+        };
+        run.scores.push(points);
+        run.cleared.push(clean);
+        run.stage += 1;
+        let combo = run.cleared.iter().take_while(|&&c| c).count() + 1;
+        run.message = if run.stage < 4 {
+            format!(
+                "{what}  STAGE {} OF 4{}",
+                run.stage + 1,
+                if clean {
+                    format!("  COMBO X{combo}")
+                } else {
+                    String::new()
+                }
+            )
+        } else {
+            what.to_string()
+        };
+        if run.stage == 4 {
+            let total = gauntlet_total(&run.scores, &run.cleared);
+            let seed = run.seed;
+            self.post_score(&format!("gauntlet seed:{seed}"), total);
+        }
+    }
+
+    /// One key into the Gauntlet: routed to whichever stage is live.
+    fn gauntlet_key(&mut self, key: &Key) {
+        if matches!(key, Key::Named(NamedKey::Escape)) {
+            self.gauntlet = None;
+            self.update_audio();
+            return;
+        }
+        let Some(run) = self.gauntlet.as_mut() else {
+            return;
+        };
+        match run.stage {
+            0 => {
+                let play = &mut run.munch;
+                match key {
+                    Key::Named(NamedKey::Enter) => {
+                        let bites: Vec<usize> = play.bites.iter().copied().collect();
+                        let outcome = numinous_core::grade_munch(&play.board, &bites);
+                        let clean =
+                            outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
+                        let (points, what) = (outcome.score, format!("MUNCH +{}.", outcome.score));
+                        self.gauntlet_bank(points, clean, &what);
+                    }
+                    Key::Named(NamedKey::Space) => {
+                        let cell = play.cursor;
+                        let _ = play.bites.remove(&cell) || play.bites.insert(cell);
+                    }
+                    Key::Named(NamedKey::ArrowRight) => play.cursor = (play.cursor + 1) % 30,
+                    Key::Named(NamedKey::ArrowLeft) => play.cursor = (play.cursor + 29) % 30,
+                    Key::Named(NamedKey::ArrowDown) => play.cursor = (play.cursor + 6) % 30,
+                    Key::Named(NamedKey::ArrowUp) => play.cursor = (play.cursor + 24) % 30,
+                    Key::Character(c) => match c.as_str() {
+                        "d" => play.cursor = (play.cursor + 1) % 30,
+                        "a" => play.cursor = (play.cursor + 29) % 30,
+                        "s" => play.cursor = (play.cursor + 6) % 30,
+                        "w" => play.cursor = (play.cursor + 24) % 30,
+                        "e" => {
+                            let cell = play.cursor;
+                            let _ = play.bites.remove(&cell) || play.bites.insert(cell);
+                        }
+                        _ => {}
+                    },
+                    _ => {}
+                }
+            }
+            1 => {
+                if let Key::Character(c) = key
+                    && c.len() == 1
+                {
+                    let letter = c.chars().next().unwrap_or(' ').to_ascii_uppercase();
+                    if run.quiz.round.choices.iter().any(|ch| ch.letter == letter) {
+                        let correct = letter == run.quiz.round.answer;
+                        let what = format!(
+                            "IT WAS {} ({}).",
+                            run.quiz.round.answer,
+                            run.quiz.round.answer_title.to_uppercase()
+                        );
+                        self.gauntlet_bank(if correct { 25 } else { 0 }, correct, &what);
+                    }
+                }
+            }
+            2 => {
+                if let Key::Character(c) = key
+                    && c.len() == 1
+                {
+                    let letter = c.chars().next().unwrap_or(' ').to_ascii_uppercase();
+                    if run.scan.channels.iter().any(|ch| ch.letter == letter) {
+                        let correct = letter == run.scan.answer;
+                        let what = format!("THE SIGNAL WAS {}.", run.scan.answer);
+                        self.gauntlet_bank(if correct { 25 } else { 0 }, correct, &what);
+                    }
+                }
+            }
+            3 => match key {
+                Key::Named(NamedKey::Backspace) => {
+                    run.wire.pop();
+                }
+                Key::Named(NamedKey::Enter) => {
+                    let guess: Vec<u8> = run
+                        .wire
+                        .chars()
+                        .filter(char::is_ascii_digit)
+                        .map(|c| c as u8 - b'0')
+                        .collect();
+                    if guess.len() != 4 {
+                        return;
+                    }
+                    let feedback = numinous_core::grade(&run.secret, &guess);
+                    if feedback.locked == 4 {
+                        let spare = 4 - run.wire_lines.len() as i64;
+                        self.gauntlet_bank(10 * spare.max(0), true, "DEFUSED.");
+                        return;
+                    }
+                    run.wire_lines.push(format!(
+                        "{}: {} LOCKED, {} LOOSE",
+                        run.wire, feedback.locked, feedback.loose
+                    ));
+                    run.wire.clear();
+                    if run.wire_lines.len() >= 5 {
+                        let code: String =
+                            run.secret.iter().map(|&d| char::from(b'0' + d)).collect();
+                        self.gauntlet_bank(0, false, &format!("BOOM. IT WAS {code}."));
+                    }
+                }
+                Key::Character(c) if run.wire.len() < 4 => {
+                    for ch in c.chars().filter(char::is_ascii_digit) {
+                        if run.wire.len() < 4 {
+                            run.wire.push(ch);
+                        }
+                    }
+                }
+                _ => {}
+            },
+            _ => {
+                self.gauntlet = None;
+                self.update_audio();
+            }
+        }
     }
 
     /// GPU-render the current room if it has a real-time GPU path (the deep
@@ -506,6 +709,13 @@ impl App {
             self.blit(&rgba, width, height, width, height);
             return;
         }
+        if let Some(run) = &self.gauntlet {
+            let raster = self.draw_gauntlet(run, width, height);
+            let mut rgba = raster.to_rgba();
+            self.era.apply(&mut rgba, width, height);
+            self.blit(&rgba, width, height, width, height);
+            return;
+        }
         if let Some(play) = &self.munch {
             let raster = self.draw_munch(play, width, height);
             let mut rgba = raster.to_rgba();
@@ -594,6 +804,7 @@ impl App {
                 "G          THE QUIZ: NAME THE MATH",
                 "C          MUNCH: EAT WHAT FITS",
                 "N          NIM: BEAT THE ORDER",
+                "T          THE GAUNTLET: ONE RUN",
                 "J          YOUR JOURNEY AND TROPHIES",
                 "ESC        CLOSE MENU (X QUITS)",
             ];
@@ -951,6 +1162,142 @@ impl App {
         raster
     }
 
+    /// Draw the Gauntlet: whichever stage is live, with the run's narration.
+    fn draw_gauntlet(&self, run: &GauntletPlay, width: usize, height: usize) -> Raster {
+        let scale = (width as i32 / 400).clamp(1, 3);
+        let mut raster = match run.stage {
+            0 => {
+                let mut raster = self.draw_munch(&run.munch, width, height);
+                raster.dim(100); // no-op, keeps the arm shape uniform
+                raster
+            }
+            1 => self.draw_quiz(&run.quiz, width, height),
+            2 => {
+                let mut raster = Raster::with_accent(width, height, [150, 210, 255]);
+                numinous_core::draw_text(
+                    &mut raster,
+                    "THE SKY: WHICH CHANNEL IS A MIND?",
+                    10,
+                    10,
+                    scale,
+                    '#',
+                );
+                let lh = 14 * scale;
+                for (i, channel) in run.scan.channels.iter().enumerate() {
+                    let line = format!(
+                        "{}  {:>10}  {}",
+                        channel.letter, channel.frequency, channel.trace
+                    );
+                    numinous_core::draw_text(
+                        &mut raster,
+                        &line,
+                        10,
+                        30 * scale + i as i32 * lh,
+                        scale,
+                        '*',
+                    );
+                }
+                numinous_core::draw_text(
+                    &mut raster,
+                    "PRESS THE LETTER",
+                    10,
+                    height as i32 - 22 * scale,
+                    scale,
+                    '-',
+                );
+                raster
+            }
+            3 => {
+                let mut raster = Raster::with_accent(width, height, [255, 140, 120]);
+                numinous_core::draw_text(
+                    &mut raster,
+                    "THE BOMB: FOUR DIGITS, FIVE WIRES",
+                    10,
+                    10,
+                    scale,
+                    '#',
+                );
+                numinous_core::draw_text(
+                    &mut raster,
+                    &format!("CLUE: {}", numinous_core::hint(&run.secret).to_uppercase()),
+                    10,
+                    26 * scale,
+                    scale,
+                    '*',
+                );
+                let lh = 12 * scale;
+                for (i, line) in run.wire_lines.iter().enumerate() {
+                    numinous_core::draw_text(
+                        &mut raster,
+                        line,
+                        10,
+                        44 * scale + i as i32 * lh,
+                        scale,
+                        '*',
+                    );
+                }
+                numinous_core::draw_text(
+                    &mut raster,
+                    &format!("> {}_", run.wire),
+                    10,
+                    44 * scale + run.wire_lines.len() as i32 * lh + lh,
+                    scale + 1,
+                    '#',
+                );
+                numinous_core::draw_text(
+                    &mut raster,
+                    "TYPE DIGITS   ENTER CUTS   BACKSPACE FIXES",
+                    10,
+                    height as i32 - 22 * scale,
+                    scale,
+                    '-',
+                );
+                raster
+            }
+            _ => {
+                let mut raster = Raster::with_accent(width, height, [230, 210, 120]);
+                let total = gauntlet_total(&run.scores, &run.cleared);
+                let clears = run.cleared.iter().filter(|&&c| c).count();
+                let names = ["MUNCH", "SHAPE", "SKY", "BOMB"];
+                let mut lines = vec![format!("RUN COMPLETE  {clears}/4 CLEAN")];
+                for ((name, score), &clean) in names.iter().zip(&run.scores).zip(&run.cleared) {
+                    lines.push(format!(
+                        "{name}  +{score}{}",
+                        if clean { "  CLEAN" } else { "" }
+                    ));
+                }
+                lines.push(format!("TOTAL {total}  (GAUNTLET SEED:{})", run.seed));
+                lines.push("ANY KEY LEAVES".to_string());
+                let ls = (width as i32 / 300).clamp(2, 4);
+                let lh = 12 * ls;
+                let top = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
+                for (i, line) in lines.iter().enumerate() {
+                    numinous_core::draw_text(
+                        &mut raster,
+                        line,
+                        width as i32 / 8,
+                        top + i as i32 * lh,
+                        ls,
+                        '#',
+                    );
+                }
+                raster
+            }
+        };
+        // The run's narration rides the top edge on every stage but the last.
+        if run.stage < 4 {
+            numinous_core::draw_text(
+                &mut raster,
+                &run.message,
+                10,
+                height as i32 - 10 * scale,
+                scale,
+                '#',
+            );
+        }
+        raster
+    }
+
     /// Copy an RGBA frame (`rw` x `rh`) onto the window surface (`width` x `height`).
     fn blit(&mut self, rgba: &[u8], rw: usize, rh: usize, width: usize, height: usize) {
         let (Some(w), Some(h)) = (
@@ -1027,7 +1374,9 @@ impl ApplicationHandler for App {
                     },
                 ..
             } => {
-                if let Some(play) = &mut self.munch {
+                if self.gauntlet.is_some() {
+                    self.gauntlet_key(&logical_key);
+                } else if let Some(play) = &mut self.munch {
                     if play.graded.is_some() {
                         self.munch = None;
                         self.update_audio();
@@ -1251,6 +1600,11 @@ impl ApplicationHandler for App {
                             self.show_help = false;
                             self.nim_start();
                         }
+                        // T runs the Gauntlet: four stages, one number.
+                        Key::Character(c) if c.as_str() == "t" => {
+                            self.show_help = false;
+                            self.gauntlet_start();
+                        }
                         // J opens the journey: what the play has made of you.
                         Key::Character(c) if c.as_str() == "j" => {
                             self.show_journey = !self.show_journey;
@@ -1333,6 +1687,7 @@ impl ApplicationHandler for App {
                 && self.quiz.is_none()
                 && self.munch.is_none()
                 && self.nim.is_none()
+                && self.gauntlet.is_none()
             {
                 self.update_audio();
             }
@@ -1347,6 +1702,17 @@ impl ApplicationHandler for App {
             window.request_redraw();
         }
     }
+}
+
+/// Combo math: cleared stages multiply what follows (the shared rule).
+fn gauntlet_total(scores: &[i64], cleared: &[bool]) -> i64 {
+    let mut total = 0;
+    let mut combo = 1;
+    for (score, &clear) in scores.iter().zip(cleared) {
+        total += score * combo;
+        combo = if clear { combo + 1 } else { 1 };
+    }
+    total
 }
 
 /// The journey file: the same one the CLI and MCP level (env-overridable).
@@ -1470,6 +1836,47 @@ mod tests {
         // Your stone and the Order's reply both left the board (unless over).
         assert!(after < before);
         assert!(play.over.is_none() || play.over == Some(false) || play.over == Some(true));
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn the_gauntlet_runs_four_stages_and_totals_with_combo() {
+        use winit::keyboard::{Key, NamedKey};
+        let mut app = headless("numinous_app_test_gauntlet.txt");
+        app.gauntlet_start();
+        // Stage 1: submit an empty munch board (0 points, not clean).
+        app.gauntlet_key(&Key::Named(NamedKey::Enter));
+        assert_eq!(app.gauntlet.as_ref().unwrap().stage, 1);
+        // Stage 2: answer the shape correctly.
+        let answer = app.gauntlet.as_ref().unwrap().quiz.round.answer;
+        app.gauntlet_key(&Key::Character(answer.to_string().to_lowercase().into()));
+        let run = app.gauntlet.as_ref().unwrap();
+        assert_eq!(run.stage, 2);
+        assert_eq!(run.scores[1], 25);
+        assert!(run.cleared[1]);
+        // Stage 3: answer the sky correctly.
+        let sky = app.gauntlet.as_ref().unwrap().scan.answer;
+        app.gauntlet_key(&Key::Character(sky.to_string().to_lowercase().into()));
+        assert_eq!(app.gauntlet.as_ref().unwrap().stage, 3);
+        // Stage 4: cut the right wire first try.
+        let code: String = app
+            .gauntlet
+            .as_ref()
+            .unwrap()
+            .secret
+            .iter()
+            .map(|&d| char::from(b'0' + d))
+            .collect();
+        for ch in code.chars() {
+            app.gauntlet_key(&Key::Character(ch.to_string().into()));
+        }
+        app.gauntlet_key(&Key::Named(NamedKey::Enter));
+        let run = app.gauntlet.as_ref().unwrap();
+        assert_eq!(run.stage, 4, "the run is complete");
+        // Scores: 0 (miss), then 25*1, 25*2, 40*3 = 195.
+        assert_eq!(super::gauntlet_total(&run.scores, &run.cleared), 195);
+        assert_eq!(app.journey.plays, 4);
+        assert_eq!(app.journey.wins, 3);
         let _ = std::fs::remove_file(&app.journey_file);
     }
 

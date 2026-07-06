@@ -51,7 +51,8 @@ math, Q swaps the visual era (phosphor, 8-bit, vector, modern), R restarts the
 sweep, F goes fullscreen, M mutes, B starts The Show (lean back), G deals the
 quiz (name the math, right in the window), C plays today's Munch board with a
 cursor (WASD moves, Space eats, Enter grades), N plays Nim against the Order
-(aim with W/S and A/D, Enter takes; win and the xor secret shows), J opens
+(aim with W/S and A/D, Enter takes; win and the xor secret shows), T runs the
+Gauntlet (all four stages in sequence, combo and total at the end), J opens
 your journey (level, rank, trophies, resonances), Tab opens the Studio (type math, watch and hear it
 live). The app plays the same Journey the CLI does: entering rooms records
 visits, quiz rounds record plays and wins, your level rides in the corner, and

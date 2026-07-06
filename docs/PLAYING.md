@@ -33,6 +33,7 @@ your hands already know it:
 | G | the quiz, in the window: name the math |
 | C | Munch, in the window: cursor over the board, eat what fits |
 | N | Nim, in the window: aim your take, beat the Order |
+| T | the Gauntlet, in the window: four stages, a combo, one number |
 | J | your journey: level, rank, trophies, resonances |
 | Tab | the Studio: type math, watch and hear it live |
 | Esc | menu |
