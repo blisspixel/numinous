@@ -53,7 +53,7 @@ pub fn hint(secret: &[u8]) -> String {
     let sum: u32 = secret.iter().map(|&d| u32::from(d)).sum();
     let last_even = secret.last().is_none_or(|&d| d % 2 == 0);
     format!(
-        "The digits sum to {sum}, and the code is {}.",
+        "The digits sum to {sum}, and the last digit is {}.",
         if last_even { "even" } else { "odd" }
     )
 }
