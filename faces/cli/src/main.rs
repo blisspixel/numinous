@@ -389,6 +389,11 @@ fn home(journey: &Journey) -> ExitCode {
     print!("{}\x1b[0m", numinous_core::to_ansi(&raster));
     println!("{}  ({})", room.meta().title, room.meta().wing);
     println!(
+        "
+. . . {}",
+        numinous_core::insight(pick_day() + u64::from(journey.plays))
+    );
+    println!(
         "\nNUMINOUS   LV {:>2}  [{}]{}",
         journey.level(),
         journey.level_bar(16),
@@ -698,14 +703,14 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             let Some(id) = id else {
                 println!(
                     "Pick a game:\n
-  numinous play munch        eat the numbers that fit the rule
-  numinous play quiz         name the math from its shape
-  numinous play nim          beat the Order, earn its secret
-  numinous play crack        defuse the bomb
-  numinous play seti         find the mind in the static
-  numinous play aliens       answer in their base
-  numinous play gauntlet     one run, four games, a combo, one number
-  numinous play bench        five fixed gauntlets: compare minds
+  numinous play munch        a board of numbers, one rule; eat what fits, skip what lies
+  numinous play quiz         see a shape, name the math that made it (multiple choice)
+  numinous play nim          take stones, last stone wins; beat the Order, earn its secret
+  numinous play crack        guess the code; LOCKED right place, LOOSE right digit wrong place
+  numinous play seti         radio channels of static; only a mind counts in primes
+  numinous play aliens       they send a number sequence; answer the next, in THEIR base
+  numinous play gauntlet     one run through four of the above; clean stages build a combo
+  numinous play bench        five fixed gauntlets, one composite number: compare any two minds
 \nAdd --daily on a game's own command for the shared seed (numinous munch --daily).
 Or name a room to watch it as ASCII: numinous play lorenz"
                 );
@@ -1724,7 +1729,9 @@ fn crack(seed: u64, digits: usize, attempts: usize, journey: &mut Journey) -> Ex
     let secret = numinous_core::secret_code(seed, digits);
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
-    println!("A bomb. {digits} digits, {attempts} attempts before it blows.");
+    println!("A bomb. A hidden {digits}-digit code; {attempts} wires before it blows.");
+    println!("After each guess: LOCKED = right digit in the RIGHT place.");
+    println!("                  LOOSE  = right digit, WRONG place. Digits can repeat.");
     println!("Clue: {}\n", numinous_core::hint(&secret));
     let mut attempt = 0usize;
     while attempt < attempts {
@@ -1751,14 +1758,54 @@ fn crack(seed: u64, digits: usize, attempts: usize, journey: &mut Journey) -> Ex
             journey.win();
             let spare = (attempts - attempt) as i64;
             post_score(&format!("crack seed:{seed} digits:{digits}"), spare);
-            println!("\nDEFUSED with {spare} attempts to spare. You cracked it.");
+            println!();
+            word_in_lights("DEFUSED", [90, 230, 120], 6);
+            println!(
+                "{spare} wire{} to spare. You cracked it.",
+                if spare == 1 { "" } else { "s" }
+            );
             return ExitCode::SUCCESS;
         }
         println!("  {} locked, {} loose.", feedback.locked, feedback.loose);
     }
     let code: String = secret.iter().map(|&d| char::from(b'0' + d)).collect();
-    println!("\nBOOM. The code was {code}.");
+    println!();
+    word_in_lights("BOOM", [255, 90, 40], 6);
+    println!("The code was {code}. The bomb does not hold grudges; deal another.");
     ExitCode::FAILURE
+}
+
+/// A word in lights: draw `word` huge on a colored burst and print frames in
+/// place (truecolor half-blocks), a little cinema for the big moments.
+fn word_in_lights(word: &str, accent: [u8; 3], frames: usize) {
+    use std::io::Write as _;
+    let (w, h) = (96usize, 34usize);
+    let mut stdout = std::io::stdout();
+    let rows = h / 2 + 1;
+    for frame in 0..frames {
+        let mut raster = Raster::with_accent(w, h, accent);
+        let reach = (frame + 1) as f64 / frames as f64;
+        let (cx, cy) = (w as f64 / 2.0, h as f64 / 2.0);
+        for ray in 0..48 {
+            let angle = std::f64::consts::TAU * f64::from(ray) / 48.0;
+            let steps = (reach * w as f64 / 2.0) as i32;
+            for step in (0..steps).step_by(2) {
+                let x = (cx + angle.cos() * f64::from(step)) as i32;
+                let y = (cy + angle.sin() * f64::from(step) * 0.5) as i32;
+                raster.plot(x, y, if step % 6 == 0 { '#' } else { '*' });
+            }
+        }
+        let scale = 2;
+        let tx = (w as i32 - word.len() as i32 * 6 * scale) / 2;
+        let ty = (h as i32 - 7 * scale) / 2;
+        numinous_core::draw_text(&mut raster, word, tx, ty, scale, '#');
+        let _ = write!(stdout, "{}\x1b[0m\x1b[J", numinous_core::to_ansi(&raster));
+        let _ = stdout.flush();
+        std::thread::sleep(Duration::from_millis(70));
+        if frame + 1 < frames {
+            let _ = write!(stdout, "\x1b[{rows}A");
+        }
+    }
 }
 
 /// Play SETI: scan channels of static and pick the artificial signal.
@@ -1767,7 +1814,7 @@ fn seti(seed: u64, channels: usize, rounds: usize, journey: &mut Journey) -> Exi
     let mut input = stdin.lock();
     let mut score = 0usize;
     println!(
-        "Listening near the hydrogen line. Nature makes rhythms; only minds count in primes.\n"
+        "Listening near the hydrogen line. One channel hides a MIND; the rest are nature.\nOnly a mind counts: look for pulse groups going 2, 3, 5, 7. Answer with the letter.\n"
     );
     for round in 0..rounds {
         let scan = numinous_core::build_scan(seed.wrapping_add(round as u64), channels);
@@ -1956,7 +2003,8 @@ fn nim(seed: u64, journey: &mut Journey) -> ExitCode {
     let mut input = stdin.lock();
     let mut heaps = numinous_core::nim_new(seed);
     journey.play();
-    println!("NIM  seed {seed}. Take any number from one heap; last stone wins.");
+    println!("NIM  seed {seed}. On your turn, take ANY number of stones from ONE heap.");
+    println!("Whoever takes the last stone wins. Answer like: 2 3  (heap 2, take 3).");
     println!("The Order plays a secret. Beat it and the secret is yours.");
     loop {
         println!("\n{}", nim_board(&heaps));
@@ -2145,20 +2193,16 @@ fn gauntlet(seed: u64, journey: &mut Journey) -> ExitCode {
             clear = true;
             points = 10 * (5 - i64::from(attempt as u8));
             journey.win();
-            println!(
-                "  DEFUSED. +{points} points  CLEAN
-"
-            );
+            word_in_lights("DEFUSED", [90, 230, 120], 5);
+            println!("  +{points} points  CLEAN\n");
             break;
         }
         println!("  {} locked, {} loose.", feedback.locked, feedback.loose);
     }
     if !clear {
         let code: String = secret.iter().map(|&d| char::from(b'0' + d)).collect();
-        println!(
-            "  BOOM. It was {code}. +0 points
-"
-        );
+        word_in_lights("BOOM", [255, 90, 40], 5);
+        println!("  It was {code}. +0 points\n");
     }
     stage_scores.push(points);
     cleared.push(clear);
