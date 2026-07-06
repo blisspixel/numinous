@@ -74,6 +74,8 @@ struct App {
     nim: Option<NimPlay>,
     /// The Gauntlet, when running in the window.
     gauntlet: Option<GauntletPlay>,
+    /// The arcade, when the Vexations are loose.
+    arcade: Option<ArcadePlay>,
     /// The chiptune bed for the current room, rendered once per room.
     tune: Vec<f32>,
     /// The journey overlay ('j' toggles): level, rank, trophies, resonances.
@@ -134,6 +136,16 @@ struct GauntletPlay {
     message: String,
 }
 
+/// The in-window arcade: the run, its beat, and the last event's flash.
+struct ArcadePlay {
+    run: numinous_core::munch_arcade::Arcade,
+    seed: u64,
+    /// Flash frames left and what happened (true = caught, false = clear).
+    flash: Option<(bool, u64)>,
+    /// The run has ended; any key leaves.
+    over: bool,
+}
+
 /// The in-window Nim: the heaps, your aim, and the Order's last word.
 struct NimPlay {
     heaps: Vec<u32>,
@@ -181,6 +193,7 @@ impl App {
             munch: None,
             nim: None,
             gauntlet: None,
+            arcade: None,
             tune: Vec::new(),
             show_journey: false,
             mouse: (0.0, 0.0),
@@ -357,6 +370,59 @@ impl App {
             play.selected = play.heaps.iter().position(|&h| h > 0).unwrap_or(0);
         }
         play.take = play.take.min(play.heaps[play.selected].max(1));
+    }
+
+    /// Start the arcade: today's run, spirits loose, the beat ticking.
+    fn arcade_start(&mut self) {
+        let seed = Self::daily_seed();
+        self.journey.play();
+        self.journey_changed();
+        self.arcade = Some(ArcadePlay {
+            run: numinous_core::munch_arcade::Arcade::new(seed),
+            seed,
+            flash: None,
+            over: false,
+        });
+    }
+
+    /// One player action into the live arcade.
+    fn arcade_act(&mut self, action: numinous_core::munch_arcade::Action) {
+        use numinous_core::munch_arcade::Turn;
+        let Some(play) = self.arcade.as_mut() else {
+            return;
+        };
+        if play.over {
+            return;
+        }
+        match play.run.act(action) {
+            Turn::Cleared => {
+                play.flash = Some((false, 40));
+                self.journey.win();
+                self.journey_changed();
+            }
+            Turn::Over => play.over = true,
+            _ => {}
+        }
+    }
+
+    /// The spirits' beat: called from the frame clock.
+    fn arcade_beat(&mut self) {
+        use numinous_core::munch_arcade::Turn;
+        let Some(play) = self.arcade.as_mut() else {
+            return;
+        };
+        if play.over {
+            return;
+        }
+        match play.run.tick() {
+            Turn::Caught => play.flash = Some((true, 40)),
+            Turn::Over => {
+                play.over = true;
+                let (seed, score) = (play.seed, play.run.score);
+                self.post_score(&format!("arcade seed:{seed}"), score);
+            }
+            _ => {}
+        }
     }
 
     /// Start the Gauntlet: today's run, four stages, a combo.
@@ -963,6 +1029,14 @@ impl App {
             self.blit(&rgba, width, height, width, height);
             return;
         }
+        if let Some(play) = &self.arcade {
+            let raster = self.draw_arcade(play, width, height);
+            let (rw, rh) = (raster.width(), raster.height());
+            let mut rgba = raster.to_rgba();
+            self.era.apply(&mut rgba, rw, rh);
+            self.blit(&rgba, rw, rh, width, height);
+            return;
+        }
         if let Some(run) = &self.gauntlet {
             let raster = self.draw_gauntlet(run, width, height);
             let (rw, rh) = (raster.width(), raster.height());
@@ -1124,6 +1198,7 @@ impl App {
                 "C          MUNCH: EAT WHAT FITS",
                 "N          NIM: BEAT THE ORDER",
                 "T          THE GAUNTLET: ONE RUN",
+                "V          THE ARCADE: EAT WHILE HUNTED",
                 "",
                 "WANDER",
                 "A / D      PREV / NEXT ROOM    1-9 JUMP",
@@ -1428,6 +1503,126 @@ impl App {
         raster
     }
 
+    /// Draw the live arcade: the board, the Muncher, the spirits, the beat.
+    fn draw_arcade(&self, play: &ArcadePlay, width: usize, height: usize) -> Raster {
+        use numinous_core::munch_arcade::Mind;
+        use numinous_core::munchers::{COLS, ROWS};
+        let mut raster = Raster::with_accent(width, height, [255, 205, 100]);
+        let scale = (width as i32 / 400).clamp(1, 3);
+        raster.dim_rows(0, 12 + 7 * scale, 40);
+        raster.dim_rows(height as i32 - 14 * scale, height as i32, 40);
+        let run = &play.run;
+        numinous_core::draw_text(
+            &mut raster,
+            &format!(
+                "ARCADE  LV {}  {}  {}",
+                run.level,
+                "O ".repeat(run.lives as usize),
+                run.board.rule.describe().to_uppercase()
+            ),
+            10,
+            10,
+            scale,
+            '#',
+        );
+        let top = 14 * scale + 10;
+        let cell_w = (width as i32 - 20) / COLS as i32;
+        let cell_h = (height as i32 - top - 14 * scale) / ROWS as i32;
+        for cell in 0..ROWS * COLS {
+            let (col, row) = (cell as i32 % COLS as i32, cell as i32 / COLS as i32);
+            let (x0, y0) = (10 + col * cell_w, top + row * cell_h);
+            let (x1, y1) = (x0 + cell_w - 3, y0 + cell_h - 3);
+            raster.line(x0, y0, x1, y0, '-');
+            raster.line(x0, y1, x1, y1, '-');
+            raster.line(x0, y0, x0, y1, '-');
+            raster.line(x1, y0, x1, y1, '-');
+            let center_x = x0 + cell_w / 2;
+            let center_y = y0 + cell_h / 2;
+            if cell == run.muncher {
+                // The Muncher: a bright ring with a bite taken out.
+                let r = (cell_h / 3).max(4);
+                for i in 0..40 {
+                    let a = std::f64::consts::TAU * f64::from(i) / 40.0;
+                    if !(0.9..=5.4).contains(&a) {
+                        continue; // the bite
+                    }
+                    let px = center_x + (f64::from(r) * a.cos()) as i32;
+                    let py = center_y + (f64::from(r) * a.sin()) as i32;
+                    raster.plot(px, py, '#');
+                    raster.plot(px + 1, py, '#');
+                }
+            } else if let Some(v) = run.vexations.iter().find(|v| v.cell == cell) {
+                let mark = match v.mind {
+                    Mind::Tracker => "T",
+                    Mind::Drifter => "D",
+                    Mind::Editor => "E",
+                };
+                numinous_core::draw_text(
+                    &mut raster,
+                    mark,
+                    center_x - 3 * scale,
+                    center_y - 4 * scale,
+                    scale + 1,
+                    '#',
+                );
+            } else if !run.eaten[cell] {
+                let label = run.board.numbers[cell].to_string();
+                numinous_core::draw_text(
+                    &mut raster,
+                    &label,
+                    center_x - (label.len() as i32 * 3 * scale),
+                    center_y - 4 * scale,
+                    scale,
+                    '*',
+                );
+            }
+        }
+        if let Some((caught, _)) = play.flash {
+            raster.dim(70);
+            numinous_core::draw_text(
+                &mut raster,
+                if caught {
+                    "CAUGHT"
+                } else {
+                    "CLEAR. THEY MULTIPLY."
+                },
+                width as i32 / 6,
+                height as i32 / 2 - 6 * scale,
+                (scale + 1).min(4),
+                '#',
+            );
+        }
+        if play.over {
+            raster.dim(30);
+            let lines = [
+                "THE SPIRITS SEND REGARDS".to_string(),
+                format!("LEVEL {}  SCORE {}", run.level, run.score),
+                "ANY KEY LEAVES".to_string(),
+            ];
+            let ls = (width as i32 / 300).clamp(2, 4);
+            let top = height as i32 / 2 - 18 * ls;
+            for (i, line) in lines.iter().enumerate() {
+                numinous_core::draw_text(
+                    &mut raster,
+                    line,
+                    width as i32 / 8,
+                    top + i as i32 * 12 * ls,
+                    ls,
+                    '#',
+                );
+            }
+        }
+        numinous_core::draw_text(
+            &mut raster,
+            "WASD  RUN   SPACE  EAT   DON'T BE CAUGHT   ESC  LEAVE",
+            10,
+            height as i32 - 10 * scale,
+            scale,
+            '-',
+        );
+        raster
+    }
+
     /// Draw Nim: heaps as stones, your aim highlighted, the Order's last word.
     fn draw_nim(&self, play: &NimPlay, width: usize, height: usize) -> Raster {
         let mut raster = Raster::with_accent(width, height, [230, 200, 120]);
@@ -1711,7 +1906,36 @@ impl ApplicationHandler for App {
                     },
                 ..
             } => {
-                if self.gauntlet.is_some() {
+                if let Some(play) = &mut self.arcade {
+                    use numinous_core::munch_arcade::Action;
+                    if play.over {
+                        self.arcade = None;
+                        self.update_audio();
+                    } else {
+                        match logical_key {
+                            Key::Named(NamedKey::Escape) => {
+                                let (seed, score) = (play.seed, play.run.score);
+                                self.post_score(&format!("arcade seed:{seed}"), score);
+                                self.arcade = None;
+                                self.update_audio();
+                            }
+                            Key::Named(NamedKey::Space) => self.arcade_act(Action::Eat),
+                            Key::Named(NamedKey::ArrowUp) => self.arcade_act(Action::Up),
+                            Key::Named(NamedKey::ArrowDown) => self.arcade_act(Action::Down),
+                            Key::Named(NamedKey::ArrowLeft) => self.arcade_act(Action::Left),
+                            Key::Named(NamedKey::ArrowRight) => self.arcade_act(Action::Right),
+                            Key::Character(c) => match c.as_str() {
+                                "w" => self.arcade_act(Action::Up),
+                                "s" => self.arcade_act(Action::Down),
+                                "a" => self.arcade_act(Action::Left),
+                                "d" => self.arcade_act(Action::Right),
+                                "e" => self.arcade_act(Action::Eat),
+                                _ => {}
+                            },
+                            _ => {}
+                        }
+                    }
+                } else if self.gauntlet.is_some() {
                     self.gauntlet_key(&logical_key);
                 } else if let Some(play) = &mut self.munch {
                     if play.graded.is_some() {
@@ -1958,6 +2182,11 @@ impl ApplicationHandler for App {
                             self.show_help = false;
                             self.gauntlet_start();
                         }
+                        // V looses the Vexations: the arcade.
+                        Key::Character(c) if c.as_str() == "v" && self.show_help => {
+                            self.show_help = false;
+                            self.arcade_start();
+                        }
                         // J opens the journey: what the play has made of you.
                         Key::Character(c) if c.as_str() == "j" => {
                             self.show_journey = !self.show_journey;
@@ -2073,6 +2302,7 @@ impl ApplicationHandler for App {
                 && self.munch.is_none()
                 && self.nim.is_none()
                 && self.gauntlet.is_none()
+                && self.arcade.is_none()
             {
                 self.update_audio();
             }
@@ -2088,6 +2318,20 @@ impl ApplicationHandler for App {
             }
             if self.room_card > 0 {
                 self.room_card -= 1;
+            }
+            // The arcade's heartbeat: the spirits step on the beat, faster
+            // each level; the flash counts itself down.
+            if let Some(play) = &mut self.arcade {
+                if let Some((_, frames)) = &mut play.flash {
+                    *frames -= 1;
+                    if *frames == 0 {
+                        play.flash = None;
+                    }
+                }
+                let interval = 48u64.saturating_sub(play.run.level * 4).max(16);
+                if !play.over && self.frame % interval == 0 {
+                    self.arcade_beat();
+                }
             }
             if let Some((_, frames)) = &mut self.banner {
                 *frames -= 1;
@@ -2259,6 +2503,38 @@ mod tests {
         // Your stone and the Order's reply both left the board (unless over).
         assert!(after < before);
         assert!(play.over.is_none() || play.over == Some(false) || play.over == Some(true));
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn the_live_arcade_acts_beats_and_ends() {
+        use numinous_core::munch_arcade::Action;
+        let mut app = headless("numinous_app_test_arcade.txt");
+        app.arcade_start();
+        assert_eq!(app.journey.plays, 1);
+        app.arcade_act(Action::Right);
+        app.arcade_act(Action::Eat);
+        let before = app.arcade.as_ref().unwrap().run.vexations.clone();
+        app.arcade_beat();
+        let after = &app.arcade.as_ref().unwrap().run.vexations;
+        assert!(
+            before
+                .iter()
+                .zip(after.iter())
+                .any(|(b, a)| b.cell != a.cell),
+            "the beat moves spirits"
+        );
+        // Beat until the spirits finish the job; the run must end and score.
+        for _ in 0..500 {
+            app.arcade_beat();
+            if app.arcade.as_ref().unwrap().over {
+                break;
+            }
+        }
+        assert!(
+            app.arcade.as_ref().unwrap().over,
+            "the spirits always win eventually"
+        );
         let _ = std::fs::remove_file(&app.journey_file);
     }
 
