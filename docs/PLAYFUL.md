@@ -320,3 +320,52 @@ Schmidhuber's compression-progress theory of fun). Sketches:
 - **1.0:** Shape to Function (Fourier epicycles), Name That Constant, daily seed,
   The Show.
 - **2.0+:** shareable authored rooms, human-vs-agent leaderboards, deeper lore.
+
+## The next games: advanced math as play (July 2026 ideation)
+
+Territories no current game touches, each with its playable verb already
+found. Ranked by fun-per-effort; the concept line is what `?` would say.
+
+1. **Hackenbush (surreal numbers).** Red-blue grass on a ground line; take
+   turns cutting your color, anything disconnected falls. Kid verb: snip
+   grass. The trapdoor: Conway proved positions ARE numbers, including 1/2
+   and stranger things; winning is arithmetic. Two-player-vs-Order like nim,
+   same architecture, deeper trapdoor. The single best fit for us.
+2. **The Brachistochrone Race (calculus of variations).** Draw a ramp with
+   the mouse; a bead races the cycloid, physics honest. Kid verb: draw and
+   race. Nobody beats the cycloid, and the reveal is why (light does this
+   too, Fermat). The app's first draw-verb game.
+3. **Calibration (Bayes).** Twenty rapid questions you cannot fully know;
+   answer with a confidence slider, score by Brier: honesty about
+   uncertainty IS the skill. Monty Hall and the taxi problem as boards.
+   Uniquely human-vs-AI comparable on the same bench.
+4. **The Party Problem (Ramsey theory).** Color the edges of six dots trying
+   to avoid a one-color triangle; you cannot, R(3,3) = 6, and FEELING the
+   inevitability is the lesson. One-verb game: click edges. Open-problem
+   hook: R(5,5) is unknown, the frontier again.
+5. **Fifteen (group theory, parity).** The classic sliding puzzle, but half
+   of all scrambles are provably unsolvable, and the game asks you to bet
+   first: solvable or not? Parity as a felt invariant; nim's cousin.
+6. **Draw Without Lifting (graph theory).** Trace figures in one stroke;
+   Euler's odd-corners rule is discoverable by a child in five puzzles.
+   Konigsberg is the boss level. Mouse verb, app-native.
+7. **Tit-for-Tat Arena (game theory).** Iterated prisoner's dilemma against
+   a zoo of strategies (grudger, random, pavlov); then write your own from
+   two dials. Cooperation emerging from selfishness is the reveal. MCP
+   agents can enter the same arena: a real tournament across minds.
+8. **Fraction Golf (continued fractions).** Approximate pi (then phi, the
+   hardest hole, golden-angle crossover) with the smallest denominator;
+   par is the continued-fraction convergent. Scored, daily-able.
+9. **The Halting Zoo (computability).** Watch tiny Turing machines; bet
+   halts-or-runs-forever before the timer. Busy beaver lore; the
+   uncomputable made playable.
+10. **Cipher Room (cryptography).** Frequency-analysis codebreaking with a
+    live histogram; the Diffie-Hellman paint-mixing puzzle as the deep
+    level. Natural sibling of crack.
+
+Rooms rather than games: hypercube rotation (drag to turn a 4D die), knot
+untangler (Reidemeister moves as the only verbs), Monty Hall hall (walk it,
+switch or stay, tally truth), circle packing (drop coins, hear them settle).
+
+All hold the standing laws: one-hand verbs, the concept behind `?`, rewards
+as knowledge, no math as toll.
