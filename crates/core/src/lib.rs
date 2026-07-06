@@ -23,9 +23,11 @@ pub mod font;
 pub mod humor;
 pub mod journey;
 pub mod munchers;
+pub mod nim;
 pub mod quiz;
 pub mod raster;
 pub mod registry;
+pub mod resonance;
 pub mod rng;
 pub mod room;
 pub mod rooms;
@@ -50,9 +52,14 @@ pub use journey::{
     Boon, CUT_LEVELS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options, constellation,
 };
 pub use munchers::{Board, Munched, board_text, build_board, grade as grade_munch};
+pub use nim::{
+    apply as nim_apply, finished as nim_finished, new_game as nim_new, order_move as nim_order,
+    the_secret as nim_secret,
+};
 pub use quiz::{QuizChoice, QuizRound, build_round, build_round_sized};
 pub use raster::Raster;
 pub use registry::{all_rooms, hidden_room_by_id, room_by_id};
+pub use resonance::{Resonance, resonances};
 pub use rng::SplitMix64;
 pub use room::{Room, RoomMeta};
 pub use scores::Scoreboard;

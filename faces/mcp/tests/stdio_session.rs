@@ -102,7 +102,7 @@ fn a_full_agent_session_walks_every_tool() {
     assert_eq!(by_id(1)["result"]["serverInfo"]["name"], "numinous");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(15)
+        Some(16)
     );
     assert!(text_of(by_id(3)).contains("times-tables"));
     assert!(text_of(by_id(4)).contains("Fractals"));

@@ -80,6 +80,12 @@ pub fn build_round_sized(
     let t = rng.next_f64();
     let mut canvas = Canvas::new(width, height);
     rooms[answer_idx].render(&mut canvas, t);
+    if canvas.ink_count() < 5 {
+        // A mystery with nothing to see is no mystery: fall back to the
+        // room's own postcard phase, which is guaranteed to have ink.
+        canvas = Canvas::new(width, height);
+        rooms[answer_idx].render(&mut canvas, rooms[answer_idx].postcard_t());
+    }
     let art = canvas.to_text();
 
     let mut choices = Vec::with_capacity(picks.len());

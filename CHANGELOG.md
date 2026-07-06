@@ -6,6 +6,31 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Resonances (the synergy layer, completing the RPG spine): when two things you
+  have done start to rhyme, a link lights in the journey and hands you the line
+  that connects them, The Sieve (the Ulam spiral and the primes you ate), The
+  Atlas (Mandelbrot and Julia), Sensitive Dependence, First Contact, The Chord
+  Made Visible, Rate and Total. Computed purely from the record; the reward is
+  the connection itself.
+- Nim (`numinous nim`, MCP `nim`): three heaps against the Order's perfect
+  play; openings are always winnable; beat it and it hands you the xor secret
+  in full, the transfer of power is the lesson. The MCP tool is stateless
+  (pass your move history; replies are deterministic), and the Xor trophy
+  honors the win. Sixteen MCP tools.
+- The Change wing opens with the calculus felt, not taught: The Pour
+  (integration as water filling a curve while the running total traces the
+  antiderivative above, the fundamental theorem watched rather than stated;
+  the closed-form area is Riemann-verified in tests) and Slope Rider (the
+  tangent as a board whose tilt traces f prime below; the slope is
+  derivative-verified). Both sing their quantity.
+- Double Pendulum (Chaos & Order): exact equations, unforecastable motion, a
+  shadow twin one ten-thousandth of a radian away peeling off before your
+  eyes; divergence and boundedness both tested. 22 rooms across 8 wings.
+
+### Fixed
+- Quiz mysteries can no longer be blank: if the random phase renders nothing
+  (a pendulum before its drop), the mystery falls back to the room's postcard
+  phase; the pendulum also always draws its starting pose.
 - Daily streaks (the chain from the RPG queue): playing any daily on
   consecutive UTC days grows the chain; DAILY STREAK announces it as you start,
   the journey shows it while it lives, and two trophies honor it (The Chain at
