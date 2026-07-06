@@ -10,7 +10,7 @@
 use std::num::NonZeroU32;
 use std::rc::Rc;
 
-use numinous_core::{Raster, Room, Surface, all_rooms};
+use numinous_core::{Journey, Raster, Room, Surface, all_rooms};
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
@@ -57,6 +57,28 @@ struct App {
     frame: u64,
     /// Time speed multiplier (W faster, S slower), like sprint and sneak.
     time_scale: f64,
+    /// The player's journey: the same file the CLI levels (visits, plays, wins).
+    journey: Journey,
+    /// The level before the last change, to catch level-ups as they happen.
+    level_seen: u32,
+    /// A LEVEL UP banner: the lines shown, and frames left to show them.
+    banner: Option<(Vec<String>, u64)>,
+    /// The quiz, when playing: the round, its number, and the answer flash.
+    quiz: Option<QuizPlay>,
+    /// The chiptune bed for the current room, rendered once per room.
+    tune: Vec<f32>,
+    /// The journey overlay ('j' toggles): level, rank, trophies, resonances.
+    show_journey: bool,
+    /// Where the journey persists (the CLI's file; a scratch file in tests).
+    journey_file: std::path::PathBuf,
+}
+
+/// The in-window quiz state: what is asked, and how the last answer landed.
+struct QuizPlay {
+    round: numinous_core::QuizRound,
+    number: u64,
+    /// After an answer: (was it right, frames left on the flash).
+    flash: Option<(bool, u64)>,
 }
 
 impl App {
@@ -82,6 +104,75 @@ impl App {
             show_help: true,
             frame: 0,
             time_scale: 1.0,
+            journey: Journey::from_text(
+                &std::fs::read_to_string(journey_path()).unwrap_or_default(),
+            ),
+            level_seen: 1,
+            banner: None,
+            quiz: None,
+            tune: Vec::new(),
+            show_journey: false,
+            journey_file: journey_path(),
+        }
+    }
+
+    /// Persist the journey and raise the LEVEL UP banner when the level moves.
+    fn journey_changed(&mut self) {
+        let _ = std::fs::write(&self.journey_file, self.journey.to_text());
+        let level = self.journey.level();
+        if level > self.level_seen {
+            let mut lines = vec![
+                format!("LEVEL UP  LV {level}"),
+                numinous_core::level_lore(level).to_uppercase(),
+            ];
+            if self.journey.boons_available() > 0 {
+                lines.push("BOON BANKED: NUMINOUS CHOOSE".to_string());
+            }
+            self.banner = Some((lines, 300));
+        }
+        self.level_seen = level;
+    }
+
+    /// Entering a room counts as a visit, exactly as it does in the CLI.
+    fn visit_current(&mut self) {
+        let id = self.rooms[self.current].meta().id;
+        if !self.journey.visited.contains(id) {
+            self.journey.visit(id);
+            self.journey_changed();
+        }
+    }
+
+    /// Start (or advance) the quiz: a fresh seeded round, phase-of-day seeded
+    /// so everyone who opens the app today can compare notes.
+    fn quiz_next(&mut self) {
+        let number = self.quiz.as_ref().map_or(0, |q| q.number + 1);
+        let seed = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() / 86_400)
+            .unwrap_or(1);
+        let round = numinous_core::build_round(seed, number, 10, 10);
+        self.journey.play();
+        self.journey_changed();
+        self.quiz = Some(QuizPlay {
+            round,
+            number,
+            flash: None,
+        });
+    }
+
+    /// Answer the quiz with a letter; right or wrong, the reveal follows.
+    fn quiz_answer(&mut self, letter: char) {
+        let Some(quiz) = self.quiz.as_mut() else {
+            return;
+        };
+        if quiz.flash.is_some() || !quiz.round.choices.iter().any(|c| c.letter == letter) {
+            return;
+        }
+        let correct = letter == quiz.round.answer;
+        quiz.flash = Some((correct, 300));
+        if correct {
+            self.journey.win();
+            self.journey_changed();
         }
     }
 
@@ -143,7 +234,7 @@ impl App {
 
     /// Render the current room's sound at the current phase and send it to the
     /// looping player, so the room you see is the room you hear.
-    fn update_audio(&self) {
+    fn update_audio(&mut self) {
         let Some(player) = &self.player else {
             return;
         };
@@ -152,13 +243,24 @@ impl App {
             return;
         }
         let spec = self.rooms[self.current].sound(self.t);
-        // Rendered a notch quieter than the raw spec: this loops for a while.
-        let samples: Vec<f32> = spec
+        let tone: Vec<f32> = spec
             .render(player.sample_rate())
             .into_iter()
-            .map(|s| s * 0.6)
+            .map(|s| s * 0.5)
             .collect();
-        player.set_samples(samples);
+        // The chiptune bed carries the room's voice on top: Music Engine A as
+        // the score, the sonification as the accent (docs/MUSIC.md, one bus).
+        if self.tune.is_empty() {
+            let pattern = numinous_core::compose(self.current as u64 + 1, 8);
+            self.tune = pattern.render(player.sample_rate());
+        }
+        let mut mix = self.tune.clone();
+        if !tone.is_empty() {
+            for (i, sample) in mix.iter_mut().enumerate() {
+                *sample = (*sample * 0.55 + tone[i % tone.len()] * 0.45).clamp(-1.0, 1.0);
+            }
+        }
+        player.set_samples(mix);
     }
 
     fn title(&self) -> String {
@@ -184,9 +286,11 @@ impl App {
         let n = self.rooms.len() as isize;
         self.current = (((self.current as isize + delta) % n + n) % n) as usize;
         self.t = 0.0;
+        self.tune.clear();
         if let Some(window) = &self.window {
             window.set_title(&self.title());
         }
+        self.visit_current();
         self.update_audio();
     }
 
@@ -267,6 +371,13 @@ impl App {
             self.blit(&rgba, width, height, width, height);
             return;
         }
+        if let Some(quiz) = &self.quiz {
+            let raster = self.draw_quiz(quiz, width, height);
+            let mut rgba = raster.to_rgba();
+            self.era.apply(&mut rgba, width, height);
+            self.blit(&rgba, width, height, width, height);
+            return;
+        }
         let room = &self.rooms[self.current];
         let mut raster = if self.studio {
             let mut raster = Raster::with_accent(width, height, [120, 220, 190]);
@@ -290,6 +401,10 @@ impl App {
                 scale + 1,
                 '#',
             );
+            // The level, top right: the game in one glance.
+            let level = format!("LV {}", self.journey.level());
+            let lx = width as i32 - (level.len() as i32 * 6 * scale) - 10;
+            numinous_core::draw_text(&mut raster, &level, lx, 10, scale, '#');
         }
         if self.show_info && !self.the_show && !self.studio {
             let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
@@ -327,6 +442,8 @@ impl App {
                 "M          SOUND      SPACE  PAUSE",
                 "TAB        THE STUDIO",
                 "B          THE SHOW: SIT BACK",
+                "G          THE QUIZ: NAME THE MATH",
+                "J          YOUR JOURNEY AND TROPHIES",
                 "ESC        CLOSE MENU (X QUITS)",
             ];
             let line_height = 11 * menu_scale;
@@ -356,10 +473,168 @@ impl App {
             );
         }
 
+        // The journey overlay: the constellation of what you have become.
+        if self.show_journey && !self.the_show {
+            raster.dim(22);
+            let js = (width as i32 / 300).clamp(2, 4);
+            let board = numinous_core::Scoreboard::from_text(
+                &std::fs::read_to_string(scores_path()).unwrap_or_default(),
+            );
+            let mut lines = vec![
+                format!(
+                    "LV {}  [{}]",
+                    self.journey.level(),
+                    self.journey.level_bar(12)
+                ),
+                format!(
+                    "{} XP  {}",
+                    self.journey.sparks(),
+                    self.journey.rank().name().to_uppercase()
+                ),
+                format!(
+                    "{} OF {} ROOMS   {} WINS",
+                    self.journey.visited.len(),
+                    self.rooms.len(),
+                    self.journey.wins
+                ),
+            ];
+            if self.journey.streak > 1 {
+                lines.push(format!("DAILY STREAK {}", self.journey.streak));
+            }
+            let earned: Vec<&str> = numinous_core::trophies(&self.journey, &board)
+                .into_iter()
+                .filter(|t| t.earned)
+                .map(|t| t.name)
+                .collect();
+            lines.push(format!("TROPHIES {}", earned.len()));
+            for name in earned.iter().take(6) {
+                lines.push(format!("  {}", name.to_uppercase()));
+            }
+            let lit = numinous_core::resonances(&self.journey, &board)
+                .into_iter()
+                .filter(|r| r.active)
+                .count();
+            if lit > 0 {
+                lines.push(format!("RESONANCES {lit}"));
+            }
+            lines.push("J CLOSES".to_string());
+            let line_height = 11 * js;
+            let top = (height as i32 / 2) - (lines.len() as i32 * line_height) / 2;
+            for (i, line) in lines.iter().enumerate() {
+                numinous_core::draw_text(
+                    &mut raster,
+                    line,
+                    width as i32 / 8,
+                    top + i as i32 * line_height,
+                    js,
+                    '#',
+                );
+            }
+        }
+        // The LEVEL UP banner rides over everything for a few seconds.
+        if let Some((lines, _)) = &self.banner {
+            let bs = (width as i32 / 300).clamp(2, 4);
+            let line_height = 12 * bs;
+            let top = height as i32 / 6;
+            for (i, line) in lines.iter().enumerate() {
+                numinous_core::draw_text(
+                    &mut raster,
+                    line,
+                    width as i32 / 8,
+                    top + i as i32 * line_height,
+                    bs,
+                    '#',
+                );
+            }
+        }
+
         let mut rgba = raster.to_rgba();
         let (rw, rh) = (raster.width(), raster.height());
         self.era.apply(&mut rgba, rw, rh);
         self.blit(&rgba, rw, rh, width, height);
+    }
+
+    /// Draw the quiz: the mystery room fullscreen, the choices at the bottom,
+    /// and after an answer, the verdict and the reveal.
+    fn draw_quiz(&self, quiz: &QuizPlay, width: usize, height: usize) -> Raster {
+        let answer_id = quiz
+            .round
+            .choices
+            .iter()
+            .find(|c| c.letter == quiz.round.answer)
+            .map_or("", |c| c.id);
+        let mystery = self.rooms.iter().find(|r| r.meta().id == answer_id);
+        let mut raster = match mystery {
+            Some(room) => {
+                let mut raster = Raster::with_accent(width, height, room.meta().accent);
+                room.render(&mut raster, room.postcard_t().max(0.4));
+                raster
+            }
+            None => Raster::new(width, height),
+        };
+        let scale = (width as i32 / 400).clamp(1, 3);
+        let line_height = 10 * scale;
+        match &quiz.flash {
+            None => {
+                numinous_core::draw_text(
+                    &mut raster,
+                    "WHICH MATH MADE THIS?",
+                    10,
+                    10,
+                    scale + 1,
+                    '#',
+                );
+                let base = height as i32 - (quiz.round.choices.len() as i32 + 1) * line_height - 8;
+                for (i, choice) in quiz.round.choices.iter().enumerate() {
+                    let line = format!("{}  {}", choice.letter, choice.title.to_uppercase());
+                    numinous_core::draw_text(
+                        &mut raster,
+                        &line,
+                        10,
+                        base + i as i32 * line_height,
+                        scale,
+                        '#',
+                    );
+                }
+            }
+            Some((correct, _)) => {
+                raster.dim(35);
+                let verdict = if *correct {
+                    "CORRECT".to_string()
+                } else {
+                    format!(
+                        "IT WAS {}: {}",
+                        quiz.round.answer,
+                        quiz.round.answer_title.to_uppercase()
+                    )
+                };
+                numinous_core::draw_text(&mut raster, &verdict, 10, 10, scale + 1, '#');
+                let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
+                for (i, line) in
+                    numinous_core::wrap_text(&quiz.round.answer_reveal.to_uppercase(), columns)
+                        .iter()
+                        .enumerate()
+                {
+                    numinous_core::draw_text(
+                        &mut raster,
+                        line,
+                        10,
+                        10 + (3 + i as i32) * line_height,
+                        scale,
+                        '#',
+                    );
+                }
+                numinous_core::draw_text(
+                    &mut raster,
+                    "ANY KEY  NEXT     ESC  LEAVE",
+                    10,
+                    height as i32 - line_height - 4,
+                    scale,
+                    '-',
+                );
+            }
+        }
+        raster
     }
 
     /// Copy an RGBA frame (`rw` x `rh`) onto the window surface (`width` x `height`).
@@ -414,12 +689,20 @@ impl ApplicationHandler for App {
         self.surface = Some(surface);
         self.player = numinous_audio::LoopPlayer::new().ok();
         self.gpu = numinous_gpu::FractalRenderer::new().ok();
+        if std::env::var("NUMINOUS_MUTE").is_ok() {
+            self.muted = true;
+        }
+        self.level_seen = self.journey.level();
+        self.visit_current();
         self.update_audio();
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         match event {
-            WindowEvent::CloseRequested => event_loop.exit(),
+            WindowEvent::CloseRequested => {
+                let _ = std::fs::write(&self.journey_file, self.journey.to_text());
+                event_loop.exit();
+            }
             WindowEvent::RedrawRequested => self.draw(),
             WindowEvent::KeyboardInput {
                 event:
@@ -430,7 +713,24 @@ impl ApplicationHandler for App {
                     },
                 ..
             } => {
-                if self.studio {
+                if let Some(quiz) = &mut self.quiz {
+                    // Quiz mode: letters answer; after the reveal, any key deals
+                    // the next round; Esc leaves.
+                    match logical_key {
+                        Key::Named(NamedKey::Escape) => {
+                            self.quiz = None;
+                            self.update_audio();
+                        }
+                        _ if quiz.flash.is_some() => self.quiz_next(),
+                        Key::Character(c) if c.len() == 1 => {
+                            let letter = c.chars().next().unwrap_or(' ').to_ascii_uppercase();
+                            if quiz.round.choices.iter().any(|ch| ch.letter == letter) {
+                                self.quiz_answer(letter);
+                            }
+                        }
+                        _ => {}
+                    }
+                } else if self.studio {
                     // Studio mode: the keyboard is a math keyboard.
                     match logical_key {
                         Key::Named(NamedKey::Escape) | Key::Named(NamedKey::Tab) => {
@@ -515,6 +815,15 @@ impl ApplicationHandler for App {
                         Key::Character(c) if c.as_str() == "h" => {
                             self.show_help = !self.show_help;
                         }
+                        // G deals the quiz: guess the shape, in the window.
+                        Key::Character(c) if c.as_str() == "g" => {
+                            self.show_help = false;
+                            self.quiz_next();
+                        }
+                        // J opens the journey: what the play has made of you.
+                        Key::Character(c) if c.as_str() == "j" => {
+                            self.show_journey = !self.show_journey;
+                        }
                         // B for the big show (lean back).
                         Key::Character(c) if c.as_str() == "b" => {
                             self.the_show = !self.the_show;
@@ -588,8 +897,14 @@ impl ApplicationHandler for App {
             }
             // The sound follows the sweep instead of droning on one tone.
             self.frame += 1;
-            if self.frame % 120 == 0 && !self.studio {
+            if self.frame % 120 == 0 && !self.studio && self.quiz.is_none() {
                 self.update_audio();
+            }
+            if let Some((_, frames)) = &mut self.banner {
+                *frames -= 1;
+                if *frames == 0 {
+                    self.banner = None;
+                }
             }
         }
         if let Some(window) = &self.window {
@@ -598,9 +913,104 @@ impl ApplicationHandler for App {
     }
 }
 
+/// The journey file: the same one the CLI and MCP level (env-overridable).
+fn journey_path() -> std::path::PathBuf {
+    if let Ok(path) = std::env::var("NUMINOUS_JOURNEY") {
+        return std::path::PathBuf::from(path);
+    }
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+    std::path::PathBuf::from(home).join(".numinous-journey")
+}
+
+/// The score table, read for the journey overlay's trophy evidence.
+fn scores_path() -> std::path::PathBuf {
+    if let Ok(path) = std::env::var("NUMINOUS_SCORES") {
+        return std::path::PathBuf::from(path);
+    }
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+    std::path::PathBuf::from(home).join(".numinous-scores")
+}
+
 fn main() {
     let event_loop = EventLoop::new().expect("create event loop");
     event_loop.set_control_flow(ControlFlow::Poll);
     let mut app = App::new();
     event_loop.run_app(&mut app).expect("run the app");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::App;
+
+    /// An app pointed at scratch files, with no window, player, or GPU.
+    fn headless(name: &str) -> App {
+        let mut app = App::new();
+        app.journey = numinous_core::Journey::default();
+        app.journey_file = std::env::temp_dir().join(name);
+        app.level_seen = 1;
+        app
+    }
+
+    #[test]
+    fn switching_rooms_records_visits_and_persists() {
+        let mut app = headless("numinous_app_test_switch.txt");
+        app.switch(1);
+        app.switch(1);
+        assert_eq!(app.journey.visited.len(), 2, "two rooms entered");
+        let disk = numinous_core::Journey::from_text(
+            &std::fs::read_to_string(&app.journey_file).expect("persisted"),
+        );
+        assert_eq!(disk.visited, app.journey.visited);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn the_quiz_deals_records_and_scores_wins() {
+        let mut app = headless("numinous_app_test_quiz.txt");
+        app.quiz_next();
+        assert_eq!(app.journey.plays, 1, "dealing a round is a play");
+        let answer = app.quiz.as_ref().expect("a round is live").round.answer;
+        app.quiz_answer('!');
+        assert!(
+            app.quiz.as_ref().unwrap().flash.is_none(),
+            "letters off the menu do nothing"
+        );
+        app.quiz_answer(answer);
+        assert_eq!(app.journey.wins, 1, "the right answer is a win");
+        let (correct, _) = app.quiz.as_ref().unwrap().flash.expect("verdict shows");
+        assert!(correct);
+        app.quiz_next();
+        assert_eq!(app.journey.plays, 2, "the next round deals");
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn level_ups_raise_the_banner_with_lore() {
+        let mut app = headless("numinous_app_test_banner.txt");
+        app.journey.play();
+        app.journey_changed(); // one spark crosses the first threshold: level 2
+        let (lines, frames) = app.banner.as_ref().expect("the banner rises");
+        assert!(lines[0].contains("LEVEL UP  LV 2"));
+        assert!(lines.len() >= 2, "the lore line rides along");
+        assert!(*frames > 0);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn quiz_answers_letter_matches_a_choice() {
+        let mut app = headless("numinous_app_test_letters.txt");
+        app.quiz_next();
+        let quiz = app.quiz.as_ref().unwrap();
+        assert!(
+            quiz.round
+                .choices
+                .iter()
+                .any(|c| c.letter == quiz.round.answer)
+        );
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
 }

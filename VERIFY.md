@@ -42,14 +42,20 @@ hardware and excluded from the coverage gate, see `docs/QUALITY.md`).
 ```
 cargo run --bin numinous-app
 ```
-Opens a real window showing a room animating in full color, with its sound, and
-a menu explaining itself (Esc brings it back). Game-native controls: A/D or
-arrows change rooms, 1-9 jump straight to one, W/S run time faster or slower,
-drag or mouse-wheel scrubs, E inspects the math, Q swaps the visual era
-(phosphor, 8-bit, vector, modern), R restarts the sweep, F goes fullscreen, M
-mutes, B starts The Show (lean back), Tab opens the Studio (type math, watch
-and hear it live). The Mandelbrot and Julia rooms render on the GPU when the
-machine has one; everything else draws on the CPU.
+Opens a real window showing a room animating in full color, scored by the
+chiptune (Music Engine A: each room gets its own seeded tune, with the room's
+sonification riding on top), and a menu explaining itself (Esc brings it
+back). Game-native controls: A/D or arrows change rooms, 1-9 jump straight to
+one, W/S run time faster or slower, drag or mouse-wheel scrubs, E inspects the
+math, Q swaps the visual era (phosphor, 8-bit, vector, modern), R restarts the
+sweep, F goes fullscreen, M mutes, B starts The Show (lean back), G deals the
+quiz (name the math, right in the window), J opens your journey (level, rank,
+trophies, resonances), Tab opens the Studio (type math, watch and hear it
+live). The app plays the same Journey the CLI does: entering rooms records
+visits, quiz rounds record plays and wins, your level rides in the corner, and
+LEVEL UP banners rise with the level's lore. Set `NUMINOUS_MUTE=1` to launch
+silent. The Mandelbrot and Julia rooms render on the GPU when the machine has
+one; everything else draws on the CPU.
 
 ## 4. See it work (the other faces)
 
