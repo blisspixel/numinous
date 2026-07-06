@@ -902,30 +902,34 @@ impl App {
         }
         if let Some(run) = &self.gauntlet {
             let raster = self.draw_gauntlet(run, width, height);
+            let (rw, rh) = (raster.width(), raster.height());
             let mut rgba = raster.to_rgba();
-            self.era.apply(&mut rgba, width, height);
-            self.blit(&rgba, width, height, width, height);
+            self.era.apply(&mut rgba, rw, rh);
+            self.blit(&rgba, rw, rh, width, height);
             return;
         }
         if let Some(play) = &self.munch {
             let raster = self.draw_munch(play, width, height);
+            let (rw, rh) = (raster.width(), raster.height());
             let mut rgba = raster.to_rgba();
-            self.era.apply(&mut rgba, width, height);
-            self.blit(&rgba, width, height, width, height);
+            self.era.apply(&mut rgba, rw, rh);
+            self.blit(&rgba, rw, rh, width, height);
             return;
         }
         if let Some(play) = &self.nim {
             let raster = self.draw_nim(play, width, height);
+            let (rw, rh) = (raster.width(), raster.height());
             let mut rgba = raster.to_rgba();
-            self.era.apply(&mut rgba, width, height);
-            self.blit(&rgba, width, height, width, height);
+            self.era.apply(&mut rgba, rw, rh);
+            self.blit(&rgba, rw, rh, width, height);
             return;
         }
         if let Some(quiz) = &self.quiz {
             let raster = self.draw_quiz(quiz, width, height);
+            let (rw, rh) = (raster.width(), raster.height());
             let mut rgba = raster.to_rgba();
-            self.era.apply(&mut rgba, width, height);
-            self.blit(&rgba, width, height, width, height);
+            self.era.apply(&mut rgba, rw, rh);
+            self.blit(&rgba, rw, rh, width, height);
             return;
         }
         let room = &self.rooms[self.current];
@@ -1555,7 +1559,8 @@ impl ApplicationHandler for App {
         }
         let attributes = Window::default_attributes()
             .with_title(self.title())
-            .with_inner_size(winit::dpi::LogicalSize::new(900.0, 900.0));
+            .with_inner_size(winit::dpi::LogicalSize::new(900.0, 900.0))
+            .with_maximized(true);
         let Ok(window) = event_loop.create_window(attributes) else {
             return;
         };

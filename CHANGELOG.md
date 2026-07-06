@@ -5,6 +5,19 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- The window-game crash on large displays: the drawing surface clamps at a
+  maximum dimension, but the game paths told the era filter and the blitter
+  the window's size instead of the raster's, out of bounds the moment a
+  maximized window exceeded the clamp. Games now report the raster's true
+  size (as the room path always did), and the clamp itself rose to 4096 so
+  4K displays render full-bleed. The same clamp explains the cut-off frame
+  the report described.
+- The app launches maximized: it takes the screen instead of a 900-pixel
+  square in the corner.
+- Track lengths lost their round-minute tells: the rotation decks now deal
+  2:28, 4:07, 5:58, like records, not like timers.
+
 ### Added
 - Track lengths joined the rotation deck: each station cycles real runtimes
   (trance stretches from 150s to a six-minute 360; chill wanders 180 to 360;

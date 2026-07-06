@@ -80,9 +80,9 @@ pub const STATIONS: [Station; 3] = [
 #[must_use]
 pub fn length_for(station: &Station, track: usize) -> u64 {
     let cycle: &[u64] = match station.id {
-        "trance" => &[240, 330, 180, 300, 150, 360],
-        "chill" => &[210, 300, 360, 180, 270],
-        _ => &[150, 200, 120, 240, 170],
+        "trance" => &[247, 331, 178, 296, 152, 363],
+        "chill" => &[214, 293, 358, 176, 269],
+        _ => &[148, 203, 124, 237, 172],
     };
     cycle[track % cycle.len()]
 }
