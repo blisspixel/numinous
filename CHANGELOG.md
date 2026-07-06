@@ -18,6 +18,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   live instead of restarting the record.
 
 ### Added
+- Casual play deals fresh: `numinous play <game>` now uses a new seed every
+  time (announced, so any board can be replayed or shared with --seed);
+  dailies stay on the games' own --daily flags. No more typing yesterday's
+  bomb code into today's bomb.
+- Games take the screen: launching one clears the console first, and the
+  BOOM/DEFUSED bursts keep a quiet disc in the center so the word owns it.
 - The CLI got its front door: bare `numinous` opens onto today's room in
   full color, your level bar and streak, and the seven verbs that matter.
   `numinous play` lists the games; `numinous play munch` (or quiz, nim,

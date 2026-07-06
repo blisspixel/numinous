@@ -417,6 +417,25 @@ fn home(journey: &Journey) -> ExitCode {
     ExitCode::SUCCESS
 }
 
+/// A fresh seed for casual play: different every deal, printed by the game
+/// so any board can be replayed or shared (numinous crack --seed N).
+fn fresh_seed() -> u64 {
+    let seed = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.subsec_nanos() as u64 ^ d.as_secs())
+        .unwrap_or(1)
+        % 1_000_000;
+    println!("(seed {seed}: replay or share any game with --seed)");
+    clear_screen_soon();
+    seed
+}
+
+/// Clear the screen so a game owns a clean console.
+fn clear_screen_soon() {
+    print!("[2J[H");
+    let _ = std::io::stdout().flush();
+}
+
 /// Days since the epoch: the shared daily clock.
 fn pick_day() -> u64 {
     std::time::SystemTime::now()
@@ -716,14 +735,15 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                 );
                 return ExitCode::SUCCESS;
             };
+            let seed = fresh_seed();
             match id.as_str() {
-                "munch" => munch(pick_day(), 3, journey),
-                "quiz" => quiz(3, pick_day(), 44, 18, 4, journey),
-                "nim" => nim(pick_day(), journey),
-                "crack" => crack(pick_day(), 4, 8, journey),
-                "seti" => seti(pick_day(), 4, 3, journey),
-                "aliens" => aliens(pick_day(), 3, journey),
-                "gauntlet" => gauntlet(pick_day(), journey),
+                "munch" => munch(seed, 3, journey),
+                "quiz" => quiz(3, seed, 44, 18, 4, journey),
+                "nim" => nim(seed, journey),
+                "crack" => crack(seed, 4, 8, journey),
+                "seti" => seti(seed, 4, 3, journey),
+                "aliens" => aliens(seed, 3, journey),
+                "gauntlet" => gauntlet(seed, journey),
                 "bench" => bench(journey),
                 _ => {
                     if find_room(&id, allow_hidden).is_some() {
@@ -1786,12 +1806,19 @@ fn word_in_lights(word: &str, accent: [u8; 3], frames: usize) {
         let mut raster = Raster::with_accent(w, h, accent);
         let reach = (frame + 1) as f64 / frames as f64;
         let (cx, cy) = (w as f64 / 2.0, h as f64 / 2.0);
+        // Rays start outside a quiet disc, so the word owns the center.
+        let hush = (word.len() as f64 * 6.0 * 2.0) / 2.0 + 4.0;
         for ray in 0..48 {
             let angle = std::f64::consts::TAU * f64::from(ray) / 48.0;
             let steps = (reach * w as f64 / 2.0) as i32;
             for step in (0..steps).step_by(2) {
-                let x = (cx + angle.cos() * f64::from(step)) as i32;
-                let y = (cy + angle.sin() * f64::from(step) * 0.5) as i32;
+                let fx = angle.cos() * f64::from(step);
+                let fy = angle.sin() * f64::from(step) * 0.5;
+                if (fx * fx + fy * fy * 4.0).sqrt() < hush {
+                    continue;
+                }
+                let x = (cx + fx) as i32;
+                let y = (cy + fy) as i32;
                 raster.plot(x, y, if step % 6 == 0 { '#' } else { '*' });
             }
         }
