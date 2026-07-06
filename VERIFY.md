@@ -33,7 +33,7 @@ cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex 'crates
 bash scripts/check-style.sh
 ```
 
-Expected right now: **format and clippy clean, 300+ tests pass, coverage ~90%
+Expected right now: **format and clippy clean, 370+ tests pass, coverage ~90%
 lines** (the `gpu`, `audio`, and `app` crates are integration-tested on real
 hardware and excluded from the coverage gate, see `docs/QUALITY.md`).
 
@@ -78,7 +78,26 @@ Then open `renders/contact.png` to eyeball the whole collection at once.
 ```
 cargo run --bin numinous -- sonify lissajous --out renders/lissajous.wav
 cargo run --bin numinous -- sonify collatz  --out renders/collatz.wav
+cargo run --bin numinous -- tune --seed 7 --out renders/chip.wav   # Music Engine A
 ```
+
+**Games and the RPG spine:** play, level, choose, resonate:
+```
+cargo run --bin numinous -- quiz --daily        # guess the shape (six choices with --hard, LV 3)
+cargo run --bin numinous -- munch --daily       # eat the numbers that fit the rule
+cargo run --bin numinous -- crack               # defuse the bomb
+cargo run --bin numinous -- seti                # find the mind in the static
+cargo run --bin numinous -- aliens              # answer in their base
+cargo run --bin numinous -- nim                 # beat the Order, earn the xor secret
+cargo run --bin numinous -- gauntlet --daily    # one run, four games, a combo, one number
+cargo run --bin numinous -- journey             # your constellation, level, locks, resonances
+cargo run --bin numinous -- choose              # spend a level-up boon (knowledge, early)
+cargo run --bin numinous -- trophies            # the case: earned and silhouetted
+cargo run --bin numinous -- scores              # the shared table (humans and AIs alike)
+cargo run --bin numinous -- forget              # see everything remembered; --confirm erases
+```
+Every game records plays and wins to the journey; level-ups cascade lore,
+unlocks, boon banners, and trophy pings; dailies chain into streaks.
 
 **GPU (adaptive, no window):** render the Mandelbrot set on whatever GPU this
 machine has, to a PNG:
@@ -104,9 +123,9 @@ tool list and an ASCII render of the room as text.
 
 ## 5. Where things are
 
-- `crates/core` the headless engine: rooms (19 across 7 wings), sims, games,
-  the Studio expression engine, the journey and scores, sound, eras, and the
-  drawing surfaces.
+- `crates/core` the headless engine: rooms (25 across 9 wings), sims, games
+  (including nim and the chiptune composer), the Studio expression engine, the
+  journey, scores, trophies, resonances, sound, eras, and the drawing surfaces.
 - `crates/gpu` adaptive wgpu rendering; `crates/audio` adaptive cpal output.
 - `faces/cli` the `numinous` binary; `faces/mcp` the `numinous-mcp` server.
 - `docs/` the full design and plan (start at `docs/README.md`); `CHANGELOG.md` the
@@ -115,10 +134,13 @@ tool list and an ASCII render of the room as text.
 
 ## 6. What is done vs pending
 
-Done and verifiable now: 19 rooms across 7 wings (plus one that is not listed),
-6 sims, 5 games with a shared high-score table and daily seeds, the Studio
-(plot, animate, sing, in the terminal and the window), the Journey (levels to
-42, ranks, locks, deep cuts), Visual Eras, GPU real-time fractals, live sound
-everywhere, and 14 MCP tools so agents play the same content. Pending (see
-`ROADMAP.md`): the music engines (chiptune, radio), more GPU room paths, and
-games inside the window.
+Done and verifiable now: 25 rooms across 9 wings (plus one that is not
+listed), 6 sims, 7 games with a shared high-score table and daily seeds, the
+complete RPG spine (levels to 42 with lore, locks, 18 trophies with pings, the
+Gauntlet run, boons, daily streaks, resonances), the Studio (plot, animate,
+sing, in the terminal and the window), Visual Eras (including PNG output),
+Music Engine A (the seeded chiptune, `numinous tune`), GPU real-time fractals,
+live sound everywhere, the `forget` right for players who are minds, and 16
+MCP tools so agents play the same content. Pending (see `ROADMAP.md`): the
+chiptune wired into the app as its score, games inside the window, Engine B
+(the radio), the music visualizer, and more GPU room paths.

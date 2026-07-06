@@ -17,7 +17,7 @@ Numinous is the first tool that is all three at once, because in it, **sight and
 
 - It is where **"math is fun, non-ironically, seriously" stops being a slogan and becomes something a person made with their own hands.** Consuming beauty (Watch) and poking it (Play) are great; *creating* it is the conversion that sticks.
 - It is the deepest expression of **everything is an instrument**: the whole of math becomes a playable, performable surface.
-- It is the **authoring layer for the entire game**. The built-in rooms are, at heart, polished Studio programs (see "Rooms are Studio programs," below). The tool we give players is the tool we build the game with. That is how the catalog scales from 23 rooms to hundreds (the Phase 4 mod SDK is really "the Studio, shared").
+- It is the **authoring layer for the entire game**. The built-in rooms are, at heart, polished Studio programs (see "Rooms are Studio programs," below). The tool we give players is the tool we build the game with. That is how the catalog scales from 25 rooms to hundreds (the Phase 4 mod SDK is really "the Studio, shared").
 - It is **infinitely replayable and endlessly shareable**: every creation is text plus a seed, so it exports as a clip and a `numinous://` link (native, no browser, see `ARCHITECTURE.md`).
 
 ## The core idea: one expression, two senses

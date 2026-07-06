@@ -8,6 +8,11 @@ There are two engines, and they are designed to coexist and even harmonize.
 
 ## Engine A: Programmatic music (the math makes the sound)
 
+> Status: v1 shipped. `crates/core/src/chiptune.rs` composes deterministic
+> pentatonic chiptunes (square lead, triangle bass, noise ticks, click-free
+> envelopes) from a seed; `numinous tune --seed N --out chip.wav` writes them.
+> Next: wire it into the app as the score, then the pattern engine below.
+
 This is the native, generative, "everything is an instrument" engine. It runs locally, in real time, in Rust (`cpal` + `fundsp`), and it is driven by the math itself. No files, no streaming, infinite and never-repeating.
 
 ### A1. Room sonification (the instrument layer)
