@@ -100,7 +100,7 @@ pub fn trophies(journey: &Journey, board: &Scoreboard) -> Vec<Trophy> {
         },
         Trophy {
             name: "Century",
-            what: "post one hundred points on a single board",
+            what: "eat one hundred points on a single munch board",
             earned: best_for(board, "munch") >= 100,
         },
         Trophy {
