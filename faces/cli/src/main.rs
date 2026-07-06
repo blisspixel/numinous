@@ -919,8 +919,30 @@ Erase the journey with: numinous forget --confirm  (add --scores for the table)"
         }
         Command::Radio => {
             println!("THE DIAL (Music Engine B). Tune with: numinous tune2 <station>\n");
+            let dir = radio_dir();
             for st in numinous_core::STATIONS {
-                println!("  {:<8} {}", st.id, st.name);
+                let tracks = std::fs::read_dir(&dir)
+                    .map(|entries| {
+                        entries
+                            .filter_map(Result::ok)
+                            .filter(|e| {
+                                e.file_name()
+                                    .to_string_lossy()
+                                    .starts_with(&format!("{}-", st.id))
+                            })
+                            .count()
+                    })
+                    .unwrap_or(0);
+                println!(
+                    "  {:<8} {:<18} {}",
+                    st.id,
+                    st.name,
+                    if tracks == 0 {
+                        format!("no tracks yet: numinous tune2 {}", st.id)
+                    } else {
+                        format!("{tracks} track(s) on rotation")
+                    }
+                );
                 let preview: String = st.brief.chars().take(76).collect();
                 println!("           {preview}...\n");
             }
