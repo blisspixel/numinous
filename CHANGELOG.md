@@ -6,6 +6,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The app is the game (v1): the chiptune scores the window, each room gets
+  its own seeded tune with the room's sonification riding on top of the bed;
+  G deals the quiz in-window (the mystery room fullscreen, letters answer,
+  the reveal follows, any key deals again); J opens the journey overlay
+  (level bar, XP, rank, streak, trophies, resonances); the level rides in the
+  HUD corner; LEVEL UP banners rise in-window with the level's lore and boon
+  notices. The app reads and writes the same journey file as the CLI and MCP,
+  so all three faces level one identity. NUMINOUS_MUTE=1 launches silent.
+  The app's state machine is now headlessly unit-tested (visits persist, quiz
+  plays and wins record, banners rise), which caught and fixed a real bug:
+  the quiz accepted letters that were not on the menu.
 - Music Engine A, the chiptune (`crates/core/src/chiptune.rs`): square lead,
   triangle bass, seeded noise ticks; deterministic pentatonic compositions
   (the same seed is the same tune, forever, on every machine); pure synthesis

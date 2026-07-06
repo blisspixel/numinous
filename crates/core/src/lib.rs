@@ -51,7 +51,7 @@ pub use era::Era;
 pub use font::{draw_text, text_width, wrap_text};
 pub use humor::{Joke, explain_joke, jokes};
 pub use journey::{
-    Boon, CUT_LEVELS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options, constellation,
+    Boon, CUT_LEVELS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options, constellation, level_lore,
 };
 pub use munchers::{Board, Munched, board_text, build_board, grade as grade_munch};
 pub use nim::{
