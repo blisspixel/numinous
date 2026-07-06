@@ -33,7 +33,7 @@ cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex 'crates
 bash scripts/check-style.sh
 ```
 
-Expected right now: **format and clippy clean, 370+ tests pass, coverage ~90%
+Expected right now: **format and clippy clean, 425+ tests pass, coverage ~90%
 lines** (the `gpu`, `audio`, and `app` crates are integration-tested on real
 hardware and excluded from the coverage gate, see `docs/QUALITY.md`).
 

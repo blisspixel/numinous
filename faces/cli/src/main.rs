@@ -422,7 +422,7 @@ fn home(journey: &Journey) -> ExitCode {
     );
     println!(
         "\n  numinous play              pick a game (munch, quiz, nim, the gauntlet...)
-  numinous play munch        or name it and go; --daily rides the shared seed
+  numinous play munch        or name one and go (fresh deal; --daily on its own command)
   numinous tour              sit back: every room, full color, narrated
   numinous watch {:<12} any one room, live, with its sound
   numinous radio             the music stations (Y in the app tunes them)

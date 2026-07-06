@@ -55,7 +55,7 @@ Multiply and wrap → a cardioid. A coin flip repeated → a perfect fractal. Tw
 
 You open Numinous into a quiet, near-black **Cabinet**, a grid of glowing tiles, each a room. You pick *Times Tables*. A circle of points. A line is drawn from each point *n* to point *2n*, wrapping around. A **cardioid**, a perfect heart-curve, materializes out of nothing but "multiply by two." You grab the multiplier dial and drag: 2 → 3 → 4 → the shape morphs through nephroids and nested loops, humming in tuned harmony as it goes, the pitch bending with the number. You hit **π** and the shape shivers into near-chaos. You tap **Reveal** and one sentence tells you this same curve is the silhouette of the Mandelbrot set's main bulb, and you feel the floor tilt. You hit **Share** and a five-second loop of your favorite moment is on your clipboard.
 
-Then you go back to the Cabinet, because there are nineteen more rooms, and because you just unlocked the ability to re-skin the whole thing in glowing **8-bit CRT with chiptune**, which is a completely different set of screenshots from the exact same math. (More on the retro-to-modern **Visual Eras** in [`docs/DESIGN.md`](docs/DESIGN.md).)
+Then you go back to the Cabinet, because there are twenty-seven more rooms, and because you just unlocked the ability to re-skin the whole thing in glowing **8-bit CRT with chiptune**, which is a completely different set of screenshots from the exact same math. (More on the retro-to-modern **Visual Eras** in [`docs/DESIGN.md`](docs/DESIGN.md).)
 
 ## Tech: in brief
 
@@ -66,7 +66,7 @@ This is a real native app, not a website in a costume.
 - **Native real-time audio** (`cpal` + `fundsp`) for the sonification and the programmatic chiptune engine, plus an **ElevenLabs**-powered radio for the GTA-style music stations. See [`docs/MUSIC.md`](docs/MUSIC.md).
 - **Sharing is native, not a browser build:** in-app video/image export plus reproducible `.num` seed files and a `numinous://` link that reopens an exact configuration in the app.
 - A tiny **Room SDK** (one Rust trait) so every phenomenon is a self-contained plugin. Eventually: so *anyone* can build one.
-- **Three faces over one headless core, from day one** (see [`docs/INTERFACES.md`](docs/INTERFACES.md)): the **App** (GUI), a full **CLI** (`numinous render/eval/tui/...`, even renders rooms as ASCII in your terminal), and an **MCP server** so AI agents can learn and play too.
+- **Three faces over one headless core, from day one** (see [`docs/INTERFACES.md`](docs/INTERFACES.md)): the **App** (GUI), a full **CLI** (`numinous play/watch/tour/...`, a first-class terminal instrument with truecolor and live sound), and an **MCP server** so AI agents can learn and play too.
 
 No Electron, no HTML, no "easy shitty way." Full rationale, and an honest scorecard of Rust vs. C++/Vulkan vs. Godot vs. CUDA/Triton/Bend/Mojo/Chapel/Julia, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
@@ -96,9 +96,9 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 
 ## Status
 
-**0.1 in progress.** The headless core and two of the three faces are built and green (Rust 1.96.0): fmt clean, clippy `-D warnings` clean, tests passing, line coverage above 90% with an enforced gate. What exists today:
+**Roughly 0.6 to First Light** (the honest scorecard lives in [`docs/ROADMAP.md`](docs/ROADMAP.md)). All three faces are real and green (Rust 1.96.0): fmt clean, clippy `-D warnings` clean, 425+ tests, line coverage above 90% with an enforced gate. What exists today:
 
-- **`crates/core`**: the `Room` trait (with `reveal()`), a deterministic ASCII `Canvas`, a seeded `SplitMix64` RNG, the registry, and **nine rooms** across four Wings, Times Tables, Golden Angle, Prime Spirals (Number & Pattern); Cellular Automata, Chaos Game, Collatz (Emergence); Galton Board, Buffon's Needle (Chance & Order); and Lissajous (Waves & Sound).
+- **`crates/core`**: 28 rooms across 10 wings, 10 games (munch, quiz, nim, crack, seti, aliens, hackenbush, the Party Problem, Fifteen's Bet, and the Gauntlet run), 6 lever sims, the Studio expression engine, the full RPG spine (levels to 42, trophies, boons, streaks, resonances), both music engines, and the insight and concept catalogs, all deterministic and tested
 - **`faces/cli`** (`numinous`): `rooms`, `describe`, `render` (rooms drawn as ASCII in the terminal), with `--json`.
 - **`faces/mcp`** (`numinous-mcp`): a JSON-RPC 2.0 stdio server so an agent can `list_rooms`, `describe_room`, `reveal_room`, and `play_room` (getting the render back as text).
 - **`faces/app`** (`numinous-app`): a real windowed app (winit + softbuffer) that shows a room animating in full color; left/right switch rooms, space pauses, escape quits. `cargo run --bin numinous-app`.
