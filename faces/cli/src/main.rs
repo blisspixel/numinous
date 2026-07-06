@@ -973,16 +973,12 @@ fn fetch_track(
         return false;
     }
     // Raw 16-bit little-endian PCM at 44.1k, stereo interleaved (verified
-    // against the live API): downmix to mono for the one-bus mixer.
-    let samples: Vec<f32> = pcm
-        .chunks_exact(4)
-        .map(|b| {
-            let left = f32::from(i16::from_le_bytes([b[0], b[1]]));
-            let right = f32::from(i16::from_le_bytes([b[2], b[3]]));
-            (left + right) / 65_536.0
-        })
+    // against the live API): cache it as a stereo WAV, width intact.
+    let samples: Vec<i16> = pcm
+        .chunks_exact(2)
+        .map(|b| i16::from_le_bytes([b[0], b[1]]))
         .collect();
-    if samples.len() < 4_410 {
+    if samples.len() < 8_820 {
         eprintln!(
             "The tower sent almost nothing ({} bytes). Try again.",
             pcm.len()
@@ -990,12 +986,24 @@ fn fetch_track(
         return false;
     }
     let path = dir.join(format!("{}-{:03}.wav", station.id, track + 1));
-    match write_wav(&path, &samples, 44_100) {
+    let spec = hound::WavSpec {
+        channels: 2,
+        sample_rate: 44_100,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    let write = hound::WavWriter::create(&path, spec).and_then(|mut writer| {
+        for &sample in &samples {
+            writer.write_sample(sample)?;
+        }
+        writer.finalize()
+    });
+    match write {
         Ok(()) => {
             println!(
-                "  ON AIR: {} ({:.0}s)",
+                "  ON AIR: {} ({:.0}s, stereo)",
                 path.display(),
-                samples.len() as f64 / 44_100.0
+                samples.len() as f64 / 2.0 / 44_100.0
             );
             true
         }

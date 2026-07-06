@@ -685,7 +685,9 @@ impl App {
         self.update_audio();
     }
 
-    /// Put the current playlist entry on the air, starting `offset` seconds in.
+    /// Put the current playlist entry on the air, starting `offset` seconds
+    /// in: read it (mono or stereo), resample to the device's rate so pitch
+    /// and tempo are true, and hand it to the player once.
     fn radio_play(&mut self, offset: f64) {
         let Some(path) = self.radio_paths.get(self.radio_index) else {
             return;
@@ -693,19 +695,46 @@ impl App {
         let Ok(mut reader) = hound::WavReader::open(path) else {
             return;
         };
-        let rate = f64::from(reader.spec().sample_rate);
-        let mut samples: Vec<f32> = reader
+        let spec = reader.spec();
+        let src_rate = f64::from(spec.sample_rate);
+        let channels = usize::from(spec.channels).max(1);
+        let raw: Vec<f32> = reader
             .samples::<i16>()
             .filter_map(Result::ok)
             .map(|s| f32::from(s) / 32_768.0)
             .collect();
-        let skip = ((offset * rate) as usize).min(samples.len());
-        samples.rotate_left(skip);
-        let remaining = (samples.len() - skip) as f64 / rate.max(1.0);
-        self.radio_track = samples;
+        let device_rate = self.player.as_ref().map_or(44_100, |p| p.sample_rate());
+        // Linear resample per channel to the device rate: 44.1k played as
+        // 48k is nine percent sharp, which reads as cheap.
+        let src_frames = raw.len() / channels;
+        if src_frames < 2 {
+            return;
+        }
+        let out_frames = (src_frames as f64 * f64::from(device_rate) / src_rate) as usize;
+        let mut track = Vec::with_capacity(out_frames * 2);
+        for i in 0..out_frames {
+            let src = i as f64 * src_rate / f64::from(device_rate);
+            let base = (src as usize).min(src_frames - 2);
+            let frac = (src - base as f64) as f32;
+            for ch in [0, channels.saturating_sub(1)] {
+                let a = raw[base * channels + ch];
+                let b = raw[(base + 1) * channels + ch];
+                track.push(a + (b - a) * frac);
+            }
+        }
+        // Join `offset` seconds in, wrapping, and arm the rotation.
+        let skip_frames = ((offset * f64::from(device_rate)) as usize).min(out_frames);
+        track.rotate_left(skip_frames * 2);
+        let remaining = (out_frames - skip_frames) as f64 / f64::from(device_rate);
+        self.radio_track = track;
         self.radio_until = Some(
             std::time::Instant::now() + std::time::Duration::from_secs_f64(remaining.max(1.0)),
         );
+        if !self.muted
+            && let Some(player) = &self.player
+        {
+            player.set_stereo(self.radio_track.clone());
+        }
     }
 
     /// GPU-render the current room if it has a real-time GPU path (the deep
@@ -788,9 +817,9 @@ impl App {
             self.tune = pattern.render(player.sample_rate());
         }
         if self.radio.is_some() && !self.radio_track.is_empty() {
-            // The station is the sound: hand the record over untouched, so
-            // nothing restarts it mid-play.
-            player.set_samples(self.radio_track.clone());
+            // The station is the sound, and radio_play already handed the
+            // record to the player. Touching the buffer here would restart
+            // it on every room switch: the jitter. Hands off.
             return;
         }
         let mut mix = self.tune.clone();
@@ -1853,7 +1882,11 @@ impl ApplicationHandler for App {
                         }
                         Key::Character(c) if c.as_str() == "m" => {
                             self.muted = !self.muted;
-                            self.update_audio();
+                            if !self.muted && self.radio.is_some() {
+                                self.tune_in();
+                            } else {
+                                self.update_audio();
+                            }
                         }
                         Key::Character(c) if c.as_str() == "h" => {
                             self.show_help = !self.show_help;
