@@ -27,6 +27,10 @@ pub struct Journey {
     /// Boons redeemed: early unlocks chosen at level-ups (for example
     /// `cut:mandelbrot:0`). Choices shape the order; levels still open all.
     pub chosen: BTreeSet<String>,
+    /// Consecutive daily-challenge days, current run.
+    pub streak: u32,
+    /// The last daily day played (days since the epoch), 0 for never.
+    pub last_daily: u64,
 }
 
 /// The level cap. The answer to how far you can go.
@@ -160,18 +164,36 @@ impl Journey {
         (self.level() - 1).saturating_sub(self.chosen.len() as u32)
     }
 
+    /// Record playing today's daily (a day count since the epoch). Consecutive
+    /// days grow the chain; a gap quietly starts a new one; the same day twice
+    /// changes nothing. Returns the streak if it moved. No scolding, ever.
+    pub fn record_daily(&mut self, day: u64) -> Option<u32> {
+        if day == self.last_daily {
+            return None;
+        }
+        self.streak = if day == self.last_daily + 1 && self.last_daily != 0 {
+            self.streak + 1
+        } else {
+            1
+        };
+        self.last_daily = day;
+        Some(self.streak)
+    }
+
     /// Serialize to the journey file format (plain lines, stable order).
     #[must_use]
     pub fn to_text(&self) -> String {
         let visited: Vec<&str> = self.visited.iter().map(String::as_str).collect();
         let chosen: Vec<&str> = self.chosen.iter().map(String::as_str).collect();
         format!(
-            "visited {}\nwins {}\nsecrets {}\nplays {}\nchosen {}\n",
+            "visited {}\nwins {}\nsecrets {}\nplays {}\nchosen {}\nstreak {} {}\n",
             visited.join(" "),
             self.wins,
             self.secrets,
             self.plays,
-            chosen.join(" ")
+            chosen.join(" "),
+            self.streak,
+            self.last_daily
         )
     }
 
@@ -197,6 +219,10 @@ impl Journey {
                 }
                 Some("chosen") => {
                     journey.chosen = parts.map(str::to_string).collect();
+                }
+                Some("streak") => {
+                    journey.streak = parts.next().and_then(|v| v.parse().ok()).unwrap_or(0);
+                    journey.last_daily = parts.next().and_then(|v| v.parse().ok()).unwrap_or(0);
                 }
                 _ => {}
             }
@@ -479,6 +505,25 @@ mod tests {
                 .iter()
                 .all(|b| b.id != options[0].id)
         );
+    }
+
+    #[test]
+    fn daily_streaks_chain_gap_and_idempotence() {
+        let mut journey = Journey::default();
+        assert_eq!(
+            journey.record_daily(100),
+            Some(1),
+            "first daily starts at 1"
+        );
+        assert_eq!(journey.record_daily(100), None, "same day changes nothing");
+        assert_eq!(journey.record_daily(101), Some(2), "consecutive days chain");
+        assert_eq!(
+            journey.record_daily(105),
+            Some(1),
+            "a gap starts fresh, quietly"
+        );
+        let back = Journey::from_text(&journey.to_text());
+        assert_eq!(back, journey, "streak survives the file");
     }
 
     #[test]

@@ -6,6 +6,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Daily streaks (the chain from the RPG queue): playing any daily on
+  consecutive UTC days grows the chain; DAILY STREAK announces it as you start,
+  the journey shows it while it lives, and two trophies honor it (The Chain at
+  seven, Unbroken at thirty). Doctrine-tuned: a missed day quietly starts a new
+  chain, the same day twice changes nothing, and nothing ever scolds.
 - Boons: choice on level-up, the genre's soul, held to the doctrine. Every
   level past the first banks a boon (never expires, never nags); `numinous
   choose` offers a deterministic pick-one-of-three, and what you choose is

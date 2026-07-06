@@ -114,6 +114,16 @@ pub fn trophies(journey: &Journey, board: &Scoreboard) -> Vec<Trophy> {
             earned: best_for(board, "seti") >= 4,
         },
         Trophy {
+            name: "The Chain",
+            what: "seven daily challenges in a row",
+            earned: journey.streak >= 7,
+        },
+        Trophy {
+            name: "Unbroken",
+            what: "thirty in a row",
+            earned: journey.streak >= 30,
+        },
+        Trophy {
             name: "Polymath",
             what: "post a score in every game there is",
             earned: all_games,

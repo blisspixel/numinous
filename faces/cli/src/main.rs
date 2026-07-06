@@ -597,7 +597,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             let choices = if hard { 6 } else { 4 };
             quiz(
                 rounds,
-                pick_seed(seed, daily),
+                pick_seed(seed, daily, journey),
                 width,
                 height,
                 choices,
@@ -659,7 +659,7 @@ Erase the journey with: numinous forget --confirm  (add --scores for the table)"
             if digits > 4 && still_locked(journey, 5, "crack --digits 5+") {
                 return ExitCode::FAILURE;
             }
-            crack(pick_seed(seed, daily), digits, attempts, journey)
+            crack(pick_seed(seed, daily, journey), digits, attempts, journey)
         }
         Command::Seti {
             seed,
@@ -670,15 +670,15 @@ Erase the journey with: numinous forget --confirm  (add --scores for the table)"
             if channels > 4 && still_locked(journey, 7, "seti --channels 5+") {
                 return ExitCode::FAILURE;
             }
-            seti(pick_seed(seed, daily), channels, rounds, journey)
+            seti(pick_seed(seed, daily, journey), channels, rounds, journey)
         }
         Command::Aliens { seed, rounds } => aliens(seed, rounds, journey),
         Command::Munch {
             seed,
             daily,
             rounds,
-        } => munch(pick_seed(seed, daily), rounds, journey),
-        Command::Gauntlet { seed, daily } => gauntlet(pick_seed(seed, daily), journey),
+        } => munch(pick_seed(seed, daily, journey), rounds, journey),
+        Command::Gauntlet { seed, daily } => gauntlet(pick_seed(seed, daily, journey), journey),
         Command::Answer => {
             if still_locked(journey, numinous_core::MAX_LEVEL, "the answer") {
                 return ExitCode::FAILURE;
@@ -1139,7 +1139,7 @@ fn journey_report(journey: &Journey) -> String {
         }
     }
     format!(
-        "LV {:>2}  [{}]  {} XP\n\n{}\n\n{} of {} stars lit. {} answered well. {} heard.\n{}\n\n{wall}",
+        "LV {:>2}  [{}]  {} XP\n\n{}\n\n{} of {} stars lit. {} answered well. {} heard.{}\n{}\n\n{wall}",
         journey.level(),
         journey.level_bar(20),
         journey.sparks(),
@@ -1148,6 +1148,11 @@ fn journey_report(journey: &Journey) -> String {
         all_rooms().len(),
         journey.wins,
         journey.secrets,
+        if journey.streak > 1 {
+            format!(" Streak {}.", journey.streak)
+        } else {
+            String::new()
+        },
         journey.rank().name()
     )
 }
@@ -1442,13 +1447,19 @@ fn aliens(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
 
 /// The seed to play with: the explicit one, or today's shared seed with
 /// `--daily` (the same for every player on the same calendar day, UTC).
-fn pick_seed(seed: u64, daily: bool) -> u64 {
+fn pick_seed(seed: u64, daily: bool, journey: &mut Journey) -> u64 {
     if daily {
         let days = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs() / 86_400)
             .unwrap_or(0);
-        println!("Daily challenge (day {days}). Everyone gets this one.\n");
+        println!("Daily challenge (day {days}). Everyone gets this one.");
+        if let Some(chain) = journey.record_daily(days)
+            && chain > 1
+        {
+            println!("DAILY STREAK  {chain} days.");
+        }
+        println!();
         days
     } else {
         seed
@@ -2216,11 +2227,12 @@ mod tests {
 
     #[test]
     fn pick_seed_honors_the_explicit_seed() {
-        assert_eq!(super::pick_seed(7, false), 7);
+        let mut j = numinous_core::Journey::default();
+        assert_eq!(super::pick_seed(7, false, &mut j), 7);
         // The daily seed is a day count: small, positive, stable within a run.
-        let daily = super::pick_seed(7, true);
+        let daily = super::pick_seed(7, true, &mut j);
         assert!(daily > 20_000 && daily < 40_000, "got {daily}");
-        assert_eq!(super::pick_seed(7, true), daily);
+        assert_eq!(super::pick_seed(7, true, &mut j), daily);
     }
 
     #[test]
