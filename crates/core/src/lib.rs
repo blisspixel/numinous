@@ -59,7 +59,7 @@ pub use nim::{
     apply as nim_apply, finished as nim_finished, new_game as nim_new, order_move as nim_order,
     the_secret as nim_secret,
 };
-pub use quiz::{QuizChoice, QuizRound, build_round, build_round_sized};
+pub use quiz::{ICONIC, QuizChoice, QuizRound, build_round, build_round_pool, build_round_sized};
 pub use radio::{STATIONS, Station, brief_for, length_for, station};
 pub use raster::Raster;
 pub use registry::{all_rooms, hidden_room_by_id, room_by_id};

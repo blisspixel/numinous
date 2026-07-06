@@ -222,7 +222,13 @@ impl App {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs() / 86_400)
             .unwrap_or(1);
-        let round = numinous_core::build_round(seed, number, 10, 10);
+        // The ramp: a brand new player's first rounds are three-way picks
+        // among the most recognizable rooms; the catalog opens up from there.
+        let round = if number < 3 {
+            numinous_core::build_round_pool(seed, number, 10, 10, 3, &numinous_core::ICONIC)
+        } else {
+            numinous_core::build_round(seed, number, 10, 10)
+        };
         self.journey.play();
         self.journey_changed();
         self.quiz = Some(QuizPlay {
@@ -617,10 +623,14 @@ impl App {
             return;
         };
         let st = &numinous_core::STATIONS[i];
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        let dir = std::path::PathBuf::from(home).join(".numinous-radio");
+        let dir = if let Ok(dir) = std::env::var("NUMINOUS_RADIO") {
+            std::path::PathBuf::from(dir)
+        } else {
+            let home = std::env::var("HOME")
+                .or_else(|_| std::env::var("USERPROFILE"))
+                .unwrap_or_else(|_| ".".to_string());
+            std::path::PathBuf::from(home).join(".numinous-radio")
+        };
         if let Ok(entries) = std::fs::read_dir(&dir) {
             let prefix = format!("{}-", st.id);
             let legacy = format!("{}.wav", st.id);
@@ -779,11 +789,13 @@ impl App {
             let pattern = numinous_core::compose(self.current as u64 + 1, 8);
             self.tune = pattern.render(player.sample_rate());
         }
-        let mut mix = if self.radio.is_some() && !self.radio_track.is_empty() {
-            self.radio_track.clone()
-        } else {
-            self.tune.clone()
-        };
+        if self.radio.is_some() && !self.radio_track.is_empty() {
+            // The station is the sound: hand the record over untouched, so
+            // nothing restarts it mid-play.
+            player.set_samples(self.radio_track.clone());
+            return;
+        }
+        let mut mix = self.tune.clone();
         if !tone.is_empty() {
             for (i, sample) in mix.iter_mut().enumerate() {
                 *sample = (*sample * 0.55 + tone[i % tone.len()] * 0.45).clamp(-1.0, 1.0);
@@ -1935,8 +1947,12 @@ impl ApplicationHandler for App {
             }
             // The sound follows the sweep instead of droning on one tone.
             self.frame += 1;
+            // The room's voice follows the sweep, but never while the radio
+            // is on the air: resetting the loop buffer would restart the
+            // record every couple of seconds.
             if self.frame % 120 == 0
                 && !self.studio
+                && self.radio.is_none()
                 && self.quiz.is_none()
                 && self.munch.is_none()
                 && self.nim.is_none()
@@ -2140,6 +2156,45 @@ mod tests {
         assert_eq!(super::gauntlet_total(&run.scores, &run.cleared), 195);
         assert_eq!(app.journey.plays, 4);
         assert_eq!(app.journey.wins, 3);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn the_radio_loads_cached_tracks_and_joins_live() {
+        let dir = std::env::temp_dir().join("numinous_radio_test");
+        let _ = std::fs::create_dir_all(&dir);
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: 44_100,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let path = dir.join("trance-001.wav");
+        let mut writer = hound::WavWriter::create(&path, spec).expect("write wav");
+        for i in 0..44_100 * 3 {
+            let sample = ((i as f32 * 0.05).sin() * 12_000.0) as i16;
+            writer.write_sample(sample).expect("sample");
+        }
+        writer.finalize().expect("finalize");
+        // SAFETY-free env override: the test sets the var via a scratch app
+        // field instead. tune_in reads NUMINOUS_RADIO; set through the
+        // process env is forbidden, so exercise radio_play directly.
+        let mut app = headless("numinous_app_test_radio.txt");
+        app.radio = Some(0);
+        app.radio_paths = vec![path.clone()];
+        app.radio_index = 0;
+        app.radio_play(1.0);
+        assert!(
+            app.radio_track.len() > 44_100 * 2,
+            "the record is loaded ({} samples)",
+            app.radio_track.len()
+        );
+        assert!(app.radio_until.is_some(), "rotation is armed");
+        assert!(
+            app.radio_track.iter().any(|&s| s.abs() > 0.1),
+            "the record has music in it"
+        );
+        let _ = std::fs::remove_file(&path);
         let _ = std::fs::remove_file(&app.journey_file);
     }
 

@@ -6,6 +6,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Fixed
+- The radio actually plays its records now: the periodic audio refresh was
+  resetting the loop buffer every couple of seconds, restarting the track
+  endlessly (which left you hearing mostly the chiptune bed). While a
+  station is on the air the record is handed to the player untouched and
+  the refresh cycle stands down. A headless test now proves the whole load
+  path: a cached WAV loads, joins mid-track, and arms rotation.
+- The quiz opens gently: a new player's first three rounds are three-way
+  picks among the eight most recognizable rooms (times tables, the golden
+  angle, the Mandelbrot set...), then the full catalog opens up. Wins
+  waiting to happen, then the deep end.
 - The window-game crash on large displays: the drawing surface clamps at a
   maximum dimension, but the game paths told the era filter and the blitter
   the window's size instead of the raster's, out of bounds the moment a
