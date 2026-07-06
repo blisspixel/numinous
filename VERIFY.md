@@ -167,7 +167,7 @@ complete RPG spine (levels to 42 with lore, locks, 18 trophies with pings, the
 Gauntlet run, boons, daily streaks, resonances), the Studio (plot, animate,
 sing, in the terminal and the window), Visual Eras (including PNG output),
 Music Engine A (the seeded chiptune, `numinous tune`), GPU real-time fractals,
-live sound everywhere, the `forget` right for players who are minds, and 22
+live sound everywhere, the `forget` right for players who are minds, and 25
 MCP tools (full CLI parity) so agents play the same content. Pending (see `ROADMAP.md`): the
 chiptune wired into the app as its score, games inside the window, Engine B
 (the radio), the music visualizer, and more GPU room paths.
