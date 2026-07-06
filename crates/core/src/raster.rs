@@ -89,6 +89,22 @@ impl Raster {
         }
     }
 
+    /// Dim only the rows from `y0` to `y1` (clamped): a legibility band
+    /// behind HUD text, so words stay readable over bright rooms.
+    pub fn dim_rows(&mut self, y0: i32, y1: i32, keep: u32) {
+        let keep = keep.min(100);
+        let from = y0.max(0) as usize;
+        let to = (y1.max(0) as usize).min(self.height);
+        for y in from..to {
+            for x in 0..self.width {
+                let pixel = &mut self.pixels[y * self.width + x];
+                for channel in pixel.iter_mut() {
+                    *channel = ((u32::from(*channel) * keep) / 100) as u8;
+                }
+            }
+        }
+    }
+
     /// Replace this raster's pixels from an RGBA byte buffer (alpha ignored;
     /// extra or missing bytes are tolerated). Brings a post-processed frame,
     /// for example a visual era, back onto a raster.
@@ -215,6 +231,23 @@ mod tests {
             "should darken hard: {bright} -> {dimmed}"
         );
         raster.dim(150); // clamped to 100: no brightening, no overflow
+    }
+
+    #[test]
+    fn dim_rows_darkens_only_the_band() {
+        let mut raster = Raster::new(2, 4);
+        for y in 0..4 {
+            raster.plot(0, y, '#');
+        }
+        let before = raster.to_rgba();
+        raster.dim_rows(1, 3, 20);
+        let after = raster.to_rgba();
+        let px = |buf: &Vec<u8>, y: usize| buf[y * 2 * 4];
+        assert_eq!(px(&before, 0), px(&after, 0), "above the band untouched");
+        assert!(px(&after, 1) < px(&before, 1), "inside the band darker");
+        assert!(px(&after, 2) < px(&before, 2));
+        assert_eq!(px(&before, 3), px(&after, 3), "below the band untouched");
+        raster.dim_rows(-5, 99, 50); // clamps, never panics
     }
 
     #[test]
