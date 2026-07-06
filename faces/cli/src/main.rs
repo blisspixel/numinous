@@ -233,6 +233,12 @@ enum Command {
         #[arg(long, default_value_t = 3)]
         rounds: usize,
     },
+    /// Nim: three heaps against the Order. Lose, learn, become unbeatable.
+    Nim {
+        /// Seed (the same seed is the same heaps).
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+    },
     /// The Gauntlet: one run, four games, a combo, one number at the end.
     Gauntlet {
         /// Seed (the same seed is the same run, for anyone).
@@ -609,7 +615,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             ExitCode::SUCCESS
         }
         Command::Journey => {
-            print!("{}", journey_report(journey));
+            print!("{}", journey_report(journey, &load_scores()));
             ExitCode::SUCCESS
         }
         Command::Choose => choose(journey),
@@ -678,6 +684,7 @@ Erase the journey with: numinous forget --confirm  (add --scores for the table)"
             daily,
             rounds,
         } => munch(pick_seed(seed, daily, journey), rounds, journey),
+        Command::Nim { seed } => nim(seed, journey),
         Command::Gauntlet { seed, daily } => gauntlet(pick_seed(seed, daily, journey), journey),
         Command::Answer => {
             if still_locked(journey, numinous_core::MAX_LEVEL, "the answer") {
@@ -1129,7 +1136,7 @@ fn choose(journey: &mut Journey) -> ExitCode {
 }
 
 /// Your constellation and standing, shown plainly and explained never.
-fn journey_report(journey: &Journey) -> String {
+fn journey_report(journey: &Journey, board: &numinous_core::Scoreboard) -> String {
     let mut wall = String::new();
     for &(level, name, what) in numinous_core::UNLOCKS {
         if journey.level() >= level {
@@ -1154,7 +1161,14 @@ fn journey_report(journey: &Journey) -> String {
             String::new()
         },
         journey.rank().name()
-    )
+    ) + &{
+        let active: Vec<String> = numinous_core::resonances(journey, board)
+            .into_iter()
+            .filter(|r| r.active)
+            .map(|r| format!("\nRESONANCE  {}\n  {}\n", r.name, r.lore))
+            .collect();
+        active.join("")
+    }
 }
 
 /// True (and says so) if `what` is still locked at this journey's level.
@@ -1520,6 +1534,62 @@ fn quiz_remark(score: usize, rounds: usize) -> &'static str {
         100 => "Flawless. You see the math behind the shape.",
         60..=99 => "Sharp eye.",
         _ => "The shapes are sneaky. Play again.",
+    }
+}
+
+/// Draw the heaps as rows of stones.
+fn nim_board(heaps: &[u32]) -> String {
+    heaps
+        .iter()
+        .enumerate()
+        .map(|(i, &h)| format!("  {}) {}", i + 1, "O ".repeat(h as usize)))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Play nim against the Order. Winning earns the secret, spoken in full.
+fn nim(seed: u64, journey: &mut Journey) -> ExitCode {
+    let stdin = std::io::stdin();
+    let mut input = stdin.lock();
+    let mut heaps = numinous_core::nim_new(seed);
+    journey.play();
+    println!("NIM  seed {seed}. Take any number from one heap; last stone wins.");
+    println!("The Order plays a secret. Beat it and the secret is yours.");
+    loop {
+        println!("\n{}", nim_board(&heaps));
+        print!("heap amount > ");
+        let _ = std::io::stdout().flush();
+        let mut line = String::new();
+        if input.read_line(&mut line).unwrap_or(0) == 0 {
+            println!();
+            return ExitCode::SUCCESS;
+        }
+        let nums: Vec<u32> = line
+            .split_whitespace()
+            .filter_map(|w| w.parse().ok())
+            .collect();
+        let (Some(&heap), Some(&take)) = (nums.first(), nums.get(1)) else {
+            println!("  Two numbers: which heap, how many. Like: 2 3");
+            continue;
+        };
+        if heap == 0 || !numinous_core::nim_apply(&mut heaps, heap as usize - 1, take) {
+            println!("  That move is not on the board.");
+            continue;
+        }
+        if numinous_core::nim_finished(&heaps) {
+            journey.win();
+            post_score(&format!("nim seed:{seed}"), 1);
+            println!("\nYou took the last stone. The Order concedes, and keeps its word:");
+            println!("\n{}", numinous_core::nim_secret());
+            return ExitCode::SUCCESS;
+        }
+        let (oh, ot) = numinous_core::nim_order(&heaps);
+        let _ = numinous_core::nim_apply(&mut heaps, oh, ot);
+        println!("  The Order takes {ot} from heap {}.", oh + 1);
+        if numinous_core::nim_finished(&heaps) {
+            println!("\nThe Order takes the last stone. Again. (It is not luck.)");
+            return ExitCode::SUCCESS;
+        }
     }
 }
 
@@ -2173,14 +2243,32 @@ mod tests {
     #[test]
     fn journey_report_shows_the_sky_and_the_rank() {
         let mut journey = numinous_core::Journey::default();
-        let fresh = super::journey_report(&journey);
+        let fresh = super::journey_report(&journey, &numinous_core::Scoreboard::default());
         assert!(fresh.contains("0 of"));
         assert!(fresh.contains("Outsider"));
         journey.visit("lorenz");
-        let one = super::journey_report(&journey);
+        let one = super::journey_report(&journey, &numinous_core::Scoreboard::default());
         assert!(one.contains("1 of"));
         assert!(one.contains("Akousmatikos"));
         assert!(one.contains('#'), "a lit star");
+    }
+
+    #[test]
+    fn nim_board_draws_stones_per_heap() {
+        let text = super::nim_board(&[3, 1, 0]);
+        assert!(text.contains("1) O O O"));
+        assert!(text.contains("2) O"));
+        assert_eq!(text.lines().count(), 3);
+    }
+
+    #[test]
+    fn resonances_appear_in_the_journey_when_lit() {
+        let mut journey = numinous_core::Journey::default();
+        journey.visit("mandelbrot");
+        journey.visit("julia");
+        let report = super::journey_report(&journey, &numinous_core::Scoreboard::default());
+        assert!(report.contains("RESONANCE  The Atlas"));
+        assert!(report.contains("atlas"), "the lore line rides along");
     }
 
     #[test]

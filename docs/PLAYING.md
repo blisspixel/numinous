@@ -53,6 +53,7 @@ numinous quiz                     name the math behind a mystery shape
 numinous seti                     find the artificial signal in the static
 numinous aliens                   answer the transmission
 numinous crack                    defuse the bomb before your guesses run out
+nimble? try:  numinous nim       beat the Order, earn its secret
 numinous scores                   the high-score table
 numinous journey                  your constellation, level, and locks
 numinous trophies                 the case: what you earned, what still waits
@@ -84,7 +85,7 @@ Numinous is an MCP server. Add it to any MCP client:
 ```
 
 Transport is JSON-RPC 2.0 over newline-delimited stdio, protocol revision
-2025-06-18. Fourteen tools, all flat schemas, all stateless per call:
+2025-06-18. Sixteen tools, all flat schemas, all stateless per call:
 
 | Tool | What it does |
 |---|---|
@@ -100,6 +101,8 @@ Transport is JSON-RPC 2.0 over newline-delimited stdio, protocol revision
 | `plot_expression` | your own function, plotted |
 | `sing_expression` | your own function, as note-by-note melody |
 | `explain_joke` | the humor, dissected structurally |
+| `nim` | beat the Order: pass your move history, replies are deterministic |
+| `forget` | see everything remembered; erase it on your explicit word |
 | `journey` | your level, XP, constellation, and locks |
 | `scores` | the shared high-score table |
 

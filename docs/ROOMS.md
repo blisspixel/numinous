@@ -263,8 +263,8 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [x] **Phyllotaxis / packing** — the Golden Angle again (geometry door this time).
 
 ## Change (analysis)
-- [ ] **Integration** — The Pour: area pours like water; the fill level traces the antiderivative; reverse the pour and you are differentiating.
-- [ ] **Differentiation** — Slope Rider: ride the tangent; your speed is the derivative; inflections are the jumps.
+- [x] **Integration** — The Pour: area pours like water; the fill level traces the antiderivative; reverse the pour and you are differentiating.
+- [x] **Differentiation** — Slope Rider: ride the tangent; your speed is the derivative; inflections are the jumps.
 - [ ] **Limits** — Zeno's Runner: sprint half the remaining distance per tap; the wall arrives anyway.
 - [ ] **Fourier** — the Epicycle Draw: any shape you doodle, rebuilt by circles on circles.
 - [x] **Differential equations** — Lorenz: three equations, weather, the butterfly.
@@ -294,14 +294,14 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [x] **Godel, strange loops** — the lore layer's deep water (LORE.md), never a lecture.
 
 ## Decision (games and fairness)
-- [ ] **Nim** — play it, lose repeatedly, then be handed the xor secret and become unbeatable; the transfer of power is the lesson.
+- [x] **Nim** — play it, lose repeatedly, then be handed the xor secret and become unbeatable; the transfer of power is the lesson.
 - [ ] **Prisoner's dilemma** — an iterated tournament against strategies with personalities; tit-for-tat wins hearts.
 - [ ] **Voting paradoxes** — run the same three-candidate election under five systems and crown five different winners.
 - [ ] **Fair division** — cut the cake: I-cut-you-choose, then envy-free for three; fairness as a mechanic, not a sermon.
 
 ## Motion and dynamics
 - [x] **Deterministic chaos** — the logistic cascade; Lorenz; Langton's Ant.
-- [ ] **Double pendulum** — grab it, drop it, and watch two of them disagree from a pixel of difference.
+- [x] **Double pendulum** — grab it, drop it, and watch two of them disagree from a pixel of difference.
 - [ ] **Three-body problem** — place three suns and try to make them dance forever; grief teaches what "no closed-form solution" means.
 - [x] **Resonance and harmony** — Lissajous, the harmonograph, every room's sound; the kanon whisper.
 

@@ -121,6 +121,13 @@ fn record_progress(request: &Value, path: &std::path::Path) {
             }
         }
         "run_sim" | "plot_expression" | "sing_expression" => journey.play(),
+        "nim" => {
+            if let Some(list) = args.get("moves").and_then(Value::as_array)
+                && !list.is_empty()
+            {
+                journey.play();
+            }
+        }
         "munch" => {
             if let Some(raw) = args.get("bites").and_then(Value::as_array) {
                 journey.play();
@@ -362,6 +369,18 @@ fn tools_list_result() -> Value {
                 "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
             },
             {
+                "name": "nim",
+                "description": "Nim against the Order: three heaps, take any amount from one heap, last stone wins. Stateless: pass your full move history as moves (pairs of [heap, take], 1-based heap); the Order's perfect replies are deterministic, so the same seed and moves always give the same game. Beat it and it teaches you its secret.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "seed": { "type": "integer", "description": "Seed; the same seed gives the same starting heaps." },
+                        "moves": { "type": "array", "items": { "type": "array", "items": { "type": "integer" } }, "description": "Your moves so far, in order: [[heap, take], ...]. Omit to see the opening board." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
                 "name": "journey",
                 "description": "Your journey: level (the cap is 42), XP bar, the constellation of rooms you have entered, and what is unlocked. Playing any tool advances it: rooms entered, sims run, expressions made, quiz rounds answered. Anyone who keeps playing reaches the cap.",
                 "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
@@ -409,6 +428,7 @@ fn call_tool(
         "quiz" => Ok(quiz_tool(&args)),
         "munch" => Ok(munch_tool(&args)),
         "journey" => Ok(journey_tool(journey_file)),
+        "nim" => Ok(nim_tool(&args)),
         "scores" => Ok(scores_tool(&scores_path())),
         "forget" => Ok(forget_tool(&args, journey_file, &scores_path())),
         "plot_expression" => Ok(plot_expression_tool(&args)),
@@ -716,6 +736,65 @@ fn scores_tool(path: &std::path::Path) -> Value {
     tool_structured(&lines.join("\n"), json!({ "top": structured }))
 }
 
+/// The `nim` tool: replay the whole game from the move list, statelessly.
+fn nim_tool(args: &Value) -> Value {
+    let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+    let mut heaps = numinous_core::nim_new(seed);
+    let mut narration = Vec::new();
+    let moves: Vec<(usize, u32)> = args
+        .get("moves")
+        .and_then(Value::as_array)
+        .map(|list| {
+            list.iter()
+                .filter_map(|m| {
+                    let pair = m.as_array()?;
+                    let heap = pair.first()?.as_u64()? as usize;
+                    let take = pair.get(1)?.as_u64()? as u32;
+                    Some((heap, take))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    for (heap, take) in moves {
+        if heap == 0 || !numinous_core::nim_apply(&mut heaps, heap - 1, take) {
+            return tool_error(&format!(
+                "Illegal move: take {take} from heap {heap}. Heaps now: {heaps:?}."
+            ));
+        }
+        if numinous_core::nim_finished(&heaps) {
+            return tool_structured(
+                &format!(
+                    "You took the last stone. The Order concedes, and keeps its word:\n\n{}",
+                    numinous_core::nim_secret()
+                ),
+                json!({ "game": "nim", "seed": seed, "won": true }),
+            );
+        }
+        let (oh, ot) = numinous_core::nim_order(&heaps);
+        let _ = numinous_core::nim_apply(&mut heaps, oh, ot);
+        narration.push(format!("The Order takes {ot} from heap {}.", oh + 1));
+        if numinous_core::nim_finished(&heaps) {
+            return tool_structured(
+                "The Order takes the last stone. Again. (It is not luck.)",
+                json!({ "game": "nim", "seed": seed, "won": false }),
+            );
+        }
+    }
+    let board: Vec<String> = heaps
+        .iter()
+        .enumerate()
+        .map(|(i, &h)| format!("  {}) {}", i + 1, "O ".repeat(h as usize)))
+        .collect();
+    tool_structured(
+        &format!(
+            "NIM seed {seed}. Last stone wins.\n{}\n{}\nMove by calling again with your full move list.",
+            narration.join("\n"),
+            board.join("\n")
+        ),
+        json!({ "game": "nim", "seed": seed, "heaps": heaps }),
+    )
+}
+
 /// The `journey` tool: an agent's own level, sky, and standing.
 fn journey_tool(path: &std::path::Path) -> Value {
     let journey = load_journey(path);
@@ -899,7 +978,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 15);
+        assert_eq!(tools.len(), 16);
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
         assert!(names.contains(&"reveal_room"));
         assert!(names.contains(&"run_sim"));
@@ -912,6 +991,47 @@ mod tests {
         assert!(names.contains(&"munch"));
         assert!(names.contains(&"scores"));
         assert!(names.contains(&"forget"));
+        assert!(names.contains(&"nim"));
+    }
+
+    #[test]
+    fn nim_replays_statelessly_and_teaches_on_victory() {
+        let opening = handle_request(&json!({
+            "jsonrpc":"2.0","id":80,"method":"tools/call",
+            "params":{"name":"nim","arguments":{"seed":3}}
+        }))
+        .expect("must respond");
+        let heaps = opening["result"]["structuredContent"]["heaps"]
+            .as_array()
+            .expect("heaps")
+            .clone();
+        assert_eq!(heaps.len(), 3);
+        // Play the Order's own strategy against it: compute the zeroing move.
+        let h: Vec<u32> = heaps.iter().map(|v| v.as_u64().unwrap() as u32).collect();
+        let x = h.iter().fold(0u32, |a, &v| a ^ v);
+        let (i, take) = h
+            .iter()
+            .enumerate()
+            .find_map(|(i, &v)| ((v ^ x) < v).then(|| (i, v - (v ^ x))))
+            .expect("a winning move exists: the openings are winnable");
+        let reply = handle_request(&json!({
+            "jsonrpc":"2.0","id":81,"method":"tools/call",
+            "params":{"name":"nim","arguments":{"seed":3,"moves":[[i+1,take]]}}
+        }))
+        .expect("must respond");
+        assert_eq!(reply["result"]["isError"], false);
+        // Either the game continues deterministically or it is already won.
+        let text = reply["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("Order") || text.contains("secret"));
+
+        let bad = handle_request(&json!({
+            "jsonrpc":"2.0","id":82,"method":"tools/call",
+            "params":{"name":"nim","arguments":{"seed":3,"moves":[[9,1]]}}
+        }))
+        .expect("must respond");
+        assert_eq!(bad["result"]["isError"], true);
     }
 
     #[test]
