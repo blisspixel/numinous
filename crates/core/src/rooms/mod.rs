@@ -10,6 +10,7 @@ pub mod double_pendulum;
 pub mod epicycles;
 pub mod galton_board;
 pub mod game_of_life;
+pub mod goldbach;
 pub mod golden_angle;
 pub mod harmonograph;
 pub mod julia;
