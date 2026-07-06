@@ -99,7 +99,7 @@ impl Room for RandomWalk {
         for i in 0..ring {
             let a = TAU * i as f64 / ring as f64;
             let (px, py) = to_screen(law * a.cos(), law * a.sin());
-            canvas.plot(px, py, '*');
+            canvas.plot(px, py, '#');
         }
     }
 
