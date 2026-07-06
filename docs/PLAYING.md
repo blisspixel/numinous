@@ -30,6 +30,8 @@ your hands already know it:
 | F | fullscreen |
 | M | sound on / off |
 | B | The Show: sit back, it plays itself |
+| G | the quiz, in the window: name the math |
+| J | your journey: level, rank, trophies, resonances |
 | Tab | the Studio: type math, watch and hear it live |
 | Esc | menu |
 
