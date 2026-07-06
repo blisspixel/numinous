@@ -43,6 +43,11 @@ hardware and excluded from the coverage gate, see `docs/QUALITY.md`).
 cargo install --path faces/cli --force
 ```
 
+If a shell says numinous is not recognized, the cargo bin directory is
+missing from PATH: add `%USERPROFILE%' + chr(92) + '.cargo' + chr(92) + 'bin` to the user PATH once
+(Settings, or `[Environment]::SetEnvironmentVariable` in PowerShell), then
+open a new terminal.
+
 Then the CLI is just the word, anywhere: `numinous` alone opens the front
 door (today's room in color, your level, the verbs that matter);
 `numinous play` lists the games; `numinous play munch` deals today's board.
