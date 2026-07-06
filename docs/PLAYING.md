@@ -30,10 +30,11 @@ your hands already know it:
 | F | fullscreen |
 | M | sound on / off |
 | B | The Show: sit back, it plays itself |
-| G | the quiz, in the window: name the math |
-| C | Munch, in the window: cursor over the board, eat what fits |
-| N | Nim, in the window: aim your take, beat the Order |
-| T | the Gauntlet, in the window: four stages, a combo, one number |
+| Esc | the menu: play (G quiz, C munch, N nim, T gauntlet) and every control |
+| G (in the menu) | the quiz: name the math |
+| C (in the menu) | Munch: cursor over the board, eat what fits |
+| N (in the menu) | Nim: aim your take, beat the Order |
+| T (in the menu) | the Gauntlet: four stages, a combo, one number |
 | J | your journey: level, rank, trophies, resonances |
 | P | keep the picture: saves the room as a PNG postcard |
 | Y | the radio dial: off, trance, chill, synthwave (cached stations) |
