@@ -328,6 +328,10 @@ enum Command {
         /// Track length in seconds (10 to 300).
         #[arg(long, default_value_t = 120)]
         seconds: u64,
+        /// How many tracks to add to the station's playlist (each is one
+        /// paid API call; briefs vary per track).
+        #[arg(long, default_value_t = 1)]
+        count: usize,
     },
     /// Compose a seeded chiptune and write it as a WAV (Music Engine A).
     Tune {
@@ -797,7 +801,11 @@ Erase the journey with: numinous forget --confirm  (add --scores for the table)"
             println!("Cached tracks live in ~/.numinous-radio/. Set ELEVENLABS_API_KEY to tune.");
             ExitCode::SUCCESS
         }
-        Command::Tune2 { station, seconds } => radio_tune(&station, seconds),
+        Command::Tune2 {
+            station,
+            seconds,
+            count,
+        } => radio_tune(&station, seconds, count.clamp(1, 10)),
         Command::Tune { seed, bars, out } => {
             journey.play();
             emit(tune_wav(seed, bars, &out))
@@ -862,7 +870,7 @@ fn radio_dir() -> PathBuf {
 
 /// Tune a station: call ElevenLabs Music with the station's brief, receive
 /// raw PCM, and cache it as a WAV the app and CLI can loop.
-fn radio_tune(station_id: &str, seconds: u64) -> ExitCode {
+fn radio_tune(station_id: &str, seconds: u64, count: usize) -> ExitCode {
     let Some(station) = numinous_core::station(station_id) else {
         eprintln!("No station '{station_id}' on the dial. See: numinous radio");
         return ExitCode::FAILURE;
@@ -874,12 +882,49 @@ fn radio_tune(station_id: &str, seconds: u64) -> ExitCode {
         return ExitCode::FAILURE;
     };
     let seconds = seconds.clamp(10, 300);
+    let dir = radio_dir();
+    let _ = std::fs::create_dir_all(&dir);
+    let existing = std::fs::read_dir(&dir)
+        .map(|entries| {
+            entries
+                .filter_map(Result::ok)
+                .filter(|e| {
+                    e.file_name()
+                        .to_string_lossy()
+                        .starts_with(&format!("{}-", station.id))
+                })
+                .count()
+        })
+        .unwrap_or(0);
+    for track in existing..existing + count {
+        if !fetch_track(station, track, seconds, &key, &dir) {
+            return ExitCode::FAILURE;
+        }
+    }
     println!(
-        "Tuning {} ({}): {} seconds...",
-        station.id, station.name, seconds
+        "{} has {} track(s) on rotation. In the app, Y tunes the dial; the station is always on the air.",
+        station.name,
+        existing + count
+    );
+    ExitCode::SUCCESS
+}
+
+/// Fetch one track of a station's playlist. True on success.
+fn fetch_track(
+    station: &numinous_core::Station,
+    track: usize,
+    seconds: u64,
+    key: &str,
+    dir: &Path,
+) -> bool {
+    println!(
+        "Tuning {} ({}): track {:03}, {seconds} seconds...",
+        station.id,
+        station.name,
+        track + 1
     );
     let body = serde_json::json!({
-        "prompt": station.brief,
+        "prompt": numinous_core::brief_for(station, track),
         "music_length_ms": seconds * 1000,
     });
     let response = ureq::post("https://api.elevenlabs.io/v1/music?output_format=pcm_44100")
@@ -892,17 +937,17 @@ fn radio_tune(station_id: &str, seconds: u64) -> ExitCode {
         Err(ureq::Error::Status(code, r)) => {
             let detail = r.into_string().unwrap_or_default();
             eprintln!("The station is off the air (HTTP {code}): {detail}");
-            return ExitCode::FAILURE;
+            return false;
         }
         Err(e) => {
             eprintln!("Could not reach the tower: {e}");
-            return ExitCode::FAILURE;
+            return false;
         }
     };
     let mut pcm = Vec::new();
     if let Err(e) = std::io::copy(&mut response.into_reader(), &mut pcm) {
         eprintln!("The signal broke up: {e}");
-        return ExitCode::FAILURE;
+        return false;
     }
     // Raw 16-bit little-endian PCM at 44.1k: wrap it in a WAV.
     let samples: Vec<f32> = pcm
@@ -914,24 +959,21 @@ fn radio_tune(station_id: &str, seconds: u64) -> ExitCode {
             "The tower sent almost nothing ({} bytes). Try again.",
             pcm.len()
         );
-        return ExitCode::FAILURE;
+        return false;
     }
-    let dir = radio_dir();
-    let _ = std::fs::create_dir_all(&dir);
-    let path = dir.join(format!("{}.wav", station.id));
+    let path = dir.join(format!("{}-{:03}.wav", station.id, track + 1));
     match write_wav(&path, &samples, 44_100) {
         Ok(()) => {
             println!(
-                "ON AIR: {} cached to {} ({:.0}s). The app picks it up next launch.",
-                station.name,
+                "  ON AIR: {} ({:.0}s)",
                 path.display(),
                 samples.len() as f64 / 44_100.0
             );
-            ExitCode::SUCCESS
+            true
         }
         Err(e) => {
             eprintln!("could not cache the track: {e}");
-            ExitCode::FAILURE
+            false
         }
     }
 }
