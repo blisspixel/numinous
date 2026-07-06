@@ -156,12 +156,21 @@ impl Arcade {
             .all(|(i, &n)| self.eaten[i] || !self.board.rule.fits(n))
     }
 
-    /// One full turn: the player acts, then every spirit steps.
+    /// One full turn: the player acts, then every spirit steps. (The
+    /// turn-based faces use this; real time calls `act` and `tick` apart.)
     pub fn turn(&mut self, action: Action) -> Turn {
+        let acted = self.act(action);
+        if acted != Turn::Going {
+            return acted;
+        }
+        self.tick()
+    }
+
+    /// The player's half alone: move or eat, and settle clears.
+    pub fn act(&mut self, action: Action) -> Turn {
         if self.lives == 0 {
             return Turn::Over;
         }
-        self.turns += 1;
         // The player's half.
         match action {
             Action::Up => {
@@ -201,7 +210,15 @@ impl Arcade {
             self.spawn_vexations();
             return Turn::Cleared;
         }
-        // The spirits' half.
+        Turn::Going
+    }
+
+    /// The spirits' half alone: every Vexation steps; contact is judged.
+    pub fn tick(&mut self) -> Turn {
+        if self.lives == 0 {
+            return Turn::Over;
+        }
+        self.turns += 1;
         let mut rng = SplitMix64::new(self.seed ^ ARCADE_MIX ^ self.turns);
         let muncher = self.muncher;
         let mut caught = false;
