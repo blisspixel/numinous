@@ -35,18 +35,22 @@ fn main() {
         raster.dim(22);
         let menu_scale = (width as i32 / 300).clamp(2, 4);
         let lines = [
-            "A / D      PREV / NEXT ROOM",
-            "1 - 9      JUMP TO ROOM",
-            "W / S      TIME FASTER / SLOWER",
-            "MOUSE      DRAG OR WHEEL TO SCRUB",
-            "E          INSPECT THE MATH",
-            "Q          SWAP ERA",
-            "R          RESTART SWEEP",
-            "F          FULLSCREEN",
+            "PLAY",
+            "G          THE QUIZ: NAME THE MATH",
+            "C          MUNCH: EAT WHAT FITS",
+            "N          NIM: BEAT THE ORDER",
+            "T          THE GAUNTLET: ONE RUN",
+            "",
+            "WANDER",
+            "A / D      PREV / NEXT ROOM    1-9 JUMP",
+            "W / S      TIME SPEED   MOUSE  SCRUB",
+            "E          INSPECT    Q  ERA    R  RESTART",
+            "B          THE SHOW   TAB  THE STUDIO",
+            "J          JOURNEY    F  FULLSCREEN",
+            "Y          RADIO STATIONS    P  POSTCARD",
             "M          SOUND      SPACE  PAUSE",
-            "TAB        THE STUDIO",
-            "B          THE SHOW: SIT BACK",
-            "ESC        CLOSE MENU (X QUITS)",
+            "",
+            "ESC        CLOSE MENU AND WANDER",
         ];
         let line_height = 11 * menu_scale;
         let top = (height as i32 / 2) - (lines.len() as i32 * line_height) / 2;
@@ -76,9 +80,36 @@ fn main() {
             scale + 1,
             '#',
         );
+        // The arrival card under the title, as the app draws it.
+        let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
+        for (i, line) in wrap_text(&room.meta().blurb.to_uppercase(), columns)
+            .iter()
+            .take(3)
+            .enumerate()
+        {
+            draw_text(
+                &mut raster,
+                line,
+                10,
+                10 + (2 + i as i32) * 9 * scale,
+                scale,
+                '#',
+            );
+        }
         draw_text(
             &mut raster,
-            "ESC MENU   M SOUND   Q ERA   E INSPECT",
+            "(E FOR THE WHOLE STORY)",
+            10,
+            10 + 5 * 9 * scale,
+            scale,
+            '-',
+        );
+        let level = "LV 7";
+        let lx = width as i32 - (level.len() as i32 * 6 * scale) - 10;
+        draw_text(&mut raster, level, lx, 10, scale, '#');
+        draw_text(
+            &mut raster,
+            "G QUIZ   C MUNCH   N NIM   T RUN   E INSPECT   ESC MENU",
             10,
             height as i32 - 10 * scale,
             scale,

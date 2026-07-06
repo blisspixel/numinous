@@ -997,7 +997,12 @@ impl App {
             );
             // The arrival card: the room explains itself for a few seconds,
             // then gets out of the way. E brings the full story anytime.
-            if self.room_card > 0 && !self.show_info && !self.show_help {
+            if self.room_card > 0
+                && !self.show_info
+                && !self.show_help
+                && !self.show_journey
+                && self.banner.is_none()
+            {
                 let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
                 for (i, line) in
                     numinous_core::wrap_text(&room.meta().blurb.to_uppercase(), columns)
@@ -1065,6 +1070,7 @@ impl App {
                 "E          INSPECT    Q  ERA    R  RESTART",
                 "B          THE SHOW   TAB  THE STUDIO",
                 "J          JOURNEY    F  FULLSCREEN",
+                "Y          RADIO STATIONS    P  POSTCARD",
                 "M          SOUND      SPACE  PAUSE",
                 "",
                 "ESC        CLOSE MENU AND WANDER",
@@ -1233,9 +1239,12 @@ impl App {
                 };
                 numinous_core::draw_text(&mut raster, &verdict, 10, 10, scale + 1, '#');
                 let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
+                let room_for =
+                    ((height as i32 - 3 * line_height - 20) / line_height - 3).max(2) as usize;
                 for (i, line) in
                     numinous_core::wrap_text(&quiz.round.answer_reveal.to_uppercase(), columns)
                         .iter()
+                        .take(room_for)
                         .enumerate()
                 {
                     numinous_core::draw_text(
@@ -1547,13 +1556,13 @@ impl App {
                 raster
             }
         };
-        // The run's narration rides the top edge on every stage but the last.
+        // The run's narration rides its own band, clear of the stage hints.
         if run.stage < 4 {
             numinous_core::draw_text(
                 &mut raster,
                 &run.message,
                 10,
-                height as i32 - 10 * scale,
+                height as i32 - 34 * scale,
                 scale,
                 '#',
             );
