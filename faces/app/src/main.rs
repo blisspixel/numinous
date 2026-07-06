@@ -52,6 +52,8 @@ struct App {
     era: numinous_core::Era,
     /// Sound off ('m' toggles).
     muted: bool,
+    /// Master volume, 0.0 to 1.0 ('-' and '=' step it).
+    volume: f32,
     /// The help overlay ('h' toggles; shown at launch so nobody is lost).
     show_help: bool,
     /// Frame counter, used to refresh the audio as the phase sweeps.
@@ -166,6 +168,7 @@ impl App {
             gpu: None,
             era: numinous_core::Era::default(),
             muted: false,
+            volume: 0.7,
             show_help: true,
             frame: 0,
             time_scale: 1.0,
@@ -751,7 +754,8 @@ impl App {
         if !self.muted
             && let Some(player) = &self.player
         {
-            player.set_stereo(self.radio_track.clone());
+            let volume = self.volume;
+            player.set_stereo(self.radio_track.iter().map(|&s| s * volume).collect());
         }
     }
 
@@ -846,7 +850,8 @@ impl App {
                 *sample = (*sample * 0.55 + tone[i % tone.len()] * 0.45).clamp(-1.0, 1.0);
             }
         }
-        player.set_samples(mix);
+        let volume = self.volume;
+        player.set_samples(mix.into_iter().map(|s| s * volume).collect());
     }
 
     fn title(&self) -> String {
@@ -1127,7 +1132,7 @@ impl App {
                 "B          THE SHOW   TAB  THE STUDIO",
                 "J          JOURNEY    F  FULLSCREEN",
                 "Y          RADIO STATIONS    P  POSTCARD",
-                "M          SOUND      SPACE  PAUSE",
+                "M          SOUND   - / =  VOLUME   SPACE  PAUSE",
                 "",
                 "ESC        CLOSE MENU AND WANDER",
             ];
@@ -1908,6 +1913,18 @@ impl ApplicationHandler for App {
                                         winit::window::Fullscreen::Borderless(None),
                                     ));
                                 }
+                            }
+                        }
+                        // Volume steps: '-' softer, '=' louder.
+                        Key::Character(c) if c.as_str() == "-" || c.as_str() == "=" => {
+                            let step = if c.as_str() == "-" { -0.1 } else { 0.1 };
+                            self.volume = (self.volume + step).clamp(0.0, 1.0);
+                            self.banner =
+                                Some((vec![format!("VOLUME {:.0}%", self.volume * 100.0)], 90));
+                            if self.radio.is_some() {
+                                self.tune_in();
+                            } else {
+                                self.update_audio();
                             }
                         }
                         Key::Character(c) if c.as_str() == "m" => {
