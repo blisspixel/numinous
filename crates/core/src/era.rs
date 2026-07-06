@@ -89,6 +89,17 @@ impl Era {
                     pixel[1] = lum.min(255) as u8;
                     pixel[2] = (lum / 4).min(255) as u8;
                 }
+                // The glass: every third scanline sits darker, like the tube.
+                for y in (0..height).step_by(3) {
+                    for x in 0..width {
+                        let o = (y * width + x) * 4;
+                        if o + 2 < rgba.len() {
+                            rgba[o] = (u16::from(rgba[o]) * 6 / 10) as u8;
+                            rgba[o + 1] = (u16::from(rgba[o + 1]) * 6 / 10) as u8;
+                            rgba[o + 2] = (u16::from(rgba[o + 2]) * 6 / 10) as u8;
+                        }
+                    }
+                }
             }
             Era::EightBit => {
                 pixelate(rgba, width, height, 2);

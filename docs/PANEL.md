@@ -68,6 +68,11 @@ is absent anymore; everything on this list makes an existing organ stronger.
 
 ## The list, in order
 
+> Progress: items 1 (first serving), 2, 3, 5, and the phosphor half of 8 are
+> built. Motifs (4), Open Problems (6), citations (7), crossfade, the
+> visualizer, gamepad, and the spark cap remain.
+
+
 1. **Juice in the window games**: per-action feedback (flash on eat, shake
    on bad bite, a tick sound per action from the chiptune voices).
 2. **Mouse support**: click a munch cell, click a quiz choice, click stones.

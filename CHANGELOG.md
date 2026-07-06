@@ -6,6 +6,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Panel list, first serving (depth where the hands touch):
+  - Munch grows judgment: from round two the rule deck deepens with digit
+    sums, composites (91 is the classic trap, and the test says so), and
+    Fibonacci numbers; boards stay guaranteed edible.
+  - The aliens leave decimal more often: half of all transmissions now
+    arrive in base 8, 2, 16, or 12.
+  - Mouse support: click munch cells to eat them, click quiz choices to
+    answer, click the reveal for the next round. The kid's first instinct
+    finally works.
+  - P is the postcard key: saves the current room's frame as a PNG in your
+    home directory, named for the room and phase.
+  - Juice: the munch cursor breathes (a two-frame pulse).
+  - Phosphor wears its glass: every third scanline sits darker, like the
+    tube it remembers.
 - The panel (`docs/PANEL.md`): a five-seat review of the whole build, a kid,
   a PhD, a stoner creative, the chair, and an AGI seat quoting the real AI
   playtest verbatim (verdict: "yes, I would play again... the number was

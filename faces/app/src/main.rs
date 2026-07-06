@@ -75,6 +75,8 @@ struct App {
     tune: Vec<f32>,
     /// The journey overlay ('j' toggles): level, rank, trophies, resonances.
     show_journey: bool,
+    /// Where the mouse last was, for clicking cells and choices.
+    mouse: (f64, f64),
     /// Where the journey persists (the CLI's file; a scratch file in tests).
     journey_file: std::path::PathBuf,
 }
@@ -166,6 +168,7 @@ impl App {
             gauntlet: None,
             tune: Vec::new(),
             show_journey: false,
+            mouse: (0.0, 0.0),
             journey_file: journey_path(),
         }
     }
@@ -510,6 +513,80 @@ impl App {
             _ => {
                 self.gauntlet = None;
                 self.update_audio();
+            }
+        }
+    }
+
+    /// Write the current room's frame to a PNG next to the save files: the
+    /// postcard key. Returns the path it wrote.
+    fn save_postcard(&self) -> Option<std::path::PathBuf> {
+        let room = &self.rooms[self.current];
+        let mut raster = Raster::with_accent(900, 900, room.meta().accent);
+        room.render(&mut raster, self.t);
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        let path = std::path::PathBuf::from(home).join(format!(
+            "numinous-{}-{:03}.png",
+            room.meta().id,
+            (self.t * 100.0) as u32
+        ));
+        let file = std::fs::File::create(&path).ok()?;
+        let mut encoder = png::Encoder::new(std::io::BufWriter::new(file), 900, 900);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        let mut writer = encoder.write_header().ok()?;
+        writer.write_image_data(&raster.to_rgba()).ok()?;
+        Some(path)
+    }
+
+    /// A click lands in the games: munch toggles the cell, the quiz answers.
+    fn click(&mut self) {
+        let Some(window) = &self.window else {
+            return;
+        };
+        let size = window.inner_size();
+        let (width, height) = (size.width as f64, size.height as f64);
+        if width < 1.0 || height < 1.0 {
+            return;
+        }
+        let (mx, my) = self.mouse;
+        if let Some(play) = &mut self.munch {
+            if play.graded.is_some() {
+                return;
+            }
+            // The same geometry the board is drawn with.
+            let scale = f64::from((width as i32 / 400).clamp(1, 3));
+            let top = 14.0 * scale + 10.0;
+            let cell_w = (width - 20.0) / 6.0;
+            let cell_h = (height - top - 14.0 * scale) / 5.0;
+            if mx >= 10.0 && my >= top && cell_w > 1.0 && cell_h > 1.0 {
+                let col = ((mx - 10.0) / cell_w) as usize;
+                let row = ((my - top) / cell_h) as usize;
+                if col < 6 && row < 5 {
+                    let cell = row * 6 + col;
+                    play.cursor = cell;
+                    let _ = play.bites.remove(&cell) || play.bites.insert(cell);
+                }
+            }
+            return;
+        }
+        if let Some(quiz) = &self.quiz {
+            if quiz.flash.is_some() {
+                self.quiz_next();
+                return;
+            }
+            // The choice rows, same geometry they are drawn with.
+            let scale = f64::from((width as i32 / 400).clamp(1, 3));
+            let line_height = 10.0 * scale;
+            let count = quiz.round.choices.len() as f64;
+            let base = height - (count + 1.0) * line_height - 8.0;
+            if my >= base {
+                let index = ((my - base) / line_height) as usize;
+                if let Some(choice) = quiz.round.choices.get(index) {
+                    let letter = choice.letter;
+                    self.quiz_answer(letter);
+                }
             }
         }
     }
@@ -1052,10 +1129,12 @@ impl App {
             raster.line(x0, y0, x0, y1, mark);
             raster.line(x1, y0, x1, y1, mark);
             if i == play.cursor && play.graded.is_none() {
-                raster.line(x0 + 1, y0 + 1, x1 - 1, y0 + 1, '#');
-                raster.line(x0 + 1, y1 - 1, x1 - 1, y1 - 1, '#');
-                raster.line(x0 + 1, y0 + 1, x0 + 1, y1 - 1, '#');
-                raster.line(x1 - 1, y0 + 1, x1 - 1, y1 - 1, '#');
+                // The cursor breathes: a two-frame pulse, cheap and alive.
+                let inset = if (self.frame / 20) % 2 == 0 { 1 } else { 2 };
+                raster.line(x0 + inset, y0 + inset, x1 - inset, y0 + inset, '#');
+                raster.line(x0 + inset, y1 - inset, x1 - inset, y1 - inset, '#');
+                raster.line(x0 + inset, y0 + inset, x0 + inset, y1 - inset, '#');
+                raster.line(x1 - inset, y0 + inset, x1 - inset, y1 - inset, '#');
             }
             let label = value.to_string();
             let tx = x0 + cell_w / 2 - (label.len() as i32 * 3 * scale);
@@ -1636,6 +1715,17 @@ impl ApplicationHandler for App {
                         Key::Character(c) if c.as_str() == "j" => {
                             self.show_journey = !self.show_journey;
                         }
+                        // P keeps the picture: the postcard key.
+                        Key::Character(c) if c.as_str() == "p" => {
+                            if let Some(path) = self.save_postcard()
+                                && let Some(window) = &self.window
+                            {
+                                window.set_title(&format!(
+                                    "Numinous  |  postcard saved: {}",
+                                    path.display()
+                                ));
+                            }
+                        }
                         // B for the big show (lean back).
                         Key::Character(c) if c.as_str() == "b" => {
                             self.the_show = !self.the_show;
@@ -1672,8 +1762,12 @@ impl ApplicationHandler for App {
                 button: MouseButton::Left,
                 ..
             } => {
-                // Drag horizontally to scrub the room's phase directly.
-                self.dragging = state == ElementState::Pressed;
+                if state == ElementState::Pressed && (self.munch.is_some() || self.quiz.is_some()) {
+                    self.click();
+                } else {
+                    // Drag horizontally to scrub the room's phase directly.
+                    self.dragging = state == ElementState::Pressed;
+                }
             }
             WindowEvent::MouseWheel { delta, .. } if !self.studio => {
                 let lines = match delta {
@@ -1682,6 +1776,9 @@ impl ApplicationHandler for App {
                 };
                 self.t = (self.t + lines * 0.02).rem_euclid(1.0);
                 self.update_audio();
+            }
+            WindowEvent::CursorMoved { position, .. } if !self.dragging => {
+                self.mouse = (position.x, position.y);
             }
             WindowEvent::CursorMoved { position, .. } if self.dragging => {
                 if let Some(window) = &self.window {
