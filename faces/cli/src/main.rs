@@ -860,6 +860,22 @@ fn plot_animate(
     }
 }
 
+/// Read ELEVENLABS_API_KEY from a .env file in the working directory, so a
+/// key can live in the repo root (gitignored) instead of the shell.
+fn env_file_key() -> Result<String, std::env::VarError> {
+    let text = std::fs::read_to_string(".env").map_err(|_| std::env::VarError::NotPresent)?;
+    for line in text.lines() {
+        let line = line.trim();
+        if let Some(value) = line.strip_prefix("ELEVENLABS_API_KEY=") {
+            let value = value.trim().trim_matches('"').trim_matches('\'');
+            if !value.is_empty() {
+                return Ok(value.to_string());
+            }
+        }
+    }
+    Err(std::env::VarError::NotPresent)
+}
+
 /// Where fetched radio tracks live.
 fn radio_dir() -> PathBuf {
     let home = std::env::var("HOME")
@@ -875,7 +891,7 @@ fn radio_tune(station_id: &str, seconds: u64, count: usize) -> ExitCode {
         eprintln!("No station '{station_id}' on the dial. See: numinous radio");
         return ExitCode::FAILURE;
     };
-    let Ok(key) = std::env::var("ELEVENLABS_API_KEY") else {
+    let Ok(key) = std::env::var("ELEVENLABS_API_KEY").or_else(|_| env_file_key()) else {
         eprintln!(
             "Set ELEVENLABS_API_KEY to tune the radio. The station briefs are ready;\n             see docs/MUSIC.md for the pipeline and pricing notes."
         );
@@ -926,6 +942,10 @@ fn fetch_track(
     let body = serde_json::json!({
         "prompt": numinous_core::brief_for(station, track),
         "music_length_ms": seconds * 1000,
+        // Latest model, instrumental guaranteed by the API rather than by
+        // pleading in the prompt. (seed is rejected alongside prompt.)
+        "model_id": "music_v2",
+        "force_instrumental": true,
     });
     let response = ureq::post("https://api.elevenlabs.io/v1/music?output_format=pcm_44100")
         .set("xi-api-key", key)
@@ -949,10 +969,15 @@ fn fetch_track(
         eprintln!("The signal broke up: {e}");
         return false;
     }
-    // Raw 16-bit little-endian PCM at 44.1k: wrap it in a WAV.
+    // Raw 16-bit little-endian PCM at 44.1k, stereo interleaved (verified
+    // against the live API): downmix to mono for the one-bus mixer.
     let samples: Vec<f32> = pcm
-        .chunks_exact(2)
-        .map(|b| f32::from(i16::from_le_bytes([b[0], b[1]])) / 32_768.0)
+        .chunks_exact(4)
+        .map(|b| {
+            let left = f32::from(i16::from_le_bytes([b[0], b[1]]));
+            let right = f32::from(i16::from_le_bytes([b[2], b[3]]));
+            (left + right) / 65_536.0
+        })
         .collect();
     if samples.len() < 4_410 {
         eprintln!(
