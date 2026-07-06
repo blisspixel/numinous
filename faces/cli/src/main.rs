@@ -1801,6 +1801,8 @@ fn word_in_lights(word: &str, accent: [u8; 3], frames: usize) {
     use std::io::Write as _;
     let (w, h) = (96usize, 34usize);
     let mut stdout = std::io::stdout();
+    // The moment owns the whole screen: wipe first, then erupt.
+    let _ = write!(stdout, "[2J[H");
     let rows = h / 2 + 1;
     for frame in 0..frames {
         let mut raster = Raster::with_accent(w, h, accent);
@@ -1828,7 +1830,11 @@ fn word_in_lights(word: &str, accent: [u8; 3], frames: usize) {
         numinous_core::draw_text(&mut raster, word, tx, ty, scale, '#');
         let _ = write!(stdout, "{}\x1b[0m\x1b[J", numinous_core::to_ansi(&raster));
         let _ = stdout.flush();
-        std::thread::sleep(Duration::from_millis(70));
+        std::thread::sleep(Duration::from_millis(if frame + 1 == frames {
+            350
+        } else {
+            70
+        }));
         if frame + 1 < frames {
             let _ = write!(stdout, "\x1b[{rows}A");
         }
