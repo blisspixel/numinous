@@ -181,7 +181,7 @@ impl App {
             tune: Vec::new(),
             show_journey: false,
             mouse: (0.0, 0.0),
-            room_card: 360,
+            room_card: 240,
             radio: None,
             radio_track: Vec::new(),
             radio_paths: Vec::new(),
@@ -854,7 +854,7 @@ impl App {
         let n = self.rooms.len() as isize;
         self.current = (((self.current as isize + delta) % n + n) % n) as usize;
         self.t = 0.0;
-        self.room_card = 360;
+        self.room_card = 240;
         self.tune.clear();
         if let Some(window) = &self.window {
             window.set_title(&self.title());
@@ -989,13 +989,17 @@ impl App {
         let scale = (width as i32 / 400).clamp(1, 4);
         if !self.the_show && !self.studio && !self.show_help && !self.show_journey {
             // Legibility bands: HUD words never fight the room's ink.
-            let card_depth = if self.room_card > 0 && !self.show_info {
-                10 + 6 * 9 * scale
+            raster.dim_rows(0, 14 + 7 * (scale + 1), 45);
+            let card_lines = if self.room_card > 0 && !self.show_info {
+                2
             } else {
-                14 + 7 * (scale + 1)
+                0
             };
-            raster.dim_rows(0, card_depth, 45);
-            raster.dim_rows(height as i32 - 14 * scale, height as i32, 45);
+            raster.dim_rows(
+                height as i32 - (14 + card_lines * 9) * scale,
+                height as i32,
+                45,
+            );
         }
         if self.the_show {
             if self.t < 0.12 || self.t > 0.9 {
@@ -1037,8 +1041,8 @@ impl App {
                 scale + 1,
                 '#',
             );
-            // The arrival card: the room explains itself for a few seconds,
-            // then gets out of the way. E brings the full story anytime.
+            // The arrival card: two quiet lines above the hint bar, briefly,
+            // then the math has the whole screen. E brings the full story.
             if self.room_card > 0
                 && !self.show_info
                 && !self.show_help
@@ -1049,26 +1053,18 @@ impl App {
                 for (i, line) in
                     numinous_core::wrap_text(&room.meta().blurb.to_uppercase(), columns)
                         .iter()
-                        .take(3)
+                        .take(2)
                         .enumerate()
                 {
                     numinous_core::draw_text(
                         &mut raster,
                         line,
                         10,
-                        10 + (2 + i as i32) * 9 * scale,
+                        height as i32 - (12 + (2 - i as i32) * 9) * scale,
                         scale,
                         '#',
                     );
                 }
-                numinous_core::draw_text(
-                    &mut raster,
-                    "(E FOR THE WHOLE STORY)",
-                    10,
-                    10 + 5 * 9 * scale,
-                    scale,
-                    '-',
-                );
             }
             // The level, top right: the game in one glance.
             let level = format!("LV {}", self.journey.level());
@@ -1100,7 +1096,7 @@ impl App {
             raster.dim(22);
             let menu_scale = (width as i32 / 300).clamp(2, 4);
             let lines = [
-                "PLAY",
+                "PLAY (PRESS A LETTER)",
                 "G          THE QUIZ: NAME THE MATH",
                 "C          MUNCH: EAT WHAT FITS",
                 "N          NIM: BEAT THE ORDER",
@@ -1130,7 +1126,7 @@ impl App {
                 );
             }
         } else if !self.the_show {
-            let mut hint = String::from("G QUIZ   C MUNCH   N NIM   T RUN   E INSPECT   ESC MENU");
+            let mut hint = String::from("ESC  PLAY + MENU     E INSPECT   Y RADIO   J JOURNEY");
             if self.muted {
                 hint.push_str("   (MUTED)");
             }
@@ -1908,22 +1904,22 @@ impl ApplicationHandler for App {
                             self.show_help = !self.show_help;
                         }
                         // G deals the quiz: guess the shape, in the window.
-                        Key::Character(c) if c.as_str() == "g" => {
+                        Key::Character(c) if c.as_str() == "g" && self.show_help => {
                             self.show_help = false;
                             self.quiz_next();
                         }
                         // C chomps: today's Munch board, in the window.
-                        Key::Character(c) if c.as_str() == "c" => {
+                        Key::Character(c) if c.as_str() == "c" && self.show_help => {
                             self.show_help = false;
                             self.munch_start();
                         }
                         // N is nim: three heaps against the Order.
-                        Key::Character(c) if c.as_str() == "n" => {
+                        Key::Character(c) if c.as_str() == "n" && self.show_help => {
                             self.show_help = false;
                             self.nim_start();
                         }
                         // T runs the Gauntlet: four stages, one number.
-                        Key::Character(c) if c.as_str() == "t" => {
+                        Key::Character(c) if c.as_str() == "t" && self.show_help => {
                             self.show_help = false;
                             self.gauntlet_start();
                         }

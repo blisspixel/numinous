@@ -35,7 +35,7 @@ fn main() {
         raster.dim(22);
         let menu_scale = (width as i32 / 300).clamp(2, 4);
         let lines = [
-            "PLAY",
+            "PLAY (PRESS A LETTER)",
             "G          THE QUIZ: NAME THE MATH",
             "C          MUNCH: EAT WHAT FITS",
             "N          NIM: BEAT THE ORDER",
@@ -80,36 +80,28 @@ fn main() {
             scale + 1,
             '#',
         );
-        // The arrival card under the title, as the app draws it.
+        // The arrival card: two quiet lines above the hint bar.
         let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
         for (i, line) in wrap_text(&room.meta().blurb.to_uppercase(), columns)
             .iter()
-            .take(3)
+            .take(2)
             .enumerate()
         {
             draw_text(
                 &mut raster,
                 line,
                 10,
-                10 + (2 + i as i32) * 9 * scale,
+                height as i32 - (12 + (2 - i as i32) * 9) * scale,
                 scale,
                 '#',
             );
         }
-        draw_text(
-            &mut raster,
-            "(E FOR THE WHOLE STORY)",
-            10,
-            10 + 5 * 9 * scale,
-            scale,
-            '-',
-        );
         let level = "LV 7";
         let lx = width as i32 - (level.len() as i32 * 6 * scale) - 10;
         draw_text(&mut raster, level, lx, 10, scale, '#');
         draw_text(
             &mut raster,
-            "G QUIZ   C MUNCH   N NIM   T RUN   E INSPECT   ESC MENU",
+            "ESC  PLAY + MENU     E INSPECT   Y RADIO   J JOURNEY",
             10,
             height as i32 - 10 * scale,
             scale,
