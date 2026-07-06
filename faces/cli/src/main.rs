@@ -1762,6 +1762,9 @@ fn crack(seed: u64, digits: usize, attempts: usize, journey: &mut Journey) -> Ex
             println!();
             break;
         }
+        if asked_why(&line, "crack") {
+            continue;
+        }
         let guess: Vec<u8> = line
             .trim()
             .chars()
@@ -1841,6 +1844,22 @@ fn word_in_lights(word: &str, accent: [u8; 3], frames: usize) {
     }
 }
 
+/// "?" is always an honest question: print the game's concept and return
+/// true (the caller repeats the prompt, spending nothing).
+fn asked_why(line: &str, game: &str) -> bool {
+    if line.trim() != "?" {
+        return false;
+    }
+    if let Some(text) = numinous_core::concept(game) {
+        println!(
+            "
+{text}
+"
+        );
+    }
+    true
+}
+
 /// Play SETI: scan channels of static and pick the artificial signal.
 fn seti(seed: u64, channels: usize, rounds: usize, journey: &mut Journey) -> ExitCode {
     let stdin = std::io::stdin();
@@ -1865,6 +1884,9 @@ fn seti(seed: u64, channels: usize, rounds: usize, journey: &mut Journey) -> Exi
         if input.read_line(&mut line).unwrap_or(0) == 0 {
             println!();
             break;
+        }
+        if asked_why(&line, "seti") {
+            continue;
         }
         let guess = line
             .chars()
@@ -1920,6 +1942,9 @@ fn aliens(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
         if input.read_line(&mut line).unwrap_or(0) == 0 {
             println!();
             break;
+        }
+        if asked_why(&line, "aliens") {
+            continue;
         }
         let answer = numinous_core::to_base(message.answer, message.base);
         let cleaned: String = line.chars().filter(char::is_ascii_alphanumeric).collect();
@@ -2038,7 +2063,7 @@ fn nim(seed: u64, journey: &mut Journey) -> ExitCode {
     journey.play();
     println!("NIM  seed {seed}. On your turn, take ANY number of stones from ONE heap.");
     println!("Whoever takes the last stone wins. Answer like: 2 3  (heap 2, take 3).");
-    println!("The Order plays a secret. Beat it and the secret is yours.");
+    println!("The Order plays a secret. Beat it and the secret is yours. (? explains)");
     loop {
         println!("\n{}", nim_board(&heaps));
         print!("heap amount > ");
@@ -2047,6 +2072,9 @@ fn nim(seed: u64, journey: &mut Journey) -> ExitCode {
         if input.read_line(&mut line).unwrap_or(0) == 0 {
             println!();
             return ExitCode::SUCCESS;
+        }
+        if asked_why(&line, "nim") {
+            continue;
         }
         let nums: Vec<u32> = line
             .split_whitespace()
@@ -2123,6 +2151,14 @@ fn gauntlet(seed: u64, journey: &mut Journey) -> ExitCode {
     let mut line = String::new();
     if input.read_line(&mut line).unwrap_or(0) == 0 {
         return ExitCode::SUCCESS;
+    }
+    if asked_why(&line, "gauntlet") {
+        print!("Your bites > ");
+        let _ = std::io::stdout().flush();
+        line.clear();
+        if input.read_line(&mut line).unwrap_or(0) == 0 {
+            return ExitCode::SUCCESS;
+        }
     }
     let bites: Vec<usize> = line
         .split_whitespace()
@@ -2253,7 +2289,7 @@ fn munch(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
     let mut total = 0i64;
-    println!("MUNCH. Eat by cell number, e.g. \"1 7 22\". Wrong bites cost you.\n");
+    println!("MUNCH. Eat by cell number, e.g. \"1 7 22\". Wrong bites cost you. (? explains)\n");
     for round in 0..rounds {
         let board = numinous_core::build_board(seed, round as u64);
         journey.play();
@@ -2265,6 +2301,9 @@ fn munch(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
         if input.read_line(&mut line).unwrap_or(0) == 0 {
             println!();
             break;
+        }
+        if asked_why(&line, "munch") {
+            continue;
         }
         let bites: Vec<usize> = line
             .split_whitespace()
@@ -2333,6 +2372,9 @@ fn quiz(
         if input.read_line(&mut line).unwrap_or(0) == 0 {
             println!();
             break;
+        }
+        if asked_why(&line, "quiz") {
+            continue;
         }
         let guess = line
             .chars()

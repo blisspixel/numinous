@@ -18,6 +18,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   live instead of restarting the record.
 
 ### Added
+- The question mark: in any game, answering `?` reveals the concept the game
+  has been teaching all along, nim's invariants, crack's information theory,
+  seti's signatures of mind, aliens' representation-versus-meaning, munch's
+  set membership, the quiz's structure-reading, the gauntlet's compound
+  performance. Hidden by default, costs nothing, never required. The core
+  catalog is tested; each intro whispers the door once.
 - Casual play deals fresh: `numinous play <game>` now uses a new seed every
   time (announced, so any board can be replayed or shared with --seed);
   dailies stay on the games' own --daily flags. No more typing yesterday's
