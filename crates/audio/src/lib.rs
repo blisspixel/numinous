@@ -130,20 +130,28 @@ pub fn synthesize_sine(frequency: f32, sample_rate: u32, count: usize) -> Vec<f3
         .collect()
 }
 
-/// The looping sample buffer shared with the audio callback.
+/// The looping sample buffer shared with the audio callback: mono or
+/// interleaved stereo frames.
 struct LoopState {
     samples: Vec<f32>,
     pos: usize,
+    /// 1 for mono, 2 for interleaved stereo.
+    channels: usize,
 }
 
-/// Read the next looping sample and advance the position; silence if empty.
-fn read_loop(state: &mut LoopState) -> f32 {
+/// Read the next looping frame as (left, right); silence if empty.
+fn read_frame(state: &mut LoopState) -> (f32, f32) {
     if state.samples.is_empty() {
-        return 0.0;
+        return (0.0, 0.0);
     }
-    let value = state.samples[state.pos];
-    state.pos = (state.pos + 1) % state.samples.len();
-    value
+    let frame = if state.channels >= 2 && state.pos + 1 < state.samples.len() {
+        (state.samples[state.pos], state.samples[state.pos + 1])
+    } else {
+        let v = state.samples[state.pos];
+        (v, v)
+    };
+    state.pos = (state.pos + state.channels.max(1)) % state.samples.len();
+    frame
 }
 
 /// Plays a sample buffer on the default device, looping, in the background.
@@ -171,6 +179,7 @@ impl LoopPlayer {
         let state = Arc::new(Mutex::new(LoopState {
             samples: Vec::new(),
             pos: 0,
+            channels: 1,
         }));
         let callback_state = state.clone();
         let err_fn = |e| eprintln!("audio stream error: {e}");
@@ -181,9 +190,9 @@ impl LoopPlayer {
                 move |data: &mut [f32], _| {
                     if let Ok(mut s) = callback_state.lock() {
                         for frame in data.chunks_mut(channels) {
-                            let value = read_loop(&mut s);
-                            for out in frame {
-                                *out = value;
+                            let (left, right) = read_frame(&mut s);
+                            for (i, out) in frame.iter_mut().enumerate() {
+                                *out = if i % 2 == 0 { left } else { right };
                             }
                         }
                     }
@@ -196,9 +205,13 @@ impl LoopPlayer {
                 move |data: &mut [i16], _| {
                     if let Ok(mut s) = callback_state.lock() {
                         for frame in data.chunks_mut(channels) {
-                            let value = (read_loop(&mut s) * f32::from(i16::MAX)) as i16;
-                            for out in frame {
-                                *out = value;
+                            let (left, right) = read_frame(&mut s);
+                            let (l, r) = (
+                                (left * f32::from(i16::MAX)) as i16,
+                                (right * f32::from(i16::MAX)) as i16,
+                            );
+                            for (i, out) in frame.iter_mut().enumerate() {
+                                *out = if i % 2 == 0 { l } else { r };
                             }
                         }
                     }
@@ -227,18 +240,28 @@ impl LoopPlayer {
         self.sample_rate
     }
 
-    /// Replace the looping buffer (restarting from the beginning).
+    /// Replace the looping buffer with mono samples (restarts playback).
     pub fn set_samples(&self, samples: Vec<f32>) {
         if let Ok(mut s) = self.state.lock() {
             s.samples = samples;
             s.pos = 0;
+            s.channels = 1;
+        }
+    }
+
+    /// Replace the looping buffer with interleaved stereo frames (restarts).
+    pub fn set_stereo(&self, interleaved: Vec<f32>) {
+        if let Ok(mut s) = self.state.lock() {
+            s.samples = interleaved;
+            s.pos = 0;
+            s.channels = 2;
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{AMPLITUDE, LoopState, read_loop, synthesize_sine};
+    use super::{AMPLITUDE, LoopState, read_frame, synthesize_sine};
 
     #[test]
     fn synthesize_has_the_requested_length() {
@@ -274,20 +297,35 @@ mod tests {
     }
 
     #[test]
-    fn read_loop_wraps_and_handles_empty() {
+    fn read_frame_wraps_handles_empty_and_speaks_stereo() {
         let mut empty = LoopState {
             samples: vec![],
             pos: 0,
+            channels: 1,
         };
-        assert_eq!(read_loop(&mut empty), 0.0);
+        assert_eq!(read_frame(&mut empty), (0.0, 0.0));
 
-        let mut s = LoopState {
+        let mut mono = LoopState {
             samples: vec![0.1, 0.2, 0.3],
             pos: 0,
+            channels: 1,
         };
-        assert!((read_loop(&mut s) - 0.1).abs() < 1e-6);
-        assert!((read_loop(&mut s) - 0.2).abs() < 1e-6);
-        assert!((read_loop(&mut s) - 0.3).abs() < 1e-6);
-        assert!((read_loop(&mut s) - 0.1).abs() < 1e-6, "should wrap");
+        assert_eq!(read_frame(&mut mono), (0.1, 0.1), "mono fills both ears");
+        assert_eq!(read_frame(&mut mono), (0.2, 0.2));
+        assert_eq!(read_frame(&mut mono), (0.3, 0.3));
+        assert_eq!(read_frame(&mut mono), (0.1, 0.1), "and wraps");
+
+        let mut stereo = LoopState {
+            samples: vec![0.1, -0.1, 0.2, -0.2],
+            pos: 0,
+            channels: 2,
+        };
+        assert_eq!(
+            read_frame(&mut stereo),
+            (0.1, -0.1),
+            "left and right differ"
+        );
+        assert_eq!(read_frame(&mut stereo), (0.2, -0.2));
+        assert_eq!(read_frame(&mut stereo), (0.1, -0.1), "wraps on frames");
     }
 }

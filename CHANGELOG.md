@@ -6,6 +6,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Fixed
+- The radio went hi-fi: the whole pipeline is stereo now (the player speaks
+  interleaved stereo frames, cached tracks keep both channels instead of
+  being folded to mono), and records are resampled to the device's actual
+  rate, 44.1k played on a 48k device was nine percent sharp, which is
+  exactly the "lower quality than expected" feel. Existing mono tracks
+  still play (upmixed); newly tuned tracks cache in full stereo.
+- Changing rooms no longer jitters the music: the room switch was resetting
+  the loop buffer every time; while a station is on the air, nothing but
+  the radio itself may touch the player. Unmuting rejoins the broadcast
+  live instead of restarting the record.
+
+### Added
 - The quiz stopped repeating itself: stepping out and back in (or
   relaunching the app) restarted the round counter at zero against the same
   daily seed, dealing identical puzzles. The round number is now the
