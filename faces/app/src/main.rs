@@ -81,6 +81,12 @@ struct App {
     radio: Option<usize>,
     /// The loaded station track, if any.
     radio_track: Vec<f32>,
+    /// The tuned station's playlist on disk, in rotation order.
+    radio_paths: Vec<std::path::PathBuf>,
+    /// Which playlist entry is on the air.
+    radio_index: usize,
+    /// When the current track ends and the next takes the air.
+    radio_until: Option<std::time::Instant>,
     /// Where the journey persists (the CLI's file; a scratch file in tests).
     journey_file: std::path::PathBuf,
 }
@@ -175,6 +181,9 @@ impl App {
             mouse: (0.0, 0.0),
             radio: None,
             radio_track: Vec::new(),
+            radio_paths: Vec::new(),
+            radio_index: 0,
+            radio_until: None,
             journey_file: journey_path(),
         }
     }
@@ -595,6 +604,100 @@ impl App {
                 }
             }
         }
+    }
+
+    /// Tune in to the current dial position: build the playlist, join the
+    /// broadcast mid-stream (the station was always on the air), and play.
+    fn tune_in(&mut self) {
+        self.radio_track.clear();
+        self.radio_paths.clear();
+        self.radio_until = None;
+        let Some(i) = self.radio else {
+            self.update_audio();
+            return;
+        };
+        let st = &numinous_core::STATIONS[i];
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        let dir = std::path::PathBuf::from(home).join(".numinous-radio");
+        if let Ok(entries) = std::fs::read_dir(&dir) {
+            let prefix = format!("{}-", st.id);
+            let legacy = format!("{}.wav", st.id);
+            self.radio_paths = entries
+                .filter_map(Result::ok)
+                .map(|e| e.path())
+                .filter(|p| {
+                    let name = p.file_name().unwrap_or_default().to_string_lossy();
+                    name.starts_with(&prefix) || name == legacy
+                })
+                .collect();
+            self.radio_paths.sort();
+        }
+        if !self.radio_paths.is_empty() {
+            // Join the broadcast live: the wall clock decides which track is
+            // on the air and how far into it we are.
+            let durations: Vec<f64> = self
+                .radio_paths
+                .iter()
+                .map(|p| {
+                    hound::WavReader::open(p)
+                        .map(|r| f64::from(r.duration()) / f64::from(r.spec().sample_rate))
+                        .unwrap_or(0.0)
+                })
+                .collect();
+            let total: f64 = durations.iter().sum();
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs_f64())
+                .unwrap_or(0.0);
+            let mut pos = if total > 1.0 { now % total } else { 0.0 };
+            self.radio_index = 0;
+            for (idx, &secs) in durations.iter().enumerate() {
+                if pos < secs || idx == durations.len() - 1 {
+                    self.radio_index = idx;
+                    break;
+                }
+                pos -= secs;
+            }
+            self.radio_play(pos);
+        }
+        if let Some(window) = &self.window {
+            let st = &numinous_core::STATIONS[i];
+            window.set_title(&format!(
+                "Numinous  |  radio: {}{}",
+                st.name,
+                if self.radio_paths.is_empty() {
+                    "  (no tracks yet: numinous tune2)"
+                } else {
+                    ""
+                }
+            ));
+        }
+        self.update_audio();
+    }
+
+    /// Put the current playlist entry on the air, starting `offset` seconds in.
+    fn radio_play(&mut self, offset: f64) {
+        let Some(path) = self.radio_paths.get(self.radio_index) else {
+            return;
+        };
+        let Ok(mut reader) = hound::WavReader::open(path) else {
+            return;
+        };
+        let rate = f64::from(reader.spec().sample_rate);
+        let mut samples: Vec<f32> = reader
+            .samples::<i16>()
+            .filter_map(Result::ok)
+            .map(|s| f32::from(s) / 32_768.0)
+            .collect();
+        let skip = ((offset * rate) as usize).min(samples.len());
+        samples.rotate_left(skip);
+        let remaining = (samples.len() - skip) as f64 / rate.max(1.0);
+        self.radio_track = samples;
+        self.radio_until = Some(
+            std::time::Instant::now() + std::time::Duration::from_secs_f64(remaining.max(1.0)),
+        );
     }
 
     /// GPU-render the current room if it has a real-time GPU path (the deep
@@ -1734,37 +1837,7 @@ impl ApplicationHandler for App {
                                 Some(i) if i + 1 < stations => Some(i + 1),
                                 Some(_) => None,
                             };
-                            self.radio_track.clear();
-                            if let Some(i) = self.radio {
-                                let st = &numinous_core::STATIONS[i];
-                                let path = {
-                                    let home = std::env::var("HOME")
-                                        .or_else(|_| std::env::var("USERPROFILE"))
-                                        .unwrap_or_else(|_| ".".to_string());
-                                    std::path::PathBuf::from(home)
-                                        .join(".numinous-radio")
-                                        .join(format!("{}.wav", st.id))
-                                };
-                                if let Ok(mut reader) = hound::WavReader::open(&path) {
-                                    self.radio_track = reader
-                                        .samples::<i16>()
-                                        .filter_map(Result::ok)
-                                        .map(|s| f32::from(s) / 32_768.0)
-                                        .collect();
-                                }
-                                if let Some(window) = &self.window {
-                                    window.set_title(&format!(
-                                        "Numinous  |  radio: {}{}",
-                                        st.name,
-                                        if self.radio_track.is_empty() {
-                                            "  (not cached: numinous tune2)"
-                                        } else {
-                                            ""
-                                        }
-                                    ));
-                                }
-                            }
-                            self.update_audio();
+                            self.tune_in();
                         }
                         // P keeps the picture: the postcard key.
                         Key::Character(c) if c.as_str() == "p" => {
@@ -1864,6 +1937,16 @@ impl ApplicationHandler for App {
                 && self.nim.is_none()
                 && self.gauntlet.is_none()
             {
+                self.update_audio();
+            }
+            // The station rotates: when a track ends, the next takes the air.
+            if self.radio.is_some()
+                && let Some(until) = self.radio_until
+                && std::time::Instant::now() >= until
+                && !self.radio_paths.is_empty()
+            {
+                self.radio_index = (self.radio_index + 1) % self.radio_paths.len();
+                self.radio_play(0.0);
                 self.update_audio();
             }
             if let Some((_, frames)) = &mut self.banner {
