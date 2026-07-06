@@ -7,7 +7,7 @@
 
 /// The largest surface dimension, in cells or pixels. Shared cap so an absurd
 /// size request cannot attempt a process-aborting allocation.
-pub(crate) const MAX_DIM: usize = 2048;
+pub(crate) const MAX_DIM: usize = 4096;
 
 /// A target a room can draw into, in integer (x, y) coordinates.
 ///
