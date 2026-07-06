@@ -2101,6 +2101,31 @@ fn scores_path() -> std::path::PathBuf {
 }
 
 fn main() {
+    // The GUI subsystem has no console: a panic would vanish. Every panic
+    // writes its message and location to a crash log next to the save files,
+    // so any crash report can be triaged from one file.
+    std::panic::set_hook(Box::new(|info| {
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        let path = std::path::PathBuf::from(home).join(".numinous-crash.log");
+        let location = info
+            .location()
+            .map(|l| format!("{}:{}", l.file(), l.line()))
+            .unwrap_or_else(|| "unknown".to_string());
+        let entry = format!(
+            "panic at {location}: {info}
+"
+        );
+        use std::io::Write as _;
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+        {
+            let _ = file.write_all(entry.as_bytes());
+        }
+    }));
     let event_loop = EventLoop::new().expect("create event loop");
     event_loop.set_control_flow(ControlFlow::Poll);
     let mut app = App::new();

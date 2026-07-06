@@ -74,7 +74,8 @@ your journey (level, rank, trophies, resonances), Tab opens the Studio (type mat
 live). The app plays the same Journey the CLI does: entering rooms records
 visits, quiz rounds record plays and wins, your level rides in the corner, and
 LEVEL UP banners rise with the level's lore. Set `NUMINOUS_MUTE=1` to launch
-silent. The Mandelbrot and Julia rooms render on the GPU when the machine has
+silent. If the app ever crashes, the panic and its file:line land in
+`~/.numinous-crash.log`; include it in any report. The Mandelbrot and Julia rooms render on the GPU when the machine has
 one; everything else draws on the CPU.
 
 ## 4. See it work (the other faces)
