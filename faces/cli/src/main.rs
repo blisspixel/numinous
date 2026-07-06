@@ -325,9 +325,10 @@ enum Command {
     Tune2 {
         /// The station id (see: numinous radio).
         station: String,
-        /// Track length in seconds (10 to 300).
-        #[arg(long, default_value_t = 120)]
-        seconds: u64,
+        /// Override track length in seconds (10 to 600). By default each
+        /// track gets its card's natural runtime, varied like real radio.
+        #[arg(long)]
+        seconds: Option<u64>,
         /// How many tracks to add to the station's playlist (each is one
         /// paid API call; briefs vary per track).
         #[arg(long, default_value_t = 1)]
@@ -886,7 +887,7 @@ fn radio_dir() -> PathBuf {
 
 /// Tune a station: call ElevenLabs Music with the station's brief, receive
 /// raw PCM, and cache it as a WAV the app and CLI can loop.
-fn radio_tune(station_id: &str, seconds: u64, count: usize) -> ExitCode {
+fn radio_tune(station_id: &str, seconds: Option<u64>, count: usize) -> ExitCode {
     let Some(station) = numinous_core::station(station_id) else {
         eprintln!("No station '{station_id}' on the dial. See: numinous radio");
         return ExitCode::FAILURE;
@@ -897,7 +898,6 @@ fn radio_tune(station_id: &str, seconds: u64, count: usize) -> ExitCode {
         );
         return ExitCode::FAILURE;
     };
-    let seconds = seconds.clamp(10, 300);
     let dir = radio_dir();
     let _ = std::fs::create_dir_all(&dir);
     let existing = std::fs::read_dir(&dir)
@@ -913,7 +913,10 @@ fn radio_tune(station_id: &str, seconds: u64, count: usize) -> ExitCode {
         })
         .unwrap_or(0);
     for track in existing..existing + count {
-        if !fetch_track(station, track, seconds, &key, &dir) {
+        let secs = seconds
+            .unwrap_or_else(|| numinous_core::length_for(station, track))
+            .clamp(10, 600);
+        if !fetch_track(station, track, secs, &key, &dir) {
             return ExitCode::FAILURE;
         }
     }

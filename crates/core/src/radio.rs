@@ -74,6 +74,19 @@ pub const STATIONS: [Station; 3] = [
     },
 ];
 
+/// Track lengths per station, in seconds, cycled alongside the deck so a
+/// station plays records of different sizes: radio, not a loop of singles.
+/// Trance stretches out; chill wanders; arcade keeps it punchy.
+#[must_use]
+pub fn length_for(station: &Station, track: usize) -> u64 {
+    let cycle: &[u64] = match station.id {
+        "trance" => &[240, 330, 180, 300, 150, 360],
+        "chill" => &[210, 300, 360, 180, 270],
+        _ => &[150, 200, 120, 240, 170],
+    };
+    cycle[track % cycle.len()]
+}
+
 /// The full brief for a station's nth track: the house identity plus that
 /// track's card from the rotation deck.
 #[must_use]
@@ -133,6 +146,22 @@ mod tests {
             }
         }
         assert_eq!(brief_for(st, 0), brief_for(st, st.deck.len()), "then wraps");
+    }
+
+    #[test]
+    fn track_lengths_vary_like_real_radio() {
+        for st in &STATIONS {
+            let lengths: Vec<u64> = (0..6).map(|i| super::length_for(st, i)).collect();
+            let distinct: std::collections::BTreeSet<_> = lengths.iter().collect();
+            assert!(
+                distinct.len() >= 4,
+                "{}: a real spread, not one runtime",
+                st.id
+            );
+            for &secs in &lengths {
+                assert!((120..=600).contains(&secs), "{}: {secs}s is a song", st.id);
+            }
+        }
     }
 
     #[test]

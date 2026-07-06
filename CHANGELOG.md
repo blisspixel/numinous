@@ -6,6 +6,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Track lengths joined the rotation deck: each station cycles real runtimes
+  (trance stretches from 150s to a six-minute 360; chill wanders 180 to 360;
+  arcade keeps it punchy, 120 to 240), tested for spread, so a station plays
+  records of different sizes instead of a loop of two-minute singles.
+  `tune2 --seconds` remains as an override, now up to the API's 600s cap.
 - The radio went live against the real ElevenLabs Music API and three truths
   came back: `seed` cannot ride with `prompt` (removed), the PCM stream is
   stereo interleaved (now downmixed to mono for the one-bus mixer, verified
