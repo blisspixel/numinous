@@ -928,7 +928,7 @@ fn fetch_track(
         "music_length_ms": seconds * 1000,
     });
     let response = ureq::post("https://api.elevenlabs.io/v1/music?output_format=pcm_44100")
-        .set("xi-api-key", &key)
+        .set("xi-api-key", key)
         .set("content-type", "application/json")
         .timeout(std::time::Duration::from_secs(600))
         .send_string(&body.to_string());
