@@ -6,6 +6,21 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The window arcade: Munch (C) and Nim (N) now play inside the app alongside
+  the quiz. Munch is cursor-driven, WASD or arrows walk the board, Space or E
+  eats, Enter grades with the full dense feedback (including the near-miss
+  line); Nim draws the heaps as stones, W/S aims at a heap, A/D sets the take
+  (the aimed stones glow), Enter commits and the Order answers at once, and a
+  win prints the xor secret in full. Both run on the daily seed, post to the
+  shared table, and level the shared journey. Headlessly tested.
+- Mobius Strip (Shape & Space): the half-twisted band with its single bright
+  edge traced around twice, and an ant walking the centerline to arrive
+  upside down; the side-swap identity is tested. Scissors lore in the cuts.
+- Zeno's Square (Change): the proof without words, tiles of 1/2, 1/4, 1/8
+  filling the unit square exactly; areas, non-overlap, and near-unity sum are
+  all tested. 27 rooms across 9 wings.
+- Munch's recap honors the near miss in the CLI too: one clean board short,
+  and it says so ("One away. The board remembers.").
 - Agent playtest readiness: full CLI/MCP parity with six new tools (crack,
   seti, aliens, the gauntlet, choose, trophies), 22 in all, each stateless
   and two-phase (call to see, call again to answer), each recording plays,
