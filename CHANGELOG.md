@@ -6,6 +6,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The radio went live against the real ElevenLabs Music API and three truths
+  came back: `seed` cannot ride with `prompt` (removed), the PCM stream is
+  stereo interleaved (now downmixed to mono for the one-bus mixer, verified
+  by requesting 10 seconds and receiving exactly 20 of drift), and
+  `music_v2` with `force_instrumental: true` is the current best practice
+  (adopted: the API guarantees instrumental now instead of the prompt
+  pleading for it). The key can live in a gitignored .env at the repo root
+  (`ELEVENLABS_API_KEY=...`); the CLI reads it when the shell variable is
+  absent. NUMINA FM, THE ATTRACTOR, and EIGHT BIT SUNRISE are on the air.
 - Music Engine B, the radio, v0: three stations with real producer briefs in
   the core (NUMINA FM melodic trance, THE ATTRACTOR chillwave, EIGHT BIT
   SUNRISE synthwave; all instrumental by contract, briefs tested for tempo
