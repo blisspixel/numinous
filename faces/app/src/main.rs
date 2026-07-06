@@ -987,7 +987,20 @@ impl App {
         // Show stays clean, except each room announces itself as it arrives
         // and leaves its one line as it goes: a let's-play that narrates.
         let scale = (width as i32 / 400).clamp(1, 4);
+        if !self.the_show && !self.studio && !self.show_help && !self.show_journey {
+            // Legibility bands: HUD words never fight the room's ink.
+            let card_depth = if self.room_card > 0 && !self.show_info {
+                10 + 6 * 9 * scale
+            } else {
+                14 + 7 * (scale + 1)
+            };
+            raster.dim_rows(0, card_depth, 45);
+            raster.dim_rows(height as i32 - 14 * scale, height as i32, 45);
+        }
         if self.the_show {
+            if self.t < 0.12 || self.t > 0.9 {
+                raster.dim_rows(height as i32 - 34 * scale, height as i32, 45);
+            }
             if self.t < 0.12 {
                 numinous_core::draw_text(
                     &mut raster,
@@ -1234,6 +1247,7 @@ impl App {
         let line_height = 10 * scale;
         match &quiz.flash {
             None => {
+                raster.dim_rows(0, 14 + 7 * (scale + 1), 40);
                 numinous_core::draw_text(
                     &mut raster,
                     "WHICH MATH MADE THIS?",
@@ -1243,6 +1257,7 @@ impl App {
                     '#',
                 );
                 let base = height as i32 - (quiz.round.choices.len() as i32 + 1) * line_height - 8;
+                raster.dim_rows(base - 6, height as i32, 40);
                 for (i, choice) in quiz.round.choices.iter().enumerate() {
                     let line = format!("{}  {}", choice.letter, choice.title.to_uppercase());
                     numinous_core::draw_text(
@@ -1302,6 +1317,8 @@ impl App {
     fn draw_munch(&self, play: &MunchPlay, width: usize, height: usize) -> Raster {
         let mut raster = Raster::with_accent(width, height, [140, 230, 120]);
         let scale = (width as i32 / 400).clamp(1, 3);
+        raster.dim_rows(0, 12 + 7 * scale, 40);
+        raster.dim_rows(height as i32 - 14 * scale, height as i32, 40);
         numinous_core::draw_text(
             &mut raster,
             &format!("MUNCH: {}", play.board.rule.describe().to_uppercase()),
@@ -1396,6 +1413,8 @@ impl App {
     fn draw_nim(&self, play: &NimPlay, width: usize, height: usize) -> Raster {
         let mut raster = Raster::with_accent(width, height, [230, 200, 120]);
         let scale = (width as i32 / 400).clamp(1, 3);
+        raster.dim_rows(0, 12 + 7 * scale, 40);
+        raster.dim_rows(height as i32 - 26 * scale, height as i32, 40);
         numinous_core::draw_text(&mut raster, "NIM: LAST STONE WINS", 10, 10, scale, '#');
         let top = 20 * scale + 10;
         let row_h = (height as i32 - top - 30 * scale) / 3;
@@ -1585,16 +1604,13 @@ impl App {
                 raster
             }
         };
-        // The run's narration rides its own band, clear of the stage hints.
+        // The run's narration owns the top-right corner with its own band,
+        // clear of every stage's grids, choices, and clues.
         if run.stage < 4 {
-            numinous_core::draw_text(
-                &mut raster,
-                &run.message,
-                10,
-                height as i32 - 34 * scale,
-                scale,
-                '#',
-            );
+            let x =
+                (width as i32 / 2).max(width as i32 - run.message.len() as i32 * 6 * scale - 14);
+            raster.dim_rows(0, 12 + 7 * scale, 40);
+            numinous_core::draw_text(&mut raster, &run.message, x, 10, scale, '#');
         }
         raster
     }
