@@ -790,23 +790,21 @@ impl App {
             raster.dim(22);
             let menu_scale = (width as i32 / 300).clamp(2, 4);
             let lines = [
-                "A / D      PREV / NEXT ROOM",
-                "1 - 9      JUMP TO ROOM",
-                "W / S      TIME FASTER / SLOWER",
-                "MOUSE      DRAG OR WHEEL TO SCRUB",
-                "E          INSPECT THE MATH",
-                "Q          SWAP ERA",
-                "R          RESTART SWEEP",
-                "F          FULLSCREEN",
-                "M          SOUND      SPACE  PAUSE",
-                "TAB        THE STUDIO",
-                "B          THE SHOW: SIT BACK",
+                "PLAY",
                 "G          THE QUIZ: NAME THE MATH",
                 "C          MUNCH: EAT WHAT FITS",
                 "N          NIM: BEAT THE ORDER",
                 "T          THE GAUNTLET: ONE RUN",
-                "J          YOUR JOURNEY AND TROPHIES",
-                "ESC        CLOSE MENU (X QUITS)",
+                "",
+                "WANDER",
+                "A / D      PREV / NEXT ROOM    1-9 JUMP",
+                "W / S      TIME SPEED   MOUSE  SCRUB",
+                "E          INSPECT    Q  ERA    R  RESTART",
+                "B          THE SHOW   TAB  THE STUDIO",
+                "J          JOURNEY    F  FULLSCREEN",
+                "M          SOUND      SPACE  PAUSE",
+                "",
+                "ESC        CLOSE MENU AND WANDER",
             ];
             let line_height = 11 * menu_scale;
             let top = (height as i32 / 2) - (lines.len() as i32 * line_height) / 2;
@@ -821,7 +819,7 @@ impl App {
                 );
             }
         } else if !self.the_show {
-            let mut hint = String::from("ESC MENU   M SOUND   Q ERA   E INSPECT");
+            let mut hint = String::from("G QUIZ   C MUNCH   N NIM   T RUN   E INSPECT   ESC MENU");
             if self.muted {
                 hint.push_str("   (MUTED)");
             }
