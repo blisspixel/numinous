@@ -1259,9 +1259,12 @@ impl App {
                 );
             }
         } else if !self.the_show {
+            // The verb never leaves the screen: what your hand does here,
+            // then what the dial says, then the doors.
+            let verb = room.verb().unwrap_or("DRAG: SCRUB TIME");
             let mut hint = match room.status(self.t) {
-                Some(readout) => format!("{readout}     ESC  PLAY + MENU   E INSPECT"),
-                None => String::from("ESC  PLAY + MENU     E INSPECT   Y RADIO   J JOURNEY"),
+                Some(readout) => format!("{verb}   {readout}   ESC MENU"),
+                None => format!("{verb}     ESC  PLAY + MENU   E INSPECT"),
             };
             if self.muted {
                 hint.push_str("   (MUTED)");
