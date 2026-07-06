@@ -97,7 +97,6 @@ struct App {
 /// The in-window quiz state: what is asked, and how the last answer landed.
 struct QuizPlay {
     round: numinous_core::QuizRound,
-    number: u64,
     /// After an answer: (was it right, frames left on the flash).
     flash: Option<(bool, u64)>,
 }
@@ -221,25 +220,21 @@ impl App {
     /// Start (or advance) the quiz: a fresh seeded round, phase-of-day seeded
     /// so everyone who opens the app today can compare notes.
     fn quiz_next(&mut self) {
-        let number = self.quiz.as_ref().map_or(0, |q| q.number + 1);
-        let seed = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs() / 86_400)
-            .unwrap_or(1);
-        // The ramp: a brand new player's first rounds are three-way picks
+        // The round number is the journey's lifetime play count, so no two
+        // deals repeat: not within a session, not across restarts, not after
+        // stepping out and back in. Today's seed keeps it shareable.
+        let number = u64::from(self.journey.plays);
+        let seed = Self::daily_seed();
+        // The ramp: a brand new player's first deals are three-way picks
         // among the most recognizable rooms; the catalog opens up from there.
-        let round = if number < 3 {
+        let round = if self.journey.plays < 6 {
             numinous_core::build_round_pool(seed, number, 10, 10, 3, &numinous_core::ICONIC)
         } else {
             numinous_core::build_round(seed, number, 10, 10)
         };
         self.journey.play();
         self.journey_changed();
-        self.quiz = Some(QuizPlay {
-            round,
-            number,
-            flash: None,
-        });
+        self.quiz = Some(QuizPlay { round, flash: None });
     }
 
     /// Answer the quiz with a letter; right or wrong, the reveal follows.
@@ -375,8 +370,7 @@ impl App {
                 graded: None,
             },
             quiz: QuizPlay {
-                round: numinous_core::build_round(seed, 1, 10, 10),
-                number: 1,
+                round: numinous_core::build_round(seed, 1, 44, 18),
                 flash: None,
             },
             scan: numinous_core::build_scan(seed, 4),

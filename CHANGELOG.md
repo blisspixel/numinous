@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Fixed
+- The quiz stopped repeating itself: stepping out and back in (or
+  relaunching the app) restarted the round counter at zero against the same
+  daily seed, dealing identical puzzles. The round number is now the
+  journey's lifetime play count, so no deal ever repeats: not in a session,
+  not across restarts. The kid ramp gates on the same count (your first six
+  deals ever are the gentle ones), then the catalog opens for good.
 - No more second window: the app now builds for the Windows GUI subsystem,
   so launching it opens the game and nothing else (the console ghost was
   the default subsystem tagging along).
