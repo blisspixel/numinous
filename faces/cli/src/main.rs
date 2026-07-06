@@ -2750,9 +2750,24 @@ fn quiz(
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
     let mut score = 0usize;
+    let mut recent: Vec<&'static str> = Vec::new();
     println!("Guess the shape. Name the math behind each mystery render.\n");
     for round in 0..rounds {
-        let r = numinous_core::build_round_sized(seed, round as u64, width, height, choices);
+        // Recently asked rooms sit out: no repeated questions in a session.
+        let all: Vec<&'static str> = all_rooms().iter().map(|r| r.meta().id).collect();
+        let fresh: Vec<&'static str> = all
+            .iter()
+            .copied()
+            .filter(|id| !recent.contains(id))
+            .collect();
+        let pool = if fresh.len() > choices { fresh } else { all };
+        let r = numinous_core::build_round_pool(seed, round as u64, width, height, choices, &pool);
+        if let Some(choice) = r.choices.iter().find(|c| c.letter == r.answer) {
+            recent.push(choice.id);
+            if recent.len() > 10 {
+                recent.remove(0);
+            }
+        }
         journey.play();
         println!("Mystery #{} of {rounds}:", round + 1);
         print!("{}", r.art);

@@ -93,6 +93,19 @@ The workstreams, each built to the 1.0 bar:
 
 ---
 
+## The mantra
+
+**Every screen answers your hand. Every answer reveals the math.**
+
+The near-term stack, adopted from the July 2026 external review
+(`docs/REVIEW.md`): (1) Times Tables as the gold-standard interactive room;
+(2) the input/verb/variation substrate (RoomInput, not one-shot pokes);
+(3) six first pokes (four shipped: Lorenz, Life, Voronoi, Random Walk;
+Double Pendulum and Chaos Game next); (4) Engine A2 motifs for those rooms;
+(5) MCP structured deltas and challenge metrics for the same rooms; (6) one
+human hallway test; (7) cross-platform run; (8) docs reconciliation.
+Do not build twenty more rooms before those are done.
+
 ## Where we stand (July 2026): the honest scorecard
 
 Scored against the nine 1.0 gates below, the build sits at roughly **0.6**:

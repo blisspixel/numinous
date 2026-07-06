@@ -87,3 +87,16 @@ Only the optional Puzzle layer and the deeper insight-gates have difficulty, and
 1. How explicit should the Constellation Map be? Fully hidden (Outer Wilds style, you hold it in your head) versus a visible filling-in web. Leaning visible-but-uncluttered, because the web itself is beautiful and on-thesis.
 2. How hard should insight-gates gate? Truly block deeper content, or only *reveal* it as a bonus? Leaning reveal, to protect the Wanderer, with only the Layer-4 endgame genuinely gated.
 3. Elegance-scoring for Puzzles: per-room bespoke metrics, or a shared "fewest moves / simplest expression" currency across all rooms?
+
+## The ruling (July 2026): ceremony, not economy
+
+The build carries XP, levels, trophies, boons, streaks, and scores; this doc
+carries knowledge-only progression. Both are kept, under one explicit rule:
+
+**XP records contact with beauty; insight records progress.**
+
+The RPG layer is a local journal and celebration layer. It may decorate,
+remember, and pace. It may never gate core play, optimize behavior, punish
+absence, or reward idling faster than playing. Where those conflict, the
+knowledge layer wins. (Adopted from the July 2026 external review; see
+`docs/REVIEW.md`.)
