@@ -6,6 +6,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The watchable game, fully built out for all three minds: `numinous tour`
+  is the Show for the terminal (every room takes the stage in turn, full
+  color and sound, a title card as it arrives and its reveal as the curtain
+  line, forever until Ctrl+C, with `--era`, `--mute`, and `--seconds`); the
+  windowed Show now narrates the same way (each room announces itself and
+  leaves its one line as it goes), so a kid watching learns names without
+  reading a manual.
+- The Bench v1 (`numinous bench`): five gauntlets on fixed seeds 101-105,
+  one composite posted as `bench v1`. Agents run the same five seeds over
+  MCP and sum their totals; the seeds never change, so any two minds can
+  compare runs honestly, today or years apart.
 - The Gauntlet runs in the window (T): all four stages in sequence, the munch
   cursor board, the mystery shape, the sky scan, and a bomb keypad you type
   digits into, with the combo narrated between stages and the run recap

@@ -68,6 +68,7 @@ cargo run --bin numinous -- rooms
 cargo run --bin numinous -- describe times-tables
 cargo run --bin numinous -- render chaos-game --width 50 --height 25
 cargo run --bin numinous -- render mandelbrot --color --t 0.2   # 24-bit color in the terminal
+cargo run --bin numinous -- tour                   # the Show: every room, narrated; Ctrl+C
 cargo run --bin numinous -- watch julia            # full color, animating, WITH SOUND; Ctrl+C
 cargo run --bin numinous -- watch lorenz --era phosphor   # the same math on 1978 glass
 cargo run --bin numinous -- play times-tables      # classic ASCII animation

@@ -749,8 +749,37 @@ impl App {
         };
 
         // HUD: the room title, and the reveal when toggled with the 'i' key. The
-        // Show draws no HUD at all: nothing between you and the math.
+        // Show stays clean, except each room announces itself as it arrives
+        // and leaves its one line as it goes: a let's-play that narrates.
         let scale = (width as i32 / 400).clamp(1, 4);
+        if self.the_show {
+            if self.t < 0.12 {
+                numinous_core::draw_text(
+                    &mut raster,
+                    &room.meta().title.to_uppercase(),
+                    width as i32 / 10,
+                    height as i32 - 24 * scale,
+                    scale + 1,
+                    '#',
+                );
+            } else if self.t > 0.9 {
+                let columns = ((width as i32 / (6 * scale)) - 8).max(12) as usize;
+                for (i, line) in numinous_core::wrap_text(&room.reveal().to_uppercase(), columns)
+                    .iter()
+                    .take(3)
+                    .enumerate()
+                {
+                    numinous_core::draw_text(
+                        &mut raster,
+                        line,
+                        width as i32 / 10,
+                        height as i32 - (30 - i as i32 * 9) * scale,
+                        scale,
+                        '#',
+                    );
+                }
+            }
+        }
         if !self.the_show && !self.studio {
             numinous_core::draw_text(
                 &mut raster,

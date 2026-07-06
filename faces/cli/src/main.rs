@@ -70,6 +70,29 @@ enum Command {
         #[arg(long, default_value = "modern")]
         era: String,
     },
+    /// The Show for the terminal: every room in turn, full color, sound.
+    Tour {
+        /// Frames per second.
+        #[arg(long, default_value_t = 30.0)]
+        fps: f64,
+        /// Frame width in pixels (two pixels per character row).
+        #[arg(long, default_value_t = 100)]
+        width: usize,
+        /// Frame height in pixels.
+        #[arg(long, default_value_t = 62)]
+        height: usize,
+        /// Silence, for late nights.
+        #[arg(long)]
+        mute: bool,
+        /// A visual era for the whole tour (phosphor, 8bit, vector, modern).
+        #[arg(long, default_value = "modern")]
+        era: String,
+        /// Seconds each room holds the stage.
+        #[arg(long, default_value_t = 12.0)]
+        seconds: f64,
+    },
+    /// The Bench: five fixed gauntlets, one composite number. Compare minds.
+    Bench,
     /// Watch a room in full color in the terminal, with its sound, live.
     Watch {
         /// Room id, e.g. "mandelbrot".
@@ -562,6 +585,21 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 None => emit(render_report(&id, width, height, t, allow_hidden)),
             }
         }
+        Command::Tour {
+            fps,
+            width,
+            height,
+            mute,
+            era,
+            seconds,
+        } => {
+            let Some(era) = numinous_core::Era::parse(&era) else {
+                eprintln!("Unknown era '{era}'. Eras: phosphor, 8bit, vector, modern.");
+                return ExitCode::FAILURE;
+            };
+            tour(fps, width, height, mute, era, seconds, journey)
+        }
+        Command::Bench => bench(journey),
         Command::Watch {
             id,
             fps,
@@ -1104,6 +1142,85 @@ fn watch(
         t = if t + 0.005 >= 1.0 { 0.0 } else { t + 0.005 };
         frame += 1;
     }
+}
+
+/// The Show, in the terminal: every room takes the stage in turn, full color
+/// and sound, with a title card and its reveal as the curtain line. Ctrl+C
+/// whenever you have had enough; it comes back around forever.
+#[allow(clippy::too_many_arguments)]
+fn tour(
+    fps: f64,
+    width: usize,
+    height: usize,
+    mute: bool,
+    era: numinous_core::Era,
+    seconds: f64,
+    journey: &mut Journey,
+) -> ExitCode {
+    let player = if mute {
+        None
+    } else {
+        numinous_audio::LoopPlayer::new().ok()
+    };
+    let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
+    let frames_per_room = (seconds.max(2.0) * fps.max(1.0)) as u64;
+    let mut stdout = std::io::stdout();
+    let _ = write!(stdout, "\x1b[2J");
+    let rooms = all_rooms();
+    loop {
+        for room in &rooms {
+            journey.visit(room.meta().id);
+            for frame in 0..frames_per_room {
+                let t = frame as f64 / frames_per_room as f64;
+                let mut screen = watch_frame(room.as_ref(), t, width, height, era);
+                // The title card: the room announces itself, then bows out.
+                if t < 0.18 {
+                    screen.push_str(&format!(
+                        "\x1b[1m{}\x1b[0m  ({})\x1b[K\n",
+                        room.meta().title,
+                        room.meta().wing
+                    ));
+                } else if t > 0.86 {
+                    screen.push_str(&format!("{}\x1b[K\n", room.reveal()));
+                } else {
+                    screen.push_str("\x1b[K\n");
+                }
+                let _ = write!(stdout, "{screen}");
+                let _ = stdout.flush();
+                if frame % 24 == 0
+                    && let Some(player) = &player
+                {
+                    let spec = room.sound(t);
+                    player.set_samples(spec.render(player.sample_rate()));
+                }
+                std::thread::sleep(frame_time);
+            }
+        }
+    }
+}
+
+/// The five seeds of the Bench: fixed forever, so every mind runs the same
+/// five gauntlets and the composite means something.
+const BENCH_SEEDS: [u64; 5] = [101, 102, 103, 104, 105];
+
+/// The Bench: five gauntlets back to back, one composite, posted as bench v1.
+/// A teenager, a laureate, and an agent all take the same run.
+fn bench(journey: &mut Journey) -> ExitCode {
+    println!("THE BENCH v1: five gauntlets, seeds 101 to 105, one number.");
+    println!("Agents run the same five seeds over MCP. Compare minds kindly.\n");
+    let mut composite = 0i64;
+    for (i, &seed) in BENCH_SEEDS.iter().enumerate() {
+        println!("RUN {} OF 5", i + 1);
+        let _ = gauntlet(seed, journey);
+        let board = load_scores();
+        let key = format!("gauntlet seed:{seed}");
+        let run_total = board.entries.get(&key).copied().unwrap_or(0);
+        composite += run_total;
+        println!();
+    }
+    post_score("bench v1", composite);
+    println!("BENCH COMPLETE  composite {composite}  (bench v1)");
+    ExitCode::SUCCESS
 }
 
 /// A room rendered to ASCII, or a guiding error if the id is unknown.

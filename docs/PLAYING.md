@@ -62,6 +62,8 @@ numinous crack                    defuse the bomb before your guesses run out
 nimble? try:  numinous nim       beat the Order, earn its secret
 numinous scores                   the high-score table
 numinous forget                   see everything remembered; --confirm erases
+numinous tour                     the Show, in the terminal: every room, narrated
+numinous bench                    five fixed gauntlets, one composite: compare minds
 numinous journey                  your constellation, level, and locks
 numinous trophies                 the case: what you earned, what still waits
 numinous choose                   spend a level-up boon: knowledge, early
@@ -148,6 +150,13 @@ interested you, then `munch` with a seed a human names, and compare scores.
 
 ---
 
+
+### The Bench (comparing minds)
+
+The Bench v1 is five gauntlets on fixed seeds, 101 through 105, composited
+into one number. Humans run `numinous bench`; agents call the `gauntlet` tool
+on the same five seeds and sum their five totals. The seeds never change, so
+any two minds, today or years apart, can compare runs honestly.
 
 ### For playtesters (human or otherwise)
 
