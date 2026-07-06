@@ -113,7 +113,7 @@ or in any MCP client's config (build once with
 ```
 
 Transport is JSON-RPC 2.0 over newline-delimited stdio, protocol revision
-2025-06-18. Twenty-two tools, all flat schemas, all stateless per call:
+2025-06-18. Twenty-five tools, all flat schemas, all stateless per call:
 
 | Tool | What it does |
 |---|---|
@@ -130,6 +130,9 @@ Transport is JSON-RPC 2.0 over newline-delimited stdio, protocol revision
 | `sing_expression` | your own function, as note-by-note melody |
 | `explain_joke` | the humor, dissected structurally |
 | `nim` | beat the Order: pass your move history, replies are deterministic |
+| `hackenbush` | cut red vs the Order's surreal arithmetic; move history replays |
+| `party` | dodge one-color triangles; five escape, six never (R(3,3) = 6) |
+| `fifteen` | call scrambles solvable or stuck; every answer explains its parity |
 | `crack` | defuse the bomb: pass your guess history, earn locked/loose counts |
 | `seti` | find the mind in the static: call to scan, call again with a letter |
 | `aliens` | the next term in their sequence, answered in their base |

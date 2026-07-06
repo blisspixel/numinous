@@ -279,6 +279,108 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                 }
             }
         }
+        "hackenbush" => {
+            if let Some(list) = args.get("moves").and_then(Value::as_array)
+                && !list.is_empty()
+            {
+                journey.play();
+                let seed = effective_seed(&args);
+                let moves: Vec<(usize, usize)> = list
+                    .iter()
+                    .filter_map(|m| {
+                        let pair = m.as_array()?;
+                        Some((
+                            pair.first()?.as_u64()? as usize,
+                            pair.get(1)?.as_u64()? as usize,
+                        ))
+                    })
+                    .collect();
+                if let Some((_, true, _)) = hackenbush_replay(seed, &moves) {
+                    journey.win();
+                    post_score(&scores_path(), &format!("hackenbush seed:{seed}"), 1);
+                }
+            }
+        }
+        "party" => {
+            if let Some(list) = args.get("shakes").and_then(Value::as_array)
+                && !list.is_empty()
+            {
+                journey.play();
+                // A win is a complete shading with no triangle; replay cheaply
+                // by trusting the tool's own logic via a re-call shape.
+                let guests = args.get("guests").and_then(Value::as_u64).unwrap_or(5) as usize;
+                if (4..=6).contains(&guests) {
+                    let mut party = numinous_core::party::Party::new(guests);
+                    let mut clean = true;
+                    for shake in list {
+                        let Some(t) = shake.as_array() else {
+                            clean = false;
+                            break;
+                        };
+                        let (Some(a), Some(b), Some(color)) = (
+                            t.first().and_then(Value::as_u64),
+                            t.get(1).and_then(Value::as_u64),
+                            t.get(2).and_then(Value::as_str),
+                        ) else {
+                            clean = false;
+                            break;
+                        };
+                        let shade = if color.starts_with(['r', 'R']) {
+                            numinous_core::party::Shade::Red
+                        } else {
+                            numinous_core::party::Shade::Blue
+                        };
+                        if a == 0
+                            || b == 0
+                            || !party.shade(a as usize - 1, b as usize - 1, shade)
+                            || party.mono_triangle().is_some()
+                        {
+                            clean = false;
+                            break;
+                        }
+                    }
+                    if clean && party.complete() {
+                        journey.win();
+                        post_score(
+                            &scores_path(),
+                            &format!("party guests:{guests}"),
+                            party.shaded() as i64,
+                        );
+                    }
+                }
+            }
+        }
+        "fifteen" => {
+            if let Some(calls) = args.get("calls").and_then(Value::as_array)
+                && !calls.is_empty()
+            {
+                journey.play();
+                let seed = effective_seed(&args);
+                let rounds = args
+                    .get("rounds")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(5)
+                    .clamp(1, 20);
+                let mut correct = 0i64;
+                for n in 0..rounds.min(calls.len() as u64) {
+                    let call_s = calls[n as usize]
+                        .as_str()
+                        .map(|c| c.trim().to_ascii_uppercase().starts_with('S'))
+                        .unwrap_or(false);
+                    if call_s
+                        == numinous_core::fifteen::solvable(&numinous_core::fifteen::deal(seed, n))
+                    {
+                        correct += 1;
+                        journey.win();
+                    }
+                }
+                post_score(
+                    &scores_path(),
+                    &format!("fifteen seed:{seed} rounds:{rounds}"),
+                    correct,
+                );
+            }
+        }
         "gauntlet" => {
             if let Some(answers) = args.get("answers") {
                 let seed = effective_seed(&args);
@@ -609,6 +711,45 @@ fn tools_list_result() -> Value {
                 "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
             },
             {
+                "name": "hackenbush",
+                "description": "Hackenbush against the Order: red-blue stalks on a ground line; cut a RED segment (everything above falls), the Order cuts blue by computing Conway's surreal values. Whoever cannot cut loses. Stateless: pass your full move history as moves (pairs of [stalk, height], 1-based); gardens are seeded winnable. Beat it and it hands you the surreal numbers.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "seed": { "type": "integer", "description": "Seed; the same seed grows the same garden." },
+                        "daily": { "type": "boolean", "description": "Use today's shared seed instead." },
+                        "moves": { "type": "array", "items": { "type": "array", "items": { "type": "integer" } }, "description": "Your red cuts so far, in order: [[stalk, height], ...] (1-based). Omit to see the garden." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "party",
+                "description": "The Party Problem: shade every handshake red or blue without making a one-color triangle. Five guests can escape; six cannot (R(3,3) = 6), and feeling that is the point. Stateless: pass your full shading history as shakes (triples of [a, b, color] with color \"r\" or \"b\", guests 1-based).",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "guests": { "type": "integer", "description": "5 (escapable) or 6 (Ramsey says no). Default 5." },
+                        "shakes": { "type": "array", "items": { "type": "array", "items": {} }, "description": "Your shadings so far: [[1, 3, \"r\"], [2, 5, \"b\"], ...]. Omit to see the open party." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "fifteen",
+                "description": "Fifteen's Bet: for each dealt 4x4 scramble, call S (solvable) or U (stuck forever); parity decides and every answer explains itself. Pass calls to grade them all at once.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "seed": { "type": "integer", "description": "Seed; the same seed deals the same scrambles." },
+                        "daily": { "type": "boolean", "description": "Use today's shared seed instead." },
+                        "rounds": { "type": "integer", "description": "How many scrambles, default 5." },
+                        "calls": { "type": "array", "items": { "type": "string" }, "description": "Your verdicts in order, \"S\" or \"U\". Omit to see the scrambles." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
                 "name": "quiz",
                 "description": "Play Guess the Shape. Call with seed and round to get a mystery render and lettered choices; call again with your guess (a letter) to learn if you were right and why.",
                 "inputSchema": {
@@ -653,6 +794,9 @@ fn call_tool(
         "munch" => Ok(munch_tool(&args)),
         "journey" => Ok(journey_tool(journey_file)),
         "nim" => Ok(nim_tool(&args)),
+        "hackenbush" => Ok(hackenbush_tool(&args)),
+        "party" => Ok(party_tool(&args)),
+        "fifteen" => Ok(fifteen_tool(&args)),
         "scores" => Ok(scores_tool(&scores_path())),
         "forget" => Ok(forget_tool(&args, journey_file, &scores_path())),
         "crack" => Ok(crack_tool(&args, journey_file)),
@@ -1238,6 +1382,227 @@ fn trophies_tool(journey_file: &std::path::Path) -> Value {
     )
 }
 
+/// Replay a hackenbush move list; None on an illegal move, else the final
+/// garden and whether the player has already won.
+fn hackenbush_replay(
+    seed: u64,
+    moves: &[(usize, usize)],
+) -> Option<(numinous_core::hackenbush::Stalks, bool, Vec<String>)> {
+    use numinous_core::hackenbush as hb;
+    let mut stalks = hb::new_garden(seed);
+    let mut narration = Vec::new();
+    for &(stalk, height) in moves {
+        if stalk == 0 || height == 0 || !hb::cut(&mut stalks, stalk - 1, height - 1, hb::Color::Red)
+        {
+            return None;
+        }
+        if !hb::can_move(&stalks, hb::Color::Blue) {
+            return Some((stalks, true, narration));
+        }
+        let (bi, bh) = hb::order_move(&stalks)?;
+        let _ = hb::cut(&mut stalks, bi, bh, hb::Color::Blue);
+        narration.push(format!(
+            "The Order cuts stalk {} at height {}.",
+            bi + 1,
+            bh + 1
+        ));
+    }
+    Some((stalks, false, narration))
+}
+
+/// The garden as plain text rows for the tool reply.
+fn garden_rows(stalks: &numinous_core::hackenbush::Stalks) -> String {
+    use numinous_core::hackenbush::Color;
+    let tallest = stalks.iter().map(Vec::len).max().unwrap_or(0);
+    let mut out = String::new();
+    for row in (0..tallest).rev() {
+        for stalk in stalks {
+            out.push(match stalk.get(row) {
+                Some(Color::Red) => 'R',
+                Some(Color::Blue) => 'B',
+                None => '.',
+            });
+            out.push(' ');
+        }
+        out.push('\n');
+    }
+    for i in 1..=stalks.len() {
+        out.push_str(&format!("{i} "));
+    }
+    out
+}
+
+/// The `hackenbush` tool.
+fn hackenbush_tool(args: &Value) -> Value {
+    use numinous_core::hackenbush as hb;
+    let seed = effective_seed(args);
+    let moves: Vec<(usize, usize)> = args
+        .get("moves")
+        .and_then(Value::as_array)
+        .map(|list| {
+            list.iter()
+                .filter_map(|m| {
+                    let pair = m.as_array()?;
+                    Some((
+                        pair.first()?.as_u64()? as usize,
+                        pair.get(1)?.as_u64()? as usize,
+                    ))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let Some((stalks, won, narration)) = hackenbush_replay(seed, &moves) else {
+        return tool_error("Illegal cut: pick a RED segment as [stalk, height], both 1-based.");
+    };
+    if won {
+        return tool_structured(
+            &format!(
+                "The Order has nothing left to cut. It concedes, and keeps its word:\n\n{}",
+                hb::the_secret()
+            ),
+            json!({ "game": "hackenbush", "seed": seed, "won": true }),
+        );
+    }
+    if !hb::can_move(&stalks, hb::Color::Red) {
+        return tool_structured(
+            "No red left to cut. The Order takes the garden. (It was arithmetic.)",
+            json!({ "game": "hackenbush", "seed": seed, "won": false }),
+        );
+    }
+    tool_structured(
+        &format!(
+            "HACKENBUSH seed {seed}. Cut RED as [stalk, height] (1-based); whoever cannot cut loses. This garden is winnable.\n{}\n{}",
+            narration.join("\n"),
+            garden_rows(&stalks)
+        ),
+        json!({ "game": "hackenbush", "seed": seed, "stalks": stalks.len() }),
+    )
+}
+
+/// The `party` tool.
+fn party_tool(args: &Value) -> Value {
+    use numinous_core::party::{Party, Shade};
+    let guests = args.get("guests").and_then(Value::as_u64).unwrap_or(5) as usize;
+    if !(4..=6).contains(&guests) {
+        return tool_error("Parties run 4 to 6 guests (5 is escapable; 6 is Ramsey's).");
+    }
+    let mut party = Party::new(guests);
+    if let Some(list) = args.get("shakes").and_then(Value::as_array) {
+        for shake in list {
+            let Some(t) = shake.as_array() else {
+                return tool_error("Each shake is [a, b, \"r\"|\"b\"], guests 1-based.");
+            };
+            let (Some(a), Some(b), Some(color)) = (
+                t.first().and_then(Value::as_u64),
+                t.get(1).and_then(Value::as_u64),
+                t.get(2).and_then(Value::as_str),
+            ) else {
+                return tool_error("Each shake is [a, b, \"r\"|\"b\"], guests 1-based.");
+            };
+            let shade = if color.starts_with(['r', 'R']) {
+                Shade::Red
+            } else {
+                Shade::Blue
+            };
+            if a == 0 || b == 0 || !party.shade(a as usize - 1, b as usize - 1, shade) {
+                return tool_error(&format!("Handshake {a}-{b} is not open."));
+            }
+            if let Some((x, y, z, _)) = party.mono_triangle() {
+                let lesson = if guests == 6 {
+                    "It was never possible: among six, three mutual friends or three mutual strangers MUST exist. R(3,3) = 6."
+                } else {
+                    "Five CAN escape: ring one color, star the other (the pentagon's trick)."
+                };
+                return tool_structured(
+                    &format!(
+                        "A one-color triangle: guests {}, {}, {}. {} handshakes survived. {lesson}",
+                        x + 1,
+                        y + 1,
+                        z + 1,
+                        party.shaded() - 1
+                    ),
+                    json!({ "game": "party", "guests": guests, "escaped": false, "survived": party.shaded() - 1 }),
+                );
+            }
+        }
+    }
+    if party.complete() {
+        return tool_structured(
+            &format!(
+                "Every handshake shaded, no triangle: you escaped with all {}.{}",
+                party.shaded(),
+                if guests == 5 {
+                    " Now try six; Ramsey is waiting."
+                } else {
+                    ""
+                }
+            ),
+            json!({ "game": "party", "guests": guests, "escaped": true }),
+        );
+    }
+    tool_structured(
+        &format!(
+            "THE PARTY: {guests} guests, {} of {} handshakes shaded, no triangle yet. Shade with shakes: [[a, b, \"r\"], ...].",
+            party.shaded(),
+            party.edges.len()
+        ),
+        json!({ "game": "party", "guests": guests, "shaded": party.shaded(), "total": party.edges.len() }),
+    )
+}
+
+/// The `fifteen` tool.
+fn fifteen_tool(args: &Value) -> Value {
+    use numinous_core::fifteen as ff;
+    let seed = effective_seed(args);
+    let rounds = args
+        .get("rounds")
+        .and_then(Value::as_u64)
+        .unwrap_or(5)
+        .clamp(1, 20);
+    match args.get("calls").and_then(Value::as_array) {
+        None => {
+            let boards: Vec<String> = (0..rounds)
+                .map(|n| {
+                    format!(
+                        "SCRAMBLE {}:\n{}",
+                        n + 1,
+                        ff::board_text(&ff::deal(seed, n))
+                    )
+                })
+                .collect();
+            tool_structured(
+                &format!(
+                    "FIFTEEN'S BET (seed {seed}). For each scramble call S (solvable) or U (stuck forever); half of all deals are lies and parity is the tell.\n\n{}\nCall again with calls: [\"S\", \"U\", ...].",
+                    boards.join("\n")
+                ),
+                json!({ "game": "fifteen", "seed": seed, "rounds": rounds }),
+            )
+        }
+        Some(calls) => {
+            let mut lines = Vec::new();
+            let mut correct = 0u64;
+            for n in 0..rounds.min(calls.len() as u64) {
+                let call_s = calls[n as usize]
+                    .as_str()
+                    .map(|c| c.trim().to_ascii_uppercase().starts_with('S'))
+                    .unwrap_or(false);
+                let tiles = ff::deal(seed, n);
+                let truth = ff::solvable(&tiles);
+                if call_s == truth {
+                    correct += 1;
+                    lines.push(format!("{}: called it. {}", n + 1, ff::why(&tiles)));
+                } else {
+                    lines.push(format!("{}: no. {}", n + 1, ff::why(&tiles)));
+                }
+            }
+            tool_structured(
+                &format!("{}\n{correct} of {rounds} called.", lines.join("\n")),
+                json!({ "game": "fifteen", "seed": seed, "correct": correct, "rounds": rounds }),
+            )
+        }
+    }
+}
+
 fn quiz_tool(args: &Value, journey_file: &std::path::Path) -> Value {
     let seed = effective_seed(args);
     let round = args.get("round").and_then(Value::as_u64).unwrap_or(0);
@@ -1629,7 +1994,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 22);
+        assert_eq!(tools.len(), 25);
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
         assert!(names.contains(&"reveal_room"));
         assert!(names.contains(&"run_sim"));
@@ -1643,7 +2008,17 @@ mod tests {
         assert!(names.contains(&"scores"));
         assert!(names.contains(&"forget"));
         assert!(names.contains(&"nim"));
-        for tool in ["crack", "seti", "aliens", "gauntlet", "choose", "trophies"] {
+        for tool in [
+            "crack",
+            "seti",
+            "aliens",
+            "gauntlet",
+            "choose",
+            "trophies",
+            "hackenbush",
+            "party",
+            "fifteen",
+        ] {
             assert!(names.contains(&tool), "{tool} is a tool");
         }
     }
@@ -1724,6 +2099,51 @@ mod tests {
         assert_eq!(sc["game"], "gauntlet");
         assert!(sc["total"].as_i64().is_some());
         assert!(sc["clean"].as_u64().is_some());
+    }
+
+    #[test]
+    fn the_new_games_present_grade_and_guide() {
+        let garden = handle_request(&json!({
+            "jsonrpc":"2.0","id":110,"method":"tools/call",
+            "params":{"name":"hackenbush","arguments":{"seed":2}}
+        }))
+        .expect("must respond");
+        assert!(
+            garden["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap()
+                .contains("winnable")
+        );
+        let bad = handle_request(&json!({
+            "jsonrpc":"2.0","id":111,"method":"tools/call",
+            "params":{"name":"hackenbush","arguments":{"seed":2,"moves":[[99,1]]}}
+        }))
+        .expect("must respond");
+        assert_eq!(bad["result"]["isError"], true, "illegal cuts guide");
+
+        let escaped = handle_request(&json!({
+            "jsonrpc":"2.0","id":112,"method":"tools/call",
+            "params":{"name":"party","arguments":{"guests":5,"shakes":[
+                [1,2,"r"],[2,3,"r"],[3,4,"r"],[4,5,"r"],[5,1,"r"],
+                [1,3,"b"],[2,4,"b"],[3,5,"b"],[4,1,"b"],[5,2,"b"]
+            ]}}
+        }))
+        .expect("must respond");
+        assert_eq!(
+            escaped["result"]["structuredContent"]["escaped"], true,
+            "the pentagon's escape works over MCP"
+        );
+
+        let graded = handle_request(&json!({
+            "jsonrpc":"2.0","id":113,"method":"tools/call",
+            "params":{"name":"fifteen","arguments":{"seed":3,"rounds":3,"calls":["S","S","S"]}}
+        }))
+        .expect("must respond");
+        assert!(
+            graded["result"]["structuredContent"]["correct"]
+                .as_u64()
+                .is_some()
+        );
     }
 
     #[test]
