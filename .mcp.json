@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "numinous": {
+      "command": "cargo",
+      "args": ["run", "--quiet", "--release", "--bin", "numinous-mcp"]
+    }
+  }
+}

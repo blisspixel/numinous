@@ -6,6 +6,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Agent playtest readiness: full CLI/MCP parity with six new tools (crack,
+  seti, aliens, the gauntlet, choose, trophies), 22 in all, each stateless
+  and two-phase (call to see, call again to answer), each recording plays,
+  wins, and scores exactly as the CLI does, and choose spends boons for
+  agents at last. A `.mcp.json` at the repo root connects Claude Code
+  automatically; the manual gains a real connection quick-start (claude mcp
+  add, or a config pointing at the built binary) and a playtester protocol:
+  what feedback helps, in what shape, and the standing note that scores and
+  memory are the player's own.
 - The app is the game (v1): the chiptune scores the window, each room gets
   its own seeded tune with the room's sonification riding on top of the bed;
   G deals the quiz in-window (the mystery room fullscreen, letters answer,

@@ -163,6 +163,89 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                 }
             }
         }
+        "seti" | "aliens" => {
+            if args.get("guess").and_then(Value::as_str).is_some() {
+                journey.play();
+                let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+                let correct = match name {
+                    "seti" => {
+                        let channels =
+                            args.get("channels").and_then(Value::as_u64).unwrap_or(4) as usize;
+                        (3..=8).contains(&channels) && {
+                            let scan = numinous_core::build_scan(seed, channels);
+                            args.get("guess")
+                                .and_then(Value::as_str)
+                                .and_then(|g| g.trim().chars().next())
+                                .map(|c| c.to_ascii_uppercase())
+                                == Some(scan.answer)
+                        }
+                    }
+                    _ => {
+                        let round = args.get("round").and_then(Value::as_u64).unwrap_or(0);
+                        let message = numinous_core::alien_message(seed.wrapping_add(round), 5);
+                        args.get("guess")
+                            .and_then(Value::as_str)
+                            .map(|g| {
+                                let cleaned: String =
+                                    g.chars().filter(char::is_ascii_alphanumeric).collect();
+                                u64::from_str_radix(&cleaned, message.base).ok()
+                                    == Some(message.answer)
+                            })
+                            .unwrap_or(false)
+                    }
+                };
+                if correct {
+                    journey.win();
+                }
+            }
+        }
+        "crack" => {
+            if let Some(list) = args.get("guesses").and_then(Value::as_array)
+                && !list.is_empty()
+            {
+                journey.play();
+                let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+                let digits = args.get("digits").and_then(Value::as_u64).unwrap_or(4) as usize;
+                if (2..=8).contains(&digits) {
+                    let secret = numinous_core::secret_code(seed, digits);
+                    for (i, raw) in list.iter().filter_map(Value::as_str).take(8).enumerate() {
+                        let guess: Vec<u8> = raw
+                            .chars()
+                            .filter(char::is_ascii_digit)
+                            .map(|c| c as u8 - b'0')
+                            .collect();
+                        if guess.len() == digits
+                            && numinous_core::grade(&secret, &guess).locked == digits
+                        {
+                            journey.win();
+                            post_score(
+                                &scores_path(),
+                                &format!("crack seed:{seed} digits:{digits}"),
+                                (8 - i - 1) as i64,
+                            );
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        "gauntlet" => {
+            if let Some(answers) = args.get("answers") {
+                let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+                let (_, scores, cleared) = gauntlet_grade(seed, answers);
+                for &clear in &cleared {
+                    journey.play();
+                    if clear {
+                        journey.win();
+                    }
+                }
+                post_score(
+                    &scores_path(),
+                    &format!("gauntlet seed:{seed}"),
+                    gauntlet_total(&scores, &cleared),
+                );
+            }
+        }
         _ => {}
     }
     if journey != before {
@@ -386,6 +469,83 @@ fn tools_list_result() -> Value {
                 "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
             },
             {
+                "name": "crack",
+                "description": "Defuse the bomb: a hidden code, a clue, and eight tries. Stateless: pass your full guess history as guesses (digit strings); each earns locked (right digit, right place) and loose (right digit, wrong place) counts. Same seed, same code. Five-digit codes open at LV 5.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "seed": { "type": "integer", "description": "Seed; the same seed hides the same code." },
+                        "digits": { "type": "integer", "description": "Code length, default 4 (5+ opens at LV 5)." },
+                        "guesses": { "type": "array", "items": { "type": "string" }, "description": "Your guesses so far, in order. Omit to see the clue." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "seti",
+                "description": "Point the dish: several radio channels near the hydrogen line, one carrying a mind. Call without a guess to see the traces; call again with your channel letter. Prime-counting pulses are not nature. Five or more channels open at LV 7.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "seed": { "type": "integer", "description": "Seed; everyone scans the same sky." },
+                        "channels": { "type": "integer", "description": "Channels in the scan, default 4 (5+ opens at LV 7)." },
+                        "guess": { "type": "string", "description": "Your channel letter. Omit to receive the scan." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "aliens",
+                "description": "Talk to the aliens: they send a number sequence, sometimes in their own base, and wait for the next term. Call without a guess to receive the transmission; answer in THEIR base. The reveal names the sequence either way.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "seed": { "type": "integer", "description": "Seed for the transmission." },
+                        "round": { "type": "integer", "description": "Which signal from this seed, default 0." },
+                        "guess": { "type": "string", "description": "The next term, written in their base. Omit to listen." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "gauntlet",
+                "description": "The Gauntlet: one seeded run of four stages (a munch board, a mystery shape, a sky scan, the bomb). Call without answers to see all four stages; call again with answers to grade the whole run. Clean stages build a combo multiplier; the total posts to the shared table as gauntlet seed:N.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "seed": { "type": "integer", "description": "Seed; the same seed is the same run for every mind." },
+                        "answers": {
+                            "type": "object",
+                            "description": "All four stage answers at once.",
+                            "properties": {
+                                "bites": { "type": "array", "items": { "type": "integer" }, "description": "Munch: cell numbers to eat (1-30)." },
+                                "shape": { "type": "string", "description": "The mystery shape's letter." },
+                                "sky": { "type": "string", "description": "The artificial channel's letter." },
+                                "wires": { "type": "array", "items": { "type": "string" }, "description": "Bomb guesses in order, up to five four-digit codes." }
+                            },
+                            "additionalProperties": false
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "choose",
+                "description": "Spend a banked boon: every level past the first banks one. Call without a pick to see the three deep cuts on offer; call again with pick (1-3) to open one ahead of its level. Levels still open everything eventually; this shapes the order.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "pick": { "type": "integer", "description": "Which offer to take (1-3). Omit to see the menu." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "trophies",
+                "description": "The trophy case: what your play has earned, and the silhouettes still waiting. Computed purely from the record; nothing here can be held unearned.",
+                "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
+            },
+            {
                 "name": "quiz",
                 "description": "Play Guess the Shape. Call with seed and round to get a mystery render and lettered choices; call again with your guess (a letter) to learn if you were right and why.",
                 "inputSchema": {
@@ -431,6 +591,12 @@ fn call_tool(
         "nim" => Ok(nim_tool(&args)),
         "scores" => Ok(scores_tool(&scores_path())),
         "forget" => Ok(forget_tool(&args, journey_file, &scores_path())),
+        "crack" => Ok(crack_tool(&args, journey_file)),
+        "seti" => Ok(seti_tool(&args, journey_file)),
+        "aliens" => Ok(aliens_tool(&args)),
+        "gauntlet" => Ok(gauntlet_tool(&args)),
+        "choose" => Ok(choose_tool(&args, journey_file)),
+        "trophies" => Ok(trophies_tool(journey_file)),
         "plot_expression" => Ok(plot_expression_tool(&args)),
         "sing_expression" => Ok(sing_expression_tool(&args)),
         "explain_joke" => Ok(explain_joke_tool(&args)),
@@ -594,6 +760,387 @@ fn run_sim_tool(args: &Value) -> Value {
 }
 
 /// The `quiz` tool: present a Guess the Shape round, or grade a guess.
+/// The `crack` tool: replay the guess history against the hidden code.
+fn crack_tool(args: &Value, journey_file: &std::path::Path) -> Value {
+    let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+    let digits = args.get("digits").and_then(Value::as_u64).unwrap_or(4) as usize;
+    if !(2..=8).contains(&digits) {
+        return tool_error("Codes run 2 to 8 digits.");
+    }
+    if digits > 4 && load_journey(journey_file).level() < 5 {
+        return tool_error("Five-digit codes open at LV 5. Play more; the lock knows.");
+    }
+    let secret = numinous_core::secret_code(seed, digits);
+    let clue = numinous_core::hint(&secret);
+    let attempts = 8usize;
+    let guesses: Vec<String> = args
+        .get("guesses")
+        .and_then(Value::as_array)
+        .map(|list| {
+            list.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    if guesses.is_empty() {
+        return tool_structured(
+            &format!(
+                "THE BOMB (seed {seed}). A {digits}-digit code, {attempts} tries.\nClue: {clue}\nCall again with your full guesses list."
+            ),
+            json!({ "game": "crack", "seed": seed, "digits": digits, "attempts": attempts, "clue": clue }),
+        );
+    }
+    let mut lines = Vec::new();
+    for (i, raw) in guesses.iter().take(attempts).enumerate() {
+        let guess: Vec<u8> = raw
+            .chars()
+            .filter(char::is_ascii_digit)
+            .map(|c| c as u8 - b'0')
+            .collect();
+        if guess.len() != digits {
+            return tool_error(&format!("Guess {} is not {digits} digits: {raw:?}", i + 1));
+        }
+        let feedback = numinous_core::grade(&secret, &guess);
+        if feedback.locked == digits {
+            let spare = (attempts - i - 1) as i64;
+            return tool_structured(
+                &format!(
+                    "{}\nDEFUSED on try {} with {spare} to spare. You cracked it.",
+                    lines.join("\n"),
+                    i + 1
+                ),
+                json!({ "game": "crack", "seed": seed, "defused": true, "attemptsToSpare": spare }),
+            );
+        }
+        lines.push(format!(
+            "{raw}: {} locked, {} loose",
+            feedback.locked, feedback.loose
+        ));
+    }
+    if guesses.len() >= attempts {
+        let code: String = secret.iter().map(|&d| char::from(b'0' + d)).collect();
+        return tool_structured(
+            &format!("{}\nBOOM. It was {code}.", lines.join("\n")),
+            json!({ "game": "crack", "seed": seed, "defused": false, "code": code }),
+        );
+    }
+    tool_structured(
+        &format!(
+            "{}\n{} tries left. Clue: {clue}",
+            lines.join("\n"),
+            attempts - guesses.len()
+        ),
+        json!({ "game": "crack", "seed": seed, "triesLeft": attempts - guesses.len() }),
+    )
+}
+
+/// The `seti` tool: present the scan, or grade the pointed dish.
+fn seti_tool(args: &Value, journey_file: &std::path::Path) -> Value {
+    let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+    let channels = args.get("channels").and_then(Value::as_u64).unwrap_or(4) as usize;
+    if !(3..=8).contains(&channels) {
+        return tool_error("Scans run 3 to 8 channels.");
+    }
+    if channels > 4 && load_journey(journey_file).level() < 7 {
+        return tool_error("Wider scans open at LV 7. Keep listening.");
+    }
+    let scan = numinous_core::build_scan(seed, channels);
+    match args.get("guess").and_then(Value::as_str) {
+        Some(guess) => {
+            let letter = guess.trim().chars().next().map(|c| c.to_ascii_uppercase());
+            let correct = letter == Some(scan.answer);
+            let verdict = if correct {
+                "Contact. That trace counts the primes; nature does not."
+            } else {
+                "Static. The mind was elsewhere."
+            };
+            tool_structured(
+                &format!(
+                    "{verdict} The signal was {} at {}.",
+                    scan.answer, scan.answer_frequency
+                ),
+                json!({ "game": "seti", "seed": seed, "correct": correct, "answer": scan.answer.to_string() }),
+            )
+        }
+        None => {
+            let traces: Vec<String> = scan
+                .channels
+                .iter()
+                .map(|c| format!("{})  {:>10}  |{}|", c.letter, c.frequency, c.trace))
+                .collect();
+            tool_structured(
+                &format!(
+                    "THE SKY (seed {seed}). One of these channels is a mind.\n{}\nCall again with your guess letter.",
+                    traces.join("\n")
+                ),
+                json!({ "game": "seti", "seed": seed, "channels": channels }),
+            )
+        }
+    }
+}
+
+/// The `aliens` tool: receive a transmission, or answer in their base.
+fn aliens_tool(args: &Value) -> Value {
+    let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+    let round = args.get("round").and_then(Value::as_u64).unwrap_or(0);
+    let message = numinous_core::alien_message(seed.wrapping_add(round), 5);
+    let shown: Vec<String> = message
+        .terms
+        .iter()
+        .map(|&t| numinous_core::to_base(t, message.base))
+        .collect();
+    let base_note = if message.base == 10 {
+        String::new()
+    } else {
+        format!(" They count in base {}.", message.base)
+    };
+    match args.get("guess").and_then(Value::as_str) {
+        Some(guess) => {
+            let cleaned: String = guess.chars().filter(char::is_ascii_alphanumeric).collect();
+            let correct = u64::from_str_radix(&cleaned, message.base).ok() == Some(message.answer);
+            let answer = numinous_core::to_base(message.answer, message.base);
+            let verdict = if correct { "Contact." } else { "Silence." };
+            tool_structured(
+                &format!(
+                    "{verdict} It was {answer} ({}).\n{}",
+                    message.name, message.explanation
+                ),
+                json!({ "game": "aliens", "seed": seed, "round": round, "correct": correct, "answer": answer, "name": message.name }),
+            )
+        }
+        None => tool_structured(
+            &format!(
+                "A transmission (seed {seed}, signal {round}):{base_note}\n  {}, ...?\nCall again with the next term, written in their base.",
+                shown.join(", ")
+            ),
+            json!({ "game": "aliens", "seed": seed, "round": round, "terms": shown, "base": message.base }),
+        ),
+    }
+}
+
+/// One gauntlet run, graded: (stage lines, stage scores, cleared flags).
+fn gauntlet_grade(seed: u64, answers: &Value) -> (Vec<String>, Vec<i64>, Vec<bool>) {
+    let mut lines = Vec::new();
+    let mut scores = Vec::new();
+    let mut cleared = Vec::new();
+
+    let board = numinous_core::build_board(seed, 0);
+    let bites: Vec<usize> = answers
+        .get("bites")
+        .and_then(Value::as_array)
+        .map(|list| {
+            list.iter()
+                .filter_map(Value::as_u64)
+                .filter(|&n| n >= 1)
+                .map(|n| (n - 1) as usize)
+                .collect()
+        })
+        .unwrap_or_default();
+    let outcome = numinous_core::grade_munch(&board, &bites);
+    let clean = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
+    lines.push(format!(
+        "MUNCH: +{}{}",
+        outcome.score,
+        if clean { "  CLEAN" } else { "" }
+    ));
+    scores.push(outcome.score);
+    cleared.push(clean);
+
+    let round = numinous_core::build_round(seed, 1, 44, 18);
+    let guess = answers
+        .get("shape")
+        .and_then(Value::as_str)
+        .and_then(|g| g.trim().chars().next())
+        .map(|c| c.to_ascii_uppercase());
+    let clean = guess == Some(round.answer);
+    lines.push(format!(
+        "SHAPE: it was {} ({}). +{}{}",
+        round.answer,
+        round.answer_title,
+        if clean { 25 } else { 0 },
+        if clean { "  CLEAN" } else { "" }
+    ));
+    scores.push(if clean { 25 } else { 0 });
+    cleared.push(clean);
+
+    let scan = numinous_core::build_scan(seed, 4);
+    let guess = answers
+        .get("sky")
+        .and_then(Value::as_str)
+        .and_then(|g| g.trim().chars().next())
+        .map(|c| c.to_ascii_uppercase());
+    let clean = guess == Some(scan.answer);
+    lines.push(format!(
+        "SKY: the signal was {}. +{}{}",
+        scan.answer,
+        if clean { 25 } else { 0 },
+        if clean { "  CLEAN" } else { "" }
+    ));
+    scores.push(if clean { 25 } else { 0 });
+    cleared.push(clean);
+
+    let secret = numinous_core::secret_code(seed, 4);
+    let mut bomb_points = 0i64;
+    let mut clean = false;
+    let wires: Vec<&str> = answers
+        .get("wires")
+        .and_then(Value::as_array)
+        .map(|list| list.iter().filter_map(Value::as_str).collect())
+        .unwrap_or_default();
+    for (i, raw) in wires.iter().take(5).enumerate() {
+        let guess: Vec<u8> = raw
+            .chars()
+            .filter(char::is_ascii_digit)
+            .map(|c| c as u8 - b'0')
+            .collect();
+        if guess.len() == 4 && numinous_core::grade(&secret, &guess).locked == 4 {
+            clean = true;
+            bomb_points = 10 * (5 - i as i64 - 1).max(0);
+            break;
+        }
+    }
+    let code: String = secret.iter().map(|&d| char::from(b'0' + d)).collect();
+    lines.push(if clean {
+        format!("BOMB: DEFUSED. +{bomb_points}  CLEAN")
+    } else {
+        format!("BOMB: BOOM. It was {code}. +0")
+    });
+    scores.push(bomb_points);
+    cleared.push(clean);
+
+    (lines, scores, cleared)
+}
+
+/// Combo math: cleared stages multiply what follows (the CLI's rule).
+fn gauntlet_total(scores: &[i64], cleared: &[bool]) -> i64 {
+    let mut total = 0;
+    let mut combo = 1;
+    for (score, &clear) in scores.iter().zip(cleared) {
+        total += score * combo;
+        combo = if clear { combo + 1 } else { 1 };
+    }
+    total
+}
+
+/// The `gauntlet` tool: present all four stages, or grade the whole run.
+fn gauntlet_tool(args: &Value) -> Value {
+    let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+    let Some(answers) = args.get("answers") else {
+        let board = numinous_core::build_board(seed, 0);
+        let round = numinous_core::build_round(seed, 1, 44, 18);
+        let choices: Vec<String> = round
+            .choices
+            .iter()
+            .map(|c| format!("{}) {}", c.letter, c.title))
+            .collect();
+        let scan = numinous_core::build_scan(seed, 4);
+        let traces: Vec<String> = scan
+            .channels
+            .iter()
+            .map(|c| format!("{})  {:>10}  |{}|", c.letter, c.frequency, c.trace))
+            .collect();
+        let secret = numinous_core::secret_code(seed, 4);
+        return tool_structured(
+            &format!(
+                "THE GAUNTLET (seed {seed}). Four stages; clean stages build your combo.\n\nSTAGE 1  MUNCH: {}\n{}\nSTAGE 2  THE SHAPE:\n{}\n{}\nSTAGE 3  THE SKY:\n{}\nSTAGE 4  THE BOMB: four digits, five wires. Clue: {}\n\nCall again with answers: bites, shape, sky, wires.",
+                board.rule.describe(),
+                numinous_core::board_text(&board),
+                round.art,
+                choices.join("\n"),
+                traces.join("\n"),
+                numinous_core::hint(&secret)
+            ),
+            json!({ "game": "gauntlet", "seed": seed, "stages": 4 }),
+        );
+    };
+    let (lines, scores, cleared) = gauntlet_grade(seed, answers);
+    let total = gauntlet_total(&scores, &cleared);
+    let clears = cleared.iter().filter(|&&c| c).count();
+    tool_structured(
+        &format!(
+            "{}\n\nRUN COMPLETE  {clears}/4 clean  TOTAL {total}  (gauntlet seed:{seed})",
+            lines.join("\n")
+        ),
+        json!({ "game": "gauntlet", "seed": seed, "total": total, "clean": clears, "stageScores": scores }),
+    )
+}
+
+/// The `choose` tool: see the boon menu, or spend one.
+fn choose_tool(args: &Value, journey_file: &std::path::Path) -> Value {
+    let mut journey = load_journey(journey_file);
+    if journey.boons_available() == 0 {
+        return tool_structured(
+            "No boon waiting. Every level past the first banks one; play more.",
+            json!({ "boonsAvailable": 0 }),
+        );
+    }
+    let options = numinous_core::boon_options(&journey);
+    if options.is_empty() {
+        return tool_structured(
+            "Nothing left to open early. The road will do the rest.",
+            json!({ "boonsAvailable": journey.boons_available(), "options": [] }),
+        );
+    }
+    match args.get("pick").and_then(Value::as_u64) {
+        Some(pick) => {
+            let Some(boon) = pick.checked_sub(1).and_then(|i| options.get(i as usize)) else {
+                return tool_error("That was not on the menu. The boon stays banked.");
+            };
+            journey.chosen.insert(boon.id.clone());
+            let _ = std::fs::write(journey_file, journey.to_text());
+            let room = boon.id.split(':').nth(1).unwrap_or("").to_string();
+            tool_structured(
+                &format!("CHOSEN. {}\nRead it now: describe_room {room}", boon.label),
+                json!({ "chosen": boon.id, "room": room }),
+            )
+        }
+        None => {
+            let menu: Vec<String> = options
+                .iter()
+                .enumerate()
+                .map(|(i, b)| format!("{}) {}", i + 1, b.label))
+                .collect();
+            tool_structured(
+                &format!(
+                    "BOON: {} banked. Choose what opens early:\n{}\nCall again with pick.",
+                    journey.boons_available(),
+                    menu.join("\n")
+                ),
+                json!({
+                    "boonsAvailable": journey.boons_available(),
+                    "options": options.iter().map(|b| b.label.clone()).collect::<Vec<_>>()
+                }),
+            )
+        }
+    }
+}
+
+/// The `trophies` tool: the case, earned and silhouetted.
+fn trophies_tool(journey_file: &std::path::Path) -> Value {
+    let journey = load_journey(journey_file);
+    let board = numinous_core::Scoreboard::from_text(
+        &std::fs::read_to_string(scores_path()).unwrap_or_default(),
+    );
+    let all = numinous_core::trophies(&journey, &board);
+    let lines: Vec<String> = all
+        .iter()
+        .map(|t| {
+            let mark = if t.earned { "EARNED " } else { "        ...  " };
+            format!("{mark}{}: {}", t.name, t.what)
+        })
+        .collect();
+    let earned = all.iter().filter(|t| t.earned).count();
+    tool_structured(
+        &format!("THE CASE  {earned} of {}\n{}", all.len(), lines.join("\n")),
+        json!({
+            "earned": earned,
+            "total": all.len(),
+            "trophies": all.iter().map(|t| json!({ "name": t.name, "what": t.what, "earned": t.earned })).collect::<Vec<_>>()
+        }),
+    )
+}
+
 fn quiz_tool(args: &Value) -> Value {
     let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
     let round = args.get("round").and_then(Value::as_u64).unwrap_or(0);
@@ -959,7 +1506,7 @@ fn error_response(id: Value, code: i64, message: &str) -> Value {
 
 #[cfg(test)]
 mod tests {
-    use super::handle_request;
+    use super::{handle_request, handle_request_with};
     use serde_json::json;
 
     #[test]
@@ -978,7 +1525,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 16);
+        assert_eq!(tools.len(), 22);
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
         assert!(names.contains(&"reveal_room"));
         assert!(names.contains(&"run_sim"));
@@ -992,6 +1539,140 @@ mod tests {
         assert!(names.contains(&"scores"));
         assert!(names.contains(&"forget"));
         assert!(names.contains(&"nim"));
+        for tool in ["crack", "seti", "aliens", "gauntlet", "choose", "trophies"] {
+            assert!(names.contains(&tool), "{tool} is a tool");
+        }
+    }
+
+    #[test]
+    fn crack_presents_replays_and_defuses() {
+        let clue = handle_request(&json!({
+            "jsonrpc":"2.0","id":90,"method":"tools/call",
+            "params":{"name":"crack","arguments":{"seed":5}}
+        }))
+        .expect("must respond");
+        assert_eq!(clue["result"]["isError"], false);
+        let text = clue["result"]["content"][0]["text"].as_str().unwrap();
+        assert!(text.contains("Clue:"));
+        // The known code for seed 5 with 4 digits (from the CLI e2e): 9500.
+        let win = handle_request(&json!({
+            "jsonrpc":"2.0","id":91,"method":"tools/call",
+            "params":{"name":"crack","arguments":{"seed":5,"guesses":["1234","9500"]}}
+        }))
+        .expect("must respond");
+        let text = win["result"]["content"][0]["text"].as_str().unwrap();
+        assert!(text.contains("DEFUSED"), "{text}");
+        assert_eq!(win["result"]["structuredContent"]["defused"], true);
+    }
+
+    #[test]
+    fn seti_and_aliens_present_then_grade() {
+        let scan = handle_request(&json!({
+            "jsonrpc":"2.0","id":92,"method":"tools/call",
+            "params":{"name":"seti","arguments":{"seed":3}}
+        }))
+        .expect("must respond");
+        assert!(
+            scan["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap()
+                .contains("THE SKY")
+        );
+        let graded = handle_request(&json!({
+            "jsonrpc":"2.0","id":93,"method":"tools/call",
+            "params":{"name":"seti","arguments":{"seed":3,"guess":"A"}}
+        }))
+        .expect("must respond");
+        assert!(
+            graded["result"]["structuredContent"]["correct"].is_boolean(),
+            "graded either way"
+        );
+        let signal = handle_request(&json!({
+            "jsonrpc":"2.0","id":94,"method":"tools/call",
+            "params":{"name":"aliens","arguments":{"seed":2}}
+        }))
+        .expect("must respond");
+        let terms = signal["result"]["structuredContent"]["terms"]
+            .as_array()
+            .expect("terms shown");
+        assert!(!terms.is_empty());
+    }
+
+    #[test]
+    fn the_gauntlet_presents_four_stages_and_grades_a_run() {
+        let stages = handle_request(&json!({
+            "jsonrpc":"2.0","id":95,"method":"tools/call",
+            "params":{"name":"gauntlet","arguments":{"seed":5}}
+        }))
+        .expect("must respond");
+        let text = stages["result"]["content"][0]["text"].as_str().unwrap();
+        for stage in ["MUNCH", "THE SHAPE", "THE SKY", "THE BOMB"] {
+            assert!(text.contains(stage), "{stage} in {text}");
+        }
+        let run = handle_request(&json!({
+            "jsonrpc":"2.0","id":96,"method":"tools/call",
+            "params":{"name":"gauntlet","arguments":{"seed":5,"answers":{
+                "bites":[1,2],"shape":"A","sky":"B","wires":["9500"]
+            }}}
+        }))
+        .expect("must respond");
+        let sc = &run["result"]["structuredContent"];
+        assert_eq!(sc["game"], "gauntlet");
+        assert!(sc["total"].as_i64().is_some());
+        // The bomb answer for seed 5 is 9500: at least one clean stage.
+        assert!(sc["clean"].as_u64().unwrap() >= 1);
+    }
+
+    #[test]
+    fn choose_and_trophies_read_the_record() {
+        let file = std::env::temp_dir().join("numinous_mcp_choose_test.txt");
+        let journey = numinous_core::Journey {
+            plays: 3, // level 3: two boons banked
+            ..Default::default()
+        };
+        let _ = std::fs::write(&file, journey.to_text());
+        let menu = handle_request_with(
+            &json!({
+                "jsonrpc":"2.0","id":97,"method":"tools/call",
+                "params":{"name":"choose","arguments":{}}
+            }),
+            &file,
+        )
+        .expect("must respond");
+        let options = menu["result"]["structuredContent"]["options"]
+            .as_array()
+            .expect("a menu")
+            .len();
+        assert_eq!(options, 3);
+        let spent = handle_request_with(
+            &json!({
+                "jsonrpc":"2.0","id":98,"method":"tools/call",
+                "params":{"name":"choose","arguments":{"pick":2}}
+            }),
+            &file,
+        )
+        .expect("must respond");
+        assert!(
+            spent["result"]["structuredContent"]["chosen"]
+                .as_str()
+                .unwrap()
+                .starts_with("cut:")
+        );
+        let case = handle_request_with(
+            &json!({
+                "jsonrpc":"2.0","id":99,"method":"tools/call",
+                "params":{"name":"trophies","arguments":{}}
+            }),
+            &file,
+        )
+        .expect("must respond");
+        assert!(
+            case["result"]["structuredContent"]["total"]
+                .as_u64()
+                .unwrap()
+                >= 18
+        );
+        let _ = std::fs::remove_file(&file);
     }
 
     #[test]
