@@ -46,7 +46,9 @@ pub use codebreaker::{Feedback, grade, hint, secret_code};
 pub use era::Era;
 pub use font::{draw_text, text_width, wrap_text};
 pub use humor::{Joke, explain_joke, jokes};
-pub use journey::{Journey, MAX_LEVEL, Rank, UNLOCKS, constellation};
+pub use journey::{
+    Boon, CUT_LEVELS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options, constellation,
+};
 pub use munchers::{Board, Munched, board_text, build_board, grade as grade_munch};
 pub use quiz::{QuizChoice, QuizRound, build_round, build_round_sized};
 pub use raster::Raster;
