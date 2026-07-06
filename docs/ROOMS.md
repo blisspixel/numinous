@@ -308,3 +308,16 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 The wings stay feelings, not branches; this map is the coverage checklist
 behind them. A branch is covered when a kid can play its entry and a professor
 can nod at it, and neither one is bored.
+
+## Founder's room idea (July 2026): The Dimension Dial
+
+One control: the number of dimensions, 1 up to many. At 1 a line of points
+pulses; at 2 they become a polygon breathing; at 3 a rotating polytope
+projection; at 4 the hypercube's shadow; beyond, n-cube and n-sphere
+projections where volume concentrates near the equator and intuition breaks
+(the curse of dimensionality, felt). And it DANCES: the room locks to the
+radio (or, later, system loopback via the visualizer), beat driving rotation
+speed, loudness driving scale, so the shape is a creature moving to your
+music. Verb: DRAG UP AND DOWN: ADD DIMENSIONS. Ships with the visualizer
+workstream; the projection math (rotation in random 2-planes of R^n) is
+pure core and testable today.
