@@ -1841,6 +1841,9 @@ fn munch(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
             if !outcome.missed.is_empty() {
                 let missed: Vec<String> = outcome.missed.iter().map(u64::to_string).collect();
                 println!("  You walked past: {}.", missed.join(", "));
+                if outcome.bad_bites == 0 && outcome.missed.len() == 1 {
+                    println!("  One away. The board remembers.");
+                }
             }
             println!();
         }

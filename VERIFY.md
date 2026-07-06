@@ -49,8 +49,10 @@ back). Game-native controls: A/D or arrows change rooms, 1-9 jump straight to
 one, W/S run time faster or slower, drag or mouse-wheel scrubs, E inspects the
 math, Q swaps the visual era (phosphor, 8-bit, vector, modern), R restarts the
 sweep, F goes fullscreen, M mutes, B starts The Show (lean back), G deals the
-quiz (name the math, right in the window), J opens your journey (level, rank,
-trophies, resonances), Tab opens the Studio (type math, watch and hear it
+quiz (name the math, right in the window), C plays today's Munch board with a
+cursor (WASD moves, Space eats, Enter grades), N plays Nim against the Order
+(aim with W/S and A/D, Enter takes; win and the xor secret shows), J opens
+your journey (level, rank, trophies, resonances), Tab opens the Studio (type math, watch and hear it
 live). The app plays the same Journey the CLI does: entering rooms records
 visits, quiz rounds record plays and wins, your level rides in the corner, and
 LEVEL UP banners rise with the level's lore. Set `NUMINOUS_MUTE=1` to launch
@@ -129,7 +131,7 @@ tool list and an ASCII render of the room as text.
 
 ## 5. Where things are
 
-- `crates/core` the headless engine: rooms (25 across 9 wings), sims, games
+- `crates/core` the headless engine: rooms (27 across 9 wings), sims, games
   (including nim and the chiptune composer), the Studio expression engine, the
   journey, scores, trophies, resonances, sound, eras, and the drawing surfaces.
 - `crates/gpu` adaptive wgpu rendering; `crates/audio` adaptive cpal output.
@@ -140,7 +142,7 @@ tool list and an ASCII render of the room as text.
 
 ## 6. What is done vs pending
 
-Done and verifiable now: 25 rooms across 9 wings (plus one that is not
+Done and verifiable now: 27 rooms across 9 wings (plus one that is not
 listed), 6 sims, 7 games with a shared high-score table and daily seeds, the
 complete RPG spine (levels to 42 with lore, locks, 18 trophies with pings, the
 Gauntlet run, boons, daily streaks, resonances), the Studio (plot, animate,
