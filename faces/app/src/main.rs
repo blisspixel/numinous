@@ -86,6 +86,8 @@ struct App {
     mouse: (f64, f64),
     /// The hands in the current room: normalized poke points (R clears).
     pokes: Vec<(f64, f64)>,
+    /// A press began on a listening room: drags keep poking.
+    poking: bool,
     /// The radio: Some(index into STATIONS) when a cached station plays.
     radio: Option<usize>,
     /// The loaded station track, if any.
@@ -203,6 +205,7 @@ impl App {
             show_journey: false,
             mouse: (0.0, 0.0),
             pokes: Vec::new(),
+            poking: false,
             room_card: 240,
             radio: None,
             radio_track: Vec::new(),
@@ -1256,7 +1259,10 @@ impl App {
                 );
             }
         } else if !self.the_show {
-            let mut hint = String::from("ESC  PLAY + MENU     E INSPECT   Y RADIO   J JOURNEY");
+            let mut hint = match room.status(self.t) {
+                Some(readout) => format!("{readout}     ESC  PLAY + MENU   E INSPECT"),
+                None => String::from("ESC  PLAY + MENU     E INSPECT   Y RADIO   J JOURNEY"),
+            };
             if self.muted {
                 hint.push_str("   (MUTED)");
             }
@@ -2292,19 +2298,24 @@ impl ApplicationHandler for App {
                     && self.gauntlet.is_none()
                     && self.rooms[self.current].verb().is_some()
                 {
-                    // The poke: the room answers the hand.
+                    // The poke: the room answers the hand, and keeps
+                    // answering while the hand drags.
+                    self.poking = true;
                     if let Some(window) = &self.window {
                         let size = window.inner_size();
                         let (w, h) = (f64::from(size.width.max(1)), f64::from(size.height.max(1)));
                         let (mx, my) = self.mouse;
                         self.pokes.push((mx / w, my / h));
-                        if self.pokes.len() > 12 {
+                        if self.pokes.len() > 24 {
                             self.pokes.remove(0);
                         }
                     }
                 } else {
                     // Drag horizontally to scrub the room's phase directly.
                     self.dragging = state == ElementState::Pressed;
+                }
+                if state != ElementState::Pressed {
+                    self.poking = false;
                 }
             }
             WindowEvent::MouseWheel { delta, .. } if !self.studio => {
@@ -2317,6 +2328,22 @@ impl ApplicationHandler for App {
             }
             WindowEvent::CursorMoved { position, .. } if !self.dragging => {
                 self.mouse = (position.x, position.y);
+                if self.poking
+                    && let Some(window) = &self.window
+                {
+                    let size = window.inner_size();
+                    let (w, h) = (f64::from(size.width.max(1)), f64::from(size.height.max(1)));
+                    let point = (position.x / w, position.y / h);
+                    let far_enough = self.pokes.last().is_none_or(|&(lx, ly)| {
+                        ((point.0 - lx).powi(2) + (point.1 - ly).powi(2)).sqrt() > 0.02
+                    });
+                    if far_enough {
+                        self.pokes.push(point);
+                        if self.pokes.len() > 24 {
+                            self.pokes.remove(0);
+                        }
+                    }
+                }
             }
             WindowEvent::CursorMoved { position, .. } if self.dragging => {
                 if let Some(window) = &self.window {

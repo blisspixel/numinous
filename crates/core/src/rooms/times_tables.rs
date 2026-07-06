@@ -42,6 +42,24 @@ impl Room for TimesTables {
         }
     }
 
+    fn verb(&self) -> Option<&'static str> {
+        Some("DRAG: TURN THE DIAL")
+    }
+
+    fn status(&self, t: f64) -> Option<String> {
+        let k = K_MIN + K_SWEEP * t.clamp(0.0, 1.0);
+        let nearest = k.round();
+        let off = (k - nearest).abs();
+        let note = if off < 0.02 {
+            format!("CLOSED: {} LOBES", (nearest as i64 - 1).max(0))
+        } else if off < 0.15 {
+            format!("ALMOST: {} LOBES FORMING", (nearest as i64 - 1).max(0))
+        } else {
+            "OPEN, WANDERING".to_string()
+        };
+        Some(format!("K = {k:.2}   {note}"))
+    }
+
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let multiplier = K_MIN + K_SWEEP * t.clamp(0.0, 1.0);
 
@@ -117,6 +135,21 @@ mod tests {
         let spec = TimesTables::new().sound(0.0);
         assert_eq!(spec.notes.len(), 1);
         assert!(spec.notes[0].freq > 0.0);
+    }
+
+    #[test]
+    fn the_dial_reads_back_and_knows_closure() {
+        use crate::room::Room;
+        let room = TimesTables::new();
+        // Some t where k is an integer: K_MIN..K_MIN+K_SWEEP hits integers.
+        let t_closed = (2.0 - super::K_MIN) / super::K_SWEEP;
+        let closed = room.status(t_closed).expect("the dial speaks");
+        assert!(closed.contains("CLOSED"), "{closed}");
+        assert!(closed.contains("K = 2.00"), "{closed}");
+        let open = room
+            .status(t_closed + 0.4 / super::K_SWEEP)
+            .expect("still speaks");
+        assert!(!open.contains("CLOSED"), "{open}");
     }
 
     #[test]

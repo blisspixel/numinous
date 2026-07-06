@@ -50,6 +50,14 @@ pub trait Room {
         0.0
     }
 
+    /// The live readout: what the dial says right now ("K = 2.98, 2 LOBES,
+    /// ALMOST CLOSING"). The math answering back as you scrub. None stays
+    /// silent; keep it one short line.
+    fn status(&self, t: f64) -> Option<String> {
+        let _ = t;
+        None
+    }
+
     /// The verb: what a hand can do here, named for the arrival card
     /// ("CLICK: DROP A STORM"). None means the room only performs.
     fn verb(&self) -> Option<&'static str> {
