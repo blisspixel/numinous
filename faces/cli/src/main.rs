@@ -1433,8 +1433,12 @@ fn watch_frame(
 ) -> String {
     let mut raster = Raster::with_accent(width, height, room.meta().accent);
     room.render(&mut raster, t);
+    let readout = room
+        .status(t)
+        .map(|line| format!("   {line}"))
+        .unwrap_or_default();
     format!(
-        "\x1b[H{}\x1b[0m{}  t = {t:.2}   (Ctrl+C to stop)\x1b[K\n",
+        "\x1b[H{}\x1b[0m{}  t = {t:.2}{readout}   (Ctrl+C to stop)\x1b[K\n",
         ansi_in_era(&raster, era),
         room.meta().title
     )
