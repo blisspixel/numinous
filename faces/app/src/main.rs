@@ -68,6 +68,8 @@ struct App {
     banner: Option<(Vec<String>, u64)>,
     /// The quiz, when playing: the round, its number, and the answer flash.
     quiz: Option<QuizPlay>,
+    /// Rooms recently asked about, excluded from the next deals.
+    quiz_recent: Vec<&'static str>,
     /// Munch, when playing in the window.
     munch: Option<MunchPlay>,
     /// Nim, when playing in the window.
@@ -192,6 +194,7 @@ impl App {
             level_seen: 1,
             banner: None,
             quiz: None,
+            quiz_recent: Vec::new(),
             munch: None,
             nim: None,
             gauntlet: None,
@@ -246,11 +249,26 @@ impl App {
         let seed = Self::daily_seed();
         // The ramp: a brand new player's first deals are three-way picks
         // among the most recognizable rooms; the catalog opens up from there.
-        let round = if self.journey.plays < 6 {
-            numinous_core::build_round_pool(seed, number, 10, 10, 3, &numinous_core::ICONIC)
+        // Recently asked rooms sit out, so no question repeats back to back.
+        let (base, choices): (Vec<&'static str>, usize) = if self.journey.plays < 6 {
+            (numinous_core::ICONIC.to_vec(), 3)
         } else {
-            numinous_core::build_round(seed, number, 10, 10)
+            (self.rooms.iter().map(|r| r.meta().id).collect(), 4)
         };
+        let fresh: Vec<&'static str> = base
+            .iter()
+            .copied()
+            .filter(|id| !self.quiz_recent.contains(id))
+            .collect();
+        let pool = if fresh.len() > choices { fresh } else { base };
+        let round = numinous_core::build_round_pool(seed, number, 10, 10, choices, &pool);
+        if let Some(choice) = round.choices.iter().find(|c| c.letter == round.answer) {
+            self.quiz_recent.push(choice.id);
+            let keep = if self.journey.plays < 6 { 4 } else { 10 };
+            while self.quiz_recent.len() > keep {
+                self.quiz_recent.remove(0);
+            }
+        }
         self.journey.play();
         self.journey_changed();
         self.quiz = Some(QuizPlay { round, flash: None });
