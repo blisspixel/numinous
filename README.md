@@ -79,7 +79,7 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 | [`docs/VISION.md`](docs/VISION.md) | The soul of the project, tone, references, what we are and aren't |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Design philosophy, the three-layer room model, the Watch/Play/Create modes, Benchmark mode, Visual Eras, aesthetic & audio direction |
 | [`docs/STUDIO.md`](docs/STUDIO.md) | The Studio: the Desmos-meets-Strudel live-coding audiovisual canvas, and the game's authoring layer |
-| [`docs/ROOMS.md`](docs/ROOMS.md) | The full catalog of phenomena, 23 rooms, scored by wow-factor and build-cost |
+| [`docs/ROOMS.md`](docs/ROOMS.md) | The catalog of phenomena (25 rooms built, 9 wings) and the Full Map of what remains |
 | [`docs/PROGRESSION.md`](docs/PROGRESSION.md) | Levels & insights: the knowledge-gated "metroidbrainia" structure, the Constellation Map, pacing, Benchmark/Watch |
 | [`docs/INSIGHTS.md`](docs/INSIGHTS.md) | The awe bank: the deep library of mathematical revelations and the insight-chains that connect them |
 | [`docs/VISUALS.md`](docs/VISUALS.md) | The rendering & look bible: pipeline, shader toolbox, color, motion, and how each Visual Era is drawn |

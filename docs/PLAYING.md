@@ -56,6 +56,7 @@ numinous aliens                   answer the transmission
 numinous crack                    defuse the bomb before your guesses run out
 nimble? try:  numinous nim       beat the Order, earn its secret
 numinous scores                   the high-score table
+numinous forget                   see everything remembered; --confirm erases
 numinous journey                  your constellation, level, and locks
 numinous trophies                 the case: what you earned, what still waits
 numinous choose                   spend a level-up boon: knowledge, early

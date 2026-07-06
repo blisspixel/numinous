@@ -63,7 +63,7 @@ Each Era is a draw-mode plus a post-filter, all in the pipeline's stage 4. Same 
 
 Each Era also swaps the audio voice to match (chiptune, FM, analog, modern), see `SOUND.md` and `MUSIC.md`. Eras unlock in historical order as the player collects Constants (see `PROGRESSION.md`).
 
-## Per-wing visual identity (so 23 rooms feel varied but unified)
+## Per-wing visual identity (so 25 rooms feel varied but unified)
 
 The shared pipeline guarantees coherence; these keep the wings distinct:
 - **Emergence:** dense fields and grids, particle clouds, feedback trails. Cellular, alive.
