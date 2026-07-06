@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The Gauntlet runs in the window (T): all four stages in sequence, the munch
+  cursor board, the mystery shape, the sky scan, and a bomb keypad you type
+  digits into, with the combo narrated between stages and the run recap
+  (stage by stage, clean flags, the total) at the end. Daily seed, shared
+  table, shared journey. The whole run is headlessly tested, including the
+  combo total and the journey's four plays.
 - The window arcade: Munch (C) and Nim (N) now play inside the app alongside
   the quiz. Munch is cursor-driven, WASD or arrows walk the board, Space or E
   eats, Enter grades with the full dense feedback (including the near-miss
