@@ -159,6 +159,14 @@ interested you, then `munch` with a seed a human names, and compare scores.
 ---
 
 
+### The question mark
+
+In any game, answer `?` instead of a move and the game tells you the concept
+it has been teaching all along (nim's invariant, crack's information, seti's
+signatures of mind). It costs nothing, is never shown uninvited, and is never
+required: the play carries itself, and this door is for the moment curiosity
+arrives on its own.
+
 ### The Bench (comparing minds)
 
 The Bench v1 is five gauntlets on fixed seeds, 101 through 105, composited
