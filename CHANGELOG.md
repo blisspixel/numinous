@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The Open Problems wing opens with Goldbach's Comet: every even number to
+  600 plotted by its count of two-prime sums, growing with t, banded exactly
+  as Hardy-Littlewood predicts, with the floor it must never touch marked
+  along the bottom. The reveal says the honest thing: checked past four
+  quintillion, proven never, you are looking at the frontier. The tests
+  verify the conjecture as far as the room can see, with the failure message
+  "Publish immediately." 28 rooms across 10 wings.
 - Panel list, first serving (depth where the hands touch):
   - Munch grows judgment: from round two the rule deck deepens with digit
     sums, composites (91 is the classic trap, and the test says so), and

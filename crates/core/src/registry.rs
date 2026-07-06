@@ -36,6 +36,7 @@ pub fn all_rooms() -> Vec<Box<dyn Room>> {
         Box::new(rooms::voronoi::Voronoi::new()),
         Box::new(rooms::mobius::Mobius::new()),
         Box::new(rooms::zeno::Zeno::new()),
+        Box::new(rooms::goldbach::Goldbach::new()),
     ]
 }
 
