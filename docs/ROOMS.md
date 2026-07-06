@@ -259,14 +259,14 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [ ] **Mobius strip** — draw the center line, cover both sides without lifting; cut it and gasp.
 - [ ] **Knots** — tangle and untangle; discover some tangles are truly different, not just stubborn.
 - [ ] **Four-color map** — race to color a map with five, then four, then try three and fail forever.
-- [ ] **Voronoi** — drop wells in a desert and watch territories crystallize; every point served by its nearest well.
+- [x] **Voronoi** — drop wells in a desert and watch territories crystallize; every point served by its nearest well.
 - [x] **Phyllotaxis / packing** — the Golden Angle again (geometry door this time).
 
 ## Change (analysis)
 - [x] **Integration** — The Pour: area pours like water; the fill level traces the antiderivative; reverse the pour and you are differentiating.
 - [x] **Differentiation** — Slope Rider: ride the tangent; your speed is the derivative; inflections are the jumps.
 - [ ] **Limits** — Zeno's Runner: sprint half the remaining distance per tap; the wall arrives anyway.
-- [ ] **Fourier** — the Epicycle Draw: any shape you doodle, rebuilt by circles on circles.
+- [x] **Fourier** — the Epicycle Draw: any shape you doodle, rebuilt by circles on circles.
 - [x] **Differential equations** — Lorenz: three equations, weather, the butterfly.
 - [x] **Exponential growth and equilibrium** — Tribbles; the Big Bang's omega; e hides in both.
 - [ ] **Taylor series** — a zoom toy: every smooth curve becomes its own tangent parabola, cubic, quartic, as you add terms with a slider; sin(x) assembles itself out of polynomials.
@@ -275,7 +275,7 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [x] **Central limit theorem** — the Galton board's bell.
 - [x] **Monte Carlo** — Buffon's needles estimate pi with no circle in sight.
 - [ ] **Bayes** — a lie-detector game: update your suspicion die-roll by die-roll; feel evidence accumulate instead of computing it.
-- [ ] **Random walks** — the drunkard: stumble n steps, end up sqrt(n) from the bar, every time, on average.
+- [x] **Random walks** — the drunkard: stumble n steps, end up sqrt(n) from the bar, every time, on average.
 - [ ] **Birthday paradox** — a party-filling toy: watch the collision arrive absurdly early; bet against it and lose.
 - [ ] **Markov chains** — a weather machine with dials: today decides tomorrow; find the steady state by feel.
 

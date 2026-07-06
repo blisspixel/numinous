@@ -6,6 +6,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Music Engine A, the chiptune (`crates/core/src/chiptune.rs`): square lead,
+  triangle bass, seeded noise ticks; deterministic pentatonic compositions
+  (the same seed is the same tune, forever, on every machine); pure synthesis
+  with click-free step envelopes, fully tested without a speaker. `numinous
+  tune --seed N --out chip.wav` writes it as a WAV.
+- Fourier Epicycles (Waves & Sound): a star decomposed into rotating circles;
+  the chain draws it back into existence while the machinery spins in view.
+  The partial sum is reconstruction-tested against the target; the deep cuts
+  connect Ptolemy's planets and Fourier's rejected 1807 paper.
+- Random Walk (Chance & Order): sixty seeded walkers and the square root law
+  drawn as the circle they scatter around; the RMS distance is law-tested.
+- Voronoi Territories (Shape & Space, a new wing): fourteen drifting wells,
+  borders where they tie; John Snow's cholera map in the reveal. 25 rooms
+  across 9 wings.
 - Resonances (the synergy layer, completing the RPG spine): when two things you
   have done start to rhyme, a link lights in the journey and hands you the line
   that connects them, The Sieve (the Ulam spiral and the primes you ate), The

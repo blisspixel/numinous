@@ -31,6 +31,9 @@ pub fn all_rooms() -> Vec<Box<dyn Room>> {
         Box::new(rooms::the_pour::ThePour::new()),
         Box::new(rooms::slope_rider::SlopeRider::new()),
         Box::new(rooms::double_pendulum::DoublePendulum::new()),
+        Box::new(rooms::epicycles::Epicycles::new()),
+        Box::new(rooms::random_walk::RandomWalk::new()),
+        Box::new(rooms::voronoi::Voronoi::new()),
     ]
 }
 
