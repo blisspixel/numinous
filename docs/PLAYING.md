@@ -69,6 +69,7 @@ numinous seti                     find the artificial signal in the static
 numinous aliens                   answer the transmission
 numinous crack                    defuse the bomb before your guesses run out
 nimble? try:  numinous nim       beat the Order, earn its secret
+numinous arcade --daily           the Munch arcade: eat what fits, dodge the Vexations
 numinous hackenbush               cut grass vs the Order; the grass is numbers
 numinous party                    dodge one-color triangles; five escape, six never
 numinous fifteen                  call scrambles solvable or stuck; parity tells

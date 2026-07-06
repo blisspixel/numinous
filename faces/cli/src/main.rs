@@ -257,6 +257,15 @@ enum Command {
         #[arg(long, default_value_t = 3)]
         rounds: usize,
     },
+    /// The Munch arcade: eat what fits while the Vexations hunt you.
+    Arcade {
+        /// Seed (the same seed is the same run).
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        /// Run today's shared arcade.
+        #[arg(long)]
+        daily: bool,
+    },
     /// Hackenbush: cut grass against the Order. The grass is made of numbers.
     Hackenbush {
         /// Seed (the same seed grows the same garden).
@@ -745,6 +754,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
   numinous play crack        guess the code; LOCKED right place, LOOSE right digit wrong place
   numinous play seti         radio channels of static; only a mind counts in primes
   numinous play aliens       they send a number sequence; answer the next, in THEIR base
+  numinous play arcade       the Munch arcade: eat what fits while spirits hunt you
   numinous play hackenbush   cut grass vs the Order; the grass is secretly made of numbers
   numinous play party        shade handshakes, dodge triangles; five escape, six never
   numinous play fifteen      call each scramble solvable or stuck; parity is the tell
@@ -760,6 +770,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                 "munch" => munch(seed, 3, journey),
                 "quiz" => quiz(3, seed, 44, 18, 4, journey),
                 "nim" => nim(seed, journey),
+                "arcade" => arcade(seed, journey),
                 "hackenbush" => hackenbush(seed, journey),
                 "party" => party(journey),
                 "fifteen" => fifteen(seed, 5, journey),
@@ -872,6 +883,7 @@ Erase the journey with: numinous forget --confirm  (add --scores for the table)"
             daily,
             rounds,
         } => munch(pick_seed(seed, daily, journey), rounds, journey),
+        Command::Arcade { seed, daily } => arcade(pick_seed(seed, daily, journey), journey),
         Command::Hackenbush { seed } => hackenbush(seed, journey),
         Command::Party => party(journey),
         Command::Fifteen { seed, rounds } => fifteen(seed, rounds, journey),
@@ -2091,6 +2103,104 @@ fn quiz_remark(score: usize, rounds: usize) -> &'static str {
         60..=99 => "Sharp eye.",
         _ => "The shapes are sneaky. Play again.",
     }
+}
+
+/// Draw the arcade board: the Muncher, the spirits, the numbers.
+fn arcade_text(run: &numinous_core::munch_arcade::Arcade) -> String {
+    use numinous_core::munch_arcade::Mind;
+    use numinous_core::munchers::{COLS, ROWS};
+    let mut out = String::new();
+    for row in 0..ROWS {
+        for col in 0..COLS {
+            let cell = row * COLS + col;
+            if cell == run.muncher {
+                out.push_str("\x1b[93m[ @]\x1b[0m");
+            } else if let Some(v) = run.vexations.iter().find(|v| v.cell == cell) {
+                let mark = match v.mind {
+                    Mind::Drifter => "\x1b[95m[ d]\x1b[0m",
+                    Mind::Tracker => "\x1b[91m[ T]\x1b[0m",
+                    Mind::Editor => "\x1b[96m[ e]\x1b[0m",
+                };
+                out.push_str(mark);
+            } else if run.eaten[cell] {
+                out.push_str("[  ]");
+            } else {
+                out.push_str(&format!("[{:>2}]", run.board.numbers[cell]));
+            }
+        }
+        out.push('\n');
+    }
+    out
+}
+
+/// The Munch arcade in the terminal: turn-based, same math, same spirits.
+fn arcade(seed: u64, journey: &mut Journey) -> ExitCode {
+    use numinous_core::munch_arcade::{Action, Arcade, Turn};
+    let stdin = std::io::stdin();
+    let mut input = stdin.lock();
+    let mut run = Arcade::new(seed);
+    journey.play();
+    println!("THE MUNCH ARCADE  seed {seed}. You are @. Eat what fits; dodge the spirits.");
+    println!("T tracks you, d drifts, e rewrites numbers where it walks.");
+    println!("Moves: w a s d, then e to eat. One move, then they move. (? explains)");
+    loop {
+        println!(
+            "\nLEVEL {}  LIVES {}  SCORE {}  RULE: {}",
+            run.level,
+            run.lives,
+            run.score,
+            run.board.rule.describe()
+        );
+        print!("{}", arcade_text(&run));
+        print!("move > ");
+        let _ = std::io::stdout().flush();
+        let mut line = String::new();
+        if input.read_line(&mut line).unwrap_or(0) == 0 {
+            break;
+        }
+        if asked_why(&line, "arcade") {
+            continue;
+        }
+        let action = match line.trim().chars().next().map(|c| c.to_ascii_lowercase()) {
+            Some('w') => Action::Up,
+            Some('s') => Action::Down,
+            Some('a') => Action::Left,
+            Some('d') => Action::Right,
+            Some('e') => Action::Eat,
+            Some('q') => break,
+            _ => {
+                println!("  w a s d to move, e to eat, q to leave.");
+                continue;
+            }
+        };
+        match run.turn(action) {
+            Turn::Going => {}
+            Turn::Caught => {
+                println!(
+                    "\n  CAUGHT. A Vexation touches you; {} lives left.",
+                    run.lives
+                );
+            }
+            Turn::Cleared => {
+                journey.win();
+                println!(
+                    "\n  BOARD CLEAR. Level {}: one more spirit joins.",
+                    run.level
+                );
+            }
+            Turn::Over => {
+                println!();
+                word_in_lights("CAUGHT", [255, 120, 60], 5);
+                break;
+            }
+        }
+    }
+    post_score(&format!("arcade seed:{seed}"), run.score);
+    println!(
+        "RUN OVER  level {}, score {}  (arcade seed:{seed}). The spirits send regards.",
+        run.level, run.score
+    );
+    ExitCode::SUCCESS
 }
 
 /// Draw the garden: stalks as columns, red and blue in truecolor.

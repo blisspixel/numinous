@@ -79,6 +79,14 @@ pub fn concept(game: &str) -> Option<&'static str> {
              legal moves can ever cross over. Invariants are how you prove a \
              thing is impossible without trying everything."
         }
+        "arcade" => {
+            "THE CONCEPT: pursuit and evasion. The Tracker plays greedy gradient \
+             descent on the distance to you, which is why straight lines get you \
+             caught and corners are your friends: greedy optimizers cannot plan \
+             around obstacles. The Editor never chases; it rewrites the board so \
+             waiting has a cost, which economists call depreciation and gamers \
+             call get moving. You are outrunning two failure modes of optimization."
+        }
         _ => return None,
     })
 }
@@ -100,6 +108,7 @@ mod tests {
             "hackenbush",
             "party",
             "fifteen",
+            "arcade",
         ] {
             let text = concept(game).expect(game);
             assert!(text.starts_with("THE CONCEPT:"), "{game} names its idea");

@@ -28,6 +28,7 @@ pub mod humor;
 pub mod insights;
 pub use insights::{INSIGHTS, insight};
 pub mod journey;
+pub mod munch_arcade;
 pub mod munchers;
 pub mod nim;
 pub mod party;
