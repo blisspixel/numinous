@@ -89,7 +89,10 @@ impl Room for BuffonNeedle {
         let half_len = Self::length_ratio_for(t) * SPACING / 2.0;
         let (fw, fh) = (width as f64, height as f64);
         let mut rng = SplitMix64::new(SEED);
-        for _ in 0..NEEDLES {
+        // Needle count scales with area so postcards read as needles, not
+        // static; huge canvases still cap at NEEDLES.
+        let count = (width * height / 300).clamp(150, NEEDLES);
+        for _ in 0..count {
             let cx = rng.next_f64() * fw;
             let cy = rng.next_f64() * fh;
             let angle = rng.next_f64() * PI;
