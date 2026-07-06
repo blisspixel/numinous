@@ -49,9 +49,14 @@ fn step(s: State) -> State {
 
 /// Integrate from the standard drop for `steps`, recording the tip path.
 fn trace(offset: f64, steps: usize) -> Vec<(f64, f64)> {
+    trace_from(2.0, offset, steps)
+}
+
+/// Integrate from any starting angle: the hand chooses the drop.
+fn trace_from(start: f64, offset: f64, steps: usize) -> Vec<(f64, f64)> {
     let mut s = State {
-        t1: 2.0 + offset,
-        t2: 2.0,
+        t1: start + offset,
+        t2: start,
         w1: 0.0,
         w2: 0.0,
     };
@@ -130,6 +135,52 @@ impl Room for DoublePendulum {
         canvas.line(pivot.0, pivot.1, tip.0, tip.1, '#');
     }
 
+    fn verb(&self) -> Option<&'static str> {
+        Some("CLICK: DROP IT YOUR WAY")
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        let Some(&(x, _)) = pokes.last() else {
+            self.render(canvas, t);
+            return;
+        };
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
+        }
+        // The horizontal position of the hand chooses the drop angle, from a
+        // gentle swing to over the top. Same equations, your storm.
+        let start = 0.6 + x.clamp(0.0, 1.0) * 2.4;
+        let steps = (t.clamp(0.0, 1.0) * MAX_STEPS as f64) as usize;
+        let aspect = canvas.char_aspect();
+        let cx = width as f64 / 2.0;
+        let cy = height as f64 / 2.0;
+        let radius = (width as f64 / 2.0).min(height as f64 / (2.0 * aspect)) * 0.45;
+        let to_screen = |px: f64, py: f64| -> (i32, i32) {
+            (
+                (cx + px * radius / 2.0) as i32,
+                (cy + py * radius / 2.0 * aspect) as i32,
+            )
+        };
+        for &(tx, ty) in &trace_from(start, SHADOW_OFFSET, steps) {
+            let (px, py) = to_screen(tx, ty);
+            canvas.plot(px, py, '-');
+        }
+        let path = trace_from(start, 0.0, steps);
+        for &(tx, ty) in &path {
+            let (px, py) = to_screen(tx, ty);
+            canvas.plot(px, py, '*');
+        }
+        let (tx, ty) = path
+            .last()
+            .copied()
+            .unwrap_or((start.sin() * 2.0, start.cos() * 2.0));
+        let pivot = to_screen(0.0, 0.0);
+        let tip = to_screen(tx, ty);
+        canvas.line(pivot.0, pivot.1, tip.0, tip.1, '#');
+    }
+
     fn reveal(&self) -> &'static str {
         "Both pendulums obey the same exact equations; nothing here is random. \
          The shadow started one ten-thousandth of a radian away and ended \
@@ -156,7 +207,7 @@ impl Room for DoublePendulum {
 
 #[cfg(test)]
 mod tests {
-    use super::{DoublePendulum, trace};
+    use super::{DoublePendulum, trace, trace_from};
     use crate::canvas::Canvas;
     use crate::room::Room;
 
@@ -191,6 +242,28 @@ mod tests {
         let mut zero = Canvas::new(50, 30);
         room.render(&mut zero, 0.0);
         assert!(zero.ink_count() > 3, "the starting pose shows");
+    }
+
+    #[test]
+    fn the_hand_chooses_the_drop_and_the_reach_still_holds() {
+        use crate::canvas::Canvas;
+        use crate::room::Room;
+        for &(x, _) in &[(0.0, 0.0), (0.5, 0.5), (1.0, 1.0)] {
+            let start = 0.6 + x * 2.4;
+            for &(px, py) in &trace_from(start, 0.0, 3000) {
+                assert!(px.hypot(py) <= 2.0 + 1e-6, "still two unit arms");
+            }
+        }
+        let room = DoublePendulum::new();
+        let mut a = Canvas::new(50, 30);
+        let mut b = Canvas::new(50, 30);
+        room.render_poked(&mut a, 0.5, &[(0.2, 0.5)]);
+        room.render_poked(&mut b, 0.5, &[(0.9, 0.5)]);
+        assert_ne!(
+            a.to_text(),
+            b.to_text(),
+            "different drops, different storms"
+        );
     }
 
     #[test]

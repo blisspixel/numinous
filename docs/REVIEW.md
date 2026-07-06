@@ -45,7 +45,9 @@ your hand; every answer reveals the math.**
 13. Challenge specs per room (metrics, not binary): QUEUED with A2/MCP.
 14. Lore stays invisible at the surface: standing law, reaffirmed.
 15. First ninety seconds: open on the flagship phenomenon, not the menu:
-    QUEUED (Times Tables gold standard, priority 1).
+    OVERRULED by the founder (July 2026): the menu stays; it leads with
+    PLAY and is part of the identity. The flagship gets its polish inside
+    the room instead.
 16. Times Tables as production template: priority 1.
 17. Performance as aesthetic (audio never waits; render degrades
     gracefully): standing engineering law.

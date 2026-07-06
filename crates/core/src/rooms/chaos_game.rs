@@ -76,6 +76,56 @@ impl Room for ChaosGame {
         }
     }
 
+    fn verb(&self) -> Option<&'static str> {
+        Some("CLICK: ADD A CORNER")
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        if pokes.is_empty() {
+            self.render(canvas, t);
+            return;
+        }
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
+        }
+        // The player's corners join the triangle: four corners fold into a
+        // square-dust, five into a pentagon-flake, and the rule never changes.
+        let ratio = Self::ratio_for(t);
+        let (fw, fh) = (width as f64, height as f64);
+        let mut vertices = vec![(fw / 2.0, 0.0), (0.0, fh - 1.0), (fw - 1.0, fh - 1.0)];
+        for &(x, y) in pokes.iter().take(3) {
+            vertices.push((
+                x.clamp(0.0, 1.0) * (fw - 1.0),
+                y.clamp(0.0, 1.0) * (fh - 1.0),
+            ));
+        }
+        let mut rng = SplitMix64::new(SEED);
+        let (mut px, mut py) = (fw / 2.0, fh / 2.0);
+        let iterations = width
+            .saturating_mul(height)
+            .saturating_mul(ITERS_PER_CELL)
+            .min(MAX_ITERS);
+        let n = vertices.len() as u64;
+        for i in 0..iterations {
+            let corner = vertices[rng.below(n) as usize];
+            px = px * (1.0 - ratio) + corner.0 * ratio;
+            py = py * (1.0 - ratio) + corner.1 * ratio;
+            if i >= WARMUP {
+                canvas.plot(px.round() as i32, py.round() as i32, '*');
+            }
+        }
+        // The corners themselves, bright, so the hand sees what it built.
+        for &(vx, vy) in &vertices {
+            for dx in -1..=1 {
+                for dy in -1..=1 {
+                    canvas.plot(vx as i32 + dx, vy as i32 + dy, '#');
+                }
+            }
+        }
+    }
+
     fn reveal(&self) -> &'static str {
         "Every dot landed at random, and there is no triangle anywhere in the \
          rule, only 'jump halfway to a random corner'. Yet a perfect Sierpinski \
