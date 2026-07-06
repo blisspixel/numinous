@@ -77,6 +77,10 @@ struct App {
     show_journey: bool,
     /// Where the mouse last was, for clicking cells and choices.
     mouse: (f64, f64),
+    /// The radio: Some(index into STATIONS) when a cached station plays.
+    radio: Option<usize>,
+    /// The loaded station track, if any.
+    radio_track: Vec<f32>,
     /// Where the journey persists (the CLI's file; a scratch file in tests).
     journey_file: std::path::PathBuf,
 }
@@ -169,6 +173,8 @@ impl App {
             tune: Vec::new(),
             show_journey: false,
             mouse: (0.0, 0.0),
+            radio: None,
+            radio_track: Vec::new(),
             journey_file: journey_path(),
         }
     }
@@ -663,13 +669,18 @@ impl App {
             .into_iter()
             .map(|s| s * 0.5)
             .collect();
-        // The chiptune bed carries the room's voice on top: Music Engine A as
-        // the score, the sonification as the accent (docs/MUSIC.md, one bus).
+        // The bed: a tuned radio station (Engine B) when one is cached,
+        // otherwise the chiptune (Engine A). The room's voice rides on top,
+        // ducked: one bus, as docs/MUSIC.md prescribes.
         if self.tune.is_empty() {
             let pattern = numinous_core::compose(self.current as u64 + 1, 8);
             self.tune = pattern.render(player.sample_rate());
         }
-        let mut mix = self.tune.clone();
+        let mut mix = if self.radio.is_some() && !self.radio_track.is_empty() {
+            self.radio_track.clone()
+        } else {
+            self.tune.clone()
+        };
         if !tone.is_empty() {
             for (i, sample) in mix.iter_mut().enumerate() {
                 *sample = (*sample * 0.55 + tone[i % tone.len()] * 0.45).clamp(-1.0, 1.0);
@@ -1714,6 +1725,46 @@ impl ApplicationHandler for App {
                         // J opens the journey: what the play has made of you.
                         Key::Character(c) if c.as_str() == "j" => {
                             self.show_journey = !self.show_journey;
+                        }
+                        // Y turns the radio dial: off, then station by station.
+                        Key::Character(c) if c.as_str() == "y" => {
+                            let stations = numinous_core::STATIONS.len();
+                            self.radio = match self.radio {
+                                None => Some(0),
+                                Some(i) if i + 1 < stations => Some(i + 1),
+                                Some(_) => None,
+                            };
+                            self.radio_track.clear();
+                            if let Some(i) = self.radio {
+                                let st = &numinous_core::STATIONS[i];
+                                let path = {
+                                    let home = std::env::var("HOME")
+                                        .or_else(|_| std::env::var("USERPROFILE"))
+                                        .unwrap_or_else(|_| ".".to_string());
+                                    std::path::PathBuf::from(home)
+                                        .join(".numinous-radio")
+                                        .join(format!("{}.wav", st.id))
+                                };
+                                if let Ok(mut reader) = hound::WavReader::open(&path) {
+                                    self.radio_track = reader
+                                        .samples::<i16>()
+                                        .filter_map(Result::ok)
+                                        .map(|s| f32::from(s) / 32_768.0)
+                                        .collect();
+                                }
+                                if let Some(window) = &self.window {
+                                    window.set_title(&format!(
+                                        "Numinous  |  radio: {}{}",
+                                        st.name,
+                                        if self.radio_track.is_empty() {
+                                            "  (not cached: numinous tune2)"
+                                        } else {
+                                            ""
+                                        }
+                                    ));
+                                }
+                            }
+                            self.update_audio();
                         }
                         // P keeps the picture: the postcard key.
                         Key::Character(c) if c.as_str() == "p" => {

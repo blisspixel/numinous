@@ -26,6 +26,7 @@ pub mod journey;
 pub mod munchers;
 pub mod nim;
 pub mod quiz;
+pub mod radio;
 pub mod raster;
 pub mod registry;
 pub mod resonance;
@@ -59,6 +60,7 @@ pub use nim::{
     the_secret as nim_secret,
 };
 pub use quiz::{QuizChoice, QuizRound, build_round, build_round_sized};
+pub use radio::{STATIONS, Station, station};
 pub use raster::Raster;
 pub use registry::{all_rooms, hidden_room_by_id, room_by_id};
 pub use resonance::{Resonance, resonances};

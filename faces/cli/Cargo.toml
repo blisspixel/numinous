@@ -18,6 +18,7 @@ clap = { workspace = true }
 serde_json = { workspace = true }
 png = "0.17"
 hound = "3"
+ureq = "2"
 
 [lints]
 workspace = true
