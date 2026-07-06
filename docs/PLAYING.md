@@ -68,6 +68,9 @@ numinous seti                     find the artificial signal in the static
 numinous aliens                   answer the transmission
 numinous crack                    defuse the bomb before your guesses run out
 nimble? try:  numinous nim       beat the Order, earn its secret
+numinous hackenbush               cut grass vs the Order; the grass is numbers
+numinous party                    dodge one-color triangles; five escape, six never
+numinous fifteen                  call scrambles solvable or stuck; parity tells
 numinous scores                   the high-score table
 numinous forget                   see everything remembered; --confirm erases
 numinous tour                     the Show, in the terminal: every room, narrated

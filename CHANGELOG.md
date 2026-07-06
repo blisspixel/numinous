@@ -18,6 +18,26 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   live instead of restarting the record.
 
 ### Added
+- Three games from the ideation shortlist, built to the bar:
+  - **Hackenbush** (`numinous hackenbush`): cut red grass against the Order,
+    whose blue play IS Conway's arithmetic, it computes the surreal value of
+    every garden (Berlekamp sign expansion, tested against 1/2, 1/4, 3/4)
+    and keeps the sum on its side. Gardens are seeded winnable (value > 0),
+    proven by the Order playing itself in tests. Win and it hands you the
+    surreal numbers.
+  - **The Party Problem** (`numinous party`): shade handshakes, dodge
+    one-color triangles. Round one is five guests (escapable, and the
+    pentagon's escape is tested); round two is six, where the tests verify
+    Ramsey by brute force, all 32,768 colorings of K6 contain a mono
+    triangle ("publish immediately" if not). You lose round two and that IS
+    the lesson: R(3,3) = 6, felt.
+  - **Fifteen's Bet** (`numinous fifteen`): call each 4x4 scramble solvable
+    or stuck forever. The parity invariant is tested by walking fifty legal
+    slides and checking the verdict never changes; every wrong call explains
+    itself (inversions + hole row, odd or even).
+  - All three answer `?` with their concept (games as numbers, Ramsey
+    theory, invariants), post scores, level the shared journey, and sit in
+    the play picker. 422 tests.
 - The question mark: in any game, answering `?` reveals the concept the game
   has been teaching all along, nim's invariants, crack's information theory,
   seti's signatures of mind, aliens' representation-versus-meaning, munch's
