@@ -28,6 +28,7 @@ pub mod humor;
 pub mod insights;
 pub use insights::{INSIGHTS, insight};
 pub mod journey;
+pub mod motifs;
 pub mod munch_arcade;
 pub mod munchers;
 pub mod nim;
@@ -62,6 +63,7 @@ pub use humor::{Joke, explain_joke, jokes};
 pub use journey::{
     Boon, CUT_LEVELS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options, constellation, level_lore,
 };
+pub use motifs::Motif;
 pub use munchers::{Board, Munched, board_text, build_board, grade as grade_munch};
 pub use nim::{
     apply as nim_apply, finished as nim_finished, new_game as nim_new, order_move as nim_order,

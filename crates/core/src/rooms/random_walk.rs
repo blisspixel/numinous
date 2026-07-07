@@ -122,6 +122,16 @@ impl Room for RandomWalk {
         ]
     }
 
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "chromatic stumble",
+            root: 174.61,
+            tempo: 104,
+            line: &[0, 1, -1, 2, 1, 3, 2, 0, -2, -1],
+            encodes: "steps that never commit: the drunkard's walk, one semitone at a time",
+        })
+    }
+
     fn verb(&self) -> Option<&'static str> {
         Some("CLICK: PLANT A WALKER")
     }

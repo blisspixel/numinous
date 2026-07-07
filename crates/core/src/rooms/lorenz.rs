@@ -98,6 +98,16 @@ impl Room for Lorenz {
          perfectly determined, and still impossible to predict."
     }
 
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "A minor, unresolved",
+            root: 110.0,
+            tempo: 84,
+            line: &[0, 3, 7, 10, 8, 3, 2, 10, 7, 1],
+            encodes: "a line that wanders forever and never lands: the attractor",
+        })
+    }
+
     fn verb(&self) -> Option<&'static str> {
         Some("CLICK: SEED A SHADOW STORM")
     }

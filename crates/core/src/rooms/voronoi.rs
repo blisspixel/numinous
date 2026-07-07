@@ -121,6 +121,16 @@ impl Room for Voronoi {
         ]
     }
 
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "open fifths",
+            root: 98.0,
+            tempo: 72,
+            line: &[0, 7, 12, 7, 0, 7, 12, 19],
+            encodes: "territories ringing against each other: nearest wins",
+        })
+    }
+
     fn verb(&self) -> Option<&'static str> {
         Some("CLICK: DROP A WELL")
     }

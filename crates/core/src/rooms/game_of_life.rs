@@ -67,6 +67,16 @@ impl Room for GameOfLife {
         }
     }
 
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "C major, sparse",
+            root: 130.81,
+            tempo: 112,
+            line: &[0, 0, 4, 0, 7, 0, 4, 0],
+            encodes: "pulses of birth against silence: cells live and die on a clock",
+        })
+    }
+
     fn verb(&self) -> Option<&'static str> {
         Some("CLICK: SOW LIFE")
     }

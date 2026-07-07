@@ -888,6 +888,15 @@ fn listen_room_tool(args: &Value) -> Value {
         spec.duration,
         spec.notes.len()
     )];
+    if let Some(motif) = room.motif() {
+        lines.push(format!(
+            "Motif: {} at {} BPM, {}. It encodes: {}.",
+            motif.key,
+            motif.tempo,
+            motif.notation().join(" "),
+            motif.encodes
+        ));
+    }
     for (i, note) in spec.notes.iter().take(64).enumerate() {
         lines.push(format!(
             "  note {:>2}: {:>7.1} Hz ({:>3})  at {:>5.2}s  for {:.2}s  amp {:.2}",
