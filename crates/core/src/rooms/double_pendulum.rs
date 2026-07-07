@@ -135,6 +135,16 @@ impl Room for DoublePendulum {
         canvas.line(pivot.0, pivot.1, tip.0, tip.1, '#');
     }
 
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "two voices drifting",
+            root: 123.47,
+            tempo: 88,
+            line: &[0, 7, 1, 8, 2, 9, 3, 10],
+            encodes: "two coupled swings sliding out of phase: deterministic, unforecastable",
+        })
+    }
+
     fn verb(&self) -> Option<&'static str> {
         Some("CLICK: DROP IT YOUR WAY")
     }

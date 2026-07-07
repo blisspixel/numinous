@@ -76,6 +76,16 @@ impl Room for ChaosGame {
         }
     }
 
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "three corners",
+            root: 164.81,
+            tempo: 132,
+            line: &[0, 12, 4, 12, 7, 12, 0, 12],
+            encodes: "always jumping halfway home: three notes and their echo",
+        })
+    }
+
     fn verb(&self) -> Option<&'static str> {
         Some("CLICK: ADD A CORNER")
     }

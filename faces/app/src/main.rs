@@ -925,7 +925,11 @@ impl App {
         // otherwise the chiptune (Engine A). The room's voice rides on top,
         // ducked: one bus, as docs/MUSIC.md prescribes.
         if self.tune.is_empty() {
-            let pattern = numinous_core::compose(self.current as u64 + 1, 8);
+            // The room's own phrase when it has one; the seeded chip otherwise.
+            let pattern = match self.rooms[self.current].motif() {
+                Some(motif) => motif.pattern(),
+                None => numinous_core::compose(self.current as u64 + 1, 8),
+            };
             self.tune = pattern.render(player.sample_rate());
         }
         if self.radio.is_some() && !self.radio_track.is_empty() {

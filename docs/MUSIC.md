@@ -8,6 +8,16 @@ There are two engines, and they are designed to coexist and even harmonize.
 
 ## Engine A: Programmatic music (the math makes the sound)
 
+> A2 status (July 2026): motifs shipped for the seven gold rooms. A motif is
+> a room's musical identity (key, tempo, a line of semitone degrees, and
+> what it encodes): Times Tables circles and returns in D minor pentatonic;
+> Lorenz wanders ten notes and never resolves; the Random Walk stumbles
+> chromatically; Voronoi rings open fifths; the Chaos Game jumps halfway
+> home; the pendulum's two voices drift out of phase; Life pulses against
+> silence. In the app the motif IS the room's bed; over MCP, listen_room
+> returns the phrase structurally (key, BPM, note names, what it encodes).
+> Next: state-dependent tension (the phrase resolves when the dial closes).
+
 > Status: v1 shipped. `crates/core/src/chiptune.rs` composes deterministic
 > pentatonic chiptunes (square lead, triangle bass, noise ticks, click-free
 > envelopes) from a seed; `numinous tune --seed N --out chip.wav` writes them.

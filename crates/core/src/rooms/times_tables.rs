@@ -42,6 +42,16 @@ impl Room for TimesTables {
         }
     }
 
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "D minor pentatonic",
+            root: 146.83,
+            tempo: 96,
+            line: &[0, 5, 7, 12, 7, 5, 0, 7],
+            encodes: "circling and returning: modular arithmetic closes its loop",
+        })
+    }
+
     fn verb(&self) -> Option<&'static str> {
         Some("DRAG: TURN THE DIAL")
     }

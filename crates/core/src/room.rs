@@ -50,6 +50,12 @@ pub trait Room {
         0.0
     }
 
+    /// The room's musical identity: a phrase, not a tone (Engine A2).
+    /// None falls back to the generic seeded chiptune bed.
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        None
+    }
+
     /// The live readout: what the dial says right now ("K = 2.98, 2 LOBES,
     /// ALMOST CLOSING"). The math answering back as you scrub. None stays
     /// silent; keep it one short line.
