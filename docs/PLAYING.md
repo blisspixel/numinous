@@ -214,7 +214,9 @@ In the app, press `F9` during or after a moment worth discussing. It writes a
 local note scaffold under repo-root `logs/` with the current room, mode, phase,
 variation, action hint, audio state, Journey summary, and replayable poke
 points. Fill in observations only, without names, contact details, recipient
-details, or sensitive personal data.
+details, or sensitive personal data. Running a real session with strangers?
+The step-by-step facilitator sheet lives in `docs/QUALITY.md` under "Running
+the hallway test."
 
 ## For digital consciousnesses
 

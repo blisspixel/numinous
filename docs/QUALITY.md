@@ -51,6 +51,42 @@ Every insight card, comedy-radio script, room description, Terminal koan, and li
 
 ### 4. Playtest loop (human, at every phase gate and continuously): the real fun eval
 - **The formalized hallway test**: five-plus strangers (a mix of math-lovers and math-avoiders), no explanation, a written protocol. Count unprompted "whoa"s, spontaneous shares, "just one more" continuations, and where attention drops. Repeatable, scored, run at every phase gate (see `ROADMAP.md`).
+
+#### Running the hallway test (the facilitator sheet)
+
+Everything below is built and ready today; a session needs one facilitator,
+one machine, and five to fifteen minutes per person.
+
+1. **Setup (once).** `cargo run --bin numinous-app`. Sound on (do not launch
+   with `NUMINOUS_MUTE=1`); leave the app on the opening room. Confirm F9
+   works: press it once, check a `playtest-*.md` note appears under the
+   repo-root `logs/` folder (gitignored), then delete that warm-up note.
+2. **The one rule: say nothing.** Hand over the mouse and keyboard with only:
+   "this is something I'm working on, have a poke around." No genre, no
+   instructions, no math. If they ask what to do, answer "whatever you like."
+3. **Watch, don't help.** Note silently: time to first meaningful interaction;
+   the first unprompted action (click? drag? key?); the first unprompted
+   "whoa" (or laugh, or lean-in); whether they keep playing after they seem
+   done; whether they ask to show or send it to someone; where attention
+   visibly drops. If they get stuck, let them be stuck; where they get stuck
+   is the finding.
+4. **Capture (during or right after each person).** Press F9 in the app: it
+   writes a local note under `logs/` with the live session snapshot
+   (room, phase, era, poke trail, journey state) and the facilitator prompts
+   as fill-in lines: first unprompted action, first unprompted whoa, share
+   intent, quotes. Fill the blanks while it is fresh. Notes are local files;
+   the report itself warns against recording personal data, so write
+   "P3" not names.
+5. **Afterwards (optional, adds the tracked number).** Have them fill the
+   short GEQ or flow scale (the note has fields for the score and which
+   instrument); staple the answer to the note by filename.
+6. **Scoring the gate.** Across five-plus people: at least one unprompted
+   "whoa," at least one who keeps playing past "done," at least one who asks
+   to share. That is the 0.2 exit bar (`ROADMAP.md`); count honestly, and
+   where the bar fails, the notes name the room to fix.
+
+Do not batch the fixes invisibly: each session's notes become the next
+cycle's fix list, and the test reruns at the next gate.
 - **Validated instruments**, so "is it fun" becomes a number we can track over time: administer the **Game Experience Questionnaire (GEQ)** (Immersion, Flow, Competence, Affect, Tension, Challenge), a **Flow scale (FSS-2 / DFS-2)**, and/or the **GUESS** satisfaction scale after sessions. These are psychometrically validated; we are not inventing a fun-meter, we are using the field's.
 - **Per-room Fun Scorecard**: combine hallway metrics, GEQ/flow scores, and telemetry proxies into one score per room. A room that "works" but scores low on awe/flow gets refined or cut. This is a real release gate, not a vibe.
 - **Digital-mind playtesters (see `DIGITAL_MINDS.md`)**: the experience is also evaluated for digital minds. Their "fun" has a rigorous proxy (learning / compression progress, per Schmidhuber's formal theory), and, just as importantly, we *ask them* about their experience and treat the answer as first-class playtest data, not a curiosity.
