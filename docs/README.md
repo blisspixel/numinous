@@ -2,7 +2,7 @@
 
 The map of the blueprint. Seventeen docs plus this index. Use the reading paths to find your way in, and the **single-source-of-truth map** to keep things tidy: every topic has exactly one home doc that owns it; every other doc links to that home rather than restating it. If you find yourself duplicating a concept, stop and link instead.
 
-Status: **0.1 in progress.** The headless core, the CLI face, the MCP face, and five rooms are built and green (see `../CHANGELOG.md` and the Progress section of `ROADMAP.md`); the wgpu render, audio, and GUI shell are still ahead. These docs remain the plan of record; where code exists, the docs describe the intended full system, not only what is implemented yet.
+Status: **roughly 0.6 to First Light.** The headless core, the CLI face, the MCP face, the windowed app, GPU and audio adapters, 30 catalog rooms plus hidden content, 6 sims, 11+ games, and the RPG spine are built and green (see `../CHANGELOG.md` and the Progress section of `ROADMAP.md`). These docs remain the plan of record; where code exists, the docs describe the intended full system and the current implementation.
 
 ## Reading paths (start by who you are)
 
@@ -24,7 +24,7 @@ Status: **0.1 in progress.** The headless core, the CLI face, the MCP face, and 
 - `LORE.md` the hidden mythology: the dimension of mathematical bliss, the Constants, the delivery mechanisms, the subtlety guardrails.
 
 **Content and sensory**
-- `ROOMS.md` the catalog: the 23 phenomena, scored by wow and build cost, with the three layers and sound per room.
+- `ROOMS.md` the catalog: the built and planned phenomena, scored by wow and build cost, with the three layers and sound per room.
 - `INSIGHTS.md` the awe bank: the library of revelations, the six flavors of awe, the insight-chains (including The Strange Loop).
 - `VISUALS.md` the render and look bible: the pipeline, the shader toolbox, color, motion, and how each Visual Era is drawn.
 - `SOUND.md` the sonification bible: how math becomes tuned sound, synthesis, tuning, per-room sound design.

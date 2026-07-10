@@ -9,12 +9,21 @@ echo "== clippy =="
 cargo clippy --workspace --all-targets -- -D warnings
 echo "== tests =="
 cargo test --workspace
+echo "== build =="
+cargo build --workspace --locked
 
 if command -v cargo-llvm-cov >/dev/null 2>&1; then
     echo "== coverage =="
-    cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex 'crates[\\/](gpu|audio)[\\/]'
+    cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'
 else
     echo "== coverage == (skipped: run 'cargo install cargo-llvm-cov' to enable)"
+fi
+
+if command -v cargo-deny >/dev/null 2>&1; then
+    echo "== supply-chain =="
+    cargo deny check
+else
+    echo "== supply-chain == (skipped: run 'cargo install cargo-deny' to enable; CI enforces it)"
 fi
 
 echo "== house-style =="

@@ -1,6 +1,6 @@
 # Numinous
 
-**Math you can feel.**
+**Math you can vibe to.**
 
 *Working title. Numinous (adj.), the feeling of awe in the presence of something vast and beautiful. That's the whole product in one word.*
 
@@ -55,7 +55,7 @@ Multiply and wrap → a cardioid. A coin flip repeated → a perfect fractal. Tw
 
 You open Numinous into a quiet, near-black **Cabinet**, a grid of glowing tiles, each a room. You pick *Times Tables*. A circle of points. A line is drawn from each point *n* to point *2n*, wrapping around. A **cardioid**, a perfect heart-curve, materializes out of nothing but "multiply by two." You grab the multiplier dial and drag: 2 → 3 → 4 → the shape morphs through nephroids and nested loops, humming in tuned harmony as it goes, the pitch bending with the number. You hit **π** and the shape shivers into near-chaos. You tap **Reveal** and one sentence tells you this same curve is the silhouette of the Mandelbrot set's main bulb, and you feel the floor tilt. You hit **Share** and a five-second loop of your favorite moment is on your clipboard.
 
-Then you go back to the Cabinet, because there are twenty-seven more rooms, and because you just unlocked the ability to re-skin the whole thing in glowing **8-bit CRT with chiptune**, which is a completely different set of screenshots from the exact same math. (More on the retro-to-modern **Visual Eras** in [`docs/DESIGN.md`](docs/DESIGN.md).)
+Then you go back to the Cabinet, because there are thirty more rooms, and because you just unlocked the ability to re-skin the whole thing in glowing **8-bit CRT with chiptune**, which is a completely different set of screenshots from the exact same math. (More on the retro-to-modern **Visual Eras** in [`docs/DESIGN.md`](docs/DESIGN.md).)
 
 ## Tech: in brief
 
@@ -79,7 +79,7 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 | [`docs/VISION.md`](docs/VISION.md) | The soul of the project, tone, references, what we are and aren't |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Design philosophy, the three-layer room model, the Watch/Play/Create modes, Benchmark mode, Visual Eras, aesthetic & audio direction |
 | [`docs/STUDIO.md`](docs/STUDIO.md) | The Studio: the Desmos-meets-Strudel live-coding audiovisual canvas, and the game's authoring layer |
-| [`docs/ROOMS.md`](docs/ROOMS.md) | The catalog of phenomena (28 rooms built, 10 wings) and the Full Map of what remains |
+| [`docs/ROOMS.md`](docs/ROOMS.md) | The catalog of phenomena (30 catalog rooms plus hidden content, 10 wings, 23 with verbs) and the Full Map of what remains |
 | [`docs/PROGRESSION.md`](docs/PROGRESSION.md) | Levels & insights: the knowledge-gated "metroidbrainia" structure, the Constellation Map, pacing, Benchmark/Watch |
 | [`docs/INSIGHTS.md`](docs/INSIGHTS.md) | The awe bank: the deep library of mathematical revelations and the insight-chains that connect them |
 | [`docs/VISUALS.md`](docs/VISUALS.md) | The rendering & look bible: pipeline, shader toolbox, color, motion, and how each Visual Era is drawn |
@@ -96,18 +96,18 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 
 ## Status
 
-**Roughly 0.6 to First Light** (the honest scorecard lives in [`docs/ROADMAP.md`](docs/ROADMAP.md)). All three faces are real and green (Rust 1.96.0): fmt clean, clippy `-D warnings` clean, 425+ tests, line coverage above 90% with an enforced gate. What exists today:
+**Roughly 0.6 to First Light** (the honest scorecard lives in [`docs/ROADMAP.md`](docs/ROADMAP.md)). All three faces are real and green (Rust 1.96.0): fmt clean, clippy `-D warnings` clean, 814 tests, 89.60% region cover, and 89.09% line cover with an enforced 80% line gate. What exists today:
 
-- **`crates/core`**: 28 rooms across 10 wings, 10 games (munch, quiz, nim, crack, seti, aliens, hackenbush, the Party Problem, Fifteen's Bet, and the Gauntlet run), 6 lever sims, the Studio expression engine, the full RPG spine (levels to 42, trophies, boons, streaks, resonances), both music engines, and the insight and concept catalogs, all deterministic and tested
-- **`faces/cli`** (`numinous`): `rooms`, `describe`, `render` (rooms drawn as ASCII in the terminal), with `--json`.
-- **`faces/mcp`** (`numinous-mcp`): a JSON-RPC 2.0 stdio server so an agent can `list_rooms`, `describe_room`, `reveal_room`, and `play_room` (getting the render back as text).
-- **`faces/app`** (`numinous-app`): a real windowed app (winit + softbuffer) that shows a room animating in full color; left/right switch rooms, space pauses, escape quits. `cargo run --bin numinous-app`.
+- **`crates/core`**: 30 catalog rooms across 10 wings plus hidden content, 11+ games (munch, munch_arcade, quiz, nim, crack, seti, aliens, hackenbush, the Party Problem, Fifteen's Bet, and the Gauntlet run), 6 lever sims, the Studio expression engine, the full RPG spine (levels to 42, trophies, boons, streaks, resonances), shared local persistence helpers for bounded Journey and score reads plus lock-owned writes that wait through short contention under instrumentation, both music engines, and the insight and concept catalogs, all deterministic and tested
+- **`faces/cli`** (`numinous`): `rooms`, `describe`, `render` (rooms drawn as ASCII in the terminal, including replayable `--poke x,y` hand points), `arcade`, with `--json`; live play frames show each room's action line, with neutral fallback copy for quiet rooms.
+- **`faces/mcp`** (`numinous-mcp`): a JSON-RPC 2.0 stdio server so an agent can `list_rooms`, `describe_room`, `reveal_room`, `play_room` (with variation, bounded `pokes`, and action/status fields), and `munch_arcade` (getting the render/state back as text + structured).
+- **`faces/app`** (`numinous-app`): a real windowed app (winit + softbuffer) that shows rooms animating in full color, with app-local play state and quiz flow, game drawing, room chrome, overlays, transient feedback banners, shared Munch/Nim/arcade keyboard controls, mouse input decisions, room input/session plumbing, Studio panel state/drawing, hallway-test notes, postcard export, and bounded radio cache loading plus open-handle WAV validation split into modules as the hardening work continues. `cargo run --bin numinous-app`.
 - **Engineering**: edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, a house-style guard, an 80%-line coverage gate, and CI across three OSes.
 
 - **`crates/gpu`**: an adaptive **wgpu** context that picks the machine's GPU (AMD / NVIDIA / Intel / Apple across Vulkan / Metal / DX12, with a CPU fallback) and renders offscreen with no window. A first compute-shader workload renders the Mandelbrot set to a PNG, verified on the dev laptop's AMD Radeon 780M.
 - **`crates/audio`**: adaptive **cpal** output on the system default device (WASAPI / CoreAudio / ALSA), with pure, tested sine synthesis. A tone hello-world plays a 440 Hz sine and writes a WAV, verified on the dev laptop.
 
-Still ahead in 0.1: rendering the existing rooms through the GPU path and sonifying them through the audio path (a shared geometry model), then **0.2 The Vertical Slice** (the GUI flagship room, to prove the feel). The version-gated plan, with 1.0 and 2.0+ defined by quality bars rather than dates, is in [`docs/ROADMAP.md`](docs/ROADMAP.md). Recent changes are in [`CHANGELOG.md`](CHANGELOG.md).
+Still ahead toward First Light: deeper room-specific poke responses, cross-platform proof, human hallway testing, full Studio save/share beyond the first CLI `.num` save/open slice, accessibility hardening, and visual polish. The version-gated plan, with 1.0 and 2.0+ defined by quality bars rather than dates, is in [`docs/ROADMAP.md`](docs/ROADMAP.md). Recent changes are in [`CHANGELOG.md`](CHANGELOG.md).
 
 **To play:** see [`docs/PLAYING.md`](docs/PLAYING.md), instructions for humans, agents, and digital consciousnesses.
 

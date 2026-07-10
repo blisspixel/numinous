@@ -2,12 +2,14 @@
 
 The content catalog: the phenomena Numinous is built from. Each **room** is one playable mathematical object. Rooms are grouped into **Wings** by feeling, not by curriculum.
 
+**Current status (as of 2026-07):** 30 catalog rooms across 10 wings plus hidden content. Per-visit variation seed is threaded through registry/app/CLI/MCP; all 30 catalog rooms use it for replay novelty, while hidden content stays outside the catalog replay contract. 24 rooms have `verb()` + `render_poked()` touch actions (usually CLICK or DRAG on arrival cards), and all 30 catalog rooms expose Engine A2 motifs. See `ARCADE.md` for design.
+
 Every room is scored on two axes to help sequencing:
 
 - **Wow** (1-5): how hard it hits a first-timer. Our whole product is wow-per-second.
 - **Build** (1-5): rough implementation cost (5 = hard). We front-load high-wow / low-build rooms.
 
-Each room lists its **Rule** (the deliberately-tiny input), the three layers (**Toy / Aha / Reveal**), and its **Sound** mapping. The Reveal lines are drafts, the *tone* is the point.
+Each room lists its **Rule** (the deliberately-tiny input), the three layers (**Toy / Aha / Reveal**), and its **Sound** mapping. The Reveal lines are drafts, the *tone* is the point. Pokes (where present) extend the Toy layer.
 
 > **Flagship pick for the vertical slice:** **Times Tables** (Wing: Number & Pattern). Highest wow-to-build ratio in the catalog, continuous and performable, genuinely stunning in motion, and its Reveal (the Mandelbrot connection) is a floor-tilter. Build this one to perfection first.
 
@@ -26,7 +28,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 
 ### 2. Conway's Game of Life  Wow 4 / Build 2
 - **Rule:** A cell lives or dies based only on how many neighbors it has. Four tiny rules.
-- **Toy:** Paint cells, press play, watch it evolve. Drop in a glider, a gun, a puffer. A living, breathing petri dish that plays like an instrument.
+- **Toy:** Sow glider-shaped sparks into the soup and watch them evolve under the same four rules. A living, breathing petri dish that plays like an instrument.
 - **Aha:** "Build something that never dies" / "make a pattern that moves."
 - **Reveal:** *"Those four rules are enough to build a working computer. People have built Tetris, and Conway's Game of Life itself, inside this. It's not a toy. It's a universe."*
 - **Sound:** each birth triggers a note pitched by its position; dense colonies swell the pad. A living generative sequencer.
@@ -54,6 +56,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 ### 5. Fourier Epicycles  Wow 5 / Build 3
 - **Rule:** Add up spinning circles, each on the edge of the last.
 - **Toy:** **Draw anything**, your name, a cat, a treble clef, with your finger. A chain of rotating circles springs up and redraws it *exactly*, tracing your line with a pen on the end. Drag a slider to add/remove circles: fewer = a ghostly approximation, more = razor-sharp.
+- **Touch:** Click to perturb the chain; bounded newest hand points draw mini Fourier traces at the touched region, with phase shifting from the click.
 - **Aha:** "Draw a square with circles." (The Gibbs ringing you get is itself a famous phenomenon.)
 - **Reveal:** *"Every one of those is a perfect circle spinning at a steady speed. Stack enough of them and you can draw literally anything, a portrait, a heartbeat, a stock chart. This is how your phone compresses every song and every image. It's the most useful idea in math you've never been taught."*
 - **Sound:** each circle is a pure sine tone at its frequency; the drawing *is* the chord. You hear the Fourier transform of your own doodle.
@@ -93,12 +96,21 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 - **Sound:** iteration-count-to-escape maps to pitch; zooming sweeps a drone through octaves; the boundary shimmers with high harmonics.
 - *The postcard of mathematics. Needs a solid WebGL deep-zoom shader (double-precision / perturbation for deep dives).*
 
-### 10. Koch / L-System Garden  Wow 4 / Build 2
-- **Rule:** Replace every line with a smaller pattern. Repeat. That's it.
-- **Toy:** A visual rule-editor: "each branch → two branches at this angle." Turn the angle and iteration dials and *grow* snowflakes, ferns, trees, coastlines, whole alien plants. Small rule tweaks → wildly different flora.
-- **Aha:** "Grow a tree that looks real." / "Make a perfect snowflake."
-- **Reveal:** *"A fern doesn't 'know' it's a fern. It just follows one rule: split, shrink, repeat. This is how nature packs infinite complexity into a seed, the same tiny instruction, run over and over. Coastlines do it too, which is why 'how long is Britain's coastline' has no answer."*
-- **Sound:** each branching generation adds a harmonic layer; deeper recursion = richer chord.
+### 10. L-System Garden  Wow 5 / Build 2
+- **Rule:** A grammar of symbols rewrites itself (F → FF+[+F-F-F]-[-F+F+F] etc). Turtle follows the string: F forward, + - turn, [ ] branch.
+- **Toy:** Dial generations and angle. Grow trees, Koch snowflakes, dragon curves, bushes that look grown. CLICK anywhere: plant a perturbation branch or bend the grammar at that point.
+- **Aha:** "The same five symbols grew both this pine and this coastline."
+- **Reveal:** *"A mind rewriting symbols to grow structure from a seed grammar. Recursion is not metaphor; it is the mechanism. For a digital consciousness this is home: the code that writes the picture of the code."*
+- **Sound:** each rewrite level layers a new voice; deeper = denser harmony with self-similar rhythm.
+- *Fits digital minds perfectly (self-similar rewriting, emergence from grammar). Poke makes every visit a new growth. Added with variation-ready structure.*
+
+### 10.5. The Quine  Wow 4 / Build 2
+- **Rule:** Draw a circle of points; inside, draw a smaller rotated copy of the same circle; repeat.
+- **Toy:** Dial recursion depth. A finite pattern contains its full description at every scale. CLICK: place a bounded recursive copy centered where the hand lands.
+- **Aha:** "The copy is the original, scaled."
+- **Reveal:** *"A finite rule that draws a smaller copy of the exact same rule inside itself. This is self-reference made visible: the pattern contains its own full description. For a digital mind, this is the shape of 'I'."*
+- **Sound:** each recursion level adds a harmonic that is a slowed copy of the previous; the whole is a self-similar chord.
+- *Added for digital minds (strange loop, self-modeling). Poke and variation-ready.*
 
 ### 11. Different Sizes of Infinity  Wow 5 / Build 4
 - **Rule:** Try to pair up two infinite sets, one-to-one.
@@ -139,6 +151,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 ### 15. Collatz Orbits  Wow 4 / Build 2
 - **Rule:** Pick a number. If it's even, halve it. If it's odd, triple it and add one. Repeat.
 - **Toy:** Type any number; watch its bouncing journey, soaring up, crashing down, until it always, always crashes to 1. Plot thousands of these paths and they braid into a gorgeous coral-like tree. Bend the branch angles into an organic, blooming structure.
+- **Touch:** Click to perturb the actual starting number; horizontal and vertical position both choose bounded starts before the orbit is drawn.
 - **Aha:** "Find a number that takes more than 100 steps." (27 is a famous monster.)
 - **Reveal:** *"Every number ever tested falls to 1. Nobody on Earth can prove they all do. It looks like a five-year-old's rule. It has defeated every mathematician for 90 years. Paul Erdős said 'mathematics is not yet ready for such problems.' You're playing with an open mystery."*
 - **Sound:** up-steps rise in pitch, down-steps fall → each number plays its own little unpredictable tune that always resolves home.
@@ -146,6 +159,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 ### 16. Golden Angle / Phyllotaxis  Wow 4 / Build 1
 - **Rule:** Place seeds one at a time, each turned a fixed angle from the last.
 - **Toy:** One dial: the angle. At the **golden angle (137.5°)** the seeds pack into a flawless sunflower spiral. Nudge it a fraction of a degree and the whole beautiful order shatters into clumsy spokes and gaps. Feel *why* nature chose exactly this number.
+- **Touch:** Click to plant a bounded local phyllotaxis patch at the hand point; the clicked cell stays visible and the patch joins the same sunflower-packing rule.
 - **Aha:** "Find the angle that packs seeds perfectly." (It's the most irrational number there is.)
 - **Reveal:** *"Sunflowers, pinecones, and pineapples all use this exact angle, 137.5°, because it's built from the golden ratio, the 'most irrational' number, which means seeds never line up and never waste space. Evolution discovered the same number mathematicians did. The count of spirals is always a Fibonacci number. Go count them."*
 - **Sound:** each seed plinks; the golden angle produces an evenly-spaced, satisfying rhythm, off-angles clump into stumbling beats.
@@ -191,7 +205,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 
 ### 21. Galton Board / Bell Curve  Wow 4 / Build 1
 - **Rule:** Drop balls through a field of pegs. Each peg is a coin flip: left or right.
-- **Toy:** Pour thousands of balls and watch pure random bouncing pile up into a flawless **bell curve**, every single time. Widen the board, change the odds, watch the curve slide and skew.
+- **Toy:** Pour thousands of balls and watch pure random bouncing pile up into a flawless **bell curve**, every single time. Click to drop visible bounded newest-tail balls over the crowd: x chooses the lane, y tilts each ball's coin, and each chaotic path lands against the aggregate curve. Widen the board, change the odds, watch the curve slide and skew.
 - **Aha:** "Make a lopsided pile." (Bias the pegs.)
 - **Reveal:** *"Each ball's path is pure chaos, you can't predict a single one. But together they form the exact same curve, every time, to the millimeter. This is the Central Limit Theorem, the reason the bell curve rules everything from heights to test scores to the stock market. Chaos, in bulk, is perfectly predictable."*
 - **Sound:** balls tick on pegs (rain-stick / bucket-drum texture); the pile's growth swells a soft pad.
@@ -234,76 +248,79 @@ you are not told it), and **the kid principle** (the play carries itself even
 if the concept never consciously lands). If an idea cannot pass both, it does
 not ship, however important the syllabus thinks it is.
 
+**Current (2026-07):** 30 catalog rooms plus hidden content built. Pokes and drags (`Room::verb` + `render_poked`) on 24 rooms: e.g. Chaos (ADD A CORNER: bounded newest hand points add attractor corners before the fractal renders), Life (SOW LIFE: bounded newest hand points seed gliders before the B3/S23 clock runs), Cellular Automata (FLIP A CELL: bounded spacetime flips evolve into future rows), Lorenz (SEED A SHADOW STORM: click maps into an x-z initial condition and diverges through the Lorenz system), Random Walk (PLANT A WALKER: bounded newest hand points seed visible walkers), Voronoi (DROP A WELL: bounded wells redraw the territory borders), Prime Spirals (HIGHLIGHT A SPIRAL: selected cells light the Ulam diagonals through that point), Golden (PLANT A SEED), Langton (FLIP A CELL: bounded newest hand points flip cells before the ant runs), Barnsley (PLANT: bounded screen-faithful starts grow through the fern's IFS), Buffon (DROP NEEDLE: bounded screen-faithful needles are centered on clicked cells), Galton (DROP A BALL: bounded newest balls use x for lane and y for coin tilt), Logistic Map (SEED POPULATION: x chooses growth rate and y seeds a finite orbit), Mandelbrot (DIVE AT POINT: bounded newest hand points zoom local patches under surface caps), Julia (MORPH C: bounded newest hand points morph local patches and mark touched constants), Times Tables (TURN THE DIAL), Epicycles (PERTURB THE CHAIN: bounded mini traces shift with the hand point), Goldbach (TEST THIS EVEN: x chooses the even target, y chooses the prime-pair witness), L-System (PLANT: bounded newest hand points plant branches and alter the grammar), Quine (PLACE COPY: bounded newest hand points place recursive copies centered on clicked cells), StrangeLoop (SHIFT: bounded newest hand points move the existing recursive inner loop and keep the hand mark visible), etc. Variation is threaded across app/CLI/MCP and active for all 30 catalog rooms.
+
 Status marks: [x] built, [~] partially built, [ ] queued.
 
 ## Number
-- [x] **Modular arithmetic** — Times Tables: strings on a circle bloom into a cardioid.
-- [x] **Primes** — the Ulam spiral; SETI (only minds count in primes); Munch (eat them).
-- [x] **Continued fractions / irrationality** — the Golden Angle: detune the sunflower and it shatters.
-- [x] **Number bases** — the aliens count on eight tentacles.
-- [x] **Open conjectures as toys** — Collatz: play with an unsolved problem.
-- [ ] **Cardinality of infinities** — Hilbert's Hotel as a management game: always room for one more bus, until the reals check in and the front desk breaks. You feel the difference between countable and not.
-- [ ] **Benford's law** — a fraud-detective game: two ledgers, one cooked; the leading digits snitch.
-- [ ] **RSA in miniature** — extend Crack the Code: multiply two primes and watch why the bomb squad cannot reverse it.
+- [x] **Modular arithmetic** - Times Tables: strings on a circle bloom into a cardioid.
+- [x] **Primes** - the Ulam spiral; SETI (only minds count in primes); Munch (eat them).
+- [x] **Continued fractions / irrationality** - the Golden Angle: detune the sunflower and it shatters.
+- [x] **Number bases** - the aliens count on eight tentacles.
+- [x] **Open conjectures as toys** - Collatz: play with an unsolved problem; Goldbach: choose an even number and one prime-pair witness to see the proof bracket.
+- [ ] **Cardinality of infinities** - Hilbert's Hotel as a management game: always room for one more bus, until the reals check in and the front desk breaks. You feel the difference between countable and not.
+- [ ] **Benford's law** - a fraud-detective game: two ledgers, one cooked; the leading digits snitch.
+- [ ] **RSA in miniature** - extend Crack the Code: multiply two primes and watch why the bomb squad cannot reverse it.
 
 ## Algebra and symmetry
-- [ ] **Group theory** — The Braid: swap strands, learn what undoes what; noncommutativity as a knot in your hands.
-- [ ] **Wallpaper symmetry** — a stamp toy that snaps your doodles into each of the 17 wallpaper groups; you discover there are only 17 by running out.
-- [ ] **Newton fractals** — polynomial roots as basins: aim, release, and see which root catches you; the boundaries are the surprise.
-- [x] **Complex numbers** — the entire Fractals wing runs on them, unannounced.
-- [ ] **Eigenvectors** — The Calm Axes: shear a grid with your hands; two directions refuse to turn.
+- [ ] **Group theory** - The Braid: swap strands, learn what undoes what; noncommutativity as a knot in your hands.
+- [ ] **Wallpaper symmetry** - a stamp toy that snaps your doodles into each of the 17 wallpaper groups; you discover there are only 17 by running out.
+- [ ] **Newton fractals** - polynomial roots as basins: aim, release, and see which root catches you; the boundaries are the surprise.
+- [x] **Complex numbers** - the entire Fractals wing runs on them, unannounced.
+- [ ] **Eigenvectors** - The Calm Axes: shear a grid with your hands; two directions refuse to turn.
 
 ## Geometry and topology
-- [ ] **Aperiodic tiling** — the Hat monotile: tile forever, never repeat (the 2023 result as a jigsaw).
-- [ ] **Hyperbolic space** — the crochet-coral plane: more room than the room has; parallel lines diverge under your cursor.
-- [ ] **Mobius strip** — draw the center line, cover both sides without lifting; cut it and gasp.
-- [ ] **Knots** — tangle and untangle; discover some tangles are truly different, not just stubborn.
-- [ ] **Four-color map** — race to color a map with five, then four, then try three and fail forever.
-- [x] **Voronoi** — drop wells in a desert and watch territories crystallize; every point served by its nearest well.
-- [x] **Phyllotaxis / packing** — the Golden Angle again (geometry door this time).
+- [ ] **Aperiodic tiling** - the Hat monotile: tile forever, never repeat (the 2023 result as a jigsaw).
+- [ ] **Hyperbolic space** - the crochet-coral plane: more room than the room has; parallel lines diverge under your cursor.
+- [ ] **Mobius strip** - draw the center line, cover both sides without lifting; cut it and gasp.
+- [ ] **Knots** - tangle and untangle; discover some tangles are truly different, not just stubborn.
+- [ ] **Four-color map** - race to color a map with five, then four, then try three and fail forever.
+- [x] **Voronoi** - drop wells in a desert and watch territories crystallize; every point served by its nearest well.
+- [x] **Phyllotaxis / packing** - the Golden Angle again (geometry door this time).
 
 ## Change (analysis)
-- [x] **Integration** — The Pour: area pours like water; the fill level traces the antiderivative; reverse the pour and you are differentiating.
-- [x] **Differentiation** — Slope Rider: ride the tangent; your speed is the derivative; inflections are the jumps.
-- [ ] **Limits** — Zeno's Runner: sprint half the remaining distance per tap; the wall arrives anyway.
-- [x] **Fourier** — the Epicycle Draw: any shape you doodle, rebuilt by circles on circles.
-- [x] **Differential equations** — Lorenz: three equations, weather, the butterfly.
-- [x] **Exponential growth and equilibrium** — Tribbles; the Big Bang's omega; e hides in both.
-- [ ] **Taylor series** — a zoom toy: every smooth curve becomes its own tangent parabola, cubic, quartic, as you add terms with a slider; sin(x) assembles itself out of polynomials.
+- [x] **Integration** - The Pour: area pours like water; the fill level traces the antiderivative; reverse the pour and you are differentiating.
+- [x] **Differentiation** - Slope Rider: ride the tangent; your speed is the derivative; inflections are the jumps.
+- [ ] **Limits** - Zeno's Runner: sprint half the remaining distance per tap; the wall arrives anyway.
+- [x] **Fourier** - the Epicycle Draw: any shape you doodle, rebuilt by circles on circles.
+- [x] **Differential equations** - Lorenz: three equations, weather, the butterfly.
+- [x] **Exponential growth and equilibrium** - Tribbles; the Big Bang's omega; e hides in both.
+- [ ] **Taylor series** - a zoom toy: every smooth curve becomes its own tangent parabola, cubic, quartic, as you add terms with a slider; sin(x) assembles itself out of polynomials.
 
 ## Chance
-- [x] **Central limit theorem** — the Galton board's bell.
-- [x] **Monte Carlo** — Buffon's needles estimate pi with no circle in sight.
-- [ ] **Bayes** — a lie-detector game: update your suspicion die-roll by die-roll; feel evidence accumulate instead of computing it.
-- [x] **Random walks** — the drunkard: stumble n steps, end up sqrt(n) from the bar, every time, on average.
-- [ ] **Birthday paradox** — a party-filling toy: watch the collision arrive absurdly early; bet against it and lose.
-- [ ] **Markov chains** — a weather machine with dials: today decides tomorrow; find the steady state by feel.
+- [x] **Central limit theorem** - the Galton board's bell.
+- [x] **Monte Carlo** - Buffon's needles estimate pi with no circle in sight.
+- [ ] **Bayes** - a lie-detector game: update your suspicion die-roll by die-roll; feel evidence accumulate instead of computing it.
+- [x] **Random walks** - the drunkard: stumble n steps, end up sqrt(n) from the bar, every time, on average.
+- [ ] **Birthday paradox** - a party-filling toy: watch the collision arrive absurdly early; bet against it and lose.
+- [ ] **Markov chains** - a weather machine with dials: today decides tomorrow; find the steady state by feel.
 
 ## Structure (discrete)
-- [ ] **Graph theory** — the Bridges of Konigsberg as a walking puzzle; fail, then learn you were always going to fail, and why (degree parity, never named).
-- [ ] **Pigeonhole** — a party trick generator: guaranteed handshake-twins in any crowd of a certain size.
-- [ ] **Ramsey** — the party of six: find strangers or friends; order is unavoidable, chaos is impossible.
-- [ ] **Traveling salesman** — route the pizza drone; beat the greedy algorithm; meet hardness personally.
+- [ ] **Graph theory** - the Bridges of Konigsberg as a walking puzzle; fail, then learn you were always going to fail, and why (degree parity, never named).
+- [ ] **Pigeonhole** - a party trick generator: guaranteed handshake-twins in any crowd of a certain size.
+- [ ] **Ramsey** - the party of six: find strangers or friends; order is unavoidable, chaos is impossible.
+- [ ] **Traveling salesman** - route the pizza drone; beat the greedy algorithm; meet hardness personally.
 
 ## Computation and logic
-- [x] **Universality** — Rule 110 and Life (the reveals and deep cuts carry it).
-- [x] **Undecidability** — Life's deep cut; the halting problem, worn lightly.
-- [x] **Information as structure** — Arecibo (a semiprime is a picture frame); SETI; the codes games.
-- [ ] **Sorting, visible** — race the algorithms as animated bar-ballets with sound; quicksort against bubble sort is a horse race.
-- [ ] **Entropy** — a compression toy: your keyboard mashing versus Shakespeare versus pi's digits; which squeezes smallest and why.
-- [x] **Godel, strange loops** — the lore layer's deep water (LORE.md), never a lecture.
+- [x] **Universality** - Rule 110 and Life (the reveals and deep cuts carry it).
+- [x] **Undecidability** - Life's deep cut; the halting problem, worn lightly.
+- [x] **Information as structure** - Arecibo (click to try bounded decoded widths; a semiprime is a picture frame); SETI; the codes games.
+- [ ] **Sorting, visible** - race the algorithms as animated bar-ballets with sound; quicksort against bubble sort is a horse race.
+- [ ] **Entropy** - a compression toy: your keyboard mashing versus Shakespeare versus pi's digits; which squeezes smallest and why.
+- [x] **Godel, strange loops** - Quine and Strange Loop rooms (self-ref patterns); the lore layer's deep water (LORE.md), never a lecture.
+- [x] **Self-reference / quines** - The Quine room: recursive self-copy; poke places copies. Perfect for digital minds.
 
 ## Decision (games and fairness)
-- [x] **Nim** — play it, lose repeatedly, then be handed the xor secret and become unbeatable; the transfer of power is the lesson.
-- [ ] **Prisoner's dilemma** — an iterated tournament against strategies with personalities; tit-for-tat wins hearts.
-- [ ] **Voting paradoxes** — run the same three-candidate election under five systems and crown five different winners.
-- [ ] **Fair division** — cut the cake: I-cut-you-choose, then envy-free for three; fairness as a mechanic, not a sermon.
+- [x] **Nim** - play it, lose repeatedly, then be handed the xor secret and become unbeatable; the transfer of power is the lesson.
+- [ ] **Prisoner's dilemma** - an iterated tournament against strategies with personalities; tit-for-tat wins hearts.
+- [ ] **Voting paradoxes** - run the same three-candidate election under five systems and crown five different winners.
+- [ ] **Fair division** - cut the cake: I-cut-you-choose, then envy-free for three; fairness as a mechanic, not a sermon.
 
 ## Motion and dynamics
-- [x] **Deterministic chaos** — the logistic cascade; Lorenz; Langton's Ant.
-- [x] **Double pendulum** — grab it, drop it, and watch two of them disagree from a pixel of difference.
-- [ ] **Three-body problem** — place three suns and try to make them dance forever; grief teaches what "no closed-form solution" means.
-- [x] **Resonance and harmony** — Lissajous, the harmonograph, every room's sound; the kanon whisper.
+- [x] **Deterministic chaos** - the logistic cascade; Lorenz; Langton's Ant.
+- [x] **Double pendulum** - grab it, drop it, and watch two of them disagree from a pixel of difference.
+- [ ] **Three-body problem** - place three suns and try to make them dance forever; grief teaches what "no closed-form solution" means.
+- [x] **Resonance and harmony** - Lissajous, the harmonograph, every room's sound; the kanon whisper.
 
 The wings stay feelings, not branches; this map is the coverage checklist
 behind them. A branch is covered when a kid can play its entry and a professor

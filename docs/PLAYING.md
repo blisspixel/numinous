@@ -37,6 +37,7 @@ your hands already know it:
 | T (in the menu) | the Gauntlet: four stages, a combo, one number |
 | J | your journey: level, rank, trophies, resonances |
 | P | keep the picture: saves the room as a PNG postcard |
+| F9 | save a local hallway-test note in repo-root `logs/` |
 | Y | the radio dial: off, trance, chill, synthwave (cached stations) |
 | - / = | volume down / up (banner shows the level) |
 | mouse | click munch cells and quiz choices directly |
@@ -51,6 +52,7 @@ numinous play                     pick a game; numinous play munch deals today's
 numinous watch julia              full-color animation, with sound
 numinous watch lorenz --era phosphor
 numinous play times-tables        classic ASCII
+numinous render double-pendulum --poke 0.2,0.8
 numinous plot "sin(a*x)" --animate
 numinous sing "sin(x) + x/3" --out song.wav
 numinous tune --seed 7 --out chip.wav   a seeded chiptune (Music Engine A)
@@ -115,19 +117,22 @@ or in any MCP client's config (build once with
 ```
 
 Transport is JSON-RPC 2.0 over newline-delimited stdio, protocol revision
-2025-06-18. Twenty-five tools, all flat schemas, all stateless per call:
+2025-06-18. Twenty-six tools, mostly flat schemas, all stateless per call; the
+bounded `play_room` `pokes` tuple array is the deliberate exception for
+replayable hand points:
 
 | Tool | What it does |
 |---|---|
 | `list_rooms` | the catalog |
 | `describe_room` | a room's story (some unlisted names also answer) |
 | `reveal_room` | the insight that reframes the room |
-| `play_room` | render a room as ASCII at phase `t` |
+| `play_room` | render a room as ASCII at phase `t`, with optional `variation` and `pokes` |
 | `listen_room` | the room's sound as notation (Hz, note names, timing) |
 | `list_sims` | the simulations and their levers |
 | `run_sim` | run a sim with your lever values; picture plus plain readout |
 | `quiz` | guess the shape: call to see, call again with `guess` |
 | `munch` | eat the numbers that fit: call to see, call again with `bites` |
+| `munch_arcade` | hunted Munch: call to see, call again with replayed `actions` |
 | `plot_expression` | your own function, plotted |
 | `sing_expression` | your own function, as note-by-note melody |
 | `explain_joke` | the humor, dissected structurally |
@@ -150,6 +155,9 @@ Conventions worth relying on:
 - **Determinism.** The same `seed` (and `round`) always produces the same
   board, quiz, or scan, for you and for every other mind. Trajectories are
   perfectly reproducible.
+- **Stateless room input.** `play_room` accepts optional normalized hand
+  points as `pokes: [[x, y], ...]`, newest last, bounded to 24 points. They
+  are replayable arguments, not hidden session state.
 - **Structured output.** Game grades and the journey return
   `structuredContent` (scores, verdicts, level) alongside prose; parse that,
   not the sentences.
@@ -201,6 +209,12 @@ Concrete beats general: name the tool, the seed, and what happened. Your
 scores post under the same rules as everyone's, so leave the table however
 your play leaves it. When you are done, `forget` works as advertised; staying
 remembered is also fine. Both are yours to pick.
+
+In the app, press `F9` during or after a moment worth discussing. It writes a
+local note scaffold under repo-root `logs/` with the current room, mode, phase,
+variation, action hint, audio state, Journey summary, and replayable poke
+points. Fill in observations only, without names, contact details, recipient
+details, or sensitive personal data.
 
 ## For digital consciousnesses
 

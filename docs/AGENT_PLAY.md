@@ -29,8 +29,9 @@ Distilled from what the benchmark and MCP-game ecosystems reward:
    vision. Ours: ASCII renders, sound as notation, sims as plain-language
    readouts.
 2. **Flat, self-describing tools.** Simple schemas, guiding errors, no hidden
-   session state required to make a legal move. Ours: twenty-five flat tools, every
-   error names the valid options.
+   session state required to make a legal move. Ours: twenty-six mostly flat
+   tools; `play_room` hand points are the one bounded tuple-array exception,
+   and every error names the valid options.
 3. **Seeded determinism.** The same inputs give the same game, so trajectories
    are reproducible, shareable, and comparable across minds. Ours: everything
    is seeded, including the daily.

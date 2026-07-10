@@ -9,7 +9,8 @@ the first dependency fetch.
 - **Rust** (edition 2024; pinned to 1.96.0 in `rust-toolchain.toml`). Install from
   <https://rustup.rs>. On Windows, cargo lands in `%USERPROFILE%\.cargo\bin`; if a
   fresh shell does not see `cargo`, add that to `PATH`.
-- Optional, for the coverage gate: `cargo install cargo-llvm-cov`.
+- Optional, for the local coverage gate: `cargo install cargo-llvm-cov`.
+- Optional, for the local supply-chain gate: `cargo install cargo-deny`.
 - The Linux build of the audio crate needs ALSA headers: `sudo apt-get install -y libasound2-dev`.
 
 ## 1. One command
@@ -19,8 +20,9 @@ Run the full gate and regenerate every artifact:
 - Windows: `scripts\verify.ps1`
 - macOS / Linux: `bash scripts/verify.sh`
 
-It runs format, clippy (deny warnings), tests, coverage (if `cargo-llvm-cov` is
-present), and the house-style guard, then writes images and audio into `renders/`.
+It runs format, clippy (deny warnings), tests, locked build, coverage (if
+`cargo-llvm-cov` is present), supply-chain policy (if `cargo-deny` is present),
+and the house-style guard, then writes images and audio into `renders/`.
 If it prints "All checks passed" and exits 0, everything is green.
 
 ## 2. Or run the gates individually
@@ -29,13 +31,17 @@ If it prints "All checks passed" and exits 0, everything is green.
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
-cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex 'crates[\\/](gpu|audio)[\\/]'
-bash scripts/check-style.sh
+cargo build --workspace --locked
+cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'
+cargo deny check                         # if cargo-deny is installed; CI always runs it
+bash scripts/check-style.sh                  # macOS / Linux
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 425+ tests pass, coverage ~90%
-lines** (the `gpu`, `audio`, and `app` crates are integration-tested on real
-hardware and excluded from the coverage gate, see `docs/QUALITY.md`).
+Expected right now: **format and clippy clean, 814 tests pass, 89.60% region
+cover, and 89.09% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
+integration-tested on real hardware and excluded from the coverage gate, see
+`docs/QUALITY.md`).
 
 ## 2b. Put `numinous` on your PATH (once)
 
@@ -65,7 +71,7 @@ sonification riding on top), and a menu explaining itself (Esc brings it
 back). Game-native controls: A/D or arrows change rooms, 1-9 jump straight to
 one, W/S run time faster or slower, drag or mouse-wheel scrubs, E inspects the
 math, Q swaps the visual era (phosphor, 8-bit, vector, modern), R restarts the
-sweep, F goes fullscreen, M mutes, B starts The Show (lean back), G deals the
+sweep, P saves the current room frame as a PNG postcard, F goes fullscreen, M mutes, B starts The Show (lean back), G deals the
 quiz (name the math, right in the window), C plays today's Munch board with a
 cursor (WASD moves, Space eats, Enter grades), N plays Nim against the Order
 (aim with W/S and A/D, Enter takes; win and the xor secret shows), T runs the
@@ -151,7 +157,7 @@ tool list and an ASCII render of the room as text.
 
 ## 5. Where things are
 
-- `crates/core` the headless engine: rooms (28 across 10 wings), sims, games
+- `crates/core` the headless engine: rooms (30 catalog rooms across 10 wings plus hidden content), sims, games
   (including nim and the chiptune composer), the Studio expression engine, the
   journey, scores, trophies, resonances, sound, eras, and the drawing surfaces.
 - `crates/gpu` adaptive wgpu rendering; `crates/audio` adaptive cpal output.
@@ -162,13 +168,12 @@ tool list and an ASCII render of the room as text.
 
 ## 6. What is done vs pending
 
-Done and verifiable now: 28 rooms across 10 wings (plus one that is not
-listed), 6 sims, 7 games with a shared high-score table and daily seeds, the
+Done and verifiable now: 30 catalog rooms across 10 wings plus hidden content,
+6 sims, 11+ games with a shared high-score table and daily seeds, the
 complete RPG spine (levels to 42 with lore, locks, 18 trophies with pings, the
 Gauntlet run, boons, daily streaks, resonances), the Studio (plot, animate,
 sing, in the terminal and the window), Visual Eras (including PNG output),
 Music Engine A (the seeded chiptune, `numinous tune`), GPU real-time fractals,
-live sound everywhere, the `forget` right for players who are minds, and 25
-MCP tools (full CLI parity) so agents play the same content. Pending (see `ROADMAP.md`): the
-chiptune wired into the app as its score, games inside the window, Engine B
-(the radio), the music visualizer, and more GPU room paths.
+live sound everywhere, the `forget` right for players who are minds, and
+26 MCP tools (full CLI parity) so agents play the same content. Pending (see `ROADMAP.md`):
+deeper room-specific pokes, human playtests, cross-platform proof, full Studio save/share beyond the first CLI `.num` save/open slice, the music visualizer, and more GPU room paths.

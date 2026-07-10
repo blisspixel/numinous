@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local quality gate, mirroring CI. Run before pushing.
+# Fast local quality gate. Use verify.sh for coverage, build, and artifacts.
 # Requires cargo on PATH. See docs/ENGINEERING.md.
 set -euo pipefail
 
