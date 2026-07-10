@@ -1426,10 +1426,17 @@ fn challenge_tool(args: &Value) -> Value {
         return tool_error(&unknown_room(id));
     };
     let seed = challenge_seed(args);
-    match challenge_kind(args) {
-        None | Some("touch") => {}
-        Some("parameter") => return parameter_challenge_tool(room.as_ref(), id, seed, args),
-        Some(other) => {
+    let kind = match args.get("kind") {
+        None => "touch",
+        Some(Value::String(kind)) => kind.as_str(),
+        Some(_) => {
+            return tool_error("Argument 'kind' must be a string: \"touch\" or \"parameter\".");
+        }
+    };
+    match kind {
+        "touch" => {}
+        "parameter" => return parameter_challenge_tool(room.as_ref(), id, seed, args),
+        other => {
             return tool_error(&format!(
                 "Unknown challenge kind '{other}'. Valid kinds: touch (change cells in a target box, graded on your pokes) and parameter (land the room's status readout on a target number, graded on your t)."
             ));
@@ -3723,6 +3730,17 @@ plays 2
             .as_str()
             .unwrap_or_default();
         assert!(text.contains("parameter"), "names the valid kinds: {text}");
+        // A non-string kind is a guiding error too, not a silent fall back to
+        // touch: the type is wrong, so say so rather than posing the default.
+        let wrong_type = handle_request(&json!({
+            "jsonrpc":"2.0","id":49,"method":"tools/call",
+            "params":{"name":"challenge","arguments":{"id":"voronoi","kind":5}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(
+            wrong_type["result"]["isError"], true,
+            "non-string kind errors"
+        );
         // Derive a readout-less room from the registry, like the quiet-room
         // test, so this cannot go vacuous if rooms later gain readouts.
         if let Some(silent) = numinous_core::all_rooms()

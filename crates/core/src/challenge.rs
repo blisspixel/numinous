@@ -167,27 +167,51 @@ fn sig_decimals(x: f64) -> usize {
     (2 - magnitude).max(0) as usize
 }
 
+/// The readout's spoken name at a chosen column: the label immediately before
+/// it, unless that prefix swallowed an earlier number (Lissajous's "X:Y = 3:"
+/// before the moving second component), in which case fall back to the line's
+/// name, the text before its first number. Keeps the goal string clean
+/// ("X:Y", not "X:Y = 3") without hardcoding any room.
+fn readout_label(status: &str, numbers: &[(usize, f64)], index: usize) -> String {
+    let precise = status_label(status, numbers[index].0);
+    if precise.chars().any(|c| c.is_ascii_digit()) {
+        status_label(status, numbers[0].0)
+    } else {
+        precise
+    }
+}
+
 /// Pose the deterministic parameter goal for a room and seed, or `None` for
 /// rooms without a numeric readout or whose readout never moves. The readout
-/// is the FIRST number in the status line that varies across the sweep
-/// (constant numbers are labels or tunings, not readouts), and the target is
-/// one of the sweep's own sampled values, so every posed goal is reachable
-/// by construction: some phase lands on it exactly.
+/// is the first column that is present and label-stable across every sample
+/// and that varies across the sweep (constant numbers are labels or tunings,
+/// not readouts). The target is one of the sweep's own sampled values, so
+/// every posed goal is reachable by construction: some phase lands on it.
 #[must_use]
 pub fn pose_parameter_goal(room: &dyn Room, seed: u64) -> Option<ParameterGoal> {
-    let mut samples = Vec::with_capacity(PARAMETER_SAMPLES);
+    let mut statuses = Vec::with_capacity(PARAMETER_SAMPLES);
     for i in 0..PARAMETER_SAMPLES {
         let t = i as f64 / PARAMETER_SAMPLES as f64;
-        samples.push(status_numbers(&room.status(t)?));
+        let status = room.status(t)?;
+        let numbers = status_numbers(&status);
+        statuses.push((status, numbers));
     }
-    // A status whose number count shifts with phase has no stable column to
-    // read; no catalog room does this, but decline safely if one ever does.
-    let columns = samples[0].len();
-    if columns == 0 || samples.iter().any(|numbers| numbers.len() != columns) {
-        return None;
-    }
-    let (index, lo, hi) = (0..columns).find_map(|index| {
-        let column = samples.iter().map(|numbers| numbers[index].1);
+    // Read only the leading columns present in every sample. Times Tables'
+    // status carries a trailing note whose own number comes and goes
+    // ("CLOSED: 5 LOBES" vs "OPEN, WANDERING"), so the total count is not
+    // stable; the K column in front of it is, and that is the readout.
+    let min_columns = statuses.iter().map(|(_, n)| n.len()).min().unwrap_or(0);
+    let (index, lo, hi) = (0..min_columns).find_map(|index| {
+        // Alignment guard: column `index` must carry the same label in every
+        // sample, so it is provably the same readout across the sweep.
+        let name = readout_label(&statuses[0].0, &statuses[0].1, index);
+        let aligned = statuses
+            .iter()
+            .all(|(s, n)| readout_label(s, n, index) == name);
+        if !aligned {
+            return None;
+        }
+        let column = statuses.iter().map(|(_, n)| n[index].1);
         let lo = column.clone().fold(f64::INFINITY, f64::min);
         let hi = column.fold(f64::NEG_INFINITY, f64::max);
         let moving = lo.is_finite() && hi.is_finite() && hi - lo >= 1e-9;
@@ -195,10 +219,9 @@ pub fn pose_parameter_goal(room: &dyn Room, seed: u64) -> Option<ParameterGoal> 
     })?;
     let meta = room.meta();
     let mut rng = SplitMix64::new(seed ^ fnv1a(meta.id.as_bytes()) ^ 0x5041_5241);
-    let target = samples[rng.below(PARAMETER_SAMPLES as u64) as usize][index].1;
+    let target = statuses[rng.below(PARAMETER_SAMPLES as u64) as usize].1[index].1;
     let tolerance = (hi - lo) / 40.0;
-    let status = room.status(0.0)?;
-    let label = status_label(&status, status_numbers(&status)[index].0);
+    let label = readout_label(&statuses[0].0, &statuses[0].1, index);
     let goal = format!(
         "SWEEP {} UNTIL {label} LANDS WITHIN {} OF {}",
         meta.title.to_uppercase(),
@@ -629,6 +652,29 @@ mod tests {
         let goal = super::pose_parameter_goal(room.as_ref(), 5).expect("the moving column poses");
         assert_eq!(goal.index, 1, "the constant first column is skipped");
         assert!(goal.span.0 < goal.span.1);
+        // The spoken label names the line, not the swallowed tuning number:
+        // "X:Y", never "X:Y = 3".
+        assert_eq!(goal.label, "X:Y", "goal reads clean: {}", goal.goal);
+        assert!(!goal.label.chars().any(|c| c.is_ascii_digit()));
+    }
+
+    #[test]
+    fn times_tables_poses_on_its_moving_k_despite_a_wandering_note() {
+        // Times Tables' status is "K = {k}   {note}" where the note's own
+        // number comes and goes ("CLOSED: 5 LOBES" vs "OPEN, WANDERING").
+        // The whole-line count is unstable, but the leading K column is the
+        // readout and it sweeps; the room must pose on it, not decline.
+        let room = crate::registry::room_by_id("times-tables").expect("room");
+        let goal =
+            super::pose_parameter_goal(room.as_ref(), 1).expect("K is a moving, aligned readout");
+        assert_eq!(goal.index, 0);
+        assert_eq!(goal.label, "K");
+        assert!(goal.span.0 < goal.span.1, "K sweeps: {:?}", goal.span);
+        let landed = (0..super::PARAMETER_SAMPLES).any(|i| {
+            let t = i as f64 / super::PARAMETER_SAMPLES as f64;
+            super::grade_parameter(room.as_ref(), &goal, t).is_some_and(|g| g.within)
+        });
+        assert!(landed, "reachable at a sampled phase");
     }
 
     #[test]
