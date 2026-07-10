@@ -30,6 +30,18 @@ pub trait Surface {
         1.0
     }
 
+    /// [`Surface::char_aspect`], guarded for hostile implementations: a
+    /// non-finite or non-positive aspect falls back to the terminal's 0.5,
+    /// so no room can be driven into degenerate geometry by its surface.
+    fn safe_char_aspect(&self) -> f64 {
+        let aspect = self.char_aspect();
+        if aspect.is_finite() && aspect > 0.0 {
+            aspect
+        } else {
+            0.5
+        }
+    }
+
     /// Mark a single point, clipping if out of bounds.
     fn plot(&mut self, x: i32, y: i32, mark: char);
 

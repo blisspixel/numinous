@@ -58,25 +58,31 @@ impl Harmonograph {
         (detune, damp)
     }
 
-    /// Draw one full decaying trace with the given physics.
-    fn draw_traced(&self, canvas: &mut dyn Surface, detune: f64, damp: f64, mark: char) {
+    /// Draw one decaying trace with the given physics, sampled at `steps`
+    /// segments. The live trace draws at full resolution; lingering ghosts
+    /// draw coarser, because a full drag trail of full-resolution ghosts
+    /// would blow the frame budget on large windows.
+    fn draw_traced(
+        &self,
+        canvas: &mut dyn Surface,
+        detune: f64,
+        damp: f64,
+        mark: char,
+        steps: usize,
+    ) {
         let width = canvas.width();
         let height = canvas.height();
-        if width == 0 || height == 0 {
+        if width == 0 || height == 0 || steps == 0 {
             return;
         }
-        let aspect = if canvas.char_aspect().is_finite() && canvas.char_aspect() > 0.0 {
-            canvas.char_aspect()
-        } else {
-            0.5
-        };
+        let aspect = canvas.safe_char_aspect();
         let center_x = width as f64 / 2.0;
         let center_y = height as f64 / 2.0;
         let radius = (width as f64 / 2.0).min(height as f64 / (2.0 * aspect)) * 0.9;
 
         let mut previous: Option<(i32, i32)> = None;
-        for i in 0..=STEPS {
-            let s = S_MAX * i as f64 / STEPS as f64;
+        for i in 0..=steps {
+            let s = S_MAX * i as f64 / steps as f64;
             let (x, y) = point_damped(s, detune, damp);
             let sx = (center_x + x * radius) as i32;
             let sy = (center_y - y * radius * aspect) as i32;
@@ -117,7 +123,7 @@ impl Room for Harmonograph {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        self.draw_traced(canvas, self.detune_for(t), DAMP, '#');
+        self.draw_traced(canvas, self.detune_for(t), DAMP, '#', STEPS);
     }
 
     fn verb(&self) -> Option<&'static str> {
@@ -146,10 +152,10 @@ impl Room for Harmonograph {
         // sweep. Older tunings linger dim; the newest draws bright.
         for &(x, y) in older {
             let (detune, damp) = self.hand_params(x, y);
-            self.draw_traced(canvas, detune, damp, '.');
+            self.draw_traced(canvas, detune, damp, '.', STEPS / 4);
         }
         let (detune, damp) = self.hand_params(newest.0, newest.1);
-        self.draw_traced(canvas, detune, damp, '#');
+        self.draw_traced(canvas, detune, damp, '#', STEPS);
         for &(x, y) in &tuned {
             let px = (x.clamp(0.0, 1.0) * (width - 1) as f64).round() as i32;
             let py = (y.clamp(0.0, 1.0) * (height - 1) as f64).round() as i32;

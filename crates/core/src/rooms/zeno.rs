@@ -85,16 +85,6 @@ fn runner_hops(target: (f64, f64), hops: usize) -> Vec<(f64, f64)> {
         .collect()
 }
 
-/// The safe drawing aspect for any surface.
-fn safe_aspect(canvas: &dyn Surface) -> f64 {
-    let aspect = canvas.char_aspect();
-    if aspect.is_finite() && aspect > 0.0 {
-        aspect
-    } else {
-        0.5
-    }
-}
-
 impl Room for Zeno {
     fn meta(&self) -> RoomMeta {
         RoomMeta {
@@ -113,7 +103,7 @@ impl Room for Zeno {
         if width == 0 || height == 0 {
             return;
         }
-        let aspect = safe_aspect(canvas);
+        let aspect = canvas.safe_char_aspect();
         let side = (width as f64 * 0.8).min(height as f64 * aspect * 0.8);
         let left = (width as f64 - side) / 2.0;
         let top = (height as f64 - side / aspect) / 2.0;
@@ -178,7 +168,7 @@ impl Room for Zeno {
         if width == 0 || height == 0 {
             return;
         }
-        let aspect = safe_aspect(canvas);
+        let aspect = canvas.safe_char_aspect();
         let side = (width as f64 * 0.8).min(height as f64 * aspect * 0.8);
         let left = (width as f64 - side) / 2.0;
         let top = (height as f64 - side / aspect) / 2.0;
@@ -186,6 +176,17 @@ impl Room for Zeno {
             (
                 (left + x * side) as i32,
                 (top + (1.0 - y) * side / aspect) as i32,
+            )
+        };
+        // The hand arrives in screen coordinates (y down); the square lives
+        // in math coordinates (y up). Invert the projection so the target
+        // lands exactly under the pointer, clamped into the square.
+        let hand_to_square = |hx: f64, hy: f64| {
+            let px = hx.clamp(0.0, 1.0) * (width - 1) as f64;
+            let py = hy.clamp(0.0, 1.0) * (height - 1) as f64;
+            (
+                ((px - left) / side).clamp(0.0, 1.0),
+                (1.0 - (py - top) * aspect / side).clamp(0.0, 1.0),
             )
         };
         // Every click sends a runner from the left edge: each hop lands with
@@ -199,12 +200,12 @@ impl Room for Zeno {
         };
         let laid = ((phase * (MAX_TILES as f64 + 1.0)) as usize).clamp(1, MAX_TILES);
         let mut draw_runner = |target: (f64, f64), mark: char| {
-            let clamped = (target.0.clamp(0.0, 1.0), target.1.clamp(0.0, 1.0));
-            for hop in runner_hops(clamped, laid) {
+            let square = hand_to_square(target.0, target.1);
+            for hop in runner_hops(square, laid) {
                 let (px, py) = to_screen(hop.0, hop.1);
                 canvas.plot(px, py, mark);
             }
-            let (tx, ty) = to_screen(clamped.0, clamped.1);
+            let (tx, ty) = to_screen(square.0, square.1);
             canvas.plot(tx, ty, '+');
         };
         for &target in older {
@@ -338,6 +339,49 @@ mod tests {
         assert!(
             (target.0 - last.0).abs() < 0.8 * 0.5_f64.powi(MAX_TILES as i32 - 1),
             "the runner is provably within any epsilon"
+        );
+    }
+
+    #[test]
+    fn the_target_lands_under_the_hand_not_its_mirror() {
+        // Screen y grows downward, square y grows upward; the inverse
+        // projection must keep the marker at the clicked screen cell.
+        let room = Zeno::new();
+        let (w, h) = (50usize, 30usize);
+        let hand = (0.5_f64, 0.2_f64);
+        let mut poked = Canvas::new(w, h);
+        room.render_poked(&mut poked, 0.5, &[hand]);
+        let hx = (hand.0 * (w - 1) as f64).round() as i32;
+        let hy = (hand.1 * (h - 1) as f64).round() as i32;
+        let mut found = false;
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                if poked.cell((hx + dx).max(0) as usize, (hy + dy).max(0) as usize) == Some('+') {
+                    found = true;
+                }
+            }
+        }
+        assert!(found, "the + marker sits under the pointer, not mirrored");
+        // And a hand moving down the screen moves the response down too.
+        let centroid_row = |hand_y: f64| {
+            let mut canvas = Canvas::new(w, h);
+            room.render_poked(&mut canvas, 1.0, &[(0.5, hand_y)]);
+            let text = canvas.to_text();
+            let mut sum = 0.0;
+            let mut n: f64 = 0.0;
+            for (row, line) in text.lines().enumerate() {
+                for ch in line.chars() {
+                    if ch == 'o' {
+                        sum += row as f64;
+                        n += 1.0;
+                    }
+                }
+            }
+            sum / n.max(1.0)
+        };
+        assert!(
+            centroid_row(0.8) > centroid_row(0.2),
+            "dragging the hand down sends the runner down"
         );
     }
 

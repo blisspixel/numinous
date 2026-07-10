@@ -136,11 +136,7 @@ impl DoublePendulum {
         if width == 0 || height == 0 {
             return;
         }
-        let aspect = if canvas.char_aspect().is_finite() && canvas.char_aspect() > 0.0 {
-            canvas.char_aspect()
-        } else {
-            0.5
-        };
+        let aspect = canvas.safe_char_aspect();
         let cx = width as f64 / 2.0;
         let cy = height as f64 / 2.0;
         let radius = (width as f64 / 2.0).min(height as f64 / (2.0 * aspect)) * 0.45;
