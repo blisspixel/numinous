@@ -26,6 +26,39 @@ fn area(x: f64) -> f64 {
     1.2 * x - x.cos() + 1.0
 }
 
+/// The largest value the vessel curve reaches.
+const F_MAX: f64 = 2.2;
+/// How far a probe's tangent segment extends on each side, in domain units.
+const TANGENT_REACH: f64 = 0.7;
+
+/// Screen geometry shared by the vessel, the total, and the hand's probes.
+fn to_px(x: f64, width: usize) -> i32 {
+    (x / X_MAX * (width as f64 - 1.0)) as i32
+}
+
+fn curve_py(x: f64, height: usize) -> i32 {
+    let curve_band = height as f64 * 0.62;
+    let curve_top = height as f64 * 0.36;
+    (curve_top + (1.0 - f(x) / F_MAX) * (curve_band - 4.0)) as i32 + 2
+}
+
+fn total_py(x: f64, height: usize) -> i32 {
+    let curve_top = height as f64 * 0.36;
+    ((1.0 - area(x) / area(X_MAX)) * (curve_top - 3.0)) as i32 + 1
+}
+
+/// The tangent segment a probe draws on the total curve, in domain space:
+/// both endpoints of the line through (x, area(x)) with slope f(x). The
+/// fundamental theorem is the drawing instruction: the tangent's slope IS
+/// the vessel's height at that x.
+fn tangent_points(x: f64) -> ((f64, f64), (f64, f64)) {
+    let x0 = (x - TANGENT_REACH).max(0.0);
+    let x1 = (x + TANGENT_REACH).min(X_MAX);
+    let a = area(x);
+    let slope = f(x);
+    ((x0, a + slope * (x0 - x)), (x1, a + slope * (x1 - x)))
+}
+
 /// The Pour.
 #[derive(Debug, Default)]
 pub struct ThePour {
@@ -46,7 +79,11 @@ impl ThePour {
     }
 
     fn phase_for(&self, t: f64) -> f64 {
-        let t = t.clamp(0.0, 1.0);
+        let t = if t.is_finite() {
+            t.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
         if self.seed == 0 {
             t
         } else {
@@ -74,19 +111,15 @@ impl Room for ThePour {
             return;
         }
         let x_t = self.phase_for(t) * X_MAX;
-        let f_max = 2.2; // 1.2 + 1
-        let area_max = area(X_MAX);
         // The curve lives in the lower two thirds; the total in the upper third.
         let curve_band = height as f64 * 0.62;
         let curve_top = height as f64 * 0.36;
-        let to_px = |x: f64| (x / X_MAX * (width as f64 - 1.0)) as i32;
-        let curve_py = |x: f64| (curve_top + (1.0 - f(x) / f_max) * (curve_band - 4.0)) as i32 + 2;
 
         // The vessel: the curve itself.
         let mut previous: Option<(i32, i32)> = None;
         for i in 0..=STEPS {
             let x = X_MAX * i as f64 / STEPS as f64;
-            let point = (to_px(x), curve_py(x));
+            let point = (to_px(x, width), curve_py(x, height));
             if let Some((px, py)) = previous {
                 canvas.line(px, py, point.0, point.1, '*');
             }
@@ -99,8 +132,8 @@ impl Room for ThePour {
             if x > x_t {
                 break;
             }
-            let px = to_px(x);
-            let top = curve_py(x);
+            let px = to_px(x, width);
+            let top = curve_py(x, height);
             let mut py = top;
             while py < floor {
                 if (px + py) % 2 == 0 {
@@ -110,19 +143,82 @@ impl Room for ThePour {
             }
         }
         // The total so far: the antiderivative, tracing itself as you pour.
-        let total_py = |x: f64| ((1.0 - area(x) / area_max) * (curve_top - 3.0)) as i32 + 1;
         let mut previous: Option<(i32, i32)> = None;
         for i in 0..=STEPS {
             let x = X_MAX * i as f64 / STEPS as f64;
             if x > x_t {
                 break;
             }
-            let point = (to_px(x), total_py(x));
+            let point = (to_px(x, width), total_py(x, height));
             if let Some((px, py)) = previous {
                 canvas.line(px, py, point.0, point.1, '#');
             }
             previous = Some(point);
         }
+    }
+
+    fn verb(&self) -> Option<&'static str> {
+        Some("CLICK: READ THE SLOPE")
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        // The newest bounded raw tail first, finite filtering after, matching
+        // the catalog input contract.
+        let start = pokes.len().saturating_sub(crate::room::MAX_ROOM_POKES);
+        let probes: Vec<(f64, f64)> = pokes[start..]
+            .iter()
+            .copied()
+            .filter(|&(x, y)| x.is_finite() && y.is_finite())
+            .collect();
+        self.render(canvas, t);
+        let Some((&newest, older)) = probes.split_last() else {
+            return;
+        };
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
+        }
+        // The probe points at the theorem: at the clicked x, the tangent
+        // drawn on the total curve has slope equal to the vessel's height
+        // below it. Same number, two curves, one hand.
+        let curve_top = height as f64 * 0.36;
+        // The same mapping total_py uses, applied to the tangent's raw
+        // area-space endpoints (which may overshoot the curve slightly at
+        // the segment's ends; line clipping keeps them safe).
+        let area_to_py = |a: f64| ((1.0 - a / area(X_MAX)) * (curve_top - 3.0)) as i32 + 1;
+        let mut draw_probe = |hand_x: f64, mark: char| {
+            let x = hand_x.clamp(0.0, 1.0) * X_MAX;
+            let px = to_px(x, width);
+            // The plumb line: from the total curve down to the vessel.
+            let mut py = total_py(x, height);
+            let vessel = curve_py(x, height);
+            while py <= vessel {
+                if py % 2 == 0 {
+                    canvas.plot(px, py, mark);
+                }
+                py += 1;
+            }
+            // The tangent on the total curve, slope f(x) by the theorem.
+            let ((x0, a0), (x1, a1)) = tangent_points(x);
+            canvas.line(
+                to_px(x0, width),
+                area_to_py(a0),
+                to_px(x1, width),
+                area_to_py(a1),
+                mark,
+            );
+            canvas.plot(px, vessel, '+');
+        };
+        for &(x, _) in older {
+            draw_probe(x, '.');
+        }
+        draw_probe(newest.0, 'o');
+    }
+
+    fn status(&self, t: f64) -> Option<String> {
+        let x = self.phase_for(t) * X_MAX;
+        Some(format!("HEIGHT = SLOPE = {:.2}", f(x)))
     }
 
     fn reveal(&self) -> &'static str {
@@ -225,5 +321,109 @@ mod tests {
     #[test]
     fn reveal_names_the_theorem() {
         assert!(ThePour::new().reveal().contains("fundamental theorem"));
+    }
+
+    #[test]
+    fn the_tangent_slope_is_the_vessel_height() {
+        // The probe's whole claim: the segment drawn on the total curve has
+        // slope exactly f(x). The fundamental theorem, as geometry.
+        for i in 1..20 {
+            let x = super::X_MAX * f64::from(i) / 20.0;
+            let ((x0, a0), (x1, a1)) = super::tangent_points(x);
+            assert!((x1 - x0) > 0.0);
+            let slope = (a1 - a0) / (x1 - x0);
+            assert!(
+                (slope - f(x)).abs() < 1e-12,
+                "tangent slope equals vessel height at {x}"
+            );
+            assert!(
+                x0 >= 0.0 && x1 <= super::X_MAX,
+                "the segment stays in domain"
+            );
+        }
+    }
+
+    #[test]
+    fn a_probe_marks_the_theorem_and_the_sweep_is_untouched() {
+        let room = ThePour::new();
+        let mut bare = Canvas::new(60, 30);
+        room.render(&mut bare, 0.6);
+        let mut poked = Canvas::new(60, 30);
+        room.render_poked(&mut poked, 0.6, &[(0.4, 0.5)]);
+        assert_ne!(bare.to_text(), poked.to_text());
+        assert!(poked.to_text().contains('o'), "the probe is visible");
+        assert!(poked.to_text().contains('+'), "the vessel point is marked");
+    }
+
+    #[test]
+    fn pokes_use_the_newest_raw_tail_before_filtering() {
+        let room = ThePour::new();
+        let mut flood: Vec<(f64, f64)> = (0..200).map(|i| (i as f64 / 200.0, 0.4)).collect();
+        flood.push((f64::NAN, 0.5));
+        flood.push((0.7, 0.3));
+        let start = flood.len() - crate::room::MAX_ROOM_POKES;
+        let tail = flood[start..].to_vec();
+        let mut via_flood = Canvas::new(60, 30);
+        room.render_poked(&mut via_flood, 0.6, &flood);
+        let mut via_tail = Canvas::new(60, 30);
+        room.render_poked(&mut via_tail, 0.6, &tail);
+        assert_eq!(via_flood.to_text(), via_tail.to_text());
+    }
+
+    #[test]
+    fn all_invalid_pokes_render_the_bare_room_and_older_probes_linger() {
+        let room = ThePour::new();
+        let mut bare = Canvas::new(60, 30);
+        room.render(&mut bare, 0.6);
+        let mut invalid = Canvas::new(60, 30);
+        room.render_poked(&mut invalid, 0.6, &[(f64::NAN, 0.5), (0.5, f64::INFINITY)]);
+        assert_eq!(bare.to_text(), invalid.to_text());
+        let mut layered = Canvas::new(60, 30);
+        room.render_poked(&mut layered, 0.6, &[(0.15, 0.5), (0.8, 0.5)]);
+        let text = layered.to_text();
+        assert!(text.contains('.'), "the older probe lingers dim");
+        assert!(text.contains('o'), "the newest probe is bright");
+    }
+
+    #[test]
+    fn seed_variation_changes_poked_renders_and_seed_zero_stays_exact() {
+        let mut a = Canvas::new(60, 30);
+        ThePour::new().render_poked(&mut a, 0.6, &[(0.4, 0.5)]);
+        let mut b = Canvas::new(60, 30);
+        ThePour::new_with(17).render_poked(&mut b, 0.6, &[(0.4, 0.5)]);
+        assert_ne!(a.to_text(), b.to_text(), "the pour phase varies with seed");
+        let mut exact = Canvas::new(60, 30);
+        ThePour::new_with(0).render_poked(&mut exact, 0.6, &[(0.4, 0.5)]);
+        assert_eq!(a.to_text(), exact.to_text());
+    }
+
+    #[test]
+    fn hostile_surfaces_and_phase_stay_bounded() {
+        struct Weird(Canvas);
+        impl crate::surface::Surface for Weird {
+            fn width(&self) -> usize {
+                self.0.width()
+            }
+            fn height(&self) -> usize {
+                self.0.height()
+            }
+            fn char_aspect(&self) -> f64 {
+                f64::INFINITY
+            }
+            fn plot(&mut self, x: i32, y: i32, mark: char) {
+                self.0.plot(x, y, mark);
+            }
+        }
+        let room = ThePour::new();
+        let mut weird = Weird(Canvas::new(30, 15));
+        room.render_poked(&mut weird, f64::NAN, &[(0.5, 0.5)]);
+        assert!(weird.0.ink_count() > 0);
+        let mut nan_phase = Canvas::new(30, 15);
+        room.render(&mut nan_phase, f64::NAN);
+        let mut zero_phase = Canvas::new(30, 15);
+        room.render(&mut zero_phase, 0.0);
+        assert_eq!(nan_phase.to_text(), zero_phase.to_text());
+        let status = room.status(f64::NAN).expect("status");
+        assert!(status.starts_with("HEIGHT = SLOPE"));
     }
 }
