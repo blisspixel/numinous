@@ -38,8 +38,8 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 814 tests pass, 89.60% region
-cover, and 89.09% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
+Expected right now: **format and clippy clean, 833 tests pass, 90.01% region
+cover, and 89.57% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
 integration-tested on real hardware and excluded from the coverage gate, see
 `docs/QUALITY.md`).
 
@@ -175,5 +175,5 @@ Gauntlet run, boons, daily streaks, resonances), the Studio (plot, animate,
 sing, in the terminal and the window), Visual Eras (including PNG output),
 Music Engine A (the seeded chiptune, `numinous tune`), GPU real-time fractals,
 live sound everywhere, the `forget` right for players who are minds, and
-26 MCP tools (full CLI parity) so agents play the same content. Pending (see `ROADMAP.md`):
+27 MCP tools (full CLI parity for the games; the challenge tool is MCP-first) so agents play the same content. Pending (see `ROADMAP.md`):
 deeper room-specific pokes, human playtests, cross-platform proof, full Studio save/share beyond the first CLI `.num` save/open slice, the music visualizer, and more GPU room paths.

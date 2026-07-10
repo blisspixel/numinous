@@ -52,6 +52,12 @@ impl Canvas {
         self.cells.iter().filter(|&&c| c != ' ').count()
     }
 
+    /// The character at cell (`x`, `y`), or `None` outside the canvas.
+    #[must_use]
+    pub fn cell(&self, x: usize, y: usize) -> Option<char> {
+        (x < self.width && y < self.height).then(|| self.cells[y * self.width + x])
+    }
+
     /// The structured cell-level difference against another render.
     ///
     /// This is the agent faces' proof-of-touch: rendering a room with and
