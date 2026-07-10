@@ -166,6 +166,19 @@ posts graded scores to the shared table. Room-specific goals beyond the
 spatial-response baseline (e.g. "find the stall angle to one decimal") remain
 future depth on this substrate.
 
+Cycle 61 laid the gesture substrate for stack item two: core `RoomInput`
+events (pointer down/move/up stamped with the room phase at which each
+happened, cancel, wheel, key) with `Room::render_input`, whose default
+translates pointer-down and pointer-move points into legacy pokes (a drag
+paints its trail, matching the shape of today's App behavior) so all 30
+catalog rooms answer gestures unchanged by construction; a catalog-wide
+sweep proves no-panic determinism under mixed trails, and gesture/poke
+equivalence is pinned directly for a representative room. Per-event
+phase and the cancel variant came out of an independent face-fit review:
+held semantics are timing questions, and gestures can end without a lift.
+Held semantics per room (pull-and-release Double Pendulum, dial drags) and
+face wiring are the next slices.
+
 Cycle 54 resolved the Strange Loop semantics gap from the prior paused pass:
 clicks now shift the existing first inner recursion and its descendants instead
 of overlaying an extra echo tree. Focused tests prove both the bounded input
