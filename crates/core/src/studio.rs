@@ -83,6 +83,7 @@ impl StudioCreation {
     /// Returns a message if the file is malformed or describes an invalid
     /// Studio expression.
     pub fn from_num_file(text: &str) -> Result<Self, String> {
+        reject_oversized_share(text)?;
         let mut lines = text.lines();
         match lines.next() {
             Some("NUMINOUS_STUDIO 1") => {}
@@ -136,6 +137,7 @@ impl StudioCreation {
     /// Returns a message if the link is malformed or describes an invalid
     /// Studio expression.
     pub fn from_link(link: &str) -> Result<Self, String> {
+        reject_oversized_share(link)?;
         let query = link
             .strip_prefix("numinous://studio?")
             .or_else(|| link.strip_prefix("numinous://studio/?"))
@@ -171,6 +173,27 @@ impl StudioCreation {
     }
 }
 
+/// The most bytes a shared `.num` file or `numinous://` link may hold. Four
+/// fields, one a 512-char expression, need only a few hundred bytes; this cap
+/// is generous headroom. A hostile input parser must bound its own byte count
+/// rather than trust its caller, so this check lives at the door of both
+/// import paths, not only in the faces that happen to read files.
+const MAX_SHARE_INPUT_BYTES: usize = 8 * 1024;
+
+/// The widest a share's x-range or parameter may reach. Well past any real
+/// plot, and far below the point where the f64-to-pixel casts would matter,
+/// so this is defense in depth, not a correctness fix.
+const MAX_SHARE_MAGNITUDE: f64 = 1e12;
+
+fn reject_oversized_share(text: &str) -> Result<(), String> {
+    if text.len() > MAX_SHARE_INPUT_BYTES {
+        return Err(format!(
+            "Studio share is too large; limit is {MAX_SHARE_INPUT_BYTES} bytes"
+        ));
+    }
+    Ok(())
+}
+
 fn validate_share_source(source: &str) -> Result<(), String> {
     if source.is_empty() {
         return Err("Studio expression is empty".to_string());
@@ -189,6 +212,14 @@ fn validate_share_source(source: &str) -> Result<(), String> {
 fn validate_share_numbers(xmin: f64, xmax: f64, a: f64) -> Result<(), String> {
     if !xmin.is_finite() || !xmax.is_finite() || !a.is_finite() {
         return Err("Studio share numbers must be finite".to_string());
+    }
+    if xmin.abs() > MAX_SHARE_MAGNITUDE
+        || xmax.abs() > MAX_SHARE_MAGNITUDE
+        || a.abs() > MAX_SHARE_MAGNITUDE
+    {
+        return Err(format!(
+            "Studio share numbers must be within {MAX_SHARE_MAGNITUDE:e} in magnitude"
+        ));
     }
     if xmax <= xmin {
         return Err("Studio share needs xmax > xmin".to_string());
@@ -433,15 +464,34 @@ pub fn plot_text(
     Ok((canvas.to_text(), ymin, ymax))
 }
 
+/// The most tokens an expression may hold. A real formula is tiny; this only
+/// bites pathological input (a million parentheses), and it bounds both the
+/// token vector and the AST that grows from it. Checked before any recursion
+/// so a hostile expression is rejected at the door, not mid-descent.
+pub const MAX_EXPR_TOKENS: usize = 4096;
+
+/// The deepest the recursive-descent parser may nest. Every `(`, every `^`,
+/// and every leading `-` adds a level, so this caps stack growth from
+/// crafted input. A stack overflow in Rust aborts the process uncatchably,
+/// so this guard is load-bearing on the MCP surface, not a nicety: the
+/// `plot_expression` and `sing_expression` tools parse agent-supplied text.
+const MAX_PARSE_DEPTH: usize = 64;
+
 /// Parse an expression in `x`, or return a human-readable error.
 ///
 /// # Errors
-/// Returns a message describing the first problem (unexpected token, unknown
-/// name, unbalanced parentheses, or trailing input).
+/// Returns a message describing the first problem (too many tokens, nesting
+/// too deep, unexpected token, unknown name, unbalanced parentheses, or
+/// trailing input).
 pub fn parse(source: &str) -> Result<Expr, String> {
     let tokens = tokenize(source)?;
+    if tokens.len() > MAX_EXPR_TOKENS {
+        return Err(format!(
+            "expression is too complex; limit is {MAX_EXPR_TOKENS} tokens"
+        ));
+    }
     let mut parser = Parser { tokens, pos: 0 };
-    let expr = parser.expr()?;
+    let expr = parser.expr(0)?;
     if parser.pos != parser.tokens.len() {
         return Err(format!("unexpected trailing input at token {}", parser.pos));
     }
@@ -523,74 +573,88 @@ impl Parser {
         tok
     }
 
+    /// Guard one level of recursion: fail before the stack, not with it. A
+    /// crafted expression can nest arbitrarily deep through `(`, `^`, and
+    /// unary `-`, and a Rust stack overflow aborts uncatchably, so every
+    /// recursive descent checks its depth against [`MAX_PARSE_DEPTH`] first.
+    fn deeper(depth: usize) -> Result<usize, String> {
+        if depth >= MAX_PARSE_DEPTH {
+            return Err(format!(
+                "expression nests too deeply; limit is {MAX_PARSE_DEPTH} levels"
+            ));
+        }
+        Ok(depth + 1)
+    }
+
     /// expr := term (('+' | '-') term)*
-    fn expr(&mut self) -> Result<Expr, String> {
-        let mut left = self.term()?;
+    fn expr(&mut self, depth: usize) -> Result<Expr, String> {
+        let depth = Self::deeper(depth)?;
+        let mut left = self.term(depth)?;
         while let Some(op) = match self.peek() {
             Some(Tok::Plus) => Some(Op::Add),
             Some(Tok::Minus) => Some(Op::Sub),
             _ => None,
         } {
             self.pos += 1;
-            let right = self.term()?;
+            let right = self.term(depth)?;
             left = Expr::Bin(op, Box::new(left), Box::new(right));
         }
         Ok(left)
     }
 
     /// term := factor (('*' | '/') factor)*
-    fn term(&mut self) -> Result<Expr, String> {
-        let mut left = self.factor()?;
+    fn term(&mut self, depth: usize) -> Result<Expr, String> {
+        let mut left = self.factor(depth)?;
         while let Some(op) = match self.peek() {
             Some(Tok::Star) => Some(Op::Mul),
             Some(Tok::Slash) => Some(Op::Div),
             _ => None,
         } {
             self.pos += 1;
-            let right = self.factor()?;
+            let right = self.factor(depth)?;
             left = Expr::Bin(op, Box::new(left), Box::new(right));
         }
         Ok(left)
     }
 
     /// factor := unary ('^' factor)?  (right associative)
-    fn factor(&mut self) -> Result<Expr, String> {
-        let base = self.unary()?;
+    fn factor(&mut self, depth: usize) -> Result<Expr, String> {
+        let base = self.unary(depth)?;
         if matches!(self.peek(), Some(Tok::Caret)) {
             self.pos += 1;
-            let exp = self.factor()?;
+            let exp = self.factor(Self::deeper(depth)?)?;
             return Ok(Expr::Bin(Op::Pow, Box::new(base), Box::new(exp)));
         }
         Ok(base)
     }
 
     /// unary := '-' unary | atom
-    fn unary(&mut self) -> Result<Expr, String> {
+    fn unary(&mut self, depth: usize) -> Result<Expr, String> {
         if matches!(self.peek(), Some(Tok::Minus)) {
             self.pos += 1;
-            return Ok(Expr::Neg(Box::new(self.unary()?)));
+            return Ok(Expr::Neg(Box::new(self.unary(Self::deeper(depth)?)?)));
         }
-        self.atom()
+        self.atom(depth)
     }
 
     /// atom := number | name | name '(' expr ')' | '(' expr ')'
-    fn atom(&mut self) -> Result<Expr, String> {
+    fn atom(&mut self, depth: usize) -> Result<Expr, String> {
         match self.bump() {
             Some(Tok::Num(n)) => Ok(Expr::Num(n)),
             Some(Tok::LParen) => {
-                let inner = self.expr()?;
+                let inner = self.expr(depth)?;
                 match self.bump() {
                     Some(Tok::RParen) => Ok(inner),
                     _ => Err("expected ')'".to_string()),
                 }
             }
-            Some(Tok::Ident(name)) => self.ident(&name),
+            Some(Tok::Ident(name)) => self.ident(&name, depth),
             other => Err(format!("unexpected token {other:?}")),
         }
     }
 
     /// Resolve an identifier: the variable, a constant, or a function call.
-    fn ident(&mut self, name: &str) -> Result<Expr, String> {
+    fn ident(&mut self, name: &str, depth: usize) -> Result<Expr, String> {
         if matches!(self.peek(), Some(Tok::LParen)) {
             let func = match name {
                 "sin" => Func::Sin,
@@ -603,7 +667,7 @@ impl Parser {
                 other => return Err(format!("unknown function '{other}'")),
             };
             self.pos += 1; // consume '('
-            let arg = self.expr()?;
+            let arg = self.expr(depth)?;
             match self.bump() {
                 Some(Tok::RParen) => Ok(Expr::Call(func, Box::new(arg))),
                 _ => Err(format!("expected ')' after {name}(")),
@@ -622,10 +686,46 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use super::{MAX_STUDIO_SOURCE_CHARS, StudioCreation, eval, parse};
+    use super::{
+        MAX_EXPR_TOKENS, MAX_PARSE_DEPTH, MAX_STUDIO_SOURCE_CHARS, StudioCreation, eval, parse,
+    };
 
     fn at(source: &str, x: f64) -> f64 {
         eval(&parse(source).expect("parse"), x, 0.0)
+    }
+
+    #[test]
+    fn deeply_nested_input_is_rejected_not_overflowed() {
+        // A crafted expression must never reach the stack limit: a Rust stack
+        // overflow aborts the process uncatchably, and this parser is live on
+        // the MCP surface (plot_expression, sing_expression). Each of the
+        // three nesting operators is checked.
+        for opener in ["(", "-", "0^"] {
+            let deep = opener.repeat(MAX_PARSE_DEPTH + 50);
+            let source = format!("{deep}1{}", ")".repeat(MAX_PARSE_DEPTH + 50));
+            let err = parse(&source).expect_err("deep nesting must error, not crash");
+            assert!(
+                err.contains("deep") || err.contains("token"),
+                "guides the caller: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_flood_of_tokens_is_rejected_at_the_door() {
+        // A long-but-flat expression cannot overflow the stack, but it can
+        // build a giant AST; the token cap bounds it before any descent.
+        let flat = "1+".repeat(MAX_EXPR_TOKENS);
+        let err = parse(&flat).expect_err("too many tokens must error");
+        assert!(err.contains("token"), "names the limit: {err}");
+    }
+
+    #[test]
+    fn ordinary_nesting_still_parses() {
+        // The guard must not bite real formulas: a dozen levels is plenty of
+        // headroom for anything a human or agent actually writes.
+        assert!((at("sin(cos(((x + 1) * 2) - 3))", 0.0)).is_finite());
+        assert!((at("-(-(-(-(x))))", 5.0) - 5.0).abs() < 1e-9);
     }
 
     #[test]
@@ -746,5 +846,27 @@ mod tests {
             StudioCreation::from_link("numinous://studio?expr=x&expr=x&xmin=-1&xmax=1&a=1")
                 .is_err()
         );
+    }
+
+    #[test]
+    fn oversized_and_out_of_range_shares_are_rejected_at_the_door() {
+        // A hostile import bounds its own byte count rather than trusting the
+        // caller, so a giant blob is refused before any per-line work.
+        let giant = format!(
+            "NUMINOUS_STUDIO 1\nexpr={}\nxmin=-1\nxmax=1\na=1\n",
+            "x".repeat(super::MAX_SHARE_INPUT_BYTES)
+        );
+        let err = StudioCreation::from_num_file(&giant).expect_err("too large must error");
+        assert!(err.contains("too large"), "names the cap: {err}");
+        assert!(
+            StudioCreation::from_link(&format!(
+                "numinous://studio?expr={}&xmin=-1&xmax=1&a=1",
+                "x".repeat(super::MAX_SHARE_INPUT_BYTES)
+            ))
+            .is_err()
+        );
+        // Absurd magnitudes are refused even when finite.
+        assert!(StudioCreation::new("x".to_string(), -1e300, 1e300, 1.0).is_err());
+        assert!(StudioCreation::new("x".to_string(), -1.0, 1.0, 1e300).is_err());
     }
 }
