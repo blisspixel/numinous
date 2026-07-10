@@ -20,6 +20,8 @@ const FREQ_Y_MIN: f64 = 2.0;
 const FREQ_Y_SWEEP: f64 = 3.0;
 /// Number of samples along the curve; consecutive samples are connected.
 const SAMPLES: usize = 1500;
+/// The largest whole number either oscillator can be tuned to by hand.
+const MAX_TUNE: f64 = 8.0;
 
 /// The Lissajous room.
 #[derive(Debug, Default)]
@@ -46,12 +48,17 @@ impl Lissajous {
     }
 
     fn point_normalized_shifted(theta: f64, freq_y: f64, phase_x: f64, phase_y: f64) -> (f64, f64) {
-        let base_x = (FREQ_X * theta + FRAC_PI_2).sin();
+        Self::point_tuned(theta, FREQ_X, freq_y, phase_x, phase_y)
+    }
+
+    /// One curve point for any pair of oscillator frequencies.
+    fn point_tuned(theta: f64, freq_x: f64, freq_y: f64, phase_x: f64, phase_y: f64) -> (f64, f64) {
+        let base_x = (freq_x * theta + FRAC_PI_2).sin();
         let y = (freq_y * theta + phase_y).sin();
         let x = if phase_x == 0.0 {
             base_x
         } else {
-            (base_x + (FREQ_X * theta + FRAC_PI_2 + phase_x).sin() * 0.15).clamp(-1.0, 1.0)
+            (base_x + (freq_x * theta + FRAC_PI_2 + phase_x).sin() * 0.15).clamp(-1.0, 1.0)
         };
         (x, y)
     }
@@ -61,6 +68,41 @@ impl Lissajous {
             variation_unit(self.seed, 0x4C49_5353_584A_0001) * TAU,
             variation_unit(self.seed, 0x4C49_5353_584A_0002) * TAU,
         )
+    }
+
+    /// The whole-number frequencies a hand point tunes: x picks the y-axis
+    /// count, y picks the x-axis count, both 1 through 8. Every click is an
+    /// exact integer ratio, so every figure the hand makes closes: the hand
+    /// plays intervals, never noise.
+    fn tuned_freqs(x: f64, y: f64) -> (f64, f64) {
+        let fy = 1.0 + (x.clamp(0.0, 1.0) * (MAX_TUNE - 1.0)).round();
+        let fx = 1.0 + (y.clamp(0.0, 1.0) * (MAX_TUNE - 1.0)).round();
+        (fx, fy)
+    }
+
+    /// Draw one full closed curve at the given frequencies.
+    fn draw_tuned(&self, canvas: &mut dyn Surface, freq_x: f64, freq_y: f64, mark: char) {
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
+        }
+        let (fw, fh) = (width as f64, height as f64);
+        let (cx, cy) = (fw / 2.0, fh / 2.0);
+        let rx = (fw / 2.0 - 1.0).max(0.0);
+        let ry = (fh / 2.0 - 1.0).max(0.0);
+        let (phase_x, phase_y) = self.phase_offsets();
+        let to_pixel = |theta: f64| -> (i32, i32) {
+            let (nx, ny) = Self::point_tuned(theta, freq_x, freq_y, phase_x, phase_y);
+            ((cx + nx * rx).round() as i32, (cy + ny * ry).round() as i32)
+        };
+        let mut prev = to_pixel(0.0);
+        for i in 1..=SAMPLES {
+            let theta = (i as f64 / SAMPLES as f64) * TAU;
+            let current = to_pixel(theta);
+            canvas.line(prev.0, prev.1, current.0, current.1, mark);
+            prev = current;
+        }
     }
 }
 
@@ -82,7 +124,7 @@ impl Room for Lissajous {
         if width == 0 || height == 0 {
             return;
         }
-        let freq_y = Self::freq_y_for(t);
+        let freq_y = Self::freq_y_for(if t.is_finite() { t } else { 0.0 });
         let (fw, fh) = (width as f64, height as f64);
         let (cx, cy) = (fw / 2.0, fh / 2.0);
         let rx = (fw / 2.0 - 1.0).max(0.0);
@@ -101,6 +143,49 @@ impl Room for Lissajous {
             canvas.line(prev.0, prev.1, current.0, current.1, '*');
             prev = current;
         }
+    }
+
+    fn verb(&self) -> Option<&'static str> {
+        Some("CLICK: TUNE THE INTERVAL")
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        // The newest bounded raw tail first, finite filtering after, matching
+        // the catalog input contract.
+        let start = pokes.len().saturating_sub(crate::room::MAX_ROOM_POKES);
+        let tuned: Vec<(f64, f64)> = pokes[start..]
+            .iter()
+            .copied()
+            .filter(|&(x, y)| x.is_finite() && y.is_finite())
+            .collect();
+        let Some((&newest, older)) = tuned.split_last() else {
+            self.render(canvas, t);
+            return;
+        };
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
+        }
+        // The hand tunes the instrument: clicked ratios replace the sweep.
+        // Older intervals linger dim, the newest plays bright, and the
+        // clicked cell is marked so the hand stays visible.
+        for &(x, y) in older {
+            let (fx, fy) = Self::tuned_freqs(x, y);
+            self.draw_tuned(canvas, fx, fy, '.');
+        }
+        let (fx, fy) = Self::tuned_freqs(newest.0, newest.1);
+        self.draw_tuned(canvas, fx, fy, '*');
+        for &(x, y) in &tuned {
+            let px = (x.clamp(0.0, 1.0) * (width - 1) as f64).round() as i32;
+            let py = (y.clamp(0.0, 1.0) * (height - 1) as f64).round() as i32;
+            canvas.plot(px, py, '+');
+        }
+    }
+
+    fn status(&self, t: f64) -> Option<String> {
+        let freq_y = Self::freq_y_for(if t.is_finite() { t } else { 0.0 });
+        Some(format!("X:Y = {FREQ_X:.0}:{freq_y:.2}"))
     }
 
     fn reveal(&self) -> &'static str {
@@ -185,5 +270,103 @@ mod tests {
     fn sound_is_a_two_note_chord() {
         let spec = Lissajous::new().sound(0.0);
         assert_eq!(spec.notes.len(), 2);
+    }
+
+    #[test]
+    fn a_click_tunes_a_whole_number_interval() {
+        // Corners and center map to exact whole-number oscillator counts.
+        assert_eq!(Lissajous::tuned_freqs(0.0, 0.0), (1.0, 1.0));
+        assert_eq!(Lissajous::tuned_freqs(1.0, 1.0), (8.0, 8.0));
+        assert_eq!(Lissajous::tuned_freqs(0.5, 0.0), (1.0, 5.0));
+        // Out-of-range input clamps instead of escaping the tuning range.
+        assert_eq!(Lissajous::tuned_freqs(9.0, -3.0), (1.0, 8.0));
+    }
+
+    #[test]
+    fn a_poke_changes_the_figure_and_marks_the_hand() {
+        let room = Lissajous::new();
+        let mut bare = Canvas::new(48, 24);
+        room.render(&mut bare, 0.3);
+        let mut poked = Canvas::new(48, 24);
+        room.render_poked(&mut poked, 0.3, &[(0.9, 0.1)]);
+        assert_ne!(bare.to_text(), poked.to_text(), "the tuned figure differs");
+        // The clicked cell carries the hand marker.
+        assert_eq!(poked.cell((0.9_f64 * 47.0).round() as usize, 2), Some('+'));
+    }
+
+    #[test]
+    fn pokes_use_the_newest_raw_tail_before_filtering() {
+        let room = Lissajous::new();
+        // A flood of old points then bad newest entries: the raw tail is
+        // capped first, so surviving finite points are honored while the
+        // rest are ignored without panicking.
+        let mut flood: Vec<(f64, f64)> = (0..200).map(|i| (i as f64 / 200.0, 0.2)).collect();
+        flood.push((f64::NAN, 0.5));
+        flood.push((0.4, 0.6));
+        let start = flood.len() - crate::room::MAX_ROOM_POKES;
+        let tail = flood[start..].to_vec();
+        let mut via_flood = Canvas::new(48, 24);
+        room.render_poked(&mut via_flood, 0.3, &flood);
+        let mut via_tail = Canvas::new(48, 24);
+        room.render_poked(&mut via_tail, 0.3, &tail);
+        assert_eq!(via_flood.to_text(), via_tail.to_text());
+    }
+
+    #[test]
+    fn all_invalid_pokes_render_the_bare_room_and_older_intervals_linger() {
+        let room = Lissajous::new();
+        let mut bare = Canvas::new(48, 24);
+        room.render(&mut bare, 0.3);
+        let mut invalid = Canvas::new(48, 24);
+        room.render_poked(&mut invalid, 0.3, &[(f64::NAN, 0.5), (0.5, f64::INFINITY)]);
+        assert_eq!(bare.to_text(), invalid.to_text());
+        // Two clicks: the older interval lingers dim beneath the newest.
+        let mut layered = Canvas::new(48, 24);
+        room.render_poked(&mut layered, 0.3, &[(0.1, 0.9), (0.9, 0.1)]);
+        let text = layered.to_text();
+        assert!(text.contains('.'), "the older interval lingers dim");
+        assert!(text.contains('*'), "the newest interval plays bright");
+    }
+
+    #[test]
+    fn seed_variation_changes_poked_renders_too() {
+        let base = Lissajous::new();
+        let varied = Lissajous::new_with(7);
+        let mut a = Canvas::new(48, 24);
+        base.render_poked(&mut a, 0.3, &[(0.7, 0.7)]);
+        let mut b = Canvas::new(48, 24);
+        varied.render_poked(&mut b, 0.3, &[(0.7, 0.7)]);
+        assert_ne!(a.to_text(), b.to_text());
+        let mut exact = Canvas::new(48, 24);
+        Lissajous::new_with(0).render_poked(&mut exact, 0.3, &[(0.7, 0.7)]);
+        assert_eq!(a.to_text(), exact.to_text(), "seed 0 stays the exact path");
+    }
+
+    #[test]
+    fn hostile_surfaces_and_phase_stay_bounded() {
+        struct Weird(Canvas);
+        impl crate::surface::Surface for Weird {
+            fn width(&self) -> usize {
+                self.0.width()
+            }
+            fn height(&self) -> usize {
+                self.0.height()
+            }
+            fn char_aspect(&self) -> f64 {
+                f64::NEG_INFINITY
+            }
+            fn plot(&mut self, x: i32, y: i32, mark: char) {
+                self.0.plot(x, y, mark);
+            }
+        }
+        let room = Lissajous::new();
+        let mut weird = Weird(Canvas::new(30, 15));
+        room.render_poked(&mut weird, f64::NAN, &[(0.5, 0.5)]);
+        assert!(weird.0.ink_count() > 0);
+        let mut nan_phase = Canvas::new(30, 15);
+        room.render(&mut nan_phase, f64::NAN);
+        let mut zero_phase = Canvas::new(30, 15);
+        room.render(&mut zero_phase, 0.0);
+        assert_eq!(nan_phase.to_text(), zero_phase.to_text());
     }
 }
