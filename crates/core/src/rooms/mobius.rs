@@ -64,16 +64,6 @@ impl Mobius {
     }
 }
 
-/// The safe drawing aspect for any surface.
-fn safe_aspect(canvas: &dyn Surface) -> f64 {
-    let aspect = canvas.char_aspect();
-    if aspect.is_finite() && aspect > 0.0 {
-        aspect
-    } else {
-        0.5
-    }
-}
-
 /// The single edge, sampled: each entry is (screen point, edge parameter w in
 /// [0, 2*TAU)). The edge closes only after two laps; w walks all of it.
 fn edge_points(width: usize, height: usize, aspect: f64) -> Vec<((i32, i32), f64)> {
@@ -116,7 +106,7 @@ impl Room for Mobius {
         if width == 0 || height == 0 {
             return;
         }
-        let aspect = safe_aspect(canvas);
+        let aspect = canvas.safe_char_aspect();
         let cx = width as f64 / 2.0;
         let cy = height as f64 / 2.0;
         let scale = (width as f64 / 2.0).min(height as f64 / (2.0 * aspect)) * 0.6;
@@ -192,7 +182,7 @@ impl Room for Mobius {
         if width == 0 || height == 0 {
             return;
         }
-        let aspect = safe_aspect(canvas);
+        let aspect = canvas.safe_char_aspect();
         let edge = edge_points(width, height, aspect);
         // Paint spreads along the one edge from each clicked point; the reach
         // grows with the sweep. By the end of the sweep the paint has flowed

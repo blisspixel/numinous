@@ -169,12 +169,19 @@ impl Room for Lissajous {
         }
         // The hand tunes the instrument: clicked ratios replace the sweep.
         // Older intervals linger dim, the newest plays bright, and the
-        // clicked cell is marked so the hand stays visible.
-        for &(x, y) in older {
-            let (fx, fy) = Self::tuned_freqs(x, y);
-            self.draw_tuned(canvas, fx, fy, '.');
-        }
+        // clicked cell is marked so the hand stays visible. Tunings quantize
+        // to whole numbers, so a drag trail mostly repeats the same interval;
+        // drawing each distinct older tuning once keeps a full trail inside
+        // the frame budget without changing a single pixel.
         let (fx, fy) = Self::tuned_freqs(newest.0, newest.1);
+        let mut drawn: Vec<(f64, f64)> = vec![(fx, fy)];
+        for &(x, y) in older {
+            let tuning = Self::tuned_freqs(x, y);
+            if !drawn.contains(&tuning) {
+                drawn.push(tuning);
+                self.draw_tuned(canvas, tuning.0, tuning.1, '.');
+            }
+        }
         self.draw_tuned(canvas, fx, fy, '*');
         for &(x, y) in &tuned {
             let px = (x.clamp(0.0, 1.0) * (width - 1) as f64).round() as i32;
