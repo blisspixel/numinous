@@ -304,8 +304,10 @@ pub fn latest_gesture(inputs: &[RoomInput]) -> Option<Gesture> {
                 | Some(RoomInput::PointerMove { x, y, t }) => {
                     return Some(Gesture::Cancelled { at: (x, y, t) });
                 }
-                // The cancel closed nothing; step past it and read again.
-                Some(RoomInput::PointerUp { .. }) => end -= 1,
+                // The cancel closed nothing (the gesture before it already
+                // ended in a lift or another cancel); step past it and read
+                // again, so the standing release or cancel is never erased.
+                Some(RoomInput::PointerUp { .. }) | Some(RoomInput::PointerCancel) => end -= 1,
                 _ => return None,
             },
             _ => return None,
@@ -609,13 +611,34 @@ mod tests {
             },
             RoomInput::PointerCancel,
         ];
+        let released = Some(super::Gesture::Released {
+            before: (0.2, 0.2, 0.10),
+            at: (0.3, 0.2, 0.12),
+        });
         assert_eq!(
             super::latest_gesture(&inputs),
-            Some(super::Gesture::Released {
-                before: (0.2, 0.2, 0.10),
-                at: (0.3, 0.2, 0.12),
-            }),
+            released,
             "a cancel that closed nothing leaves the release standing"
+        );
+        // Piles of stale cancels change nothing either.
+        let mut doubled = inputs.to_vec();
+        doubled.push(RoomInput::PointerCancel);
+        assert_eq!(super::latest_gesture(&doubled), released);
+        let cancelled_twice = [
+            RoomInput::PointerDown {
+                x: 0.2,
+                y: 0.2,
+                t: 0.10,
+            },
+            RoomInput::PointerCancel,
+            RoomInput::PointerCancel,
+        ];
+        assert_eq!(
+            super::latest_gesture(&cancelled_twice),
+            Some(super::Gesture::Cancelled {
+                at: (0.2, 0.2, 0.10)
+            }),
+            "a repeated cancel still reads as the one real cancel"
         );
     }
 

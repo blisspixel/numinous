@@ -23,7 +23,7 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 833 tests, locked build, Windows verify, 90.01% region cover, and 89.57% line cover all green.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 858 tests, locked build, Windows verify, 90.18% region cover, and 89.84% line cover all green.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -106,7 +106,7 @@ The workstreams, each built to the 1.0 bar:
 The near-term stack, adopted from the July 2026 external review
 (`docs/REVIEW.md`): (1) Times Tables as the gold-standard interactive room;
 (2) the input/verb/variation substrate (RoomInput, not one-shot pokes);
-(3) six first pokes, now generalized into 23 interactive rooms with verbs;
+(3) six first pokes, now generalized into 24 interactive rooms with verbs;
 (4) Engine A2 motifs for every catalog room; (5) MCP structured deltas
 and challenge metrics for the same rooms; (6) one human hallway test; (7)
 cross-platform run; (8) docs reconciliation.

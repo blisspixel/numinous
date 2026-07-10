@@ -1060,7 +1060,15 @@ impl App {
             self.present_raster(raster, width, height);
             return;
         }
+        // A touched frame always answers the hand: the GPU pipeline renders
+        // from phase alone, so the moment a gesture trail exists the fractal
+        // rooms fall back to the CPU poked path. The verb on screen promises
+        // a response; swallowing the click on GPU machines would break it,
+        // and the postcard (which renders the trail) would show a frame the
+        // player never saw. R or a room switch clears the trail and returns
+        // the deep-zoom GPU view.
         if !self.studio
+            && self.inputs.is_empty()
             && let Some(mut rgba) = self.gpu_frame(width, height)
         {
             self.draw_banner_on_rgba(&mut rgba, width, height);

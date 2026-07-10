@@ -24,17 +24,36 @@ const PROTOCOL_VERSION: &str = "2025-06-18";
 const DEFAULT_WIDTH: u64 = 72;
 const DEFAULT_HEIGHT: u64 = 32;
 
+/// The largest frame `play_room` will render. Terminal-scale output is the
+/// product; anything beyond this is a memory and bandwidth lever, not play
+/// (the poke path renders two canvases and diffs every cell).
+const MAX_TOOL_WIDTH: u64 = 512;
+const MAX_TOOL_HEIGHT: u64 = 256;
+
+/// The most bytes one JSON-RPC request line may hold. Every legitimate call
+/// is a few KiB; without a cap a client streaming an endless newline-free
+/// request would grow the line buffer without bound.
+const MAX_REQUEST_BYTES: usize = 1_048_576;
+
 fn main() -> io::Result<()> {
     let stdin = io::stdin();
     let stdout = io::stdout();
     let mut out = stdout.lock();
+    let mut reader = stdin.lock();
+    let mut line = Vec::new();
 
-    for line in stdin.lock().lines() {
-        let line = line?;
-        if line.trim().is_empty() {
+    while read_bounded_line(&mut reader, &mut line)? {
+        let Ok(text) = std::str::from_utf8(&line) else {
+            write_message(
+                &mut out,
+                &error_response(Value::Null, -32700, "Parse error"),
+            )?;
+            continue;
+        };
+        if text.trim().is_empty() {
             continue;
         }
-        match serde_json::from_str::<Value>(&line) {
+        match serde_json::from_str::<Value>(text) {
             Ok(request) => {
                 if let Some(response) = handle_request(&request) {
                     write_message(&mut out, &response)?;
@@ -50,6 +69,37 @@ fn main() -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+/// Read one newline-terminated request into `line`, holding at most
+/// [`MAX_REQUEST_BYTES`]. An oversized line is drained to its newline in
+/// bounded chunks and returned as empty (the parse-error path answers it as
+/// garbage rather than buffering it). Returns false at end of input.
+fn read_bounded_line(reader: &mut impl io::BufRead, line: &mut Vec<u8>) -> io::Result<bool> {
+    use std::io::Read as _;
+    line.clear();
+    let read = reader
+        .take(MAX_REQUEST_BYTES as u64 + 1)
+        .read_until(b'\n', line)?;
+    if read == 0 {
+        return Ok(false);
+    }
+    if line.len() > MAX_REQUEST_BYTES {
+        // Drain the rest of the oversized line without holding it.
+        line.clear();
+        line.push(b'{'); // guaranteed-invalid JSON, so the caller answers with a parse error
+        let mut chunk = Vec::new();
+        loop {
+            chunk.clear();
+            let n = reader
+                .take(MAX_REQUEST_BYTES as u64)
+                .read_until(b'\n', &mut chunk)?;
+            if n == 0 || chunk.last() == Some(&b'\n') {
+                break;
+            }
+        }
+    }
+    Ok(true)
 }
 
 /// Where the journey file lives (shared with the CLI face, so a mind's play
@@ -154,9 +204,12 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                     ) else {
                         break;
                     };
-                    if heap == 0
-                        || !numinous_core::nim_apply(&mut heaps, heap as usize - 1, take as u32)
-                    {
+                    // An oversized take is an illegal move, never a truncated
+                    // legal one.
+                    let Ok(take) = u32::try_from(take) else {
+                        break;
+                    };
+                    if heap == 0 || !numinous_core::nim_apply(&mut heaps, heap as usize - 1, take) {
                         break;
                     }
                     if numinous_core::nim_finished(&heaps) {
@@ -519,8 +572,8 @@ fn tools_list_result() -> Value {
                     "properties": {
                         "id": { "type": "string", "description": "Room id, for example times-tables." },
                         "t": { "type": "number", "description": "Phase in [0,1). For Times Tables this sweeps the multiplier." },
-                        "width": { "type": "integer", "description": "ASCII canvas width in columns." },
-                        "height": { "type": "integer", "description": "ASCII canvas height in rows." },
+                        "width": { "type": "integer", "description": "ASCII canvas width in columns (capped at 512)." },
+                        "height": { "type": "integer", "description": "ASCII canvas height in rows (capped at 256)." },
                         "variation": { "type": "integer", "description": "Per-visit variation seed (default 0) for replayable novelty in supporting rooms." },
                         "pokes": {
                             "type": "array",
@@ -1056,11 +1109,13 @@ fn play_room_tool(args: &Value) -> Value {
     let width = args
         .get("width")
         .and_then(Value::as_u64)
-        .unwrap_or(DEFAULT_WIDTH) as usize;
+        .unwrap_or(DEFAULT_WIDTH)
+        .min(MAX_TOOL_WIDTH) as usize;
     let height = args
         .get("height")
         .and_then(Value::as_u64)
-        .unwrap_or(DEFAULT_HEIGHT) as usize;
+        .unwrap_or(DEFAULT_HEIGHT)
+        .min(MAX_TOOL_HEIGHT) as usize;
     let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
     let pokes = match parse_room_pokes(args) {
         Ok(pokes) => pokes,
@@ -2179,8 +2234,10 @@ fn nim_tool(args: &Value) -> Value {
             list.iter()
                 .filter_map(|m| {
                     let pair = m.as_array()?;
-                    let heap = pair.first()?.as_u64()? as usize;
-                    let take = pair.get(1)?.as_u64()? as u32;
+                    let heap = usize::try_from(pair.first()?.as_u64()?).ok()?;
+                    // An oversized take saturates so the replay rejects it as
+                    // the illegal move it is, instead of truncating it legal.
+                    let take = u32::try_from(pair.get(1)?.as_u64()?).unwrap_or(u32::MAX);
                     Some((heap, take))
                 })
                 .collect()
@@ -3341,6 +3398,44 @@ plays 2
         let text = table["content"][0]["text"].as_str().unwrap_or_default();
         assert!(text.contains("challenge voronoi seed:7"), "got: {text}");
         let _ = std::fs::remove_file(&scores);
+    }
+
+    #[test]
+    fn oversized_request_lines_are_drained_not_buffered() {
+        let mut input = Vec::new();
+        input.extend(std::iter::repeat_n(b'x', super::MAX_REQUEST_BYTES + 100));
+        input.push(b'\n');
+        input.extend_from_slice(br#"{"jsonrpc":"2.0","id":1,"method":"ping"}"#);
+        input.push(b'\n');
+        let mut reader = std::io::BufReader::new(&input[..]);
+        let mut line = Vec::new();
+        assert!(super::read_bounded_line(&mut reader, &mut line).expect("read"));
+        assert!(
+            line.len() < 8,
+            "an oversized line is replaced by a tiny invalid marker, not held"
+        );
+        assert!(serde_json::from_slice::<serde_json::Value>(&line).is_err());
+        assert!(super::read_bounded_line(&mut reader, &mut line).expect("read"));
+        assert!(
+            serde_json::from_slice::<serde_json::Value>(&line).is_ok(),
+            "the request after the flood still parses"
+        );
+        assert!(!super::read_bounded_line(&mut reader, &mut line).expect("read"));
+    }
+
+    #[test]
+    fn play_room_frames_are_capped_at_the_tool_layer() {
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":60,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"voronoi","width":4096,"height":4096,"pokes":[[0.5,0.5]]}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(resp["result"]["isError"], false);
+        assert_eq!(
+            resp["result"]["structuredContent"]["delta"]["total_cells"],
+            super::MAX_TOOL_WIDTH * super::MAX_TOOL_HEIGHT,
+            "hostile dimensions clamp to the tool cap"
+        );
     }
 
     #[test]
