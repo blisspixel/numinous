@@ -512,7 +512,7 @@ fn tools_list_result() -> Value {
             },
             {
                 "name": "play_room",
-                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does.",
+                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. When you supply pokes, the structured result includes a delta (cells changed, ink added/removed/reshaped, changed region) measuring exactly how the math answered your hand.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -1051,11 +1051,15 @@ fn play_room_tool(args: &Value) -> Value {
     match room {
         Some(room) => {
             let mut canvas = Canvas::new(width, height);
-            if pokes.is_empty() {
+            let delta = if pokes.is_empty() {
                 room.render(&mut canvas, t);
+                None
             } else {
                 room.render_poked(&mut canvas, t, &pokes);
-            }
+                let mut base = Canvas::new(width, height);
+                room.render(&mut base, t);
+                base.delta(&canvas)
+            };
             let m = room.meta();
             let action = numinous_core::room_action(room.as_ref());
             let status = room.status(t);
@@ -1063,9 +1067,18 @@ fn play_room_tool(args: &Value) -> Value {
                 .as_ref()
                 .map(|readout| format!("\nStatus: {readout}"))
                 .unwrap_or_default();
+            let touch_line = delta
+                .as_ref()
+                .map(|d| {
+                    format!(
+                        "\nTouch: {} of {} cells answered",
+                        d.cells_changed, d.total_cells
+                    )
+                })
+                .unwrap_or_default();
             tool_structured(
                 &format!(
-                    "{} at t={t:.3}:\nAction: {action}{status_line}\n\n{}",
+                    "{} at t={t:.3}:\nAction: {action}{status_line}{touch_line}\n\n{}",
                     m.title,
                     canvas.to_text()
                 ),
@@ -1077,11 +1090,27 @@ fn play_room_tool(args: &Value) -> Value {
                     "pokes": pokes,
                     "action": action,
                     "status": status,
+                    "delta": delta.map(render_delta_json),
                 }),
             )
         }
         None => tool_error(&unknown_room(id)),
     }
+}
+
+/// The structured JSON shape of a poke's [`numinous_core::RenderDelta`].
+///
+/// The delta compares the unpoked and poked frames at the same phase, size,
+/// and variation, so the numbers are exactly what the hand changed.
+fn render_delta_json(delta: numinous_core::RenderDelta) -> Value {
+    json!({
+        "cells_changed": delta.cells_changed,
+        "ink_added": delta.ink_added,
+        "ink_removed": delta.ink_removed,
+        "ink_reshaped": delta.ink_reshaped,
+        "total_cells": delta.total_cells,
+        "changed_region": delta.changed_region.map(|(x0, y0, x1, y1)| json!([x0, y0, x1, y1])),
+    })
 }
 
 /// The `list_sims` text: each sim with its levers.
@@ -2206,7 +2235,7 @@ fn error_response(id: Value, code: i64, message: &str) -> Value {
 
 #[cfg(test)]
 mod tests {
-    use super::{handle_request, handle_request_with};
+    use super::{handle_request, handle_request_with, render_delta_json};
     use serde_json::json;
 
     #[test]
@@ -2956,13 +2985,92 @@ plays 2
             "params":{"name":"play_room","arguments":{"id":"double-pendulum","width":50,"height":30,"t":0.25,"pokes":[[0.2,0.8]]}}
         }))
         .expect("tools/call must respond");
+        // Compare only the frame bodies: the poked header always differs now
+        // (it carries the Touch line), so a whole-text comparison would pass
+        // even for a room that ignored its hand points.
+        let frame_of = |resp: &serde_json::Value| -> String {
+            let text = resp["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default();
+            text.split_once("\n\n")
+                .map(|(_, frame)| frame)
+                .unwrap_or_default()
+                .to_string()
+        };
         assert_ne!(
-            resting["result"]["content"][0]["text"], poked["result"]["content"][0]["text"],
+            frame_of(&resting),
+            frame_of(&poked),
             "a supplied hand point should steer the frame"
         );
         assert_eq!(poked["result"]["structuredContent"]["pokes"][0][0], 0.2);
         assert_eq!(poked["result"]["structuredContent"]["pokes"][0][1], 0.8);
         assert_eq!(poked["result"]["isError"], false);
+        assert_eq!(
+            resting["result"]["structuredContent"]["delta"],
+            serde_json::Value::Null,
+            "an unpoked render carries no delta"
+        );
+    }
+
+    #[test]
+    fn play_room_pokes_report_a_structured_delta() {
+        let poked = handle_request(&json!({
+            "jsonrpc":"2.0","id":36,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"double-pendulum","width":50,"height":30,"t":0.25,"pokes":[[0.2,0.8]]}}
+        }))
+        .expect("tools/call must respond");
+        let delta = &poked["result"]["structuredContent"]["delta"];
+        let changed = delta["cells_changed"].as_u64().expect("cells_changed");
+        assert!(changed > 0, "the hand must measurably change the frame");
+        assert_eq!(
+            changed,
+            delta["ink_added"].as_u64().unwrap_or_default()
+                + delta["ink_removed"].as_u64().unwrap_or_default()
+                + delta["ink_reshaped"].as_u64().unwrap_or_default(),
+            "the change classification must sum to the change count"
+        );
+        assert_eq!(delta["total_cells"], 50 * 30);
+        let region = delta["changed_region"]
+            .as_array()
+            .expect("a nonzero delta has a bounding region");
+        assert_eq!(region.len(), 4);
+        let text = poked["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(
+            text.contains(&format!("Touch: {changed} of {} cells answered", 50 * 30)),
+            "the text face speaks the same numbers: {text}"
+        );
+    }
+
+    #[test]
+    fn a_zero_change_delta_serializes_with_a_null_region() {
+        // A poke can legitimately change nothing (e.g. touching existing ink);
+        // the serialized delta must then carry an explicit null region.
+        let json = render_delta_json(numinous_core::RenderDelta {
+            total_cells: 12,
+            ..Default::default()
+        });
+        assert_eq!(json["cells_changed"], 0);
+        assert_eq!(json["total_cells"], 12);
+        assert_eq!(json["changed_region"], serde_json::Value::Null);
+    }
+
+    #[test]
+    fn play_room_delta_matches_across_variation_reseeds() {
+        // The delta must compare poked-vs-unpoked at the SAME variation, so a
+        // reseeded visit still reports only what the hand changed.
+        let poked = handle_request(&json!({
+            "jsonrpc":"2.0","id":37,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"voronoi","width":40,"height":20,"variation":7,"pokes":[[0.5,0.5]]}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(poked["result"]["isError"], false);
+        let delta = &poked["result"]["structuredContent"]["delta"];
+        assert!(
+            delta["cells_changed"].as_u64().expect("cells_changed") > 0,
+            "a dropped well renegotiates borders under any variation"
+        );
     }
 
     #[test]

@@ -54,7 +54,7 @@ pub mod trophies;
 
 pub use aliens::{AlienMessage, alien_message, to_base};
 pub use ansi::to_ansi;
-pub use canvas::Canvas;
+pub use canvas::{Canvas, RenderDelta};
 pub use chiptune::{Pattern, Voice, compose, pitch};
 pub use codebreaker::{Feedback, grade, hint, secret_code};
 pub use concepts::concept;

@@ -51,6 +51,64 @@ impl Canvas {
     pub fn ink_count(&self) -> usize {
         self.cells.iter().filter(|&&c| c != ' ').count()
     }
+
+    /// The structured cell-level difference against another render.
+    ///
+    /// This is the agent faces' proof-of-touch: rendering a room with and
+    /// without hand points and diffing the two frames tells an agent exactly
+    /// how much the math answered, as numbers it can verify and optimize
+    /// rather than prose it must trust. Returns `None` when the canvases
+    /// have different dimensions, because there is no meaningful cell map.
+    #[must_use]
+    pub fn delta(&self, other: &Canvas) -> Option<RenderDelta> {
+        if self.width != other.width || self.height != other.height {
+            return None;
+        }
+        let mut delta = RenderDelta {
+            total_cells: self.cells.len(),
+            ..RenderDelta::default()
+        };
+        let mut bounds: Option<(usize, usize, usize, usize)> = None;
+        for (index, (&base, &new)) in self.cells.iter().zip(&other.cells).enumerate() {
+            if base == new {
+                continue;
+            }
+            delta.cells_changed += 1;
+            match (base == ' ', new == ' ') {
+                (true, false) => delta.ink_added += 1,
+                (false, true) => delta.ink_removed += 1,
+                _ => delta.ink_reshaped += 1,
+            }
+            let (x, y) = (index % self.width, index / self.width);
+            bounds = Some(match bounds {
+                None => (x, y, x, y),
+                Some((x0, y0, x1, y1)) => (x0.min(x), y0.min(y), x1.max(x), y1.max(y)),
+            });
+        }
+        delta.changed_region = bounds;
+        Some(delta)
+    }
+}
+
+/// The cell-level difference between two equally-sized [`Canvas`] renders.
+///
+/// `cells_changed` always equals `ink_added + ink_removed + ink_reshaped`.
+/// The `changed_region` is the inclusive bounding box `(x0, y0, x1, y1)` of
+/// every changed cell, or `None` when the renders are identical.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RenderDelta {
+    /// Cells whose character differs between the two renders.
+    pub cells_changed: usize,
+    /// Blank cells that gained a glyph.
+    pub ink_added: usize,
+    /// Glyph cells that went blank.
+    pub ink_removed: usize,
+    /// Cells that swapped one glyph for another.
+    pub ink_reshaped: usize,
+    /// Total cells compared (width times height).
+    pub total_cells: usize,
+    /// Inclusive bounding box of the change, or `None` for identical frames.
+    pub changed_region: Option<(usize, usize, usize, usize)>,
 }
 
 impl Surface for Canvas {
@@ -136,5 +194,64 @@ mod tests {
     #[test]
     fn characters_are_tall_so_aspect_is_one_half() {
         assert!((Canvas::new(4, 4).char_aspect() - 0.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn delta_of_identical_frames_is_empty() {
+        let mut a = Canvas::new(10, 5);
+        a.plot(3, 2, '*');
+        let d = a.delta(&a.clone()).expect("same dimensions");
+        assert_eq!(d.cells_changed, 0);
+        assert_eq!(d.total_cells, 50);
+        assert_eq!(d.changed_region, None);
+    }
+
+    #[test]
+    fn delta_classifies_added_removed_and_reshaped_ink() {
+        let mut base = Canvas::new(10, 5);
+        base.plot(1, 1, '#'); // will go blank: removed
+        base.plot(2, 2, '#'); // will become '*': reshaped
+        let mut new = Canvas::new(10, 5);
+        new.plot(2, 2, '*');
+        new.plot(7, 4, '+'); // blank in base: added
+        let d = base.delta(&new).expect("same dimensions");
+        assert_eq!(d.ink_added, 1);
+        assert_eq!(d.ink_removed, 1);
+        assert_eq!(d.ink_reshaped, 1);
+        assert_eq!(
+            d.cells_changed,
+            d.ink_added + d.ink_removed + d.ink_reshaped,
+            "the change count invariant must hold"
+        );
+    }
+
+    #[test]
+    fn delta_bounding_box_spans_every_changed_cell_inclusively() {
+        let base = Canvas::new(10, 5);
+        let mut new = Canvas::new(10, 5);
+        new.plot(2, 1, '*');
+        new.plot(8, 3, '*');
+        let d = base.delta(&new).expect("same dimensions");
+        assert_eq!(d.changed_region, Some((2, 1, 8, 3)));
+    }
+
+    #[test]
+    fn delta_of_mismatched_dimensions_is_none() {
+        assert!(Canvas::new(10, 5).delta(&Canvas::new(10, 6)).is_none());
+        assert!(Canvas::new(9, 5).delta(&Canvas::new(10, 5)).is_none());
+    }
+
+    #[test]
+    fn delta_is_symmetric_in_count_and_region_but_swaps_direction() {
+        let mut base = Canvas::new(6, 3);
+        base.plot(1, 1, '#');
+        let mut new = Canvas::new(6, 3);
+        new.plot(4, 2, '*');
+        let forward = base.delta(&new).expect("same dimensions");
+        let backward = new.delta(&base).expect("same dimensions");
+        assert_eq!(forward.cells_changed, backward.cells_changed);
+        assert_eq!(forward.changed_region, backward.changed_region);
+        assert_eq!(forward.ink_added, backward.ink_removed);
+        assert_eq!(forward.ink_removed, backward.ink_added);
     }
 }
