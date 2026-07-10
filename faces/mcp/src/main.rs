@@ -3136,6 +3136,19 @@ plays 2
         }))
         .expect("tools/call must respond");
         assert_eq!(bad["result"]["isError"], true);
+
+        // A crafted deeply nested expression must return an error, never
+        // overflow the stack and abort the server (a Rust stack overflow is
+        // uncatchable). Both studio-parsing tools share the guarded parser.
+        let deep = format!("{}1{}", "(".repeat(5000), ")".repeat(5000));
+        for tool in ["plot_expression", "sing_expression"] {
+            let bomb = handle_request(&json!({
+                "jsonrpc":"2.0","id":41,"method":"tools/call",
+                "params":{"name":tool,"arguments":{"expr":deep}}
+            }))
+            .expect("tools/call must respond, not crash");
+            assert_eq!(bomb["result"]["isError"], true, "{tool} rejects the bomb");
+        }
     }
 
     #[test]
