@@ -7,8 +7,8 @@
 //! bounded no matter how large the surface is. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{Room, RoomMeta};
-use crate::surface::Surface;
+use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::surface::{MAX_DIM, Surface};
 
 /// Simulation grid width and height (fixed, independent of the surface).
 const GRID_W: usize = 96;
@@ -20,15 +20,33 @@ const DENSITY: f64 = 0.32;
 /// The most generations `t` reaches.
 const MAX_GEN: usize = 140;
 
+fn drawing_dims(canvas: &dyn Surface) -> Option<(usize, usize)> {
+    let width = canvas.width();
+    let height = canvas.height();
+    if width == 0 || height == 0 {
+        None
+    } else {
+        Some((width.min(MAX_DIM), height.min(MAX_DIM)))
+    }
+}
+
 /// The Game of Life room.
 #[derive(Debug, Default)]
-pub struct GameOfLife;
+pub struct GameOfLife {
+    seed: u64,
+}
 
 impl GameOfLife {
-    /// Create the room.
+    /// Create the room with default seed (0).
     #[must_use]
     pub fn new() -> Self {
-        Self
+        Self { seed: 0 }
+    }
+
+    /// Create with variation seed.
+    #[must_use]
+    pub fn new_with(seed: u64) -> Self {
+        Self { seed }
     }
 
     /// The generation shown at phase `t`.
@@ -55,16 +73,8 @@ impl Room for GameOfLife {
         if width == 0 || height == 0 {
             return;
         }
-        let grid = simulate(Self::generation_for(t));
-        for py in 0..height {
-            for px in 0..width {
-                let gx = px * GRID_W / width;
-                let gy = py * GRID_H / height;
-                if grid[gy * GRID_W + gx] {
-                    canvas.plot(px as i32, py as i32, '*');
-                }
-            }
-        }
+        let grid = simulate(Self::generation_for(t), self.seed);
+        draw_grid(canvas, &grid);
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -82,16 +92,15 @@ impl Room for GameOfLife {
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
-        self.render(canvas, t);
-        // Every poke sows a small glider-shaped seed of bright cells at the
-        // hand's point: sown life rides on top of the running world.
-        let (w, h) = (canvas.width() as f64, canvas.height() as f64);
-        for &(x, y) in pokes {
-            let (cx, cy) = ((x * w) as i32, (y * h) as i32);
-            for (dx, dy) in [(0, 0), (1, 0), (2, 0), (2, -1), (1, -2)] {
-                canvas.plot(cx + dx * 2, cy + dy * 2, '#');
-            }
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
         }
+        // Every poke sows a small glider into the world before the clock runs,
+        // so the hand's life evolves under the same B3/S23 rules as the soup.
+        let grid = simulate_with_pokes(Self::generation_for(t), self.seed, pokes);
+        draw_grid(canvas, &grid);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -117,17 +126,83 @@ impl Room for GameOfLife {
     }
 }
 
+fn draw_grid(canvas: &mut dyn Surface, grid: &[bool]) {
+    let Some((width, height)) = drawing_dims(canvas) else {
+        return;
+    };
+    for py in 0..height {
+        for px in 0..width {
+            let gx = px * GRID_W / width;
+            let gy = py * GRID_H / height;
+            if grid[gy * GRID_W + gx] {
+                canvas.plot(px as i32, py as i32, '*');
+            }
+        }
+    }
+}
+
+fn sown_glider_cells(point: (f64, f64)) -> Option<[(usize, usize); 5]> {
+    let (x, y) = point;
+    if !x.is_finite() || !y.is_finite() {
+        return None;
+    }
+    let cx = (x.clamp(0.0, 1.0) * (GRID_W - 1) as f64).round() as i32;
+    let cy = (y.clamp(0.0, 1.0) * (GRID_H - 1) as f64).round() as i32;
+    let mut cells = [(0, 0); 5];
+    for (cell, (dx, dy)) in cells
+        .iter_mut()
+        .zip([(0, 0), (1, 0), (2, 0), (2, -1), (1, -2)])
+    {
+        *cell = (
+            (cx + dx).rem_euclid(GRID_W as i32) as usize,
+            (cy + dy).rem_euclid(GRID_H as i32) as usize,
+        );
+    }
+    Some(cells)
+}
+
+fn sow_pokes(grid: &mut [bool], pokes: &[(f64, f64)]) {
+    let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
+    for &point in &pokes[start..] {
+        let Some(cells) = sown_glider_cells(point) else {
+            continue;
+        };
+        for (x, y) in cells {
+            grid[y * GRID_W + x] = true;
+        }
+    }
+}
+
+fn simulate_with_pokes(generations: usize, variation: u64, pokes: &[(f64, f64)]) -> Vec<bool> {
+    let mut grid = seed(variation);
+    sow_pokes(&mut grid, pokes);
+    for _ in 0..generations.min(MAX_GEN) {
+        grid = step(&grid, GRID_W, GRID_H);
+    }
+    grid
+}
+
+#[cfg(test)]
+fn glider_on_empty_grid(point: (f64, f64), generations: usize) -> Vec<bool> {
+    let mut grid = vec![false; GRID_W * GRID_H];
+    sow_pokes(&mut grid, &[point]);
+    for _ in 0..generations.min(MAX_GEN) {
+        grid = step(&grid, GRID_W, GRID_H);
+    }
+    grid
+}
+
 /// The initial soup, seeded deterministically.
-fn seed() -> Vec<bool> {
-    let mut rng = SplitMix64::new(SEED);
+fn seed(variation: u64) -> Vec<bool> {
+    let mut rng = SplitMix64::new(SEED ^ variation);
     (0..GRID_W * GRID_H)
         .map(|_| rng.next_f64() < DENSITY)
         .collect()
 }
 
 /// Run the Game of Life for `generations` steps from the seed.
-fn simulate(generations: usize) -> Vec<bool> {
-    let mut grid = seed();
+fn simulate(generations: usize, variation: u64) -> Vec<bool> {
+    let mut grid = seed(variation);
     for _ in 0..generations.min(MAX_GEN) {
         grid = step(&grid, GRID_W, GRID_H);
     }
@@ -162,9 +237,13 @@ fn step(grid: &[bool], w: usize, h: usize) -> Vec<bool> {
 
 #[cfg(test)]
 mod tests {
-    use super::{GameOfLife, step};
+    use super::{
+        GRID_W, GameOfLife, glider_on_empty_grid, simulate, simulate_with_pokes, sow_pokes,
+        sown_glider_cells, step,
+    };
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::room::{MAX_ROOM_POKES, Room};
+    use crate::surface::{MAX_DIM, Surface};
 
     fn grid_with(w: usize, h: usize, live: &[(usize, usize)]) -> Vec<bool> {
         let mut g = vec![false; w * h];
@@ -196,6 +275,13 @@ mod tests {
     }
 
     #[test]
+    fn nonfinite_phase_falls_back_to_the_first_generation() {
+        assert_eq!(GameOfLife::generation_for(f64::NAN), 0);
+        assert_eq!(GameOfLife::generation_for(f64::NEG_INFINITY), 0);
+        assert_eq!(GameOfLife::generation_for(f64::INFINITY), super::MAX_GEN);
+    }
+
+    #[test]
     fn render_is_deterministic() {
         let room = GameOfLife::new();
         let mut a = Canvas::new(48, 24);
@@ -203,6 +289,150 @@ mod tests {
         room.render(&mut a, 0.3);
         room.render(&mut b, 0.3);
         assert_eq!(a.to_text(), b.to_text());
+    }
+
+    #[test]
+    fn sown_glider_uses_both_coordinates() {
+        let center = sown_glider_cells((0.25, 0.75)).expect("finite point");
+        let moved_x = sown_glider_cells((0.75, 0.75)).expect("finite point");
+        let moved_y = sown_glider_cells((0.25, 0.25)).expect("finite point");
+
+        assert_ne!(center, moved_x, "x moves the planted cells");
+        assert_ne!(center, moved_y, "y moves the planted cells");
+        assert!(sown_glider_cells((f64::NAN, 0.5)).is_none());
+
+        let mut grid = vec![false; GRID_W * super::GRID_H];
+        sow_pokes(&mut grid, &[(0.25, 0.75)]);
+        for (x, y) in center {
+            assert!(grid[y * GRID_W + x], "sown cell ({x},{y}) is alive");
+        }
+    }
+
+    #[test]
+    fn sown_life_evolves_under_the_same_rules() {
+        let point = [(0.33, 0.66)];
+        let base = simulate(4, 0);
+        let sown_start = simulate_with_pokes(0, 0, &point);
+        let sown_evolved = simulate_with_pokes(4, 0, &point);
+        let sown_after_one = simulate_with_pokes(1, 0, &point);
+
+        assert_ne!(base, sown_evolved, "the planted cells affect the future");
+        assert_ne!(sown_start, sown_evolved, "the planted pattern evolves");
+        assert_eq!(
+            sown_after_one,
+            step(&sown_start, GRID_W, super::GRID_H),
+            "sown cells advance through the same B3/S23 transition"
+        );
+        assert_eq!(simulate(4, 0), simulate_with_pokes(4, 0, &[]));
+    }
+
+    #[test]
+    fn public_render_poked_visibly_changes_the_room() {
+        let room = GameOfLife::new();
+        let mut base = Canvas::new(72, 36);
+        let mut poked = Canvas::new(72, 36);
+
+        room.render(&mut base, 0.12);
+        room.render_poked(&mut poked, 0.12, &[(0.18, 0.82)]);
+
+        assert_ne!(base.to_text(), poked.to_text());
+        assert!(poked.ink_count() > 10);
+    }
+
+    #[test]
+    fn planted_glider_moves_on_the_toroidal_grid() {
+        let mut start_cells = sown_glider_cells((0.5, 0.5)).expect("center glider");
+        start_cells.sort_unstable();
+        let mut after_four = live_cells(&glider_on_empty_grid((0.5, 0.5), 4));
+        after_four.sort_unstable();
+        let expected = start_cells.map(|(x, y)| ((x + 1) % GRID_W, (y + 1) % super::GRID_H));
+        let mut expected = expected.to_vec();
+        expected.sort_unstable();
+
+        assert_eq!(after_four, expected);
+
+        let edge = sown_glider_cells((1.0, 0.0)).expect("edge glider");
+        assert!(
+            edge.iter().any(|&(x, _)| x == 0),
+            "right edge wraps to column 0"
+        );
+        assert!(
+            edge.iter().any(|&(_, y)| y == super::GRID_H - 1),
+            "top edge wraps upward"
+        );
+    }
+
+    fn live_cells(grid: &[bool]) -> Vec<(usize, usize)> {
+        grid.iter()
+            .enumerate()
+            .filter_map(|(i, &alive)| alive.then_some((i % GRID_W, i / GRID_W)))
+            .collect()
+    }
+
+    #[test]
+    fn sowed_cells_use_the_newest_bounded_raw_tail() {
+        let newest = vec![(0.85, 0.15); MAX_ROOM_POKES];
+        let mut all = vec![(0.15, 0.85); MAX_ROOM_POKES + 7];
+        all.extend(newest.iter().copied());
+        let discarded_prefix = all[..all.len() - MAX_ROOM_POKES].to_vec();
+        let mut expected = vec![false; GRID_W * super::GRID_H];
+        let mut actual = vec![false; GRID_W * super::GRID_H];
+        let mut prefix_only = vec![false; GRID_W * super::GRID_H];
+
+        sow_pokes(&mut expected, &newest);
+        sow_pokes(&mut actual, &all);
+        sow_pokes(&mut prefix_only, &discarded_prefix);
+
+        assert_eq!(actual, expected);
+        assert_ne!(actual, prefix_only);
+    }
+
+    #[test]
+    fn raw_newest_tail_is_capped_before_nonfinite_filtering() {
+        let mut with_invalid_tail = vec![(0.4, 0.6); MAX_ROOM_POKES];
+        with_invalid_tail.extend(vec![(f64::NAN, f64::INFINITY); MAX_ROOM_POKES + 5]);
+        let mut grid = vec![false; GRID_W * super::GRID_H];
+
+        sow_pokes(&mut grid, &with_invalid_tail);
+
+        assert!(grid.iter().all(|&alive| !alive));
+    }
+
+    #[test]
+    fn all_invalid_newest_tail_discards_older_valid_gliders() {
+        let mut with_valid_prefix = vec![(0.5, 0.5); MAX_ROOM_POKES];
+        with_valid_prefix.extend(vec![(f64::NAN, f64::INFINITY); MAX_ROOM_POKES + 5]);
+
+        assert_eq!(
+            simulate_with_pokes(2, 0, &with_valid_prefix),
+            simulate(2, 0)
+        );
+    }
+
+    #[test]
+    fn nonfinite_pokes_do_not_consume_glider_identity() {
+        let finite = vec![(0.25, 0.75)];
+        let with_bad_points = vec![(f64::NAN, 0.4), (0.25, 0.75), (0.2, f64::INFINITY)];
+
+        assert_eq!(
+            simulate_with_pokes(2, 0, &with_bad_points),
+            simulate_with_pokes(2, 0, &finite)
+        );
+    }
+
+    #[test]
+    fn new_with_zero_matches_default_and_nonzero_differs() {
+        let r0 = GameOfLife::new_with(0);
+        let r_def = GameOfLife::new();
+        let mut a = Canvas::new(48, 24);
+        let mut b = Canvas::new(48, 24);
+        r0.render(&mut a, 0.3);
+        r_def.render(&mut b, 0.3);
+        assert_eq!(a.to_text(), b.to_text());
+        let r42 = GameOfLife::new_with(42);
+        let mut c = Canvas::new(48, 24);
+        r42.render(&mut c, 0.3);
+        assert_ne!(a.to_text(), c.to_text());
     }
 
     #[test]
@@ -221,6 +451,46 @@ mod tests {
         let mut canvas = Canvas::new(6, 6);
         for t in [-2.0, 0.0, 0.999, 3.0] {
             room.render(&mut canvas, t);
+            room.render_poked(&mut canvas, t, &[(f64::INFINITY, f64::NAN)]);
+        }
+    }
+
+    #[test]
+    fn huge_custom_surface_does_not_render_unbounded_cells() {
+        #[derive(Default)]
+        struct HugeSurface {
+            width: usize,
+            height: usize,
+            plots: usize,
+            max_abs_coord: i32,
+        }
+
+        impl Surface for HugeSurface {
+            fn width(&self) -> usize {
+                self.width
+            }
+
+            fn height(&self) -> usize {
+                self.height
+            }
+
+            fn plot(&mut self, x: i32, y: i32, _mark: char) {
+                self.plots += 1;
+                self.max_abs_coord = self.max_abs_coord.max(x.abs()).max(y.abs());
+            }
+        }
+
+        let room = GameOfLife::new();
+        for (width, height) in [(usize::MAX, 12), (12, usize::MAX)] {
+            let mut surface = HugeSurface {
+                width,
+                height,
+                ..HugeSurface::default()
+            };
+            room.render_poked(&mut surface, 0.0, &[(0.5, 0.5)]);
+
+            assert!(surface.plots <= MAX_DIM * 12);
+            assert!(surface.max_abs_coord <= MAX_DIM.saturating_sub(1) as i32);
         }
     }
 

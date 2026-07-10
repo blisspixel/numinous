@@ -20,13 +20,31 @@ const K_SWEEP: f64 = 8.0;
 
 /// The Times Tables room.
 #[derive(Debug, Default)]
-pub struct TimesTables;
+pub struct TimesTables {
+    seed: u64,
+}
 
 impl TimesTables {
     /// Create the room.
     #[must_use]
     pub fn new() -> Self {
-        Self
+        Self { seed: 0 }
+    }
+
+    /// Create with variation seed for replayable per-visit novelty.
+    #[must_use]
+    pub fn new_with(seed: u64) -> Self {
+        Self { seed }
+    }
+
+    fn phase_for(&self, t: f64) -> f64 {
+        let phase = t.clamp(0.0, 1.0);
+        if self.seed == 0 {
+            phase
+        } else {
+            let offset = 0.08 + (self.seed % 997) as f64 / 997.0 * 0.17;
+            (phase + offset).fract()
+        }
     }
 }
 
@@ -56,8 +74,51 @@ impl Room for TimesTables {
         Some("DRAG: TURN THE DIAL")
     }
 
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        if pokes.is_empty() {
+            self.render(canvas, t);
+            return;
+        }
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
+        }
+        let n = POINTS;
+        let (fw, fh) = (width as f64, height as f64);
+        let cx = fw / 2.0;
+        let cy = fh / 2.0;
+        let r = (fw.min(fh) / 2.0) * 0.45;
+        let phase = self.phase_for(t);
+        // base
+        self.render(canvas, t);
+        // poked: extra "twisted" copies at poke positions, using y for local k shift
+        for &(px, py) in pokes {
+            let shift = (py - 0.5) * 0.5;
+            let k = K_MIN + K_SWEEP * (phase + shift).clamp(0.0, 1.0);
+            for i in 0..n {
+                let a = (i as f64 / n as f64) * TAU;
+                let b = (i as f64 * k / n as f64) * TAU;
+                let x1 = cx + r * a.cos();
+                let y1 = cy + r * a.sin();
+                let x2 = cx + r * b.cos();
+                let y2 = cy + r * b.sin();
+                // offset by poke
+                let ox = (px - 0.5) * 20.0;
+                let oy = (py - 0.5) * 20.0;
+                canvas.line(
+                    (x1 + ox) as i32,
+                    (y1 + oy) as i32,
+                    (x2 + ox) as i32,
+                    (y2 + oy) as i32,
+                    '*',
+                );
+            }
+        }
+    }
+
     fn status(&self, t: f64) -> Option<String> {
-        let k = K_MIN + K_SWEEP * t.clamp(0.0, 1.0);
+        let k = K_MIN + K_SWEEP * self.phase_for(t);
         let nearest = k.round();
         let off = (k - nearest).abs();
         let note = if off < 0.02 {
@@ -71,7 +132,7 @@ impl Room for TimesTables {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        let multiplier = K_MIN + K_SWEEP * t.clamp(0.0, 1.0);
+        let multiplier = K_MIN + K_SWEEP * self.phase_for(t);
 
         let width = canvas.width() as f64;
         let height = canvas.height() as f64;
@@ -117,7 +178,7 @@ impl Room for TimesTables {
     }
     fn sound(&self, t: f64) -> SoundSpec {
         // Pitch rises with the multiplier k; landing on a whole number sounds clean.
-        let k = (K_MIN + K_SWEEP * t.clamp(0.0, 1.0)) as f32;
+        let k = (K_MIN + K_SWEEP * self.phase_for(t)) as f32;
         SoundSpec::tone(55.0 * k, 1.5, 0.2)
     }
 }
@@ -145,6 +206,32 @@ mod tests {
         let spec = TimesTables::new().sound(0.0);
         assert_eq!(spec.notes.len(), 1);
         assert!(spec.notes[0].freq > 0.0);
+    }
+
+    #[test]
+    fn new_with_zero_matches_default() {
+        let mut a = Canvas::new(48, 28);
+        let mut b = Canvas::new(48, 28);
+        TimesTables::new().render(&mut a, 0.35);
+        TimesTables::new_with(0).render(&mut b, 0.35);
+        assert_eq!(a.to_text(), b.to_text());
+        assert_eq!(
+            TimesTables::new().status(0.35),
+            TimesTables::new_with(0).status(0.35)
+        );
+    }
+
+    #[test]
+    fn new_with_nonzero_produces_variation() {
+        let mut a = Canvas::new(48, 28);
+        let mut b = Canvas::new(48, 28);
+        TimesTables::new_with(0).render(&mut a, 0.2);
+        TimesTables::new_with(42).render(&mut b, 0.2);
+        assert_ne!(a.to_text(), b.to_text());
+        assert_ne!(
+            TimesTables::new_with(0).status(0.2),
+            TimesTables::new_with(42).status(0.2)
+        );
     }
 
     #[test]

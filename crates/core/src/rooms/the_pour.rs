@@ -6,6 +6,7 @@
 //! Nobody says the word integral; the accumulation is the controls. See the
 //! Full Map in `docs/ROOMS.md`.
 
+use super::variation_unit;
 use crate::room::{Room, RoomMeta};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
@@ -27,13 +28,30 @@ fn area(x: f64) -> f64 {
 
 /// The Pour.
 #[derive(Debug, Default)]
-pub struct ThePour;
+pub struct ThePour {
+    seed: u64,
+}
 
 impl ThePour {
     /// Create the room.
     #[must_use]
     pub fn new() -> Self {
-        Self
+        Self { seed: 0 }
+    }
+
+    /// Create with variation seed for replayable per-visit novelty.
+    #[must_use]
+    pub fn new_with(seed: u64) -> Self {
+        Self { seed }
+    }
+
+    fn phase_for(&self, t: f64) -> f64 {
+        let t = t.clamp(0.0, 1.0);
+        if self.seed == 0 {
+            t
+        } else {
+            (t + variation_unit(self.seed, 0x504F_5552_0000_0001) * 0.35).fract()
+        }
     }
 }
 
@@ -55,7 +73,7 @@ impl Room for ThePour {
         if width == 0 || height == 0 {
             return;
         }
-        let x_t = t.clamp(0.0, 1.0) * X_MAX;
+        let x_t = self.phase_for(t) * X_MAX;
         let f_max = 2.2; // 1.2 + 1
         let area_max = area(X_MAX);
         // The curve lives in the lower two thirds; the total in the upper third.
@@ -130,9 +148,19 @@ impl Room for ThePour {
         0.8
     }
 
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "C accumulating",
+            root: 130.81,
+            tempo: 92,
+            line: &[0, 2, 4, 5, 7, 9, 12, 14],
+            encodes: "area accumulating steadily into its antiderivative",
+        })
+    }
+
     fn sound(&self, t: f64) -> SoundSpec {
         // The fill sings: pitch rises with the accumulated area.
-        let ratio = (area(t.clamp(0.0, 1.0) * X_MAX) / area(X_MAX)) as f32;
+        let ratio = (area(self.phase_for(t) * X_MAX) / area(X_MAX)) as f32;
         SoundSpec::tone(110.0 + 330.0 * ratio, 1.5, 0.2)
     }
 }

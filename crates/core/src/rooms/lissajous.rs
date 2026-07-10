@@ -7,6 +7,7 @@
 
 use std::f64::consts::{FRAC_PI_2, TAU};
 
+use super::variation_unit;
 use crate::room::{Room, RoomMeta};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
@@ -22,13 +23,21 @@ const SAMPLES: usize = 1500;
 
 /// The Lissajous room.
 #[derive(Debug, Default)]
-pub struct Lissajous;
+pub struct Lissajous {
+    seed: u64,
+}
 
 impl Lissajous {
     /// Create the room.
     #[must_use]
     pub fn new() -> Self {
-        Self
+        Self { seed: 0 }
+    }
+
+    /// Create with variation seed for replayable per-visit novelty.
+    #[must_use]
+    pub fn new_with(seed: u64) -> Self {
+        Self { seed }
     }
 
     /// The y-axis frequency selected by phase `t`.
@@ -36,11 +45,22 @@ impl Lissajous {
         FREQ_Y_MIN + FREQ_Y_SWEEP * t.clamp(0.0, 1.0)
     }
 
-    /// The curve point at parameter `theta`, in normalized coordinates `[-1, 1]`.
-    fn point_normalized(theta: f64, freq_y: f64) -> (f64, f64) {
-        let x = (FREQ_X * theta + FRAC_PI_2).sin();
-        let y = (freq_y * theta).sin();
+    fn point_normalized_shifted(theta: f64, freq_y: f64, phase_x: f64, phase_y: f64) -> (f64, f64) {
+        let base_x = (FREQ_X * theta + FRAC_PI_2).sin();
+        let y = (freq_y * theta + phase_y).sin();
+        let x = if phase_x == 0.0 {
+            base_x
+        } else {
+            (base_x + (FREQ_X * theta + FRAC_PI_2 + phase_x).sin() * 0.15).clamp(-1.0, 1.0)
+        };
         (x, y)
+    }
+
+    fn phase_offsets(&self) -> (f64, f64) {
+        (
+            variation_unit(self.seed, 0x4C49_5353_584A_0001) * TAU,
+            variation_unit(self.seed, 0x4C49_5353_584A_0002) * TAU,
+        )
     }
 }
 
@@ -67,9 +87,10 @@ impl Room for Lissajous {
         let (cx, cy) = (fw / 2.0, fh / 2.0);
         let rx = (fw / 2.0 - 1.0).max(0.0);
         let ry = (fh / 2.0 - 1.0).max(0.0);
+        let (phase_x, phase_y) = self.phase_offsets();
 
         let to_pixel = |theta: f64| -> (i32, i32) {
-            let (nx, ny) = Self::point_normalized(theta, freq_y);
+            let (nx, ny) = Self::point_normalized_shifted(theta, freq_y, phase_x, phase_y);
             ((cx + nx * rx).round() as i32, (cy + ny * ry).round() as i32)
         };
 
@@ -86,6 +107,16 @@ impl Room for Lissajous {
         "A stable figure means the two frequencies are a perfect musical interval; \
          a 2:3 ratio is a perfect fifth. You are not drawing a curve, you are \
          seeing a chord. This is exactly what old oscilloscopes showed."
+    }
+
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "G visible fifth",
+            root: 196.0,
+            tempo: 120,
+            line: &[0, 7, 12, 7, 0, 5, 7, 12],
+            encodes: "the two oscillator axes locking into a visible chord",
+        })
     }
 
     fn sound(&self, t: f64) -> SoundSpec {
@@ -110,7 +141,7 @@ mod tests {
     fn normalized_points_stay_in_range() {
         for i in 0..1000 {
             let theta = f64::from(i) * 0.017;
-            let (x, y) = Lissajous::point_normalized(theta, 2.0);
+            let (x, y) = Lissajous::point_normalized_shifted(theta, 2.0, 0.0, 0.0);
             assert!((-1.0..=1.0).contains(&x));
             assert!((-1.0..=1.0).contains(&y));
         }

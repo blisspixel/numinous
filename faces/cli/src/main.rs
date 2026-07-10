@@ -8,17 +8,21 @@
 //! text to emit, so they can be unit-tested without capturing stdout; `main`
 //! stays a thin shell that prints and sets the exit code.
 
-use std::fs::File;
-use std::io::{BufRead, BufWriter, Write};
+use std::ffi::OsStr;
+use std::fs::{File, OpenOptions};
+use std::io::{BufRead, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
 use numinous_core::{
-    Canvas, Journey, Rank, Raster, Room, RoomMeta, Surface, all_rooms, draw_text,
+    Canvas, Journey, Rank, Raster, Room, RoomMeta, Surface, all_rooms, all_rooms_with, draw_text,
     hidden_room_by_id, room_by_id,
 };
+
+const MAX_STUDIO_IMPORT_BYTES: u64 = 8 * 1024;
+const MAX_ENV_FILE_BYTES: u64 = 16 * 1024;
 
 #[derive(Parser)]
 #[command(
@@ -69,6 +73,12 @@ enum Command {
         /// Visual era for color output: phosphor, 8bit, vector, or modern.
         #[arg(long, default_value = "modern")]
         era: String,
+        /// Re-deal variation seed for replayable rooms (default 0 pins postcards).
+        #[arg(long)]
+        vary: bool,
+        /// Add a normalized hand point, as x,y in [0,1]. Repeat for multiple points.
+        #[arg(long = "poke")]
+        pokes: Vec<String>,
     },
     /// The Show for the terminal: every room in turn, full color, sound.
     Tour {
@@ -112,6 +122,9 @@ enum Command {
         /// Visual era: phosphor, 8bit, vector, or modern.
         #[arg(long, default_value = "modern")]
         era: String,
+        /// Re-deal variation seed for replayable rooms (per-visit novelty, R in app).
+        #[arg(long)]
+        vary: bool,
     },
     /// Render a room's sound to a WAV file (everything is an instrument).
     Sonify {
@@ -162,6 +175,9 @@ enum Command {
         /// Canvas height in rows.
         #[arg(long, default_value_t = 36)]
         height: usize,
+        /// Re-deal variation for room play (not games).
+        #[arg(long)]
+        vary: bool,
     },
     /// Play "guess the shape": name the room behind a mystery render.
     Quiz {
@@ -344,6 +360,21 @@ enum Command {
         /// Plot height in rows.
         #[arg(long, default_value_t = 24)]
         height: usize,
+        /// Save this Studio expression as a portable .num file and print its link.
+        #[arg(long)]
+        save: Option<PathBuf>,
+    },
+    /// Open a Studio .num file or numinous://studio link and render it.
+    #[command(name = "open-studio")]
+    OpenStudio {
+        /// Path to a .num file, or a numinous://studio?... link.
+        input: String,
+        /// Plot width in columns.
+        #[arg(long, default_value_t = 72)]
+        width: usize,
+        /// Plot height in rows.
+        #[arg(long, default_value_t = 24)]
+        height: usize,
     },
     /// The radio (Music Engine B): list the stations on the dial.
     Radio,
@@ -456,6 +487,69 @@ fn fresh_seed() -> u64 {
     seed
 }
 
+/// Fresh variation for --vary in watch: different every deal for replayable rooms.
+fn fresh_variation_seed() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() ^ d.subsec_nanos() as u64)
+        .unwrap_or(42)
+}
+
+fn parse_poke_arg(raw: &str) -> Result<(f64, f64), String> {
+    let Some((x, y)) = raw.split_once(',') else {
+        return Err(format!(
+            "Bad --poke '{raw}'. Use normalized coordinates like --poke 0.4,0.6.\n"
+        ));
+    };
+    let x = x
+        .trim()
+        .parse::<f64>()
+        .map_err(|_| format!("Bad --poke '{raw}'. The x coordinate must be a number.\n"))?;
+    let y = y
+        .trim()
+        .parse::<f64>()
+        .map_err(|_| format!("Bad --poke '{raw}'. The y coordinate must be a number.\n"))?;
+    if x.is_finite() && y.is_finite() && (0.0..=1.0).contains(&x) && (0.0..=1.0).contains(&y) {
+        Ok((x, y))
+    } else {
+        Err(format!(
+            "Bad --poke '{raw}'. Coordinates must be finite numbers in [0,1].\n"
+        ))
+    }
+}
+
+fn parse_pokes(raw: &[String]) -> Result<Vec<(f64, f64)>, String> {
+    if raw.len() > numinous_core::MAX_ROOM_POKES {
+        return Err(format!(
+            "Too many --poke values: got {}, maximum is {}.\n",
+            raw.len(),
+            numinous_core::MAX_ROOM_POKES
+        ));
+    }
+    raw.iter().map(|poke| parse_poke_arg(poke)).collect()
+}
+
+#[derive(Clone, Copy)]
+struct RoomRenderInput<'a> {
+    variation: u64,
+    pokes: &'a [(f64, f64)],
+}
+
+impl<'a> RoomRenderInput<'a> {
+    fn new(variation: u64, pokes: &'a [(f64, f64)]) -> Self {
+        Self { variation, pokes }
+    }
+}
+
+impl RoomRenderInput<'static> {
+    fn plain() -> Self {
+        Self {
+            variation: 0,
+            pokes: &[],
+        }
+    }
+}
+
 /// Clear the screen so a game owns a clean console.
 fn clear_screen_soon() {
     print!("[2J[H");
@@ -509,9 +603,7 @@ fn journey_path() -> PathBuf {
 
 /// Load the journey, or start a fresh one.
 fn load_journey() -> Journey {
-    std::fs::read_to_string(journey_path())
-        .map(|text| Journey::from_text(&text))
-        .unwrap_or_default()
+    numinous_core::load_journey_file(&journey_path())
 }
 
 /// Where the high-score table lives: `NUMINOUS_SCORES` if set, else home.
@@ -527,16 +619,12 @@ fn scores_path() -> PathBuf {
 
 /// Load the high-score table, or start a fresh one.
 fn load_scores() -> numinous_core::Scoreboard {
-    std::fs::read_to_string(scores_path())
-        .map(|text| numinous_core::Scoreboard::from_text(&text))
-        .unwrap_or_default()
+    numinous_core::load_scoreboard_file(&scores_path())
 }
 
 /// Record a score; announce and persist when a record falls.
 fn post_score(key: &str, score: i64) {
-    let mut board = load_scores();
-    if board.record(key, score) {
-        let _ = std::fs::write(scores_path(), board.to_text());
+    if numinous_core::record_score_file(&scores_path(), key, score).unwrap_or(false) {
         println!("NEW BEST: {key} = {score}");
     }
 }
@@ -625,18 +713,19 @@ fn finish_journey(
     if before == after {
         return;
     }
-    let _ = std::fs::write(journey_path(), after.to_text());
-    for ping in trophy_pings(earned_before, after, &load_scores()) {
+    let saved = numinous_core::persist_journey_delta(&journey_path(), before, after)
+        .unwrap_or_else(|_| after.clone());
+    for ping in trophy_pings(earned_before, &saved, &load_scores()) {
         println!(
             "
 {ping}"
         );
     }
-    if let Some(banner) = level_up_report(before, after) {
+    if let Some(banner) = level_up_report(before, &saved) {
         println!("\n{banner}");
     }
-    if after.rank() > before.rank() {
-        println!("\n{}", after.rank().whisper());
+    if saved.rank() > before.rank() {
+        println!("\n{}", saved.rank().whisper());
     }
 }
 
@@ -650,6 +739,18 @@ fn find_room(id: &str, allow_hidden: bool) -> Option<Box<dyn Room>> {
             None
         }
     })
+}
+
+/// Find a room for commands that may request per-visit variation. Variation
+/// only applies to catalog rooms; hidden rooms still answer after rank checks.
+fn find_room_with_variation(id: &str, allow_hidden: bool, variation: u64) -> Option<Box<dyn Room>> {
+    if variation == 0 {
+        return find_room(id, allow_hidden);
+    }
+    all_rooms_with(variation)
+        .into_iter()
+        .find(|room| room.meta().id == id)
+        .or_else(|| find_room(id, allow_hidden))
 }
 
 /// Run one command, recording the journey as it goes.
@@ -676,26 +777,33 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             out,
             color,
             era,
+            vary,
+            pokes,
         } => {
-            if find_room(&id, allow_hidden).is_some() {
-                journey.visit(&id);
-            }
             let Some(era) = numinous_core::Era::parse(&era) else {
                 eprintln!("Unknown era '{era}'. Eras: phosphor, 8bit, vector, modern.");
                 return ExitCode::FAILURE;
             };
-            match out {
-                Some(path) => emit(render_png(&id, width, height, t, &path, allow_hidden, era)),
-                None if color => emit(render_color_report(
-                    &id,
-                    width,
-                    height,
-                    t,
-                    allow_hidden,
-                    era,
-                )),
-                None => emit(render_report(&id, width, height, t, allow_hidden)),
+            let pokes = match parse_pokes(&pokes) {
+                Ok(pokes) => pokes,
+                Err(message) => {
+                    eprint!("{message}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let variation = if vary { fresh_variation_seed() } else { 0 };
+            let input = RoomRenderInput::new(variation, &pokes);
+            let report = match out {
+                Some(path) => render_png(&id, width, height, t, &path, allow_hidden, era, input),
+                None if color => {
+                    render_color_report(&id, width, height, t, allow_hidden, era, input)
+                }
+                None => render_report(&id, width, height, t, allow_hidden, input),
+            };
+            if report.is_ok() && find_room(&id, allow_hidden).is_some() {
+                journey.visit(&id);
             }
+            emit(report)
         }
         Command::Tour {
             fps,
@@ -719,17 +827,20 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             height,
             mute,
             era,
+            vary,
         } => {
             if find_room(&id, allow_hidden).is_some() {
+                let before = journey.clone();
                 journey.visit(&id);
                 // The loop never returns; persist the visit before it starts.
-                let _ = std::fs::write(journey_path(), journey.to_text());
+                let _ = numinous_core::persist_journey_delta(&journey_path(), &before, journey);
             }
             let Some(era) = numinous_core::Era::parse(&era) else {
                 eprintln!("Unknown era '{era}'. Eras: phosphor, 8bit, vector, modern.");
                 return ExitCode::FAILURE;
             };
-            watch(&id, fps, width, height, mute, allow_hidden, era)
+            let variation = if vary { fresh_variation_seed() } else { 0 };
+            watch(&id, fps, width, height, mute, allow_hidden, era, variation)
         }
         Command::Sonify { id, t, out } => {
             if find_room(&id, allow_hidden).is_some() {
@@ -744,6 +855,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             fps,
             width,
             height,
+            vary,
         } => {
             let Some(id) = id else {
                 println!(
@@ -781,10 +893,13 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                 "bench" => bench(journey),
                 _ => {
                     if find_room(&id, allow_hidden).is_some() {
+                        let before = journey.clone();
                         journey.visit(&id);
-                        let _ = std::fs::write(journey_path(), journey.to_text());
+                        let _ =
+                            numinous_core::persist_journey_delta(&journey_path(), &before, journey);
                     }
-                    play(&id, fps, width, height, allow_hidden)
+                    let variation = if vary { fresh_variation_seed() } else { 0 };
+                    play(&id, fps, width, height, allow_hidden, variation)
                 }
             }
         }
@@ -844,9 +959,9 @@ Erase the journey with: numinous forget --confirm  (add --scores for the table)"
                 );
                 return ExitCode::SUCCESS;
             }
-            let _ = std::fs::remove_file(journey_path());
+            let _ = numinous_core::remove_persisted_file(&journey_path());
             if scores {
-                let _ = std::fs::remove_file(scores_path());
+                let _ = numinous_core::remove_persisted_file(&scores_path());
             }
             // The in-memory copy stays untouched: finish_journey only writes
             // on change, so the erased file genuinely stays erased.
@@ -919,15 +1034,46 @@ Erase the journey with: numinous forget --confirm  (add --scores for the table)"
             amax,
             width,
             height,
+            save,
         } => {
-            journey.play();
+            if animate && save.is_some() {
+                return emit(Err(
+                    "--save is for still Studio plots; omit --animate to save a .num file\n"
+                        .to_string(),
+                ));
+            }
             if animate {
+                let before = journey.clone();
+                journey.play();
                 // The loop never returns; persist the play before it starts.
-                let _ = std::fs::write(journey_path(), journey.to_text());
+                let _ = numinous_core::persist_journey_delta(&journey_path(), &before, journey);
                 plot_animate(&expr, xmin, xmax, amin, amax, width, height)
             } else {
-                emit(plot_report(&expr, xmin, xmax, a, width, height))
+                let report = match plot_report(&expr, xmin, xmax, a, width, height) {
+                    Ok(report) => report,
+                    Err(message) => return emit(Err(message)),
+                };
+                if let Some(path) = save.as_deref() {
+                    match save_studio_creation(&expr, xmin, xmax, a, path) {
+                        Ok(message) => print!("{message}"),
+                        Err(message) => return emit(Err(message)),
+                    }
+                }
+                journey.play();
+                emit(Ok(report))
             }
+        }
+        Command::OpenStudio {
+            input,
+            width,
+            height,
+        } => {
+            let report = match open_studio_report(&input, width, height) {
+                Ok(report) => report,
+                Err(message) => return emit(Err(message)),
+            };
+            journey.play();
+            emit(Ok(report))
         }
         Command::Radio => {
             println!("THE DIAL (Music Engine B). Tune with: numinous tune2 <station>\n");
@@ -1023,7 +1169,25 @@ fn plot_animate(
 /// Read ELEVENLABS_API_KEY from a .env file in the working directory, so a
 /// key can live in the repo root (gitignored) instead of the shell.
 fn env_file_key() -> Result<String, std::env::VarError> {
-    let text = std::fs::read_to_string(".env").map_err(|_| std::env::VarError::NotPresent)?;
+    env_file_key_from(Path::new(".env"))
+}
+
+fn env_file_key_from(path: &Path) -> Result<String, std::env::VarError> {
+    let file = File::open(path).map_err(|_| std::env::VarError::NotPresent)?;
+    if file
+        .metadata()
+        .map(|metadata| metadata.len() > MAX_ENV_FILE_BYTES)
+        .unwrap_or(false)
+    {
+        return Err(std::env::VarError::NotPresent);
+    }
+    let mut text = String::new();
+    file.take(MAX_ENV_FILE_BYTES + 1)
+        .read_to_string(&mut text)
+        .map_err(|_| std::env::VarError::NotPresent)?;
+    if text.len() as u64 > MAX_ENV_FILE_BYTES {
+        return Err(std::env::VarError::NotPresent);
+    }
     for line in text.lines() {
         let line = line.trim();
         if let Some(value) = line.strip_prefix("ELEVENLABS_API_KEY=") {
@@ -1258,6 +1422,131 @@ fn plot_report(
     ))
 }
 
+/// Save a Studio creation as a first-version `.num` file and return the share link.
+fn save_studio_creation(
+    source: &str,
+    xmin: f64,
+    xmax: f64,
+    a: f64,
+    path: &Path,
+) -> Result<String, String> {
+    let creation = numinous_core::StudioCreation::new(source, xmin, xmax, a)?;
+    write_create_new(path, creation.to_num_file().as_bytes())?;
+    Ok(format!(
+        "saved Studio creation: {}\nlink: {}\n",
+        path.display(),
+        creation.to_link()
+    ))
+}
+
+fn load_studio_creation(input: &str) -> Result<numinous_core::StudioCreation, String> {
+    if input.starts_with("numinous://") {
+        return numinous_core::StudioCreation::from_link(input)
+            .map_err(|_| "invalid Numinous Studio link\n".to_string());
+    }
+    let path = Path::new(input);
+    let file = File::open(path).map_err(|e| {
+        format!(
+            "could not read Studio .num file '{}': {e}\n",
+            path.display()
+        )
+    })?;
+    if file
+        .metadata()
+        .map(|metadata| metadata.len() > MAX_STUDIO_IMPORT_BYTES)
+        .unwrap_or(false)
+    {
+        return Err(format!(
+            "Studio .num file is too large; limit is {MAX_STUDIO_IMPORT_BYTES} bytes\n"
+        ));
+    }
+    let mut text = String::new();
+    file.take(MAX_STUDIO_IMPORT_BYTES + 1)
+        .read_to_string(&mut text)
+        .map_err(|e| {
+            format!(
+                "could not read Studio .num file '{}': {e}\n",
+                path.display()
+            )
+        })?;
+    if text.len() as u64 > MAX_STUDIO_IMPORT_BYTES {
+        return Err(format!(
+            "Studio .num file is too large; limit is {MAX_STUDIO_IMPORT_BYTES} bytes\n"
+        ));
+    }
+    numinous_core::StudioCreation::from_num_file(&text)
+        .map_err(|_| "invalid Numinous Studio .num file\n".to_string())
+}
+
+fn open_studio_report(input: &str, width: usize, height: usize) -> Result<String, String> {
+    let creation = load_studio_creation(input)?;
+    let report = plot_report(
+        creation.source(),
+        creation.xmin(),
+        creation.xmax(),
+        creation.a(),
+        width,
+        height,
+    )?;
+    Ok(format!(
+        "Studio creation\nexpr={}\nxmin={}\nxmax={}\na={}\nlink={}\n\n{}",
+        creation.source(),
+        creation.xmin(),
+        creation.xmax(),
+        creation.a(),
+        creation.to_link(),
+        report
+    ))
+}
+
+fn write_create_new(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    let parent = path.parent().unwrap_or_else(|| Path::new("."));
+    let base = path.file_name().unwrap_or_else(|| OsStr::new("studio.num"));
+    let mut last_error = None;
+    for attempt in 0..8 {
+        let mut temp_name = base.to_os_string();
+        temp_name.push(format!(".tmp.{}.{}", std::process::id(), attempt));
+        let temp = parent.join(temp_name);
+        let mut created_temp = false;
+        let write_result = (|| -> Result<(), String> {
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&temp)
+                .map_err(|err| format!("could not create {}: {err}\n", temp.display()))?;
+            created_temp = true;
+            file.write_all(bytes)
+                .map_err(|err| format!("could not write {}: {err}\n", temp.display()))?;
+            file.flush()
+                .map_err(|err| format!("could not flush {}: {err}\n", temp.display()))
+        })();
+        if let Err(message) = write_result {
+            if created_temp {
+                let _ = std::fs::remove_file(&temp);
+            }
+            last_error = Some(message);
+            continue;
+        }
+        match std::fs::hard_link(&temp, path) {
+            Ok(()) => {
+                let _ = std::fs::remove_file(&temp);
+                return Ok(());
+            }
+            Err(err) => {
+                let _ = std::fs::remove_file(&temp);
+                if path.exists() {
+                    return Err(format!(
+                        "could not create {}: already exists\n",
+                        path.display()
+                    ));
+                }
+                last_error = Some(format!("could not create {}: {err}\n", path.display()));
+            }
+        }
+    }
+    Err(last_error.unwrap_or_else(|| format!("could not create {}\n", path.display())))
+}
+
 /// The list of sims and their levers.
 fn sims_report() -> String {
     let lines: Vec<String> = numinous_core::all_sims()
@@ -1406,10 +1695,16 @@ fn render_color_report(
     t: f64,
     allow_hidden: bool,
     era: numinous_core::Era,
+    input: RoomRenderInput<'_>,
 ) -> Result<String, String> {
-    let room = find_room(id, allow_hidden).ok_or_else(|| not_found_message(id))?;
+    let room = find_room_with_variation(id, allow_hidden, input.variation)
+        .ok_or_else(|| not_found_message(id))?;
     let mut raster = Raster::with_accent(width, height, room.meta().accent);
-    room.render(&mut raster, t);
+    if input.pokes.is_empty() {
+        room.render(&mut raster, t);
+    } else {
+        room.render_poked(&mut raster, t, input.pokes);
+    }
     Ok(ansi_in_era(&raster, era))
 }
 
@@ -1455,8 +1750,9 @@ fn watch(
     mute: bool,
     allow_hidden: bool,
     era: numinous_core::Era,
+    variation: u64,
 ) -> ExitCode {
-    let Some(room) = find_room(id, allow_hidden) else {
+    let Some(room) = find_room_with_variation(id, allow_hidden, variation) else {
         eprint!("{}", not_found_message(id));
         return ExitCode::FAILURE;
     };
@@ -1577,10 +1873,16 @@ fn render_report(
     height: usize,
     t: f64,
     allow_hidden: bool,
+    input: RoomRenderInput<'_>,
 ) -> Result<String, String> {
-    let room = find_room(id, allow_hidden).ok_or_else(|| not_found_message(id))?;
+    let room = find_room_with_variation(id, allow_hidden, input.variation)
+        .ok_or_else(|| not_found_message(id))?;
     let mut canvas = Canvas::new(width, height);
-    room.render(&mut canvas, t);
+    if input.pokes.is_empty() {
+        room.render(&mut canvas, t);
+    } else {
+        room.render_poked(&mut canvas, t, input.pokes);
+    }
     Ok(canvas.to_text())
 }
 
@@ -1685,10 +1987,16 @@ fn render_png(
     path: &Path,
     allow_hidden: bool,
     era: numinous_core::Era,
+    input: RoomRenderInput<'_>,
 ) -> Result<String, String> {
-    let room = find_room(id, allow_hidden).ok_or_else(|| not_found_message(id))?;
+    let room = find_room_with_variation(id, allow_hidden, input.variation)
+        .ok_or_else(|| not_found_message(id))?;
     let mut raster = Raster::with_accent(width, height, room.meta().accent);
-    room.render(&mut raster, t);
+    if input.pokes.is_empty() {
+        room.render(&mut raster, t);
+    } else {
+        room.render_poked(&mut raster, t, input.pokes);
+    }
     if era != numinous_core::Era::Modern {
         let (w, h) = (raster.width(), raster.height());
         let mut rgba = raster.to_rgba();
@@ -1801,6 +2109,7 @@ fn gallery(dir: &Path, width: usize, height: usize) -> Result<String, String> {
             &path,
             false,
             numinous_core::Era::Modern,
+            RoomRenderInput::plain(),
         )?;
         count += 1;
     }
@@ -2820,17 +3129,30 @@ fn quiz(
 fn play_frame(room: &dyn Room, t: f64, width: usize, height: usize) -> String {
     let mut canvas = Canvas::new(width, height);
     room.render(&mut canvas, t);
+    let status = room
+        .status(t)
+        .map(|readout| format!("   {readout}"))
+        .unwrap_or_default();
     // \x1b[2J clears the screen, \x1b[H moves the cursor home.
     format!(
-        "\x1b[2J\x1b[H{}\n[{}]  t = {t:.2}   (Ctrl+C to stop)\n",
+        "\x1b[2J\x1b[H{}\n[{}]  {}   t = {t:.2}{status}   (Ctrl+C to stop)\n",
         canvas.to_text(),
-        room.meta().title
+        room.meta().title,
+        numinous_core::room_action(room)
     )
 }
 
 /// Animate a room in the terminal, sweeping its phase, until interrupted.
-fn play(id: &str, fps: f64, width: usize, height: usize, allow_hidden: bool) -> ExitCode {
-    let Some(room) = find_room(id, allow_hidden) else {
+fn play(
+    id: &str,
+    fps: f64,
+    width: usize,
+    height: usize,
+    allow_hidden: bool,
+    variation: u64,
+) -> ExitCode {
+    let room = find_room_with_variation(id, allow_hidden, variation);
+    let Some(room) = room else {
         eprint!("{}", not_found_message(id));
         return ExitCode::FAILURE;
     };
@@ -2871,7 +3193,12 @@ fn to_pretty(value: &serde_json::Value) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{describe_report, meta_json, not_found_message, render_report, rooms_report};
+    use super::{
+        Cli, Command, RoomRenderInput, describe_report, load_studio_creation, meta_json,
+        not_found_message, open_studio_report, parse_poke_arg, parse_pokes, render_report,
+        rooms_report, run, save_studio_creation,
+    };
+    use clap::Parser;
     use numinous_core::room_by_id;
     use serde_json::Value;
 
@@ -2885,6 +3212,29 @@ mod tests {
         let text = rooms_report(true);
         let value: Value = serde_json::from_str(&text).expect("valid json");
         assert!(value.as_array().is_some_and(|a| !a.is_empty()));
+    }
+
+    #[test]
+    fn env_file_key_reads_key_without_unbounded_file_loads() {
+        let dir = std::env::temp_dir().join("numinous_cli_env_file_key");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("test dir");
+        let path = dir.join(".env");
+
+        std::fs::write(
+            &path,
+            "# local secrets\nOTHER=value\nELEVENLABS_API_KEY='test-key'\n",
+        )
+        .expect("write env file");
+        assert_eq!(super::env_file_key_from(&path).expect("key"), "test-key");
+
+        std::fs::write(&path, "x".repeat(super::MAX_ENV_FILE_BYTES as usize + 1))
+            .expect("write oversized env file");
+        assert!(super::env_file_key_from(&path).is_err());
+
+        std::fs::write(&path, "OTHER=value\n").expect("write keyless env file");
+        assert!(super::env_file_key_from(&path).is_err());
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]
@@ -2956,13 +3306,100 @@ mod tests {
 
     #[test]
     fn render_known_room_has_ink() {
-        let text = render_report("times-tables", 40, 20, 0.0, false).expect("known room");
+        let text = render_report("times-tables", 40, 20, 0.0, false, RoomRenderInput::plain())
+            .expect("known room");
         assert!(text.contains('*'));
     }
 
     #[test]
     fn render_unknown_room_is_error() {
-        assert!(render_report("no-such-room", 10, 10, 0.0, false).is_err());
+        assert!(
+            render_report("no-such-room", 10, 10, 0.0, false, RoomRenderInput::plain(),).is_err()
+        );
+    }
+
+    #[test]
+    fn parse_pokes_keep_hand_points_normalized() {
+        assert_eq!(parse_poke_arg("0.25,0.75"), Ok((0.25, 0.75)));
+        assert_eq!(
+            parse_pokes(&["0,1".to_string(), "1,0".to_string()]),
+            Ok(vec![(0.0, 1.0), (1.0, 0.0)])
+        );
+        assert!(parse_poke_arg("0.5").is_err());
+        assert!(parse_poke_arg("-0.1,0.5").is_err());
+        assert!(parse_poke_arg("0.5,NaN").is_err());
+        let too_many = vec!["0.5,0.5".to_string(); numinous_core::MAX_ROOM_POKES + 1];
+        assert!(parse_pokes(&too_many).is_err());
+    }
+
+    #[test]
+    fn render_report_uses_hand_points_when_supplied() {
+        let resting = render_report(
+            "double-pendulum",
+            50,
+            30,
+            0.25,
+            false,
+            RoomRenderInput::plain(),
+        )
+        .expect("resting room");
+        let poked = render_report(
+            "double-pendulum",
+            50,
+            30,
+            0.25,
+            false,
+            RoomRenderInput::new(0, &[(0.2, 0.8)]),
+        )
+        .expect("poked room");
+        assert_ne!(
+            resting, poked,
+            "a supplied hand point should steer the frame"
+        );
+        let last_only = render_report(
+            "double-pendulum",
+            50,
+            30,
+            0.25,
+            false,
+            RoomRenderInput::new(0, &[(0.8, 0.2)]),
+        )
+        .expect("last-only poked room");
+        let newest_last = render_report(
+            "double-pendulum",
+            50,
+            30,
+            0.25,
+            false,
+            RoomRenderInput::new(0, &[(0.2, 0.8), (0.8, 0.2)]),
+        )
+        .expect("multi-poked room");
+        assert_eq!(
+            last_only, newest_last,
+            "Double Pendulum should treat the newest hand point as the re-drop"
+        );
+    }
+
+    #[test]
+    fn invalid_render_pokes_do_not_record_progress() {
+        let mut journey = numinous_core::Journey::default();
+        let before = journey.clone();
+        let code = run(
+            Command::Render {
+                id: "double-pendulum".to_string(),
+                width: 30,
+                height: 20,
+                t: 0.0,
+                out: None,
+                color: false,
+                era: "modern".to_string(),
+                vary: false,
+                pokes: vec!["2,0.5".to_string()],
+            },
+            &mut journey,
+        );
+        assert_eq!(code, std::process::ExitCode::FAILURE);
+        assert_eq!(journey, before);
     }
 
     #[test]
@@ -2991,6 +3428,7 @@ mod tests {
             &path,
             false,
             numinous_core::Era::Modern,
+            RoomRenderInput::plain(),
         )
         .expect("render png");
         assert!(message.contains("wrote"));
@@ -3010,7 +3448,8 @@ mod tests {
                 0.0,
                 &path,
                 false,
-                numinous_core::Era::Modern
+                numinous_core::Era::Modern,
+                RoomRenderInput::plain(),
             )
             .is_err()
         );
@@ -3059,7 +3498,15 @@ mod tests {
         let room = numinous_core::room_by_id("times-tables").expect("room");
         let frame = super::play_frame(room.as_ref(), 0.0, 30, 15);
         assert!(frame.contains("Times Tables"));
+        assert!(frame.contains(numinous_core::room_action(room.as_ref())));
         assert!(frame.contains('*'));
+    }
+
+    #[test]
+    fn play_frame_gives_quiet_rooms_a_default_action() {
+        let room = numinous_core::room_by_id("lissajous").expect("room");
+        let frame = super::play_frame(room.as_ref(), 0.0, 30, 15);
+        assert!(frame.contains(numinous_core::DEFAULT_ROOM_ACTION));
     }
 
     #[test]
@@ -3081,7 +3528,8 @@ mod tests {
                 0.0,
                 bad,
                 false,
-                numinous_core::Era::Modern
+                numinous_core::Era::Modern,
+                RoomRenderInput::plain(),
             )
             .is_err()
         );
@@ -3097,14 +3545,21 @@ mod tests {
     fn the_hidden_room_answers_only_to_rank() {
         assert!(super::find_room("tetractys", false).is_none());
         assert!(super::find_room("tetractys", true).is_some());
+        assert!(super::find_room_with_variation("tetractys", false, 42).is_none());
+        assert!(
+            super::find_room_with_variation("tetractys", true, 42).is_some(),
+            "variation lookup must preserve hidden-room access after rank checks"
+        );
         // Catalog rooms are open to everyone.
         assert!(super::find_room("lorenz", false).is_some());
         // The unready get the ordinary not-found, no special acknowledgment.
-        let err = super::render_report("tetractys", 10, 10, 0.0, false).unwrap_err();
+        let err = super::render_report("tetractys", 10, 10, 0.0, false, RoomRenderInput::plain())
+            .unwrap_err();
         assert!(err.contains("Known rooms"), "an ordinary miss: {err}");
         assert!(!err.contains("Order"), "nothing is given away");
         // The ready see the figure.
-        let ok = super::render_report("tetractys", 30, 20, 0.0, true).expect("the figure");
+        let ok = super::render_report("tetractys", 30, 20, 0.0, true, RoomRenderInput::plain())
+            .expect("the figure");
         assert!(ok.contains('#'));
     }
 
@@ -3345,12 +3800,21 @@ mod tests {
             0.0,
             false,
             numinous_core::Era::Modern,
+            RoomRenderInput::plain(),
         )
         .expect("color render");
         assert!(out.contains("\x1b[38;2;"), "has truecolor escapes");
         assert!(
-            super::render_color_report("nope", 20, 20, 0.0, false, numinous_core::Era::Modern)
-                .is_err()
+            super::render_color_report(
+                "nope",
+                20,
+                20,
+                0.0,
+                false,
+                numinous_core::Era::Modern,
+                RoomRenderInput::plain(),
+            )
+            .is_err()
         );
     }
 
@@ -3363,6 +3827,7 @@ mod tests {
             0.0,
             false,
             numinous_core::Era::Modern,
+            RoomRenderInput::plain(),
         )
         .expect("render");
         let phosphor = super::render_color_report(
@@ -3372,6 +3837,7 @@ mod tests {
             0.0,
             false,
             numinous_core::Era::Phosphor,
+            RoomRenderInput::plain(),
         )
         .expect("render");
         assert_ne!(modern, phosphor);
@@ -3408,6 +3874,227 @@ mod tests {
     fn plot_report_rejects_bad_input() {
         assert!(super::plot_report("sin(", -1.0, 1.0, 0.0, 24, 8).is_err());
         assert!(super::plot_report("x", 1.0, 1.0, 0.0, 24, 8).is_err()); // xmax not > xmin
+    }
+
+    #[test]
+    fn plot_save_writes_a_portable_studio_file() {
+        let path = std::env::temp_dir().join("numinous_cli_studio_save_test.num");
+        let _ = std::fs::remove_file(&path);
+        let message = save_studio_creation("sin(a*x)", -2.0, 2.0, 0.5, &path).expect("studio save");
+        assert!(message.contains("numinous://studio?"));
+        let text = std::fs::read_to_string(&path).expect("saved file");
+        let creation = numinous_core::StudioCreation::from_num_file(&text).expect("round trip");
+        assert_eq!(creation.source(), "sin(a*x)");
+        assert_eq!(creation.xmin(), -2.0);
+        assert_eq!(creation.xmax(), 2.0);
+        assert_eq!(creation.a(), 0.5);
+        assert!(
+            save_studio_creation("sin(a*x)", -2.0, 2.0, 0.5, &path).is_err(),
+            "save should not overwrite an existing share file"
+        );
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn plot_save_and_animate_is_rejected_before_progress() {
+        let path = std::env::temp_dir().join("numinous_cli_studio_save_animate_test.num");
+        let _ = std::fs::remove_file(&path);
+        let mut journey = numinous_core::Journey::default();
+        let code = run(
+            Command::Plot {
+                expr: "x".to_string(),
+                xmin: -1.0,
+                xmax: 1.0,
+                a: 1.0,
+                animate: true,
+                amin: 0.0,
+                amax: 1.0,
+                width: 24,
+                height: 8,
+                save: Some(path.clone()),
+            },
+            &mut journey,
+        );
+        assert_eq!(code, std::process::ExitCode::FAILURE);
+        assert_eq!(journey.plays, 0);
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn plot_save_waits_for_a_valid_still_plot() {
+        let path = std::env::temp_dir().join("numinous_cli_studio_bad_width_test.num");
+        let _ = std::fs::remove_file(&path);
+        let mut journey = numinous_core::Journey::default();
+        let code = run(
+            Command::Plot {
+                expr: "x".to_string(),
+                xmin: -1.0,
+                xmax: 1.0,
+                a: 1.0,
+                animate: false,
+                amin: 0.0,
+                amax: 1.0,
+                width: 1,
+                height: 8,
+                save: Some(path.clone()),
+            },
+            &mut journey,
+        );
+        assert_eq!(code, std::process::ExitCode::FAILURE);
+        assert_eq!(journey.plays, 0);
+        assert!(!path.exists(), "failed plot must not leave a .num file");
+    }
+
+    #[test]
+    fn plot_save_waits_for_finite_samples() {
+        let path = std::env::temp_dir().join("numinous_cli_studio_undefined_test.num");
+        let _ = std::fs::remove_file(&path);
+        let mut journey = numinous_core::Journey::default();
+        let code = run(
+            Command::Plot {
+                expr: "ln(-1)".to_string(),
+                xmin: -2.0,
+                xmax: -1.0,
+                a: 1.0,
+                animate: false,
+                amin: 0.0,
+                amax: 1.0,
+                width: 24,
+                height: 8,
+                save: Some(path.clone()),
+            },
+            &mut journey,
+        );
+        assert_eq!(code, std::process::ExitCode::FAILURE);
+        assert_eq!(journey.plays, 0);
+        assert!(!path.exists(), "undefined plot must not leave a .num file");
+    }
+
+    #[test]
+    fn failed_plot_save_does_not_record_progress() {
+        let path = std::env::temp_dir().join("numinous_cli_studio_existing_test.num");
+        std::fs::write(&path, "already here").expect("seed existing file");
+        let mut journey = numinous_core::Journey::default();
+        let code = run(
+            Command::Plot {
+                expr: "x".to_string(),
+                xmin: -1.0,
+                xmax: 1.0,
+                a: 1.0,
+                animate: false,
+                amin: 0.0,
+                amax: 1.0,
+                width: 24,
+                height: 8,
+                save: Some(path.clone()),
+            },
+            &mut journey,
+        );
+        assert_eq!(code, std::process::ExitCode::FAILURE);
+        assert_eq!(journey.plays, 0);
+        assert_eq!(
+            std::fs::read_to_string(&path).expect("existing file"),
+            "already here",
+            "save failure must not overwrite the existing file"
+        );
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn open_studio_renders_saved_file_and_link() {
+        let path = std::env::temp_dir().join("numinous_cli_studio_open_test.num");
+        let _ = std::fs::remove_file(&path);
+        save_studio_creation("sin(a*x)", -2.0, 2.0, 0.5, &path).expect("studio save");
+
+        let from_file =
+            open_studio_report(path.to_str().expect("utf8 path"), 32, 10).expect("open saved file");
+        assert!(from_file.contains("Studio creation"));
+        assert!(from_file.contains("expr=sin(a*x)"));
+        assert!(from_file.contains("link=numinous://studio?"));
+        assert!(from_file.contains('#'));
+
+        let creation = numinous_core::StudioCreation::from_num_file(
+            &std::fs::read_to_string(&path).expect("saved file"),
+        )
+        .expect("creation");
+        let from_link = open_studio_report(&creation.to_link(), 32, 10).expect("open link");
+        assert!(from_link.contains("expr=sin(a*x)"));
+        assert!(from_link.contains('#'));
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn open_studio_subcommand_parses_and_records_success() {
+        let path = std::env::temp_dir().join("numinous_cli_studio_run_open_test.num");
+        let _ = std::fs::remove_file(&path);
+        save_studio_creation("x", -1.0, 1.0, 0.0, &path).expect("studio save");
+
+        let cli = Cli::try_parse_from([
+            "numinous",
+            "open-studio",
+            path.to_str().expect("utf8 path"),
+            "--width",
+            "24",
+            "--height",
+            "8",
+        ])
+        .expect("parse open-studio");
+        let Some(command) = cli.command else {
+            panic!("command parsed");
+        };
+        let mut journey = numinous_core::Journey::default();
+        let code = run(command, &mut journey);
+        assert_eq!(code, std::process::ExitCode::SUCCESS);
+        assert_eq!(journey.plays, 1);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn failed_open_studio_does_not_record_progress() {
+        let mut journey = numinous_core::Journey::default();
+        let missing = std::env::temp_dir().join("numinous_cli_studio_missing_test.num");
+        let _ = std::fs::remove_file(&missing);
+        let code = run(
+            Command::OpenStudio {
+                input: missing.to_string_lossy().to_string(),
+                width: 32,
+                height: 10,
+            },
+            &mut journey,
+        );
+        assert_eq!(code, std::process::ExitCode::FAILURE);
+        assert_eq!(journey.plays, 0);
+    }
+
+    #[test]
+    fn open_studio_rejects_malformed_and_oversized_imports() {
+        let bad = std::env::temp_dir().join("numinous_cli_studio_bad_test.num");
+        let huge = std::env::temp_dir().join("numinous_cli_studio_huge_test.num");
+        std::fs::write(
+            &bad,
+            "NUMINOUS_STUDIO 1\nexpr=x\u{1b}[31m\nxmin=-1\nxmax=1\na=1\n",
+        )
+        .expect("bad file");
+        std::fs::write(
+            &huge,
+            "x".repeat(super::MAX_STUDIO_IMPORT_BYTES as usize + 1),
+        )
+        .expect("huge file");
+
+        let bad_err = load_studio_creation(bad.to_str().expect("utf8 path"))
+            .expect_err("bad import rejected");
+        assert_eq!(bad_err, "invalid Numinous Studio .num file\n");
+        let huge_err = load_studio_creation(huge.to_str().expect("utf8 path"))
+            .expect_err("huge import rejected");
+        assert!(huge_err.contains("too large"));
+        let link_err = load_studio_creation("numinous://studio?expr=x&xmin=-1&xmax=1&a=%")
+            .expect_err("bad link rejected");
+        assert_eq!(link_err, "invalid Numinous Studio link\n");
+
+        let _ = std::fs::remove_file(&bad);
+        let _ = std::fs::remove_file(&huge);
     }
 
     #[test]

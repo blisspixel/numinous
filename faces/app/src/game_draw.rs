@@ -1,0 +1,764 @@
+use numinous_core::{Raster, Room, Surface};
+
+use crate::play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_total};
+
+fn game_scale(width: usize) -> i32 {
+    (width as i32 / 400).clamp(1, 3)
+}
+
+pub(crate) struct QuizChoiceLayout {
+    base: i32,
+    line_height: i32,
+}
+
+impl QuizChoiceLayout {
+    pub(crate) fn new(width: usize, height: usize, choice_count: usize) -> Self {
+        let line_height = 10 * game_scale(width);
+        let base = height as i32 - (choice_count as i32 + 1) * line_height - 8;
+        Self { base, line_height }
+    }
+
+    pub(crate) fn hit(&self, y: f64, choice_count: usize) -> Option<usize> {
+        if y < f64::from(self.base) || self.line_height <= 0 {
+            return None;
+        }
+        let index = ((y - f64::from(self.base)) / f64::from(self.line_height)) as usize;
+        (index < choice_count).then_some(index)
+    }
+}
+
+pub(crate) struct MunchLayout {
+    top: i32,
+    cell_w: i32,
+    cell_h: i32,
+}
+
+impl MunchLayout {
+    pub(crate) fn new(width: usize, height: usize) -> Self {
+        let scale = game_scale(width);
+        let top = 14 * scale + 10;
+        let cell_w = (width as i32 - 20) / 6;
+        let cell_h = (height as i32 - top - 14 * scale) / 5;
+        Self {
+            top,
+            cell_w,
+            cell_h,
+        }
+    }
+
+    fn rect(&self, cell: usize) -> (i32, i32, i32, i32) {
+        let (col, row) = (cell as i32 % 6, cell as i32 / 6);
+        let (x0, y0) = (10 + col * self.cell_w, self.top + row * self.cell_h);
+        let (x1, y1) = (x0 + self.cell_w - 3, y0 + self.cell_h - 3);
+        (x0, y0, x1, y1)
+    }
+
+    pub(crate) fn hit(&self, x: f64, y: f64) -> Option<usize> {
+        if self.cell_w <= 1 || self.cell_h <= 1 || x < 10.0 || y < f64::from(self.top) {
+            return None;
+        }
+        let col = ((x - 10.0) / f64::from(self.cell_w)) as usize;
+        let row = ((y - f64::from(self.top)) / f64::from(self.cell_h)) as usize;
+        (col < 6 && row < 5).then_some(row * 6 + col)
+    }
+}
+
+fn gauntlet_message_lines(message: &str, width: usize, scale: i32) -> Vec<String> {
+    let columns = ((width as i32 / (6 * scale)) - 4).max(8) as usize;
+    let mut lines: Vec<String> = numinous_core::wrap_text(message, columns)
+        .into_iter()
+        .take(2)
+        .collect();
+    if lines.is_empty() {
+        lines.push(message.to_string());
+    }
+    lines
+}
+
+fn gauntlet_message_x(line: &str, width: usize, scale: i32) -> i32 {
+    let width = width as i32;
+    let text_w = line.len() as i32 * 6 * scale;
+    if text_w + 14 <= width / 2 {
+        (width - text_w - 14).max(width / 2)
+    } else {
+        10.min(width.saturating_sub(1).max(0))
+    }
+}
+
+/// Draw the quiz: the mystery room fullscreen, the choices at the bottom,
+/// and after an answer, the verdict and the reveal.
+pub(crate) fn draw_quiz(
+    rooms: &[Box<dyn Room>],
+    quiz: &QuizPlay,
+    width: usize,
+    height: usize,
+) -> Raster {
+    let answer_id = quiz
+        .round
+        .choices
+        .iter()
+        .find(|c| c.letter == quiz.round.answer)
+        .map_or("", |c| c.id);
+    let mystery = rooms.iter().find(|r| r.meta().id == answer_id);
+    let mut raster = match mystery {
+        Some(room) => {
+            let mut raster = Raster::with_accent(width, height, room.meta().accent);
+            room.render(&mut raster, room.postcard_t().max(0.4));
+            raster
+        }
+        None => Raster::new(width, height),
+    };
+    let scale = game_scale(width);
+    let layout = QuizChoiceLayout::new(width, height, quiz.round.choices.len());
+    let line_height = layout.line_height;
+    match &quiz.flash {
+        None => {
+            raster.dim_rows(0, 14 + 7 * (scale + 1), 40);
+            numinous_core::draw_text(&mut raster, "WHICH MATH MADE THIS?", 10, 10, scale + 1, '#');
+            raster.dim_rows(layout.base - 6, height as i32, 40);
+            for (i, choice) in quiz.round.choices.iter().enumerate() {
+                let line = format!("{}  {}", choice.letter, choice.title.to_uppercase());
+                numinous_core::draw_text(
+                    &mut raster,
+                    &line,
+                    10,
+                    layout.base + i as i32 * line_height,
+                    scale,
+                    '#',
+                );
+            }
+        }
+        Some((correct, _)) => {
+            raster.dim(35);
+            let verdict = if *correct {
+                "CORRECT".to_string()
+            } else {
+                format!(
+                    "IT WAS {}: {}",
+                    quiz.round.answer,
+                    quiz.round.answer_title.to_uppercase()
+                )
+            };
+            numinous_core::draw_text(&mut raster, &verdict, 10, 10, scale + 1, '#');
+            let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
+            let room_for =
+                ((height as i32 - 3 * line_height - 20) / line_height - 3).max(2) as usize;
+            for (i, line) in
+                numinous_core::wrap_text(&quiz.round.answer_reveal.to_uppercase(), columns)
+                    .iter()
+                    .take(room_for)
+                    .enumerate()
+            {
+                numinous_core::draw_text(
+                    &mut raster,
+                    line,
+                    10,
+                    10 + (3 + i as i32) * line_height,
+                    scale,
+                    '#',
+                );
+            }
+            numinous_core::draw_text(
+                &mut raster,
+                "ANY KEY  NEXT     ESC  LEAVE",
+                10,
+                height as i32 - line_height - 4,
+                scale,
+                '-',
+            );
+        }
+    }
+    raster
+}
+
+/// Draw Munch: the 5x6 board as a grid, the cursor, your bites, and the rule.
+pub(crate) fn draw_munch(play: &MunchPlay, frame: u64, width: usize, height: usize) -> Raster {
+    let mut raster = Raster::with_accent(width, height, [140, 230, 120]);
+    let scale = game_scale(width);
+    raster.dim_rows(0, 12 + 7 * scale, 40);
+    raster.dim_rows(height as i32 - 14 * scale, height as i32, 40);
+    numinous_core::draw_text(
+        &mut raster,
+        &format!("MUNCH: {}", play.board.rule.describe().to_uppercase()),
+        10,
+        10,
+        scale,
+        '#',
+    );
+    let layout = MunchLayout::new(width, height);
+    for (i, &value) in play.board.numbers.iter().enumerate() {
+        let (x0, y0, x1, y1) = layout.rect(i);
+        let bitten = play.bites.contains(&i);
+        let mark = if bitten { '#' } else { '-' };
+        raster.line(x0, y0, x1, y0, mark);
+        raster.line(x0, y1, x1, y1, mark);
+        raster.line(x0, y0, x0, y1, mark);
+        raster.line(x1, y0, x1, y1, mark);
+        if i == play.cursor && play.graded.is_none() {
+            let inset = if (frame / 20) % 2 == 0 { 1 } else { 2 };
+            raster.line(x0 + inset, y0 + inset, x1 - inset, y0 + inset, '#');
+            raster.line(x0 + inset, y1 - inset, x1 - inset, y1 - inset, '#');
+            raster.line(x0 + inset, y0 + inset, x0 + inset, y1 - inset, '#');
+            raster.line(x1 - inset, y0 + inset, x1 - inset, y1 - inset, '#');
+        }
+        let label = value.to_string();
+        let tx = x0 + layout.cell_w / 2 - (label.len() as i32 * 3 * scale);
+        let ty = y0 + layout.cell_h / 2 - 4 * scale;
+        numinous_core::draw_text(
+            &mut raster,
+            &label,
+            tx,
+            ty,
+            scale,
+            if bitten { '#' } else { '*' },
+        );
+    }
+    match &play.graded {
+        None => {
+            numinous_core::draw_text(
+                &mut raster,
+                "MOVE  WASD/ARROWS   EAT  SPACE   DONE  ENTER   ESC  LEAVE",
+                10,
+                height as i32 - 10 * scale,
+                scale,
+                '-',
+            );
+        }
+        Some(outcome) => {
+            raster.dim(30);
+            let clean = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
+            let mut lines = vec![format!(
+                "{} +{}",
+                if clean { "PERFECT." } else { "DONE." },
+                outcome.score
+            )];
+            lines.push(format!(
+                "{} EATEN  {} BAD  {} LEFT",
+                outcome.hits, outcome.bad_bites, outcome.left_behind
+            ));
+            if !outcome.missed.is_empty() {
+                let listed: Vec<String> = outcome.missed.iter().map(u64::to_string).collect();
+                lines.push(format!("WALKED PAST: {}", listed.join(", ")));
+                if outcome.bad_bites == 0 && outcome.missed.len() == 1 {
+                    lines.push("ONE AWAY. THE BOARD REMEMBERS.".to_string());
+                }
+            }
+            lines.push("ANY KEY LEAVES".to_string());
+            let ls = (width as i32 / 300).clamp(2, 4);
+            let lh = 12 * ls;
+            let ttop = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
+            for (i, line) in lines.iter().enumerate() {
+                numinous_core::draw_text(
+                    &mut raster,
+                    line,
+                    width as i32 / 8,
+                    ttop + i as i32 * lh,
+                    ls,
+                    '#',
+                );
+            }
+        }
+    }
+    raster
+}
+
+/// Draw the live arcade: the board, the Muncher, the spirits, and the beat.
+pub(crate) fn draw_arcade(play: &ArcadePlay, width: usize, height: usize) -> Raster {
+    use numinous_core::munch_arcade::Mind;
+    use numinous_core::munchers::{COLS, ROWS};
+
+    let mut raster = Raster::with_accent(width, height, [255, 205, 100]);
+    let scale = game_scale(width);
+    raster.dim_rows(0, 12 + 7 * scale, 40);
+    raster.dim_rows(height as i32 - 14 * scale, height as i32, 40);
+    let run = &play.run;
+    numinous_core::draw_text(
+        &mut raster,
+        &format!(
+            "ARCADE  LV {}  {}  {}",
+            run.level,
+            "O ".repeat(run.lives as usize),
+            run.board.rule.describe().to_uppercase()
+        ),
+        10,
+        10,
+        scale,
+        '#',
+    );
+    let top = 14 * scale + 10;
+    let cell_w = (width as i32 - 20) / COLS as i32;
+    let cell_h = (height as i32 - top - 14 * scale) / ROWS as i32;
+    for cell in 0..ROWS * COLS {
+        let (col, row) = (cell as i32 % COLS as i32, cell as i32 / COLS as i32);
+        let (x0, y0) = (10 + col * cell_w, top + row * cell_h);
+        let (x1, y1) = (x0 + cell_w - 3, y0 + cell_h - 3);
+        raster.line(x0, y0, x1, y0, '-');
+        raster.line(x0, y1, x1, y1, '-');
+        raster.line(x0, y0, x0, y1, '-');
+        raster.line(x1, y0, x1, y1, '-');
+        let center_x = x0 + cell_w / 2;
+        let center_y = y0 + cell_h / 2;
+        if cell == run.muncher {
+            let r = (cell_h / 3).max(4);
+            for i in 0..40 {
+                let a = std::f64::consts::TAU * f64::from(i) / 40.0;
+                if !(0.9..=5.4).contains(&a) {
+                    continue;
+                }
+                let px = center_x + (f64::from(r) * a.cos()) as i32;
+                let py = center_y + (f64::from(r) * a.sin()) as i32;
+                raster.plot(px, py, '#');
+                raster.plot(px + 1, py, '#');
+            }
+        } else if let Some(v) = run.vexations.iter().find(|v| v.cell == cell) {
+            let mark = match v.mind {
+                Mind::Tracker => "T",
+                Mind::Drifter => "D",
+                Mind::Editor => "E",
+            };
+            numinous_core::draw_text(
+                &mut raster,
+                mark,
+                center_x - 3 * scale,
+                center_y - 4 * scale,
+                scale + 1,
+                '#',
+            );
+        } else if !run.eaten[cell] {
+            let label = run.board.numbers[cell].to_string();
+            numinous_core::draw_text(
+                &mut raster,
+                &label,
+                center_x - (label.len() as i32 * 3 * scale),
+                center_y - 4 * scale,
+                scale,
+                '*',
+            );
+        }
+    }
+    if let Some((caught, _)) = play.flash {
+        raster.dim(70);
+        numinous_core::draw_text(
+            &mut raster,
+            if caught {
+                "CAUGHT"
+            } else {
+                "CLEAR. THEY MULTIPLY."
+            },
+            width as i32 / 6,
+            height as i32 / 2 - 6 * scale,
+            (scale + 1).min(4),
+            '#',
+        );
+    }
+    if play.over {
+        raster.dim(30);
+        let lines = [
+            "THE SPIRITS SEND REGARDS".to_string(),
+            format!("LEVEL {}  SCORE {}", run.level, run.score),
+            "ANY KEY LEAVES".to_string(),
+        ];
+        let ls = (width as i32 / 300).clamp(2, 4);
+        let top = height as i32 / 2 - 18 * ls;
+        for (i, line) in lines.iter().enumerate() {
+            numinous_core::draw_text(
+                &mut raster,
+                line,
+                width as i32 / 8,
+                top + i as i32 * 12 * ls,
+                ls,
+                '#',
+            );
+        }
+    }
+    numinous_core::draw_text(
+        &mut raster,
+        "WASD  RUN   SPACE  EAT   DON'T BE CAUGHT   ESC  LEAVE",
+        10,
+        height as i32 - 10 * scale,
+        scale,
+        '-',
+    );
+    raster
+}
+
+/// Draw Nim: heaps as stones, your aim highlighted, and the Order's last word.
+pub(crate) fn draw_nim(play: &NimPlay, width: usize, height: usize) -> Raster {
+    let mut raster = Raster::with_accent(width, height, [230, 200, 120]);
+    let scale = game_scale(width);
+    raster.dim_rows(0, 12 + 7 * scale, 40);
+    raster.dim_rows(height as i32 - 26 * scale, height as i32, 40);
+    numinous_core::draw_text(&mut raster, "NIM: LAST STONE WINS", 10, 10, scale, '#');
+    let top = 20 * scale + 10;
+    let row_h = (height as i32 - top - 30 * scale) / 3;
+    let stone = (row_h / 2).clamp(4, 10 * scale);
+    for (heap, &count) in play.heaps.iter().enumerate() {
+        let y = top + heap as i32 * row_h + row_h / 2;
+        let selected = heap == play.selected && play.over.is_none();
+        numinous_core::draw_text(
+            &mut raster,
+            &format!("{}{}", if selected { ">" } else { " " }, heap + 1),
+            10,
+            y - 4 * scale,
+            scale,
+            if selected { '#' } else { '-' },
+        );
+        for i in 0..count {
+            let x0 = 40 + i as i32 * (stone + 6);
+            let aimed = selected && i >= count.saturating_sub(play.take);
+            let mark = if aimed { '#' } else { '*' };
+            for dy in 0..stone {
+                raster.line(x0, y + dy, x0 + stone, y + dy, mark);
+            }
+        }
+    }
+    let hint = if play.over.is_none() {
+        format!(
+            "AIM  W/S HEAP   A/D TAKE {}   ENTER TAKE   ESC LEAVE",
+            play.take
+        )
+    } else {
+        "ANY KEY LEAVES".to_string()
+    };
+    numinous_core::draw_text(
+        &mut raster,
+        &play.message,
+        10,
+        height as i32 - 22 * scale,
+        scale,
+        '#',
+    );
+    numinous_core::draw_text(
+        &mut raster,
+        &hint,
+        10,
+        height as i32 - 10 * scale,
+        scale,
+        '-',
+    );
+    if play.over == Some(true) {
+        raster.dim(25);
+        let ls = (width as i32 / 340).clamp(1, 3);
+        let columns = ((width as i32 / (6 * ls)) - 6).max(12) as usize;
+        let mut lines = vec!["YOU TOOK THE LAST STONE. THE SECRET IS YOURS:".to_string()];
+        lines.extend(numinous_core::wrap_text(
+            &numinous_core::nim_secret().to_uppercase(),
+            columns,
+        ));
+        let lh = 10 * ls;
+        let ttop = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
+        for (i, line) in lines.iter().enumerate() {
+            numinous_core::draw_text(&mut raster, line, 20, ttop + i as i32 * lh, ls, '#');
+        }
+    }
+    raster
+}
+
+/// Draw the Gauntlet: whichever stage is live, with the run's narration.
+pub(crate) fn draw_gauntlet(
+    rooms: &[Box<dyn Room>],
+    run: &GauntletPlay,
+    frame: u64,
+    width: usize,
+    height: usize,
+) -> Raster {
+    let scale = game_scale(width);
+    let mut raster = match run.stage {
+        0 => draw_munch(&run.munch, frame, width, height),
+        1 => draw_quiz(rooms, &run.quiz, width, height),
+        2 => {
+            let mut raster = Raster::with_accent(width, height, [150, 210, 255]);
+            numinous_core::draw_text(
+                &mut raster,
+                "THE SKY: WHICH CHANNEL IS A MIND?",
+                10,
+                10,
+                scale,
+                '#',
+            );
+            let lh = 14 * scale;
+            for (i, channel) in run.scan.channels.iter().enumerate() {
+                let line = format!(
+                    "{}  {:>10}  {}",
+                    channel.letter, channel.frequency, channel.trace
+                );
+                numinous_core::draw_text(
+                    &mut raster,
+                    &line,
+                    10,
+                    30 * scale + i as i32 * lh,
+                    scale,
+                    '*',
+                );
+            }
+            numinous_core::draw_text(
+                &mut raster,
+                "PRESS THE LETTER",
+                10,
+                height as i32 - 22 * scale,
+                scale,
+                '-',
+            );
+            raster
+        }
+        3 => {
+            let mut raster = Raster::with_accent(width, height, [255, 140, 120]);
+            numinous_core::draw_text(
+                &mut raster,
+                "THE BOMB: FOUR DIGITS, FIVE WIRES",
+                10,
+                10,
+                scale,
+                '#',
+            );
+            numinous_core::draw_text(
+                &mut raster,
+                &format!("CLUE: {}", numinous_core::hint(&run.secret).to_uppercase()),
+                10,
+                26 * scale,
+                scale,
+                '*',
+            );
+            let lh = 12 * scale;
+            for (i, line) in run.wire_lines.iter().enumerate() {
+                numinous_core::draw_text(
+                    &mut raster,
+                    line,
+                    10,
+                    44 * scale + i as i32 * lh,
+                    scale,
+                    '*',
+                );
+            }
+            numinous_core::draw_text(
+                &mut raster,
+                &format!("> {}_", run.wire),
+                10,
+                44 * scale + run.wire_lines.len() as i32 * lh + lh,
+                scale + 1,
+                '#',
+            );
+            numinous_core::draw_text(
+                &mut raster,
+                "TYPE DIGITS   ENTER CUTS   BACKSPACE FIXES",
+                10,
+                height as i32 - 22 * scale,
+                scale,
+                '-',
+            );
+            raster
+        }
+        _ => {
+            let mut raster = Raster::with_accent(width, height, [230, 210, 120]);
+            let total = gauntlet_total(&run.scores, &run.cleared);
+            let clears = run.cleared.iter().filter(|&&c| c).count();
+            let names = ["MUNCH", "SHAPE", "SKY", "BOMB"];
+            let mut lines = vec![format!("RUN COMPLETE  {clears}/4 CLEAN")];
+            for ((name, score), &clean) in names.iter().zip(&run.scores).zip(&run.cleared) {
+                lines.push(format!(
+                    "{name}  +{score}{}",
+                    if clean { "  CLEAN" } else { "" }
+                ));
+            }
+            lines.push(format!("TOTAL {total}  (GAUNTLET SEED:{})", run.seed));
+            lines.push("ANY KEY LEAVES".to_string());
+            let ls = (width as i32 / 300).clamp(2, 4);
+            let lh = 12 * ls;
+            let top = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
+            for (i, line) in lines.iter().enumerate() {
+                numinous_core::draw_text(
+                    &mut raster,
+                    line,
+                    width as i32 / 8,
+                    top + i as i32 * lh,
+                    ls,
+                    '#',
+                );
+            }
+            raster
+        }
+    };
+    if run.stage < 4 {
+        let lines = gauntlet_message_lines(&run.message, width, scale);
+        raster.dim_rows(0, 12 + lines.len() as i32 * 9 * scale, 40);
+        for (i, line) in lines.iter().enumerate() {
+            numinous_core::draw_text(
+                &mut raster,
+                line,
+                gauntlet_message_x(line, width, scale),
+                10 + i as i32 * 9 * scale,
+                scale,
+                '#',
+            );
+        }
+    }
+    raster
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use super::*;
+
+    fn assert_visible(name: &str, raster: Raster) {
+        assert!(
+            raster.lit_count() > 100,
+            "{name} should draw visible pixels, lit={}",
+            raster.lit_count()
+        );
+        assert_eq!(raster.to_rgba().len(), 320 * 220 * 4);
+    }
+
+    fn sample_munch() -> MunchPlay {
+        MunchPlay {
+            board: numinous_core::build_board(17, 0),
+            seed: 17,
+            cursor: 0,
+            bites: BTreeSet::new(),
+            graded: None,
+        }
+    }
+
+    fn sample_quiz() -> QuizPlay {
+        QuizPlay {
+            round: numinous_core::build_round(29, 0, 40, 24),
+            flash: None,
+        }
+    }
+
+    fn sample_gauntlet() -> GauntletPlay {
+        GauntletPlay {
+            seed: 41,
+            stage: 2,
+            munch: sample_munch(),
+            quiz: sample_quiz(),
+            scan: numinous_core::build_scan(41, 4),
+            secret: numinous_core::secret_code(41, 4),
+            wire: String::new(),
+            wire_lines: Vec::new(),
+            scores: vec![0, 25],
+            cleared: vec![false, true],
+            message: "SKY GATE".to_string(),
+        }
+    }
+
+    #[test]
+    fn game_layouts_drive_hit_testing() {
+        let quiz = sample_quiz();
+        let layout = QuizChoiceLayout::new(320, 220, quiz.round.choices.len());
+        assert_eq!(
+            layout.hit(f64::from(layout.base), quiz.round.choices.len()),
+            Some(0)
+        );
+        assert_eq!(
+            layout.hit(
+                f64::from(layout.base + layout.line_height * 2),
+                quiz.round.choices.len()
+            ),
+            Some(2)
+        );
+        assert_eq!(
+            layout.hit(f64::from(layout.base - 1), quiz.round.choices.len()),
+            None
+        );
+
+        let munch = MunchLayout::new(320, 220);
+        assert_eq!(munch.hit(11.0, f64::from(munch.top + 1)), Some(0));
+        assert_eq!(
+            munch.hit(
+                10.0 + f64::from(munch.cell_w * 5) + 1.0,
+                f64::from(munch.top + munch.cell_h * 4) + 1.0
+            ),
+            Some(29)
+        );
+        assert_eq!(munch.hit(5.0, f64::from(munch.top + 1)), None);
+    }
+
+    #[test]
+    fn game_drawers_produce_visible_rasters() {
+        let rooms = numinous_core::all_rooms_with(0);
+        assert_visible("quiz", draw_quiz(&rooms, &sample_quiz(), 320, 220));
+        assert_visible("munch", draw_munch(&sample_munch(), 0, 320, 220));
+        assert_visible(
+            "arcade",
+            draw_arcade(
+                &ArcadePlay {
+                    run: numinous_core::munch_arcade::Arcade::new(19),
+                    seed: 19,
+                    flash: None,
+                    over: false,
+                },
+                320,
+                220,
+            ),
+        );
+        assert_visible(
+            "nim",
+            draw_nim(
+                &NimPlay {
+                    heaps: numinous_core::nim_new(23),
+                    seed: 23,
+                    selected: 0,
+                    take: 1,
+                    message: "YOUR MOVE".to_string(),
+                    over: None,
+                },
+                320,
+                220,
+            ),
+        );
+        assert_visible(
+            "gauntlet",
+            draw_gauntlet(&rooms, &sample_gauntlet(), 0, 320, 220),
+        );
+    }
+
+    #[test]
+    fn gauntlet_stage_screens_draw() {
+        let rooms = numinous_core::all_rooms_with(0);
+        for stage in 0..=3 {
+            let mut run = sample_gauntlet();
+            run.stage = stage;
+            run.message = "A LONG GAUNTLET MESSAGE THAT MUST STAY ON THE SCREEN".to_string();
+            if stage == 3 {
+                run.wire = "12".to_string();
+                run.wire_lines = vec!["1 LOCKED  0 LOOSE".to_string()];
+            }
+            assert_visible(
+                &format!("gauntlet stage {stage}"),
+                draw_gauntlet(&rooms, &run, 0, 320, 220),
+            );
+        }
+    }
+
+    #[test]
+    fn gauntlet_done_screen_uses_combo_total() {
+        let rooms = numinous_core::all_rooms_with(0);
+        let mut run = sample_gauntlet();
+        run.stage = 4;
+        run.scores = vec![10, 20, 30, 40];
+        run.cleared = vec![true, true, false, true];
+        assert_eq!(gauntlet_total(&run.scores, &run.cleared), 10 + 40 + 90 + 40);
+        assert_visible("gauntlet done", draw_gauntlet(&rooms, &run, 0, 320, 220));
+    }
+
+    #[test]
+    fn gauntlet_message_wraps_inside_the_raster() {
+        let scale = game_scale(320);
+        let lines = gauntlet_message_lines(
+            "THE GAUNTLET WAKES AND THE ORDER WRITES A VERY LONG WARNING",
+            320,
+            scale,
+        );
+        assert!(lines.len() > 1, "long narration should wrap");
+        for line in lines {
+            let x = gauntlet_message_x(&line, 320, scale);
+            assert!(x >= 0, "message starts inside the raster");
+            assert!(
+                x + line.len() as i32 * 6 * scale <= 320,
+                "message line fits: x={x}, line={line}"
+            );
+        }
+    }
+}

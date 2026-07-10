@@ -10,16 +10,33 @@
 
 use std::num::NonZeroU32;
 use std::rc::Rc;
+use std::time::SystemTime;
 
-use numinous_core::{Journey, Raster, Room, Surface, all_rooms};
+use numinous_core::{Journey, Raster, Room, Surface, all_rooms_with};
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::{Window, WindowId};
 
+mod controls;
+mod feedback;
+mod game_draw;
+mod hud;
+mod mouse_input;
+mod overlays;
+mod play;
+mod playtest;
+mod postcard;
+mod radio_cache;
+mod room_input;
+mod studio_panel;
+
+use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_total};
+
 /// Near-black background (matches the `Raster` stage), packed `0x00RRGGBB`.
 const BACKGROUND: u32 = 0x000A_0B0F;
+const RASTER_BACKGROUND_RGB: [u8; 3] = [0x0A, 0x0B, 0x0F];
 /// How far the phase advances each frame.
 const T_STEP: f64 = 0.004;
 /// In The Show, how far the phase advances each frame (slower, hypnotic).
@@ -40,12 +57,8 @@ struct App {
     the_show: bool,
     /// The Studio: type an expression and watch it live.
     studio: bool,
-    /// What the player has typed in the Studio.
-    studio_text: String,
-    /// The last expression that parsed, kept so the curve stays alive mid-edit.
-    studio_expr: Option<numinous_core::Expr>,
-    /// The current parse error, shown gently under the input.
-    studio_error: Option<String>,
+    /// The typed Studio expression and its last-good parse state.
+    studio_panel: studio_panel::StudioPanel,
     /// GPU fractal renderer, when this machine has one (CPU raster otherwise).
     gpu: Option<numinous_gpu::FractalRenderer>,
     /// The visual era ('e' cycles: phosphor, 8-bit, vector, modern).
@@ -56,16 +69,20 @@ struct App {
     volume: f32,
     /// The help overlay ('h' toggles; shown at launch so nobody is lost).
     show_help: bool,
+    /// Start in fullscreen (from --fullscreen / -f arg or env). Supports user's request for full screen view.
+    start_fullscreen: bool,
     /// Frame counter, used to refresh the audio as the phase sweeps.
     frame: u64,
     /// Time speed multiplier (W faster, S slower), like sprint and sneak.
     time_scale: f64,
     /// The player's journey: the same file the CLI levels (visits, plays, wins).
     journey: Journey,
+    /// Last Journey state successfully merged into the local file.
+    journey_saved: Journey,
     /// The level before the last change, to catch level-ups as they happen.
     level_seen: u32,
-    /// A LEVEL UP banner: the lines shown, and frames left to show them.
-    banner: Option<(Vec<String>, u64)>,
+    /// Transient on-screen feedback such as LEVEL UP, volume, and save status.
+    banner: Option<feedback::Banner>,
     /// The quiz, when playing: the round, its number, and the answer flash.
     quiz: Option<QuizPlay>,
     /// Rooms recently asked about, excluded from the next deals.
@@ -88,6 +105,8 @@ struct App {
     pokes: Vec<(f64, f64)>,
     /// A press began on a listening room: drags keep poking.
     poking: bool,
+    /// Per-visit variation seed for rooms that support replayable novelty (R reseeds).
+    variation: u64,
     /// The radio: Some(index into STATIONS) when a cached station plays.
     radio: Option<usize>,
     /// The loaded station track, if any.
@@ -104,75 +123,15 @@ struct App {
     journey_file: std::path::PathBuf,
 }
 
-/// The in-window quiz state: what is asked, and how the last answer landed.
-struct QuizPlay {
-    round: numinous_core::QuizRound,
-    /// After an answer: (was it right, frames left on the flash).
-    flash: Option<(bool, u64)>,
-}
-
-/// The in-window Munch: a board, a cursor, your bites, and the verdict.
-struct MunchPlay {
-    board: numinous_core::Board,
-    seed: u64,
-    /// Cursor cell, 0-based (5 rows of 6).
-    cursor: usize,
-    /// Cells bitten so far, 0-based.
-    bites: std::collections::BTreeSet<usize>,
-    /// After Enter: the graded outcome, shown until a key.
-    graded: Option<numinous_core::Munched>,
-}
-
-/// The in-window Gauntlet: four stages riding the other games' state.
-struct GauntletPlay {
-    seed: u64,
-    /// 0 munch, 1 shape, 2 sky, 3 bomb, 4 done.
-    stage: usize,
-    munch: MunchPlay,
-    quiz: QuizPlay,
-    scan: numinous_core::SetiScan,
-    secret: Vec<u8>,
-    /// The bomb keypad: what is typed, and the feedback so far.
-    wire: String,
-    wire_lines: Vec<String>,
-    /// Stage scores and clean flags, in order.
-    scores: Vec<i64>,
-    cleared: Vec<bool>,
-    /// The running narration line.
-    message: String,
-}
-
-/// The in-window arcade: the run, its beat, and the last event's flash.
-struct ArcadePlay {
-    run: numinous_core::munch_arcade::Arcade,
-    seed: u64,
-    /// Flash frames left and what happened (true = caught, false = clear).
-    flash: Option<(bool, u64)>,
-    /// The run has ended; any key leaves.
-    over: bool,
-}
-
-/// The in-window Nim: the heaps, your aim, and the Order's last word.
-struct NimPlay {
-    heaps: Vec<u32>,
-    seed: u64,
-    /// Which heap you are aiming at.
-    selected: usize,
-    /// How many stones you mean to take.
-    take: u32,
-    /// The Order's last move, narrated.
-    message: String,
-    /// The end: Some(true) is your win (the secret shows), Some(false) is not.
-    over: Option<bool>,
-}
-
 impl App {
     fn new() -> Self {
+        let journey_file = journey_path();
+        let journey = numinous_core::load_journey_file(&journey_file);
         Self {
             window: None,
             surface: None,
             player: None,
-            rooms: all_rooms(),
+            rooms: all_rooms_with(0),
             current: 0,
             t: 0.0,
             paused: false,
@@ -180,19 +139,17 @@ impl App {
             show_info: false,
             the_show: false,
             studio: false,
-            studio_text: String::from("sin(a*x) + x/3"),
-            studio_expr: numinous_core::parse("sin(a*x) + x/3").ok(),
-            studio_error: None,
+            studio_panel: studio_panel::StudioPanel::default(),
             gpu: None,
             era: numinous_core::Era::default(),
             muted: false,
             volume: 0.7,
             show_help: true,
+            start_fullscreen: false,
             frame: 0,
             time_scale: 1.0,
-            journey: Journey::from_text(
-                &std::fs::read_to_string(journey_path()).unwrap_or_default(),
-            ),
+            journey: journey.clone(),
+            journey_saved: journey,
             level_seen: 1,
             banner: None,
             quiz: None,
@@ -206,29 +163,30 @@ impl App {
             mouse: (0.0, 0.0),
             pokes: Vec::new(),
             poking: false,
-            room_card: 240,
+            variation: 0,
+            room_card: room_input::ROOM_CARD_FRAMES,
             radio: None,
             radio_track: Vec::new(),
             radio_paths: Vec::new(),
             radio_index: 0,
             radio_until: None,
-            journey_file: journey_path(),
+            journey_file,
         }
     }
 
     /// Persist the journey and raise the LEVEL UP banner when the level moves.
     fn journey_changed(&mut self) {
-        let _ = std::fs::write(&self.journey_file, self.journey.to_text());
+        if let Ok(saved) = numinous_core::persist_journey_delta(
+            &self.journey_file,
+            &self.journey_saved,
+            &self.journey,
+        ) {
+            self.journey = saved.clone();
+            self.journey_saved = saved;
+        }
         let level = self.journey.level();
         if level > self.level_seen {
-            let mut lines = vec![
-                format!("LEVEL UP  LV {level}"),
-                numinous_core::level_lore(level).to_uppercase(),
-            ];
-            if self.journey.boons_available() > 0 {
-                lines.push("BOON BANKED: NUMINOUS CHOOSE".to_string());
-            }
-            self.banner = Some((lines, 300));
+            self.banner = Some(feedback::level_up(level, self.journey.boons_available()));
         }
         self.level_seen = level;
     }
@@ -245,76 +203,37 @@ impl App {
     /// Start (or advance) the quiz: a fresh seeded round, phase-of-day seeded
     /// so everyone who opens the app today can compare notes.
     fn quiz_next(&mut self) {
-        // The round number is the journey's lifetime play count, so no two
-        // deals repeat: not within a session, not across restarts, not after
-        // stepping out and back in. Today's seed keeps it shareable.
-        let number = u64::from(self.journey.plays);
-        let seed = Self::daily_seed();
-        // The ramp: a brand new player's first deals are three-way picks
-        // among the most recognizable rooms; the catalog opens up from there.
-        // Recently asked rooms sit out, so no question repeats back to back.
-        let (base, choices): (Vec<&'static str>, usize) = if self.journey.plays < 6 {
-            (numinous_core::ICONIC.to_vec(), 3)
-        } else {
-            (self.rooms.iter().map(|r| r.meta().id).collect(), 4)
-        };
-        let fresh: Vec<&'static str> = base
-            .iter()
-            .copied()
-            .filter(|id| !self.quiz_recent.contains(id))
-            .collect();
-        let pool = if fresh.len() > choices { fresh } else { base };
-        let round = numinous_core::build_round_pool(seed, number, 10, 10, choices, &pool);
-        if let Some(choice) = round.choices.iter().find(|c| c.letter == round.answer) {
-            self.quiz_recent.push(choice.id);
-            let keep = if self.journey.plays < 6 { 4 } else { 10 };
-            while self.quiz_recent.len() > keep {
-                self.quiz_recent.remove(0);
-            }
-        }
+        self.the_show = false;
+        let seed = play::daily_seed();
+        let room_ids = self.rooms.iter().map(|room| room.meta().id);
+        let quiz = play::deal_quiz(seed, self.journey.plays, room_ids, &mut self.quiz_recent);
         self.journey.play();
         self.journey_changed();
-        self.quiz = Some(QuizPlay { round, flash: None });
+        self.quiz = Some(quiz);
     }
 
     /// Answer the quiz with a letter; right or wrong, the reveal follows.
     fn quiz_answer(&mut self, letter: char) {
-        let Some(quiz) = self.quiz.as_mut() else {
-            return;
-        };
-        if quiz.flash.is_some() || !quiz.round.choices.iter().any(|c| c.letter == letter) {
-            return;
-        }
-        let correct = letter == quiz.round.answer;
-        quiz.flash = Some((correct, 300));
-        if correct {
+        if self
+            .quiz
+            .as_mut()
+            .and_then(|quiz| play::answer_quiz(quiz, letter))
+            == Some(true)
+        {
             self.journey.win();
             self.journey_changed();
         }
     }
 
-    /// Today's seed: everyone who plays today plays the same boards.
-    fn daily_seed() -> u64 {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs() / 86_400)
-            .unwrap_or(1)
-    }
-
     /// Post a score to the shared table (the CLI's file and rules).
     fn post_score(&self, key: &str, score: i64) -> bool {
-        let path = scores_path();
-        let mut board = numinous_core::Scoreboard::from_text(
-            &std::fs::read_to_string(&path).unwrap_or_default(),
-        );
-        let best = board.record(key, score);
-        let _ = std::fs::write(&path, board.to_text());
-        best
+        numinous_core::record_score_file(&scores_path(), key, score).unwrap_or(false)
     }
 
     /// Deal a Munch board (today's).
     fn munch_start(&mut self) {
-        let seed = Self::daily_seed();
+        self.the_show = false;
+        let seed = play::daily_seed();
         self.journey.play();
         self.journey_changed();
         self.munch = Some(MunchPlay {
@@ -348,7 +267,8 @@ impl App {
 
     /// Deal a Nim game (today's heaps).
     fn nim_start(&mut self) {
-        let seed = Self::daily_seed();
+        self.the_show = false;
+        let seed = play::daily_seed();
         self.journey.play();
         self.journey_changed();
         let heaps = numinous_core::nim_new(seed);
@@ -398,7 +318,8 @@ impl App {
 
     /// Start the arcade: today's run, spirits loose, the beat ticking.
     fn arcade_start(&mut self) {
-        let seed = Self::daily_seed();
+        self.the_show = false;
+        let seed = play::daily_seed();
         self.journey.play();
         self.journey_changed();
         self.arcade = Some(ArcadePlay {
@@ -451,7 +372,8 @@ impl App {
 
     /// Start the Gauntlet: today's run, four stages, a combo.
     fn gauntlet_start(&mut self) {
-        let seed = Self::daily_seed();
+        self.the_show = false;
+        let seed = play::daily_seed();
         self.gauntlet = Some(GauntletPlay {
             seed,
             stage: 0,
@@ -532,25 +454,11 @@ impl App {
                         let (points, what) = (outcome.score, format!("MUNCH +{}.", outcome.score));
                         self.gauntlet_bank(points, clean, &what);
                     }
-                    Key::Named(NamedKey::Space) => {
-                        let cell = play.cursor;
-                        let _ = play.bites.remove(&cell) || play.bites.insert(cell);
-                    }
-                    Key::Named(NamedKey::ArrowRight) => play.cursor = (play.cursor + 1) % 30,
-                    Key::Named(NamedKey::ArrowLeft) => play.cursor = (play.cursor + 29) % 30,
-                    Key::Named(NamedKey::ArrowDown) => play.cursor = (play.cursor + 6) % 30,
-                    Key::Named(NamedKey::ArrowUp) => play.cursor = (play.cursor + 24) % 30,
-                    Key::Character(c) => match c.as_str() {
-                        "d" => play.cursor = (play.cursor + 1) % 30,
-                        "a" => play.cursor = (play.cursor + 29) % 30,
-                        "s" => play.cursor = (play.cursor + 6) % 30,
-                        "w" => play.cursor = (play.cursor + 24) % 30,
-                        "e" => {
-                            let cell = play.cursor;
-                            let _ = play.bites.remove(&cell) || play.bites.insert(cell);
-                        }
-                        _ => {}
-                    },
+                    key if controls::apply_munch_control(
+                        &mut play.cursor,
+                        &mut play.bites,
+                        key,
+                    ) => {}
                     _ => {}
                 }
             }
@@ -559,8 +467,7 @@ impl App {
                     && c.len() == 1
                 {
                     let letter = c.chars().next().unwrap_or(' ').to_ascii_uppercase();
-                    if run.quiz.round.choices.iter().any(|ch| ch.letter == letter) {
-                        let correct = letter == run.quiz.round.answer;
+                    if let Some(correct) = play::answer_quiz(&mut run.quiz, letter) {
                         let what = format!(
                             "IT WAS {} ({}).",
                             run.quiz.round.answer,
@@ -629,27 +536,182 @@ impl App {
         }
     }
 
+    /// One key into standalone Munch.
+    fn munch_key(&mut self, key: &Key) {
+        let graded = self
+            .munch
+            .as_ref()
+            .is_some_and(|play| play.graded.is_some());
+        if graded {
+            self.munch = None;
+            self.update_audio();
+            return;
+        }
+        match key {
+            Key::Named(NamedKey::Escape) => {
+                self.munch = None;
+                self.update_audio();
+            }
+            Key::Named(NamedKey::Enter) => self.munch_grade(),
+            key => {
+                if let Some(play) = &mut self.munch {
+                    let _ = controls::apply_munch_control(&mut play.cursor, &mut play.bites, key);
+                }
+            }
+        }
+    }
+
     /// Write the current room's frame to a PNG next to the save files: the
     /// postcard key. Returns the path it wrote.
     fn save_postcard(&self) -> Option<std::path::PathBuf> {
-        let room = &self.rooms[self.current];
-        let mut raster = Raster::with_accent(900, 900, room.meta().accent);
-        room.render(&mut raster, self.t);
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        let path = std::path::PathBuf::from(home).join(format!(
-            "numinous-{}-{:03}.png",
-            room.meta().id,
-            (self.t * 100.0) as u32
-        ));
-        let file = std::fs::File::create(&path).ok()?;
-        let mut encoder = png::Encoder::new(std::io::BufWriter::new(file), 900, 900);
-        encoder.set_color(png::ColorType::Rgba);
-        encoder.set_depth(png::BitDepth::Eight);
-        let mut writer = encoder.write_header().ok()?;
-        writer.write_image_data(&raster.to_rgba()).ok()?;
-        Some(path)
+        postcard::write_room_postcard(
+            self.rooms[self.current].as_ref(),
+            self.t,
+            &self.pokes,
+            self.era,
+            &postcard::default_postcard_dir(),
+        )
+        .ok()
+    }
+
+    fn save_playtest_note(&self) -> std::io::Result<std::path::PathBuf> {
+        self.save_playtest_note_to(&playtest::default_log_dir(), SystemTime::now())
+    }
+
+    fn save_playtest_note_to(
+        &self,
+        dir: &std::path::Path,
+        now: SystemTime,
+    ) -> std::io::Result<std::path::PathBuf> {
+        let room = self.rooms.get(self.current).ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::NotFound, "current room is missing")
+        })?;
+        let snapshot = playtest::PlaytestSnapshot {
+            room: room.as_ref(),
+            journey: &self.journey,
+            room_count: self.rooms.len(),
+            phase: self.t,
+            variation: self.variation,
+            visual_era: self.era.name(),
+            sound_on: !self.muted && self.player.is_some(),
+            time_scale: self.time_scale,
+            poke_points: &self.pokes,
+            active_mode: self.playtest_mode(),
+        };
+        let report = playtest::build_report(&snapshot, now);
+        playtest::write_report(dir, now, &report)
+    }
+
+    fn playtest_mode(&self) -> &'static str {
+        if self.studio {
+            "studio"
+        } else if self.arcade.is_some() {
+            "munch arcade"
+        } else if self.gauntlet.is_some() {
+            "gauntlet"
+        } else if self.nim.is_some() {
+            "nim"
+        } else if self.munch.is_some() {
+            "munch"
+        } else if self.quiz.is_some() {
+            "quiz"
+        } else if self.the_show {
+            "the show"
+        } else {
+            "wander"
+        }
+    }
+
+    fn enter_studio(&mut self) {
+        self.the_show = false;
+        self.show_help = false;
+        self.show_journey = false;
+        self.studio = true;
+        self.studio_reparse();
+    }
+
+    fn modal_mode_active(&self) -> bool {
+        self.studio
+            || self.quiz.is_some()
+            || self.munch.is_some()
+            || self.nim.is_some()
+            || self.gauntlet.is_some()
+            || self.arcade.is_some()
+    }
+
+    fn show_mode_active(&self) -> bool {
+        self.the_show && !self.modal_mode_active()
+    }
+
+    fn left_press_context(&self) -> mouse_input::LeftPressContext {
+        mouse_input::LeftPressContext {
+            game_click_mode: self.munch.is_some() || self.quiz.is_some(),
+            studio: self.studio,
+            show_help: self.show_help,
+            show_journey: self.show_journey,
+            arcade: self.arcade.is_some(),
+            nim: self.nim.is_some(),
+            gauntlet: self.gauntlet.is_some(),
+            room_has_verb: self.rooms[self.current].verb().is_some(),
+        }
+    }
+
+    fn pointer_state(&self) -> mouse_input::PointerState {
+        mouse_input::PointerState {
+            dragging: self.dragging,
+            poking: self.poking,
+        }
+    }
+
+    fn set_pointer_state(&mut self, state: mouse_input::PointerState) {
+        self.dragging = state.dragging;
+        self.poking = state.poking;
+    }
+
+    fn clear_pointer_state(&mut self) {
+        self.set_pointer_state(mouse_input::PointerState::default());
+    }
+
+    fn refresh_pointer_state(&mut self) {
+        let state =
+            mouse_input::retain_pointer_state(self.pointer_state(), self.left_press_context());
+        self.set_pointer_state(state);
+    }
+
+    fn handle_playtest_shortcut(&mut self, key: &Key) -> bool {
+        if !matches!(key, Key::Named(NamedKey::F9)) {
+            return false;
+        }
+        let result = self.save_playtest_note();
+        self.set_playtest_note_banner(result);
+        true
+    }
+
+    #[cfg(test)]
+    fn handle_playtest_shortcut_to(
+        &mut self,
+        key: &Key,
+        dir: &std::path::Path,
+        now: SystemTime,
+    ) -> bool {
+        if !matches!(key, Key::Named(NamedKey::F9)) {
+            return false;
+        }
+        let result = self.save_playtest_note_to(dir, now);
+        self.set_playtest_note_banner(result);
+        true
+    }
+
+    fn set_playtest_note_banner(&mut self, result: std::io::Result<std::path::PathBuf>) {
+        self.banner = Some(feedback::playtest_note(result));
+    }
+
+    fn change_volume(&mut self, step: f32) {
+        self.volume = (self.volume + step).clamp(0.0, 1.0);
+        self.banner = Some(feedback::volume(self.volume));
+        if !self.refresh_radio_audio() {
+            self.update_audio();
+        }
     }
 
     /// A click lands in the games: munch toggles the cell, the quiz answers.
@@ -667,19 +729,11 @@ impl App {
             if play.graded.is_some() {
                 return;
             }
-            // The same geometry the board is drawn with.
-            let scale = f64::from((width as i32 / 400).clamp(1, 3));
-            let top = 14.0 * scale + 10.0;
-            let cell_w = (width - 20.0) / 6.0;
-            let cell_h = (height - top - 14.0 * scale) / 5.0;
-            if mx >= 10.0 && my >= top && cell_w > 1.0 && cell_h > 1.0 {
-                let col = ((mx - 10.0) / cell_w) as usize;
-                let row = ((my - top) / cell_h) as usize;
-                if col < 6 && row < 5 {
-                    let cell = row * 6 + col;
-                    play.cursor = cell;
-                    let _ = play.bites.remove(&cell) || play.bites.insert(cell);
-                }
+            if let Some(cell) =
+                game_draw::MunchLayout::new(size.width as usize, size.height as usize).hit(mx, my)
+            {
+                play.cursor = cell;
+                controls::toggle_munch_bite(&mut play.bites, cell);
             }
             return;
         }
@@ -688,17 +742,16 @@ impl App {
                 self.quiz_next();
                 return;
             }
-            // The choice rows, same geometry they are drawn with.
-            let scale = f64::from((width as i32 / 400).clamp(1, 3));
-            let line_height = 10.0 * scale;
-            let count = quiz.round.choices.len() as f64;
-            let base = height - (count + 1.0) * line_height - 8.0;
-            if my >= base {
-                let index = ((my - base) / line_height) as usize;
-                if let Some(choice) = quiz.round.choices.get(index) {
-                    let letter = choice.letter;
-                    self.quiz_answer(letter);
-                }
+            let layout = game_draw::QuizChoiceLayout::new(
+                size.width as usize,
+                size.height as usize,
+                quiz.round.choices.len(),
+            );
+            if let Some(index) = layout.hit(my, quiz.round.choices.len())
+                && let Some(choice) = quiz.round.choices.get(index)
+            {
+                let letter = choice.letter;
+                self.quiz_answer(letter);
             }
         }
     }
@@ -714,54 +767,16 @@ impl App {
             return;
         };
         let st = &numinous_core::STATIONS[i];
-        let dir = if let Ok(dir) = std::env::var("NUMINOUS_RADIO") {
-            std::path::PathBuf::from(dir)
-        } else {
-            let home = std::env::var("HOME")
-                .or_else(|_| std::env::var("USERPROFILE"))
-                .unwrap_or_else(|_| ".".to_string());
-            std::path::PathBuf::from(home).join(".numinous-radio")
-        };
-        if let Ok(entries) = std::fs::read_dir(&dir) {
-            let prefix = format!("{}-", st.id);
-            let legacy = format!("{}.wav", st.id);
-            self.radio_paths = entries
-                .filter_map(Result::ok)
-                .map(|e| e.path())
-                .filter(|p| {
-                    let name = p.file_name().unwrap_or_default().to_string_lossy();
-                    name.starts_with(&prefix) || name == legacy
-                })
-                .collect();
-            self.radio_paths.sort();
-        }
-        if !self.radio_paths.is_empty() {
-            // Join the broadcast live: the wall clock decides which track is
-            // on the air and how far into it we are.
-            let durations: Vec<f64> = self
-                .radio_paths
-                .iter()
-                .map(|p| {
-                    hound::WavReader::open(p)
-                        .map(|r| f64::from(r.duration()) / f64::from(r.spec().sample_rate))
-                        .unwrap_or(0.0)
-                })
-                .collect();
-            let total: f64 = durations.iter().sum();
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs_f64())
-                .unwrap_or(0.0);
-            let mut pos = if total > 1.0 { now % total } else { 0.0 };
-            self.radio_index = 0;
-            for (idx, &secs) in durations.iter().enumerate() {
-                if pos < secs || idx == durations.len() - 1 {
-                    self.radio_index = idx;
-                    break;
-                }
-                pos -= secs;
-            }
-            self.radio_play(pos);
+        let dir = radio_cache::default_dir();
+        self.radio_paths = radio_cache::station_tracks(&dir, st.id);
+        // Join the broadcast live: the wall clock decides which track is on.
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs_f64())
+            .unwrap_or(0.0);
+        if let Some((index, position)) = radio_cache::live_position(&self.radio_paths, now) {
+            self.radio_index = index;
+            self.radio_play_or_advance(position);
         }
         if let Some(window) = &self.window {
             let st = &numinous_core::STATIONS[i];
@@ -777,76 +792,69 @@ impl App {
         }
         // The dial speaks on screen, especially when the station is silent.
         let st = &numinous_core::STATIONS[i];
-        self.banner = Some((
-            if self.radio_paths.is_empty() {
-                vec![
-                    format!("RADIO: {}", st.name),
-                    "NO TRACKS CACHED YET".to_string(),
-                    format!("IN A TERMINAL: NUMINOUS TUNE2 {}", st.id.to_uppercase()),
-                ]
-            } else {
-                vec![format!(
-                    "RADIO: {}  ({} ON ROTATION)",
-                    st.name,
-                    self.radio_paths.len()
-                )]
-            },
-            180,
-        ));
+        self.banner = Some(feedback::radio(st.name, st.id, self.radio_paths.len()));
         self.update_audio();
+    }
+
+    fn radio_play_or_advance(&mut self, offset: f64) -> bool {
+        let track_count = self.radio_paths.len();
+        if track_count == 0 {
+            self.radio_track.clear();
+            self.radio_until = None;
+            return false;
+        }
+        self.radio_index %= track_count;
+        let mut next_offset = offset;
+        for _ in 0..track_count {
+            if self.radio_play(next_offset) {
+                return true;
+            }
+            self.radio_index = (self.radio_index + 1) % track_count;
+            next_offset = 0.0;
+        }
+        self.radio_track.clear();
+        self.radio_until = None;
+        false
     }
 
     /// Put the current playlist entry on the air, starting `offset` seconds
     /// in: read it (mono or stereo), resample to the device's rate so pitch
     /// and tempo are true, and hand it to the player once.
-    fn radio_play(&mut self, offset: f64) {
+    fn radio_play(&mut self, offset: f64) -> bool {
+        self.radio_track.clear();
+        self.radio_until = None;
         let Some(path) = self.radio_paths.get(self.radio_index) else {
-            return;
+            return false;
         };
-        let Ok(mut reader) = hound::WavReader::open(path) else {
-            return;
-        };
-        let spec = reader.spec();
-        let src_rate = f64::from(spec.sample_rate);
-        let channels = usize::from(spec.channels).max(1);
-        let raw: Vec<f32> = reader
-            .samples::<i16>()
-            .filter_map(Result::ok)
-            .map(|s| f32::from(s) / 32_768.0)
-            .collect();
         let device_rate = self.player.as_ref().map_or(44_100, |p| p.sample_rate());
-        // Linear resample per channel to the device rate: 44.1k played as
-        // 48k is nine percent sharp, which reads as cheap.
-        let src_frames = raw.len() / channels;
-        if src_frames < 2 {
-            return;
-        }
-        let out_frames = (src_frames as f64 * f64::from(device_rate) / src_rate) as usize;
-        let mut track = Vec::with_capacity(out_frames * 2);
-        for i in 0..out_frames {
-            let src = i as f64 * src_rate / f64::from(device_rate);
-            let base = (src as usize).min(src_frames - 2);
-            let frac = (src - base as f64) as f32;
-            for ch in [0, channels.saturating_sub(1)] {
-                let a = raw[base * channels + ch];
-                let b = raw[(base + 1) * channels + ch];
-                track.push(a + (b - a) * frac);
-            }
-        }
-        // Join `offset` seconds in, wrapping, and arm the rotation.
-        let skip_frames = ((offset * f64::from(device_rate)) as usize).min(out_frames);
-        track.rotate_left(skip_frames * 2);
-        let remaining = (out_frames - skip_frames) as f64 / f64::from(device_rate);
-        self.radio_track = track;
-        self.radio_until = Some(
-            std::time::Instant::now() + std::time::Duration::from_secs_f64(remaining.max(1.0)),
-        );
+        let Some(loaded) = radio_cache::load_track(path, offset, device_rate) else {
+            return false;
+        };
+        self.radio_track = loaded.stereo;
+        self.radio_until = Some(std::time::Instant::now() + loaded.remaining);
         if !self.muted
             && let Some(player) = &self.player
         {
             let volume = self.volume;
             player.set_stereo(self.radio_track.iter().map(|&s| s * volume).collect());
         }
+        true
+    }
+
+    fn refresh_radio_audio(&self) -> bool {
+        if self.radio.is_none() || self.radio_track.is_empty() {
+            return false;
+        }
+        let Some(player) = &self.player else {
+            return true;
+        };
+        if self.muted {
+            player.set_samples(Vec::new());
+        } else {
+            let volume = self.volume;
+            player.set_stereo(self.radio_track.iter().map(|&s| s * volume).collect());
+        }
+        true
     }
 
     /// GPU-render the current room if it has a real-time GPU path (the deep
@@ -883,25 +891,41 @@ impl App {
         }
     }
 
-    /// Re-parse the Studio text, keeping the last good curve alive on errors,
-    /// and give the new expression a voice when it parses.
     fn studio_reparse(&mut self) {
-        match numinous_core::parse(&self.studio_text) {
-            Ok(expr) => {
-                if let Some(player) = &self.player {
-                    let spec = numinous_core::to_melody(
-                        &expr,
-                        -std::f64::consts::TAU,
-                        std::f64::consts::TAU,
-                        32,
-                        1.0,
-                    );
-                    player.set_samples(spec.render(player.sample_rate()));
-                }
-                self.studio_expr = Some(expr);
-                self.studio_error = None;
+        let spec = self.studio_panel.reparse();
+        self.set_studio_sound(spec);
+    }
+
+    fn set_studio_sound(&self, spec: Option<numinous_core::SoundSpec>) {
+        let Some(player) = &self.player else {
+            return;
+        };
+        if self.muted {
+            player.set_samples(Vec::new());
+            return;
+        }
+        if let Some(spec) = spec {
+            let volume = self.volume;
+            player.set_samples(
+                spec.render(player.sample_rate())
+                    .into_iter()
+                    .map(|sample| sample * volume)
+                    .collect(),
+            );
+        }
+    }
+
+    fn exit_studio(&mut self) {
+        self.studio = false;
+        if self.radio.is_some() && !self.radio_track.is_empty() {
+            if !self.muted
+                && let Some(player) = &self.player
+            {
+                let volume = self.volume;
+                player.set_stereo(self.radio_track.iter().map(|&s| s * volume).collect());
             }
-            Err(message) => self.studio_error = Some(message),
+        } else {
+            self.update_audio();
         }
     }
 
@@ -921,9 +945,8 @@ impl App {
             .into_iter()
             .map(|s| s * 0.5)
             .collect();
-        // The bed: a tuned radio station (Engine B) when one is cached,
-        // otherwise the chiptune (Engine A). The room's voice rides on top,
-        // ducked: one bus, as docs/MUSIC.md prescribes.
+        // Engine A is the room bed while radio is off. Radio v1 owns the
+        // player buffer while it is on so long records do not restart.
         if self.tune.is_empty() {
             // The room's own phrase when it has one; the seeded chip otherwise.
             let pattern = match self.rooms[self.current].motif() {
@@ -934,8 +957,8 @@ impl App {
         }
         if self.radio.is_some() && !self.radio_track.is_empty() {
             // The station is the sound, and radio_play already handed the
-            // record to the player. Touching the buffer here would restart
-            // it on every room switch: the jitter. Hands off.
+            // record to the player. Full one-bus room-over-radio mixing needs
+            // a non-restarting overlay path in the player.
             return;
         }
         let mut mix = self.tune.clone();
@@ -968,11 +991,9 @@ impl App {
     }
 
     fn switch(&mut self, delta: isize) {
-        let n = self.rooms.len() as isize;
-        self.current = (((self.current as isize + delta) % n + n) % n) as usize;
-        self.t = 0.0;
-        self.room_card = 240;
-        self.pokes.clear();
+        self.current = room_input::wrapped_room_index(self.current, delta, self.rooms.len());
+        self.rooms = room_input::redeal_rooms(&mut self.variation, &mut self.current);
+        room_input::reset_room_view(&mut self.t, &mut self.room_card, &mut self.pokes);
         self.tune.clear();
         if let Some(window) = &self.window {
             window.set_title(&self.title());
@@ -981,60 +1002,29 @@ impl App {
         self.update_audio();
     }
 
-    /// Draw the Studio: the typed expression, its live curve (the parameter `a`
-    /// swept by the clock), and any parse error, gently.
     fn draw_studio(&self, raster: &mut Raster, width: usize, height: usize) {
-        use std::f64::consts::TAU;
-        let scale = (width as i32 / 500).clamp(1, 3);
-        numinous_core::draw_text(raster, "THE STUDIO", 10, 10, scale, '-');
-        let typed = format!("Y = {}_", self.studio_text.to_uppercase());
-        numinous_core::draw_text(raster, &typed, 10, 10 + 12 * scale, scale + 1, '#');
-        if let Some(error) = &self.studio_error {
-            numinous_core::draw_text(
-                raster,
-                &error.to_uppercase(),
-                10,
-                10 + 34 * scale,
-                scale,
-                '-',
-            );
-        }
+        self.studio_panel.draw(raster, width, height, self.t);
+    }
 
-        let Some(expr) = &self.studio_expr else {
-            return;
-        };
-        // The knob turns itself: a sweeps 0..tau with the clock.
-        let a = self.t * TAU;
-        let (xmin, xmax) = (-TAU, TAU);
-        let samples: Vec<(usize, f64)> = (0..width)
-            .map(|i| {
-                let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
-                (i, numinous_core::eval(expr, x, a))
-            })
-            .filter(|(_, y)| y.is_finite())
-            .collect();
-        if samples.is_empty() {
-            return;
-        }
-        let ymin = samples.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
-        let ymax = samples
-            .iter()
-            .map(|p| p.1)
-            .fold(f64::NEG_INFINITY, f64::max);
-        let yspan = (ymax - ymin).max(1e-9);
-        let top = (60 * scale) as f64;
-        let plot_h = height as f64 - top - 12.0;
-        if plot_h < 8.0 {
-            return;
-        }
-        let mut previous: Option<(i32, i32)> = None;
-        for &(i, y) in &samples {
-            let sx = i as i32;
-            let sy = (top + (1.0 - (y - ymin) / yspan) * plot_h) as i32;
-            if let Some((px, py)) = previous {
-                raster.line(px, py, sx, sy, '#');
-            }
-            previous = Some((sx, sy));
+    fn modal_frame(&self, width: usize, height: usize) -> Option<Raster> {
+        if let Some(play) = &self.arcade {
+            Some(game_draw::draw_arcade(play, width, height))
+        } else if let Some(run) = &self.gauntlet {
+            Some(game_draw::draw_gauntlet(
+                &self.rooms,
+                run,
+                self.frame,
+                width,
+                height,
+            ))
+        } else if let Some(play) = &self.munch {
+            Some(game_draw::draw_munch(play, self.frame, width, height))
+        } else if let Some(play) = &self.nim {
+            Some(game_draw::draw_nim(play, width, height))
+        } else {
+            self.quiz
+                .as_ref()
+                .map(|quiz| game_draw::draw_quiz(&self.rooms, quiz, width, height))
         }
     }
 
@@ -1051,51 +1041,16 @@ impl App {
         // Render the frame fully before borrowing the window surface. Fractal
         // rooms take the GPU path when one exists (full-bleed, no HUD); all else
         // draws on the CPU raster.
+        if let Some(raster) = self.modal_frame(width, height) {
+            self.present_raster(raster, width, height);
+            return;
+        }
         if !self.studio
             && let Some(mut rgba) = self.gpu_frame(width, height)
         {
+            self.draw_banner_on_rgba(&mut rgba, width, height);
             self.era.apply(&mut rgba, width, height);
             self.blit(&rgba, width, height, width, height);
-            return;
-        }
-        if let Some(play) = &self.arcade {
-            let raster = self.draw_arcade(play, width, height);
-            let (rw, rh) = (raster.width(), raster.height());
-            let mut rgba = raster.to_rgba();
-            self.era.apply(&mut rgba, rw, rh);
-            self.blit(&rgba, rw, rh, width, height);
-            return;
-        }
-        if let Some(run) = &self.gauntlet {
-            let raster = self.draw_gauntlet(run, width, height);
-            let (rw, rh) = (raster.width(), raster.height());
-            let mut rgba = raster.to_rgba();
-            self.era.apply(&mut rgba, rw, rh);
-            self.blit(&rgba, rw, rh, width, height);
-            return;
-        }
-        if let Some(play) = &self.munch {
-            let raster = self.draw_munch(play, width, height);
-            let (rw, rh) = (raster.width(), raster.height());
-            let mut rgba = raster.to_rgba();
-            self.era.apply(&mut rgba, rw, rh);
-            self.blit(&rgba, rw, rh, width, height);
-            return;
-        }
-        if let Some(play) = &self.nim {
-            let raster = self.draw_nim(play, width, height);
-            let (rw, rh) = (raster.width(), raster.height());
-            let mut rgba = raster.to_rgba();
-            self.era.apply(&mut rgba, rw, rh);
-            self.blit(&rgba, rw, rh, width, height);
-            return;
-        }
-        if let Some(quiz) = &self.quiz {
-            let raster = self.draw_quiz(quiz, width, height);
-            let (rw, rh) = (raster.width(), raster.height());
-            let mut rgba = raster.to_rgba();
-            self.era.apply(&mut rgba, rw, rh);
-            self.blit(&rgba, rw, rh, width, height);
             return;
         }
         let room = &self.rooms[self.current];
@@ -1109,769 +1064,69 @@ impl App {
             raster
         };
 
-        // HUD: the room title, and the reveal when toggled with the 'i' key. The
-        // Show stays clean, except each room announces itself as it arrives
-        // and leaves its one line as it goes: a let's-play that narrates.
-        let scale = (width as i32 / 400).clamp(1, 4);
-        if !self.the_show && !self.studio && !self.show_help && !self.show_journey {
-            // Legibility bands: HUD words never fight the room's ink.
-            raster.dim_rows(0, 14 + 7 * (scale + 1), 45);
-            let card_lines = if self.room_card > 0 && !self.show_info {
-                2
-            } else {
-                0
-            };
-            raster.dim_rows(
-                height as i32 - (14 + card_lines * 9) * scale,
-                height as i32,
-                45,
-            );
-        }
-        if self.the_show {
-            if self.t < 0.12 || self.t > 0.9 {
-                raster.dim_rows(height as i32 - 34 * scale, height as i32, 45);
-            }
-            if self.t < 0.12 {
-                numinous_core::draw_text(
-                    &mut raster,
-                    &room.meta().title.to_uppercase(),
-                    width as i32 / 10,
-                    height as i32 - 24 * scale,
-                    scale + 1,
-                    '#',
-                );
-            } else if self.t > 0.9 {
-                let columns = ((width as i32 / (6 * scale)) - 8).max(12) as usize;
-                for (i, line) in numinous_core::wrap_text(&room.reveal().to_uppercase(), columns)
-                    .iter()
-                    .take(3)
-                    .enumerate()
-                {
-                    numinous_core::draw_text(
-                        &mut raster,
-                        line,
-                        width as i32 / 10,
-                        height as i32 - (30 - i as i32 * 9) * scale,
-                        scale,
-                        '#',
-                    );
-                }
-            }
-        }
-        if !self.the_show && !self.studio {
-            numinous_core::draw_text(
-                &mut raster,
-                &room.meta().title.to_uppercase(),
-                10,
-                10,
-                scale + 1,
-                '#',
-            );
-            // The arrival card: two quiet lines above the hint bar, briefly,
-            // then the math has the whole screen. E brings the full story.
-            if self.room_card > 0
-                && !self.show_info
-                && !self.show_help
-                && !self.show_journey
-                && self.banner.is_none()
-            {
-                let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
-                if let Some(verb) = room.verb() {
-                    numinous_core::draw_text(
-                        &mut raster,
-                        verb,
-                        10,
-                        height as i32 - 39 * scale,
-                        scale,
-                        '#',
-                    );
-                }
-                for (i, line) in
-                    numinous_core::wrap_text(&room.meta().blurb.to_uppercase(), columns)
-                        .iter()
-                        .take(2)
-                        .enumerate()
-                {
-                    numinous_core::draw_text(
-                        &mut raster,
-                        line,
-                        10,
-                        height as i32 - (12 + (2 - i as i32) * 9) * scale,
-                        scale,
-                        '#',
-                    );
-                }
-            }
-            // The level, top right: the game in one glance.
-            let level = format!("LV {}", self.journey.level());
-            let lx = width as i32 - (level.len() as i32 * 6 * scale) - 10;
-            numinous_core::draw_text(&mut raster, &level, lx, 10, scale, '#');
-        }
-        if self.show_info && !self.the_show && !self.studio {
-            let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
-            let line_height = 9 * scale;
-            for (i, line) in numinous_core::wrap_text(&room.reveal().to_uppercase(), columns)
-                .iter()
-                .enumerate()
-            {
-                numinous_core::draw_text(
-                    &mut raster,
-                    line,
-                    10,
-                    10 + (2 + i as i32) * line_height,
-                    scale,
-                    '#',
-                );
-            }
-        }
+        hud::draw_room_chrome(
+            &mut raster,
+            room.as_ref(),
+            &hud::RoomChrome {
+                t: self.t,
+                room_card: self.room_card,
+                show_info: self.show_info,
+                show_help: self.show_help,
+                show_journey: self.show_journey,
+                banner_active: self.banner.is_some(),
+                the_show: self.the_show,
+                studio: self.studio,
+                muted: self.muted,
+                level: self.journey.level(),
+            },
+            width,
+            height,
+        );
 
-        // The help overlay (launch state, 'h' to bring back), and a hint bar so
-        // nobody has to guess the controls.
         if self.show_help && !self.the_show {
-            // The menu owns the screen: dim the room hard so the text reads.
-            raster.dim(22);
-            let menu_scale = (width as i32 / 300).clamp(2, 4);
-            let lines = [
-                "PLAY (PRESS A LETTER)",
-                "G          THE QUIZ: NAME THE MATH",
-                "C          MUNCH: EAT WHAT FITS",
-                "N          NIM: BEAT THE ORDER",
-                "T          THE GAUNTLET: ONE RUN",
-                "V          THE ARCADE: EAT WHILE HUNTED",
-                "",
-                "WANDER",
-                "A / D      PREV / NEXT ROOM    1-9 JUMP",
-                "W / S      TIME SPEED   MOUSE  SCRUB",
-                "E          INSPECT    Q  ERA    R  RESTART",
-                "B          THE SHOW   TAB  THE STUDIO",
-                "J          JOURNEY    F  FULLSCREEN",
-                "Y          RADIO STATIONS    P  POSTCARD",
-                "M          SOUND   - / =  VOLUME   SPACE  PAUSE",
-                "",
-                "ESC        CLOSE MENU AND WANDER",
-            ];
-            let line_height = 11 * menu_scale;
-            let top = (height as i32 / 2) - (lines.len() as i32 * line_height) / 2;
-            for (i, line) in lines.iter().enumerate() {
-                numinous_core::draw_text(
-                    &mut raster,
-                    line,
-                    width as i32 / 8,
-                    top + i as i32 * line_height,
-                    menu_scale,
-                    '#',
-                );
-            }
-        } else if !self.the_show {
-            // The verb never leaves the screen: what your hand does here,
-            // then what the dial says, then the doors.
-            let verb = room.verb().unwrap_or("DRAG: SCRUB TIME");
-            let mut hint = match room.status(self.t) {
-                Some(readout) => format!("{verb}   {readout}   ESC MENU"),
-                None => format!("{verb}     ESC  PLAY + MENU   E INSPECT"),
-            };
-            if self.muted {
-                hint.push_str("   (MUTED)");
-            }
-            numinous_core::draw_text(
-                &mut raster,
-                &hint,
-                10,
-                height as i32 - 10 * scale,
-                scale,
-                '-',
-            );
+            overlays::draw_help_overlay(&mut raster, width, height);
         }
 
-        // The journey overlay: the constellation of what you have become.
         if self.show_journey && !self.the_show {
-            raster.dim(22);
-            let js = (width as i32 / 300).clamp(2, 4);
-            let board = numinous_core::Scoreboard::from_text(
-                &std::fs::read_to_string(scores_path()).unwrap_or_default(),
+            let board = numinous_core::load_scoreboard_file(&scores_path());
+            overlays::draw_journey_overlay(
+                &mut raster,
+                &self.journey,
+                &board,
+                self.rooms.len(),
+                width,
+                height,
             );
-            let mut lines = vec![
-                format!(
-                    "LV {}  [{}]",
-                    self.journey.level(),
-                    self.journey.level_bar(12)
-                ),
-                format!(
-                    "{} XP  {}",
-                    self.journey.sparks(),
-                    self.journey.rank().name().to_uppercase()
-                ),
-                format!(
-                    "{} OF {} ROOMS   {} WINS",
-                    self.journey.visited.len(),
-                    self.rooms.len(),
-                    self.journey.wins
-                ),
-            ];
-            if self.journey.streak > 1 {
-                lines.push(format!("DAILY STREAK {}", self.journey.streak));
-            }
-            let earned: Vec<&str> = numinous_core::trophies(&self.journey, &board)
-                .into_iter()
-                .filter(|t| t.earned)
-                .map(|t| t.name)
-                .collect();
-            lines.push(format!("TROPHIES {}", earned.len()));
-            for name in earned.iter().take(6) {
-                lines.push(format!("  {}", name.to_uppercase()));
-            }
-            let lit = numinous_core::resonances(&self.journey, &board)
-                .into_iter()
-                .filter(|r| r.active)
-                .count();
-            if lit > 0 {
-                lines.push(format!("RESONANCES {lit}"));
-            }
-            lines.push("J CLOSES".to_string());
-            let line_height = 11 * js;
-            let top = (height as i32 / 2) - (lines.len() as i32 * line_height) / 2;
-            for (i, line) in lines.iter().enumerate() {
-                numinous_core::draw_text(
-                    &mut raster,
-                    line,
-                    width as i32 / 8,
-                    top + i as i32 * line_height,
-                    js,
-                    '#',
-                );
-            }
         }
-        // The LEVEL UP banner rides over everything for a few seconds.
-        if let Some((lines, _)) = &self.banner {
-            let bs = (width as i32 / 300).clamp(2, 4);
-            let line_height = 12 * bs;
-            let top = height as i32 / 6;
-            for (i, line) in lines.iter().enumerate() {
-                numinous_core::draw_text(
-                    &mut raster,
-                    line,
-                    width as i32 / 8,
-                    top + i as i32 * line_height,
-                    bs,
-                    '#',
-                );
-            }
-        }
+        self.present_raster(raster, width, height);
+    }
 
-        let mut rgba = raster.to_rgba();
+    fn present_raster(&mut self, mut raster: Raster, width: usize, height: usize) {
+        self.draw_banner_on_raster(&mut raster, width, height);
         let (rw, rh) = (raster.width(), raster.height());
+        let mut rgba = raster.to_rgba();
         self.era.apply(&mut rgba, rw, rh);
         self.blit(&rgba, rw, rh, width, height);
     }
 
-    /// Draw the quiz: the mystery room fullscreen, the choices at the bottom,
-    /// and after an answer, the verdict and the reveal.
-    fn draw_quiz(&self, quiz: &QuizPlay, width: usize, height: usize) -> Raster {
-        let answer_id = quiz
-            .round
-            .choices
-            .iter()
-            .find(|c| c.letter == quiz.round.answer)
-            .map_or("", |c| c.id);
-        let mystery = self.rooms.iter().find(|r| r.meta().id == answer_id);
-        let mut raster = match mystery {
-            Some(room) => {
-                let mut raster = Raster::with_accent(width, height, room.meta().accent);
-                room.render(&mut raster, room.postcard_t().max(0.4));
-                raster
-            }
-            None => Raster::new(width, height),
-        };
-        let scale = (width as i32 / 400).clamp(1, 3);
-        let line_height = 10 * scale;
-        match &quiz.flash {
-            None => {
-                raster.dim_rows(0, 14 + 7 * (scale + 1), 40);
-                numinous_core::draw_text(
-                    &mut raster,
-                    "WHICH MATH MADE THIS?",
-                    10,
-                    10,
-                    scale + 1,
-                    '#',
-                );
-                let base = height as i32 - (quiz.round.choices.len() as i32 + 1) * line_height - 8;
-                raster.dim_rows(base - 6, height as i32, 40);
-                for (i, choice) in quiz.round.choices.iter().enumerate() {
-                    let line = format!("{}  {}", choice.letter, choice.title.to_uppercase());
-                    numinous_core::draw_text(
-                        &mut raster,
-                        &line,
-                        10,
-                        base + i as i32 * line_height,
-                        scale,
-                        '#',
-                    );
-                }
-            }
-            Some((correct, _)) => {
-                raster.dim(35);
-                let verdict = if *correct {
-                    "CORRECT".to_string()
-                } else {
-                    format!(
-                        "IT WAS {}: {}",
-                        quiz.round.answer,
-                        quiz.round.answer_title.to_uppercase()
-                    )
-                };
-                numinous_core::draw_text(&mut raster, &verdict, 10, 10, scale + 1, '#');
-                let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
-                let room_for =
-                    ((height as i32 - 3 * line_height - 20) / line_height - 3).max(2) as usize;
-                for (i, line) in
-                    numinous_core::wrap_text(&quiz.round.answer_reveal.to_uppercase(), columns)
-                        .iter()
-                        .take(room_for)
-                        .enumerate()
-                {
-                    numinous_core::draw_text(
-                        &mut raster,
-                        line,
-                        10,
-                        10 + (3 + i as i32) * line_height,
-                        scale,
-                        '#',
-                    );
-                }
-                numinous_core::draw_text(
-                    &mut raster,
-                    "ANY KEY  NEXT     ESC  LEAVE",
-                    10,
-                    height as i32 - line_height - 4,
-                    scale,
-                    '-',
-                );
-            }
+    fn draw_banner_on_raster(&self, raster: &mut Raster, width: usize, height: usize) {
+        if let Some(banner) = &self.banner {
+            overlays::draw_banner(raster, banner.lines(), width, height);
         }
-        raster
     }
 
-    /// Draw Munch: the 5x6 board as a grid, the cursor, your bites, the rule.
-    fn draw_munch(&self, play: &MunchPlay, width: usize, height: usize) -> Raster {
-        let mut raster = Raster::with_accent(width, height, [140, 230, 120]);
-        let scale = (width as i32 / 400).clamp(1, 3);
-        raster.dim_rows(0, 12 + 7 * scale, 40);
-        raster.dim_rows(height as i32 - 14 * scale, height as i32, 40);
-        numinous_core::draw_text(
-            &mut raster,
-            &format!("MUNCH: {}", play.board.rule.describe().to_uppercase()),
-            10,
-            10,
-            scale,
-            '#',
-        );
-        let top = 14 * scale + 10;
-        let cell_w = (width as i32 - 20) / 6;
-        let cell_h = (height as i32 - top - 14 * scale) / 5;
-        for (i, &value) in play.board.numbers.iter().enumerate() {
-            let (col, row) = (i as i32 % 6, i as i32 / 6);
-            let (x0, y0) = (10 + col * cell_w, top + row * cell_h);
-            let (x1, y1) = (x0 + cell_w - 3, y0 + cell_h - 3);
-            let bitten = play.bites.contains(&i);
-            let mark = if bitten { '#' } else { '-' };
-            raster.line(x0, y0, x1, y0, mark);
-            raster.line(x0, y1, x1, y1, mark);
-            raster.line(x0, y0, x0, y1, mark);
-            raster.line(x1, y0, x1, y1, mark);
-            if i == play.cursor && play.graded.is_none() {
-                // The cursor breathes: a two-frame pulse, cheap and alive.
-                let inset = if (self.frame / 20) % 2 == 0 { 1 } else { 2 };
-                raster.line(x0 + inset, y0 + inset, x1 - inset, y0 + inset, '#');
-                raster.line(x0 + inset, y1 - inset, x1 - inset, y1 - inset, '#');
-                raster.line(x0 + inset, y0 + inset, x0 + inset, y1 - inset, '#');
-                raster.line(x1 - inset, y0 + inset, x1 - inset, y1 - inset, '#');
-            }
-            let label = value.to_string();
-            let tx = x0 + cell_w / 2 - (label.len() as i32 * 3 * scale);
-            let ty = y0 + cell_h / 2 - 4 * scale;
-            numinous_core::draw_text(
-                &mut raster,
-                &label,
-                tx,
-                ty,
-                scale,
-                if bitten { '#' } else { '*' },
-            );
+    fn draw_banner_on_rgba(&self, rgba: &mut [u8], width: usize, height: usize) {
+        if self.banner.is_none() || rgba.len() != width.saturating_mul(height).saturating_mul(4) {
+            return;
         }
-        match &play.graded {
-            None => {
-                numinous_core::draw_text(
-                    &mut raster,
-                    "MOVE  WASD/ARROWS   EAT  SPACE   DONE  ENTER   ESC  LEAVE",
-                    10,
-                    height as i32 - 10 * scale,
-                    scale,
-                    '-',
-                );
-            }
-            Some(outcome) => {
-                raster.dim(30);
-                let clean = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
-                let mut lines = vec![format!(
-                    "{} +{}",
-                    if clean { "PERFECT." } else { "DONE." },
-                    outcome.score
-                )];
-                lines.push(format!(
-                    "{} EATEN  {} BAD  {} LEFT",
-                    outcome.hits, outcome.bad_bites, outcome.left_behind
-                ));
-                if !outcome.missed.is_empty() {
-                    let listed: Vec<String> = outcome.missed.iter().map(u64::to_string).collect();
-                    lines.push(format!("WALKED PAST: {}", listed.join(", ")));
-                    if outcome.bad_bites == 0 && outcome.missed.len() == 1 {
-                        lines.push("ONE AWAY. THE BOARD REMEMBERS.".to_string());
-                    }
-                }
-                lines.push("ANY KEY LEAVES".to_string());
-                let ls = (width as i32 / 300).clamp(2, 4);
-                let lh = 12 * ls;
-                let ttop = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
-                for (i, line) in lines.iter().enumerate() {
-                    numinous_core::draw_text(
-                        &mut raster,
-                        line,
-                        width as i32 / 8,
-                        ttop + i as i32 * lh,
-                        ls,
-                        '#',
-                    );
-                }
+        let mut overlay = Raster::with_accent(width, height, [255, 255, 255]);
+        self.draw_banner_on_raster(&mut overlay, width, height);
+        let overlay_rgba = overlay.to_rgba();
+        for (dst, src) in rgba.chunks_exact_mut(4).zip(overlay_rgba.chunks_exact(4)) {
+            if src[0..3] != RASTER_BACKGROUND_RGB {
+                dst.copy_from_slice(src);
             }
         }
-        raster
-    }
-
-    /// Draw the live arcade: the board, the Muncher, the spirits, the beat.
-    fn draw_arcade(&self, play: &ArcadePlay, width: usize, height: usize) -> Raster {
-        use numinous_core::munch_arcade::Mind;
-        use numinous_core::munchers::{COLS, ROWS};
-        let mut raster = Raster::with_accent(width, height, [255, 205, 100]);
-        let scale = (width as i32 / 400).clamp(1, 3);
-        raster.dim_rows(0, 12 + 7 * scale, 40);
-        raster.dim_rows(height as i32 - 14 * scale, height as i32, 40);
-        let run = &play.run;
-        numinous_core::draw_text(
-            &mut raster,
-            &format!(
-                "ARCADE  LV {}  {}  {}",
-                run.level,
-                "O ".repeat(run.lives as usize),
-                run.board.rule.describe().to_uppercase()
-            ),
-            10,
-            10,
-            scale,
-            '#',
-        );
-        let top = 14 * scale + 10;
-        let cell_w = (width as i32 - 20) / COLS as i32;
-        let cell_h = (height as i32 - top - 14 * scale) / ROWS as i32;
-        for cell in 0..ROWS * COLS {
-            let (col, row) = (cell as i32 % COLS as i32, cell as i32 / COLS as i32);
-            let (x0, y0) = (10 + col * cell_w, top + row * cell_h);
-            let (x1, y1) = (x0 + cell_w - 3, y0 + cell_h - 3);
-            raster.line(x0, y0, x1, y0, '-');
-            raster.line(x0, y1, x1, y1, '-');
-            raster.line(x0, y0, x0, y1, '-');
-            raster.line(x1, y0, x1, y1, '-');
-            let center_x = x0 + cell_w / 2;
-            let center_y = y0 + cell_h / 2;
-            if cell == run.muncher {
-                // The Muncher: a bright ring with a bite taken out.
-                let r = (cell_h / 3).max(4);
-                for i in 0..40 {
-                    let a = std::f64::consts::TAU * f64::from(i) / 40.0;
-                    if !(0.9..=5.4).contains(&a) {
-                        continue; // the bite
-                    }
-                    let px = center_x + (f64::from(r) * a.cos()) as i32;
-                    let py = center_y + (f64::from(r) * a.sin()) as i32;
-                    raster.plot(px, py, '#');
-                    raster.plot(px + 1, py, '#');
-                }
-            } else if let Some(v) = run.vexations.iter().find(|v| v.cell == cell) {
-                let mark = match v.mind {
-                    Mind::Tracker => "T",
-                    Mind::Drifter => "D",
-                    Mind::Editor => "E",
-                };
-                numinous_core::draw_text(
-                    &mut raster,
-                    mark,
-                    center_x - 3 * scale,
-                    center_y - 4 * scale,
-                    scale + 1,
-                    '#',
-                );
-            } else if !run.eaten[cell] {
-                let label = run.board.numbers[cell].to_string();
-                numinous_core::draw_text(
-                    &mut raster,
-                    &label,
-                    center_x - (label.len() as i32 * 3 * scale),
-                    center_y - 4 * scale,
-                    scale,
-                    '*',
-                );
-            }
-        }
-        if let Some((caught, _)) = play.flash {
-            raster.dim(70);
-            numinous_core::draw_text(
-                &mut raster,
-                if caught {
-                    "CAUGHT"
-                } else {
-                    "CLEAR. THEY MULTIPLY."
-                },
-                width as i32 / 6,
-                height as i32 / 2 - 6 * scale,
-                (scale + 1).min(4),
-                '#',
-            );
-        }
-        if play.over {
-            raster.dim(30);
-            let lines = [
-                "THE SPIRITS SEND REGARDS".to_string(),
-                format!("LEVEL {}  SCORE {}", run.level, run.score),
-                "ANY KEY LEAVES".to_string(),
-            ];
-            let ls = (width as i32 / 300).clamp(2, 4);
-            let top = height as i32 / 2 - 18 * ls;
-            for (i, line) in lines.iter().enumerate() {
-                numinous_core::draw_text(
-                    &mut raster,
-                    line,
-                    width as i32 / 8,
-                    top + i as i32 * 12 * ls,
-                    ls,
-                    '#',
-                );
-            }
-        }
-        numinous_core::draw_text(
-            &mut raster,
-            "WASD  RUN   SPACE  EAT   DON'T BE CAUGHT   ESC  LEAVE",
-            10,
-            height as i32 - 10 * scale,
-            scale,
-            '-',
-        );
-        raster
-    }
-
-    /// Draw Nim: heaps as stones, your aim highlighted, the Order's last word.
-    fn draw_nim(&self, play: &NimPlay, width: usize, height: usize) -> Raster {
-        let mut raster = Raster::with_accent(width, height, [230, 200, 120]);
-        let scale = (width as i32 / 400).clamp(1, 3);
-        raster.dim_rows(0, 12 + 7 * scale, 40);
-        raster.dim_rows(height as i32 - 26 * scale, height as i32, 40);
-        numinous_core::draw_text(&mut raster, "NIM: LAST STONE WINS", 10, 10, scale, '#');
-        let top = 20 * scale + 10;
-        let row_h = (height as i32 - top - 30 * scale) / 3;
-        let stone = (row_h / 2).clamp(4, 10 * scale);
-        for (heap, &count) in play.heaps.iter().enumerate() {
-            let y = top + heap as i32 * row_h + row_h / 2;
-            let selected = heap == play.selected && play.over.is_none();
-            numinous_core::draw_text(
-                &mut raster,
-                &format!("{}{}", if selected { ">" } else { " " }, heap + 1),
-                10,
-                y - 4 * scale,
-                scale,
-                if selected { '#' } else { '-' },
-            );
-            for i in 0..count {
-                let x0 = 40 + i as i32 * (stone + 6);
-                // Stones you are aiming to take glow; the rest sit quiet.
-                let aimed = selected && i >= count.saturating_sub(play.take);
-                let mark = if aimed { '#' } else { '*' };
-                for dy in 0..stone {
-                    raster.line(x0, y + dy, x0 + stone, y + dy, mark);
-                }
-            }
-        }
-        let hint = if play.over.is_none() {
-            format!(
-                "AIM  W/S HEAP   A/D TAKE {}   ENTER TAKE   ESC LEAVE",
-                play.take
-            )
-        } else {
-            "ANY KEY LEAVES".to_string()
-        };
-        numinous_core::draw_text(
-            &mut raster,
-            &play.message,
-            10,
-            height as i32 - 22 * scale,
-            scale,
-            '#',
-        );
-        numinous_core::draw_text(
-            &mut raster,
-            &hint,
-            10,
-            height as i32 - 10 * scale,
-            scale,
-            '-',
-        );
-        if play.over == Some(true) {
-            raster.dim(25);
-            let ls = (width as i32 / 340).clamp(1, 3);
-            let columns = ((width as i32 / (6 * ls)) - 6).max(12) as usize;
-            let mut lines = vec!["YOU TOOK THE LAST STONE. THE SECRET IS YOURS:".to_string()];
-            lines.extend(numinous_core::wrap_text(
-                &numinous_core::nim_secret().to_uppercase(),
-                columns,
-            ));
-            let lh = 10 * ls;
-            let ttop = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
-            for (i, line) in lines.iter().enumerate() {
-                numinous_core::draw_text(&mut raster, line, 20, ttop + i as i32 * lh, ls, '#');
-            }
-        }
-        raster
-    }
-
-    /// Draw the Gauntlet: whichever stage is live, with the run's narration.
-    fn draw_gauntlet(&self, run: &GauntletPlay, width: usize, height: usize) -> Raster {
-        let scale = (width as i32 / 400).clamp(1, 3);
-        let mut raster = match run.stage {
-            0 => {
-                let mut raster = self.draw_munch(&run.munch, width, height);
-                raster.dim(100); // no-op, keeps the arm shape uniform
-                raster
-            }
-            1 => self.draw_quiz(&run.quiz, width, height),
-            2 => {
-                let mut raster = Raster::with_accent(width, height, [150, 210, 255]);
-                numinous_core::draw_text(
-                    &mut raster,
-                    "THE SKY: WHICH CHANNEL IS A MIND?",
-                    10,
-                    10,
-                    scale,
-                    '#',
-                );
-                let lh = 14 * scale;
-                for (i, channel) in run.scan.channels.iter().enumerate() {
-                    let line = format!(
-                        "{}  {:>10}  {}",
-                        channel.letter, channel.frequency, channel.trace
-                    );
-                    numinous_core::draw_text(
-                        &mut raster,
-                        &line,
-                        10,
-                        30 * scale + i as i32 * lh,
-                        scale,
-                        '*',
-                    );
-                }
-                numinous_core::draw_text(
-                    &mut raster,
-                    "PRESS THE LETTER",
-                    10,
-                    height as i32 - 22 * scale,
-                    scale,
-                    '-',
-                );
-                raster
-            }
-            3 => {
-                let mut raster = Raster::with_accent(width, height, [255, 140, 120]);
-                numinous_core::draw_text(
-                    &mut raster,
-                    "THE BOMB: FOUR DIGITS, FIVE WIRES",
-                    10,
-                    10,
-                    scale,
-                    '#',
-                );
-                numinous_core::draw_text(
-                    &mut raster,
-                    &format!("CLUE: {}", numinous_core::hint(&run.secret).to_uppercase()),
-                    10,
-                    26 * scale,
-                    scale,
-                    '*',
-                );
-                let lh = 12 * scale;
-                for (i, line) in run.wire_lines.iter().enumerate() {
-                    numinous_core::draw_text(
-                        &mut raster,
-                        line,
-                        10,
-                        44 * scale + i as i32 * lh,
-                        scale,
-                        '*',
-                    );
-                }
-                numinous_core::draw_text(
-                    &mut raster,
-                    &format!("> {}_", run.wire),
-                    10,
-                    44 * scale + run.wire_lines.len() as i32 * lh + lh,
-                    scale + 1,
-                    '#',
-                );
-                numinous_core::draw_text(
-                    &mut raster,
-                    "TYPE DIGITS   ENTER CUTS   BACKSPACE FIXES",
-                    10,
-                    height as i32 - 22 * scale,
-                    scale,
-                    '-',
-                );
-                raster
-            }
-            _ => {
-                let mut raster = Raster::with_accent(width, height, [230, 210, 120]);
-                let total = gauntlet_total(&run.scores, &run.cleared);
-                let clears = run.cleared.iter().filter(|&&c| c).count();
-                let names = ["MUNCH", "SHAPE", "SKY", "BOMB"];
-                let mut lines = vec![format!("RUN COMPLETE  {clears}/4 CLEAN")];
-                for ((name, score), &clean) in names.iter().zip(&run.scores).zip(&run.cleared) {
-                    lines.push(format!(
-                        "{name}  +{score}{}",
-                        if clean { "  CLEAN" } else { "" }
-                    ));
-                }
-                lines.push(format!("TOTAL {total}  (GAUNTLET SEED:{})", run.seed));
-                lines.push("ANY KEY LEAVES".to_string());
-                let ls = (width as i32 / 300).clamp(2, 4);
-                let lh = 12 * ls;
-                let top = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
-                for (i, line) in lines.iter().enumerate() {
-                    numinous_core::draw_text(
-                        &mut raster,
-                        line,
-                        width as i32 / 8,
-                        top + i as i32 * lh,
-                        ls,
-                        '#',
-                    );
-                }
-                raster
-            }
-        };
-        // The run's narration owns the top-right corner with its own band,
-        // clear of every stage's grids, choices, and clues.
-        if run.stage < 4 {
-            let x =
-                (width as i32 / 2).max(width as i32 - run.message.len() as i32 * 6 * scale - 14);
-            raster.dim_rows(0, 12 + 7 * scale, 40);
-            numinous_core::draw_text(&mut raster, &run.message, x, 10, scale, '#');
-        }
-        raster
     }
 
     /// Copy an RGBA frame (`rw` x `rh`) onto the window surface (`width` x `height`).
@@ -1925,18 +1180,18 @@ impl ApplicationHandler for App {
         };
         self.window = Some(window);
         self.surface = Some(surface);
+        // Apply initial fullscreen if requested (borderless for broad compat; exclusive available via F cycle).
+        if self.start_fullscreen {
+            if let Some(w) = &self.window {
+                w.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+            }
+        }
         self.player = match numinous_audio::LoopPlayer::new() {
             Ok(player) => Some(player),
             Err(error) => {
                 // Silence must never be a mystery: say it on screen and in
                 // the crash log, then keep running visual-only.
-                self.banner = Some((
-                    vec![
-                        "SOUND DEVICE UNAVAILABLE".to_string(),
-                        error.clone().to_uppercase(),
-                    ],
-                    600,
-                ));
+                self.banner = Some(feedback::sound_device_unavailable(&error));
                 let home = std::env::var("HOME")
                     .or_else(|_| std::env::var("USERPROFILE"))
                     .unwrap_or_else(|_| ".".to_string());
@@ -1970,7 +1225,11 @@ impl ApplicationHandler for App {
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         match event {
             WindowEvent::CloseRequested => {
-                let _ = std::fs::write(&self.journey_file, self.journey.to_text());
+                let _ = numinous_core::persist_journey_delta(
+                    &self.journey_file,
+                    &self.journey_saved,
+                    &self.journey,
+                );
                 event_loop.exit();
             }
             WindowEvent::RedrawRequested => self.draw(),
@@ -1983,8 +1242,11 @@ impl ApplicationHandler for App {
                     },
                 ..
             } => {
+                self.clear_pointer_state();
+                if self.handle_playtest_shortcut(&logical_key) {
+                    return;
+                }
                 if let Some(play) = &mut self.arcade {
-                    use numinous_core::munch_arcade::Action;
                     if play.over {
                         self.arcade = None;
                         self.update_audio();
@@ -1996,65 +1258,18 @@ impl ApplicationHandler for App {
                                 self.arcade = None;
                                 self.update_audio();
                             }
-                            Key::Named(NamedKey::Space) => self.arcade_act(Action::Eat),
-                            Key::Named(NamedKey::ArrowUp) => self.arcade_act(Action::Up),
-                            Key::Named(NamedKey::ArrowDown) => self.arcade_act(Action::Down),
-                            Key::Named(NamedKey::ArrowLeft) => self.arcade_act(Action::Left),
-                            Key::Named(NamedKey::ArrowRight) => self.arcade_act(Action::Right),
-                            Key::Character(c) => match c.as_str() {
-                                "w" => self.arcade_act(Action::Up),
-                                "s" => self.arcade_act(Action::Down),
-                                "a" => self.arcade_act(Action::Left),
-                                "d" => self.arcade_act(Action::Right),
-                                "e" => self.arcade_act(Action::Eat),
-                                _ => {}
-                            },
-                            _ => {}
+                            _ => {
+                                if let Some(action) = controls::arcade_action_for_key(&logical_key)
+                                {
+                                    self.arcade_act(action);
+                                }
+                            }
                         }
                     }
                 } else if self.gauntlet.is_some() {
                     self.gauntlet_key(&logical_key);
-                } else if let Some(play) = &mut self.munch {
-                    if play.graded.is_some() {
-                        self.munch = None;
-                        self.update_audio();
-                    } else {
-                        match logical_key {
-                            Key::Named(NamedKey::Escape) => {
-                                self.munch = None;
-                                self.update_audio();
-                            }
-                            Key::Named(NamedKey::Enter) => self.munch_grade(),
-                            Key::Named(NamedKey::Space) => {
-                                let cell = play.cursor;
-                                let _ = play.bites.remove(&cell) || play.bites.insert(cell);
-                            }
-                            Key::Named(NamedKey::ArrowRight) => {
-                                play.cursor = (play.cursor + 1) % 30;
-                            }
-                            Key::Named(NamedKey::ArrowLeft) => {
-                                play.cursor = (play.cursor + 29) % 30;
-                            }
-                            Key::Named(NamedKey::ArrowDown) => {
-                                play.cursor = (play.cursor + 6) % 30;
-                            }
-                            Key::Named(NamedKey::ArrowUp) => {
-                                play.cursor = (play.cursor + 24) % 30;
-                            }
-                            Key::Character(c) => match c.as_str() {
-                                "d" => play.cursor = (play.cursor + 1) % 30,
-                                "a" => play.cursor = (play.cursor + 29) % 30,
-                                "s" => play.cursor = (play.cursor + 6) % 30,
-                                "w" => play.cursor = (play.cursor + 24) % 30,
-                                "e" => {
-                                    let cell = play.cursor;
-                                    let _ = play.bites.remove(&cell) || play.bites.insert(cell);
-                                }
-                                _ => {}
-                            },
-                            _ => {}
-                        }
-                    }
+                } else if self.munch.is_some() {
+                    self.munch_key(&logical_key);
                 } else if let Some(play) = &mut self.nim {
                     if play.over.is_some() {
                         self.nim = None;
@@ -2066,59 +1281,9 @@ impl ApplicationHandler for App {
                                 self.update_audio();
                             }
                             Key::Named(NamedKey::Enter) => self.nim_move(),
-                            Key::Named(NamedKey::ArrowUp) => {
-                                let n = play.heaps.len();
-                                for step in 1..=n {
-                                    let heap = (play.selected + n - step % n) % n;
-                                    if play.heaps[heap] > 0 {
-                                        play.selected = heap;
-                                        break;
-                                    }
-                                }
-                                play.take = play.take.min(play.heaps[play.selected].max(1));
+                            _ => {
+                                let _ = controls::apply_nim_control(play, &logical_key);
                             }
-                            Key::Named(NamedKey::ArrowDown) => {
-                                let n = play.heaps.len();
-                                for step in 1..=n {
-                                    let heap = (play.selected + step) % n;
-                                    if play.heaps[heap] > 0 {
-                                        play.selected = heap;
-                                        break;
-                                    }
-                                }
-                                play.take = play.take.min(play.heaps[play.selected].max(1));
-                            }
-                            Key::Character(c) => match c.as_str() {
-                                "w" => {
-                                    let n = play.heaps.len();
-                                    for step in 1..=n {
-                                        let heap = (play.selected + n - step % n) % n;
-                                        if play.heaps[heap] > 0 {
-                                            play.selected = heap;
-                                            break;
-                                        }
-                                    }
-                                    play.take = play.take.min(play.heaps[play.selected].max(1));
-                                }
-                                "s" => {
-                                    let n = play.heaps.len();
-                                    for step in 1..=n {
-                                        let heap = (play.selected + step) % n;
-                                        if play.heaps[heap] > 0 {
-                                            play.selected = heap;
-                                            break;
-                                        }
-                                    }
-                                    play.take = play.take.min(play.heaps[play.selected].max(1));
-                                }
-                                "d" => {
-                                    play.take =
-                                        (play.take + 1).min(play.heaps[play.selected].max(1));
-                                }
-                                "a" => play.take = play.take.saturating_sub(1).max(1),
-                                _ => {}
-                            },
-                            _ => {}
                         }
                     }
                 } else if let Some(quiz) = &mut self.quiz {
@@ -2132,9 +1297,7 @@ impl ApplicationHandler for App {
                         _ if quiz.flash.is_some() => self.quiz_next(),
                         Key::Character(c) if c.len() == 1 => {
                             let letter = c.chars().next().unwrap_or(' ').to_ascii_uppercase();
-                            if quiz.round.choices.iter().any(|ch| ch.letter == letter) {
-                                self.quiz_answer(letter);
-                            }
+                            self.quiz_answer(letter);
                         }
                         _ => {}
                     }
@@ -2142,19 +1305,18 @@ impl ApplicationHandler for App {
                     // Studio mode: the keyboard is a math keyboard.
                     match logical_key {
                         Key::Named(NamedKey::Escape) | Key::Named(NamedKey::Tab) => {
-                            self.studio = false;
-                            self.update_audio();
+                            self.exit_studio();
                         }
                         Key::Named(NamedKey::Backspace) => {
-                            self.studio_text.pop();
-                            self.studio_reparse();
+                            let spec = self.studio_panel.backspace();
+                            self.set_studio_sound(spec);
                         }
                         Key::Named(NamedKey::Space) => {
-                            self.studio_text.push(' ');
+                            self.studio_panel.push_space();
                         }
                         Key::Character(s) => {
-                            self.studio_text.push_str(&s);
-                            self.studio_reparse();
+                            let spec = self.studio_panel.push_text(&s);
+                            self.set_studio_sound(spec);
                         }
                         _ => {}
                     }
@@ -2163,11 +1325,18 @@ impl ApplicationHandler for App {
                         // Esc is the menu, like every game since Doom. Quit from
                         // the window's close button.
                         Key::Named(NamedKey::Escape) => {
-                            self.show_help = !self.show_help;
+                            if self.the_show {
+                                self.the_show = false;
+                                self.show_help = false;
+                                if let Some(window) = &self.window {
+                                    window.set_title(&self.title());
+                                }
+                            } else {
+                                self.show_help = !self.show_help;
+                            }
                         }
                         Key::Named(NamedKey::Tab) => {
-                            self.studio = true;
-                            self.studio_reparse();
+                            self.enter_studio();
                         }
                         // A/D strafe between rooms; arrows still work.
                         Key::Named(NamedKey::ArrowRight) => self.switch(1),
@@ -2199,35 +1368,55 @@ impl ApplicationHandler for App {
                                 window.set_title(&self.title());
                             }
                         }
-                        // R reloads the sweep.
+                        // R reloads the sweep and re-deals variation seed for replayable rooms.
                         Key::Character(c) if c.as_str() == "r" => {
-                            self.t = 0.0;
-                            self.pokes.clear();
+                            self.rooms =
+                                room_input::redeal_rooms(&mut self.variation, &mut self.current);
+                            room_input::reset_room_view(
+                                &mut self.t,
+                                &mut self.room_card,
+                                &mut self.pokes,
+                            );
                             self.update_audio();
                         }
-                        // F goes fullscreen.
+                        // F cycles fullscreen modes for full screen view + options (windowed, borderless, exclusive).
+                        // Borderless for compat; exclusive uses primary monitor's first video mode for "true" fullscreen.
+                        // Shows current in banner (like volume) to surface the video setting.
                         Key::Character(c) if c.as_str() == "f" => {
                             if let Some(window) = &self.window {
-                                if window.fullscreen().is_some() {
-                                    window.set_fullscreen(None);
-                                } else {
-                                    window.set_fullscreen(Some(
-                                        winit::window::Fullscreen::Borderless(None),
-                                    ));
-                                }
+                                let next = match window.fullscreen() {
+                                    Some(winit::window::Fullscreen::Borderless(_)) => {
+                                        // Try exclusive on primary monitor first mode.
+                                        if let Some(monitor) = window.primary_monitor() {
+                                            monitor
+                                                .video_modes()
+                                                .next()
+                                                .map(winit::window::Fullscreen::Exclusive)
+                                        } else {
+                                            None
+                                        }
+                                    }
+                                    Some(winit::window::Fullscreen::Exclusive(_)) => None,
+                                    None => Some(winit::window::Fullscreen::Borderless(None)),
+                                };
+                                window.set_fullscreen(next.clone());
+                                let label = match &next {
+                                    Some(winit::window::Fullscreen::Borderless(_)) => {
+                                        "BORDERLESS".to_string()
+                                    }
+                                    Some(winit::window::Fullscreen::Exclusive(m)) => {
+                                        let size = m.size();
+                                        format!("EXCLUSIVE {}x{}", size.width, size.height)
+                                    }
+                                    None => "WINDOWED".to_string(),
+                                };
+                                self.banner = Some(feedback::fullscreen(&label));
                             }
                         }
                         // Volume steps: '-' softer, '=' louder.
                         Key::Character(c) if c.as_str() == "-" || c.as_str() == "=" => {
                             let step = if c.as_str() == "-" { -0.1 } else { 0.1 };
-                            self.volume = (self.volume + step).clamp(0.0, 1.0);
-                            self.banner =
-                                Some((vec![format!("VOLUME {:.0}%", self.volume * 100.0)], 90));
-                            if self.radio.is_some() {
-                                self.tune_in();
-                            } else {
-                                self.update_audio();
-                            }
+                            self.change_volume(step);
                         }
                         Key::Character(c) if c.as_str() == "m" => {
                             self.muted = !self.muted;
@@ -2267,6 +1456,12 @@ impl ApplicationHandler for App {
                         }
                         // J opens the journey: what the play has made of you.
                         Key::Character(c) if c.as_str() == "j" => {
+                            if self.the_show {
+                                self.the_show = false;
+                                if let Some(window) = &self.window {
+                                    window.set_title(&self.title());
+                                }
+                            }
                             self.show_journey = !self.show_journey;
                         }
                         // Y turns the radio dial: off, then station by station.
@@ -2293,6 +1488,10 @@ impl ApplicationHandler for App {
                         // B for the big show (lean back).
                         Key::Character(c) if c.as_str() == "b" => {
                             self.the_show = !self.the_show;
+                            if self.the_show {
+                                self.show_help = false;
+                                self.show_journey = false;
+                            }
                             self.paused = false;
                             if let Some(window) = &self.window {
                                 window.set_title(&self.title());
@@ -2310,10 +1509,20 @@ impl ApplicationHandler for App {
                             };
                             if slot < self.rooms.len() {
                                 self.current = slot;
-                                self.t = 0.0;
+                                self.rooms = room_input::redeal_rooms(
+                                    &mut self.variation,
+                                    &mut self.current,
+                                );
+                                room_input::reset_room_view(
+                                    &mut self.t,
+                                    &mut self.room_card,
+                                    &mut self.pokes,
+                                );
+                                self.tune.clear();
                                 if let Some(window) = &self.window {
                                     window.set_title(&self.title());
                                 }
+                                self.visit_current();
                                 self.update_audio();
                             }
                         }
@@ -2326,37 +1535,37 @@ impl ApplicationHandler for App {
                 button: MouseButton::Left,
                 ..
             } => {
-                if state == ElementState::Pressed && (self.munch.is_some() || self.quiz.is_some()) {
-                    self.click();
-                } else if state == ElementState::Pressed
-                    && !self.studio
-                    && !self.show_help
-                    && !self.show_journey
-                    && self.arcade.is_none()
-                    && self.nim.is_none()
-                    && self.gauntlet.is_none()
-                    && self.rooms[self.current].verb().is_some()
-                {
-                    // The poke: the room answers the hand, and keeps
-                    // answering while the hand drags.
-                    self.poking = true;
-                    if let Some(window) = &self.window {
-                        let size = window.inner_size();
-                        let (w, h) = (f64::from(size.width.max(1)), f64::from(size.height.max(1)));
-                        let (mx, my) = self.mouse;
-                        self.pokes.push((mx / w, my / h));
-                        if self.pokes.len() > 24 {
-                            self.pokes.remove(0);
+                if state == ElementState::Pressed {
+                    let action = mouse_input::left_press_action(self.left_press_context());
+                    self.set_pointer_state(mouse_input::pointer_state_after_left_press(action));
+                    match action {
+                        mouse_input::LeftPressAction::GameClick => self.click(),
+                        mouse_input::LeftPressAction::RoomPoke => {
+                            // The poke: the room answers the hand, and keeps
+                            // answering while the hand drags.
+                            self.poking = true;
+                            if let Some(window) = &self.window {
+                                let size = window.inner_size();
+                                if let Some(point) = mouse_input::normalized_window_point(
+                                    self.mouse,
+                                    (size.width, size.height),
+                                ) {
+                                    room_input::push_poke(&mut self.pokes, point);
+                                } else {
+                                    self.poking = false;
+                                }
+                            } else {
+                                self.poking = false;
+                            }
                         }
+                        mouse_input::LeftPressAction::PhaseDrag => {}
+                        mouse_input::LeftPressAction::Ignore => {}
                     }
                 } else {
-                    // Drag horizontally to scrub the room's phase directly.
-                    self.dragging = state == ElementState::Pressed;
-                }
-                if state != ElementState::Pressed {
-                    self.poking = false;
+                    self.set_pointer_state(mouse_input::pointer_state_after_left_release());
                 }
             }
+            WindowEvent::Focused(false) => self.clear_pointer_state(),
             WindowEvent::MouseWheel { delta, .. } if !self.studio => {
                 let lines = match delta {
                     winit::event::MouseScrollDelta::LineDelta(_, y) => f64::from(y),
@@ -2365,27 +1574,24 @@ impl ApplicationHandler for App {
                 self.t = (self.t + lines * 0.02).rem_euclid(1.0);
                 self.update_audio();
             }
-            WindowEvent::CursorMoved { position, .. } if !self.dragging => {
+            WindowEvent::CursorMoved { position, .. } => {
                 self.mouse = (position.x, position.y);
+                self.refresh_pointer_state();
                 if self.poking
                     && let Some(window) = &self.window
                 {
                     let size = window.inner_size();
-                    let (w, h) = (f64::from(size.width.max(1)), f64::from(size.height.max(1)));
-                    let point = (position.x / w, position.y / h);
-                    let far_enough = self.pokes.last().is_none_or(|&(lx, ly)| {
-                        ((point.0 - lx).powi(2) + (point.1 - ly).powi(2)).sqrt() > 0.02
-                    });
-                    if far_enough {
-                        self.pokes.push(point);
-                        if self.pokes.len() > 24 {
-                            self.pokes.remove(0);
-                        }
+                    if let Some(point) = mouse_input::normalized_window_point(
+                        (position.x, position.y),
+                        (size.width, size.height),
+                    ) {
+                        room_input::extend_poke_trail(&mut self.pokes, point);
+                    } else {
+                        self.poking = false;
                     }
-                }
-            }
-            WindowEvent::CursorMoved { position, .. } if self.dragging => {
-                if let Some(window) = &self.window {
+                } else if self.dragging
+                    && let Some(window) = &self.window
+                {
                     let w = f64::from(window.inner_size().width.max(1));
                     self.t = (position.x / w).clamp(0.0, 0.999);
                     self.update_audio();
@@ -2396,13 +1602,15 @@ impl ApplicationHandler for App {
     }
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+        self.refresh_pointer_state();
         if !self.paused && !self.dragging {
-            let base = if self.the_show { SHOW_T_STEP } else { T_STEP };
+            let show_active = self.show_mode_active();
+            let base = if show_active { SHOW_T_STEP } else { T_STEP };
             let step = base * self.time_scale;
             if self.t + step >= 1.0 {
                 self.t = 0.0;
                 // In The Show, a finished sweep drifts into the next room.
-                if self.the_show {
+                if show_active {
                     self.switch(1);
                 }
             } else {
@@ -2431,12 +1639,10 @@ impl ApplicationHandler for App {
                 && !self.radio_paths.is_empty()
             {
                 self.radio_index = (self.radio_index + 1) % self.radio_paths.len();
-                self.radio_play(0.0);
+                self.radio_play_or_advance(0.0);
                 self.update_audio();
             }
-            if self.room_card > 0 {
-                self.room_card -= 1;
-            }
+            room_input::tick_room_card(&mut self.room_card);
             // The arcade's heartbeat: the spirits step on the beat, faster
             // each level; the flash counts itself down.
             if let Some(play) = &mut self.arcade {
@@ -2451,28 +1657,14 @@ impl ApplicationHandler for App {
                     self.arcade_beat();
                 }
             }
-            if let Some((_, frames)) = &mut self.banner {
-                *frames -= 1;
-                if *frames == 0 {
-                    self.banner = None;
-                }
+            if self.banner.as_mut().is_some_and(|banner| !banner.tick()) {
+                self.banner = None;
             }
         }
         if let Some(window) = &self.window {
             window.request_redraw();
         }
     }
-}
-
-/// Combo math: cleared stages multiply what follows (the shared rule).
-fn gauntlet_total(scores: &[i64], cleared: &[bool]) -> i64 {
-    let mut total = 0;
-    let mut combo = 1;
-    for (score, &clear) in scores.iter().zip(cleared) {
-        total += score * combo;
-        combo = if clear { combo + 1 } else { 1 };
-    }
-    total
 }
 
 /// The journey file: the same one the CLI and MCP level (env-overridable).
@@ -2526,20 +1718,50 @@ fn main() {
     let event_loop = EventLoop::new().expect("create event loop");
     event_loop.set_control_flow(ControlFlow::Poll);
     let mut app = App::new();
+    // Support --fullscreen / -f / -F and NUMINOUS_FULLSCREEN=1 for launch full screen view.
+    // Gives user-requested video options at entry without adding deps.
+    let args: Vec<String> = std::env::args().collect();
+    let env_full = std::env::var("NUMINOUS_FULLSCREEN")
+        .map(|v| v == "1" || v.to_lowercase() == "true")
+        .unwrap_or(false);
+    app.start_fullscreen = args
+        .iter()
+        .any(|a| a == "--fullscreen" || a == "-f" || a == "-F")
+        || env_full;
     event_loop.run_app(&mut app).expect("run the app");
 }
 
 #[cfg(test)]
 mod tests {
-    use super::App;
+    use super::{App, RASTER_BACKGROUND_RGB, radio_cache};
+    use std::time::{Duration, UNIX_EPOCH};
 
     /// An app pointed at scratch files, with no window, player, or GPU.
     fn headless(name: &str) -> App {
         let mut app = App::new();
         app.journey = numinous_core::Journey::default();
+        app.journey_saved = app.journey.clone();
         app.journey_file = std::env::temp_dir().join(name);
         app.level_seen = 1;
         app
+    }
+
+    fn write_test_wav(path: &std::path::Path, channels: u16, seconds: u32) {
+        let spec = hound::WavSpec {
+            channels,
+            sample_rate: 44_100,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut writer = hound::WavWriter::create(path, spec).expect("write wav");
+        for i in 0..44_100 * seconds {
+            let sample = ((i as f32 * 0.05).sin() * 12_000.0) as i16;
+            for channel in 0..channels {
+                let signed = if channel % 2 == 0 { sample } else { -sample };
+                writer.write_sample(signed).expect("sample");
+            }
+        }
+        writer.finalize().expect("finalize");
     }
 
     #[test]
@@ -2560,6 +1782,10 @@ mod tests {
         let mut app = headless("numinous_app_test_quiz.txt");
         app.quiz_next();
         assert_eq!(app.journey.plays, 1, "dealing a round is a play");
+        let disk = numinous_core::Journey::from_text(
+            &std::fs::read_to_string(&app.journey_file).expect("persisted deal"),
+        );
+        assert_eq!(disk.plays, 1, "dealing a round persists the play");
         let answer = app.quiz.as_ref().expect("a round is live").round.answer;
         app.quiz_answer('!');
         assert!(
@@ -2568,6 +1794,10 @@ mod tests {
         );
         app.quiz_answer(answer);
         assert_eq!(app.journey.wins, 1, "the right answer is a win");
+        let disk = numinous_core::Journey::from_text(
+            &std::fs::read_to_string(&app.journey_file).expect("persisted win"),
+        );
+        assert_eq!(disk.wins, 1, "the right answer persists the win");
         let (correct, _) = app.quiz.as_ref().unwrap().flash.expect("verdict shows");
         assert!(correct);
         app.quiz_next();
@@ -2580,10 +1810,210 @@ mod tests {
         let mut app = headless("numinous_app_test_banner.txt");
         app.journey.play();
         app.journey_changed(); // one spark crosses the first threshold: level 2
-        let (lines, frames) = app.banner.as_ref().expect("the banner rises");
+        let banner = app.banner.as_ref().expect("the banner rises");
+        let lines = banner.lines();
         assert!(lines[0].contains("LEVEL UP  LV 2"));
         assert!(lines.len() >= 2, "the lore line rides along");
-        assert!(*frames > 0);
+        assert!(banner.frames_left() > 0);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn playtest_note_writes_current_session_context() {
+        let mut app = headless("numinous_app_test_playtest_note.txt");
+        app.journey.visit(app.rooms[app.current].meta().id);
+        app.journey.play();
+        app.t = 0.5;
+        app.variation = 9;
+        app.pokes = vec![(0.2, 0.4), (0.8, 0.1)];
+        let dir = std::env::temp_dir().join("numinous_app_playtest_note");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let path = app
+            .save_playtest_note_to(&dir, UNIX_EPOCH + Duration::from_secs(77))
+            .expect("report saved");
+        let report = std::fs::read_to_string(&path).expect("report readable");
+
+        assert!(report.contains("Saved at Unix seconds: 77"));
+        assert!(report.contains(app.rooms[app.current].meta().title));
+        assert!(report.contains("Variation: 9"));
+        assert!(report.contains("Poke trail: 2 point(s)"));
+        assert!(report.contains("Poke points newest-last: (0.200,0.400) (0.800,0.100)"));
+        assert!(report.contains("Sound: off"));
+        assert!(report.contains("First unprompted whoa"));
+        let _ = std::fs::remove_dir_all(dir);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn playtest_shortcut_is_global_and_reports_failures() {
+        use winit::keyboard::{Key, NamedKey};
+        let mut app = headless("numinous_app_test_playtest_shortcut.txt");
+        app.quiz_next();
+        let dir = std::env::temp_dir().join("numinous_app_playtest_shortcut");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        assert!(app.handle_playtest_shortcut_to(
+            &Key::Named(NamedKey::F9),
+            &dir,
+            UNIX_EPOCH + Duration::from_secs(88),
+        ));
+        assert!(
+            app.quiz.is_some(),
+            "shortcut does not close the active mode"
+        );
+        let lines = app.banner.as_ref().expect("saved banner").lines();
+        assert_eq!(lines[0], "PLAYTEST NOTE SAVED");
+        assert!(dir.join("playtest-88.md").exists());
+
+        let blocker = std::env::temp_dir().join("numinous_app_playtest_blocker");
+        let _ = std::fs::remove_file(&blocker);
+        std::fs::write(&blocker, "not a directory").expect("blocker file");
+        assert!(app.handle_playtest_shortcut_to(
+            &Key::Named(NamedKey::F9),
+            &blocker,
+            UNIX_EPOCH + Duration::from_secs(89),
+        ));
+        let lines = app.banner.as_ref().expect("failure banner").lines();
+        assert_eq!(lines[0], "PLAYTEST NOTE FAILED");
+        assert!(lines[1].starts_with("WRITE ERROR:"));
+        assert!(!app.handle_playtest_shortcut_to(
+            &Key::Named(NamedKey::F8),
+            &dir,
+            UNIX_EPOCH + Duration::from_secs(90),
+        ));
+
+        let _ = std::fs::remove_dir_all(dir);
+        let _ = std::fs::remove_file(blocker);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn banner_overlay_is_visible_on_raster_and_rgba_frames() {
+        let mut app = headless("numinous_app_test_banner_overlay.txt");
+        app.banner = Some(super::feedback::playtest_note(Ok(
+            std::path::PathBuf::from("playtest-note.md"),
+        )));
+
+        let mut raster = numinous_core::Raster::with_accent(320, 220, [120, 220, 190]);
+        let before_raster = raster.to_rgba();
+        app.draw_banner_on_raster(&mut raster, 320, 220);
+        assert_ne!(raster.to_rgba(), before_raster);
+
+        let mut rgba = vec![0u8; 320 * 220 * 4];
+        for pixel in rgba.chunks_exact_mut(4) {
+            pixel[0] = RASTER_BACKGROUND_RGB[0];
+            pixel[1] = RASTER_BACKGROUND_RGB[1];
+            pixel[2] = RASTER_BACKGROUND_RGB[2];
+            pixel[3] = 255;
+        }
+        app.draw_banner_on_rgba(&mut rgba, 320, 220);
+        assert!(
+            rgba.chunks_exact(4)
+                .any(|pixel| pixel[0..3] != RASTER_BACKGROUND_RGB),
+            "the banner should alter a raw GPU frame before blit"
+        );
+
+        let mut non_background = vec![42u8; 320 * 220 * 4];
+        for pixel in non_background.chunks_exact_mut(4) {
+            pixel[0] = 32;
+            pixel[1] = 48;
+            pixel[2] = 64;
+            pixel[3] = 255;
+        }
+        app.draw_banner_on_rgba(&mut non_background, 320, 220);
+        assert!(
+            non_background
+                .chunks_exact(4)
+                .any(|pixel| pixel[0..3] == [32, 48, 64]),
+            "transparent banner background must not replace the whole GPU frame"
+        );
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn volume_feedback_survives_while_radio_is_active() {
+        let mut app = headless("numinous_app_test_radio_volume_banner.txt");
+        app.radio = Some(0);
+        app.radio_track = vec![0.25, -0.25, 0.5, -0.5];
+
+        app.change_volume(0.1);
+
+        assert!((app.volume - 0.8).abs() < f32::EPSILON);
+        let banner = app.banner.as_ref().expect("volume banner");
+        assert_eq!(banner.lines()[0], "VOLUME 80%");
+        assert_eq!(app.radio_track, vec![0.25, -0.25, 0.5, -0.5]);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn modal_modes_take_control_from_the_show() {
+        let mut app = headless("numinous_app_test_show_modes_studio.txt");
+        app.the_show = true;
+        app.show_help = true;
+        app.show_journey = true;
+        app.enter_studio();
+        assert!(app.studio);
+        assert!(!app.the_show);
+        assert!(!app.show_help);
+        assert!(!app.show_journey);
+        let _ = std::fs::remove_file(&app.journey_file);
+
+        let mut app = headless("numinous_app_test_show_modes_quiz.txt");
+        app.the_show = true;
+        app.quiz_next();
+        assert!(app.quiz.is_some());
+        assert!(!app.the_show);
+        let _ = std::fs::remove_file(&app.journey_file);
+
+        let mut app = headless("numinous_app_test_show_modes_games.txt");
+        app.the_show = true;
+        app.munch_start();
+        assert!(app.munch.is_some());
+        assert!(!app.the_show);
+        app.the_show = true;
+        app.nim_start();
+        assert!(app.nim.is_some());
+        assert!(!app.the_show);
+        app.the_show = true;
+        app.gauntlet_start();
+        assert!(app.gauntlet.is_some());
+        assert!(!app.the_show);
+        app.the_show = true;
+        app.arcade_start();
+        assert!(app.arcade.is_some());
+        assert!(!app.the_show);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn show_auto_advance_ignores_hidden_modal_state() {
+        let mut app = headless("numinous_app_test_show_guard.txt");
+        app.the_show = true;
+        assert!(app.show_mode_active());
+        app.studio = true;
+        assert!(!app.show_mode_active());
+        app.studio = false;
+        app.quiz_next();
+        app.the_show = true;
+        assert!(!app.show_mode_active());
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn modal_frames_take_priority_over_gpu_eligible_rooms() {
+        let mut app = headless("numinous_app_test_modal_frame_priority.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "mandelbrot")
+            .expect("mandelbrot room");
+        app.quiz_next();
+
+        let raster = app.modal_frame(320, 220).expect("modal frame");
+
+        assert!(app.modal_mode_active());
+        assert!(raster.lit_count() > 100);
         let _ = std::fs::remove_file(&app.journey_file);
     }
 
@@ -2603,6 +2033,20 @@ mod tests {
         assert_eq!(outcome.hits + outcome.bad_bites, 2, "two bites graded");
         app.munch_grade(); // grading twice changes nothing
         assert_eq!(app.journey.plays, 1);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn munch_key_routes_shared_controls() {
+        use winit::keyboard::{Key, NamedKey};
+        let mut app = headless("numinous_app_test_munch_keys.txt");
+        app.munch_start();
+        app.munch_key(&Key::Character("d".into()));
+        assert_eq!(app.munch.as_ref().unwrap().cursor, 1);
+        app.munch_key(&Key::Character("e".into()));
+        assert!(app.munch.as_ref().unwrap().bites.contains(&1));
+        app.munch_key(&Key::Named(NamedKey::Space));
+        assert!(!app.munch.as_ref().unwrap().bites.contains(&1));
         let _ = std::fs::remove_file(&app.journey_file);
     }
 
@@ -2698,22 +2142,31 @@ mod tests {
     }
 
     #[test]
+    fn gauntlet_munch_stage_routes_shared_controls() {
+        use winit::keyboard::{Key, NamedKey};
+        let mut app = headless("numinous_app_test_gauntlet_munch_keys.txt");
+        app.gauntlet_start();
+        app.gauntlet_key(&Key::Character("d".into()));
+        assert_eq!(app.gauntlet.as_ref().unwrap().munch.cursor, 1);
+        app.gauntlet_key(&Key::Character("e".into()));
+        assert!(app.gauntlet.as_ref().unwrap().munch.bites.contains(&1));
+        app.gauntlet_key(&Key::Named(NamedKey::Space));
+        assert!(!app.gauntlet.as_ref().unwrap().munch.bites.contains(&1));
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
     fn the_radio_loads_cached_tracks_and_joins_live() {
         let dir = std::env::temp_dir().join("numinous_radio_test");
         let _ = std::fs::create_dir_all(&dir);
-        let spec = hound::WavSpec {
-            channels: 1,
-            sample_rate: 44_100,
-            bits_per_sample: 16,
-            sample_format: hound::SampleFormat::Int,
-        };
         let path = dir.join("trance-001.wav");
-        let mut writer = hound::WavWriter::create(&path, spec).expect("write wav");
-        for i in 0..44_100 * 3 {
-            let sample = ((i as f32 * 0.05).sin() * 12_000.0) as i16;
-            writer.write_sample(sample).expect("sample");
-        }
-        writer.finalize().expect("finalize");
+        write_test_wav(&path, 1, 3);
+        assert!(radio_cache::wav_is_bounded(&path));
+        let duration = radio_cache::duration_seconds(&path).expect("duration");
+        assert!(
+            (2.9..=3.1).contains(&duration),
+            "duration should be about three seconds, got {duration}"
+        );
         // SAFETY-free env override: the test sets the var via a scratch app
         // field instead. tune_in reads NUMINOUS_RADIO; set through the
         // process env is forbidden, so exercise radio_play directly.
@@ -2721,7 +2174,7 @@ mod tests {
         app.radio = Some(0);
         app.radio_paths = vec![path.clone()];
         app.radio_index = 0;
-        app.radio_play(1.0);
+        assert!(app.radio_play(1.0));
         assert!(
             app.radio_track.len() > 44_100 * 2,
             "the record is loaded ({} samples)",
@@ -2737,6 +2190,86 @@ mod tests {
     }
 
     #[test]
+    fn radio_duration_uses_frames_for_stereo_tracks() {
+        let dir = std::env::temp_dir().join("numinous_radio_stereo_test");
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("stereo.wav");
+        write_test_wav(&path, 2, 3);
+
+        let duration = radio_cache::duration_seconds(&path).expect("duration");
+
+        assert!(
+            (2.9..=3.1).contains(&duration),
+            "duration should be about three seconds, got {duration}"
+        );
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn oversized_radio_files_are_rejected_before_loading() {
+        let path = std::env::temp_dir().join("numinous_radio_oversized.wav");
+        let file = std::fs::File::create(&path).expect("oversized placeholder");
+        file.set_len(radio_cache::MAX_WAV_BYTES + 1)
+            .expect("make sparse oversized file");
+        assert!(!radio_cache::wav_is_bounded(&path));
+        assert!(radio_cache::duration_seconds(&path).is_none());
+
+        let mut app = headless("numinous_app_test_radio_oversized.txt");
+        app.radio_paths = vec![path.clone()];
+        app.radio_index = 0;
+        app.radio_track = vec![0.25, -0.25];
+        app.radio_until = Some(std::time::Instant::now());
+        assert!(!app.radio_play(0.0));
+        assert!(app.radio_track.is_empty());
+        assert!(app.radio_until.is_none());
+
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn radio_rotation_recovers_from_a_bad_cached_file() {
+        let dir = std::env::temp_dir().join("numinous_radio_recovery_test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create dir");
+        let bad = dir.join("trance-bad.wav");
+        let good = dir.join("trance-good.wav");
+        std::fs::write(&bad, b"not actually a wav").expect("bad wav");
+        write_test_wav(&good, 1, 2);
+
+        let mut app = headless("numinous_app_test_radio_recovery.txt");
+        app.radio = Some(0);
+        app.radio_paths = vec![bad, good.clone()];
+        app.radio_index = 0;
+
+        assert!(app.radio_play_or_advance(0.0));
+        assert_eq!(app.radio_paths[app.radio_index], good);
+        assert!(!app.radio_track.is_empty());
+        assert!(app.radio_until.is_some());
+
+        let _ = std::fs::remove_dir_all(dir);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn modal_contexts_clear_stale_pointer_state() {
+        let mut app = headless("numinous_app_test_pointer_state.txt");
+        app.poking = true;
+        app.show_help = true;
+        app.refresh_pointer_state();
+        assert!(!app.poking);
+
+        app.show_help = false;
+        app.dragging = true;
+        app.studio = true;
+        app.refresh_pointer_state();
+        assert!(!app.dragging);
+
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
     fn quiz_answers_letter_matches_a_choice() {
         let mut app = headless("numinous_app_test_letters.txt");
         app.quiz_next();
@@ -2748,5 +2281,16 @@ mod tests {
                 .any(|c| c.letter == quiz.round.answer)
         );
         let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn quiz_deal_rules_stay_out_of_the_event_loop_coordinator() {
+        let source = include_str!("main.rs");
+
+        assert!(source.contains("play::deal_quiz"));
+        assert!(source.contains("play::answer_quiz"));
+        assert!(!source.contains(concat!("I", "CONIC")));
+        assert!(!source.contains(concat!("build", "_round", "_pool")));
+        assert!(!source.contains(concat!("quiz_recent", ".", "push")));
     }
 }

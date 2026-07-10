@@ -6,6 +6,7 @@
 //! infinitely many steps fit exactly inside one tile of floor. `t` lays the
 //! tiles. See the Full Map in `docs/ROOMS.md`.
 
+use super::variation_unit;
 use crate::room::{Room, RoomMeta};
 use crate::surface::Surface;
 
@@ -36,13 +37,30 @@ fn tiles() -> Vec<(f64, f64, f64, f64)> {
 
 /// Zeno's Square.
 #[derive(Debug, Default)]
-pub struct Zeno;
+pub struct Zeno {
+    seed: u64,
+}
 
 impl Zeno {
     /// Create the room.
     #[must_use]
     pub fn new() -> Self {
-        Self
+        Self { seed: 0 }
+    }
+
+    /// Create with variation seed for replayable per-visit novelty.
+    #[must_use]
+    pub fn new_with(seed: u64) -> Self {
+        Self { seed }
+    }
+
+    fn phase_for(&self, t: f64) -> f64 {
+        let t = t.clamp(0.0, 1.0);
+        if self.seed == 0 {
+            t
+        } else {
+            (t + variation_unit(self.seed, 0x5A45_4E4F_0000_0001) * 0.4).fract()
+        }
     }
 }
 
@@ -83,7 +101,7 @@ impl Room for Zeno {
         canvas.line(x1, y0, x1, y1, '*');
 
         // The tiles laid so far: 1/2, then 1/4, then 1/8, ...
-        let laid = ((t.clamp(0.0, 1.0) * (MAX_TILES as f64 + 1.0)) as usize).min(MAX_TILES);
+        let laid = ((self.phase_for(t) * (MAX_TILES as f64 + 1.0)) as usize).min(MAX_TILES);
         for (i, &(tx, ty, tw, th)) in tiles().iter().take(laid).enumerate() {
             let (px0, py0) = to_screen(tx, ty + th);
             let (px1, py1) = to_screen(tx + tw, ty);
@@ -131,6 +149,16 @@ impl Room for Zeno {
 
     fn postcard_t(&self) -> f64 {
         0.75
+    }
+
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "D convergent halves",
+            root: 146.83,
+            tempo: 80,
+            line: &[12, 7, 5, 3, 2, 1, 0, 0],
+            encodes: "halves shrinking toward a finite arrival",
+        })
     }
 }
 

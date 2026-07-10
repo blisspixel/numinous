@@ -8,6 +8,15 @@
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
+/// The face-neutral default action for rooms without a dedicated touch verb.
+pub const DEFAULT_ROOM_ACTION: &str = "SCRUB TIME";
+
+/// The touch-first default action for App arrival cards and HUD hints.
+pub const DEFAULT_TOUCH_ROOM_ACTION: &str = "DRAG: SCRUB TIME";
+
+/// Maximum static hand points a face should pass to [`Room::render_poked`].
+pub const MAX_ROOM_POKES: usize = 24;
+
 /// Static, human- and agent-readable description of a room.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RoomMeta {
@@ -64,16 +73,19 @@ pub trait Room {
         None
     }
 
-    /// The verb: what a hand can do here, named for the arrival card
-    /// ("CLICK: DROP A STORM"). None means the room only performs.
+    /// The touch-surface verb: what a hand can do here, named for the arrival
+    /// card ("CLICK: DROP A STORM", "DRAG: TURN THE DIAL"). None means the room
+    /// has no dedicated poke or drag behavior; faces may still offer generic
+    /// phase scrubbing through [`room_action`] or [`room_touch_action`].
     fn verb(&self) -> Option<&'static str> {
         None
     }
 
     /// Render with hands in the scene: `pokes` are normalized (x, y) points
-    /// the player has placed, newest last. Rooms that answer override this;
-    /// the default performs exactly as `render`, so nothing changes until a
-    /// room chooses to listen.
+    /// the player has placed, newest last. Faces bound this history to
+    /// [`MAX_ROOM_POKES`]. Rooms that answer override this; the default
+    /// performs exactly as `render`, so nothing changes until a room chooses
+    /// to listen.
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let _ = pokes;
         self.render(canvas, t);
@@ -90,7 +102,60 @@ pub trait Room {
     /// see `docs/SOUND.md`). The default is a single tone that rises with `t`;
     /// rooms override this to give their own voice.
     fn sound(&self, t: f64) -> SoundSpec {
-        let octaves = t.clamp(0.0, 1.0) as f32;
+        let phase = if t.is_finite() {
+            t.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        let octaves = phase as f32;
         SoundSpec::tone(110.0 * 2.0_f32.powf(octaves), 1.5, 0.2)
+    }
+}
+
+/// The face-neutral action line for text and protocol faces.
+pub fn room_action(room: &dyn Room) -> &'static str {
+    room.verb().unwrap_or(DEFAULT_ROOM_ACTION)
+}
+
+/// The touch-first action line for app arrival cards and HUD hints.
+pub fn room_touch_action(room: &dyn Room) -> &'static str {
+    room.verb().unwrap_or(DEFAULT_TOUCH_ROOM_ACTION)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Room, RoomMeta};
+    use crate::surface::Surface;
+
+    struct DefaultSoundRoom;
+
+    impl Room for DefaultSoundRoom {
+        fn meta(&self) -> RoomMeta {
+            RoomMeta {
+                id: "default-sound",
+                title: "Default Sound",
+                wing: "Tests",
+                blurb: "A test room for the trait default.",
+                accent: [0, 0, 0],
+            }
+        }
+
+        fn render(&self, _surface: &mut dyn Surface, _t: f64) {}
+
+        fn reveal(&self) -> &'static str {
+            "The default sound remains finite."
+        }
+    }
+
+    #[test]
+    fn default_sound_handles_nonfinite_phase() {
+        let room = DefaultSoundRoom;
+        let base = room.sound(0.0);
+
+        for t in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            let spec = room.sound(t);
+            assert_eq!(spec, base);
+            assert!(spec.notes.iter().all(|note| note.freq.is_finite()));
+        }
     }
 }

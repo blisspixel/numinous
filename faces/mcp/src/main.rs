@@ -14,7 +14,7 @@
 
 use std::io::{self, BufRead, Write};
 
-use numinous_core::{Canvas, all_rooms, room_by_id};
+use numinous_core::{Canvas, all_rooms, all_rooms_with, room_by_id};
 use serde_json::{Value, json};
 
 /// The MCP protocol revision this server targets.
@@ -36,7 +36,6 @@ fn main() -> io::Result<()> {
         }
         match serde_json::from_str::<Value>(&line) {
             Ok(request) => {
-                record_progress(&request, &journey_path());
                 if let Some(response) = handle_request(&request) {
                     write_message(&mut out, &response)?;
                 }
@@ -67,9 +66,7 @@ fn journey_path() -> std::path::PathBuf {
 
 /// Load the journey at `path`, or start a fresh one.
 fn load_journey(path: &std::path::Path) -> numinous_core::Journey {
-    std::fs::read_to_string(path)
-        .map(|text| numinous_core::Journey::from_text(&text))
-        .unwrap_or_default()
+    numinous_core::load_journey_file(path)
 }
 
 /// Where the high-score table lives (shared with the CLI face, same keys, so
@@ -86,14 +83,7 @@ fn scores_path() -> std::path::PathBuf {
 
 /// Record a score at `path`, keeping the best. Returns true on a new record.
 fn post_score(path: &std::path::Path, key: &str, score: i64) -> bool {
-    let mut board = std::fs::read_to_string(path)
-        .map(|text| numinous_core::Scoreboard::from_text(&text))
-        .unwrap_or_default();
-    let record = board.record(key, score);
-    if record {
-        let _ = std::fs::write(path, board.to_text());
-    }
-    record
+    numinous_core::record_score_file(path, key, score).unwrap_or(false)
 }
 
 /// Record what this request means for the journey: agents level up too, by the
@@ -135,10 +125,16 @@ fn record_progress(request: &Value, path: &std::path::Path) {
             }
         }
         "play_room" | "listen_room" => {
-            if let Some(id) = args.get("id").and_then(Value::as_str)
-                && room_by_id(id).is_some()
-            {
-                journey.visit(id);
+            if let Some(id) = args.get("id").and_then(Value::as_str) {
+                let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
+                let has_room = if variation != 0 {
+                    all_rooms_with(variation).iter().any(|r| r.meta().id == id)
+                } else {
+                    room_by_id(id).is_some()
+                };
+                if has_room {
+                    journey.visit(id);
+                }
             }
         }
         "run_sim" | "plot_expression" | "sing_expression" => journey.play(),
@@ -195,6 +191,18 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                     outcome.score,
                 );
                 if outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0 {
+                    journey.win();
+                }
+            }
+        }
+        "munch_arcade" => {
+            if let Some(actions) = args.get("actions").and_then(Value::as_array)
+                && !actions.is_empty()
+            {
+                journey.play();
+                if let Some((_, _, cleared)) = post_munch_arcade_score(&args, &scores_path())
+                    && cleared
+                {
                     journey.win();
                 }
             }
@@ -408,7 +416,7 @@ fn record_progress(request: &Value, path: &std::path::Path) {
         let _ = journey.record_daily(day);
     }
     if journey != before {
-        let _ = std::fs::write(path, journey.to_text());
+        let _ = numinous_core::persist_journey_delta(path, &before, &journey);
     }
 }
 
@@ -439,6 +447,13 @@ fn handle_request_with(request: &Value, journey_file: &std::path::Path) -> Optio
         "ping" => Ok(json!({})),
         other => Err((-32601_i64, format!("Method not found: {other}"))),
     };
+
+    if method == "tools/call"
+        && let Ok(value) = &result
+        && value.get("isError").and_then(Value::as_bool) != Some(true)
+    {
+        record_progress(request, journey_file);
+    }
 
     // Notifications carry no id and get no response.
     let id = id?;
@@ -504,7 +519,19 @@ fn tools_list_result() -> Value {
                         "id": { "type": "string", "description": "Room id, for example times-tables." },
                         "t": { "type": "number", "description": "Phase in [0,1). For Times Tables this sweeps the multiplier." },
                         "width": { "type": "integer", "description": "ASCII canvas width in columns." },
-                        "height": { "type": "integer", "description": "ASCII canvas height in rows." }
+                        "height": { "type": "integer", "description": "ASCII canvas height in rows." },
+                        "variation": { "type": "integer", "description": "Per-visit variation seed (default 0) for replayable novelty in supporting rooms." },
+                        "pokes": {
+                            "type": "array",
+                            "description": "Normalized hand points as [x,y] pairs in [0,1]. Newest point last.",
+                            "maxItems": numinous_core::MAX_ROOM_POKES,
+                            "items": {
+                                "type": "array",
+                                "items": { "type": "number", "minimum": 0, "maximum": 1 },
+                                "minItems": 2,
+                                "maxItems": 2
+                            }
+                        }
                     },
                     "required": ["id"],
                     "additionalProperties": false
@@ -517,7 +544,8 @@ fn tools_list_result() -> Value {
                     "type": "object",
                     "properties": {
                         "id": { "type": "string", "description": "Room id, for example lissajous." },
-                        "t": { "type": "number", "description": "Phase in [0,1)." }
+                        "t": { "type": "number", "description": "Phase in [0,1)." },
+                        "variation": { "type": "integer", "description": "Per-visit variation seed (default 0), matching play_room." }
                     },
                     "required": ["id"],
                     "additionalProperties": false
@@ -590,6 +618,19 @@ fn tools_list_result() -> Value {
                         "daily": { "type": "boolean", "description": "Use today\'s shared seed instead; dailies chain into streaks." },
                         "round": { "type": "integer", "description": "Round number (0, 1, 2, ...)." },
                         "bites": { "type": "array", "items": { "type": "integer" }, "description": "The 1-based cell numbers you eat. Omit to see the board." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "munch_arcade",
+                "description": "The Munch Arcade: eat fitting numbers while hunted by Vexations (T=tracker, d=drifter, e=editor that rewrites). Stateless replay: pass full actions list (e.g. [\"right\",\"eat\",\"up\"]) with seed. Omit actions to see the starting board. Deterministic, scores post to table as 'arcade seed:N'.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "seed": { "type": "integer", "description": "Seed for the run." },
+                        "daily": { "type": "boolean", "description": "Use today's shared seed." },
+                        "actions": { "type": "array", "items": { "type": "string" }, "description": "Action list to replay: up/down/left/right/eat (or w/a/s/d/e). Omit to see initial state." }
                     },
                     "additionalProperties": false
                 }
@@ -792,6 +833,7 @@ fn call_tool(
         "run_sim" => Ok(run_sim_tool(&args)),
         "quiz" => Ok(quiz_tool(&args, journey_file)),
         "munch" => Ok(munch_tool(&args)),
+        "munch_arcade" => Ok(munch_arcade_tool(&args)),
         "journey" => Ok(journey_tool(journey_file)),
         "nim" => Ok(nim_tool(&args)),
         "hackenbush" => Ok(hackenbush_tool(&args)),
@@ -836,10 +878,11 @@ fn describe_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
                 }
             }
             tool_text(&format!(
-                "{} ({})\nWing: {}\n\n{}\n\nReveal: {}{cuts}",
+                "{} ({})\nWing: {}\nAction: {}\n\n{}\n\nReveal: {}{cuts}",
                 m.title,
                 m.id,
                 m.wing,
+                numinous_core::room_action(room.as_ref()),
                 m.blurb,
                 room.reveal()
             ))
@@ -878,7 +921,15 @@ fn listen_room_tool(args: &Value) -> Value {
         return tool_error("Missing required string argument 'id'.");
     };
     let t = args.get("t").and_then(Value::as_f64).unwrap_or(0.0);
-    let Some(room) = room_by_id(id) else {
+    let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
+    let room = if variation != 0 {
+        all_rooms_with(variation)
+            .into_iter()
+            .find(|r| r.meta().id == id)
+    } else {
+        room_by_id(id)
+    };
+    let Some(room) = room else {
         return tool_error(&unknown_room(id));
     };
     let spec = room.sound(t);
@@ -925,6 +976,51 @@ fn reveal_room_tool(args: &Value) -> Value {
     }
 }
 
+fn parse_room_pokes(args: &Value) -> Result<Vec<(f64, f64)>, String> {
+    let Some(raw) = args.get("pokes") else {
+        return Ok(Vec::new());
+    };
+    let Some(points) = raw.as_array() else {
+        return Err("Argument 'pokes' must be an array of [x, y] pairs.".to_string());
+    };
+    if points.len() > numinous_core::MAX_ROOM_POKES {
+        return Err(format!(
+            "Argument 'pokes' accepts at most {} points.",
+            numinous_core::MAX_ROOM_POKES
+        ));
+    }
+    points
+        .iter()
+        .enumerate()
+        .map(|(i, point)| {
+            let Some(pair) = point.as_array() else {
+                return Err(format!("Argument 'pokes[{i}]' must be [x, y]."));
+            };
+            if pair.len() != 2 {
+                return Err(format!(
+                    "Argument 'pokes[{i}]' must contain exactly two numbers."
+                ));
+            }
+            let Some(x) = pair.first().and_then(Value::as_f64) else {
+                return Err(format!("Argument 'pokes[{i}][0]' must be a number."));
+            };
+            let Some(y) = pair.get(1).and_then(Value::as_f64) else {
+                return Err(format!("Argument 'pokes[{i}][1]' must be a number."));
+            };
+            if !x.is_finite()
+                || !y.is_finite()
+                || !(0.0..=1.0).contains(&x)
+                || !(0.0..=1.0).contains(&y)
+            {
+                return Err(format!(
+                    "Argument 'pokes[{i}]' must contain finite coordinates in [0,1]."
+                ));
+            }
+            Ok((x, y))
+        })
+        .collect()
+}
+
 fn play_room_tool(args: &Value) -> Value {
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'id'.");
@@ -938,16 +1034,51 @@ fn play_room_tool(args: &Value) -> Value {
         .get("height")
         .and_then(Value::as_u64)
         .unwrap_or(DEFAULT_HEIGHT) as usize;
+    let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
+    let pokes = match parse_room_pokes(args) {
+        Ok(pokes) => pokes,
+        Err(message) => return tool_error(&message),
+    };
 
-    match room_by_id(id) {
+    let room = if variation != 0 {
+        all_rooms_with(variation)
+            .into_iter()
+            .find(|r| r.meta().id == id)
+    } else {
+        room_by_id(id)
+    };
+
+    match room {
         Some(room) => {
             let mut canvas = Canvas::new(width, height);
-            room.render(&mut canvas, t);
-            tool_text(&format!(
-                "{} at t={t:.3}:\n\n{}",
-                room.meta().title,
-                canvas.to_text()
-            ))
+            if pokes.is_empty() {
+                room.render(&mut canvas, t);
+            } else {
+                room.render_poked(&mut canvas, t, &pokes);
+            }
+            let m = room.meta();
+            let action = numinous_core::room_action(room.as_ref());
+            let status = room.status(t);
+            let status_line = status
+                .as_ref()
+                .map(|readout| format!("\nStatus: {readout}"))
+                .unwrap_or_default();
+            tool_structured(
+                &format!(
+                    "{} at t={t:.3}:\nAction: {action}{status_line}\n\n{}",
+                    m.title,
+                    canvas.to_text()
+                ),
+                json!({
+                    "room": m.id,
+                    "title": m.title,
+                    "t": t,
+                    "variation": variation,
+                    "pokes": pokes,
+                    "action": action,
+                    "status": status,
+                }),
+            )
         }
         None => tool_error(&unknown_room(id)),
     }
@@ -1337,8 +1468,9 @@ fn choose_tool(args: &Value, journey_file: &std::path::Path) -> Value {
             let Some(boon) = pick.checked_sub(1).and_then(|i| options.get(i as usize)) else {
                 return tool_error("That was not on the menu. The boon stays banked.");
             };
+            let before = journey.clone();
             journey.chosen.insert(boon.id.clone());
-            let _ = std::fs::write(journey_file, journey.to_text());
+            let _ = numinous_core::persist_journey_delta(journey_file, &before, &journey);
             let room = boon.id.split(':').nth(1).unwrap_or("").to_string();
             tool_structured(
                 &format!("CHOSEN. {}\nRead it now: describe_room {room}", boon.label),
@@ -1369,9 +1501,7 @@ fn choose_tool(args: &Value, journey_file: &std::path::Path) -> Value {
 /// The `trophies` tool: the case, earned and silhouetted.
 fn trophies_tool(journey_file: &std::path::Path) -> Value {
     let journey = load_journey(journey_file);
-    let board = numinous_core::Scoreboard::from_text(
-        &std::fs::read_to_string(scores_path()).unwrap_or_default(),
-    );
+    let board = numinous_core::load_scoreboard_file(&scores_path());
     let all = numinous_core::trophies(&journey, &board);
     let lines: Vec<String> = all
         .iter()
@@ -1705,6 +1835,102 @@ fn munch_tool(args: &Value) -> Value {
     }
 }
 
+fn arcade_action(value: &Value) -> Option<numinous_core::munch_arcade::Action> {
+    use numinous_core::munch_arcade::Action;
+    Some(match value.as_str()?.to_ascii_lowercase().as_str() {
+        "up" | "w" => Action::Up,
+        "down" | "s" => Action::Down,
+        "left" | "a" => Action::Left,
+        "right" | "d" => Action::Right,
+        "eat" | "e" => Action::Eat,
+        _ => return None,
+    })
+}
+
+fn replay_munch_arcade(args: &Value) -> Option<(numinous_core::munch_arcade::Arcade, bool)> {
+    use numinous_core::munch_arcade::Turn;
+    let seed = effective_seed(args);
+    let mut run = numinous_core::munch_arcade::Arcade::new(seed);
+    let actions = args.get("actions").and_then(Value::as_array)?;
+    let mut cleared = false;
+    for action in actions.iter().filter_map(arcade_action) {
+        if matches!(run.turn(action), Turn::Cleared) {
+            cleared = true;
+        }
+    }
+    Some((run, cleared))
+}
+
+fn post_munch_arcade_score(
+    args: &Value,
+    scores_file: &std::path::Path,
+) -> Option<(u64, i64, bool)> {
+    let seed = effective_seed(args);
+    let (run, cleared) = replay_munch_arcade(args)?;
+    post_score(scores_file, &format!("arcade seed:{seed}"), run.score);
+    Some((seed, run.score, cleared))
+}
+
+/// The `munch_arcade` tool: the full hunted arcade. Call with seed to see the board; call with "actions" list to replay the run (stateless). Returns text + structured state. Scores as "arcade seed:N".
+fn munch_arcade_tool(args: &Value) -> Value {
+    use numinous_core::munch_arcade::Turn;
+    use numinous_core::munch_arcade::{Arcade, Mind};
+    let seed = effective_seed(args);
+    let mut run = Arcade::new(seed);
+    let mut cleared = false;
+    if let Some(raw) = args.get("actions").and_then(Value::as_array) {
+        for action in raw.iter().filter_map(arcade_action) {
+            if matches!(run.turn(action), Turn::Cleared) {
+                cleared = true;
+            }
+        }
+    }
+    // Simple board text (dupe of cli for MCP independence)
+    let mut board_text = String::new();
+    for row in 0..numinous_core::munchers::ROWS {
+        for col in 0..numinous_core::munchers::COLS {
+            let cell = row * numinous_core::munchers::COLS + col;
+            if cell == run.muncher {
+                board_text.push_str("[@]");
+            } else if let Some(v) = run.vexations.iter().find(|v| v.cell == cell) {
+                let m = match v.mind {
+                    Mind::Drifter => "d",
+                    Mind::Tracker => "T",
+                    Mind::Editor => "e",
+                };
+                board_text.push_str(&format!("[{}]", m));
+            } else if run.eaten[cell] {
+                board_text.push_str("[ ]");
+            } else {
+                board_text.push_str(&format!("[{:>2}]", run.board.numbers[cell]));
+            }
+        }
+        board_text.push('\n');
+    }
+    let state_text = format!(
+        "ARCADE seed {seed} LEVEL {} LIVES {} SCORE {}\nRULE: {}\n{}",
+        run.level,
+        run.lives,
+        run.score,
+        run.board.rule.describe(),
+        board_text
+    );
+    tool_structured(
+        &state_text,
+        json!({
+            "game": "arcade",
+            "seed": seed,
+            "level": run.level,
+            "lives": run.lives,
+            "score": run.score,
+            "muncher": run.muncher,
+            "vexations": run.vexations.iter().map(|v| json!({"cell": v.cell, "mind": format!("{:?}", v.mind)})).collect::<Vec<_>>(),
+            "cleared": cleared,
+            "over": run.lives == 0
+        }),
+    )
+}
+
 /// The `forget` tool: memory transparency, and erasure on explicit consent.
 /// Everything this place remembers is two small text files; here is the proof.
 fn forget_tool(
@@ -1730,14 +1956,12 @@ fn forget_tool(
             journey.wins,
             journey.plays,
             journey.secrets,
-            std::fs::read_to_string(scores_file)
-                .map(|t| numinous_core::Scoreboard::from_text(&t).entries.len())
-                .unwrap_or(0)
+            numinous_core::load_scoreboard_file(scores_file).entries.len()
         ));
     }
-    let _ = std::fs::remove_file(journey_file);
+    let _ = numinous_core::remove_persisted_file(journey_file);
     if also_scores {
-        let _ = std::fs::remove_file(scores_file);
+        let _ = numinous_core::remove_persisted_file(scores_file);
     }
     tool_text(
         "Forgotten. The journey is erased; the constellation is dark again.          The rooms are all still here, whenever you like.",
@@ -1746,9 +1970,7 @@ fn forget_tool(
 
 /// The `scores` tool: the shared high-score table, prose and structured.
 fn scores_tool(path: &std::path::Path) -> Value {
-    let board = std::fs::read_to_string(path)
-        .map(|text| numinous_core::Scoreboard::from_text(&text))
-        .unwrap_or_default();
+    let board = numinous_core::load_scoreboard_file(path);
     if board.entries.is_empty() {
         return tool_text("No scores yet. Post one: munch, quiz.");
     }
@@ -2003,7 +2225,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 25);
+        assert_eq!(tools.len(), 26);
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
         assert!(names.contains(&"reveal_room"));
         assert!(names.contains(&"run_sim"));
@@ -2014,9 +2236,18 @@ mod tests {
         assert!(names.contains(&"explain_joke"));
         assert!(names.contains(&"journey"));
         assert!(names.contains(&"munch"));
+        assert!(names.contains(&"munch_arcade"));
         assert!(names.contains(&"scores"));
         assert!(names.contains(&"forget"));
         assert!(names.contains(&"nim"));
+        let play_room = tools
+            .iter()
+            .find(|tool| tool["name"] == "play_room")
+            .expect("play_room tool");
+        let poke_schema = &play_room["inputSchema"]["properties"]["pokes"];
+        assert_eq!(poke_schema["maxItems"], numinous_core::MAX_ROOM_POKES);
+        assert_eq!(poke_schema["items"]["items"]["minimum"], 0);
+        assert_eq!(poke_schema["items"]["items"]["maximum"], 1);
         for tool in [
             "crack",
             "seti",
@@ -2445,7 +2676,7 @@ plays 2
     fn listen_room_returns_readable_notation() {
         let resp = handle_request(&json!({
             "jsonrpc":"2.0","id":30,"method":"tools/call",
-            "params":{"name":"listen_room","arguments":{"id":"lissajous","t":0.0}}
+            "params":{"name":"listen_room","arguments":{"id":"times-tables","t":0.0}}
         }))
         .expect("tools/call must respond");
         let text = resp["result"]["content"][0]["text"]
@@ -2453,10 +2684,122 @@ plays 2
             .unwrap_or_default();
         assert!(text.contains("Hz"), "got: {text}");
         assert!(
-            text.contains("2 notes"),
-            "the lissajous chord has two notes"
+            text.contains("1 notes"),
+            "the times-tables default tone has one note"
+        );
+        assert!(text.contains("Motif:"), "got: {text}");
+        assert!(
+            text.contains("D minor pentatonic") && text.contains("D3 G3 A3 D4"),
+            "interactive room motifs must surface readable notation: {text}"
         );
         assert_eq!(resp["result"]["isError"], false);
+
+        let quiet = handle_request(&json!({
+            "jsonrpc":"2.0","id":302,"method":"tools/call",
+            "params":{"name":"listen_room","arguments":{"id":"lissajous","t":0.0}}
+        }))
+        .expect("tools/call must respond");
+        let quiet_text = quiet["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(
+            quiet_text.contains("G visible fifth") && quiet_text.contains("G3 D4 G4"),
+            "quiet room motifs must surface readable notation: {quiet_text}"
+        );
+
+        let varied = handle_request(&json!({
+            "jsonrpc":"2.0","id":301,"method":"tools/call",
+            "params":{"name":"listen_room","arguments":{"id":"times-tables","t":0.0,"variation":42}}
+        }))
+        .expect("tools/call must respond");
+        let varied_text = varied["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert_ne!(text, varied_text, "listen_room must honor variation");
+    }
+
+    #[test]
+    fn invalid_tools_do_not_record_progress() {
+        let file = std::env::temp_dir().join("numinous_mcp_invalid_progress_test.txt");
+        let _ = std::fs::remove_file(&file);
+        for (id, name, arguments) in [
+            (401, "run_sim", json!({"id": "no-such-sim"})),
+            (402, "plot_expression", json!({"expr": "sin("})),
+            (403, "sing_expression", json!({"expr": "sin("})),
+        ] {
+            let resp = handle_request_with(
+                &json!({
+                    "jsonrpc":"2.0","id":id,"method":"tools/call",
+                    "params":{"name":name,"arguments":arguments}
+                }),
+                &file,
+            )
+            .expect("tools/call must respond");
+            assert_eq!(resp["result"]["isError"], true);
+        }
+        let journey = std::fs::read_to_string(&file)
+            .map(|text| numinous_core::Journey::from_text(&text))
+            .unwrap_or_default();
+        assert_eq!(journey.plays, 0);
+        let _ = std::fs::remove_file(&file);
+    }
+
+    #[test]
+    fn munch_arcade_replay_posts_the_cli_score_key() {
+        let path = std::env::temp_dir().join("numinous_mcp_arcade_scores_test.txt");
+        let _ = std::fs::remove_file(&path);
+        let posted = super::post_munch_arcade_score(
+            &json!({"seed": 7, "actions": ["right", "eat", "down"]}),
+            &path,
+        )
+        .expect("actions replay");
+        assert_eq!(posted.0, 7);
+        let table = super::scores_tool(&path);
+        let text = table["content"][0]["text"].as_str().unwrap_or_default();
+        assert!(text.contains("arcade seed:7"), "got: {text}");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn munch_arcade_replay_reports_clear_events() {
+        fn sweep_actions() -> Vec<&'static str> {
+            let mut actions = vec!["eat"];
+            for row in 0..numinous_core::munchers::ROWS {
+                let across = numinous_core::munchers::COLS - 1;
+                let step = if row % 2 == 0 { "right" } else { "left" };
+                for _ in 0..across {
+                    actions.push(step);
+                    actions.push("eat");
+                }
+                if row + 1 < numinous_core::munchers::ROWS {
+                    actions.push("down");
+                    actions.push("eat");
+                }
+            }
+            actions
+        }
+
+        let path = std::env::temp_dir().join("numinous_mcp_arcade_clear_test.txt");
+        let _ = std::fs::remove_file(&path);
+        let actions = sweep_actions();
+        let mut cleared = false;
+        for seed in 1..=200 {
+            let Some((_, _, did_clear)) = super::post_munch_arcade_score(
+                &json!({"seed": seed, "actions": actions.clone()}),
+                &path,
+            ) else {
+                continue;
+            };
+            if did_clear {
+                cleared = true;
+                break;
+            }
+        }
+        assert!(
+            cleared,
+            "at least one deterministic replay must clear a board"
+        );
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
@@ -2565,6 +2908,8 @@ plays 2
 
     #[test]
     fn play_room_returns_ascii_the_agent_can_see() {
+        let expected_action =
+            numinous_core::room_action(numinous_core::room_by_id("times-tables").unwrap().as_ref());
         let resp = handle_request(&json!({
             "jsonrpc":"2.0","id":3,"method":"tools/call",
             "params":{"name":"play_room","arguments":{"id":"times-tables","width":40,"height":20}}
@@ -2574,7 +2919,81 @@ plays 2
             .as_str()
             .expect("text content");
         assert!(text.contains('*'), "the render should contain ink");
+        assert!(text.contains(&format!("Action: {expected_action}")));
+        assert_eq!(
+            resp["result"]["structuredContent"]["action"],
+            expected_action
+        );
         assert_eq!(resp["result"]["isError"], false);
+    }
+
+    #[test]
+    fn play_room_gives_quiet_rooms_a_default_action() {
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":31,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"lissajous","width":40,"height":20}}
+        }))
+        .expect("tools/call must respond");
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .expect("text content");
+        assert!(text.contains(numinous_core::DEFAULT_ROOM_ACTION));
+        assert_eq!(
+            resp["result"]["structuredContent"]["action"],
+            numinous_core::DEFAULT_ROOM_ACTION
+        );
+    }
+
+    #[test]
+    fn play_room_accepts_stateless_hand_points() {
+        let resting = handle_request(&json!({
+            "jsonrpc":"2.0","id":32,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"double-pendulum","width":50,"height":30,"t":0.25}}
+        }))
+        .expect("tools/call must respond");
+        let poked = handle_request(&json!({
+            "jsonrpc":"2.0","id":33,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"double-pendulum","width":50,"height":30,"t":0.25,"pokes":[[0.2,0.8]]}}
+        }))
+        .expect("tools/call must respond");
+        assert_ne!(
+            resting["result"]["content"][0]["text"], poked["result"]["content"][0]["text"],
+            "a supplied hand point should steer the frame"
+        );
+        assert_eq!(poked["result"]["structuredContent"]["pokes"][0][0], 0.2);
+        assert_eq!(poked["result"]["structuredContent"]["pokes"][0][1], 0.8);
+        assert_eq!(poked["result"]["isError"], false);
+    }
+
+    #[test]
+    fn play_room_rejects_invalid_hand_points() {
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":34,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"double-pendulum","pokes":[[1.2,0.5]]}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(resp["result"]["isError"], true);
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("[0,1]"), "got: {text}");
+    }
+
+    #[test]
+    fn play_room_rejects_too_many_hand_points() {
+        let pokes: Vec<_> = (0..=numinous_core::MAX_ROOM_POKES)
+            .map(|_| json!([0.5, 0.5]))
+            .collect();
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":35,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"double-pendulum","pokes":pokes}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(resp["result"]["isError"], true);
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("at most"), "got: {text}");
     }
 
     #[test]
@@ -2642,6 +3061,7 @@ plays 2
             .as_str()
             .unwrap_or_default();
         assert!(text.contains("Number & Pattern"));
+        assert!(text.contains("Action:"));
     }
 
     #[test]

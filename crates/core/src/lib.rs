@@ -33,6 +33,7 @@ pub mod munch_arcade;
 pub mod munchers;
 pub mod nim;
 pub mod party;
+pub mod persistence;
 pub mod quiz;
 pub mod radio;
 pub mod raster;
@@ -69,19 +70,28 @@ pub use nim::{
     apply as nim_apply, finished as nim_finished, new_game as nim_new, order_move as nim_order,
     the_secret as nim_secret,
 };
+pub use persistence::{
+    load_journey_file, load_scoreboard_file, persist_journey_delta, record_score_file,
+    remove_persisted_file,
+};
 pub use quiz::{ICONIC, QuizChoice, QuizRound, build_round, build_round_pool, build_round_sized};
 pub use radio::{STATIONS, Station, brief_for, length_for, station};
 pub use raster::Raster;
-pub use registry::{all_rooms, hidden_room_by_id, room_by_id};
+pub use registry::{all_rooms, all_rooms_with, hidden_room_by_id, room_by_id};
 pub use resonance::{Resonance, resonances};
 pub use rng::SplitMix64;
-pub use room::{Room, RoomMeta};
+pub use room::{
+    DEFAULT_ROOM_ACTION, DEFAULT_TOUCH_ROOM_ACTION, MAX_ROOM_POKES, Room, RoomMeta, room_action,
+    room_touch_action,
+};
 pub use scores::Scoreboard;
 pub use secret::{akousma, deep_akousma};
 pub use seti::{SetiChannel, SetiScan, build_scan};
 pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
 pub use sims::{all_sims, sim_by_id};
 pub use sound::{Note, SoundSpec};
-pub use studio::{Expr, eval, parse, plot_text, to_melody};
+pub use studio::{
+    Expr, MAX_STUDIO_SOURCE_CHARS, StudioCreation, eval, parse, plot_text, to_melody,
+};
 pub use surface::Surface;
 pub use trophies::{Trophy, trophies};
