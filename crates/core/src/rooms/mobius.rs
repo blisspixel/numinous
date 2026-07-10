@@ -51,13 +51,51 @@ impl Mobius {
     }
 
     fn phase_for(&self, t: f64) -> f64 {
-        let t = t.clamp(0.0, 1.0);
+        let t = if t.is_finite() {
+            t.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
         if self.seed == 0 {
             t
         } else {
             (t + variation_unit(self.seed, 0x4D4F_4249_5553_0001) * 0.5).fract()
         }
     }
+}
+
+/// The safe drawing aspect for any surface.
+fn safe_aspect(canvas: &dyn Surface) -> f64 {
+    let aspect = canvas.char_aspect();
+    if aspect.is_finite() && aspect > 0.0 {
+        aspect
+    } else {
+        0.5
+    }
+}
+
+/// The single edge, sampled: each entry is (screen point, edge parameter w in
+/// [0, 2*TAU)). The edge closes only after two laps; w walks all of it.
+fn edge_points(width: usize, height: usize, aspect: f64) -> Vec<((i32, i32), f64)> {
+    let cx = width as f64 / 2.0;
+    let cy = height as f64 / 2.0;
+    let scale = (width as f64 / 2.0).min(height as f64 / (2.0 * aspect)) * 0.6;
+    let steps = 260;
+    // Half-open sampling: w = 2*TAU is the same edge point as w = 0, so the
+    // closing sample is excluded (drawers close the polyline themselves).
+    // Including it would give the w = 0 location a phantom twin whose
+    // parameter sits a full lap away.
+    (0..steps)
+        .map(|i| {
+            let w = 2.0 * TAU * f64::from(i) / f64::from(steps);
+            let (x, y, z) = strip(w % TAU, if w < TAU { W } else { -W });
+            let (px, py) = project(x, y, z);
+            (
+                ((cx + px * scale) as i32, (cy + py * scale * aspect) as i32),
+                w,
+            )
+        })
+        .collect()
 }
 
 impl Room for Mobius {
@@ -78,7 +116,7 @@ impl Room for Mobius {
         if width == 0 || height == 0 {
             return;
         }
-        let aspect = canvas.char_aspect();
+        let aspect = safe_aspect(canvas);
         let cx = width as f64 / 2.0;
         let cy = height as f64 / 2.0;
         let scale = (width as f64 / 2.0).min(height as f64 / (2.0 * aspect)) * 0.6;
@@ -98,17 +136,17 @@ impl Room for Mobius {
             canvas.line(a.0, a.1, b.0, b.1, '-');
         }
         // The single edge: follow v = +W around TWICE and it closes. One curve.
-        let steps = 260;
+        let edge = edge_points(width, height, aspect);
         let mut previous: Option<(i32, i32)> = None;
-        for i in 0..=steps {
-            let u = 2.0 * TAU * f64::from(i) / f64::from(steps);
-            // After one lap the +W side has become the -W side: same edge.
-            let (x, y, z) = strip(u % TAU, if u < TAU { W } else { -W });
-            let point = to_screen(x, y, z);
+        for &(point, _) in &edge {
             if let Some((px, py)) = previous {
                 canvas.line(px, py, point.0, point.1, '*');
             }
             previous = Some(point);
+        }
+        // Close the two-lap loop back to its first point.
+        if let (Some((px, py)), Some(&(first, _))) = (previous, edge.first()) {
+            canvas.line(px, py, first.0, first.1, '*');
         }
         // The ant: two laps of the centerline to get home. Its trail shows
         // where it has been; at t = 0.5 it is "underneath", upside down.
@@ -129,6 +167,63 @@ impl Room for Mobius {
             for dy in -1..=1 {
                 canvas.plot(px + dx, py + dy, '#');
             }
+        }
+    }
+
+    fn verb(&self) -> Option<&'static str> {
+        Some("CLICK: PAINT THE EDGE")
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        // The newest bounded raw tail first, finite filtering after, matching
+        // the catalog input contract.
+        let start = pokes.len().saturating_sub(crate::room::MAX_ROOM_POKES);
+        let sources: Vec<(f64, f64)> = pokes[start..]
+            .iter()
+            .copied()
+            .filter(|&(x, y)| x.is_finite() && y.is_finite())
+            .collect();
+        self.render(canvas, t);
+        if sources.is_empty() {
+            return;
+        }
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
+        }
+        let aspect = safe_aspect(canvas);
+        let edge = edge_points(width, height, aspect);
+        // Paint spreads along the one edge from each clicked point; the reach
+        // grows with the sweep. By the end of the sweep the paint has flowed
+        // onto the "other" edge without ever jumping, because there is only
+        // one edge. That is the room's whole truth, now under the hand.
+        let phase = if t.is_finite() {
+            t.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        let spread = phase * TAU;
+        for &(x, y) in &sources {
+            let px = (x.clamp(0.0, 1.0) * (width - 1) as f64).round() as i32;
+            let py = (y.clamp(0.0, 1.0) * (height - 1) as f64).round() as i32;
+            // The nearest sampled edge point to the hand is where the brush
+            // lands.
+            let Some(&(_, w_start)) = edge.iter().min_by_key(|((ex, ey), _)| {
+                let dx = i64::from(*ex) - i64::from(px);
+                let dy = i64::from(*ey) - i64::from(py);
+                dx * dx + dy * dy
+            }) else {
+                continue;
+            };
+            for &((ex, ey), w) in &edge {
+                let raw = (w - w_start).abs();
+                let around = (2.0 * TAU - raw).abs();
+                if raw.min(around) <= spread {
+                    canvas.plot(ex, ey, 'o');
+                }
+            }
+            canvas.plot(px, py, '+');
         }
     }
 
@@ -211,5 +306,138 @@ mod tests {
     #[test]
     fn reveal_declines_sidedness() {
         assert!(Mobius::new().reveal().contains("one side"));
+    }
+
+    #[test]
+    fn paint_spreads_with_the_sweep_and_flows_across_the_twist() {
+        let room = Mobius::new();
+        let count_paint = |t: f64| {
+            let mut canvas = Canvas::new(60, 30);
+            room.render_poked(&mut canvas, t, &[(0.5, 0.15)]);
+            canvas.to_text().chars().filter(|&c| c == 'o').count()
+        };
+        let early = count_paint(0.05);
+        let late = count_paint(0.6);
+        assert!(early > 0, "the brush lands immediately");
+        assert!(late > early, "paint keeps flowing as the sweep advances");
+
+        // The discriminating cross-lap proof: pick the click's own edge
+        // point, then a target sample on the OTHER lap whose circular
+        // distance requires crossing the twist, at a screen cell no
+        // same-lap sample shares. It must be unpainted while the spread is
+        // short and painted once the spread reaches it: paint that only
+        // covered one lap could never touch it.
+        let edge = super::edge_points(60, 30, 0.5);
+        let hand = (0.5_f64, 0.15_f64);
+        let (px, py) = (
+            (hand.0 * 59.0).round() as i32,
+            (hand.1 * 29.0).round() as i32,
+        );
+        let &(_, w_start) = edge
+            .iter()
+            .min_by_key(|((ex, ey), _)| {
+                let dx = i64::from(*ex) - i64::from(px);
+                let dy = i64::from(*ey) - i64::from(py);
+                dx * dx + dy * dy
+            })
+            .expect("edge samples exist");
+        let same_lap_cells: std::collections::HashSet<(i32, i32)> = edge
+            .iter()
+            .filter(|&&(_, w)| (w < TAU) == (w_start < TAU))
+            .map(|&(cell, _)| cell)
+            .collect();
+        let circular = |w: f64| {
+            let raw = (w - w_start).abs();
+            raw.min(2.0 * TAU - raw)
+        };
+        let target = edge
+            .iter()
+            .find(|&&(cell, w)| {
+                (w < TAU) != (w_start < TAU)
+                    && !same_lap_cells.contains(&cell)
+                    && circular(w) > 0.55 * TAU
+                    && circular(w) < 0.85 * TAU
+            })
+            .expect("a distinguishable other-lap sample exists");
+        let paint_at = |t: f64| {
+            let mut canvas = Canvas::new(60, 30);
+            room.render_poked(&mut canvas, t, &[hand]);
+            canvas.cell(target.0.0 as usize, target.0.1 as usize)
+        };
+        assert_ne!(
+            paint_at(0.3),
+            Some('o'),
+            "a short spread has not crossed the twist yet"
+        );
+        assert_eq!(
+            paint_at(0.9),
+            Some('o'),
+            "the spread crosses the twist onto the other lap without a jump"
+        );
+    }
+
+    #[test]
+    fn pokes_use_the_newest_raw_tail_before_filtering() {
+        let room = Mobius::new();
+        let mut flood: Vec<(f64, f64)> = (0..200).map(|i| (i as f64 / 200.0, 0.8)).collect();
+        flood.push((f64::NAN, 0.5));
+        flood.push((0.3, 0.2));
+        let start = flood.len() - crate::room::MAX_ROOM_POKES;
+        let tail = flood[start..].to_vec();
+        let mut via_flood = Canvas::new(60, 30);
+        room.render_poked(&mut via_flood, 0.4, &flood);
+        let mut via_tail = Canvas::new(60, 30);
+        room.render_poked(&mut via_tail, 0.4, &tail);
+        assert_eq!(via_flood.to_text(), via_tail.to_text());
+    }
+
+    #[test]
+    fn all_invalid_pokes_render_the_bare_room() {
+        let room = Mobius::new();
+        let mut bare = Canvas::new(60, 30);
+        room.render(&mut bare, 0.4);
+        let mut invalid = Canvas::new(60, 30);
+        room.render_poked(&mut invalid, 0.4, &[(f64::NAN, 0.5), (0.5, f64::INFINITY)]);
+        assert_eq!(bare.to_text(), invalid.to_text());
+    }
+
+    #[test]
+    fn seed_variation_changes_poked_renders_and_seed_zero_stays_exact() {
+        let mut a = Canvas::new(60, 30);
+        Mobius::new().render_poked(&mut a, 0.4, &[(0.5, 0.15)]);
+        let mut b = Canvas::new(60, 30);
+        Mobius::new_with(11).render_poked(&mut b, 0.4, &[(0.5, 0.15)]);
+        assert_ne!(a.to_text(), b.to_text(), "the ant phase varies with seed");
+        let mut exact = Canvas::new(60, 30);
+        Mobius::new_with(0).render_poked(&mut exact, 0.4, &[(0.5, 0.15)]);
+        assert_eq!(a.to_text(), exact.to_text());
+    }
+
+    #[test]
+    fn hostile_surfaces_and_phase_stay_bounded() {
+        struct Weird(Canvas);
+        impl crate::surface::Surface for Weird {
+            fn width(&self) -> usize {
+                self.0.width()
+            }
+            fn height(&self) -> usize {
+                self.0.height()
+            }
+            fn char_aspect(&self) -> f64 {
+                f64::NEG_INFINITY
+            }
+            fn plot(&mut self, x: i32, y: i32, mark: char) {
+                self.0.plot(x, y, mark);
+            }
+        }
+        let room = Mobius::new();
+        let mut weird = Weird(Canvas::new(30, 15));
+        room.render_poked(&mut weird, f64::NAN, &[(0.5, 0.5)]);
+        assert!(weird.0.ink_count() > 0);
+        let mut nan_phase = Canvas::new(30, 15);
+        room.render(&mut nan_phase, f64::NAN);
+        let mut zero_phase = Canvas::new(30, 15);
+        room.render(&mut zero_phase, 0.0);
+        assert_eq!(nan_phase.to_text(), zero_phase.to_text());
     }
 }
