@@ -51,6 +51,190 @@ pub struct ChallengeGrade {
     pub score: u32,
 }
 
+/// A posed parameter goal: sweep the room until its own readout lands on a
+/// target number. Ruling 13's deeper half: "find the stall angle to one
+/// decimal" style, where the metric is the phenomenon's own parameter. The
+/// readout is taken from [`Room::status`], the same line the player sees, so
+/// the goal and the instrument can never disagree.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParameterGoal {
+    /// The room this goal is posed for.
+    pub room: String,
+    /// The seed the target was drawn from.
+    pub seed: u64,
+    /// Which number in the status line is the readout: the first one that
+    /// moves across the sweep. Lissajous reads "X:Y = 3:2.00" where the 3 is
+    /// a constant tuning, so position matters, not just presence.
+    pub index: usize,
+    /// The readout's label, straight from the status line (e.g. "TILT").
+    pub label: String,
+    /// The value to land on.
+    pub target: f64,
+    /// How close counts as landed.
+    pub tolerance: f64,
+    /// The full observed range of the readout across the sweep.
+    pub span: (f64, f64),
+    /// The goal, spoken plainly.
+    pub goal: String,
+}
+
+/// A graded parameter attempt. Metrics first, as always.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParameterGrade {
+    /// The readout at the attempted phase.
+    pub value: f64,
+    /// Distance from the target.
+    pub distance: f64,
+    /// Whether the value landed within tolerance.
+    pub within: bool,
+    /// A graded 0-100 score: closeness across the observed span.
+    pub score: u32,
+}
+
+/// How many phases the sweep is sampled at while posing a parameter goal.
+const PARAMETER_SAMPLES: usize = 64;
+
+/// Every number in a status line, as (byte offset of its first character,
+/// parsed value), left to right. A sign counts as part of a number only when
+/// a digit follows it, so "X:Y = 3:2.00" yields the 3 and the 2.00 and a
+/// hyphen in prose never starts a phantom number.
+fn status_numbers(status: &str) -> Vec<(usize, f64)> {
+    let bytes = status.as_bytes();
+    let mut numbers = Vec::new();
+    let mut start = 0;
+    while start < bytes.len() {
+        let c = bytes[start] as char;
+        if c.is_ascii_digit()
+            || ((c == '-' || c == '+')
+                && bytes
+                    .get(start + 1)
+                    .is_some_and(|next| (*next as char).is_ascii_digit()))
+        {
+            let mut end = start + 1;
+            while end < bytes.len() && ((bytes[end] as char).is_ascii_digit() || bytes[end] == b'.')
+            {
+                end += 1;
+            }
+            if let Ok(value) = status[start..end].parse() {
+                numbers.push((start, value));
+            }
+            start = end;
+        } else {
+            start += 1;
+        }
+    }
+    numbers
+}
+
+/// The readout's label: the status text before the number at byte offset
+/// `cut`, trimmed of separators. Falls back to "READOUT" for label-less
+/// lines.
+fn status_label(status: &str, cut: usize) -> String {
+    let label = status[..cut]
+        .trim()
+        .trim_end_matches(['=', ':', ' '])
+        .trim();
+    if label.is_empty() {
+        "READOUT".to_string()
+    } else {
+        label.to_string()
+    }
+}
+
+/// A goal number with three significant digits, so tiny tolerances read at
+/// their true scale instead of vanishing into "0.000".
+fn fmt_sig(x: f64) -> String {
+    let decimals = sig_decimals(x);
+    format!("{x:.decimals$}")
+}
+
+/// A tolerance for prose, rounded DOWN at its last displayed digit: the
+/// spoken bound may be tighter than the grader enforces, never looser, so
+/// text can never call an attempt inside when the grade says otherwise.
+fn fmt_tolerance(x: f64) -> String {
+    let decimals = sig_decimals(x);
+    let scale = 10f64.powi(decimals as i32);
+    let floored = (x * scale).floor() / scale;
+    format!("{floored:.decimals$}")
+}
+
+/// How many decimals give roughly three significant digits for `x`.
+fn sig_decimals(x: f64) -> usize {
+    if x == 0.0 || !x.is_finite() {
+        return 3;
+    }
+    let magnitude = x.abs().log10().floor() as i32;
+    (2 - magnitude).max(0) as usize
+}
+
+/// Pose the deterministic parameter goal for a room and seed, or `None` for
+/// rooms without a numeric readout or whose readout never moves. The readout
+/// is the FIRST number in the status line that varies across the sweep
+/// (constant numbers are labels or tunings, not readouts), and the target is
+/// one of the sweep's own sampled values, so every posed goal is reachable
+/// by construction: some phase lands on it exactly.
+#[must_use]
+pub fn pose_parameter_goal(room: &dyn Room, seed: u64) -> Option<ParameterGoal> {
+    let mut samples = Vec::with_capacity(PARAMETER_SAMPLES);
+    for i in 0..PARAMETER_SAMPLES {
+        let t = i as f64 / PARAMETER_SAMPLES as f64;
+        samples.push(status_numbers(&room.status(t)?));
+    }
+    // A status whose number count shifts with phase has no stable column to
+    // read; no catalog room does this, but decline safely if one ever does.
+    let columns = samples[0].len();
+    if columns == 0 || samples.iter().any(|numbers| numbers.len() != columns) {
+        return None;
+    }
+    let (index, lo, hi) = (0..columns).find_map(|index| {
+        let column = samples.iter().map(|numbers| numbers[index].1);
+        let lo = column.clone().fold(f64::INFINITY, f64::min);
+        let hi = column.fold(f64::NEG_INFINITY, f64::max);
+        let moving = lo.is_finite() && hi.is_finite() && hi - lo >= 1e-9;
+        moving.then_some((index, lo, hi))
+    })?;
+    let meta = room.meta();
+    let mut rng = SplitMix64::new(seed ^ fnv1a(meta.id.as_bytes()) ^ 0x5041_5241);
+    let target = samples[rng.below(PARAMETER_SAMPLES as u64) as usize][index].1;
+    let tolerance = (hi - lo) / 40.0;
+    let status = room.status(0.0)?;
+    let label = status_label(&status, status_numbers(&status)[index].0);
+    let goal = format!(
+        "SWEEP {} UNTIL {label} LANDS WITHIN {} OF {}",
+        meta.title.to_uppercase(),
+        fmt_tolerance(tolerance),
+        fmt_sig(target),
+    );
+    Some(ParameterGoal {
+        room: meta.id.to_string(),
+        seed,
+        index,
+        label,
+        target,
+        tolerance,
+        span: (lo, hi),
+        goal,
+    })
+}
+
+/// Grade a parameter attempt at phase `t`: read the room's own readout and
+/// measure the distance. Returns `None` only if the room's status vanished
+/// or its readout column went missing, which no catalog room does.
+#[must_use]
+pub fn grade_parameter(room: &dyn Room, goal: &ParameterGoal, t: f64) -> Option<ParameterGrade> {
+    let status = room.status(t)?;
+    let value = status_numbers(&status).get(goal.index)?.1;
+    let distance = (value - goal.target).abs();
+    let span = (goal.span.1 - goal.span.0).max(1e-9);
+    let score = (100.0 * (1.0 - (distance / span).min(1.0))).round() as u32;
+    Some(ParameterGrade {
+        value,
+        distance,
+        within: distance <= goal.tolerance,
+        score,
+    })
+}
+
 /// How many seeded probe hands posing may try before giving up.
 const PROBE_ATTEMPTS: usize = 8;
 
@@ -397,6 +581,109 @@ mod tests {
         assert!(far.cells_changed > 0);
         assert!(far.center_distance > 0.0);
         assert!(far.score < 100, "distance must cost score");
+    }
+
+    #[test]
+    fn status_numbers_and_labels_parse_from_real_readouts() {
+        let values = |s: &str| {
+            super::status_numbers(s)
+                .iter()
+                .map(|n| n.1)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(values("TILT = +0.33"), vec![0.33]);
+        assert_eq!(values("DETUNE -0.041"), vec![-0.041]);
+        assert_eq!(values("X:Y = 3:2.00"), vec![3.0, 2.0]);
+        assert_eq!(values("no numbers here"), Vec::<f64>::new());
+        // A hyphen in prose starts no phantom number, so the label cut and
+        // the value parser can never disagree about where a number begins.
+        assert_eq!(values("E-FIELD 0.5"), vec![0.5]);
+        let label =
+            |s: &str, index: usize| super::status_label(s, super::status_numbers(s)[index].0);
+        assert_eq!(label("TILT = +0.33", 0), "TILT");
+        assert_eq!(label("HEIGHT = SLOPE = 1.85", 0), "HEIGHT = SLOPE");
+        assert_eq!(label("X:Y = 3:2.00", 1), "X:Y = 3");
+        assert_eq!(label("E-FIELD 0.5", 0), "E-FIELD");
+        assert_eq!(super::status_label("1.85", 0), "READOUT");
+    }
+
+    #[test]
+    fn spoken_tolerances_are_never_looser_than_the_graded_bound() {
+        for &tolerance in &[0.00148, 0.0015, 0.31, 12.5, 300.0] {
+            let spoken: f64 = super::fmt_tolerance(tolerance).parse().expect("parses");
+            assert!(
+                spoken <= tolerance,
+                "prose must bound from below: {spoken} vs {tolerance}"
+            );
+            assert!(spoken > 0.0, "and never vanish to zero: {tolerance}");
+        }
+        assert_eq!(super::fmt_sig(0.00148), "0.00148");
+        assert_eq!(super::fmt_sig(12.5), "12.5");
+    }
+
+    #[test]
+    fn lissajous_poses_on_its_moving_ratio_not_the_constant_tuning() {
+        // "X:Y = 3:2.00": the 3 is a fixed tuning, the 2.00 sweeps. The goal
+        // must target the number that moves, or the room could never pose.
+        let room = crate::registry::room_by_id("lissajous").expect("room");
+        let goal = super::pose_parameter_goal(room.as_ref(), 5).expect("the moving column poses");
+        assert_eq!(goal.index, 1, "the constant first column is skipped");
+        assert!(goal.span.0 < goal.span.1);
+    }
+
+    #[test]
+    fn parameter_goals_pose_deterministically_and_are_reachable() {
+        let room = crate::registry::room_by_id("slope-rider").expect("room");
+        let a = super::pose_parameter_goal(room.as_ref(), 7).expect("slope-rider has a readout");
+        let b = super::pose_parameter_goal(room.as_ref(), 7).expect("same seed, same goal");
+        assert_eq!(a, b);
+        assert!(a.tolerance > 0.0);
+        assert!(a.span.0 < a.span.1);
+        assert!(
+            a.goal.contains("TILT"),
+            "the goal names the readout: {}",
+            a.goal
+        );
+        // Reachable by construction: the target is one of the sweep's own
+        // sampled values, so some sampled phase lands within tolerance.
+        let landed = (0..super::PARAMETER_SAMPLES).any(|i| {
+            let t = i as f64 / super::PARAMETER_SAMPLES as f64;
+            super::grade_parameter(room.as_ref(), &a, t).is_some_and(|g| g.within)
+        });
+        assert!(landed, "a sampled phase lands on the target");
+    }
+
+    #[test]
+    fn parameter_grades_are_metrics_not_binary() {
+        let room = crate::registry::room_by_id("harmonograph").expect("room");
+        let goal = super::pose_parameter_goal(room.as_ref(), 3).expect("poses");
+        // Every attempt earns a graded distance, even far misses.
+        let mut scores = Vec::new();
+        for i in 0..8 {
+            let t = i as f64 / 8.0;
+            let grade = super::grade_parameter(room.as_ref(), &goal, t).expect("grades");
+            assert!(grade.distance.is_finite());
+            assert!(grade.score <= 100);
+            scores.push(grade.score);
+        }
+        assert!(
+            scores.iter().any(|&s| s != scores[0]),
+            "different phases earn different scores: a gradient to climb"
+        );
+    }
+
+    #[test]
+    fn rooms_without_a_status_line_pose_no_parameter_goal() {
+        // A room with no status line cannot pose.
+        for room in crate::registry::all_rooms() {
+            if room.status(0.3).is_none() {
+                assert!(
+                    super::pose_parameter_goal(room.as_ref(), 1).is_none(),
+                    "{} has no readout to target",
+                    room.meta().id
+                );
+            }
+        }
     }
 
     #[test]

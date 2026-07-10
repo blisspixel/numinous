@@ -56,7 +56,10 @@ pub mod trophies;
 pub use aliens::{AlienMessage, alien_message, to_base};
 pub use ansi::to_ansi;
 pub use canvas::{Canvas, RenderDelta};
-pub use challenge::{Challenge, ChallengeGrade, grade_challenge, pose_challenge};
+pub use challenge::{
+    Challenge, ChallengeGrade, ParameterGoal, ParameterGrade, grade_challenge, grade_parameter,
+    pose_challenge, pose_parameter_goal,
+};
 pub use chiptune::{Pattern, Voice, compose, pitch};
 pub use codebreaker::{Feedback, grade, hint, secret_code};
 pub use concepts::concept;

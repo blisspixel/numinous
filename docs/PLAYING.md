@@ -128,6 +128,7 @@ the deliberate exceptions for replayable hand input:
 | `describe_room` | a room's story (some unlisted names also answer) |
 | `reveal_room` | the insight that reframes the room |
 | `play_room` | render a room as ASCII at phase `t`, with optional `variation` and `pokes` |
+| `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
 | `listen_room` | the room's sound as notation (Hz, note names, timing) |
 | `list_sims` | the simulations and their levers |
 | `run_sim` | run a sim with your lever values; picture plus plain readout |

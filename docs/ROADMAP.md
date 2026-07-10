@@ -23,7 +23,7 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 900 tests, locked build, Windows verify, 90.49% region cover, and 90.06% line cover all green.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 909 tests, locked build, Windows verify, 90.66% region cover, and 90.21% line cover all green.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -163,9 +163,17 @@ construction and a registry-wide test proves the witness; and challenge seeds
 are always explicit rather than clock-derived, so the graded reply and the
 recorded progress can never straddle midnight. The MCP `challenge` tool (the
 27th) poses and grades it, records play/win through the shared Journey, and
-posts graded scores to the shared table. Room-specific goals beyond the
-spatial-response baseline (e.g. "find the stall angle to one decimal") remain
-future depth on this substrate.
+posts graded scores to the shared table.
+
+Cycle 75 delivered the room-specific depth beyond that spatial baseline: the
+challenge tool's parameter kind (`kind: "parameter"`) targets the phenomenon's
+own parameter, "land TILT within 0.02 of 0.31" style, completing REVIEW
+ruling 13. Posing samples the room's status readout across the sweep and
+draws the target from the sampled values themselves, so every posed goal is
+reachable by construction; the attempt is the phase, and grading reads the
+same status line the player sees, reporting value, distance, tolerance, and
+a 0-100 score across the readout's observed span. Rooms without a moving
+numeric readout decline with a guiding error.
 
 Cycle 61 laid the gesture substrate for stack item two: core `RoomInput`
 events (pointer down/move/up stamped with the room phase at which each
@@ -247,7 +255,7 @@ contract and the geometry change beyond the click marker.
 
 Scored against the nine 1.0 gates below, the build sits at roughly **0.6**:
 the structure is complete (30 catalog rooms across 10 wings plus hidden content,
-11+ games on four shapes of play, the full RPG spine, 27 MCP tools, both music engines live, 833
+11+ games on four shapes of play, the full RPG spine, 27 MCP tools, both music engines live, 909
 tests) and the remaining distance is quality density, not missing systems.
 
 | 1.0 gate | Estimate | What is missing |

@@ -170,12 +170,15 @@ interpretable, and recoverable.
 
 ## Next for agent play
 
-- Challenge gradients, v1 built: the `challenge` tool poses a seeded touch
-  goal for any room with a verb and grades attempts as metrics (cells in
-  target, threshold fraction, centroid distance, 0-100 score), never bare
-  pass/fail. Next depth: room-specific goals on the same substrate ("find the
-  stall angle to one decimal"), where the metric is the phenomenon's own
-  parameter rather than the spatial response.
+- Challenge gradients, v2 built: the `challenge` tool poses two kinds of
+  seeded goal. Touch goals (any room with a verb) grade attempts as spatial
+  metrics (cells in target, threshold fraction, centroid distance, 0-100
+  score). Parameter goals (`kind: "parameter"`, any room with a moving
+  numeric readout) target the phenomenon's own parameter, "land TILT within
+  0.02 of 0.31" style: the agent sweeps `t` until the room's status readout
+  lands, and every attempt grades as distance plus a climbable score. Both
+  are metrics, never bare pass/fail, and every posed goal is reachable by
+  construction.
 - Trajectory friendliness: a session log format an agent (or researcher) can
   replay.
 - Multi-mind play: the same daily seed already gives humans and agents a shared
