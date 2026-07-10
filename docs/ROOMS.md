@@ -326,6 +326,90 @@ The wings stay feelings, not branches; this map is the coverage checklist
 behind them. A branch is covered when a kid can play its entry and a professor
 can nod at it, and neither one is bored.
 
+## The Next Wave (July 2026): designed, not built
+
+The founder's directive: more and better rooms, researched creatively across
+four aspects. Four parallel design passes (physics, deep mathematics,
+fun-first, cosmic) produced these twenty-nine designs, deduplicated (the
+sandpile and the Chladni plate surfaced independently in multiple passes,
+which is itself a signal). Every entry has a full design (rule, gasp, verb,
+sound, reveal, feasibility) in the research record; what follows is the
+catalog-level card. None are built; the review-stack rule stands, and each
+room still faces the Definition of Done, including math sign-off on its
+reveal. Non-textbook reveal claims carry sources in CHANGELOG-linked research
+(BB(5)=47,176,870 per the 2024 bbchallenge Coq-verified proof; Conway's
+constant; McKinley's starbow analysis; Tero's Physarum Tokyo result).
+
+**The first eight, by wow-to-build, when the build gate opens:**
+
+1. **The Sandpile** (Emergence): drop grains; four topples to neighbors;
+   self-organized criticality blooms a fractal mandala. HOLD: POUR SAND.
+   Reveal: catastrophe is the resting state. Trivial build, huge wow.
+2. **Chladni Figures** (Waves & Sound): sand flees a singing plate and draws
+   the silence. DRAG: TUNE THE PLATE (the drive tone IS the room's pitch).
+   Reveal: you cannot always hear the shape of a drum (Gordon-Webb-Wolpert
+   1992). Sight and sound as the same number: the thesis, twice.
+3. **The Ripple Tank** (Waves & Sound): CLICK: DROP A PEBBLE; interference
+   fans, dead-calm lanes, the double slit built by hand. Reveal: the only
+   mystery of quantum mechanics.
+4. **The Coffee Cup** (Shape & Space): rays bounce once in a circle and
+   condense into the cardioid. DRAG: SWING THE SUN. Closes the cardioid
+   triangle with Times Tables and Mandelbrot: one curve, three rooms.
+5. **Ford Circles** (Number & Pattern): every fraction owns a circle at
+   height 1/(2q^2); none ever overlap; kisses are Farey neighbors; the
+   deepest crevice belongs to the golden ratio. CLICK: BIRTH THE MEDIANT.
+6. **The Zeta Walk** (Number & Pattern): the eta-walk on the critical line;
+   DRAG: CLIMB THE LINE; the thousand-arm spiral folds home to zero exactly
+   at Riemann zeros, hunted by ear as cadences. The Prime Spirals 0.5 egg,
+   made playable.
+7. **The Starbow** (Shape & Space / Cosmos): HOLD: BURN toward lightspeed;
+   relativistic aberration pours the whole sky into a burning ring ahead.
+   One closed-form transform per star (McKinley 1979).
+8. **Slingshot** (Motion & Dynamics): PULL AND RELEASE: LAUNCH A PROBE on
+   the gesture substrate; HOLD grows suns; gravity assists discovered, not
+   taught. Daily seeded courses; missed probes become comets, never failures.
+
+**The rest of the wave, by aspect:**
+
+- Physics: **The Magnet** (DRAG: TURN THE HEAT; Ising criticality,
+  universality, honest 1/f crackle), **The First Rain** (DRAG: MAKE IT RAIN;
+  percolation's cliff at p=0.5927), **Kepler's Loom** (DRAG: FLING A MOON;
+  every throw an ellipse, equal areas as metronome), **The Fastest Fall**
+  (DRAG: DRAW YOUR TRACK; race the cycloid and lose; the calculus of
+  variations door).
+- Deep math: **Audioactive Decay** (CLICK: SPEAK THE NEXT LINE; look-and-say
+  shatters into 92 elements, Conway's constant), **The Busy Beaver** (CLICK:
+  FLIP ONE RULE; five rules run 47,176,870 steps then stop on purpose;
+  undecidability worn lightly), **The Chord Game** (elliptic-curve addition
+  as bank shots; the group law that locks your credit card), **The
+  Upside-Down Ruler** (p-adic tower; ...999999 + 1 = 0, so ...999999 = -1),
+  **The 720 Degree Room** (Dirac's belt; DRAG rotates a tethered stone; 360
+  is not enough, 720 is; the quaternion double cover felt in the wrist).
+- Fun-first: **Phantom Jam** (HOLD: BRAKE; one tap births a jam that rolls
+  backward forever; Sugiyama 2008), **The Whispering Table** (PULL AND
+  RELEASE: SHOOT; elliptic billiards weave caustics; chaos is impossible
+  here), **Murmuration** (HOLD: BE THE FALCON; boids with seven neighbors;
+  the shape exists in no bird's head), **The Wet Oracle** (DRAG: SMEAR THE
+  FOOD; race a slime mold to the shortest path and lose; Tero 2010), **The
+  Unlit Room** (DRAG: CRANK THE LANTERN; the illumination problem; one point
+  no light can reach, Tokarsky 1995).
+- Cosmic: **Tilt the Cone** (DRAG: BOOST THE FRAME; simultaneity trades
+  places, causality refuses), **The Stretch** (CLICK any galaxy: everyone is
+  the center; redshift played an octave down), **Laplace's Clockwork**
+  (DRAG: DETUNE A MOON; Io-Europa-Ganymede's 1:2:4 lock; the forbidden
+  triple conjunction), **The Message That Heals** (DRAG: RAISE THE NOISE;
+  Hamming codes healing wounds mid-flight, until the cliff), **The Lens**
+  (DRAG: MOVE THE DARK MASS; Einstein rings from a mass you never see),
+  **Fourteen Beacons** (DRAG: GUESS WHERE HOME IS; the Pioneer pulsar map as
+  polyrhythm), **The Loneliness Equation** (seven dials; the last one, L, is
+  drawn longer; the silence is scheduling, not scarcity).
+
+Cross-room resonances the wave adds for free: the cardioid triangle (Coffee
+Cup, Times Tables, Mandelbrot), the Lorentz pair (Starbow, Tilt the Cone),
+consonance-as-stability (Laplace's Clockwork, Lissajous), Drake's two
+artifacts (Fourteen Beacons, Arecibo), and irrationality's two faces (Ford
+Circles, Golden Angle).
+
 ## Founder's room idea (July 2026): The Dimension Dial
 
 One control: the number of dimensions, 1 up to many. At 1 a line of points
