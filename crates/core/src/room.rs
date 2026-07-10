@@ -91,6 +91,22 @@ pub trait Room {
         self.render(canvas, t);
     }
 
+    /// Render with the hand's full gesture history: `inputs` are replayable
+    /// [`RoomInput`] events, newest last, bounded by faces to
+    /// [`MAX_ROOM_INPUTS`]. The default translates pointer-down and
+    /// pointer-move points into legacy pokes (a drag paints its trail, as the
+    /// App does today) and defers to [`Room::render_poked`], so every
+    /// existing room answers exactly as before; rooms whose math wants held
+    /// input (drag a dial, pull and release a pendulum) override this instead.
+    fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
+        let pokes = pokes_from_inputs(inputs);
+        if pokes.is_empty() {
+            self.render(canvas, t);
+        } else {
+            self.render_poked(canvas, t, &pokes);
+        }
+    }
+
     /// Deeper cuts, in order of depth: true, retellable, math-teacher-grade
     /// gems that unlock as the journey deepens (the faces choose thresholds;
     /// see `docs/PLAYFUL.md`). The knowledge is the loot. Empty by default.
@@ -112,6 +128,94 @@ pub trait Room {
     }
 }
 
+/// Maximum input events a face should pass to [`Room::render_input`].
+///
+/// A gesture is many events (down, moves, up), so this is larger than
+/// [`MAX_ROOM_POKES`]; it bounds render work and keeps trails replayable.
+pub const MAX_ROOM_INPUTS: usize = 96;
+
+/// One replayable hand event inside a room, in normalized [0, 1] coordinates.
+///
+/// Ruling 2 of the July 2026 review (`docs/REVIEW.md`): the poke must become
+/// a real input substrate, not one-shot clicks. Faces record what the hand
+/// did as plain data, newest last, so a room can give a held gesture real
+/// semantics while staying stateless, deterministic, and replayable across
+/// App, CLI, and MCP. Pointer events carry the room phase `t` at which they
+/// happened, because held semantics (release velocity, drag-start phase) are
+/// timing questions and time keeps advancing during a gesture. The enum is
+/// non-exhaustive: variants will grow (parameters, pinch) without breaking
+/// downstream matches.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RoomInput {
+    /// The pointer landed at a point.
+    PointerDown {
+        /// Normalized column, 0 at the left edge.
+        x: f64,
+        /// Normalized row, 0 at the top edge.
+        y: f64,
+        /// The room phase when the pointer landed.
+        t: f64,
+    },
+    /// The pointer moved while held.
+    PointerMove {
+        /// Normalized column, 0 at the left edge.
+        x: f64,
+        /// Normalized row, 0 at the top edge.
+        y: f64,
+        /// The room phase when the pointer passed this point.
+        t: f64,
+    },
+    /// The pointer lifted at a point, ending a gesture.
+    PointerUp {
+        /// Normalized column, 0 at the left edge.
+        x: f64,
+        /// Normalized row, 0 at the top edge.
+        y: f64,
+        /// The room phase when the pointer lifted.
+        t: f64,
+    },
+    /// The gesture ended without a meaningful lift point (focus loss, a
+    /// modal opening). Held rooms treat this as "let go where you were,
+    /// gently": no release semantics should fire from it.
+    PointerCancel,
+    /// A wheel or pinch step; positive means away or up.
+    Wheel {
+        /// Signed step count; faces normalize device units.
+        delta: f64,
+    },
+    /// A character key pressed inside the room.
+    Key {
+        /// The character as typed.
+        ch: char,
+    },
+}
+
+/// The legacy poke points inside an input trail: every pointer-down and
+/// pointer-move point, newest last, capped to the newest [`MAX_ROOM_POKES`].
+///
+/// Moves count because that is how the App behaves today: a drag paints its
+/// trail samples as pokes. The shape is preserved, not the exact sample
+/// list: faces still own their own decimation and clamping (the App skips
+/// near-duplicate trail points and normalizes before storing). Lift and
+/// cancel events carry no paint. Points are passed raw (no finiteness
+/// filtering), matching the documented room contract of
+/// newest-raw-tail-then-filter.
+#[must_use]
+pub fn pokes_from_inputs(inputs: &[RoomInput]) -> Vec<(f64, f64)> {
+    let points: Vec<(f64, f64)> = inputs
+        .iter()
+        .filter_map(|input| match *input {
+            RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. } => {
+                Some((x, y))
+            }
+            _ => None,
+        })
+        .collect();
+    let start = points.len().saturating_sub(MAX_ROOM_POKES);
+    points[start..].to_vec()
+}
+
 /// The face-neutral action line for text and protocol faces.
 pub fn room_action(room: &dyn Room) -> &'static str {
     room.verb().unwrap_or(DEFAULT_ROOM_ACTION)
@@ -124,7 +228,7 @@ pub fn room_touch_action(room: &dyn Room) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::{Room, RoomMeta};
+    use super::{MAX_ROOM_INPUTS, MAX_ROOM_POKES, Room, RoomInput, RoomMeta, pokes_from_inputs};
     use crate::surface::Surface;
 
     struct DefaultSoundRoom;
@@ -156,6 +260,151 @@ mod tests {
             let spec = room.sound(t);
             assert_eq!(spec, base);
             assert!(spec.notes.iter().all(|note| note.freq.is_finite()));
+        }
+    }
+
+    #[test]
+    fn inputs_translate_downs_and_moves_to_pokes_newest_last() {
+        // Downs AND moves paint, matching the app's drag-trail behavior;
+        // lifts, cancels, wheels, and keys carry no paint.
+        let inputs = [
+            RoomInput::PointerDown {
+                x: 0.1,
+                y: 0.2,
+                t: 0.00,
+            },
+            RoomInput::PointerMove {
+                x: 0.3,
+                y: 0.3,
+                t: 0.01,
+            },
+            RoomInput::PointerUp {
+                x: 0.4,
+                y: 0.4,
+                t: 0.02,
+            },
+            RoomInput::PointerCancel,
+            RoomInput::Wheel { delta: 1.0 },
+            RoomInput::Key { ch: 'r' },
+            RoomInput::PointerDown {
+                x: 0.5,
+                y: 0.6,
+                t: 0.03,
+            },
+        ];
+        assert_eq!(
+            pokes_from_inputs(&inputs),
+            vec![(0.1, 0.2), (0.3, 0.3), (0.5, 0.6)],
+        );
+    }
+
+    #[test]
+    fn inputs_cap_legacy_pokes_to_the_newest_tail() {
+        let inputs: Vec<RoomInput> = (0..MAX_ROOM_POKES + 5)
+            .map(|i| RoomInput::PointerDown {
+                x: i as f64 / 40.0,
+                y: 0.5,
+                t: 0.0,
+            })
+            .collect();
+        let pokes = pokes_from_inputs(&inputs);
+        assert_eq!(pokes.len(), MAX_ROOM_POKES);
+        assert_eq!(
+            pokes.last().copied(),
+            Some(((MAX_ROOM_POKES + 4) as f64 / 40.0, 0.5)),
+            "the newest event survives the cap"
+        );
+    }
+
+    #[test]
+    fn the_default_gesture_render_matches_render_poked() {
+        // A room that only knows render_poked answers gesture input
+        // identically: downs and moves become pokes, the rest is ignored.
+        let room = crate::registry::room_by_id("voronoi").expect("voronoi exists");
+        let mut via_pokes = crate::canvas::Canvas::new(40, 20);
+        room.render_poked(&mut via_pokes, 0.25, &[(0.3, 0.7), (0.35, 0.7)]);
+        let mut via_inputs = crate::canvas::Canvas::new(40, 20);
+        room.render_input(
+            &mut via_inputs,
+            0.25,
+            &[
+                RoomInput::PointerDown {
+                    x: 0.3,
+                    y: 0.7,
+                    t: 0.25,
+                },
+                RoomInput::PointerMove {
+                    x: 0.35,
+                    y: 0.7,
+                    t: 0.26,
+                },
+                RoomInput::PointerUp {
+                    x: 0.35,
+                    y: 0.7,
+                    t: 0.27,
+                },
+                RoomInput::Wheel { delta: -2.0 },
+            ],
+        );
+        assert_eq!(via_pokes.to_text(), via_inputs.to_text());
+    }
+
+    #[test]
+    fn a_gesture_with_no_paint_renders_the_bare_room() {
+        let room = crate::registry::room_by_id("voronoi").expect("voronoi exists");
+        let mut bare = crate::canvas::Canvas::new(40, 20);
+        room.render(&mut bare, 0.25);
+        let mut gestured = crate::canvas::Canvas::new(40, 20);
+        room.render_input(
+            &mut gestured,
+            0.25,
+            &[
+                RoomInput::PointerCancel,
+                RoomInput::Wheel { delta: 3.0 },
+                RoomInput::Key { ch: 'x' },
+            ],
+        );
+        assert_eq!(bare.to_text(), gestured.to_text());
+    }
+
+    #[test]
+    fn every_catalog_room_accepts_a_mixed_gesture_trail() {
+        // The substrate invariant: render_input never panics and stays
+        // deterministic for any room, given a full mixed bounded trail.
+        let trail: Vec<RoomInput> = (0..MAX_ROOM_INPUTS)
+            .map(|i| {
+                let t = i as f64 / MAX_ROOM_INPUTS as f64;
+                match i % 6 {
+                    0 => RoomInput::PointerDown {
+                        x: (i % 10) as f64 / 10.0,
+                        y: (i % 7) as f64 / 7.0,
+                        t,
+                    },
+                    1 => RoomInput::PointerMove {
+                        x: (i % 9) as f64 / 9.0,
+                        y: 0.5,
+                        t,
+                    },
+                    2 => RoomInput::PointerUp { x: 0.5, y: 0.5, t },
+                    3 => RoomInput::PointerCancel,
+                    4 => RoomInput::Wheel {
+                        delta: (i as f64) - 4.0,
+                    },
+                    _ => RoomInput::Key { ch: 'r' },
+                }
+            })
+            .collect();
+        for room in crate::registry::all_rooms() {
+            let mut once = crate::canvas::Canvas::new(40, 20);
+            room.render_input(&mut once, 0.5, &trail);
+            let mut twice = crate::canvas::Canvas::new(40, 20);
+            room.render_input(&mut twice, 0.5, &trail);
+            assert_eq!(
+                once.to_text(),
+                twice.to_text(),
+                "{} must stay deterministic under gesture input",
+                room.meta().id
+            );
         }
     }
 }
