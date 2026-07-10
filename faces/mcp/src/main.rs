@@ -3178,7 +3178,7 @@ plays 2
     fn play_room_gives_quiet_rooms_a_default_action() {
         let resp = handle_request(&json!({
             "jsonrpc":"2.0","id":31,"method":"tools/call",
-            "params":{"name":"play_room","arguments":{"id":"zeno","width":40,"height":20}}
+            "params":{"name":"play_room","arguments":{"id":"the-pour","width":40,"height":20}}
         }))
         .expect("tools/call must respond");
         let text = resp["result"]["content"][0]["text"]
