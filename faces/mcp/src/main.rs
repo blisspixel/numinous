@@ -2941,17 +2941,17 @@ plays 2
         );
         assert_eq!(resp["result"]["isError"], false);
 
-        let quiet = handle_request(&json!({
+        let tuned = handle_request(&json!({
             "jsonrpc":"2.0","id":302,"method":"tools/call",
             "params":{"name":"listen_room","arguments":{"id":"lissajous","t":0.0}}
         }))
         .expect("tools/call must respond");
-        let quiet_text = quiet["result"]["content"][0]["text"]
+        let tuned_text = tuned["result"]["content"][0]["text"]
             .as_str()
             .unwrap_or_default();
         assert!(
-            quiet_text.contains("G visible fifth") && quiet_text.contains("G3 D4 G4"),
-            "quiet room motifs must surface readable notation: {quiet_text}"
+            tuned_text.contains("G visible fifth") && tuned_text.contains("G3 D4 G4"),
+            "room motifs must surface readable notation: {tuned_text}"
         );
 
         let varied = handle_request(&json!({
@@ -3178,7 +3178,7 @@ plays 2
     fn play_room_gives_quiet_rooms_a_default_action() {
         let resp = handle_request(&json!({
             "jsonrpc":"2.0","id":31,"method":"tools/call",
-            "params":{"name":"play_room","arguments":{"id":"lissajous","width":40,"height":20}}
+            "params":{"name":"play_room","arguments":{"id":"zeno","width":40,"height":20}}
         }))
         .expect("tools/call must respond");
         let text = resp["result"]["content"][0]["text"]
