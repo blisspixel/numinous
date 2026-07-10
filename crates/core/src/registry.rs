@@ -6,37 +6,50 @@
 use crate::room::Room;
 use crate::rooms;
 
-/// All built-in rooms, in catalog order.
+/// All built-in rooms, in catalog order. Default variation 0 pins tests and postcards.
 #[must_use]
 pub fn all_rooms() -> Vec<Box<dyn Room>> {
+    all_rooms_with(0)
+}
+
+/// All rooms with a per-visit variation seed (default 0 keeps exact behavior for
+/// tests, postcards, and determinism). Rooms that support it read the seed for
+/// replayable novelty. See ARCADE.md and DIGITAL_MINDS.md.
+#[must_use]
+pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
     vec![
-        Box::new(rooms::times_tables::TimesTables::new()),
-        Box::new(rooms::cellular_automata::CellularAutomata::new()),
-        Box::new(rooms::chaos_game::ChaosGame::new()),
-        Box::new(rooms::golden_angle::GoldenAngle::new()),
-        Box::new(rooms::galton_board::GaltonBoard::new()),
-        Box::new(rooms::lissajous::Lissajous::new()),
-        Box::new(rooms::prime_spirals::PrimeSpirals::new()),
-        Box::new(rooms::collatz::Collatz::new()),
-        Box::new(rooms::buffon_needle::BuffonNeedle::new()),
-        Box::new(rooms::game_of_life::GameOfLife::new()),
-        Box::new(rooms::mandelbrot::Mandelbrot::new()),
-        Box::new(rooms::julia::Julia::new()),
-        Box::new(rooms::barnsley_fern::BarnsleyFern::new()),
-        Box::new(rooms::harmonograph::Harmonograph::new()),
-        Box::new(rooms::logistic_map::LogisticMap::new()),
-        Box::new(rooms::langtons_ant::LangtonsAnt::new()),
-        Box::new(rooms::lorenz::Lorenz::new()),
-        Box::new(rooms::arecibo::Arecibo::new()),
-        Box::new(rooms::the_pour::ThePour::new()),
-        Box::new(rooms::slope_rider::SlopeRider::new()),
-        Box::new(rooms::double_pendulum::DoublePendulum::new()),
-        Box::new(rooms::epicycles::Epicycles::new()),
-        Box::new(rooms::random_walk::RandomWalk::new()),
-        Box::new(rooms::voronoi::Voronoi::new()),
-        Box::new(rooms::mobius::Mobius::new()),
-        Box::new(rooms::zeno::Zeno::new()),
-        Box::new(rooms::goldbach::Goldbach::new()),
+        Box::new(rooms::times_tables::TimesTables::new_with(variation)),
+        Box::new(rooms::cellular_automata::CellularAutomata::new_with(
+            variation,
+        )),
+        Box::new(rooms::chaos_game::ChaosGame::new_with(variation)),
+        Box::new(rooms::golden_angle::GoldenAngle::new_with(variation)),
+        Box::new(rooms::galton_board::GaltonBoard::new_with(variation)),
+        Box::new(rooms::lissajous::Lissajous::new_with(variation)),
+        Box::new(rooms::prime_spirals::PrimeSpirals::new_with(variation)),
+        Box::new(rooms::collatz::Collatz::new_with(variation)),
+        Box::new(rooms::buffon_needle::BuffonNeedle::new_with(variation)),
+        Box::new(rooms::game_of_life::GameOfLife::new_with(variation)),
+        Box::new(rooms::mandelbrot::Mandelbrot::new_with(variation)),
+        Box::new(rooms::julia::Julia::new_with(variation)),
+        Box::new(rooms::barnsley_fern::BarnsleyFern::new_with(variation)),
+        Box::new(rooms::lsystem::LSystemGarden::new_with(variation)),
+        Box::new(rooms::harmonograph::Harmonograph::new_with(variation)),
+        Box::new(rooms::logistic_map::LogisticMap::new_with(variation)),
+        Box::new(rooms::langtons_ant::LangtonsAnt::new_with(variation)),
+        Box::new(rooms::lorenz::Lorenz::new_with(variation)),
+        Box::new(rooms::arecibo::Arecibo::new_with(variation)),
+        Box::new(rooms::the_pour::ThePour::new_with(variation)),
+        Box::new(rooms::slope_rider::SlopeRider::new_with(variation)),
+        Box::new(rooms::double_pendulum::DoublePendulum::new_with(variation)),
+        Box::new(rooms::epicycles::Epicycles::new_with(variation)),
+        Box::new(rooms::random_walk::RandomWalk::new_with(variation)),
+        Box::new(rooms::voronoi::Voronoi::new_with(variation)),
+        Box::new(rooms::mobius::Mobius::new_with(variation)),
+        Box::new(rooms::zeno::Zeno::new_with(variation)),
+        Box::new(rooms::goldbach::Goldbach::new_with(variation)),
+        Box::new(rooms::quine::Quine::new_with(variation)),
+        Box::new(rooms::strange_loop::StrangeLoop::new_with(variation)),
     ]
 }
 
@@ -60,6 +73,28 @@ pub fn hidden_room_by_id(id: &str) -> Option<Box<dyn Room>> {
 #[cfg(test)]
 mod tests {
     use super::{all_rooms, room_by_id};
+    use crate::canvas::Canvas;
+    use crate::room::Room;
+
+    fn render_text(room: &dyn Room, t: f64) -> String {
+        let mut canvas = Canvas::new(48, 28);
+        room.render(&mut canvas, t);
+        canvas.to_text()
+    }
+
+    fn render_poked_text(room: &dyn Room, t: f64, pokes: &[(f64, f64)]) -> String {
+        let mut canvas = Canvas::new(48, 28);
+        room.render_poked(&mut canvas, t, pokes);
+        canvas.to_text()
+    }
+
+    fn room_text(rooms: &[Box<dyn Room>], id: &str, t: f64) -> String {
+        let room = rooms
+            .iter()
+            .find(|room| room.meta().id == id)
+            .unwrap_or_else(|| panic!("{id} must be registered"));
+        render_text(room.as_ref(), t)
+    }
 
     #[test]
     fn registry_is_non_empty() {
@@ -79,7 +114,6 @@ mod tests {
     #[test]
     fn every_room_postcard_has_ink() {
         // The beauty-QA invariant: no room may present an empty postcard.
-        use crate::canvas::Canvas;
         for room in all_rooms() {
             let mut canvas = Canvas::new(60, 40);
             room.render(&mut canvas, room.postcard_t());
@@ -95,5 +129,237 @@ mod tests {
     fn lookup_by_id_works_and_misses_are_none() {
         assert!(room_by_id("times-tables").is_some());
         assert!(room_by_id("no-such-room").is_none());
+    }
+
+    #[test]
+    fn all_rooms_with_variation_produces_different_lsystem() {
+        use super::all_rooms_with;
+        let r0 = all_rooms_with(0);
+        let r1 = all_rooms_with(1);
+        assert_eq!(r0.len(), r1.len());
+        assert_ne!(
+            room_text(&r0, "lsystem-garden", 0.5),
+            room_text(&r1, "lsystem-garden", 0.5),
+            "registry variation must reach the L-System room"
+        );
+        assert_ne!(
+            room_text(&r0, "quine", 0.6),
+            room_text(&r1, "quine", 0.6),
+            "registry variation must reach the Quine room"
+        );
+        assert_ne!(
+            room_text(&r0, "double-pendulum", 0.75),
+            room_text(&r1, "double-pendulum", 0.75),
+            "registry variation must reach animated double-pendulum motion"
+        );
+        assert_ne!(
+            room_text(&r0, "times-tables", 0.2),
+            room_text(&r1, "times-tables", 0.2),
+            "registry variation must reach Times Tables"
+        );
+        assert_ne!(
+            room_text(&r0, "prime-spirals", 0.3),
+            room_text(&r1, "prime-spirals", 0.3),
+            "registry variation must reach Prime Spirals"
+        );
+    }
+
+    #[test]
+    fn all_rooms_with_variation_reaches_quiet_rooms() {
+        use super::all_rooms_with;
+        let r0 = all_rooms_with(0);
+        let r42 = all_rooms_with(42);
+        for (id, phase) in [
+            ("lissajous", 0.35),
+            ("harmonograph", 0.4),
+            ("logistic-map", 0.3),
+            ("the-pour", 0.45),
+            ("slope-rider", 0.55),
+            ("mobius", 0.35),
+            ("zeno", 0.75),
+        ] {
+            assert_ne!(
+                room_text(&r0, id, phase),
+                room_text(&r42, id, phase),
+                "registry variation must reach {id}"
+            );
+        }
+    }
+
+    #[test]
+    fn quiet_room_variation_seed_zero_matches_default() {
+        use crate::rooms::{
+            harmonograph::Harmonograph, lissajous::Lissajous, logistic_map::LogisticMap,
+            mobius::Mobius, slope_rider::SlopeRider, the_pour::ThePour, zeno::Zeno,
+        };
+        for (id, phase, default, seeded) in [
+            (
+                "lissajous",
+                0.35,
+                Box::new(Lissajous::new()) as Box<dyn Room>,
+                Box::new(Lissajous::new_with(0)) as Box<dyn Room>,
+            ),
+            (
+                "harmonograph",
+                0.4,
+                Box::new(Harmonograph::new()) as Box<dyn Room>,
+                Box::new(Harmonograph::new_with(0)) as Box<dyn Room>,
+            ),
+            (
+                "logistic-map",
+                0.3,
+                Box::new(LogisticMap::new()) as Box<dyn Room>,
+                Box::new(LogisticMap::new_with(0)) as Box<dyn Room>,
+            ),
+            (
+                "the-pour",
+                0.45,
+                Box::new(ThePour::new()) as Box<dyn Room>,
+                Box::new(ThePour::new_with(0)) as Box<dyn Room>,
+            ),
+            (
+                "slope-rider",
+                0.55,
+                Box::new(SlopeRider::new()) as Box<dyn Room>,
+                Box::new(SlopeRider::new_with(0)) as Box<dyn Room>,
+            ),
+            (
+                "mobius",
+                0.35,
+                Box::new(Mobius::new()) as Box<dyn Room>,
+                Box::new(Mobius::new_with(0)) as Box<dyn Room>,
+            ),
+            (
+                "zeno",
+                0.75,
+                Box::new(Zeno::new()) as Box<dyn Room>,
+                Box::new(Zeno::new_with(0)) as Box<dyn Room>,
+            ),
+        ] {
+            assert_eq!(
+                render_text(default.as_ref(), phase),
+                render_text(seeded.as_ref(), phase),
+                "{id} seed 0 must preserve the default postcard path"
+            );
+        }
+    }
+
+    #[test]
+    fn dynamic_rooms_expose_poke_through_trait_objects() {
+        let rooms = all_rooms();
+        let julia = rooms
+            .iter()
+            .find(|room| room.meta().id == "julia")
+            .expect("julia must be registered");
+        assert_eq!(julia.verb(), Some("CLICK: MORPH C"));
+        assert_ne!(
+            render_text(julia.as_ref(), 0.35),
+            render_poked_text(julia.as_ref(), 0.35, &[(0.9, 0.1)]),
+            "Julia poke must dispatch through dyn Room"
+        );
+    }
+
+    #[test]
+    fn every_catalog_room_has_a_structured_motif() {
+        for room in all_rooms() {
+            let meta = room.meta();
+            let motif = room
+                .motif()
+                .unwrap_or_else(|| panic!("{} must have an Engine A2 motif", meta.id));
+            assert!(
+                !motif.key.trim().is_empty(),
+                "{} motif must name a key",
+                meta.id
+            );
+            assert!(
+                motif.root.is_finite() && motif.root > 0.0,
+                "{} motif root must be a positive finite frequency",
+                meta.id
+            );
+            assert!(
+                (40..=220).contains(&motif.tempo),
+                "{} motif tempo must stay playable",
+                meta.id
+            );
+            assert!(
+                motif.line.len() >= 6,
+                "{} motif must be a phrase, not a sting",
+                meta.id
+            );
+            assert!(
+                motif.line.iter().any(|&step| step != 0),
+                "{} motif must carry melodic movement",
+                meta.id
+            );
+            assert!(
+                !motif.encodes.trim().is_empty(),
+                "{} motif must explain the mathematical mapping",
+                meta.id
+            );
+            assert_eq!(
+                motif.notation().len(),
+                motif.line.len(),
+                "{} motif notation must cover the whole phrase",
+                meta.id
+            );
+            assert!(
+                motif.pattern().seconds() > 0.0,
+                "{} motif must render to a nonempty pattern",
+                meta.id
+            );
+        }
+    }
+
+    #[test]
+    fn all_rooms_with_variation_affects_poke_rooms() {
+        use crate::rooms::{
+            chaos_game::ChaosGame, game_of_life::GameOfLife, golden_angle::GoldenAngle,
+            langtons_ant::LangtonsAnt, strange_loop::StrangeLoop, voronoi::Voronoi,
+        };
+        let c0 = ChaosGame::new_with(0);
+        let c1 = ChaosGame::new_with(1);
+        let mut ca0 = crate::canvas::Canvas::new(32, 16);
+        let mut ca1 = crate::canvas::Canvas::new(32, 16);
+        c0.render(&mut ca0, 0.5);
+        c1.render(&mut ca1, 0.5);
+        assert_ne!(ca0.to_text(), ca1.to_text());
+        let g0 = GameOfLife::new_with(0);
+        let g1 = GameOfLife::new_with(1);
+        let mut ga0 = crate::canvas::Canvas::new(32, 16);
+        let mut ga1 = crate::canvas::Canvas::new(32, 16);
+        g0.render(&mut ga0, 0.3);
+        g1.render(&mut ga1, 0.3);
+        assert_ne!(ga0.to_text(), ga1.to_text());
+        let v0 = Voronoi::new_with(0);
+        let v1 = Voronoi::new_with(1);
+        let mut va0 = crate::canvas::Canvas::new(32, 16);
+        let mut va1 = crate::canvas::Canvas::new(32, 16);
+        v0.render(&mut va0, 0.3);
+        v1.render(&mut va1, 0.3);
+        assert_ne!(va0.to_text(), va1.to_text());
+        // Verify StrangeLoop (self-ref) variation affects render (seed-driven rotation)
+        let s0 = StrangeLoop::new_with(0);
+        let s1 = StrangeLoop::new_with(1);
+        let mut sa0 = crate::canvas::Canvas::new(32, 16);
+        let mut sa1 = crate::canvas::Canvas::new(32, 16);
+        s0.render(&mut sa0, 0.5);
+        s1.render(&mut sa1, 0.5);
+        assert_ne!(sa0.to_text(), sa1.to_text());
+        // GoldenAngle: variation rotates + jitters seed count for visible per-visit novelty (poke plants respect seed too)
+        let ga0 = GoldenAngle::new_with(0);
+        let ga42 = GoldenAngle::new_with(42);
+        let mut gaa0 = crate::canvas::Canvas::new(32, 16);
+        let mut gaa42 = crate::canvas::Canvas::new(32, 16);
+        ga0.render(&mut gaa0, 0.0);
+        ga42.render(&mut gaa42, 0.0);
+        assert_ne!(gaa0.to_text(), gaa42.to_text());
+        // LangtonsAnt now has functional variation (initial scatter) + poke pre-integration
+        let la0 = LangtonsAnt::new_with(0);
+        let la1 = LangtonsAnt::new_with(1);
+        let mut laa0 = crate::canvas::Canvas::new(32, 16);
+        let mut laa1 = crate::canvas::Canvas::new(32, 16);
+        la0.render(&mut laa0, 0.5);
+        la1.render(&mut laa1, 0.5);
+        assert_ne!(laa0.to_text(), laa1.to_text());
     }
 }

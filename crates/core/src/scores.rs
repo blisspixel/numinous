@@ -9,6 +9,9 @@
 
 use std::collections::BTreeMap;
 
+const MAX_SCORE_ENTRIES: usize = 4096;
+const MAX_SCORE_KEY_LEN: usize = 128;
+
 /// The table: best score per challenge key.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Scoreboard {
@@ -20,8 +23,13 @@ impl Scoreboard {
     /// Record `score` for `key`, keeping the best. Returns true when this is a
     /// new record (arcade rules: strictly better than what stood before).
     pub fn record(&mut self, key: &str, score: i64) -> bool {
+        let key = key.trim();
+        if !score_key_is_sane(key) {
+            return false;
+        }
         match self.entries.get(key) {
             Some(&best) if score <= best => false,
+            None if self.entries.len() >= MAX_SCORE_ENTRIES => false,
             _ => {
                 self.entries.insert(key.to_string(), score);
                 true
@@ -65,6 +73,10 @@ impl Scoreboard {
     }
 }
 
+fn score_key_is_sane(key: &str) -> bool {
+    !key.is_empty() && key.len() <= MAX_SCORE_KEY_LEN && !key.contains(['\t', '\n', '\r'])
+}
+
 #[cfg(test)]
 mod tests {
     use super::Scoreboard;
@@ -106,5 +118,41 @@ mod tests {
             Scoreboard::from_text("garbage\n\t\nx\t\n"),
             Scoreboard::default()
         );
+    }
+
+    #[test]
+    fn record_rejects_keys_that_can_forge_rows() {
+        let mut board = Scoreboard::default();
+        assert!(!board.record("munch seed:1\n999\tforged", 10));
+        assert!(!board.record("munch\tseed:1", 10));
+        assert!(board.entries.is_empty());
+    }
+
+    #[test]
+    fn record_rejects_oversized_keys_and_caps_unique_entries() {
+        let mut board = Scoreboard::default();
+        assert!(!board.record(&"x".repeat(super::MAX_SCORE_KEY_LEN + 1), 10));
+        assert!(board.entries.is_empty());
+
+        for i in 0..super::MAX_SCORE_ENTRIES {
+            assert!(board.record(&format!("key:{i}"), i as i64));
+        }
+        assert_eq!(board.entries.len(), super::MAX_SCORE_ENTRIES);
+        assert!(!board.record("one-more", 1));
+        assert!(board.record("key:0", i64::MAX));
+        assert_eq!(board.entries["key:0"], i64::MAX);
+    }
+
+    #[test]
+    fn from_text_bounds_corrupted_score_tables() {
+        let text = (0..(super::MAX_SCORE_ENTRIES + 512))
+            .map(|i| format!("{i}\tkey:{i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let board = Scoreboard::from_text(&text);
+
+        assert_eq!(board.entries.len(), super::MAX_SCORE_ENTRIES);
+        let rejected_key = format!("key:{}", super::MAX_SCORE_ENTRIES);
+        assert!(!board.entries.contains_key(&rejected_key));
     }
 }

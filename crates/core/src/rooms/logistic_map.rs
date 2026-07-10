@@ -5,30 +5,70 @@
 //! settles: one value, then two, then four, then a chaotic smear, the famous
 //! bifurcation diagram. `t` zooms the left edge into the chaos. See `docs/ROOMS.md`.
 
-use crate::room::{Room, RoomMeta};
+use super::variation_unit;
+use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
 use crate::surface::Surface;
 
 /// Iterations discarded so only the long-run attractor is drawn.
 const TRANSIENT: usize = 300;
 /// Attractor points plotted per column.
 const SAMPLES: usize = 200;
+/// Steps in the hand-seeded orbit overlay.
+const POKED_ORBIT_STEPS: usize = 160;
 
 /// The logistic map room.
 #[derive(Debug, Default)]
-pub struct LogisticMap;
+pub struct LogisticMap {
+    seed: u64,
+}
 
 impl LogisticMap {
     /// Create the room.
     #[must_use]
     pub fn new() -> Self {
-        Self
+        Self { seed: 0 }
+    }
+
+    /// Create with variation seed for replayable per-visit novelty.
+    #[must_use]
+    pub fn new_with(seed: u64) -> Self {
+        Self { seed }
     }
 
     /// The `[r_min, r_max]` window shown at phase `t` (zooming into the chaos).
     fn r_window(t: f64) -> (f64, f64) {
-        let t = t.clamp(0.0, 1.0);
+        let t = finite_phase(t);
         (2.5 + t * 1.0, 4.0)
     }
+
+    fn r_window_for(&self, t: f64) -> (f64, f64) {
+        let (r_min, r_max) = Self::r_window(t);
+        let shift = variation_unit(self.seed, 0x4C4F_4749_5354_0001) * 0.18;
+        ((r_min + shift).min(r_max - 0.05), r_max)
+    }
+}
+
+fn finite_phase(t: f64) -> f64 {
+    if t.is_finite() {
+        t.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+fn hand_points(pokes: &[(f64, f64)]) -> impl Iterator<Item = (f64, f64)> + '_ {
+    let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
+    pokes[start..].iter().filter_map(|&(x, y)| {
+        if x.is_finite() && y.is_finite() {
+            Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
+        } else {
+            None
+        }
+    })
+}
+
+fn population_row(height: usize, x: f64) -> i32 {
+    ((height as f64 - 1.0) - x.clamp(0.0, 1.0) * (height as f64 - 1.0)).round() as i32
 }
 
 impl Room for LogisticMap {
@@ -49,7 +89,7 @@ impl Room for LogisticMap {
         if width == 0 || height == 0 {
             return;
         }
-        let (r_min, r_max) = Self::r_window(t);
+        let (r_min, r_max) = self.r_window_for(t);
         for px in 0..width {
             let r = r_min + (r_max - r_min) * (px as f64 / width as f64);
             let mut x = 0.5;
@@ -58,8 +98,7 @@ impl Room for LogisticMap {
             }
             for _ in 0..SAMPLES {
                 x = r * x * (1.0 - x);
-                let py = (height as f64 - x * height as f64) as i32;
-                canvas.plot(px as i32, py, '#');
+                canvas.plot(px as i32, population_row(height, x), '#');
             }
         }
     }
@@ -68,6 +107,52 @@ impl Room for LogisticMap {
         "The point where order breaks into chaos arrives at the same rate for this \
          equation, for dripping taps, and for heartbeats: Feigenbaum's constant, \
          4.669. A single number governs how simple things fall apart."
+    }
+
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "B bifurcation",
+            root: 246.94,
+            tempo: 136,
+            line: &[0, 0, 7, 7, 3, 10, 1, 8],
+            encodes: "one fixed point splitting into two, four, then chaos",
+        })
+    }
+
+    fn verb(&self) -> Option<&'static str> {
+        Some("CLICK: SEED POPULATION")
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        self.render(canvas, t);
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
+        }
+        let (r_min, r_max) = self.r_window_for(t);
+        let max_x = width.saturating_sub(1) as f64;
+        let max_i = width.saturating_sub(1) as i32;
+
+        for (hand_x, hand_y) in hand_points(pokes) {
+            let column = (hand_x * max_x).round().clamp(0.0, max_x) as i32;
+            let r = r_min + (r_max - r_min) * hand_x;
+            let mut population = (1.0 - hand_y).clamp(0.001, 0.999);
+            canvas.plot(column, population_row(height, population), '@');
+            for step in 0..POKED_ORBIT_STEPS {
+                population = r * population * (1.0 - population);
+                if !population.is_finite() {
+                    break;
+                }
+                let lane = column + (step % 5) as i32 - 2;
+                canvas.plot(
+                    lane.clamp(0, max_i),
+                    population_row(height, population),
+                    '*',
+                );
+            }
+            canvas.plot(column, population_row(height, 1.0 - hand_y), '@');
+        }
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {
@@ -86,7 +171,7 @@ impl Room for LogisticMap {
 mod tests {
     use super::{LogisticMap, TRANSIENT};
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::room::{MAX_ROOM_POKES, Room};
 
     /// The attractor value after the transient, for testing.
     fn settle(r: f64) -> f64 {
@@ -137,5 +222,68 @@ mod tests {
     #[test]
     fn reveal_mentions_feigenbaum() {
         assert!(LogisticMap::new().reveal().contains("Feigenbaum"));
+    }
+
+    #[test]
+    fn verb_names_population_seeding() {
+        assert_eq!(LogisticMap::new().verb(), Some("CLICK: SEED POPULATION"));
+    }
+
+    #[test]
+    fn render_poked_draws_a_seeded_orbit_trace() {
+        let room = LogisticMap::new();
+        let mut base = Canvas::new(60, 30);
+        let mut poked = Canvas::new(60, 30);
+
+        room.render(&mut base, 0.35);
+        room.render_poked(&mut poked, 0.35, &[(0.75, 0.2)]);
+
+        assert_ne!(base.to_text(), poked.to_text());
+        assert!(
+            poked.to_text().matches('*').count() > 5,
+            "the click should draw an orbit, not just a marker"
+        );
+    }
+
+    #[test]
+    fn render_poked_caps_the_newest_raw_tail_before_filtering() {
+        let room = LogisticMap::new();
+        let mut base = Canvas::new(50, 24);
+        let mut actual = Canvas::new(50, 24);
+        let mut pokes = vec![(0.6, 0.4)];
+        pokes.extend(std::iter::repeat_n((f64::NAN, 0.2), MAX_ROOM_POKES));
+
+        room.render(&mut base, 0.2);
+        room.render_poked(&mut actual, 0.2, &pokes);
+
+        assert_eq!(
+            actual.to_text(),
+            base.to_text(),
+            "an all-invalid newest tail must discard older valid points"
+        );
+    }
+
+    #[test]
+    fn render_poked_clamps_finite_edge_points() {
+        let room = LogisticMap::new();
+        let mut canvas = Canvas::new(30, 16);
+
+        room.render_poked(&mut canvas, 0.2, &[(2.0, -1.0), (-1.0, 2.0)]);
+        let text = canvas.to_text();
+
+        assert!(text.contains('@'));
+        assert!(text.contains('*'));
+    }
+
+    #[test]
+    fn nonfinite_phase_falls_back_to_the_first_window() {
+        let room = LogisticMap::new();
+        let mut finite = Canvas::new(50, 24);
+        let mut nonfinite = Canvas::new(50, 24);
+
+        room.render_poked(&mut finite, 0.0, &[(0.7, 0.3)]);
+        room.render_poked(&mut nonfinite, f64::NAN, &[(0.7, 0.3)]);
+
+        assert_eq!(finite.to_text(), nonfinite.to_text());
     }
 }

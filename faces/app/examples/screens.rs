@@ -46,7 +46,7 @@ fn main() {
             "W / S      TIME SPEED   MOUSE  SCRUB",
             "E          INSPECT    Q  ERA    R  RESTART",
             "B          THE SHOW   TAB  THE STUDIO",
-            "J          JOURNEY    F  FULLSCREEN",
+            "J          JOURNEY    F  FULLSCREEN CYCLE (BORDERLESS/EXCL)",
             "Y          RADIO STATIONS    P  POSTCARD",
             "M          SOUND      SPACE  PAUSE",
             "",

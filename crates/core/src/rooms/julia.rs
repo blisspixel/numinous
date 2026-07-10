@@ -7,29 +7,94 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{Room, RoomMeta};
-use crate::surface::Surface;
+use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::surface::{MAX_DIM, Surface};
 
 /// Escape-iteration budget.
 const MAX_ITER: u32 = 160;
 /// Radius of the circle in the `c` plane that `t` walks around.
 const C_RADIUS: f64 = 0.7885;
+const MORPH_RADIUS: i32 = 5;
+const MORPH_STEP: i32 = 2;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct MorphPoint {
+    x: i32,
+    y: i32,
+    nx: f64,
+    ny: f64,
+}
+
+fn finite_phase(t: f64) -> f64 {
+    if t.is_finite() {
+        t.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+fn drawing_dims(canvas: &dyn Surface) -> Option<(usize, usize)> {
+    let width = canvas.width();
+    let height = canvas.height();
+    if width == 0 || height == 0 {
+        None
+    } else {
+        Some((width.min(MAX_DIM), height.min(MAX_DIM)))
+    }
+}
+
+fn screen_coord(norm: f64, extent: usize) -> i32 {
+    debug_assert!(extent > 0);
+    (norm.clamp(0.0, 1.0) * extent.saturating_sub(1) as f64).round() as i32
+}
+
+fn bounded_morph_points(pokes: &[(f64, f64)], width: usize, height: usize) -> Vec<MorphPoint> {
+    let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
+    pokes[start..]
+        .iter()
+        .filter_map(|&(x, y)| {
+            if !x.is_finite() || !y.is_finite() {
+                return None;
+            }
+            let nx = x.clamp(0.0, 1.0);
+            let ny = y.clamp(0.0, 1.0);
+            Some(MorphPoint {
+                x: screen_coord(nx, width),
+                y: screen_coord(ny, height),
+                nx,
+                ny,
+            })
+        })
+        .collect()
+}
 
 /// The Julia set room.
 #[derive(Debug, Default)]
-pub struct Julia;
+pub struct Julia {
+    seed: u64,
+}
 
 impl Julia {
-    /// Create the room.
+    /// Create the room with default seed (0).
     #[must_use]
     pub fn new() -> Self {
-        Self
+        Self { seed: 0 }
+    }
+
+    /// Create with variation seed.
+    #[must_use]
+    pub fn new_with(seed: u64) -> Self {
+        Self { seed }
     }
 
     /// The constant `c` at phase `t`.
-    fn c_for(t: f64) -> (f64, f64) {
-        let theta = TAU * t.clamp(0.0, 1.0);
-        (C_RADIUS * theta.cos(), C_RADIUS * theta.sin())
+    fn c_for(&self, t: f64) -> (f64, f64) {
+        let theta = TAU * finite_phase(t);
+        let s_off = (self.seed % 1000) as f64 * 0.00001;
+        (
+            C_RADIUS * theta.cos() + s_off,
+            C_RADIUS * theta.sin() + s_off,
+        )
     }
 }
 
@@ -58,12 +123,10 @@ impl Room for Julia {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        let width = canvas.width();
-        let height = canvas.height();
-        if width == 0 || height == 0 {
+        let Some((width, height)) = drawing_dims(canvas) else {
             return;
-        }
-        let (cx, cy) = Self::c_for(t);
+        };
+        let (cx, cy) = self.c_for(t);
         // A fixed window on the z plane, roughly [-1.6, 1.6] on the shorter axis.
         let scale = 3.2 / width as f64;
         let half_w = width as f64 / 2.0;
@@ -109,13 +172,73 @@ impl Room for Julia {
              classroom the whole time.",
         ]
     }
+
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "C# minor boundary",
+            root: 138.59,
+            tempo: 100,
+            line: &[0, 3, 7, 11, 8, 4, 1, 5],
+            encodes: "one complex constant pulling the edge of infinity",
+        })
+    }
+
+    fn verb(&self) -> Option<&'static str> {
+        Some("CLICK: MORPH C")
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        if pokes.is_empty() {
+            self.render(canvas, t);
+            return;
+        }
+        let Some((width, height)) = drawing_dims(canvas) else {
+            return;
+        };
+        self.render(canvas, t);
+        let (base_cx, base_cy) = self.c_for(t);
+        for morph in bounded_morph_points(pokes, width, height) {
+            let dcx = (morph.nx - 0.5) * 0.2;
+            let dcy = (morph.ny - 0.5) * 0.2;
+            let cx = base_cx + dcx;
+            let cy = base_cy + dcy;
+            let scale = 3.0 / width as f64;
+            let half_w = width as f64 / 2.0;
+            let half_h = height as f64 / 2.0;
+            for dy in -MORPH_RADIUS..=MORPH_RADIUS {
+                for dx in -MORPH_RADIUS..=MORPH_RADIUS {
+                    let lx = morph.x + dx * MORPH_STEP;
+                    let ly = morph.y + dy * MORPH_STEP;
+                    if lx < 0 || lx >= width as i32 || ly < 0 || ly >= height as i32 {
+                        continue;
+                    }
+                    let zx = (f64::from(lx) - half_w) * scale;
+                    let zy = (f64::from(ly) - half_h) * scale;
+                    let iters = escape_iters(zx, zy, cx, cy, MAX_ITER);
+                    let mark = if iters == MAX_ITER {
+                        '#'
+                    } else if iters > 24 {
+                        '*'
+                    } else if iters > 6 {
+                        '-'
+                    } else {
+                        continue;
+                    };
+                    canvas.plot(lx, ly, mark);
+                }
+            }
+            canvas.plot(morph.x, morph.y, '#');
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Julia, escape_iters};
+    use super::{Julia, MorphPoint, bounded_morph_points, escape_iters, finite_phase};
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::raster::Raster;
+    use crate::room::{MAX_ROOM_POKES, Room};
+    use crate::surface::{MAX_DIM, Surface};
 
     #[test]
     fn origin_survives_for_a_small_c() {
@@ -130,8 +253,9 @@ mod tests {
 
     #[test]
     fn c_walks_a_circle() {
-        let (x0, y0) = Julia::c_for(0.0);
-        let (x1, y1) = Julia::c_for(0.25);
+        let room = Julia::new();
+        let (x0, y0) = room.c_for(0.0);
+        let (x1, y1) = room.c_for(0.25);
         assert!((x0 - 0.7885).abs() < 1e-9 && y0.abs() < 1e-9);
         assert!(x1.abs() < 1e-9 && (y1 - 0.7885).abs() < 1e-9);
     }
@@ -148,6 +272,20 @@ mod tests {
     }
 
     #[test]
+    fn seed_zero_preserves_default_and_nonzero_seed_varies() {
+        let default = Julia::new();
+        let seed_zero = Julia::new_with(0);
+        let varied = Julia::new_with(7);
+
+        assert_eq!(
+            render_text(&default, 0.3, &[]),
+            render_text(&seed_zero, 0.3, &[])
+        );
+        assert_eq!(default.c_for(0.3), seed_zero.c_for(0.3));
+        assert_ne!(default.c_for(0.3), varied.c_for(0.3));
+    }
+
+    #[test]
     fn extreme_inputs_do_not_panic() {
         let room = Julia::new();
         let mut empty = Canvas::new(0, 0);
@@ -158,8 +296,173 @@ mod tests {
         }
     }
 
+    fn render_text(room: &Julia, t: f64, pokes: &[(f64, f64)]) -> String {
+        let mut canvas = Canvas::new(48, 32);
+        room.render_poked(&mut canvas, t, pokes);
+        canvas.to_text()
+    }
+
+    #[test]
+    fn nonfinite_phase_falls_back_to_first_frame() {
+        let room = Julia::new();
+        assert_eq!(finite_phase(f64::NAN), 0.0);
+        assert_eq!(finite_phase(f64::INFINITY), 0.0);
+
+        let mut first = Canvas::new(36, 24);
+        let mut nan = Canvas::new(36, 24);
+        room.render(&mut first, 0.0);
+        room.render(&mut nan, f64::NAN);
+        assert_eq!(nan.to_text(), first.to_text());
+        assert_eq!(
+            render_text(&room, f64::NEG_INFINITY, &[(0.65, 0.35)]),
+            render_text(&room, 0.0, &[(0.65, 0.35)])
+        );
+    }
+
+    #[test]
+    fn morph_points_use_the_newest_bounded_raw_tail() {
+        let newest: Vec<_> = (0..MAX_ROOM_POKES)
+            .map(|i| {
+                (
+                    i as f64 / (MAX_ROOM_POKES - 1) as f64,
+                    if i % 2 == 0 { 0.2 } else { 0.8 },
+                )
+            })
+            .collect();
+        let mut all = vec![(0.2, 0.8); MAX_ROOM_POKES + 5];
+        all.extend(newest.iter().copied());
+        let discarded_prefix = all[..all.len() - MAX_ROOM_POKES].to_vec();
+
+        assert_eq!(
+            bounded_morph_points(&all, 48, 32),
+            bounded_morph_points(&newest, 48, 32)
+        );
+        assert_ne!(
+            bounded_morph_points(&all, 48, 32),
+            bounded_morph_points(&discarded_prefix, 48, 32)
+        );
+    }
+
+    #[test]
+    fn render_poked_uses_newest_raw_tail() {
+        let room = Julia::new();
+        let newest = vec![(0.85, 0.2); MAX_ROOM_POKES];
+        let mut all = vec![(0.15, 0.8); MAX_ROOM_POKES + 5];
+        all.extend(newest.iter().copied());
+        let prefix = all[..all.len() - MAX_ROOM_POKES].to_vec();
+
+        assert_eq!(
+            render_text(&room, 0.4, &all),
+            render_text(&room, 0.4, &newest)
+        );
+        assert_ne!(
+            render_text(&room, 0.4, &all),
+            render_text(&room, 0.4, &prefix)
+        );
+    }
+
+    #[test]
+    fn raw_newest_tail_is_capped_before_nonfinite_filtering() {
+        let room = Julia::new();
+        let mut with_invalid_tail = vec![(0.4, 0.6); MAX_ROOM_POKES];
+        with_invalid_tail.extend(vec![(f64::NAN, f64::INFINITY); MAX_ROOM_POKES + 5]);
+
+        assert!(bounded_morph_points(&with_invalid_tail, 48, 32).is_empty());
+        assert_eq!(
+            render_text(&room, 0.4, &with_invalid_tail),
+            render_text(&room, 0.4, &[])
+        );
+    }
+
+    #[test]
+    fn render_poked_marks_the_morph_center_for_raster_exports() {
+        let room = Julia::new();
+        let mut plain = Raster::new(256, 256);
+        let mut poked = Raster::new(256, 256);
+        room.render(&mut plain, 0.35);
+        room.render_poked(&mut poked, 0.35, &[(0.9, 0.1)]);
+
+        assert_ne!(plain.to_rgba(), poked.to_rgba());
+    }
+
+    #[test]
+    fn nonfinite_pokes_do_not_consume_morph_identity() {
+        let room = Julia::new();
+        let finite = vec![(0.25, 0.75)];
+        let with_bad_points = vec![(f64::NAN, 0.4), (0.25, 0.75), (0.2, f64::INFINITY)];
+
+        assert_eq!(
+            bounded_morph_points(&with_bad_points, 48, 32),
+            bounded_morph_points(&finite, 48, 32)
+        );
+        assert_eq!(
+            render_text(&room, 0.35, &with_bad_points),
+            render_text(&room, 0.35, &finite)
+        );
+    }
+
+    #[test]
+    fn finite_morph_points_clamp_to_visible_edges() {
+        assert_eq!(
+            bounded_morph_points(&[(1.5, -1.0)], 10, 8),
+            vec![MorphPoint {
+                x: 9,
+                y: 0,
+                nx: 1.0,
+                ny: 0.0,
+            }]
+        );
+    }
+
+    #[test]
+    fn huge_custom_surface_does_not_render_unbounded_regions() {
+        #[derive(Default)]
+        struct HugeSurface {
+            width: usize,
+            height: usize,
+            plots: usize,
+            max_abs_coord: i32,
+        }
+
+        impl Surface for HugeSurface {
+            fn width(&self) -> usize {
+                self.width
+            }
+
+            fn height(&self) -> usize {
+                self.height
+            }
+
+            fn plot(&mut self, x: i32, y: i32, _mark: char) {
+                self.plots += 1;
+                self.max_abs_coord = self.max_abs_coord.max(x.abs()).max(y.abs());
+            }
+        }
+
+        let room = Julia::new();
+        for (width, height) in [(usize::MAX, 8), (8, usize::MAX)] {
+            let mut surface = HugeSurface {
+                width,
+                height,
+                ..HugeSurface::default()
+            };
+            room.render_poked(&mut surface, f64::INFINITY, &[(0.5, 0.5)]);
+
+            assert!(surface.plots <= MAX_DIM * 16);
+            assert!(surface.max_abs_coord <= MAX_DIM.saturating_sub(1) as i32);
+        }
+    }
+
     #[test]
     fn reveal_mentions_infinity() {
         assert!(Julia::new().reveal().contains("infinity"));
+    }
+
+    #[test]
+    fn verb_and_poked_no_panic() {
+        let room = Julia::new();
+        assert!(room.verb().is_some());
+        let mut c = Canvas::new(20, 15);
+        room.render_poked(&mut c, 0.3, &[(0.5, 0.5)]);
     }
 }

@@ -7,6 +7,7 @@
 
 use std::f64::consts::TAU;
 
+use super::variation_unit;
 use crate::room::{Room, RoomMeta};
 use crate::surface::Surface;
 
@@ -32,13 +33,30 @@ fn project(x: f64, y: f64, z: f64) -> (f64, f64) {
 
 /// The Mobius strip room.
 #[derive(Debug, Default)]
-pub struct Mobius;
+pub struct Mobius {
+    seed: u64,
+}
 
 impl Mobius {
     /// Create the room.
     #[must_use]
     pub fn new() -> Self {
-        Self
+        Self { seed: 0 }
+    }
+
+    /// Create with variation seed for replayable per-visit novelty.
+    #[must_use]
+    pub fn new_with(seed: u64) -> Self {
+        Self { seed }
+    }
+
+    fn phase_for(&self, t: f64) -> f64 {
+        let t = t.clamp(0.0, 1.0);
+        if self.seed == 0 {
+            t
+        } else {
+            (t + variation_unit(self.seed, 0x4D4F_4249_5553_0001) * 0.5).fract()
+        }
     }
 }
 
@@ -94,7 +112,7 @@ impl Room for Mobius {
         }
         // The ant: two laps of the centerline to get home. Its trail shows
         // where it has been; at t = 0.5 it is "underneath", upside down.
-        let ant_u = 2.0 * TAU * t.clamp(0.0, 1.0);
+        let ant_u = 2.0 * TAU * self.phase_for(t);
         let trail = 40;
         for i in 0..trail {
             let u = ant_u - 0.06 * f64::from(i);
@@ -136,6 +154,16 @@ impl Room for Mobius {
 
     fn postcard_t(&self) -> f64 {
         0.35
+    }
+
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "E half twist",
+            root: 164.81,
+            tempo: 104,
+            line: &[0, 5, 7, 12, 7, 5, -12, 0],
+            encodes: "one lap turns over and the second lap returns home",
+        })
     }
 }
 

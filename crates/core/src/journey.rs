@@ -35,6 +35,10 @@ pub struct Journey {
 
 /// The level cap. The answer to how far you can go.
 pub const MAX_LEVEL: u32 = 42;
+const MAX_CONSTELLATION_WIDTH: usize = 240;
+const MAX_CONSTELLATION_HEIGHT: usize = 120;
+const MAX_STORED_TOKEN_COUNT: usize = 256;
+const MAX_STORED_TOKEN_LEN: usize = 128;
 
 /// The unlocks: level, what opens, and how it reads on the wall.
 /// These gate extras and harder modes, never the base experience.
@@ -93,7 +97,11 @@ impl Journey {
     /// who keeps playing gets there.
     #[must_use]
     pub fn sparks(&self) -> u32 {
-        self.visited.len() as u32 + self.plays + 2 * self.wins + 5 * self.secrets
+        let visits = u32::try_from(self.visited.len()).unwrap_or(u32::MAX);
+        visits
+            .saturating_add(self.plays)
+            .saturating_add(self.wins.saturating_mul(2))
+            .saturating_add(self.secrets.saturating_mul(5))
     }
 
     /// The level these sparks confer: 1 through [`MAX_LEVEL`]. Level `n` needs
@@ -144,17 +152,17 @@ impl Journey {
 
     /// Record a game won.
     pub fn win(&mut self) {
-        self.wins += 1;
+        self.wins = self.wins.saturating_add(1);
     }
 
     /// Record a secret heard.
     pub fn secret(&mut self) {
-        self.secrets += 1;
+        self.secrets = self.secrets.saturating_add(1);
     }
 
     /// Record a round played, a sim run, or a curve made. Showing up counts.
     pub fn play(&mut self) {
-        self.plays += 1;
+        self.plays = self.plays.saturating_add(1);
     }
 
     /// Boons waiting to be chosen: every level past the first banks one, and
@@ -171,8 +179,13 @@ impl Journey {
         if day == self.last_daily {
             return None;
         }
-        self.streak = if day == self.last_daily + 1 && self.last_daily != 0 {
-            self.streak + 1
+        self.streak = if self.last_daily != 0
+            && self
+                .last_daily
+                .checked_add(1)
+                .is_some_and(|next| day == next)
+        {
+            self.streak.saturating_add(1)
         } else {
             1
         };
@@ -206,7 +219,7 @@ impl Journey {
             let mut parts = line.split_whitespace();
             match parts.next() {
                 Some("visited") => {
-                    journey.visited = parts.map(str::to_string).collect();
+                    journey.visited = bounded_token_set(parts);
                 }
                 Some("wins") => {
                     journey.wins = parts.next().and_then(|v| v.parse().ok()).unwrap_or(0);
@@ -218,7 +231,7 @@ impl Journey {
                     journey.plays = parts.next().and_then(|v| v.parse().ok()).unwrap_or(0);
                 }
                 Some("chosen") => {
-                    journey.chosen = parts.map(str::to_string).collect();
+                    journey.chosen = bounded_token_set(parts);
                 }
                 Some("streak") => {
                     journey.streak = parts.next().and_then(|v| v.parse().ok()).unwrap_or(0);
@@ -229,6 +242,25 @@ impl Journey {
         }
         journey
     }
+}
+
+fn bounded_token_set<'a>(parts: impl Iterator<Item = &'a str>) -> BTreeSet<String> {
+    let mut tokens = BTreeSet::new();
+    for token in parts.filter(|token| persisted_token_is_sane(token)) {
+        tokens.insert(token.to_string());
+        if tokens.len() >= MAX_STORED_TOKEN_COUNT {
+            break;
+        }
+    }
+    tokens
+}
+
+fn persisted_token_is_sane(token: &str) -> bool {
+    !token.is_empty()
+        && token.len() <= MAX_STORED_TOKEN_LEN
+        && token
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b':' | b'.'))
 }
 
 /// A boon on offer: an early unlock the player may choose at a level-up.
@@ -359,7 +391,9 @@ fn triangular(n: u32) -> u32 {
 /// the same for everyone; only your light differs.
 #[must_use]
 pub fn constellation(journey: &Journey, width: usize, height: usize) -> String {
-    let mut grid = vec![vec![' '; width.max(1)]; height.max(1)];
+    let width = width.clamp(1, MAX_CONSTELLATION_WIDTH);
+    let height = height.clamp(1, MAX_CONSTELLATION_HEIGHT);
+    let mut grid = vec![vec![' '; width]; height];
     for room in all_rooms() {
         let id = room.meta().id;
         // Hash the id into a stable position.
@@ -368,8 +402,8 @@ pub fn constellation(journey: &Journey, width: usize, height: usize) -> String {
             seed = seed.wrapping_mul(31).wrapping_add(u64::from(byte));
         }
         let mut rng = SplitMix64::new(seed);
-        let x = (rng.below(width.max(1) as u64)) as usize;
-        let y = (rng.below(height.max(1) as u64)) as usize;
+        let x = (rng.below(width as u64)) as usize;
+        let y = (rng.below(height as u64)) as usize;
         grid[y][x] = if journey.visited.contains(id) {
             '#'
         } else {
@@ -445,6 +479,57 @@ mod tests {
             ..Journey::default()
         };
         assert_eq!(journey.level(), super::MAX_LEVEL);
+    }
+
+    #[test]
+    fn malformed_large_counters_saturate() {
+        let mut journey = Journey::from_text(
+            "wins 4294967295\nsecrets 4294967295\nplays 4294967295\nstreak 4294967295 18446744073709551615\n",
+        );
+        assert_eq!(journey.sparks(), u32::MAX);
+        assert_eq!(journey.level(), super::MAX_LEVEL);
+        journey.win();
+        journey.secret();
+        journey.play();
+        assert_eq!(journey.sparks(), u32::MAX);
+        assert_eq!(journey.record_daily(u64::MAX), None);
+        assert_eq!(journey.record_daily(0), Some(1));
+    }
+
+    #[test]
+    fn malformed_large_token_sets_are_bounded() {
+        let visited = (0..1_000)
+            .map(|i| format!("room-{i}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let chosen = (0..1_000)
+            .map(|i| format!("cut:room-{i}:0"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let too_long = "x".repeat(super::MAX_STORED_TOKEN_LEN + 1);
+        let journey = Journey::from_text(&format!(
+            "visited ok bad/slash {too_long} {visited}\nchosen cut:lorenz:0 bad/slash {too_long} {chosen}\n"
+        ));
+        assert!(journey.visited.contains("ok"));
+        assert!(journey.chosen.contains("cut:lorenz:0"));
+        assert!(!journey.visited.contains("bad/slash"));
+        assert!(!journey.chosen.contains("bad/slash"));
+        assert!(!journey.visited.contains(&too_long));
+        assert!(!journey.chosen.contains(&too_long));
+        assert_eq!(journey.visited.len(), super::MAX_STORED_TOKEN_COUNT);
+        assert_eq!(journey.chosen.len(), super::MAX_STORED_TOKEN_COUNT);
+    }
+
+    #[test]
+    fn duplicate_tokens_do_not_consume_the_stored_token_budget() {
+        let duplicates = std::iter::repeat_n("dupe", super::MAX_STORED_TOKEN_COUNT)
+            .collect::<Vec<_>>()
+            .join(" ");
+        let journey = Journey::from_text(&format!("visited {duplicates} tail-ok\n"));
+
+        assert!(journey.visited.contains("dupe"));
+        assert!(journey.visited.contains("tail-ok"));
+        assert_eq!(journey.visited.len(), 2);
     }
 
     #[test]
@@ -574,5 +659,15 @@ mod tests {
         let lit = constellation(&journey, 60, 20);
         assert!(lit.contains('#'), "a visited room is a lit star");
         assert_eq!(lit, constellation(&journey, 60, 20), "the sky is stable");
+    }
+
+    #[test]
+    fn constellation_caps_untrusted_dimensions() {
+        let sky = constellation(&Journey::default(), usize::MAX, usize::MAX);
+        assert_eq!(sky.lines().count(), super::MAX_CONSTELLATION_HEIGHT);
+        assert!(
+            sky.lines()
+                .all(|line| line.len() == super::MAX_CONSTELLATION_WIDTH)
+        );
     }
 }

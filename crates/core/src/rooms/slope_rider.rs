@@ -6,6 +6,7 @@
 //! itself. Nobody says the word derivative; your speed is the controls. See
 //! the Full Map in `docs/ROOMS.md`.
 
+use super::variation_unit;
 use crate::room::{Room, RoomMeta};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
@@ -27,13 +28,30 @@ fn slope(x: f64) -> f64 {
 
 /// Slope Rider.
 #[derive(Debug, Default)]
-pub struct SlopeRider;
+pub struct SlopeRider {
+    seed: u64,
+}
 
 impl SlopeRider {
     /// Create the room.
     #[must_use]
     pub fn new() -> Self {
-        Self
+        Self { seed: 0 }
+    }
+
+    /// Create with variation seed for replayable per-visit novelty.
+    #[must_use]
+    pub fn new_with(seed: u64) -> Self {
+        Self { seed }
+    }
+
+    fn phase_for(&self, t: f64) -> f64 {
+        let t = t.clamp(0.0, 1.0);
+        if self.seed == 0 {
+            t
+        } else {
+            (t + variation_unit(self.seed, 0x534C_4F50_4552_0001) * 0.45).fract()
+        }
     }
 }
 
@@ -55,7 +73,7 @@ impl Room for SlopeRider {
         if width == 0 || height == 0 {
             return;
         }
-        let x_t = (t.clamp(0.0, 1.0) - 0.5) * X_SPAN;
+        let x_t = (self.phase_for(t) - 0.5) * X_SPAN;
         let x_min = -X_SPAN / 2.0;
         let to_px = |x: f64| ((x - x_min) / X_SPAN * (width as f64 - 1.0)) as i32;
 
@@ -138,9 +156,19 @@ impl Room for SlopeRider {
         0.62
     }
 
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "A tangent ride",
+            root: 220.0,
+            tempo: 128,
+            line: &[0, 3, 7, 10, 7, 3, -2, 0],
+            encodes: "the board climbing, cresting, descending, and leveling",
+        })
+    }
+
     fn sound(&self, t: f64) -> SoundSpec {
         // The board hums with the tilt: uphill high, downhill low.
-        let x = (t.clamp(0.0, 1.0) - 0.5) * X_SPAN;
+        let x = (self.phase_for(t) - 0.5) * X_SPAN;
         let norm = ((slope(x) + 0.7) / 2.1) as f32;
         SoundSpec::tone(110.0 + 330.0 * norm.clamp(0.0, 1.0), 1.5, 0.2)
     }

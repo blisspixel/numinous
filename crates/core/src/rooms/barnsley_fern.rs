@@ -5,6 +5,7 @@
 //! fern that looks convincingly alive, an iterated function system. `t` grows the
 //! fern by drawing more points. See `docs/ROOMS.md`.
 
+use crate::MAX_ROOM_POKES;
 use crate::rng::SplitMix64;
 use crate::room::{Room, RoomMeta};
 use crate::surface::Surface;
@@ -14,21 +15,81 @@ const SEED: u64 = 0xFE87_0000_5EED_1234;
 /// Points always drawn, and the extra points `t` adds.
 const BASE_POINTS: usize = 3_000;
 const SWEEP_POINTS: usize = 25_000;
+const FERN_X_MIN: f64 = -2.5;
+const FERN_X_SPAN: f64 = 5.5;
+const FERN_Y_MAX: f64 = 10.0;
 
 /// The Barnsley fern room.
 #[derive(Debug, Default)]
-pub struct BarnsleyFern;
+pub struct BarnsleyFern {
+    seed: u64,
+}
 
 impl BarnsleyFern {
-    /// Create the room.
+    /// Create the room with default seed (0).
     #[must_use]
     pub fn new() -> Self {
-        Self
+        Self { seed: 0 }
+    }
+
+    /// Create with variation seed.
+    #[must_use]
+    pub fn new_with(seed: u64) -> Self {
+        Self { seed }
     }
 
     /// How many points to draw at phase `t`.
     fn points_for(t: f64) -> usize {
-        BASE_POINTS + (t.clamp(0.0, 1.0) * SWEEP_POINTS as f64) as usize
+        BASE_POINTS + (Self::phase_for(t) * SWEEP_POINTS as f64) as usize
+    }
+
+    fn phase_for(t: f64) -> f64 {
+        if t.is_finite() {
+            t.clamp(0.0, 1.0)
+        } else {
+            0.0
+        }
+    }
+
+    fn screen_cell(px: f64, py: f64, width: usize, height: usize) -> Option<(usize, usize)> {
+        if width == 0 || height == 0 || !px.is_finite() || !py.is_finite() {
+            return None;
+        }
+        let sx = (px.clamp(0.0, 1.0) * width.saturating_sub(1) as f64).round() as usize;
+        let sy = (py.clamp(0.0, 1.0) * height.saturating_sub(1) as f64).round() as usize;
+        Some((sx.min(width - 1), sy.min(height - 1)))
+    }
+
+    fn world_at_cell(sx: usize, sy: usize, width: usize, height: usize) -> (f64, f64) {
+        let x = FERN_X_MIN + ((sx as f64 + 0.5) / width as f64) * FERN_X_SPAN;
+        let y = FERN_Y_MAX - ((sy as f64 + 0.5) / height as f64) * FERN_Y_MAX;
+        (x, y)
+    }
+
+    fn project_point(x: f64, y: f64, width: usize, height: usize) -> Option<(i32, i32)> {
+        if width == 0 || height == 0 || !x.is_finite() || !y.is_finite() {
+            return None;
+        }
+        let sx = (((x - FERN_X_MIN) / FERN_X_SPAN) * width as f64).floor() as i32;
+        let sy = (height as f64 - (y / FERN_Y_MAX) * height as f64).floor() as i32;
+        if sx >= 0 && sx < width as i32 && sy >= 0 && sy < height as i32 {
+            Some((sx, sy))
+        } else {
+            None
+        }
+    }
+
+    fn planted_points(
+        pokes: &[(f64, f64)],
+        width: usize,
+        height: usize,
+    ) -> impl Iterator<Item = (f64, f64, i32, i32)> + '_ {
+        let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
+        pokes[start..].iter().filter_map(move |&(px, py)| {
+            let (sx, sy) = Self::screen_cell(px, py, width, height)?;
+            let (x, y) = Self::world_at_cell(sx, sy, width, height);
+            Some((x, y, sx as i32, sy as i32))
+        })
     }
 }
 
@@ -63,21 +124,60 @@ impl Room for BarnsleyFern {
         if width == 0 || height == 0 {
             return;
         }
-        let mut rng = SplitMix64::new(SEED);
+        let mut rng = SplitMix64::new(SEED ^ self.seed);
         let (mut x, mut y) = (0.0_f64, 0.0_f64);
         for _ in 0..Self::points_for(t) {
             let (nx, ny) = next_point(x, y, rng.next_f64());
             x = nx;
             y = ny;
-            // Fern lives in x within [-2.5, 3.0] and y within [0, 10].
-            let sx = ((x + 2.5) / 5.5 * width as f64) as i32;
-            let sy = (height as f64 - (y / 10.0) * height as f64) as i32;
-            canvas.plot(sx, sy, '#');
+            if let Some((sx, sy)) = Self::project_point(x, y, width, height) {
+                canvas.plot(sx, sy, '#');
+            }
         }
     }
 
     fn postcard_t(&self) -> f64 {
         1.0
+    }
+
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "E fern",
+            root: 164.81,
+            tempo: 104,
+            line: &[0, 7, 12, 9, 5, 12, 7, 0],
+            encodes: "contractive maps repeating stem, leaf, and leaflet",
+        })
+    }
+
+    fn verb(&self) -> Option<&'static str> {
+        Some("CLICK: PLANT A NEW POINT")
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        if pokes.is_empty() {
+            self.render(canvas, t);
+            return;
+        }
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
+        }
+        self.render(canvas, t);
+        let mut rng = SplitMix64::new(SEED ^ self.seed);
+        for (mut x, mut y, sx, sy) in Self::planted_points(pokes, width, height) {
+            canvas.plot(sx, sy, '+');
+            for _ in 0..100 {
+                let r = rng.next_f64();
+                let (nx, ny) = next_point(x, y, r);
+                x = nx;
+                y = ny;
+                if let Some((sx, sy)) = Self::project_point(x, y, width, height) {
+                    canvas.plot(sx, sy, '+');
+                }
+            }
+        }
     }
 
     fn reveal(&self) -> &'static str {
@@ -102,6 +202,7 @@ impl Room for BarnsleyFern {
 #[cfg(test)]
 mod tests {
     use super::{BarnsleyFern, SEED, next_point};
+    use crate::MAX_ROOM_POKES;
     use crate::canvas::Canvas;
     use crate::rng::SplitMix64;
     use crate::room::Room;
@@ -125,6 +226,18 @@ mod tests {
     }
 
     #[test]
+    fn nonfinite_phase_falls_back_to_first_frame() {
+        assert_eq!(
+            BarnsleyFern::points_for(f64::NAN),
+            BarnsleyFern::points_for(0.0)
+        );
+        assert_eq!(
+            BarnsleyFern::points_for(f64::INFINITY),
+            BarnsleyFern::points_for(0.0)
+        );
+    }
+
+    #[test]
     fn render_is_deterministic_and_has_ink() {
         let room = BarnsleyFern::new();
         let mut a = Canvas::new(40, 40);
@@ -136,18 +249,191 @@ mod tests {
     }
 
     #[test]
+    fn new_with_zero_matches_default_and_nonzero_differs() {
+        let r0 = BarnsleyFern::new_with(0);
+        let r_def = BarnsleyFern::new();
+        let mut a = Canvas::new(40, 40);
+        let mut b = Canvas::new(40, 40);
+        r0.render(&mut a, 0.5);
+        r_def.render(&mut b, 0.5);
+        assert_eq!(a.to_text(), b.to_text());
+        let r42 = BarnsleyFern::new_with(42);
+        let mut c = Canvas::new(40, 40);
+        r42.render(&mut c, 0.5);
+        assert_ne!(a.to_text(), c.to_text());
+    }
+
+    #[test]
     fn extreme_inputs_do_not_panic() {
         let room = BarnsleyFern::new();
         let mut empty = Canvas::new(0, 0);
         room.render(&mut empty, 0.5);
         let mut canvas = Canvas::new(8, 8);
-        for t in [-1.0, 0.0, 1.0, 9.0] {
+        for t in [f64::NAN, f64::INFINITY, -1.0, 0.0, 1.0, 9.0] {
             room.render(&mut canvas, t);
         }
+        room.render_poked(&mut canvas, f64::NAN, &[(f64::INFINITY, f64::NAN)]);
     }
 
     #[test]
     fn reveal_mentions_the_index_card() {
         assert!(BarnsleyFern::new().reveal().contains("index card"));
+    }
+
+    #[test]
+    fn poked_changes_output() {
+        let r0 = BarnsleyFern::new_with(0);
+        let mut cp = Canvas::new(40, 40);
+        let mut c0 = Canvas::new(40, 40);
+        r0.render_poked(&mut cp, 0.5, &[(0.5, 0.5)]);
+        r0.render(&mut c0, 0.5);
+        assert!(
+            cp.ink_count() != c0.ink_count() || cp.to_text() != c0.to_text(),
+            "poke should change output"
+        );
+    }
+
+    #[test]
+    fn planted_points_preserve_order_clamp_and_filter() {
+        let points: Vec<_> = BarnsleyFern::planted_points(
+            &[
+                (-1.0, 0.0),
+                (f64::NAN, 0.5),
+                (0.5, f64::INFINITY),
+                (0.5, 0.5),
+                (2.0, 1.0),
+            ],
+            40,
+            40,
+        )
+        .map(|(x, y, sx, sy)| {
+            assert_eq!(BarnsleyFern::project_point(x, y, 40, 40), Some((sx, sy)));
+            (sx, sy)
+        })
+        .collect();
+
+        assert_eq!(points, vec![(0, 0), (20, 20), (39, 39)]);
+    }
+
+    #[test]
+    fn planted_points_are_screen_space_faithful_at_edges() {
+        let points: Vec<_> =
+            BarnsleyFern::planted_points(&[(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)], 40, 40)
+                .map(|(x, y, sx, sy)| {
+                    assert_eq!(BarnsleyFern::project_point(x, y, 40, 40), Some((sx, sy)));
+                    (sx, sy)
+                })
+                .collect();
+
+        assert_eq!(points, vec![(0, 0), (39, 0), (0, 39), (39, 39)]);
+    }
+
+    #[test]
+    fn render_poked_marks_the_clicked_cell_before_growth() {
+        let room = BarnsleyFern::new();
+        let mut canvas = Canvas::new(40, 40);
+
+        room.render_poked(&mut canvas, 0.5, &[(1.0, 0.0)]);
+
+        let text = canvas.to_text();
+        let top_row = text.lines().next().expect("top row");
+        assert_eq!(top_row.as_bytes()[39], b'+');
+    }
+
+    #[test]
+    fn planted_points_filter_bad_values_before_mapping() {
+        let points: Vec<_> = BarnsleyFern::planted_points(
+            &[
+                (-1.0, 0.0),
+                (f64::NAN, 0.5),
+                (0.5, f64::INFINITY),
+                (0.5, 0.5),
+                (2.0, 1.0),
+            ],
+            40,
+            40,
+        )
+        .collect();
+
+        assert_eq!(points.len(), 3);
+    }
+
+    #[test]
+    fn planted_points_use_the_newest_bounded_raw_tail() {
+        let mut many = vec![(0.0, 0.0); MAX_ROOM_POKES + 3];
+        let newest: Vec<_> = many[many.len() - MAX_ROOM_POKES..].to_vec();
+        many[0] = (1.0, 1.0);
+
+        let expected: Vec<_> = BarnsleyFern::planted_points(&newest, 40, 40).collect();
+        let actual: Vec<_> = BarnsleyFern::planted_points(&many, 40, 40).collect();
+
+        assert_eq!(actual, expected);
+        assert_eq!(actual.len(), MAX_ROOM_POKES);
+    }
+
+    #[test]
+    fn nonfinite_pokes_do_not_consume_planted_identity() {
+        let room = BarnsleyFern::new();
+        let finite = [(0.25, 0.25), (0.75, 0.75)];
+        let with_bad_points = [(f64::NAN, 0.0), finite[0], (0.0, f64::INFINITY), finite[1]];
+
+        let mut expected = Canvas::new(40, 40);
+        let mut actual = Canvas::new(40, 40);
+        room.render_poked(&mut expected, 0.5, &finite);
+        room.render_poked(&mut actual, 0.5, &with_bad_points);
+
+        assert_eq!(actual.to_text(), expected.to_text());
+    }
+
+    #[test]
+    fn raw_newest_tail_is_capped_before_nonfinite_filtering() {
+        let mut with_invalid_tail = vec![(0.25, 0.25); MAX_ROOM_POKES];
+        with_invalid_tail.push((f64::NAN, f64::INFINITY));
+
+        let points: Vec<_> = BarnsleyFern::planted_points(&with_invalid_tail, 40, 40).collect();
+
+        assert_eq!(points.len(), MAX_ROOM_POKES - 1);
+        assert!(points.iter().all(|&(_, _, sx, sy)| (sx, sy) == (10, 10)));
+    }
+
+    #[test]
+    fn oversized_poke_slices_render_like_their_newest_bounded_tail() {
+        let room = BarnsleyFern::new();
+        let discarded_prefix = vec![(1.0, 1.0), (0.9, 0.1), (0.8, 0.2)];
+        let newest: Vec<_> = (0..MAX_ROOM_POKES)
+            .map(|i| {
+                (
+                    (f64::from((i % 7) as u32) + 0.5) / 7.0,
+                    (f64::from((i % 5) as u32) + 0.5) / 5.0,
+                )
+            })
+            .collect();
+        let mut all = discarded_prefix.clone();
+        all.extend_from_slice(&newest);
+
+        let mut expected = Canvas::new(40, 40);
+        let mut actual = Canvas::new(40, 40);
+        let mut prefix_only = Canvas::new(40, 40);
+        room.render_poked(&mut expected, 0.5, &newest);
+        room.render_poked(&mut actual, 0.5, &all);
+        room.render_poked(&mut prefix_only, 0.5, &discarded_prefix);
+
+        assert_eq!(actual.to_text(), expected.to_text());
+        assert_ne!(prefix_only.to_text(), expected.to_text());
+    }
+
+    #[test]
+    fn new_with_nonzero_affects_poked_output() {
+        let r0 = BarnsleyFern::new_with(0);
+        let r42 = BarnsleyFern::new_with(42);
+        let mut cp0 = Canvas::new(40, 40);
+        let mut cp42 = Canvas::new(40, 40);
+        r0.render_poked(&mut cp0, 0.5, &[(0.5, 0.5)]);
+        r42.render_poked(&mut cp42, 0.5, &[(0.5, 0.5)]);
+        assert_ne!(
+            cp0.to_text(),
+            cp42.to_text(),
+            "variation seed must affect poked render for replayable per-visit pokes"
+        );
     }
 }

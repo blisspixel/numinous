@@ -13,6 +13,7 @@ use crate::rng::SplitMix64;
 const ARCADE_MIX: u64 = 0xA5CA_DE00_0000_0007;
 /// Lives at the start of a run.
 pub const LIVES: u32 = 3;
+const CELLS: usize = ROWS * COLS;
 
 /// A Vexation's mind: one behavior each, one line of math each.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -133,12 +134,13 @@ impl Arcade {
     /// The spirits for the current level: one more each level, minds cycling
     /// drifter, tracker, editor, seeded placement away from the Muncher.
     fn spawn_vexations(&mut self) {
+        self.repair_public_state();
         let mut rng = SplitMix64::new(self.seed ^ ARCADE_MIX ^ self.level.wrapping_mul(0xD1CE));
-        let count = (1 + self.level as usize).min(5);
+        let count = (self.level as usize).saturating_add(1).min(5);
         self.vexations.clear();
         let minds = [Mind::Drifter, Mind::Tracker, Mind::Editor];
         while self.vexations.len() < count {
-            let cell = rng.below((ROWS * COLS) as u64) as usize;
+            let cell = rng.below(CELLS as u64) as usize;
             if distance(cell, self.muncher) >= 4 && !self.vexations.iter().any(|v| v.cell == cell) {
                 let mind = minds[self.vexations.len() % minds.len()];
                 self.vexations.push(Vexation { cell, mind });
@@ -149,6 +151,9 @@ impl Arcade {
     /// Whether every number that fits the rule has been eaten.
     #[must_use]
     pub fn cleared(&self) -> bool {
+        if self.board.numbers.len() != CELLS || self.eaten.len() != CELLS {
+            return false;
+        }
         self.board
             .numbers
             .iter()
@@ -168,6 +173,7 @@ impl Arcade {
 
     /// The player's half alone: move or eat, and settle clears.
     pub fn act(&mut self, action: Action) -> Turn {
+        self.repair_public_state();
         if self.lives == 0 {
             return Turn::Over;
         }
@@ -179,7 +185,7 @@ impl Arcade {
                 }
             }
             Action::Down => {
-                if self.muncher + COLS < ROWS * COLS {
+                if self.muncher + COLS < CELLS {
                     self.muncher += COLS;
                 }
             }
@@ -197,15 +203,22 @@ impl Arcade {
                 if !self.eaten[self.muncher] {
                     self.eaten[self.muncher] = true;
                     let n = self.board.numbers[self.muncher];
-                    self.score += if self.board.rule.fits(n) { 10 } else { -5 };
+                    self.score = if self.board.rule.fits(n) {
+                        self.score.saturating_add(10)
+                    } else {
+                        self.score.saturating_sub(5)
+                    };
                 }
             }
         }
         if self.cleared() {
-            self.score += 20 * self.level as i64;
-            self.level += 1;
+            let bonus = i64::try_from(self.level)
+                .unwrap_or(i64::MAX / 20)
+                .saturating_mul(20);
+            self.score = self.score.saturating_add(bonus);
+            self.level = self.level.saturating_add(1);
             self.board = build_board(self.seed ^ ARCADE_MIX, self.level - 1);
-            self.eaten = vec![false; ROWS * COLS];
+            self.eaten = vec![false; CELLS];
             self.muncher = 0;
             self.spawn_vexations();
             return Turn::Cleared;
@@ -215,10 +228,11 @@ impl Arcade {
 
     /// The spirits' half alone: every Vexation steps; contact is judged.
     pub fn tick(&mut self) -> Turn {
+        self.repair_public_state();
         if self.lives == 0 {
             return Turn::Over;
         }
-        self.turns += 1;
+        self.turns = self.turns.saturating_add(1);
         let mut rng = SplitMix64::new(self.seed ^ ARCADE_MIX ^ self.turns);
         let muncher = self.muncher;
         let mut caught = false;
@@ -256,17 +270,24 @@ impl Arcade {
                 return Turn::Over;
             }
             // Respawn at the far corner; the spirits scatter afresh.
-            self.muncher = ROWS * COLS - 1;
+            self.muncher = CELLS - 1;
             self.spawn_vexations();
             return Turn::Caught;
         }
         Turn::Going
     }
+
+    fn repair_public_state(&mut self) {
+        self.board.numbers.resize(CELLS, 1);
+        self.eaten.resize(CELLS, false);
+        self.muncher = self.muncher.min(CELLS - 1);
+        self.vexations.retain(|v| v.cell < CELLS);
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Action, Arcade, LIVES, Mind, Turn, distance, neighbors};
+    use super::{Action, Arcade, LIVES, Mind, Turn, Vexation, distance, neighbors};
     use crate::munchers::{COLS, ROWS};
 
     #[test]
@@ -365,6 +386,23 @@ mod tests {
         let mid = run.score;
         run.turn(Action::Eat);
         assert_eq!(run.score, mid, "a cell only feeds once");
+    }
+
+    #[test]
+    fn public_state_is_repaired_before_indexing() {
+        let mut run = Arcade::new(5);
+        run.muncher = usize::MAX;
+        run.vexations.push(Vexation {
+            cell: usize::MAX,
+            mind: Mind::Editor,
+        });
+        run.eaten.clear();
+        run.board.numbers.clear();
+        let _ = run.turn(Action::Eat);
+        assert!(run.muncher < ROWS * COLS);
+        assert_eq!(run.eaten.len(), ROWS * COLS);
+        assert_eq!(run.board.numbers.len(), ROWS * COLS);
+        assert!(run.vexations.iter().all(|v| v.cell < ROWS * COLS));
     }
 
     #[test]

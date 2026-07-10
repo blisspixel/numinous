@@ -4,6 +4,7 @@
 //! inward as the swings die away, like a Lissajous figure caught in amber. `t`
 //! detunes the frequencies, opening and closing the weave. See `docs/ROOMS.md`.
 
+use super::variation_signed;
 use crate::room::{Room, RoomMeta};
 use crate::surface::Surface;
 
@@ -16,13 +17,26 @@ const DAMP: f64 = 0.012;
 
 /// The harmonograph room.
 #[derive(Debug, Default)]
-pub struct Harmonograph;
+pub struct Harmonograph {
+    seed: u64,
+}
 
 impl Harmonograph {
     /// Create the room.
     #[must_use]
     pub fn new() -> Self {
-        Self
+        Self { seed: 0 }
+    }
+
+    /// Create with variation seed for replayable per-visit novelty.
+    #[must_use]
+    pub fn new_with(seed: u64) -> Self {
+        Self { seed }
+    }
+
+    fn detune_for(&self, t: f64) -> f64 {
+        (t.clamp(0.0, 1.0) - 0.5) * 0.06
+            + variation_signed(self.seed, 0x4841_524D_4F4E_0001) * 0.035
     }
 }
 
@@ -53,7 +67,7 @@ impl Room for Harmonograph {
         if width == 0 || height == 0 {
             return;
         }
-        let detune = (t.clamp(0.0, 1.0) - 0.5) * 0.06;
+        let detune = self.detune_for(t);
         let aspect = canvas.char_aspect();
         let center_x = width as f64 / 2.0;
         let center_y = height as f64 / 2.0;
@@ -76,6 +90,16 @@ impl Room for Harmonograph {
         "Before computers, this is how people saw a chord. Two frequencies in a \
          simple ratio draw a clean closed figure; nudge them apart and it blooms \
          into a rose that never quite repeats."
+    }
+
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "F fading rose",
+            root: 174.61,
+            tempo: 84,
+            line: &[0, 4, 7, 11, 9, 7, 4, 0],
+            encodes: "pendulum harmonics blooming outward then decaying home",
+        })
     }
 }
 

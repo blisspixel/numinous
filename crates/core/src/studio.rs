@@ -10,6 +10,257 @@ use std::f64::consts::{E, PI};
 
 use crate::sound::{Note, SoundSpec};
 
+/// Maximum accepted Studio source length for share files and links.
+pub const MAX_STUDIO_SOURCE_CHARS: usize = 512;
+
+/// A shareable Studio expression plus its viewing parameters.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StudioCreation {
+    source: String,
+    xmin: f64,
+    xmax: f64,
+    a: f64,
+}
+
+impl StudioCreation {
+    /// Build a validated Studio creation.
+    ///
+    /// # Errors
+    /// Returns a message if the source is empty, too large, contains control
+    /// characters, does not parse, or if the range/parameter are not finite.
+    pub fn new(source: impl Into<String>, xmin: f64, xmax: f64, a: f64) -> Result<Self, String> {
+        let source = source.into().trim().to_string();
+        validate_share_source(&source)?;
+        parse(&source)?;
+        validate_share_numbers(xmin, xmax, a)?;
+        Ok(Self {
+            source,
+            xmin,
+            xmax,
+            a,
+        })
+    }
+
+    /// The Studio expression source.
+    #[must_use]
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+
+    /// Left edge of the shared x range.
+    #[must_use]
+    pub fn xmin(&self) -> f64 {
+        self.xmin
+    }
+
+    /// Right edge of the shared x range.
+    #[must_use]
+    pub fn xmax(&self) -> f64 {
+        self.xmax
+    }
+
+    /// Shared value for the parameter `a`.
+    #[must_use]
+    pub fn a(&self) -> f64 {
+        self.a
+    }
+
+    /// Serialize to the first `.num` Studio file format.
+    #[must_use]
+    pub fn to_num_file(&self) -> String {
+        format!(
+            "NUMINOUS_STUDIO 1\nexpr={}\nxmin={}\nxmax={}\na={}\n",
+            self.source,
+            format_share_number(self.xmin),
+            format_share_number(self.xmax),
+            format_share_number(self.a)
+        )
+    }
+
+    /// Parse a `.num` Studio file.
+    ///
+    /// # Errors
+    /// Returns a message if the file is malformed or describes an invalid
+    /// Studio expression.
+    pub fn from_num_file(text: &str) -> Result<Self, String> {
+        let mut lines = text.lines();
+        match lines.next() {
+            Some("NUMINOUS_STUDIO 1") => {}
+            _ => return Err("not a Numinous Studio .num file".to_string()),
+        }
+        let mut source: Option<String> = None;
+        let mut xmin: Option<f64> = None;
+        let mut xmax: Option<f64> = None;
+        let mut a: Option<f64> = None;
+        for line in lines {
+            if line.trim().is_empty() {
+                continue;
+            }
+            let (key, value) = line
+                .split_once('=')
+                .ok_or_else(|| format!("bad Studio .num line '{line}'"))?;
+            match key {
+                "expr" if source.is_none() => source = Some(value.to_string()),
+                "xmin" if xmin.is_none() => xmin = Some(parse_share_number("xmin", value)?),
+                "xmax" if xmax.is_none() => xmax = Some(parse_share_number("xmax", value)?),
+                "a" if a.is_none() => a = Some(parse_share_number("a", value)?),
+                "expr" | "xmin" | "xmax" | "a" => {
+                    return Err(format!("duplicate Studio .num field '{key}'"));
+                }
+                other => return Err(format!("unknown Studio .num field '{other}'")),
+            }
+        }
+        Self::new(
+            source.ok_or_else(|| "missing Studio expression".to_string())?,
+            xmin.ok_or_else(|| "missing xmin".to_string())?,
+            xmax.ok_or_else(|| "missing xmax".to_string())?,
+            a.ok_or_else(|| "missing a".to_string())?,
+        )
+    }
+
+    /// Produce a native `numinous://` Studio link for this creation.
+    #[must_use]
+    pub fn to_link(&self) -> String {
+        format!(
+            "numinous://studio?expr={}&xmin={}&xmax={}&a={}",
+            percent_encode(&self.source),
+            format_share_number(self.xmin),
+            format_share_number(self.xmax),
+            format_share_number(self.a)
+        )
+    }
+
+    /// Parse a native `numinous://` Studio link.
+    ///
+    /// # Errors
+    /// Returns a message if the link is malformed or describes an invalid
+    /// Studio expression.
+    pub fn from_link(link: &str) -> Result<Self, String> {
+        let query = link
+            .strip_prefix("numinous://studio?")
+            .or_else(|| link.strip_prefix("numinous://studio/?"))
+            .ok_or_else(|| "not a Numinous Studio link".to_string())?;
+        let mut source: Option<String> = None;
+        let mut xmin: Option<f64> = None;
+        let mut xmax: Option<f64> = None;
+        let mut a: Option<f64> = None;
+        for pair in query.split('&') {
+            if pair.is_empty() {
+                continue;
+            }
+            let (key, value) = pair
+                .split_once('=')
+                .ok_or_else(|| format!("bad Studio link parameter '{pair}'"))?;
+            match key {
+                "expr" if source.is_none() => source = Some(percent_decode(value)?),
+                "xmin" if xmin.is_none() => xmin = Some(parse_share_number("xmin", value)?),
+                "xmax" if xmax.is_none() => xmax = Some(parse_share_number("xmax", value)?),
+                "a" if a.is_none() => a = Some(parse_share_number("a", value)?),
+                "expr" | "xmin" | "xmax" | "a" => {
+                    return Err(format!("duplicate Studio link field '{key}'"));
+                }
+                other => return Err(format!("unknown Studio link field '{other}'")),
+            }
+        }
+        Self::new(
+            source.ok_or_else(|| "missing Studio expression".to_string())?,
+            xmin.ok_or_else(|| "missing xmin".to_string())?,
+            xmax.ok_or_else(|| "missing xmax".to_string())?,
+            a.ok_or_else(|| "missing a".to_string())?,
+        )
+    }
+}
+
+fn validate_share_source(source: &str) -> Result<(), String> {
+    if source.is_empty() {
+        return Err("Studio expression is empty".to_string());
+    }
+    if source.chars().count() > MAX_STUDIO_SOURCE_CHARS {
+        return Err(format!(
+            "Studio expression is too long; limit is {MAX_STUDIO_SOURCE_CHARS} characters"
+        ));
+    }
+    if source.chars().any(char::is_control) {
+        return Err("Studio expression cannot contain control characters".to_string());
+    }
+    Ok(())
+}
+
+fn validate_share_numbers(xmin: f64, xmax: f64, a: f64) -> Result<(), String> {
+    if !xmin.is_finite() || !xmax.is_finite() || !a.is_finite() {
+        return Err("Studio share numbers must be finite".to_string());
+    }
+    if xmax <= xmin {
+        return Err("Studio share needs xmax > xmin".to_string());
+    }
+    Ok(())
+}
+
+fn format_share_number(value: f64) -> String {
+    value.to_string()
+}
+
+fn parse_share_number(name: &str, value: &str) -> Result<f64, String> {
+    value
+        .parse::<f64>()
+        .map_err(|_| format!("bad Studio number for {name}: '{value}'"))
+}
+
+fn percent_encode(source: &str) -> String {
+    let mut out = String::new();
+    for byte in source.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~') {
+            out.push(byte as char);
+        } else {
+            out.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    out
+}
+
+fn percent_decode(source: &str) -> Result<String, String> {
+    let bytes = source.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'%' => {
+                let hi = bytes
+                    .get(i + 1)
+                    .copied()
+                    .ok_or_else(|| "truncated percent escape".to_string())?;
+                let lo = bytes
+                    .get(i + 2)
+                    .copied()
+                    .ok_or_else(|| "truncated percent escape".to_string())?;
+                let value = hex_value(hi)
+                    .and_then(|h| hex_value(lo).map(|l| h * 16 + l))
+                    .ok_or_else(|| "bad percent escape".to_string())?;
+                out.push(value);
+                i += 3;
+            }
+            b'+' => {
+                out.push(b' ');
+                i += 1;
+            }
+            byte => {
+                out.push(byte);
+                i += 1;
+            }
+        }
+    }
+    String::from_utf8(out).map_err(|_| "Studio link is not valid UTF-8".to_string())
+}
+
+fn hex_value(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
+}
+
 /// A parsed expression tree over the single variable `x`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -371,7 +622,7 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use super::{eval, parse};
+    use super::{MAX_STUDIO_SOURCE_CHARS, StudioCreation, eval, parse};
 
     fn at(source: &str, x: f64) -> f64 {
         eval(&parse(source).expect("parse"), x, 0.0)
@@ -436,5 +687,64 @@ mod tests {
         assert!(parse("nope(x)").is_err());
         assert!(parse("wut").is_err());
         assert!(parse("2 @ 3").is_err());
+    }
+
+    #[test]
+    fn studio_creation_round_trips_num_files_and_links() {
+        let creation = StudioCreation::new("sin(a*x) + x/2", -3.0, 3.0, 1.25).expect("creation");
+        let file = creation.to_num_file();
+        assert!(file.starts_with("NUMINOUS_STUDIO 1\n"));
+        assert!(file.contains("expr=sin(a*x) + x/2\n"));
+        assert_eq!(
+            StudioCreation::from_num_file(&file).expect("file round trip"),
+            creation
+        );
+
+        let link = creation.to_link();
+        assert!(link.starts_with("numinous://studio?expr=sin%28a%2Ax%29%20%2B%20x%2F2"));
+        assert_eq!(
+            StudioCreation::from_link(&link).expect("link round trip"),
+            creation
+        );
+    }
+
+    #[test]
+    fn studio_creation_preserves_tiny_ranges() {
+        let creation = StudioCreation::new("x", 0.0, 1e-20, 1e-30).expect("tiny creation");
+        let from_file =
+            StudioCreation::from_num_file(&creation.to_num_file()).expect("file round trip");
+        assert_eq!(from_file.xmin(), 0.0);
+        assert_eq!(from_file.xmax(), 1e-20);
+        assert_eq!(from_file.a(), 1e-30);
+        let from_link = StudioCreation::from_link(&creation.to_link()).expect("link round trip");
+        assert_eq!(from_link, creation);
+    }
+
+    #[test]
+    fn studio_creation_validates_source_and_range() {
+        assert!(StudioCreation::new("", -1.0, 1.0, 1.0).is_err());
+        assert!(StudioCreation::new("sin(", -1.0, 1.0, 1.0).is_err());
+        assert!(StudioCreation::new("x\nx", -1.0, 1.0, 1.0).is_err());
+        assert!(StudioCreation::new("x", 1.0, 1.0, 1.0).is_err());
+        assert!(StudioCreation::new("x", -1.0, 1.0, f64::NAN).is_err());
+        let too_long = "x".repeat(MAX_STUDIO_SOURCE_CHARS + 1);
+        assert!(StudioCreation::new(too_long, -1.0, 1.0, 1.0).is_err());
+    }
+
+    #[test]
+    fn studio_creation_rejects_malformed_artifacts() {
+        assert!(StudioCreation::from_num_file("nope").is_err());
+        assert!(
+            StudioCreation::from_num_file(
+                "NUMINOUS_STUDIO 1\nexpr=x\nxmin=-1\nxmax=1\na=1\nunknown=2\n"
+            )
+            .is_err()
+        );
+        assert!(StudioCreation::from_link("https://example.com").is_err());
+        assert!(StudioCreation::from_link("numinous://studio?expr=x&xmin=-1&xmax=1&a=%").is_err());
+        assert!(
+            StudioCreation::from_link("numinous://studio?expr=x&expr=x&xmin=-1&xmax=1&a=1")
+                .is_err()
+        );
     }
 }
