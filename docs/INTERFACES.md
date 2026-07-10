@@ -60,7 +60,7 @@ The CLI (`numinous`) is not a debug afterthought. It is a legitimate, gorgeous w
 For automation, pipelines, CI, power users, and agents-via-shell. It follows modern CLI-guideline hygiene:
 - **Human-first output by default, machine-first on request.** Readable, styled output when attached to a terminal; clean `--json` (and exit codes) when piped or asked. It detects a TTY and adapts.
 - **Composable and deterministic.** Small verbs, good defaults, quiet by default, `--help` that teaches, seeds that make every render reproducible. Respects `NO_COLOR` and pipes.
-- **Room input is explicit.** Static hand points for room rendering are command arguments, for example `render double-pendulum --poke 0.2,0.8`, so terminal output is replayable and scriptable instead of tied to an interactive session.
+- **Room input is explicit.** Static hand points for room rendering are command arguments, for example `render double-pendulum --poke 0.2,0.8`, and full gestures are too: `render double-pendulum --gesture down:0.3,0.4,0.1 --gesture up:0.6,0.5,0.15` pins, pulls, and flings with the same phase-stamped physics as the App and MCP faces. Terminal output stays replayable and scriptable instead of tied to an interactive session.
 - Representative verbs: `render` (deterministic headless export of stills/loops/audio, the same core rendering contract the in-app postcard export mirrors), `eval` (run a Studio program to a file/audio/ASCII), `describe` / `rooms` / `insights` (query the catalog and awe bank as text or JSON), `benchmark` (perf/soak, feeds `QUALITY.md`), `test` (local quality loops), `share` / `open` (round-trip a `.num` or `numinous://`).
 
 ### Tier B: the interactive TUI (a real terminal app)

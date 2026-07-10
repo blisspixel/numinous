@@ -23,7 +23,7 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 897 tests, locked build, Windows verify, 90.55% region cover, and 90.11% line cover all green.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 900 tests, locked build, Windows verify, 90.49% region cover, and 90.06% line cover all green.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -211,6 +211,12 @@ Cycle 73 gave agents hands with time in them: MCP `play_room` accepts a
 exclusive with `pokes`), so a digital mind can pin the pendulum, pull, and
 fling with measured velocity, statelessly and replayably; legacy rooms answer
 through the same bridge the App uses, tested delta-identical to pokes.
+
+Cycle 74 completed gesture parity across all three faces: the CLI's
+`render --gesture down:x,y,t` (move, up, and bare cancel too) replays the
+same phase-stamped trails through the same core path, so a pinned pendulum
+ignores the clock in the terminal exactly as it does in the window and over
+the wire. Every face now speaks the complete input vocabulary.
 
 Cycle 72 gave Slope Rider its verb (CLICK: DROP A RIDER) and completed the
 catalog: every one of the 30 rooms now answers the hand. Riders drop onto the

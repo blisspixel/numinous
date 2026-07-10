@@ -53,6 +53,7 @@ numinous watch julia              full-color animation, with sound
 numinous watch lorenz --era phosphor
 numinous play times-tables        classic ASCII
 numinous render double-pendulum --poke 0.2,0.8
+numinous render double-pendulum --gesture down:0.3,0.4,0.1 --gesture up:0.6,0.5,0.15
 numinous plot "sin(a*x)" --animate
 numinous sing "sin(x) + x/3" --out song.wav
 numinous tune --seed 7 --out chip.wav   a seeded chiptune (Music Engine A)
@@ -110,16 +111,16 @@ or in any MCP client's config (build once with
 {
   "mcpServers": {
     "numinous": {
-      "command": "C:/GitHub/math-is-cool/target/release/numinous-mcp"
+      "command": "C:/GitHub/Numinous/target/release/numinous-mcp"
     }
   }
 }
 ```
 
 Transport is JSON-RPC 2.0 over newline-delimited stdio, protocol revision
-2025-06-18. Twenty-six tools, mostly flat schemas, all stateless per call; the
-bounded `play_room` `pokes` tuple array is the deliberate exception for
-replayable hand points:
+2025-06-18. Twenty-seven tools, mostly flat schemas, all stateless per call;
+the bounded `play_room` `pokes` tuple array and `gesture` event objects are
+the deliberate exceptions for replayable hand input:
 
 | Tool | What it does |
 |---|---|
@@ -156,8 +157,9 @@ Conventions worth relying on:
   board, quiz, or scan, for you and for every other mind. Trajectories are
   perfectly reproducible.
 - **Stateless room input.** `play_room` accepts optional normalized hand
-  points as `pokes: [[x, y], ...]`, newest last, bounded to 24 points. They
-  are replayable arguments, not hidden session state.
+  points as `pokes: [[x, y], ...]`, newest last, bounded to 24 points, or a
+  `gesture` trail of phase-stamped pointer events (held rooms pin, pull, and
+  fling). Both are replayable arguments, not hidden session state.
 - **Structured output.** Game grades and the journey return
   `structuredContent` (scores, verdicts, level) alongside prose; parse that,
   not the sentences.
