@@ -51,7 +51,7 @@ theirs; nothing is borrowed.
   action line) and `poke(x, y, variation)` where meaningful; the registry
   threads a per-visit `variation` seed (default 0 pins all current tests
   and postcards exactly).
-- Expanded pokes and drags (touch verbs on arrival cards for playable rooms): first wave (Lorenz: DROP A STORM, Life: SOW LIFE, Voronoi: DROP A WELL, Double: RE-DROP from the hand's point, Chaos: MOVE A CORNER, Random: PLANT A WALKER) plus many more including Golden (PLANT A SEED), Langton (FLIP A CELL), Barnsley (PLANT A NEW POINT), Buffon (DROP A NEEDLE), Galton (DROP A BALL: x chooses the lane, y tilts its coin), Mandelbrot (DIVE), Julia (MORPH C), Times Tables (TURN THE DIAL), Epicycles (PERTURB), Goldbach (TEST THIS EVEN: x chooses an even target, y chooses a prime-pair witness), L-System (PLANT), Quine (PLACE A COPY), StrangeLoop (SHIFT), etc. 23 total.
+- Expanded pokes and drags (touch verbs on arrival cards for playable rooms): first wave (Lorenz: DROP A STORM, Life: SOW LIFE, Voronoi: DROP A WELL, Double: RE-DROP from the hand's point, Chaos: MOVE A CORNER, Random: PLANT A WALKER) plus many more including Golden (PLANT A SEED), Langton (FLIP A CELL), Barnsley (PLANT A NEW POINT), Buffon (DROP A NEEDLE), Galton (DROP A BALL: x chooses the lane, y tilts its coin), Mandelbrot (DIVE), Julia (MORPH C), Times Tables (TURN THE DIAL), Epicycles (PERTURB), Goldbach (TEST THIS EVEN: x chooses an even target, y chooses a prime-pair witness), L-System (PLANT), Quine (PLACE A COPY), StrangeLoop (SHIFT), etc. 26 total.
 - The app maps clicks to normalized coordinates; R re-deals the variation.
   The CLI gets `watch --vary`; MCP `play_room` gains `variation`.
 - MCP `munch_arcade` tool added for full parity (stateless action-list replay + state + score posting through progress).
@@ -59,7 +59,7 @@ theirs; nothing is borrowed.
 ## Order of work (one session each, built to the bar)
 1. `munch_arcade` core + CLI twin + tests (the game exists end to end).
 2. App real-time Munch with juice (the fun lands).
-3. The poke trait + first six rooms + arrival verbs (expanded to 25 rooms).
+3. The poke trait + first six rooms + arrival verbs (expanded to 26 rooms).
 4. MCP `munch_arcade` + variation parity; docs; playtest pass (agent + kid). **DONE** (MCP tool + play_room variation + score posting).
 
 Every law holds: rewards stay knowledge, `?` explains the concept (chase
