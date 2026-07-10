@@ -169,7 +169,7 @@ mod tests {
 
     #[test]
     fn arrival_lines_always_name_an_action() {
-        let quiet = room("the-pour");
+        let quiet = room("slope-rider");
         let interactive = room("game-of-life");
         assert_eq!(room_action(quiet.as_ref()), DEFAULT_TOUCH_ROOM_ACTION);
         assert!(
