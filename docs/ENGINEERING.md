@@ -13,7 +13,7 @@ Pin these exactly; **re-verify the exact current stable at project kickoff**, si
 | `wgpu` | **29.x** | The portable GPU stack (Vulkan/Metal/DX12). See `ARCHITECTURE.md`. |
 | `bevy` (if used) | **0.19** | Only if we take the engine route; decided by the 0.1 spike. Bevy tracks wgpu, so versions move together. |
 | `cpal`, `fundsp` | latest GA | Native audio I/O + DSP (see `SOUND.md`, `MUSIC.md`). |
-| Test runner | **cargo-nextest** | Faster, per-test process isolation. |
+| Test runner | **cargo test** today; **cargo-nextest** target | Current CI uses stock Cargo for zero setup; nextest remains the speed target. |
 | Property testing | **proptest** (1.x) | Invariants and metamorphic tests (`QUALITY.md`). |
 | Snapshot testing | **insta** (1.x) | Deterministic output snapshots. |
 | Benchmarks | **criterion** | Hot-path perf, regression tracking. |
@@ -25,7 +25,7 @@ Pin these exactly; **re-verify the exact current stable at project kickoff**, si
 ## Formatting and linting (zero-warning policy)
 
 - **`rustfmt`** on everything; `cargo fmt --all --check` is a blocking CI gate. No unformatted code merges, ever. Style is not up for per-PR debate.
-- **`clippy` at a strict level:** `cargo clippy --workspace --all-targets --all-features -- -D warnings`. Enable `clippy::pedantic` and selected `nursery`/`cargo` lints; opt *out* deliberately, per case, with a written reason.
+- **`clippy` at a strict level:** current CI runs `cargo clippy --workspace --all-targets -- -D warnings`. `--all-features`, selected `pedantic`, `nursery`, and `cargo` lints are hardening targets; opt out deliberately, per case, with a written reason.
 - **`-D warnings` project-wide.** A warning is a bug that has not been fixed yet. CI is red on any warning.
 - **Prefer `#[expect(lint, reason = "...")]` over `#[allow(...)]`** so that a suppression which is no longer needed becomes an error and gets cleaned up. Every suppression carries a `reason`.
 
@@ -52,13 +52,13 @@ Pin these exactly; **re-verify the exact current stable at project kickoff**, si
 
 - **`#![deny(missing_docs)]` on library crates.** Every public item has a doc comment; every crate has a `//!` overview.
 - **Doctests are real tests** and run in CI; examples must compile and pass.
-- **`cargo doc` builds clean under `-D warnings`;** broken intra-doc links fail CI.
+- **`cargo doc` builds clean under `-D warnings`;** broken intra-doc links should fail CI once the doc gate is added.
 - **Architecture Decision Records (ADRs)** for consequential choices (the stack, Bevy-vs-bespoke, the Studio DSL, the sandbox model). A decision without a recorded rationale is a future argument waiting to happen.
 - Comments explain **why**, not what; the code says what.
 
 ## Testing (the enforcement of `QUALITY.md`)
 
-- **Runner:** `cargo-nextest` for speed and isolation.
+- **Runner:** `cargo test --workspace` is the current enforced runner. Move to `cargo-nextest` when the repo has the dependency and CI time justifies it.
 - **Layers:** unit + integration tests; **proptest** for invariants and metamorphic properties; **insta** snapshots for deterministic output; **golden-reference** tests for GPU math (the-math-is-the-oracle, `QUALITY.md`); **criterion** for benchmarks. These *are* the commit-loop in `QUALITY.md`.
 - **Determinism is mandatory:** seeded RNG only, never ambient randomness or wall-clock time in logic; same seed, same result (so shares and tests reproduce exactly).
 - **Coverage** is tracked with `cargo-llvm-cov` and read as a *smell detector*, not a target. The real metric is meaningful assertions on real behavior, not a percentage. We do not write tests to move a number.
@@ -80,12 +80,14 @@ Pin these exactly; **re-verify the exact current stable at project kickoff**, si
 Nothing merges red. On every PR, blocking:
 
 1. `cargo fmt --all --check`
-2. `cargo clippy --workspace --all-targets --all-features -- -D warnings`
-3. `cargo nextest run --workspace` (unit + property + integration)
-4. the `QUALITY.md` commit-loop: golden-reference, determinism, visual-regression, audio-regression, and the **style guard** (no emojis, no em-dashes, no AI/tool attribution)
-5. `cargo doc --workspace --no-deps` under `-D warnings`
-6. `cargo deny check` and `cargo audit`
-7. build succeeds on macOS, Linux, and Windows (and on a non-NVIDIA GPU in the nightly cross-GPU job)
+2. `cargo clippy --workspace --all-targets -- -D warnings`
+3. `cargo test --workspace`
+4. `bash scripts/check-style.sh`
+5. `cargo deny check`
+6. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
+7. `cargo build --workspace --locked` on macOS, Linux, and Windows
+
+Hardening targets not yet enforced in CI: `cargo doc --workspace --no-deps` under `-D warnings`, `cargo audit`, `cargo nextest`, the visual/audio regression loops, and real-hardware soak/performance jobs.
 
 The nightly loop adds soak/perf and cross-GPU differential tests (`QUALITY.md`).
 

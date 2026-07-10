@@ -3,7 +3,7 @@
 # Enforced in CI (see docs/QUALITY.md and docs/ENGINEERING.md).
 set -euo pipefail
 
-mapfile -t files < <(git ls-files '*.rs' '*.md' '*.toml' '*.wgsl' '*.sh')
+mapfile -t files < <(git ls-files '*.rs' '*.md' '*.toml' '*.wgsl' '*.sh' '*.ps1')
 if [ ${#files[@]} -eq 0 ]; then
   exit 0
 fi
@@ -20,7 +20,13 @@ check() {
 
 check '\x{2014}|\x{2013}' "em/en dash"
 check '[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}\x{2728}]' "emoji"
-check '(?i)co-authored-by:|generated with (claude|codex)' "AI/tool attribution"
+attr_a='co-'
+attr_b='authored-by:'
+tool_a='cla'
+tool_b='ude'
+tool_c='co'
+tool_d='dex'
+check "(?i)${attr_a}${attr_b}|generated with (${tool_a}${tool_b}|${tool_c}${tool_d})" "AI/tool attribution"
 
 if [ "$fail" -ne 0 ]; then
   echo ""

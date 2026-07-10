@@ -60,7 +60,8 @@ The CLI (`numinous`) is not a debug afterthought. It is a legitimate, gorgeous w
 For automation, pipelines, CI, power users, and agents-via-shell. It follows modern CLI-guideline hygiene:
 - **Human-first output by default, machine-first on request.** Readable, styled output when attached to a terminal; clean `--json` (and exit codes) when piped or asked. It detects a TTY and adapts.
 - **Composable and deterministic.** Small verbs, good defaults, quiet by default, `--help` that teaches, seeds that make every render reproducible. Respects `NO_COLOR` and pipes.
-- Representative verbs: `render` (deterministic headless export of stills/loops/audio, the same path in-app Share uses), `eval` (run a Studio program to a file/audio/ASCII), `describe` / `rooms` / `insights` (query the catalog and awe bank as text or JSON), `benchmark` (perf/soak, feeds `QUALITY.md`), `test` (local quality loops), `share` / `open` (round-trip a `.num` or `numinous://`).
+- **Room input is explicit.** Static hand points for room rendering are command arguments, for example `render double-pendulum --poke 0.2,0.8`, so terminal output is replayable and scriptable instead of tied to an interactive session.
+- Representative verbs: `render` (deterministic headless export of stills/loops/audio, the same core rendering contract the in-app postcard export mirrors), `eval` (run a Studio program to a file/audio/ASCII), `describe` / `rooms` / `insights` (query the catalog and awe bank as text or JSON), `benchmark` (perf/soak, feeds `QUALITY.md`), `test` (local quality loops), `share` / `open` (round-trip a `.num` or `numinous://`).
 
 ### Tier B: the interactive TUI (a real terminal app)
 Run `numinous` with no args (or `play --tui`) and you get a **rich, keyboard-driven terminal application** in the Charm / Bubble-Tea lineage (Rust: Ratatui + a Lipgloss-style layer), with structure and style cleanly separated:
@@ -92,7 +93,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
    - a **natural-language description of what happened and what is notable** ("the curve just closed into a single loop; the tone resolved to a consonant fifth; the pattern is now 3-fold symmetric").
    That last one is the agent's eyes and ears. **We narrate the beauty.** This is the heart of agent UX here: sensory substitution through description.
 
-3. **Tool descriptions and errors are the UX.** The description is what the agent reads to decide what to do; it must be clear, concrete, and example-rich. Inputs are **simple and flat** (no deeply nested config objects, which reliably break LLM tool calls). Errors are **guiding**, not just failing: "that expression has no free variable to animate; add `t` for time, or try `eval` with a fixed value."
+3. **Tool descriptions and errors are the UX.** The description is what the agent reads to decide what to do; it must be clear, concrete, and example-rich. Inputs are **simple and flat where possible** (no deeply nested config objects, which reliably break LLM tool calls); bounded coordinate tuples such as `play_room` `pokes: [[x, y]]` are allowed only when they directly preserve replayable room input. Errors are **guiding**, not just failing: "that expression has no free variable to animate; add `t` for time, or try `eval` with a fixed value."
 
 4. **A learning arc, not just an API, mirroring the human three layers.** The agent gets the same Toy to Puzzle to Revelation shape (see `DESIGN.md`):
    - **Explore (Toy):** poke parameters, observe consequences.
@@ -104,9 +105,29 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 
 ### What it exposes (shaped by the above)
 - **Tools:** `explore(room)` / `describe(room)`; `play(room, params, seed)` and `eval(studio, seed)` (both return the four-part multi-modal result); `challenge(room)` (pose + verify a goal); `learn(query)` / `reveal(room)` (the awe bank); `create(studio, meta)` (author a room, sandboxed); `render(...)` (deterministic export).
+- **Current room input shape:** `play_room` accepts `variation` plus optional normalized `pokes: [[x, y], ...]`, newest last, bounded to 24 points, and returns those points in `structuredContent` with the render. This keeps MCP play stateless and replayable while richer held-input semantics are still future work.
 - **Resources:** the room catalog, the insight bank, the Studio language reference, the Visual Eras, and discoverable Codex/lore fragments (`LORE.md`).
 - **Prompts:** the guided learn/connect/compose flows above.
 - **Interactive surfaces (emerging):** where the host supports MCP-app UI, the server can render a live interactive panel so a supervising human (or the agent) sees the room in real time.
+
+### Protocol watch: MCP 2026-07-28 release candidate
+
+As of 2026-07-08, the official MCP 2026-07-28 release-candidate post
+(`https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/`)
+is roadmap-relevant but not an immediate blocker for the current stdio face. The
+final specification is scheduled for July 28, 2026. The compatibility pass
+should happen after the final target is selected, not during current
+room-playability work.
+
+Implications to preserve in the MCP design:
+- Keep `play_room` replayable and explicit; the RC favors stateless protocol
+  calls and visible application handles over hidden protocol sessions.
+- Preserve stdio support unless and until a concrete host target requires the
+  new HTTP transport shape.
+- When a final migration is scheduled, check stateless requests, per-request
+  `_meta` client information/capabilities, `server/discover`, `Mcp-Method` and
+  `Mcp-Name` headers, cacheable `tools/list`, JSON Schema 2020-12, Tasks, MCP
+  Apps, authorization hardening, and roots/sampling/logging deprecations.
 
 ### Safety
 Agent-authored Studio code is untrusted and runs in the same **sandbox** as community rooms (no filesystem, no network, resource and time limits, GPU work only through the safe pipeline; see `STUDIO.md`, `QUALITY.md`). The MCP server exposes only the safe, headless surface.

@@ -18,7 +18,7 @@ Numinous is the first tool that is all three at once, because in it, **sight and
 - It is where **"math is fun, non-ironically, seriously" stops being a slogan and becomes something a person made with their own hands.** Consuming beauty (Watch) and poking it (Play) are great; *creating* it is the conversion that sticks.
 - It is the deepest expression of **everything is an instrument**: the whole of math becomes a playable, performable surface.
 - It is the **authoring layer for the entire game**. The built-in rooms are, at heart, polished Studio programs (see "Rooms are Studio programs," below). The tool we give players is the tool we build the game with. That is how the catalog scales from 25 rooms to hundreds (the Phase 4 mod SDK is really "the Studio, shared").
-- It is **infinitely replayable and endlessly shareable**: every creation is text plus a seed, so it exports as a clip and a `numinous://` link (native, no browser, see `ARCHITECTURE.md`).
+- It is **infinitely replayable and endlessly shareable**: every creation is text plus deterministic parameters, so it exports as a clip and a `.num` file / `numinous://` link (native, no browser, see `ARCHITECTURE.md`). The first CLI `.num` save/open slice exists for expression plots; exact app reopening, gallery, and fork/remix remain roadmap work.
 
 ## The core idea: one expression, two senses
 
@@ -77,7 +77,7 @@ The point of the examples: the famous built-in rooms are reachable in a few line
 
 ## Sharing and safety
 
-- **Native sharing:** a creation is text + seed, exported as a clip and a `.num` file / `numinous://` link that reopens it exactly in the app. Feeds the community gallery (see `ARCHITECTURE.md`, `ROADMAP.md`).
+- **Native sharing:** a creation is text plus deterministic parameters, exported as a clip and a `.num` file / `numinous://` link that reopens it exactly in the app. The first CLI `.num` file/link save and `open-studio` path now exists for expression plots; app reopening, clips, and gallery flow still need to land before this promise is complete (see `ARCHITECTURE.md`, `ROADMAP.md`).
 - **Sandboxing (important):** community Studio code is untrusted and must run sandboxed, no filesystem, no network, resource/time limits, GPU work through the safe pipeline only. This is a hard requirement for the mod SDK and a `QUALITY.md` concern (fault injection and fuzzing of untrusted patterns).
 
 ## Roadmap position (reconsidered)

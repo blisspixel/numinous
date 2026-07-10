@@ -23,8 +23,8 @@ doors' design goals. The point is what we are missing, not what we have.
 - "When I eat a number nothing happens until the end." **The window games
   grade at the end; there is no bite-by-bite juice**, no flash, no crunch
   sound, no shake on a wrong bite. Munch in 1990 crunched.
-- "Can I keep the picture?" **No save-postcard key in the app.** One
-  keypress should write the current frame to a PNG she can keep.
+- "Can I keep the picture?" **P now saves a PNG postcard in the app.** The
+  remaining share gap is polish: loops, links, and a discoverable share flow.
 
 ### Dr. Okafor (the PhD door)
 - "The deep cuts are genuinely good. Now cite them: every room should carry
@@ -70,8 +70,8 @@ is absent anymore; everything on this list makes an existing organ stronger.
 
 > Progress: items 1 (first serving), 2, 3, 5, and the phosphor half of 8 are
 > built. Open Problems opened (Goldbach); Engine B v0 shipped (the dial, the
-> fetch pipeline, Y in the app). Motifs (4), citations (7), crossfade, the
-> visualizer, gamepad, and the spark cap remain.
+> fetch pipeline, Y in the app). Motifs (4), citations (7), full Share v1,
+> crossfade, the visualizer, gamepad, and the spark cap remain.
 
 
 1. **Juice in the window games**: per-action feedback (flash on eat, shake
@@ -81,7 +81,8 @@ is absent anymore; everything on this list makes an existing organ stronger.
    ramp** (their base drifts from 10 earlier).
 4. **Engine A2, room motifs**: every room's sound becomes a short chiptune
    phrase in its own key; `listen_room` returns real notation.
-5. **Save-postcard key** in the app (P writes the frame to a PNG).
+5. **Save-postcard key** in the app (P writes the live room frame to a PNG,
+   preserving pokes and the selected Visual Era).
 6. **Open Problems wing** (Collatz has friends: twin primes, Goldbach).
 7. **Further reading**: one citation per room, unlocked with its deep cut.
 8. **Era grain** (scanlines, bloom, dither), **Show crossfade**, then the

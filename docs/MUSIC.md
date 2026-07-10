@@ -8,15 +8,15 @@ There are two engines, and they are designed to coexist and even harmonize.
 
 ## Engine A: Programmatic music (the math makes the sound)
 
-> A2 status (July 2026): motifs shipped for the seven gold rooms. A motif is
+> A2 status (July 2026): motifs shipped for all 30 catalog rooms. A motif is
 > a room's musical identity (key, tempo, a line of semitone degrees, and
 > what it encodes): Times Tables circles and returns in D minor pentatonic;
 > Lorenz wanders ten notes and never resolves; the Random Walk stumbles
-> chromatically; Voronoi rings open fifths; the Chaos Game jumps halfway
-> home; the pendulum's two voices drift out of phase; Life pulses against
-> silence. In the app the motif IS the room's bed; over MCP, listen_room
-> returns the phrase structurally (key, BPM, note names, what it encodes).
-> Next: state-dependent tension (the phrase resolves when the dial closes).
+> chromatically; Voronoi rings open fifths; Lissajous locks a visible fifth;
+> Zeno's Square shrinks toward arrival; the Logistic Map splits into chaos.
+> In the app the motif IS the room's bed; over MCP, listen_room returns the
+> phrase structurally (key, BPM, note names, what it encodes). Next:
+> state-dependent tension (the phrase resolves when the dial closes).
 
 > Status: v1 shipped. `crates/core/src/chiptune.rs` composes deterministic
 > pentatonic chiptunes (square lead, triangle bass, noise ticks, click-free
@@ -60,10 +60,11 @@ The centerpiece of the programmatic engine, and the beating heart of the **Studi
 > Status: v1 live. Three stations, 30+ original tracks and climbing (about
 > two hours on air), full stereo, varied unround runtimes dealt from each
 > station's rotation deck, wall-clock live sync (you tune in mid-broadcast),
-> per-track briefs from the house identity plus a card. The dial: Y in the
+> bounded local cache loading through the app radio-cache module, per-track
+> briefs from the house identity plus a card. The dial: Y in the
 > app, - and = for volume; `numinous radio` lists rotations; `numinous tune2
 > <station> --count N` grows them. Next: crossfade on rotation, the Comedy
-> Channel, cost guardrails.
+> Channel, room-over-radio one-bus mixing without record restarts, cost guardrails.
 >
 > (v0 status, kept for the record:) v0 shipped. The dial lives in `crates/core/src/radio.rs` (three
 > stations with full producer briefs: NUMINA FM trance at 132 BPM, THE
@@ -73,7 +74,7 @@ The centerpiece of the programmatic engine, and the beating heart of the **Studi
 > (`POST /v1/music?output_format=pcm_44100`, `ELEVENLABS_API_KEY` env),
 > receives raw PCM, and caches `~/.numinous-radio/<station>.wav`. In the
 > app, Y turns the dial: off, then station by station; a cached station
-> becomes the bed and the room's voice rides on top, ducked, one bus.
+> becomes the bed. Room-over-radio mixing is the next mixer upgrade.
 > Next: multiple tracks per station with rotation, the Comedy Channel
 > (needs its writer), crossfade on dial turns, and cost guardrails
 > (a track of 2 minutes is a paid API call; cache hard, regenerate rarely).
@@ -103,7 +104,7 @@ The comedy channel is generated, not hand-recorded, so it can be endless and cur
 
 ### Technical shape
 - **`crates/music`** holds a thin ElevenLabs service layer (request, stream, cache) fully decoupled from the synthesis engine.
-- **Generation is offline-first where possible:** tracks and comedy segments are generated ahead, cached to disk, and assembled by a local **station scheduler**, so the radio works without a live connection after first fetch. Optional online refresh pulls new bits.
+- **Generation is offline-first where possible:** tracks and comedy segments are generated ahead, cached to disk, validated under bounded local cache rules, and assembled by a local **station scheduler**, so the radio works without a live connection after first fetch. Optional online refresh pulls new bits.
 - **Station identity** (idents, stingers, DJ drops) is generated once and reused; music beds and talk are ducked/crossfaded by the scheduler for that seamless-radio feel.
 - **Licensing / rights:** AI-generated audio via a paid ElevenLabs tier is intended to grant commercial usage, but confirm the current ElevenLabs commercial terms before shipping, and keep a fully-generative fallback (Engine A) so the product is never dependent on a third party to make sound.
 
@@ -111,7 +112,7 @@ The comedy channel is generated, not hand-recorded, so it can be endless and cur
 
 ## How the two engines coexist
 
-- **One master bus.** Both engines feed a shared mix with a global master volume and mute. Room sonification (Engine A) sits *on top of* whatever the radio (Engine B) is playing, ducked so it reads as a musical accent, not a clash.
+- **One master bus target.** Both engines should feed a shared mix with a global master volume and mute. Current app radio v1 keeps long station tracks stable by handing the station buffer to the player; the room-over-radio overlay is still a mixer upgrade so it can happen without restarting records.
 - **Global key and tempo.** The app holds a global key and BPM. Room sonification quantizes to that key so your poking harmonizes with the current station instead of fighting it. (This is itself a piece of math: everything tuned to one ratio lattice.)
 - **Mode-aware mixing.**
   - *Watch* mode: radio forward, room sonification as gentle texture. Lean back.
