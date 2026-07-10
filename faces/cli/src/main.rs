@@ -3504,7 +3504,7 @@ mod tests {
 
     #[test]
     fn play_frame_gives_quiet_rooms_a_default_action() {
-        let room = numinous_core::room_by_id("zeno").expect("room");
+        let room = numinous_core::room_by_id("the-pour").expect("room");
         let frame = super::play_frame(room.as_ref(), 0.0, 30, 15);
         assert!(frame.contains(numinous_core::DEFAULT_ROOM_ACTION));
     }
