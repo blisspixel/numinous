@@ -207,6 +207,7 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                 }
             }
         }
+        "challenge" => record_challenge_attempt(&args, &mut journey, &scores_path()),
         "quiz" => {
             if let Some(guess) = args.get("guess").and_then(Value::as_str) {
                 journey.play();
@@ -538,6 +539,31 @@ fn tools_list_result() -> Value {
                 }
             },
             {
+                "name": "challenge",
+                "description": "A posed, seeded touch goal for an interactive room: call without pokes to get the goal (change enough cells inside a target box), then call again with your pokes to be graded. Grades are metrics, not pass/fail: cells in target, total change, centroid distance, and a 0-100 score you can climb.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Room id; the room must have a touch verb (see describe_room)." },
+                        "seed": { "type": "integer", "description": "Challenge seed (default 1). The same seed poses the same goal; pass any number you like, including today's date, to share a goal." },
+                        "t": { "type": "number", "description": "Phase in [0,1) for the attempt (default 0). Some rooms answer the hand only at certain phases; sweeping t is part of the game." },
+                        "pokes": {
+                            "type": "array",
+                            "description": "Your attempt: normalized hand points as [x,y] pairs in [0,1], newest last. Omit to pose the goal.",
+                            "maxItems": numinous_core::MAX_ROOM_POKES,
+                            "items": {
+                                "type": "array",
+                                "items": { "type": "number", "minimum": 0, "maximum": 1 },
+                                "minItems": 2,
+                                "maxItems": 2
+                            }
+                        }
+                    },
+                    "required": ["id"],
+                    "additionalProperties": false
+                }
+            },
+            {
                 "name": "listen_room",
                 "description": "Hear a room: its sound at phase t returned as readable notation (each note's pitch, timing, and loudness), so you can perceive the audio as structure. Pitch is written as Hz and as a note name.",
                 "inputSchema": {
@@ -828,6 +854,7 @@ fn call_tool(
         "describe_room" => Ok(describe_room_tool(&args, journey_file)),
         "reveal_room" => Ok(reveal_room_tool(&args)),
         "play_room" => Ok(play_room_tool(&args)),
+        "challenge" => Ok(challenge_tool(&args)),
         "listen_room" => Ok(listen_room_tool(&args)),
         "list_sims" => Ok(tool_text(&list_sims_text())),
         "run_sim" => Ok(run_sim_tool(&args)),
@@ -1096,6 +1123,134 @@ fn play_room_tool(args: &Value) -> Value {
         }
         None => tool_error(&unknown_room(id)),
     }
+}
+
+/// The challenge seed: always the explicit argument, never the daily clock.
+///
+/// Challenges are graded twice per request (once for the reply, once for
+/// progress recording), so a clock-derived seed could pose two different
+/// goals across a midnight boundary. An explicit seed cannot drift; agents
+/// who want a shared daily goal can pass today's day number themselves.
+fn challenge_seed(args: &Value) -> u64 {
+    args.get("seed").and_then(Value::as_u64).unwrap_or(1)
+}
+
+/// Record what a challenge attempt means for progress: showing up counts
+/// (play), clearing the threshold counts double (win), and the graded score
+/// posts under `challenge <room> seed:N`. Pose-only calls record nothing.
+/// Separated from `record_progress` so the semantics are testable against
+/// explicit temp paths, like the arcade replay path.
+fn record_challenge_attempt(
+    args: &Value,
+    journey: &mut numinous_core::Journey,
+    scores: &std::path::Path,
+) {
+    let Ok(pokes) = parse_room_pokes(args) else {
+        return;
+    };
+    if pokes.is_empty() {
+        return;
+    }
+    let Some(id) = args.get("id").and_then(Value::as_str) else {
+        return;
+    };
+    let Some(room) = room_by_id(id) else {
+        return;
+    };
+    let seed = challenge_seed(args);
+    let Some(challenge) = numinous_core::pose_challenge(
+        room.as_ref(),
+        seed,
+        DEFAULT_WIDTH as usize,
+        DEFAULT_HEIGHT as usize,
+    ) else {
+        return;
+    };
+    journey.play();
+    let t = args.get("t").and_then(Value::as_f64).unwrap_or(0.0);
+    let grade = numinous_core::grade_challenge(room.as_ref(), &challenge, t, &pokes);
+    post_score(
+        scores,
+        &format!("challenge {id} seed:{seed}"),
+        i64::from(grade.score),
+    );
+    if grade.passed {
+        journey.win();
+    }
+}
+
+/// The `challenge` tool: pose a seeded touch goal, or grade an attempt.
+///
+/// Pose and grade run on the server's default frame so goals are comparable
+/// across minds. Grading recomputes deterministically from (room, seed, t,
+/// pokes), so the same attempt always earns the same numbers.
+fn challenge_tool(args: &Value) -> Value {
+    let Some(id) = args.get("id").and_then(Value::as_str) else {
+        return tool_error("Missing required string argument 'id'.");
+    };
+    let Some(room) = room_by_id(id) else {
+        return tool_error(&unknown_room(id));
+    };
+    let seed = challenge_seed(args);
+    let Some(challenge) = numinous_core::pose_challenge(
+        room.as_ref(),
+        seed,
+        DEFAULT_WIDTH as usize,
+        DEFAULT_HEIGHT as usize,
+    ) else {
+        return tool_error(&format!(
+            "{id} does not answer the hand yet, so no challenge can be posed. Challenges need a room with a touch verb; describe_room names each room's action."
+        ));
+    };
+    let t = args.get("t").and_then(Value::as_f64).unwrap_or(0.0);
+    let pokes = match parse_room_pokes(args) {
+        Ok(pokes) => pokes,
+        Err(message) => return tool_error(&message),
+    };
+    let (x0, y0, x1, y1) = challenge.target;
+    if pokes.is_empty() {
+        return tool_structured(
+            &format!(
+                "{}\n\nCall challenge again with the same seed and your pokes ([[x,y], ...] in [0,1]) to be graded. Every attempt gets metrics, not pass/fail: cells changed in the target, cells changed overall, centroid distance, and a 0-100 score to climb.",
+                challenge.goal
+            ),
+            json!({
+                "game": "challenge",
+                "room": challenge.room,
+                "seed": seed,
+                "goal": challenge.goal,
+                "target": [x0, y0, x1, y1],
+                "minCells": challenge.min_cells,
+                "width": challenge.width,
+                "height": challenge.height,
+            }),
+        );
+    }
+    let grade = numinous_core::grade_challenge(room.as_ref(), &challenge, t, &pokes);
+    let verdict = if grade.passed { "PASSED. " } else { "" };
+    tool_structured(
+        &format!(
+            "{verdict}Score {}/100: {} of {} needed cells changed inside the target, {} changed overall, centroid {:.1} cells from target center (seed {seed}).",
+            grade.score,
+            grade.cells_in_target,
+            challenge.min_cells,
+            grade.cells_changed,
+            grade.center_distance
+        ),
+        json!({
+            "game": "challenge",
+            "room": challenge.room,
+            "seed": seed,
+            "target": [x0, y0, x1, y1],
+            "minCells": challenge.min_cells,
+            "cellsInTarget": grade.cells_in_target,
+            "cellsChanged": grade.cells_changed,
+            "thresholdFraction": grade.threshold_fraction,
+            "centerDistance": grade.center_distance,
+            "passed": grade.passed,
+            "score": grade.score,
+        }),
+    )
 }
 
 /// The structured JSON shape of a poke's [`numinous_core::RenderDelta`].
@@ -2254,7 +2409,13 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 26);
+        assert_eq!(tools.len(), 27);
+        assert!(
+            tools
+                .iter()
+                .filter_map(|t| t["name"].as_str())
+                .any(|name| name == "challenge")
+        );
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
         assert!(names.contains(&"reveal_room"));
         assert!(names.contains(&"run_sim"));
@@ -3041,6 +3202,145 @@ plays 2
             text.contains(&format!("Touch: {changed} of {} cells answered", 50 * 30)),
             "the text face speaks the same numbers: {text}"
         );
+    }
+
+    #[test]
+    fn challenge_poses_then_grades_with_metrics_not_binary() {
+        let posed = handle_request(&json!({
+            "jsonrpc":"2.0","id":40,"method":"tools/call",
+            "params":{"name":"challenge","arguments":{"id":"voronoi","seed":7}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(posed["result"]["isError"], false);
+        let sc = &posed["result"]["structuredContent"];
+        assert_eq!(sc["game"], "challenge");
+        let target = sc["target"].as_array().expect("target box");
+        assert_eq!(target.len(), 4);
+        let min_cells = sc["minCells"].as_u64().expect("threshold");
+        assert!(min_cells >= 2);
+        let text = posed["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(
+            text.contains("CELLS CHANGE INSIDE"),
+            "goal is spoken: {text}"
+        );
+
+        // Aim at the target center: the graded attempt reports every metric.
+        let cx = (target[0].as_f64().unwrap() + target[2].as_f64().unwrap())
+            / 2.0
+            / (sc["width"].as_f64().unwrap() - 1.0);
+        let cy = (target[1].as_f64().unwrap() + target[3].as_f64().unwrap())
+            / 2.0
+            / (sc["height"].as_f64().unwrap() - 1.0);
+        let graded = handle_request(&json!({
+            "jsonrpc":"2.0","id":41,"method":"tools/call",
+            "params":{"name":"challenge","arguments":{"id":"voronoi","seed":7,"pokes":[[cx, cy]]}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(graded["result"]["isError"], false);
+        let grade = &graded["result"]["structuredContent"];
+        assert!(grade["cellsChanged"].as_u64().expect("cells") > 0);
+        assert!(grade["score"].as_u64().expect("score") > 0);
+        assert!(grade["centerDistance"].is_number());
+        assert!(grade["passed"].is_boolean());
+        // Determinism: the same attempt earns the same grade.
+        let again = handle_request(&json!({
+            "jsonrpc":"2.0","id":42,"method":"tools/call",
+            "params":{"name":"challenge","arguments":{"id":"voronoi","seed":7,"pokes":[[cx, cy]]}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(grade, &again["result"]["structuredContent"]);
+    }
+
+    #[test]
+    fn challenge_guides_away_from_quiet_rooms_and_bad_input() {
+        // Derive a verbless room from the registry so this test cannot go
+        // vacuous if a hardcoded room later gains a verb.
+        if let Some(quiet_room) = numinous_core::all_rooms()
+            .into_iter()
+            .find(|room| room.verb().is_none())
+        {
+            let quiet = handle_request(&json!({
+                "jsonrpc":"2.0","id":43,"method":"tools/call",
+                "params":{"name":"challenge","arguments":{"id":quiet_room.meta().id}}
+            }))
+            .expect("tools/call must respond");
+            assert_eq!(quiet["result"]["isError"], true);
+            let text = quiet["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default();
+            assert!(text.contains("touch verb"), "guides the agent: {text}");
+        }
+        let bad = handle_request(&json!({
+            "jsonrpc":"2.0","id":44,"method":"tools/call",
+            "params":{"name":"challenge","arguments":{"id":"voronoi","pokes":[[1.5,0.5]]}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(bad["result"]["isError"], true);
+        let unknown = handle_request(&json!({
+            "jsonrpc":"2.0","id":45,"method":"tools/call",
+            "params":{"name":"challenge","arguments":{"id":"no-such-room"}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(unknown["result"]["isError"], true);
+    }
+
+    #[test]
+    fn a_challenge_attempt_records_play_win_and_a_graded_score() {
+        let scores = std::env::temp_dir().join("numinous_mcp_challenge_scores_test.txt");
+        let _ = std::fs::remove_file(&scores);
+        let posed = handle_request(&json!({
+            "jsonrpc":"2.0","id":46,"method":"tools/call",
+            "params":{"name":"challenge","arguments":{"id":"voronoi","seed":7}}
+        }))
+        .expect("tools/call must respond");
+        let sc = &posed["result"]["structuredContent"];
+        let box_at = |i: usize| sc["target"][i].as_f64().expect("target coord");
+        let (w, h) = (
+            sc["width"].as_f64().expect("width") - 1.0,
+            sc["height"].as_f64().expect("height") - 1.0,
+        );
+        let to_norm = |x: f64, y: f64| json!([x / w, y / h]);
+        let spread = json!([
+            to_norm((box_at(0) + box_at(2)) / 2.0, (box_at(1) + box_at(3)) / 2.0),
+            to_norm(box_at(0) + 1.0, box_at(1) + 1.0),
+            to_norm(box_at(2) - 1.0, box_at(1) + 1.0),
+            to_norm(box_at(0) + 1.0, box_at(3) - 1.0),
+            to_norm(box_at(2) - 1.0, box_at(3) - 1.0),
+        ]);
+
+        // Pose-only records nothing.
+        let mut idle = numinous_core::Journey::from_text("");
+        super::record_challenge_attempt(&json!({"id":"voronoi","seed":7}), &mut idle, &scores);
+        assert_eq!(idle.sparks(), 0, "posing must not farm XP");
+
+        // A passed attempt records play plus win; a miss records play only.
+        let mut winner = numinous_core::Journey::from_text("");
+        super::record_challenge_attempt(
+            &json!({"id":"voronoi","seed":7,"pokes":spread}),
+            &mut winner,
+            &scores,
+        );
+        let mut misser = numinous_core::Journey::from_text("");
+        super::record_challenge_attempt(
+            &json!({"id":"voronoi","seed":7,"pokes":[[0.0,0.0]]}),
+            &mut misser,
+            &scores,
+        );
+        assert!(misser.sparks() > 0, "showing up counts");
+        assert!(
+            winner.sparks() > misser.sparks(),
+            "clearing the threshold counts double: {} vs {}",
+            winner.sparks(),
+            misser.sparks()
+        );
+
+        // The graded score posts under the challenge key.
+        let table = super::scores_tool(&scores);
+        let text = table["content"][0]["text"].as_str().unwrap_or_default();
+        assert!(text.contains("challenge voronoi seed:7"), "got: {text}");
+        let _ = std::fs::remove_file(&scores);
     }
 
     #[test]

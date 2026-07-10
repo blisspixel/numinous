@@ -34,7 +34,8 @@ your hand; every answer reveals the math.**
    tightened; times tables already careful); open-problem cards need a
    last-verified date mechanism: QUEUED.
 9. Agent play: structured deltas, challenge gradients, replayable
-   trajectories: QUEUED with A2.
+   trajectories: SHIPPED v1 for deltas (play_room `delta`) and gradients
+   (the `challenge` tool); replayable trajectory logs QUEUED.
 10. Digital-mind stance stays non-manipulative; taglines stay literal:
     ADOPTED ("Math you can feel." / "A playable math world for human and
     digital minds.").
@@ -42,7 +43,9 @@ your hand; every answer reveals the math.**
     ADOPTED under the Option B ruling.
 12. Munch as real arcade: SHIPPED v1 (Muncher, Vexations); enemy-as-
     failure-mode roster (Mirror, Jammer, Proof) QUEUED.
-13. Challenge specs per room (metrics, not binary): QUEUED with A2/MCP.
+13. Challenge specs per room (metrics, not binary): SHIPPED v1 (the seeded
+    spatial-response challenge, graded as metrics); room-specific parameter
+    goals QUEUED on the same substrate.
 14. Lore stays invisible at the surface: standing law, reaffirmed.
 15. First ninety seconds: open on the flagship phenomenon, not the menu:
     OVERRULED by the founder (July 2026): the menu stays; it leads with

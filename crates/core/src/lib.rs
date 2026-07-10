@@ -17,6 +17,7 @@
 pub mod aliens;
 pub mod ansi;
 pub mod canvas;
+pub mod challenge;
 pub mod chiptune;
 pub mod codebreaker;
 pub mod concepts;
@@ -55,6 +56,7 @@ pub mod trophies;
 pub use aliens::{AlienMessage, alien_message, to_base};
 pub use ansi::to_ansi;
 pub use canvas::{Canvas, RenderDelta};
+pub use challenge::{Challenge, ChallengeGrade, grade_challenge, pose_challenge};
 pub use chiptune::{Pattern, Voice, compose, pitch};
 pub use codebreaker::{Feedback, grade, hint, secret_code};
 pub use concepts::concept;

@@ -29,9 +29,9 @@ Distilled from what the benchmark and MCP-game ecosystems reward:
    vision. Ours: ASCII renders, sound as notation, sims as plain-language
    readouts.
 2. **Flat, self-describing tools.** Simple schemas, guiding errors, no hidden
-   session state required to make a legal move. Ours: twenty-six mostly flat
-   tools; `play_room` hand points are the one bounded tuple-array exception,
-   and every error names the valid options.
+   session state required to make a legal move. Ours: twenty-seven mostly flat
+   tools; the bounded `pokes` tuple-array on `play_room` and `challenge` is
+   the one exception shape, and every error names the valid options.
 3. **Seeded determinism.** The same inputs give the same game, so trajectories
    are reproducible, shareable, and comparable across minds. Ours: everything
    is seeded, including the daily.
@@ -166,8 +166,12 @@ interpretable, and recoverable.
 
 ## Next for agent play
 
-- Challenge gradients: "find the stall angle to one decimal" style optimization
-  tasks with graded feedback, the agent's version of a boss fight.
+- Challenge gradients, v1 built: the `challenge` tool poses a seeded touch
+  goal for any room with a verb and grades attempts as metrics (cells in
+  target, threshold fraction, centroid distance, 0-100 score), never bare
+  pass/fail. Next depth: room-specific goals on the same substrate ("find the
+  stall angle to one decimal"), where the metric is the phenomenon's own
+  parameter rather than the spatial response.
 - Trajectory friendliness: a session log format an agent (or researcher) can
   replay.
 - Multi-mind play: the same daily seed already gives humans and agents a shared

@@ -87,11 +87,17 @@ fn a_full_agent_session_walks_every_tool() {
         json!({"jsonrpc":"2.0","id":20,"method":"ping"}),
         json!({"jsonrpc":"2.0","id":21,"method":"no-such-method"}),
         call(22, "no_such_tool", json!({})),
+        call(23, "challenge", json!({"id":"voronoi","seed":7})),
+        call(
+            24,
+            "challenge",
+            json!({"id":"voronoi","seed":7,"pokes":[[0.5,0.5]]}),
+        ),
     ];
     let replies = run_session(&requests);
 
-    // 22 id-carrying requests, one notification with no reply.
-    assert_eq!(replies.len(), 22, "one reply per id-carrying request");
+    // 24 id-carrying requests, one notification with no reply.
+    assert_eq!(replies.len(), 24, "one reply per id-carrying request");
     let by_id = |id: u64| -> &Value {
         replies
             .iter()
@@ -102,7 +108,7 @@ fn a_full_agent_session_walks_every_tool() {
     assert_eq!(by_id(1)["result"]["serverInfo"]["name"], "numinous");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(26)
+        Some(27)
     );
     assert!(text_of(by_id(3)).contains("times-tables"));
     assert!(text_of(by_id(4)).contains("Fractals"));
@@ -130,6 +136,15 @@ fn a_full_agent_session_walks_every_tool() {
     assert!(by_id(20)["result"].is_object());
     assert_eq!(by_id(21)["error"]["code"], -32601);
     assert_eq!(by_id(22)["error"]["code"], -32602);
+    assert!(
+        text_of(by_id(23)).contains("CELLS CHANGE INSIDE"),
+        "the challenge poses its goal"
+    );
+    let graded = &by_id(24)["result"]["structuredContent"];
+    assert!(
+        graded["score"].as_u64().is_some(),
+        "the attempt is graded with metrics: {graded}"
+    );
 }
 
 #[test]
