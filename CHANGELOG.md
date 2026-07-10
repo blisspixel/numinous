@@ -6,6 +6,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- MCP `play_room` now returns a structured poke `delta` whenever hand points are supplied: the poked frame diffed against the unpoked frame at the same phase, size, and variation, reported as `cells_changed`, `ink_added`, `ink_removed`, `ink_reshaped`, `total_cells`, and the inclusive `changed_region` bounding box, with a matching `Touch: N of M cells answered` line in the render text. The diff is a new core primitive, `Canvas::delta` returning `RenderDelta`, with invariant tests (classification sums to the change count, inclusive bounding box, dimension-mismatch safety, directional symmetry).
 - CLI Studio imports can now reopen the first-version share artifacts: `numinous open-studio <file.num>` and `numinous open-studio "numinous://studio?..."` validate, bound, and render saved expressions without recording Journey progress on failed imports.
 - Studio expression plots can now be saved from the CLI as first-version `.num` files with matching `numinous://studio?...` links via `numinous plot "<expr>" --save file.num`; the core validates and round-trips the artifact format without adding dependencies.
 - The app now has an explicit local playtest note key (`F9`) that writes a hallway-test report under gitignored repo-root `logs/`, capturing the current room, journey state, mode, action hint, and facilitator prompts without telemetry or network behavior.

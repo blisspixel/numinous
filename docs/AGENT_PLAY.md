@@ -49,6 +49,15 @@ humor, dissected), `plot_expression` and `sing_expression` (creation),
 `run_sim` (optimization play), `quiz` (challenge), `journey` (progression to
 LV 42), and the whispers for the ones who wander off the map.
 
+Touch is measurable: supply `pokes` to `play_room` and the structured result
+includes a `delta` (cells changed, ink added/removed/reshaped, total cells,
+and the changed-region bounding box) comparing the poked frame against the
+unpoked frame at the same phase, size, and variation. The render text carries
+the same count as a `Touch:` line. An agent can therefore verify, not merely
+believe, that its hand changed the math, and can treat the numbers as a
+gradient to optimize (touch to maximize divergence, to minimize disturbance,
+to steer the change region).
+
 ## MCP-game conventions (July 2026 survey)
 
 The MCP-game genre now has real exemplars and emerging conventions. What the

@@ -142,6 +142,14 @@ population orbits into the bifurcation diagram, with x choosing the growth rate
 and y choosing the starting population. The full verify gate is green at 814
 tests, 89.60% region cover, and 89.09% line cover.
 
+Cycle 59 delivered the structured-deltas half of stack item five: poked
+`play_room` calls now return a `delta` in `structuredContent` (cells changed,
+ink added/removed/reshaped, total cells, changed-region bounding box) diffing
+the poked frame against the unpoked frame at the same phase, size, and
+variation, with a matching `Touch:` line in the render text. The diff itself is
+a core `Canvas::delta` primitive with its own invariant tests. Graded per-room
+challenge metrics (pose + verify) are the remaining half of stack item five.
+
 Cycle 54 resolved the Strange Loop semantics gap from the prior paused pass:
 clicks now shift the existing first inner recursion and its descendants instead
 of overlaying an extra echo tree. Focused tests prove both the bounded input
