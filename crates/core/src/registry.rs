@@ -165,7 +165,7 @@ mod tests {
     }
 
     #[test]
-    fn all_rooms_with_variation_reaches_quiet_rooms() {
+    fn all_rooms_with_variation_reaches_the_late_variation_rooms() {
         use super::all_rooms_with;
         let r0 = all_rooms_with(0);
         let r42 = all_rooms_with(42);
@@ -187,7 +187,7 @@ mod tests {
     }
 
     #[test]
-    fn quiet_room_variation_seed_zero_matches_default() {
+    fn late_variation_room_seed_zero_matches_default() {
         use crate::rooms::{
             harmonograph::Harmonograph, lissajous::Lissajous, logistic_map::LogisticMap,
             mobius::Mobius, slope_rider::SlopeRider, the_pour::ThePour, zeno::Zeno,
