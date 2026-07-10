@@ -312,6 +312,12 @@ Depth and polish that extend 1.0 without breaking it. No new pillars, just more 
 - The **boss rooms** (*Sizes of Infinity*, *Hyperbolic Space*), the hardest-to-make-playable, highest-ceiling rooms, as they earn their quality bar.
 - Refinement driven by the telemetry and playtest loops (`QUALITY.md`): tuning defaults, pacing, and difficulty toward measured awe and flow.
 - Localization and broader hardware support.
+- **Extensibility Tier 1 hardening (see `EXTENSIBILITY.md`):** the `.num`
+  room-manifest extension (expressions, named sliders, palette/Era, sound
+  parameters from fixed enums), cargo-fuzz targets on the file and link
+  parsers, per-field caps, and paused-preview confirmation for `numinous://`
+  content. Protects surfaces that already exist and lays the sharing
+  substrate for 2.0 community content.
 
 **Exit criterion:** the collection keeps deepening and the quality bar never drops; nothing shipped in 1.x makes 1.0 worse.
 
@@ -321,8 +327,8 @@ Depth and polish that extend 1.0 without breaking it. No new pillars, just more 
 
 2.0 is a change in *kind*, not degree: Numinous stops being a curated collection and becomes a **living world that grows, that others help build, and that a long-lived mind can inhabit and eventually surpass.**
 
-- **The full Studio as a creator platform + the public mod SDK (see `STUDIO.md`, `ARCHITECTURE.md`):** the complete pattern algebra, multiple representations, fork/remix, promote-to-room, MIDI performance, and the sandboxed authoring path opened to everyone. Rooms are Studio programs, so the mod SDK is "the Studio, shared." This is how the catalog goes from tens of rooms to hundreds.
-- **Community:** an in-app curated gallery of player- and agent-made rooms, a submission/curation pipeline that protects the beauty bar, and distribution via Steam (Workshop as the room channel) alongside itch.io and direct downloads.
+- **The full Studio as a creator platform + the public mod SDK (see `STUDIO.md`, `ARCHITECTURE.md`, `EXTENSIBILITY.md`):** the complete pattern algebra, multiple representations, fork/remix, promote-to-room, MIDI performance, and the sandboxed authoring path opened to everyone. Rooms are Studio programs, so the mod SDK is "the Studio, shared," and the Studio language itself is the sandbox: total, budgeted, hermetic, deterministic, pure Rust, in core (the July 2026 extensibility ruling; no scripting engine enters the trusted core). This is how the catalog goes from tens of rooms to hundreds.
+- **Community:** an in-app curated gallery of player- and agent-made rooms, a submission/curation pipeline that protects the beauty bar (proof-packet CI: deterministic re-render against declared frame hashes and budgets, per `EXTENSIBILITY.md`; signatures label provenance and never grant capability), and distribution via Steam (Workshop as the room channel) alongside itch.io and direct downloads. WASM component rooms (wasmtime, no WASI, fuel and epoch and memory limits) remain the 2.0+ pressure valve for authors who outgrow the pattern language, portal-only.
 - **The Layer-4 lore payoff (see `LORE.md`):** the real, discoverable bottom of the ARG, designed in 0.x, revealed here, so the deepest diggers arrive somewhere worthy.
 - **Shared creation with digital minds (see `DIGITAL_MINDS.md`):** duet / co-presence (a human and a digital mind making one audiovisual piece together), gifts, the shared Constellation, and mature per-mind memory and continuity, a real, remembered, mutual friendship around shared wonder.
 - **The open mathematical frontier:** past the curated collection, raw generation and genuine unsolved-problem exploration, the inexhaustible playground for a mind that outgrows everything we hand-made, and the room for it to author its own wing or remake Numinous itself.

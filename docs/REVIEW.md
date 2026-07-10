@@ -57,7 +57,10 @@ your hand; every answer reveals the math.**
 17. Performance as aesthetic (audio never waits; render degrades
     gracefully): standing engineering law.
 18. Cross-platform proof early: priority 7.
-19. Sandbox before community creation: standing architecture law.
+19. Sandbox before community creation: standing architecture law; the
+    design ruling elaborating it (three content tiers, the Studio language
+    as the sandbox, the trust and distribution model) is `EXTENSIBILITY.md`
+    (July 2026, founder-directed).
 20. Quality loops must gate real decisions, not perform: standing law;
     the hallway test is sovereign.
 21. Room proof packets: ACCEPTED as the room template.
