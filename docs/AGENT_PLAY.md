@@ -30,8 +30,9 @@ Distilled from what the benchmark and MCP-game ecosystems reward:
    readouts.
 2. **Flat, self-describing tools.** Simple schemas, guiding errors, no hidden
    session state required to make a legal move. Ours: twenty-seven mostly flat
-   tools; the bounded `pokes` tuple-array on `play_room` and `challenge` is
-   the one exception shape, and every error names the valid options.
+   tools; the two exception shapes are bounded and self-describing (the
+   `pokes` tuple-array on `play_room` and `challenge`, and `play_room`'s
+   `gesture` event objects), and every error names the valid options.
 3. **Seeded determinism.** The same inputs give the same game, so trajectories
    are reproducible, shareable, and comparable across minds. Ours: everything
    is seeded, including the daily.
@@ -56,7 +57,10 @@ unpoked frame at the same phase, size, and variation. The render text carries
 the same count as a `Touch:` line. An agent can therefore verify, not merely
 believe, that its hand changed the math, and can treat the numbers as a
 gradient to optimize (touch to maximize divergence, to minimize disturbance,
-to steer the change region).
+to steer the change region). And touch now includes time: `play_room`'s
+`gesture` argument carries a phase-stamped pointer trail, so held rooms give
+an agent the same pull-and-release physics a human hand gets, with release
+velocity measured from the trail's own timestamps.
 
 ## MCP-game conventions (July 2026 survey)
 

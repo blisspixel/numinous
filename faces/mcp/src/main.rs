@@ -1,3 +1,7 @@
+// The tools/list schema is one large nested json! literal; its depth exceeds
+// the default macro recursion limit.
+#![recursion_limit = "256"]
+
 //! The Numinous MCP server: the face that lets AI agents (and digital minds)
 //! learn and play. See `docs/INTERFACES.md` and `docs/DIGITAL_MINDS.md`.
 //!
@@ -577,13 +581,29 @@ fn tools_list_result() -> Value {
                         "variation": { "type": "integer", "description": "Per-visit variation seed (default 0) for replayable novelty in supporting rooms." },
                         "pokes": {
                             "type": "array",
-                            "description": "Normalized hand points as [x,y] pairs in [0,1]. Newest point last.",
+                            "description": "Normalized hand points as [x,y] pairs in [0,1]. Newest point last. Not combinable with 'gesture'.",
                             "maxItems": numinous_core::MAX_ROOM_POKES,
                             "items": {
                                 "type": "array",
                                 "items": { "type": "number", "minimum": 0, "maximum": 1 },
                                 "minItems": 2,
                                 "maxItems": 2
+                            }
+                        },
+                        "gesture": {
+                            "type": "array",
+                            "description": "A replayable pointer trail for held rooms: pin, pull, and fling. Events run oldest to newest; each pointer event carries the room phase t at which it happened. In held rooms (double-pendulum) a down pins the bob, an up releases it with the velocity of the approach, and a cancel lets go gently; everywhere else the trail's down and move points paint like pokes. Not combinable with 'pokes'.",
+                            "maxItems": numinous_core::MAX_ROOM_INPUTS,
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "kind": { "type": "string", "enum": ["down", "move", "up", "cancel"] },
+                                    "x": { "type": "number", "minimum": 0, "maximum": 1 },
+                                    "y": { "type": "number", "minimum": 0, "maximum": 1 },
+                                    "t": { "type": "number", "minimum": 0, "maximum": 1 }
+                                },
+                                "required": ["kind"],
+                                "additionalProperties": false
                             }
                         }
                     },
@@ -1101,6 +1121,94 @@ fn parse_room_pokes(args: &Value) -> Result<Vec<(f64, f64)>, String> {
         .collect()
 }
 
+/// Parse the optional `gesture` argument: a replayable pointer trail for
+/// held rooms. Each event is an object with a `kind` of `down`, `move`,
+/// `up` (all needing finite `x`, `y`, `t` in [0,1]), or `cancel` (no
+/// other fields; unknown fields are rejected per the schema). Bounded to [`numinous_core::MAX_ROOM_INPUTS`].
+fn parse_room_gesture(args: &Value) -> Result<Vec<numinous_core::RoomInput>, String> {
+    let Some(raw) = args.get("gesture") else {
+        return Ok(Vec::new());
+    };
+    let Some(events) = raw.as_array() else {
+        return Err("Argument 'gesture' must be an array of event objects.".to_string());
+    };
+    if events.len() > numinous_core::MAX_ROOM_INPUTS {
+        return Err(format!(
+            "Argument 'gesture' accepts at most {} events.",
+            numinous_core::MAX_ROOM_INPUTS
+        ));
+    }
+    events
+        .iter()
+        .enumerate()
+        .map(|(i, event)| {
+            let Some(fields) = event.as_object() else {
+                return Err(format!("Argument 'gesture[{i}]' must be an object."));
+            };
+            // The kind decides which fields are legal; name a bad kind
+            // before complaining about anything else.
+            let kind = fields.get("kind").and_then(Value::as_str).unwrap_or("");
+            let allowed: &[&str] = match kind {
+                "cancel" => &["kind"],
+                "down" | "move" | "up" => &["kind", "x", "y", "t"],
+                other => {
+                    return Err(format!(
+                        "Argument 'gesture[{i}].kind' must be down, move, up, or cancel; got '{other}'."
+                    ));
+                }
+            };
+            if let Some(unknown) = fields.keys().find(|key| !allowed.contains(&key.as_str())) {
+                return Err(format!(
+                    "Argument 'gesture[{i}]' has an unexpected field '{unknown}'."
+                ));
+            }
+            if kind == "cancel" {
+                return Ok(numinous_core::RoomInput::PointerCancel);
+            }
+            let coord = |name: &str| -> Result<f64, String> {
+                let value = fields
+                    .get(name)
+                    .and_then(Value::as_f64)
+                    .ok_or(format!("Argument 'gesture[{i}].{name}' must be a number."))?;
+                if !value.is_finite() || !(0.0..=1.0).contains(&value) {
+                    return Err(format!(
+                        "Argument 'gesture[{i}].{name}' must be finite and in [0,1]."
+                    ));
+                }
+                Ok(value)
+            };
+            let (x, y, t) = (coord("x")?, coord("y")?, coord("t")?);
+            match kind {
+                "down" => Ok(numinous_core::RoomInput::PointerDown { x, y, t }),
+                "move" => Ok(numinous_core::RoomInput::PointerMove { x, y, t }),
+                _ => Ok(numinous_core::RoomInput::PointerUp { x, y, t }),
+            }
+        })
+        .collect()
+}
+
+/// The canonical JSON form of a parsed gesture, echoed back so the reply
+/// carries exactly what was played, never raw client bytes.
+fn gesture_json(gesture: &[numinous_core::RoomInput]) -> Value {
+    Value::Array(
+        gesture
+            .iter()
+            .map(|event| match *event {
+                numinous_core::RoomInput::PointerDown { x, y, t } => {
+                    json!({"kind": "down", "x": x, "y": y, "t": t})
+                }
+                numinous_core::RoomInput::PointerMove { x, y, t } => {
+                    json!({"kind": "move", "x": x, "y": y, "t": t})
+                }
+                numinous_core::RoomInput::PointerUp { x, y, t } => {
+                    json!({"kind": "up", "x": x, "y": y, "t": t})
+                }
+                _ => json!({"kind": "cancel"}),
+            })
+            .collect(),
+    )
+}
+
 fn play_room_tool(args: &Value) -> Value {
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'id'.");
@@ -1121,6 +1229,15 @@ fn play_room_tool(args: &Value) -> Value {
         Ok(pokes) => pokes,
         Err(message) => return tool_error(&message),
     };
+    let gesture = match parse_room_gesture(args) {
+        Ok(gesture) => gesture,
+        Err(message) => return tool_error(&message),
+    };
+    if !pokes.is_empty() && !gesture.is_empty() {
+        return tool_error(
+            "Use either 'pokes' (static hand points) or 'gesture' (a pointer trail), not both in one call.",
+        );
+    }
 
     let room = if variation != 0 {
         all_rooms_with(variation)
@@ -1133,7 +1250,15 @@ fn play_room_tool(args: &Value) -> Value {
     match room {
         Some(room) => {
             let mut canvas = Canvas::new(width, height);
-            let delta = if pokes.is_empty() {
+            let delta = if !gesture.is_empty() {
+                // A gesture trail: held rooms give it pull-and-release
+                // semantics; every other room answers through the same
+                // bridge the App uses.
+                room.render_input(&mut canvas, t, &gesture);
+                let mut base = Canvas::new(width, height);
+                room.render(&mut base, t);
+                base.delta(&canvas)
+            } else if pokes.is_empty() {
                 room.render(&mut canvas, t);
                 None
             } else {
@@ -1170,6 +1295,7 @@ fn play_room_tool(args: &Value) -> Value {
                     "t": t,
                     "variation": variation,
                     "pokes": pokes,
+                    "gesture": if gesture.is_empty() { Value::Null } else { gesture_json(&gesture) },
                     "action": action,
                     "status": status,
                     "delta": delta.map(render_delta_json),
@@ -3468,6 +3594,123 @@ plays 2
             delta["cells_changed"].as_u64().expect("cells_changed") > 0,
             "a dropped well renegotiates borders under any variation"
         );
+    }
+
+    #[test]
+    fn a_gesture_lets_an_agent_pin_pull_and_fling() {
+        // Held: a down with no lift pins the pendulum; time does not move it.
+        let pinned = |t: f64| {
+            handle_request(&json!({
+                "jsonrpc":"2.0","id":70,"method":"tools/call",
+                "params":{"name":"play_room","arguments":{"id":"double-pendulum","width":50,"height":30,"t":t,
+                    "gesture":[{"kind":"down","x":0.3,"y":0.4,"t":0.1}]}}
+            }))
+            .expect("tools/call must respond")["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .split_once("\n\n")
+                .map(|(_, frame)| frame.to_string())
+                .unwrap_or_default()
+        };
+        assert_eq!(pinned(0.2), pinned(0.9), "a pinned bob ignores the clock");
+
+        // Released: the same lift point with a faster approach throws harder.
+        let released = |before_x: f64, before_t: f64| {
+            handle_request(&json!({
+                "jsonrpc":"2.0","id":71,"method":"tools/call",
+                "params":{"name":"play_room","arguments":{"id":"double-pendulum","width":50,"height":30,"t":0.35,
+                    "gesture":[
+                        {"kind":"move","x":before_x,"y":0.5,"t":before_t},
+                        {"kind":"up","x":0.6,"y":0.5,"t":0.15}
+                    ]}}
+            }))
+            .expect("tools/call must respond")["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string()
+        };
+        assert_ne!(
+            released(0.58, 0.05),
+            released(0.30, 0.147),
+            "a flick and a gentle lift land differently: momentum crosses the wire"
+        );
+    }
+
+    #[test]
+    fn a_gesture_bridges_to_pokes_for_rooms_without_held_semantics() {
+        // For a legacy room, a gesture's downs and moves paint exactly like
+        // the equivalent poke list: the App's bridge, over the protocol.
+        let via_gesture = handle_request(&json!({
+            "jsonrpc":"2.0","id":72,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"voronoi","width":40,"height":20,"t":0.25,
+                "gesture":[
+                    {"kind":"down","x":0.3,"y":0.7,"t":0.25},
+                    {"kind":"move","x":0.5,"y":0.5,"t":0.26},
+                    {"kind":"up","x":0.5,"y":0.5,"t":0.27}
+                ]}}
+        }))
+        .expect("tools/call must respond");
+        let via_pokes = handle_request(&json!({
+            "jsonrpc":"2.0","id":73,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"voronoi","width":40,"height":20,"t":0.25,
+                "pokes":[[0.3,0.7],[0.5,0.5]]}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(
+            via_gesture["result"]["structuredContent"]["delta"],
+            via_pokes["result"]["structuredContent"]["delta"],
+            "the bridge answers identically over MCP"
+        );
+        assert_eq!(via_gesture["result"]["isError"], false);
+    }
+
+    #[test]
+    fn gestures_are_validated_and_exclusive_with_pokes() {
+        let bad_kind = handle_request(&json!({
+            "jsonrpc":"2.0","id":74,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"voronoi",
+                "gesture":[{"kind":"wiggle","x":0.5,"y":0.5,"t":0.1}]}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(bad_kind["result"]["isError"], true);
+        let bad_coord = handle_request(&json!({
+            "jsonrpc":"2.0","id":75,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"voronoi",
+                "gesture":[{"kind":"down","x":1.5,"y":0.5,"t":0.1}]}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(bad_coord["result"]["isError"], true);
+        let too_many: Vec<_> = (0..=numinous_core::MAX_ROOM_INPUTS)
+            .map(|_| json!({"kind":"cancel"}))
+            .collect();
+        let flooded = handle_request(&json!({
+            "jsonrpc":"2.0","id":76,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"voronoi","gesture":too_many}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(flooded["result"]["isError"], true);
+        let stowaway = handle_request(&json!({
+            "jsonrpc":"2.0","id":78,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"voronoi",
+                "gesture":[{"kind":"cancel","note":"smuggled"}]}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(
+            stowaway["result"]["isError"], true,
+            "unknown event fields are rejected, matching the schema"
+        );
+        let both = handle_request(&json!({
+            "jsonrpc":"2.0","id":77,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"voronoi",
+                "pokes":[[0.5,0.5]],
+                "gesture":[{"kind":"down","x":0.5,"y":0.5,"t":0.1}]}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(both["result"]["isError"], true);
+        let text = both["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("not both"), "the error guides: {text}");
     }
 
     #[test]
