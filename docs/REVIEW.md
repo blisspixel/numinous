@@ -45,7 +45,9 @@ your hand; every answer reveals the math.**
     failure-mode roster (Mirror, Jammer, Proof) QUEUED.
 13. Challenge specs per room (metrics, not binary): SHIPPED v1 (the seeded
     spatial-response challenge, graded as metrics); room-specific parameter
-    goals QUEUED on the same substrate.
+    goals SHIPPED v2 (the challenge tool's parameter kind targets the room's
+    own status readout, "land TILT within 0.02 of 0.31" style, graded as
+    distance and a climbable score).
 14. Lore stays invisible at the surface: standing law, reaffirmed.
 15. First ninety seconds: open on the flagship phenomenon, not the menu:
     OVERRULED by the founder (July 2026): the menu stays; it leads with

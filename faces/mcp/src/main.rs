@@ -613,13 +613,14 @@ fn tools_list_result() -> Value {
             },
             {
                 "name": "challenge",
-                "description": "A posed, seeded touch goal for an interactive room: call without pokes to get the goal (change enough cells inside a target box), then call again with your pokes to be graded. Grades are metrics, not pass/fail: cells in target, total change, centroid distance, and a 0-100 score you can climb.",
+                "description": "A posed, seeded goal for a room, in two kinds. Touch (default): change enough cells inside a target box; call without pokes to get the goal, then again with pokes to be graded. Parameter: sweep the room's phase until its own status readout lands on a target number; call without t to get the goal, then again with t to be graded. Grades are metrics, not pass/fail: a 0-100 score you can climb, plus the numbers behind it.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "id": { "type": "string", "description": "Room id; the room must have a touch verb (see describe_room)." },
+                        "id": { "type": "string", "description": "Room id; touch goals need a room with a touch verb, parameter goals a room with a moving numeric readout (see describe_room)." },
+                        "kind": { "type": "string", "enum": ["touch", "parameter"], "description": "Goal kind (default touch). Parameter goals target the room's own status readout instead of a spatial response." },
                         "seed": { "type": "integer", "description": "Challenge seed (default 1). The same seed poses the same goal; pass any number you like, including today's date, to share a goal." },
-                        "t": { "type": "number", "description": "Phase in [0,1) for the attempt (default 0). Some rooms answer the hand only at certain phases; sweeping t is part of the game." },
+                        "t": { "type": "number", "description": "Phase in [0,1) for the attempt (default 0 for touch). For parameter goals this IS the attempt: omit it to pose, pass it to be graded at that phase." },
                         "pokes": {
                             "type": "array",
                             "description": "Your attempt: normalized hand points as [x,y] pairs in [0,1], newest last. Omit to pose the goal.",
@@ -1316,6 +1317,54 @@ fn challenge_seed(args: &Value) -> u64 {
     args.get("seed").and_then(Value::as_u64).unwrap_or(1)
 }
 
+/// The requested challenge kind, exactly as passed (validation happens in
+/// the tool so bad values earn a guiding error, not a silent default).
+fn challenge_kind(args: &Value) -> Option<&str> {
+    args.get("kind").and_then(Value::as_str)
+}
+
+/// Record a parameter attempt: showing up counts (play), landing within
+/// tolerance counts double (win), and the graded score posts under
+/// `challenge <room> parameter seed:N`. Pose-only calls (no `t`) record
+/// nothing, mirroring the touch kind's pose/grade split.
+fn record_parameter_attempt(
+    args: &Value,
+    journey: &mut numinous_core::Journey,
+    scores: &std::path::Path,
+) {
+    let Some(t) = args.get("t").and_then(Value::as_f64) else {
+        return;
+    };
+    // The tool already rejects out-of-range phases before recording runs,
+    // but the gate is re-stated here so this path never depends on that
+    // coupling: a clamped-t attempt must not earn play or win.
+    if !(0.0..1.0).contains(&t) {
+        return;
+    }
+    let Some(id) = args.get("id").and_then(Value::as_str) else {
+        return;
+    };
+    let Some(room) = room_by_id(id) else {
+        return;
+    };
+    let seed = challenge_seed(args);
+    let Some(goal) = numinous_core::pose_parameter_goal(room.as_ref(), seed) else {
+        return;
+    };
+    let Some(grade) = numinous_core::grade_parameter(room.as_ref(), &goal, t) else {
+        return;
+    };
+    journey.play();
+    post_score(
+        scores,
+        &format!("challenge {id} parameter seed:{seed}"),
+        i64::from(grade.score),
+    );
+    if grade.within {
+        journey.win();
+    }
+}
+
 /// Record what a challenge attempt means for progress: showing up counts
 /// (play), clearing the threshold counts double (win), and the graded score
 /// posts under `challenge <room> seed:N`. Pose-only calls record nothing.
@@ -1326,6 +1375,10 @@ fn record_challenge_attempt(
     journey: &mut numinous_core::Journey,
     scores: &std::path::Path,
 ) {
+    if challenge_kind(args) == Some("parameter") {
+        record_parameter_attempt(args, journey, scores);
+        return;
+    }
     let Ok(pokes) = parse_room_pokes(args) else {
         return;
     };
@@ -1373,6 +1426,15 @@ fn challenge_tool(args: &Value) -> Value {
         return tool_error(&unknown_room(id));
     };
     let seed = challenge_seed(args);
+    match challenge_kind(args) {
+        None | Some("touch") => {}
+        Some("parameter") => return parameter_challenge_tool(room.as_ref(), id, seed, args),
+        Some(other) => {
+            return tool_error(&format!(
+                "Unknown challenge kind '{other}'. Valid kinds: touch (change cells in a target box, graded on your pokes) and parameter (land the room's status readout on a target number, graded on your t)."
+            ));
+        }
+    }
     let Some(challenge) = numinous_core::pose_challenge(
         room.as_ref(),
         seed,
@@ -1429,6 +1491,74 @@ fn challenge_tool(args: &Value) -> Value {
             "thresholdFraction": grade.threshold_fraction,
             "centerDistance": grade.center_distance,
             "passed": grade.passed,
+            "score": grade.score,
+        }),
+    )
+}
+
+/// The parameter kind of the `challenge` tool: pose a readout target, or
+/// grade an attempted phase.
+///
+/// The goal targets the room's own status line, the same instrument the
+/// player reads, so posing and grading can never disagree with the screen.
+/// Omitting `t` poses; passing it grades, because for this kind the phase
+/// IS the attempt.
+fn parameter_challenge_tool(
+    room: &dyn numinous_core::Room,
+    id: &str,
+    seed: u64,
+    args: &Value,
+) -> Value {
+    let Some(goal) = numinous_core::pose_parameter_goal(room, seed) else {
+        return tool_error(&format!(
+            "{id} has no moving numeric readout, so no parameter goal can be posed. Parameter goals need a room whose status line carries a number that changes with phase; try the touch kind, or another room."
+        ));
+    };
+    let (lo, hi) = goal.span;
+    let Some(t) = args.get("t").and_then(Value::as_f64) else {
+        return tool_structured(
+            &format!(
+                "{}\n\nThe readout ranges roughly {lo:.3} to {hi:.3} across the sweep. Call challenge again with the same seed and kind plus your t in [0,1) to be graded. Every attempt gets metrics, not pass/fail: the readout you landed on, its distance from the target, and a 0-100 score to climb.",
+                goal.goal
+            ),
+            json!({
+                "game": "challenge",
+                "kind": "parameter",
+                "room": goal.room,
+                "seed": seed,
+                "goal": goal.goal,
+                "label": goal.label,
+                "target": goal.target,
+                "tolerance": goal.tolerance,
+                "span": [lo, hi],
+            }),
+        );
+    };
+    if !(0.0..1.0).contains(&t) {
+        return tool_error("Argument 't' must be a phase in [0,1).");
+    }
+    let Some(grade) = numinous_core::grade_parameter(room, &goal, t) else {
+        return tool_error(&format!(
+            "{id}'s readout vanished at t={t}; try a different phase."
+        ));
+    };
+    let verdict = if grade.within { "LANDED. " } else { "" };
+    tool_structured(
+        &format!(
+            "{verdict}Score {}/100: {} read {:.3} at t={t}, {:.3} from the target (seed {seed}); structuredContent carries the exact target and tolerance.",
+            grade.score, goal.label, grade.value, grade.distance
+        ),
+        json!({
+            "game": "challenge",
+            "kind": "parameter",
+            "room": goal.room,
+            "seed": seed,
+            "label": goal.label,
+            "target": goal.target,
+            "tolerance": goal.tolerance,
+            "value": grade.value,
+            "distance": grade.distance,
+            "within": grade.within,
             "score": grade.score,
         }),
     )
@@ -3525,6 +3655,143 @@ plays 2
         let table = super::scores_tool(&scores);
         let text = table["content"][0]["text"].as_str().unwrap_or_default();
         assert!(text.contains("challenge voronoi seed:7"), "got: {text}");
+        let _ = std::fs::remove_file(&scores);
+    }
+
+    #[test]
+    fn parameter_challenge_poses_then_grades_by_phase() {
+        let posed = handle_request(&json!({
+            "jsonrpc":"2.0","id":47,"method":"tools/call",
+            "params":{"name":"challenge","arguments":{"id":"slope-rider","kind":"parameter","seed":7}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(posed["result"]["isError"], false);
+        let sc = &posed["result"]["structuredContent"];
+        assert_eq!(sc["kind"], "parameter");
+        let target = sc["target"].as_f64().expect("target value");
+        let tolerance = sc["tolerance"].as_f64().expect("tolerance");
+        assert!(tolerance > 0.0);
+        let label = sc["label"].as_str().expect("label");
+        let text = posed["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains(label), "goal names the readout: {text}");
+
+        // Sweep the sampled phases; by construction one lands in tolerance.
+        let mut landed = None;
+        for i in 0..64 {
+            let t = f64::from(i) / 64.0;
+            let graded = handle_request(&json!({
+                "jsonrpc":"2.0","id":48,"method":"tools/call",
+                "params":{"name":"challenge","arguments":{"id":"slope-rider","kind":"parameter","seed":7,"t":t}}
+            }))
+            .expect("tools/call must respond");
+            let grade = &graded["result"]["structuredContent"];
+            assert!(grade["distance"].as_f64().expect("distance") >= 0.0);
+            assert!(grade["score"].as_u64().expect("score") <= 100);
+            if grade["within"] == true {
+                landed = Some(grade["value"].as_f64().expect("value"));
+                break;
+            }
+        }
+        let value = landed.expect("a sampled phase lands within tolerance");
+        assert!((value - target).abs() <= tolerance);
+    }
+
+    #[test]
+    fn parameter_challenge_guides_bad_kinds_readoutless_rooms_and_bad_phases() {
+        let bad_kind = handle_request(&json!({
+            "jsonrpc":"2.0","id":49,"method":"tools/call",
+            "params":{"name":"challenge","arguments":{"id":"voronoi","kind":"spatial"}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(bad_kind["result"]["isError"], true);
+        let text = bad_kind["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("parameter"), "names the valid kinds: {text}");
+        // Derive a readout-less room from the registry, like the quiet-room
+        // test, so this cannot go vacuous if rooms later gain readouts.
+        if let Some(silent) = numinous_core::all_rooms()
+            .into_iter()
+            .find(|room| numinous_core::pose_parameter_goal(room.as_ref(), 1).is_none())
+        {
+            let refused = handle_request(&json!({
+                "jsonrpc":"2.0","id":50,"method":"tools/call",
+                "params":{"name":"challenge","arguments":{"id":silent.meta().id,"kind":"parameter"}}
+            }))
+            .expect("tools/call must respond");
+            assert_eq!(refused["result"]["isError"], true);
+            let text = refused["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default();
+            assert!(text.contains("readout"), "guides the agent: {text}");
+        }
+        let bad_phase = handle_request(&json!({
+            "jsonrpc":"2.0","id":51,"method":"tools/call",
+            "params":{"name":"challenge","arguments":{"id":"slope-rider","kind":"parameter","t":1.5}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(bad_phase["result"]["isError"], true);
+    }
+
+    #[test]
+    fn a_parameter_attempt_records_play_win_and_a_graded_score() {
+        let scores = std::env::temp_dir().join("numinous_mcp_parameter_scores_test.txt");
+        let _ = std::fs::remove_file(&scores);
+        let room = numinous_core::room_by_id("slope-rider").expect("room");
+        let goal = numinous_core::pose_parameter_goal(room.as_ref(), 7).expect("slope-rider poses");
+        let (landing_t, missing_t) = {
+            let mut landing = None;
+            let mut missing = None;
+            for i in 0..64 {
+                let t = f64::from(i) / 64.0;
+                let grade =
+                    numinous_core::grade_parameter(room.as_ref(), &goal, t).expect("grades");
+                if grade.within && landing.is_none() {
+                    landing = Some(t);
+                }
+                if !grade.within && missing.is_none() {
+                    missing = Some(t);
+                }
+            }
+            (landing.expect("reachable"), missing.expect("missable"))
+        };
+
+        // Pose-only (no t) records nothing.
+        let mut idle = numinous_core::Journey::from_text("");
+        super::record_challenge_attempt(
+            &json!({"id":"slope-rider","kind":"parameter","seed":7}),
+            &mut idle,
+            &scores,
+        );
+        assert_eq!(idle.sparks(), 0, "posing must not farm XP");
+
+        let mut winner = numinous_core::Journey::from_text("");
+        super::record_challenge_attempt(
+            &json!({"id":"slope-rider","kind":"parameter","seed":7,"t":landing_t}),
+            &mut winner,
+            &scores,
+        );
+        let mut misser = numinous_core::Journey::from_text("");
+        super::record_challenge_attempt(
+            &json!({"id":"slope-rider","kind":"parameter","seed":7,"t":missing_t}),
+            &mut misser,
+            &scores,
+        );
+        assert!(misser.sparks() > 0, "showing up counts");
+        assert!(
+            winner.sparks() > misser.sparks(),
+            "landing counts double: {} vs {}",
+            winner.sparks(),
+            misser.sparks()
+        );
+        let table = super::scores_tool(&scores);
+        let text = table["content"][0]["text"].as_str().unwrap_or_default();
+        assert!(
+            text.contains("challenge slope-rider parameter seed:7"),
+            "got: {text}"
+        );
         let _ = std::fs::remove_file(&scores);
     }
 
