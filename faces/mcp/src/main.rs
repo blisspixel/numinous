@@ -3175,20 +3175,22 @@ plays 2
     }
 
     #[test]
-    fn play_room_gives_quiet_rooms_a_default_action() {
-        let resp = handle_request(&json!({
-            "jsonrpc":"2.0","id":31,"method":"tools/call",
-            "params":{"name":"play_room","arguments":{"id":"slope-rider","width":40,"height":20}}
-        }))
-        .expect("tools/call must respond");
-        let text = resp["result"]["content"][0]["text"]
-            .as_str()
-            .expect("text content");
-        assert!(text.contains(numinous_core::DEFAULT_ROOM_ACTION));
-        assert_eq!(
-            resp["result"]["structuredContent"]["action"],
-            numinous_core::DEFAULT_ROOM_ACTION
-        );
+    fn play_room_actions_always_name_the_verb() {
+        // Every catalog room answers the hand now; the action an agent sees
+        // is the room's own verb, never the generic fallback.
+        for room in numinous_core::all_rooms() {
+            let id = room.meta().id;
+            let resp = handle_request(&json!({
+                "jsonrpc":"2.0","id":31,"method":"tools/call",
+                "params":{"name":"play_room","arguments":{"id":id,"width":40,"height":20}}
+            }))
+            .expect("tools/call must respond");
+            assert_eq!(
+                resp["result"]["structuredContent"]["action"],
+                room.verb().expect("all catalog rooms have verbs"),
+                "{id} leads with its verb"
+            );
+        }
     }
 
     #[test]
