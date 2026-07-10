@@ -103,6 +103,9 @@ struct App {
     mouse: (f64, f64),
     /// The hands in the current room: normalized poke points (R clears).
     pokes: Vec<(f64, f64)>,
+    /// The same hands as replayable gesture events (down/move/up/cancel,
+    /// phase-stamped), so held rooms can read pulls and releases.
+    inputs: Vec<numinous_core::RoomInput>,
     /// A press began on a listening room: drags keep poking.
     poking: bool,
     /// Per-visit variation seed for rooms that support replayable novelty (R reseeds).
@@ -162,6 +165,7 @@ impl App {
             show_journey: false,
             mouse: (0.0, 0.0),
             pokes: Vec::new(),
+            inputs: Vec::new(),
             poking: false,
             variation: 0,
             room_card: room_input::ROOM_CARD_FRAMES,
@@ -567,7 +571,7 @@ impl App {
         postcard::write_room_postcard(
             self.rooms[self.current].as_ref(),
             self.t,
-            &self.pokes,
+            &self.inputs,
             self.era,
             &postcard::default_postcard_dir(),
         )
@@ -664,6 +668,12 @@ impl App {
     }
 
     fn set_pointer_state(&mut self, state: mouse_input::PointerState) {
+        // A poke that ends without a recorded lift (focus loss, a modal
+        // opening) closes its gesture gently; releases record their lift
+        // first, which makes this cancel a no-op.
+        if self.poking && !state.poking {
+            room_input::cancel_open_gesture(&mut self.inputs);
+        }
         self.dragging = state.dragging;
         self.poking = state.poking;
     }
@@ -993,7 +1003,12 @@ impl App {
     fn switch(&mut self, delta: isize) {
         self.current = room_input::wrapped_room_index(self.current, delta, self.rooms.len());
         self.rooms = room_input::redeal_rooms(&mut self.variation, &mut self.current);
-        room_input::reset_room_view(&mut self.t, &mut self.room_card, &mut self.pokes);
+        room_input::reset_room_view(
+            &mut self.t,
+            &mut self.room_card,
+            &mut self.pokes,
+            &mut self.inputs,
+        );
         self.tune.clear();
         if let Some(window) = &self.window {
             window.set_title(&self.title());
@@ -1060,7 +1075,7 @@ impl App {
             raster
         } else {
             let mut raster = Raster::with_accent(width, height, room.meta().accent);
-            room.render_poked(&mut raster, self.t, &self.pokes);
+            room.render_input(&mut raster, self.t, &self.inputs);
             raster
         };
 
@@ -1376,6 +1391,7 @@ impl ApplicationHandler for App {
                                 &mut self.t,
                                 &mut self.room_card,
                                 &mut self.pokes,
+                                &mut self.inputs,
                             );
                             self.update_audio();
                         }
@@ -1517,6 +1533,7 @@ impl ApplicationHandler for App {
                                     &mut self.t,
                                     &mut self.room_card,
                                     &mut self.pokes,
+                                    &mut self.inputs,
                                 );
                                 self.tune.clear();
                                 if let Some(window) = &self.window {
@@ -1551,6 +1568,11 @@ impl ApplicationHandler for App {
                                     (size.width, size.height),
                                 ) {
                                     room_input::push_poke(&mut self.pokes, point);
+                                    room_input::record_pointer_down(
+                                        &mut self.inputs,
+                                        point,
+                                        self.t,
+                                    );
                                 } else {
                                     self.poking = false;
                                 }
@@ -1562,6 +1584,19 @@ impl ApplicationHandler for App {
                         mouse_input::LeftPressAction::Ignore => {}
                     }
                 } else {
+                    // Record the lift before the state change, so the
+                    // gesture completes as a release rather than a cancel.
+                    if self.poking
+                        && let Some(window) = &self.window
+                    {
+                        let size = window.inner_size();
+                        if let Some(point) = mouse_input::normalized_window_point(
+                            self.mouse,
+                            (size.width, size.height),
+                        ) {
+                            room_input::record_pointer_up(&mut self.inputs, point, self.t);
+                        }
+                    }
                     self.set_pointer_state(mouse_input::pointer_state_after_left_release());
                 }
             }
@@ -1585,8 +1620,15 @@ impl ApplicationHandler for App {
                         (position.x, position.y),
                         (size.width, size.height),
                     ) {
-                        room_input::extend_poke_trail(&mut self.pokes, point);
+                        // Gestures share the poke trail's decimation, so
+                        // legacy rooms see identical hands either way.
+                        if room_input::extend_poke_trail(&mut self.pokes, point) {
+                            room_input::record_pointer_move(&mut self.inputs, point, self.t);
+                        }
                     } else {
+                        // The window lost its size mid-drag: the gesture
+                        // ends without a lift, so close it gently.
+                        room_input::cancel_open_gesture(&mut self.inputs);
                         self.poking = false;
                     }
                 } else if self.dragging
@@ -1762,6 +1804,32 @@ mod tests {
             }
         }
         writer.finalize().expect("finalize");
+    }
+
+    #[test]
+    fn losing_the_pointer_mid_gesture_records_a_cancel() {
+        let mut app = headless("numinous_app_test_gesture_cancel.txt");
+        app.poking = true;
+        crate::room_input::record_pointer_down(&mut app.inputs, (0.4, 0.4), 0.1);
+        // Focus loss and modal opens route through set_pointer_state, which
+        // must close the open gesture gently.
+        app.clear_pointer_state();
+        assert!(!app.poking);
+        assert_eq!(
+            app.inputs.last(),
+            Some(&numinous_core::RoomInput::PointerCancel),
+            "an interrupted gesture ends in a cancel, not a phantom hold"
+        );
+        // A release recorded normally is not followed by a stray cancel.
+        app.poking = true;
+        crate::room_input::record_pointer_down(&mut app.inputs, (0.5, 0.5), 0.2);
+        crate::room_input::record_pointer_up(&mut app.inputs, (0.5, 0.5), 0.25);
+        app.clear_pointer_state();
+        assert!(matches!(
+            app.inputs.last(),
+            Some(numinous_core::RoomInput::PointerUp { .. })
+        ));
+        let _ = std::fs::remove_file(&app.journey_file);
     }
 
     #[test]

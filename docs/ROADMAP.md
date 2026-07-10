@@ -179,6 +179,18 @@ held semantics are timing questions, and gestures can end without a lift.
 Held semantics per room (pull-and-release Double Pendulum, dial drags) and
 face wiring are the next slices.
 
+Cycle 62 delivered those slices for the first room: the App records gestures
+as phase-stamped `RoomInput` events beside the poke trail (sharing its
+decimation, so legacy rooms provably see identical hands) and renders through
+`render_input`; a shared core `latest_gesture` reading summarizes trails as
+held, released-with-velocity, or cancelled; and Double Pendulum gains true
+held semantics: hold pins the bob, release drops from there, a flick throws
+with measured angular momentum, and a cancel drops gently. The pendulum's
+cross-face verb stays `CLICK: RE-DROP` until CLI and MCP accept gesture
+trails; a tap through the gesture path is a click re-drop with zero fling
+(its run clock starts at the lift rather than at phase zero), so the copy
+stays true on every face.
+
 Cycle 54 resolved the Strange Loop semantics gap from the prior paused pass:
 clicks now shift the existing first inner recursion and its descendants instead
 of overlaying an extra echo tree. Focused tests prove both the bounded input

@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use numinous_core::{Era, Raster, Room};
+use numinous_core::{Era, Raster, Room, RoomInput};
 
 const POSTCARD_SIZE: u32 = 900;
 const MAX_POSTCARD_COLLISIONS: u16 = 999;
@@ -19,11 +19,11 @@ pub(crate) fn default_postcard_dir() -> PathBuf {
 pub(crate) fn write_room_postcard(
     room: &dyn Room,
     phase: f64,
-    pokes: &[(f64, f64)],
+    inputs: &[RoomInput],
     era: Era,
     dir: &Path,
 ) -> std::io::Result<PathBuf> {
-    let rgba = render_room_postcard_rgba(room, phase, pokes, era);
+    let rgba = render_room_postcard_rgba(room, phase, inputs, era);
     for path in postcard_paths(dir, room.meta().id, phase) {
         match write_rgba_png(&path, POSTCARD_SIZE, POSTCARD_SIZE, &rgba) {
             Ok(()) => return Ok(path),
@@ -40,7 +40,7 @@ pub(crate) fn write_room_postcard(
 fn render_room_postcard_rgba(
     room: &dyn Room,
     phase: f64,
-    pokes: &[(f64, f64)],
+    inputs: &[RoomInput],
     era: Era,
 ) -> Vec<u8> {
     let mut raster = Raster::with_accent(
@@ -48,7 +48,9 @@ fn render_room_postcard_rgba(
         POSTCARD_SIZE as usize,
         room.meta().accent,
     );
-    room.render_poked(&mut raster, phase, pokes);
+    // The postcard's promise is the screen: the same gesture trail the live
+    // frame renders from, so a held or just-flung room saves as seen.
+    room.render_input(&mut raster, phase, inputs);
     let mut rgba = raster.to_rgba();
     era.apply(&mut rgba, POSTCARD_SIZE as usize, POSTCARD_SIZE as usize);
     rgba
@@ -141,9 +143,14 @@ mod tests {
             .expect("julia room exists")
             .as_ref();
 
+        let touch = [RoomInput::PointerDown {
+            x: 0.9,
+            y: 0.1,
+            t: 0.35,
+        }];
         let plain = render_room_postcard_rgba(room, 0.35, &[], Era::Modern);
-        let poked = render_room_postcard_rgba(room, 0.35, &[(0.9, 0.1)], Era::Modern);
-        let phosphor = render_room_postcard_rgba(room, 0.35, &[(0.9, 0.1)], Era::Phosphor);
+        let poked = render_room_postcard_rgba(room, 0.35, &touch, Era::Modern);
+        let phosphor = render_room_postcard_rgba(room, 0.35, &touch, Era::Phosphor);
 
         assert_ne!(plain, poked, "postcards should preserve placed hands");
         assert_ne!(
@@ -160,9 +167,14 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create postcard dir");
 
-        let path = write_room_postcard(room, 0.25, &[(0.25, 0.75)], Era::Modern, &dir)
-            .expect("write postcard");
-        let second_path = write_room_postcard(room, 0.25, &[(0.25, 0.75)], Era::Modern, &dir)
+        let touch = [RoomInput::PointerDown {
+            x: 0.25,
+            y: 0.75,
+            t: 0.25,
+        }];
+        let path =
+            write_room_postcard(room, 0.25, &touch, Era::Modern, &dir).expect("write postcard");
+        let second_path = write_room_postcard(room, 0.25, &touch, Era::Modern, &dir)
             .expect("write colliding postcard");
         assert_ne!(
             path, second_path,
