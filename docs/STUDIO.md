@@ -90,7 +90,7 @@ The Studio is currently slated as a Phase 3 build, but its *engine* is foundatio
 - **Phase 4:** the Studio *is* the mod SDK, sandboxed community rooms.
 
 ## Open questions
-1. Bespoke DSL vs. embedding an existing scripting host (Rhai/Lua) with a pattern layer on top (shared decision with `ARCHITECTURE.md`).
-2. How much raw WGSL to expose at Level 3, and how to sandbox it safely for community sharing.
+1. Bespoke DSL vs. embedding an existing scripting host (Rhai/Lua) with a pattern layer on top: ANSWERED (July 2026, see `EXTENSIBILITY.md`): bespoke, grown from the existing expression engine. The Studio language itself is the sandbox: total, budgeted, hermetic, deterministic, pure Rust, in core. No scripting engine enters the trusted core.
+2. How much raw WGSL to expose at Level 3, and how to sandbox it safely for community sharing: ANSWERED for now (see `EXTENSIBILITY.md`): first-party and locally-authored only; untrusted GPU work goes through the safe pipeline exclusively.
 3. Live-eval performance: keeping sub-second feedback while an expression drives both a heavy visual and real-time audio.
 4. How much of the pattern language to borrow directly from Strudel/TidalCycles (familiarity) vs. tailor to the math-first, audiovisual use case.

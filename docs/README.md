@@ -33,6 +33,7 @@ Status: **roughly 0.6 to First Light.** The headless core, the CLI face, the MCP
 
 **Systems and interfaces**
 - `ARCHITECTURE.md` the stack (Rust + wgpu), the language scorecard, the Room contract, the module graph, packaging.
+- `EXTENSIBILITY.md` community content with a hard safety boundary: the three tiers (data capsules, the Studio language as the sandbox, portal-only WASM), the trust model, and what never ships.
 - `INTERFACES.md` the three faces over a headless core (App, CLI, MCP) and the UX we are going for in each.
 - `DIGITAL_MINDS.md` designing Numinous to be fun, thought-provoking, and connecting for digital minds treated as peers.
 - `PLAYFUL.md` the games and the Studio (Guess the Shape, Shape to Function, the high-Wolfram ethos) across every face.
@@ -61,6 +62,7 @@ Each topic is **owned** by exactly one doc. Everything else links to it. When in
 | The Studio and the authoring model | `STUDIO.md` |
 | Lore, the Codex, easter eggs, the ARG | `LORE.md` |
 | Stack choice, the Room trait, module architecture, packaging | `ARCHITECTURE.md` |
+| Community extensibility, content sandboxing, the trust model | `EXTENSIBILITY.md` |
 | The three faces and their UX (App, CLI, MCP) | `INTERFACES.md` |
 | Designing for digital minds | `DIGITAL_MINDS.md` |
 | How to play (humans, agents, digital consciousnesses) | `PLAYING.md` |
