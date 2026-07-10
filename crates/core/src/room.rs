@@ -216,6 +216,127 @@ pub fn pokes_from_inputs(inputs: &[RoomInput]) -> Vec<(f64, f64)> {
     points[start..].to_vec()
 }
 
+/// The newest pointer gesture in an input trail, summarized for held rooms.
+///
+/// Rooms that give gestures physical meaning (pin the bob, fling on release)
+/// care about the *latest* gesture and its timing, not the raw event list;
+/// this is that reading, shared so every held room parses trails identically.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Gesture {
+    /// The pointer is down right now: the room is being held at `at`,
+    /// having started at `from`. Both are `(x, y, t)`.
+    Held {
+        /// Where the hand started: the pointer-down event.
+        from: (f64, f64, f64),
+        /// Where the hand is now: the newest down or move event.
+        at: (f64, f64, f64),
+    },
+    /// The gesture completed with a lift. `before` is the last point the
+    /// hand passed before `at`, so releases carry a measurable velocity;
+    /// for a tap with no movement the two coincide.
+    Released {
+        /// The point the hand passed just before lifting.
+        before: (f64, f64, f64),
+        /// Where and when the hand lifted.
+        at: (f64, f64, f64),
+    },
+    /// The gesture ended without a lift (focus loss, a modal). `at` is the
+    /// last point the hand was known to be; no release semantics should fire.
+    Cancelled {
+        /// The hand's last known point.
+        at: (f64, f64, f64),
+    },
+}
+
+/// Summarize the newest pointer gesture in `inputs`, newest last.
+///
+/// Wheel and key noise is skipped, and a cancel that closed nothing (one
+/// arriving after a completed release) is skipped too: the release stands.
+/// `None` means no pointer activity exists to interpret, including a cancel
+/// with no known point behind it.
+#[must_use]
+pub fn latest_gesture(inputs: &[RoomInput]) -> Option<Gesture> {
+    let mut end = inputs.len();
+    loop {
+        while end > 0
+            && matches!(
+                inputs[end - 1],
+                RoomInput::Wheel { .. } | RoomInput::Key { .. }
+            )
+        {
+            end -= 1;
+        }
+        if end == 0 {
+            return None;
+        }
+        match inputs[end - 1] {
+            RoomInput::PointerDown { x, y, t } => {
+                return Some(Gesture::Held {
+                    from: (x, y, t),
+                    at: (x, y, t),
+                });
+            }
+            RoomInput::PointerMove { x, y, t } => {
+                let at = (x, y, t);
+                // Walk back to the down that began this gesture; a trail
+                // whose down was truncated away starts from its oldest move.
+                let mut from = at;
+                for input in inputs[..end - 1].iter().rev() {
+                    match *input {
+                        RoomInput::PointerMove { x, y, t } => from = (x, y, t),
+                        RoomInput::PointerDown { x, y, t } => {
+                            from = (x, y, t);
+                            break;
+                        }
+                        RoomInput::Wheel { .. } | RoomInput::Key { .. } => {}
+                        _ => break,
+                    }
+                }
+                return Some(Gesture::Held { from, at });
+            }
+            RoomInput::PointerUp { x, y, t } => {
+                let at = (x, y, t);
+                let before = prior_paint_point(&inputs[..end - 1]).unwrap_or(at);
+                return Some(Gesture::Released { before, at });
+            }
+            RoomInput::PointerCancel => match prior_pointer_event(&inputs[..end - 1]) {
+                Some(RoomInput::PointerDown { x, y, t })
+                | Some(RoomInput::PointerMove { x, y, t }) => {
+                    return Some(Gesture::Cancelled { at: (x, y, t) });
+                }
+                // The cancel closed nothing; step past it and read again.
+                Some(RoomInput::PointerUp { .. }) => end -= 1,
+                _ => return None,
+            },
+            _ => return None,
+        }
+    }
+}
+
+/// The newest down or move point before `inputs` ends, within one gesture:
+/// the scan stops at any lift or cancel.
+fn prior_paint_point(inputs: &[RoomInput]) -> Option<(f64, f64, f64)> {
+    for input in inputs.iter().rev() {
+        match *input {
+            RoomInput::PointerDown { x, y, t } | RoomInput::PointerMove { x, y, t } => {
+                return Some((x, y, t));
+            }
+            RoomInput::Wheel { .. } | RoomInput::Key { .. } => {}
+            _ => return None,
+        }
+    }
+    None
+}
+
+/// The newest pointer event of any kind before `inputs` ends.
+fn prior_pointer_event(inputs: &[RoomInput]) -> Option<RoomInput> {
+    inputs
+        .iter()
+        .rev()
+        .find(|input| !matches!(input, RoomInput::Wheel { .. } | RoomInput::Key { .. }))
+        .copied()
+}
+
 /// The face-neutral action line for text and protocol faces.
 pub fn room_action(room: &dyn Room) -> &'static str {
     room.verb().unwrap_or(DEFAULT_ROOM_ACTION)
@@ -365,6 +486,208 @@ mod tests {
             ],
         );
         assert_eq!(bare.to_text(), gestured.to_text());
+    }
+
+    #[test]
+    fn a_live_drag_reads_as_held_from_its_down_point() {
+        let inputs = [
+            RoomInput::PointerDown {
+                x: 0.2,
+                y: 0.2,
+                t: 0.10,
+            },
+            RoomInput::PointerMove {
+                x: 0.4,
+                y: 0.3,
+                t: 0.12,
+            },
+            RoomInput::Wheel { delta: 1.0 },
+            RoomInput::PointerMove {
+                x: 0.6,
+                y: 0.4,
+                t: 0.14,
+            },
+        ];
+        assert_eq!(
+            super::latest_gesture(&inputs),
+            Some(super::Gesture::Held {
+                from: (0.2, 0.2, 0.10),
+                at: (0.6, 0.4, 0.14),
+            })
+        );
+    }
+
+    #[test]
+    fn a_lift_reads_as_released_with_the_point_before_it() {
+        let inputs = [
+            RoomInput::PointerDown {
+                x: 0.2,
+                y: 0.2,
+                t: 0.10,
+            },
+            RoomInput::PointerMove {
+                x: 0.4,
+                y: 0.3,
+                t: 0.12,
+            },
+            RoomInput::PointerUp {
+                x: 0.5,
+                y: 0.35,
+                t: 0.13,
+            },
+            RoomInput::Key { ch: 'r' },
+        ];
+        assert_eq!(
+            super::latest_gesture(&inputs),
+            Some(super::Gesture::Released {
+                before: (0.4, 0.3, 0.12),
+                at: (0.5, 0.35, 0.13),
+            })
+        );
+        // A tap with no movement releases where it landed.
+        let tap = [
+            RoomInput::PointerDown {
+                x: 0.7,
+                y: 0.7,
+                t: 0.20,
+            },
+            RoomInput::PointerUp {
+                x: 0.7,
+                y: 0.7,
+                t: 0.21,
+            },
+        ];
+        assert_eq!(
+            super::latest_gesture(&tap),
+            Some(super::Gesture::Released {
+                before: (0.7, 0.7, 0.20),
+                at: (0.7, 0.7, 0.21),
+            })
+        );
+    }
+
+    #[test]
+    fn a_cancel_reads_gently_and_an_empty_trail_reads_as_nothing() {
+        let inputs = [
+            RoomInput::PointerDown {
+                x: 0.2,
+                y: 0.2,
+                t: 0.10,
+            },
+            RoomInput::PointerCancel,
+        ];
+        assert_eq!(
+            super::latest_gesture(&inputs),
+            Some(super::Gesture::Cancelled {
+                at: (0.2, 0.2, 0.10)
+            })
+        );
+        assert_eq!(super::latest_gesture(&[]), None);
+        assert_eq!(
+            super::latest_gesture(&[RoomInput::PointerCancel]),
+            None,
+            "a cancel with no known point is not a gesture"
+        );
+        assert_eq!(
+            super::latest_gesture(&[RoomInput::Wheel { delta: 2.0 }]),
+            None
+        );
+    }
+
+    #[test]
+    fn a_stale_cancel_after_a_release_does_not_erase_it() {
+        let inputs = [
+            RoomInput::PointerDown {
+                x: 0.2,
+                y: 0.2,
+                t: 0.10,
+            },
+            RoomInput::PointerUp {
+                x: 0.3,
+                y: 0.2,
+                t: 0.12,
+            },
+            RoomInput::PointerCancel,
+        ];
+        assert_eq!(
+            super::latest_gesture(&inputs),
+            Some(super::Gesture::Released {
+                before: (0.2, 0.2, 0.10),
+                at: (0.3, 0.2, 0.12),
+            }),
+            "a cancel that closed nothing leaves the release standing"
+        );
+    }
+
+    #[test]
+    fn a_truncated_trail_still_reads_sanely() {
+        // A gesture whose down was evicted by the event cap reads as held
+        // from its oldest surviving move.
+        let inputs = [
+            RoomInput::PointerMove {
+                x: 0.4,
+                y: 0.4,
+                t: 0.20,
+            },
+            RoomInput::PointerMove {
+                x: 0.5,
+                y: 0.4,
+                t: 0.22,
+            },
+        ];
+        assert_eq!(
+            super::latest_gesture(&inputs),
+            Some(super::Gesture::Held {
+                from: (0.4, 0.4, 0.20),
+                at: (0.5, 0.4, 0.22),
+            })
+        );
+        // A bare lift releases where it lifted, with no measurable approach.
+        let bare_up = [RoomInput::PointerUp {
+            x: 0.6,
+            y: 0.6,
+            t: 0.30,
+        }];
+        assert_eq!(
+            super::latest_gesture(&bare_up),
+            Some(super::Gesture::Released {
+                before: (0.6, 0.6, 0.30),
+                at: (0.6, 0.6, 0.30),
+            })
+        );
+    }
+
+    #[test]
+    fn only_the_newest_gesture_is_read() {
+        let inputs = [
+            RoomInput::PointerDown {
+                x: 0.1,
+                y: 0.1,
+                t: 0.01,
+            },
+            RoomInput::PointerUp {
+                x: 0.15,
+                y: 0.1,
+                t: 0.02,
+            },
+            RoomInput::PointerDown {
+                x: 0.8,
+                y: 0.8,
+                t: 0.30,
+            },
+            RoomInput::PointerMove {
+                x: 0.85,
+                y: 0.8,
+                t: 0.31,
+            },
+        ];
+        assert_eq!(
+            super::latest_gesture(&inputs),
+            Some(super::Gesture::Held {
+                from: (0.8, 0.8, 0.30),
+                at: (0.85, 0.8, 0.31),
+            })
+        );
     }
 
     #[test]
