@@ -26,6 +26,43 @@ fn slope(x: f64) -> f64 {
     x.cos() + 1.0 / 3.0
 }
 
+/// The left edge of the domain.
+const X_MIN: f64 = -X_SPAN / 2.0;
+/// The hill's vertical range on screen.
+const F_MIN: f64 = -X_SPAN / 6.0 - 1.0;
+const F_MAX: f64 = X_SPAN / 6.0 + 1.0;
+/// The tilt trace's vertical range.
+const S_MIN: f64 = -0.7;
+const S_MAX: f64 = 1.4;
+/// How far a board extends on each side of its rider, in domain units.
+const BOARD_REACH: f64 = X_SPAN / 10.0;
+
+/// Screen geometry shared by the hill, the trace, and dropped riders.
+fn to_px(x: f64, width: usize) -> i32 {
+    ((x - X_MIN) / X_SPAN * (width as f64 - 1.0)) as i32
+}
+
+fn hill_py(y: f64, height: usize) -> i32 {
+    let norm = (y - F_MIN) / (F_MAX - F_MIN);
+    ((1.0 - norm) * (height as f64 * 0.60 - 2.0)) as i32 + 1
+}
+
+fn trace_py(x: f64, height: usize) -> i32 {
+    let trace_top = height as f64 * 0.66;
+    let norm = (slope(x) - S_MIN) / (S_MAX - S_MIN);
+    (trace_top + (1.0 - norm) * (height as f64 * 0.32 - 2.0)) as i32
+}
+
+/// A dropped rider's board, in domain space: both endpoints of the tangent
+/// through (x, f(x)) with slope f'(x). The derivative is the drawing
+/// instruction, exactly as in the live ride.
+fn board_points(x: f64) -> ((f64, f64), (f64, f64)) {
+    let m = slope(x);
+    let x0 = x - BOARD_REACH;
+    let x1 = x + BOARD_REACH;
+    ((x0, f(x) + m * (x0 - x)), (x1, f(x) + m * (x1 - x)))
+}
+
 /// Slope Rider.
 #[derive(Debug, Default)]
 pub struct SlopeRider {
@@ -46,7 +83,11 @@ impl SlopeRider {
     }
 
     fn phase_for(&self, t: f64) -> f64 {
-        let t = t.clamp(0.0, 1.0);
+        let t = if t.is_finite() {
+            t.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
         if self.seed == 0 {
             t
         } else {
@@ -74,20 +115,12 @@ impl Room for SlopeRider {
             return;
         }
         let x_t = (self.phase_for(t) - 0.5) * X_SPAN;
-        let x_min = -X_SPAN / 2.0;
-        let to_px = |x: f64| ((x - x_min) / X_SPAN * (width as f64 - 1.0)) as i32;
 
         // The hill, upper two thirds.
-        let f_min = -X_SPAN / 6.0 - 1.0;
-        let f_max = X_SPAN / 6.0 + 1.0;
-        let hill_py = |x: f64| {
-            let norm = (f(x) - f_min) / (f_max - f_min);
-            ((1.0 - norm) * (height as f64 * 0.60 - 2.0)) as i32 + 1
-        };
         let mut previous: Option<(i32, i32)> = None;
         for i in 0..=STEPS {
-            let x = x_min + X_SPAN * i as f64 / STEPS as f64;
-            let point = (to_px(x), hill_py(x));
+            let x = X_MIN + X_SPAN * i as f64 / STEPS as f64;
+            let point = (to_px(x, width), hill_py(f(x), height));
             if let Some((px, py)) = previous {
                 canvas.line(px, py, point.0, point.1, '*');
             }
@@ -95,42 +128,83 @@ impl Room for SlopeRider {
         }
 
         // The board: the tangent at the rider, drawn bright.
-        let m = slope(x_t);
-        let reach = X_SPAN / 10.0;
-        let (x0, x1) = (x_t - reach, x_t + reach);
-        let y_at = |x: f64| f(x_t) + m * (x - x_t);
-        let tangent_py = |y: f64| {
-            let norm = (y - f_min) / (f_max - f_min);
-            ((1.0 - norm) * (height as f64 * 0.60 - 2.0)) as i32 + 1
-        };
+        let ((x0, y0), (x1, y1)) = board_points(x_t);
         canvas.line(
-            to_px(x0),
-            tangent_py(y_at(x0)),
-            to_px(x1),
-            tangent_py(y_at(x1)),
+            to_px(x0, width),
+            hill_py(y0, height),
+            to_px(x1, width),
+            hill_py(y1, height),
             '#',
         );
 
         // The tilt trace, lower third: f prime drawing itself up to the rider.
-        let s_min = -0.7;
-        let s_max = 1.4;
-        let trace_top = height as f64 * 0.66;
-        let trace_py = |x: f64| {
-            let norm = (slope(x) - s_min) / (s_max - s_min);
-            (trace_top + (1.0 - norm) * (height as f64 * 0.32 - 2.0)) as i32
-        };
         let mut previous: Option<(i32, i32)> = None;
         for i in 0..=STEPS {
-            let x = x_min + X_SPAN * i as f64 / STEPS as f64;
+            let x = X_MIN + X_SPAN * i as f64 / STEPS as f64;
             if x > x_t {
                 break;
             }
-            let point = (to_px(x), trace_py(x));
+            let point = (to_px(x, width), trace_py(x, height));
             if let Some((px, py)) = previous {
                 canvas.line(px, py, point.0, point.1, '#');
             }
             previous = Some(point);
         }
+    }
+
+    fn verb(&self) -> Option<&'static str> {
+        Some("CLICK: DROP A RIDER")
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        // The newest bounded raw tail first, finite filtering after, matching
+        // the catalog input contract.
+        let start = pokes.len().saturating_sub(crate::room::MAX_ROOM_POKES);
+        let riders: Vec<(f64, f64)> = pokes[start..]
+            .iter()
+            .copied()
+            .filter(|&(x, y)| x.is_finite() && y.is_finite())
+            .collect();
+        self.render(canvas, t);
+        let Some((&newest, older)) = riders.split_last() else {
+            return;
+        };
+        let width = canvas.width();
+        let height = canvas.height();
+        if width == 0 || height == 0 {
+            return;
+        }
+        // Every click drops another rider onto the hill at that x: its board
+        // is the true tangent there, and a tick lands on the tilt trace below
+        // at exactly the board's slope. Two curves, one number, your hand on
+        // both. The Pour reads totals; this room reads rates: the Change
+        // wing's pair, now both under the hand.
+        let mut drop_rider = |hand_x: f64, mark: char| {
+            let x = X_MIN + hand_x.clamp(0.0, 1.0) * X_SPAN;
+            let ((x0, y0), (x1, y1)) = board_points(x);
+            canvas.line(
+                to_px(x0, width),
+                hill_py(y0, height),
+                to_px(x1, width),
+                hill_py(y1, height),
+                mark,
+            );
+            let px = to_px(x, width);
+            canvas.plot(px, hill_py(f(x), height), '+');
+            // The tick on the trace: the board's tilt, written below.
+            let ty = trace_py(x, height);
+            canvas.plot(px, ty, mark);
+            canvas.plot(px, ty - 1, mark);
+        };
+        for &(x, _) in older {
+            drop_rider(x, '.');
+        }
+        drop_rider(newest.0, 'o');
+    }
+
+    fn status(&self, t: f64) -> Option<String> {
+        let x = (self.phase_for(t) - 0.5) * X_SPAN;
+        Some(format!("TILT = {:+.2}", slope(x)))
     }
 
     fn reveal(&self) -> &'static str {
@@ -215,5 +289,109 @@ mod tests {
     #[test]
     fn reveal_reads_the_second_curve() {
         assert!(SlopeRider::new().reveal().contains("second curve"));
+    }
+
+    #[test]
+    fn the_board_slope_is_the_true_derivative() {
+        for i in 1..20 {
+            let x = super::X_MIN + super::X_SPAN * f64::from(i) / 20.0;
+            let ((x0, y0), (x1, y1)) = super::board_points(x);
+            let m = (y1 - y0) / (x1 - x0);
+            assert!(
+                (m - slope(x)).abs() < 1e-12,
+                "the board's slope equals f'(x) at {x}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_dropped_rider_marks_the_hill_and_ticks_the_trace() {
+        let room = SlopeRider::new();
+        let mut bare = Canvas::new(60, 30);
+        room.render(&mut bare, 0.5);
+        let mut poked = Canvas::new(60, 30);
+        room.render_poked(&mut poked, 0.5, &[(0.75, 0.5)]);
+        assert_ne!(bare.to_text(), poked.to_text());
+        assert!(
+            poked.to_text().contains('o'),
+            "the rider's board is visible"
+        );
+        assert!(poked.to_text().contains('+'), "the rider marks the hill");
+    }
+
+    #[test]
+    fn pokes_use_the_newest_raw_tail_before_filtering() {
+        let room = SlopeRider::new();
+        let mut flood: Vec<(f64, f64)> = (0..200).map(|i| (i as f64 / 200.0, 0.4)).collect();
+        flood.push((f64::INFINITY, 0.5));
+        flood.push((0.25, 0.3));
+        let start = flood.len() - crate::room::MAX_ROOM_POKES;
+        let tail = flood[start..].to_vec();
+        let mut via_flood = Canvas::new(60, 30);
+        room.render_poked(&mut via_flood, 0.5, &flood);
+        let mut via_tail = Canvas::new(60, 30);
+        room.render_poked(&mut via_tail, 0.5, &tail);
+        assert_eq!(via_flood.to_text(), via_tail.to_text());
+    }
+
+    #[test]
+    fn all_invalid_pokes_render_the_bare_room_and_older_riders_linger() {
+        let room = SlopeRider::new();
+        let mut bare = Canvas::new(60, 30);
+        room.render(&mut bare, 0.5);
+        let mut invalid = Canvas::new(60, 30);
+        room.render_poked(
+            &mut invalid,
+            0.5,
+            &[(f64::NAN, 0.5), (0.5, f64::NEG_INFINITY)],
+        );
+        assert_eq!(bare.to_text(), invalid.to_text());
+        let mut layered = Canvas::new(60, 30);
+        room.render_poked(&mut layered, 0.5, &[(0.15, 0.5), (0.85, 0.5)]);
+        let text = layered.to_text();
+        assert!(text.contains('.'), "the older rider lingers dim");
+        assert!(text.contains('o'), "the newest rider is bright");
+    }
+
+    #[test]
+    fn seed_variation_changes_poked_renders_and_seed_zero_stays_exact() {
+        let mut a = Canvas::new(60, 30);
+        SlopeRider::new().render_poked(&mut a, 0.5, &[(0.75, 0.5)]);
+        let mut b = Canvas::new(60, 30);
+        SlopeRider::new_with(19).render_poked(&mut b, 0.5, &[(0.75, 0.5)]);
+        assert_ne!(a.to_text(), b.to_text(), "the ride phase varies with seed");
+        let mut exact = Canvas::new(60, 30);
+        SlopeRider::new_with(0).render_poked(&mut exact, 0.5, &[(0.75, 0.5)]);
+        assert_eq!(a.to_text(), exact.to_text());
+    }
+
+    #[test]
+    fn hostile_surfaces_and_phase_stay_bounded() {
+        struct Weird(Canvas);
+        impl crate::surface::Surface for Weird {
+            fn width(&self) -> usize {
+                self.0.width()
+            }
+            fn height(&self) -> usize {
+                self.0.height()
+            }
+            fn char_aspect(&self) -> f64 {
+                f64::NAN
+            }
+            fn plot(&mut self, x: i32, y: i32, mark: char) {
+                self.0.plot(x, y, mark);
+            }
+        }
+        let room = SlopeRider::new();
+        let mut weird = Weird(Canvas::new(30, 15));
+        room.render_poked(&mut weird, f64::NAN, &[(0.5, 0.5)]);
+        assert!(weird.0.ink_count() > 0);
+        let mut nan_phase = Canvas::new(30, 15);
+        room.render(&mut nan_phase, f64::NAN);
+        let mut zero_phase = Canvas::new(30, 15);
+        room.render(&mut zero_phase, 0.0);
+        assert_eq!(nan_phase.to_text(), zero_phase.to_text());
+        let status = room.status(f64::NAN).expect("status");
+        assert!(status.starts_with("TILT ="));
     }
 }

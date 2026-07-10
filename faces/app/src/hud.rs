@@ -167,17 +167,38 @@ mod tests {
             .expect("room exists")
     }
 
+    /// A verbless room: every catalog room answers the hand now, so the
+    /// default-action fallback is proven against a synthetic room, the same
+    /// shape any future room has on the day it is born.
+    struct Newborn;
+
+    impl Room for Newborn {
+        fn meta(&self) -> numinous_core::RoomMeta {
+            numinous_core::RoomMeta {
+                id: "newborn",
+                title: "Newborn",
+                wing: "Tests",
+                blurb: "A room that has not yet learned to answer the hand.",
+                accent: [0, 0, 0],
+            }
+        }
+        fn render(&self, _surface: &mut dyn numinous_core::surface::Surface, _t: f64) {}
+        fn reveal(&self) -> &'static str {
+            "Even a newborn room teaches what hands do."
+        }
+    }
+
     #[test]
     fn arrival_lines_always_name_an_action() {
-        let quiet = room("slope-rider");
+        let quiet = Newborn;
         let interactive = room("game-of-life");
-        assert_eq!(room_action(quiet.as_ref()), DEFAULT_TOUCH_ROOM_ACTION);
+        assert_eq!(room_action(&quiet), DEFAULT_TOUCH_ROOM_ACTION);
         assert!(
             room_action(interactive.as_ref()).starts_with("CLICK:"),
             "interactive rooms keep their verb"
         );
         assert_eq!(
-            arrival_lines(quiet.as_ref(), 32)[0],
+            arrival_lines(&quiet, 32)[0],
             DEFAULT_TOUCH_ROOM_ACTION,
             "quiet rooms still teach what hands do"
         );

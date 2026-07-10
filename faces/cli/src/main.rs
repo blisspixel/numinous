@@ -3503,10 +3503,13 @@ mod tests {
     }
 
     #[test]
-    fn play_frame_gives_quiet_rooms_a_default_action() {
+    fn play_frames_always_lead_with_the_verb() {
+        // Every catalog room answers the hand now; live play frames carry
+        // the room's own verb, never the generic fallback.
         let room = numinous_core::room_by_id("slope-rider").expect("room");
         let frame = super::play_frame(room.as_ref(), 0.0, 30, 15);
-        assert!(frame.contains(numinous_core::DEFAULT_ROOM_ACTION));
+        assert!(frame.contains(room.verb().expect("slope-rider has a verb")));
+        assert!(!frame.contains(numinous_core::DEFAULT_ROOM_ACTION));
     }
 
     #[test]
