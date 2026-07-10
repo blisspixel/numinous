@@ -79,7 +79,7 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 | [`docs/VISION.md`](docs/VISION.md) | The soul of the project, tone, references, what we are and aren't |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Design philosophy, the three-layer room model, the Watch/Play/Create modes, Benchmark mode, Visual Eras, aesthetic & audio direction |
 | [`docs/STUDIO.md`](docs/STUDIO.md) | The Studio: the Desmos-meets-Strudel live-coding audiovisual canvas, and the game's authoring layer |
-| [`docs/ROOMS.md`](docs/ROOMS.md) | The catalog of phenomena (30 catalog rooms plus hidden content, 10 wings, 26 with verbs) and the Full Map of what remains |
+| [`docs/ROOMS.md`](docs/ROOMS.md) | The catalog of phenomena (30 catalog rooms plus hidden content, 10 wings, 27 with verbs) and the Full Map of what remains |
 | [`docs/PROGRESSION.md`](docs/PROGRESSION.md) | Levels & insights: the knowledge-gated "metroidbrainia" structure, the Constellation Map, pacing, Benchmark/Watch |
 | [`docs/INSIGHTS.md`](docs/INSIGHTS.md) | The awe bank: the deep library of mathematical revelations and the insight-chains that connect them |
 | [`docs/VISUALS.md`](docs/VISUALS.md) | The rendering & look bible: pipeline, shader toolbox, color, motion, and how each Visual Era is drawn |
@@ -96,7 +96,7 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 
 ## Status
 
-**Roughly 0.6 to First Light** (the honest scorecard lives in [`docs/ROADMAP.md`](docs/ROADMAP.md)). All three faces are real and green (Rust 1.96.0): fmt clean, clippy `-D warnings` clean, 870 tests, 90.33% region cover, and 89.94% line cover with an enforced 80% line gate. What exists today:
+**Roughly 0.6 to First Light** (the honest scorecard lives in [`docs/ROADMAP.md`](docs/ROADMAP.md)). All three faces are real and green (Rust 1.96.0): fmt clean, clippy `-D warnings` clean, 875 tests, 90.41% region cover, and 90.01% line cover with an enforced 80% line gate. What exists today:
 
 - **`crates/core`**: 30 catalog rooms across 10 wings plus hidden content, 11+ games (munch, munch_arcade, quiz, nim, crack, seti, aliens, hackenbush, the Party Problem, Fifteen's Bet, and the Gauntlet run), 6 lever sims, the Studio expression engine, the full RPG spine (levels to 42, trophies, boons, streaks, resonances), shared local persistence helpers for bounded Journey and score reads plus lock-owned writes that wait through short contention under instrumentation, both music engines, and the insight and concept catalogs, all deterministic and tested
 - **`faces/cli`** (`numinous`): `rooms`, `describe`, `render` (rooms drawn as ASCII in the terminal, including replayable `--poke x,y` hand points), `arcade`, with `--json`; live play frames show each room's action line, with neutral fallback copy for quiet rooms.
