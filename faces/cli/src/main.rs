@@ -79,6 +79,11 @@ enum Command {
         /// Add a normalized hand point, as x,y in [0,1]. Repeat for multiple points.
         #[arg(long = "poke")]
         pokes: Vec<String>,
+        /// Add a gesture event: down:x,y,t, move:x,y,t, up:x,y,t, or cancel.
+        /// Repeat, oldest first; held rooms pin, pull, and fling. Not
+        /// combinable with --poke.
+        #[arg(long = "gesture")]
+        gestures: Vec<String>,
     },
     /// The Show for the terminal: every room in turn, full color, sound.
     Tour {
@@ -518,6 +523,65 @@ fn parse_poke_arg(raw: &str) -> Result<(f64, f64), String> {
     }
 }
 
+/// Parse one --gesture value: `down:x,y,t`, `move:x,y,t`, `up:x,y,t`, or
+/// `cancel`, with finite coordinates in [0,1].
+fn parse_gesture_arg(raw: &str) -> Result<numinous_core::RoomInput, String> {
+    if raw == "cancel" {
+        return Ok(numinous_core::RoomInput::PointerCancel);
+    }
+    let Some((kind, coords)) = raw.split_once(':') else {
+        return Err(format!(
+            "Bad --gesture '{raw}'. Use down:x,y,t, move:x,y,t, up:x,y,t, or cancel.
+"
+        ));
+    };
+    let parts: Vec<&str> = coords.split(',').collect();
+    if parts.len() != 3 {
+        return Err(format!(
+            "Bad --gesture '{raw}'. Pointer events need x,y,t like down:0.3,0.4,0.1.
+"
+        ));
+    }
+    let mut values = [0.0_f64; 3];
+    for (slot, part) in values.iter_mut().zip(&parts) {
+        let value: f64 = part.trim().parse().map_err(|_| {
+            format!(
+                "Bad --gesture '{raw}'. Coordinates must be numbers.
+"
+            )
+        })?;
+        if !value.is_finite() || !(0.0..=1.0).contains(&value) {
+            return Err(format!(
+                "Bad --gesture '{raw}'. Coordinates must be finite numbers in [0,1].
+"
+            ));
+        }
+        *slot = value;
+    }
+    let (x, y, t) = (values[0], values[1], values[2]);
+    match kind {
+        "down" => Ok(numinous_core::RoomInput::PointerDown { x, y, t }),
+        "move" => Ok(numinous_core::RoomInput::PointerMove { x, y, t }),
+        "up" => Ok(numinous_core::RoomInput::PointerUp { x, y, t }),
+        other => Err(format!(
+            "Bad --gesture '{raw}'. Pointer kinds are down, move, and up; cancel takes no coordinates; got '{other}'.
+"
+        )),
+    }
+}
+
+fn parse_gestures(raw: &[String]) -> Result<Vec<numinous_core::RoomInput>, String> {
+    if raw.len() > numinous_core::MAX_ROOM_INPUTS {
+        return Err(format!(
+            "Too many --gesture events: got {}, maximum is {}.
+",
+            raw.len(),
+            numinous_core::MAX_ROOM_INPUTS
+        ));
+    }
+    raw.iter().map(|event| parse_gesture_arg(event)).collect()
+}
+
 fn parse_pokes(raw: &[String]) -> Result<Vec<(f64, f64)>, String> {
     if raw.len() > numinous_core::MAX_ROOM_POKES {
         return Err(format!(
@@ -533,11 +597,24 @@ fn parse_pokes(raw: &[String]) -> Result<Vec<(f64, f64)>, String> {
 struct RoomRenderInput<'a> {
     variation: u64,
     pokes: &'a [(f64, f64)],
+    gesture: &'a [numinous_core::RoomInput],
 }
 
 impl<'a> RoomRenderInput<'a> {
     fn new(variation: u64, pokes: &'a [(f64, f64)]) -> Self {
-        Self { variation, pokes }
+        Self {
+            variation,
+            pokes,
+            gesture: &[],
+        }
+    }
+
+    fn with_gesture(variation: u64, gesture: &'a [numinous_core::RoomInput]) -> Self {
+        Self {
+            variation,
+            pokes: &[],
+            gesture,
+        }
     }
 }
 
@@ -546,6 +623,7 @@ impl RoomRenderInput<'static> {
         Self {
             variation: 0,
             pokes: &[],
+            gesture: &[],
         }
     }
 }
@@ -779,6 +857,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             era,
             vary,
             pokes,
+            gestures,
         } => {
             let Some(era) = numinous_core::Era::parse(&era) else {
                 eprintln!("Unknown era '{era}'. Eras: phosphor, 8bit, vector, modern.");
@@ -791,8 +870,25 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                     return ExitCode::FAILURE;
                 }
             };
+            let gesture = match parse_gestures(&gestures) {
+                Ok(gesture) => gesture,
+                Err(message) => {
+                    eprint!("{message}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            if !pokes.is_empty() && !gesture.is_empty() {
+                eprintln!(
+                    "Use either --poke (static hand points) or --gesture (a pointer trail), not both."
+                );
+                return ExitCode::FAILURE;
+            }
             let variation = if vary { fresh_variation_seed() } else { 0 };
-            let input = RoomRenderInput::new(variation, &pokes);
+            let input = if gesture.is_empty() {
+                RoomRenderInput::new(variation, &pokes)
+            } else {
+                RoomRenderInput::with_gesture(variation, &gesture)
+            };
             let report = match out {
                 Some(path) => render_png(&id, width, height, t, &path, allow_hidden, era, input),
                 None if color => {
@@ -1700,7 +1796,9 @@ fn render_color_report(
     let room = find_room_with_variation(id, allow_hidden, input.variation)
         .ok_or_else(|| not_found_message(id))?;
     let mut raster = Raster::with_accent(width, height, room.meta().accent);
-    if input.pokes.is_empty() {
+    if !input.gesture.is_empty() {
+        room.render_input(&mut raster, t, input.gesture);
+    } else if input.pokes.is_empty() {
         room.render(&mut raster, t);
     } else {
         room.render_poked(&mut raster, t, input.pokes);
@@ -1878,7 +1976,9 @@ fn render_report(
     let room = find_room_with_variation(id, allow_hidden, input.variation)
         .ok_or_else(|| not_found_message(id))?;
     let mut canvas = Canvas::new(width, height);
-    if input.pokes.is_empty() {
+    if !input.gesture.is_empty() {
+        room.render_input(&mut canvas, t, input.gesture);
+    } else if input.pokes.is_empty() {
         room.render(&mut canvas, t);
     } else {
         room.render_poked(&mut canvas, t, input.pokes);
@@ -1992,7 +2092,9 @@ fn render_png(
     let room = find_room_with_variation(id, allow_hidden, input.variation)
         .ok_or_else(|| not_found_message(id))?;
     let mut raster = Raster::with_accent(width, height, room.meta().accent);
-    if input.pokes.is_empty() {
+    if !input.gesture.is_empty() {
+        room.render_input(&mut raster, t, input.gesture);
+    } else if input.pokes.is_empty() {
         room.render(&mut raster, t);
     } else {
         room.render_poked(&mut raster, t, input.pokes);
@@ -3395,6 +3497,7 @@ mod tests {
                 era: "modern".to_string(),
                 vary: false,
                 pokes: vec!["2,0.5".to_string()],
+                gestures: Vec::new(),
             },
             &mut journey,
         );
@@ -3500,6 +3603,100 @@ mod tests {
         assert!(frame.contains("Times Tables"));
         assert!(frame.contains(numinous_core::room_action(room.as_ref())));
         assert!(frame.contains('*'));
+    }
+
+    #[test]
+    fn gesture_args_parse_and_reject_bad_events() {
+        use numinous_core::RoomInput;
+        assert_eq!(
+            super::parse_gesture_arg("down:0.3,0.4,0.1"),
+            Ok(RoomInput::PointerDown {
+                x: 0.3,
+                y: 0.4,
+                t: 0.1
+            })
+        );
+        assert_eq!(
+            super::parse_gesture_arg("cancel"),
+            Ok(RoomInput::PointerCancel)
+        );
+        assert!(super::parse_gesture_arg("wiggle:0.1,0.2,0.3").is_err());
+        assert!(super::parse_gesture_arg("down:1.5,0.2,0.3").is_err());
+        assert!(super::parse_gesture_arg("down:0.1,0.2").is_err());
+        let too_many: Vec<String> = (0..=numinous_core::MAX_ROOM_INPUTS)
+            .map(|_| "cancel".to_string())
+            .collect();
+        assert!(super::parse_gestures(&too_many).is_err());
+    }
+
+    #[test]
+    fn a_gesture_render_matches_the_poke_bridge_for_legacy_rooms() {
+        use numinous_core::RoomInput;
+        let gesture = [
+            RoomInput::PointerDown {
+                x: 0.3,
+                y: 0.7,
+                t: 0.25,
+            },
+            RoomInput::PointerMove {
+                x: 0.5,
+                y: 0.5,
+                t: 0.26,
+            },
+            RoomInput::PointerUp {
+                x: 0.5,
+                y: 0.5,
+                t: 0.27,
+            },
+        ];
+        let via_gesture = super::render_report(
+            "voronoi",
+            40,
+            20,
+            0.25,
+            false,
+            super::RoomRenderInput::with_gesture(0, &gesture),
+        )
+        .expect("gesture render succeeds");
+        let via_pokes = super::render_report(
+            "voronoi",
+            40,
+            20,
+            0.25,
+            false,
+            super::RoomRenderInput::new(0, &[(0.3, 0.7), (0.5, 0.5)]),
+        )
+        .expect("poke render succeeds");
+        assert_eq!(via_gesture, via_pokes, "the bridge answers identically");
+    }
+
+    #[test]
+    fn a_gesture_pins_the_pendulum_in_the_terminal_too() {
+        use numinous_core::RoomInput;
+        let held = [RoomInput::PointerDown {
+            x: 0.3,
+            y: 0.4,
+            t: 0.1,
+        }];
+        let early = super::render_report(
+            "double-pendulum",
+            50,
+            30,
+            0.2,
+            false,
+            super::RoomRenderInput::with_gesture(0, &held),
+        )
+        .expect("held render succeeds");
+        let late = super::render_report(
+            "double-pendulum",
+            50,
+            30,
+            0.9,
+            false,
+            super::RoomRenderInput::with_gesture(0, &held),
+        )
+        .expect("held render succeeds");
+        assert_eq!(early, late, "a pinned bob ignores the clock in the CLI too");
     }
 
     #[test]
