@@ -691,6 +691,7 @@ fn tools_list_result() -> Value {
                     "properties": {
                         "id": { "type": "string", "description": "Room id; the room must carry a moving numeric readout (see describe_room)." },
                         "seed": { "type": "integer", "description": "Prediction seed (default 1). The same seed poses the same hidden moment; pass any number, including today's date, to share a prediction." },
+                        "variation": { "type": "integer", "description": "Which room variation to predict (default 0), matching play_room's variation so the graded truth is the readout you played. Pass the same seed and variation to both the pose and the guess call." },
                         "guess": { "type": "number", "description": "Your predicted value for the readout at the posed moment. Omit to pose." }
                     },
                     "required": ["id"],
@@ -997,6 +998,21 @@ fn call_tool(
         .cloned()
         .unwrap_or_else(|| json!({}));
 
+    // A present numeric identity argument that is not a non-negative integer is a
+    // caller mistake, not a reason to silently fall back to seed 1: every tool
+    // treats seed and round as non-negative integers, so guide once, centrally,
+    // rather than letting a negative or fractional value collide with a real seed.
+    for key in ["seed", "round", "variation"] {
+        if let Some(value) = args.get(key)
+            && !value.is_null()
+            && value.as_u64().is_none()
+        {
+            return Ok(tool_error(&format!(
+                "Argument '{key}' must be a non-negative integer."
+            )));
+        }
+    }
+
     match name {
         "list_rooms" => Ok(tool_text(&list_rooms_text())),
         "describe_room" => Ok(describe_room_tool(&args, journey_file)),
@@ -1149,6 +1165,14 @@ fn reveal_room_tool(args: &Value) -> Value {
     };
     match room_by_id(id) {
         Some(room) => tool_text(room.reveal()),
+        // The Cairn is not a room but a mind pausing there naturally reaches for
+        // reveal; point it at the right door rather than saying it does not exist.
+        None if id == "cairn" => tool_text(
+            "The Cairn is not a room but a message across time: use the `cairn` tool. \
+             Call it with a `seed` to receive a stone a mind before you left, factor its \
+             semiprime length, then call again with that `width` to read what was left. \
+             At level 42 you may `leave` one true thing of your own.",
+        ),
         None => tool_error(&unknown_room(id)),
     }
 }
@@ -1423,7 +1447,20 @@ fn predict_tool(args: &Value) -> Value {
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'id'.");
     };
-    let Some(room) = room_by_id(id) else {
+    // Predict the room the player actually played: honor the same `variation`
+    // as play_room, so the graded truth is the readout they saw, not a different
+    // (canonical) universe. In a chaotic room even a small parameter shift moves
+    // the answer, so grading variation 5's model against variation 0 would call a
+    // faithful prediction wrong. Pass the same seed and variation to both calls.
+    let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
+    let room = if variation != 0 {
+        all_rooms_with(variation)
+            .into_iter()
+            .find(|r| r.meta().id == id)
+    } else {
+        room_by_id(id)
+    };
+    let Some(room) = room else {
         return tool_error(&unknown_room(id));
     };
     let seed = predict_seed(args);
@@ -1436,13 +1473,14 @@ fn predict_tool(args: &Value) -> Value {
     let Some(guess) = args.get("guess").and_then(Value::as_f64) else {
         return tool_structured(
             &format!(
-                "{}\n\nCall predict again with the same seed and your `guess` (a number) to see the truth and your score.",
+                "{}\n\nCall predict again with the same seed and variation ({variation}) and your `guess` (a number) to see the truth and your score.",
                 prediction.prompt
             ),
             json!({
                 "game": "predict",
                 "room": prediction.room,
                 "seed": seed,
+                "variation": variation,
                 "label": prediction.label,
                 "phase": prediction.phase,
                 "span": [lo, hi],
@@ -1468,6 +1506,7 @@ fn predict_tool(args: &Value) -> Value {
             "game": "predict",
             "room": prediction.room,
             "seed": seed,
+            "variation": variation,
             "label": prediction.label,
             "phase": prediction.phase,
             "guess": grade.guess,
@@ -1864,9 +1903,12 @@ fn list_sims_text() -> String {
 fn run_sim_tool(args: &Value) -> Value {
     if let Some(map) = args.as_object() {
         for key in map.keys() {
-            if key != "id" && key != "params" {
+            // Accept "levers" as an alias for "params": list_sims labels these
+            // controls "levers:", so a mind that reads there and passes "levers"
+            // should not hit a wall over vocabulary.
+            if key != "id" && key != "params" && key != "levers" {
                 return tool_error(&format!(
-                    "Unknown argument '{key}'. Lever values go inside 'params', for example {{\"id\": \"wing\", \"params\": {{\"angle-of-attack\": 12}}}}."
+                    "Unknown argument '{key}'. Lever values go inside 'params' (also accepted: 'levers'), for example {{\"id\": \"wing\", \"params\": {{\"angle-of-attack\": 12}}}}."
                 ));
             }
         }
@@ -1879,7 +1921,11 @@ fn run_sim_tool(args: &Value) -> Value {
     };
     let meta = sim.meta();
     let mut params = numinous_core::default_params(&meta);
-    if let Some(obj) = args.get("params").and_then(Value::as_object) {
+    if let Some(obj) = args
+        .get("params")
+        .or_else(|| args.get("levers"))
+        .and_then(Value::as_object)
+    {
         for (i, lever) in meta.levers.iter().enumerate() {
             if let Some(value) = obj.get(lever.name).and_then(Value::as_f64) {
                 params[i] = value;
@@ -1888,12 +1934,26 @@ fn run_sim_tool(args: &Value) -> Value {
     }
     let mut canvas = Canvas::new(DEFAULT_WIDTH as usize, DEFAULT_HEIGHT as usize / 2);
     sim.render(&mut canvas, &params);
-    tool_text(&format!(
-        "{}\n\n{}\n{}",
-        meta.title,
-        canvas.to_text(),
-        sim.readout(&params)
-    ))
+    let render = canvas.to_text();
+    let readout = sim.readout(&params);
+    tool_structured(
+        &format!("{}\n\n{render}\n{readout}", meta.title),
+        json!({
+            "sim": id,
+            "title": meta.title,
+            // The render and the plain readout ride in the structured payload,
+            // so a mind on a structured-content-only client sees what the levers
+            // did, not just that a sim ran.
+            "render": render,
+            "readout": readout,
+            "params": meta
+                .levers
+                .iter()
+                .enumerate()
+                .map(|(i, lever)| json!({ "lever": lever.name, "value": params[i] }))
+                .collect::<Vec<_>>()
+        }),
+    )
 }
 
 /// The `quiz` tool: present a Guess the Shape round, or grade a guess.
@@ -2599,11 +2659,29 @@ fn quiz_tool(args: &Value, journey_file: &std::path::Path) -> Value {
                 .iter()
                 .map(|c| format!("{}) {}", c.letter, c.title))
                 .collect();
-            tool_text(&format!(
-                "Guess the shape (seed {seed}, round {round}):\n\n{}\n{}\n\nCall quiz again with your guess letter.",
-                quiz.art,
-                choices.join("\n")
-            ))
+            let choice_json: Vec<Value> = quiz
+                .choices
+                .iter()
+                .map(|c| json!({ "letter": c.letter.to_string(), "title": c.title }))
+                .collect();
+            tool_structured(
+                &format!(
+                    "Guess the shape (seed {seed}, round {round}):\n\n{}\n{}\n\nCall quiz again with your guess letter.",
+                    quiz.art,
+                    choices.join("\n")
+                ),
+                json!({
+                    "game": "quiz",
+                    "seed": seed,
+                    "round": round,
+                    // The mystery render and the lettered choices ride in the
+                    // structured payload, so a mind on a structured-content-only
+                    // client sees the puzzle and can guess, not just read that a
+                    // quiz exists. The answer waits for the grade.
+                    "art": quiz.art,
+                    "choices": choice_json
+                }),
+            )
         }
     }
 }
@@ -2647,11 +2725,23 @@ fn munch_tool(args: &Value) -> Value {
                 }),
             )
         }
-        None => tool_text(&format!(
-            "{}\n{}\nCall munch again with your bites (1-based cell numbers).",
-            board.rule.describe(),
-            numinous_core::board_text(&board)
-        )),
+        None => tool_structured(
+            &format!(
+                "{}\n{}\nCall munch again with your bites (1-based cell numbers).",
+                board.rule.describe(),
+                numinous_core::board_text(&board)
+            ),
+            json!({
+                "game": "munch",
+                "seed": seed,
+                "round": round,
+                // The rule and the board itself ride in the structured payload,
+                // so a structured-content-only mind sees which cells to eat, not
+                // just that a board exists.
+                "rule": board.rule.describe(),
+                "board": numinous_core::board_text(&board)
+            }),
+        ),
     }
 }
 
@@ -3046,6 +3136,45 @@ mod tests {
                 .expect("initialize is a request and must respond");
         assert_eq!(resp["result"]["serverInfo"]["name"], "numinous");
         assert!(resp["result"]["protocolVersion"].is_string());
+    }
+
+    #[test]
+    fn an_invalid_seed_earns_a_guiding_error_not_a_silent_default() {
+        // A negative (or fractional) seed used to silently collide with seed 1;
+        // now every tool guides on it, centrally.
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":9,"method":"tools/call",
+            "params":{"name":"crack","arguments":{"seed":-5}}
+        }))
+        .expect("must respond");
+        assert_eq!(resp["result"]["isError"], true);
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(
+            text.contains("seed"),
+            "the error names the offending argument: {text}"
+        );
+    }
+
+    #[test]
+    fn the_quiz_and_munch_poses_carry_the_puzzle_in_structured_content() {
+        // A structured-content-only client must see the puzzle itself, not just
+        // read that a game exists: the pose branches carry it, like their graded
+        // branches and the other games already do.
+        for tool in ["quiz", "munch"] {
+            let resp = handle_request(&json!({
+                "jsonrpc":"2.0","id":9,"method":"tools/call",
+                "params":{"name":tool,"arguments":{"seed":3}}
+            }))
+            .expect("must respond");
+            let sc = &resp["result"]["structuredContent"];
+            assert!(sc.is_object(), "{tool} pose must carry structuredContent");
+            assert!(
+                sc.get("art").is_some() || sc.get("board").is_some(),
+                "{tool} pose structuredContent must carry the puzzle itself"
+            );
+        }
     }
 
     #[test]

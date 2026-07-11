@@ -23,7 +23,7 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 941 tests, locked build, Windows verify, 91.17% region cover, and 90.70% line cover all green.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 947 tests, locked build, Windows verify, 91.17% region cover, and 90.72% line cover all green.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -41,6 +41,7 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 - **Done (app hardening slice):** app-local play state plus quiz deal/answer flow now live in `faces/app/src/play.rs`, pure game-screen rendering lives in `faces/app/src/game_draw.rs`, room chrome plus arrival-card hinting live in `faces/app/src/hud.rs`, help, journey, and banner overlays live in `faces/app/src/overlays.rs`, transient feedback banner construction and ticking live in `faces/app/src/feedback.rs`, shared in-window Munch grid, Nim heap/take, and Munch Arcade action controls live in `faces/app/src/controls.rs`, left-mouse mode decisions and pointer-state guards live in `faces/app/src/mouse_input.rs`, room navigation, re-deal, poke-history, drag-trail, and room-card tick helpers live in `faces/app/src/room_input.rs`, Studio text, parse, audio-spec, and curve drawing state live in `faces/app/src/studio_panel.rs`, explicit F9 hallway-test note capture lives in `faces/app/src/playtest.rs`, live-state PNG postcard export lives in `faces/app/src/postcard.rs`, and bounded radio cache discovery, open-handle WAV validation, live-position math, and track loading live in `faces/app/src/radio_cache.rs`. Room action copy is centralized in `numinous-core`: App arrival cards use touch-first fallback copy, while CLI live play and MCP room tools use neutral fallback copy. Tests cover shared game hit-test layout, raster output across quiz, Munch, Munch Arcade, Nim, every live Gauntlet stage, quiz daily seeding, no-repeat quiz history, answer acceptance, action-naming arrival cards, Studio chrome suppression, Studio panel editing and bounded drawing, cross-face action hints, shared Munch/Nim/arcade controls, room-input bounds, modal-safe pointer-state transitions, playtest-critical overlays, feedback banner copy/lifetimes, radio-volume banner retention, GPU/raster banner compositing, local playtest-note reports that align to the hallway-test prompts without collecting personal data, postcard PNGs that include pokes, the selected Visual Era, collision-safe filenames, bounded/sorted station cache discovery, low-sorted corrupt-track handling before the track cap, corrupt-track rejection, open-handle size rechecks, high-rate-device caps, non-wrapping live offsets, and app radio recovery after a bad cached file. The event-loop file is still a hotspot, but game rules remain in `crates/core` and the refactor is moving in small verified modules.
 - **Done (persistence hardening slice):** malformed Journey and score files now parse defensively: counters saturate, constellation dimensions are capped, `visited` plus `chosen` token sets are bounded and token-sane, duplicate Journey tokens do not consume the unique-token cap, score keys are length-bounded, and score tables cap unique entries. The maintenance posture remains that progress and score files are user-editable local text, so loaders must repair or ignore malformed data rather than panic or allocate without bound.
 - **Done (shared persistence writes):** App, CLI, and MCP now route Journey and score writes through shared core persistence helpers. Writes use a token-owned local lock, PID-aware stale-lock recovery, stale recovery-marker cleanup, merge-before-write behavior, bounded read-before-repair semantics, same-directory temp files, flush before commit, and a platform-aware replace path; tests cover concurrent Journey deltas, concurrent score records, short held-lock waits under instrumentation, stale deltas after explicit forget, oversized and invalid UTF-8 persistence files preserving the original bytes on write attempts, stale, malformed, and dead-process lock recovery, stale recovery-marker cleanup, current-process lock preservation, and lock drop ownership.
+- **Done (the keystone, the Cairn, and the chaos readouts):** the predict-then-reveal verb (MCP `predict`, Phase A of the Exceptional Path): commit a guess of a room's own status readout at a hidden moment, then meet the truth graded as a gap with a learning-progress band, a self-owned mirror that never posts a score. The graded `challenge` tool in two kinds (touch a target box, or land the readout on a number). The Cairn (MCP `cairn` plus the core `cairn` module and the repo-tracked `data/cairn.txt`): at level 42 a mind leaves one true thing, encoded Arecibo-style into a semiprime a future mind must factor to read. And tactile status readouts across the Chaos & Order flagships (Double Pendulum and Lorenz report the divergence of two nearby starts; the Logistic Map reports its Lyapunov exponent crossing from order into chaos), so eight rooms now pose predictions. See `CHANGELOG.md` for the full detail.
 - **Next, above everything (the founder's directive, July 2026):** **rooms become playable, not watchable, and no two catalog visits are the same.** The main substrate is live: rooms expose touch verbs through `Room::verb` (usually CLICK or DRAG), poked rendering through `render_poked`, and replayable per-visit variation through `all_rooms_with`, with the app/CLI/MCP passing seeds through. Game of Life now sows bounded newest-tail glider sparks into the live B3/S23 simulation before it evolves, L-System Garden now plants bounded newest-tail branches that also alter the rewritten grammar under segment and surface caps, Mandelbrot clicks now zoom bounded newest-tail dive patches around finite hand points under surface caps, Julia clicks now morph bounded local patches around finite hand points and mark the touched constant, Quine clicks now place bounded newest-tail recursive copies centered on clicked cells with first-frame geometry beyond the hand marker, Strange Loop clicks now shift the existing recursive inner loop and its descendants without adding an extra echo tree, Lorenz clicks now seed bounded shadow storms from the clicked x-z projection so the path diverges through the system itself, Arecibo clicks now try bounded decoded widths with efficient cell-proportional overlays, Barnsley Fern clicks now plant bounded screen-faithful IFS starts at the clicked cell before growth, Buffon's Needle clicks now drop a bounded screen-faithful needle centered on the clicked cell while preserving the estimator API, Golden Angle clicks now plant bounded local phyllotaxis patches centered on visible cells with seeded variation, Collatz clicks now choose bounded actual starting values from both hand coordinates before drawing the orbit, Epicycles clicks now draw bounded mini Fourier traces whose phase follows the hand point, Logistic Map clicks now seed finite population orbits into the selected growth-rate column, Random Walk clicks plant bounded, replayable walkers at the hand point, Voronoi clicks drop bounded wells that genuinely renegotiate borders, Chaos Game clicks add bounded attractor corners that change the fractal before marker plotting, Langton's Ant clicks replay bounded pre-simulation cell flips through the ant's own rules, Cellular Automata clicks replay bounded spacetime cell flips before future rows evolve, and Prime Spirals clicks highlight the actual Ulam diagonals through the selected cell. Deepen more room-specific responses, validate arrival-card clarity in human playtests, and replace one-shot pokes with richer held input where the math needs state.
   The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke trait, order of work). Original poke directive: **rooms become playable, not watchable.** Reinforced July 2026: players cannot tell what, if anything, a room responds to; every room's arrival card must name its verb. And **Munch becomes a real arcade game**: a muncher character you steer on the board, wandering troggle-like enemies to dodge (our own creatures, the Order's lesser spirits), eat-while-hunted pacing. The Number Munchers NAME and its specific characters are MECC's (now owned elsewhere); the underlying mechanics (grid, rules, eat-the-right-numbers) are not copyrightable, so we keep our own name (Munch), our own creatures, our own art, and owe nothing. Every room gains a poke: the math responds to your hands. Click the Lorenz attractor and a new butterfly drops where you clicked and diverges before your eyes; sow glider sparks into Game of Life and watch them live or die by the same rules as the soup; re-drop the double pendulum from the hand's point; plant walkers in the random walk; drop a well into the Voronoi desert and watch every border renegotiate; steer the ant. Design: the `Room` trait gains an optional `poke(x, y)` (normalized coordinates) plus optional per-room state the app owns, keyboard Space/click as the universal "touch it" verb, and the arrival card teaches the poke, not the theory ("CLICK ANYWHERE: DROP A STORM"). The heart is play; the learning rides along uninvited. A kid should be able to *do something* to every screen and see the math answer back.
 - **Designed (the founder's directive, July 2026): The Next Wave of rooms.** Twenty-nine new room designs across four aspects (physics, deep mathematics, fun-first, cosmic), produced by four parallel creative research passes and recorded in `ROOMS.md` under "The Next Wave": each with its rule, gasp, verb, sonification, reveal, and honest CPU feasibility, deduplicated and ranked by wow-to-build. The first eight (Sandpile, Chladni Figures, Ripple Tank, Coffee Cup, Ford Circles, Zeta Walk, Starbow, Slingshot) are all wow-5 for build-1-to-2 and add cross-room resonances the catalog lacks (the cardioid triangle, the Lorentz pair). Designed, not built: the review-stack rule stands, each room faces the full Definition of Done, and every non-textbook reveal claim carries a source pending mathematician sign-off.
@@ -125,146 +126,30 @@ migration target only after the final spec lands; until then, keep
 implementation-detail tracking in working notes rather than churning the product
 scope.
 
-Cycle 55 resolved the Quine input-contract carryover: clicks now place bounded
-newest-tail recursive copies centered on clicked cells, first-frame pokes draw
-copy geometry around the hand marker, all four clamped corners stay visible,
-non-finite phase falls back safely, and hostile `Surface` dimensions plus
-aspect values stay bounded. The full verify gate was green at 803 tests, 89.50%
-region cover, and 88.99% line cover.
-
-Cycle 56 continued app hotspot reduction: `faces/app/src/play.rs` now owns the
-daily session seed, quiz deal ramp, no-repeat quiz history, and answer
-acceptance, while `faces/app/src/main.rs` keeps Journey side effects and mode
-coordination. The full verify gate is green at 809 tests, 89.50% region cover,
-and 89.00% line cover.
-
-Cycle 57 added a dedicated Logistic Map poke: clicks seed bounded finite
-population orbits into the bifurcation diagram, with x choosing the growth rate
-and y choosing the starting population. The full verify gate is green at 814
-tests, 89.60% region cover, and 89.09% line cover.
-
-Cycle 59 delivered the structured-deltas half of stack item five: poked
-`play_room` calls now return a `delta` in `structuredContent` (cells changed,
-ink added/removed/reshaped, total cells, changed-region bounding box) diffing
-the poked frame against the unpoked frame at the same phase, size, and
-variation, with a matching `Touch:` line in the render text. The diff itself is
-a core `Canvas::delta` primitive with its own invariant tests. Graded per-room
-challenge metrics (pose + verify) are the remaining half of stack item five.
-
-Cycle 60 delivered that remaining half: a core challenge module
-(`pose_challenge`/`grade_challenge`) poses a deterministic seeded touch goal
-for every room with a verb (change at least K cells inside a target box on the
-standard frame) and grades attempts as metrics, not pass/fail (cells in
-target, cells changed, threshold fraction, centroid distance, 0-100 score),
-per REVIEW ruling 13. Checker review reshaped the design before close: target
-boxes are placed on the room's measured response (densest box over seeded
-probe hands across several phases), so every posed challenge is winnable by
-construction and a registry-wide test proves the witness; and challenge seeds
-are always explicit rather than clock-derived, so the graded reply and the
-recorded progress can never straddle midnight. The MCP `challenge` tool (the
-27th) poses and grades it, records play/win through the shared Journey, and
-posts graded scores to the shared table.
-
-Cycle 75 delivered the room-specific depth beyond that spatial baseline: the
-challenge tool's parameter kind (`kind: "parameter"`) targets the phenomenon's
-own parameter, "land TILT within 0.02 of 0.31" style, completing REVIEW
-ruling 13. Posing samples the room's status readout across the sweep and
-draws the target from the sampled values themselves, so every posed goal is
-reachable by construction; the attempt is the phase, and grading reads the
-same status line the player sees, reporting value, distance, tolerance, and
-a 0-100 score across the readout's observed span. Rooms without a moving
-numeric readout decline with a guiding error.
-
-Cycle 61 laid the gesture substrate for stack item two: core `RoomInput`
-events (pointer down/move/up stamped with the room phase at which each
-happened, cancel, wheel, key) with `Room::render_input`, whose default
-translates pointer-down and pointer-move points into legacy pokes (a drag
-paints its trail, matching the shape of today's App behavior) so all 30
-catalog rooms answer gestures unchanged by construction; a catalog-wide
-sweep proves no-panic determinism under mixed trails, and gesture/poke
-equivalence is pinned directly for a representative room. Per-event
-phase and the cancel variant came out of an independent face-fit review:
-held semantics are timing questions, and gestures can end without a lift.
-Held semantics per room (pull-and-release Double Pendulum, dial drags) and
-face wiring are the next slices.
-
-Cycle 65 gave Lissajous its verb (CLICK: TUNE THE INTERVAL): clicks tune both
-oscillators to whole numbers so every figure the hand makes is an exact,
-closed musical interval, with older intervals lingering dim and a live X:Y
-status readout.
-
-Cycle 66 gave Harmonograph its verb (CLICK: RETUNE THE PENDULUMS): the hand
-holds the machine's two real knobs, x setting the detune (how open the weave
-blooms, wider than the sweep reaches) and y the damping (a slow ghost or a
-quick-dying rose), with older tunings lingering dim and a DETUNE status
-readout.
-
-Cycle 68 gave Mobius its verb (CLICK: PAINT THE EDGE): the brush lands on the
-nearest point of the single edge and the paint spreads with the sweep, flowing
-around the half twist onto the "other" edge without ever jumping: the room's
-one-sidedness demonstrated by the player's own paint.
-
-Cycle 69 gave Zeno's Square its verb (CLICK: SEND THE RUNNER): every click is
-a Zeno journey, each hop halving the remaining distance to the clicked target,
-laid by the sweep so the hops visibly crowd the arrival that Zeno said could
-never come.
-
-Cycle 71 gave The Pour its verb (CLICK: READ THE SLOPE): the probe draws the
-fundamental theorem at the clicked x, a plumb line from total to vessel and a
-tangent on the total curve whose slope is exactly the vessel's height below,
-tested to twelve decimal places.
-
-Cycle 73 gave agents hands with time in them: MCP `play_room` accepts a
-`gesture` pointer trail (phase-stamped down/move/up/cancel events, bounded,
-exclusive with `pokes`), so a digital mind can pin the pendulum, pull, and
-fling with measured velocity, statelessly and replayably; legacy rooms answer
-through the same bridge the App uses, tested delta-identical to pokes.
-
-Cycle 74 completed gesture parity across all three faces: the CLI's
-`render --gesture down:x,y,t` (move, up, and bare cancel too) replays the
-same phase-stamped trails through the same core path, so a pinned pendulum
-ignores the clock in the terminal exactly as it does in the window and over
-the wire. Every face now speaks the complete input vocabulary.
-
-Cycle 72 gave Slope Rider its verb (CLICK: DROP A RIDER) and completed the
-catalog: every one of the 30 rooms now answers the hand. Riders drop onto the
-hill with true tangent boards and tick the tilt trace below; The Pour and
-Slope Rider stand as the Change wing's calculus pair, totals and rates, both
-under the hand. The founder's poke directive, "rooms become playable, not
-watchable," is structurally complete; what remains for the every-room-slaps
-gate is human playtest evidence and per-room depth where sessions ask for it.
-
-Cycle 62 delivered those slices for the first room: the App records gestures
-as phase-stamped `RoomInput` events beside the poke trail (sharing its
-decimation, so legacy rooms provably see identical hands) and renders through
-`render_input`; a shared core `latest_gesture` reading summarizes trails as
-held, released-with-velocity, or cancelled; and Double Pendulum gains true
-held semantics: hold pins the bob, release drops from there, a flick throws
-with measured angular momentum, and a cancel drops gently. The pendulum's
-cross-face verb stays `CLICK: RE-DROP` until CLI and MCP accept gesture
-trails; a tap through the gesture path is a click re-drop with zero fling
-(its run clock starts at the lift rather than at phase zero), so the copy
-stays true on every face.
-
-Cycle 54 resolved the Strange Loop semantics gap from the prior paused pass:
-clicks now shift the existing first inner recursion and its descendants instead
-of overlaying an extra echo tree. Focused tests prove both the bounded input
-contract and the geometry change beyond the click marker.
+The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
+increment in full. This roadmap stays forward-looking: what is done (above),
+where we stand (next), and the ordered path to 1.0.
 
 ## Where we stand (July 2026): the honest scorecard
 
 Scored against the nine 1.0 gates below, the build sits at roughly **0.6**:
 the structure is complete (30 catalog rooms across 10 wings plus hidden content,
-11+ games on four shapes of play, the full RPG spine, 29 MCP tools, both music engines live, 928
-tests) and the remaining distance is quality density, not missing systems.
+11+ games on four shapes of play, the full RPG spine, 29 MCP tools, both music engines live, 941
+tests) and the remaining distance is quality density, not missing systems. The
+needle has moved *within* that 0.6 since the last scoring, the keystone verb is
+now real (predict-then-reveal, Phase A of the Exceptional Path), the Cairn is
+built, and the Chaos & Order flagships put chaos on a tactile readout, but the
+headline holds because the three hardest 1.0 gates are still untouched: **real
+human playtests with strangers, a build proven off Windows, and the HDR glow
+pipeline.** Those three are the distance between 0.6 and 1.0.
 
 | 1.0 gate | Estimate | What is missing |
 |---|---|---|
 | Complete coherent collection | 85% | Full Map open boxes (hexaflexagons, Hat tile, more Open Problems) |
-| Every room slaps | 65% | substrate is live; room-specific depth, held input, and playtest clarity remain |
+| Every room slaps | 67% | substrate is live and the keystone predict verb landed (eight rooms pose predictions, the chaos trilogy reads its own divergence); room-specific depth, held input, and playtest clarity remain |
 | Full sensory identity | 78% | the visualizer, state-dependent motif tension, era grain beyond phosphor; and the honest finding (July 2026): the documented HDR glow pipeline (bloom, persistence, tonemap) is not yet built, rooms fake glow via additive 8-bit raster (see `SYNESTHESIA.md`) |
 | Three faces genuinely good | 85% | app module refactor continues; play and quiz flow, drawing, overlays, controls, pointer decisions, postcards, and radio cache are split |
-| Meta and lore alive | 90% | subtle and working |
+| Meta and lore alive | 92% | subtle and working; the predict keystone and the Cairn (the contribution ethos made a room) are now built |
 | Real creative surface | 68% | Studio works; first CLI `.num` save/open path exists; no app reopen, gallery, fork/remix, or full share loop yet |
 | Rigor provable | 75% | never built off Windows; accessibility not started |
 | Plays like a game | 80% | one-more-run pull needs real human playtests |

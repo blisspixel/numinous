@@ -526,10 +526,14 @@ mod tests {
 
     #[test]
     fn sound_uses_the_default_phrase() {
-        // Galton does not override sound, so it gets the default short phrase
-        // (a root-fifth-octave arpeggio), not a single held tone.
-        let spec = GaltonBoard::new().sound(0.0);
-        assert_eq!(spec.notes.len(), 3);
+        // Galton does not override sound, so it gets the default: its own motif
+        // played note for note, so the voice matches the notation listen_room
+        // reports, not a generic fallback or a single held tone.
+        let room = GaltonBoard::new();
+        let spec = room.sound(0.0);
+        let motif = room.motif().expect("galton has a motif");
+        assert_eq!(spec.notes.len(), motif.line.len());
+        assert!(spec.notes.len() > 1, "a phrase, not a blip");
         // The notes are staggered in time, a phrase and not a chord.
         assert!(spec.notes[1].start > spec.notes[0].start);
     }

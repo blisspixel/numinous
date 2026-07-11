@@ -72,6 +72,30 @@ impl SoundSpec {
         }
     }
 
+    /// Play a motif's phrase note for note, so the sound a room makes is the
+    /// same phrase `listen_room` reports as its notation, and each room sounds
+    /// like itself instead of a shared fallback. Timing mirrors `Motif::pattern`
+    /// (eighth notes at the motif's tempo).
+    #[must_use]
+    pub fn from_motif(motif: &crate::motifs::Motif) -> Self {
+        let step = 60.0 / motif.tempo.max(1) as f32 / 2.0;
+        let notes: Vec<Note> = motif
+            .line
+            .iter()
+            .enumerate()
+            .map(|(i, &degree)| Note {
+                freq: crate::chiptune::pitch(motif.root, degree),
+                start: i as f32 * step,
+                dur: step * 0.9,
+                amp: 0.25,
+            })
+            .collect();
+        Self {
+            duration: (motif.line.len() as f32 * step).max(step),
+            notes,
+        }
+    }
+
     /// Several simultaneous tones (a chord) for `duration` seconds.
     #[must_use]
     pub fn chord(freqs: &[f32], duration: f32, amp: f32) -> Self {

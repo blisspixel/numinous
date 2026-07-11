@@ -12,9 +12,15 @@ use crate::surface::Surface;
 
 /// Fixed seed so the fern grows the same way every time.
 const SEED: u64 = 0xFE87_0000_5EED_1234;
-/// Points always drawn, and the extra points `t` adds.
-const BASE_POINTS: usize = 3_000;
-const SWEEP_POINTS: usize = 25_000;
+/// Points drawn per canvas cell at the start of the sweep, and the extra
+/// per-cell points `t` adds. Scaling to the canvas keeps the density constant
+/// across resolutions: a coarse ASCII grid gets a sparse dusting that leaves the
+/// fronds and the negative space between them visible (a filled `#` blob is not a
+/// fern), while a high-res raster gets enough points to fill the plant smoothly.
+const BASE_POINTS_PER_CELL: f64 = 0.35;
+const SWEEP_POINTS_PER_CELL: f64 = 0.9;
+/// A floor so a tiny canvas still grows a recognizable plant.
+const MIN_POINTS: usize = 1_200;
 const FERN_X_MIN: f64 = -2.5;
 const FERN_X_SPAN: f64 = 5.5;
 const FERN_Y_MAX: f64 = 10.0;
@@ -38,9 +44,12 @@ impl BarnsleyFern {
         Self { seed }
     }
 
-    /// How many points to draw at phase `t`.
-    fn points_for(t: f64) -> usize {
-        BASE_POINTS + (Self::phase_for(t) * SWEEP_POINTS as f64) as usize
+    /// How many points to draw at phase `t` on a canvas of `cells` cells. Scaled
+    /// to the canvas so the fern's density (and so its legible structure) is the
+    /// same whether it is drawn on an 80-column terminal or a full-res window.
+    fn points_for(t: f64, cells: usize) -> usize {
+        let per_cell = BASE_POINTS_PER_CELL + Self::phase_for(t) * SWEEP_POINTS_PER_CELL;
+        ((cells as f64 * per_cell) as usize).max(MIN_POINTS)
     }
 
     fn phase_for(t: f64) -> f64 {
@@ -126,7 +135,7 @@ impl Room for BarnsleyFern {
         }
         let mut rng = SplitMix64::new(SEED ^ self.seed);
         let (mut x, mut y) = (0.0_f64, 0.0_f64);
-        for _ in 0..Self::points_for(t) {
+        for _ in 0..Self::points_for(t, width * height) {
             let (nx, ny) = next_point(x, y, rng.next_f64());
             x = nx;
             y = ny;
@@ -222,18 +231,24 @@ mod tests {
 
     #[test]
     fn more_phase_grows_the_fern() {
-        assert!(BarnsleyFern::points_for(1.0) > BarnsleyFern::points_for(0.0));
+        assert!(BarnsleyFern::points_for(1.0, 4_000) > BarnsleyFern::points_for(0.0, 4_000));
+    }
+
+    #[test]
+    fn a_bigger_canvas_draws_proportionally_more_points() {
+        // Density is scaled to the canvas, so structure stays legible at any size.
+        assert!(BarnsleyFern::points_for(0.5, 40_000) > BarnsleyFern::points_for(0.5, 4_000));
     }
 
     #[test]
     fn nonfinite_phase_falls_back_to_first_frame() {
         assert_eq!(
-            BarnsleyFern::points_for(f64::NAN),
-            BarnsleyFern::points_for(0.0)
+            BarnsleyFern::points_for(f64::NAN, 4_000),
+            BarnsleyFern::points_for(0.0, 4_000)
         );
         assert_eq!(
-            BarnsleyFern::points_for(f64::INFINITY),
-            BarnsleyFern::points_for(0.0)
+            BarnsleyFern::points_for(f64::INFINITY, 4_000),
+            BarnsleyFern::points_for(0.0, 4_000)
         );
     }
 

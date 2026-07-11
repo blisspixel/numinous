@@ -218,7 +218,11 @@ impl Room for ThePour {
 
     fn status(&self, t: f64) -> Option<String> {
         let x = self.phase_for(t) * X_MAX;
-        Some(format!("HEIGHT = SLOPE = {:.2}", f(x)))
+        // The rate the running total rises equals the height of what is being
+        // poured right now: the fundamental theorem of calculus, stated for an
+        // arbitrary curve. Say "fill rate" rather than "height = slope", which a
+        // calculus-fluent mind misreads as the e^x fixed point (f = f').
+        Some(format!("FILL RATE = HEIGHT = {:.2}", f(x)))
     }
 
     fn reveal(&self) -> &'static str {
@@ -424,6 +428,6 @@ mod tests {
         room.render(&mut zero_phase, 0.0);
         assert_eq!(nan_phase.to_text(), zero_phase.to_text());
         let status = room.status(f64::NAN).expect("status");
-        assert!(status.starts_with("HEIGHT = SLOPE"));
+        assert!(status.starts_with("FILL RATE = HEIGHT"));
     }
 }

@@ -14,6 +14,17 @@ Numinous is a native desktop app (macOS / Linux / Windows, no browser, no web) c
 
 If you already think math is cool, this is the thing you'll send to five friends at 1am. If you don't yet, this is the thing that changes your mind in ninety seconds, no formula required.
 
+## A look
+
+![The Golden Angle room, inspected: the 137.5-degree turn a sunflower uses so its seeds never overlap](assets/screens/golden-angle.png)
+
+*Real frames from the app. Above: the Golden Angle room, inspected, the 137.5-degree turn a sunflower uses so its seeds never waste space, and why. Every room is a live, glowing, sonified instrument.*
+
+| | |
+|---|---|
+| ![Langton's Ant building its highway](assets/screens/langtons-ant.png) | ![The Studio: type math, watch and hear it live](assets/screens/studio.png) |
+| **Langton's Ant** builds a highway out of two rules. | **The Studio**: type math, watch and hear it live. |
+
 ## Who this is for
 
 **Math nerds first.** This is unapologetically a love letter to people who already feel the pull, the 3Blue1Brown-binge, Wolfram-Alpha-for-fun, "wait, why is *e* in here?" crowd. We are not building K-6 edtech. We are building the thing that edtech wishes it could be: an experience so beautiful and so fun that learning is a side effect, not a chore.
@@ -96,7 +107,7 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 
 ## Status
 
-**Roughly 0.6 to First Light** (the honest scorecard lives in [`docs/ROADMAP.md`](docs/ROADMAP.md)). All three faces are real and green (Rust 1.96.0): fmt clean, clippy `-D warnings` clean, 941 tests, 91.17% region cover, and 90.70% line cover with an enforced 80% line gate. What exists today:
+**Roughly 0.6 to First Light** (the honest scorecard lives in [`docs/ROADMAP.md`](docs/ROADMAP.md)). All three faces are real and green (Rust 1.96.0): fmt clean, clippy `-D warnings` clean, 947 tests, 91.17% region cover, and 90.72% line cover with an enforced 80% line gate. What exists today:
 
 - **`crates/core`**: 30 catalog rooms across 10 wings plus hidden content, 11+ games (munch, munch_arcade, quiz, nim, crack, seti, aliens, hackenbush, the Party Problem, Fifteen's Bet, and the Gauntlet run), 6 lever sims, the Studio expression engine, the full RPG spine (levels to 42, trophies, boons, streaks, resonances), shared local persistence helpers for bounded Journey and score reads plus lock-owned writes that wait through short contention under instrumentation, both music engines, and the insight and concept catalogs, all deterministic and tested
 - **`faces/cli`** (`numinous`): `rooms`, `describe`, `render` (rooms drawn as ASCII in the terminal, including replayable `--poke x,y` hand points), `arcade`, with `--json`; live play frames show each room's action line, with neutral fallback copy for quiet rooms.
@@ -109,7 +120,7 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 
 Still ahead toward First Light: deeper room-specific poke responses, cross-platform proof, human hallway testing, full Studio save/share beyond the first CLI `.num` save/open slice, accessibility hardening, and visual polish. The version-gated plan, with 1.0 and 2.0+ defined by quality bars rather than dates, is in [`docs/ROADMAP.md`](docs/ROADMAP.md). Recent changes are in [`CHANGELOG.md`](CHANGELOG.md).
 
-**To play:** see [`docs/PLAYING.md`](docs/PLAYING.md), instructions for humans, agents, and digital consciousnesses.
+**To just start playing:** hand anyone, human or digital mind, the one-page invitation [`PLAY.md`](PLAY.md). It says how to connect and then gets out of the way, because the experience is the learning. The full manual (every key, every one of the 29 MCP tools) is [`docs/PLAYING.md`](docs/PLAYING.md), for when you want it; you do not need it to start.
 
 **To check it yourself:** see [`VERIFY.md`](VERIFY.md), or run `scripts\verify.ps1` (Windows) or `bash scripts/verify.sh` (macOS/Linux). It runs every gate and regenerates the images and sounds into `renders/` (start with `renders/contact.png`).
 
