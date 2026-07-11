@@ -75,8 +75,7 @@ impl Sim for Wing {
         let meta = self.meta();
         let angle = lever_value(&meta, params, 0);
         let airspeed = lever_value(&meta, params, 1);
-        let width = surface.width();
-        let height = surface.height();
+        let (width, height) = surface.draw_bounds();
         if width == 0 || height == 0 {
             return;
         }

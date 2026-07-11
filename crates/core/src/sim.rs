@@ -58,11 +58,19 @@ pub fn default_params(meta: &SimMeta) -> Vec<f64> {
 #[must_use]
 pub fn lever_value(meta: &SimMeta, params: &[f64], index: usize) -> f64 {
     let lever = meta.levers[index];
-    params
+    let value = params
         .get(index)
         .copied()
         .unwrap_or(lever.default)
-        .clamp(lever.min, lever.max)
+        .clamp(lever.min, lever.max);
+    // `f64::clamp` passes NaN straight through (NaN fails both comparisons), so
+    // a non-finite lever would otherwise reach a sim's readout as "NaN"/"inf".
+    // Fall back to the finite default, so every sim reads a real number.
+    if value.is_finite() {
+        value
+    } else {
+        lever.default
+    }
 }
 
 #[cfg(test)]
@@ -103,5 +111,16 @@ mod tests {
         assert_eq!(lever_value(&META, &[99.0], 0), 10.0); // clamped to max
         assert_eq!(lever_value(&META, &[], 0), 3.0); // fell back to default
         assert_eq!(lever_value(&META, &[5.0, -9.0], 1), -1.0); // clamped to min
+    }
+
+    #[test]
+    fn lever_value_rejects_non_finite_input() {
+        // clamp turns +/-inf into the max/min (both finite), but passes NaN
+        // straight through; the result must always be finite, and NaN falls back
+        // to the default so a sim can never read a "NaN" value.
+        assert_eq!(lever_value(&META, &[f64::NAN], 0), 3.0);
+        for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert!(lever_value(&META, &[bad], 0).is_finite());
+        }
     }
 }

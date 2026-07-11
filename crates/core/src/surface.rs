@@ -122,6 +122,17 @@ pub trait Surface {
         }
     }
 
+    /// The surface's width and height, each clamped to [`MAX_DIM`]. A room that
+    /// loops or allocates over the whole surface must use this, not the raw
+    /// `width()`/`height()`: a hostile `Surface` reporting a huge size would
+    /// otherwise drive unbounded work or overflow an allocation. Real surfaces
+    /// (`Canvas`, `Raster`) already clamp to `MAX_DIM`, so this is a no-op for
+    /// them and changes no visible output. Rooms that only plot bounded points do
+    /// not need it.
+    fn draw_bounds(&self) -> (usize, usize) {
+        (self.width().min(MAX_DIM), self.height().min(MAX_DIM))
+    }
+
     /// Mark a single point, clipping if out of bounds.
     fn plot(&mut self, x: i32, y: i32, mark: char);
 
@@ -246,5 +257,22 @@ mod tests {
     #[test]
     fn clip_segment_is_empty_for_a_zero_size_surface() {
         assert_eq!(clip_segment(0, 0, 5, 5, 0, 0), None);
+    }
+
+    #[test]
+    fn draw_bounds_clamps_a_hostile_surface_to_max_dim() {
+        let hostile = Counter {
+            w: usize::MAX,
+            h: usize::MAX,
+            plots: 0,
+        };
+        assert_eq!(hostile.draw_bounds(), (super::MAX_DIM, super::MAX_DIM));
+        // A real-sized surface is returned unchanged (a no-op for Canvas/Raster).
+        let ok = Counter {
+            w: 100,
+            h: 50,
+            plots: 0,
+        };
+        assert_eq!(ok.draw_bounds(), (100, 50));
     }
 }
