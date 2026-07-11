@@ -262,7 +262,7 @@ tests) and the remaining distance is quality density, not missing systems.
 |---|---|---|
 | Complete coherent collection | 85% | Full Map open boxes (hexaflexagons, Hat tile, more Open Problems) |
 | Every room slaps | 65% | substrate is live; room-specific depth, held input, and playtest clarity remain |
-| Full sensory identity | 78% | the visualizer, state-dependent motif tension, era grain beyond phosphor |
+| Full sensory identity | 78% | the visualizer, state-dependent motif tension, era grain beyond phosphor; and the honest finding (July 2026): the documented HDR glow pipeline (bloom, persistence, tonemap) is not yet built, rooms fake glow via additive 8-bit raster (see `SYNESTHESIA.md`) |
 | Three faces genuinely good | 85% | app module refactor continues; play and quiz flow, drawing, overlays, controls, pointer decisions, postcards, and radio cache are split |
 | Meta and lore alive | 90% | subtle and working |
 | Real creative surface | 68% | Studio works; first CLI `.num` save/open path exists; no app reopen, gallery, fork/remix, or full share loop yet |
@@ -284,6 +284,50 @@ tests) and the remaining distance is quality density, not missing systems.
 4. **The visualizer and full Studio save/share**: the two remaining promises; the first CLI `.num` save/open slice is real, but app reopen, gallery, fork/remix, and loop export are still owed.
 5. **Hardening**: app refactor into modules, accessibility pass, era grain,
    gamepad, Show crossfade.
+
+## The Exceptional Path (July 2026): the fan-out synthesis
+
+A six-way research fan-out (the awe engine, play and progression, sensory
+identity, digital minds, the creator platform, and pedagogy) converged on one
+architecture, distilled in `NORTH_STAR.md`. The headline: Numinous is not missing
+engines, it is missing one verb, a **prediction that meets a deterministic
+truth**, and one honest infrastructure gap, the documented HDR glow pipeline that
+is not yet built. The phased milestones below thread the six lanes into the gates
+above, in leverage order. They deepen what exists rather than jumping the
+"do not build twenty more rooms first" queue.
+
+- **Phase A, the keystone.** The prediction wager wired into a five-beat
+  engineered-aha reveal, on Times Tables first (the cardioid-to-Mandelbrot morph
+  as the worked example), with insight-collection gated on the generation act,
+  and the same predict-then-reveal verb exposed over MCP as compression progress
+  for digital minds. One mechanic seeds the understanding, curiosity, mastery,
+  and creation loops at once. Owner doc: `PEDAGOGY.md`. Moves "every room slaps"
+  and "meta and lore alive."
+- **Phase B, the glow pipeline.** The GPU post-stack (HDR bright-pass bloom,
+  ping-pong phosphor persistence, tonemap, the sample-lattice Era filter) as one
+  systemic pipeline every room inherits, then the Sensory Bus (one event stream,
+  both renderer and synth). Owner doc: `SYNESTHESIA.md`. Directly retires the
+  "full sensory identity" (78%) and "beautiful and honest" (75%) gaps, since the
+  documented look currently exists only on paper.
+- **Phase C, the game spine.** Constructions (a par, an elegance histogram, and a
+  ghost of your past self per room) and the Constellation redesigned as a
+  Rumor-Mode discovery map the daily route traverses. Owner docs:
+  `CONSTRUCTIONS.md`, `CONSTELLATION.md`. This is what makes "plays like a game"
+  (80%) real: a catalog you play through, not a gallery you wander.
+- **Phase D, the creator loop.** Close make-share-remix on the `.num` capsule:
+  app-side reopen, the room-manifest capsule, the one-button share bundle, a
+  local gallery with one-keystroke fork, and generous lineage. Owner doc:
+  `CREATOR.md`. Lifts "real creative surface" (68%) from a save path to a loop.
+- **Phase E, the catalog deepens.** The cheap-and-gorgeous classical-geometry and
+  sonification-first batch, the causal insight-chains, and the scope-flagship
+  (the Studio Function Painter). Owner doc: `ROOMS.md` (the Awe Engine wave).
+
+The standing anti-pattern all six lanes named, added to the always-on tracks:
+**nothing counts as learned, mastered, collected, or won without an act of
+generation.** Delight metrics (reveal-opens, dwell, shares) inform; a
+generation-based measure (a prediction, a construction, a self-explanation)
+decides. This is the single rule that keeps the whole plan clear of the checklist/
+XP-treadmill failure mode.
 
 ## 1.0 "First Light": the definition
 

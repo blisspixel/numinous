@@ -422,3 +422,111 @@ speed, loudness driving scale, so the shape is a creature moving to your
 music. Verb: DRAG UP AND DOWN: ADD DIMENSIONS. Ships with the visualizer
 workstream; the projection math (rotation in random 2-planes of R^n) is
 pure core and testable today.
+
+## The Awe Engine wave (July 2026): the cheap-and-gorgeous batch
+
+A third design pass (part of the "make it exceptional" fan-out, see
+`NORTH_STAR.md`) hunted specifically for the highest awe per unit build effort on
+the current deterministic ASCII-plus-raster engine, and for the catalog's blind
+spots: classical Euclidean and inversive geometry (zero rooms), sonification-
+first rooms (only pi-as-music), and one-line generative art at scale. Designed,
+not built; each still faces the Definition of Done and math sign-off. Ranked
+easy-first, since these are the batch to open the post-substrate content wave.
+
+**Tier S, buildable now, highest awe per build:**
+- **Recaman's Sequence, "The Jumper"** (Number, sonification-first): jump back by
+  n if you can, forward if you cannot, drawing each jump as an arc. A hypnotic
+  harp of nested arcs that is also the most beautiful sonification in mathematics,
+  hiding an open problem (852655 has never appeared in 10^230 terms; Sloane now
+  doubts it does). DRAG: SET THE STRIDE. Chains to Collatz.
+- **Truchet Tiles / 10 PRINT, "The Weave"** (Emergence): one tile, two rotations,
+  a coin flip per cell, endless mazes or interlocking loops from nothing. Retro-
+  perfect for the Teletype and 8-bit Eras. DRAG: PAINT THE BIAS.
+- **Pursuit Curves, "The Chase"** (Motion): four bugs each walk at the next; they
+  spiral into a logarithmic whirlpool and each walks exactly one side length.
+  DRAG a bug; CLICK to add more.
+- **Strange Attractor Zoo, "The Menagerie"** (Fractals): a rack of 2D maps
+  (Clifford, de Jong, Thomas) driven by four numbers; a million iterations
+  condense a luminous alien creature. An infinite gallery where Lorenz is one
+  instance. DRAG THE FOUR CONSTANTS. Reuses the Barnsley IFS density machinery.
+- **Pascal mod n, "The Divisor Fractal"** (Number): color Pascal's triangle by
+  divisibility; mod 2 is exact Sierpinski, and the coloring rule is Kummer's
+  theorem, so the counting and the fractal are one fact. DRAG: TURN THE MODULUS.
+- **The Three-Gap Theorem, "The Spinner"** (Number): points at angles n*theta on
+  a circle have at most three distinct gap sizes, ever, and the largest is the
+  sum of the other two. The hidden law behind Golden Angle. DRAG: TURN THE ANGLE.
+- **Morley's Miracle, "The Triangle That Cheats"** (Shape): trisect any
+  triangle's angles and the inner crossings always form a perfect equilateral
+  triangle. DRAG A VERTEX and watch it refuse to break. Ties to Straightedge and
+  Compass (the impossibility it flirts with).
+
+**Tier A, postcard-grade, medium build:**
+- **Apollonian Gasket, "The Kissing Circles"** (Number/Fractals): infinite
+  nested kissing circles with integer curvatures (Descartes), plus a live open
+  door (the local-global conjecture was proved false in 2023). CLICK A GAP.
+- **Circle Inversion and the Riemann Sphere, "The Mirror That Bends"** (Shape):
+  lines become circles, the whole plane wraps onto a ball where infinity is one
+  ordinary point. The hub that unifies Apollonian, Steiner, and Ford circles.
+- **Domain Coloring, "The Color of a Function"** (Fractals): every complex
+  function painted (hue is phase, brightness is size); zeros are pinwheels you
+  can count. Ties directly to the Studio engine; see the flagship note below.
+- **Diffusion-Limited Aggregation, "The Frost"** (Emergence): random walkers
+  freeze on contact and build lightning, frost, and coral. The sibling Random
+  Walk is begging for. CLICK: PLANT A SEED.
+- **Buddhabrot, "The Ghost in the Set"** (Fractals): trace the escaping paths of
+  the Mandelbrot and a meditating figure rises out of the fog. The famous shape's
+  hidden second face; a deep-cut unlock off Mandelbrot.
+- **Wireworld, "The Visible Computer"** (Computation): a four-state automaton
+  where you build gates and watch the electrons flow. Game of Life claims it can
+  compute; this shows the circuit.
+
+**Tier B, the missing categories (sphere, quantum, number magic):**
+- **Spherical Harmonics, "The Singing Sphere"** and **Hydrogen, "The Shape of the
+  Atom"**: the same lobed shapes are atomic orbitals, bell overtones, and the
+  cosmic microwave background. One math kernel, a whole missing quantum wing.
+- **Hopf Fibration, "The Linked Rings"**: space filled with circles all linked
+  and none touching, the shadow of a 4D sphere and the picture of a qubit.
+- **Kaprekar 6174, "The Number That Eats Numbers"**: every 4-digit number falls
+  to 6174 in at most seven steps. The solved, satisfying twin of Collatz.
+- **Steiner Chains, "The Ring That Always Closes"**: a ring of circles that, once
+  it closes, closes from every angle. Obvious once inverted (the room next door).
+
+**The scope flagship: the Studio Function Painter (domain coloring).** Times
+Tables is the onboarding flagship (one dial, a floor-tilting reveal, hits a
+seven-year-old). The product-defining flagship should express the ceiling: domain
+coloring wired to the Studio expression engine is the one room that is
+simultaneously a Toy, a Studio, and a museum of the whole catalog. Type `z^2` for
+two pinwheels; type `z^2 + c` and drag c to sit inside the Mandelbrot's engine;
+type the zeta function and stare at the million-dollar zeros. Newton fractals,
+the whole Fractals wing, and the Zeta Walk are all special cases of this one
+surface, so it reframes everything else as instances of itself, which is the
+definition of a flagship. It proves "rooms are Studio programs" with a single
+screenshot-perfect artifact, and it is buildable now from parts that exist (the
+expression engine, the raster, phase-to-pitch sonification, the complex-iteration
+path). Ship Times Tables to prove the feel; build the Function Painter to prove
+the scope.
+
+**New causal insight-chains** (each room's reveal hands you the next room's tool
+or question, deeper than thematic grouping; fold into `CONSTELLATION.md`):
+- **The Inversive Thread:** Circle Inversion (a mirror that bends lines into
+  circles) unlocks Steiner Chains (the necklace always closes because the outer
+  circles are secretly parallel lines) unlocks Apollonian Gasket (the same
+  kissing idea run to infinity) points at Ford Circles (its 1D shadow). One move,
+  four rooms: bend how you look, and hard geometry becomes obvious.
+- **The Standing-Wave Thread:** Chladni Figures (a flat singing plate) wraps into
+  Spherical Harmonics (the lobes are electron clouds) becomes Hydrogen (the atom
+  is a standing wave) drawn by the Hopf Fibration (the "between 0 and 1" state).
+  Builds the entire quantum wing on the back of a room already believed in.
+- **The Toy-Rule Mystery Thread:** Kaprekar 6174 (provably tidy) sets up Collatz
+  (the unsolved abyss) sets up Recaman (we do not even know if every number is
+  reached). The same childish rule shape, from solved to permanently open, and
+  you feel exactly where the cliff is.
+
+Two new content-side planning docs are warranted when this wave builds, and are
+noted here rather than split out prematurely: a Classical Geometry wing spec (a
+shared triangle-intersection and Mobius-inversion kernel; every theorem a
+drag-to-break-it toy) and `OPEN_DOORS.md`, a single audited ledger of every
+"still unproven / proved false last year" claim the reveals lean on, with sources
+and last-checked dates, because the open door is the product's signature and its
+most perishable asset (the 2023 Apollonian result is a live example of a punchline
+that can flip in a year).

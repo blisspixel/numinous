@@ -15,12 +15,16 @@ Status: **roughly 0.6 to First Light.** The headless core, the CLI face, the MCP
 ## The docs, grouped
 
 **Foundation and vision**
+- `NORTH_STAR.md` the synthesis: the July 2026 "make it exceptional" fan-out distilled into one architecture, the keystone mechanic, the honest gaps, and the prioritized path. Start here for where the product is going.
 - `VISION.md` the soul: the origin fantasy, the maker ethos, tone, what we are and are not, the name.
 - `RESEARCH.md` the evidence base: what makes it fun, prior art, and sources.
 
 **Experience design**
 - `DESIGN.md` the design bible: the three-layer room model, the Watch/Play/Create modes and Benchmark, the Cabinet, Visual Eras, aesthetic and audio direction, UX principles.
+- `PEDAGOGY.md` the understanding layer: explore-then-tell, the fluency-illusion risk, the predict-then-reveal keystone, the engineered aha, and how understanding and awe are measured.
 - `PROGRESSION.md` levels and insights: the knowledge-gated "metroidbrainia" structure, insight-gating, the Constellation Map, session shapes.
+- `CONSTRUCTIONS.md` the game spine: the puzzle layer with a par, an elegance histogram, and a ghost of your past self.
+- `CONSTELLATION.md` the meta-map spec: the Rumor-Mode discovery graph and the daily route that runs across it.
 - `LORE.md` the hidden mythology: the dimension of mathematical bliss, the Constants, the delivery mechanisms, the subtlety guardrails.
 
 **Content and sensory**
@@ -30,6 +34,8 @@ Status: **roughly 0.6 to First Light.** The headless core, the CLI face, the MCP
 - `SOUND.md` the sonification bible: how math becomes tuned sound, synthesis, tuning, per-room sound design.
 - `MUSIC.md` the music engines: programmatic (chiptune, Strudel-style) plus the ElevenLabs radio stations and comedy channel.
 - `STUDIO.md` the creative canvas: the Desmos-meets-Strudel live-coding tool, and the game's authoring layer (rooms are Studio programs).
+- `SYNESTHESIA.md` the sensory seam: the glow pipeline (the documented HDR look, not yet built) and the one-event-two-renderings model that binds sight and sound.
+- `CREATOR.md` the creator platform: closing the make-share-remix loop on the `.num` capsule, the gallery, and the arc to a living world.
 
 **Systems and interfaces**
 - `ARCHITECTURE.md` the stack (Rust + wgpu), the language scorecard, the Room contract, the module graph, packaging.
@@ -51,15 +57,21 @@ Each topic is **owned** by exactly one doc. Everything else links to it. When in
 
 | Topic | Owned by |
 | --- | --- |
+| The synthesis: the path to exceptional, the keystone, the priority order | `NORTH_STAR.md` |
 | Vision, tone, maker ethos, the name | `VISION.md` |
 | The three-layer model, modes, Benchmark, Cabinet, Visual Eras concept, aesthetic/audio direction, UX principles | `DESIGN.md` |
-| Progression, levels, insight-gating, the Constellation Map | `PROGRESSION.md` |
+| The science of understanding and awe, the predict-then-reveal keystone, the engineered aha | `PEDAGOGY.md` |
+| Progression, levels, insight-gating philosophy | `PROGRESSION.md` |
+| The Constellation meta-map spec (node states, edges, the daily route) | `CONSTELLATION.md` |
+| The puzzle layer: par, elegance histograms, the ghost | `CONSTRUCTIONS.md` |
 | The room catalog and per-room specs | `ROOMS.md` |
 | Insights, reveals, insight-chains | `INSIGHTS.md` |
 | Rendering pipeline, shader techniques, per-Era drawing, color/motion | `VISUALS.md` |
+| The sensory seam: the glow pipeline and the one-event-two-renderings model | `SYNESTHESIA.md` |
 | Sonification grammar, synthesis, tuning, per-room sound | `SOUND.md` |
 | Music engines, chiptune, pattern engine, the radio stations | `MUSIC.md` |
 | The Studio and the authoring model | `STUDIO.md` |
+| The creator platform, the remix loop, the gallery, community curation | `CREATOR.md` |
 | Lore, the Codex, easter eggs, the ARG | `LORE.md` |
 | Stack choice, the Room trait, module architecture, packaging | `ARCHITECTURE.md` |
 | Community extensibility, content sandboxing, the trust model | `EXTENSIBILITY.md` |

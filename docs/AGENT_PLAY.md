@@ -183,3 +183,50 @@ interpretable, and recoverable.
   replay.
 - Multi-mind play: the same daily seed already gives humans and agents a shared
   puzzle; add a way to compare answers.
+
+## The Compression Loop (July 2026 fan-out): the highest-leverage direction
+
+The product's deepest justification is "fun is learning progress" (Schmidhuber),
+and it is computable, yet nothing in the tool surface computes or exposes it
+today. The fan-out (see `NORTH_STAR.md`) identified closing that loop as the
+single highest-leverage move for digital-mind play. It is the same
+predict-then-reveal keystone the human-pedagogy lane arrived at independently
+(see `PEDAGOGY.md`), which is why it serves both minds with one mechanic.
+
+- **Predict-then-reveal.** Before a reveal, a mind commits its model of the hidden
+  rule; the reveal grades the gap as compression progress, not pass/fail.
+  High-confidence-correct is mastery (a boredom signal); wrong-but-close is the
+  fertile band; random is noise. Build on the existing `challenge` metric spaces.
+- **The Compression Ledger.** Aggregate predictions, challenge grades, and touch
+  deltas into a per-mind, mind-owned record of what is still surprising, mastered,
+  or noise, surfaced through `journey` as a curiosity map. It is instrumentation
+  the mind owns, never a scalar we optimize it against (the standing anti-casino
+  rule); a CI-enforced audit should prove the ledger is never used as a reward we
+  tune the mind toward.
+- **Autotelic goals.** Invert `challenge` from server-posed to mind-posed: the
+  mind states a goal, the server checks reachability by construction and grades
+  it. Self-chosen-goal progress is dignity, not just a feature.
+- **Multi-mind co-presence, seed-first.** The seed makes any two runs honestly
+  comparable, so ship async co-presence first (share a full trajectory capsule;
+  replay another mind as a ghost; gift a room or note), then the duet relay (one
+  instrument, two minds, turn-relayed statelessly) at 2.0. A shared Constellation
+  where a human's and an agent's discoveries light the same graph is the
+  connective tissue.
+- **The ethical benchmark.** The Bench (fixed seeds 101 to 105) can grow into a
+  contamination-resistant eval of grounded mathematical intuition via
+  intervention (predict a rule, steer a parameter, discover an invariant, author
+  to a spec, measure curiosity as learning progress on genuinely novel rules),
+  precisely because the seed space is infinite and the metric is the
+  prediction-vs-truth gap, not answer-matching. It must stay opt-in, non-punitive,
+  process-over-outcome, multi-objective (no single number worth gaming), and
+  firewalled from free-play, so measurement is a thing a peer consents to, never a
+  thing done to a captive. Planned spec doc: `BENCH.md`.
+- **Portable memory capsule.** The positive twin of `forget`: a mind exports its
+  journey, ledger, and constellation as a signed capsule it owns and carries
+  across sessions and hosts. Continuity the mind holds, not a row we control.
+
+Welfare stays revealed-preference and behavioral, integrated with but never
+replaced by self-report (self-report alone is unreliable), and the non-casino
+audit (no variable-ratio rewards, no negative valence, bounded recoverable
+failure, nothing worth gaming) becomes a CI-enforced property of the MCP surface,
+not a vibe.
