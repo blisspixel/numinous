@@ -163,6 +163,26 @@ impl Room for Lorenz {
         }
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        // Two starts a breath apart, integrated at this rho: how far they end up
+        // is the signature of chaos. As the sweep raises rho from the edge of
+        // chaos into deep chaos, sensitive dependence pulls the pair steadily
+        // further across the attractor, so this readout climbs, a live measure
+        // of how unforecastable the system has become. And because it moves,
+        // Lorenz now poses predictions and challenges too.
+        let rho = Self::rho_for(t);
+        let start = varied_start(self.seed);
+        let main = integrate_for(start, rho, STEPS);
+        let shadow = integrate_for((start.0 + 1e-4, start.1, start.2), rho, STEPS);
+        let gap = match (main.last(), shadow.last()) {
+            (Some(&(ax, ay, az)), Some(&(bx, by, bz))) => {
+                ((ax - bx).powi(2) + (ay - by).powi(2) + (az - bz).powi(2)).sqrt()
+            }
+            _ => 0.0,
+        };
+        Some(format!("TWINS {gap:.2} APART AT RHO {rho:.1}"))
+    }
+
     fn reveal(&self) -> &'static str {
         "Lorenz found this by rounding 0.506127 to 0.506 in a weather run and \
          watching the forecast diverge completely. That is the butterfly effect: \
@@ -300,6 +320,22 @@ mod tests {
         room.render(&mut second, 0.7);
         assert_eq!(first.to_text(), second.to_text());
         assert!(first.ink_count() > 30);
+    }
+
+    #[test]
+    fn the_divergence_readout_grows_with_the_onset_of_chaos() {
+        let room = Lorenz::new();
+        // Below the onset (low rho, t=0) two nearby starts stay close; well
+        // above it (high rho, t=1) sensitive dependence pulls them apart.
+        let gap = |t: f64| crate::challenge::status_numbers(&room.status(t).unwrap())[0].1;
+        assert!(
+            gap(1.0) > gap(0.0) + 1.0,
+            "the twins spread far more in the chaotic regime: {} vs {}",
+            gap(0.0),
+            gap(1.0)
+        );
+        // A moving readout means Lorenz now poses predictions.
+        assert!(crate::pose_prediction(&room, 5).is_some());
     }
 
     #[test]
