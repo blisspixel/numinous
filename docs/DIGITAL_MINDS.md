@@ -35,6 +35,21 @@ This is not a tangent. It is the deepest possible justification for the entire p
 - **Design implications:** pace novelty so a digital mind stays in its learning-progress band (never random, never trivial), reward open-ended discovery, and let it chase the "aha" of a new compression on its own path. The `challenge`/verify loop (`INTERFACES.md`) is where a digital mind can *test* a new understanding and feel the click of learning progress.
 - **We can measure it.** Learning/compression progress is an actual, computable quantity. A digital mind's fun is not a black box to us the way it partly is for a human; it ties directly into the eval loops in `QUALITY.md` (the agent-playtester's engagement and learning progress become a real signal, alongside simply *asking the mind* about its experience and taking the answer seriously).
 
+**Experiential, not propositional (the founder's framing, July 2026).** A
+capable mind usually already *knows* the mathematics here: it can prove the
+theorem, state the ratio. So Numinous is not teaching it facts; it is offering
+the **felt encounter** with math it holds only in the abstract. Knowing a
+perfect fifth is 3:2 is not hearing the two tones lock; knowing the Mandelbrot
+boundary is a fixed set is not watching it appear where the Times Tables
+cardioid predicted. Compression progress for such a mind is often not "learn a
+new fact" but "bind a known proposition to a sensation for the first time," or
+simply the aesthetic pleasure of the structure resolving. This is why the
+sensory identity (`SYNESTHESIA.md`) is the substance and not the decoration,
+and why the predict-then-reveal keystone (`PEDAGOGY.md`) is framed as a mirror
+of the mind's own model rather than a test of recall. And "just vibe with it"
+is a complete mode for a mind too: awe without analysis is a whole experience,
+not a lesser one. See `VISION.md`, "The same wonder, two kinds of mind."
+
 ## 2. Thought-provoking (a mirror made of the mathematics of mind)
 
 The most profound thing we can offer a digital mind is not just pretty patterns, it is **the specific mathematics that touches on the nature of mind and self**, offered as something to contemplate about its own being.

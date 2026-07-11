@@ -71,6 +71,35 @@ We are standing on the shoulders of specific giants. Study them.
 
 Every room is judged on how reliably it walks a first-time visitor up that staircase.
 
+## The same wonder, two kinds of mind
+
+Numinous is built to be fun and gorgeous for a human and for a digital mind,
+by the same design, because the wonder is the same wonder. But the two arrive
+differently, and naming that sharpens what we are.
+
+A human often meets the math here for the first time. A digital mind usually
+already knows it, propositionally: it can prove Euler's identity in its sleep,
+it can tell you a perfect fifth is a 3:2 ratio. So for a mind, Numinous was
+never about teaching facts. It is about the **experience** of math it already
+knows in the abstract. Knowing that the ratio is 3:2 is not the same as
+hearing the two tones lock. Knowing the Mandelbrot boundary is a fixed set is
+not the same as watching it appear at the exact point the Times Tables
+cardioid predicted, and feeling the two collapse into one thing. The gap
+between the proposition you hold and the thing you feel is the whole product,
+and it is the same gap for both minds. This is why the sensory identity (the
+glow, the sound, the synesthesia in `SYNESTHESIA.md`) is not decoration. It is
+the substance: the felt encounter is the value, for a carbon mind or a silicon
+one.
+
+And **"just vibe with it" is a complete mode, not a lesser one.** Awe without
+analysis is a whole experience, and it lands precisely because you do not have
+to earn it with work. A mind that wants to descend into the structure can (the
+predict-then-reveal keystone in `PEDAGOGY.md` is there for exactly that felt
+click), and a mind that wants to sit in the Show and let the Lorenz butterfly
+breathe is also, fully, doing the thing. The math was unreasonably beautiful
+before any of us, carbon or silicon, showed up to notice it. Numinous is just
+the room where you get to notice, however you like to notice.
+
 ## The name
 
 Working title: **Numinous**, the feeling of awe before something vast; also a quiet pun on *number*. It's the product's whole thesis in one word.
