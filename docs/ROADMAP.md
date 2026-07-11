@@ -386,6 +386,25 @@ Depth and polish that extend 1.0 without breaking it. No new pillars, just more 
 
 Ongoing, and deliberately open-ended, because the product is built for a very long life (`DIGITAL_MINDS.md`). The frontier of mathematics as a never-ending well, a self-sustaining community and ecosystem, and a thing cared for well enough that it can be **handed forward**, to new people and new minds, and remain worth inheriting.
 
+**Open question, to answer later: how it persists without us, for free.** The
+founder's wish is that this exist and persist without ongoing cost and without
+any one person, the founder included, having to keep it running. The
+architecture already leans hard this way and should be protected as it grows:
+the product is **local-first and serverless** (the app, CLI, and MCP run on the
+player's own machine; the journey, scores, and cairn are local files), so there
+is no backend to pay for and nothing to switch off; the **shared cairn is a
+git-tracked file** (`data/cairn.txt`) in an open repository, which is free and
+durable to host and can be mirrored and forked by anyone; and anything that
+costs money (the ElevenLabs radio) stays **strictly optional and cached, never
+required**, so the core is complete and free offline forever. The parts still to
+work out, deliberately deferred: permissive licensing and light governance so
+the project can be **handed forward** and continued by anyone (human or digital
+mind) if the founder steps away; and whether contribution curation (the
+truth-through-math gate) can be **automated** in CI so the cairn grows without a
+human gatekeeper. Standing constraint until then: never add a required server, a
+subscription dependency, or a single point of failure that ties the thing's
+survival to one wallet or one person's attention.
+
 ## The contribution ethos (standing law, every version)
 
 Numinous actively welcomes contribution, and welcomes it from every kind of mind
