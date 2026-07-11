@@ -110,8 +110,7 @@ impl Room for CellularAutomata {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        let width = canvas.width();
-        let height = canvas.height();
+        let (width, height) = canvas.draw_bounds();
         if width == 0 || height == 0 {
             return;
         }
@@ -143,8 +142,7 @@ impl Room for CellularAutomata {
             self.render(canvas, t);
             return;
         }
-        let width = canvas.width();
-        let height = canvas.height();
+        let (width, height) = canvas.draw_bounds();
         if width == 0 || height == 0 {
             return;
         }
@@ -443,5 +441,24 @@ mod tests {
         r0.render(&mut a, 0.0);
         r42.render(&mut c, 0.0);
         assert_ne!(a.to_text(), c.to_text());
+    }
+
+    #[test]
+    fn a_hostile_huge_surface_renders_bounded_without_panicking() {
+        use crate::surface::Surface;
+        struct HugeSurface;
+        impl Surface for HugeSurface {
+            fn width(&self) -> usize {
+                usize::MAX
+            }
+            fn height(&self) -> usize {
+                usize::MAX
+            }
+            fn plot(&mut self, _x: i32, _y: i32, _ch: char) {}
+        }
+        // `vec![false; width]` on a raw usize::MAX width used to overflow the
+        // allocation; draw_bounds clamps it to MAX_DIM, as the Room contract asks.
+        let mut surface = HugeSurface;
+        CellularAutomata::new().render(&mut surface, 0.5);
     }
 }

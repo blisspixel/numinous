@@ -116,8 +116,7 @@ impl Room for BuffonNeedle {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        let width = canvas.width();
-        let height = canvas.height();
+        let (width, height) = canvas.draw_bounds();
         if width == 0 || height == 0 {
             return;
         }
@@ -194,8 +193,7 @@ impl Room for BuffonNeedle {
             self.render(canvas, t);
             return;
         }
-        let width = canvas.width();
-        let height = canvas.height();
+        let (width, height) = canvas.draw_bounds();
         if width == 0 || height == 0 {
             return;
         }

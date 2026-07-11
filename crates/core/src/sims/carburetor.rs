@@ -66,8 +66,7 @@ impl Sim for Carburetor {
         let meta = self.meta();
         let afr = lever_value(&meta, params, 0);
         let throttle = lever_value(&meta, params, 1);
-        let width = surface.width();
-        let height = surface.height();
+        let (width, height) = surface.draw_bounds();
         if width == 0 || height == 0 {
             return;
         }

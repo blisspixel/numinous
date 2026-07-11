@@ -42,7 +42,9 @@ impl Party {
     pub fn new(guests: usize) -> Self {
         Self {
             guests,
-            edges: vec![Shade::Open; guests * (guests - 1) / 2],
+            // saturating_sub so `guests == 0` cannot underflow (a debug panic);
+            // zero or one guest simply has no edges.
+            edges: vec![Shade::Open; guests * guests.saturating_sub(1) / 2],
         }
     }
 
