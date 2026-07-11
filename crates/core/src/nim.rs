@@ -54,12 +54,14 @@ pub fn order_move(heaps: &[u32]) -> (usize, u32) {
             }
         }
     }
-    let (i, _) = heaps
-        .iter()
-        .enumerate()
-        .max_by_key(|&(_, &h)| h)
-        .expect("heaps exist");
-    (i, 1) // one stone from the largest, and wait
+    // A lost position: take one from the largest heap and wait for a mistake.
+    // If there is no legal move at all (an empty or all-zero board, which every
+    // caller gates out with `finished` first), pass safely rather than panic on
+    // the empty case or return an illegal take from a zero heap.
+    match heaps.iter().enumerate().max_by_key(|&(_, &h)| h) {
+        Some((i, &h)) if h > 0 => (i, 1),
+        _ => (0, 0),
+    }
 }
 
 /// The secret, handed over in full when it has been earned.
@@ -79,6 +81,16 @@ mod tests {
 
     fn xor(heaps: &[u32]) -> u32 {
         heaps.iter().fold(0, |x, &h| x ^ h)
+    }
+
+    #[test]
+    fn order_move_is_total_on_degenerate_boards() {
+        // A board with no legal move (empty, or all zero) must not panic and must
+        // not return an illegal take from a zero heap; it passes with take 0.
+        assert_eq!(order_move(&[]), (0, 0));
+        assert_eq!(order_move(&[0, 0, 0]), (0, 0));
+        // A real lost position still takes one from the largest heap.
+        assert_eq!(order_move(&[2, 2]).1, 1);
     }
 
     #[test]

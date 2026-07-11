@@ -38,7 +38,15 @@ impl TimesTables {
     }
 
     fn phase_for(&self, t: f64) -> f64 {
-        let phase = t.clamp(0.0, 1.0);
+        // Guard non-finite `t` like every other room: `f64::clamp` passes NaN
+        // through, which would otherwise leak into the multiplier and produce a
+        // NaN status and a NaN-frequency sound (and, with a hostile poke, a
+        // saturated line endpoint).
+        let phase = if t.is_finite() {
+            t.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
         if self.seed == 0 {
             phase
         } else {
@@ -199,6 +207,19 @@ mod tests {
     #[test]
     fn reveal_names_the_connection() {
         assert!(TimesTables::new().reveal().contains("Mandelbrot"));
+    }
+
+    #[test]
+    fn sound_stays_finite_on_nonfinite_phase() {
+        // f64::clamp passes NaN through, so an unguarded phase would leak a NaN
+        // frequency into the sound; the room must stay finite like its siblings.
+        let room = TimesTables::new();
+        for t in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert!(
+                room.sound(t).notes.iter().all(|n| n.freq.is_finite()),
+                "sound must be finite at t={t}"
+            );
+        }
     }
 
     #[test]
