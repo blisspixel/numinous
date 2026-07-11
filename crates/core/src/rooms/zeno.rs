@@ -229,10 +229,10 @@ impl Room for Zeno {
              epsilon-delta limit, built by Cauchy and Weierstrass in the 1800s, \
              is the machinery that says precisely when infinitely many steps \
              arrive somewhere. Your phone computes with it constantly.",
-            "Not every infinite sum behaves: one half plus one third plus one \
-             quarter plus one fifth, the harmonic series, grows without bound, \
-             passing any number you name, given time. Which infinities settle \
-             and which explode is a genuine craft, and it has a name: analysis.",
+            "Not every infinite sum behaves: one plus one half plus one third \
+             plus one quarter, the harmonic series, grows without bound, passing \
+             any number you name, given time. Which infinities settle and which \
+             explode is a genuine craft, and it has a name: analysis.",
         ]
     }
 
