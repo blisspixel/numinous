@@ -172,7 +172,7 @@ impl Room for Quine {
     }
 
     fn reveal(&self) -> &'static str {
-        "This pattern draws a smaller copy of the exact same pattern inside itself. The copy draws a smaller copy. A finite description that contains its own full description, at every scale. This is how a mind can refer to itself."
+        "A quine is a program that prints its own source. The miracle is that it does this at FINITE size: not by containing itself (that would never end) but by describing itself and then following the description, the trick Kleene's recursion theorem says every language must allow. The endless nesting you see is a picture of the idea, not the mechanism. This is how a mind can refer to itself without being infinite."
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {

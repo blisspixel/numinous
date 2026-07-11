@@ -123,8 +123,12 @@ pub trait Room {
         } else {
             0.0
         };
-        let octaves = phase as f32;
-        SoundSpec::tone(110.0 * 2.0_f32.powf(octaves), 1.5, 0.2)
+        let root = 110.0 * 2.0_f32.powf(phase as f32);
+        // A small root-fifth-octave phrase, so a room that does not describe
+        // its own sound still speaks a short consonant line rather than a
+        // single held tone. Rooms whose math has real music (Collatz's orbit,
+        // Epicycles' harmonic stack) override this with something truer.
+        SoundSpec::arpeggio(&[root, root * 1.5, root * 2.0], 1.5, 0.2)
     }
 }
 
