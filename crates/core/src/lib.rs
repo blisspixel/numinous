@@ -58,8 +58,8 @@ pub mod trophies;
 pub use aliens::{AlienMessage, alien_message, to_base};
 pub use ansi::to_ansi;
 pub use cairn::{
-    Bequest, CairnRead, CairnStone, deposit, draw_stone, encode, founding_bequests, picture,
-    read_at, submission_line,
+    Bequest, CairnRead, CairnStone, count as cairn_count, deposit, draw_stone, encode,
+    founding_bequests, picture, read_at, submission_line,
 };
 pub use canvas::{Canvas, RenderDelta};
 pub use challenge::{
