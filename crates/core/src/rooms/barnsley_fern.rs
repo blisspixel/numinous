@@ -21,6 +21,10 @@ const BASE_POINTS_PER_CELL: f64 = 0.35;
 const SWEEP_POINTS_PER_CELL: f64 = 0.9;
 /// A floor so a tiny canvas still grows a recognizable plant.
 const MIN_POINTS: usize = 1_200;
+/// A ceiling so a very large (or hostile) surface cannot drive an unbounded
+/// chaos-game loop: it bounds the per-frame cost and keeps a high-resolution
+/// fern lush without paying to fill every pixel, which the eye does not need.
+const MAX_POINTS: usize = 120_000;
 const FERN_X_MIN: f64 = -2.5;
 const FERN_X_SPAN: f64 = 5.5;
 const FERN_Y_MAX: f64 = 10.0;
@@ -49,7 +53,7 @@ impl BarnsleyFern {
     /// same whether it is drawn on an 80-column terminal or a full-res window.
     fn points_for(t: f64, cells: usize) -> usize {
         let per_cell = BASE_POINTS_PER_CELL + Self::phase_for(t) * SWEEP_POINTS_PER_CELL;
-        ((cells as f64 * per_cell) as usize).max(MIN_POINTS)
+        ((cells as f64 * per_cell) as usize).clamp(MIN_POINTS, MAX_POINTS)
     }
 
     fn phase_for(t: f64) -> f64 {
@@ -135,7 +139,11 @@ impl Room for BarnsleyFern {
         }
         let mut rng = SplitMix64::new(SEED ^ self.seed);
         let (mut x, mut y) = (0.0_f64, 0.0_f64);
-        for _ in 0..Self::points_for(t, width * height) {
+        // A hostile Surface can report dimensions whose product overflows usize;
+        // saturate so the point count stays bounded and the render never panics,
+        // exactly as the Room contract requires. Real surfaces clamp to MAX_DIM.
+        let cells = width.saturating_mul(height);
+        for _ in 0..Self::points_for(t, cells) {
             let (nx, ny) = next_point(x, y, rng.next_f64());
             x = nx;
             y = ny;
@@ -288,6 +296,28 @@ mod tests {
             room.render(&mut canvas, t);
         }
         room.render_poked(&mut canvas, f64::NAN, &[(f64::INFINITY, f64::NAN)]);
+    }
+
+    #[test]
+    fn a_hostile_huge_surface_renders_bounded_without_panicking() {
+        use crate::surface::Surface;
+        struct HugeSurface;
+        impl Surface for HugeSurface {
+            fn width(&self) -> usize {
+                usize::MAX
+            }
+            fn height(&self) -> usize {
+                usize::MAX
+            }
+            fn plot(&mut self, _x: i32, _y: i32, _ch: char) {}
+        }
+        // width * height would overflow usize and the point count would be
+        // unbounded; saturating_mul plus the MAX_POINTS cap keep it finite and
+        // quick, as the Room contract requires.
+        let room = BarnsleyFern::new();
+        let mut surface = HugeSurface;
+        room.render(&mut surface, 1.0);
+        room.render_poked(&mut surface, f64::NAN, &[(1.0, 1.0)]);
     }
 
     #[test]
