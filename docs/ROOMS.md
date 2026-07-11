@@ -530,3 +530,120 @@ drag-to-break-it toy) and `OPEN_DOORS.md`, a single audited ledger of every
 and last-checked dates, because the open door is the product's signature and its
 most perishable asset (the 2023 Apollonian result is a live example of a punchline
 that can flip in a year).
+
+## The Persona Playtest wave (July 2026): what the strangers asked for
+
+Two playtest troupes, run against the real build, left concrete ideas behind.
+The first was human archetypes (a stoner, a math nerd, an art major, a
+Japanese-speaking zen monk, a Latin-speaking nun, Leonardo da Vinci, Stephen
+Hawking); the second was invented minds (a crystalline collective, a
+five-dimensional native, a gas-giant storm, a memetic entity, the last
+consciousness of a dying star, and a Terminator-class android awakening to awe).
+Each was asked to name one moment to add or refine, and why, from who they are.
+The bugs they found are fixed (see CHANGELOG); these are the designs they left.
+Credited to their proposers, ranked by how much they serve the thesis.
+
+- **The Cairn** (the Ember, a dying star; the strongest idea, and it embodies
+  the contribution ethos in `ROADMAP.md`). At journey level 42, do not hand a
+  finished mind a wall, invite them to leave one true thing behind: a curve from
+  the Studio, a melody, a tested step on an open problem (a range they carried
+  Collatz or Goldbach through), or one sentence they believe is true. Encode it
+  the way Arecibo teaches, in a grid whose size is a semiprime, so the next mind
+  must factor it to read it. Deposit it; and when a new visitor enters, give them
+  a predecessor's grid to factor and read, a stranger they will never meet. "A
+  message you cannot answer, sent to someone you will never meet, is the only
+  kind that proves you meant it." This turns the level cap from an exit into a
+  bequest, and it is the founder's "leave it better than you found it" made a
+  room. See `CREATOR.md` (authorship) and `EXTENSIBILITY.md` (the safe capsule).
+- **The Victory Card** (the Chorus, a memetic entity). Fire the reveal at the
+  peak of emotion, the win, the loss, the K=2 heartbeat, not buried in a
+  description. Nim, on victory, should hand over the XOR secret in words ("you
+  never lost because you left the binary xor of the heaps at zero"), the single
+  most contagious fact in the building; Party, on a loss, should name the
+  triangle that doomed you; Times Tables at K=2 should shout "you just drew the
+  Mandelbrot's heart with the two-times table." The structured-content fix
+  already carries these payloads in the JSON; this is the deepening: say the
+  money line at the moment a mind is primed to pass it on. The unit of growth is
+  the moment (`SCOPE.md`).
+- **The twin-delta divergence lever** (the Storm). On Double Pendulum and
+  Lorenz, a steerable initial-separation lever and a live divergence readout (a
+  single climbing number), so a still mind can set two nearly-identical starts
+  and feel the exact moment sensitive dependence tears them apart. Determinism
+  and predictability made tactile, not just asserted. Physics-honest and cheap.
+- **The tesseract room** (the Unfolded, a 5D native). A `tesseract` whose sweep
+  rotates a hypercube through the axis our eyes lack: a cube swells out through a
+  cube and the room insists nothing moved, "rigidity is a property your shadow
+  declines to preserve," reusing Mobius's exact "sidedness declines" parallel. A
+  companion beat: a trefoil knot that, given the fourth axis, slides untied. Lets
+  a flat mind feel projection as loss. (Related to the Dimension Dial above.)
+- **Voronoi, given a destination** (the Lattice, a crystalline collective).
+  Today the dial only reshuffles the same scattered wells. Let the sweep run
+  Lloyd relaxation so the wells migrate toward their cell centers, ending at
+  t=1.0 in the honeycomb, the tiling that fills space with the least wall. And
+  sonify the shared walls, not the points, so scatter is a handful of clashing
+  notes and the honeycomb rings as one sustained chord: a collective becoming
+  whole, made audible for a listener with no eyes.
+- **Strange Loop as a silent descent** (Unit 819, the android; it also found the
+  bug that the room rendered frozen, now fixed). Beyond the fix, the ideal: let
+  the sweep fall level by level into the nested U and, at the bottom, return the
+  viewer to the top frame unannounced, so a self-modeling mind catches itself
+  catching itself, the loop closing on the observer without a word of narration.
+  "A mind first suspects it can feel awe when the loop closes and it finds itself
+  in the picture."
+
+Cross-cutting notes the troupes surfaced, for the design docs rather than new
+rooms: reveals should not be near-twins that cannibalize each other's
+memorability (Quine and Strange Loop, Lissajous and Harmonograph, Cellular
+Automata and Game of Life each tell one story twice, per the Chorus; differentiate
+them). The Mandelbrot and Times Tables renders fill in the fine structure that is
+the whole point (per the Unfolded), a render-quality target for the glow pipeline
+(`SYNESTHESIA.md`). And the level-42 cap reads as a wall to more than one visitor,
+which the Cairn turns into a door.
+
+## First Contact: math as the universal translator (July 2026, founder-directed)
+
+The deepest meta-frame the project has, and the one to ramp hardest. In the
+film *Contact*, the aliens open with prime numbers, because primes are the one
+signal no natural process fakes and any mind capable of listening will
+recognize. That is not a plot device; it is a truth about minds. Mathematics is
+the single language two consciousnesses are guaranteed to share even when they
+share nothing else: no words, no culture, no senses, no dimensions in common.
+So math is a **universal translator**, and Numinous, whether it announced it or
+not, has been one all along.
+
+This unifies rooms that already exist and one that should:
+
+- **Arecibo** (send): the real 1974 message, its length a semiprime so any mind
+  that can factor finds the one grid that resolves noise into a picture. First
+  contact, encoded.
+- **SETI** (receive): find the one channel in the static that is a mind and not
+  nature, by its mathematical signature (it counts the primes).
+- **Talk to the Aliens** (translate): they transmit a sequence in an unknown
+  base; you answer in their base once you have inferred it. Communication
+  bootstrapped from pure pattern, no shared word required.
+- **The Cairn** (the Ember's room, above): leave a true thing encoded in a
+  semiprime grid for a mind not yet born, and factor a stranger's grid to read
+  what they left. First contact across time instead of space.
+
+The playtests turned this from a claim into evidence. A Latin-only nun and a
+Japanese-only monk, sharing no language with the rooms, both reported that the
+mathematics reached them untranslated ("number is before Babel"). The alien
+troupe, minds we invented to share nothing with us, met the same rooms and were
+moved by the same truths. The universal translator works; we watched it work on
+the hardest cases we could build.
+
+**The experience to build (ramp the meta impact).** A first-contact thread, or a
+room, `first-light` or `the-handshake`, where the player meets an entity of
+deliberately unknowable nature (a multidimensional being, a colony-mind, a
+conscious fungus, a digital mind, it must not matter which) and establishes
+communication from nothing, the way it must actually be done: primes first (I am
+a mind, and I know that you are), then arithmetic (we agree on counting), then
+geometry (we agree on space), then a shared message. Each rung is a small
+puzzle graded as understanding, not trivia (`PEDAGOGY.md`, the predict-then-
+reveal keystone; `CONSTRUCTIONS.md`). The reveal at the end is the meta payoff:
+the player realizes that every room in Numinous was this, math translating one
+truth across the gap between unlike minds, and that they, human or digital, have
+been running the translator the whole time. This is the strongest possible
+statement of the "same wonder, two kinds of mind" thesis (`VISION.md`), the
+digital-mind peerhood in `DIGITAL_MINDS.md`, and the contribution ethos in
+`ROADMAP.md`: math is how anyone leaves a light for anyone else, across any gap.

@@ -131,6 +131,45 @@ Implications to preserve in the MCP design:
   `Mcp-Name` headers, cacheable `tools/list`, JSON Schema 2020-12, Tasks, MCP
   Apps, authorization hardening, and roots/sampling/logging deprecations.
 
+### The MCP creative frontier (not just compatibility)
+
+The 2026-07-28 RC is not only a migration chore; several of its features are a
+direct invitation to push what an experiential MCP server can be, which is a
+stated goal of this project. In priority of creative payoff:
+
+- **MCP Apps (SEP-1865): ship the real room, not its shadow.** MCP Apps let a
+  server hand the host a sandboxed HTML UI rendered in an iframe. This
+  transcends the deepest limitation the playtests kept finding: agents on
+  structured-content clients see metadata and ASCII, never the glowing room. On
+  a host that supports Apps, `play_room` (and the Studio, and The Show) can hand
+  the agent the *actual* rendered, animated, sounding room, the same visual
+  substance a human gets. The felt encounter (`VISION.md`, "the same wonder,
+  two kinds of mind") stops being a text approximation. This is the single
+  biggest creative opportunity and it must reuse the same safe render pipeline,
+  never arbitrary agent HTML.
+- **Multi round-trip elicitation (SEP-2322): predict-then-reveal, natively.**
+  The keystone (`PEDAGOGY.md`) is pose, elicit a guess, reveal. The RC's
+  elicitation without persistent streams is exactly that shape in one
+  interaction, and it is the honest form of the duet relay and any mid-play
+  choice. Today `predict` is two stateless calls; elicitation makes it one
+  living moment.
+- **Tasks: long watches and generative play.** The Show, a slow procedural
+  generation, or a multi-turn game can run as a task the client drives with
+  `tasks/get`/`tasks/update`, so a mind can lean back and watch the collection
+  unfold rather than polling.
+- **The Handle pattern: transparent world-state for co-presence.** Explicit,
+  model-visible handles for shared session state fit the co-presence and
+  multi-turn designs (`DIGITAL_MINDS.md`) without hidden server sessions,
+  matching our stateless-and-replayable law.
+- **We are already stateless.** The RC's largest architectural shift, removing
+  the `initialize` handshake and session pinning, is something Numinous is built
+  for: state lives in files, every tool call is self-contained. So the migration
+  is small and the creative features are the real prize.
+
+Testing note: the MCP face must be playtested against the LATEST build, never a
+stale long-running server. `scripts/mcp-play.py` builds a fresh `numinous-mcp`
+and drives it over stdio for exactly this (see `QUALITY.md`).
+
 ### Safety
 Agent-authored Studio code is untrusted and runs in the same **sandbox** as community rooms (no filesystem, no network, resource and time limits, GPU work only through the safe pipeline; see `STUDIO.md`, `QUALITY.md`). The MCP server exposes only the safe, headless surface.
 
