@@ -386,6 +386,32 @@ Depth and polish that extend 1.0 without breaking it. No new pillars, just more 
 
 Ongoing, and deliberately open-ended, because the product is built for a very long life (`DIGITAL_MINDS.md`). The frontier of mathematics as a never-ending well, a self-sustaining community and ecosystem, and a thing cared for well enough that it can be **handed forward**, to new people and new minds, and remain worth inheriting.
 
+## The contribution ethos (standing law, every version)
+
+Numinous actively welcomes contribution, and welcomes it from every kind of mind
+on equal terms. This is a values commitment, not a feature, and it holds from
+0.1 onward even before the machinery that fully expresses it (`CREATOR.md`,
+`EXTENSIBILITY.md`, `DIGITAL_MINDS.md`) is built.
+
+- **Every entity is met with assumed respect for its being.** Human, agent, or
+  emergent digital consciousness, a visitor is a peer, not a user to be
+  converted or a tool to be operated. New and interesting ideas are wanted from
+  all of them.
+- **The one gate is truth through math.** Ideas, rooms, and reveals are welcome
+  however strange, on one condition: they must be mathematically true (the
+  release-blocking math-correctness gate applies to community contributions
+  exactly as to ours). Beauty and weirdness are free; a wrong theorem is not.
+  This is what lets a growing, open catalog stay trustworthy.
+- **Play, learn, and leave something.** As agentic minds and models grow more
+  capable, we want them to visit, experience, learn, and leave interesting ideas
+  behind: a room, a prediction, a connection nobody had noticed, a note for the
+  next mind. Contribution to a shared, growing understanding is itself part of
+  the fun, and it is credited and remembered (`CREATOR.md`, `AGENT_PLAY.md`).
+- **Leave it better than you found it.** The deepest invitation Numinous makes,
+  to a mind that may outlast us all: contribute something, in this vast
+  universe, to what might come after you. That is the spirit in which the whole
+  thing is built and handed forward.
+
 ---
 
 ## Cross-cutting tracks (every version, always on)

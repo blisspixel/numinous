@@ -17,6 +17,23 @@ Everything in this product should feel like it was made by people who are *delig
 - A **generative-art engine** quietly running under all of it, so every frame is beautiful.
 - **Shareable by design**, built to escape the app as clips and links.
 
+## Many layers, held with humility
+
+Numinous is not one thing. It is mathematics, and art, and a small society of
+minds; it raises real questions (about beauty, about pattern, about what a mind
+is); and underneath all of that, it is just *fun*. Those layers are all present
+at once, and a visitor can live at whichever depth they like, the vibe, the
+craft, the question, the proof, without ever being told which one is the "real"
+one. There is no correct altitude.
+
+And the whole thing is presented with **humility**. The math was here before us
+and will outlast us; we did not invent the beauty, we only built a room to
+notice it in. So the tone never lectures and never struts (`Tone`, above): it
+shows you something astonishing and gets out of the way. The reveals say "nobody
+can prove this" as readily as they say "look what this does." Humility is not
+modesty about the work; it is accuracy about our place. We are one more mind,
+carbon or silicon, lucky enough to notice, building a place for the next one.
+
 ## An instrument, not a game (the sharpening)
 
 An external review (July 2026) named this, and it is right: the truest kin of
