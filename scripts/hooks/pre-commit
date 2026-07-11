@@ -25,9 +25,12 @@ cd "$(git rev-parse --show-toplevel)"
 # House style applies to every file type and is near-instant.
 bash scripts/check-style.sh
 
-# Only pay for the cargo checks when code or the build manifest changed.
-if git diff --cached --name-only --diff-filter=ACM \
-    | grep -qE '\.rs$|(^|/)Cargo\.(toml|lock)$|\.wgsl$'; then
+# Only pay for the cargo checks when code or the build manifest changed. Include
+# renames (R) and deletions (D), not only added/modified, so removing or moving a
+# Rust file that breaks the build cannot skip the gate. quotePath-off and NUL
+# delimiting keep non-ASCII paths readable to grep.
+if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
+    | grep -zqE '\.rs$|(^|/)Cargo\.(toml|lock)$|\.wgsl$'; then
   echo "== fmt =="
   cargo fmt --all --check
   echo "== clippy =="

@@ -20,7 +20,11 @@ for candidate in "${LC_ALL:-}" "${LANG:-}" C.UTF-8 C.utf8 en_US.UTF-8 en_US.utf8
   esac
 done
 
-mapfile -t files < <(git ls-files '*.rs' '*.md' '*.toml' '*.wgsl' '*.sh' '*.ps1')
+# NUL-delimited and quotePath-off so a filename with non-ASCII characters or a
+# space is read literally, not as a git-quoted, octal-escaped string that then
+# fails to open and would either be skipped or misreported.
+mapfile -d '' -t files < <(git -c core.quotePath=false ls-files -z \
+  '*.rs' '*.md' '*.toml' '*.wgsl' '*.sh' '*.ps1' '*.yml' '*.yaml' '*.py' '*.txt' '*.json')
 if [ ${#files[@]} -eq 0 ]; then
   exit 0
 fi
@@ -46,8 +50,13 @@ check() {
   fi
 }
 
-check '\x{2014}|\x{2013}' "em/en dash"
-check '[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}\x{2728}]' "emoji"
+# Dashes: em (2014), en (2013), and the look-alikes people paste by mistake,
+# figure dash (2012), horizontal bar (2015), and the true minus sign (2212).
+check '\x{2012}|\x{2013}|\x{2014}|\x{2015}|\x{2212}' "em/en dash"
+# Emoji: the main pictographic blocks (1F000-1FAFF covers symbols, flags, and
+# regional indicators), the misc-symbols/dingbats range, the stars/arrows block
+# (2B00-2BFF, e.g. 2B50), and the lone sparkle 2728.
+check '[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{2728}]' "emoji"
 attr_a='co-'
 attr_b='authored-by:'
 tool_a='cla'
