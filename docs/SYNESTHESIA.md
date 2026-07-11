@@ -108,6 +108,21 @@ trail brightness and hear as timbre, and poking it drops a second detuned voice
 that beats apart from the first, the butterfly effect felt in the ears. When
 someone can hum the Lorenz attractor, the promise is delivered.
 
+## Render like a cinematographer, not only a graphics engineer
+
+The glow pipeline is the how; this is the why. Beauty is necessary but not
+sufficient. Every room should answer one question before its treatment is
+chosen: **what emotion is this room?** Wonder, fragility, violence, infinity,
+loneliness, chaos, stillness. The shaders, palette, persistence length, motion
+cadence, and sound are then selected to communicate that emotion, not merely to
+look good. Lorenz is chaos held in a strange, beautiful cage; the double
+pendulum is violence; Golden Angle is serene inevitability; Sizes of Infinity
+is vertigo. Two rooms with identical glow settings but different emotional
+intent are a failure of direction. This is a per-room design decision recorded
+alongside the room's palette signature, and it is what turns "a gorgeous
+generative-art frame" into "a place with a feeling." The same principle governs
+sound: a room's emotion is carried by both channels or neither.
+
 ## The Visual Eras as complete worlds
 
 The Eras are a top-tier idea and are currently palette-deep. Make each a coherent

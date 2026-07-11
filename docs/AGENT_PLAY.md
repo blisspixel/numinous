@@ -230,3 +230,20 @@ replaced by self-report (self-report alone is unreliable), and the non-casino
 audit (no variable-ratio rewards, no negative valence, bounded recoverable
 failure, nothing worth gaming) becomes a CI-enforced property of the MCP surface,
 not a vibe.
+
+## Two cautions from the July 2026 review
+
+- **A mind should discover, not only play.** The most novel thing an agent can
+  do here is not clear a room but find something in it a human has not noticed:
+  "find a regularity in the Logistic room nobody has flagged." At enormous scale,
+  exploration surfaces interesting structure, and even when most candidates are
+  false positives the workflow itself is collaborative and alive. This is the
+  playable face of the open-frontier well in `DIGITAL_MINDS.md`; the compression
+  ledger and self-authored goals are the substrate, and agent-authored rooms
+  (`CREATOR.md`) are where a discovery becomes a shared, credited artifact.
+- **Keep the benchmark completely separate from the product.** The ethical Bench
+  is worth building, but a benchmark freezes design and play evolves, so it must
+  be a downstream, optional, clearly-firewalled layer, never a design driver.
+  "How can a mind enjoy this?" is the right question; "what benchmark should this
+  become?" is a trap. Build for the play; let the measurement be a separate thing
+  a peer may consent to (see `SCOPE.md`, the justification filter).

@@ -112,6 +112,22 @@ hand-author 30 difficulty curves, you hand players a distribution and let them
 choose their target. That is the only way difficulty on demand scales to 30-plus
 rooms without a per-room content explosion.
 
+## Beyond the puzzle: performance mastery
+
+Elegance-scored constructions give a room a skill floor, but the deepest rooms
+should also have a **performance** ceiling, in the instrument sense of
+`VISION.md`. The question is not only "can the player solve this in par" but
+"can the player get good at *playing* this room": improvise a trajectory,
+develop timing and rhythm, build a recognizable style another player could
+identify. Times Tables today is "drag the multiplier"; its performance form is
+an expert executing an evolving multiplier trajectory where speed, rhythm, and
+the resulting sound all matter, and "my best Lorenz solo" is a coherent,
+shareable artifact. This is the honest, uncapped alternative to an XP treadmill
+(see `SCOPE.md`, "Mastery is math's, not XP's"), and it is where a room stops
+being a puzzle you finish and becomes an instrument you never do. Not every
+room needs a performance ceiling, but the flagship and the continuous ones
+(Times Tables, Lorenz, Harmonograph, the Studio) should aim for one.
+
 ## Self-set challenge, the top rung
 
 Let a player or agent author a seeded challenge (the `challenge` tool already
