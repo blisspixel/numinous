@@ -109,13 +109,20 @@ impl Room for StrangeLoop {
         let Some((width, height)) = drawing_dims(canvas) else {
             return;
         };
+        let phase = finite_phase(t);
         let depth = Self::depth_for(t);
         let (fw, fh) = (width as f64, height as f64);
-        let cx = fw / 2.0;
+        // The sweep turns the loop and zooms slowly into it, so the room about
+        // self-reference actually moves and more of its nesting surfaces as you
+        // descend, rather than sitting frozen at one frame.
+        let r = fw.min(fh) / 3.0 * (1.0 + phase * 0.6);
+        // The seed shifts the whole loop sideways, a phase-independent variation
+        // that stays visible even where the sweep's rotation flattens the arm
+        // shear. Seed 0 (the default and the postcard) stays centered.
+        let cx = fw / 2.0 + (self.seed % 5) as f64 * r * 0.22;
         let cy = fh / 2.0;
-        let r = fw.min(fh) / 3.0;
         let aspect = safe_aspect(canvas);
-        let rot = (self.seed % 100) as f64 * 0.01;
+        let rot = (self.seed % 100) as f64 * 0.01 + phase * std::f64::consts::TAU;
         self.draw_loop(canvas, cx, cy, r, rot, depth, aspect);
     }
 
@@ -127,14 +134,15 @@ impl Room for StrangeLoop {
         let Some((width, height)) = drawing_dims(canvas) else {
             return;
         };
+        let phase = finite_phase(t);
         let depth = Self::depth_for(t);
         let fw = width as f64;
         let fh = height as f64;
         let cx = fw / 2.0;
         let cy = fh / 2.0;
-        let r = fw.min(fh) / 3.0;
+        let r = fw.min(fh) / 3.0 * (1.0 + phase * 0.6);
         let aspect = safe_aspect(canvas);
-        let base_rot = (self.seed % 100) as f64 * 0.01;
+        let base_rot = (self.seed % 100) as f64 * 0.01 + phase * std::f64::consts::TAU;
         let points = bounded_loop_points(pokes, width, height);
         let Some(control) = points.last().copied() else {
             self.render(canvas, t);
@@ -252,6 +260,24 @@ mod tests {
         let mut canvas = Canvas::new(40, 30);
         room.render(&mut canvas, 0.5);
         assert!(canvas.ink_count() > 10);
+    }
+
+    #[test]
+    fn the_loop_actually_moves_across_the_sweep() {
+        // A playtester caught this room rendering identically at every phase:
+        // the one room about self-reference sat frozen. The sweep must animate.
+        let room = StrangeLoop::new();
+        let frame = |t: f64| {
+            let mut canvas = Canvas::new(48, 32);
+            room.render(&mut canvas, t);
+            canvas.to_text()
+        };
+        assert_ne!(
+            frame(0.0),
+            frame(0.5),
+            "the loop must move from t=0 to t=0.5"
+        );
+        assert_ne!(frame(0.5), frame(0.9), "and keep moving to t=0.9");
     }
 
     fn render_text(room: &StrangeLoop, t: f64, pokes: &[(f64, f64)]) -> String {

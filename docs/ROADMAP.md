@@ -23,7 +23,7 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 927 tests, locked build, Windows verify, 91.13% region cover, and 90.66% line cover all green.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 928 tests, locked build, Windows verify, 91.14% region cover, and 90.67% line cover all green.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -255,7 +255,7 @@ contract and the geometry change beyond the click marker.
 
 Scored against the nine 1.0 gates below, the build sits at roughly **0.6**:
 the structure is complete (30 catalog rooms across 10 wings plus hidden content,
-11+ games on four shapes of play, the full RPG spine, 28 MCP tools, both music engines live, 927
+11+ games on four shapes of play, the full RPG spine, 28 MCP tools, both music engines live, 928
 tests) and the remaining distance is quality density, not missing systems.
 
 | 1.0 gate | Estimate | What is missing |
