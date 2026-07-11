@@ -18,6 +18,12 @@ use crate::{Journey, Scoreboard};
 const LOCK_RETRIES: usize = 2500;
 const LOCK_SLEEP: Duration = Duration::from_millis(2);
 const LOCK_STALE_AFTER_SECS: u64 = 30 * 60;
+/// A much shorter grace for a lock whose holder process is confidently gone. A
+/// real writer holds the lock for milliseconds, so a lock older than this from a
+/// dead PID is certainly abandoned; recovering it here (instead of waiting the
+/// full staleness window) means a hard crash blocks other writers for seconds,
+/// not half an hour.
+const LOCK_DEAD_PID_GRACE_SECS: u64 = 10;
 const MAX_JOURNEY_FILE_BYTES: u64 = 64 * 1024;
 const MAX_LOCK_FILE_BYTES: u64 = 4 * 1024;
 const MAX_SCOREBOARD_FILE_BYTES: u64 = 1024 * 1024;
@@ -112,7 +118,12 @@ fn merge_journey_delta(before: &Journey, after: &Journey, latest: &mut Journey) 
     latest.plays = latest
         .plays
         .saturating_add(after.plays.saturating_sub(before.plays));
-    if after.last_daily != before.last_daily && after.last_daily != 0 {
+    // Only advance the daily record. `record_daily` is not monotone (it resets
+    // the streak whenever the day is not exactly the next one), so replaying a
+    // stale or out-of-order delta whose day is at or behind what another writer
+    // already recorded would move `last_daily` backward and destroy a longer
+    // streak. Guarding on strict advance keeps the record monotone.
+    if after.last_daily > latest.last_daily {
         let _ = latest.record_daily(after.last_daily);
     }
 }
@@ -353,19 +364,27 @@ fn lock_is_recoverable(lock_path: &Path) -> bool {
     let age = started
         .map(|started| current_unix_secs().saturating_sub(started))
         .or_else(|| lock_modified_age_secs(lock_path));
-    if age.is_none_or(|age| age < LOCK_STALE_AFTER_SECS) {
-        return false;
-    }
-    let Some(pid) = text.as_ref().and_then(|text| {
+    let pid = text.as_ref().and_then(|text| {
         text.lines().find_map(|line| {
             line.trim()
                 .strip_prefix("pid ")
                 .and_then(|value| value.parse::<u32>().ok())
         })
-    }) else {
-        return true;
-    };
-    !process_may_be_running(pid)
+    });
+    match pid {
+        // The holder is confidently gone (`process_may_be_running` returns true
+        // on any uncertainty, so a false is reliable and PID reuse is guarded).
+        // Recover after a short grace rather than the full staleness window: a
+        // hard crash leaks the lock, and the old age-first gate then blocked
+        // every writer for up to 30 minutes.
+        Some(pid) if !process_may_be_running(pid) => {
+            age.is_some_and(|age| age >= LOCK_DEAD_PID_GRACE_SECS)
+        }
+        // The holder may still be alive: never steal an active lock.
+        Some(_) => false,
+        // No PID recorded: fall back to the staleness window alone.
+        None => age.is_some_and(|age| age >= LOCK_STALE_AFTER_SECS),
+    }
 }
 
 fn read_lock_text_lossy(lock_path: &Path) -> io::Result<String> {
@@ -689,6 +708,52 @@ mod tests {
         assert_eq!(load_scoreboard_file(&path).entries["key"], 1);
         assert!(!lock.exists());
         remove_persisted_file(&path).expect("cleanup");
+    }
+
+    #[test]
+    fn recent_dead_process_lock_is_recovered_without_the_full_stale_wait() {
+        let path = temp_file("recent_dead_lock");
+        let lock = super::lock_path_for(&path);
+        // A lock only seconds old, well under the 30-minute staleness window, but
+        // held by a dead process, must recover after the short grace so a hard
+        // crash does not block writers for half an hour.
+        let recent_started = super::current_unix_secs()
+            .saturating_sub(super::LOCK_DEAD_PID_GRACE_SECS)
+            .saturating_sub(1);
+        std::fs::write(
+            &lock,
+            format!(
+                "pid {}\ntoken stale\nstarted_unix_secs {recent_started}\n",
+                exited_process_id()
+            ),
+        )
+        .expect("recent dead lock");
+
+        assert!(record_score_file(&path, "key", 1).expect("write after recent dead lock"));
+        assert_eq!(load_scoreboard_file(&path).entries["key"], 1);
+        assert!(!lock.exists());
+        remove_persisted_file(&path).expect("cleanup");
+    }
+
+    #[test]
+    fn a_stale_daily_delta_does_not_move_the_streak_backward() {
+        use crate::journey::Journey;
+        // latest already recorded day 101 with a streak; a stale or out-of-order
+        // delta carrying an earlier day must not regress last_daily or reset the
+        // streak another writer already earned.
+        let mut latest = Journey::default();
+        let _ = latest.record_daily(100);
+        let _ = latest.record_daily(101);
+        let (day_before, streak_before) = (latest.last_daily, latest.streak);
+        assert!(streak_before >= 2, "the setup earns a streak to protect");
+
+        let before = Journey::default();
+        let mut after = Journey::default();
+        let _ = after.record_daily(100);
+
+        super::merge_journey_delta(&before, &after, &mut latest);
+        assert_eq!(latest.last_daily, day_before, "the day must not regress");
+        assert_eq!(latest.streak, streak_before, "the streak must be preserved");
     }
 
     #[test]
