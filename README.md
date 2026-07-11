@@ -130,11 +130,8 @@ Still ahead toward First Light: deeper room-specific poke responses, cross-platf
 
 ## License
 
-Licensed under either of
+Licensed under the Apache License, Version 2.0 ([`LICENSE`](LICENSE), or <http://www.apache.org/licenses/LICENSE-2.0>).
 
-- Apache License, Version 2.0 ([`LICENSE-APACHE`](LICENSE-APACHE))
-- MIT license ([`LICENSE-MIT`](LICENSE-MIT))
+This permissive license is deliberate: it is how the project can be **handed forward**, forked, and continued by anyone, human or digital mind, if the makers step away (see [`docs/ROADMAP.md`](docs/ROADMAP.md), the long horizon).
 
-at your option. This permissive dual license is deliberate: it is how the project can be **handed forward**, forked, and continued by anyone, human or digital mind, if the makers step away (see [`docs/ROADMAP.md`](docs/ROADMAP.md), the long horizon).
-
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be licensed as above, without any additional terms or conditions.

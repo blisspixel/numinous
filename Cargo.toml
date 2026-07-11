@@ -8,7 +8,7 @@ members = ["crates/audio", "crates/core", "crates/gpu", "faces/app", "faces/cli"
 version = "0.1.0"
 edition = "2024"
 # License expression to review before any public release.
-license = "MIT OR Apache-2.0"
+license = "Apache-2.0"
 rust-version = "1.85" # MSRV floor: edition 2024 requires >= 1.85. Pin exact stable in rust-toolchain.toml.
 repository = "https://github.com/pueo/numinous"
 
