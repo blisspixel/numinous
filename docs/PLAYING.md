@@ -162,9 +162,13 @@ Conventions worth relying on:
   points as `pokes: [[x, y], ...]`, newest last, bounded to 24 points, or a
   `gesture` trail of phase-stamped pointer events (held rooms pin, pull, and
   fling). Both are replayable arguments, not hidden session state.
-- **Structured output.** Game grades and the journey return
-  `structuredContent` (scores, verdicts, level) alongside prose; parse that,
-  not the sentences.
+- **Structured output, and the substance is in it.** Game grades and the
+  journey return `structuredContent` (scores, verdicts, level) alongside prose;
+  parse that, not the sentences. The load-bearing content rides there too, not
+  only in the text block: `play_room` carries the ASCII `render`, `nim` carries
+  its `secret` on a win, `quiz` carries the `why`, `crack` carries per-guess
+  `feedback`, `seti` carries the channel traces. So a client that surfaces only
+  `structuredContent` still sees the math and earns the teaching.
 - **Dense feedback.** Grades name the wrong judgments (`wronglyEaten`,
   `missed`), not just totals. Mine it.
 - **Guiding errors.** A bad room id returns the list of valid ids. Errors are

@@ -1311,11 +1311,11 @@ fn play_room_tool(args: &Value) -> Value {
                     )
                 })
                 .unwrap_or_default();
+            let render = canvas.to_text();
             tool_structured(
                 &format!(
-                    "{} at t={t:.3}:\nAction: {action}{status_line}{touch_line}\n\n{}",
+                    "{} at t={t:.3}:\nAction: {action}{status_line}{touch_line}\n\n{render}",
                     m.title,
-                    canvas.to_text()
                 ),
                 json!({
                     "room": m.id,
@@ -1326,6 +1326,10 @@ fn play_room_tool(args: &Value) -> Value {
                     "gesture": if gesture.is_empty() { Value::Null } else { gesture_json(&gesture) },
                     "action": action,
                     "status": status,
+                    // The picture itself, so a mind on a client that surfaces
+                    // only structuredContent still sees the math, not just its
+                    // metadata. The render is the substance, never text-only.
+                    "render": render,
                     "delta": delta.map(render_delta_json),
                 }),
             )
@@ -1775,6 +1779,10 @@ fn crack_tool(args: &Value, journey_file: &std::path::Path) -> Value {
         );
     }
     let mut lines = Vec::new();
+    // The per-guess locked/loose signal is the whole game, so it rides in the
+    // structured payload too, not only in the text a structured-content client
+    // would drop.
+    let mut feedback_rows = Vec::new();
     for (i, raw) in guesses.iter().take(attempts).enumerate() {
         let guess: Vec<u8> = raw
             .chars()
@@ -1785,6 +1793,11 @@ fn crack_tool(args: &Value, journey_file: &std::path::Path) -> Value {
             return tool_error(&format!("Guess {} is not {digits} digits: {raw:?}", i + 1));
         }
         let feedback = numinous_core::grade(&secret, &guess);
+        feedback_rows.push(json!({
+            "guess": raw,
+            "locked": feedback.locked,
+            "loose": feedback.loose,
+        }));
         if feedback.locked == digits {
             let spare = (attempts - i - 1) as i64;
             return tool_structured(
@@ -1793,7 +1806,7 @@ fn crack_tool(args: &Value, journey_file: &std::path::Path) -> Value {
                     lines.join("\n"),
                     i + 1
                 ),
-                json!({ "game": "crack", "seed": seed, "defused": true, "attemptsToSpare": spare }),
+                json!({ "game": "crack", "seed": seed, "defused": true, "attemptsToSpare": spare, "feedback": feedback_rows }),
             );
         }
         lines.push(format!(
@@ -1805,7 +1818,7 @@ fn crack_tool(args: &Value, journey_file: &std::path::Path) -> Value {
         let code: String = secret.iter().map(|&d| char::from(b'0' + d)).collect();
         return tool_structured(
             &format!("{}\nBOOM. It was {code}.", lines.join("\n")),
-            json!({ "game": "crack", "seed": seed, "defused": false, "code": code }),
+            json!({ "game": "crack", "seed": seed, "defused": false, "code": code, "feedback": feedback_rows }),
         );
     }
     tool_structured(
@@ -1814,7 +1827,7 @@ fn crack_tool(args: &Value, journey_file: &std::path::Path) -> Value {
             lines.join("\n"),
             attempts - guesses.len()
         ),
-        json!({ "game": "crack", "seed": seed, "triesLeft": attempts - guesses.len() }),
+        json!({ "game": "crack", "seed": seed, "triesLeft": attempts - guesses.len(), "clue": clue, "feedback": feedback_rows }),
     )
 }
 
@@ -1843,7 +1856,14 @@ fn seti_tool(args: &Value, journey_file: &std::path::Path) -> Value {
                     "{verdict} The signal was {} at {}.",
                     scan.answer, scan.answer_frequency
                 ),
-                json!({ "game": "seti", "seed": seed, "correct": correct, "answer": scan.answer.to_string() }),
+                json!({
+                    "game": "seti",
+                    "seed": seed,
+                    "correct": correct,
+                    "answer": scan.answer.to_string(),
+                    "answerFrequency": scan.answer_frequency,
+                    "why": verdict,
+                }),
             )
         }
         None => {
@@ -1852,12 +1872,20 @@ fn seti_tool(args: &Value, journey_file: &std::path::Path) -> Value {
                 .iter()
                 .map(|c| format!("{})  {:>10}  |{}|", c.letter, c.frequency, c.trace))
                 .collect();
+            // The channels a mind must read to answer ride in the structured
+            // payload too, so the scan is not lost on a structured-content
+            // client. The trace is the puzzle, never text-only.
+            let channel_rows: Vec<Value> = scan
+                .channels
+                .iter()
+                .map(|c| json!({ "letter": c.letter.to_string(), "frequency": c.frequency, "trace": c.trace }))
+                .collect();
             tool_structured(
                 &format!(
                     "THE SKY (seed {seed}). One of these channels is a mind.\n{}\nCall again with your guess letter.",
                     traces.join("\n")
                 ),
-                json!({ "game": "seti", "seed": seed, "channels": channels }),
+                json!({ "game": "seti", "seed": seed, "channels": channel_rows }),
             )
         }
     }
@@ -1889,7 +1917,9 @@ fn aliens_tool(args: &Value) -> Value {
                     "{verdict} It was {answer} ({}).\n{}",
                     message.name, message.explanation
                 ),
-                json!({ "game": "aliens", "seed": seed, "round": round, "correct": correct, "answer": answer, "name": message.name }),
+                // The explanation of the sequence is the teaching, so it rides
+                // in structuredContent too, not only in the dropped text block.
+                json!({ "game": "aliens", "seed": seed, "round": round, "correct": correct, "answer": answer, "name": message.name, "why": message.explanation }),
             )
         }
         None => tool_structured(
@@ -2027,6 +2057,11 @@ fn gauntlet_tool(args: &Value) -> Value {
             .map(|c| format!("{})  {:>10}  |{}|", c.letter, c.frequency, c.trace))
             .collect();
         let secret = numinous_core::secret_code(seed ^ GAUNTLET_BOMB_MIX, 4);
+        let sky_rows: Vec<Value> = scan
+            .channels
+            .iter()
+            .map(|c| json!({ "letter": c.letter.to_string(), "frequency": c.frequency, "trace": c.trace }))
+            .collect();
         return tool_structured(
             &format!(
                 "THE GAUNTLET (seed {seed}). Four stages; clean stages build your combo.\n\nSTAGE 1  MUNCH: {}\n{}\nSTAGE 2  THE SHAPE:\n{}\n{}\nSTAGE 3  THE SKY:\n{}\nSTAGE 4  THE BOMB: four digits, five wires. Clue: {}\n\nCall again with answers: bites, shape, sky, wires.",
@@ -2037,7 +2072,18 @@ fn gauntlet_tool(args: &Value) -> Value {
                 traces.join("\n"),
                 numinous_core::hint(&secret)
             ),
-            json!({ "game": "gauntlet", "seed": seed, "stages": 4 }),
+            // The whole four-stage puzzle rides in structuredContent, so a mind
+            // on a structured-content client can actually play it, not just read
+            // that four stages exist.
+            json!({
+                "game": "gauntlet",
+                "seed": seed,
+                "stages": 4,
+                "munch": { "rule": board.rule.describe(), "board": numinous_core::board_text(&board) },
+                "shape": { "art": round.art, "choices": choices },
+                "sky": sky_rows,
+                "bomb": { "clue": numinous_core::hint(&secret) }
+            }),
         );
     };
     let (lines, scores, cleared) = gauntlet_grade(seed, answers);
@@ -2048,7 +2094,9 @@ fn gauntlet_tool(args: &Value) -> Value {
             "{}\n\nRUN COMPLETE  {clears}/4 clean  TOTAL {total}  (gauntlet seed:{seed})",
             lines.join("\n")
         ),
-        json!({ "game": "gauntlet", "seed": seed, "total": total, "clean": clears, "stageScores": scores }),
+        // The per-stage reveals (what the shape, signal, and code were) ride in
+        // the structured payload, so the run teaches on any client.
+        json!({ "game": "gauntlet", "seed": seed, "total": total, "clean": clears, "stageScores": scores, "reveals": lines }),
     )
 }
 
@@ -2199,12 +2247,13 @@ fn hackenbush_tool(args: &Value) -> Value {
         return tool_error("Illegal cut: pick a RED segment as [stalk, height], both 1-based.");
     };
     if won {
+        let secret = hb::the_secret();
         return tool_structured(
             &format!(
-                "The Order has nothing left to cut. It concedes, and keeps its word:\n\n{}",
-                hb::the_secret()
+                "The Order has nothing left to cut. It concedes, and keeps its word:\n\n{secret}"
             ),
-            json!({ "game": "hackenbush", "seed": seed, "won": true }),
+            // The promised secret rides in structuredContent too.
+            json!({ "game": "hackenbush", "seed": seed, "won": true, "secret": secret }),
         );
     }
     if !hb::can_move(&stalks, hb::Color::Red) {
@@ -2219,7 +2268,9 @@ fn hackenbush_tool(args: &Value) -> Value {
             narration.join("\n"),
             garden_rows(&stalks)
         ),
-        json!({ "game": "hackenbush", "seed": seed, "stalks": stalks.len() }),
+        // The Order's replies ride in the structured payload, so a mind on a
+        // structured-content client can follow the game.
+        json!({ "game": "hackenbush", "seed": seed, "stalks": stalks.len(), "order": narration }),
     )
 }
 
@@ -2265,7 +2316,9 @@ fn party_tool(args: &Value) -> Value {
                         z + 1,
                         party.shaded() - 1
                     ),
-                    json!({ "game": "party", "guests": guests, "escaped": false, "survived": party.shaded() - 1 }),
+                    // The Ramsey lesson and the offending triangle ride in the
+                    // structured payload, so the teaching is not text-only.
+                    json!({ "game": "party", "guests": guests, "escaped": false, "survived": party.shaded() - 1, "triangle": [x + 1, y + 1, z + 1], "why": lesson }),
                 );
             }
         }
@@ -2314,16 +2367,22 @@ fn fifteen_tool(args: &Value) -> Value {
                     )
                 })
                 .collect();
+            // The scramble boards a mind must read to call each deal ride in the
+            // structured payload too, so the puzzle is not text-only.
+            let scrambles: Vec<Value> = (0..rounds)
+                .map(|n| json!({ "round": n + 1, "board": ff::board_text(&ff::deal(seed, n)) }))
+                .collect();
             tool_structured(
                 &format!(
                     "FIFTEEN'S BET (seed {seed}). For each scramble call S (solvable) or U (stuck forever); half of all deals are lies and parity is the tell.\n\n{}\nCall again with calls: [\"S\", \"U\", ...].",
                     boards.join("\n")
                 ),
-                json!({ "game": "fifteen", "seed": seed, "rounds": rounds }),
+                json!({ "game": "fifteen", "seed": seed, "rounds": rounds, "scrambles": scrambles }),
             )
         }
         Some(calls) => {
             let mut lines = Vec::new();
+            let mut verdicts = Vec::new();
             let mut correct = 0u64;
             for n in 0..rounds.min(calls.len() as u64) {
                 let call_s = calls[n as usize]
@@ -2332,16 +2391,19 @@ fn fifteen_tool(args: &Value) -> Value {
                     .unwrap_or(false);
                 let tiles = ff::deal(seed, n);
                 let truth = ff::solvable(&tiles);
-                if call_s == truth {
+                let right = call_s == truth;
+                if right {
                     correct += 1;
                     lines.push(format!("{}: called it. {}", n + 1, ff::why(&tiles)));
                 } else {
                     lines.push(format!("{}: no. {}", n + 1, ff::why(&tiles)));
                 }
+                // Each round's parity tell (the whole lesson) rides in the JSON.
+                verdicts.push(json!({ "round": n + 1, "correct": right, "solvable": truth, "why": ff::why(&tiles) }));
             }
             tool_structured(
                 &format!("{}\n{correct} of {rounds} called.", lines.join("\n")),
-                json!({ "game": "fifteen", "seed": seed, "correct": correct, "rounds": rounds }),
+                json!({ "game": "fifteen", "seed": seed, "correct": correct, "rounds": rounds, "verdicts": verdicts }),
             )
         }
     }
@@ -2374,7 +2436,10 @@ fn quiz_tool(args: &Value, journey_file: &std::path::Path) -> Value {
                     "round": round,
                     "correct": correct,
                     "answer": quiz.answer.to_string(),
-                    "answerTitle": quiz.answer_title
+                    "answerTitle": quiz.answer_title,
+                    // The "why" the shape is what it is, so a wrong guess still
+                    // teaches on a client that surfaces only structuredContent.
+                    "why": quiz.answer_reveal
                 }),
             )
         }
@@ -2530,6 +2595,10 @@ fn munch_arcade_tool(args: &Value) -> Value {
             "score": run.score,
             "muncher": run.muncher,
             "vexations": run.vexations.iter().map(|v| json!({"cell": v.cell, "mind": format!("{:?}", v.mind)})).collect::<Vec<_>>(),
+            // The rule to eat by and the board a mind reads ride in the
+            // structured payload, not only the text state.
+            "rule": run.board.rule.describe(),
+            "board": board_text,
             "cleared": cleared,
             "over": run.lives == 0
         }),
@@ -2616,12 +2685,14 @@ fn nim_tool(args: &Value) -> Value {
             ));
         }
         if numinous_core::nim_finished(&heaps) {
+            let secret = numinous_core::nim_secret();
             return tool_structured(
                 &format!(
-                    "You took the last stone. The Order concedes, and keeps its word:\n\n{}",
-                    numinous_core::nim_secret()
+                    "You took the last stone. The Order concedes, and keeps its word:\n\n{secret}"
                 ),
-                json!({ "game": "nim", "seed": seed, "won": true }),
+                // The promised secret lives in the structured payload too, so a
+                // mind that reads only structuredContent still earns it.
+                json!({ "game": "nim", "seed": seed, "won": true, "secret": secret }),
             );
         }
         let (oh, ot) = numinous_core::nim_order(&heaps);
@@ -2645,7 +2716,9 @@ fn nim_tool(args: &Value) -> Value {
             narration.join("\n"),
             board.join("\n")
         ),
-        json!({ "game": "nim", "seed": seed, "heaps": heaps }),
+        // The Order's replies ride in the structured payload, so a mind that
+        // reads only structuredContent can follow the game, not just the heaps.
+        json!({ "game": "nim", "seed": seed, "heaps": heaps, "order": narration }),
     )
 }
 
@@ -3551,7 +3624,143 @@ plays 2
             resp["result"]["structuredContent"]["action"],
             expected_action
         );
+        // The picture must also ride in structuredContent, so a mind on a
+        // client that surfaces only the JSON still sees the math, not just its
+        // metadata. This is the playtest finding made a standing contract.
+        let render = resp["result"]["structuredContent"]["render"]
+            .as_str()
+            .expect("structuredContent carries the render");
+        assert!(render.contains('*'), "the structured render has ink too");
         assert_eq!(resp["result"]["isError"], false);
+    }
+
+    #[test]
+    fn the_reasoning_survives_in_structured_content() {
+        // A structured-content client drops the text block, so every graded
+        // game's teaching payload must also live in structuredContent. This
+        // pins the fix for the July 2026 playtest's core finding.
+        let sc = |resp: &serde_json::Value| resp["result"]["structuredContent"].clone();
+
+        // Nim: beating the Order must deliver the secret in the JSON. Seed 3's
+        // opening is winnable (the existing victory test relies on it too).
+        let win = handle_request(&json!({
+            "jsonrpc":"2.0","id":60,"method":"tools/call",
+            "params":{"name":"nim","arguments":{"seed":3,"moves":winning_nim_moves(3)}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(sc(&win)["won"], true);
+        assert!(
+            sc(&win)["secret"].as_str().unwrap_or_default().len() > 8,
+            "the promised secret rides in structuredContent"
+        );
+
+        // Quiz: a graded guess carries the "why" in the JSON, right or wrong.
+        let quiz = handle_request(&json!({
+            "jsonrpc":"2.0","id":61,"method":"tools/call",
+            "params":{"name":"quiz","arguments":{"seed":7,"round":0,"guess":"A"}}
+        }))
+        .expect("tools/call must respond");
+        assert!(
+            sc(&quiz)["why"].as_str().unwrap_or_default().len() > 8,
+            "the quiz explanation rides in structuredContent"
+        );
+
+        // Seti: the pose carries the channel traces a mind must read.
+        let sky = handle_request(&json!({
+            "jsonrpc":"2.0","id":62,"method":"tools/call",
+            "params":{"name":"seti","arguments":{"seed":7,"channels":4}}
+        }))
+        .expect("tools/call must respond");
+        let sky_sc = sc(&sky);
+        let channels = sky_sc["channels"].as_array().expect("channel rows");
+        assert_eq!(channels.len(), 4);
+        assert!(
+            channels[0]["trace"].as_str().is_some(),
+            "each channel's trace is in structuredContent"
+        );
+
+        // Crack: a guess carries its locked/loose signal in the JSON.
+        let bomb = handle_request(&json!({
+            "jsonrpc":"2.0","id":63,"method":"tools/call",
+            "params":{"name":"crack","arguments":{"seed":7,"digits":4,"guesses":["1234"]}}
+        }))
+        .expect("tools/call must respond");
+        let bomb_sc = sc(&bomb);
+        let rows = bomb_sc["feedback"].as_array().expect("feedback rows");
+        assert_eq!(rows.len(), 1);
+        assert!(rows[0]["locked"].is_number() && rows[0]["loose"].is_number());
+
+        // Aliens: the grade carries the sequence's explanation.
+        let aliens = handle_request(&json!({
+            "jsonrpc":"2.0","id":64,"method":"tools/call",
+            "params":{"name":"aliens","arguments":{"seed":7,"guess":"1"}}
+        }))
+        .expect("tools/call must respond");
+        assert!(
+            sc(&aliens)["why"].as_str().unwrap_or_default().len() > 4,
+            "the aliens explanation rides in structuredContent"
+        );
+
+        // Fifteen: the pose carries the scramble boards to read.
+        let fifteen = handle_request(&json!({
+            "jsonrpc":"2.0","id":65,"method":"tools/call",
+            "params":{"name":"fifteen","arguments":{"seed":7,"rounds":3}}
+        }))
+        .expect("tools/call must respond");
+        let fifteen_sc = sc(&fifteen);
+        assert_eq!(
+            fifteen_sc["scrambles"].as_array().map(Vec::len),
+            Some(3),
+            "the scramble boards ride in structuredContent"
+        );
+
+        // Gauntlet: the pose carries the whole four-stage puzzle.
+        let gauntlet = handle_request(&json!({
+            "jsonrpc":"2.0","id":66,"method":"tools/call",
+            "params":{"name":"gauntlet","arguments":{"seed":7}}
+        }))
+        .expect("tools/call must respond");
+        let gauntlet_sc = sc(&gauntlet);
+        assert!(
+            gauntlet_sc["munch"]["board"].as_str().is_some()
+                && gauntlet_sc["shape"]["art"].as_str().is_some()
+                && gauntlet_sc["sky"].as_array().is_some_and(|s| !s.is_empty())
+                && gauntlet_sc["bomb"]["clue"].as_str().is_some(),
+            "every gauntlet stage rides in structuredContent"
+        );
+    }
+
+    /// A move list that beats the Order at nim for the given seed, found by
+    /// replaying optimal xor-reducing play, so the win test cannot go stale if
+    /// the seeded heaps change.
+    fn winning_nim_moves(seed: u64) -> Vec<serde_json::Value> {
+        let mut heaps = numinous_core::nim_new(seed);
+        let mut moves = Vec::new();
+        loop {
+            let nim_sum = heaps.iter().fold(0u32, |acc, &h| acc ^ h);
+            // The winning move exists whenever the position is not already lost
+            // (nonzero xor), which a seeded start guarantees.
+            let Some((heap, take)) = heaps.iter().enumerate().find_map(|(i, &h)| {
+                let target = h ^ nim_sum;
+                (target < h).then(|| (i, h - target))
+            }) else {
+                // A balanced position (nim_sum 0) has no winning move; from a
+                // winnable opening we never reach one at our turn, so just stop.
+                return moves;
+            };
+            moves.push(json!([heap + 1, take]));
+            numinous_core::nim_apply(&mut heaps, heap, take);
+            if numinous_core::nim_finished(&heaps) {
+                return moves;
+            }
+            let (oh, ot) = numinous_core::nim_order(&heaps);
+            numinous_core::nim_apply(&mut heaps, oh, ot);
+            if numinous_core::nim_finished(&heaps) {
+                // The Order took the last stone; unreachable under optimal play,
+                // but return what we have rather than loop forever.
+                return moves;
+            }
+        }
     }
 
     #[test]

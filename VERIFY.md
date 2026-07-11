@@ -38,8 +38,8 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 926 tests pass, 90.87% region
-cover, and 90.40% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
+Expected right now: **format and clippy clean, 927 tests pass, 91.13% region
+cover, and 90.66% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
 integration-tested on real hardware and excluded from the coverage gate, see
 `docs/QUALITY.md`).
 
