@@ -1916,6 +1916,13 @@ fn run_sim_tool(args: &Value) -> Value {
             }
         }
     }
+    // `params` and `levers` are the same slot; if both are given, one would be
+    // silently dropped, so guide instead of quietly losing half the settings.
+    if args.get("params").is_some() && args.get("levers").is_some() {
+        return tool_error(
+            "Pass lever values in one of 'params' or 'levers', not both; they are the same argument.",
+        );
+    }
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'id'.");
     };
@@ -3158,6 +3165,22 @@ mod tests {
             text.contains("seed"),
             "the error names the offending argument: {text}"
         );
+    }
+
+    #[test]
+    fn run_sim_rejects_both_params_and_levers() {
+        // The two are the same slot; passing both must guide, not silently drop
+        // half the lever settings.
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":9,"method":"tools/call",
+            "params":{"name":"run_sim","arguments":{"id":"tribbles","params":{"breeding-rate":2.0},"levers":{"breeding-rate":1.0}}}
+        }))
+        .expect("must respond");
+        assert_eq!(resp["result"]["isError"], true);
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("not both"), "guides on the conflict: {text}");
     }
 
     #[test]
