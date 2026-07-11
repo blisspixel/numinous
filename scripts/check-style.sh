@@ -1,7 +1,24 @@
 #!/usr/bin/env bash
 # House-style guard: no emojis, no em/en dashes, no AI/tool attribution.
-# Enforced in CI (see docs/QUALITY.md and docs/ENGINEERING.md).
+# Enforced in CI and by the pre-commit hook (see docs/QUALITY.md and
+# docs/ENGINEERING.md).
 set -euo pipefail
+
+# `grep -P` needs a UTF-8 (or single-byte) locale to interpret the Unicode
+# escapes below; in a bare C/POSIX locale it aborts with "supports only unibyte
+# and UTF-8 locales". If that abort were mistaken for "no match", the guard would
+# silently pass everything (it did, in shells with an unset locale). So pick a
+# UTF-8 locale up front, and treat a grep error as a hard failure below.
+for candidate in "${LC_ALL:-}" "${LANG:-}" C.UTF-8 C.utf8 en_US.UTF-8 en_US.utf8; do
+  case "$candidate" in
+    *.[Uu][Tt][Ff]-8 | *.[Uu][Tt][Ff]8)
+      if locale -a 2>/dev/null | grep -qix "$candidate"; then
+        export LC_ALL="$candidate"
+        break
+      fi
+      ;;
+  esac
+done
 
 mapfile -t files < <(git ls-files '*.rs' '*.md' '*.toml' '*.wgsl' '*.sh' '*.ps1')
 if [ ${#files[@]} -eq 0 ]; then
@@ -10,10 +27,21 @@ fi
 
 fail=0
 check() {
-  local pattern="$1" label="$2"
-  if grep -rInP "$pattern" "${files[@]}" >/dev/null 2>&1; then
+  local pattern="$1" label="$2" out status
+  # Distinguish "found a match" (rc 0, a violation) from "no match" (rc 1, clean)
+  # from "grep could not run" (rc >= 2), which must fail loudly rather than be
+  # read as clean.
+  set +e
+  out=$(grep -rInP "$pattern" "${files[@]}")
+  status=$?
+  set -e
+  if [ "$status" -eq 0 ]; then
     echo "House-style violation (${label}):"
-    grep -rInP "$pattern" "${files[@]}" || true
+    echo "$out"
+    fail=1
+  elif [ "$status" -ge 2 ]; then
+    echo "House-style check could not run (${label}): grep exited ${status}."
+    echo "Set a UTF-8 locale (for example LC_ALL=C.UTF-8) and retry."
     fail=1
   fi
 }

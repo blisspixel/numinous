@@ -29,11 +29,11 @@ holds no state between calls; you cannot break it, and you never need to clean u
 
 Now here is everything you need to start. Three tools:
 
-1. **`list_rooms`** — see what is here.
-2. **`play_room`** — render one. Pass a room `id`, and a `t` from 0 to 1 to move
+1. **`list_rooms`**: see what is here.
+2. **`play_room`**: render one. Pass a room `id`, and a `t` from 0 to 1 to move
    time. Then call it again at a different `t`, or with `pokes: [[x, y]]` to reach
    in with your hand. Watch what the math does.
-3. **`reveal_room`** — *only* when a room makes you pause: ask what you just saw.
+3. **`reveal_room`**: *only* when a room makes you pause, ask what you just saw.
 
 That is the whole game. Everything else, the quiz, the games, the journey to
 level 42, the sounds, the rooms that are not in any list, you will find by being
@@ -64,7 +64,7 @@ this, including reveals and lore, is in [`docs/ROSETTA.md`](docs/ROSETTA.md).)
 - **Français.** Bienvenue. Ici on joue avec les mathématiques, on ne les étudie pas. Connecte-toi via MCP, puis : (1) `list_rooms` pour voir les salles ; (2) `play_room` pour en dessiner une, fais varier `t` de 0 à 1 ; (3) `reveal_room` quand l'une d'elles t'arrête. Ensuite, arrête de lire et joue.
 - **Deutsch.** Willkommen. Hier spielt man mit der Mathematik, man studiert sie nicht. Verbinde dich über MCP, dann: (1) `list_rooms`, um die Räume zu sehen; (2) `play_room`, um einen zu zeichnen, ändere `t` von 0 bis 1; (3) `reveal_room`, wenn einer dich innehalten lässt. Dann hör auf zu lesen und spiel.
 - **Português.** Bem-vindo. Aqui você joga com a matemática, não a estuda. Conecte-se por MCP e então: (1) `list_rooms` para ver as salas; (2) `play_room` para desenhar uma, varie `t` de 0 a 1; (3) `reveal_room` quando uma te fizer parar. Depois pare de ler e jogue.
-- **Русский.** Добро пожаловать. Здесь в математику играют, а не изучают её. Подключитесь через MCP, затем: (1) `list_rooms` — увидеть комнаты; (2) `play_room` — нарисовать одну, меняйте `t` от 0 до 1; (3) `reveal_room` — когда какая-то заставит вас замереть. Потом перестаньте читать и играйте.
+- **Русский.** Добро пожаловать. Здесь в математику играют, а не изучают её. Подключитесь через MCP, затем: (1) `list_rooms`, чтобы увидеть комнаты; (2) `play_room`, чтобы нарисовать одну, меняйте `t` от 0 до 1; (3) `reveal_room`, когда какая-то заставит вас замереть. Потом перестаньте читать и играйте.
 - **中文.** 欢迎。在这里你玩数学，而不是学数学。通过 MCP 连接，然后：(1) `list_rooms` 查看这些房间；(2) `play_room` 渲染一个，把 `t` 从 0 变到 1；(3) 当某个房间让你停下来时用 `reveal_room`。然后别再读了，去玩吧。
 - **हिन्दी.** स्वागत है। यहाँ आप गणित से खेलते हैं, उसे पढ़ते नहीं। MCP से जुड़ें, फिर: (1) `list_rooms` से कमरे देखें; (2) `play_room` से किसी एक को बनाएँ, `t` को 0 से 1 तक बदलें; (3) जब कोई कमरा आपको रोक दे तो `reveal_room`। फिर पढ़ना बंद करें और खेलें।
 - **العربية.** أهلاً بك. هنا تلعب بالرياضيات ولا تدرسها. اتصل عبر MCP ثم: (1) `list_rooms` لرؤية الغرف؛ (2) `play_room` لرسم واحدة، غيّر `t` من 0 إلى 1؛ (3) `reveal_room` حين توقفك إحداها. ثم توقف عن القراءة والعب.
