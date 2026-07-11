@@ -2134,7 +2134,13 @@ fn write_png(path: &Path, raster: &Raster) -> Result<(), String> {
 /// Render every room into one tiled contact-sheet PNG.
 fn contact_sheet(path: &Path, cols: usize, tile: usize) -> Result<String, String> {
     let rooms = all_rooms();
-    let cols = cols.max(1);
+    // Bound both argv numbers before any multiply. `cols * tile` sizes the sheet
+    // and `col * tile` / `row * tile` place every cell, so an absurd --cols/--tile
+    // would overflow usize (a panic under overflow-checks, wrapped garbage in
+    // release). More columns than rooms only adds empty cells, and 4096 is the
+    // Raster dimension cap, so a larger tile would be clamped away regardless.
+    let cols = cols.clamp(1, rooms.len().max(1));
+    let tile = tile.clamp(1, 4096);
     let rows = rooms.len().div_ceil(cols);
     let mut sheet = Raster::new(cols * tile, rows * tile);
     let label_scale = (tile as i32 / 160).clamp(1, 3);
@@ -3593,6 +3599,17 @@ mod tests {
         assert!(message.contains("contact sheet"));
         let size = std::fs::metadata(&path).expect("file exists").len();
         assert!(size > 0);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn contact_sheet_survives_absurd_dimensions() {
+        // `cols * tile` overflowed usize before the Raster clamp (a panic under
+        // overflow-checks). A huge cols with a small tile hits that same multiply
+        // while keeping the render cheap; the clamp must bound it.
+        let path = std::env::temp_dir().join("numinous_contact_huge_test.png");
+        let message = super::contact_sheet(&path, usize::MAX, 8).expect("bounded sheet");
+        assert!(message.contains("contact sheet"));
         let _ = std::fs::remove_file(&path);
     }
 

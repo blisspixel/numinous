@@ -376,11 +376,17 @@ pub fn eval(expr: &Expr, x: f64, a: f64) -> f64 {
     }
 }
 
+/// The most notes a melody may hold. Each note is a fixed slice of time and a
+/// sample buffer, so an unbounded count (a hostile `--notes`) would drive an
+/// unbounded allocation; this bounds it to a couple of minutes of audio while
+/// staying far above any real curve's detail.
+pub const MAX_MELODY_NOTES: usize = 512;
+
 /// Turn an expression into a melody: sample `y = f(x)` across `[xmin, xmax]` and
 /// map each value to a pitch, stepping through time. You hear the curve.
 #[must_use]
 pub fn to_melody(expr: &Expr, xmin: f64, xmax: f64, notes: usize, a: f64) -> SoundSpec {
-    let notes = notes.max(1);
+    let notes = notes.clamp(1, MAX_MELODY_NOTES);
     let step = 0.12_f32;
     let denom = (notes as f64 - 1.0).max(1.0);
     let samples: Vec<f64> = (0..notes)
@@ -687,11 +693,22 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_EXPR_TOKENS, MAX_PARSE_DEPTH, MAX_STUDIO_SOURCE_CHARS, StudioCreation, eval, parse,
+        MAX_EXPR_TOKENS, MAX_MELODY_NOTES, MAX_PARSE_DEPTH, MAX_STUDIO_SOURCE_CHARS,
+        StudioCreation, eval, parse, to_melody,
     };
 
     fn at(source: &str, x: f64) -> f64 {
         eval(&parse(source).expect("parse"), x, 0.0)
+    }
+
+    #[test]
+    fn to_melody_bounds_a_hostile_note_count() {
+        // A huge `notes` (from a hostile CLI --notes) would otherwise drive an
+        // unbounded sample allocation; it must clamp, while still making music.
+        let expr = parse("x").expect("parses");
+        let spec = to_melody(&expr, 0.0, 1.0, usize::MAX, 0.0);
+        assert!(spec.notes.len() <= MAX_MELODY_NOTES);
+        assert!(!spec.notes.is_empty());
     }
 
     #[test]
