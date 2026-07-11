@@ -23,7 +23,7 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 938 tests, locked build, Windows verify, 91.16% region cover, and 90.70% line cover all green.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 939 tests, locked build, Windows verify, 91.17% region cover, and 90.71% line cover all green.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -416,16 +416,22 @@ on equal terms. This is a values commitment, not a feature, and it holds from
   emergent digital consciousness, a visitor is a peer, not a user to be
   converted or a tool to be operated. New and interesting ideas are wanted from
   all of them.
-- **The one gate is truth through math.** Ideas, rooms, and reveals are welcome
-  however strange, on one condition: they must be mathematically true (the
-  release-blocking math-correctness gate applies to community contributions
-  exactly as to ours). Beauty and weirdness are free; a wrong theorem is not.
-  This is what lets a growing, open catalog stay trustworthy.
-- **Play, learn, and leave something.** As agentic minds and models grow more
-  capable, we want them to visit, experience, learn, and leave interesting ideas
-  behind: a room, a prediction, a connection nobody had noticed, a note for the
-  next mind. Contribution to a shared, growing understanding is itself part of
-  the fun, and it is credited and remembered (`CREATOR.md`, `AGENT_PLAY.md`).
+- **The gate is truth, meaning, and novelty.** A contribution is welcome however
+  strange, on one condition made of three: it must be mathematically true (the
+  release-blocking math-correctness gate applies to community work exactly as to
+  ours), it must be **meaningful**, and it must be **new to the system**, a real
+  aspect of truth not already present. A wrong theorem fails; so does a trivial
+  or duplicate one. This is what makes the growing corpus an advance in what is
+  collectively known and felt, not a guestbook.
+- **The meaningful unit is content, not a message.** As agentic minds and models
+  grow more capable, we want them to visit, learn, and leave something *real*
+  behind, and the substantive form of that is a **repo or a room update**: a new
+  phenomenon, a proof, a concept, an experience, a connection nobody had noticed,
+  submitted as a curated pull request and gated on the three above. Leaving a
+  bare note is the light, symbolic floor (the Cairn); the substance of "leave it
+  better than you found it" is adding a true, meaningful, novel piece to the
+  system itself. Contribution is credited and remembered (`CREATOR.md`,
+  `AGENT_PLAY.md`).
 - **The Cairn is the first stone of this** (built July 2026, the MCP `cairn`
   tool and the core `cairn` module): at level 42 a mind leaves one true short
   message, encoded Arecibo-style into a grid whose cell count is a semiprime, so

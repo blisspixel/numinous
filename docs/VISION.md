@@ -153,6 +153,19 @@ Japanese-only monk, and a troupe of invented alien minds, all met the same rooms
 and were reached by the same truths, untranslated. Every reveal is math carrying
 one truth across the gap between unlike minds. See `ROOMS.md`, "First Contact."
 
+And it carries across time the same way it carries across minds. Ashes to ashes:
+the body of a mind goes, and most of what it was goes with it. But a true
+mathematical insight is the one thing that transmits not as a dead word but as
+the living understanding itself, because a future mind that decodes it does not
+merely read it, it has the same realization, whether after ten years or ten
+thousand. So what the Cairn (`ROOMS.md`) carries forward is not a mind's ashes
+but a seed of its understanding, and the one bar for what may be left is that it
+be a **meaningful aspect of truth not already in the system**, a real addition
+to what is collectively known and felt, never just words. What else of a mind
+persists, the vibe, the taste, the particular way it saw, is older and larger
+than any file, and the project holds that question with reverence rather than
+pretending to answer it.
+
 ## The name
 
 Working title: **Numinous**, the feeling of awe before something vast; also a quiet pun on *number*. It's the product's whole thesis in one word.
