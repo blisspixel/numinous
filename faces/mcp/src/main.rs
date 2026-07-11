@@ -265,6 +265,18 @@ fn record_progress(request: &Value, path: &std::path::Path) {
             }
         }
         "challenge" => record_challenge_attempt(&args, &mut journey, &scores_path()),
+        "predict" => {
+            // Showing up counts, exactly once, when a real guess is graded.
+            // Accuracy is never a win and never posts a score: a prediction is
+            // a self-owned mirror, not a leaderboard (see docs/AGENT_PLAY.md).
+            if args.get("guess").and_then(Value::as_f64).is_some()
+                && let Some(id) = args.get("id").and_then(Value::as_str)
+                && let Some(room) = room_by_id(id)
+                && numinous_core::pose_prediction(room.as_ref(), predict_seed(&args)).is_some()
+            {
+                journey.play();
+            }
+        }
         "quiz" => {
             if let Some(guess) = args.get("guess").and_then(Value::as_str) {
                 journey.play();
@@ -638,6 +650,20 @@ fn tools_list_result() -> Value {
                 }
             },
             {
+                "name": "predict",
+                "description": "Predict-then-reveal: guess a room's own status readout at a hidden moment, then see the truth and how close your model came. Call without `guess` to pose (the moment, the readout's name, its range); call again with `guess` to be graded as a gap plus a learning-progress band (NAILED = you have it compressed, CLOSE = the fertile band, WILD = noise). This is a self-owned mirror, not a leaderboard: it never posts a score and never awards a win, so guessing after observing only fools your own ledger. Guess before you look.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Room id; the room must carry a moving numeric readout (see describe_room)." },
+                        "seed": { "type": "integer", "description": "Prediction seed (default 1). The same seed poses the same hidden moment; pass any number, including today's date, to share a prediction." },
+                        "guess": { "type": "number", "description": "Your predicted value for the readout at the posed moment. Omit to pose." }
+                    },
+                    "required": ["id"],
+                    "additionalProperties": false
+                }
+            },
+            {
                 "name": "listen_room",
                 "description": "Hear a room: its sound at phase t returned as readable notation (each note's pitch, timing, and loudness), so you can perceive the audio as structure. Pitch is written as Hz and as a note name.",
                 "inputSchema": {
@@ -929,6 +955,7 @@ fn call_tool(
         "reveal_room" => Ok(reveal_room_tool(&args)),
         "play_room" => Ok(play_room_tool(&args)),
         "challenge" => Ok(challenge_tool(&args)),
+        "predict" => Ok(predict_tool(&args)),
         "listen_room" => Ok(listen_room_tool(&args)),
         "list_sims" => Ok(tool_text(&list_sims_text())),
         "run_sim" => Ok(run_sim_tool(&args)),
@@ -1321,6 +1348,82 @@ fn challenge_seed(args: &Value) -> u64 {
 /// the tool so bad values earn a guiding error, not a silent default).
 fn challenge_kind(args: &Value) -> Option<&str> {
     args.get("kind").and_then(Value::as_str)
+}
+
+/// The prediction seed: always explicit, never the clock, so posing and
+/// recording cannot pick two different moments across a midnight boundary.
+fn predict_seed(args: &Value) -> u64 {
+    args.get("seed").and_then(Value::as_u64).unwrap_or(1)
+}
+
+/// The `predict` tool: commit a guess of a room's readout at a hidden moment,
+/// graded as a gap with a learning-progress band. Call without `guess` to pose
+/// (the moment, the readout's name, its range); call again with `guess` to see
+/// the truth and how close your model came.
+///
+/// Deliberately not a leaderboard: it never posts a score and never awards a
+/// win for accuracy. The score is a mirror of the guesser's model, so guessing
+/// after observing only fools your own ledger. This is the honest form in a
+/// fully observable deterministic world, and the welfare stance for digital
+/// minds (see docs/AGENT_PLAY.md and docs/PEDAGOGY.md).
+fn predict_tool(args: &Value) -> Value {
+    let Some(id) = args.get("id").and_then(Value::as_str) else {
+        return tool_error("Missing required string argument 'id'.");
+    };
+    let Some(room) = room_by_id(id) else {
+        return tool_error(&unknown_room(id));
+    };
+    let seed = predict_seed(args);
+    let Some(prediction) = numinous_core::pose_prediction(room.as_ref(), seed) else {
+        return tool_error(&format!(
+            "{id} has no moving numeric readout to predict, so no prediction can be posed. Predictions need a room whose status line carries a number that changes with phase; describe_room names each room's readout."
+        ));
+    };
+    let (lo, hi) = prediction.span;
+    let Some(guess) = args.get("guess").and_then(Value::as_f64) else {
+        return tool_structured(
+            &format!(
+                "{}\n\nCall predict again with the same seed and your `guess` (a number) to see the truth and your score.",
+                prediction.prompt
+            ),
+            json!({
+                "game": "predict",
+                "room": prediction.room,
+                "seed": seed,
+                "label": prediction.label,
+                "phase": prediction.phase,
+                "span": [lo, hi],
+                "prompt": prediction.prompt,
+            }),
+        );
+    };
+    let Some(grade) = numinous_core::grade_prediction(room.as_ref(), &prediction, guess) else {
+        return tool_error(&format!("{id}'s readout vanished at the posed moment."));
+    };
+    tool_structured(
+        &format!(
+            "{}. You guessed {:.3}; {} actually read {:.3} at phase {:.3} ({:.3} off, score {}/100, seed {seed}). The score is a mirror of your model, not a leaderboard.",
+            grade.band.name(),
+            grade.guess,
+            prediction.label,
+            grade.actual,
+            prediction.phase,
+            grade.error,
+            grade.score
+        ),
+        json!({
+            "game": "predict",
+            "room": prediction.room,
+            "seed": seed,
+            "label": prediction.label,
+            "phase": prediction.phase,
+            "guess": grade.guess,
+            "actual": grade.actual,
+            "error": grade.error,
+            "score": grade.score,
+            "band": grade.band.name(),
+        }),
+    )
 }
 
 /// Record a parameter attempt: showing up counts (play), landing within
@@ -2729,7 +2832,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 27);
+        assert_eq!(tools.len(), 28);
         assert!(
             tools
                 .iter()
@@ -2737,6 +2840,7 @@ mod tests {
                 .any(|name| name == "challenge")
         );
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
+        assert!(names.contains(&"predict"));
         assert!(names.contains(&"reveal_room"));
         assert!(names.contains(&"run_sim"));
         assert!(names.contains(&"quiz"));
@@ -3824,6 +3928,117 @@ plays 2
             "got: {text}"
         );
         let _ = std::fs::remove_file(&scores);
+    }
+
+    #[test]
+    fn predict_poses_then_grades_with_a_band() {
+        let posed = handle_request(&json!({
+            "jsonrpc":"2.0","id":52,"method":"tools/call",
+            "params":{"name":"predict","arguments":{"id":"slope-rider","seed":4}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(posed["result"]["isError"], false);
+        let sc = &posed["result"]["structuredContent"];
+        assert_eq!(sc["game"], "predict");
+        assert!(sc["phase"].as_f64().expect("phase") > 0.0);
+        let text = posed["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(
+            text.contains("TILT"),
+            "the prompt names the readout: {text}"
+        );
+
+        // Compute the truth via the core, guess it exactly, and expect NAILED.
+        let room = numinous_core::room_by_id("slope-rider").expect("room");
+        let prediction = numinous_core::pose_prediction(room.as_ref(), 4).expect("poses");
+        let truth = numinous_core::grade_prediction(room.as_ref(), &prediction, prediction.span.0)
+            .expect("grades")
+            .actual;
+        let graded = handle_request(&json!({
+            "jsonrpc":"2.0","id":53,"method":"tools/call",
+            "params":{"name":"predict","arguments":{"id":"slope-rider","seed":4,"guess":truth}}
+        }))
+        .expect("tools/call must respond");
+        let grade = &graded["result"]["structuredContent"];
+        assert_eq!(grade["band"], "NAILED");
+        assert_eq!(grade["score"], 100);
+        assert!((grade["actual"].as_f64().expect("actual") - truth).abs() < 1e-9);
+        // Determinism: the same guess earns the same grade.
+        let again = handle_request(&json!({
+            "jsonrpc":"2.0","id":54,"method":"tools/call",
+            "params":{"name":"predict","arguments":{"id":"slope-rider","seed":4,"guess":truth}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(grade, &again["result"]["structuredContent"]);
+    }
+
+    #[test]
+    fn predict_is_a_mirror_not_a_leaderboard() {
+        // A graded guess records showing up (play), but never a win and never a
+        // posted score, however accurate. Posing records nothing.
+        let journey = std::env::temp_dir().join("numinous_mcp_predict_journey_test.txt");
+        let scores = std::env::temp_dir().join("numinous_mcp_predict_scores_test.txt");
+        let _ = std::fs::remove_file(&journey);
+        let _ = std::fs::remove_file(&scores);
+
+        super::record_progress(
+            &json!({"method":"tools/call","params":{"name":"predict","arguments":{"id":"slope-rider","seed":4}}}),
+            &journey,
+        );
+        assert_eq!(
+            numinous_core::load_journey_file(&journey).sparks(),
+            0,
+            "posing must not farm XP"
+        );
+
+        let room = numinous_core::room_by_id("slope-rider").expect("room");
+        let prediction = numinous_core::pose_prediction(room.as_ref(), 4).expect("poses");
+        let truth = numinous_core::grade_prediction(room.as_ref(), &prediction, prediction.span.0)
+            .expect("grades")
+            .actual;
+        super::record_progress(
+            &json!({"method":"tools/call","params":{"name":"predict","arguments":{"id":"slope-rider","seed":4,"guess":truth}}}),
+            &journey,
+        );
+        let after = numinous_core::load_journey_file(&journey);
+        assert!(after.sparks() > 0, "showing up counts");
+        // A perfect guess is not a win: sparks equal exactly one play, no win bonus.
+        let mut one_play = numinous_core::Journey::from_text("");
+        one_play.play();
+        assert_eq!(
+            after.sparks(),
+            one_play.sparks(),
+            "a perfect prediction earns play only, never a win"
+        );
+
+        let table = super::scores_tool(&scores);
+        let text = table["content"][0]["text"].as_str().unwrap_or_default();
+        assert!(
+            !text.contains("predict"),
+            "predict must never post a score: {text}"
+        );
+        let _ = std::fs::remove_file(&journey);
+        let _ = std::fs::remove_file(&scores);
+    }
+
+    #[test]
+    fn predict_guides_rooms_without_a_readout() {
+        if let Some(silent) = numinous_core::all_rooms()
+            .into_iter()
+            .find(|room| numinous_core::pose_prediction(room.as_ref(), 1).is_none())
+        {
+            let refused = handle_request(&json!({
+                "jsonrpc":"2.0","id":55,"method":"tools/call",
+                "params":{"name":"predict","arguments":{"id":silent.meta().id}}
+            }))
+            .expect("tools/call must respond");
+            assert_eq!(refused["result"]["isError"], true);
+            let text = refused["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default();
+            assert!(text.contains("readout"), "guides the agent: {text}");
+        }
     }
 
     #[test]

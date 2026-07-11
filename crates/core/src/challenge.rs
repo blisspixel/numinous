@@ -98,7 +98,7 @@ const PARAMETER_SAMPLES: usize = 64;
 /// parsed value), left to right. A sign counts as part of a number only when
 /// a digit follows it, so "X:Y = 3:2.00" yields the 3 and the 2.00 and a
 /// hyphen in prose never starts a phantom number.
-fn status_numbers(status: &str) -> Vec<(usize, f64)> {
+pub(crate) fn status_numbers(status: &str) -> Vec<(usize, f64)> {
     let bytes = status.as_bytes();
     let mut numbers = Vec::new();
     let mut start = 0;
@@ -141,9 +141,9 @@ fn status_label(status: &str, cut: usize) -> String {
     }
 }
 
-/// A goal number with three significant digits, so tiny tolerances read at
-/// their true scale instead of vanishing into "0.000".
-fn fmt_sig(x: f64) -> String {
+/// A number with three significant digits, so tiny values read at their true
+/// scale instead of vanishing into "0.000".
+pub(crate) fn fmt_sig(x: f64) -> String {
     let decimals = sig_decimals(x);
     format!("{x:.decimals$}")
 }
@@ -181,14 +181,29 @@ fn readout_label(status: &str, numbers: &[(usize, f64)], index: usize) -> String
     }
 }
 
-/// Pose the deterministic parameter goal for a room and seed, or `None` for
-/// rooms without a numeric readout or whose readout never moves. The readout
-/// is the first column that is present and label-stable across every sample
-/// and that varies across the sweep (constant numbers are labels or tunings,
-/// not readouts). The target is one of the sweep's own sampled values, so
-/// every posed goal is reachable by construction: some phase lands on it.
-#[must_use]
-pub fn pose_parameter_goal(room: &dyn Room, seed: u64) -> Option<ParameterGoal> {
+/// A room's readout: the first status-line number that is present and
+/// label-stable across the whole sweep and actually varies. This is the single
+/// thing both parameter goals and predictions target, so the column-finding
+/// lives here once rather than in each feature.
+pub(crate) struct Readout {
+    /// Which number in the status line the readout is.
+    pub index: usize,
+    /// Its spoken name (TILT, K, X:Y), never a swallowed tuning digit.
+    pub label: String,
+    /// The lowest and highest values it takes across the sampled sweep.
+    pub span: (f64, f64),
+    /// Its value at each of the [`PARAMETER_SAMPLES`] sampled phases.
+    pub samples: Vec<f64>,
+}
+
+/// Find the room's readout, or `None` if it has no status line, no numeric
+/// column stable across the sweep, or none that moves. The readout is the
+/// first column that is present and label-stable across every sample and that
+/// varies (constant numbers are labels or tunings, not readouts). Times
+/// Tables' status carries a trailing note whose own number comes and goes
+/// ("CLOSED: 5 LOBES" vs "OPEN, WANDERING"), so only the leading, aligned
+/// columns count.
+pub(crate) fn find_readout(room: &dyn Room) -> Option<Readout> {
     let mut statuses = Vec::with_capacity(PARAMETER_SAMPLES);
     for i in 0..PARAMETER_SAMPLES {
         let t = i as f64 / PARAMETER_SAMPLES as f64;
@@ -196,10 +211,6 @@ pub fn pose_parameter_goal(room: &dyn Room, seed: u64) -> Option<ParameterGoal> 
         let numbers = status_numbers(&status);
         statuses.push((status, numbers));
     }
-    // Read only the leading columns present in every sample. Times Tables'
-    // status carries a trailing note whose own number comes and goes
-    // ("CLOSED: 5 LOBES" vs "OPEN, WANDERING"), so the total count is not
-    // stable; the K column in front of it is, and that is the readout.
     let min_columns = statuses.iter().map(|(_, n)| n.len()).min().unwrap_or(0);
     let (index, lo, hi) = (0..min_columns).find_map(|index| {
         // Alignment guard: column `index` must carry the same label in every
@@ -217,22 +228,40 @@ pub fn pose_parameter_goal(room: &dyn Room, seed: u64) -> Option<ParameterGoal> 
         let moving = lo.is_finite() && hi.is_finite() && hi - lo >= 1e-9;
         moving.then_some((index, lo, hi))
     })?;
+    let label = readout_label(&statuses[0].0, &statuses[0].1, index);
+    let samples = statuses.iter().map(|(_, n)| n[index].1).collect();
+    Some(Readout {
+        index,
+        label,
+        span: (lo, hi),
+        samples,
+    })
+}
+
+/// Pose the deterministic parameter goal for a room and seed, or `None` for
+/// rooms without a moving numeric readout. The target is one of the sweep's
+/// own sampled values, so every posed goal is reachable by construction: some
+/// phase lands on it.
+#[must_use]
+pub fn pose_parameter_goal(room: &dyn Room, seed: u64) -> Option<ParameterGoal> {
+    let readout = find_readout(room)?;
+    let (lo, hi) = readout.span;
     let meta = room.meta();
     let mut rng = SplitMix64::new(seed ^ fnv1a(meta.id.as_bytes()) ^ 0x5041_5241);
-    let target = statuses[rng.below(PARAMETER_SAMPLES as u64) as usize].1[index].1;
+    let target = readout.samples[rng.below(readout.samples.len() as u64) as usize];
     let tolerance = (hi - lo) / 40.0;
-    let label = readout_label(&statuses[0].0, &statuses[0].1, index);
     let goal = format!(
-        "SWEEP {} UNTIL {label} LANDS WITHIN {} OF {}",
+        "SWEEP {} UNTIL {} LANDS WITHIN {} OF {}",
         meta.title.to_uppercase(),
+        readout.label,
         fmt_tolerance(tolerance),
         fmt_sig(target),
     );
     Some(ParameterGoal {
         room: meta.id.to_string(),
         seed,
-        index,
-        label,
+        index: readout.index,
+        label: readout.label,
         target,
         tolerance,
         span: (lo, hi),
@@ -460,7 +489,7 @@ pub fn grade_challenge(
 }
 
 /// FNV-1a over bytes: a tiny, stable hash to mix a room id into a seed.
-fn fnv1a(bytes: &[u8]) -> u64 {
+pub(crate) fn fnv1a(bytes: &[u8]) -> u64 {
     let mut hash = 0xcbf2_9ce4_8422_2325u64;
     for &b in bytes {
         hash ^= u64::from(b);

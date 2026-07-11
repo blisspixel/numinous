@@ -35,6 +35,7 @@ pub mod munchers;
 pub mod nim;
 pub mod party;
 pub mod persistence;
+pub mod predict;
 pub mod quiz;
 pub mod radio;
 pub mod raster;
@@ -79,6 +80,7 @@ pub use persistence::{
     load_journey_file, load_scoreboard_file, persist_journey_delta, record_score_file,
     remove_persisted_file,
 };
+pub use predict::{Band, Prediction, PredictionGrade, grade_prediction, pose_prediction};
 pub use quiz::{ICONIC, QuizChoice, QuizRound, build_round, build_round_pool, build_round_sized};
 pub use radio::{STATIONS, Station, brief_for, length_for, station};
 pub use raster::Raster;

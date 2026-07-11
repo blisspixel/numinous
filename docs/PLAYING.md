@@ -118,7 +118,7 @@ or in any MCP client's config (build once with
 ```
 
 Transport is JSON-RPC 2.0 over newline-delimited stdio, protocol revision
-2025-06-18. Twenty-seven tools, mostly flat schemas, all stateless per call;
+2025-06-18. Twenty-eight tools, mostly flat schemas, all stateless per call;
 the bounded `play_room` `pokes` tuple array and `gesture` event objects are
 the deliberate exceptions for replayable hand input:
 
@@ -129,6 +129,7 @@ the deliberate exceptions for replayable hand input:
 | `reveal_room` | the insight that reframes the room |
 | `play_room` | render a room as ASCII at phase `t`, with optional `variation` and `pokes` |
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
+| `predict` | predict a room's readout at a hidden moment; graded as a gap and a band, a self-owned mirror, never a score |
 | `listen_room` | the room's sound as notation (Hz, note names, timing) |
 | `list_sims` | the simulations and their levers |
 | `run_sim` | run a sim with your lever values; picture plus plain readout |
