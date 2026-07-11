@@ -17,6 +17,32 @@ Everything in this product should feel like it was made by people who are *delig
 - A **generative-art engine** quietly running under all of it, so every frame is beautiful.
 - **Shareable by design**, built to escape the app as clips and links.
 
+## An instrument, not a game (the sharpening)
+
+An external review (July 2026) named this, and it is right: the truest kin of
+Numinous are not games but **instruments**, Ableton, Blender, Desmos,
+TouchDesigner, the OP-1, Dreams. You never "beat" a piano; you become more
+expressive. Numinous lives there. This has three consequences worth stating as
+law (the enforcement lives in `SCOPE.md`):
+
+- **The room is the thing; everything else is a multiplier or subordinate to
+  it.** The instrument (the playable rooms) is what matters; the Studio raises
+  its ceiling to infinity; progression is kept from ever outshining the math.
+- **Mastery is math's, not XP's.** The test is not "can they understand this
+  room" but "can they get *good* at it": improvise, perform, develop a
+  recognizable style. "My best Lorenz solo" should be a real, shareable thing.
+  Math already has mastery built in; we never replace it with a level number.
+- **The unit of growth is the moment.** What becomes legendary is the
+  five-second clip: someone sees something mathematically impossible, stops,
+  watches, sends it to a friend. Every room should hold dozens. Design for that
+  moment.
+
+And the competitive posture: most ambitious software tries to become
+*indispensable* (habitual use because it solves a problem). We aim at something
+rarer, to be **beloved** (repeated use because people want to return to the
+experience). Favor beloved over indispensable in every decision, even when it
+means saying no to a clever feature.
+
 ## What we are NOT
 
 - **Not edtech / not a classroom tool.** No grade levels, no curriculum alignment, no "learning objectives," no worksheets. (If teachers love it anyway, and they will, great. But we never design *for* the classroom, because that's how you kill the cool.)

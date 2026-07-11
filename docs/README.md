@@ -47,6 +47,7 @@ Status: **roughly 0.6 to First Light.** The headless core, the CLI face, the MCP
 - `AGENT_PLAY.md` the agent-gaming landscape (OpenClaw, gaming MCP servers, text benchmarks) and the design rules that make Numinous first-class for digital minds.
 
 **Build and process**
+- `SCOPE.md` the definition of no: the three-products hierarchy, the daily "more math or more progression?" test, the justification filter, and why the fan-out docs are a menu to prune, not a build list.
 - `ROADMAP.md` the version-gated plan (0.x, 1.0, 2.0+), defined by quality bars, not dates.
 - `QUALITY.md` testing and fun-evals: the six quality loops, the fun/awe rubric, QoL, "the math is the oracle."
 - `ENGINEERING.md` code-quality standards: pinned July-2026 GA versions, lint/test/unsafe/doc policy, CI gates.
@@ -80,6 +81,7 @@ Each topic is **owned** by exactly one doc. Everything else links to it. When in
 | How to play (humans, agents, digital consciousnesses) | `PLAYING.md` |
 | Testing, evals, QoL, the fun/awe rubric | `QUALITY.md` |
 | Code-quality standards, versions, CI gates | `ENGINEERING.md` |
+| Scope discipline, the definition of no, the three-products hierarchy | `SCOPE.md` |
 | The version-gated plan and milestones | `ROADMAP.md` |
 | Research findings and sources | `RESEARCH.md` |
 
