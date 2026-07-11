@@ -159,15 +159,62 @@ const CAIRN_LEVEL: u32 = 42;
 /// Record what this request means for the journey: agents level up too, by the
 /// same rules as everyone else. Showing up counts; being right counts double.
 /// The seed a tool should use: the daily day count when asked, else the arg.
+/// The key under which the resolved day is pinned into a daily request's args
+/// (see [`freeze_daily_day`]). Camel-case to match the other structured fields.
+const DAILY_DAY_KEY: &str = "dailyDay";
+
+/// Today's day count (whole days since the Unix epoch), the seed a daily game
+/// shares with every mind. Read exactly once per request via [`freeze_daily_day`]
+/// so the reply grading, the posted score, and the streak never straddle a
+/// midnight tick.
+fn daily_day_count() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() / 86_400)
+        .unwrap_or(1)
+}
+
+/// The day a request should use: the frozen value pinned at the request boundary
+/// when present (the normal path), else a fresh read (a direct call in a test).
+fn request_day(args: &Value) -> u64 {
+    args.get(DAILY_DAY_KEY)
+        .and_then(Value::as_u64)
+        .unwrap_or_else(daily_day_count)
+}
+
 fn effective_seed(args: &Value) -> u64 {
     if args.get("daily").and_then(Value::as_bool) == Some(true) {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs() / 86_400)
-            .unwrap_or(1)
+        request_day(args)
     } else {
         args.get("seed").and_then(Value::as_u64).unwrap_or(1)
     }
+}
+
+/// Pin the day count into a daily `tools/call` so every clock-derived use in the
+/// request (the reply seed, the posted score, the streak) shares one value. The
+/// daily seed is otherwise read from the clock more than once per request, and a
+/// UTC midnight between two reads would grade or record against a board the
+/// player never saw. Non-daily and non-`tools/call` requests borrow unchanged.
+fn freeze_daily_day(request: &Value) -> std::borrow::Cow<'_, Value> {
+    let is_daily_call = request.get("method").and_then(Value::as_str) == Some("tools/call")
+        && request
+            .get("params")
+            .and_then(|params| params.get("arguments"))
+            .and_then(|args| args.get("daily"))
+            .and_then(Value::as_bool)
+            == Some(true);
+    if !is_daily_call {
+        return std::borrow::Cow::Borrowed(request);
+    }
+    let mut owned = request.clone();
+    if let Some(args) = owned
+        .get_mut("params")
+        .and_then(|params| params.get_mut("arguments"))
+        .and_then(Value::as_object_mut)
+    {
+        args.insert(DAILY_DAY_KEY.to_string(), json!(daily_day_count()));
+    }
+    std::borrow::Cow::Owned(owned)
 }
 
 fn record_progress(request: &Value, path: &std::path::Path) {
@@ -513,11 +560,7 @@ fn record_progress(request: &Value, path: &std::path::Path) {
         _ => {}
     }
     if args.get("daily").and_then(Value::as_bool) == Some(true) {
-        let day = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs() / 86_400)
-            .unwrap_or(1);
-        let _ = journey.record_daily(day);
+        let _ = journey.record_daily(request_day(&args));
     }
     if journey != before {
         let _ = numinous_core::persist_journey_delta(path, &before, &journey);
@@ -538,6 +581,12 @@ fn handle_request(request: &Value) -> Option<Value> {
 
 /// [`handle_request`] with an explicit journey file, so tests stay hermetic.
 fn handle_request_with(request: &Value, journey_file: &std::path::Path) -> Option<Value> {
+    // Freeze the daily day once, at the request boundary, so the reply grading
+    // (via call_tool) and the progress recording below share one day count and
+    // cannot straddle a midnight tick. Non-daily requests are not cloned.
+    let frozen = freeze_daily_day(request);
+    let request: &Value = &frozen;
+
     let id = request.get("id").cloned();
     let method = request
         .get("method")
@@ -3164,6 +3213,37 @@ mod tests {
         assert!(
             text.contains("seed"),
             "the error names the offending argument: {text}"
+        );
+    }
+
+    #[test]
+    fn a_daily_request_pins_one_day_for_the_whole_request() {
+        // The daily day is frozen once at the request boundary, so the reply
+        // grading and the progress recording read the same value and cannot
+        // straddle a midnight tick.
+        let req = json!({
+            "jsonrpc":"2.0","id":1,"method":"tools/call",
+            "params":{"name":"munch","arguments":{"daily":true}}
+        });
+        let frozen = super::freeze_daily_day(&req);
+        let args = &frozen["params"]["arguments"];
+        let day = args[super::DAILY_DAY_KEY]
+            .as_u64()
+            .expect("the day is pinned into the request");
+        assert_eq!(
+            super::effective_seed(args),
+            day,
+            "seed reads the frozen day"
+        );
+        // A non-daily request passes through untouched.
+        let plain = json!({
+            "jsonrpc":"2.0","id":1,"method":"tools/call",
+            "params":{"name":"munch","arguments":{"seed":5}}
+        });
+        assert!(
+            super::freeze_daily_day(&plain)["params"]["arguments"]
+                .get(super::DAILY_DAY_KEY)
+                .is_none()
         );
     }
 
