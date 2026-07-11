@@ -18,22 +18,30 @@ const SAMPLES: usize = 128;
 /// Fourier terms kept (frequencies -K..=K).
 const K: i64 = 10;
 
+/// One Fourier circle: its frequency `k` and its coefficient as `(re, im)`.
+type Circle = (i64, f64, f64);
+/// The target's constant decomposition: the center (frequency 0) and the kept
+/// circles, largest first.
+type Decomposition = ((f64, f64), Vec<Circle>);
+
+/// One of the star's 10 outline vertices (outer, inner, outer, ...).
+fn star_vertex(v: usize) -> (f64, f64) {
+    let angle = TAU * v as f64 / 10.0 - TAU / 4.0;
+    let r = if v % 2 == 0 { 1.0 } else { 0.45 };
+    (r * angle.cos(), r * angle.sin())
+}
+
 /// The target: a five-pointed star, closed, centered, radius about one.
 fn target(i: usize) -> (f64, f64) {
     let s = i as f64 / SAMPLES as f64;
-    // Walk the star's 10 outline vertices (outer, inner, outer, ...).
-    let verts: Vec<(f64, f64)> = (0..10)
-        .map(|v| {
-            let angle = TAU * v as f64 / 10.0 - TAU / 4.0;
-            let r = if v % 2 == 0 { 1.0 } else { 0.45 };
-            (r * angle.cos(), r * angle.sin())
-        })
-        .collect();
     let pos = s * 10.0;
     let edge = (pos as usize) % 10;
     let frac = pos.fract();
-    let (x0, y0) = verts[edge];
-    let (x1, y1) = verts[(edge + 1) % 10];
+    // Compute only the two vertices this segment needs, not a fresh Vec of all
+    // ten every call; `target` is called thousands of times when the constant
+    // Fourier series is built.
+    let (x0, y0) = star_vertex(edge);
+    let (x1, y1) = star_vertex((edge + 1) % 10);
     (x0 + (x1 - x0) * frac, y0 + (y1 - y0) * frac)
 }
 
@@ -53,7 +61,7 @@ fn coefficient(k: i64) -> (f64, f64) {
 
 /// All kept coefficients with their frequencies, largest circle first
 /// (skipping the constant term, which is just the center).
-fn epicycles() -> Vec<(i64, f64, f64)> {
+fn epicycles() -> Vec<Circle> {
     let mut list: Vec<(i64, f64, f64)> = (-K..=K)
         .filter(|&k| k != 0)
         .map(|k| {
@@ -69,11 +77,21 @@ fn epicycles() -> Vec<(i64, f64, f64)> {
     list
 }
 
+/// The constant Fourier decomposition of the target star: the center (frequency
+/// 0) and the kept circles, largest first. It does not depend on `tau`, the
+/// seed, or the surface, so it is computed once and reused across every `tip`
+/// call and every frame (building it was the room's dominant cost, recomputed
+/// hundreds of times per frame with a heap allocation per sample).
+fn series() -> &'static Decomposition {
+    static SERIES: std::sync::OnceLock<Decomposition> = std::sync::OnceLock::new();
+    SERIES.get_or_init(|| (coefficient(0), epicycles()))
+}
+
 /// The chain's tip at time `tau` in [0, 1): the partial Fourier sum.
 fn tip(tau: f64) -> (f64, f64) {
-    let (c0re, c0im) = coefficient(0);
-    let (mut x, mut y) = (c0re, c0im);
-    for (k, re, im) in epicycles() {
+    let ((c0re, c0im), circles) = series();
+    let (mut x, mut y) = (*c0re, *c0im);
+    for &(k, re, im) in circles {
         let angle = TAU * k as f64 * tau;
         let (c, s) = (angle.cos(), angle.sin());
         x += re * c - im * s;
@@ -211,9 +229,9 @@ impl Room for Epicycles {
             previous = Some(point);
         }
         // The machinery: the chain of circles at this instant, dim.
-        let (c0re, c0im) = coefficient(0);
-        let (mut x, mut y) = (c0re, c0im);
-        for (k, re, im) in epicycles().into_iter().take(7) {
+        let ((c0re, c0im), circles) = series();
+        let (mut x, mut y) = (*c0re, *c0im);
+        for &(k, re, im) in circles.iter().take(7) {
             let radius = re.hypot(im);
             let ring = 90;
             for r in 0..ring {
