@@ -15,8 +15,15 @@ There are two engines, and they are designed to coexist and even harmonize.
 > chromatically; Voronoi rings open fifths; Lissajous locks a visible fifth;
 > Zeno's Square shrinks toward arrival; the Logistic Map splits into chaos.
 > In the app the motif IS the room's bed; over MCP, listen_room returns the
-> phrase structurally (key, BPM, note names, what it encodes). Next:
-> state-dependent tension (the phrase resolves when the dial closes).
+> phrase structurally (key, BPM, note names, what it encodes). And the room's
+> actual sonification now derives from the motif too: the default `Room::sound`
+> plays the motif's own phrase (`SoundSpec::from_motif`), so every room sounds
+> like itself rather than a shared root-fifth-octave fallback, and the notes you
+> hear match the notation listen_room reports (a July 2026 playtest caught the
+> old fallback making every room sound identical and disagree with its motif).
+> Rooms whose math has richer, phase-varying music (Collatz's orbit, Epicycles'
+> harmonic stack, Lissajous' tuned ratio) still override with something truer.
+> Next: state-dependent tension (the phrase resolves when the dial closes).
 
 > Status: v1 shipped. `crates/core/src/chiptune.rs` composes deterministic
 > pentatonic chiptunes (square lead, triangle bass, noise ticks, click-free
