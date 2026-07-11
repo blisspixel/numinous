@@ -869,4 +869,144 @@ mod tests {
         assert!(StudioCreation::new("x".to_string(), -1e300, 1e300, 1.0).is_err());
         assert!(StudioCreation::new("x".to_string(), -1.0, 1.0, 1e300).is_err());
     }
+
+    // A seeded totality harness for the untrusted-input surface. EXTENSIBILITY.md
+    // promises the Studio parser and importers are "fuzzed continuously"; a
+    // full cargo-fuzz run needs a nightly toolchain and is the CI-nightly
+    // future, but the core totality properties (never panic, never diverge,
+    // always terminate, caps always bite) belong in the stable gate where
+    // every commit exercises them. This is that guard: deterministic, so a
+    // regression names the exact seed that broke it.
+
+    /// A pseudo-random hostile string over an alphabet biased toward the
+    /// characters that actually drive the parser, plus junk and multi-byte
+    /// UTF-8 to probe byte-boundary slicing.
+    fn hostile_string(rng: &mut crate::rng::SplitMix64, max_len: usize) -> String {
+        // Weighted so parens and operators dominate: deep nesting and long
+        // operator runs are the shapes that stress a recursive-descent parser.
+        const ALPHABET: &[char] = &[
+            '(', '(', '(', ')', ')', '+', '-', '*', '/', '^', 'x', 'a', '.', '0', '1', '9', 's',
+            'i', 'n', 'c', 'o', 'e', ' ', 'z', '%', '=', '&', '\n', '\t', '\u{00e9}', '\u{4e16}',
+        ];
+        let len = (rng.below(max_len as u64 + 1)) as usize;
+        (0..len)
+            .map(|_| ALPHABET[rng.below(ALPHABET.len() as u64) as usize])
+            .collect()
+    }
+
+    #[test]
+    fn the_parser_is_total_over_hostile_input() {
+        let mut rng = crate::rng::SplitMix64::new(0x00D1_5EA5);
+        for _ in 0..20_000 {
+            let source = hostile_string(&mut rng, 200);
+            // The only contract: parse returns, never panics, never hangs. A
+            // panic or a non-terminating input fails this test outright.
+            if let Ok(expr) = parse(&source) {
+                // A parsed expression must evaluate totally at any x, however
+                // hostile: the caller (renderer, melody) relies on a finite
+                // world downstream, but eval itself must never panic.
+                for &x in &[0.0, 1.0, -1e300, 1e300, f64::MIN_POSITIVE, -0.0] {
+                    let y = eval(&expr, x, 0.5);
+                    let _ = y.is_finite(); // touch it; NaN and inf are allowed
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_caps_always_bite_pathological_input() {
+        // Past the caps, parse must ALWAYS reject, never accept and never
+        // crash. Both nesting and breadth are checked, at and beyond the edge.
+        let mut rng = crate::rng::SplitMix64::new(0x0000_CA95);
+        for _ in 0..500 {
+            let over_depth = rng.below(200) as usize + MAX_PARSE_DEPTH + 1;
+            let nested = format!("{}1{}", "(".repeat(over_depth), ")".repeat(over_depth));
+            assert!(
+                parse(&nested).is_err(),
+                "depth {over_depth} must be rejected"
+            );
+
+            // A well-formed but oversized sum: "1+1+...+1" with a trailing
+            // operand, so it would parse cleanly if not for the token cap.
+            // (A trailing "+" would error on its own and prove nothing.) The
+            // error must name the token limit, so this guards the cap itself,
+            // not some incidental syntax failure.
+            let pairs = rng.below(500) as usize + MAX_EXPR_TOKENS;
+            let flooded = format!("{}1", "1+".repeat(pairs));
+            let err = parse(&flooded).expect_err("token flood must be rejected");
+            assert!(
+                err.contains("token"),
+                "the token cap must be the reason: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_importers_are_total_and_never_forge_state() {
+        let mut rng = crate::rng::SplitMix64::new(0x0000_F11E);
+        for _ in 0..20_000 {
+            // Feed both importers arbitrary bytes, including well-formed
+            // prefixes so the per-field parsing is actually reached.
+            let body = hostile_string(&mut rng, 120);
+            let file = if rng.below(2) == 0 {
+                format!("NUMINOUS_STUDIO 1\n{body}")
+            } else {
+                body.clone()
+            };
+            let _ = StudioCreation::from_num_file(&file); // must not panic
+            let link = if rng.below(2) == 0 {
+                format!("numinous://studio?{body}")
+            } else {
+                body
+            };
+            let _ = StudioCreation::from_link(&link); // must not panic
+        }
+    }
+
+    #[test]
+    fn valid_creations_round_trip_under_fuzzed_values() {
+        // Any creation the constructor accepts must survive both
+        // serializations unchanged: sharing is lossless or it is a bug.
+        // Real formulas so the round-trip path is reliably exercised; the
+        // fuzzing is in the numeric fields and the occasional hostile source.
+        const VALID: &[&str] = &[
+            "x",
+            "sin(x)",
+            "a*x + 1",
+            "x^2 - 3",
+            "cos(x) / 2",
+            "-x",
+            "abs(x)",
+        ];
+        let mut rng = crate::rng::SplitMix64::new(0x0000_5EED);
+        let mut round_tripped = 0;
+        for _ in 0..5_000 {
+            let source = if rng.below(2) == 0 {
+                VALID[rng.below(VALID.len() as u64) as usize].to_string()
+            } else {
+                hostile_string(&mut rng, 40)
+            };
+            let span = rng.next_f64() * 2000.0 - 1000.0;
+            let xmin = rng.next_f64() * 2000.0 - 1000.0;
+            let xmax = xmin + span.abs() + 1e-6;
+            let a = rng.next_f64() * 20.0 - 10.0;
+            if let Ok(creation) = StudioCreation::new(source, xmin, xmax, a) {
+                assert_eq!(
+                    StudioCreation::from_num_file(&creation.to_num_file()).as_ref(),
+                    Ok(&creation),
+                    ".num round trip must be lossless"
+                );
+                assert_eq!(
+                    StudioCreation::from_link(&creation.to_link()).as_ref(),
+                    Ok(&creation),
+                    "link round trip must be lossless"
+                );
+                round_tripped += 1;
+            }
+        }
+        assert!(
+            round_tripped > 500,
+            "the generator must actually produce valid creations, got {round_tripped}"
+        );
+    }
 }

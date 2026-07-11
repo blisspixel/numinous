@@ -157,14 +157,16 @@ quality. Never the other way around.
 | Float determinism | `libm` | bit-exact transcendentals across OSes |
 | Tier 3 runtime | `wasmtime` + `wit-bindgen` | fuel + epochs + memory limits, component model, Zed precedent; behind a feature flag in a face-adjacent crate, never in core |
 | Signing | `ed25519-dalek` | boring, audited, tiny |
-| Fuzzing | `cargo-fuzz` on parse/file/link/eval | the parser edge is the real attack surface today |
+| Fuzzing | in-suite seeded totality harness now (stable gate), `cargo-fuzz` on parse/file/link/eval as the nightly deepening | the parser edge is the real attack surface today; a deterministic stress harness over `parse`/`from_num_file`/`from_link` runs every commit (never panic, always terminate, caps always bite, valid creations round-trip losslessly), and a nightly cargo-fuzz run needs a nightly toolchain the project does not pin |
 | Rejected: Rhai/Lua/Starlark in core | | a second language to sandbox, subtractive fencing, and a UX we would fight; Luau via mlua reconsidered only if courting existing modder muscle memory ever matters |
 
 ## Sequencing (mirrors ROADMAP.md)
 
-- **Now / 1.x:** Tier 1 hardening (parser fuzz targets, link-preview
-  confirmation, per-field caps) and the `.num` room-manifest extension.
-  These protect surfaces that already exist.
+- **Now / 1.x:** Tier 1 hardening. The parser budgets (token and depth caps),
+  the import byte and magnitude caps, and the in-suite totality stress harness
+  are done and gate every commit; the link-preview confirmation, a nightly
+  cargo-fuzz run, and the `.num` room-manifest extension remain. These protect
+  surfaces that already exist.
 - **2.0:** Tier 2, the Studio pattern language as the creation surface, with
   the gallery, fork/remix, promote-to-room, the proof-packet portal CI, and
   signing. This is "The Living World" milestone's spine.
