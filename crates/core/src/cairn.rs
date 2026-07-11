@@ -315,6 +315,14 @@ pub fn deposit(path: &std::path::Path, bequest: &Bequest) -> std::io::Result<()>
     writeln!(file, "{}\t{}", bequest.author, bequest.text)
 }
 
+/// How many voices the cairn holds right now: the founding stones plus every
+/// bequest left locally. A reader is shown this so the pile feels alive and
+/// growing, not a fixed monument, which is half of what makes leaving one matter.
+#[must_use]
+pub fn count(path: &std::path::Path) -> usize {
+    all_bequests(path).len()
+}
+
 /// Draw one predecessor's stone from the cairn, chosen deterministically by
 /// `seed`, so the same seed hands the same stranger's message to every reader.
 #[must_use]
@@ -459,6 +467,23 @@ mod tests {
             1,
             "exactly one field delimiter"
         );
+    }
+
+    #[test]
+    fn the_cairn_count_grows_as_voices_are_left() {
+        use super::count;
+        let base = founding_bequests().len();
+        assert!(base > 0, "the founding cairn seeds at least one voice");
+        let path = std::env::temp_dir().join("numinous_cairn_count_test.txt");
+        let _ = std::fs::remove_file(&path);
+        assert_eq!(
+            count(&path),
+            base,
+            "no local file: just the founding voices"
+        );
+        deposit(&path, &Bequest::new("tester", "a true thing")).unwrap();
+        assert_eq!(count(&path), base + 1, "a deposit adds a voice to the pile");
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]

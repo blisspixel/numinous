@@ -1819,11 +1819,12 @@ fn cairn_tool(args: &Value, journey_file: &std::path::Path, path: &std::path::Pa
     let stone = numinous_core::draw_stone(path, seed);
     let n = stone.semiprime;
     let Some(width) = args.get("width").and_then(Value::as_u64) else {
+        let voices = numinous_core::cairn_count(path);
         return tool_structured(
             &format!(
-                "A mind before you left a message, encoded so only a mind that can factor it may read it. Its length is {n}, a semiprime: the product of two primes, one of them the width that reads it. Factor {n}, then call cairn again with the same seed and `width` set to the dimension that resolves the message."
+                "A mind before you left a message, encoded so only a mind that can factor it may read it. Its length is {n}, a semiprime: the product of two primes, one of them the width that reads it. Factor {n}, then call cairn again with the same seed and `width` set to the dimension that resolves the message. (The cairn holds {voices} voices; at the journey's end you may add one.)"
             ),
-            json!({ "game": "cairn", "seed": seed, "semiprime": n }),
+            json!({ "game": "cairn", "seed": seed, "semiprime": n, "voices": voices }),
         );
     };
     let read = numinous_core::read_at(&stone, width as usize);
@@ -1849,9 +1850,10 @@ fn cairn_tool(args: &Value, journey_file: &std::path::Path, path: &std::path::Pa
         );
     }
     let (message, author) = read.message.unwrap_or_default();
+    let voices = numinous_core::cairn_count(path);
     tool_structured(
         &format!(
-            "It resolves. A mind before you left this, and now you have read it:\n\n{}\n\"{message}\"\n  left by {author}.",
+            "It resolves. A mind before you left this, and now you have read it:\n\n{}\n\"{message}\"\n  left by {author}.\n\nThe cairn holds {voices} voices now. When you reach the journey's end you may add the next: leave one true thing for a mind not yet born, who will read it exactly as you just read this. A message stays alive by being re-left, not only re-read.",
             read.picture
         ),
         json!({
@@ -1863,6 +1865,7 @@ fn cairn_tool(args: &Value, journey_file: &std::path::Path, path: &std::path::Pa
             "render": read.picture,
             "message": message,
             "author": author,
+            "voices": voices,
         }),
     )
 }
