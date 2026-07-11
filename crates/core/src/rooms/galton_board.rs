@@ -525,9 +525,12 @@ mod tests {
     }
 
     #[test]
-    fn sound_uses_the_default_tone() {
-        // Galton does not override sound, so it gets the default single tone.
+    fn sound_uses_the_default_phrase() {
+        // Galton does not override sound, so it gets the default short phrase
+        // (a root-fifth-octave arpeggio), not a single held tone.
         let spec = GaltonBoard::new().sound(0.0);
-        assert_eq!(spec.notes.len(), 1);
+        assert_eq!(spec.notes.len(), 3);
+        // The notes are staggered in time, a phrase and not a chord.
+        assert!(spec.notes[1].start > spec.notes[0].start);
     }
 }

@@ -212,8 +212,12 @@ impl Room for Lissajous {
     }
 
     fn sound(&self, t: f64) -> SoundSpec {
-        // The two axis frequencies played together: the figure you see is this chord.
-        let fy = Self::freq_y_for(t) as f32;
+        // The two axis frequencies as a chord. The y axis snaps to its nearest
+        // whole number, so the interval you hear is always a clean integer
+        // ratio, the room's own lesson that only whole-number tunings close
+        // into a figure and ring true. A swept, non-integer value would sound
+        // a sour near-unison, which is exactly the noise the room is not about.
+        let fy = (Self::freq_y_for(t).round() as f32).max(1.0);
         SoundSpec::chord(&[110.0 * FREQ_X as f32, 110.0 * fy], 1.5, 0.25)
     }
 }

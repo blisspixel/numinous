@@ -50,6 +50,28 @@ impl SoundSpec {
         }
     }
 
+    /// Several tones in sequence (an arpeggio), evenly spaced across
+    /// `duration`, each sustaining until the next begins. A room with no
+    /// bespoke sound still speaks a short phrase this way, rather than one
+    /// held tone.
+    #[must_use]
+    pub fn arpeggio(freqs: &[f32], duration: f32, amp: f32) -> Self {
+        let step = duration / freqs.len().max(1) as f32;
+        Self {
+            duration,
+            notes: freqs
+                .iter()
+                .enumerate()
+                .map(|(i, &freq)| Note {
+                    freq,
+                    start: i as f32 * step,
+                    dur: step,
+                    amp,
+                })
+                .collect(),
+        }
+    }
+
     /// Several simultaneous tones (a chord) for `duration` seconds.
     #[must_use]
     pub fn chord(freqs: &[f32], duration: f32, amp: f32) -> Self {

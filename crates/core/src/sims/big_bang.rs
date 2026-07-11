@@ -101,7 +101,8 @@ impl Sim for BigBang {
             let peak = series.iter().copied().fold(0.0_f64, f64::max);
             format!(
                 "Omega {omega:.2}: closed. Gravity wins. The universe expands to {peak:.1} times \
-                 its start, halts, and falls back into a Big Crunch, a Big Bang run in reverse."
+                 its start, halts, and falls back into a Big Crunch. It looks like the Big Bang \
+                 played backward, though entropy still runs forward, so it is a return, not a mirror."
             )
         } else if omega < 0.98 {
             format!(
@@ -110,8 +111,10 @@ impl Sim for BigBang {
             )
         } else {
             format!(
-                "Omega {omega:.2}: flat, balanced on a knife edge. It expands forever, but ever \
-                 more slowly, coasting to a stop it never quite reaches. This is our universe."
+                "Omega {omega:.2}: flat, balanced on a knife edge. With only matter it would \
+                 coast toward a stop it never quite reaches. Our own universe is very nearly \
+                 flat, but its expansion is speeding up, pushed by a dark energy this simple \
+                 matter-only model leaves out."
             )
         }
     }

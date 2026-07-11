@@ -186,7 +186,7 @@ impl Room for PrimeSpirals {
              paying attention.",
             "Euler's polynomial n squared plus n plus 41 produces primes for every n \
              from 0 to 39, and quadratics like it are exactly why the primes fall \
-             into diagonal streaks here. The streaks trace prime-rich quadratic polynomials, and why those are so rich is still open the streaks.",
+             into diagonal streaks here. The streaks trace prime-rich quadratic polynomials, and why those particular polynomials are so rich is still open.",
         ]
     }
 
