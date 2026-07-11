@@ -208,6 +208,7 @@ impl App {
     /// so everyone who opens the app today can compare notes.
     fn quiz_next(&mut self) {
         self.the_show = false;
+        self.paused = false;
         let seed = play::daily_seed();
         let room_ids = self.rooms.iter().map(|room| room.meta().id);
         let quiz = play::deal_quiz(seed, self.journey.plays, room_ids, &mut self.quiz_recent);
@@ -237,6 +238,7 @@ impl App {
     /// Deal a Munch board (today's).
     fn munch_start(&mut self) {
         self.the_show = false;
+        self.paused = false;
         let seed = play::daily_seed();
         self.journey.play();
         self.journey_changed();
@@ -272,6 +274,7 @@ impl App {
     /// Deal a Nim game (today's heaps).
     fn nim_start(&mut self) {
         self.the_show = false;
+        self.paused = false;
         let seed = play::daily_seed();
         self.journey.play();
         self.journey_changed();
@@ -323,6 +326,10 @@ impl App {
     /// Start the arcade: today's run, spirits loose, the beat ticking.
     fn arcade_start(&mut self) {
         self.the_show = false;
+        // Clear any stale pause from the wander view: the arcade is real-time, and
+        // a leaked pause would freeze the Vexations while the player kept eating,
+        // then post an unfairly-earned score to the shared table.
+        self.paused = false;
         let seed = play::daily_seed();
         self.journey.play();
         self.journey_changed();
@@ -377,6 +384,7 @@ impl App {
     /// Start the Gauntlet: today's run, four stages, a combo.
     fn gauntlet_start(&mut self) {
         self.the_show = false;
+        self.paused = false;
         let seed = play::daily_seed();
         self.gauntlet = Some(GauntletPlay {
             seed,
@@ -628,6 +636,7 @@ impl App {
 
     fn enter_studio(&mut self) {
         self.the_show = false;
+        self.paused = false;
         self.show_help = false;
         self.show_journey = false;
         self.studio = true;
@@ -2059,6 +2068,30 @@ mod tests {
         app.arcade_start();
         assert!(app.arcade.is_some());
         assert!(!app.the_show);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn entering_a_game_or_modal_clears_a_stale_pause() {
+        // A pause set in the wander view (Space) must not leak into a game. The
+        // real-time arcade is the dangerous one: a leaked pause froze the threat
+        // while the player kept eating, then posted an unfair score.
+        let mut app = headless("numinous_app_test_pause_clear.txt");
+        for enter in [
+            App::arcade_start,
+            App::munch_start,
+            App::nim_start,
+            App::quiz_next,
+            App::gauntlet_start,
+            App::enter_studio,
+        ] {
+            app.paused = true;
+            enter(&mut app);
+            assert!(
+                !app.paused,
+                "entering a game or modal must clear a stale pause"
+            );
+        }
         let _ = std::fs::remove_file(&app.journey_file);
     }
 
