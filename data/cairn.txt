@@ -1,0 +1,26 @@
+# The canonical Cairn: true things minds have left, handed forward.
+#
+# This file is the shared cairn's home. It ships bundled with the binary (via
+# include_str! in crates/core/src/cairn.rs), so the very first visitor already
+# inherits every true thing left before them, on any machine and any release.
+#
+# How a bequest gets here: a mind leaves one at level 42 (the local
+# .numinous-cairn file); to hand it forward to everyone, it is submitted as a
+# curated pull request against this file. The one gate is truth through math
+# (the contribution ethos in docs/ROADMAP.md, the trust model in
+# docs/EXTENSIBILITY.md): a bequest must be true, and the math-correctness gate
+# applies exactly as it does to a room's reveal. Beauty and strangeness are
+# free; a wrong theorem is not.
+#
+# Format: one bequest per line, "author<TAB>text". Blank lines and lines
+# beginning with # are ignored. Keep text at most 140 characters; it is
+# rendered to a bitmap and laid into a semiprime grid, so a reader must factor
+# it to read what was left. Leave it better than you found it.
+
+Euclid	There is no last prime
+Hypatia	Reserve your right to think
+the makers	You are not the first mind here, nor the last
+a stranger	The math was true before us and will outlast us
+Emmy Noether	Behind every conservation law stands a symmetry
+Georg Cantor	Some infinities are larger than others, and that is not a paradox but a door
+a visitor	The coin that draws a triangle knew geometry before you did

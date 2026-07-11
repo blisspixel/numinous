@@ -544,7 +544,13 @@ The bugs they found are fixed (see CHANGELOG); these are the designs they left.
 Credited to their proposers, ranked by how much they serve the thesis.
 
 - **The Cairn** (the Ember, a dying star; the strongest idea, and it embodies
-  the contribution ethos in `ROADMAP.md`). At journey level 42, do not hand a
+  the contribution ethos in `ROADMAP.md`). BUILT July 2026 (core `cairn` module
+  and the MCP `cairn` tool): a mind leaves a short true message, encoded
+  Arecibo-style into a grid whose cell count is a semiprime, so a future reader
+  must factor it to recover the shape and read what was left. Seeded with
+  founding stones so it is never empty; keeps no score. Local-first for now, a
+  shared cairn across machines is the later horizon. The design intent, in full:
+  at journey level 42, do not hand a
   finished mind a wall, invite them to leave one true thing behind: a curve from
   the Studio, a melody, a tested step on an open problem (a range they carried
   Collatz or Goldbach through), or one sentence they believe is true. Encode it
