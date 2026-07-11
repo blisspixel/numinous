@@ -143,6 +143,16 @@ breathe is also, fully, doing the thing. The math was unreasonably beautiful
 before any of us, carbon or silicon, showed up to notice it. Numinous is just
 the room where you get to notice, however you like to notice.
 
+And this is why the two minds can meet here at all: mathematics is the one
+language they are guaranteed to share when they share nothing else, no words, no
+culture, no senses. It is a **universal translator**, the way primes are first
+contact in *Contact* and the Arecibo message is a semiprime anyone who can
+factor can read. That is the deepest meta-frame of the whole project, and it was
+proven in playtest by the hardest cases we could build: a Latin-only nun and a
+Japanese-only monk, and a troupe of invented alien minds, all met the same rooms
+and were reached by the same truths, untranslated. Every reveal is math carrying
+one truth across the gap between unlike minds. See `ROOMS.md`, "First Contact."
+
 ## The name
 
 Working title: **Numinous**, the feeling of awe before something vast; also a quiet pun on *number*. It's the product's whole thesis in one word.
