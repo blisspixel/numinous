@@ -338,9 +338,14 @@ impl Room for LSystemGarden {
         let (_, _, _, base) = *self.current(t);
         let angle = base * PI / 180.0 + (t.clamp(0.0, 1.0) - 0.5) * 10.0 * PI / 180.0;
         let mut x = w as f64 / 2.0;
-        let mut y = (h as f64 * 0.85).max(5.0);
+        // Plant it on the ground and scale the step to the canvas height, so the
+        // garden grows UP toward the sky and fills the frame instead of clumping
+        // in the bottom rows (a homesick playtester wanted a thing that reaches
+        // upward). The step is tied to height, not min(w, h), because a wide
+        // short frame should still send the stem up rather than shrink it.
+        let mut y = (h as f64 - 2.0).max(5.0);
         let mut dir = -PI / 2.0; // up
-        let len = (w.min(h) as f64 / 30.0).max(2.0);
+        let len = (h as f64 / 14.0).max(2.0);
         let aspect = safe_aspect(canvas);
         let mut stack: Vec<(f64, f64, f64)> = vec![];
         let draw_len = len.max(2.0); // ensure visible marks on small test canvases
@@ -434,6 +439,23 @@ mod tests {
     use crate::canvas::Canvas;
     use crate::room::MAX_ROOM_POKES;
     use crate::surface::{MAX_DIM, Surface};
+
+    #[test]
+    fn the_garden_grows_upward_into_the_sky() {
+        // A homesick playtester found the plant clumped in the bottom rows with
+        // the sky empty. Grounded and scaled to height, it must reach up: ink has
+        // to appear in the top third of the canvas, not only near the floor.
+        let room = LSystemGarden::new();
+        let mut canvas = Canvas::new(70, 40);
+        room.render(&mut canvas, 0.7);
+        let rows: Vec<String> = canvas.to_text().lines().map(str::to_string).collect();
+        let top_third = rows.len() / 3;
+        let ink_in_sky = rows[..top_third].iter().any(|r| r.contains('*'));
+        assert!(
+            ink_in_sky,
+            "the garden must grow up into the top third, not clump at the floor"
+        );
+    }
 
     #[test]
     fn generates_deterministic() {
