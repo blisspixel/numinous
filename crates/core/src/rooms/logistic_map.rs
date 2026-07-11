@@ -71,6 +71,35 @@ fn population_row(height: usize, x: f64) -> i32 {
     ((height as f64 - 1.0) - x.clamp(0.0, 1.0) * (height as f64 - 1.0)).round() as i32
 }
 
+/// Iterations averaged when estimating the Lyapunov exponent.
+const LYAPUNOV_STEPS: usize = 2000;
+
+/// The Lyapunov exponent of the map at growth rate `r`: the long-run average of
+/// `ln|f'(x)|` along the orbit. It is the rate at which nearby populations pull
+/// apart, negative when the orbit settles onto a cycle (order), positive once it
+/// never repeats (chaos). The zero crossing is the exact border between the two.
+fn lyapunov(r: f64) -> f64 {
+    let mut x = 0.5;
+    for _ in 0..TRANSIENT {
+        x = r * x * (1.0 - x);
+    }
+    let mut sum = 0.0;
+    let mut counted = 0u32;
+    for _ in 0..LYAPUNOV_STEPS {
+        let slope = (r * (1.0 - 2.0 * x)).abs();
+        if slope > 1e-12 {
+            sum += slope.ln();
+            counted += 1;
+        }
+        x = r * x * (1.0 - x);
+    }
+    if counted == 0 {
+        0.0
+    } else {
+        sum / counted as f64
+    }
+}
+
 impl Room for LogisticMap {
     fn meta(&self) -> RoomMeta {
         RoomMeta {
@@ -107,6 +136,20 @@ impl Room for LogisticMap {
         "The point where order breaks into chaos arrives at the same rate for this \
          equation, for dripping taps, and for heartbeats: Feigenbaum's constant, \
          4.669. A single number governs how simple things fall apart."
+    }
+
+    fn status(&self, t: f64) -> Option<String> {
+        // Read the middle of the visible band. At t = 0 the whole cascade is on
+        // screen and the midpoint sits in the ordered, cycling regime; as the
+        // sweep zooms the left edge deeper into chaos, that midpoint crosses the
+        // onset and the exponent turns positive. So the readout narrates order
+        // becoming chaos as one number changing sign, and because it moves the
+        // Logistic Map now poses predictions and challenges too.
+        let (r_min, r_max) = self.r_window_for(t);
+        let r = (r_min + r_max) / 2.0;
+        let exponent = lyapunov(r);
+        let regime = if exponent > 0.0 { "CHAOS" } else { "ORDER" };
+        Some(format!("LYAPUNOV {exponent:+.2} ({regime}) AT R {r:.2}"))
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -273,6 +316,19 @@ mod tests {
 
         assert!(text.contains('@'));
         assert!(text.contains('*'));
+    }
+
+    #[test]
+    fn the_lyapunov_readout_crosses_from_order_into_chaos() {
+        use super::lyapunov;
+        // Deep in a cycle the exponent is negative; deep in chaos it is positive.
+        assert!(lyapunov(3.2) < 0.0, "a 2-cycle should read as order");
+        assert!(lyapunov(3.9) > 0.0, "a chaotic rate should read as chaos");
+
+        // The readout moves across the sweep, so the room can pose predictions.
+        let room = LogisticMap::new();
+        assert!(room.status(0.0).is_some());
+        assert!(crate::pose_prediction(&room, 5).is_some());
     }
 
     #[test]
