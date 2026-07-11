@@ -51,6 +51,7 @@ Status: **roughly 0.6 to First Light.** The headless core, the CLI face, the MCP
 - `ROADMAP.md` the version-gated plan (0.x, 1.0, 2.0+), defined by quality bars, not dates.
 - `QUALITY.md` testing and fun-evals: the six quality loops, the fun/awe rubric, QoL, "the math is the oracle."
 - `PLAYTESTS.md` the playtest archive: the voices from the diverse-persona troupes (human archetypes and invented alien minds), the experiences in their own words, the convergences, and the moments worth remembering.
+- `PLAYTESTERS.md` the casting pool: forty-two playtester personas with backstories (Norm the normie, a barefoot kid, returned geniuses, living experts, digital minds, and invented beings), spanning ages, languages, understanding levels, and kinds of mind, to draw from for testing rounds.
 - `ENGINEERING.md` code-quality standards: pinned July-2026 GA versions, lint/test/unsafe/doc policy, CI gates.
 
 ## Single source of truth (the anti-redundancy map)
@@ -82,6 +83,7 @@ Each topic is **owned** by exactly one doc. Everything else links to it. When in
 | How to play (humans, agents, digital consciousnesses) | `PLAYING.md` |
 | Testing, evals, QoL, the fun/awe rubric | `QUALITY.md` |
 | The playtest archive: the troupes' voices and experiences | `PLAYTESTS.md` |
+| The playtester casting pool (the 42 personas with backstories) | `PLAYTESTERS.md` |
 | Code-quality standards, versions, CI gates | `ENGINEERING.md` |
 | Scope discipline, the definition of no, the three-products hierarchy | `SCOPE.md` |
 | The version-gated plan and milestones | `ROADMAP.md` |
