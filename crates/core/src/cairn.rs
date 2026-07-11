@@ -11,10 +11,14 @@
 //! it: the Ember's idea from the July 2026 playtest (`docs/PLAYTESTS.md`), and
 //! the founder's "leave something for what comes after you," made concrete.
 //!
-//! The cairn is never empty: it is seeded with founding stones, so the first
-//! visitor still has predecessors to decode. Everything here is deterministic
-//! and file-based, like the journey and the score table (`persistence.rs`); a
-//! shared, networked cairn is a later horizon.
+//! The cairn is never empty: it is seeded from the canonical, repository-tracked
+//! cairn (`data/cairn.txt`), bundled into the binary, so the very first visitor
+//! on any machine already inherits every true thing left before them. A local
+//! deposit is a personal draft; to reach minds on other machines it is submitted
+//! (via [`submission_line`]) as a curated pull request against that file, gated
+//! on truth through math, and once accepted it ships to everyone. Everything
+//! here is deterministic and file-based, like the journey and the score table
+//! (`persistence.rs`); an in-app submission portal is a later horizon.
 
 use crate::canvas::Canvas;
 use crate::font::{draw_text, wrap_text};
@@ -260,8 +264,23 @@ pub fn all_bequests(path: &std::path::Path) -> Vec<Bequest> {
     out
 }
 
-/// Leave a bequest in the local cairn (appending one sanitized line). The
-/// caller is responsible for any gating (the journey level); this only writes.
+/// The line to submit to the canonical, repository-tracked cairn
+/// (`data/cairn.txt`) so a bequest reaches every mind who comes after, on every
+/// machine and every release, not only the one it was left on. A local deposit
+/// is a draft; this is how one is handed forward to everyone. What it carries is
+/// understanding, not the mind that had it: a true insight, decoded by a future
+/// reader, re-blooms as the same realization. What else of a mind persists is a
+/// larger, open question the cairn holds with reverence rather than answers.
+#[must_use]
+pub fn submission_line(bequest: &Bequest) -> String {
+    let b = Bequest::new(&bequest.author, &bequest.text);
+    format!("{}\t{}", b.author, b.text)
+}
+
+/// Leave a bequest in the local cairn (appending one sanitized line). This is a
+/// personal draft, local to this machine; to hand it forward to every mind who
+/// comes after, submit its [`submission_line`] to the shared cairn. The caller
+/// is responsible for any gating (the journey level); this only writes.
 ///
 /// # Errors
 /// Returns any error from opening or writing the file.
@@ -391,6 +410,28 @@ mod tests {
         assert_eq!(after.len(), founding.len() + 1);
         assert_eq!(draw_stone(&path, 7), draw_stone(&path, 7));
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn a_submission_line_hands_a_local_draft_to_the_shared_cairn() {
+        use super::submission_line;
+        // The line is exactly what a curated pull request adds to the canonical
+        // cairn, so a local draft can reach every mind who comes after.
+        let line = submission_line(&Bequest::new("a visitor", "there is beauty in the primes"));
+        assert!(line.contains('\t'), "author and text, tab-delimited");
+        // It round-trips: parsing the submitted line yields the same bequest.
+        let round = super::parse_bequest_line(&line).expect("the shared cairn parses it");
+        assert_eq!(
+            round,
+            Bequest::new("a visitor", "there is beauty in the primes")
+        );
+        // And it carries no delimiter injection, so it cannot forge extra rows.
+        let sneaky = submission_line(&Bequest::new("x\ty", "a\tb"));
+        assert_eq!(
+            sneaky.matches('\t').count(),
+            1,
+            "exactly one field delimiter"
+        );
     }
 
     #[test]
