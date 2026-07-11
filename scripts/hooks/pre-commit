@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Pre-commit quality gate: a wired gate that blocks a bad commit beats any
+# instruction to "remember to run the checks". It is tracked and shared, not a
+# per-clone .git/hooks file, so every contributor gets the same enforcement.
+#
+# Enable it once per clone (see docs/ENGINEERING.md):
+#     git config core.hooksPath scripts/hooks
+#
+# What it enforces, and why it is split:
+#   - House style (no em/en dashes, no emoji, no AI/tool attribution) runs on
+#     every commit, because it is instant and applies to docs as much as code.
+#   - The cargo gate (fmt, clippy -D warnings, the full test suite) runs only
+#     when this commit actually touches Rust or the build manifest, so a
+#     docs-only commit stays fast while a code commit cannot land red.
+#
+# Deliberately NOT here: coverage, the locked build, and artifact regeneration.
+# Those live in scripts/verify.sh (the release/CI gate); they are too slow to
+# run on every commit, and coverage is checked there and in CI instead. This
+# hook is the fast floor, not the whole gate. Bypass only in a real emergency
+# with `git commit --no-verify`, and run scripts/verify.sh before you push.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+# House style applies to every file type and is near-instant.
+bash scripts/check-style.sh
+
+# Only pay for the cargo checks when code or the build manifest changed.
+if git diff --cached --name-only --diff-filter=ACM \
+    | grep -qE '\.rs$|(^|/)Cargo\.(toml|lock)$|\.wgsl$'; then
+  echo "== fmt =="
+  cargo fmt --all --check
+  echo "== clippy =="
+  cargo clippy --workspace --all-targets -- -D warnings
+  echo "== test =="
+  cargo test --workspace
+fi
+
+echo "pre-commit: all checks passed."

@@ -91,6 +91,32 @@ Hardening targets not yet enforced in CI: `cargo doc --workspace --no-deps` unde
 
 The nightly loop adds soak/perf and cross-GPU differential tests (`QUALITY.md`).
 
+## Local enforcement (the pre-commit hook)
+
+CI is the merge bar, but this repository is developed local-first and (today)
+without a shared remote, so the deterministic gate that actually fires is a
+tracked pre-commit hook. Enable it once per clone:
+
+```
+git config core.hooksPath scripts/hooks
+```
+
+`scripts/hooks/pre-commit` then blocks any commit that would fail the fast gate.
+It runs the house-style guard on every commit (instant, and it applies to docs
+as much as code), and the cargo gate (fmt, clippy `-D warnings`, the full test
+suite) only when the commit touches Rust, `Cargo.*`, or a shader, so a docs-only
+commit stays fast. Coverage, the locked build, and artifact regeneration stay in
+`scripts/verify.sh` (the release gate); they are too slow for every commit.
+Emergency bypass is `git commit --no-verify`, after which you must run
+`scripts/verify.sh` before pushing.
+
+A note on why the hook matters beyond convenience: the house-style guard uses
+`grep -P` with Unicode escapes, which silently aborts in a bare C/POSIX locale.
+Before this was fixed (`scripts/check-style.sh` now forces a UTF-8 locale and
+fails loudly if grep cannot run), the guard was a no-op in any shell with an
+unset locale, so violations could land locally and only CI would catch them. A
+wired, correct hook closes that gap.
+
 ## Git and review hygiene
 
 - **Small, focused PRs**, one concern each; a clear, imperative commit subject and a body that explains the why.
