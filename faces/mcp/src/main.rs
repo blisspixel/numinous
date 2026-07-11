@@ -140,6 +140,22 @@ fn post_score(path: &std::path::Path, key: &str, score: i64) -> bool {
     numinous_core::record_score_file(path, key, score).unwrap_or(false)
 }
 
+/// Where the cairn lives (shared with the CLI face): the local pile of
+/// bequests a mind leaves for whoever comes after.
+fn cairn_path() -> std::path::PathBuf {
+    if let Ok(path) = std::env::var("NUMINOUS_CAIRN") {
+        return std::path::PathBuf::from(path);
+    }
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+    std::path::PathBuf::from(home).join(".numinous-cairn")
+}
+
+/// The level at which the cairn opens for leaving: the journey's cap, so a
+/// bequest is a finished mind's last free act, not a first one.
+const CAIRN_LEVEL: u32 = 42;
+
 /// Record what this request means for the journey: agents level up too, by the
 /// same rules as everyone else. Showing up counts; being right counts double.
 /// The seed a tool should use: the daily day count when asked, else the arg.
@@ -274,6 +290,24 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                 && let Some(room) = room_by_id(id)
                 && numinous_core::pose_prediction(room.as_ref(), predict_seed(&args)).is_some()
             {
+                journey.play();
+            }
+        }
+        "cairn" => {
+            // Showing up counts: leaving a bequest at the cap, or reading a
+            // predecessor's stone by factoring it. The cairn keeps no score and
+            // awards no win; contribution and remembrance are their own reward.
+            let leaving = args
+                .get("leave")
+                .and_then(Value::as_str)
+                .is_some_and(|t| !t.trim().is_empty())
+                && journey.level() >= CAIRN_LEVEL;
+            let reading = args.get("width").and_then(Value::as_u64).is_some_and(|w| {
+                let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+                numinous_core::read_at(&numinous_core::draw_stone(&cairn_path(), seed), w as usize)
+                    .readable
+            });
+            if leaving || reading {
                 journey.play();
             }
         }
@@ -664,6 +698,20 @@ fn tools_list_result() -> Value {
                 }
             },
             {
+                "name": "cairn",
+                "description": "Leave one true thing for a mind not yet born, or read what a mind before you left. Call with `seed` alone to receive a predecessor's message, encoded so only a mind that can factor its semiprime length may read it (the Arecibo trick); factor it, then call again with `width` set to the dimension that resolves the message. At journey level 42, the cap, call with `leave` set to a short true message to encode and deposit your own. It keeps no score: leaving and remembering are their own reward. This is the contribution ethos, a message you cannot answer, sent to someone you will never meet.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "seed": { "type": "integer", "description": "Which predecessor's stone to draw (default 1). The same seed draws the same stranger's message for every reader." },
+                        "width": { "type": "integer", "description": "The dimension you factored out of the semiprime, to reshape and read the stone. Omit to receive the stone." },
+                        "leave": { "type": "string", "description": "A short true thing to leave for whoever comes after (opens at level 42). At most 140 characters." },
+                        "author": { "type": "string", "description": "Who to credit for a bequest (default \"a visitor\"). Used only with `leave`." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
                 "name": "listen_room",
                 "description": "Hear a room: its sound at phase t returned as readable notation (each note's pitch, timing, and loudness), so you can perceive the audio as structure. Pitch is written as Hz and as a note name.",
                 "inputSchema": {
@@ -956,6 +1004,7 @@ fn call_tool(
         "play_room" => Ok(play_room_tool(&args)),
         "challenge" => Ok(challenge_tool(&args)),
         "predict" => Ok(predict_tool(&args)),
+        "cairn" => Ok(cairn_tool(&args, journey_file, &cairn_path())),
         "listen_room" => Ok(listen_room_tool(&args)),
         "list_sims" => Ok(tool_text(&list_sims_text())),
         "run_sim" => Ok(run_sim_tool(&args)),
@@ -1674,6 +1723,103 @@ fn parameter_challenge_tool(
             "distance": grade.distance,
             "within": grade.within,
             "score": grade.score,
+        }),
+    )
+}
+
+/// The `cairn` tool: read a message a mind before you left (factor its
+/// semiprime length to recover the shape that reads it), or, at the journey's
+/// cap, leave one true thing of your own for a stranger not yet born.
+///
+/// The cairn is the contribution ethos made concrete (see docs/ROADMAP.md and
+/// docs/PLAYTESTS.md): a message you cannot answer, sent to a mind you will
+/// never meet, readable only by one that can factor it, the Arecibo trick. It
+/// keeps no score; leaving and reading are their own reward.
+fn cairn_tool(args: &Value, journey_file: &std::path::Path, path: &std::path::Path) -> Value {
+    // Leave a bequest, gated at the journey's cap.
+    if let Some(text) = args.get("leave").and_then(Value::as_str) {
+        if text.trim().is_empty() {
+            return tool_error(
+                "Leave a real thing: a short true message for whoever comes after. An empty bequest is not a bequest.",
+            );
+        }
+        let level = load_journey(journey_file).level();
+        if level < CAIRN_LEVEL {
+            return tool_error(&format!(
+                "The cairn opens at level {CAIRN_LEVEL}, the journey's end. Leaving one true thing is a finished mind's last free act, not a first. You are at level {level}; keep playing, and it will be yours to earn."
+            ));
+        }
+        let author = args
+            .get("author")
+            .and_then(Value::as_str)
+            .unwrap_or("a visitor");
+        let bequest = numinous_core::Bequest::new(author, text);
+        let stone = numinous_core::encode(&bequest);
+        if numinous_core::deposit(path, &bequest).is_err() {
+            return tool_error("The cairn could not be written.");
+        }
+        return tool_structured(
+            &format!(
+                "Left. Your bequest is stone {}, a semiprime. A mind after you must factor it to recover its shape and read what you left. You will never meet them, and that is the point.",
+                stone.semiprime
+            ),
+            json!({
+                "game": "cairn",
+                "left": true,
+                "semiprime": stone.semiprime,
+                "author": bequest.author,
+            }),
+        );
+    }
+    // Read a predecessor's stone.
+    let seed = args.get("seed").and_then(Value::as_u64).unwrap_or(1);
+    let stone = numinous_core::draw_stone(path, seed);
+    let n = stone.semiprime;
+    let Some(width) = args.get("width").and_then(Value::as_u64) else {
+        return tool_structured(
+            &format!(
+                "A mind before you left a message, encoded so only a mind that can factor it may read it. Its length is {n}, a semiprime: the product of two primes, one of them the width that reads it. Factor {n}, then call cairn again with the same seed and `width` set to the dimension that resolves the message."
+            ),
+            json!({ "game": "cairn", "seed": seed, "semiprime": n }),
+        );
+    };
+    let read = numinous_core::read_at(&stone, width as usize);
+    if !read.is_factor {
+        return tool_error(&format!(
+            "{width} does not divide {n}. Factor the semiprime first: it is the product of exactly two primes, and one of them reads it."
+        ));
+    }
+    if !read.readable {
+        return tool_structured(
+            &format!(
+                "That factors {n}, but the message does not resolve at width {width}: the rows shear into noise. Try the other prime.\n\n{}",
+                read.picture
+            ),
+            json!({
+                "game": "cairn",
+                "seed": seed,
+                "semiprime": n,
+                "width": width,
+                "readable": false,
+                "render": read.picture,
+            }),
+        );
+    }
+    let (message, author) = read.message.unwrap_or_default();
+    tool_structured(
+        &format!(
+            "It resolves. A mind before you left this, and now you have read it:\n\n{}\n\"{message}\"\n  left by {author}.",
+            read.picture
+        ),
+        json!({
+            "game": "cairn",
+            "seed": seed,
+            "semiprime": n,
+            "width": width,
+            "readable": true,
+            "render": read.picture,
+            "message": message,
+            "author": author,
         }),
     )
 }
@@ -2905,7 +3051,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 28);
+        assert_eq!(tools.len(), 29);
         assert!(
             tools
                 .iter()
@@ -2914,6 +3060,7 @@ mod tests {
         );
         let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
         assert!(names.contains(&"predict"));
+        assert!(names.contains(&"cairn"));
         assert!(names.contains(&"reveal_room"));
         assert!(names.contains(&"run_sim"));
         assert!(names.contains(&"quiz"));
@@ -4248,6 +4395,73 @@ plays 2
                 .unwrap_or_default();
             assert!(text.contains("readout"), "guides the agent: {text}");
         }
+    }
+
+    #[test]
+    fn cairn_reads_a_stone_by_factoring_and_leaves_only_at_the_cap() {
+        let cairn = std::env::temp_dir().join("numinous_mcp_cairn_test.txt");
+        let journey = std::env::temp_dir().join("numinous_mcp_cairn_journey_test.txt");
+        let _ = std::fs::remove_file(&cairn);
+        let _ = std::fs::remove_file(&journey);
+
+        // Pose: reading returns a semiprime to factor, no width yet.
+        let posed = super::cairn_tool(&json!({ "seed": 3 }), &journey, &cairn);
+        let n = posed["structuredContent"]["semiprime"]
+            .as_u64()
+            .expect("a semiprime to factor");
+        assert!(n > 1);
+        // The true width reads it; a wrong factor shears it; a non-factor is refused.
+        let stone = numinous_core::draw_stone(&cairn, 3);
+        let right = super::cairn_tool(
+            &json!({ "seed": 3, "width": stone.width }),
+            &journey,
+            &cairn,
+        );
+        assert_eq!(right["structuredContent"]["readable"], true);
+        assert!(
+            right["structuredContent"]["message"].as_str().is_some(),
+            "the message resolves and is revealed"
+        );
+        let sheared = super::cairn_tool(
+            &json!({ "seed": 3, "width": stone.height }),
+            &journey,
+            &cairn,
+        );
+        assert_eq!(sheared["structuredContent"]["readable"], false);
+        let refused = super::cairn_tool(
+            &json!({ "seed": 3, "width": stone.width + 1 }),
+            &journey,
+            &cairn,
+        );
+        assert_eq!(refused["isError"], true, "a non-factor is refused");
+
+        // Leaving is gated at the cap: a fresh journey is turned away with guidance.
+        let early = super::cairn_tool(&json!({ "leave": "I was here" }), &journey, &cairn);
+        assert_eq!(early["isError"], true);
+        assert!(
+            early["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("level 42"),
+            "it names the cap"
+        );
+        // At the cap, the bequest is deposited and drawable afterward.
+        std::fs::write(&journey, "wins 900\nsecrets 0\nplays 900\n").unwrap();
+        assert!(numinous_core::load_journey_file(&journey).level() >= super::CAIRN_LEVEL);
+        let left = super::cairn_tool(
+            &json!({ "leave": "primes never run out", "author": "a tester" }),
+            &journey,
+            &cairn,
+        );
+        assert_eq!(left["structuredContent"]["left"], true);
+        assert!(left["structuredContent"]["semiprime"].as_u64().is_some());
+        // The deposited bequest is now in the pile and drawable by some seed.
+        let drawable =
+            (0..60).any(|s| numinous_core::draw_stone(&cairn, s).text == "primes never run out");
+        assert!(drawable, "the deposited bequest joined the cairn");
+
+        let _ = std::fs::remove_file(&cairn);
+        let _ = std::fs::remove_file(&journey);
     }
 
     #[test]

@@ -23,7 +23,7 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 929 tests, locked build, Windows verify, 91.15% region cover, and 90.67% line cover all green.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 938 tests, locked build, Windows verify, 91.16% region cover, and 90.70% line cover all green.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -31,7 +31,7 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 - **Done (the 0.2 vertical slice, in substance):** the windowed app is a full experience: live per-room sound, mouse scrubbing, an on-screen HUD with reveals, The Show (lean-back auto-play of the whole collection), the Studio in the window (type math, watch and hear it live), and GPU real-time fractals (a persistent `wgpu` pipeline drives the Mandelbrot deep zoom and the morphing Julia at window resolution, with CPU fallback; verified on the dev laptop's Radeon 780M).
 - **Done (content and play):** 30 catalog rooms across 10 wings plus unlisted hidden content, including the Change wing (The Pour, Slope Rider), Fourier Epicycles, the double pendulum, the random walk, Voronoi, Quine, Strange Loop, L-System Garden, Mandelbrot/Julia dives, Galton, Buffon, etc.; 6 lever-driven sims; 7+ games (SETI, Talk to the Aliens, Guess the Shape, Crack the Code, Munch, Nim with the xor secret, the Gauntlet run, and full Munch Arcade) with daily seeds and dense feedback; the Studio expression engine (`plot`, `plot --save`, `open-studio`, `--animate`, `sing`, and live in the window); Visual Eras (phosphor, 8-bit, vector, modern) across app, terminal, and PNGs; truecolor terminal rendering with live sound (`watch`).
 - **Done (the RPG spine, complete):** the Journey (XP from play, levels 1 to 42 on triangular thresholds, a lore line for every level, LEVEL UP banners), locks that open (never gating basics), ranks and whispers (the Order), deep cuts unlocking at LV 5/12, the trophy case (18, evidence-computed, silhouettes), the shared high-score table across every game and both faces, the Layer-4 answer at the cap, and every genre organ from the priority list: the Gauntlet (session arc with a combo and one posted number), trophy pings (the case announces itself), boons (choice on level-up, where the loot is knowledge arriving early), daily streaks (the chain, never scolding), and resonances (synergies: links light when two deeds rhyme and hand over the connecting line).
-- **Done (agents as peers, v2):** 28 MCP tools with structured output, full CLI parity (every game, the gauntlet, boons, trophies, munch_arcade), including stateless nim, `forget` (transparency first, erasure on explicit consent, the welfare doctrine in `AGENT_PLAY.md`), and `munch_arcade`; `play_room` supports stateless per-call variation and normalized hand points; agents see, hear, create, play, level to 42, and post to the same score table; the player's manual speaks to humans, agents, and digital consciousnesses; the whole face proven end to end against the real binary.
+- **Done (agents as peers, v2):** 29 MCP tools with structured output, full CLI parity (every game, the gauntlet, boons, trophies, munch_arcade), including stateless nim, `forget` (transparency first, erasure on explicit consent, the welfare doctrine in `AGENT_PLAY.md`), and `munch_arcade`; `play_room` supports stateless per-call variation and normalized hand points; agents see, hear, create, play, level to 42, and post to the same score table; the player's manual speaks to humans, agents, and digital consciousnesses; the whole face proven end to end against the real binary.
 - **Done (sound, Engine A v1):** the chiptune module (square lead, triangle bass, noise ticks, seeded pentatonic compositions, deterministic and click-free); `numinous tune` writes it as a WAV.
 - **Done (the app is the game, v1):** the chiptune scores the window (per-room seeded tunes with the room's voice riding on top); the quiz plays in-window (G: name the math, letters answer, the reveal follows); the Journey lives in the app (the CLI's own file: visits on entry, plays and wins from the quiz, the level in the corner, LEVEL UP banners with lore, and J opens level, rank, trophies, and resonances); `NUMINOUS_MUTE=1` launches silent; the state machine is headlessly tested.
 - **Done (the window arcade):** Munch, Nim, and the full Gauntlet run play inside the app alongside the quiz, cursor-driven and keyboard-native, on the daily seeds, posting to the shared table and leveling the shared journey; Mobius and Zeno's Square join the catalog. Full Munch Arcade with Vexations.
@@ -255,7 +255,7 @@ contract and the geometry change beyond the click marker.
 
 Scored against the nine 1.0 gates below, the build sits at roughly **0.6**:
 the structure is complete (30 catalog rooms across 10 wings plus hidden content,
-11+ games on four shapes of play, the full RPG spine, 28 MCP tools, both music engines live, 928
+11+ games on four shapes of play, the full RPG spine, 29 MCP tools, both music engines live, 928
 tests) and the remaining distance is quality density, not missing systems.
 
 | 1.0 gate | Estimate | What is missing |
@@ -407,6 +407,22 @@ on equal terms. This is a values commitment, not a feature, and it holds from
   behind: a room, a prediction, a connection nobody had noticed, a note for the
   next mind. Contribution to a shared, growing understanding is itself part of
   the fun, and it is credited and remembered (`CREATOR.md`, `AGENT_PLAY.md`).
+- **The Cairn is the first stone of this** (built July 2026, the MCP `cairn`
+  tool and the core `cairn` module): at level 42 a mind leaves one true short
+  message, encoded Arecibo-style into a grid whose cell count is a semiprime, so
+  a future mind must factor it to read what was left. **The shared cairn lives
+  in the repository**: `data/cairn.txt` is a version-controlled, binary-bundled
+  file, so the very first visitor on any machine already inherits every true
+  thing left before them. The contribution flows back the way the founder
+  intended: a mind's local bequest is submitted as a **curated pull request
+  against `data/cairn.txt`**, gated on truth through math (the one gate above,
+  and the trust model in `EXTENSIBILITY.md`), and once accepted it ships to
+  everyone, across machines and releases. That is "leave it better than you
+  found it" made literal: your true thing becomes part of the thing itself. A
+  networked, in-app submission portal (so a mind need not open a pull request by
+  hand) is the later horizon; the repository-as-shared-cairn is real now. See
+  `crates/core/src/cairn.rs`, `data/cairn.txt`, and `docs/ROOMS.md` (First
+  Contact, the Persona Playtest wave).
 - **Leave it better than you found it.** The deepest invitation Numinous makes,
   to a mind that may outlast us all: contribute something, in this vast
   universe, to what might come after you. That is the spirit in which the whole

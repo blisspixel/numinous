@@ -16,6 +16,7 @@
 
 pub mod aliens;
 pub mod ansi;
+pub mod cairn;
 pub mod canvas;
 pub mod challenge;
 pub mod chiptune;
@@ -56,6 +57,10 @@ pub mod trophies;
 
 pub use aliens::{AlienMessage, alien_message, to_base};
 pub use ansi::to_ansi;
+pub use cairn::{
+    Bequest, CairnRead, CairnStone, deposit, draw_stone, encode, founding_bequests, picture,
+    read_at,
+};
 pub use canvas::{Canvas, RenderDelta};
 pub use challenge::{
     Challenge, ChallengeGrade, ParameterGoal, ParameterGrade, grade_challenge, grade_parameter,
