@@ -160,9 +160,9 @@ impl Room for TimesTables {
     }
 
     fn reveal(&self) -> &'static str {
-        "You drew a heart with the two-times table. That cardioid is the exact \
-         outline of the Mandelbrot set's main body: a homework grid and the most \
-         complex object in mathematics trace the same shape."
+        "Set the dial to 2 and this table draws a heart. That cardioid is the \
+         exact outline of the Mandelbrot set's main body: a homework grid and the \
+         most complex object in mathematics trace the same shape."
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {

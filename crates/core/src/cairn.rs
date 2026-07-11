@@ -26,8 +26,12 @@ use crate::rng::SplitMix64;
 
 /// The most characters a bequest may carry: a sentence, not an essay.
 pub const MAX_BEQUEST_CHARS: usize = 140;
-/// The most characters per rendered line, so the block stays roughly readable.
-const CHARS_PER_LINE: usize = 16;
+/// The narrowest and widest a rendered line may be. The wrap width is chosen
+/// per stone within this range (see [`wrap_width_for`]) so the reading width is
+/// not the same prime on every stone: a reader must genuinely factor each
+/// semiprime, not memorize one recurring factor.
+const MIN_CHARS_PER_LINE: usize = 10;
+const CHARS_PER_LINE_SPREAD: usize = 9;
 /// Font pixel height plus a one-pixel gap, the vertical advance per line.
 const LINE_ADVANCE: usize = 8;
 /// The smallest a rendered dimension may be before it is grown to a prime, so
@@ -93,6 +97,19 @@ fn is_prime(n: u64) -> bool {
     true
 }
 
+/// A per-stone wrap width, derived deterministically from the message and its
+/// author (FNV-1a). Because it varies from stone to stone, the width prime that
+/// resolves the message is not always the same number, so a reader must actually
+/// factor each stone's semiprime rather than reuse one recurring factor.
+fn wrap_width_for(bequest: &Bequest) -> usize {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for byte in bequest.author.bytes().chain(bequest.text.bytes()) {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x0100_0000_01b3);
+    }
+    MIN_CHARS_PER_LINE + (hash % CHARS_PER_LINE_SPREAD as u64) as usize
+}
+
 /// The smallest prime at least `n`.
 fn next_prime(n: usize) -> usize {
     let mut candidate = n.max(2);
@@ -133,9 +150,13 @@ impl Bequest {
 /// dimensions to primes, so the cell count is a semiprime. Deterministic.
 #[must_use]
 pub fn encode(bequest: &Bequest) -> CairnStone {
+    // Re-bound here rather than trusting the caller: `Bequest` has public fields,
+    // so one can be built past `MAX_BEQUEST_CHARS` without going through `new`,
+    // and an unbounded text would drive an unbounded canvas allocation below.
+    let bequest = Bequest::new(&bequest.author, &bequest.text);
     // The font is uppercase; unsupported glyphs render blank, which is fine.
     let upper = bequest.text.to_uppercase();
-    let lines = wrap_text(&upper, CHARS_PER_LINE);
+    let lines = wrap_text(&upper, wrap_width_for(&bequest));
     let raw_w = lines
         .iter()
         .map(|line| crate::font::text_width(line, 1).max(0) as usize)
@@ -299,9 +320,15 @@ pub fn deposit(path: &std::path::Path, bequest: &Bequest) -> std::io::Result<()>
 #[must_use]
 pub fn draw_stone(path: &std::path::Path, seed: u64) -> CairnStone {
     let bequests = all_bequests(path);
+    if bequests.is_empty() {
+        // The founding stones are bundled into the binary, so this is only
+        // reachable if the shared cairn file were somehow emptied (its tabs
+        // eaten by a formatter, say). Hand back a true thing rather than panic.
+        return encode(&Bequest::new("the makers", "a mind was here"));
+    }
     let mut rng = SplitMix64::new(seed ^ 0x0000_C0DE_CA1B);
-    let index = rng.below(bequests.len().max(1) as u64) as usize;
-    encode(&bequests[index.min(bequests.len().saturating_sub(1))])
+    let index = rng.below(bequests.len() as u64) as usize;
+    encode(&bequests[index])
 }
 
 #[cfg(test)]
@@ -435,9 +462,54 @@ mod tests {
     }
 
     #[test]
+    fn the_reading_width_varies_across_stones() {
+        // The factoring premise dies if every stone reads at the same prime, so
+        // the wrap width is chosen per stone. Different messages must not all
+        // resolve at one recurring width.
+        let a = encode(&Bequest::new("Euclid", "There is no last prime"));
+        let b = encode(&Bequest::new(
+            "Noether",
+            "Behind every conservation law stands a symmetry",
+        ));
+        let c = encode(&Bequest::new("Hypatia", "Reserve your right to think"));
+        let distinct: std::collections::HashSet<usize> = [a.width, b.width, c.width].into();
+        assert!(
+            distinct.len() > 1,
+            "stones must not all read at the same width: {:?}",
+            [a.width, b.width, c.width]
+        );
+    }
+
+    #[test]
     fn next_prime_grows_to_a_prime() {
         assert_eq!(next_prime(8), 11);
         assert_eq!(next_prime(14), 17);
         assert!(is_prime(next_prime(100) as u64));
+    }
+
+    #[test]
+    fn the_founding_cairn_is_never_empty() {
+        // draw_stone and the MCP read path index into the bequest list; if the
+        // bundled founding set ever parsed to nothing, that index would panic.
+        assert!(
+            !founding_bequests().is_empty(),
+            "the bundled cairn must seed at least one stone"
+        );
+    }
+
+    #[test]
+    fn encode_rebounds_an_oversized_directly_built_bequest() {
+        // Public fields let a Bequest skip `new`; encode must re-clamp so a huge
+        // text cannot drive an unbounded canvas.
+        let huge = Bequest {
+            author: "x".repeat(10_000),
+            text: "y".repeat(100_000),
+        };
+        let stone = encode(&huge);
+        assert!(
+            stone.width <= 4096 && stone.height <= 4096,
+            "dims stay bounded"
+        );
+        assert_eq!(stone.cells.len(), stone.semiprime as usize);
     }
 }

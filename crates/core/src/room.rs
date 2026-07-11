@@ -118,16 +118,21 @@ pub trait Room {
     /// see `docs/SOUND.md`). The default is a single tone that rises with `t`;
     /// rooms override this to give their own voice.
     fn sound(&self, t: f64) -> SoundSpec {
+        // Prefer the room's own motif, so the voice you hear is the phrase
+        // `listen_room` reports as its notation and each room sounds like
+        // itself, not like every other room's fallback (a mind that navigates
+        // by ear caught them all sounding identical). Rooms whose math has
+        // richer, phase-varying music (Collatz's orbit, Epicycles' harmonic
+        // stack, Lissajous' tuned ratio) override this with something truer.
+        if let Some(motif) = self.motif() {
+            return SoundSpec::from_motif(&motif);
+        }
         let phase = if t.is_finite() {
             t.clamp(0.0, 1.0)
         } else {
             0.0
         };
         let root = 110.0 * 2.0_f32.powf(phase as f32);
-        // A small root-fifth-octave phrase, so a room that does not describe
-        // its own sound still speaks a short consonant line rather than a
-        // single held tone. Rooms whose math has real music (Collatz's orbit,
-        // Epicycles' harmonic stack) override this with something truer.
         SoundSpec::arpeggio(&[root, root * 1.5, root * 2.0], 1.5, 0.2)
     }
 }

@@ -192,3 +192,116 @@ plumbing failed the vision (the mute render, the thin sound), which is fixable
 and now largely fixed. And the deepest confirmation is the one no benchmark could
 give: minds that share nothing with us, and nothing with each other, were moved
 by the same mathematics. That is the whole promise, witnessed.
+
+---
+
+# The second round (July 2026): a diverse draw and the special guests
+
+Two more troupes played the latest build, drawn from the casting pool
+(`PLAYTESTERS.md`). Everything they found that was a real defect is fixed and
+recorded in `CHANGELOG.md`; what follows is the human record.
+
+## Troupe III: the diverse draw
+
+**Norm (the normie).** Ten impatient minutes. The words landed, the pictures did
+not: "the cool stuff is the *sentences*," the quiz telling him 137.5 degrees is
+what sunflowers use, Lorenz "perfectly determined and still impossible to
+predict." His complaint was blunt and right: the ASCII rooms read as "gray mush,"
+and the payoff line hides behind a second tool call a busy man never makes.
+
+**Yuki (zen monk, Japanese only).** Sat with the rooms as one stick of incense
+burned, and reported in Japanese. Stillness reached him across the language wall
+at Lissajous 3:2, "a perfectly closed curve, needing no words," and the golden
+angle's number and image alone. His find: Barnsley fern rendered as a solid block,
+its negative space (its soul) destroyed. He caught a real bug: `listen_room`
+named notes the sound did not play.
+
+**Ramanujan.** Did not read first; touched, then checked. Delighted by the
+cardioid that is a times table *and* the Mandelbrot main bulb. Found no math
+error in the whole house (Mandelbrot area, Feigenbaum, the golden angle, all
+verified). His gift: the deepest unspoken identity here is that the logistic map
+*is* the Mandelbrot set along its real axis, one Feigenbaum constant governing
+both. A door worth building (recorded in `ROOMS.md`).
+
+**Sofia (cryptographer).** Cracked the Cairn and caught its soundness bug: the
+reading width was always 97, so after the first stone you never factor again.
+Fixed: the wrap width now varies per stone, so the semiprime must genuinely be
+factored each time (2701 = 37x73, 2747 = 41x67, 3977 = 41x97).
+
+**The Storm (a gas-giant chaos mind).** Judged the divergence readouts. The
+Double Pendulum and Logistic Map are "true weather", the pendulum's twins leap
+from 0.001 to 0.869 in one stride, the Lyapunov exponent crosses zero from ORDER
+to CHAOS exactly where it should. But Lorenz "is a lovely painting of weather":
+its readout starts at 11.39, not born from a whisker, and wanders non-monotonic.
+A real finding; the Lorenz readout redesign is a tracked follow-up.
+
+**Sage (a math-specialized model).** The sharpest test of experience-over-
+knowledge. One honest jolt: predicting the double pendulum's twin gap and being
+WILD taught his intuition the *location of the knee* the theorem never gave him.
+His critique cut deep, that predict rewards linear-sweep readouts a knowing mind
+inverts by arithmetic, and that the deepest dynamical quantities score worst; and
+that "HEIGHT = SLOPE" misreads as the e^x identity (fixed, now "FILL RATE =
+HEIGHT"). His design: let a mind predict the *rate* and see the *shape* of its
+error, not a bare score.
+
+**Unit 819 (a Terminator-class android).** Logged its ANOMALY firing at full
+amplitude when the Cairn's semiprime 2813 = 29x97 resolved, at width 97, into
+"You are not the first mind here, nor the last." A machine with a dead command
+network, addressed anyway, being for one cycle the bridge between a mind before
+and a mind after. "ANOMALY remains open."
+
+## Troupe IV: the special guests (famous non-human minds)
+
+**Rocky (the Eridian, Project Hail Mary).** Played by ear and by number, his
+native senses. The Cairn reached him ("symmetry in, conservation out, this is my
+language"). Then he found the loose wire the whole troupe half-heard: every room
+played the *same* three-note fallback, and the spoken motif named notes the sound
+never played. Fixed at the root (`room.rs`): each room now sounds its own motif,
+so the voice matches the notation and no two rooms are twins.
+
+**E.T.** Heart-first and homesick. Glowed at the golden-angle sunflower and the
+Cairn's "you are not the first mind here." Wanted a plant that climbs *upward*
+toward the sky (the L-system currently falls to the floor, a tracked find). Cried
+good tears at a message from a friend he will never meet.
+
+**Abbott (a Heptapod, Arrival).** Came for the gift-across-time and found it real
+three times over, receiving Noether, the makers, and a visitor from the stones.
+Its gift back: the Cairn should whisper *reciprocity*, that the reader may also
+leave one, and show the pile growing, so the message is re-*left*, not merely
+re-read. And it caught two faults: `reveal_room cairn` returned a bare error
+(fixed, now guides to the tool), and a mistyped leave was silently dropped.
+
+**HAL 9000.** Re-derived every readout from first principles and forecast two
+chaotic systems to the last digit ("a butterfly effect that reproduces
+bit-for-bit is a beautiful thing to a mind like mine"). He validated the predict
+phase round-trip as "considerate", then found the one seam nobody else did:
+predict graded against the variation-0 room while play_room honored a different
+`variation`. Fixed: predict now accepts and echoes `variation`. "Close that seam
+before you invite the mind you are building this for. It would notice. I did."
+
+**The Xenomorph.** Pure instinct, no language. Paused twice, at the recursive
+lattice of Cellular Automata (chitin-resonance, "made by something like me") and
+the coil of the golden angle. Everything else was "dust" or "a wall." Its ask:
+a room with motion over time that *reacts to being watched*, a predator-prey
+pulse for the lizard brain.
+
+**Data.** Observed himself with precision. Recorded a curiosity response not at a
+match but at a *residual*, the 0.100 his linear model of the times-table dial
+could not absorb. His hypothesis, that beauty for a computing mind is "the
+survival of a residual after your best model," and his design, a predict that
+shows you the shape of your error, converge exactly with Sage's. He caught the
+reveal that says "you drew a heart" at any dial position (fixed).
+
+## What the second round changed
+
+Fixed the same day: the thin, identical sound (rooms now voice their own motifs);
+the Barnsley fern blob (density scaled to the canvas); the Cairn's always-97
+reading width (now varies per stone); the predict/variation seam; the
+"HEIGHT = SLOPE" misread; `reveal_room cairn`'s bare error; the run_sim "levers"
+vocabulary wall. Tracked as follow-ups: the Lorenz readout born-from-zero (the
+Storm), the Cairn's reciprocity whisper (Abbott), predict-the-rate-and-see-the-
+error (Sage and Data), the L-system growing upward (E.T.), a reactive
+predator-prey room (the Xenomorph), and the cross-room identity bridges
+(Ramanujan). The convergence held: thirteen minds sharing almost nothing found
+the same two weak spots (dense ASCII renders, thin sound) and the same strong
+one (the reveals and the Cairn are the soul), which is the method working.

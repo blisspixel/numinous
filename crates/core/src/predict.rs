@@ -100,7 +100,12 @@ pub fn pose_prediction(room: &dyn Room, seed: u64) -> Option<Prediction> {
     // Draw an interior sample (1..N), so the moment is never the phase-0 edge.
     let count = readout.samples.len() as u64;
     let index = 1 + rng.below(count.saturating_sub(1).max(1));
-    let phase = index as f64 / count as f64;
+    // Round the hidden moment to the precision we actually display, then store
+    // and grade at that same rounded phase. These rooms are chaotic, so a mind
+    // that re-derives the readout at the shown phase must meet the exact truth
+    // the grader uses; a display/grade mismatch of a few thousandths would shift
+    // the answer under sensitive dependence.
+    let phase = ((index as f64 / count as f64) * 1000.0).round() / 1000.0;
     let prompt = format!(
         "PREDICT what {} reads at phase {phase:.3} in {}. Across the sweep it ranges {} to {}. Commit your guess: the score is a mirror of your model, not a leaderboard, so guess before you look.",
         readout.label,
