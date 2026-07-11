@@ -235,6 +235,27 @@ impl Room for DoublePendulum {
         self.draw_hand_state(canvas, 2.0 + self.seed_offset(), 2.0, 0.0, 0.0, steps);
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        // The divergence you can see peeling apart, made a number you can feel:
+        // the distance between the bright pendulum and its shadow twin, which
+        // began one SHADOW_OFFSET away. It sits near zero, then runs away as
+        // sensitive dependence takes hold. Because it moves, it also lets this
+        // room pose predictions and challenges, and predicting a chaotic gap is
+        // exactly the hard, honest kind of guess the predict keystone is for.
+        let steps = (t.clamp(0.0, 1.0) * MAX_STEPS as f64) as usize;
+        let off = self.seed_offset();
+        let main = trace_from_state(2.0 + off, 2.0, 0.0, 0.0, 0.0, steps);
+        let shadow = trace_from_state(2.0 + off, 2.0, 0.0, 0.0, SHADOW_OFFSET, steps);
+        let gap = match (main.last(), shadow.last()) {
+            (Some(&(mx, my)), Some(&(sx, sy))) => ((mx - sx).powi(2) + (my - sy).powi(2)).sqrt(),
+            // Before the first sampled step the twins are still one offset apart.
+            _ => 0.0,
+        };
+        Some(format!(
+            "TWINS {gap:.3} APART (from a {SHADOW_OFFSET:.0e} start)"
+        ))
+    }
+
     fn motif(&self) -> Option<crate::motifs::Motif> {
         Some(crate::motifs::Motif {
             key: "two voices drifting",
@@ -334,6 +355,20 @@ mod tests {
         let (bx, by) = *b.last().unwrap();
         let gap = ((ax - bx).powi(2) + (ay - by).powi(2)).sqrt();
         assert!(gap > 0.1, "the twins should part company: gap {gap}");
+    }
+
+    #[test]
+    fn the_divergence_readout_climbs_and_poses_a_prediction() {
+        let room = DoublePendulum::new();
+        // The twins start together and run apart: the readout is near zero at
+        // the start and larger once sensitive dependence takes hold.
+        let start = room.status(0.0).expect("has a readout");
+        assert!(start.contains("TWINS 0.000"), "starts together: {start}");
+        let value = |t: f64| crate::challenge::status_numbers(&room.status(t).unwrap())[0].1;
+        assert!(value(0.6) > value(0.0), "the gap grows across the sweep");
+        // Because the readout moves, the room now poses a prediction: a hard,
+        // chaotic guess, exactly what predict-then-reveal is for.
+        assert!(crate::pose_prediction(&room, 3).is_some());
     }
 
     #[test]

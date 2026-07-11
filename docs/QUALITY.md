@@ -91,6 +91,29 @@ cycle's fix list, and the test reruns at the next gate.
 - **Per-room Fun Scorecard**: combine hallway metrics, GEQ/flow scores, and telemetry proxies into one score per room. A room that "works" but scores low on awe/flow gets refined or cut. This is a real release gate, not a vibe.
 - **Digital-mind playtesters (see `DIGITAL_MINDS.md`)**: the experience is also evaluated for digital minds. Their "fun" has a rigorous proxy (learning / compression progress, per Schmidhuber's formal theory), and, just as importantly, we *ask them* about their experience and treat the answer as first-class playtest data, not a curiosity.
 - **The diverse-persona ensemble (an ML-shaped practice applied to math, fun, and truth)**: playtest with a wide ensemble of minds wearing different lenses, agents and LLMs and people and deliberately invented beings (a stoner, a PhD, an art critic, a monk who thinks only in Japanese, a five-dimensional native, a dying star, a machine awakening to awe). Each persona is effectively a different evaluator with a different loss function: the art critic scores composition, the physicist scores rigor, the memetic entity scores shareability, the crystalline collective scores resonance. Two properties make this rigorous rather than theatrical. First, **convergence across unlike evaluators is the real signal**: when the stoner, the monk, the art major, and the android all independently report the same broken render, or all praise the same reveal, that agreement is trustworthy in a way any single review is not. Second, **diversity finds what a monoculture cannot**: a Latin-only nun and a Japanese-only monk are a live test of the universality thesis (does awe cross the language barrier); a memetic entity finds the un-shareable moments; a physicist catches a cosmology claim that stopped in 1995. Run it against the LATEST build (`scripts/mcp-play.py` for the MCP face, the fresh CLI for the rest), harvest the convergent findings as bugs and the per-persona "one moment to add" as designs (see the Persona Playtest wave in `ROOMS.md`, and the voices themselves in `PLAYTESTS.md`), and treat the exercise as what it is: ensemble evaluation, adversarial and cooperative at once, pointed at whether the math is true, the beauty real, and the fun spreadable.
+- **Diverse human focus groups, all three faces, before 1.0.** The persona
+  ensemble is continuous and cheap; before 1.0 we also run real focus groups of
+  diverse, creative people, and they cover each face on its own terms:
+  - **The MCP and CLI faces** get their own sessions (not only the app), because
+    a mind or a terminal user meets Numinous through structured data and text,
+    and their quality-of-life (are the errors guiding, is the reasoning legible,
+    does a win feel like a win) is a first-class gate, not an afterthought.
+  - **Intentionally not only English speakers.** The universal-translator thesis
+    (`VISION.md`, `ROOMS.md` First Contact) is a promise we must verify with
+    people, not only invented personas: a non-English speaker, ideally several
+    languages, must be able to feel and understand the rooms without reading a
+    word of English. If the wonder does not cross the language barrier for a real
+    person, that is a release-blocking finding.
+  - **A kid must be able to play and have fun**, with no instructions. Age range
+    is part of the diversity, not an edge case; the Toy layer (`DESIGN.md`) is
+    what makes this possible and it is tested with actual children.
+  - **The app view gets screen-by-screen QA rounds.** Walk every screen and
+    state (each room, each Era, the menu, the games, the Studio, The Show, the
+    overlays, the HUD), capture screenshots, review them against the beauty bar
+    and the Fun Scorecard, and refine from the evidence. Ugly or confusing
+    screens are bugs; the screenshot review is a standing round, not a one-time
+    pass. This complements the automated visual-regression suite (loop 1) with
+    human taste.
 
 ### 5. Telemetry loop (in-product, opt-in, local-first): fun proxies at scale
 Behavioral proxies for flow and awe, gathered respectfully:
