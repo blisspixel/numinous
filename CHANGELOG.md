@@ -6,6 +6,31 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The Only Move is designed as a 1.x room (founder's idea, July 2026): a
+  machine plays both sides of tic-tac-toe through real minimax until the whole
+  game tree burns down to the inevitable draw, then declines a war-shaped game
+  it has learned cannot be won. The design records its evidence boundaries
+  (tic-tac-toe and checkers are solved draws with sources; chess and Go are
+  not; the war game's no-win property comes from its declared payoffs, not a
+  world claim), its resonances with Nim, the Party Problem, and Hackenbush,
+  and its pairing with the Traveling Salesman stub as the two faces of
+  combinatorial search. Full design in `docs/ROOMS.md`; placement in the 1.x
+  roadmap line.
+- The windowed app now holds its frame rate in heavy rooms with a
+  time-budgeted adaptive live-render resolution. The measured cliffs from the
+  round-3 audit (Mandelbrot's CPU fallback at 939ms per frame at 2560x1440 on
+  the dev laptop, with Julia at 78ms and Voronoi at 60ms) are retired: the app
+  watches each frame's real room render time and picks an integer downscale
+  factor per frame (a grossly slow frame jumps straight to the predicted
+  factor, mild ones climb after a two-frame streak, fast frames walk back with
+  hysteresis so the factor never oscillates), renders the room raster at the
+  reduced size, and integer-upscales to the window. Measured end to end, the
+  worst room now costs 28.8ms per frame at 2560x1440, inside the 33ms budget.
+  The HUD, overlays, and banners draw after the upscale so interface text
+  stays window-crisp; exports, postcards, modal game frames, the Studio, and
+  the GPU fractal path never pass through the cap. The controller and the
+  nearest-neighbor upscale are unit-tested (`faces/app/src/live_render.rs`,
+  `Raster::upscaled`).
 - Setup is now one command on every platform. `scripts/install.sh` (macOS and
   Linux) and `scripts/install.ps1` (Windows) check what the machine needs and
   name the exact fix for anything missing, install Rust through rustup when

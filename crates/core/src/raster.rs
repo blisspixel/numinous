@@ -128,6 +128,44 @@ impl Raster {
         }
     }
 
+    /// A `width` x `height` copy of this raster where each source pixel
+    /// covers a `factor` x `factor` block (nearest neighbor, never blended).
+    ///
+    /// The live app view renders heavy rooms below window resolution and
+    /// expands them with this before the HUD draws, so interface text stays
+    /// window-crisp while only room pixels trade sharpness for motion. The
+    /// accent carries over so chrome drawn on the result matches chrome drawn
+    /// on a full-resolution render.
+    ///
+    /// The output is exactly the requested size, whatever the source size:
+    /// blocks at the right and bottom edges are partial when the dimensions
+    /// are not factor multiples, output beyond the scaled source repeats the
+    /// nearest edge pixel, and output smaller than the scaled source is a
+    /// top-left crop. Requested dimensions are clamped to the same safe
+    /// maximum as every raster; a zero-size source stays background.
+    #[must_use]
+    pub fn upscaled(&self, factor: usize, width: usize, height: usize) -> Raster {
+        let factor = factor.max(1);
+        let mut out = Raster::with_accent(width, height, self.accent);
+        if self.width == 0 || self.height == 0 {
+            return out;
+        }
+        for y in 0..out.height {
+            let sy = (y / factor).min(self.height - 1);
+            let row = y * out.width;
+            let same_source_row = y > 0 && sy == ((y - 1) / factor).min(self.height - 1);
+            if same_source_row {
+                out.pixels.copy_within(row - out.width..row, row);
+                continue;
+            }
+            for x in 0..out.width {
+                let sx = (x / factor).min(self.width - 1);
+                out.pixels[row + x] = self.pixels[sy * self.width + sx];
+            }
+        }
+        out
+    }
+
     /// Copy another raster's pixels into this one with its top-left at `(x, y)`,
     /// clipping anything that falls outside. Used to tile rooms into a sheet.
     pub fn blit(&mut self, other: &Raster, x: usize, y: usize) {
@@ -282,6 +320,66 @@ mod tests {
         for pixel in after[12..36].chunks_exact(4) {
             assert_eq!(pixel, [10, 11, 15, 255]);
         }
+    }
+
+    #[test]
+    fn upscaled_expands_each_source_pixel_into_a_block() {
+        let mut small = Raster::with_accent(2, 2, [200, 40, 40]);
+        small.plot(0, 0, '*'); // only the top-left source pixel is lit
+        let big = small.upscaled(3, 7, 5);
+        assert_eq!(big.width(), 7);
+        assert_eq!(big.height(), 5);
+        let rgba = big.to_rgba();
+        let lit = |x: usize, y: usize| rgba[(y * 7 + x) * 4] > BACKGROUND[0];
+        // The lit source pixel covers exactly the 3x3 block at the origin.
+        assert!(lit(0, 0) && lit(2, 2), "block interior is lit");
+        assert!(!lit(3, 0) && !lit(0, 3), "neighboring blocks stay dark");
+        // The partial right/bottom edge repeats the nearest source pixel
+        // (source x=1 dark, so the edge is dark) instead of reading out of
+        // bounds.
+        assert!(!lit(6, 0) && !lit(0, 4));
+    }
+
+    #[test]
+    fn upscaled_smaller_than_the_scaled_source_is_a_top_left_crop() {
+        let mut small = Raster::new(3, 3);
+        small.plot(0, 0, '*');
+        small.plot(2, 2, '*'); // outside the crop below
+        let cropped = small.upscaled(2, 4, 4); // scaled source is 6x6
+        assert_eq!(cropped.width(), 4);
+        assert_eq!(cropped.height(), 4);
+        let rgba = cropped.to_rgba();
+        let lit = |x: usize, y: usize| rgba[(y * 4 + x) * 4] > BACKGROUND[0];
+        assert!(lit(0, 0) && lit(1, 1), "top-left block survives the crop");
+        assert_eq!(
+            cropped.lit_count(),
+            4,
+            "the (2,2) source pixel's block falls wholly outside"
+        );
+    }
+
+    #[test]
+    fn upscaled_factor_one_matches_the_source() {
+        let mut small = Raster::new(3, 2);
+        small.plot(1, 1, '#');
+        let copy = small.upscaled(1, 3, 2);
+        assert_eq!(copy.to_rgba(), small.to_rgba());
+    }
+
+    #[test]
+    fn upscaled_keeps_the_accent_and_survives_degenerate_input() {
+        let small = Raster::with_accent(2, 2, [10, 200, 10]);
+        let mut big = small.upscaled(0, 4, 4); // factor 0 behaves as 1
+        big.plot(0, 0, '*');
+        let rgba = big.to_rgba();
+        assert!(rgba[1] > 100, "accent green carried to the upscaled raster");
+        let empty = Raster::new(0, 3);
+        let out = empty.upscaled(2, 4, 4);
+        assert_eq!(
+            out.lit_count(),
+            0,
+            "zero-size source upscales to background"
+        );
     }
 
     #[test]
