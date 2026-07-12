@@ -31,8 +31,8 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 **Current release state: 0.1.0 pre-alpha.** Capability breadth resembles a much
 later alpha, but versions are earned by evidence, not feature count. The first
-public CI run, independent macOS and Linux execution, the 0.2 stranger hallway
-test, and accessibility work are still open. Later systems already present in
+independent macOS and Linux app execution, the 0.2 stranger hallway test, and
+accessibility work are still open. Later systems already present in
 source do not waive those earlier gates.
 
 - **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **31 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 978 tests, locked build, Windows release gate, 91.43% region coverage, and 91.02% line coverage all pass.
