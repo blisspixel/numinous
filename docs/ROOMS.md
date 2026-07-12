@@ -314,6 +314,7 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 
 ## Decision (games and fairness)
 - [x] **Nim** - play it, lose repeatedly, then be handed the xor secret and become unbeatable; the transfer of power is the lesson.
+- [ ] **The Only Move** - a machine burns through every future of a solved game and learns to decline the unwinnable one; Zermelo worn lightly (full design below).
 - [ ] **Prisoner's dilemma** - an iterated tournament against strategies with personalities; tit-for-tat wins hearts.
 - [ ] **Voting paradoxes** - run the same three-candidate election under five systems and crown five different winners.
 - [ ] **Fair division** - cut the cake: I-cut-you-choose, then envy-free for three; fairness as a mechanic, not a sermon.
@@ -474,6 +475,81 @@ graph; uses at least one replay layer to improve a later shot; and can explain
 which model changes made the orbital, relativistic, and string views possible.
 Math review, accessibility review, deterministic replay, stable frame pacing,
 and an engaging opponent all remain release gates.
+
+## Founder's room idea (July 2026): The Only Move
+
+**Status:** designed, not built. Roadmap position: 1.x, after the current
+flagship gates, alongside The Long Shot. Wing: Decision (games and fairness),
+with a Computation resonance.
+
+A machine asks you to play. The premise recalls the 1983 film *WarGames*,
+where a computer offered a menu of games ending in one nobody could win; the
+homage stops at the premise. The name, the machine, the art, and every line of
+copy are our own, and the mathematics underneath, game trees, backward
+induction, and exhaustive search, belongs to no one. Same precedent as Munch:
+mechanics and mathematics are not copyrightable, expression is, so we write
+our own expression.
+
+**The room.** A dark terminal presence, one of the Order's machines, offers a
+menu of games. The first is tic-tac-toe. CLICK: PLAY THE MACHINE. Play it;
+the machine is perfect, so you draw or lose, never win. Then the room offers
+the real verb. HOLD: LET IT PLAY ITSELF. The machine begins playing both
+sides, and the game tree fills the stage: every branch a hanging thread of
+light, wins flaring briefly at the leaves, each explored line collapsing into
+the growing ledger. It accelerates, thousands of futures a second, the
+sonification ticking faster and pitching upward, until the whole tree has
+burned to ash and a single figure remains: every game, both sides perfect,
+draw. The machine stops asking to play that one. The menu advances to a
+war-shaped game, a bigger tree drawn the same way, and the machine, having
+learned the shape, declines it without finishing the burn. The room goes
+quiet. The silence is the point.
+
+**The mathematics, honestly bounded.** Tic-tac-toe is finite, perfect
+information, and zero sum, so Zermelo's theorem applies: with perfect play the
+value is determined, and for tic-tac-toe that value is a draw (textbook;
+5,478 reachable positions, small enough to exhaust live on any CPU). The
+machine's discovery process on stage is real minimax over the real tree, not
+an animation of one. The escalation ladder is honest about scale: checkers is
+solved and is also a draw (Schaeffer et al., Science 2007, weakly solved),
+chess and Go are not solved, and the war-shaped game is presented as a model
+whose no-win property comes from its declared payoff structure, not from a
+claim about the world. The reveal names the ladder: some games are small
+enough to know completely, some are knowable in principle and out of reach in
+practice, and for some the only optimal strategy discovered by exhausting
+every line is to decline the game. Backward induction, worn lightly.
+
+**Reveal card.** "It searched every future and found no winning one. For a
+solved game, refusing to play is not fear; it is the answer." Then the
+identity of the machine's method with the player's own Nim experience: the
+xor secret from Nim is the same object, a solved game's strategy handed to a
+mind. Cross-room resonances: Nim (a solved game you become perfect at), the
+Party Problem (six never; order is unavoidable), Hackenbush (game values as
+numbers), and the halting-problem deep cut in Life (some questions no
+exhaustion settles).
+
+**Sonification.** The self-play burn is the instrument: exploration ticks
+accelerate and rise as branches close, each subtree's collapse lands a soft
+resolved interval, and the final draw sustains one long consonant tone that
+decays into the room's quiet. Declining the second game plays nothing at all;
+the rest disappears. Reduced-motion mode steps the burn; the searched-count
+readout carries the same information without color or speed.
+
+**Faces.** App: full burn visualization with HOLD. CLI: the tree burn as
+column-collapse animation with the live searched-count. MCP: `play_room`
+renders the frozen tree at phase t; the machine's move function and the final
+game value are deterministic and exposed through the room's status readout,
+so predict can ask a mind to call the value before the burn finishes.
+
+**Build honestly:** Wow 5 / Build 2. Minimax with memoization over 5,478
+positions is a few pages of tested core code; the visual is the existing
+surface substrate drawing a tree; the war-shaped second game is a payoff
+matrix, not a simulation. The sibling checklist stub, the Traveling Salesman
+(route the pizza drone, meet hardness personally), shares this room's soul,
+searching a combinatorial space you cannot brute-force, and stays its own
+room: the salesman's space (9!/2 = 181,440 routes for ten cities) defeats
+exhaustion where tic-tac-toe's yields to it, and feeling that boundary from
+both sides is the pair's lesson. Both face the full Definition of Done, and
+the non-textbook reveal claim (checkers) carries its source above.
 
 ## Founder's room idea (July 2026): The Dimension Dial
 
