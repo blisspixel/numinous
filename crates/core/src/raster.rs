@@ -105,6 +105,20 @@ impl Raster {
         }
     }
 
+    /// Reset a horizontal band to the stage background.
+    ///
+    /// This gives dense interface copy a quiet surface instead of asking it to
+    /// compete with a bright room. Bounds are clamped to the raster.
+    pub fn clear_rows(&mut self, y0: i32, y1: i32) {
+        let from = y0.max(0) as usize;
+        let to = (y1.max(0) as usize).min(self.height);
+        for y in from..to {
+            for x in 0..self.width {
+                self.pixels[y * self.width + x] = BACKGROUND;
+            }
+        }
+    }
+
     /// Replace this raster's pixels from an RGBA byte buffer (alpha ignored;
     /// extra or missing bytes are tolerated). Brings a post-processed frame,
     /// for example a visual era, back onto a raster.
@@ -248,6 +262,26 @@ mod tests {
         assert!(px(&after, 2) < px(&before, 2));
         assert_eq!(px(&before, 3), px(&after, 3), "below the band untouched");
         raster.dim_rows(-5, 99, 50); // clamps, never panics
+    }
+
+    #[test]
+    fn clear_rows_restores_only_the_requested_band() {
+        let mut raster = Raster::with_accent(3, 4, [100, 80, 60]);
+        for y in 0..4 {
+            for x in 0..3 {
+                raster.plot(x, y, '#');
+            }
+        }
+        let before = raster.to_rgba();
+
+        raster.clear_rows(1, 3);
+        let after = raster.to_rgba();
+
+        assert_eq!(&after[0..12], &before[0..12]);
+        assert_eq!(&after[36..48], &before[36..48]);
+        for pixel in after[12..36].chunks_exact(4) {
+            assert_eq!(pixel, [10, 11, 15, 255]);
+        }
     }
 
     #[test]

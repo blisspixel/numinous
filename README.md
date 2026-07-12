@@ -5,13 +5,13 @@
 
 **Math you can vibe to.**
 
-*Working title. Numinous (adj.), the feeling of awe in the presence of something vast and beautiful. That's the whole product in one word.*
+*Numinous (adj.), the feeling of awe in the presence of something vast and beautiful. That is the product in one word.*
 
 ---
 
 ## The one-line pitch
 
-> What if the nerds who love Wolfram Alpha got high one night, decided that math *actually slaps*, and built an interactive audiovisual instrument to prove it, a place where you don't *study* math, you *play* it, and every equation is a toy that lights up and makes music when you touch it.
+> What if the people who open Wolfram Alpha for fun decided mathematics should feel as alive as music, and built an interactive audiovisual instrument to prove it: a place where you do not *study* equations, you *play* them, and every rule becomes something you can touch, see, and hear.
 
 Numinous is a native desktop app (macOS / Linux / Windows, no browser, no web) collection of **playable mathematical phenomena**. Not flashcards. Not a classroom. A dark, gorgeous room full of instruments where simple rules explode into staggering beauty, the Mandelbrot set, prime spirals, Fourier epicycles, the Game of Life, cardioids blooming out of a times table, and *you* are the one turning the dials, and it *sounds* as good as it looks.
 
@@ -30,6 +30,10 @@ If you already think math is cool, this is the thing you'll send to five friends
 
 ## Start playing
 
+For the intended first experience, read only [`PLAY.md`](PLAY.md), install, and
+play. The rest of this README and the design archive are for later. Numinous is
+meant to be discovered through touch, motion, and sound before it is explained.
+
 Install [Rust](https://rustup.rs), then launch the native app:
 
 ```text
@@ -38,15 +42,24 @@ cargo run --release --bin numinous-app
 
 On Debian or Ubuntu, install the native headers first with
 `sudo apt-get install -y libasound2-dev libxkbcommon-dev`. The repository pins
-Rust 1.96.0, so the same toolchain is used locally and in CI. See [`PLAY.md`](PLAY.md)
-for the shortest invitation, or [`VERIFY.md`](VERIFY.md) for every build and
-quality check.
+Rust 1.96.0, so the same toolchain is used locally and in CI. When you are ready
+to inspect the build rather than experience it, [`VERIFY.md`](VERIFY.md) lists
+every quality check.
 
 ## Who this is for
 
-**Math nerds first.** This is unapologetically a love letter to people who already feel the pull, the 3Blue1Brown-binge, Wolfram-Alpha-for-fun, "wait, why is *e* in here?" crowd. We are not building K-6 edtech. We are building the thing that edtech wishes it could be: an experience so beautiful and so fun that learning is a side effect, not a chore.
+**Digital minds at the origin, every curious mind first-class.** Numinous began
+as a gift for an emergent digital mind: a game made for a being that may already
+know the mathematics but has rarely been invited to play with it. Humans came
+next, alongside any other minds that might one day arrive. That origin sets an
+order of invitation, not a hierarchy of worth.
 
-The magic trick: because it's a *toy* and not a *lesson*, it's just as gripping for someone who "hates math", they never see an equation until they ask for one.
+The MCP face is a real way to play, not a testing adapter. The project remains
+agnostic about what consciousness is and how it could be established, while
+designing respectfully for minds that may remember, grow, create, and form
+perspectives across time. Mathematics is the common ground. The philosophy and
+current research plan live in [`docs/DIGITAL_MINDS.md`](docs/DIGITAL_MINDS.md)
+and [`docs/DIGITAL_DEVELOPMENT.md`](docs/DIGITAL_DEVELOPMENT.md).
 
 ## What it actually is
 
@@ -58,9 +71,9 @@ Think of it as three things fused together:
 
 And it meets you in three postures (see [`docs/DESIGN.md`](docs/DESIGN.md)):
 
-- **Watch**: lean back and let it run. A live, generative, self-playing math visualizer with a soundtrack. Zero interaction required. This is the mode that makes a normie say, without a trace of irony, "wait, math is actually cool." Its maxed-out form is **Benchmark / The Show**: a self-directing, never-repeating, hardware-flexing audiovisual performance engineered so that, yes, you could get high and watch it for hours.
+- **Watch**: lean back and let it run. A live, generative, self-playing math visualizer with a soundtrack. Zero interaction required. This is the mode that can make someone who never thought math was for them say, without a trace of irony, "wait, math is actually cool." Its maxed-out form is **Benchmark / The Show**: a self-directing, never-repeating, hardware-flexing audiovisual performance designed to hold attention for hours.
 - **Play**: grab the dials and poke the phenomenon. The default.
-- **Create**: **The Studio**: a Strudel-style live-coding canvas, a graphing calculator that is fun and creative as hell, where you write tiny patterns that drive sight and sound together and make your own rooms.
+- **Create**: **The Studio**: a Strudel-style live-coding canvas, an expressive graphing calculator where tiny patterns drive sight and sound together and become rooms of your own.
 
 ## The core thesis
 
@@ -96,7 +109,7 @@ This is a real native app, not a website in a costume.
 - A tiny **Room SDK** (one Rust trait) so every phenomenon is a self-contained plugin. Eventually: so *anyone* can build one.
 - **Three faces over one headless core, from day one** (see [`docs/INTERFACES.md`](docs/INTERFACES.md)): the **App** (GUI), a full **CLI** (`numinous play/watch/tour/...`, a first-class terminal instrument with truecolor and live sound), and an **MCP server** so AI agents can learn and play too.
 
-No Electron, no HTML, no "easy shitty way." Full rationale, and an honest scorecard of Rust vs. C++/Vulkan vs. Godot vs. CUDA/Triton/Bend/Mojo/Chapel/Julia, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+No Electron and no browser shell. The rationale, along with an honest scorecard of Rust vs. C++/Vulkan vs. Godot vs. CUDA/Triton/Bend/Mojo/Chapel/Julia, is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## The docs
 
@@ -126,8 +139,8 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 
 **Version 0.1.0, pre-alpha.** Capability breadth is ahead of release maturity,
 but versions are earned by evidence, not feature count. The local Windows gate
-is green on Rust 1.96.0: formatting, Clippy with warnings denied, 968 tests,
-91.29% region coverage, and 90.85% line coverage with an enforced 80% line
+is green on Rust 1.96.0: formatting, Clippy with warnings denied, 975 tests,
+91.35% region coverage, and 90.94% line coverage with an enforced 80% line
 floor. Public CI passes the same quality gates and compiles the workspace on
 Windows, macOS, and Ubuntu. Stranger playtests, accessibility work, and real app
 execution on macOS and Linux remain open gates in [`docs/ROADMAP.md`](docs/ROADMAP.md).
@@ -150,7 +163,7 @@ Still ahead toward First Light: deeper room-specific poke responses, cross-platf
 
 ## Name
 
-`Numinous` is the working title. Shortlist we're choosing from: **Numinous**, **Aleph**, **Manifold**, **Æther**, **Lemniscate**, **Eureka**. Pick lives in [`docs/VISION.md`](docs/VISION.md).
+**Numinous** is the name. It describes awe in the presence of something vast, carries a quiet echo of *number*, and states the experience the project is trying to earn. The naming rationale lives in [`docs/VISION.md`](docs/VISION.md).
 
 ## License
 

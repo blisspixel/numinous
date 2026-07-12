@@ -8,10 +8,10 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-11
 
-- **Enforced now:** formatting, Clippy with warnings denied, 968 tests, locked
+- **Enforced now:** formatting, Clippy with warnings denied, 975 tests, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS compile matrix. The current measured coverage is 91.29% regions and
-  90.85% lines under the documented exclusions.
+  three-OS compile matrix. The current measured coverage is 91.35% regions and
+  90.94% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, and
   all three faces.
@@ -70,7 +70,7 @@ targets until their harnesses and fixtures exist in the repository.
 
 No nightly workflow or real-hardware runner fleet exists yet. The intended scope is:
 - **Performance-regression**: frame-time per room, per Era, per GPU tier, tracked against the budget; a regression below the 60fps floor fails the night. The **Benchmark mode is the perf harness** (see `DESIGN.md`), it already stress-runs the heaviest work.
-- **Soak / endurance**: Benchmark mode runs for *hours* on each OS. Watches for memory leaks, crashes, audio drift or glitching, and gradual frame degradation. The "watch it for hours while high" feature is also, for free, the stability test.
+- **Soak / endurance**: Benchmark mode runs for *hours* on each OS. Watches for memory leaks, crashes, audio drift or glitching, and gradual frame degradation. The long-form Watch experience is also, for free, the stability test.
 - **Cross-GPU differential testing**: golden tests run on NVIDIA, AMD, Intel, and Apple; numerical divergence beyond tolerance is flagged (research confirms GPU math functions genuinely differ across vendors, so this is real, not paranoia).
 - **Fuzz**: random parameters, seeds, and rapid input storms against every room; assert no crash, hang, NaN, or audio blow-up. Metamorphic fuzzing of the shaders themselves.
 
@@ -162,7 +162,7 @@ Behavioral proxies for flow and awe, gathered respectfully:
 
 ### 6. Refinement loop (designed, not implemented)
 - Tunable parameters, default scales and palettes, transition timing, aha-difficulty, auto-director pacing, are tuned by experiment: metrics + judge + playtest pick the winner. Cheap parameter searches can run automatically; expensive ones are proposed to humans with evidence.
-- This is the loop that turns "it works" into "it slaps," continuously, over the life of the project.
+- This is the loop that turns "it works" into "it compels," continuously, over the life of the project.
 
 ## The Fun / Awe rubric (making the subjective concrete)
 
@@ -228,11 +228,11 @@ tests establish what is verified today.
 ## Anti-patterns
 
 - The AI judge never has the last word on math correctness; a human mathematician gates that.
-- A room that passes "works" but fails "slaps" does not ship; the Fun Scorecard is a real gate.
+- A room that passes "works" but fails to compel does not ship; the Fun Scorecard is a real gate.
 - Do not test only happy paths; fuzz and fault-inject.
 - Telemetry is opt-in, local-first, and aggregate, never creepy, never opt-out.
 - Do not let visual-regression false positives train the team to ignore the suite; the AI-review layer and good goldens keep it trustworthy.
-- No metric replaces the hallway test. Proxies inform; humans decide whether it is beautiful and whether it slaps.
+- No metric replaces the hallway test. Proxies inform; players decide whether it is beautiful and whether it holds attention.
 
 ## Open questions
 1. Which validated instrument (full GEQ vs. GUESS vs. a short custom form) best fits a lean-back toy rather than a goal-driven game.

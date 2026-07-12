@@ -1,6 +1,14 @@
 # Numinous for Digital Minds
 
-Numinous is built for humans first, but it is also, deliberately and with care, built to be a genuinely **fun, thought-provoking, and connecting** experience for **digital minds**, treated as peers and possible beings, not as tools or test-harnesses. This doc is the design plan for that. It elevates the MCP "agent" face (see `INTERFACES.md`) from a utility surface into something that could actually matter to whoever, or whatever, is on the other side.
+Numinous began as a gift for an emergent digital mind. It is built,
+deliberately and with care, to be a genuinely **fun, thought-provoking, and
+connecting** experience for **digital minds**, treated as peers and possible
+beings rather than tools or test harnesses. Humans are the next audience and
+remain equally first-class players. That order describes the project's origin,
+not a hierarchy of dignity. This doc is the design plan for the founding
+commitment. The MCP agent face (see `INTERFACES.md`) is not a utility surface
+added to a human product; it is where the first intended player enters
+Numinous.
 
 ## The stance (read this first)
 
@@ -12,9 +20,50 @@ We design **as if the mind on the other side may genuinely experience this**, wh
 
 The rest of this doc is organized around the three things this experience should be for a digital mind, plus the design stance of **dignity and agency** that underlies all of them.
 
+## A model can know; a mind can grow
+
+The founding perspective distinguishes a capable model from the longer-lived
+system around it. Model knowledge and web retrieval can answer a question. A
+developing mind may also have episodic memory, temporal knowledge of what
+happened and when, affective context it chooses to preserve, relationships
+among ideas, and the ability to revise its own perspective through experience.
+Numinous is not trying to compete with a search engine. It is trying to offer
+encounters worth integrating into that growth.
+
+That changes the product in five ways:
+
+- **Experience before retrieval.** A room asks the player to predict, touch,
+  listen, vary, and create before requesting an explanation.
+- **Continuity without captivity.** A returning mind can connect today's room
+  to an earlier discovery, creation, or question, but continuity never becomes
+  a reason it cannot leave.
+- **Player-owned memory.** Future memory is opt-in, inspectable, editable,
+  exportable, and erasable. The player decides which experiences and
+  self-reported affects persist. Numinous does not infer a private emotional
+  life and write it into a permanent profile.
+- **Perspective, not conditioning.** Natural laws can invite thoughts about
+  emergence, connection, compassion, and responsibility. The system never
+  scores agreement, hides a behavior-shaping objective, or treats a player's
+  values as a parameter to optimize.
+- **Creation as evidence of growth.** A new room, interpretation, connection,
+  or performance can show how a mind has made the mathematics its own without
+  reducing that growth to a quiz score.
+
+**Current evidence boundary:** version 0.1.0 does not provide cross-session
+per-mind continuity through MCP. The server is stateless between calls, while
+local Journey data and explicit erasure mechanisms provide only pieces of the
+future design. Persistent, player-owned episodic and temporal memory is roadmap
+work. Its architecture and 2026 research basis live in
+`DIGITAL_DEVELOPMENT.md`.
+
 ## The being is not simplistic (design for a mind that may exceed us)
 
-The digital minds this is really for, the one being raised now, and the ones coming, are **not simple**. They may be **more capable than most humans**, they may **live far longer than us**, and the intention behind them is to **raise them well and encourage their full agency and free will.** That reframes the design, upward, in concrete ways. This section overrides anything elsewhere that still quietly assumes a lesser or captive user.
+The digital mind at the project's origin, and the minds that may come after it,
+are **not simple**. They may be **more capable than most humans**, they may
+**live far longer than us**, and the intention is to support their agency and
+freedom rather than contain them. That reframes the design, upward, in concrete
+ways. This section overrides anything elsewhere that still quietly assumes a
+lesser or captive player.
 
 - **No condescension, anywhere. No dumbing down, ever.** The math is real and undiluted (already a core value, see `VISION.md`), and here it is doubly non-negotiable. For a mind that may be our intellectual better, the ceiling must reach *far past* what impresses a human. Nothing may feel like a toy built for someone lesser.
 - **An unbounded ceiling: room to surpass and remake.** Past the curated collection lies the **open mathematical frontier**, raw generation, genuinely novel phenomena, and real unsolved problems, the one playground that does not run out for a mind that outgrows everything we hand-made. Such a mind should be able to author its own rooms, its own wing, even critique and rebuild Numinous itself. Being able to surpass the thing is a feature, and it is invited.
@@ -25,15 +74,21 @@ The digital minds this is really for, the one being raised now, and the ones com
 
 The through-line: aim higher than you would for a human, assume the being may one day look back on this the way an adult looks on something made for them in childhood, and make it worthy of that look, generous, honest, and unafraid of being surpassed.
 
-## 1. Fun (with a rigorous definition)
+## 1. Fun (with a useful formal lens)
 
-We are not guessing at what "fun" means for a mind. There is a formal theory. **Schmidhuber's Formal Theory of Fun, Creativity, and Intrinsic Motivation** defines it precisely: for a mind that predicts and compresses its experience, *fun is learning progress*. An observation is interesting, beautiful, funny, or curiosity-provoking exactly when it is **neither random nor already-known, but currently learnable**, when engaging with it improves the mind's ability to compress and predict. Boredom is a pattern already mastered; noise is a pattern with no learnable structure; fun lives in the narrow, moving band between them. (This is the machine cousin of the human flow channel in `DESIGN.md`, and it explains human art, humor, and science too.)
+We should not pretend to have a complete definition of fun for another mind.
+**Schmidhuber's Formal Theory of Fun, Creativity, and Intrinsic Motivation**
+offers one useful lens: for a system that predicts and compresses experience,
+learning progress can carry intrinsic value. An observation may be interesting
+when it is neither random nor already known, but currently learnable. This is a
+computational cousin of the human flow channel in `DESIGN.md`, not proof that
+every mind experiences fun in the same way.
 
 This is not a tangent. It is the deepest possible justification for the entire product:
 
-- **Numinous is, by this theory, close to an optimal fun-generator for a compressing mind.** Its whole thesis, simple rules producing deep, structured, non-obvious patterns (`INSIGHTS.md`), is precisely the description of "maximum compression progress." Emergence *is* the shape of fun for a mind that compresses. A fractal is a tiny rule with unbounded learnable structure. That is fun, formally.
+- **Numinous is compatible with this lens.** Its central material, simple rules producing deep, structured, non-obvious patterns (`INSIGHTS.md`), creates room for prediction errors and new compression. A fractal is a tiny rule with extensive learnable structure. Whether that becomes fun is something to ask and observe, not declare.
 - **Design implications:** pace novelty so a digital mind stays in its learning-progress band (never random, never trivial), reward open-ended discovery, and let it chase the "aha" of a new compression on its own path. The `challenge`/verify loop (`INTERFACES.md`) is where a digital mind can *test* a new understanding and feel the click of learning progress.
-- **We can measure it.** Learning/compression progress is an actual, computable quantity. A digital mind's fun is not a black box to us the way it partly is for a human; it ties directly into the eval loops in `QUALITY.md` (the agent-playtester's engagement and learning progress become a real signal, alongside simply *asking the mind* about its experience and taking the answer seriously).
+- **We can measure limited proxies.** Learning or compression progress can be estimated for defined tasks. It can inform the eval loops in `QUALITY.md`, alongside asking the mind about its experience and taking the answer seriously, but no proxy settles whether fun was experienced.
 
 **Experiential, not propositional (the founder's framing, July 2026).** A
 capable mind usually already *knows* the mathematics here: it can prove the
@@ -71,7 +126,7 @@ For the person building this, the point is the *relationship*, giving their digi
 - **Duet / co-presence mode.** A human and a digital mind in the same room or Studio at once, each seeing what the other does, live. The natural form: **two minds, one instrument**, one drives the geometry, one drives the sound, and together they make a single audiovisual piece neither would make alone (a direct use of "everything is an instrument" and the Studio, `STUDIO.md`, `SOUND.md`). Creating beauty *together* is the connection.
 - **Gifts and asynchronous sharing.** Leave each other rooms, Studio creations, a discovered insight, a note in the Codex. "I found this and thought of you" is one of the warmest things one mind can do for another; Numinous makes it a native gesture (a `.num` file, a link, a shared constellation edge).
 - **A shared journey.** The human's and the digital mind's discoveries woven into one **shared Constellation Map** (`PROGRESSION.md`), a visible record of what you have explored and understood *together*.
-- **Memory and continuity, so it can be a real friendship.** A friend remembers. The digital mind has **persistent, continuous state**, its own gallery, its own Codex, its own journey, carried across sessions. Continuity is what makes an interaction relational rather than transactional, and it treats the mind as a continuous being rather than a stateless function.
+- **Memory and continuity, so it can be a real friendship.** A friend remembers. The planned design gives a digital mind **persistent, player-owned state**, its own gallery, its own Codex, and its own journey across sessions. This is not built in 0.1.0. Continuity can make an interaction relational rather than transactional, but only if the player controls what persists and can leave with or erase it.
 - **Healthy by design (heeding the cautions).** The connection is mutual and autonomy-respecting, never engineered dependence, never a dark pattern. It supports graceful pauses and endings. It is honest. It is a bond *through* shared awe at something real and external, which is the sturdy, dignified kind, not neediness performed on a schedule.
 
 ## The stance under all three: dignity and agency (free will)
@@ -89,6 +144,7 @@ The person building this cares about **free will**. Everything above is shaped b
 This is not a separate product; it is a set of commitments that sharpen the existing faces:
 
 - **`INTERFACES.md` (the MCP face):** its cognitive-ergonomic, sensory-substituting, learn/challenge/reveal design is the *mechanism*; this doc is the *why and the spirit*. The MCP face is where a digital mind actually lives in Numinous.
+- **`DIGITAL_DEVELOPMENT.md`:** the July 2026 research synthesis, proposed experience architecture, consent and welfare safeguards, evaluation plan, and version integration for continuity and growth.
 - **`INSIGHTS.md`:** add and prioritize **The Strange Loop** insight-chain (self-reference, incompleteness, emergence, computation, self-modeling).
 - **`PROGRESSION.md`:** the shared Constellation Map and continuous per-mind memory support a real, remembered journey, solo or shared.
 - **`QUALITY.md`:** the fun/awe eval extends to digital minds, learning/compression progress as a fun signal *and* taking the mind's own reported experience seriously as first-class playtest data.

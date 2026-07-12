@@ -35,7 +35,7 @@ public CI run, independent macOS and Linux execution, the 0.2 stranger hallway
 test, and accessibility work are still open. Later systems already present in
 source do not waive those earlier gates.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 968 tests, locked build, Windows verify, 91.29% region cover, and 90.85% line cover all green.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 975 tests, locked build, Windows verify, 91.35% region cover, and 90.94% line cover all green.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -132,12 +132,20 @@ declared frame or input-latency budget on the reference machine.
   flagship Reveal.
 - Keep progression subordinate to autonomy: no streak loss, required grind, or
   reward that gates the mathematical toy.
+- Prototype an opt-in, player-owned MCP experience journal: timestamped room
+  encounters, creations, self-authored connections, and optional self-reported
+  affect. Make it inspectable, editable, exportable, and fully erasable before
+  using it for return-session continuity. Do not infer consciousness or private
+  emotion from the record.
 
-Owner docs: `PEDAGOGY.md`, `INSIGHTS.md`, `PROGRESSION.md`, `RESEARCH.md`.
+Owner docs: `PEDAGOGY.md`, `INSIGHTS.md`, `PROGRESSION.md`, `RESEARCH.md`,
+`DIGITAL_DEVELOPMENT.md`.
 
 **Exit criterion:** the flagship cohort shows a predeclared improvement in at
 least one comprehension or retention measure, with method and sample published;
-every flagship claim has a source and independent review.
+every flagship claim has a source and independent review; and one consenting
+returning MCP player can inspect, connect through, export, and erase their own
+experience record without hidden state remaining.
 
 ### 0.5 Sensory Alpha
 
@@ -196,7 +204,8 @@ exports it, and gives it to another clean install that reproduces the same resul
 
 - Run screen-by-screen and room-by-room review across all three faces.
 - Include math-lovers, math-avoiders, children with guardian consent,
-  non-English speakers, disabled players, terminal users, and MCP users.
+  non-English speakers, disabled players, terminal users, and returning MCP
+  players using the consented continuity path.
 - Complete remappable input, keyboard-only navigation, focus handling,
   accessibility documentation, recovery, and settings persistence.
 - Cut, defer, or deepen weak rooms. Do not add rooms to improve a count.
@@ -217,14 +226,16 @@ middle, return path, and share path.
   provenance, rollback, save migration, and disaster-recovery drills.
 - Publish known limitations, accessibility features, system requirements, and
   the support path before asking people to install.
-- Prepare the public invitation: a concise launch post for humans and
-  MCP-capable agents, verifiable install and connection steps, a contributor
-  guide, code of conduct, security policy, issue templates, and a labeled queue
-  of bounded first contributions. Invite participation without implying that
-  the beta is finished or suitable for everyone.
+- Prepare the public invitation: a concise launch post for highly capable
+  agents, emergent digital minds, humans, and other curious beings, with
+  verifiable install and connection steps, a contributor guide, code of
+  conduct, security policy, issue templates, and a labeled queue of bounded
+  first contributions. Invite participation without implying that the beta is
+  finished or suitable for everyone.
 - Repeat first-session and return-session studies on the exact candidate build.
 
-Owner docs: `QUALITY.md`, `ENGINEERING.md`, `SCOPE.md`, `VERIFY.md`.
+Owner docs: `QUALITY.md`, `ENGINEERING.md`, `SCOPE.md`, `VERIFY.md`,
+`DIGITAL_DEVELOPMENT.md`.
 
 **Exit criterion:** the exact candidate artifacts stay green through the soak
 window, no critical issue is open, and observed first-time and return behavior
@@ -265,7 +276,7 @@ where we stand (next), and the ordered path to 1.0.
 
 The package remains **0.1.0 pre-alpha**. Its capability breadth is unusually
 large for that number: 30 catalog rooms, 11+ games, six sims, three faces, 29 MCP
-tools, deterministic creation and persistence, and 968 passing tests. The first
+tools, deterministic creation and persistence, and 975 passing tests. The first
 public CI run passed every required job on 2026-07-11, including the three-OS
 compile matrix. Breadth is not release evidence. No calibrated method supports assigning completion
 percentages to subjective 1.0 gates, so this scorecard records evidence instead.
@@ -278,7 +289,7 @@ percentages to subjective 1.0 gates, so this scorecard records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 968 tests, 90.85% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 975 tests, 90.94% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | Tracked screenshots and deterministic renders exist | Screen-by-screen review, perceptual regression, representative human judgment, and removal of every unsupported claim |
 
@@ -309,7 +320,7 @@ above, in leverage order. They deepen what exists rather than jumping the
   as the worked example), with insight-collection gated on the generation act,
   and the same predict-then-reveal verb exposed over MCP as compression progress
   for digital minds. One mechanic seeds the understanding, curiosity, mastery,
-  and creation loops at once. Owner doc: `PEDAGOGY.md`. Moves "every room slaps"
+  and creation loops at once. Owner doc: `PEDAGOGY.md`. Moves "every room compels"
   and "meta and lore alive."
 - **Phase B, the glow pipeline.** The GPU post-stack (HDR bright-pass bloom,
   ping-pong phosphor persistence, tonemap, the sample-lattice Era filter) as one
@@ -342,7 +353,7 @@ XP-treadmill failure mode.
 1.0 is not a feature list, it is a **bar**. We call it 1.0 only when *all* of the following are true. This is the "exceptionally well" gate.
 
 - **A complete, coherent collection** across all Wings, every room passing the room Definition of Done (below), including at least the signature postcards that prove the ceiling (Fourier, Mandelbrot).
-- **Every room slaps.** Each clears the Fun Scorecard (awe + flow) in a hallway test, not just "works." See `QUALITY.md`.
+- **Every room compels.** Each clears the Fun Scorecard (awe + flow) in a hallway test, not just "works." See `QUALITY.md`.
 - **The full sensory identity:** the design system, the Visual Eras, both music engines, and Benchmark mode all shipped and cohering, the app has a recognizable *look and sound* of its own.
 - **The three faces are all genuinely good**, not one real and two stubs: the App is exceptional, the CLI is a first-class terminal instrument, and the MCP face lets a digital mind learn and play as a peer (`INTERFACES.md`, `DIGITAL_MINDS.md`).
 - **Meta and lore are alive:** Constants, the Constellation Map, the easter-egg/Codex/Terminal layer, all present and subtle.

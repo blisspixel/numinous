@@ -7,7 +7,10 @@
 use std::fs::File;
 use std::io::BufWriter;
 
-use numinous_core::{Raster, Surface, all_rooms, draw_text, wrap_text};
+use numinous_core::{Raster, Surface, all_rooms, draw_text};
+
+#[path = "../src/hud.rs"]
+mod hud;
 
 fn save(raster: &Raster, path: &str) {
     let (w, h) = (raster.width(), raster.height());
@@ -25,8 +28,6 @@ fn save(raster: &Raster, path: &str) {
 fn main() {
     let (width, height) = (900usize, 900usize);
     let rooms = all_rooms();
-    let scale = (width as i32 / 500).clamp(1, 3);
-
     // Screen 1: launch state, the help overlay over the first room.
     {
         let room = &rooms[0];
@@ -72,40 +73,23 @@ fn main() {
         let room = &rooms[16]; // lorenz
         let mut raster = Raster::with_accent(width, height, room.meta().accent);
         room.render(&mut raster, 0.7);
-        draw_text(
+        hud::draw_room_chrome(
             &mut raster,
-            &room.meta().title.to_uppercase(),
-            10,
-            10,
-            scale + 1,
-            '#',
-        );
-        // The arrival card: two quiet lines above the hint bar.
-        let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
-        for (i, line) in wrap_text(&room.meta().blurb.to_uppercase(), columns)
-            .iter()
-            .take(2)
-            .enumerate()
-        {
-            draw_text(
-                &mut raster,
-                line,
-                10,
-                height as i32 - (12 + (2 - i as i32) * 9) * scale,
-                scale,
-                '#',
-            );
-        }
-        let level = "LV 7";
-        let lx = width as i32 - (level.len() as i32 * 6 * scale) - 10;
-        draw_text(&mut raster, level, lx, 10, scale, '#');
-        draw_text(
-            &mut raster,
-            "ESC  PLAY + MENU     E INSPECT   Y RADIO   J JOURNEY",
-            10,
-            height as i32 - 10 * scale,
-            scale,
-            '-',
+            room.as_ref(),
+            &hud::RoomChrome {
+                t: 0.7,
+                room_card: 240,
+                show_info: false,
+                show_help: false,
+                show_journey: false,
+                banner_active: false,
+                the_show: false,
+                studio: false,
+                muted: false,
+                level: 7,
+            },
+            width,
+            height,
         );
         save(&raster, "renders/qa3/app-2-main.png");
     }
@@ -115,29 +99,24 @@ fn main() {
         let room = &rooms[3];
         let mut raster = Raster::with_accent(width, height, room.meta().accent);
         room.render(&mut raster, 0.0);
-        draw_text(
+        hud::draw_room_chrome(
             &mut raster,
-            &room.meta().title.to_uppercase(),
-            10,
-            10,
-            scale + 1,
-            '#',
+            room.as_ref(),
+            &hud::RoomChrome {
+                t: 0.0,
+                room_card: 0,
+                show_info: true,
+                show_help: false,
+                show_journey: false,
+                banner_active: false,
+                the_show: false,
+                studio: false,
+                muted: false,
+                level: 1,
+            },
+            width,
+            height,
         );
-        let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
-        let line_height = 9 * scale;
-        for (i, line) in wrap_text(&room.reveal().to_uppercase(), columns)
-            .iter()
-            .enumerate()
-        {
-            draw_text(
-                &mut raster,
-                line,
-                10,
-                10 + (2 + i as i32) * line_height,
-                scale,
-                '#',
-            );
-        }
         save(&raster, "renders/qa3/app-3-inspect.png");
     }
 

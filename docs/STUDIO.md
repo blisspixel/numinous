@@ -1,6 +1,6 @@
 # The Studio
 
-The creative canvas: a graphing calculator that is fun and creative as hell, fused with a Strudel-style live-coding instrument, fused with a shader toy. You type a little math, and it instantly *draws* and *sings*. This is the "Create" posture (see `DESIGN.md`), and it is a headline pillar, not a bonus feature.
+The creative canvas: an expressive graphing calculator fused with a Strudel-style live-coding instrument and a shader toy. You type a little math, and it instantly *draws* and *sings*. This is the "Create" posture (see `DESIGN.md`), and it is a headline pillar, not a bonus feature.
 
 ## The one-liner
 
@@ -39,7 +39,7 @@ So when you write a euclidean rhythm, you *see* the beats land and *hear* them a
 
 The Studio is a ramp, not a cliff. Same tool, radically different ceilings.
 
-- **Level 0, the graphing calculator.** `y = sin(x)`. It draws, glowing, and it sings the curve. A curious normie is delighted in ten seconds. This is the whole onboarding.
+- **Level 0, the graphing calculator.** `y = sin(x)`. It draws, glowing, and it sings the curve. A curious newcomer is delighted in ten seconds. This is the whole onboarding.
 - **Level 1, make it move.** `y = sin(x + t)` (t is time) and it animates. Free variables auto-spawn **sliders**; every number is **draggable** (Desmos-style scrubbing). Parametric, polar, and 3D toggles. Now it is alive.
 - **Level 2, patterns (the Strudel layer).** `note("c e g")`, `euclid(3, 8)`, layered and transformed live (`rev`, `fast`, `slow`, `every`, `degrade`). The pattern drives sound *and* geometry together. Now it is an instrument and a generative visual at once, "Strudel techno" you can see (see `MUSIC.md`).
 - **Level 3, fields and shaders.** Write an expression over the whole plane for domain coloring and SDFs, or drop into raw **WGSL** for full control (see `VISUALS.md`). Now it is a shader toy with a soundtrack.

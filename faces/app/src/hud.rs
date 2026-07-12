@@ -1,4 +1,4 @@
-use numinous_core::{Raster, Room};
+use numinous_core::{Raster, Room, Surface};
 
 pub(crate) struct RoomChrome {
     pub(crate) t: f64,
@@ -47,18 +47,36 @@ pub(crate) fn draw_room_chrome(
     height: usize,
 ) {
     let scale = (width as i32 / 400).clamp(1, 4);
+    let reveal_lines = if state.show_info && !state.the_show && !state.studio {
+        let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
+        numinous_core::wrap_text(&room.reveal().to_uppercase(), columns)
+    } else {
+        Vec::new()
+    };
     if !state.the_show && !state.studio && !state.show_help && !state.show_journey {
-        raster.dim_rows(0, 14 + 7 * (scale + 1), 45);
+        if reveal_lines.is_empty() {
+            let title_bottom = 14 + 7 * (scale + 1);
+            raster.clear_rows(0, title_bottom);
+            raster.line(0, title_bottom - 1, width as i32 - 1, title_bottom - 1, '-');
+        } else {
+            let reveal_bottom = 18 + (2 + reveal_lines.len() as i32) * 9 * scale;
+            raster.clear_rows(0, reveal_bottom);
+            raster.line(
+                0,
+                reveal_bottom - 1,
+                width as i32 - 1,
+                reveal_bottom - 1,
+                '-',
+            );
+        }
         let card_lines = if state.room_card > 0 && !state.show_info {
             3
         } else {
             0
         };
-        raster.dim_rows(
-            height as i32 - (14 + card_lines * 9) * scale,
-            height as i32,
-            45,
-        );
+        let footer_top = height as i32 - (14 + card_lines * 9) * scale;
+        raster.clear_rows(footer_top, height as i32);
+        raster.line(0, footer_top, width as i32 - 1, footer_top, '-');
     }
 
     if state.the_show {
@@ -126,12 +144,8 @@ pub(crate) fn draw_room_chrome(
     }
 
     if state.show_info && !state.the_show && !state.studio {
-        let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
         let line_height = 9 * scale;
-        for (i, line) in numinous_core::wrap_text(&room.reveal().to_uppercase(), columns)
-            .iter()
-            .enumerate()
-        {
+        for (i, line) in reveal_lines.iter().enumerate() {
             numinous_core::draw_text(
                 raster,
                 line,
@@ -150,7 +164,7 @@ pub(crate) fn draw_room_chrome(
             10,
             height as i32 - 10 * scale,
             scale,
-            '-',
+            '.',
         );
     }
 }
@@ -264,5 +278,40 @@ mod tests {
             220,
         );
         assert_eq!(raster.to_rgba(), before);
+    }
+
+    #[test]
+    fn inspection_copy_gets_a_clear_content_sized_panel() {
+        let room = room("golden-angle");
+        let (width, height) = (900, 900);
+        let mut raster = Raster::with_accent(width, height, room.meta().accent);
+        room.render(&mut raster, 0.0);
+        draw_room_chrome(
+            &mut raster,
+            room.as_ref(),
+            &RoomChrome {
+                t: 0.0,
+                room_card: 0,
+                show_info: true,
+                show_help: false,
+                show_journey: false,
+                banner_active: false,
+                the_show: false,
+                studio: false,
+                muted: false,
+                level: 1,
+            },
+            width,
+            height,
+        );
+
+        let rgba = raster.to_rgba();
+        let quiet_pixel = (70 * width + width / 2) * 4;
+        assert_eq!(&rgba[quiet_pixel..quiet_pixel + 4], [10, 11, 15, 255]);
+        let lower_lit = rgba[120 * width * 4..]
+            .chunks_exact(4)
+            .filter(|pixel| *pixel != [10, 11, 15, 255])
+            .count();
+        assert!(lower_lit > 100, "room art remains visible below the panel");
     }
 }

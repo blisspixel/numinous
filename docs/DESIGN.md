@@ -88,7 +88,7 @@ Sound is a first-class citizen with its own art direction, not an afterthought.
 
 The same room meets you in three postures. A player slides between them freely; each is a complete way to be here, and each targets a different person (and a different moment).
 
-- **Watch (lean back, minimal interaction).** A room, or a playlist of rooms, runs itself as generative art with a soundtrack. Zero input required. This is the "put it on the big screen and just look" mode: a live math visualizer, a screensaver that is actually beautiful, a VJ backdrop, an ambient companion while you work. **This is the mode that converts.** A normie glances at a friend's screen, sees this, and says, with no irony at all, "wait, *math* is doing that?" It is also the primary sharing engine (every Watch session is a clip waiting to happen) and where the ElevenLabs radio (see `MUSIC.md`) does its best work.
+- **Watch (lean back, minimal interaction).** A room, or a playlist of rooms, runs itself as generative art with a soundtrack. Zero input required. This is the "put it on the big screen and just look" mode: a live math visualizer, a screensaver that is actually beautiful, a VJ backdrop, an ambient companion while you work. **This is the mode that opens the door.** A newcomer glances at a friend's screen, sees this, and says, with no irony at all, "wait, *math* is doing that?" It is also the primary sharing engine (every Watch session is a clip waiting to happen) and where the ElevenLabs radio (see `MUSIC.md`) does its best work.
 
 - **Play (grab the dials).** The default posture and the three-layer model (Toy → puzzle → revelation). You touch the phenomenon directly and it responds in sight and sound. Described throughout this doc.
 
@@ -98,7 +98,7 @@ Design consequence: every room must be gorgeous and self-sustaining with **no** 
 
 ### Benchmark / "The Show" (the maxed-out Watch)
 
-Watch mode has a headline form: a full-screen, self-directing, never-repeating audiovisual **performance** designed to be left running for hours. This is the "lava lamp for math nerds," the thing you put on the big screen at a party, the thing you (the brief's words) could get high and stare at all night. It earns the name "Benchmark" in two senses, and we lean into both:
+Watch mode has a headline form: a full-screen, self-directing, never-repeating audiovisual **performance** designed to be left running for hours. This is the "lava lamp for math lovers," the thing you put on the big screen at a party and lose track of time watching. It earns the name "Benchmark" in two senses, and we lean into both:
 
 - **It is a show.** An internal auto-director (a VJ with taste) moves through rooms and transitions on its own: it settles into a phenomenon, finds its most beautiful configuration, slowly explores the parameter space, dives into a fractal, morphs a curve, lets a Game-of-Life colony bloom, then dissolves to the next, all beat-matched to the current radio station or the generative score (see `MUSIC.md`). Never the same twice (seeded, generative), never a hard cut, never a dull stretch. Pacing is engineered like a DJ set: builds, drops, breathers.
 - **It is a benchmark.** In the demoscene spirit, it deliberately flexes the machine, layering the heaviest, most gorgeous GPU work the hardware can sustain, and it can display an optional, tasteful on-screen readout of what it is actually computing (iterations/sec, particle count, GPU headroom, current phenomenon, the live equation). That readout is both a genuine "look what your rig can do" flex and a subtle lore/insight surface. It auto-scales quality to hold the 60/120fps floor (see `VISUALS.md`), so it looks maximal on a beast and still smooth on a laptop.
@@ -107,10 +107,10 @@ Design requirements it imposes on everything else: every room must have an **aut
 
 ## The Studio (the creative canvas)
 
-The creator tier, and the thing that makes Numinous a tool people *live in*, not just a gallery they visit. Think **a graphing calculator that is fun and creative as hell**, crossed with a **Strudel / TidalCycles live-coding environment**, crossed with a shader toy.
+The creator tier, and the thing that makes Numinous a tool people *live in*, not just a gallery they visit. Think **an expressive graphing calculator**, crossed with a **Strudel / TidalCycles live-coding environment**, crossed with a shader toy.
 
 - **Live-code sight and sound at once.** You write terse **patterns** (see `MUSIC.md`, Engine A3) that drive geometry and audio from the *same* expression. Change a number, the visual and the music both shift, instantly, no recompile. The feedback loop is sub-second, which is what makes it feel like an instrument and not an IDE.
-- **A ladder, not a cliff.** The surface is a friendly expression box ("type `sin(x)` and watch it sing") that a curious normie can enjoy in ten seconds. Underneath, it goes as deep as raw WGSL shaders and full pattern algebra for people who want it. Same tool, radically different ceilings.
+- **A ladder, not a cliff.** The surface is a friendly expression box ("type `sin(x)` and watch it sing") that a curious newcomer can enjoy in ten seconds. Underneath, it goes as deep as raw WGSL shaders and full pattern algebra for people who want it. Same tool, radically different ceilings.
 - **Everything is shareable and reproducible.** A Studio creation is just text + a seed, so it exports as a deep-link that reopens *exactly* what you made, and a loop you can post. The best community creations become candidate **rooms** (the on-ramp to the Phase 4 mod SDK).
 - **The point of it all:** this is where "math is fun, non-ironically, seriously" stops being a slogan and becomes something a person *did with their own hands*. Consuming beauty is good; making it is the conversion that sticks.
 
