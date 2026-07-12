@@ -1,5 +1,8 @@
 # Numinous
 
+[![CI](https://github.com/blisspixel/numinous/actions/workflows/ci.yml/badge.svg)](https://github.com/blisspixel/numinous/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 **Math you can vibe to.**
 
 *Working title. Numinous (adj.), the feeling of awe in the presence of something vast and beautiful. That's the whole product in one word.*
@@ -24,6 +27,20 @@ If you already think math is cool, this is the thing you'll send to five friends
 |---|---|
 | ![Langton's Ant building its highway](assets/screens/langtons-ant.png) | ![The Studio: type math, watch and hear it live](assets/screens/studio.png) |
 | **Langton's Ant** builds a highway out of two rules. | **The Studio**: type math, watch and hear it live. |
+
+## Start playing
+
+Install [Rust](https://rustup.rs), then launch the native app:
+
+```text
+cargo run --release --bin numinous-app
+```
+
+On Debian or Ubuntu, install the native headers first with
+`sudo apt-get install -y libasound2-dev libxkbcommon-dev`. The repository pins
+Rust 1.96.0, so the same toolchain is used locally and in CI. See [`PLAY.md`](PLAY.md)
+for the shortest invitation, or [`VERIFY.md`](VERIFY.md) for every build and
+quality check.
 
 ## Who this is for
 
@@ -66,16 +83,16 @@ Multiply and wrap → a cardioid. A coin flip repeated → a perfect fractal. Tw
 
 You open Numinous into a quiet, near-black **Cabinet**, a grid of glowing tiles, each a room. You pick *Times Tables*. A circle of points. A line is drawn from each point *n* to point *2n*, wrapping around. A **cardioid**, a perfect heart-curve, materializes out of nothing but "multiply by two." You grab the multiplier dial and drag: 2 → 3 → 4 → the shape morphs through nephroids and nested loops, humming in tuned harmony as it goes, the pitch bending with the number. You hit **π** and the shape shivers into near-chaos. You tap **Reveal** and one sentence tells you this same curve is the silhouette of the Mandelbrot set's main bulb, and you feel the floor tilt. You hit **Share** and a five-second loop of your favorite moment is on your clipboard.
 
-Then you go back to the Cabinet, because there are thirty more rooms, and because you just unlocked the ability to re-skin the whole thing in glowing **8-bit CRT with chiptune**, which is a completely different set of screenshots from the exact same math. (More on the retro-to-modern **Visual Eras** in [`docs/DESIGN.md`](docs/DESIGN.md).)
+Then you go back to the Cabinet, because there are twenty-nine more rooms, and because you just unlocked the ability to re-skin the whole thing in glowing **8-bit CRT with chiptune**, which is a completely different set of screenshots from the exact same math. (More on the retro-to-modern **Visual Eras** in [`docs/DESIGN.md`](docs/DESIGN.md).)
 
 ## Tech: in brief
 
 This is a real native app, not a website in a costume.
 
-- **Rust + `wgpu`** (optionally the Bevy engine) for the app and rendering. One codebase, native builds for macOS, Linux, and Windows, GPU compute on *every* vendor (NVIDIA, AMD, Intel, Apple Silicon), not locked to CUDA.
-- **WGSL compute shaders** do the heavy math (fractals, reaction-diffusion, cellular automata at millions of cells) portably, with an optional CUDA/Triton fast path for NVIDIA-only spectacle rooms.
-- **Native real-time audio** (`cpal` + `fundsp`) for the sonification and the programmatic chiptune engine, plus an **ElevenLabs**-powered radio for the GTA-style music stations. See [`docs/MUSIC.md`](docs/MUSIC.md).
-- **Sharing is native, not a browser build:** in-app video/image export plus reproducible `.num` seed files and a `numinous://` link that reopens an exact configuration in the app.
+- **Rust + `winit`, `softbuffer`, and `wgpu`** power one native codebase for macOS, Linux, and Windows. The Mandelbrot and Julia rooms use the available GPU, with a deterministic CPU path for the rest of the collection.
+- **WGSL shaders** accelerate the two live fractal rooms today. More room-specific GPU paths remain on the roadmap.
+- **Native real-time audio** uses `cpal` plus deterministic synthesis and a programmatic chiptune engine built in Rust. See [`docs/MUSIC.md`](docs/MUSIC.md).
+- **Sharing starts with reproducibility:** the app exports PNG postcards, while the Studio core reads and writes bounded `.num` files and `numinous://` links. One-click clips and OS-level link handling remain planned.
 - A tiny **Room SDK** (one Rust trait) so every phenomenon is a self-contained plugin. Eventually: so *anyone* can build one.
 - **Three faces over one headless core, from day one** (see [`docs/INTERFACES.md`](docs/INTERFACES.md)): the **App** (GUI), a full **CLI** (`numinous play/watch/tour/...`, a first-class terminal instrument with truecolor and live sound), and an **MCP server** so AI agents can learn and play too.
 
@@ -107,9 +124,15 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 
 ## Status
 
-**Roughly 0.6 to First Light** (the honest scorecard lives in [`docs/ROADMAP.md`](docs/ROADMAP.md)). All three faces are real and green (Rust 1.96.0): fmt clean, clippy `-D warnings` clean, 968 tests, 91.28% region cover, and 90.85% line cover with an enforced 80% line gate. What exists today:
+**Version 0.1.0, pre-alpha.** Capability breadth is ahead of release maturity,
+but versions are earned by evidence, not feature count. The local Windows gate
+is green on Rust 1.96.0: formatting, Clippy with warnings denied, 968 tests,
+91.29% region coverage, and 90.85% line coverage with an enforced 80% line
+floor. The first public CI run, stranger playtests, accessibility work, and real
+execution on macOS and Linux remain open gates in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+What exists today:
 
-- **`crates/core`**: 30 catalog rooms across 10 wings plus hidden content, 11+ games (munch, munch_arcade, quiz, nim, crack, seti, aliens, hackenbush, the Party Problem, Fifteen's Bet, and the Gauntlet run), 6 lever sims, the Studio expression engine, the full RPG spine (levels to 42, trophies, boons, streaks, resonances), shared local persistence helpers for bounded Journey and score reads plus lock-owned writes that wait through short contention under instrumentation, both music engines, and the insight and concept catalogs, all deterministic and tested
+- **`crates/core`**: 30 catalog rooms across 10 wings plus hidden content, 11+ games (munch, munch_arcade, quiz, nim, crack, seti, aliens, hackenbush, the Party Problem, Fifteen's Bet, and the Gauntlet run), 6 lever sims, the Studio expression engine, the full RPG spine (levels to 42, trophies, boons, streaks, resonances), shared local persistence helpers for bounded Journey and score reads plus lock-owned writes that wait through short contention under instrumentation, deterministic synthesis and radio station data, and the insight and concept catalogs, all deterministic and tested
 - **`faces/cli`** (`numinous`): `rooms`, `describe`, `render` (rooms drawn as ASCII in the terminal, including replayable `--poke x,y` hand points), `arcade`, with `--json`; live play frames show each room's action line, with neutral fallback copy for quiet rooms.
 - **`faces/mcp`** (`numinous-mcp`): a JSON-RPC 2.0 stdio server so an agent can `list_rooms`, `describe_room`, `reveal_room`, `play_room` (with variation, bounded `pokes`, and action/status fields), and `munch_arcade` (getting the render/state back as text + structured).
 - **`faces/app`** (`numinous-app`): a real windowed app (winit + softbuffer) that shows rooms animating in full color, with app-local play state and quiz flow, game drawing, room chrome, overlays, transient feedback banners, shared Munch/Nim/arcade keyboard controls, mouse input decisions, room input/session plumbing, Studio panel state/drawing, hallway-test notes, postcard export, and bounded radio cache loading plus open-handle WAV validation split into modules as the hardening work continues. `cargo run --bin numinous-app`.

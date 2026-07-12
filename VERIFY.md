@@ -38,7 +38,7 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 968 tests pass, 91.28% region
+Expected right now: **format and clippy clean, 968 tests pass, 91.29% region
 cover, and 90.85% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
 integration-tested on real hardware and excluded from the coverage gate, see
 `docs/QUALITY.md`).
@@ -50,7 +50,7 @@ cargo install --path faces/cli --force
 ```
 
 If a shell says numinous is not recognized, the cargo bin directory is
-missing from PATH: add `%USERPROFILE%' + chr(92) + '.cargo' + chr(92) + 'bin` to the user PATH once
+missing from PATH: add `%USERPROFILE%\.cargo\bin` to the user PATH once
 (Settings, or `[Environment]::SetEnvironmentVariable` in PowerShell), then
 open a new terminal.
 

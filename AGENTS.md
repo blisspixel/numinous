@@ -18,8 +18,8 @@ These are enforced, and violating them fails the gate. They apply to
 descriptions alike.
 
 1. **No AI or tool attribution, anywhere, ever.** Nothing you produce is signed
-   by a tool: no "by Codex", no "by Claude", no co-author trailers, no session
-   links, no "generated with" note. This applies to commit messages and PR
+   by a tool: no tool names in authorship claims, no co-author trailers, no
+   session links, no "generated with" note. This applies to commit messages and PR
    descriptions as much as to files. The work stands on its own.
 2. **No em-dashes or en-dashes.** Use a comma, a colon, or a rewrite. The
    characters U+2014 and U+2013 must not appear in any tracked file or commit

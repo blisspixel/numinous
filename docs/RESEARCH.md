@@ -1,17 +1,55 @@
 # Research & Inspiration
 
-The thinking behind Numinous: what makes something maximally fun, why these particular math concepts land, what prior art we're building on, and the sources.
+The evidence and influences behind Numinous: what may support engagement and
+learning, why these mathematical phenomena are promising, what prior art can
+teach us, and where the project is still making a hypothesis. Evidence links
+were reviewed on 2026-07-11.
 
-## 1. What makes something *maximally fun*
+## Evidence posture
 
-The design literature converges hard on one idea: **fun is flow.** Csíkszentmihályi's flow state, total absorption, is what game designers actually chase, and "what we call 'fun' is, in fact, 'flow.'" The conditions that produce it map directly onto our design pillars:
+Research can narrow the search space. It cannot prove that Numinous is fun,
+beautiful, accessible, or educational. Those claims require observation of this
+build with real people, including disabled players and people who do not already
+like mathematics. We use five labels throughout the planning docs:
 
-- **Clear goals + immediate feedback.** You must know, *instantly*, whether what you just did worked. → *Everything is an instrument*: every action produces immediate sight **and** sound. Our feedback latency is a design metric.
-- **Challenge-skill balance.** Too easy = bored, too hard = anxious; flow lives in the narrow channel between. → *Toy → puzzle → revelation*: the toy has no difficulty floor (anyone can play), the optional puzzle supplies challenge on demand, so every visitor can sit in their own flow channel.
-- **No distractions.** Flow shatters on interruption. → *Respect the flow*: no popups, no forced text, near-invisible UI, the Reveal card is summoned not pushed.
-- **Variable reward.** Rewards that vary in size and timing sustain engagement (the "just one more" loop). → *Emergence* is an infinite variable-reward engine: you never quite know what beauty the next dial-turn produces.
+- **Built:** present in source and covered by a relevant automated check.
+- **Measured:** observed on a named build, platform, and date.
+- **Observed:** seen in a documented human session. Sample size and method stay attached.
+- **Designed:** specified in an owner document but not shipped.
+- **Hypothesis:** plausible and research-informed, but untested in Numinous.
 
-The takeaway for us: we don't need to *invent* fun mechanics. Math's emergence gives us an endless supply of "clear action → surprising, beautiful, immediate feedback" loops, which is the exact shape of flow. Our job is to remove every source of friction and interruption around them.
+A citation supports the narrow claim it actually studied. Results from classroom
+learning, memory tasks, or another game do not automatically transfer to an
+audiovisual mathematical instrument.
+
+## 1. What may support engagement and learning
+
+No single theory defines fun. Flow is one useful lens, while self-determination
+theory adds autonomy, competence, and relatedness. Active-learning and memory
+research support asking a learner to act, predict, generate, and retrieve rather
+than only receive an explanation. Applied to Numinous, these are design
+hypotheses with testable consequences:
+
+- **Immediate, legible feedback.** Every deliberate action should produce a
+  perceivable response. We measure input-to-response latency and test whether a
+  first-time player can tell what changed.
+- **Autonomy and competence without pressure.** Watch, Play, and Create should
+  offer meaningful choice, while optional challenges make progress legible. XP,
+  streaks, and rewards must not coerce return play or replace intrinsic interest.
+- **Generation before explanation.** A prediction, construction, or
+  self-explanation before Reveal is supported by generation, prequestioning, and
+  retrieval-practice research. Whether it improves understanding here needs a
+  Numinous-specific retention study.
+- **Conceptually congruent modalities.** Sound should encode the same
+  mathematical relationship as the picture, systematically and reproducibly.
+  More sensory output is not automatically better; redundant noise and
+  incongruent mappings can hurt clarity.
+- **Low interruption.** Text and progression should remain optional around the
+  instrument. This is tested by observed flow and comprehension, not asserted
+  from visual minimalism alone.
+
+The working bet is that mathematical emergence supplies unusually rich feedback.
+The hallway test decides whether that bet survives contact with players.
 
 ## 2. Why *these* math concepts (the awe inventory)
 
@@ -41,18 +79,55 @@ Each Wing in `ROOMS.md` is really one of these awe-types made playable. The frac
 | **Wolfram (Alpha / NKS)** | Serious computation; the "computational universe"; Rule 30. | The seriousness of the math; Rule 30/110 literally become rooms. | Wolfram is the *utility*; we're the *emotion*, the feeling that made someone build Wolfram. |
 | **Coolmath Games / classroom math games** | Reach, "math + fun" brand. | (Cautionary.) A reminder of what to avoid. | We are the opposite of edtech drills, no worksheets, no grade levels, beautiful by default. |
 
-**The gap we fill:** there is no *beautiful, playable, audiovisual, cross-platform collection of mathematical awe made for people who already love math.* Explorables are essays; 3b1b is video; Mathigon is edtech; games touch one idea each. Numinous is the museum-instrument-toybox that doesn't exist yet.
+**The gap we are exploring:** the references above each cover part of the idea,
+but we have not found a native collection with this exact instrument, museum,
+and game combination. That is a market and design hypothesis, not proof that no
+comparable work exists.
 
-## 4. Design principles we're committing to (distilled)
+## 4. Design principles we are testing
 
-1. **Fun = flow;** engineer for clear action → immediate beautiful feedback, and protect it from interruption.
-2. **Awe is the metric.** The hallway test (strangers, no words, count the "whoa"s) outranks every other measure.
-3. **Emergence is the renewable fuel.** Simple-rule/complex-result is an infinite well of variable reward; make the *simplicity legible* so the result feels impossible.
-4. **Two senses beat one.** Sight + tuned sound on the same math lands the point twice and makes it shareable.
-5. **Restraint is the aesthetic.** Beautiful-by-default, one idea per screen, every frame a screenshot.
-6. **Shareability is a feature, not marketing.** Build the export/loop/deep-link into every room.
+1. **Protect voluntary attention.** Clear action and immediate feedback are the
+   target; session length is not a success if the player feels controlled.
+2. **Treat awe as observed evidence.** Record unprompted reactions and sharing
+   intent, while accepting that no short test captures the whole experience.
+3. **Make the first interaction language-light.** Test this with children,
+   non-English speakers, and assistive-technology users rather than assuming
+   that visual interaction is universal.
+4. **Bind sound to the mathematics.** Use systematic, reproducible mappings and
+   always provide visual or textual redundancy for information carried by sound.
+5. **Make accessibility part of the sensory system.** Reduced motion,
+   photosensitivity limits, scalable text, remappable input, color-independent
+   cues, mono audio, and separate volume controls are release work, not polish.
+6. **Prefer restraint.** One idea per screen and a coherent palette are design
+   constraints. Human review decides whether a frame is actually beautiful.
+7. **Make sharing honest and reproducible.** Exports and capsules preserve the
+   state that created them; privacy and consent precede growth metrics.
 
 ## Sources
+
+**Learning and motivation evidence**
+- [Active learning increases student performance in STEM, PNAS meta-analysis](https://doi.org/10.1073/pnas.1319030111)
+- [The generation effect, meta-analytic review](https://pubmed.ncbi.nlm.nih.gov/17645161/)
+- [Guessing as a learning intervention, meta-analytic review](https://pubmed.ncbi.nlm.nih.gov/37640836/)
+- [Prequestioning and pretesting effects, 2023 review](https://doi.org/10.1007/s10648-023-09814-5)
+- [Retrieval practice and conceptual learning, Science](https://pubmed.ncbi.nlm.nih.gov/21252317/)
+- [The motivational pull of video games, autonomy and competence studies](https://selfdeterminationtheory.org/SDT/documents/2006_RyanRigbyPrzybylski_MandE.pdf)
+
+**Sonification and multisensory evidence**
+- [A definition for sonification, ICAD](https://www.icad.org/Proceedings/2008/Hermann2008.pdf)
+- [Sonification of numerical data for education](https://doi.org/10.1080/02680513.2018.1553707)
+- [Conceptual congruency across sensory modalities and mathematics learning](https://doi.org/10.1080/10494820.2021.2016860)
+
+**Accessibility and safety practice**
+- [Web Content Accessibility Guidelines 2.2, W3C](https://www.w3.org/TR/WCAG22/)
+- [Xbox Accessibility Guidelines 3.2](https://learn.microsoft.com/en-us/xbox/accessibility/guidelines)
+- [Game Accessibility Guidelines](https://gameaccessibilityguidelines.com/)
+
+**Protocol and software supply-chain practice**
+- [MCP versioning, current and draft status](https://modelcontextprotocol.io/docs/learn/versioning)
+- [MCP 2026-07-28 release candidate](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/)
+- [GitHub Actions secure-use guidance](https://docs.github.com/en/actions/reference/security/secure-use)
+- [OpenSSF Scorecard checks](https://scorecard.dev/)
 
 **Fun / flow / game design**
 - [Getting Gamers in the Zone: Understanding Flow, Game Developer](https://www.gamedeveloper.com/design/getting-gamers-in-the-zone-understanding-flow)

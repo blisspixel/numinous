@@ -13,9 +13,15 @@ path = "src/main.rs"
 
 [dependencies]
 numinous-core = { workspace = true }
-numinous-audio = { path = "../../crates/audio" }
-numinous-gpu = { path = "../../crates/gpu" }
-winit = "0.30"
+numinous-audio = { workspace = true }
+numinous-gpu = { workspace = true }
+winit = { version = "0.30", default-features = false, features = [
+    "rwh_06",
+    "wayland",
+    "wayland-csd-adwaita-notitle",
+    "wayland-dlopen",
+    "x11",
+] }
 softbuffer = "0.4"
 png = "0.17"
 hound = "3"
