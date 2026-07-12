@@ -51,14 +51,31 @@ The programmatic engine has its own retro voices that pair with the Visual Eras 
 
 Because the melodies are *generated from the math*, the same room produces an endless chiptune in 8-bit and an endless ambient piece in modern, from one source of truth.
 
-### A3. Strudel-style generative techno (the pattern engine)
-The centerpiece of the programmatic engine, and the beating heart of the **Studio** (see `DESIGN.md`): a **pattern language** in the spirit of **TidalCycles / Strudel**, where terse patterns describe rhythm, pitch, and timbre as functions of time, and can be layered, transformed (reverse, every-n, degrade, euclid), and modulated live.
+### A3. The mathematical pattern instrument
+The centerpiece of the programmatic engine, and the beating heart of the **Studio** (see `DESIGN.md`): an independently designed **pattern language** where terse patterns describe rhythm, pitch, and timbre as functions of time, and can be layered, transformed (reverse, every-n, degrade, euclid), and modulated live.
 
-- This is how we get **"Strudel techno"**: driving, evolving, algorithmic electronic music that never loops identically, built from mathematical patterns.
+- This is how we get driving, evolving algorithmic electronic music that never loops identically, built from mathematical patterns.
 - Crucially, the same pattern that drives the *sound* can drive the *geometry* on screen, so in the Studio you live-code an audiovisual piece where sight and sound are literally the same expression.
 - It doubles as the app's generative soundtrack: point the pattern engine at the current room's parameters and it scores your play in real time.
 
 **Why local + generative:** it is free, infinite, offline, never repeats, reacts instantly to what you do, and every configuration is reproducible from a seed (so a shared deep-link sounds identical to what the sharer heard).
+
+The planned surface is `STUDIO.md`'s Pattern Studio: pattern text, a tracker,
+step grid, piano roll, and mathematical visualizers as equivalent readings of
+one bounded event graph. Formula Jam adds curated Random and a phrase-aligned
+Auto set at 0.3. The shared event graph and credible style templates land at
+0.5. Save, reopen, MCP composition, and interchange complete the loop at 0.7.
+
+This is an independent implementation built in Rust from mathematical first
+principles. It uses no Strudel code: nothing is copied, adapted, embedded,
+linked, or vendored. Strudel and TidalCycles remain useful research comparisons,
+not dependencies or compatibility targets.
+
+The quality target is electronic music that can stand beside excellent
+human-made EDM and trance, not a novelty that receives easier judgment because
+it is generated. `STUDIO.md` defines how musician-led reference sessions, blind
+listening where practical, curated adversarial seeds, and audio checks decide
+whether that target has been earned.
 
 ---
 
@@ -115,7 +132,7 @@ Do not commit the current WAV cache or attach it to a public release yet.
   cannot be established, replace the cache with commissioned, contributor-owned,
   public-domain, or otherwise clearly licensed recordings.
 
-Primary terms reviewed 11 July 2026:
+Primary terms reviewed 12 July 2026:
 [Music Model-Specific Terms](https://elevenlabs.io/eleven-music-model-specific-terms),
 [Music API Terms](https://elevenlabs.io/music-api-terms), and
 [publishing guidance](https://help.elevenlabs.io/hc/en-us/articles/13313564601361-Can-I-publish-the-content-I-generate-on-the-platform).
@@ -160,5 +177,7 @@ The comedy channel is generated, not hand-recorded, so it can be endless and cur
 ## Open questions
 1. Whether the first public station pack should be commissioned, contributed under a project-compatible license, or covered by a separate enterprise agreement.
 2. How much comedy content to pre-produce and ship versus fetch on demand (size versus freshness).
-3. Whether the Strudel-style pattern engine is a bespoke Rust DSL or an embedded scripting host (shared decision with the Studio, see `ARCHITECTURE.md`).
+3. How small the first bespoke pattern vocabulary should be. The architecture
+   decision is settled: bounded data and a pure Rust evaluator in core, with no
+   embedded scripting host in the trusted path.
 4. Global-key harmonization: how aggressively to quantize room sound to the station key before it feels less like *the room's* voice.

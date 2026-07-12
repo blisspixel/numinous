@@ -6,6 +6,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- A versioned Studio plan grounded in current live-coding and music-notation
+  practice: Formula Jam gains curated Random and phrase-aligned Auto discovery;
+  Pattern Studio grows through one bounded audiovisual event graph into tracker,
+  grid, text, piano-roll, `.num`, MCP, MIDI, and appropriate MusicXML workflows.
+  The language is an independent Rust design built from cycle, phase, ratio,
+  symmetry, transformation, probability, geometry, and composition, with no
+  Strudel code or compatibility layer. Its stated quality target is electronic
+  music that holds up beside excellent human-made work under musician-led and
+  blind listening where practical, not novelty credit for generated output.
+  The roadmap places the tactile entry in 0.3, sensory and musical evidence in
+  0.5, and the complete local creator loop in 0.7. The radio audit also confirms
+  that Engine A ships in source while the 42-track local cache remains blocked
+  from public distribution until a compatible rights path and compressed pack
+  exist.
 - Cult of Pi, a new code-art room built from exact decimal prefixes rather than decorative random digits. A low-flicker green channel moves from fresh digits to dust, finite replay phases introduce deterministic display corruption, and CLICK: BREAK THE SEQUENCE adds a bounded local fault. Its decimal motif becomes a drifting but finite sound, the app's shared dismissible chrome keeps explanation outside the active field, and eight focused tests cover exact digits, deterministic replay, interaction, variation, hostile surfaces, sound, and historical boundaries. The catalog now has 31 rooms, all with touch verbs, variation, motifs, and multi-face rendering.
 - The radio documentation now distinguishes shipped code from private assets. The repository includes the three station identities, rotation decks, optional local generation path, bounded cache validation, and playback, while the current founder cache of 42 WAV tracks, about 1.41 GB, remains outside Git. A public pack now has an explicit gate: recorded provenance and distribution rights for every track, replacement of anything ambiguous, compressed checksummed release packaging, clean-install testing, and an offline Engine A fallback. This follows the May 2026 model-specific terms, whose self-serve table restricts music repositories and some media uses; the existing recordings are not published on an assumption.
 - Public-repository readiness: the README now leads with CI and license status, gives a direct native-app quick start, and distinguishes shipped technology from roadmap direction; GitHub Actions use the pinned Rust 1.96.0 toolchain, current action releases, and read-only repository permissions; Dependabot watches Cargo and workflow dependencies; package metadata points to the canonical public repository; and the Windows PATH guidance is corrected.

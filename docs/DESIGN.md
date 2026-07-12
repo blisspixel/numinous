@@ -107,7 +107,7 @@ Design requirements it imposes on everything else: every room must have an **aut
 
 ## The Studio (the creative canvas)
 
-The creator tier, and the thing that makes Numinous a tool people *live in*, not just a gallery they visit. Think **an expressive graphing calculator**, crossed with a **Strudel / TidalCycles live-coding environment**, crossed with a shader toy.
+The creator tier, and the thing that makes Numinous a tool people *live in*, not just a gallery they visit. Think **an expressive graphing calculator**, crossed with an independently designed **mathematical live-coding environment**, crossed with a shader toy.
 
 - **Live-code sight and sound at once.** You write terse **patterns** (see `MUSIC.md`, Engine A3) that drive geometry and audio from the *same* expression. Change a number, the visual and the music both shift, instantly, no recompile. The feedback loop is sub-second, which is what makes it feel like an instrument and not an IDE.
 - **A ladder, not a cliff.** The surface is a friendly expression box ("type `sin(x)` and watch it sing") that a curious newcomer can enjoy in ten seconds. Underneath, it goes as deep as raw WGSL shaders and full pattern algebra for people who want it. Same tool, radically different ceilings.

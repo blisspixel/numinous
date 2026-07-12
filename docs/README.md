@@ -44,8 +44,8 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 - `INSIGHTS.md` the awe bank: the library of revelations, the six flavors of awe, the insight-chains (including The Strange Loop).
 - `VISUALS.md` the render and look bible: the pipeline, the shader toolbox, color, motion, and how each Visual Era is drawn.
 - `SOUND.md` the sonification bible: how math becomes tuned sound, synthesis, tuning, per-room sound design.
-- `MUSIC.md` the music engines: programmatic (chiptune, Strudel-style) plus the ElevenLabs radio stations and comedy channel.
-- `STUDIO.md` the creative canvas: the Desmos-meets-Strudel live-coding tool, and the game's authoring layer (rooms are Studio programs).
+- `MUSIC.md` the music engines: programmatic chiptune and mathematical patterns, plus the optional radio stations and comedy channel plan.
+- `STUDIO.md` the mathematical live-coding canvas and the game's authoring layer (rooms are Studio programs).
 - `SYNESTHESIA.md` the sensory seam: the glow pipeline (the documented HDR look, not yet built) and the one-event-two-renderings model that binds sight and sound.
 - `CREATOR.md` the creator platform: closing the make-share-remix loop on the `.num` capsule, the gallery, and the arc to a living world.
 

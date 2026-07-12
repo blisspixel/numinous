@@ -113,12 +113,17 @@ without relying on the founder's machine or undocumented context?"
 - Run a short formative session after each interaction change and record where
   the action or consequence is unclear.
 - Establish frame-time and input-latency baselines for those rooms.
+- Give Formula Jam three legible ways to begin: manual expression entry,
+  curated Random, and an Auto set that changes about every 21 seconds at phrase
+  boundaries. Add a dismissible, recallable help overlay and pause Auto on edit.
 
-Owner docs: `ROOMS.md`, `INTERFACES.md`, `SOUND.md`, `QUALITY.md`.
+Owner docs: `ROOMS.md`, `INTERFACES.md`, `SOUND.md`, `STUDIO.md`, `QUALITY.md`.
 
 **Exit criterion:** five strangers can discover the main action in each flagship
 without instruction, can describe what changed, and no flagship exceeds its
-declared frame or input-latency budget on the reference machine.
+declared frame or input-latency budget on the reference machine. A first-time
+Studio player can start Random or Auto, dismiss and restore Help, edit the shown
+expression, and understand how to return to manual control.
 
 ### 0.4 Understanding Alpha
 
@@ -159,12 +164,21 @@ experience record without hidden state remaining.
   color-independent cues, mono audio, and separate music, effect, and room volume.
 - Add perceptual image and spectral audio regression harnesses, plus 60fps and
   audio-glitch budgets on declared hardware tiers.
+- Build the bounded semantic event graph for Pattern Studio so the tracker,
+  pattern text, piano roll, mathematical visualizers, and mixer all read the
+  same rhythm, pitch, harmony, and automation events.
+- Validate curated techno, trance, ambient, and chiptune templates through
+  musician listening sessions and deterministic audio checks. Do not infer
+  musical quality from a valid render.
 
-Owner docs: `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md`, `QUALITY.md`.
+Owner docs: `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md`, `MUSIC.md`,
+`STUDIO.md`, `QUALITY.md`.
 
 **Exit criterion:** the five flagships pass human visual and audio review,
 automated safety checks, accessibility sessions with affected players, and
-performance budgets on the reference hardware tiers.
+performance budgets on the reference hardware tiers. Pattern templates render
+without clipping or stuck notes, and their visual events remain synchronized
+with the audible events under measured load.
 
 ### 0.6 Portable Alpha
 
@@ -183,7 +197,8 @@ performance budgets on the reference hardware tiers.
 - Evaluate major dependency upgrades separately, with migration notes and
   before-and-after performance evidence.
 
-Owner docs: `ARCHITECTURE.md`, `ENGINEERING.md`, `INTERFACES.md`, `VERIFY.md`.
+Owner docs: `ARCHITECTURE.md`, `ENGINEERING.md`, `INTERFACES.md`, `MUSIC.md`,
+`VERIFY.md`.
 
 **Exit criterion:** a clean machine on each supported system installs, launches,
 plays a flagship with sound, saves state, and uninstalls cleanly from a signed or
@@ -195,13 +210,25 @@ otherwise verifiable artifact.
 
 - Reopen `.num` creations in the app and preserve deterministic state.
 - Add a local gallery, explicit fork/remix, lineage, and a bounded share bundle.
+- Complete Pattern Studio with equivalent pattern text, tracker, step-grid, and
+  piano-roll editing over one versioned `.num` document. Ship constrained scene
+  templates and mutations for intro, build, break, drop, and outro.
+- Give MCP peers the same bounded data operations as the app: list examples,
+  compose, mutate, preview, render, and export with explicit seeds and no raw
+  code execution. Preserve turn history, undo, agency, and inspectability in
+  multi-being sessions.
+- Export MIDI broadly and MusicXML only where the event data maps honestly to
+  conventional notation.
 - Fuzz every parser and require paused preview before opening shared content.
 - Keep all creator content inside the documented capability boundary.
 
 Owner docs: `CREATOR.md`, `STUDIO.md`, `EXTENSIBILITY.md`.
 
 **Exit criterion:** a new user creates a piece, closes the app, reopens it,
-exports it, and gives it to another clean install that reproduces the same result.
+exports it, and gives it to another clean install that reproduces the same
+result. An MCP peer and a human can independently make and then transparently
+remix the same musical document without either interface receiving hidden
+capabilities.
 
 ### 0.8 Closed Beta
 

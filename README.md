@@ -69,7 +69,7 @@ And it meets you in three postures (see [`docs/DESIGN.md`](docs/DESIGN.md)):
 
 - **Watch**: lean back and let it run. A live, generative, self-playing math visualizer with a soundtrack. Zero interaction required. This is the mode that can make someone who never thought math was for them say, without a trace of irony, "wait, math is actually cool." Its maxed-out form is **Benchmark / The Show**: a self-directing, never-repeating, hardware-flexing audiovisual performance designed to hold attention for hours.
 - **Play**: grab the dials and poke the phenomenon. The default.
-- **Create**: **The Studio**: a Strudel-style live-coding canvas, an expressive graphing calculator where tiny patterns drive sight and sound together and become rooms of your own.
+- **Create**: **The Studio**: a mathematical live-coding canvas, an expressive graphing calculator where tiny patterns drive sight and sound together and become rooms of your own.
 
 ## The core thesis
 
@@ -115,7 +115,7 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 | --- | --- |
 | [`docs/VISION.md`](docs/VISION.md) | The soul of the project, tone, references, what we are and aren't |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Design philosophy, the three-layer room model, the Watch/Play/Create modes, Benchmark mode, Visual Eras, aesthetic & audio direction |
-| [`docs/STUDIO.md`](docs/STUDIO.md) | The Studio: the Desmos-meets-Strudel live-coding audiovisual canvas, and the game's authoring layer |
+| [`docs/STUDIO.md`](docs/STUDIO.md) | The Studio: the mathematical live-coding audiovisual canvas and the game's authoring layer |
 | [`docs/ROOMS.md`](docs/ROOMS.md) | The catalog of phenomena (31 catalog rooms plus hidden content, 10 wings, every one of them with a verb) and the Full Map of what remains |
 | [`docs/PROGRESSION.md`](docs/PROGRESSION.md) | Levels & insights: the knowledge-gated "metroidbrainia" structure, the Constellation Map, pacing, Benchmark/Watch |
 | [`docs/INSIGHTS.md`](docs/INSIGHTS.md) | The awe bank: the deep library of mathematical revelations and the insight-chains that connect them |

@@ -3,7 +3,7 @@
 The evidence and influences behind Numinous: what may support engagement and
 learning, why these mathematical phenomena are promising, what prior art can
 teach us, and where the project is still making a hypothesis. Evidence links
-were reviewed on 2026-07-11.
+were reviewed on 2026-07-12.
 
 ## Evidence posture
 
@@ -109,6 +109,34 @@ comparable work exists.
 7. **Make sharing honest and reproducible.** Exports and capsules preserve the
    state that created them; privacy and consent precede growth metrics.
 
+## 5. Live coding, notation, and music interchange
+
+Current live-coding practice supports a Studio that can be learned through
+multiple synchronized representations rather than through syntax alone.
+Strudel demonstrates event highlighting, piano-roll and punchcard views, cycle
+spirals, oscilloscopes, pitch wheels, and spectra around a compact pattern
+language. TidalCycles documents the nested pattern operations beneath that
+style of notation. These are prior-art observations, not evidence that the same
+interface will work in Numinous.
+
+The design response is one bounded semantic event graph with several editors:
+pattern text, tracker, step grid, and piano roll. The same events feed the audio
+engine and mathematical visualizers. Curated randomization is constrained by
+key, scale, role, energy, density, and arrangement, because unconstrained
+randomness is easy to generate and difficult to make musically useful. Human
+listening remains the quality gate.
+
+For exchange, MusicXML 4.0 is an open W3C format for digital sheet music and
+MIDI remains the practical performance bridge. Neither replaces the native
+Numinous document: staff notation does not faithfully carry all electronic
+timbre, automation, spatial, visual, or provenance data. The versioned `.num`
+document remains authoritative, and exports are derived views.
+
+Licensing is part of the architecture. Numinous implements its language from
+first principles and uses no Strudel code: nothing is copied, adapted, embedded,
+linked, or vendored. Recorded radio assets follow a separate rights and
+provenance gate in `MUSIC.md` and `ROADMAP.md`.
+
 ## Sources
 
 **Learning and motivation evidence**
@@ -123,6 +151,16 @@ comparable work exists.
 - [A definition for sonification, ICAD](https://www.icad.org/Proceedings/2008/Hermann2008.pdf)
 - [Sonification of numerical data for education](https://doi.org/10.1080/02680513.2018.1553707)
 - [Conceptual congruency across sensory modalities and mathematics learning](https://doi.org/10.1080/10494820.2021.2016860)
+
+**Live coding, notation, and interchange**
+- [Strudel visual feedback](https://strudel.cc/learn/visual-feedback/)
+- [Strudel getting started](https://strudel.cc/workshop/getting-started/)
+- [Strudel effects and signal flow](https://strudel.cc/learn/effects/)
+- [Strudel source license, AGPL-3.0](https://github.com/tidalcycles/strudel/blob/main/LICENSE)
+- [TidalCycles mini-notation reference](https://tidalcycles.org/docs/reference/mini_notation/)
+- [MusicXML 4.0, W3C](https://www.w3.org/2021/06/musicxml40/)
+- [W3C Music Notation Community Group](https://www.w3.org/groups/cg/music-notation/)
+- [MIDI specifications](https://midi.org/specifications)
 
 **Accessibility and safety practice**
 - [Web Content Accessibility Guidelines 2.2, W3C](https://www.w3.org/TR/WCAG22/)

@@ -17,7 +17,7 @@ Most of the languages in the shortlist (Triton, Gluon, CUDA C++, SYCL, Kokkos, R
 
 **Engine layer: Rust + `wgpu`, optionally inside the Bevy engine.**
 **Compute layer: WGSL compute shaders as the portable baseline, with an optional CUDA/Triton fast path behind a feature flag for NVIDIA-only spectacle rooms.**
-**Creative/live-coding layer: a bespoke pattern DSL (Strudel/TidalCycles-style) embedded in the Rust host, plus raw WGSL exposed for shader-heads.**
+**Creative/live-coding layer: a bespoke mathematical pattern DSL embedded in the Rust host, plus raw WGSL exposed for shader-heads.**
 
 Why this specific combination wins for *math + games + visualization + fun + truly cross-platform*:
 
@@ -65,7 +65,7 @@ The catch is the app-shell story: shipping a tightly-polished, custom-UI, custom
 ## The audio + live-coding stack
 
 - **Real-time synthesis:** `cpal` for output, `fundsp`/custom DSP for the tuned synth voices and the master bus. This powers the "everything is an instrument" sonification and the programmatic chiptune engine (see `MUSIC.md`).
-- **The Studio (Strudel-style creative canvas):** a small **pattern DSL** embedded in the host (evaluated live, hot, no recompile), inspired by TidalCycles/Strudel, where a user live-codes audiovisual math so that patterns drive both sound and geometry at once. Shader-heads can also drop into raw **WGSL** for visuals. This is the creator-tier surface that turns Numinous from a toy into an instrument-you-program. (See `DESIGN.md` "Modes" and "The Studio".)
+- **The Studio (mathematical creative canvas):** a small, independently designed **pattern DSL** embedded in the host (evaluated live, hot, no recompile), where a user live-codes audiovisual math so that patterns drive both sound and geometry at once. Shader-heads can also drop into raw **WGSL** for visuals. This is the creator-tier surface that turns Numinous from a toy into an instrument-you-program. (See `DESIGN.md` "Modes" and "The Studio".)
 - **Optional cached radio:** station identity lives in the headless core, the CLI owns an optional local generation path, and the app validates and plays a bounded local cache. No radio service or recording is required for the source-shipped synthesis engine. (See `MUSIC.md`.)
 
 ## The Room contract (the core abstraction)
@@ -133,7 +133,7 @@ numinous/
 │   ├── theme/           # Visual Eras (skins): teletype, 8-bit/CRT, oscilloscope, blueprint, modern
 │   ├── audio/           # cpal/fundsp bus, synth voices, scales/quantizer, master mix
 │   ├── music/           # programmatic sound and optional station integration (see MUSIC.md)
-│   ├── studio/          # the live-coding pattern DSL (Strudel-style) + WGSL exposure
+│   ├── studio/          # the mathematical live-coding DSL + WGSL exposure
 │   ├── params/          # ParamSpec -> UI + URL serialization + audio bindings
 │   ├── share/           # still + loop capture, deep-link encode/decode
 │   └── lore/            # the ARG/easter-egg layer (see LORE.md): triggers, secrets, the codex
