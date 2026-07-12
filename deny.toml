@@ -10,9 +10,12 @@ ignore = [
 ]
 
 [licenses]
-# Allow only permissive, well-understood licenses. Add deliberately, with review.
+# Allow compatible, well-understood licenses. Symphonia's MPL-2.0 is file-level
+# copyleft, used unmodified as a dependency, and does not change the workspace
+# license.
 allow = [
     "MIT",
+    "MPL-2.0",
     "Apache-2.0",
     "Apache-2.0 WITH LLVM-exception",
     "BSD-2-Clause",

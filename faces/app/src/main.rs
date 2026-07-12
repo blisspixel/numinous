@@ -2270,7 +2270,7 @@ mod tests {
         let _ = std::fs::create_dir_all(&dir);
         let path = dir.join("trance-001.wav");
         write_test_wav(&path, 1, 3);
-        assert!(radio_cache::wav_is_bounded(&path));
+        assert!(radio_cache::audio_is_bounded(&path));
         let duration = radio_cache::duration_seconds(&path).expect("duration");
         assert!(
             (2.9..=3.1).contains(&duration),
@@ -2319,9 +2319,9 @@ mod tests {
     fn oversized_radio_files_are_rejected_before_loading() {
         let path = std::env::temp_dir().join("numinous_radio_oversized.wav");
         let file = std::fs::File::create(&path).expect("oversized placeholder");
-        file.set_len(radio_cache::MAX_WAV_BYTES + 1)
+        file.set_len(radio_cache::MAX_AUDIO_BYTES + 1)
             .expect("make sparse oversized file");
-        assert!(!radio_cache::wav_is_bounded(&path));
+        assert!(!radio_cache::audio_is_bounded(&path));
         assert!(radio_cache::duration_seconds(&path).is_none());
 
         let mut app = headless("numinous_app_test_radio_oversized.txt");

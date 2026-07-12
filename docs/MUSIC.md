@@ -99,7 +99,7 @@ audiovisual piece.
 
 ---
 
-## Engine B: The Radio (optional cached stations)
+## Engine B: The Radio (built-in stations)
 
 > Code status (July 2026): v1 live. The repository contains three station
 > identities, rotation decks, the local generation command, wall-clock live
@@ -107,86 +107,32 @@ audiovisual piece.
 > the app, - and = control volume, `numinous radio` lists rotations, and
 > `numinous tune2 <station> --count N` grows a private local cache.
 >
-> Asset status: the founder cache contains 42 WAV tracks across the three
-> stations, totaling 1,409,614,248 bytes. Those recordings are not in Git and
-> do not ship with a clean clone. Engine A remains the complete, source-shipped,
-> offline soundtrack. Public radio assets wait on a separately verified rights
-> path and a size-conscious release format.
->
-> (v0 status, kept for the record:) v0 shipped. The dial lives in `crates/core/src/radio.rs` (three
-> stations with full producer briefs: NUMINA FM trance at 132 BPM, THE
-> ATTRACTOR chillwave at 84, EIGHT BIT SUNRISE synthwave at 118, all
-> instrumental by contract, tested). `numinous radio` shows the dial;
-> `numinous tune2 <station> --seconds 120` calls ElevenLabs Music
-> (`POST /v1/music?output_format=pcm_44100`, `ELEVENLABS_API_KEY` env),
-> receives raw PCM, and caches `~/.numinous-radio/<station>.wav`. In the
-> app, Y turns the dial: off, then station by station; a cached station
-> becomes the bed. Room-over-radio mixing is the next mixer upgrade.
-> Next: multiple tracks per station with rotation, the Comedy Channel
-> (needs its writer), crossfade on dial turns, and cost guardrails
-> (a track of 2 minutes is a paid API call; cache hard, regenerate rarely).
+> Asset status: Nick Seal made the soundtrack specifically for Numinous. It is
+> part of the game experience. The repository ships 42 high-quality V0 MP3
+> tracks across the three stations, about 269 MB in total, plus a tested pure
+> Rust decoder. The archival WAV masters live outside the repository.
 
 The counterpoint to the generative engine: curated, produced, *songs* and *talk radio*, delivered as a set of **stations** you tune between like the radio in a GTA game. Where Engine A is the math singing, Engine B is the world the math lives in having a personality.
 
-The current local generation command uses the **ElevenLabs Music API**. That is
-an optional development path, not a runtime dependency and not the only viable
-source for a future public station pack.
+The app discovers `assets/radio` automatically, so a clean clone has the full
+station rotation with no generation step or hidden download. `NUMINOUS_RADIO`
+can still point to a different compatible MP3 or WAV pack for development.
+`RADIO_ASSETS.md` records the asset layout and license.
 
-### Public distribution boundary
+### The stations
+- **NUMINA FM:** trance and EDM for Watch mode and performance sessions.
+- **THE ATTRACTOR:** warm, unhurried electronic music for long ambient sessions.
+- **EIGHT BIT SUNRISE:** chiptune and synthwave joy with modern depth.
 
-Do not commit the current WAV cache or attach it to a public release yet.
-
-- Raw WAV is about 1.41 GB, and individual tracks can exceed GitHub's normal
-  per-file limit. Putting it in Git history would permanently burden every
-  clone. A cleared pack should use compressed delivery with checksums outside
-  ordinary source history.
-- The Music Model-Specific Terms updated 26 May 2026 distinguish plan-specific
-  download, attribution, media, and repository rights. The self-serve table
-  prohibits music libraries and repositories, and its media grant excludes
-  certain radio and studio-game uses. The general publishing guidance also
-  requires attribution for free-plan output, which conflicts with this
-  project's no-attribution house rule.
-- Before any recording ships, record its source, model version, account plan at
-  creation, creation date, applicable agreement, permitted uses, and checksum.
-  Obtain a rights path that expressly covers distribution with Numinous. If that
-  cannot be established, replace the cache with commissioned, contributor-owned,
-  public-domain, or otherwise clearly licensed recordings.
-
-When a rights-cleared pack exists, publish it as a versioned GitHub Release
-asset, not ordinary Git history. The app offers an explicit install action that
-shows the download size and asset license, fetches once, verifies a signed
-manifest and SHA-256 checksum for every file, and unpacks once into the bounded
-radio cache. It does not make a hidden network request or unpack on every launch.
-Playback decodes compressed FLAC or MP3 directly. The pack supports repair,
-removal, and an offline fallback to Engine A.
-
-An archive is packaging, not a rights workaround. ZIP provides little additional
-compression for FLAC or MP3, and converting the current WAV cache does not change
-the permissions attached to those recordings. GitHub Pro can accommodate the
-technical storage through LFS, but Release assets are the cleaner distribution
-boundary for an optional soundtrack.
-
-Primary terms reviewed 12 July 2026:
-[Music Model-Specific Terms](https://elevenlabs.io/eleven-music-model-specific-terms),
-[Music API Terms](https://elevenlabs.io/music-api-terms), and
-[publishing guidance](https://help.elevenlabs.io/hc/en-us/articles/13313564601361-Can-I-publish-the-content-I-generate-on-the-platform).
-GitHub packaging guidance:
-[large files](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github),
-[Git LFS](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-git-large-file-storage), and
-[releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases).
-
-### The stations (launch set)
-- **NUMINA FM: EDM.** Festival-grade four-on-the-floor for the Watch mode and performance sessions.
-- **137.5 Trance.** (Named for the golden angle.) Long, euphoric, hypnotic, the lean-back-and-dissolve station.
-- **Lo-Fi / Chill: "Study Group".** Warm, mellow beats for long ambient sessions. The "leave it on while you work" station.
-- **The Comedy Channel: "WKRP-adjacent, but for math."** Talk radio hosted by deadpan characters who live inside the math universe. Bits, fake ads, call-ins, station idents. This is the single biggest lore-carrier in the product (see `LORE.md`) and the source of the hyper-specific, obsessive, deadpan insider humor the whole thing runs on.
+The Comedy Channel remains a planned fourth station. It should carry in-world
+stories without turning the soundtrack into exposition.
 
 Additional stations are cheap to add (a station is a prompt template + a voice + a schedule), so seasonal and community stations are trivial later.
 
 ### How the Comedy Channel works (and why it matters)
 The comedy channel is generated, not hand-recorded, so it can be endless and current:
 
-- **Hosts** are ElevenLabs designed voices with fixed personas (e.g., a serene host who speaks only in koans; a hype DJ who is *way* too excited about the Riemann Hypothesis; a nervous intern who keeps almost proving Collatz on air).
+- **Hosts** use designed voices with fixed personas (e.g., a serene host who speaks only in koans; a hype DJ who is *way* too excited about the Riemann Hypothesis; a nervous intern who keeps almost proving Collatz on air).
 - **Content** is generated from prompt templates and stitched between music: cold opens, math jokes, "on this day in mathematics," fake ads, listener call-ins, deadpan news from the math dimension.
 - **Fake ads** are the comedic core, and pure insider bait. Examples of the register we are aiming for:
   - *"New from the Numinous: the Trisection Compass. Finally trisect any angle with nothing but compass and straightedge. (Not valid in Euclidean geometry. Side effects may include two thousand years of failed proofs.)"*
@@ -195,10 +141,10 @@ The comedy channel is generated, not hand-recorded, so it can be endless and cur
 - Everything here is **in-universe**: the DJs are inhabitants of the dimension, and long-time listeners slowly realize the station is telling a story.
 
 ### Technical shape
-- **`crates/core/src/radio.rs`** owns the pure station identities and rotation decks. The CLI owns the optional fetch path, and `faces/app/src/radio_cache.rs` owns bounded local discovery and playback preparation.
+- **`crates/core/src/radio.rs`** owns the pure station identities and rotation decks. `faces/app/src/radio_cache.rs` owns bounded local discovery, MP3 and WAV validation, decoding, resampling, and playback preparation.
 - **Generation is offline-first where possible:** tracks and comedy segments are generated ahead, cached to disk, validated under bounded local cache rules, and assembled by a local **station scheduler**, so the radio works without a live connection after first fetch. Optional online refresh pulls new bits.
 - **Station identity** (idents, stingers, DJ drops) is generated once and reused; music beds and talk are ducked/crossfaded by the scheduler for that seamless-radio feel.
-- **Licensing / rights:** no public audio pack ships until its exact distribution rights are recorded and reviewed. Engine A keeps the product independent of a third party and complete in silence or offline sound.
+- **Asset distribution:** the V0 MP3 soundtrack ships in `assets/radio`; the WAV masters remain outside source control.
 
 ---
 
@@ -213,9 +159,8 @@ The comedy channel is generated, not hand-recorded, so it can be endless and cur
 - **Always mutable, beautiful in silence.** A prominent, respectful mute. The visuals must still be gorgeous with the sound off (the library, the office, the 2am room where someone is asleep).
 
 ## Open questions
-1. Whether the first public station pack should be commissioned, contributed under a project-compatible license, or covered by a separate enterprise agreement.
-2. How much comedy content to pre-produce and ship versus fetch on demand (size versus freshness).
-3. How small the first bespoke pattern vocabulary should be. The architecture
+1. How much comedy content to pre-produce and ship versus create locally (size versus freshness).
+2. How small the first bespoke pattern vocabulary should be. The architecture
    decision is settled: bounded data and a pure Rust evaluator in core, with no
    embedded scripting host in the trusted path.
-4. Global-key harmonization: how aggressively to quantize room sound to the station key before it feels less like *the room's* voice.
+3. Global-key harmonization: how aggressively to quantize room sound to the station key before it feels less like *the room's* voice.

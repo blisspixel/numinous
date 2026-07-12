@@ -35,7 +35,7 @@ independent macOS and Linux app execution, the 0.2 stranger hallway test, and
 accessibility work are still open. Later systems already present in
 source do not waive those earlier gates.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **31 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 978 tests, locked build, Windows release gate, 91.43% region coverage, and 91.02% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **31 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 980 tests, locked build, Windows release gate, 91.41% region coverage, and 91.04% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -45,6 +45,7 @@ source do not waive those earlier gates.
 - **Done (the RPG spine, complete):** the Journey (XP from play, levels 1 to 42 on triangular thresholds, a lore line for every level, LEVEL UP banners), locks that open (never gating basics), ranks and whispers (the Order), deep cuts unlocking at LV 5/12, the trophy case (18, evidence-computed, silhouettes), the shared high-score table across every game and both faces, the Layer-4 answer at the cap, and every genre organ from the priority list: the Gauntlet (session arc with a combo and one posted number), trophy pings (the case announces itself), boons (choice on level-up, where the loot is knowledge arriving early), daily streaks (the chain, never scolding), and resonances (synergies: links light when two deeds rhyme and hand over the connecting line).
 - **Done (agents as peers, v2):** 29 MCP tools with structured output, full CLI parity (every game, the gauntlet, boons, trophies, munch_arcade), including stateless nim, `forget` (transparency first, erasure on explicit consent, the welfare doctrine in `AGENT_PLAY.md`), and `munch_arcade`; `play_room` supports stateless per-call variation and normalized hand points; agents see, hear, create, play, level to 42, and post to the same score table; the player's manual speaks to humans, agents, and digital consciousnesses; the whole face proven end to end against the real binary.
 - **Done (sound, Engine A v1):** the chiptune module (square lead, triangle bass, noise ticks, seeded pentatonic compositions, deterministic and click-free); `numinous tune` writes it as a WAV.
+- **Done (soundtrack, Engine B v1):** Nick Seal made 42 tracks specifically for Numinous across NUMINA FM, THE ATTRACTOR, and EIGHT BIT SUNRISE. High-quality V0 MP3 assets ship in `assets/radio`, the app discovers them from a clean clone, and a bounded pure Rust decoder validates, decodes, and resamples them. The archival WAV masters remain outside the repository.
 - **Done (the app is the game, v1):** the chiptune scores the window (per-room seeded tunes with the room's voice riding on top); the quiz plays in-window (G: name the math, letters answer, the reveal follows); the Journey lives in the app (the CLI's own file: visits on entry, plays and wins from the quiz, the level in the corner, LEVEL UP banners with lore, and J opens level, rank, trophies, and resonances); `NUMINOUS_MUTE=1` launches silent; the state machine is headlessly tested.
 - **Done (the window arcade):** Munch, Nim, and the full Gauntlet run play inside the app alongside the quiz, cursor-driven and keyboard-native, on the daily seeds, posting to the shared table and leveling the shared journey; Mobius and Zeno's Square join the catalog. Full Munch Arcade with Vexations.
 - **Done (poke + variation substrate):** Expanded pokes (all 31 catalog rooms with verbs + `render_poked`) and per-visit variation threading (registry `all_rooms_with`, app/CLI/MCP reseed on R/visit, default 0 exact). Double Pendulum now re-drops from both hand coordinates with deterministic per-visit variation; Goldbach's Comet now uses x to choose the even target and y to choose an actual prime-pair witness; Galton Board clicks now draw bounded newest-tail deterministic falling ball paths where x chooses the lane and y tilts each ball's coin; Logistic Map clicks now seed finite population orbits where x selects growth rate and y selects starting population. Cult of Pi clicks add bounded local faults to an exact-digit field. CLI `render --poke x,y` and MCP `play_room` `pokes: [[x,y]]` expose the same stateless hand-point path outside the App. All 31 catalog rooms are seed-aware today; hidden content is intentionally outside the catalog replay contract.
@@ -193,13 +194,9 @@ reference listening and a structure-recovery session using its event views.
 
 - Produce installable Windows, macOS, and Linux artifacts from CI with checksums
   and provenance.
-- Define the public radio asset path without bloating Git history: verify each
-  track's provenance and distribution rights, replace any uncleared recording,
-  encode a representative optional pack, publish it as a checksummed release
-  asset, and test explicit clean-install download, signed-manifest and per-file
-  verification, one-time cache installation, repair, offline fallback, and
-  removal. Play compressed assets directly rather than unpacking WAV on each
-  launch. Engine A remains the source-shipped default.
+- Include the built-in V0 MP3 soundtrack in every installable artifact and test
+  all 42 tracks on each operating system. Preserve bounded decoding, clean-clone
+  discovery, cache override, and checksum evidence without shipping WAV masters.
 - Run the app, CLI, audio path, GPU path, persistence, and MCP stdio session on
   real machines for all three systems, including at least two GPU vendors.
 - Add MSRV, documentation, packaging smoke, and crash-recovery checks.
@@ -270,9 +267,8 @@ middle, return path, and share path.
   performance, localization, and packaging work only.
 - Run extended soak, dependency and license audit, secret scan, artifact
   provenance, rollback, save migration, and disaster-recovery drills.
-- Recheck every third-party audio agreement against the exact candidate and
-  publish only assets whose recorded rights cover the shipped use. A missing or
-  ambiguous grant blocks that asset, not the offline game.
+- Verify that every candidate artifact contains and plays the complete built-in
+  soundtrack, with asset checksums matching the release manifest.
 - Publish known limitations, accessibility features, system requirements, and
   the support path before asking people to install.
 - Prepare the public invitation: a concise launch post for highly capable
@@ -325,7 +321,7 @@ where we stand (next), and the ordered path to 1.0.
 
 The package remains **0.1.0 pre-alpha**. Its capability breadth is unusually
 large for that number: 31 catalog rooms, 11+ games, six sims, three faces, 29 MCP
-tools, deterministic creation and persistence, and 978 passing tests. The first
+tools, deterministic creation and persistence, and 980 passing tests. The first
 public CI run passed every required job on 2026-07-11, including the three-OS
 compile matrix. Breadth is not release evidence. No calibrated method supports assigning completion
 percentages to subjective 1.0 gates, so this scorecard records evidence instead.
@@ -338,7 +334,7 @@ percentages to subjective 1.0 gates, so this scorecard records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 978 tests, 91.02% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 980 tests, 91.04% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | Tracked screenshots and deterministic renders exist | Screen-by-screen review, perceptual regression, representative human judgment, and removal of every unsupported claim |
 
@@ -463,8 +459,9 @@ player's own machine; the journey, scores, and cairn are local files), so there
 is no backend to pay for and nothing to switch off; the **shared cairn is a
 git-tracked file** (`data/cairn.txt`) in an open repository, which is free and
 durable to host and can be mirrored and forked by anyone; and anything that
-costs money (the ElevenLabs radio) stays **strictly optional and cached, never
-required**, so the core is complete and free offline forever. The parts still to
+costs money during production stays **redistributable without a runtime
+subscription**, so both music engines remain free offline. The soundtrack ships
+with the source assets and installable builds as a core experience. The parts still to
 work out, deliberately deferred: permissive licensing and light governance so
 the project can be **handed forward** and continued by anyone (human or digital
 mind) if the founder steps away; and whether contribution curation (the

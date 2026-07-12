@@ -88,7 +88,7 @@ Sound is a first-class citizen with its own art direction, not an afterthought.
 
 The same room meets you in three postures. A player slides between them freely; each is a complete way to be here, and each targets a different person (and a different moment).
 
-- **Watch (lean back, minimal interaction).** A room, or a playlist of rooms, runs itself as generative art with a soundtrack. Zero input required. This is the "put it on the big screen and just look" mode: a live math visualizer, a screensaver that is actually beautiful, a VJ backdrop, an ambient companion while you work. **This is the mode that opens the door.** A newcomer glances at a friend's screen, sees this, and says, with no irony at all, "wait, *math* is doing that?" It is also the primary sharing engine (every Watch session is a clip waiting to happen) and where the ElevenLabs radio (see `MUSIC.md`) does its best work.
+- **Watch (lean back, minimal interaction).** A room, or a playlist of rooms, runs itself as generative art with a soundtrack. Zero input required. This is the "put it on the big screen and just look" mode: a live math visualizer, a screensaver that is actually beautiful, a VJ backdrop, an ambient companion while you work. **This is the mode that opens the door.** A newcomer glances at a friend's screen, sees this, and says, with no irony at all, "wait, *math* is doing that?" It is also the primary sharing engine (every Watch session is a clip waiting to happen) and where the built-in radio (see `MUSIC.md`) does its best work.
 
 - **Play (grab the dials).** The default posture and the three-layer model (Toy → puzzle → revelation). You touch the phenomenon directly and it responds in sight and sound. Described throughout this doc.
 

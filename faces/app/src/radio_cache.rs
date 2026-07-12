@@ -5,9 +5,18 @@ use std::{
     time::Duration,
 };
 
+use symphonia::core::{
+    audio::sample::Sample,
+    codecs::audio::AudioDecoderOptions,
+    errors::Error as SymphoniaError,
+    formats::{FormatOptions, TrackType, probe::Hint},
+    io::MediaSourceStream,
+    meta::MetadataOptions,
+};
+
 pub(crate) const MAX_TRACKS: usize = 64;
-pub(crate) const MAX_WAV_BYTES: u64 = 64 * 1024 * 1024;
-const MAX_SOURCE_SAMPLES: usize = MAX_WAV_BYTES as usize / 2;
+pub(crate) const MAX_AUDIO_BYTES: u64 = 64 * 1024 * 1024;
+const MAX_SOURCE_SAMPLES: usize = MAX_AUDIO_BYTES as usize / 2;
 const MAX_OUTPUT_SECONDS: usize = 60 * 8;
 
 pub(crate) struct LoadedTrack {
@@ -17,13 +26,32 @@ pub(crate) struct LoadedTrack {
 
 pub(crate) fn default_dir() -> PathBuf {
     if let Ok(dir) = std::env::var("NUMINOUS_RADIO") {
-        PathBuf::from(dir)
-    } else {
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".numinous-radio")
+        return PathBuf::from(dir);
     }
+    let mut candidates = Vec::new();
+    if let Ok(exe) = std::env::current_exe()
+        && let Some(parent) = exe.parent()
+    {
+        candidates.push(parent.join("assets").join("radio"));
+        candidates.push(parent.join("radio"));
+    }
+    if let Ok(current) = std::env::current_dir() {
+        candidates.push(current.join("assets").join("radio"));
+    }
+    candidates.push(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("assets")
+            .join("radio"),
+    );
+    if let Some(dir) = candidates.into_iter().find(|path| path.is_dir()) {
+        return dir;
+    }
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+    PathBuf::from(home).join(".numinous-radio")
 }
 
 pub(crate) fn station_tracks(dir: &Path, station_id: &str) -> Vec<PathBuf> {
@@ -31,12 +59,20 @@ pub(crate) fn station_tracks(dir: &Path, station_id: &str) -> Vec<PathBuf> {
         return Vec::new();
     };
     let prefix = format!("{station_id}-");
-    let legacy = format!("{station_id}.wav");
+    let legacy_wav = format!("{station_id}.wav");
+    let legacy_mp3 = format!("{station_id}.mp3");
     let mut candidates = BinaryHeap::new();
     for entry in entries.filter_map(Result::ok) {
         let path = entry.path();
         let name = path.file_name().unwrap_or_default().to_string_lossy();
-        if !(name.starts_with(&prefix) || name == legacy) || !wav_is_bounded(&path) {
+        let supported = matches!(
+            path.extension().and_then(|extension| extension.to_str()),
+            Some("wav" | "mp3")
+        );
+        if !(name.starts_with(&prefix) || name == legacy_wav || name == legacy_mp3)
+            || !supported
+            || !audio_is_bounded(&path)
+        {
             continue;
         }
         if candidates.len() >= MAX_TRACKS
@@ -77,9 +113,9 @@ pub(crate) fn live_position(paths: &[PathBuf], now_secs: f64) -> Option<(usize, 
     Some((0, 0.0))
 }
 
-pub(crate) fn wav_is_bounded(path: &Path) -> bool {
+pub(crate) fn audio_is_bounded(path: &Path) -> bool {
     std::fs::metadata(path)
-        .map(|meta| meta.is_file() && meta.len() > 0 && meta.len() <= MAX_WAV_BYTES)
+        .map(|meta| meta.is_file() && meta.len() > 0 && meta.len() <= MAX_AUDIO_BYTES)
         .unwrap_or(false)
 }
 
@@ -92,10 +128,9 @@ pub(crate) fn load_track(path: &Path, offset: f64, device_rate: u32) -> Option<L
     if device_rate == 0 {
         return None;
     }
-    let info = track_info(path)?;
+    let (info, raw) = read_track(path)?;
     let src_rate = f64::from(info.sample_rate);
     let channels = info.channels;
-    let raw = read_samples(path, &info)?;
     let src_frames = info.frames;
     if src_frames < 2 {
         return None;
@@ -139,8 +174,14 @@ struct TrackInfo {
 }
 
 fn track_info(path: &Path) -> Option<TrackInfo> {
-    let reader = open_bounded_wav_reader(path)?;
-    track_info_from_reader(&reader)
+    match path.extension().and_then(|extension| extension.to_str()) {
+        Some("wav") => {
+            let reader = open_bounded_wav_reader(path)?;
+            track_info_from_reader(&reader)
+        }
+        Some("mp3") => mp3_track_info(path).or_else(|| decode_mp3(path).map(|(info, _)| info)),
+        _ => None,
+    }
 }
 
 fn track_info_from_reader(
@@ -168,7 +209,19 @@ fn track_info_from_reader(
     })
 }
 
-fn read_samples(path: &Path, info: &TrackInfo) -> Option<Vec<f32>> {
+fn read_track(path: &Path) -> Option<(TrackInfo, Vec<f32>)> {
+    match path.extension().and_then(|extension| extension.to_str()) {
+        Some("wav") => {
+            let info = track_info(path)?;
+            let raw = read_wav_samples(path, &info)?;
+            Some((info, raw))
+        }
+        Some("mp3") => decode_mp3(path),
+        _ => None,
+    }
+}
+
+fn read_wav_samples(path: &Path, info: &TrackInfo) -> Option<Vec<f32>> {
     let mut reader = open_bounded_wav_reader(path)?;
     if track_info_from_reader(&reader).as_ref() != Some(info) {
         return None;
@@ -188,15 +241,144 @@ fn read_samples(path: &Path, info: &TrackInfo) -> Option<Vec<f32>> {
 fn open_bounded_wav_reader(path: &Path) -> Option<hound::WavReader<BufReader<std::fs::File>>> {
     let file = std::fs::File::open(path).ok()?;
     let metadata = file.metadata().ok()?;
-    if !metadata.is_file() || metadata.len() == 0 || metadata.len() > MAX_WAV_BYTES {
+    if !metadata.is_file() || metadata.len() == 0 || metadata.len() > MAX_AUDIO_BYTES {
         return None;
     }
     hound::WavReader::new(BufReader::new(file)).ok()
 }
 
+fn mp3_track_info(path: &Path) -> Option<TrackInfo> {
+    let (format, track_id) = open_symphonia(path)?;
+    let track = format.tracks().iter().find(|track| track.id == track_id)?;
+    let audio = track.codec_params.as_ref()?.audio()?;
+    let sample_rate = audio.sample_rate?;
+    let channels = audio.channels.as_ref()?.count();
+    let frames = usize::try_from(track.num_frames?).ok()?;
+    let samples = frames.checked_mul(channels)?;
+    if frames < 2 || samples > MAX_SOURCE_SAMPLES {
+        return None;
+    }
+    Some(TrackInfo {
+        sample_rate,
+        channels,
+        frames,
+        samples,
+    })
+}
+
+fn decode_mp3(path: &Path) -> Option<(TrackInfo, Vec<f32>)> {
+    let (mut format, track_id) = open_symphonia(path)?;
+    let audio = format
+        .tracks()
+        .iter()
+        .find(|track| track.id == track_id)?
+        .codec_params
+        .as_ref()?
+        .audio()?
+        .clone();
+    let mut decoder = symphonia::default::get_codecs()
+        .make_audio_decoder(&audio, &AudioDecoderOptions::default())
+        .ok()?;
+    let mut raw = Vec::new();
+    let mut sample_rate = None;
+    let mut channels = None;
+    loop {
+        let packet = match format.next_packet() {
+            Ok(Some(packet)) => packet,
+            Ok(None) => break,
+            Err(_) => return None,
+        };
+        if packet.track_id != track_id {
+            continue;
+        }
+        let decoded = match decoder.decode(&packet) {
+            Ok(decoded) => decoded,
+            Err(SymphoniaError::DecodeError(_)) => continue,
+            Err(_) => return None,
+        };
+        let spec = decoded.spec();
+        let packet_channels = spec.channels().count();
+        if packet_channels == 0
+            || sample_rate.is_some_and(|rate| rate != spec.rate())
+            || channels.is_some_and(|count| count != packet_channels)
+        {
+            return None;
+        }
+        sample_rate = Some(spec.rate());
+        channels = Some(packet_channels);
+        let packet_samples = decoded.samples_interleaved();
+        if raw.len().checked_add(packet_samples)? > MAX_SOURCE_SAMPLES {
+            return None;
+        }
+        let start = raw.len();
+        raw.resize(start + packet_samples, f32::MID);
+        decoded.copy_to_slice_interleaved(&mut raw[start..]);
+    }
+    let sample_rate = sample_rate?;
+    let channels = channels?;
+    if raw.len() % channels != 0 {
+        return None;
+    }
+    let frames = raw.len() / channels;
+    if frames < 2 {
+        return None;
+    }
+    Some((
+        TrackInfo {
+            sample_rate,
+            channels,
+            frames,
+            samples: raw.len(),
+        },
+        raw,
+    ))
+}
+
+fn open_symphonia(path: &Path) -> Option<(Box<dyn symphonia::core::formats::FormatReader>, u32)> {
+    if !audio_is_bounded(path) {
+        return None;
+    }
+    let file = std::fs::File::open(path).ok()?;
+    let mut hint = Hint::new();
+    if let Some(extension) = path.extension().and_then(|extension| extension.to_str()) {
+        hint.with_extension(extension);
+    }
+    let stream = MediaSourceStream::new(Box::new(file), Default::default());
+    let format = symphonia::default::get_probe()
+        .probe(
+            &hint,
+            stream,
+            FormatOptions::default(),
+            MetadataOptions::default(),
+        )
+        .ok()?;
+    let track_id = format.default_track(TrackType::Audio)?.id;
+    Some((format, track_id))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn bundled_radio_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("assets")
+            .join("radio")
+    }
+
+    #[test]
+    fn clean_clone_default_finds_the_bundled_soundtrack() {
+        if std::env::var_os("NUMINOUS_RADIO").is_some() {
+            return;
+        }
+        let actual = default_dir().canonicalize().expect("default radio dir");
+        let expected = bundled_radio_dir()
+            .canonicalize()
+            .expect("bundled radio dir");
+        assert_eq!(actual, expected);
+    }
 
     fn write_wav(path: &Path, channels: u16, seconds: u32) {
         let spec = hound::WavSpec {
@@ -236,6 +418,34 @@ mod tests {
         assert!(tracks[0].ends_with("trance-001.wav"));
         assert!(tracks[1].ends_with("trance-002.wav"));
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn bundled_mp3_soundtrack_is_complete_and_playable() {
+        let dir = bundled_radio_dir();
+        let mut total = 0;
+        for station in ["trance", "chill", "arcade"] {
+            let tracks = station_tracks(&dir, station);
+            assert_eq!(tracks.len(), 14, "{station} track count");
+            assert!(
+                tracks
+                    .iter()
+                    .all(|path| path.extension().is_some_and(|ext| ext == "mp3"))
+            );
+            for path in &tracks {
+                assert!(
+                    duration_seconds(path).is_some_and(|seconds| seconds >= 10.0),
+                    "{} has a valid duration",
+                    path.display()
+                );
+            }
+            let first = &tracks[0];
+            let loaded = load_track(first, 5.0, 44_100).expect("decode bundled MP3");
+            assert!(loaded.stereo.iter().any(|sample| sample.abs() > 0.01));
+            assert!(loaded.remaining.as_secs_f64() >= 5.0);
+            total += tracks.len();
+        }
+        assert_eq!(total, 42);
     }
 
     #[test]
@@ -361,7 +571,7 @@ mod tests {
         }
         writer.finalize().expect("finalize");
 
-        assert!(wav_is_bounded(&path));
+        assert!(audio_is_bounded(&path));
         assert!(duration_seconds(&path).is_none());
         assert!(station_tracks(&dir, "trance").is_empty());
         assert!(load_track(&path, 0.0, 44_100).is_none());
@@ -372,9 +582,9 @@ mod tests {
     fn oversized_files_are_rejected_before_decode() {
         let path = std::env::temp_dir().join("numinous_radio_cache_oversized.wav");
         let file = std::fs::File::create(&path).expect("oversized placeholder");
-        file.set_len(MAX_WAV_BYTES + 1).expect("make sparse file");
+        file.set_len(MAX_AUDIO_BYTES + 1).expect("make sparse file");
 
-        assert!(!wav_is_bounded(&path));
+        assert!(!audio_is_bounded(&path));
         assert!(duration_seconds(&path).is_none());
         assert!(load_track(&path, 0.0, 44_100).is_none());
 
@@ -393,10 +603,10 @@ mod tests {
             .write(true)
             .open(&path)
             .expect("reopen wav");
-        file.set_len(MAX_WAV_BYTES + 1)
+        file.set_len(MAX_AUDIO_BYTES + 1)
             .expect("inflate after metadata pass");
 
-        assert!(read_samples(&path, &info).is_none());
+        assert!(read_wav_samples(&path, &info).is_none());
         let _ = std::fs::remove_dir_all(dir);
     }
 
@@ -410,7 +620,7 @@ mod tests {
         let info = track_info(&path).expect("initial mono info");
         write_wav(&path, 2, 1);
 
-        assert!(read_samples(&path, &info).is_none());
+        assert!(read_wav_samples(&path, &info).is_none());
         let _ = std::fs::remove_dir_all(dir);
     }
 }

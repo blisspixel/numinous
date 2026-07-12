@@ -134,8 +134,8 @@ document remains authoritative, and exports are derived views.
 
 Licensing is part of the architecture. Numinous implements its language from
 first principles and uses no Strudel code: nothing is copied, adapted, embedded,
-linked, or vendored. Recorded radio assets follow a separate rights and
-provenance gate in `MUSIC.md` and `ROADMAP.md`.
+linked, or vendored. The built-in recorded soundtrack remains separate from the
+independently implemented programmatic language.
 
 ## Sources
 

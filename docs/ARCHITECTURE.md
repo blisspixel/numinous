@@ -66,7 +66,7 @@ The catch is the app-shell story: shipping a tightly-polished, custom-UI, custom
 
 - **Real-time synthesis:** `cpal` for output, `fundsp`/custom DSP for the tuned synth voices and the master bus. This powers the "everything is an instrument" sonification and the programmatic chiptune engine (see `MUSIC.md`).
 - **The Studio (mathematical creative canvas):** a small, independently designed **pattern DSL** embedded in the host (evaluated live, hot, no recompile), where a user live-codes audiovisual math so that patterns drive both sound and geometry at once. Shader-heads can also drop into raw **WGSL** for visuals. This is the creator-tier surface that turns Numinous from a toy into an instrument-you-program. (See `DESIGN.md` "Modes" and "The Studio".)
-- **Optional cached radio:** station identity lives in the headless core, the CLI owns an optional local generation path, and the app validates and plays a bounded local cache. No radio service or recording is required for the source-shipped synthesis engine. (See `MUSIC.md`.)
+- **Built-in radio:** station identity lives in the headless core, and the app validates and plays the source-shipped V0 MP3 soundtrack through a bounded pure Rust decoder. A cache override remains available for development. (See `MUSIC.md`.)
 
 ## The Room contract (the core abstraction)
 
@@ -132,7 +132,7 @@ numinous/
 │   ├── gfx/             # wgpu wrappers, palette, glow/bloom, draw helpers (offscreen-capable)
 │   ├── theme/           # Visual Eras (skins): teletype, 8-bit/CRT, oscilloscope, blueprint, modern
 │   ├── audio/           # cpal/fundsp bus, synth voices, scales/quantizer, master mix
-│   ├── music/           # programmatic sound and optional station integration (see MUSIC.md)
+│   ├── music/           # programmatic sound and built-in stations (see MUSIC.md)
 │   ├── studio/          # the mathematical live-coding DSL + WGSL exposure
 │   ├── params/          # ParamSpec -> UI + URL serialization + audio bindings
 │   ├── share/           # still + loop capture, deep-link encode/decode

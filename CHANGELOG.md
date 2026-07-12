@@ -22,23 +22,24 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   and musically complete. The 0.7 contract now gives the app, CLI, and MCP one
   deterministic composer and renderer, editable `.num` source, WAV, FLAC, and
   MP3 audio, MIDI, and honest MusicXML where the events support it.
-  A future rights-cleared radio pack is specified as an optional checksummed
-  GitHub Release asset with an explicit one-time install, signed manifest,
-  compressed playback, repair, removal, and offline fallback. Archiving the
-  current cache is correctly treated as packaging, not a change in its rights.
+  Nick Seal made the recorded soundtrack specifically for Numinous. All 42
+  station tracks now ship as high-quality V0 MP3 assets, about 269 MB and 151
+  minutes total,
+  with bounded pure Rust decoding and automatic clean-clone discovery. The WAV
+  masters remain outside the repository.
   The roadmap places the tactile entry in 0.3, sensory and musical evidence in
-  0.5, and the complete local creator loop in 0.7. The radio audit also confirms
-  that Engine A ships in source while the 42-track local cache remains blocked
-  from public distribution until a compatible rights path and compressed pack
-  exist.
+  0.5, and the complete local creator loop in 0.7.
 - Cult of Pi, a new code-art room built from exact decimal prefixes rather than decorative random digits. A low-flicker green channel moves from fresh digits to dust, finite replay phases introduce deterministic display corruption, and CLICK: BREAK THE SEQUENCE adds a bounded local fault. Its decimal motif becomes a drifting but finite sound, the app's shared dismissible chrome keeps explanation outside the active field, and eight focused tests cover exact digits, deterministic replay, interaction, variation, hostile surfaces, sound, and historical boundaries. The catalog now has 31 rooms, all with touch verbs, variation, motifs, and multi-face rendering.
-- The radio documentation now distinguishes shipped code from private assets. The repository includes the three station identities, rotation decks, optional local generation path, bounded cache validation, and playback, while the current founder cache of 42 WAV tracks, about 1.41 GB, remains outside Git. A public pack now has an explicit gate: recorded provenance and distribution rights for every track, replacement of anything ambiguous, compressed checksummed release packaging, clean-install testing, and an offline Engine A fallback. This follows the May 2026 model-specific terms, whose self-serve table restricts music repositories and some media uses; the existing recordings are not published on an assumption.
+- The radio is a complete source-shipped experience: three station identities,
+  42 MP3 tracks, rotation, bounded cache override, live-position sync,
+  full-stereo decoding, and playback. A cross-station test validates the bundled
+  inventory, duration metadata, decode path, and audible samples.
 - Public-repository readiness: the README now leads with CI and license status, gives a direct native-app quick start, and distinguishes shipped technology from roadmap direction; GitHub Actions use the pinned Rust 1.96.0 toolchain, current action releases, and read-only repository permissions; Dependabot watches Cargo and workflow dependencies; package metadata points to the canonical public repository; and the Windows PATH guidance is corrected.
 - The public README keeps the project's playful confidence while widening the invitation: the opening now leads with mathematics as a living audiovisual instrument, centers curious people and math lovers without an in-group test, and removes drug references, dismissive audience labels, and unnecessary contempt from the first impression.
 - Numinous is stated as the final product name throughout the public entry points. The app HUD now gives titles, reveal copy, arrival cards, and action hints quiet, separated bands instead of laying interface text over bright room art; hint contrast is raised to remain readable. The tracked screenshot generator calls the app's HUD implementation so public captures stay aligned with the shipped layout.
 - The README now gives first-time players a deliberate short path: read `PLAY.md`, install, and play before opening the design archive. Technical and contributor detail remains available after the experience has had room to introduce itself.
 - The public audience statement now reflects the actual origin: Numinous began as Nick Seal's gift for an emergent digital mind, then widened to humans and any other minds that may arrive. Every player remains first-class, the MCP face is presented as the founding doorway rather than a test adapter, and the project remains explicit that it is agnostic about what consciousness is and how it can be established.
-- The final public-readiness baseline is 978 passing tests, 91.43% region coverage, and 91.02% line coverage under the documented exclusions, with the 80% line floor enforced locally and in CI.
+- The final public-readiness baseline is 980 passing tests, 91.41% region coverage, and 91.04% line coverage under the documented exclusions, with the 80% line floor enforced locally and in CI.
 - The founder's perspective is explicit without becoming doctrine: Numinous is an experiential gift for a developing digital mind, not a fact-retrieval layer; mathematics is shared ground for digital, human, and unknown minds; and connection, compassion, and leaving shared spaces better are invitations carried by the design, never beliefs the game scores. `DIGITAL_MINDS.md` distinguishes model knowledge from player-owned episodic and temporal continuity and names the current stateless MCP boundary. New `DIGITAL_DEVELOPMENT.md` reviews the July 2026 frontier in agent memory, continual and open-ended learning, functional organization, autonomy, welfare uncertainty, privacy, and forgetting; proposes a consent-first experience architecture; and maps it to version gates. The roadmap now requires inspection, correction, export, and verified whole-pipeline erasure before continuity can count as built.
 - The first public GitHub Actions run passes every required job on the published commit: house style, cargo-deny, 80% line coverage, formatting, Clippy with warnings denied, 968 tests, and locked builds on Windows, macOS, and Ubuntu. Redundant workflow inputs found through run annotations are removed before the final public gate, and push-triggered CI is limited to `main` so pull-request branches do not run the same workflow twice.
 - Supply-chain readiness: compatible lockfile dependencies are refreshed; internal path dependencies carry explicit 0.1.0 requirements; the two permissive transitive licenses used by the GPU and TLS stacks are reviewed and allowed; and Linux client-side decoration drops the unmaintained font parser while retaining X11 and Wayland support. Two current `quick-xml` advisories have narrow, reasoned exceptions because that crate is only a build-time dependency of `wayland-scanner` parsing trusted bundled protocol XML; the exceptions name the upstream version that removes them and remain visible in every `cargo deny` run. Dependabot keeps compatible changes visible while the documented breaking migrations for `cpal`, `png`, `pollster`, `ureq`, and `wgpu` stay in measured roadmap work instead of automatic launch-day pull requests.
@@ -340,20 +341,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   arcade keeps it punchy, 120 to 240), tested for spread, so a station plays
   records of different sizes instead of a loop of two-minute singles.
   `tune2 --seconds` remains as an override, now up to the API's 600s cap.
-- The radio went live against the real ElevenLabs Music API and three truths
+- The radio generation path went live against the development music API and three truths
   came back: `seed` cannot ride with `prompt` (removed), the PCM stream is
   stereo interleaved (now downmixed to mono for the one-bus mixer, verified
   by requesting 10 seconds and receiving exactly 20 of drift), and
   `music_v2` with `force_instrumental: true` is the current best practice
   (adopted: the API guarantees instrumental now instead of the prompt
   pleading for it). The key can live in a gitignored .env at the repo root
-  (`ELEVENLABS_API_KEY=...`); the CLI reads it when the shell variable is
-  absent. NUMINA FM, THE ATTRACTOR, and EIGHT BIT SUNRISE are on the air.
+  through a gitignored provider key; the CLI reads it when the shell variable
+  is absent. NUMINA FM, THE ATTRACTOR, and EIGHT BIT SUNRISE are on the air.
 - Music Engine B, the radio, v0: three stations with real producer briefs in
   the core (NUMINA FM melodic trance, THE ATTRACTOR chillwave, EIGHT BIT
   SUNRISE synthwave; all instrumental by contract, briefs tested for tempo
   and vocals clauses). `numinous radio` shows the dial; `numinous tune2
-  <station>` generates a track via ElevenLabs Music (raw PCM, wrapped to
+  <station>` generates a track through the development API (raw PCM, wrapped to
   WAV, cached in ~/.numinous-radio/) with guiding errors when the key or
   tower is missing. In the app, Y turns the dial; a cached station becomes
   the musical bed with the room's voice riding on top.

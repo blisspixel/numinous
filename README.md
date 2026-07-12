@@ -121,7 +121,7 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 | [`docs/INSIGHTS.md`](docs/INSIGHTS.md) | The awe bank: the deep library of mathematical revelations and the insight-chains that connect them |
 | [`docs/VISUALS.md`](docs/VISUALS.md) | The rendering & look bible: pipeline, shader toolbox, color, motion, and how each Visual Era is drawn |
 | [`docs/SOUND.md`](docs/SOUND.md) | The sonification & sound-design bible: how math becomes music, synthesis, tuning, per-room sound |
-| [`docs/MUSIC.md`](docs/MUSIC.md) | The dual music plan: source-shipped programmatic sound plus optional cached radio stations, with an explicit public-asset rights gate |
+| [`docs/MUSIC.md`](docs/MUSIC.md) | The dual music system: source-shipped programmatic sound plus 42 built-in radio tracks |
 | [`docs/LORE.md`](docs/LORE.md) | The deep lore: Numinous as a dimension of mathematical bliss, and how it stays subtle on the surface |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phased plan: engine → vertical slice → MVP → full collection → mod SDK |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | The stack (Rust + wgpu), the language scorecard, the Room contract, module architecture, packaging |
@@ -135,8 +135,8 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 
 **Version 0.1.0, pre-alpha.** Capability breadth is ahead of release maturity,
 but versions are earned by evidence, not feature count. The local Windows gate
-is green on Rust 1.96.0: formatting, Clippy with warnings denied, 978 tests,
-91.43% region coverage, and 91.02% line coverage with an enforced 80% line
+is green on Rust 1.96.0: formatting, Clippy with warnings denied, 980 tests,
+91.41% region coverage, and 91.04% line coverage with an enforced 80% line
 floor. Public CI passes the same quality gates and compiles the workspace on
 Windows, macOS, and Ubuntu. Stranger playtests, accessibility work, and real app
 execution on macOS and Linux remain open gates in [`docs/ROADMAP.md`](docs/ROADMAP.md).
@@ -145,11 +145,11 @@ What exists today:
 - **`crates/core`**: 31 catalog rooms across 10 wings plus hidden content, 11+ games (munch, munch_arcade, quiz, nim, crack, seti, aliens, hackenbush, the Party Problem, Fifteen's Bet, and the Gauntlet run), 6 lever sims, the Studio expression engine, the full RPG spine (levels to 42, trophies, boons, streaks, resonances), shared local persistence helpers for bounded Journey and score reads plus lock-owned writes that wait through short contention under instrumentation, deterministic synthesis and radio station data, and the insight and concept catalogs, all deterministic and tested
 - **`faces/cli`** (`numinous`): `rooms`, `describe`, `render` (rooms drawn as ASCII in the terminal, including replayable `--poke x,y` hand points), `arcade`, with `--json`; live play frames show each room's action line, with neutral fallback copy for quiet rooms.
 - **`faces/mcp`** (`numinous-mcp`): a JSON-RPC 2.0 stdio server so an agent can `list_rooms`, `describe_room`, `reveal_room`, `play_room` (with variation, bounded `pokes`, and action/status fields), and `munch_arcade` (getting the render/state back as text + structured).
-- **`faces/app`** (`numinous-app`): a real windowed app (winit + softbuffer) that shows rooms animating in full color, with app-local play state and quiz flow, game drawing, room chrome, overlays, transient feedback banners, shared Munch/Nim/arcade keyboard controls, mouse input decisions, room input/session plumbing, Studio panel state/drawing, hallway-test notes, postcard export, and bounded radio cache loading plus open-handle WAV validation split into modules as the hardening work continues. `cargo run --bin numinous-app`.
+- **`faces/app`** (`numinous-app`): a real windowed app (winit + softbuffer) that shows rooms animating in full color, with app-local play state and quiz flow, game drawing, room chrome, overlays, transient feedback banners, shared Munch/Nim/arcade keyboard controls, mouse input decisions, room input/session plumbing, Studio panel state/drawing, hallway-test notes, postcard export, and bounded MP3 and WAV radio loading. `cargo run --bin numinous-app`.
 - **Engineering**: edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, a house-style guard, an 80%-line coverage gate, and CI across three OSes.
 
 - **`crates/gpu`**: an adaptive **wgpu** context that picks the machine's GPU (AMD / NVIDIA / Intel / Apple across Vulkan / Metal / DX12, with a CPU fallback) and renders offscreen with no window. A first compute-shader workload renders the Mandelbrot set to a PNG, verified on the dev laptop's AMD Radeon 780M.
-- **`crates/audio`**: adaptive **cpal** output on the system default device (WASAPI / CoreAudio / ALSA), with pure, tested sine synthesis. A tone hello-world plays a 440 Hz sine and writes a WAV, verified on the dev laptop. Programmatic room music ships in source; optional radio recordings remain local until their distribution rights and release packaging are cleared.
+- **`crates/audio`**: adaptive **cpal** output on the system default device (WASAPI / CoreAudio / ALSA), with pure, tested sine synthesis. Programmatic room music and 42 high-quality MP3 radio tracks ship in the repository. Both engines are core to the experience.
 
 Still ahead toward First Light: deeper room-specific poke responses, cross-platform proof, human hallway testing, full Studio save/share beyond the first CLI `.num` save/open slice, accessibility hardening, and visual polish. The version-gated plan, with 1.0 and 2.0+ defined by quality bars rather than dates, is in [`docs/ROADMAP.md`](docs/ROADMAP.md). Recent changes are in [`CHANGELOG.md`](CHANGELOG.md).
 

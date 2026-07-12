@@ -39,7 +39,7 @@ your hands already know it:
 | J | your journey: level, rank, trophies, resonances |
 | P | keep the picture: saves the room as a PNG postcard |
 | F9 | save a local hallway-test note in repo-root `logs/` |
-| Y | the radio dial: off, trance, chill, arcade (optional cached stations) |
+| Y | the radio dial: off, trance, chill, arcade (42 built-in tracks) |
 | - / = | volume down / up (banner shows the level) |
 | mouse | click munch cells and quiz choices directly |
 | Tab | the Studio: type math, watch and hear it live |
@@ -65,7 +65,6 @@ numinous plot "sin(a*x)" --animate
 numinous sing "sin(x) + x/3" --out song.wav
 numinous tune --seed 7 --out chip.wav   a seeded chiptune (Music Engine A)
 numinous radio                    the dial: trance, chill, arcade stations
-numinous tune2 trance             generate a station track (ELEVENLABS_API_KEY)
 ```
 
 **Play the games.** All seeded: the same seed is the same puzzle for everyone,
