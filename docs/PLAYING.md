@@ -9,7 +9,19 @@ same journey to level 42, because that is the point.
 
 ## For humans
 
-**Start the app:** double-click the Numinous shortcut, or:
+**Install once.** One command sets everything up, Rust included, and puts
+`numinous`, `numinous-app`, and `numinous-mcp` on your PATH:
+
+```
+curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh    macOS or Linux
+irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex         Windows, in PowerShell
+```
+
+Re-run it any time to update. `--uninstall` (Windows: `-Uninstall`) removes
+everything it installed and leaves your play history alone.
+
+**Start the app:** open a new terminal and type `numinous-app`, or from a
+clone:
 
 ```
 cargo run --release --bin numinous-app
