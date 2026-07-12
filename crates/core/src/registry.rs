@@ -27,6 +27,7 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::galton_board::GaltonBoard::new_with(variation)),
         Box::new(rooms::lissajous::Lissajous::new_with(variation)),
         Box::new(rooms::prime_spirals::PrimeSpirals::new_with(variation)),
+        Box::new(rooms::cult_of_pi::CultOfPi::new_with(variation)),
         Box::new(rooms::collatz::Collatz::new_with(variation)),
         Box::new(rooms::buffon_needle::BuffonNeedle::new_with(variation)),
         Box::new(rooms::game_of_life::GameOfLife::new_with(variation)),

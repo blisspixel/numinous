@@ -6,6 +6,7 @@ pub mod buffon_needle;
 pub mod cellular_automata;
 pub mod chaos_game;
 pub mod collatz;
+pub mod cult_of_pi;
 pub mod double_pendulum;
 pub mod epicycles;
 pub mod galton_board;

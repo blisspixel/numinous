@@ -25,12 +25,23 @@ fn save(raster: &Raster, path: &str) {
     println!("wrote {path}");
 }
 
+fn room_by_id<'a>(
+    rooms: &'a [Box<dyn numinous_core::Room>],
+    id: &str,
+) -> &'a dyn numinous_core::Room {
+    rooms
+        .iter()
+        .find(|room| room.meta().id == id)
+        .map(Box::as_ref)
+        .unwrap_or_else(|| panic!("missing room {id}"))
+}
+
 fn main() {
     let (width, height) = (900usize, 900usize);
     let rooms = all_rooms();
     // Screen 1: launch state, the help overlay over the first room.
     {
-        let room = &rooms[0];
+        let room = room_by_id(&rooms, "times-tables");
         let mut raster = Raster::with_accent(width, height, room.meta().accent);
         room.render(&mut raster, 0.12);
         raster.dim(22);
@@ -70,12 +81,12 @@ fn main() {
 
     // Screen 2: the main view with title HUD and hint bar.
     {
-        let room = &rooms[16]; // lorenz
+        let room = room_by_id(&rooms, "lorenz");
         let mut raster = Raster::with_accent(width, height, room.meta().accent);
         room.render(&mut raster, 0.7);
         hud::draw_room_chrome(
             &mut raster,
-            room.as_ref(),
+            room,
             &hud::RoomChrome {
                 t: 0.7,
                 room_card: 240,
@@ -96,12 +107,12 @@ fn main() {
 
     // Screen 3: the reveal overlay (E, inspect) on the golden angle.
     {
-        let room = &rooms[3];
+        let room = room_by_id(&rooms, "golden-angle");
         let mut raster = Raster::with_accent(width, height, room.meta().accent);
         room.render(&mut raster, 0.0);
         hud::draw_room_chrome(
             &mut raster,
-            room.as_ref(),
+            room,
             &hud::RoomChrome {
                 t: 0.0,
                 room_card: 0,

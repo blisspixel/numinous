@@ -38,8 +38,8 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 975 tests pass, 91.35% region
-cover, and 90.94% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
+Expected right now: **format and clippy clean, 978 tests pass, 91.43% region
+cover, and 91.02% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
 integration-tested on real hardware and excluded from the coverage gate, see
 `docs/QUALITY.md`).
 
@@ -157,7 +157,7 @@ tool list and an ASCII render of the room as text.
 
 ## 5. Where things are
 
-- `crates/core` the headless engine: rooms (30 catalog rooms across 10 wings plus hidden content), sims, games
+- `crates/core` the headless engine: rooms (31 catalog rooms across 10 wings plus hidden content), sims, games
   (including nim and the chiptune composer), the Studio expression engine, the
   journey, scores, trophies, resonances, sound, eras, and the drawing surfaces.
 - `crates/gpu` adaptive wgpu rendering; `crates/audio` adaptive cpal output.
@@ -168,7 +168,7 @@ tool list and an ASCII render of the room as text.
 
 ## 6. What is done vs pending
 
-Done and verifiable now: 30 catalog rooms across 10 wings plus hidden content,
+Done and verifiable now: 31 catalog rooms across 10 wings plus hidden content,
 6 sims, 11+ games with a shared high-score table and daily seeds, the
 complete RPG spine (levels to 42 with lore, locks, 18 trophies with pings, the
 Gauntlet run, boons, daily streaks, resonances), the Studio (plot, animate,

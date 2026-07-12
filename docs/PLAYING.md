@@ -25,6 +25,7 @@ your hands already know it:
 | W / S | run time faster / slower |
 | mouse drag or wheel | scrub time yourself |
 | E | inspect: why this matters |
+| H | bring the help overlay back after it is dismissed |
 | Q | swap the visual era (phosphor, 8-bit, vector, modern) |
 | R | restart the sweep |
 | F | fullscreen |
@@ -38,11 +39,17 @@ your hands already know it:
 | J | your journey: level, rank, trophies, resonances |
 | P | keep the picture: saves the room as a PNG postcard |
 | F9 | save a local hallway-test note in repo-root `logs/` |
-| Y | the radio dial: off, trance, chill, synthwave (cached stations) |
+| Y | the radio dial: off, trance, chill, arcade (optional cached stations) |
 | - / = | volume down / up (banner shows the level) |
 | mouse | click munch cells and quiz choices directly |
 | Tab | the Studio: type math, watch and hear it live |
 | Esc | menu |
+
+The art keeps the frame. Room titles, arrival hints, and inspection copy use
+separate quiet bands rather than sitting on the active visual. Arrival hints
+fade on their own, E toggles inspection, H restores help, and Esc closes an
+open overlay. A clean install always has the programmatic soundtrack. Radio
+stations appear only when compatible local tracks are present.
 
 **Or live in the terminal.** Everything also runs in a terminal, in full color:
 
@@ -57,7 +64,7 @@ numinous render double-pendulum --gesture down:0.3,0.4,0.1 --gesture up:0.6,0.5,
 numinous plot "sin(a*x)" --animate
 numinous sing "sin(x) + x/3" --out song.wav
 numinous tune --seed 7 --out chip.wav   a seeded chiptune (Music Engine A)
-numinous radio                    the dial: trance, chill, synthwave stations
+numinous radio                    the dial: trance, chill, arcade stations
 numinous tune2 trance             generate a station track (ELEVENLABS_API_KEY)
 ```
 
