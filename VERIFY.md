@@ -175,5 +175,5 @@ Gauntlet run, boons, daily streaks, resonances), the Studio (plot, animate,
 sing, in the terminal and the window), Visual Eras (including PNG output),
 Music Engine A (the seeded chiptune, `numinous tune`), GPU real-time fractals,
 live sound everywhere, the `forget` right for players who are minds, and
-27 MCP tools (full CLI parity for the games; the challenge tool is MCP-first) so agents play the same content. Pending (see `ROADMAP.md`):
+29 MCP tools (full CLI parity for the games; challenge, predict, and cairn are MCP-first) so agents play the same content. Pending (see `ROADMAP.md`):
 deeper room-specific pokes, human playtests, cross-platform proof, full Studio save/share beyond the first CLI `.num` save/open slice, the music visualizer, and more GPU room paths.
