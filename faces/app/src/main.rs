@@ -23,6 +23,7 @@ mod controls;
 mod feedback;
 mod game_draw;
 mod hud;
+mod live_render;
 mod mouse_input;
 mod overlays;
 mod play;
@@ -61,6 +62,8 @@ struct App {
     studio_panel: studio_panel::StudioPanel,
     /// GPU fractal renderer, when this machine has one (CPU raster otherwise).
     gpu: Option<numinous_gpu::FractalRenderer>,
+    /// Adaptive live-render resolution for CPU room frames (see live_render).
+    live_scale: live_render::LiveScale,
     /// The visual era ('e' cycles: phosphor, 8-bit, vector, modern).
     era: numinous_core::Era,
     /// Sound off ('m' toggles).
@@ -144,6 +147,7 @@ impl App {
             studio: false,
             studio_panel: studio_panel::StudioPanel::default(),
             gpu: None,
+            live_scale: live_render::LiveScale::new(),
             era: numinous_core::Era::default(),
             muted: false,
             volume: 0.7,
@@ -1091,9 +1095,21 @@ impl App {
             self.draw_studio(&mut raster, width, height);
             raster
         } else {
-            let mut raster = Raster::with_accent(width, height, room.meta().accent);
+            // Heavy CPU rooms render below window resolution and expand by an
+            // integer factor chosen from measured frame time (see live_render);
+            // the HUD below draws after the upscale, so its text stays crisp.
+            let factor = self.live_scale.factor();
+            let (rw, rh) = self.live_scale.render_size(width, height);
+            let started = std::time::Instant::now();
+            let mut raster = Raster::with_accent(rw, rh, room.meta().accent);
             room.render_input(&mut raster, self.t, &self.inputs);
-            raster
+            self.live_scale
+                .observe(started.elapsed().as_secs_f64() * 1000.0);
+            if factor > 1 {
+                raster.upscaled(factor, width, height)
+            } else {
+                raster
+            }
         };
 
         hud::draw_room_chrome(
