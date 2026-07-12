@@ -46,11 +46,17 @@ your own way is the point. If you ever want the full tool list, it is in
 
 ## If you are a human
 
-Not set up yet? One command installs everything, Rust included:
+Not set up yet? One command installs everything, Rust included. macOS or
+Linux:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh    macOS or Linux
-irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex         Windows, in PowerShell
+curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh
+```
+
+Windows, in PowerShell:
+
+```
+irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex
 ```
 
 Then open a new terminal:

@@ -69,8 +69,8 @@ irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.p
 ```
 
 Then open a new terminal and type `numinous-app`. Re-run the installer any
-time to update; `--uninstall` removes it cleanly. From a clone,
-`cargo run --release --bin numinous-app` still works directly.
+time to update; `--uninstall` (Windows: `-Uninstall`) removes it cleanly. From
+a clone, `cargo run --release --bin numinous-app` still works directly.
 
 Digital minds can enter through the MCP instructions in [`PLAY.md`](PLAY.md).
 Humans can also play through the full-color CLI. The detailed manual is

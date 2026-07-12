@@ -73,22 +73,25 @@ case "$(uname -s)" in
     *) fail "unsupported system '$(uname -s)'; Numinous builds on macOS, Linux, and Windows" ;;
 esac
 
-# The line this installer appends to shell profiles, and the fixed string used
-# to find it again (for idempotent re-runs and for --uninstall).
+# The line this installer appends to shell profiles. The note at its end is
+# the removal key: --uninstall deletes exactly the lines carrying the note,
+# never a user's own PATH edits. The path marker only keeps re-runs from
+# appending a duplicate when any line already provides the directory.
+installer_note='added by the Numinous installer'
 if [ "$NUMINOUS_HOME" = "$HOME/.numinous" ]; then
-    path_line='export PATH="$HOME/.numinous/bin:$PATH" # added by the Numinous installer'
+    path_line="export PATH=\"\$HOME/.numinous/bin:\$PATH\" # $installer_note"
     path_marker='.numinous/bin'
 else
-    path_line="export PATH=\"$BIN_DIR:\$PATH\" # added by the Numinous installer"
+    path_line="export PATH=\"$BIN_DIR:\$PATH\" # $installer_note"
     path_marker="$BIN_DIR"
 fi
 
 strip_path_line() {
     profile="$1"
     [ -f "$profile" ] || return 0
-    grep -Fq "$path_marker" "$profile" || return 0
+    grep -Fq "$installer_note" "$profile" || return 0
     tmp="$profile.numinous-uninstall"
-    grep -Fv "$path_marker" "$profile" >"$tmp" || true
+    grep -Fv "$installer_note" "$profile" >"$tmp" || true
     mv "$tmp" "$profile"
 }
 
@@ -186,6 +189,7 @@ else
         git clone --depth 1 "$REPO_URL" "$stage/src"
         new_tree="$stage/src"
     else
+        have tar || fail "neither git nor tar is installed; install git and re-run"
         say "git is not installed; downloading a source snapshot instead."
         fetch "$SNAPSHOT_URL" "$stage/numinous.tar.gz"
         tar -xzf "$stage/numinous.tar.gz" -C "$stage"
