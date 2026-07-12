@@ -265,8 +265,9 @@ where we stand (next), and the ordered path to 1.0.
 
 The package remains **0.1.0 pre-alpha**. Its capability breadth is unusually
 large for that number: 30 catalog rooms, 11+ games, six sims, three faces, 29 MCP
-tools, deterministic creation and persistence, and 968 passing tests. Breadth is
-not release evidence. No calibrated method supports assigning completion
+tools, deterministic creation and persistence, and 968 passing tests. The first
+public CI run passed every required job on 2026-07-11, including the three-OS
+compile matrix. Breadth is not release evidence. No calibrated method supports assigning completion
 percentages to subjective 1.0 gates, so this scorecard records evidence instead.
 
 | 1.0 gate | Evidence today | Missing evidence or work |
@@ -283,7 +284,7 @@ percentages to subjective 1.0 gates, so this scorecard records evidence instead.
 
 **Immediate critical path:**
 
-1. Publish and pass the 0.1 public gate on the exact commit.
+1. Keep the 0.1 public gate green on every public commit.
 2. Run the 0.2 hallway test with strangers before adding breadth.
 3. Deepen five flagships for 0.3 using those observations.
 4. Test understanding and retention for 0.4 rather than inferring learning from engagement.

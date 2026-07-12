@@ -128,7 +128,8 @@ Full index with reading paths and a single-source-of-truth map: [`docs/README.md
 but versions are earned by evidence, not feature count. The local Windows gate
 is green on Rust 1.96.0: formatting, Clippy with warnings denied, 968 tests,
 91.29% region coverage, and 90.85% line coverage with an enforced 80% line
-floor. The first public CI run, stranger playtests, accessibility work, and real
+floor. Public CI passes the same quality gates and compiles the workspace on
+Windows, macOS, and Ubuntu. Stranger playtests, accessibility work, and real app
 execution on macOS and Linux remain open gates in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 What exists today:
 
