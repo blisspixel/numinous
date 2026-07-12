@@ -10,11 +10,16 @@ same journey to level 42, because that is the point.
 ## For humans
 
 **Install once.** One command sets everything up, Rust included, and puts
-`numinous`, `numinous-app`, and `numinous-mcp` on your PATH:
+`numinous`, `numinous-app`, and `numinous-mcp` on your PATH. macOS or Linux:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh    macOS or Linux
-irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex         Windows, in PowerShell
+curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh
+```
+
+Windows, in PowerShell:
+
+```
+irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex
 ```
 
 Re-run it any time to update. `--uninstall` (Windows: `-Uninstall`) removes
