@@ -66,6 +66,16 @@ one bounded event graph. Formula Jam adds curated Random and a phrase-aligned
 Auto set at 0.3. The shared event graph and credible style templates land at
 0.5. Save, reopen, MCP composition, and interchange complete the loop at 0.7.
 
+Flow State is the generative-arrangement posture of that same instrument. It
+can be left running as a complete trance, techno, ambient, or chiptune session;
+nudged through a few phrase-aligned musical controls; or opened into the full
+editor without restarting the piece. Its macro-form remembers motifs, varies
+them within a curated style grammar, and manages tension and release rather
+than choosing unrelated loops. A deterministic snapshot preserves the seed,
+arrangement history, current scene, and accepted nudges for exact replay and
+further editing across the app, CLI, and MCP. `STUDIO.md` owns the complete
+interaction, quality, and safety contract.
+
 This is an independent implementation built in Rust from mathematical first
 principles. It uses no Strudel code: nothing is copied, adapted, embedded,
 linked, or vendored. Strudel and TidalCycles remain useful research comparisons,
@@ -87,8 +97,8 @@ intelligent beings without claiming that any one style is universal.
 It belongs to a curated built-in repertoire of programmatic electronic pieces.
 Each piece must be musically complete and mathematically inspectable, ship in
 source rather than as an opaque recording, vary deterministically by seed, and
-remain editable in Pattern Studio. This is separate from the optional recorded
-radio pack in Engine B.
+remain editable in Pattern Studio. This complements the built-in recorded radio
+in Engine B, which is also core to the experience.
 
 The offline renderer targets WAV, lossless FLAC, and shareable MP3 from the same
 event stream. The app, CLI, and MCP use one core composer and renderer. MCP

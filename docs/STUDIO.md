@@ -145,6 +145,49 @@ design, arrangement, tension, release, and replay value. That is a target, not a
 current claim. It is earned only through musician-led reference sessions, blind
 listening where practical, and repeated evidence across seeds and systems.
 
+### Flow State
+
+Flow State is the easiest way into Pattern Studio: start a mathematically
+structured electronic piece, let it develop, and choose how much to take part.
+It is a mode of the same event graph and arrangement engine, not a separate
+player or a folder of prerecorded loops.
+
+It has three progressive surfaces:
+
+- **Listen:** one action starts a complete, indefinitely developing session.
+  Controls fade away so the mathematical stage remains unobstructed. Any key or
+  pointer movement brings them back.
+- **Nudge:** five legible controls, energy, tension, brightness, density, and
+  strangeness, shape what happens next. Changes enter on a musical boundary so
+  participation feels intentional rather than disruptive.
+- **Build:** the full tracker, pattern, grid, piano-roll, scene, and mixer views
+  open on the piece that is already playing. Nothing is thrown away when a
+  listener becomes an author.
+
+The arranger must make songs, not loop soup. A deterministic macro-form moves
+through establishment, build, break, release, recovery, and either an outro or
+a renewed arc. Style profiles for trance, techno, ambient, chiptune, and later
+electronic forms define harmonic language, sound roles, transition grammar,
+energy range, and typical phrase lengths. Eight, sixteen, and thirty-two bar
+memory lets a motif return with meaningful change. Curated mathematical
+operators provide variation inside that grammar, while novelty limits prevent
+random jump cuts, constant maximal energy, and endless accumulation.
+
+A snapshot captures the seed, style profile, creation document, arrangement
+history, current scene, and every accepted nudge. The same snapshot must reopen
+at the same musical state in the app, CLI, or MCP face, then remain available
+for replay, editing, remix, or export. MCP operations stay bounded and explicit:
+start, inspect, nudge, snapshot, stop. No participant receives a hidden edit or
+an unrestricted execution path.
+
+Flow State earns release only when long unattended sessions retain shape and
+breathing room, short nudge sessions remain coherent, and saved sessions replay
+without event drift. Every curated style and adversarial seed set must avoid
+silence, clipping, stuck notes, harsh accumulation, and monotonous pacing. The
+final judgment still belongs to musician-led listening, including whether the
+result is worth leaving on and whether a small intervention feels musically
+consequential.
+
 ### Flagship template: Prime Contact
 
 Pattern Studio should open with one finished example, not an empty sequencer.
@@ -247,6 +290,9 @@ tolerances. Every lossy or notational export names what it cannot preserve.
 - co-creation records who changed what, supports undo, and never hides a
   mutation behind a claim of collaboration. Every participant can inspect,
   edit, fork, export, or leave the session.
+- Flow State passes an unattended long-session review and an interactive nudge
+  review for every curated style. Its arrangement must breathe, remember, and
+  resolve without degrading into loop repetition or permanent peak energy.
 - Prime Contact passes both sides of its brief: blind listeners rate it as a
   compelling trance track, and informed listeners can recover the declared
   prime structure from the event views without a prose explanation.
@@ -273,12 +319,14 @@ The point of the examples: the famous built-in rooms are reachable in a few line
 - **0.3 Tactile Alpha:** Formula Jam gains curated Random, phrase-aligned Auto,
   and the dismissible playable help overlay.
 - **0.5 Sensory Alpha:** the shared semantic event graph drives audio and the
-  first mathematical visualizers, with mixer, accessibility, performance, and
-  listening evidence.
+  first mathematical visualizers. Flow State adds the deterministic macro-form
+  arranger and Listen and Nudge surfaces, with mixer, accessibility,
+  performance, and listening evidence.
 - **0.7 Creator Alpha:** Pattern Studio, the versioned `.num` schema, equivalent
   tracker, grid, text, and piano-roll views, save and reopen, MCP creation, MIDI
   and appropriate MusicXML export, WAV, FLAC, and MP3 rendering, local gallery,
-  and fork/remix form one loop across the app, CLI, and MCP.
+  Flow State snapshots, and fork/remix form one loop across the app, CLI, and
+  MCP.
 - **1.x:** first-party room authoring moves onto the same safe Studio substrate
   where it is a good fit.
 - **2.0:** the Studio becomes the bounded community creator platform described

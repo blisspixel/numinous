@@ -323,6 +323,7 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [x] **Double pendulum** - grab it, drop it, and watch two of them disagree from a pixel of difference.
 - [ ] **Three-body problem** - place three suns and try to make them dance forever; grief teaches what "no closed-form solution" means.
 - [x] **Resonance and harmony** - Lissajous, the harmonograph, every room's sound; the kanon whisper.
+- [ ] **The Long Shot** - aim, choose power, and fire across a changing landscape; the replay opens the mathematics inside the flight.
 
 The wings stay feelings, not branches; this map is the coverage checklist
 behind them. A branch is covered when a kid can play its entry and a professor
@@ -411,6 +412,68 @@ Cup, Times Tables, Mandelbrot), the Lorentz pair (Starbow, Tilt the Cone),
 consonance-as-stability (Laplace's Clockwork, Lissajous), Drake's two
 artifacts (Fourteen Beacons, Arecibo), and irrationality's two faces (Ford
 Circles, Golden Angle).
+
+## Founder's room idea (July 2026): The Long Shot
+
+**Status:** designed, not built. Roadmap position: 1.x, after the current
+flagship gates.
+
+The entry is deliberately simple. Two bases sit across a seeded landscape with
+a visible wind. Choose an angle, choose power, and fire before the other side
+finds the range. The play grammar recalls Kirk Crawford's 1989 Macintosh game
+*Artillery*, but the implementation, presentation, assets, and mathematics are
+independent. No prior mathematics is required, and the first round must be fun
+before any deeper layer appears.
+
+The shot is also a replayable sensory cascade. The camera follows the arc, then
+the player may pause, scrub, rewind, or open one layer at a time:
+
+1. **Flight:** position over time, the trajectory, the current tangent, and the
+   apex where vertical velocity changes sign.
+2. **Change:** velocity and acceleration vectors, curvature, and a live graph
+   that connects slope to the motion on screen.
+3. **Accumulation:** area under velocity reconstructs displacement; drag and
+   work show where mechanical energy goes in the non-ideal model.
+4. **State and uncertainty:** the position-velocity portrait, a wind and input
+   uncertainty cone, the previous shot as a ghost, and the inverse problem of
+   choosing the next angle and power.
+5. **Gravity scale shift:** replace the room's near-uniform gravity with an
+   explicit inverse-square orbital model. A cannon arc can become an orbit or a
+   slingshot because the model changed, not because ordinary artillery secretly
+   behaves that way.
+6. **Relativity scale shift:** rescale the experiment to high speed and replace
+   the trajectory with a worldline, light-cone constraints, and an appropriate
+   relativistic model. The room labels this transition before it occurs.
+7. **String thought experiment:** as an optional final lens, replace the point
+   projectile with a vibrating extended object and show the difference between
+   a worldline and a worldsheet. This is a speculative model exploration, never
+   presented as an effect on a terrestrial cannonball.
+
+The default physical model is honest about its assumptions. A perfect parabola
+appears only for constant gravity without drag. Wind and drag use a tested
+numerical integrator, expose their parameters, and distinguish simulation from
+closed-form results. Every deeper lens names the model it enters and the scale
+at which that model is meaningful.
+
+The active shot owns the full stage. Controls and explanatory chrome fade away;
+any key or pointer movement restores them, and an explicit help action remains
+available. Labels occupy a reserved panel or track the replay without covering
+the trajectory. Reduced-motion mode turns the cascade into a stepped replay,
+and every quantity also has a non-color cue.
+
+Sound follows the same semantic events: ascent and descent shape pitch and
+space, the apex creates a small breath, derivative and integral views add
+audible layers, and impact resolves rhythmically without overwhelming the
+music. The app, CLI, and MCP share one deterministic seed, state, action, and
+replay record, so a digital mind and a human receive the same game and may
+reason, guess, or experiment on equal terms.
+
+The room earns implementation when a first-time player understands angle,
+power, wind, and fire without instruction; enjoys the duel before opening a
+graph; uses at least one replay layer to improve a later shot; and can explain
+which model changes made the orbital, relativistic, and string views possible.
+Math review, accessibility review, deterministic replay, stable frame pacing,
+and an engaging opponent all remain release gates.
 
 ## Founder's room idea (July 2026): The Dimension Dial
 

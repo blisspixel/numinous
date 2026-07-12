@@ -199,6 +199,11 @@ independently implemented programmatic language.
 - [Baba Is You, Wikipedia](https://en.wikipedia.org/wiki/Baba_Is_You) · [How Baba Is You Puts the Spirit of Play into Puzzle Games](https://cjleo.com/blog/how-baba-is-you-puts-the-spirit-of-play-into-puzzle-games/)
 - [Manifold Garden, Wikipedia](https://en.wikipedia.org/wiki/Manifold_Garden)
 - [Euclidea, geometric constructions game](https://www.euclidea.xyz/)
+- [Artillery for classic Macintosh, 1989](https://classic-mac.fandom.com/wiki/Artillery)
+  and [Artillery 2.0.1 catalog record](https://www.grenier-du-mac.net/fiches/Jeux/artillery.htm)
+  document Kirk Crawford's two-player angle-and-power play grammar. The Long
+  Shot uses that historical reference only as design context and is an
+  independent implementation.
 
 **Sonification / audiovisual / aesthetic**
 - [Ryoji Ikeda, Artist Profile](https://visualalchemist.in/2024/10/11/artist-profile-ryoji-ikeda/)

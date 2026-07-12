@@ -6,6 +6,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Flow State now has a versioned design contract inside Pattern Studio: Listen,
+  Nudge, and Build surfaces share one deterministic macro-form arranger, with
+  phrase-aligned intervention, musical memory, bounded app, CLI, and MCP
+  operations, exact snapshots, and long-session quality gates. The 0.5 roadmap
+  owns arrangement and listening evidence; 0.7 owns reopen, remix, and export.
+- The Long Shot is designed as a 1.x room: a simple angle-and-power artillery
+  duel whose optional replay layers reveal projectile motion, derivatives,
+  integrals, phase space, and uncertainty. Orbital, relativistic, and string
+  views are explicit model changes rather than claims about ordinary cannon
+  physics. Its full interaction, accessibility, and evidence gates live in
+  `docs/ROOMS.md` without exposing it on the main page.
 - A versioned Studio plan grounded in current live-coding and music-notation
   practice: Formula Jam gains curated Random and phrase-aligned Auto discovery;
   Pattern Studio grows through one bounded audiovisual event graph into tracker,

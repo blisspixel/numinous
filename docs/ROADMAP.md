@@ -177,6 +177,9 @@ experience record without hidden state remaining.
 - Establish a small source-shipped repertoire whose pieces are both
   mathematically inspectable and credible as complete EDM, trance, ambient, or
   chiptune arrangements. Keep every piece deterministic and editable.
+- Build Flow State on the same event graph: a deterministic macro-form arranger
+  with Listen and Nudge surfaces, phrase-aligned interventions, musical memory,
+  and curated style grammars that manage repetition, tension, release, and rest.
 
 Owner docs: `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md`, `MUSIC.md`,
 `STUDIO.md`, `QUALITY.md`.
@@ -187,6 +190,9 @@ performance budgets on the reference hardware tiers. Pattern templates render
 without clipping or stuck notes, and their visual events remain synchronized
 with the audible events under measured load. Prime Contact passes musician-led
 reference listening and a structure-recovery session using its event views.
+Each Flow State style passes both an unattended long-session review and a nudge
+session without silence, harsh accumulation, monotonous pacing, or permanent
+peak energy.
 
 ### 0.6 Portable Alpha
 
@@ -228,6 +234,10 @@ otherwise verifiable artifact.
 - Render WAV, lossless FLAC, and shareable MP3 through one deterministic core.
   Expose the same operation in the app, CLI, and MCP, with host-approved bounded
   artifact delivery for MCP rather than arbitrary filesystem writes.
+- Save and reopen Flow State snapshots, including seed, style, creation
+  document, arrangement history, current scene, and accepted nudges. The app,
+  CLI, and bounded MCP operations must resume the same event state before a
+  participant continues, remixes, or exports it.
 - Fuzz every parser and require paused preview before opening shared content.
 - Keep all creator content inside the documented capability boundary.
 
@@ -417,6 +427,12 @@ XP-treadmill failure mode.
 Depth and polish that extend 1.0 without breaking it. No new pillars, just more of the good, higher.
 
 - More rooms, more insight-chains, more radio stations and Visual Eras.
+- Build **The Long Shot** after the flagship gates: a fun-first angle-and-power
+  artillery duel whose replay can unfold projectile motion, derivatives,
+  integrals, phase space, uncertainty, and clearly labeled scale-shift models.
+  The ordinary shot remains ordinary physics; relativity and the string
+  thought experiment enter only when the player explicitly changes the model.
+  Owner doc: `ROOMS.md`.
 - The **boss rooms** (*Sizes of Infinity*, *Hyperbolic Space*), the hardest-to-make-playable, highest-ceiling rooms, as they earn their quality bar.
 - Refinement driven by the telemetry and playtest loops (`QUALITY.md`): tuning defaults, pacing, and difficulty toward measured awe and flow.
 - Localization and broader hardware support.
