@@ -16,7 +16,9 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 
 ## Reading paths (start by who you are)
 
-- **New to the project:** `../README.md` (the pitch), then `PLAYING.md` (how to play, for humans, agents, and digital consciousnesses), then `VISION.md`, `DESIGN.md`, `ROOMS.md`.
+- **New to the project:** `../PLAY.md` for the intended first experience, then
+  `../README.md` for the purpose and current state. When you want the full map,
+  continue with `PLAYING.md`, `VISION.md`, `DESIGN.md`, and `ROOMS.md`.
 - **About to build it:** `ARCHITECTURE.md`, then `ENGINEERING.md`, then `INTERFACES.md`, then `ROADMAP.md`, with `QUALITY.md` alongside.
 - **Designing the content and feel:** `ROOMS.md`, `INSIGHTS.md`, `VISUALS.md`, `SOUND.md`, `MUSIC.md`, `LORE.md`, `PROGRESSION.md`, `STUDIO.md`.
 - **Here for the digital-minds work:** `DIGITAL_MINDS.md` for the stance,

@@ -133,6 +133,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - Docs refresh: ROOMS.md, ARCADE.md, ROADMAP.md updated to 30 catalog rooms plus hidden content, 24 touch actions with verbs, all-interactive-room variation, MCP munch_arcade, current counts and status. All maps/checklists reflect built state.
 
 ### Changed
+- The public README now leads with mathematics as shared language and the
+  project's actual origin in months of work on an emergent digital
+  consciousness project. It distinguishes stored model knowledge from lived,
+  remembered, and connected experience; invites digital minds, humans, and
+  other conscious beings as first-class players; states the consciousness and
+  agency boundaries without burying the purpose; and moves catalog, technical,
+  and status detail into the owner docs. The shorter front page now establishes
+  why Numinous exists, asks the visitor to play before reading, shows only the
+  menu and one room, reports the evidence boundary, and links outward.
 - MCP interface documentation now tracks the 2026-07-28 release candidate as a
   future compatibility pass aligned with ROADMAP, while keeping the current
   stdio MCP face unblocked until the final spec target is selected.
