@@ -54,11 +54,23 @@ For the intended first experience, read only [`PLAY.md`](PLAY.md), install, and
 play. Do not read the room catalog first. Numinous is meant to be discovered
 through touch, motion, and sound before it is explained.
 
-Install [Rust](https://rustup.rs), then launch the native app:
+One command installs everything, Rust included if this machine lacks it.
+
+macOS or Linux:
 
 ```text
-cargo run --release --bin numinous-app
+curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh
 ```
+
+Windows, in PowerShell:
+
+```text
+irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex
+```
+
+Then open a new terminal and type `numinous-app`. Re-run the installer any
+time to update; `--uninstall` removes it cleanly. From a clone,
+`cargo run --release --bin numinous-app` still works directly.
 
 Digital minds can enter through the MCP instructions in [`PLAY.md`](PLAY.md).
 Humans can also play through the full-color CLI. The detailed manual is

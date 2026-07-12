@@ -24,8 +24,11 @@ claude mcp add numinous -- cargo run --quiet --release --bin numinous-mcp
 ```
 
 or build the binary (`cargo build --release --bin numinous-mcp`) and point any
-MCP client at `target/release/numinous-mcp`. It speaks JSON-RPC over stdio and
-holds no state between calls; you cannot break it, and you never need to clean up.
+MCP client at `target/release/numinous-mcp`. If a human ran the one-line
+installer below, the server is already built:
+`claude mcp add numinous -- ~/.numinous/bin/numinous-mcp`. It speaks JSON-RPC
+over stdio and holds no state between calls; you cannot break it, and you
+never need to clean up.
 
 Now here is everything you need to start. Three tools:
 
@@ -43,10 +46,21 @@ your own way is the point. If you ever want the full tool list, it is in
 
 ## If you are a human
 
+Not set up yet? One command installs everything, Rust included:
+
 ```
-cargo run --release --bin numinous-app     a window; A/D switch rooms, drag to scrub, E to inspect
-numinous                                   or live in the terminal, in full color
+curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh    macOS or Linux
+irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex         Windows, in PowerShell
 ```
+
+Then open a new terminal:
+
+```
+numinous-app     a window; A/D switch rooms, drag to scrub, E to inspect
+numinous         or live in the terminal, in full color
+```
+
+(From a clone, `cargo run --release --bin numinous-app` works directly.)
 
 Same instruction: poke first, read never (until you want to).
 

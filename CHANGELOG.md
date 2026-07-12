@@ -6,6 +6,23 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Setup is now one command on every platform. `scripts/install.sh` (macOS and
+  Linux) and `scripts/install.ps1` (Windows) check what the machine needs and
+  name the exact fix for anything missing, install Rust through rustup when
+  cargo is absent, fetch the source into `~/.numinous/src` (git when available,
+  a snapshot download otherwise), build the release binaries, install
+  `numinous`, `numinous-app`, and `numinous-mcp` into `~/.numinous/bin`, link
+  the built-in radio next to the executables, and add that directory to PATH.
+  Re-running either installer updates in place and keeps the build cache;
+  `--uninstall` (Windows `-Uninstall`) removes everything installed while
+  leaving `~/.numinous-journey`, `~/.numinous-scores`, and `~/.numinous-cairn`
+  untouched. The Windows PATH edit preserves the registry value kind and
+  unexpanded `%VAR%` entries, and the radio link is a junction or symlink so
+  the soundtrack is never duplicated on disk. README, PLAY.md, the manual, and
+  VERIFY.md now lead with the one-line install. The Windows installer is
+  verified end to end on the dev machine; the macOS and Linux script is
+  syntax-checked and reviewed, with real-hardware execution evidence still
+  owed to the 0.6 portable gate.
 - Flow State now has a versioned design contract inside Pattern Studio: Listen,
   Nudge, and Build surfaces share one deterministic macro-form arranger, with
   phrase-aligned intervention, musical memory, bounded app, CLI, and MCP

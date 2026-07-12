@@ -6,12 +6,17 @@ the first dependency fetch.
 
 ## 0. Prerequisites
 
+Just want to play? The one-line installers in `README.md` set up everything,
+Rust included, without this document. What follows is the from-source
+verification path for contributors and the curious.
+
 - **Rust** (edition 2024; pinned to 1.96.0 in `rust-toolchain.toml`). Install from
   <https://rustup.rs>. On Windows, cargo lands in `%USERPROFILE%\.cargo\bin`; if a
   fresh shell does not see `cargo`, add that to `PATH`.
 - Optional, for the local coverage gate: `cargo install cargo-llvm-cov`.
 - Optional, for the local supply-chain gate: `cargo install cargo-deny`.
-- The Linux build of the audio crate needs ALSA headers: `sudo apt-get install -y libasound2-dev`.
+- The Linux build needs the ALSA and xkbcommon headers (the packages CI
+  installs): `sudo apt-get install -y libasound2-dev libxkbcommon-dev`.
 
 ## 1. One command
 
