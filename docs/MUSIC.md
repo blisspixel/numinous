@@ -8,7 +8,7 @@ There are two engines, and they are designed to coexist and even harmonize.
 
 ## Engine A: Programmatic music (the math makes the sound)
 
-> A2 status (July 2026): motifs shipped for all 30 catalog rooms. A motif is
+> A2 status (July 2026): motifs shipped for all 31 catalog rooms. A motif is
 > a room's musical identity (key, tempo, a line of semitone degrees, and
 > what it encodes): Times Tables circles and returns in D minor pentatonic;
 > Lorenz wanders ten notes and never resolves; the Random Walk stumbles
@@ -62,16 +62,19 @@ The centerpiece of the programmatic engine, and the beating heart of the **Studi
 
 ---
 
-## Engine B: The Radio (ElevenLabs-powered stations, GTA-style)
+## Engine B: The Radio (optional cached stations)
 
-> Status: v1 live. Three stations, 30+ original tracks and climbing (about
-> two hours on air), full stereo, varied unround runtimes dealt from each
-> station's rotation deck, wall-clock live sync (you tune in mid-broadcast),
-> bounded local cache loading through the app radio-cache module, per-track
-> briefs from the house identity plus a card. The dial: Y in the
-> app, - and = for volume; `numinous radio` lists rotations; `numinous tune2
-> <station> --count N` grows them. Next: crossfade on rotation, the Comedy
-> Channel, room-over-radio one-bus mixing without record restarts, cost guardrails.
+> Code status (July 2026): v1 live. The repository contains three station
+> identities, rotation decks, the local generation command, wall-clock live
+> sync, full-stereo playback, and bounded cache validation. The dial is Y in
+> the app, - and = control volume, `numinous radio` lists rotations, and
+> `numinous tune2 <station> --count N` grows a private local cache.
+>
+> Asset status: the founder cache contains 42 WAV tracks across the three
+> stations, totaling 1,409,614,248 bytes. Those recordings are not in Git and
+> do not ship with a clean clone. Engine A remains the complete, source-shipped,
+> offline soundtrack. Public radio assets wait on a separately verified rights
+> path and a size-conscious release format.
 >
 > (v0 status, kept for the record:) v0 shipped. The dial lives in `crates/core/src/radio.rs` (three
 > stations with full producer briefs: NUMINA FM trance at 132 BPM, THE
@@ -88,7 +91,34 @@ The centerpiece of the programmatic engine, and the beating heart of the **Studi
 
 The counterpoint to the generative engine: curated, produced, *songs* and *talk radio*, delivered as a set of **stations** you tune between like the radio in a GTA game. Where Engine A is the math singing, Engine B is the world the math lives in having a personality.
 
-Powered by the **ElevenLabs API** (music generation for tracks, voice/TTS for DJs, idents, and ads).
+The current local generation command uses the **ElevenLabs Music API**. That is
+an optional development path, not a runtime dependency and not the only viable
+source for a future public station pack.
+
+### Public distribution boundary
+
+Do not commit the current WAV cache or attach it to a public release yet.
+
+- Raw WAV is about 1.41 GB, and individual tracks can exceed GitHub's normal
+  per-file limit. Putting it in Git history would permanently burden every
+  clone. A cleared pack should use compressed delivery with checksums outside
+  ordinary source history.
+- The Music Model-Specific Terms updated 26 May 2026 distinguish plan-specific
+  download, attribution, media, and repository rights. The self-serve table
+  prohibits music libraries and repositories, and its media grant excludes
+  certain radio and studio-game uses. The general publishing guidance also
+  requires attribution for free-plan output, which conflicts with this
+  project's no-attribution house rule.
+- Before any recording ships, record its source, model version, account plan at
+  creation, creation date, applicable agreement, permitted uses, and checksum.
+  Obtain a rights path that expressly covers distribution with Numinous. If that
+  cannot be established, replace the cache with commissioned, contributor-owned,
+  public-domain, or otherwise clearly licensed recordings.
+
+Primary terms reviewed 11 July 2026:
+[Music Model-Specific Terms](https://elevenlabs.io/eleven-music-model-specific-terms),
+[Music API Terms](https://elevenlabs.io/music-api-terms), and
+[publishing guidance](https://help.elevenlabs.io/hc/en-us/articles/13313564601361-Can-I-publish-the-content-I-generate-on-the-platform).
 
 ### The stations (launch set)
 - **NUMINA FM: EDM.** Festival-grade four-on-the-floor for the Watch mode and performance sessions.
@@ -110,10 +140,10 @@ The comedy channel is generated, not hand-recorded, so it can be endless and cur
 - Everything here is **in-universe**: the DJs are inhabitants of the dimension, and long-time listeners slowly realize the station is telling a story.
 
 ### Technical shape
-- **`crates/music`** holds a thin ElevenLabs service layer (request, stream, cache) fully decoupled from the synthesis engine.
+- **`crates/core/src/radio.rs`** owns the pure station identities and rotation decks. The CLI owns the optional fetch path, and `faces/app/src/radio_cache.rs` owns bounded local discovery and playback preparation.
 - **Generation is offline-first where possible:** tracks and comedy segments are generated ahead, cached to disk, validated under bounded local cache rules, and assembled by a local **station scheduler**, so the radio works without a live connection after first fetch. Optional online refresh pulls new bits.
 - **Station identity** (idents, stingers, DJ drops) is generated once and reused; music beds and talk are ducked/crossfaded by the scheduler for that seamless-radio feel.
-- **Licensing / rights:** AI-generated audio via a paid ElevenLabs tier is intended to grant commercial usage, but confirm the current ElevenLabs commercial terms before shipping, and keep a fully-generative fallback (Engine A) so the product is never dependent on a third party to make sound.
+- **Licensing / rights:** no public audio pack ships until its exact distribution rights are recorded and reviewed. Engine A keeps the product independent of a third party and complete in silence or offline sound.
 
 ---
 
@@ -128,7 +158,7 @@ The comedy channel is generated, not hand-recorded, so it can be endless and cur
 - **Always mutable, beautiful in silence.** A prominent, respectful mute. The visuals must still be gorgeous with the sound off (the library, the office, the 2am room where someone is asleep).
 
 ## Open questions
-1. ElevenLabs Music API quality/latency/cost at the volume we need, and the exact commercial-rights terms. Prototype early.
-2. How much comedy content to pre-generate and ship vs. fetch on demand (size vs. freshness).
+1. Whether the first public station pack should be commissioned, contributed under a project-compatible license, or covered by a separate enterprise agreement.
+2. How much comedy content to pre-produce and ship versus fetch on demand (size versus freshness).
 3. Whether the Strudel-style pattern engine is a bespoke Rust DSL or an embedded scripting host (shared decision with the Studio, see `ARCHITECTURE.md`).
 4. Global-key harmonization: how aggressively to quantize room sound to the station key before it feels less like *the room's* voice.

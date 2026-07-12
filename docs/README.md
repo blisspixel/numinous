@@ -6,7 +6,7 @@ that owns it; every other doc links to that home rather than restating it. If
 you find yourself duplicating a concept, stop and link instead.
 
 Status: **0.1.0 pre-alpha.** The headless core, CLI, MCP server, windowed app,
-GPU and audio adapters, 30 catalog rooms plus hidden content, 6 sims, 11+ games,
+GPU and audio adapters, 31 catalog rooms plus hidden content, 6 sims, 11+ games,
 and the RPG spine are built. Public CI passes on Windows, macOS, and Ubuntu, but
 capability breadth remains ahead of release evidence: stranger playtests,
 accessibility work, and real macOS and Linux execution remain open. See

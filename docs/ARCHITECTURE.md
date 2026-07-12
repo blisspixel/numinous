@@ -66,7 +66,7 @@ The catch is the app-shell story: shipping a tightly-polished, custom-UI, custom
 
 - **Real-time synthesis:** `cpal` for output, `fundsp`/custom DSP for the tuned synth voices and the master bus. This powers the "everything is an instrument" sonification and the programmatic chiptune engine (see `MUSIC.md`).
 - **The Studio (Strudel-style creative canvas):** a small **pattern DSL** embedded in the host (evaluated live, hot, no recompile), inspired by TidalCycles/Strudel, where a user live-codes audiovisual math so that patterns drive both sound and geometry at once. Shader-heads can also drop into raw **WGSL** for visuals. This is the creator-tier surface that turns Numinous from a toy into an instrument-you-program. (See `DESIGN.md` "Modes" and "The Studio".)
-- **Streaming/AI music (radio stations):** the **ElevenLabs** integration for the GTA-style stations lives behind a thin service layer in the Rust host (fetch/stream/cache tracks), fully decoupled from the synthesis engine. (See `MUSIC.md`.)
+- **Optional cached radio:** station identity lives in the headless core, the CLI owns an optional local generation path, and the app validates and plays a bounded local cache. No radio service or recording is required for the source-shipped synthesis engine. (See `MUSIC.md`.)
 
 ## The Room contract (the core abstraction)
 
@@ -132,7 +132,7 @@ numinous/
 │   ├── gfx/             # wgpu wrappers, palette, glow/bloom, draw helpers (offscreen-capable)
 │   ├── theme/           # Visual Eras (skins): teletype, 8-bit/CRT, oscilloscope, blueprint, modern
 │   ├── audio/           # cpal/fundsp bus, synth voices, scales/quantizer, master mix
-│   ├── music/           # programmatic station engine + ElevenLabs service layer (see MUSIC.md)
+│   ├── music/           # programmatic sound and optional station integration (see MUSIC.md)
 │   ├── studio/          # the live-coding pattern DSL (Strudel-style) + WGSL exposure
 │   ├── params/          # ParamSpec -> UI + URL serialization + audio bindings
 │   ├── share/           # still + loop capture, deep-link encode/decode

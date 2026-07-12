@@ -142,6 +142,7 @@ comparable work exists.
 - [Game Design Theory: Psychology of Feedback Loops, Roblox DevForum](https://devforum.roblox.com/t/game-design-theory-psychology-of-feedback-loops-and-how-to-make-them/63140)
 
 **Mind-blowing math concepts**
+- [Pythagoreanism, Stanford Encyclopedia of Philosophy](https://plato.stanford.edu/entries/pythagoreanism/), used to separate evidence about early Pythagorean communities from later Hippasus legends in Cult of Pi
 - [10 Mind-Blowing Concepts Proven by Maths, Discovery UK](https://www.discoveryuk.com/features/10-mind-blowing-concepts-proven-by-maths/)
 - [5 Seriously Mind-Boggling Math Facts, Live Science](https://www.livescience.com/26584-5-mind-boggling-math-facts.html)
 - [Visually stunning math concepts which are easy to explain, Hacker News](https://news.ycombinator.com/item?id=28489582)
