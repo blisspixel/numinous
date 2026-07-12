@@ -19,20 +19,10 @@ If you already think math is cool, this is the thing you'll send to five friends
 
 ## A look
 
-![The Golden Angle room, inspected: the 137.5-degree turn a sunflower uses so its seeds never overlap](assets/screens/golden-angle.png)
-
-*Real frames from the app. Above: the Golden Angle room, inspected, the 137.5-degree turn a sunflower uses so its seeds never waste space, and why. Every room is a live, glowing, sonified instrument.*
-
 | | |
 |---|---|
-| ![Langton's Ant building its highway](assets/screens/langtons-ant.png) | ![The Studio: type math, watch and hear it live](assets/screens/studio.png) |
-| **Langton's Ant** builds a highway out of two rules. | **The Studio**: type math, watch and hear it live. |
-
-![Cult of Pi: exact digits aging through a green computational field](assets/screens/cult-of-pi.png)
-
-*Cult of Pi treats mathematics and code as the art material. Exact digits enter
-a finite green channel, age into dust, and change only where the channel or the
-player interferes. Pi itself does not degrade.*
+| ![The Numinous menu](assets/screens/menu.png) | ![The Golden Angle room](assets/screens/golden-angle.png) |
+| **Enter.** Choose how to play, or close the menu and wander. | **One room.** The rest are better discovered inside Numinous. |
 
 ## Start playing
 

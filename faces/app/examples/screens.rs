@@ -11,6 +11,9 @@ use numinous_core::{Raster, Surface, all_rooms, draw_text};
 
 #[path = "../src/hud.rs"]
 mod hud;
+#[allow(dead_code)]
+#[path = "../src/overlays.rs"]
+mod overlays;
 
 fn save(raster: &Raster, path: &str) {
     let (w, h) = (raster.width(), raster.height());
@@ -44,38 +47,7 @@ fn main() {
         let room = room_by_id(&rooms, "times-tables");
         let mut raster = Raster::with_accent(width, height, room.meta().accent);
         room.render(&mut raster, 0.12);
-        raster.dim(22);
-        let menu_scale = (width as i32 / 300).clamp(2, 4);
-        let lines = [
-            "PLAY (PRESS A LETTER)",
-            "G          THE QUIZ: NAME THE MATH",
-            "C          MUNCH: EAT WHAT FITS",
-            "N          NIM: BEAT THE ORDER",
-            "T          THE GAUNTLET: ONE RUN",
-            "",
-            "WANDER",
-            "A / D      PREV / NEXT ROOM    1-9 JUMP",
-            "W / S      TIME SPEED   MOUSE  SCRUB",
-            "E          INSPECT    Q  ERA    R  RESTART",
-            "B          THE SHOW   TAB  THE STUDIO",
-            "J          JOURNEY    F  FULLSCREEN CYCLE (BORDERLESS/EXCL)",
-            "Y          RADIO STATIONS    P  POSTCARD",
-            "M          SOUND      SPACE  PAUSE",
-            "",
-            "ESC        CLOSE MENU AND WANDER",
-        ];
-        let line_height = 11 * menu_scale;
-        let top = (height as i32 / 2) - (lines.len() as i32 * line_height) / 2;
-        for (i, line) in lines.iter().enumerate() {
-            draw_text(
-                &mut raster,
-                line,
-                width as i32 / 8,
-                top + i as i32 * line_height,
-                menu_scale,
-                '#',
-            );
-        }
+        overlays::draw_help_overlay(&mut raster, width, height);
         save(&raster, "renders/qa3/app-1-launch-help.png");
     }
 
