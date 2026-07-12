@@ -19,7 +19,6 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: dtolnay/rust-toolchain@c0e9df88980754dd93e5833b8dcb1b304c1fe173 # 1.96.0
         with:
-          toolchain: 1.96.0
           components: rustfmt, clippy
       - name: Install ALSA (for cpal)
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-dev
@@ -52,7 +51,6 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: dtolnay/rust-toolchain@c0e9df88980754dd93e5833b8dcb1b304c1fe173 # 1.96.0
         with:
-          toolchain: 1.96.0
           components: llvm-tools-preview
       - name: Install ALSA (for cpal)
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-dev
@@ -75,8 +73,6 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: dtolnay/rust-toolchain@c0e9df88980754dd93e5833b8dcb1b304c1fe173 # 1.96.0
-        with:
-          toolchain: 1.96.0
       - name: Install ALSA (Linux, for cpal)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-dev
