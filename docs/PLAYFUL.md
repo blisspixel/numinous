@@ -151,7 +151,7 @@ wins on the journey; every board counts as a play.
   plays in the terminal, in the window, and over MCP, which means an agent and a
   human can take the same quiz and compare scores.
 - **Lore underneath.** The dimension of mathematical bliss, the easter eggs, the
-  running bits. Surface-subtle, autist-level deep for those who dig.
+  running bits. Subtle on the surface, unusually deep for those who dig.
 
 ## Games
 
@@ -219,7 +219,7 @@ and share a "room" without shipping a binary.
   its story. Pi from Buffon's needles with no circle in sight.
 - **Reveal roulette.** Read a reveal, guess the phenomenon.
 - **The Show / benchmark mode.** Lean back and let the whole collection play
-  itself for hours, the "watch it while high" mode, also an honest GPU benchmark.
+  itself for hours, the long-form Watch mode, also an honest GPU benchmark.
 
 ## How the faces host the fun
 

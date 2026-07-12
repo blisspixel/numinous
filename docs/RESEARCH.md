@@ -22,6 +22,12 @@ A citation supports the narrow claim it actually studied. Results from classroom
 learning, memory tasks, or another game do not automatically transfer to an
 audiovisual mathematical instrument.
 
+The fast-moving research on digital-mind continuity has its own owner document:
+`DIGITAL_DEVELOPMENT.md`. It reviews July 2026 work on episodic and temporal
+memory, experience reuse, open-ended learning, functional organization,
+autonomy, welfare uncertainty, privacy, and verifiable forgetting. This file
+keeps the broader learning, accessibility, sonification, and game-design base.
+
 ## 1. What may support engagement and learning
 
 No single theory defines fun. Flow is one useful lens, while self-determination

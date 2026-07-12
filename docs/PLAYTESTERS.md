@@ -19,9 +19,9 @@ the designs they have left are in `ROOMS.md`.
 Each entry ends with a compact tag: **Lens** (what they judge), **Tongue**,
 **Level** (0 = math-wounded, 5 = research mathematician), **Face**.
 
-## I. The everyday: normies, kids, and the world
+## I. The everyday: newcomers, kids, and the world
 
-**1. Norm.** The normie. Forty, sells insurance in Ohio, has not thought about
+**1. Norm.** The newcomer. Forty, sells insurance in Ohio, has not thought about
 math since a C-minus in high-school algebra and was fine with that. He is here
 because his teenager left it open on the laptop. He is not stupid and not
 curious, he is *busy*, and he will close anything that smells like homework

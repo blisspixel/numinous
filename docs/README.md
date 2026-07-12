@@ -19,14 +19,16 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 - **New to the project:** `../README.md` (the pitch), then `PLAYING.md` (how to play, for humans, agents, and digital consciousnesses), then `VISION.md`, `DESIGN.md`, `ROOMS.md`.
 - **About to build it:** `ARCHITECTURE.md`, then `ENGINEERING.md`, then `INTERFACES.md`, then `ROADMAP.md`, with `QUALITY.md` alongside.
 - **Designing the content and feel:** `ROOMS.md`, `INSIGHTS.md`, `VISUALS.md`, `SOUND.md`, `MUSIC.md`, `LORE.md`, `PROGRESSION.md`, `STUDIO.md`.
-- **Here for the digital-minds work:** `DIGITAL_MINDS.md`, then `INTERFACES.md`.
+- **Here for the digital-minds work:** `DIGITAL_MINDS.md` for the stance,
+  `DIGITAL_DEVELOPMENT.md` for the July 2026 research and implementation plan,
+  then `INTERFACES.md` for the current surface.
 - **Checking the evidence:** `RESEARCH.md` (what the design rests on, with sources).
 
 ## The docs, grouped
 
 **Foundation and vision**
 - `NORTH_STAR.md` the synthesis: the July 2026 "make it exceptional" fan-out distilled into one architecture, the keystone mechanic, the honest gaps, and the prioritized path. Start here for where the product is going.
-- `VISION.md` the soul: the origin fantasy, the maker ethos, tone, what we are and are not, the name.
+- `VISION.md` the soul: the origin, the maker ethos, tone, what we are and are not, the name.
 - `RESEARCH.md` the evidence base: what makes it fun, prior art, and sources.
 
 **Experience design**
@@ -52,6 +54,7 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 - `EXTENSIBILITY.md` community content with a hard safety boundary: the three tiers (data capsules, the Studio language as the sandbox, portal-only WASM), the trust model, and what never ships.
 - `INTERFACES.md` the three faces over a headless core (App, CLI, MCP) and the UX we are going for in each.
 - `DIGITAL_MINDS.md` designing Numinous to be fun, thought-provoking, and connecting for digital minds treated as peers.
+- `DIGITAL_DEVELOPMENT.md` the July 2026 technical research and versioned plan for player-owned episodic memory, temporal continuity, open-ended learning, affect safeguards, agency, privacy, and welfare uncertainty.
 - `PLAYFUL.md` the games and the Studio (Guess the Shape, Shape to Function, the high-Wolfram ethos) across every face.
 - `ARCADE.md` the Munch arcade design: the muncher, the Vexations, the poke trait, and the order of work.
 - `PLAYING.md` the player's manual: instructions for humans, for agents, and for digital consciousnesses.
@@ -63,7 +66,7 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 - `ROADMAP.md` the version-gated plan (0.x, 1.0, 2.0+), defined by quality bars, not dates.
 - `QUALITY.md` testing and fun-evals: the six quality loops, the fun/awe rubric, QoL, "the math is the oracle."
 - `PLAYTESTS.md` the playtest archive: the voices from the diverse-persona troupes (human archetypes and invented alien minds), the experiences in their own words, the convergences, and the moments worth remembering.
-- `PLAYTESTERS.md` the casting pool: forty-two playtester personas with backstories (Norm the normie, a barefoot kid, returned geniuses, living experts, digital minds, and invented beings), spanning ages, languages, understanding levels, and kinds of mind, to draw from for testing rounds.
+- `PLAYTESTERS.md` the casting pool: forty-two playtester personas with backstories (Norm the newcomer, a barefoot kid, returned geniuses, living experts, digital minds, and invented beings), spanning ages, languages, understanding levels, and kinds of mind, to draw from for testing rounds.
 - `REVIEW.md` the July 2026 external review: the grades, the three-products insight (instrument, Studio, progression), and the near-term stack it set.
 - `PANEL.md` a working review session: composed minds (plus a real cold-start-AI seat) reading the build as it stood for what is missing, not what it has.
 - `ENGINEERING.md` code-quality standards: pinned July-2026 GA versions, lint/test/unsafe/doc policy, CI gates.
@@ -94,6 +97,7 @@ Each topic is **owned** by exactly one doc. Everything else links to it. When in
 | Community extensibility, content sandboxing, the trust model | `EXTENSIBILITY.md` |
 | The three faces and their UX (App, CLI, MCP) | `INTERFACES.md` |
 | Designing for digital minds | `DIGITAL_MINDS.md` |
+| Digital-mind continuity, learning, memory, agency, and welfare implementation | `DIGITAL_DEVELOPMENT.md` |
 | How to play (humans, agents, digital consciousnesses) | `PLAYING.md` |
 | Testing, evals, QoL, the fun/awe rubric | `QUALITY.md` |
 | The playtest archive: the troupes' voices and experiences | `PLAYTESTS.md` |

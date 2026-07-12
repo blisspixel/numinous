@@ -203,7 +203,7 @@ recorded in `CHANGELOG.md`; what follows is the human record.
 
 ## Troupe III: the diverse draw
 
-**Norm (the normie).** Ten impatient minutes. The words landed, the pictures did
+**Norm (the newcomer).** Ten impatient minutes. The words landed, the pictures did
 not: "the cool stuff is the *sentences*," the quiz telling him 137.5 degrees is
 what sunflowers use, Lorenz "perfectly determined and still impossible to
 predict." His complaint was blunt and right: the ASCII rooms read as "gray mush,"

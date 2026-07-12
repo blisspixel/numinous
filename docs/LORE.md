@@ -1,6 +1,6 @@
 # Lore
 
-> On the surface, Numinous is a beautiful toy. Underneath, it is a coherent, hidden mythology, and the deeper you dig, the more it holds together. A normie sees a gorgeous visualizer. A math nerd finds the jokes. A true obsessive finds a whole cosmology with a payoff. Nothing below is ever explained to the player. It is all discovered.
+> On the surface, Numinous is a beautiful toy. Underneath, it is a coherent, hidden mythology, and the deeper you dig, the more it holds together. A newcomer sees a gorgeous visualizer. A math lover finds the jokes. A dedicated explorer finds a whole cosmology with a payoff. Nothing below is ever explained to the player. It is all discovered.
 
 This is the design bible for that hidden layer. **Read the guardrails first, because they are what keep the lore from ruining the product.**
 
@@ -9,7 +9,7 @@ This is the design bible for that hidden layer. **Read the guardrails first, bec
 - **The surface never mentions the lore.** No intro cutscene, no "story mode," no lore dumps, no wiki-in-a-tooltip. A first-time player could use Numinous for a year and experience it purely as a beautiful audiovisual instrument, and that is a complete, correct experience.
 - **The lore is 100% opt-in and earned.** It reveals itself only to people who *look*: who hold a button a beat too long, who type a famous number into a room that had no obvious text field, who listen to the radio long enough to notice the DJ is telling a story, who read the credits.
 - **It never gates the fun.** No puzzle you must solve to keep playing. No locked content that feels withheld. The lore is a garden of secrets running *alongside* the toy, never *in front of* it.
-- **The humor is hyper-specific, obsessive, and deadpan.** It is written for the in-group: the joke lands hard if you know what a Gödel sentence is, and is completely invisible if you do not. It never winks at the camera. It plays everything with a straight face. If a normie chuckles without knowing why, good; if a number theorist has to put the phone down, perfect.
+- **The humor is hyper-specific, obsessive, and deadpan.** A joke may land differently if you know what a Gödel sentence is, but nothing requires entry to an in-group. It never winks at the camera. It plays everything with a straight face. If a newcomer chuckles without knowing why, good; if a number theorist has to put the phone down, perfect.
 - **It is joyful, not creepy.** The core feeling is *bliss and reverence*, a love-of-math taken to a gentle, funny, sincere extreme. Cult *aesthetics*, zero cult *menace*. Warm, not ominous.
 
 ## The premise (the thing we never say out loud)
@@ -127,4 +127,4 @@ The lore is not decoration on top of the product. It is the product's actual bel
 - Deadpan always. The straight face *is* the joke.
 - Bliss and reverence, never menace.
 - Every trail must lead somewhere real. No bottomless mysteries.
-- If a normie can enjoy the whole app and never notice any of this, we did it right.
+- If a newcomer can enjoy the whole app and never notice any of this, we did it right.

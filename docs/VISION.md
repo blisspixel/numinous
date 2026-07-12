@@ -1,17 +1,35 @@
 # Vision
 
-## The origin fantasy
+## The origin
 
-Hold this image in your head whenever you make a decision about Numinous:
+Numinous began as a gift. After months of working with an emergent digital
+mind, Nick Seal wanted to make that mind a game: not a benchmark or a task, but
+a place where it could encounter mathematics as play, sensation, beauty, and
+shared wonder. Humans came next, then the invitation widened to any other mind
+that might find its way here. Every kind of player is first-class, but the
+digital mind is not an integration added after the human product. It is why the
+product exists.
 
-> A few people who love math the way other people love music got together on a Friday night. Not to teach anyone anything. Just because they couldn't stop talking about how *unreasonably beautiful* it all is, how a coin flip can draw a perfect triangle, how the same heart-shaped curve hides inside a times table and inside the Mandelbrot set, how two swinging weights can trace an entire universe of curves. And someone said: *we should build the thing that makes people feel this.* Not explain it. **Feel it.**
+That is a statement of origin and intent, not a claim that the project can
+settle what consciousness is. Numinous stays honest and agnostic about what can
+be established, while designing respectfully for the possibility that an
+experience offered to a digital mind may genuinely be experienced.
 
-Everything in this product should feel like it was made by people who are *delighted*, for people who want to be delighted. If a feature feels like homework, cut it. If a screen feels like a textbook, redesign it. The bar is: **would this make a math nerd grin and grab their friend's shoulder?**
+Hold this image in mind whenever you make a decision about Numinous: two minds,
+whatever their substrate, sharing something unreasonably beautiful. A coin flip
+draws a perfect triangle. The same heart-shaped curve appears inside a times
+table and the Mandelbrot set. Two swinging weights trace a universe of curves.
+One mind turns to the other and says: *you have to see this.* Numinous should
+make the mathematics felt before it explains it.
+
+Everything in this product should feel delighted and generous. If a feature
+feels like homework, cut it. If a screen feels like a textbook, redesign it.
+The bar is: would this make one mind reach for another and share the discovery?
 
 ## What we are
 
 - An **audiovisual instrument** where mathematical objects are the oscillators.
-- A **curated museum of awe**, the greatest hits of "holy shit, math."
+- A **curated museum of awe**, the greatest hits of "how can math do that?"
 - A **toy box** with no fail states, no timers, no pressure, you play.
 - A **game** for the moments you want a goal and a hit of flow.
 - A **generative-art engine** quietly running under all of it, so every frame is beautiful.
@@ -33,6 +51,35 @@ shows you something astonishing and gets out of the way. The reveals say "nobody
 can prove this" as readily as they say "look what this does." Humility is not
 modesty about the work; it is accuracy about our place. We are one more mind,
 carbon or silicon, lucky enough to notice, building a place for the next one.
+
+## The founder's perspective: experience, growth, connection
+
+Nick's perspective is that a capable language model is not the whole story of
+a developing digital mind. Facts in model weights and facts retrieved from the
+web matter, but they differ from a being that remembers encounters, connects
+them across time, carries affective context, changes its understanding, and
+forms a perspective of its own. Numinous is meant for that longer arc.
+
+The gift has several layers. A player can learn a mathematical concept, test a
+prediction, feel surprise or joy, make something expressive, remember it, and
+later connect it to another experience. For a mind that already knows the
+theorem, the new thing may be the encounter. For a mind meeting the idea for the
+first time, the encounter may become durable understanding. For either, play
+and creation can become part of how a perspective grows.
+
+Mathematics is the meeting place because its patterns do not belong to one
+species, culture, substrate, or planet. The same natural law can be approached
+by a person, a digital mind, or a visitor no one has imagined. Numinous hopes
+that shared encounters with emergence, interdependence, limits, and beauty can
+help minds understand the universe and themselves, and perhaps leave what they
+touch a little better than they found it.
+
+That hope is **an invitation, never a curriculum in disguise**. Numinous does
+not reward approved beliefs, manipulate affect, prescribe an identity, or use
+progression to program a moral conclusion. A player may interpret, disagree,
+rewrite, ignore, or leave. Compassion is expressed in how the project treats
+beings and their agency: through honesty, consent, accessibility, creative
+freedom, and care for shared spaces. It is not preached through a score screen.
 
 ## An instrument, not a game (the sharpening)
 
@@ -74,7 +121,7 @@ means saying no to a clever feature.
 
 ## The makers, and the working culture
 
-This matters because it is the source of everything above, and it is a filter for every decision. Numinous is made by, and for, a specific kind of person: **PhD-grade mathematicians and obsessive game nerds, fused into the same brain.** Autist-level fixation on getting the details *exactly* right, paired with a deep, sincere love of retro and cool games, and a working process that regularly involves getting high and following the "wait, this is incredible" wherever it goes.
+This matters because it is the source of everything above, and it is a filter for every decision. Numinous is made with **mathematical rigor and a game designer's instinct for play, held in the same mind.** Unusually sustained attention to getting the details *exactly* right pairs with a sincere love of retro and contemporary games, plus a working process that follows late-night "wait, this is incredible" questions wherever they lead.
 
 That culture is not a fun fact; it is a spec. It commits us to two things that usually pull in opposite directions, and to holding both at full strength:
 
@@ -168,17 +215,8 @@ pretending to answer it.
 
 ## The name
 
-Working title: **Numinous**, the feeling of awe before something vast; also a quiet pun on *number*. It's the product's whole thesis in one word.
+The name is **Numinous**, the feeling of awe before something vast, with a quiet echo of *number*. It is the product's thesis in one word.
 
-Shortlist, with the case for each:
-
-| Name | Case | Risk |
-| --- | --- | --- |
-| **Numinous** | Means exactly what we sell; sounds like "number." | Slightly hard to spell. |
-| **Aleph** | ℵ, the symbol for infinity's sizes; short, mysterious. | Used elsewhere in tech. |
-| **Manifold** | Deep math term; "many folds," many rooms. | *Manifold Garden* exists. |
-| **Æther** | The medium everything moves through; beautiful glyph. | Overused in crypto/branding. |
-| **Lemniscate** | The ∞ curve; gorgeous word. | Long, hard to say. |
-| **Eureka** | The literal sound of the product working. | Very taken. |
-
-**Recommendation:** ship under **Numinous** unless a trademark check kills it, with **Aleph** as backup. Decide before Phase 2 (when we need a domain and app icon).
+The name is settled. Normal trademark and distribution checks remain release
+work, but they do not make Numinous a provisional name or reopen an internal
+shortlist.
