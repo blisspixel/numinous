@@ -1,15 +1,39 @@
 # Quality, Testing & Fun-Evals
 
-How Numinous stays exceptional, automatically, from the first commit. Most software tests only whether it *works*. Numinous also tests whether it *slaps*, and builds both into automated loops so quality is a ratchet that only tightens, never a scramble before launch.
+How Numinous works toward a high quality bar. Most software tests whether a
+program works; Numinous also needs evidence about comprehension, awe, beauty,
+comfort, and voluntary return play. Only part of that system is automated today.
+This document names both the enforced checks and the quality loops still to be
+built, so an aspiration is never mistaken for a result.
+
+## Evidence snapshot, 2026-07-11
+
+- **Enforced now:** formatting, Clippy with warnings denied, 968 tests, locked
+  builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
+  three-OS compile matrix. The current measured coverage is 91.29% regions and
+  90.85% lines under the documented exclusions.
+- **Implemented but not yet validated with strangers:** the native app, local
+  playtest-note capture, deterministic room rendering, audio generation, and
+  all three faces.
+- **Not yet evidenced:** a completed stranger hallway test, accessibility review
+  with disabled players, real execution on macOS and Linux, nightly hardware
+  soak, automated visual or audio regression, opt-in telemetry, and independent
+  mathematical sign-off of every reveal.
+- **Rule:** `RESEARCH.md` defines Built, Measured, Observed, Designed, and
+  Hypothesis. Every release decision uses those labels.
 
 ## The two quality questions
 
 Every check answers one of these:
 
 - **Does it work?** Objective: math correctness, performance (the 60/120fps floor), determinism, stability, no crashes. Fully automatable.
-- **Does it slap?** Subjective but measurable: fun/flow, awe, beauty, tone, quality-of-life. Automatable *in part* (proxies, judges, instruments), with humans as the final authority.
+- **Does it delight and teach honestly?** Subjective and measurable only in
+  part: flow, awe, beauty, tone, comprehension, and quality of life. Instruments
+  and proxies can inform; representative humans remain the authority.
 
-The single metric that outranks all others is **awe** (the hallway test, below). Everything else exists so we are never flying blind between hallway tests, and so a regression in beauty or fun is caught as reliably as a crash.
+Awe is the central experience hypothesis, not the only metric. Accessibility,
+mathematical truth, autonomy, and comprehension can veto a visually impressive
+result. The hallway test below is the first direct check of the awe hypothesis.
 
 ## The core insight: the math is the oracle
 
@@ -20,13 +44,19 @@ Numinous has an unfair advantage: **the math itself is the oracle.** For every r
 - Assert **metamorphic properties**, transformations that must not change the result: rotate/translate invariance, resolution independence (within tolerance), and seed reproducibility. A mismatch is a bug, with no golden image required.
 - Check **known-exact facts**: the Buffon room must converge to pi, the Basel sum to pi-squared-over-six, a 2:3 Lissajous must be a perfect fifth. The math gives us assertions no ordinary app has.
 
-This is what lets us hold PhD-grade rigor (see `VISION.md`) as an automated gate, not a hope.
+This gives the project unusually strong automated oracles for some mathematical
+properties. It does not replace review of explanations, numerical methods, or
+claims outside those tested properties.
 
 ## The test loops
 
-Six loops, each on its own trigger and cadence. Together they are the refinement engine.
+Six loops define the intended refinement engine. Their status is explicit below.
 
-### 1. Commit loop (CI, every push and PR, fast and blocking)
+### 1. Commit loop (partially enforced)
+
+The current workflow enforces the checks in the evidence snapshot. The richer
+property, GPU-golden, perceptual image, and spectral audio systems below are
+targets until their harnesses and fixtures exist in the repository.
 - **Unit tests** on every math kernel.
 - **Property-based tests** (`proptest`-style): invariants across random inputs. Chaos Game points stay in the hull; Game of Life obeys its four rules exactly; a "closed" curve actually closes; bounded energy stays bounded; no NaN or infinity ever escapes a kernel.
 - **Golden-reference tests**: GPU compute output vs. the independent CPU/analytic reference, within tolerance (the oracle, above).
@@ -36,26 +66,32 @@ Six loops, each on its own trigger and cadence. Together they are the refinement
 - **Determinism tests**: same seed produces the identical frame and audio (bit-exact on the same GPU; within tolerance cross-GPU). A `.num` seed file / `numinous://` link round-trips to the exact state it captured.
 - **Style + house-rules guard**: automated check that copy and code contain no emojis, no em-dashes, and no AI/tool attribution (all CI-enforced), plus lint, type, and format (see `ENGINEERING.md`).
 
-### 2. Nightly loop (soak, cross-platform, performance, on real hardware)
+### 2. Nightly loop (designed, not implemented)
+
+No nightly workflow or real-hardware runner fleet exists yet. The intended scope is:
 - **Performance-regression**: frame-time per room, per Era, per GPU tier, tracked against the budget; a regression below the 60fps floor fails the night. The **Benchmark mode is the perf harness** (see `DESIGN.md`), it already stress-runs the heaviest work.
 - **Soak / endurance**: Benchmark mode runs for *hours* on each OS. Watches for memory leaks, crashes, audio drift or glitching, and gradual frame degradation. The "watch it for hours while high" feature is also, for free, the stability test.
 - **Cross-GPU differential testing**: golden tests run on NVIDIA, AMD, Intel, and Apple; numerical divergence beyond tolerance is flagged (research confirms GPU math functions genuinely differ across vendors, so this is real, not paranoia).
 - **Fuzz**: random parameters, seeds, and rapid input storms against every room; assert no crash, hang, NaN, or audio blow-up. Metamorphic fuzzing of the shaders themselves.
 
-### 3. Content eval loop (LLM-as-judge + human, on any content change): the "math is cool" eval
+### 3. Content eval loop (designed, not implemented)
+
+There is no automated content-evaluation workflow or calibrated human golden set
+in the repository today. If built, it follows these constraints:
 Every insight card, comedy-radio script, room description, Terminal koan, and line of UI copy runs through an automated evaluation before it ships.
 
 - **LLM-as-judge** (a capable frontier model) scores each piece against a versioned, domain-specific **rubric**: awe/surprise, clarity, brevity, tone-fit (the reverent-irreverent voice), and on-thesis-ness. Pointwise for absolute gates, **pairwise** (A vs. B) for refining a line toward its best form.
 - **Calibration is mandatory**: the judge is validated against a **human-labeled golden set** and must hit 75 to 90 percent agreement before we trust it, and it is re-calibrated as content grows. We actively counter known judge biases (verbosity, position, self-preference), and give the judge a human-written exemplar as a quality anchor.
 - **Math correctness is a separate, stricter gate.** No AI has the final word on whether the math is right. Every mathematical claim is checked against known results / a computer-algebra system *and* signed off by a human mathematician. A wrong sign or a fudged theorem is a release blocker (see `VISION.md` on PhD-real rigor). The AI judge flags dubious claims for the human; it never clears them.
 
-### 4. Playtest loop (human, at every phase gate and continuously): the real fun eval
+### 4. Playtest loop (capture implemented, human evidence pending)
 - **The formalized hallway test**: five-plus strangers (a mix of math-lovers and math-avoiders), no explanation, a written protocol. Count unprompted "whoa"s, spontaneous shares, "just one more" continuations, and where attention drops. Repeatable, scored, run at every phase gate (see `ROADMAP.md`).
 
 #### Running the hallway test (the facilitator sheet)
 
-Everything below is built and ready today; a session needs one facilitator,
-one machine, and five to fifteen minutes per person.
+The F9 capture path and facilitator protocol are implemented. No stranger cohort
+has completed this gate yet. A session needs one facilitator, one machine, and
+five to fifteen minutes per person.
 
 1. **Setup (once).** `cargo run --bin numinous-app`. Sound on (do not launch
    with `NUMINOUS_MUTE=1`); leave the app on the opening room. Confirm F9
@@ -115,13 +151,16 @@ cycle's fix list, and the test reruns at the next gate.
     pass. This complements the automated visual-regression suite (loop 1) with
     human taste.
 
-### 5. Telemetry loop (in-product, opt-in, local-first): fun proxies at scale
+### 5. Telemetry loop (designed, not implemented)
+
+No telemetry ships today. If evidence later justifies it, the following privacy
+constraints apply before implementation:
 Behavioral proxies for flow and awe, gathered respectfully:
 - Time-to-first-delight (first meaningful interaction), session length, per-room dwell, "just one more" transition rate, how deep into the three layers people reach (Toy / Puzzle / Reveal), Reveal open-rate, share-rate, return/retention, Benchmark hours, and per-room drop-off heatmaps.
 - **Ethics as a hard constraint**: strictly opt-in, anonymized, aggregated, local-first, no dark patterns, no selling. QoL includes respecting the player. A creepy telemetry system would violate the product's own values.
 - Feeds the refinement loop.
 
-### 6. Refinement loop (auto-tuning and experiments)
+### 6. Refinement loop (designed, not implemented)
 - Tunable parameters, default scales and palettes, transition timing, aha-difficulty, auto-director pacing, are tuned by experiment: metrics + judge + playtest pick the winner. Cheap parameter searches can run automatically; expensive ones are proposed to humans with evidence.
 - This is the loop that turns "it works" into "it slaps," continuously, over the life of the project.
 
@@ -138,13 +177,18 @@ The dimensions every room and every shareable clip is scored on, and how each is
 | **QoL** | Fast to play, no dead-ends, graceful, accessible? | Startup-time test + a11y checks + fault injection |
 | **Shareability** | Did it produce a shareable moment? | Telemetry share-rate + export usage |
 
-These map directly onto the **Room "definition of done"** in `ROADMAP.md`: wherever possible, each done-checklist item is backed by one of these automated or semi-automated checks, so "done" means "measured," not "looks fine to me."
+These map to the Room definition of done in `ROADMAP.md`. A row becomes a release
+gate only when its measurement mechanism exists and has been run; planned
+dashboards and judges do not count as evidence.
 
 ## Quality of life
 
 Two audiences: the player, and the developer. Both are quality of life, and both are tested.
 
-### Player QoL (and how it is verified)
+### Player QoL target
+
+Items below are release requirements. Only the evidence snapshot and tracked
+tests establish what is verified today.
 - **Under 3 seconds to first play** (automated startup-time test), no tutorial wall, no account.
 - **Never lose your work**: state persists, instant resume, creations are safe (persistence tests).
 - **Fearless poking**: one-tap reset, undo/scrub, and a *no-fail invariant* asserted in tests (the Toy layer cannot reach a lose/broken state).
@@ -159,7 +203,7 @@ Two audiences: the player, and the developer. Both are quality of life, and both
 - **Fast CI** (target under 10 minutes for the commit loop) with a local pre-commit that mirrors it.
 - If the loops are slow or painful, they will not get used, so dev QoL is a first-class quality investment, not a nicety.
 
-## Tooling for the loops
+## Tooling planned for the loops
 
 - **Rust test stack**: the built-in harness + `proptest` (property-based) + snapshot testing (`insta`-style) for deterministic outputs.
 - **Golden image/audio compare**: SSIM / perceptual hashing for images, FFT feature extraction for audio; goldens versioned per Era and per GPU tier.
@@ -171,10 +215,15 @@ Two audiences: the player, and the developer. Both are quality of life, and both
 
 ## Cadence (tied to the roadmap)
 
-- **Phase 0**: stand up the commit-loop skeleton as part of the foundation, unit, golden-reference, determinism, the visual-regression harness, the style guard, and CI. Test infrastructure is built with the engine, never bolted on later.
-- **Phase 1 (vertical slice)**: the flagship room ships with full "does it work" coverage *and* passes the first formal hallway test + GEQ, establishing the Fun Scorecard baseline. We prove the loops on one room before scaling.
-- **Phase 2 (MVP)**: all six loops live; content eval loop online; opt-in telemetry shipping; nightly soak and cross-GPU running.
-- **Phase 3+**: the refinement/auto-tuning loop drives per-room scorecards and keep/cut decisions; the judge is continuously re-calibrated.
+- **0.1**: keep the current commit gate green and add honest public evidence.
+- **0.2**: run the first stranger hallway test and establish a reproducible
+  baseline for the flagship room.
+- **0.3 to 0.5**: add property, perceptual, audio, accessibility, and performance
+  harnesses as their corresponding product systems mature.
+- **0.6 to 0.9**: add real-platform execution, soak, packaging, and release
+  provenance, then use repeated human sessions for keep, cut, and tuning decisions.
+- **1.0 and later**: automation may assist refinement, but no judge or telemetry
+  system replaces representative playtests and mathematical review.
 
 ## Anti-patterns
 

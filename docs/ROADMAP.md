@@ -11,9 +11,15 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## The version map at a glance
 
-- **0.1 Foundations** the spike. The stack, the headless core, all three faces in skeleton, the test loops. Internal.
-- **0.2 The Vertical Slice** one flagship room to jaw-dropping quality. Proves the feel. Internal / friends.
-- **0.3 to 0.9 The build-out** every 1.0 workstream comes online and matures, through private alpha to open beta.
+- **0.1 Public Foundation** reproducible source, honest docs, green CI, and a safe public repository. Current pre-alpha line.
+- **0.2 Flagship Proof** one room earns its hallway-test bar with strangers.
+- **0.3 Tactile Alpha** the best five rooms answer the hand deeply and clearly.
+- **0.4 Understanding Alpha** predict, generate, reveal, and retention are tested as a learning loop.
+- **0.5 Sensory Alpha** the visual and sonic identity lands with accessibility and performance budgets.
+- **0.6 Portable Alpha** packaged builds run on all three operating systems and representative hardware.
+- **0.7 Creator Alpha** make, save, reopen, export, and remix form one local loop.
+- **0.8 Closed Beta** the collection coheres for diverse invited players and assistive-technology users.
+- **0.9 Open Beta / Release Candidate** feature freeze, distribution, soak, audit, and repeated return-play evidence.
 - **1.0 "First Light"** a complete, exceptional, coherent experience. The real first release.
 - **1.x After First Light** depth and refinement without breaking what 1.0 established.
 - **2.0 "The Living World"** the platform leap: the full Studio as a creator platform, community, the deep lore payoff, shared creation with digital minds, and the open mathematical frontier.
@@ -23,7 +29,13 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 968 tests, locked build, Windows verify, 91.28% region cover, and 90.85% line cover all green.
+**Current release state: 0.1.0 pre-alpha.** Capability breadth resembles a much
+later alpha, but versions are earned by evidence, not feature count. The first
+public CI run, independent macOS and Linux execution, the 0.2 stranger hallway
+test, and accessibility work are still open. Later systems already present in
+source do not waive those earlier gates.
+
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **30 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, clippy, 968 tests, locked build, Windows verify, 91.29% region cover, and 90.85% line cover all green.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -50,20 +62,32 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Pre-1.0 (the 0.x line): earning the right to 1.0
 
-### 0.1 Foundations (the spike)
-**Goal:** Prove the hardest technical unknowns and stand up the skeleton. No polish.
+### 0.1 Public Foundation
 
-- Lock the stack (Rust + `wgpu`; decide Bevy vs. bespoke wgpu shell; see `ARCHITECTURE.md`). One Rust codebase, native binaries for macOS, Linux, Windows.
-- **Render + audio "hello world":** a single sine wave you can *see* (a moving line) and *hear* (a tone), synced, at a locked 60fps, with a clean render-loop + audio-clock architecture (`wgpu` + `cpal`).
-- **Prove the GPU-math path:** one trivial WGSL compute shader feeding the render pass, on at least one non-NVIDIA GPU (Apple Silicon or Intel/AMD), to confirm portability.
-- Define the **`Room` trait** and load one trivial room through it.
-- **Headless core + all three faces in skeleton (see `INTERFACES.md`):** the engine runs windowless; ship a minimal `numinous` **CLI** (`render`, `eval`, `describe`) and a minimal **MCP server** (`explore`, `play`/`eval`) alongside the bare GUI shell. Three faces on day one is what keeps the core clean.
-- Bare **Cabinet** shell (GUI).
-- CI producing a signed(ish) desktop artifact per OS.
-- **Commit-loop test skeleton (see `QUALITY.md`):** golden-reference and determinism tests, the visual-regression harness, and the style guard, wired into CI from day one.
+**Goal:** establish a reproducible, honest, and safe public baseline.
 
-**Exit criterion:** one throwaway room runs as a native app on all three OSes and on a non-NVIDIA GPU, drawing (via a compute shader) and making sound in lockstep, *and* renders headless via the CLI and is playable by an agent via MCP, with golden/determinism tests green in CI.
-**Retires the risk:** "can this stack do smooth, portable, GPU-computed audiovisual math as a real native app on all three OSes?"
+- Keep the Rust workspace, headless core, app, CLI, MCP server, GPU adapter,
+  and audio adapter buildable from a clean checkout.
+- Publish the Apache-2.0 license, contributor rules, architecture map, current
+  limitations, and one direct path to run the app.
+- Enforce formatting, Clippy with warnings denied, tests, locked builds,
+  coverage, house style, supply-chain policy, and the three-OS compile matrix.
+- Pin workflow actions immutably, minimize token permissions, and enable
+  dependency update automation.
+- Scan the current tree and history for secrets and tool attribution before the
+  first push.
+- Keep claims tied to Built, Measured, Observed, Designed, or Hypothesis as
+  defined in `RESEARCH.md`.
+
+Owner docs: `README.md`, `ENGINEERING.md`, `QUALITY.md`, `VERIFY.md`.
+
+**Exit criterion:** the canonical public repository is on `main`; the full local
+gate and every required GitHub check pass on the same commit; a clean checkout
+builds and launches on the measured Windows reference machine; no secret or
+authorship attribution is present in tracked content or commit metadata.
+
+**Retires the risk:** "can another person inspect, build, and trust the source
+without relying on the founder's machine or undocumented context?"
 
 ### 0.2 The Vertical Slice ("does it slap?")
 **Goal:** Build **one** flagship room to *jaw-dropping* quality, plus exactly enough shell to frame it. The make-or-break milestone.
@@ -79,26 +103,132 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 **Exit criterion, the hallway test:** show it to five people (math-lovers and math-avoiders) with *no explanation*. Success = at least one unprompted "whoa," at least one who keeps playing after they were "done," and at least one who asks to send it to someone. If not, iterate here; do **not** advance. This is the most important gate in the document.
 **Retires the risk:** "is the core experience actually magic, or just a neat demo?"
 
-### 0.3 to 0.9 The build-out (private alpha to open beta)
-**Goal:** Bring every 1.0 workstream online and mature it to the quality bar. These run in parallel once the design system and Room trait are stable; the version numbers track how complete the whole is, not a fixed order. Alpha (internal) hardens into private beta (friends, and an early digital-mind visitor) into open beta.
+### 0.3 Tactile Alpha
 
-The workstreams, each built to the 1.0 bar:
+**Goal:** prove depth before expanding breadth.
 
-- **The collection:** grow to a strong, coherent set across all Wings, including the signature postcards (Fourier Epicycles, Mandelbrot Dive, Reaction-Diffusion, 4D Objects) and the high-wow/low-build launch rooms (Chaos Game, Lissajous, Pendulum Wave, Golden Angle, Galton, Buffon, Cellular Automata, Prime Spirals, Collatz). See `ROOMS.md`.
-- **The Cabinet, for real:** live animated room previews, Wings, smooth dissolves.
-- **Watch and Benchmark:** the lean-back auto-advance, then the full **Benchmark / "The Show"** auto-director (per-room director profiles, beat-matched transitions, DJ-set pacing, the demoscene GPU flex with an optional live compute/equation readout, the quality load-balancer). See `DESIGN.md`.
-- **Music, both engines (see `MUSIC.md`):** Engine A (per-room sonification, the bit-depth chiptune, the Strudel-style pattern engine) and Engine B (the ElevenLabs radio: EDM / Trance / Chill and the **Comedy Channel**), with global key/tempo harmonization.
-- **Visual Eras (see `VISUALS.md`):** the theme system and the skins (8-bit/CRT + chiptune first, then oscilloscope, teletype, blueprint, modern), inherited by every room for free.
-- **Meta-progression and the Constellation Map (see `PROGRESSION.md`):** Constants, insight-gating, the filling-in web of connections.
-- **The Game (the RPG spine, see `PLAYFUL.md`):** the systems that make Numinous compulsively replayable, held to the Vampire Survivors bar (constant earned micro-rewards, an unlock treadmill that begs, sessions with an arc). Built already: XP-from-play to the cap of 42, per-level number lore, LEVEL UP banners, visible locks, the trophy case with silhouettes, seeded dailies, the shared cross-face high-score table. All five owed organs are now built: **the Gauntlet** (one seeded run chaining the games with a combo multiplier and a single posted number, the session arc); **choice-on-level-up** (boons: pick one of three, the loot is a deep cut arriving early, real choice that never gates the math); **juice** (trophies ping the moment they are earned); **streaks** (the daily chain, never scolding); **synergies** (resonances: links light when two deeds rhyme and hand over the connecting line). Exit bar for this workstream: playtesters exhibit unprompted one-more-run behavior, and can name what they are working toward, without the math ever being the toll.
-- **The lore (see `LORE.md`):** the number-altar easter eggs, in-character copy, the two-layer revelation cards, the Codex, and the Terminal (Room 0). The Layer-4 payoff is *designed* here even though it lands at 2.0.
-- **The Studio (see `STUDIO.md`):** its runtime is foundational (built from 0.1, since rooms are Studio programs); the creator-facing surface grows from a graphing-calculator expression mode to a real create-and-share canvas.
-- **The three faces mature (see `INTERFACES.md`):** the full CLI (Tier-B TUI, Studio REPL, benchmark, insights), and the MCP server's `challenge`/verify loop, richer `learn`, and guided prompts, so a **digital mind can genuinely learn, play, and be met as a peer** (see `DIGITAL_MINDS.md`), including the Strange Loop insight-chain.
-- **The quality loops (see `QUALITY.md`):** all six loops live, content eval online, opt-in telemetry, nightly soak and cross-GPU.
-- **Packaging and access:** native builds for all three OSes; accessibility (reduce-motion, colorblind-safe palettes, full mute, keyboard/controller nav); the `numinous://` scheme and `.num` files.
+- Select five flagships spanning geometry, chaos, emergence, chance, and creation.
+- Give each a room-specific click, drag, or held gesture whose visual and sonic
+  consequence follows the mathematics, not a decorative overlay.
+- Run a short formative session after each interaction change and record where
+  the action or consequence is unclear.
+- Establish frame-time and input-latency baselines for those rooms.
 
-**Exit criterion:** open beta holds together as one coherent place; a stranger installs cold, wanders several rooms across multiple Wings, feels awe without reading anything, shares a clip, and comes back; a digital mind can visit and play meaningfully; the quality loops are green.
-**Retires the risk:** "does the whole thing cohere, spread, and hold its quality bar under real use?"
+Owner docs: `ROOMS.md`, `INTERFACES.md`, `SOUND.md`, `QUALITY.md`.
+
+**Exit criterion:** five strangers can discover the main action in each flagship
+without instruction, can describe what changed, and no flagship exceeds its
+declared frame or input-latency budget on the reference machine.
+
+### 0.4 Understanding Alpha
+
+**Goal:** determine whether play produces a durable model, not only a striking frame.
+
+- Complete predict-then-reveal on the flagships, with a prediction or
+  construction before an insight is counted as learned.
+- Test immediate explanation and delayed recall with a small, documented study;
+  report negative or mixed results without reframing them as wins.
+- Add source provenance and an independent math-review checklist to every
+  flagship Reveal.
+- Keep progression subordinate to autonomy: no streak loss, required grind, or
+  reward that gates the mathematical toy.
+
+Owner docs: `PEDAGOGY.md`, `INSIGHTS.md`, `PROGRESSION.md`, `RESEARCH.md`.
+
+**Exit criterion:** the flagship cohort shows a predeclared improvement in at
+least one comprehension or retention measure, with method and sample published;
+every flagship claim has a source and independent review.
+
+### 0.5 Sensory Alpha
+
+**Goal:** create a recognizable audiovisual identity without excluding or overwhelming players.
+
+- Build the HDR glow, persistence, tonemap, and Era post-stack once, then apply
+  it systemically rather than as per-room effects.
+- Route visual and audio output from one semantic event stream so mappings stay
+  congruent and reproducible.
+- Ship reduced motion, photosensitivity-safe defaults, scalable text,
+  color-independent cues, mono audio, and separate music, effect, and room volume.
+- Add perceptual image and spectral audio regression harnesses, plus 60fps and
+  audio-glitch budgets on declared hardware tiers.
+
+Owner docs: `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md`, `QUALITY.md`.
+
+**Exit criterion:** the five flagships pass human visual and audio review,
+automated safety checks, accessibility sessions with affected players, and
+performance budgets on the reference hardware tiers.
+
+### 0.6 Portable Alpha
+
+**Goal:** turn portable architecture into portable evidence.
+
+- Produce installable Windows, macOS, and Linux artifacts from CI with checksums
+  and provenance.
+- Run the app, CLI, audio path, GPU path, persistence, and MCP stdio session on
+  real machines for all three systems, including at least two GPU vendors.
+- Add MSRV, documentation, packaging smoke, and crash-recovery checks.
+- Evaluate major dependency upgrades separately, with migration notes and
+  before-and-after performance evidence.
+
+Owner docs: `ARCHITECTURE.md`, `ENGINEERING.md`, `INTERFACES.md`, `VERIFY.md`.
+
+**Exit criterion:** a clean machine on each supported system installs, launches,
+plays a flagship with sound, saves state, and uninstalls cleanly from a signed or
+otherwise verifiable artifact.
+
+### 0.7 Creator Alpha
+
+**Goal:** close the local make, save, reopen, export, and remix loop.
+
+- Reopen `.num` creations in the app and preserve deterministic state.
+- Add a local gallery, explicit fork/remix, lineage, and a bounded share bundle.
+- Fuzz every parser and require paused preview before opening shared content.
+- Keep all creator content inside the documented capability boundary.
+
+Owner docs: `CREATOR.md`, `STUDIO.md`, `EXTENSIBILITY.md`.
+
+**Exit criterion:** a new user creates a piece, closes the app, reopens it,
+exports it, and gives it to another clean install that reproduces the same result.
+
+### 0.8 Closed Beta
+
+**Goal:** test the whole collection as one place with a diverse invited cohort.
+
+- Run screen-by-screen and room-by-room review across all three faces.
+- Include math-lovers, math-avoiders, children with guardian consent,
+  non-English speakers, disabled players, terminal users, and MCP users.
+- Complete remappable input, keyboard-only navigation, focus handling,
+  accessibility documentation, recovery, and settings persistence.
+- Cut, defer, or deepen weak rooms. Do not add rooms to improve a count.
+
+Owner docs: `QUALITY.md`, `DESIGN.md`, `PLAYTESTERS.md`, `SCOPE.md`.
+
+**Exit criterion:** no known release-blocking accessibility or comprehension
+barrier remains in the tested cohort, and the collection has a coherent start,
+middle, return path, and share path.
+
+### 0.9 Open Beta and Release Candidate
+
+**Goal:** freeze scope and prove release operations under public use.
+
+- Feature-freeze the release candidate; accept fixes, evidence, accessibility,
+  performance, localization, and packaging work only.
+- Run extended soak, dependency and license audit, secret scan, artifact
+  provenance, rollback, save migration, and disaster-recovery drills.
+- Publish known limitations, accessibility features, system requirements, and
+  the support path before asking people to install.
+- Prepare the public invitation: a concise launch post for humans and
+  MCP-capable agents, verifiable install and connection steps, a contributor
+  guide, code of conduct, security policy, issue templates, and a labeled queue
+  of bounded first contributions. Invite participation without implying that
+  the beta is finished or suitable for everyone.
+- Repeat first-session and return-session studies on the exact candidate build.
+
+Owner docs: `QUALITY.md`, `ENGINEERING.md`, `SCOPE.md`, `VERIFY.md`.
+
+**Exit criterion:** the exact candidate artifacts stay green through the soak
+window, no critical issue is open, and observed first-time and return behavior
+meets the predeclared 1.0 thresholds.
 
 ---
 
@@ -131,45 +261,36 @@ The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (July 2026): the honest scorecard
+## Where we stand (reviewed 2026-07-11)
 
-Scored against the nine 1.0 gates below, the build sits at roughly **0.6**:
-the structure is complete (30 catalog rooms across 10 wings plus hidden content,
-11+ games on four shapes of play, the full RPG spine, 29 MCP tools, both music engines live, 941
-tests) and the remaining distance is quality density, not missing systems. The
-needle has moved *within* that 0.6 since the last scoring, the keystone verb is
-now real (predict-then-reveal, Phase A of the Exceptional Path), the Cairn is
-built, and the Chaos & Order flagships put chaos on a tactile readout, but the
-headline holds because the three hardest 1.0 gates are still untouched: **real
-human playtests with strangers, a build proven off Windows, and the HDR glow
-pipeline.** Those three are the distance between 0.6 and 1.0.
+The package remains **0.1.0 pre-alpha**. Its capability breadth is unusually
+large for that number: 30 catalog rooms, 11+ games, six sims, three faces, 29 MCP
+tools, deterministic creation and persistence, and 968 passing tests. Breadth is
+not release evidence. No calibrated method supports assigning completion
+percentages to subjective 1.0 gates, so this scorecard records evidence instead.
 
-| 1.0 gate | Estimate | What is missing |
+| 1.0 gate | Evidence today | Missing evidence or work |
 |---|---|---|
-| Complete coherent collection | 85% | Full Map open boxes (hexaflexagons, Hat tile, more Open Problems) |
-| Every room slaps | 67% | substrate is live and the keystone predict verb landed (eight rooms pose predictions, the chaos trilogy reads its own divergence); room-specific depth, held input, and playtest clarity remain |
-| Full sensory identity | 78% | the visualizer, state-dependent motif tension, era grain beyond phosphor; and the honest finding (July 2026): the documented HDR glow pipeline (bloom, persistence, tonemap) is not yet built, rooms fake glow via additive 8-bit raster (see `SYNESTHESIA.md`) |
-| Three faces genuinely good | 85% | app module refactor continues; play and quiz flow, drawing, overlays, controls, pointer decisions, postcards, and radio cache are split |
-| Meta and lore alive | 92% | subtle and working; the predict keystone and the Cairn (the contribution ethos made a room) are now built |
-| Real creative surface | 68% | Studio works; first CLI `.num` save/open path exists; no app reopen, gallery, fork/remix, or full share loop yet |
-| Rigor provable | 75% | never built off Windows; accessibility not started |
-| Plays like a game | 80% | one-more-run pull needs real human playtests |
-| Beautiful and honest throughout | 75% | frame bugs still surface in live use |
+| Complete coherent collection | 30 catalog rooms across 10 wings are built | A coherent cold start, pacing, keep-or-cut review, and several planned signature rooms |
+| Every room earns its place | Every catalog room has a verb, variation, image, and motif | Stranger discovery, room-specific depth, held input where useful, and per-room human scorecards |
+| Full sensory identity | Four Eras, deterministic synthesis, chiptune, and two GPU fractal paths are built | HDR post-stack, congruency review, accessibility controls, audio separation, and human sensory review |
+| Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
+| Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
+| Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
+| Rigor and care are provable | 968 tests, 90.85% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
+| It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
+| Beautiful and honest throughout | Tracked screenshots and deterministic renders exist | Screen-by-screen review, perceptual regression, representative human judgment, and removal of every unsupported claim |
 
-**The five main things between here and 1.0, in order:**
+**Immediate critical path:**
 
-1. **Deepen playable rooms**, the founder's directive above; feeds the
-   "every room slaps" gate directly. The substrate is live, so the next value
-   is richer room-specific responses, held-input semantics where needed, and
-   playtest-proven clarity.
-2. **Real human playtests**: the exit criterion is empirical (a kid, an
-   adult; "loses an hour, comes back next week"); only the founder and one
-   AI have played. Each session generates the next fix list.
-3. **Cross-platform proof**: one build and run on macOS or Linux; the
-   stacks are portable by design and unverified in practice.
-4. **The visualizer and full Studio save/share**: the two remaining promises; the first CLI `.num` save/open slice is real, but app reopen, gallery, fork/remix, and loop export are still owed.
-5. **Hardening**: app refactor into modules, accessibility pass, era grain,
-   gamepad, Show crossfade.
+1. Publish and pass the 0.1 public gate on the exact commit.
+2. Run the 0.2 hallway test with strangers before adding breadth.
+3. Deepen five flagships for 0.3 using those observations.
+4. Test understanding and retention for 0.4 rather than inferring learning from engagement.
+5. Build sensory identity and accessibility together for 0.5.
+
+Portable packaging, the creator loop, closed beta, and release operations follow
+in 0.6 through 0.9. The version sections above own their detailed order.
 
 ## The Exceptional Path (July 2026): the fan-out synthesis
 

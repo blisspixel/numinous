@@ -1,8 +1,17 @@
 # Numinous Docs Index
 
-The map of the blueprint. Seventeen docs plus this index. Use the reading paths to find your way in, and the **single-source-of-truth map** to keep things tidy: every topic has exactly one home doc that owns it; every other doc links to that home rather than restating it. If you find yourself duplicating a concept, stop and link instead.
+The map of the blueprint. Use the reading paths to find your way in, and the
+**single-source-of-truth map** to keep things tidy: every topic has one home doc
+that owns it; every other doc links to that home rather than restating it. If
+you find yourself duplicating a concept, stop and link instead.
 
-Status: **roughly 0.6 to First Light.** The headless core, the CLI face, the MCP face, the windowed app, GPU and audio adapters, 30 catalog rooms plus hidden content, 6 sims, 11+ games, and the RPG spine are built and green (see `../CHANGELOG.md` and the Progress section of `ROADMAP.md`). These docs remain the plan of record; where code exists, the docs describe the intended full system and the current implementation.
+Status: **0.1.0 pre-alpha.** The headless core, CLI, MCP server, windowed app,
+GPU and audio adapters, 30 catalog rooms plus hidden content, 6 sims, 11+ games,
+and the RPG spine are built. Capability breadth is ahead of release evidence:
+the public CI run, stranger playtests, accessibility work, and real macOS and
+Linux execution remain open. See `../CHANGELOG.md` and the Progress section of
+`ROADMAP.md`. These docs remain the plan of record; Built, Measured, Observed,
+Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 
 ## Reading paths (start by who you are)
 

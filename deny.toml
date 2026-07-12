@@ -4,6 +4,10 @@
 [advisories]
 # Fail on any known RustSec advisory in the dependency tree.
 yanked = "deny"
+ignore = [
+    { id = "RUSTSEC-2026-0194", reason = "quick-xml is used only by wayland-scanner at build time on trusted bundled protocol XML; remove when wayland-scanner adopts quick-xml 0.41 or later" },
+    { id = "RUSTSEC-2026-0195", reason = "quick-xml is used only by wayland-scanner at build time on trusted bundled protocol XML; remove when wayland-scanner adopts quick-xml 0.41 or later" },
+]
 
 [licenses]
 # Allow only permissive, well-understood licenses. Add deliberately, with review.
@@ -13,9 +17,10 @@ allow = [
     "Apache-2.0 WITH LLVM-exception",
     "BSD-2-Clause",
     "BSD-3-Clause",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
     "ISC",
     "Unicode-3.0",
-    "Unicode-DFS-2016",
     "Zlib",
 ]
 confidence-threshold = 0.9

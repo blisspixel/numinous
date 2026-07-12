@@ -7,15 +7,17 @@ members = ["crates/audio", "crates/core", "crates/gpu", "faces/app", "faces/cli"
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-# License expression to review before any public release.
+# Public repository license, matched by LICENSE and the README.
 license = "Apache-2.0"
 rust-version = "1.85" # MSRV floor: edition 2024 requires >= 1.85. Pin exact stable in rust-toolchain.toml.
-repository = "https://github.com/pueo/numinous"
+repository = "https://github.com/blisspixel/numinous"
 
 [workspace.dependencies]
 # Internal crates.
-numinous-core = { path = "crates/core" }
-# Third-party (pin to latest GA at kickoff; see docs/ENGINEERING.md).
+numinous-core = { version = "0.1.0", path = "crates/core" }
+numinous-audio = { version = "0.1.0", path = "crates/audio" }
+numinous-gpu = { version = "0.1.0", path = "crates/gpu" }
+# Shared third-party versions; Cargo.lock pins the resolved public baseline.
 clap = { version = "4", features = ["derive"] }
 serde_json = "1"
 

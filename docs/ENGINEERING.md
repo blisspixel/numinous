@@ -1,26 +1,33 @@
 # Engineering Standards & Code Quality
 
-The bar: **code a PhD CS professor would be proud of.** Every decision defensible from first principles, no cargo-culting, correctness and clarity and simplicity over cleverness. The rigor has to be visible in the code the way it is visible in the math (see `VISION.md` on PhD-real rigor). This doc is the standing engineering contract; the automated enforcement of it lives in `QUALITY.md`.
+The aim is code that can be defended from first principles: correctness,
+clarity, and simplicity over cleverness. That is an aspiration, not a claim of
+perfection. This document separates gates enforced today from hardening work
+that still has to earn its place. The automated enforcement that exists lives
+in `QUALITY.md` and `.github/workflows/ci.yml`.
 
-## Toolchain and versions (latest GA as of July 2026)
+## Toolchain and versions (verified 2026-07-11)
 
-Pin these exactly; **re-verify the exact current stable at project kickoff**, since the ecosystem moves and a few of these will have advanced by the time 0.1 starts.
+The current baseline is deliberate and green. A newer major release is a review
+candidate, not an automatic upgrade. Patch updates within the lockfile are kept
+current through Dependabot and must pass the full gate.
 
-| Component | Version (July 2026 GA) | Notes |
+| Component | Enforced baseline | Notes |
 | --- | --- | --- |
 | Rust edition | **2024** | The current edition; use it from the first commit. |
-| Rust toolchain | **latest stable (1.9x series)** | Pin exactly in `rust-toolchain.toml`; this is also the MSRV floor. Verify the exact current stable at kickoff. |
-| `wgpu` | **29.x** | The portable GPU stack (Vulkan/Metal/DX12). See `ARCHITECTURE.md`. |
-| `bevy` (if used) | **0.19** | Only if we take the engine route; decided by the 0.1 spike. Bevy tracks wgpu, so versions move together. |
-| `cpal`, `fundsp` | latest GA | Native audio I/O + DSP (see `SOUND.md`, `MUSIC.md`). |
-| Test runner | **cargo test** today; **cargo-nextest** target | Current CI uses stock Cargo for zero setup; nextest remains the speed target. |
-| Property testing | **proptest** (1.x) | Invariants and metamorphic tests (`QUALITY.md`). |
-| Snapshot testing | **insta** (1.x) | Deterministic output snapshots. |
-| Benchmarks | **criterion** | Hot-path perf, regression tracking. |
-| Supply chain | **cargo-deny**, **cargo-audit**, **cargo-auditable** | Policy, RustSec advisories, auditable shipped binaries. |
+| Rust toolchain | **1.96.0** | Exact developer and CI toolchain. The declared MSRV remains 1.85 and needs its own CI job before compatibility is claimed. |
+| `wgpu` | **29.x** | Current green GPU stack. Version 30 is an evaluated migration, not a blind launch-day bump. |
+| `winit`, `softbuffer` | **0.30.x, 0.4.x** | Current native window and software presentation path. |
+| `cpal` | **0.16.x** | Current native audio I/O. DSP and chiptune synthesis are implemented in the workspace without `fundsp`. |
+| Test runner | **cargo test** | Enforced today. `cargo-nextest` is a possible speed improvement, not a current dependency. |
+| Supply chain | **cargo-deny** | Enforced in CI for advisories, licenses, bans, and sources. `cargo-audit` and `cargo-auditable` remain release-hardening candidates. |
 | Coverage | **cargo-llvm-cov** | Tracked, not fetishized (see Testing). |
 
-**Version hygiene:** commit `Cargo.lock`, build with `--locked` in CI, centralize versions in `[workspace.dependencies]`, and keep pins current with a controlled update cadence (renovate/dependabot into CI, never blind-bumped).
+**Version hygiene:** commit `Cargo.lock`, build with `--locked` in CI,
+centralize shared versions in `[workspace.dependencies]`, and update through
+reviewed pull requests. As of this review, stable major upgrades to evaluate
+separately include `wgpu` 30, `cpal` 0.18, and `ureq` 3. `winit` 0.31 is still a
+beta and is not a release baseline.
 
 ## Formatting and linting (zero-warning policy)
 
@@ -34,13 +41,17 @@ Pin these exactly; **re-verify the exact current stable at project kickoff**, si
 - **Make illegal states unrepresentable.** Lean on the type system: newtypes over raw primitives (no primitive obsession, especially for units, ids, seeds, and mathematical quantities), enums for state, `#[non_exhaustive]` on public enums/structs where forward-compat matters.
 - **All public types derive `Debug`** (and `Clone`/`PartialEq`/`Eq`/`Hash` where sensible). Follow the Rust API Guidelines for naming and common-trait implementation.
 - **Errors are typed at library boundaries, contextual at the app.** Library crates return concrete error enums (`thiserror`-style); binaries/faces use a context-carrying error (`anyhow`/`eyre`-style). 
-- **No `unwrap`/`expect` in production paths.** A clippy lint bans them outside tests; the only exceptions are provably-infallible calls, each annotated with a `// SAFETY of unwrap:`-style justification. Panics are reserved for genuine, documented invariant violations, never for expected failure.
+- **Avoid `unwrap` and `expect` in production paths.** Expected failures return
+  errors. A workspace-wide lint does not enforce this yet, so promoting the
+  relevant Clippy lints requires an inventory and deliberate exceptions first.
 - **Prefer expressions, iterators, and exhaustive matches** over imperative sprawl; small pure functions; clear ownership; borrow over clone unless clarity wins.
 
 ## Unsafe-code policy
 
 - **`#![forbid(unsafe_code)]` by default in every crate.** Because `wgpu`, `cpal`, and friends encapsulate the FFI, the overwhelming majority of our code should be 100% safe.
-- **Any exception is a deliberate, isolated event:** confined to a small, clearly named module that opts back in with a documented reason; every `unsafe` block carries a `// SAFETY:` comment proving the invariant it upholds; it gets extra review and, where feasible, **Miri** in CI. Unsafe is never casual.
+- The current workspace policy permits no local exception. A future need for
+  unsafe code would require changing the workspace policy in a separately
+  reviewed architectural decision, with focused tests and Miri where applicable.
 
 ## Workspace and module architecture
 
@@ -50,7 +61,8 @@ Pin these exactly; **re-verify the exact current stable at project kickoff**, si
 
 ## Documentation standards
 
-- **`#![deny(missing_docs)]` on library crates.** Every public item has a doc comment; every crate has a `//!` overview.
+- `numinous-core` denies missing documentation. The other library crates inherit
+  the workspace warning today. Promoting them to deny is unfinished hardening.
 - **Doctests are real tests** and run in CI; examples must compile and pass.
 - **`cargo doc` builds clean under `-D warnings`;** broken intra-doc links should fail CI once the doc gate is added.
 - **Architecture Decision Records (ADRs)** for consequential choices (the stack, Bevy-vs-bespoke, the Studio DSL, the sandbox model). A decision without a recorded rationale is a future argument waiting to happen.
@@ -58,8 +70,12 @@ Pin these exactly; **re-verify the exact current stable at project kickoff**, si
 
 ## Testing (the enforcement of `QUALITY.md`)
 
-- **Runner:** `cargo test --workspace` is the current enforced runner. Move to `cargo-nextest` when the repo has the dependency and CI time justifies it.
-- **Layers:** unit + integration tests; **proptest** for invariants and metamorphic properties; **insta** snapshots for deterministic output; **golden-reference** tests for GPU math (the-math-is-the-oracle, `QUALITY.md`); **criterion** for benchmarks. These *are* the commit-loop in `QUALITY.md`.
+- **Runner:** `cargo test --workspace` is the current enforced runner. Consider
+  `cargo-nextest` only when measured CI time justifies another tool.
+- **Layers enforced now:** unit and integration tests, deterministic fixtures,
+  direct invariants, hostile-input tests, and end-to-end stdio coverage.
+  Property-test, snapshot, GPU-golden, and benchmark harnesses are roadmap work
+  until their dependencies and workflows exist in the repository.
 - **Determinism is mandatory:** seeded RNG only, never ambient randomness or wall-clock time in logic; same seed, same result (so shares and tests reproduce exactly).
 - **Coverage** is tracked with `cargo-llvm-cov` and read as a *smell detector*, not a target. The real metric is meaningful assertions on real behavior, not a percentage. We do not write tests to move a number.
 
@@ -71,8 +87,10 @@ Pin these exactly; **re-verify the exact current stable at project kickoff**, si
 
 ## Supply chain and dependency hygiene
 
-- **`cargo-deny`** enforces license policy, banned/duplicate crates, and trusted sources; **`cargo-audit`** checks the RustSec advisory database. Both run on every push and block on real findings (tuned with `--deny` severities so noise does not).
-- **`cargo-auditable`** embeds the dependency manifest in shipped binaries so they can be audited post-hoc.
+- **`cargo-deny`** enforces advisory, license, ban, and source policy on every
+  push. The local release gate runs it when installed; CI never skips it.
+- **`cargo-audit`** as a separate defense and **`cargo-auditable`** release
+  binaries are planned hardening. They are not current gates.
 - **Dependencies are minimal and vetted.** Each new dependency is justified in review; prefer well-maintained, widely-used crates; give extra scrutiny to unsafe-heavy deps (a CVE in an unsafe-heavy crate is more urgent than the same score in pure-safe code).
 
 ## CI gates (the merge bar)
@@ -87,15 +105,16 @@ Nothing merges red. On every PR, blocking:
 6. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
 7. `cargo build --workspace --locked` on macOS, Linux, and Windows
 
-Hardening targets not yet enforced in CI: `cargo doc --workspace --no-deps` under `-D warnings`, `cargo audit`, `cargo nextest`, the visual/audio regression loops, and real-hardware soak/performance jobs.
+Hardening targets not yet enforced in CI: MSRV, `cargo doc --workspace --no-deps`
+under `-D warnings`, `cargo audit`, release artifact provenance, the visual and
+audio regression loops, and real-hardware soak and performance jobs.
 
 The nightly loop adds soak/perf and cross-GPU differential tests (`QUALITY.md`).
 
 ## Local enforcement (the pre-commit hook)
 
-CI is the merge bar, but this repository is developed local-first and (today)
-without a shared remote, so the deterministic gate that actually fires is a
-tracked pre-commit hook. Enable it once per clone:
+CI is the merge bar. The tracked pre-commit hook provides a faster local gate.
+Enable it once per clone:
 
 ```
 git config core.hooksPath scripts/hooks
@@ -121,9 +140,16 @@ wired, correct hook closes that gap.
 
 - **Small, focused PRs**, one concern each; a clear, imperative commit subject and a body that explains the why.
 - **Clean commit messages and PR descriptions with no tool/AI attribution** (project rule).
-- **Every change is reviewed;** math-touching changes additionally pass the math-correctness gate (human-mathematician sign-off, `QUALITY.md`).
-- **Branch protection:** green CI required to merge; `Cargo.lock` committed and consistent.
+- **Review target:** math-touching changes need independent mathematical review
+  before 1.0. That process is not yet staffed, so current claims remain bounded
+  to tests and cited sources.
+- **Branch protection target:** require green CI on the public default branch.
+  Repository settings, not this document, are the evidence that it is active.
 
 ## The professor's test (the ethos, in one paragraph)
 
-Could you stand at a whiteboard and defend every non-obvious line from first principles? Is the simplest thing that is correct also what shipped? Does the type system make the wrong thing impossible rather than merely discouraged? Is every public thing documented, every claim tested, every dependency justified, every unsafe block proven? If yes, a PhD CS professor would be proud, and, more to the point, a mind that may one day read this code and be far smarter than us (see `DIGITAL_MINDS.md`) would find nothing to be embarrassed by.
+Could you stand at a whiteboard and defend every non-obvious line from first
+principles? Is the simplest correct thing what shipped? Does the type system
+prevent mistakes where practical? Is every public claim backed by a test,
+measurement, source, or an honest label saying it is still a hypothesis? That is
+the standard to keep working toward.
