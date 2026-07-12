@@ -43,6 +43,7 @@ Status: **roughly 0.6 to First Light.** The headless core, the CLI face, the MCP
 - `INTERFACES.md` the three faces over a headless core (App, CLI, MCP) and the UX we are going for in each.
 - `DIGITAL_MINDS.md` designing Numinous to be fun, thought-provoking, and connecting for digital minds treated as peers.
 - `PLAYFUL.md` the games and the Studio (Guess the Shape, Shape to Function, the high-Wolfram ethos) across every face.
+- `ARCADE.md` the Munch arcade design: the muncher, the Vexations, the poke trait, and the order of work.
 - `PLAYING.md` the player's manual: instructions for humans, for agents, and for digital consciousnesses.
 - `ROSETTA.md` instructions for any mind, in any language, or none: the three tiers of visitor (English, another human language, no shared language at all) and the math-only bootstrap for a mind that shares only mathematics.
 - `AGENT_PLAY.md` the agent-gaming landscape (OpenClaw, gaming MCP servers, text benchmarks) and the design rules that make Numinous first-class for digital minds.
@@ -53,6 +54,8 @@ Status: **roughly 0.6 to First Light.** The headless core, the CLI face, the MCP
 - `QUALITY.md` testing and fun-evals: the six quality loops, the fun/awe rubric, QoL, "the math is the oracle."
 - `PLAYTESTS.md` the playtest archive: the voices from the diverse-persona troupes (human archetypes and invented alien minds), the experiences in their own words, the convergences, and the moments worth remembering.
 - `PLAYTESTERS.md` the casting pool: forty-two playtester personas with backstories (Norm the normie, a barefoot kid, returned geniuses, living experts, digital minds, and invented beings), spanning ages, languages, understanding levels, and kinds of mind, to draw from for testing rounds.
+- `REVIEW.md` the July 2026 external review: the grades, the three-products insight (instrument, Studio, progression), and the near-term stack it set.
+- `PANEL.md` a working review session: composed minds (plus a real cold-start-AI seat) reading the build as it stood for what is missing, not what it has.
 - `ENGINEERING.md` code-quality standards: pinned July-2026 GA versions, lint/test/unsafe/doc policy, CI gates.
 
 ## Single source of truth (the anti-redundancy map)

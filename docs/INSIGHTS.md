@@ -97,6 +97,6 @@ Completing a chain is a Seeker's real reward, and a natural place to hang a Cons
 
 ## Writing voice (do and do not)
 
-- Do: "You drew a heart with the two-times table. That curve is the exact edge of the Mandelbrot set."
+- Do: "At the two-times table, you draw a heart. That curve is the exact edge of the Mandelbrot set." (Condition the claim on the state, "at the two-times table," so it stays true when the dial is elsewhere.)
 - Do not: "The cardioid r = 1 - cos(theta) arises in the modular multiplication mapping and also bounds the main cardioid of the Mandelbrot set." (True, but it is a textbook, not a gasp.)
 - Lead with the *feeling*, name the math second. Use "you," present tense, plain words. Let the fact be the punchline. End on the open door.
