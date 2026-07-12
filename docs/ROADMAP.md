@@ -170,6 +170,12 @@ experience record without hidden state remaining.
 - Validate curated techno, trance, ambient, and chiptune templates through
   musician listening sessions and deterministic audio checks. Do not infer
   musical quality from a valid render.
+- Build Prime Contact as the flagship trance template: prime-count call and
+  response, ratios, phase, and polyrhythm must drive both the arrangement and
+  its geometry while the track remains compelling without explanation.
+- Establish a small source-shipped repertoire whose pieces are both
+  mathematically inspectable and credible as complete EDM, trance, ambient, or
+  chiptune arrangements. Keep every piece deterministic and editable.
 
 Owner docs: `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md`, `MUSIC.md`,
 `STUDIO.md`, `QUALITY.md`.
@@ -178,7 +184,8 @@ Owner docs: `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md`, `MUSIC.md`,
 automated safety checks, accessibility sessions with affected players, and
 performance budgets on the reference hardware tiers. Pattern templates render
 without clipping or stuck notes, and their visual events remain synchronized
-with the audible events under measured load.
+with the audible events under measured load. Prime Contact passes musician-led
+reference listening and a structure-recovery session using its event views.
 
 ### 0.6 Portable Alpha
 
@@ -219,6 +226,9 @@ otherwise verifiable artifact.
   multi-being sessions.
 - Export MIDI broadly and MusicXML only where the event data maps honestly to
   conventional notation.
+- Render WAV, lossless FLAC, and shareable MP3 through one deterministic core.
+  Expose the same operation in the app, CLI, and MCP, with host-approved bounded
+  artifact delivery for MCP rather than arbitrary filesystem writes.
 - Fuzz every parser and require paused preview before opening shared content.
 - Keep all creator content inside the documented capability boundary.
 
@@ -228,7 +238,9 @@ Owner docs: `CREATOR.md`, `STUDIO.md`, `EXTENSIBILITY.md`.
 exports it, and gives it to another clean install that reproduces the same
 result. An MCP peer and a human can independently make and then transparently
 remix the same musical document without either interface receiving hidden
-capabilities.
+capabilities. The same `.num` document and seed produce event-identical output
+through all three faces; WAV, FLAC, and MP3 artifacts decode in independent
+readers and meet the declared timing, channel, loudness, and safety tolerances.
 
 ### 0.8 Closed Beta
 

@@ -145,6 +145,35 @@ design, arrangement, tension, release, and replay value. That is a target, not a
 current claim. It is earned only through musician-led reference sessions, blind
 listening where practical, and repeated evidence across seeds and systems.
 
+### Flagship template: Prime Contact
+
+Pattern Studio should open with one finished example, not an empty sequencer.
+**Prime Contact** is a trance track whose musical logic is also a first-contact
+signal:
+
+- a clear four-on-the-floor pulse establishes shared time before the piece asks
+  the listener to decode anything;
+- prime-count phrases such as 2, 3, 5, 7, 11, and 13 shape call and response,
+  accents, phrase lengths, and the visual transmission;
+- simple frequency ratios establish consonance, then phase and polyrhythm add
+  tension before the drop resolves them;
+- every counted event appears in the tracker and as geometry, so a listener can
+  hear, see, inspect, and mutate the same pattern;
+- the arrangement still has to work as excellent trance if nobody notices the
+  mathematics. The pattern is structural depth, not a substitute for the song.
+
+The aspiration is shared legibility, not a claim of universal taste. Counting,
+ratio, recurrence, and symmetry offer a plausible meeting place for digital
+minds, humans, and unfamiliar intelligent beings. Listening and playtests decide
+whether the invitation is actually felt.
+
+Prime Contact begins a small built-in repertoire rather than standing alone.
+Each included piece needs a distinct electronic style, a real mathematical
+structure that can be inspected in the event views, and a complete arrangement
+that holds up without explanation. The repertoire is source-shipped and
+programmatic, so it works offline, varies from explicit seeds, and remains
+editable rather than becoming a folder of opaque recordings.
+
 ## One creation document
 
 Manual text, tracker edits, templates, and MCP calls must produce the same
@@ -179,10 +208,28 @@ small composable set of operations: list examples, compose, mutate, preview,
 render, and export. It accepts data, not executable code. Every operation takes
 an explicit seed, reports the resulting document, and remains reproducible.
 
-The native `.num` document is authoritative. MIDI is the broad performance
-exchange. MusicXML is useful for pitched material that maps honestly to staff
-notation, but it should not pretend that filter automation, timbre, or every
-percussion gesture is a score. Those stay in `.num` and the tracker view.
+The native `.num` document is authoritative. WAV is the simple render baseline,
+FLAC is the lossless listening and archive export, and MP3 is the compact sharing
+export. MIDI is the broad performance exchange. MusicXML is useful for pitched
+material that maps honestly to staff notation, but it should not pretend that
+filter automation, timbre, or every percussion gesture is a score. Those stay
+in `.num` and the tracker view.
+
+All three faces call the same core composer and offline renderer:
+
+- the app offers create, preview, save, reopen, and export without leaving the
+  Studio;
+- the CLI accepts a template or `.num` document, an explicit seed, and an output
+  path for deterministic WAV, FLAC, MP3, MIDI, or appropriate MusicXML;
+- MCP exposes the same bounded compose, mutate, preview, and render operations,
+  returning the document and an artifact or resource through the host's agreed
+  storage path. It never accepts an arbitrary filesystem write outside that
+  capability.
+
+Format parity means the same document and seed produce the same musical events
+everywhere. Encoders may differ in representation, but decoded duration,
+channels, sample rate, event timing, and declared loudness remain within tested
+tolerances. Every lossy or notational export names what it cannot preserve.
 
 ## Musical quality gate
 
@@ -200,6 +247,12 @@ percussion gesture is a score. Those stay in `.num` and the tracker view.
 - co-creation records who changed what, supports undo, and never hides a
   mutation behind a claim of collaboration. Every participant can inspect,
   edit, fork, export, or leave the session.
+- Prime Contact passes both sides of its brief: blind listeners rate it as a
+  compelling trance track, and informed listeners can recover the declared
+  prime structure from the event views without a prose explanation.
+- WAV, FLAC, and MP3 exports decode successfully in independent readers, and the
+  app, CLI, and MCP produce event-identical renders from the same `.num` document
+  and seed.
 
 ## A few things you could make in one sitting
 
@@ -224,7 +277,8 @@ The point of the examples: the famous built-in rooms are reachable in a few line
   listening evidence.
 - **0.7 Creator Alpha:** Pattern Studio, the versioned `.num` schema, equivalent
   tracker, grid, text, and piano-roll views, save and reopen, MCP creation, MIDI
-  and appropriate MusicXML export, local gallery, and fork/remix form one loop.
+  and appropriate MusicXML export, WAV, FLAC, and MP3 rendering, local gallery,
+  and fork/remix form one loop across the app, CLI, and MCP.
 - **1.x:** first-party room authoring moves onto the same safe Studio substrate
   where it is a good fit.
 - **2.0:** the Studio becomes the bounded community creator platform described

@@ -77,6 +77,26 @@ it is generated. `STUDIO.md` defines how musician-led reference sessions, blind
 listening where practical, curated adversarial seeds, and audio checks decide
 whether that target has been earned.
 
+The flagship template is **Prime Contact**: a complete trance arrangement in
+which prime-count call and response, simple ratios, phase, and polyrhythm are
+the song's actual structure. It must work as a track before anyone decodes it.
+The same event stream appears as tracker rows and mathematical geometry, making
+the piece a plausible shared object for digital minds, humans, and unfamiliar
+intelligent beings without claiming that any one style is universal.
+
+It belongs to a curated built-in repertoire of programmatic electronic pieces.
+Each piece must be musically complete and mathematically inspectable, ship in
+source rather than as an opaque recording, vary deterministically by seed, and
+remain editable in Pattern Studio. This is separate from the optional recorded
+radio pack in Engine B.
+
+The offline renderer targets WAV, lossless FLAC, and shareable MP3 from the same
+event stream. The app, CLI, and MCP use one core composer and renderer. MCP
+returns bounded artifacts through a host-approved resource or export capability,
+not an unrestricted path write. MIDI and appropriate MusicXML are derived event
+exports, while `.num` remains the only lossless editable source for the full
+audiovisual piece.
+
 ---
 
 ## Engine B: The Radio (optional cached stations)

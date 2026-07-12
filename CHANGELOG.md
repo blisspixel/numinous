@@ -15,6 +15,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   Strudel code or compatibility layer. Its stated quality target is electronic
   music that holds up beside excellent human-made work under musician-led and
   blind listening where practical, not novelty credit for generated output.
+  Prime Contact is the flagship template and benchmark: a complete trance track
+  whose prime-count call and response, ratios, phase, and polyrhythm also form a
+  visible and inspectable first-contact signal.
+  A small programmatic repertoire follows the same dual bar: mathematically real
+  and musically complete. The 0.7 contract now gives the app, CLI, and MCP one
+  deterministic composer and renderer, editable `.num` source, WAV, FLAC, and
+  MP3 audio, MIDI, and honest MusicXML where the events support it.
   The roadmap places the tactile entry in 0.3, sensory and musical evidence in
   0.5, and the complete local creator loop in 0.7. The radio audit also confirms
   that Engine A ships in source while the 42-track local cache remains blocked
