@@ -152,10 +152,28 @@ Do not commit the current WAV cache or attach it to a public release yet.
   cannot be established, replace the cache with commissioned, contributor-owned,
   public-domain, or otherwise clearly licensed recordings.
 
+When a rights-cleared pack exists, publish it as a versioned GitHub Release
+asset, not ordinary Git history. The app offers an explicit install action that
+shows the download size and asset license, fetches once, verifies a signed
+manifest and SHA-256 checksum for every file, and unpacks once into the bounded
+radio cache. It does not make a hidden network request or unpack on every launch.
+Playback decodes compressed FLAC or MP3 directly. The pack supports repair,
+removal, and an offline fallback to Engine A.
+
+An archive is packaging, not a rights workaround. ZIP provides little additional
+compression for FLAC or MP3, and converting the current WAV cache does not change
+the permissions attached to those recordings. GitHub Pro can accommodate the
+technical storage through LFS, but Release assets are the cleaner distribution
+boundary for an optional soundtrack.
+
 Primary terms reviewed 12 July 2026:
 [Music Model-Specific Terms](https://elevenlabs.io/eleven-music-model-specific-terms),
 [Music API Terms](https://elevenlabs.io/music-api-terms), and
 [publishing guidance](https://help.elevenlabs.io/hc/en-us/articles/13313564601361-Can-I-publish-the-content-I-generate-on-the-platform).
+GitHub packaging guidance:
+[large files](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github),
+[Git LFS](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-git-large-file-storage), and
+[releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases).
 
 ### The stations (launch set)
 - **NUMINA FM: EDM.** Festival-grade four-on-the-floor for the Watch mode and performance sessions.

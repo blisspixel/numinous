@@ -196,8 +196,10 @@ reference listening and a structure-recovery session using its event views.
 - Define the public radio asset path without bloating Git history: verify each
   track's provenance and distribution rights, replace any uncleared recording,
   encode a representative optional pack, publish it as a checksummed release
-  asset, and test clean-install download, offline fallback, and removal. Engine A
-  remains the source-shipped default.
+  asset, and test explicit clean-install download, signed-manifest and per-file
+  verification, one-time cache installation, repair, offline fallback, and
+  removal. Play compressed assets directly rather than unpacking WAV on each
+  launch. Engine A remains the source-shipped default.
 - Run the app, CLI, audio path, GPU path, persistence, and MCP stdio session on
   real machines for all three systems, including at least two GPU vendors.
 - Add MSRV, documentation, packaging smoke, and crash-recovery checks.

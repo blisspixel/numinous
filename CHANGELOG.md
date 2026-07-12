@@ -22,6 +22,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   and musically complete. The 0.7 contract now gives the app, CLI, and MCP one
   deterministic composer and renderer, editable `.num` source, WAV, FLAC, and
   MP3 audio, MIDI, and honest MusicXML where the events support it.
+  A future rights-cleared radio pack is specified as an optional checksummed
+  GitHub Release asset with an explicit one-time install, signed manifest,
+  compressed playback, repair, removal, and offline fallback. Archiving the
+  current cache is correctly treated as packaging, not a change in its rights.
   The roadmap places the tactile entry in 0.3, sensory and musical evidence in
   0.5, and the complete local creator loop in 0.7. The radio audit also confirms
   that Engine A ships in source while the 42-track local cache remains blocked
