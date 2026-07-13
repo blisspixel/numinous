@@ -5,7 +5,7 @@
 //! the same room, HUD, overlay, and game drawing modules as the live app.
 //! Run: `cargo run -p numinous-app --example screens`.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, VecDeque};
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
@@ -34,6 +34,42 @@ const OUTPUT: &str = "renders/qa-app";
 const DEFAULT_SIZE: (usize, usize) = (900, 700);
 const ROOM_SIZE: (usize, usize) = (640, 480);
 const SMALL_SIZE: (usize, usize) = (360, 240);
+const MIN_CHANGED_PIXELS: usize = 100;
+const MIN_CHANGED_SUPPORT_PERMILLE: usize = 10;
+const MIN_SUPPORT_DENSITY_PERMILLE: usize = 1;
+const SPATIAL_TILE_SIZE: usize = 32;
+const MIN_COHERENT_TILES: usize = 2;
+const MIN_MEAN_CHANNEL_DELTA: usize = 4;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum InteractionKind {
+    Boundary,
+    Click,
+    DragRelease,
+    Repeated,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum SemanticOracle {
+    ActionContains(&'static str),
+    StatusChanges,
+}
+
+struct RoomScenario {
+    kind: InteractionKind,
+    immediate: Vec<RoomInput>,
+    delayed_phase: f64,
+    delayed: Vec<RoomInput>,
+    semantic: SemanticOracle,
+}
+
+#[derive(Debug)]
+struct Difference {
+    changed: usize,
+    support: usize,
+    largest_tile_cluster: usize,
+    mean_channel_delta: usize,
+}
 
 fn save(raster: &Raster, relative: &str, manifest: &mut Vec<String>) {
     assert_eq!(
@@ -162,13 +198,508 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
     expected
 }
 
-fn changed_pixels(before: &Raster, after: &Raster) -> usize {
-    before
-        .to_rgba()
+fn difference(before: &Raster, after: &Raster) -> Difference {
+    assert_eq!(
+        (before.width(), before.height()),
+        (after.width(), after.height()),
+        "difference inputs have matching dimensions"
+    );
+    let before_rgba = before.to_rgba();
+    let after_rgba = after.to_rgba();
+    let width = before.width();
+    let height = before.height();
+    let mut changed = 0;
+    let mut changed_mask = vec![false; width.saturating_mul(height)];
+    let mut channel_delta = 0_usize;
+    let mut min_x = width;
+    let mut max_x = 0;
+    let mut min_y = before.height();
+    let mut max_y = 0;
+    for (index, (left, right)) in before_rgba
         .chunks_exact(4)
-        .zip(after.to_rgba().chunks_exact(4))
-        .filter(|(left, right)| left != right)
-        .count()
+        .zip(after_rgba.chunks_exact(4))
+        .enumerate()
+    {
+        if left == right {
+            continue;
+        }
+        changed += 1;
+        changed_mask[index] = true;
+        let x = index % width;
+        let y = index / width;
+        min_x = min_x.min(x);
+        max_x = max_x.max(x);
+        min_y = min_y.min(y);
+        max_y = max_y.max(y);
+        channel_delta += left[..3]
+            .iter()
+            .zip(&right[..3])
+            .map(|(&a, &b)| usize::from(a.abs_diff(b)))
+            .sum::<usize>();
+    }
+    Difference {
+        changed,
+        support: if changed == 0 {
+            0
+        } else {
+            (max_x - min_x + 1) * (max_y - min_y + 1)
+        },
+        largest_tile_cluster: largest_tile_cluster(&changed_mask, width, height),
+        mean_channel_delta: channel_delta / changed.max(1) / 3,
+    }
+}
+
+fn largest_tile_cluster(changed: &[bool], width: usize, height: usize) -> usize {
+    let tile_width = width.div_ceil(SPATIAL_TILE_SIZE);
+    let tile_height = height.div_ceil(SPATIAL_TILE_SIZE);
+    let mut occupied = vec![false; tile_width.saturating_mul(tile_height)];
+    for (index, &is_changed) in changed.iter().enumerate() {
+        if is_changed {
+            let x = index % width;
+            let y = index / width;
+            occupied[(y / SPATIAL_TILE_SIZE) * tile_width + x / SPATIAL_TILE_SIZE] = true;
+        }
+    }
+    let mut visited = vec![false; occupied.len()];
+    let mut largest = 0;
+    for start in 0..occupied.len() {
+        if !occupied[start] || visited[start] {
+            continue;
+        }
+        let mut queue = VecDeque::from([start]);
+        visited[start] = true;
+        let mut size = 0;
+        while let Some(index) = queue.pop_front() {
+            size += 1;
+            let x = index % tile_width;
+            let y = index / tile_width;
+            let x_min = x.saturating_sub(1);
+            let x_max = (x + 1).min(tile_width.saturating_sub(1));
+            let y_min = y.saturating_sub(1);
+            let y_max = (y + 1).min(tile_height.saturating_sub(1));
+            for neighbor_y in y_min..=y_max {
+                for neighbor_x in x_min..=x_max {
+                    let neighbor = neighbor_y * tile_width + neighbor_x;
+                    if occupied[neighbor] && !visited[neighbor] {
+                        visited[neighbor] = true;
+                        queue.push_back(neighbor);
+                    }
+                }
+            }
+        }
+        largest = largest.max(size);
+    }
+    largest
+}
+
+fn assert_legible(id: &str, state: &str, before: &Raster, after: &Raster) {
+    let diff = difference(before, after);
+    let area = before.width() * before.height();
+    assert!(
+        diff.changed >= MIN_CHANGED_PIXELS,
+        "{id} {state} response changes only {} pixels",
+        diff.changed
+    );
+    assert!(
+        diff.support * 1_000 >= area * MIN_CHANGED_SUPPORT_PERMILLE,
+        "{id} {state} response is confined to {} of {area} pixels",
+        diff.support
+    );
+    assert!(
+        diff.changed * 1_000 >= diff.support * MIN_SUPPORT_DENSITY_PERMILLE,
+        "{id} {state} response scatters only {} changed pixels across {} supported pixels",
+        diff.changed,
+        diff.support
+    );
+    assert!(
+        diff.largest_tile_cluster >= MIN_COHERENT_TILES,
+        "{id} {state} response has no coherent cluster larger than {} spatial tile(s)",
+        diff.largest_tile_cluster
+    );
+    assert!(
+        diff.mean_channel_delta >= MIN_MEAN_CHANNEL_DELTA,
+        "{id} {state} response mean channel delta {} is too faint",
+        diff.mean_channel_delta
+    );
+}
+
+fn down(x: f64, y: f64, t: f64) -> RoomInput {
+    RoomInput::PointerDown { x, y, t }
+}
+
+fn moved(x: f64, y: f64, t: f64) -> RoomInput {
+    RoomInput::PointerMove { x, y, t }
+}
+
+fn up(x: f64, y: f64, t: f64) -> RoomInput {
+    RoomInput::PointerUp { x, y, t }
+}
+
+fn click(x: f64, y: f64) -> Vec<RoomInput> {
+    vec![down(x, y, 0.0), up(x, y, 0.06)]
+}
+
+fn drag(from: (f64, f64), through: (f64, f64), to: (f64, f64)) -> Vec<RoomInput> {
+    vec![
+        down(from.0, from.1, 0.0),
+        moved(through.0, through.1, 0.08),
+        moved(to.0, to.1, 0.14),
+        up(to.0, to.1, 0.18),
+    ]
+}
+
+fn repeated(points: &[(f64, f64)]) -> Vec<RoomInput> {
+    let mut inputs = Vec::with_capacity(points.len() * 2);
+    for (index, &(x, y)) in points.iter().enumerate() {
+        let t = index as f64 * 0.05;
+        inputs.push(down(x, y, t));
+        inputs.push(up(x, y, t + 0.025));
+    }
+    inputs
+}
+
+fn scenario(
+    kind: InteractionKind,
+    immediate_at: (f64, f64),
+    delayed_phase: f64,
+    delayed: Vec<RoomInput>,
+    semantic: SemanticOracle,
+) -> RoomScenario {
+    RoomScenario {
+        kind,
+        immediate: vec![down(immediate_at.0, immediate_at.1, 0.0)],
+        delayed_phase,
+        delayed,
+        semantic,
+    }
+}
+
+fn with_immediate(mut scenario: RoomScenario, immediate: Vec<RoomInput>) -> RoomScenario {
+    scenario.immediate = immediate;
+    scenario
+}
+
+fn room_scenario(id: &str) -> RoomScenario {
+    use InteractionKind::{Boundary, Click, DragRelease, Repeated};
+    use SemanticOracle::{ActionContains, StatusChanges};
+    match id {
+        "times-tables" => scenario(
+            DragRelease,
+            (0.18, 0.50),
+            0.35,
+            drag((0.18, 0.50), (0.52, 0.50), (0.88, 0.50)),
+            StatusChanges,
+        ),
+        "cellular-automata" => scenario(
+            Repeated,
+            (0.22, 0.30),
+            0.35,
+            repeated(&[(0.22, 0.30), (0.50, 0.46), (0.78, 0.64)]),
+            ActionContains("FLIP"),
+        ),
+        "chaos-game" => scenario(
+            Boundary,
+            (0.04, 0.88),
+            0.40,
+            repeated(&[(0.04, 0.88), (0.50, 0.04), (0.96, 0.88)]),
+            ActionContains("CORNER"),
+        ),
+        "golden-angle" => scenario(
+            Repeated,
+            (0.30, 0.30),
+            0.45,
+            repeated(&[(0.30, 0.30), (0.64, 0.42), (0.48, 0.72)]),
+            StatusChanges,
+        ),
+        "galton-board" => scenario(
+            Boundary,
+            (0.05, 0.85),
+            0.35,
+            click(0.95, 0.15),
+            ActionContains("BALL"),
+        ),
+        "lissajous" => scenario(
+            DragRelease,
+            (0.20, 0.50),
+            0.40,
+            drag((0.20, 0.50), (0.50, 0.50), (0.82, 0.50)),
+            ActionContains("INTERVAL"),
+        ),
+        "prime-spirals" => scenario(
+            DragRelease,
+            (0.18, 0.24),
+            0.50,
+            drag((0.18, 0.24), (0.50, 0.50), (0.82, 0.76)),
+            StatusChanges,
+        ),
+        "cult-of-pi" => scenario(
+            Repeated,
+            (0.26, 0.34),
+            0.40,
+            repeated(&[(0.26, 0.34), (0.54, 0.48), (0.76, 0.66)]),
+            StatusChanges,
+        ),
+        "collatz" => scenario(
+            Click,
+            (0.84, 0.18),
+            0.45,
+            click(0.84, 0.18),
+            ActionContains("PERTURB"),
+        ),
+        "buffon-needle" => scenario(
+            Repeated,
+            (0.28, 0.32),
+            0.40,
+            repeated(&[(0.28, 0.32), (0.52, 0.48), (0.74, 0.66)]),
+            StatusChanges,
+        ),
+        "game-of-life" => scenario(
+            Repeated,
+            (0.30, 0.34),
+            0.35,
+            repeated(&[(0.30, 0.34), (0.50, 0.50), (0.70, 0.66)]),
+            StatusChanges,
+        ),
+        "mandelbrot" => scenario(
+            Boundary,
+            (0.96, 0.18),
+            0.50,
+            click(0.96, 0.18),
+            StatusChanges,
+        ),
+        "julia" => scenario(
+            DragRelease,
+            (0.20, 0.24),
+            0.45,
+            drag((0.20, 0.24), (0.48, 0.46), (0.78, 0.70)),
+            StatusChanges,
+        ),
+        "barnsley-fern" => scenario(
+            Repeated,
+            (0.28, 0.72),
+            0.50,
+            repeated(&[(0.28, 0.72), (0.50, 0.56), (0.72, 0.38)]),
+            StatusChanges,
+        ),
+        "lsystem-garden" => scenario(
+            Repeated,
+            (0.28, 0.70),
+            0.60,
+            repeated(&[(0.28, 0.70), (0.52, 0.56), (0.74, 0.38)]),
+            ActionContains("PLANT"),
+        ),
+        "harmonograph" => scenario(
+            DragRelease,
+            (0.20, 0.42),
+            0.45,
+            drag((0.20, 0.42), (0.52, 0.54), (0.82, 0.68)),
+            ActionContains("RETUNE"),
+        ),
+        "logistic-map" => scenario(
+            DragRelease,
+            (0.20, 0.60),
+            0.45,
+            drag((0.20, 0.60), (0.52, 0.48), (0.84, 0.36)),
+            StatusChanges,
+        ),
+        "langtons-ant" => with_immediate(
+            scenario(
+                Repeated,
+                (0.32, 0.36),
+                0.45,
+                repeated(&[(0.32, 0.36), (0.52, 0.50), (0.70, 0.64)]),
+                StatusChanges,
+            ),
+            repeated(&[(0.28, 0.30), (0.52, 0.50), (0.74, 0.70)]),
+        ),
+        "lorenz" => scenario(
+            Repeated,
+            (0.28, 0.34),
+            0.45,
+            repeated(&[(0.28, 0.34), (0.52, 0.48), (0.74, 0.62)]),
+            ActionContains("STORM"),
+        ),
+        "arecibo" => scenario(
+            Boundary,
+            (0.04, 0.50),
+            0.40,
+            drag((0.04, 0.50), (0.50, 0.50), (0.96, 0.50)),
+            ActionContains("WIDTH"),
+        ),
+        "the-pour" => scenario(
+            DragRelease,
+            (0.18, 0.62),
+            0.45,
+            drag((0.18, 0.62), (0.50, 0.44), (0.82, 0.28)),
+            ActionContains("SLOPE"),
+        ),
+        "slope-rider" => scenario(
+            Boundary,
+            (0.53, 0.47),
+            0.45,
+            click(0.95, 0.18),
+            ActionContains("RIDER"),
+        ),
+        "double-pendulum" => scenario(
+            DragRelease,
+            (0.22, 0.28),
+            0.50,
+            drag((0.22, 0.28), (0.52, 0.46), (0.80, 0.72)),
+            ActionContains("RE-DROP"),
+        ),
+        "epicycles" => scenario(
+            DragRelease,
+            (0.22, 0.30),
+            0.45,
+            drag((0.22, 0.30), (0.50, 0.48), (0.78, 0.68)),
+            StatusChanges,
+        ),
+        "random-walk" => with_immediate(
+            scenario(
+                Repeated,
+                (0.28, 0.32),
+                0.45,
+                repeated(&[(0.28, 0.32), (0.50, 0.50), (0.72, 0.68)]),
+                StatusChanges,
+            ),
+            repeated(&[(0.24, 0.28), (0.50, 0.50), (0.76, 0.72)]),
+        ),
+        "voronoi" => scenario(
+            Boundary,
+            (0.04, 0.08),
+            0.45,
+            repeated(&[(0.04, 0.08), (0.50, 0.50), (0.96, 0.92)]),
+            ActionContains("WELL"),
+        ),
+        "mobius" => scenario(
+            DragRelease,
+            (0.20, 0.36),
+            0.45,
+            drag((0.20, 0.36), (0.50, 0.50), (0.80, 0.64)),
+            StatusChanges,
+        ),
+        "zeno" => with_immediate(
+            scenario(
+                DragRelease,
+                (0.53, 0.47),
+                0.45,
+                drag((0.20, 0.34), (0.50, 0.50), (0.80, 0.66)),
+                StatusChanges,
+            ),
+            repeated(&[(0.24, 0.28), (0.52, 0.50), (0.76, 0.72)]),
+        ),
+        "goldbach" => scenario(
+            Boundary,
+            (0.53, 0.47),
+            0.55,
+            click(0.96, 0.82),
+            StatusChanges,
+        ),
+        "quine" => scenario(
+            Repeated,
+            (0.30, 0.32),
+            0.45,
+            repeated(&[(0.30, 0.32), (0.52, 0.50), (0.72, 0.68)]),
+            StatusChanges,
+        ),
+        "strange-loop" => scenario(
+            DragRelease,
+            (0.22, 0.30),
+            0.45,
+            drag((0.22, 0.30), (0.50, 0.50), (0.78, 0.70)),
+            StatusChanges,
+        ),
+        other => panic!("missing interaction scenario for {other}"),
+    }
+}
+
+fn assert_scenario_shape(id: &str, scenario: &RoomScenario) {
+    assert!(
+        (0.0..=1.0).contains(&scenario.delayed_phase),
+        "{id} delayed phase is normalized"
+    );
+    assert!(
+        scenario
+            .immediate
+            .iter()
+            .any(|input| matches!(input, RoomInput::PointerDown { .. })),
+        "{id} immediate scenario touches the room"
+    );
+    let downs = scenario
+        .delayed
+        .iter()
+        .filter(|input| matches!(input, RoomInput::PointerDown { .. }))
+        .count();
+    let moves = scenario
+        .delayed
+        .iter()
+        .filter(|input| matches!(input, RoomInput::PointerMove { .. }))
+        .count();
+    let releases = scenario
+        .delayed
+        .iter()
+        .filter(|input| matches!(input, RoomInput::PointerUp { .. }))
+        .count();
+    let mut previous_t = 0.0;
+    for input in &scenario.delayed {
+        let (x, y, t) = match *input {
+            RoomInput::PointerDown { x, y, t }
+            | RoomInput::PointerMove { x, y, t }
+            | RoomInput::PointerUp { x, y, t } => (x, y, t),
+            _ => continue,
+        };
+        assert!(
+            x.is_finite()
+                && y.is_finite()
+                && t.is_finite()
+                && (0.0..=1.0).contains(&x)
+                && (0.0..=1.0).contains(&y),
+            "{id} scenario inputs are normalized and finite"
+        );
+        assert!(t >= previous_t, "{id} scenario timestamps are ordered");
+        assert!(
+            t <= scenario.delayed_phase,
+            "{id} scenario event cannot follow its capture"
+        );
+        previous_t = t;
+    }
+    let touches_boundary = scenario.delayed.iter().any(|input| {
+        let (x, y) = match *input {
+            RoomInput::PointerDown { x, y, .. }
+            | RoomInput::PointerMove { x, y, .. }
+            | RoomInput::PointerUp { x, y, .. } => (x, y),
+            _ => return false,
+        };
+        x <= 0.05 || x >= 0.95 || y <= 0.05 || y >= 0.95
+    });
+    assert!(downs > 0 && releases > 0, "{id} scenario closes its input");
+    match scenario.kind {
+        InteractionKind::Boundary => assert!(touches_boundary, "{id} reaches a boundary"),
+        InteractionKind::Click => {
+            assert_eq!((downs, moves, releases), (1, 0, 1), "{id} is one click")
+        }
+        InteractionKind::DragRelease => {
+            assert!(moves >= 2, "{id} drag samples its path");
+            assert_eq!(releases, 1, "{id} drag has one release");
+        }
+        InteractionKind::Repeated => assert!(downs >= 3, "{id} repeats its action"),
+    }
+}
+
+fn assert_semantics(room: &dyn Room, scenario: &RoomScenario) {
+    let id = room.meta().id;
+    let before = room.status(scenario.delayed_phase);
+    let after = room.status_input(scenario.delayed_phase, &scenario.delayed);
+    match scenario.semantic {
+        SemanticOracle::StatusChanges => assert_ne!(
+            after, before,
+            "{id} status must name the interaction consequence"
+        ),
+        SemanticOracle::ActionContains(term) => assert!(
+            numinous_core::room_touch_action(room).contains(term),
+            "{id} action must explain its {term} interaction"
+        ),
+    }
 }
 
 fn room_by_id<'a>(rooms: &'a [Box<dyn Room>], id: &str) -> &'a dyn Room {
@@ -297,61 +828,51 @@ fn main() {
     }
     let rooms = all_rooms();
     let mut manifest = Vec::new();
+    let mut interaction_kinds = BTreeSet::new();
+    let mut changed_status_oracles = 0;
+    let mut explained_action_oracles = 0;
 
     for room in &rooms {
         let id = room.meta().id;
         let phase = 0.0;
-        let immediate = [RoomInput::PointerDown {
-            x: 0.53,
-            y: 0.47,
-            t: phase,
-        }];
-        let delayed_phase = (phase + 0.2).min(1.0);
-        let gesture = [
-            RoomInput::PointerDown {
-                x: 0.35,
-                y: 0.35,
-                t: phase,
-            },
-            RoomInput::PointerMove {
-                x: 0.53,
-                y: 0.47,
-                t: (phase + 0.08).min(1.0),
-            },
-            RoomInput::PointerMove {
-                x: 0.70,
-                y: 0.60,
-                t: (phase + 0.12).min(1.0),
-            },
-            RoomInput::PointerUp {
-                x: 0.70,
-                y: 0.60,
-                t: (phase + 0.14).min(1.0),
-            },
-        ];
+        let scenario = room_scenario(id);
+        assert_scenario_shape(id, &scenario);
+        assert_semantics(room.as_ref(), &scenario);
+        interaction_kinds.insert(scenario.kind);
+        match scenario.semantic {
+            SemanticOracle::StatusChanges => changed_status_oracles += 1,
+            SemanticOracle::ActionContains(_) => explained_action_oracles += 1,
+        }
         let raw_base = room_content(room.as_ref(), phase, &[], ROOM_SIZE);
-        let raw_interacted = room_content(room.as_ref(), phase, &immediate, ROOM_SIZE);
-        let raw_delayed_base = room_content(room.as_ref(), delayed_phase, &[], ROOM_SIZE);
-        let raw_delayed = room_content(room.as_ref(), delayed_phase, &gesture, ROOM_SIZE);
-        let base = room_screen(room.as_ref(), phase, &[], ROOM_SIZE, 0, false, 7);
-        let interacted = room_screen(room.as_ref(), phase, &immediate, ROOM_SIZE, 0, false, 7);
-        let delayed = room_screen(
+        let raw_interacted = room_content(room.as_ref(), phase, &scenario.immediate, ROOM_SIZE);
+        let raw_delayed_base = room_content(room.as_ref(), scenario.delayed_phase, &[], ROOM_SIZE);
+        let raw_delayed = room_content(
             room.as_ref(),
-            delayed_phase,
-            &gesture,
+            scenario.delayed_phase,
+            &scenario.delayed,
+            ROOM_SIZE,
+        );
+        let base = room_screen(room.as_ref(), phase, &[], ROOM_SIZE, 0, false, 7);
+        let interacted = room_screen(
+            room.as_ref(),
+            phase,
+            &scenario.immediate,
             ROOM_SIZE,
             0,
             false,
             7,
         );
-        assert!(
-            changed_pixels(&raw_base, &raw_interacted) >= 100,
-            "{id} immediate room-content response must be legible"
+        let delayed = room_screen(
+            room.as_ref(),
+            scenario.delayed_phase,
+            &scenario.delayed,
+            ROOM_SIZE,
+            0,
+            false,
+            7,
         );
-        assert!(
-            changed_pixels(&raw_delayed_base, &raw_delayed) >= 100,
-            "{id} delayed room-content gesture response must be legible"
-        );
+        assert_legible(id, "immediate", &raw_base, &raw_interacted);
+        assert_legible(id, "delayed", &raw_delayed_base, &raw_delayed);
         save(
             &base,
             &format!("rooms/{id}-base-{}x{}.png", ROOM_SIZE.0, ROOM_SIZE.1),
@@ -383,8 +904,8 @@ fn main() {
         save(
             &room_screen(
                 room.as_ref(),
-                delayed_phase,
-                &gesture,
+                scenario.delayed_phase,
+                &scenario.delayed,
                 SMALL_SIZE,
                 0,
                 false,
@@ -398,6 +919,29 @@ fn main() {
         );
     }
     assert_eq!(manifest.len(), rooms.len() * 6, "six states per room");
+    assert!(
+        changed_status_oracles > 0 && explained_action_oracles > 0,
+        "room scenarios cover changed status and explanatory action oracles"
+    );
+    assert_eq!(
+        interaction_kinds,
+        BTreeSet::from([
+            InteractionKind::Boundary,
+            InteractionKind::Click,
+            InteractionKind::DragRelease,
+            InteractionKind::Repeated,
+        ]),
+        "room scenarios cover every interaction family"
+    );
+    println!(
+        "validated {} room scenarios: {changed_status_oracles} changed-status, \
+         {explained_action_oracles} explanatory-action; minimum {MIN_CHANGED_PIXELS} changed \
+         pixels, {MIN_CHANGED_SUPPORT_PERMILLE} permille support, \
+         {MIN_SUPPORT_DENSITY_PERMILLE} permille support density, and \
+         {MIN_COHERENT_TILES} adjacent spatial tiles, and \
+         {MIN_MEAN_CHANNEL_DELTA} mean channel delta",
+        rooms.len()
+    );
 
     let times = room_by_id(&rooms, "times-tables");
     for (index, phase) in [0.0, 0.24, 0.51, 0.88].into_iter().enumerate() {
@@ -632,4 +1176,35 @@ fn main() {
     )
     .expect("write manifest");
     println!("wrote {}", manifest_path.display());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        MIN_CHANGED_PIXELS, MIN_CHANGED_SUPPORT_PERMILLE, MIN_COHERENT_TILES,
+        MIN_MEAN_CHANNEL_DELTA, MIN_SUPPORT_DENSITY_PERMILLE, ROOM_SIZE, difference,
+    };
+    use numinous_core::{Raster, Surface};
+
+    #[test]
+    fn scattered_corner_markers_do_not_satisfy_the_spatial_oracle() {
+        let before = Raster::with_accent(ROOM_SIZE.0, ROOM_SIZE.1, [255, 255, 255]);
+        let mut after = Raster::with_accent(ROOM_SIZE.0, ROOM_SIZE.1, [255, 255, 255]);
+        for (left, top) in [(0, 0), (630, 0), (0, 470), (630, 470)] {
+            for y in top..top + 10 {
+                for x in left..left + 10 {
+                    after.plot(x, y, '#');
+                }
+            }
+        }
+
+        let diff = difference(&before, &after);
+        let area = ROOM_SIZE.0 * ROOM_SIZE.1;
+        assert!(diff.changed >= MIN_CHANGED_PIXELS);
+        assert!(diff.support * 1_000 >= area * MIN_CHANGED_SUPPORT_PERMILLE);
+        assert!(diff.changed * 1_000 >= diff.support * MIN_SUPPORT_DENSITY_PERMILLE);
+        assert!(diff.mean_channel_delta >= MIN_MEAN_CHANNEL_DELTA);
+        assert_eq!(diff.largest_tile_cluster, 1);
+        assert!(diff.largest_tile_cluster < MIN_COHERENT_TILES);
+    }
 }

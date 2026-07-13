@@ -70,6 +70,14 @@ fn bounded_loop_points(pokes: &[(f64, f64)], width: usize, height: usize) -> Vec
         .collect()
 }
 
+fn u_point(cx: f64, cy: f64, r: f64, rot: f64, aspect: f64, phase: f64) -> (i32, i32) {
+    let horizontal = phase * 2.0 - 1.0;
+    let curve = 1.0 - horizontal * horizontal;
+    let x = cx + r * 0.8 * horizontal + rot.sin() * r * 0.05 * curve;
+    let y = cy + r * (0.1 - 0.9 * horizontal * horizontal) * aspect;
+    (x.round() as i32, y.round() as i32)
+}
+
 /// The Strange Loop room.
 #[derive(Debug, Default)]
 pub struct StrangeLoop {
@@ -248,43 +256,23 @@ impl StrangeLoop {
         if depth == 0 || r < 3.0 {
             return;
         }
-        // Draw a connected U. Sparse point clouds looked like dust at window
-        // resolution and hid both the nesting and the player's displacement.
-        let steps = 20;
-        let mut left = None;
-        let mut right = None;
-        let mut bottom = None;
+        // One continuous parabola makes the recursive unit an actual U. Each
+        // nested copy remains a separate object, but no level is assembled from
+        // disconnected arms and a floating crossbar.
+        let steps = 48;
+        let mut previous = None;
         for i in 0..=steps {
             let f = i as f64 / steps as f64;
-            // left arm
-            let x1 = cx - r * 0.8 * (1.0 - f * 0.2).cos() + rot.sin() * f * 5.0;
-            let y1 = cy - r * 0.8 * f * aspect;
-            let left_next = (x1 as i32, y1 as i32);
-            if let Some(previous) = left {
-                Self::stroke(canvas, previous, left_next, '#');
+            let next = u_point(cx, cy, r, rot, aspect, f);
+            if let Some(from) = previous {
+                Self::stroke(canvas, from, next, '#');
             }
-            left = Some(left_next);
-            // right arm
-            let x2 = cx + r * 0.8 * (1.0 - f * 0.2).cos() + rot.sin() * f * 5.0;
-            let y2 = cy - r * 0.8 * f * aspect;
-            let right_next = (x2 as i32, y2 as i32);
-            if let Some(previous) = right {
-                Self::stroke(canvas, previous, right_next, '#');
-            }
-            right = Some(right_next);
-            // bottom curve
-            let bx = cx + r * 0.8 * (f - 0.5) * 2.0;
-            let by = cy + r * 0.1 * aspect;
-            let bottom_next = (bx as i32, by as i32);
-            if let Some(previous) = bottom {
-                Self::stroke(canvas, previous, bottom_next, '#');
-            }
-            bottom = Some(bottom_next);
+            previous = Some(next);
         }
         // recurse inner
         let sub_r = r * 0.4;
         let sub_cx = cx + inner_ox;
-        let sub_cy = cy + r * 0.3 * aspect + inner_oy;
+        let sub_cy = cy - r * 0.18 * aspect + inner_oy;
         self.draw_loop(canvas, sub_cx, sub_cy, sub_r, rot + 1.0, depth - 1, aspect);
     }
 }
@@ -312,6 +300,56 @@ mod tests {
         let mut canvas = Canvas::new(40, 30);
         room.render(&mut canvas, 0.5);
         assert!(canvas.ink_count() > 10);
+    }
+
+    #[test]
+    fn one_level_is_one_connected_u() {
+        use std::collections::{BTreeSet, VecDeque};
+
+        #[derive(Default)]
+        struct MarkSetSurface {
+            marks: BTreeSet<(i32, i32)>,
+        }
+
+        impl Surface for MarkSetSurface {
+            fn width(&self) -> usize {
+                120
+            }
+
+            fn height(&self) -> usize {
+                90
+            }
+
+            fn plot(&mut self, x: i32, y: i32, _mark: char) {
+                self.marks.insert((x, y));
+            }
+        }
+
+        let room = StrangeLoop::new();
+        let mut surface = MarkSetSurface::default();
+        room.draw_loop(&mut surface, 60.0, 45.0, 35.0, 0.0, 1, 1.0);
+        let mut unseen = surface.marks;
+        let mut components = 0;
+
+        while let Some(start) = unseen.pop_first() {
+            components += 1;
+            let mut queue = VecDeque::from([start]);
+            while let Some((x, y)) = queue.pop_front() {
+                for dy in -1..=1 {
+                    for dx in -1..=1 {
+                        if dx == 0 && dy == 0 {
+                            continue;
+                        }
+                        let neighbor = (x + dx, y + dy);
+                        if unseen.remove(&neighbor) {
+                            queue.push_back(neighbor);
+                        }
+                    }
+                }
+            }
+        }
+
+        assert_eq!(components, 1);
     }
 
     #[test]

@@ -14,6 +14,8 @@ use crate::surface::Surface;
 const GRID: usize = 100;
 /// The most steps `t` reaches (the highway emerges around 10,000).
 const MAX_STEPS: usize = 12_000;
+/// A visible opening state, before the clock grows the path toward its highway.
+const ENTRY_STEPS: usize = 2_500;
 
 /// Seed base for deterministic variation (nonzero only; var=0 path is empty start).
 const SEED: u64 = 0xA4A4_0000_5EED_0001;
@@ -39,7 +41,7 @@ impl LangtonsAnt {
 
     /// Steps simulated at phase `t`.
     fn steps_for(t: f64) -> usize {
-        (t.clamp(0.0, 1.0) * MAX_STEPS as f64) as usize
+        ENTRY_STEPS + (t.clamp(0.0, 1.0) * (MAX_STEPS - ENTRY_STEPS) as f64) as usize
     }
 }
 
@@ -59,9 +61,7 @@ fn init_grid(variation: u64) -> Vec<bool> {
     grid
 }
 
-/// Advance the ant `steps` from the provided starting grid (mutates and returns).
-/// For nonzero variation, start position is deterministically offset so paths diverge visibly.
-fn run_ant(mut grid: Vec<bool>, steps: usize, variation: u64) -> Vec<bool> {
+fn starting_ant(variation: u64) -> (i32, i32, i32) {
     let side = GRID as i32;
     let dx = if variation == 0 {
         0
@@ -73,9 +73,14 @@ fn run_ant(mut grid: Vec<bool>, steps: usize, variation: u64) -> Vec<bool> {
     } else {
         (((variation / 7) % 5) as i32) - 2
     };
-    let (mut x, mut y) = (side / 2 + dx, side / 2 + dy);
-    // Direction: 0 up, 1 right, 2 down, 3 left.
-    let mut dir = 0i32;
+    (side / 2 + dx, side / 2 + dy, 0)
+}
+
+/// Advance the ant `steps` from the provided starting grid (mutates and returns).
+/// For nonzero variation, start position is deterministically offset so paths diverge visibly.
+fn run_ant(mut grid: Vec<bool>, steps: usize, variation: u64) -> Vec<bool> {
+    let side = GRID as i32;
+    let (mut x, mut y, mut dir) = starting_ant(variation);
     for _ in 0..steps {
         let index = (y as usize) * GRID + x as usize;
         let black = grid[index];
@@ -128,7 +133,7 @@ fn apply_poked_flips(grid: &mut [bool], pokes: &[(f64, f64)]) {
 }
 
 fn draw_poked_cells(canvas: &mut dyn Surface, pokes: &[(f64, f64)], width: usize, height: usize) {
-    let radius = (width.min(height) / 40).clamp(4, 14) as i32;
+    let radius = (width.min(height) / 28).clamp(6, 18) as i32;
     for (gx, gy) in poked_cells(pokes) {
         let x = ((gx as f64 + 0.5) * width as f64 / GRID as f64) as i32;
         let y = ((gy as f64 + 0.5) * height as f64 / GRID as f64) as i32;
@@ -146,12 +151,19 @@ fn draw_grid(canvas: &mut dyn Surface, grid: &[bool], width: usize, height: usiz
     if width == 0 || height == 0 {
         return;
     }
-    for py in 0..height {
-        for px in 0..width {
-            let gx = px * GRID / width;
-            let gy = py * GRID / height;
-            if grid[gy * GRID + gx] {
-                canvas.plot(px as i32, py as i32, '#');
+    for gy in 0..GRID {
+        for gx in 0..GRID {
+            if !grid[gy * GRID + gx] {
+                continue;
+            }
+            let left = gx * width / GRID;
+            let right = (((gx + 1) * width / GRID).max(left + 1)).min(width);
+            let top = gy * height / GRID;
+            let bottom = (((gy + 1) * height / GRID).max(top + 1)).min(height);
+            for py in top..bottom {
+                for px in left..right {
+                    canvas.plot(px as i32, py as i32, '#');
+                }
             }
         }
     }
@@ -174,7 +186,8 @@ impl Room for LangtonsAnt {
         if width == 0 || height == 0 {
             return;
         }
-        let grid = simulate_varied(Self::steps_for(t), self.seed);
+        let steps = Self::steps_for(t);
+        let grid = simulate_varied(steps, self.seed);
         draw_grid(canvas, &grid, width, height);
     }
 
@@ -277,6 +290,13 @@ mod tests {
         room.render(&mut b, 0.5);
         assert_eq!(a.to_text(), b.to_text());
         assert!(a.ink_count() > 5);
+
+        let mut entry = Canvas::new(80, 40);
+        room.render(&mut entry, 0.0);
+        assert!(
+            entry.ink_count() >= 30,
+            "the opening state shows the ant's first visible pattern"
+        );
     }
 
     #[test]
@@ -326,7 +346,7 @@ mod tests {
         assert!(poked.ink_count() >= base.ink_count() + 20);
         assert_eq!(
             room.status_input(0.0, &input).as_deref(),
-            Some("CELL 50,50 FLIPPED   ANT REPLAYED 0 STEPS")
+            Some("CELL 50,50 FLIPPED   ANT REPLAYED 2500 STEPS")
         );
     }
 

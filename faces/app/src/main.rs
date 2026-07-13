@@ -634,6 +634,35 @@ impl App {
         }
     }
 
+    /// One key into standalone Nim, including an explicit retry after either
+    /// result so a loss can teach without ejecting the player.
+    fn nim_key(&mut self, key: &Key) {
+        let over = self.nim.as_ref().is_some_and(|play| play.over.is_some());
+        if over {
+            match key {
+                Key::Named(NamedKey::Escape) => {
+                    self.nim = None;
+                    self.update_audio();
+                }
+                Key::Named(NamedKey::Enter | NamedKey::Space) => self.nim_start(),
+                _ => {}
+            }
+            return;
+        }
+        match key {
+            Key::Named(NamedKey::Escape) => {
+                self.nim = None;
+                self.update_audio();
+            }
+            Key::Named(NamedKey::Enter) => self.nim_move(),
+            key => {
+                if let Some(play) = &mut self.nim {
+                    let _ = controls::apply_nim_control(play, key);
+                }
+            }
+        }
+    }
+
     /// Write the current room's frame to a PNG next to the save files: the
     /// postcard key. Returns the path it wrote.
     fn save_postcard(&self) -> Option<std::path::PathBuf> {
@@ -1382,22 +1411,8 @@ impl ApplicationHandler for App {
                     self.gauntlet_key(&logical_key);
                 } else if self.munch.is_some() {
                     self.munch_key(&logical_key);
-                } else if let Some(play) = &mut self.nim {
-                    if play.over.is_some() {
-                        self.nim = None;
-                        self.update_audio();
-                    } else {
-                        match logical_key {
-                            Key::Named(NamedKey::Escape) => {
-                                self.nim = None;
-                                self.update_audio();
-                            }
-                            Key::Named(NamedKey::Enter) => self.nim_move(),
-                            _ => {
-                                let _ = controls::apply_nim_control(play, &logical_key);
-                            }
-                        }
-                    }
+                } else if self.nim.is_some() {
+                    self.nim_key(&logical_key);
                 } else if let Some(quiz) = &mut self.quiz {
                     // Quiz mode: letters answer; after the reveal, any key deals
                     // the next round; Esc leaves.
@@ -1799,15 +1814,72 @@ impl ApplicationHandler for App {
     }
 }
 
+#[cfg(test)]
+struct TestStateRoot {
+    path: std::path::PathBuf,
+}
+
+#[cfg(test)]
+impl TestStateRoot {
+    fn new() -> Self {
+        use std::hash::{Hash, Hasher};
+
+        let thread = std::thread::current();
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        thread.id().hash(&mut hasher);
+        thread.name().hash(&mut hasher);
+        let path = std::env::temp_dir().join(format!(
+            "numinous-app-test-{}-{:016x}",
+            std::process::id(),
+            hasher.finish()
+        ));
+        Self::at(path)
+    }
+
+    fn at(path: std::path::PathBuf) -> Self {
+        match std::fs::remove_dir_all(&path) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => panic!("cannot clear app test state directory: {error}"),
+        }
+        std::fs::create_dir_all(&path).expect("app test state directory should be writable");
+        Self { path }
+    }
+}
+
+#[cfg(test)]
+impl Drop for TestStateRoot {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.path);
+    }
+}
+
+#[cfg(test)]
+std::thread_local! {
+    static TEST_STATE_ROOT: TestStateRoot = TestStateRoot::new();
+}
+
+#[cfg(test)]
+fn test_state_path(kind: &str) -> std::path::PathBuf {
+    TEST_STATE_ROOT.with(|root| root.path.join(format!("{kind}.txt")))
+}
+
 /// The journey file: the same one the CLI and MCP level (env-overridable).
 fn journey_path() -> std::path::PathBuf {
-    if let Ok(path) = std::env::var("NUMINOUS_JOURNEY") {
-        return std::path::PathBuf::from(path);
+    #[cfg(test)]
+    {
+        test_state_path("journey")
     }
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| ".".to_string());
-    std::path::PathBuf::from(home).join(".numinous-journey")
+    #[cfg(not(test))]
+    {
+        if let Ok(path) = std::env::var("NUMINOUS_JOURNEY") {
+            return std::path::PathBuf::from(path);
+        }
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        std::path::PathBuf::from(home).join(".numinous-journey")
+    }
 }
 
 fn app_icon() -> Option<Icon> {
@@ -1831,13 +1903,20 @@ fn app_icon() -> Option<Icon> {
 
 /// The score table, read for the journey overlay's trophy evidence.
 fn scores_path() -> std::path::PathBuf {
-    if let Ok(path) = std::env::var("NUMINOUS_SCORES") {
-        return std::path::PathBuf::from(path);
+    #[cfg(test)]
+    {
+        test_state_path("scores")
     }
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| ".".to_string());
-    std::path::PathBuf::from(home).join(".numinous-scores")
+    #[cfg(not(test))]
+    {
+        if let Ok(path) = std::env::var("NUMINOUS_SCORES") {
+            return std::path::PathBuf::from(path);
+        }
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        std::path::PathBuf::from(home).join(".numinous-scores")
+    }
 }
 
 fn main() {
@@ -1885,7 +1964,8 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{
-        App, app_icon, julia_gpu_c, julia_gpu_vertical_span, mandelbrot_gpu_view, radio_cache,
+        App, TestStateRoot, app_icon, julia_gpu_c, julia_gpu_vertical_span, mandelbrot_gpu_view,
+        radio_cache,
     };
     use std::time::{Duration, UNIX_EPOCH};
 
@@ -1894,7 +1974,7 @@ mod tests {
         let mut app = App::new();
         app.journey = numinous_core::Journey::default();
         app.journey_saved = app.journey.clone();
-        app.journey_file = std::env::temp_dir().join(name);
+        app.journey_file = super::test_state_path(name);
         app.scores_file = app.journey_file.with_extension("scores");
         let _ = std::fs::remove_file(&app.journey_file);
         let _ = std::fs::remove_file(&app.scores_file);
@@ -1918,6 +1998,61 @@ mod tests {
             }
         }
         writer.finalize().expect("finalize");
+    }
+
+    #[test]
+    fn app_test_profiles_are_stable_isolated_and_owned() {
+        let player_journey = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .map(|home| std::path::PathBuf::from(home).join(".numinous-journey"));
+        let player_scores = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .map(|home| std::path::PathBuf::from(home).join(".numinous-scores"));
+
+        let first = std::thread::spawn(|| {
+            let journey = super::journey_path();
+            let scores = super::scores_path();
+            assert_eq!(journey, super::journey_path());
+            assert_eq!(scores, super::scores_path());
+            assert_eq!(journey.parent(), scores.parent());
+            assert_ne!(journey, scores);
+            std::fs::write(&journey, "isolated").expect("write isolated app Journey");
+            (journey, scores)
+        })
+        .join()
+        .expect("first app test profile thread");
+        let second = std::thread::spawn(|| (super::journey_path(), super::scores_path()))
+            .join()
+            .expect("second app test profile thread");
+
+        assert_ne!(first.0.parent(), second.0.parent());
+        assert!(
+            !first.0.exists(),
+            "the first thread owns and clears its files"
+        );
+        assert!(
+            !second.0.exists(),
+            "the second thread owns and clears its files"
+        );
+        if let Ok(path) = player_journey {
+            assert_ne!(first.0, path);
+            assert_ne!(second.0, path);
+        }
+        if let Ok(path) = player_scores {
+            assert_ne!(first.1, path);
+            assert_ne!(second.1, path);
+        }
+
+        let collision = std::env::temp_dir().join(format!(
+            "numinous-app-test-collision-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&collision);
+        let _ = std::fs::remove_file(&collision);
+        std::fs::write(&collision, "not a directory").expect("write collision file");
+        let result = std::panic::catch_unwind(|| TestStateRoot::at(collision.clone()));
+        assert!(result.is_err(), "a file collision must be rejected");
+        std::fs::remove_file(collision).expect("remove collision file");
     }
 
     #[test]
@@ -2386,6 +2521,28 @@ mod tests {
         // Your stone and the Order's reply both left the board (unless over).
         assert!(after < before);
         assert!(play.over.is_none() || play.over == Some(false) || play.over == Some(true));
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn nim_result_requires_an_explicit_retry_or_exit() {
+        let mut app = headless("numinous_app_test_nim_retry.txt");
+        app.nim_start();
+        app.nim.as_mut().unwrap().over = Some(false);
+        let plays = app.journey.plays;
+
+        app.nim_key(&winit::keyboard::Key::Character("x".into()));
+        assert!(
+            app.nim.is_some(),
+            "an unrelated key must not eject the result"
+        );
+        assert_eq!(app.journey.plays, plays);
+
+        app.nim_key(&winit::keyboard::Key::Named(
+            winit::keyboard::NamedKey::Enter,
+        ));
+        assert_eq!(app.nim.as_ref().unwrap().over, None);
+        assert_eq!(app.journey.plays, plays + 1);
         let _ = std::fs::remove_file(&app.journey_file);
     }
 

@@ -11,6 +11,8 @@ use crate::surface::Surface;
 
 /// The largest even number the comet reaches.
 const N_MAX: u64 = 600;
+/// The opening even, large enough to reveal the first comet bands immediately.
+const ENTRY_REACH: u64 = 200;
 
 /// Primality by trial division; small numbers, honest method.
 fn is_prime(n: u64) -> bool {
@@ -61,15 +63,50 @@ fn even_at_hand(x: f64) -> u64 {
 }
 
 fn even_x(n: u64, width: usize) -> i32 {
-    ((n - 4) as f64 / (N_MAX - 4) as f64 * (width as f64 - 1.0)) as i32
+    graph_x(n, 4, N_MAX, width)
 }
 
 fn prime_x(n: u64, width: usize) -> i32 {
-    ((n.saturating_sub(2)) as f64 / (N_MAX - 2) as f64 * (width as f64 - 1.0)) as i32
+    graph_x(n, 2, N_MAX, width)
+}
+
+fn graph_x(value: u64, min: u64, max: u64, width: usize) -> i32 {
+    if width <= 1 || max <= min {
+        return 0;
+    }
+    let margin = (width / 24).clamp(1, 24).min(width.saturating_sub(1) / 2);
+    let left = margin;
+    let right = width.saturating_sub(1 + margin).max(left);
+    let unit = value.saturating_sub(min) as f64 / (max - min) as f64;
+    (left as f64 + unit.clamp(0.0, 1.0) * right.saturating_sub(left) as f64).round() as i32
+}
+
+fn graph_floor(height: usize) -> i32 {
+    if height <= 1 {
+        return 0;
+    }
+    // Leave the lower quarter clear for face-level controls and captions. The
+    // same inset also gives terminal renders a deliberate plot margin.
+    ((height.saturating_sub(1) as f64) * 0.72).round() as i32
+}
+
+fn count_y(count: u64, y_max: f64, height: usize) -> i32 {
+    let floor = graph_floor(height);
+    let top = (height / 24).clamp(1, 16).min(height.saturating_sub(1)) as i32;
+    let unit = (count as f64 / y_max.max(1.0)).clamp(0.0, 1.0);
+    (floor as f64 - unit * floor.saturating_sub(top) as f64).round() as i32
+}
+
+fn draw_graph_frame(canvas: &mut dyn Surface, width: usize, height: usize) {
+    let left = even_x(4, width);
+    let right = even_x(N_MAX, width);
+    let floor = graph_floor(height);
+    canvas.line(left, floor, right, floor, '*');
+    canvas.line(left, (height / 24).clamp(1, 16) as i32, left, floor, '-');
 }
 
 fn witness_row(height: usize) -> i32 {
-    ((height.saturating_sub(1) as f64) * 0.9) as i32
+    ((height.saturating_sub(1) as f64) * 0.76) as i32
 }
 
 /// Goldbach's Comet.
@@ -92,7 +129,8 @@ impl Goldbach {
     }
 
     fn reach_for(&self, t: f64) -> u64 {
-        let base_reach = 4 + ((t.clamp(0.0, 1.0) * (N_MAX - 4) as f64) as u64) / 2 * 2;
+        let base_reach =
+            ENTRY_REACH + ((t.clamp(0.0, 1.0) * (N_MAX - ENTRY_REACH) as f64) as u64) / 2 * 2;
         if self.seed == 0 {
             base_reach
         } else {
@@ -121,15 +159,17 @@ impl Room for Goldbach {
         }
         let reach = self.reach_for(t);
         let y_max = (ways(N_MAX).max(ways(N_MAX - 2)) + 4) as f64;
+        draw_graph_frame(canvas, width, height);
         let mut n = 4;
         while n <= reach {
-            let count = ways(n) as f64;
-            let px = ((n - 4) as f64 / (N_MAX - 4) as f64 * (width as f64 - 1.0)) as i32;
-            let py = ((1.0 - count / y_max) * (height as f64 - 3.0)) as i32 + 1;
-            canvas.plot(px, py, '*');
-            // The floor it must never touch: marked faintly along the bottom.
-            if n % 12 == 0 {
-                canvas.plot(px, height as i32 - 1, '-');
+            let px = even_x(n, width);
+            let py = count_y(ways(n), y_max, height);
+            if n == reach {
+                let radius = (width.min(height) / 96).clamp(2, 6) as i32;
+                canvas.line(px - radius, py, px + radius, py, '#');
+                canvas.line(px, py - radius, px, py + radius, '#');
+            } else {
+                canvas.plot(px, py, '*');
             }
             n += 2;
         }
@@ -179,9 +219,9 @@ impl Room for Goldbach {
                 continue;
             }
             let n = even_at_hand(px);
-            let count = ways(n) as f64;
+            let count = ways(n);
             let x = even_x(n, width);
-            let y = ((1.0 - count / y_max) * (height as f64 - 3.0)) as i32 + 1;
+            let y = count_y(count, y_max, height);
             if let Some((p, q)) = witness_for(n, py) {
                 let row = witness_row(height);
                 let px = prime_x(p, width);
@@ -197,7 +237,7 @@ impl Room for Goldbach {
             }
             canvas.plot(x, y, '+');
             // mark the floor test
-            canvas.plot(x, height as i32 - 1, 'o');
+            canvas.plot(x, graph_floor(height), 'o');
         }
     }
 
@@ -233,7 +273,10 @@ impl Room for Goldbach {
 
 #[cfg(test)]
 mod tests {
-    use super::{Goldbach, prime_pairs, prime_x, ways, witness_for, witness_row};
+    use super::{
+        Goldbach, count_y, even_x, graph_floor, prime_pairs, prime_x, ways, witness_for,
+        witness_row,
+    };
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
 
@@ -278,6 +321,34 @@ mod tests {
         let mut again = Canvas::new(60, 30);
         room.render(&mut again, 1.0);
         assert_eq!(late.to_text(), again.to_text());
+    }
+
+    #[test]
+    fn phase_zero_shows_the_first_comet_band_above_a_visible_floor() {
+        let room = Goldbach::new();
+        let width = 60;
+        let height = 30;
+        let mut canvas = Canvas::new(width, height);
+        room.render(&mut canvas, 0.0);
+        let text = canvas.to_text();
+        let y_max = (ways(super::N_MAX).max(ways(super::N_MAX - 2)) + 4) as f64;
+
+        assert_eq!(
+            text_char_at(&text, even_x(4, width), count_y(ways(4), y_max, height)),
+            '*'
+        );
+        assert_eq!(
+            text_char_at(
+                &text,
+                even_x(super::ENTRY_REACH, width),
+                count_y(ways(super::ENTRY_REACH), y_max, height)
+            ),
+            '#'
+        );
+        assert!(count_y(ways(4), y_max, height) < graph_floor(height));
+        assert!(graph_floor(height) <= (height * 3 / 4) as i32);
+        assert!(canvas.ink_count() >= width / 2);
+        assert_eq!(room.reach_for(0.0), super::ENTRY_REACH);
     }
 
     #[test]

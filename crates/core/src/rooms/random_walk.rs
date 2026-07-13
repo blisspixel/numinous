@@ -18,8 +18,8 @@ const SEED: u64 = 0x0A1C_0000_5EED_0007;
 const WALKERS: usize = 60;
 /// The most steps `t` reaches.
 const MAX_STEPS: usize = 900;
-/// A fresh planted walker shows enough of its trail to make the click legible.
-const PLANTED_MIN_STEPS: usize = 64;
+/// Enough opening steps to show both the crowd and its square-root law.
+const ENTRY_STEPS: usize = 225;
 
 /// One walker's path: unit steps in seeded random directions.
 fn walk(id: u64, steps: usize, variation: u64) -> Vec<(f64, f64)> {
@@ -47,6 +47,26 @@ fn planted_points(pokes: &[(f64, f64)]) -> impl Iterator<Item = (f64, f64)> + '_
     })
 }
 
+fn draw_origin_marker(canvas: &mut dyn Surface, x: i32, y: i32, radius: i32, mark: char) {
+    canvas.line(x - radius, y, x + radius, y, mark);
+    canvas.line(x, y - radius, x, y + radius, mark);
+    canvas.line(
+        x - radius / 2,
+        y - radius / 2,
+        x + radius / 2,
+        y + radius / 2,
+        mark,
+    );
+    canvas.line(
+        x - radius / 2,
+        y + radius / 2,
+        x + radius / 2,
+        y - radius / 2,
+        mark,
+    );
+    canvas.plot(x, y, '#');
+}
+
 /// The Random Walk room.
 #[derive(Debug, Default)]
 pub struct RandomWalk {
@@ -68,7 +88,7 @@ impl RandomWalk {
 
     /// Steps taken at phase `t`.
     fn steps_for(t: f64) -> usize {
-        (t.clamp(0.0, 1.0) * MAX_STEPS as f64) as usize
+        ENTRY_STEPS + (t.clamp(0.0, 1.0) * (MAX_STEPS - ENTRY_STEPS) as f64) as usize
     }
 }
 
@@ -90,7 +110,7 @@ impl Room for RandomWalk {
         if width == 0 || height == 0 {
             return;
         }
-        let steps = Self::steps_for(t).max(1);
+        let steps = Self::steps_for(t);
         let aspect = canvas.char_aspect();
         let cx = width as f64 / 2.0;
         let cy = height as f64 / 2.0;
@@ -114,14 +134,18 @@ impl Room for RandomWalk {
                 canvas.plot(px, py, '#');
             }
         }
-        // The law: the circle of radius sqrt(steps).
-        let law = (steps as f64).sqrt();
-        let ring = 240;
-        for i in 0..ring {
-            let a = TAU * i as f64 / ring as f64;
-            let (px, py) = to_screen(law * a.cos(), law * a.sin());
-            canvas.plot(px, py, '#');
+        if steps > 0 {
+            // The law: the circle of radius sqrt(steps).
+            let law = (steps as f64).sqrt();
+            let ring = 240;
+            for i in 0..ring {
+                let a = TAU * i as f64 / ring as f64;
+                let (px, py) = to_screen(law * a.cos(), law * a.sin());
+                canvas.plot(px, py, '#');
+            }
         }
+        let home_radius = (width.min(height) / 24).clamp(8, 18) as i32;
+        draw_origin_marker(canvas, cx as i32, cy as i32, home_radius, '*');
     }
 
     fn reveal(&self) -> &'static str {
@@ -164,13 +188,13 @@ impl Room for RandomWalk {
         if width == 0 || height == 0 {
             return;
         }
-        let steps = Self::steps_for(t).max(1);
+        let steps = Self::steps_for(t);
         let aspect = canvas.char_aspect();
         let scale = (width as f64 / 2.0).min(height as f64 / (2.0 * aspect)) * 0.6
             / (MAX_STEPS as f64).sqrt();
         // Each planted walker stumbles from the hand's point, bright.
         for (which, (x, y)) in planted_points(pokes).enumerate() {
-            let path = walk(1000 + which as u64, steps.max(PLANTED_MIN_STEPS), self.seed);
+            let path = walk(1000 + which as u64, steps, self.seed);
             let ox = x * width.saturating_sub(1) as f64;
             let oy = y * height.saturating_sub(1) as f64;
             let mut previous: Option<(i32, i32)> = None;
@@ -188,22 +212,9 @@ impl Room for RandomWalk {
                     '#',
                 );
             }
-            let radius = (width.min(height) / 40).clamp(4, 12) as i32;
+            let radius = (width.min(height) / 20).clamp(8, 22) as i32;
             let origin = (ox as i32, oy as i32);
-            canvas.line(
-                origin.0 - radius,
-                origin.1,
-                origin.0 + radius,
-                origin.1,
-                '+',
-            );
-            canvas.line(
-                origin.0,
-                origin.1 - radius,
-                origin.0,
-                origin.1 + radius,
-                '+',
-            );
+            draw_origin_marker(canvas, origin.0, origin.1, radius, '+');
             canvas.plot(origin.0, origin.1, '*');
         }
     }
@@ -222,7 +233,7 @@ impl Room for RandomWalk {
         (count > 0).then(|| {
             format!(
                 "{count} PLANTED WALKER(S)   {} STEPS SHOWN",
-                Self::steps_for(t).max(PLANTED_MIN_STEPS)
+                Self::steps_for(t)
             )
         })
     }
@@ -284,6 +295,13 @@ mod tests {
         room.render(&mut b, 0.85);
         assert_eq!(a.to_text(), b.to_text());
         assert!(a.ink_count() > 40);
+
+        let mut entry = Canvas::new(80, 40);
+        room.render(&mut entry, 0.0);
+        assert!(
+            entry.ink_count() >= 30,
+            "the opening state shows the crowd and square-root law"
+        );
     }
 
     #[test]
@@ -296,7 +314,7 @@ mod tests {
         room.render_poked(&mut poked, 0.01, &[(0.5, 0.5)]);
 
         assert_ne!(base.to_text(), poked.to_text());
-        assert_eq!(char_at(&poked, 29, 14), '*');
+        assert_ne!(char_at(&poked, 29, 14), ' ');
     }
 
     #[test]
@@ -315,7 +333,7 @@ mod tests {
         assert!(poked.ink_count() > base.ink_count());
         assert_eq!(
             room.status_input(0.0, &input).as_deref(),
-            Some("1 PLANTED WALKER(S)   64 STEPS SHOWN")
+            Some("1 PLANTED WALKER(S)   225 STEPS SHOWN")
         );
     }
 

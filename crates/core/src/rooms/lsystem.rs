@@ -186,6 +186,14 @@ fn line_in_frame(
     canvas.line(x0, y0, x1, y1, mark);
 }
 
+fn draw_seed_marker(canvas: &mut dyn Surface, width: usize, height: usize, x: f64, y: f64) {
+    let radius = (width.min(height) / 18).clamp(8, 24) as f64;
+    line_in_frame(canvas, width, height, (x - radius, y), (x + radius, y), '*');
+    line_in_frame(canvas, width, height, (x - radius, y), (x, y - radius), '#');
+    line_in_frame(canvas, width, height, (x + radius, y), (x, y - radius), '#');
+    canvas.plot(x.round() as i32, y.round() as i32, '#');
+}
+
 fn bounded_plants(pokes: &[(f64, f64)], width: usize, height: usize) -> Vec<Plant> {
     let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
     pokes[start..]
@@ -243,7 +251,7 @@ impl LSystemGarden {
     fn presets() -> &'static [Preset] {
         // (name, axiom, rules as (from, to), base_angle_deg)
         &[
-            ("tree", "0", &[("0", "1[0]0"), ("1", "11")], 25.0),
+            ("tree", "0", &[("0", "1[+0]-0"), ("1", "11")], 25.0),
             ("koch", "F", &[("F", "F+F-F-F+F")], 90.0),
             ("sierpinski", "A", &[("A", "B-A-B"), ("B", "A+B+A")], 60.0),
             ("bush", "F", &[("F", "FF+[+F-F-F]-[-F+F+F]")], 25.0),
@@ -331,7 +339,7 @@ impl Room for LSystemGarden {
             return;
         };
         let t = finite_phase(t);
-        let iters = ((t * 8.0) as usize).clamp(1, MAX_ITERS);
+        let iters = 3 + (t.clamp(0.0, 1.0) * 5.0) as usize;
         let plants = bounded_plants(pokes, w, h);
         let var = plant_variation(&plants);
         let s = self.generate(t, iters, var);
@@ -343,7 +351,10 @@ impl Room for LSystemGarden {
         // in the bottom rows (a homesick playtester wanted a thing that reaches
         // upward). The step is tied to height, not min(w, h), because a wide
         // short frame should still send the stem up rather than shrink it.
-        let mut y = (h as f64 - 2.0).max(5.0);
+        // Keep the ground above face-level controls and captions. Starting at
+        // the physical last row hid the opening growth behind the app footer.
+        let ground = ((h.saturating_sub(1)) as f64 * 0.72).max(5.0);
+        let mut y = ground;
         let mut dir = -PI / 2.0; // up
         let len = (h as f64 / 14.0).max(2.0);
         let aspect = safe_aspect(canvas);
@@ -379,11 +390,13 @@ impl Room for LSystemGarden {
                 break;
             } // bound
         }
+        draw_seed_marker(canvas, w, h, w as f64 / 2.0, ground);
         // Poke effect: plant extra "seeds" or small branches at click points.
         let branch_len = (len * 2.0).max(4.0);
         for plant in plants {
             let sx = f64::from(plant.x);
             let sy = f64::from(plant.y);
+            draw_seed_marker(canvas, w, h, sx, sy);
             line_in_frame(
                 canvas,
                 w,
@@ -490,6 +503,37 @@ mod tests {
         let mut c = Canvas::new(40, 30);
         r.render(&mut c, 0.5);
         assert!(c.ink_count() > 5);
+    }
+
+    #[test]
+    fn phase_zero_draws_visible_opening_growth_from_the_exact_axiom() {
+        let room = LSystemGarden::new();
+        assert_eq!(room.generate(0.0, 0, 0), "0");
+
+        let mut entry = Canvas::new(80, 40);
+        room.render(&mut entry, 0.0);
+        assert!(entry.ink_count() >= 30);
+        let text = entry.to_text();
+        let rows: Vec<_> = text.lines().collect();
+        assert!(
+            rows.iter()
+                .take(32)
+                .skip(20)
+                .any(|row| row.contains('*') || row.contains('#')),
+            "opening growth stays above the lower control-safe quarter"
+        );
+        let center = 40;
+        assert!(
+            rows.iter().any(|row| {
+                row.chars().take(center).any(|mark| mark == '*')
+                    && row.chars().skip(center + 1).any(|mark| mark == '*')
+            }),
+            "the opening tree branches to both sides of its stem"
+        );
+
+        let mut planted = Canvas::new(80, 40);
+        room.render_poked(&mut planted, 0.0, &[(0.25, 0.5)]);
+        assert!(planted.ink_count() >= entry.ink_count() + 20);
     }
 
     #[test]
