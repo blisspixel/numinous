@@ -17,6 +17,12 @@ const BETA: f64 = 8.0 / 3.0;
 const DT: f64 = 0.005;
 /// Total integration steps.
 const STEPS: usize = 9_000;
+/// The classic chaotic parameter used by the divergence instrument.
+const CLASSIC_RHO: f64 = 28.0;
+/// Distance between the two initial conditions measured by the instrument.
+const TWIN_OFFSET: f64 = 1e-4;
+/// Draw a subset of the integrated twin states to keep the overlay light.
+const TWIN_DRAW_STRIDE: usize = 4;
 /// Steps to discard so the path is on the attractor before drawing.
 const TRANSIENT: usize = 800;
 /// Shadow trajectories are user-seeded, so keep each one short enough for many pokes.
@@ -46,14 +52,17 @@ impl Lorenz {
         Self { seed }
     }
 
-    /// The Rayleigh parameter at phase `t`, sweeping through the onset of chaos.
-    fn rho_for(t: f64) -> f64 {
-        let phase = if t.is_finite() {
+    fn phase_for(t: f64) -> f64 {
+        if t.is_finite() {
             t.clamp(0.0, 1.0)
         } else {
             0.0
-        };
-        24.0 + 6.0 * phase
+        }
+    }
+
+    /// The Rayleigh parameter at phase `t`, sweeping through the onset of chaos.
+    fn rho_for(t: f64) -> f64 {
+        24.0 + 6.0 * Self::phase_for(t)
     }
 }
 
@@ -80,23 +89,59 @@ fn integrate(x: f64, y: f64, z: f64, rho: f64) -> Vec<(f64, f64, f64)> {
 }
 
 /// Integrate the Lorenz system from `start` for a bounded number of steps.
-fn integrate_for(
-    (mut x, mut y, mut z): (f64, f64, f64),
-    rho: f64,
-    steps: usize,
-) -> Vec<(f64, f64, f64)> {
+fn integrate_for(mut state: (f64, f64, f64), rho: f64, steps: usize) -> Vec<(f64, f64, f64)> {
     let steps = steps.min(STEPS);
     let mut points = Vec::with_capacity(steps);
     for _ in 0..steps {
-        let dx = SIGMA * (y - x);
-        let dy = x * (rho - z) - y;
-        let dz = x * y - BETA * z;
-        x += dx * DT;
-        y += dy * DT;
-        z += dz * DT;
-        points.push((x, y, z));
+        state = lorenz_step(state, rho);
+        points.push(state);
     }
     points
+}
+
+fn lorenz_step((x, y, z): (f64, f64, f64), rho: f64) -> (f64, f64, f64) {
+    let dx = SIGMA * (y - x);
+    let dy = x * (rho - z) - y;
+    let dz = x * y - BETA * z;
+    (x + dx * DT, y + dy * DT, z + dz * DT)
+}
+
+fn state_distance(a: (f64, f64, f64), b: (f64, f64, f64)) -> f64 {
+    ((a.0 - b.0).powi(2) + (a.1 - b.1).powi(2) + (a.2 - b.2).powi(2)).sqrt()
+}
+
+/// Number of classic twin integration steps visible at phase `t`.
+fn twin_steps(t: f64) -> usize {
+    (Lorenz::phase_for(t) * STEPS as f64).floor() as usize
+}
+
+/// Advance two nearby classic Lorenz runs and return their peak separation.
+///
+/// Instantaneous separation can shrink when the attractor folds. A running
+/// maximum preserves that real motion while giving the player an honest,
+/// monotonic record of how much predictability has already been lost.
+fn run_twins(
+    t: f64,
+    seed: u64,
+    mut observe: impl FnMut(usize, (f64, f64, f64), (f64, f64, f64)),
+) -> f64 {
+    let steps = twin_steps(t);
+    let mut main = varied_start(seed);
+    let mut shadow = (main.0 + TWIN_OFFSET, main.1, main.2);
+    let mut peak = state_distance(main, shadow);
+    observe(0, main, shadow);
+
+    for step in 1..=steps {
+        main = lorenz_step(main, CLASSIC_RHO);
+        shadow = lorenz_step(shadow, CLASSIC_RHO);
+        peak = peak.max(state_distance(main, shadow));
+        observe(step, main, shadow);
+    }
+    peak
+}
+
+fn divergence_peak(t: f64, seed: u64) -> f64 {
+    run_twins(t, seed, |_, _, _| {})
 }
 
 /// Project a Lorenz `(x, z)` point into the room's classic butterfly view.
@@ -161,26 +206,40 @@ impl Room for Lorenz {
             }
             previous = Some((sx, sy));
         }
+
+        // The full attractor remains the stage while the two classic-rho
+        // forecasts traced by the status instrument grow across it. Their
+        // instantaneous separation may shrink when the attractor folds; the
+        // status reports the largest separation this visible run has reached.
+        let steps = twin_steps(t);
+        let mut main_previous: Option<(i32, i32)> = None;
+        let mut shadow_previous: Option<(i32, i32)> = None;
+        let mut main_endpoint = (0, 0);
+        let mut shadow_endpoint = (0, 0);
+        run_twins(t, self.seed, |step, main, shadow| {
+            if step % TWIN_DRAW_STRIDE != 0 && step != steps {
+                return;
+            }
+            let main_point = project(width, height, main.0, main.2);
+            let shadow_point = project(width, height, shadow.0, shadow.2);
+            if let Some(previous) = main_previous {
+                canvas.line(previous.0, previous.1, main_point.0, main_point.1, '+');
+            }
+            if let Some(previous) = shadow_previous {
+                canvas.line(previous.0, previous.1, shadow_point.0, shadow_point.1, '-');
+            }
+            main_previous = Some(main_point);
+            shadow_previous = Some(shadow_point);
+            main_endpoint = main_point;
+            shadow_endpoint = shadow_point;
+        });
+        canvas.plot(main_endpoint.0, main_endpoint.1, '*');
+        canvas.plot(shadow_endpoint.0, shadow_endpoint.1, '*');
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        // Two starts a breath apart, integrated at this rho: how far they end up
-        // is the signature of chaos. As the sweep raises rho from the edge of
-        // chaos into deep chaos, sensitive dependence pulls the pair steadily
-        // further across the attractor, so this readout climbs, a live measure
-        // of how unforecastable the system has become. And because it moves,
-        // Lorenz now poses predictions and challenges too.
-        let rho = Self::rho_for(t);
-        let start = varied_start(self.seed);
-        let main = integrate_for(start, rho, STEPS);
-        let shadow = integrate_for((start.0 + 1e-4, start.1, start.2), rho, STEPS);
-        let gap = match (main.last(), shadow.last()) {
-            (Some(&(ax, ay, az)), Some(&(bx, by, bz))) => {
-                ((ax - bx).powi(2) + (ay - by).powi(2) + (az - bz).powi(2)).sqrt()
-            }
-            _ => 0.0,
-        };
-        Some(format!("TWINS {gap:.2} APART AT RHO {rho:.1}"))
+        let peak = divergence_peak(t, self.seed);
+        Some(format!("STORM PEAK {peak:.4} AT RHO {CLASSIC_RHO:.0}"))
     }
 
     fn reveal(&self) -> &'static str {
@@ -246,8 +305,8 @@ impl Room for Lorenz {
 #[cfg(test)]
 mod tests {
     use super::{
-        Lorenz, X_MAX, X_MIN, Z_MAX, Z_MIN, bounded_shadow_starts, integrate, project,
-        shadow_start, trajectory,
+        Lorenz, TWIN_OFFSET, X_MAX, X_MIN, Z_MAX, Z_MIN, bounded_shadow_starts, integrate, project,
+        run_twins, shadow_start, trajectory,
     };
     use crate::canvas::Canvas;
     use crate::room::Room;
@@ -273,6 +332,10 @@ mod tests {
             self.marks
                 .iter()
                 .any(|&(mx, my, m)| mx == x && my == y && m == mark)
+        }
+
+        fn has_mark(&self, mark: char) -> bool {
+            self.marks.iter().any(|&(_, _, m)| m == mark)
         }
     }
 
@@ -323,19 +386,74 @@ mod tests {
     }
 
     #[test]
-    fn the_divergence_readout_grows_with_the_onset_of_chaos() {
+    fn the_divergence_readout_is_born_from_the_perturbation_and_never_falls() {
+        for seed in [0, 1, 42, 1_000] {
+            let room = Lorenz::new_with(seed);
+            let gap = |t: f64| crate::challenge::status_numbers(&room.status(t).unwrap())[0].1;
+            let initial = gap(0.0);
+
+            assert!(
+                (initial - TWIN_OFFSET).abs() < 1e-12,
+                "seed {seed} should begin at the exact perturbation, not after divergence: {initial}"
+            );
+            let mut previous = initial;
+            for sample in 1..=64 {
+                let current = gap(sample as f64 / 64.0);
+                assert!(
+                    current.is_finite() && current >= previous,
+                    "seed {seed} fell at sample {sample}: {previous} to {current}"
+                );
+                previous = current;
+            }
+            assert!(
+                previous > 10.0,
+                "seed {seed} should eventually separate across the attractor: {previous}"
+            );
+        }
         let room = Lorenz::new();
-        // Below the onset (low rho, t=0) two nearby starts stay close; well
-        // above it (high rho, t=1) sensitive dependence pulls them apart.
-        let gap = |t: f64| crate::challenge::status_numbers(&room.status(t).unwrap())[0].1;
         assert!(
-            gap(1.0) > gap(0.0) + 1.0,
-            "the twins spread far more in the chaotic regime: {} vs {}",
-            gap(0.0),
-            gap(1.0)
+            room.status(0.5).unwrap().contains("PEAK"),
+            "the readout must disclose that it reports a running envelope"
         );
-        // A moving readout means Lorenz now poses predictions.
-        assert!(crate::pose_prediction(&room, 5).is_some());
+        assert_eq!(room.status(f64::NAN), room.status(0.0));
+        assert_eq!(room.status(f64::INFINITY), room.status(0.0));
+        assert_eq!(room.status(-1.0), room.status(0.0));
+        assert_eq!(room.status(9.0), room.status(1.0));
+        assert!(
+            room.status(0.5).unwrap().len() <= 40,
+            "the live instrument must stay one short line"
+        );
+        // A moving readout means Lorenz now poses predictions on the peak,
+        // not on one of the constant explanatory numbers that follow it.
+        let prediction = crate::pose_prediction(&room, 5).expect("the storm peak moves");
+        assert_eq!(prediction.index, 0);
+        assert_eq!(prediction.label, "STORM PEAK");
+        assert!((prediction.span.0 - TWIN_OFFSET).abs() < 1e-12);
+    }
+
+    #[test]
+    fn the_render_draws_both_trajectories_measured_by_the_instrument() {
+        let mut surface = ProbeSurface::new(80, 40);
+        let room = Lorenz::new();
+        let phase = 0.6;
+        let mut endpoint = None;
+        let peak = run_twins(phase, 0, |_, main, shadow| {
+            endpoint = Some((main, shadow));
+        });
+
+        room.render(&mut surface, phase);
+        assert!(surface.has_mark('+'), "the main forecast is visible");
+        assert!(surface.has_mark('-'), "the nearby forecast is visible");
+        let (main, shadow) = endpoint.expect("the twin run always has its initial state");
+        let main_point = project(surface.width, surface.height, main.0, main.2);
+        let shadow_point = project(surface.width, surface.height, shadow.0, shadow.2);
+        assert!(surface.marked(main_point.0, main_point.1, '*'));
+        assert!(surface.marked(shadow_point.0, shadow_point.1, '*'));
+        let status_peak = crate::challenge::status_numbers(&room.status(phase).unwrap())[0].1;
+        assert!(
+            (status_peak - peak).abs() <= 0.000_05,
+            "the visible run and its status must agree: {status_peak} vs {peak}"
+        );
     }
 
     #[test]
@@ -442,6 +560,7 @@ mod tests {
         let room = Lorenz::new();
         let mut empty = Canvas::new(0, 0);
         room.render(&mut empty, 0.5);
+        room.render_poked(&mut empty, 0.5, &[(0.5, 0.5)]);
         let mut canvas = Canvas::new(8, 8);
         for t in [f64::NAN, -1.0, 0.0, 1.0, 9.0] {
             room.render(&mut canvas, t);
