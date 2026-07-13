@@ -10,7 +10,7 @@
 
 use std::ffi::OsStr;
 use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufWriter, Read, Write};
+use std::io::{BufRead, BufWriter, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Duration;
@@ -23,6 +23,9 @@ use numinous_core::{
 
 const MAX_STUDIO_IMPORT_BYTES: u64 = 8 * 1024;
 const MAX_ENV_FILE_BYTES: u64 = 16 * 1024;
+const MAX_CLI_RENDER_WIDTH: usize = 4096;
+const MAX_CLI_RENDER_HEIGHT: usize = 4096;
+const MAX_CLI_RENDER_PIXELS: usize = 16 * 1024 * 1024;
 
 #[derive(Parser)]
 #[command(
@@ -579,7 +582,53 @@ fn parse_gestures(raw: &[String]) -> Result<Vec<numinous_core::RoomInput>, Strin
             numinous_core::MAX_ROOM_INPUTS
         ));
     }
-    raw.iter().map(|event| parse_gesture_arg(event)).collect()
+    let events: Vec<numinous_core::RoomInput> = raw
+        .iter()
+        .map(|event| parse_gesture_arg(event))
+        .collect::<Result<_, _>>()?;
+    let mut last_t = None;
+    for event in &events {
+        let t = match event {
+            numinous_core::RoomInput::PointerDown { t, .. }
+            | numinous_core::RoomInput::PointerMove { t, .. }
+            | numinous_core::RoomInput::PointerUp { t, .. } => Some(*t),
+            _ => None,
+        };
+        if let Some(t) = t {
+            if last_t.is_some_and(|previous| t < previous) {
+                return Err(format!(
+                    "Gesture timestamps must be nondecreasing; {t} came after {}.\n",
+                    last_t.unwrap_or(t)
+                ));
+            }
+            last_t = Some(t);
+        }
+    }
+    Ok(events)
+}
+
+fn validate_render_request(width: usize, height: usize, t: f64) -> Result<(), String> {
+    if width == 0 || height == 0 {
+        return Err("Render width and height must both be positive.\n".to_string());
+    }
+    if width > MAX_CLI_RENDER_WIDTH || height > MAX_CLI_RENDER_HEIGHT {
+        return Err(format!(
+            "Render size {width}x{height} exceeds the CLI limit of {}x{}.\n",
+            MAX_CLI_RENDER_WIDTH, MAX_CLI_RENDER_HEIGHT
+        ));
+    }
+    if width.saturating_mul(height) > MAX_CLI_RENDER_PIXELS {
+        return Err(format!(
+            "Render size {width}x{height} exceeds the {}-pixel allocation limit.\n",
+            MAX_CLI_RENDER_PIXELS
+        ));
+    }
+    if !t.is_finite() || !(0.0..1.0).contains(&t) {
+        return Err(format!(
+            "Render phase must be a finite number in [0,1); got {t}.\n"
+        ));
+    }
+    Ok(())
 }
 
 fn parse_pokes(raw: &[String]) -> Result<Vec<(f64, f64)>, String> {
@@ -632,18 +681,18 @@ impl RoomRenderInput<'static> {
     }
 }
 
-fn interaction_status(room: &dyn Room, t: f64, input: RoomRenderInput<'_>) -> Option<String> {
-    if !input.has_interaction() {
-        return None;
-    }
+fn visible_status(room: &dyn Room, t: f64, input: RoomRenderInput<'_>) -> Option<String> {
     let base = room.status(t);
-    let status = if !input.gesture.is_empty() {
+    if !input.has_interaction() {
+        return base;
+    }
+    if !input.gesture.is_empty() {
         room.status_input(t, input.gesture)
     } else {
         let inputs = numinous_core::inputs_from_pokes(input.pokes, t);
         room.status_input(t, &inputs)
-    };
-    (status != base).then_some(status).flatten()
+    }
+    .or(base)
 }
 
 /// Clear the screen so a game owns a clean console.
@@ -941,6 +990,10 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             pokes,
             gestures,
         } => {
+            if let Err(message) = validate_render_request(width, height, t) {
+                eprint!("{message}");
+                return ExitCode::FAILURE;
+            }
             let Some(era) = numinous_core::Era::parse(&era) else {
                 eprintln!("Unknown era '{era}'. Eras: phosphor, 8bit, vector, modern.");
                 return ExitCode::FAILURE;
@@ -1021,6 +1074,10 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             watch(&id, fps, width, height, mute, allow_hidden, era, variation)
         }
         Command::Sonify { id, t, out } => {
+            if let Err(message) = validate_render_request(1, 1, t) {
+                eprint!("{message}");
+                return ExitCode::FAILURE;
+            }
             if find_room(&id, allow_hidden).is_some() {
                 journey.visit(&id);
             }
@@ -1920,7 +1977,7 @@ fn render_color_report(
         room.render_input(&mut raster, t, &events);
     }
     let mut report = ansi_in_era(&raster, era);
-    if let Some(status) = interaction_status(room.as_ref(), t, input) {
+    if let Some(status) = visible_status(room.as_ref(), t, input) {
         report.push_str(&format!("\x1b[0mStatus: {status}\n"));
     }
     Ok(report)
@@ -2105,7 +2162,7 @@ fn render_report(
         room.render_input(&mut canvas, t, &events);
     }
     let mut report = canvas.to_text();
-    if let Some(status) = interaction_status(room.as_ref(), t, input) {
+    if let Some(status) = visible_status(room.as_ref(), t, input) {
         report.push_str(&format!("Status: {status}\n"));
     }
     Ok(report)
@@ -2238,7 +2295,7 @@ fn render_png(
         raster.width(),
         raster.height()
     );
-    if let Some(status) = interaction_status(room.as_ref(), t, input) {
+    if let Some(status) = visible_status(room.as_ref(), t, input) {
         report.push_str(&format!("Status: {status}\n"));
     }
     Ok(report)
@@ -2356,23 +2413,29 @@ fn gallery(dir: &Path, width: usize, height: usize) -> Result<String, String> {
 
 /// Play Crack the Code: defuse a math-clued bomb from stdin guesses.
 fn crack(seed: u64, digits: usize, attempts: usize, journey: &mut Journey) -> ExitCode {
-    journey.play();
-    let secret = numinous_core::secret_code(seed, digits);
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
+    crack_with_input(seed, digits, attempts, journey, &mut input)
+}
+
+fn crack_with_input(
+    seed: u64,
+    digits: usize,
+    attempts: usize,
+    journey: &mut Journey,
+    input: &mut impl BufRead,
+) -> ExitCode {
+    let secret = numinous_core::secret_code(seed, digits);
     println!("A bomb. A hidden {digits}-digit code; {attempts} wires before it blows.");
     println!("After each guess: LOCKED = right digit in the RIGHT place.");
     println!("                  LOOSE  = right digit, WRONG place. Digits can repeat.");
     println!("Clue: {}\n", numinous_core::hint(&secret));
     let mut attempt = 0usize;
     while attempt < attempts {
-        print!("Wire {}/{attempts} > ", attempt + 1);
-        let _ = std::io::stdout().flush();
-        let mut line = String::new();
-        if input.read_line(&mut line).unwrap_or(0) == 0 {
-            println!();
-            break;
-        }
+        let Some(line) = read_game_line(input, &format!("Wire {}/{attempts} > ", attempt + 1))
+        else {
+            return ExitCode::SUCCESS;
+        };
         if asked_why(&line, "crack") {
             continue;
         }
@@ -2385,6 +2448,9 @@ fn crack(seed: u64, digits: usize, attempts: usize, journey: &mut Journey) -> Ex
         if guess.len() != digits {
             println!("  Enter exactly {digits} digits.");
             continue;
+        }
+        if attempt == 0 {
+            journey.play();
         }
         attempt += 1;
         let feedback = numinous_core::grade(&secret, &guess);
@@ -2413,6 +2479,10 @@ fn crack(seed: u64, digits: usize, attempts: usize, journey: &mut Journey) -> Ex
 /// place (truecolor half-blocks), a little cinema for the big moments.
 fn word_in_lights(word: &str, accent: [u8; 3], frames: usize) {
     use std::io::Write as _;
+    if !std::io::stdout().is_terminal() {
+        println!("*** {word} ***");
+        return;
+    }
     let (w, h) = (96usize, 34usize);
     let mut stdout = std::io::stdout();
     // The moment owns the whole screen: wipe first, then erupt.
@@ -2471,17 +2541,47 @@ fn asked_why(line: &str, game: &str) -> bool {
     true
 }
 
+/// Read one prompted game input without turning a closed pipe into a move.
+/// EOF and read errors are neutral departures: they never mutate progression
+/// or post a score by themselves.
+fn read_game_line(input: &mut impl BufRead, prompt: &str) -> Option<String> {
+    print!("{prompt}");
+    let _ = std::io::stdout().flush();
+    let mut line = String::new();
+    match input.read_line(&mut line) {
+        Ok(0) => {
+            println!("\nINPUT CLOSED. LEAVING WITHOUT COUNTING A MOVE.");
+            None
+        }
+        Ok(_) => Some(line),
+        Err(error) => {
+            eprintln!("\nCould not read game input: {error}. Leaving without counting a move.");
+            None
+        }
+    }
+}
+
 /// Play SETI: scan channels of static and pick the artificial signal.
 fn seti(seed: u64, channels: usize, rounds: usize, journey: &mut Journey) -> ExitCode {
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
+    seti_with_input(seed, channels, rounds, journey, &mut input)
+}
+
+fn seti_with_input(
+    seed: u64,
+    channels: usize,
+    rounds: usize,
+    journey: &mut Journey,
+    input: &mut impl BufRead,
+) -> ExitCode {
     let mut score = 0usize;
+    let mut completed = 0usize;
     println!(
         "Listening near the hydrogen line. One channel hides a MIND; the rest are nature.\nOnly a mind counts: look for pulse groups going 2, 3, 5, 7. Answer with the letter.\n"
     );
     for round in 0..rounds {
         let scan = numinous_core::build_scan(seed.wrapping_add(round as u64), channels);
-        journey.play();
         println!("Scan #{}:", round + 1);
         for channel in &scan.channels {
             println!(
@@ -2489,21 +2589,32 @@ fn seti(seed: u64, channels: usize, rounds: usize, journey: &mut Journey) -> Exi
                 channel.letter, channel.frequency, channel.trace
             );
         }
-        print!("Which channel is a transmission? ");
-        let _ = std::io::stdout().flush();
-        let mut line = String::new();
-        if input.read_line(&mut line).unwrap_or(0) == 0 {
-            println!();
-            break;
-        }
-        if asked_why(&line, "seti") {
-            continue;
-        }
-        let guess = line
-            .chars()
-            .find(char::is_ascii_alphanumeric)
-            .map(|c| c.to_ascii_uppercase());
-        if guess == Some(scan.answer) {
+        let guess = loop {
+            let Some(line) = read_game_line(input, "Which channel is a transmission? ") else {
+                if completed > 0 {
+                    post_score(
+                        &format!("seti seed:{seed} rounds:{completed}"),
+                        score as i64,
+                    );
+                }
+                return ExitCode::SUCCESS;
+            };
+            if asked_why(&line, "seti") {
+                continue;
+            }
+            let Some(guess) = line
+                .chars()
+                .find(char::is_ascii_alphanumeric)
+                .map(|c| c.to_ascii_uppercase())
+            else {
+                println!("  Answer with a channel letter.");
+                continue;
+            };
+            break guess;
+        };
+        journey.play();
+        completed += 1;
+        if guess == scan.answer {
             score += 1;
             journey.win();
             println!(
@@ -2517,7 +2628,12 @@ fn seti(seed: u64, channels: usize, rounds: usize, journey: &mut Journey) -> Exi
             );
         }
     }
-    post_score(&format!("seti seed:{seed} rounds:{rounds}"), score as i64);
+    if completed > 0 {
+        post_score(
+            &format!("seti seed:{seed} rounds:{completed}"),
+            score as i64,
+        );
+    }
     println!("You found {score}/{rounds}. Now open a channel and say hello: numinous aliens.");
     ExitCode::SUCCESS
 }
@@ -2526,11 +2642,20 @@ fn seti(seed: u64, channels: usize, rounds: usize, journey: &mut Journey) -> Exi
 fn aliens(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
+    aliens_with_input(seed, rounds, journey, &mut input)
+}
+
+fn aliens_with_input(
+    seed: u64,
+    rounds: usize,
+    journey: &mut Journey,
+    input: &mut impl BufRead,
+) -> ExitCode {
     let mut score = 0usize;
+    let mut completed = 0usize;
     println!("A transmission. They speak only in numbers. Prove you understand.\n");
     for round in 0..rounds {
         let message = numinous_core::alien_message(seed.wrapping_add(round as u64), 5);
-        journey.play();
         let shown: Vec<String> = message
             .terms
             .iter()
@@ -2547,16 +2672,29 @@ fn aliens(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
             base_note,
             shown.join(", ")
         );
-        print!("The next number > ");
-        let _ = std::io::stdout().flush();
-        let mut line = String::new();
-        if input.read_line(&mut line).unwrap_or(0) == 0 {
-            println!();
-            break;
-        }
-        if asked_why(&line, "aliens") {
-            continue;
-        }
+        let line = loop {
+            let Some(line) = read_game_line(input, "The next number > ") else {
+                if completed > 0 {
+                    post_score(
+                        &format!("aliens seed:{seed} rounds:{completed}"),
+                        score as i64,
+                    );
+                }
+                return ExitCode::SUCCESS;
+            };
+            if asked_why(&line, "aliens") {
+                continue;
+            }
+            if line
+                .chars()
+                .any(|character| character.is_ascii_alphanumeric())
+            {
+                break line;
+            }
+            println!("  Answer with the next transmitted number.");
+        };
+        journey.play();
+        completed += 1;
         let answer = numinous_core::to_base(message.answer, message.base);
         let cleaned: String = line.chars().filter(char::is_ascii_alphanumeric).collect();
         if u64::from_str_radix(&cleaned, message.base).ok() == Some(message.answer) {
@@ -2573,7 +2711,12 @@ fn aliens(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
             );
         }
     }
-    post_score(&format!("aliens seed:{seed} rounds:{rounds}"), score as i64);
+    if completed > 0 {
+        post_score(
+            &format!("aliens seed:{seed} rounds:{completed}"),
+            score as i64,
+        );
+    }
     println!("You understood {score}/{rounds} of their language.");
     ExitCode::SUCCESS
 }
@@ -2686,11 +2829,15 @@ fn arcade_text(run: &numinous_core::munch_arcade::Arcade) -> String {
 
 /// The Munch arcade in the terminal: turn-based, same math, same spirits.
 fn arcade(seed: u64, journey: &mut Journey) -> ExitCode {
-    use numinous_core::munch_arcade::{Action, Arcade, Turn};
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
+    arcade_with_input(seed, journey, &mut input)
+}
+
+fn arcade_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRead) -> ExitCode {
+    use numinous_core::munch_arcade::{Action, Arcade, Turn};
     let mut run = Arcade::new(seed);
-    journey.play();
+    let mut played = false;
     println!("THE MUNCH ARCADE  seed {seed}. You are @. Eat what fits; dodge the spirits.");
     println!("T tracks you, d drifts, e rewrites numbers where it walks.");
     println!("Moves: w a s d, then e to eat. One move, then they move. (? explains)");
@@ -2703,12 +2850,9 @@ fn arcade(seed: u64, journey: &mut Journey) -> ExitCode {
             run.board.rule.describe()
         );
         print!("{}", arcade_text(&run));
-        print!("move > ");
-        let _ = std::io::stdout().flush();
-        let mut line = String::new();
-        if input.read_line(&mut line).unwrap_or(0) == 0 {
+        let Some(line) = read_game_line(input, "move > ") else {
             break;
-        }
+        };
         if asked_why(&line, "arcade") {
             continue;
         }
@@ -2724,6 +2868,10 @@ fn arcade(seed: u64, journey: &mut Journey) -> ExitCode {
                 continue;
             }
         };
+        if !played {
+            journey.play();
+            played = true;
+        }
         match run.turn(action) {
             Turn::Going => {}
             Turn::Caught => {
@@ -2746,7 +2894,12 @@ fn arcade(seed: u64, journey: &mut Journey) -> ExitCode {
             }
         }
     }
-    post_score(&format!("arcade seed:{seed}"), run.score);
+    if played {
+        post_score(&format!("arcade seed:{seed}"), run.score);
+    } else {
+        println!("RUN CLOSED. No score recorded.");
+        return ExitCode::SUCCESS;
+    }
     println!(
         "RUN OVER  level {}, score {}  (arcade seed:{seed}). The spirits send regards.",
         run.level, run.score
@@ -2781,11 +2934,15 @@ fn garden_text(stalks: &numinous_core::hackenbush::Stalks) -> String {
 
 /// Hackenbush against the Order: cut red, it cuts blue, last cutter wins.
 fn hackenbush(seed: u64, journey: &mut Journey) -> ExitCode {
-    use numinous_core::hackenbush as hb;
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
+    hackenbush_with_input(seed, journey, &mut input)
+}
+
+fn hackenbush_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRead) -> ExitCode {
+    use numinous_core::hackenbush as hb;
     let mut stalks = hb::new_garden(seed);
-    journey.play();
+    let mut played = false;
     println!("HACKENBUSH  seed {seed}. Cut a RED segment; everything above it falls.");
     println!("The Order cuts blue. Whoever cannot cut, loses. Answer: stalk height");
     println!("(1 1 cuts stalk 1 at the ground). This garden is winnable. (? explains)");
@@ -2795,13 +2952,9 @@ fn hackenbush(seed: u64, journey: &mut Journey) -> ExitCode {
             println!("No red left to cut. The Order takes the garden. (It was arithmetic.)");
             return ExitCode::SUCCESS;
         }
-        print!("stalk height > ");
-        let _ = std::io::stdout().flush();
-        let mut line = String::new();
-        if input.read_line(&mut line).unwrap_or(0) == 0 {
-            println!();
+        let Some(line) = read_game_line(input, "stalk height > ") else {
             return ExitCode::SUCCESS;
-        }
+        };
         if asked_why(&line, "hackenbush") {
             continue;
         }
@@ -2818,6 +2971,10 @@ fn hackenbush(seed: u64, journey: &mut Journey) -> ExitCode {
             println!("  That is not a red segment you can reach.");
             continue;
         }
+        if !played {
+            journey.play();
+            played = true;
+        }
         if !hb::can_move(&stalks, hb::Color::Blue) {
             journey.win();
             post_score(&format!("hackenbush seed:{seed}"), 1);
@@ -2833,14 +2990,18 @@ fn hackenbush(seed: u64, journey: &mut Journey) -> ExitCode {
 
 /// The Party Problem: round one, five guests (escapable); round two, six.
 fn party(journey: &mut Journey) -> ExitCode {
-    use numinous_core::party::{Party, Shade};
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
+    party_with_input(journey, &mut input)
+}
+
+fn party_with_input(journey: &mut Journey, input: &mut impl BufRead) -> ExitCode {
+    use numinous_core::party::{Party, Shade};
     println!("THE PARTY PROBLEM. Shade every handshake red or blue WITHOUT making");
     println!("a triangle of one color. Answer like: 1 3 r   (guests 1 and 3, red).");
     println!("Round one: five guests. It can be done. (? explains)\n");
     for (round, guests) in [(1usize, 5usize), (2, 6)] {
-        journey.play();
+        let mut played = false;
         let mut p = Party::new(guests);
         println!(
             "ROUND {round}: {guests} guests, {} handshakes.",
@@ -2870,13 +3031,9 @@ fn party(journey: &mut Journey) -> ExitCode {
                 }
                 println!();
             }
-            print!("handshake > ");
-            let _ = std::io::stdout().flush();
-            let mut line = String::new();
-            if input.read_line(&mut line).unwrap_or(0) == 0 {
-                println!();
+            let Some(line) = read_game_line(input, "handshake > ") else {
                 return ExitCode::SUCCESS;
-            }
+            };
             if asked_why(&line, "party") {
                 continue;
             }
@@ -2889,14 +3046,21 @@ fn party(journey: &mut Journey) -> ExitCode {
                 println!("  Like this: 1 3 r   or   2 5 b");
                 continue;
             };
-            let shade = if color.starts_with('r') || color.starts_with('R') {
-                Shade::Red
-            } else {
-                Shade::Blue
+            let shade = match color.chars().next().map(|c| c.to_ascii_lowercase()) {
+                Some('r') => Shade::Red,
+                Some('b') => Shade::Blue,
+                _ => {
+                    println!("  Color must be r or b.");
+                    continue;
+                }
             };
             if a == 0 || b == 0 || !p.shade(a - 1, b - 1, shade) {
                 println!("  That handshake is not open.");
                 continue;
+            }
+            if !played {
+                journey.play();
+                played = true;
             }
             if let Some((x, y, z, _)) = p.mono_triangle() {
                 println!(
@@ -2937,15 +3101,24 @@ fn party(journey: &mut Journey) -> ExitCode {
 
 /// Fifteen's Bet: call each scramble solvable or stuck forever.
 fn fifteen(seed: u64, rounds: u64, journey: &mut Journey) -> ExitCode {
-    use numinous_core::fifteen as ff;
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
+    fifteen_with_input(seed, rounds, journey, &mut input)
+}
+
+fn fifteen_with_input(
+    seed: u64,
+    rounds: u64,
+    journey: &mut Journey,
+    input: &mut impl BufRead,
+) -> ExitCode {
+    use numinous_core::fifteen as ff;
     let mut called = 0u64;
+    let mut completed = 0u64;
     println!("FIFTEEN'S BET. Half of all scrambles can never be solved, and one");
     println!("invisible quantity decides which. Call each one: S(olvable) or U(nsolvable).");
     println!("(? explains)\n");
     for n in 0..rounds {
-        journey.play();
         let tiles = ff::deal(seed, n);
         println!(
             "SCRAMBLE {} of {rounds}:\n{}",
@@ -2953,13 +3126,9 @@ fn fifteen(seed: u64, rounds: u64, journey: &mut Journey) -> ExitCode {
             ff::board_text(&tiles)
         );
         let verdict = loop {
-            print!("S or U > ");
-            let _ = std::io::stdout().flush();
-            let mut line = String::new();
-            if input.read_line(&mut line).unwrap_or(0) == 0 {
-                println!();
+            let Some(line) = read_game_line(input, "S or U > ") else {
                 return ExitCode::SUCCESS;
-            }
+            };
             if asked_why(&line, "fifteen") {
                 continue;
             }
@@ -2973,6 +3142,8 @@ fn fifteen(seed: u64, rounds: u64, journey: &mut Journey) -> ExitCode {
                 _ => println!("  S or U."),
             }
         };
+        journey.play();
+        completed += 1;
         let truth = ff::solvable(&tiles);
         if verdict == truth {
             called += 1;
@@ -2982,10 +3153,12 @@ fn fifteen(seed: u64, rounds: u64, journey: &mut Journey) -> ExitCode {
             println!("  No: {}\n", ff::why(&tiles));
         }
     }
-    post_score(
-        &format!("fifteen seed:{seed} rounds:{rounds}"),
-        called as i64,
-    );
+    if completed > 0 {
+        post_score(
+            &format!("fifteen seed:{seed} rounds:{completed}"),
+            called as i64,
+        );
+    }
     println!("{called} of {rounds} called. Parity is learnable; deal again.");
     ExitCode::SUCCESS
 }
@@ -3004,20 +3177,20 @@ fn nim_board(heaps: &[u32]) -> String {
 fn nim(seed: u64, journey: &mut Journey) -> ExitCode {
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
+    nim_with_input(seed, journey, &mut input)
+}
+
+fn nim_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRead) -> ExitCode {
     let mut heaps = numinous_core::nim_new(seed);
-    journey.play();
+    let mut played = false;
     println!("NIM  seed {seed}. On your turn, take ANY number of stones from ONE heap.");
     println!("Whoever takes the last stone wins. Answer like: 2 3  (heap 2, take 3).");
     println!("The Order plays a secret. Beat it and the secret is yours. (? explains)");
     loop {
         println!("\n{}", nim_board(&heaps));
-        print!("heap amount > ");
-        let _ = std::io::stdout().flush();
-        let mut line = String::new();
-        if input.read_line(&mut line).unwrap_or(0) == 0 {
-            println!();
+        let Some(line) = read_game_line(input, "heap amount > ") else {
             return ExitCode::SUCCESS;
-        }
+        };
         if asked_why(&line, "nim") {
             continue;
         }
@@ -3032,6 +3205,10 @@ fn nim(seed: u64, journey: &mut Journey) -> ExitCode {
         if heap == 0 || !numinous_core::nim_apply(&mut heaps, heap as usize - 1, take) {
             println!("  That move is not on the board.");
             continue;
+        }
+        if !played {
+            journey.play();
+            played = true;
         }
         if numinous_core::nim_finished(&heaps) {
             journey.win();
@@ -3063,12 +3240,8 @@ fn gauntlet_total(stage_scores: &[i64], cleared: &[bool]) -> i64 {
     total
 }
 
-/// One line of stdin, uppercased first char, for quick answers.
-fn read_letter(input: &mut impl BufRead) -> Option<char> {
-    let mut line = String::new();
-    if input.read_line(&mut line).unwrap_or(0) == 0 {
-        return None;
-    }
+/// The first answer letter in one already-read input line.
+fn letter_from_line(line: &str) -> Option<char> {
     line.chars()
         .find(char::is_ascii_alphanumeric)
         .map(|c| c.to_ascii_uppercase())
@@ -3079,6 +3252,10 @@ fn read_letter(input: &mut impl BufRead) -> Option<char> {
 fn gauntlet(seed: u64, journey: &mut Journey) -> ExitCode {
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
+    gauntlet_with_input(seed, journey, &mut input)
+}
+
+fn gauntlet_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRead) -> ExitCode {
     let mut stage_scores = Vec::new();
     let mut cleared = Vec::new();
     println!(
@@ -3088,23 +3265,17 @@ fn gauntlet(seed: u64, journey: &mut Journey) -> ExitCode {
 
     // Stage 1: one munch board.
     let board = numinous_core::build_board(seed, 0);
-    journey.play();
     println!("STAGE 1 of 4  MUNCH: {}", board.rule.describe());
     print!("{}", numinous_core::board_text(&board));
-    print!("Your bites > ");
-    let _ = std::io::stdout().flush();
-    let mut line = String::new();
-    if input.read_line(&mut line).unwrap_or(0) == 0 {
-        return ExitCode::SUCCESS;
-    }
-    if asked_why(&line, "gauntlet") {
-        print!("Your bites > ");
-        let _ = std::io::stdout().flush();
-        line.clear();
-        if input.read_line(&mut line).unwrap_or(0) == 0 {
+    let line = loop {
+        let Some(line) = read_game_line(input, "Your bites > ") else {
             return ExitCode::SUCCESS;
+        };
+        if !asked_why(&line, "gauntlet") {
+            break line;
         }
-    }
+    };
+    journey.play();
     let bites: Vec<usize> = line
         .split_whitespace()
         .filter_map(|w| w.parse::<usize>().ok())
@@ -3127,16 +3298,26 @@ fn gauntlet(seed: u64, journey: &mut Journey) -> ExitCode {
 
     // Stage 2: one mystery shape.
     let round = numinous_core::build_round(seed, 1, 44, 18);
-    journey.play();
     println!("STAGE 2 of 4  THE SHAPE:");
     print!("{}", round.art);
     for choice in &round.choices {
         println!("  {}) {}", choice.letter, choice.title);
     }
-    print!("Your answer > ");
-    let _ = std::io::stdout().flush();
-    let guess = read_letter(&mut input);
-    let clear = guess == Some(round.answer);
+    let guess = loop {
+        let Some(line) = read_game_line(input, "Your answer > ") else {
+            return ExitCode::SUCCESS;
+        };
+        if asked_why(&line, "gauntlet") {
+            continue;
+        }
+        let Some(guess) = letter_from_line(&line) else {
+            println!("  Answer with a choice letter.");
+            continue;
+        };
+        break guess;
+    };
+    journey.play();
+    let clear = guess == round.answer;
     if clear {
         journey.win();
     }
@@ -3153,7 +3334,6 @@ fn gauntlet(seed: u64, journey: &mut Journey) -> ExitCode {
 
     // Stage 3: one sky scan.
     let scan = numinous_core::build_scan(seed, 4);
-    journey.play();
     println!("STAGE 3 of 4  THE SKY:");
     for channel in &scan.channels {
         println!(
@@ -3161,10 +3341,21 @@ fn gauntlet(seed: u64, journey: &mut Journey) -> ExitCode {
             channel.letter, channel.frequency, channel.trace
         );
     }
-    print!("Which is a mind > ");
-    let _ = std::io::stdout().flush();
-    let guess = read_letter(&mut input);
-    let clear = guess == Some(scan.answer);
+    let guess = loop {
+        let Some(line) = read_game_line(input, "Which is a mind > ") else {
+            return ExitCode::SUCCESS;
+        };
+        if asked_why(&line, "gauntlet") {
+            continue;
+        }
+        let Some(guess) = letter_from_line(&line) else {
+            println!("  Answer with a channel letter.");
+            continue;
+        };
+        break guess;
+    };
+    journey.play();
+    let clear = guess == scan.answer;
     if clear {
         journey.win();
     }
@@ -3180,18 +3371,15 @@ fn gauntlet(seed: u64, journey: &mut Journey) -> ExitCode {
 
     // Stage 4: the bomb, four digits, five tries.
     let secret = numinous_core::secret_code(seed ^ 0x0000_6A17_0000_0B0B, 4);
-    journey.play();
     println!("STAGE 4 of 4  THE BOMB. Four digits, five tries.");
     println!("  Clue: {}", numinous_core::hint(&secret));
     let mut points = 0i64;
     let mut clear = false;
+    let mut played = false;
     for attempt in 1..=5 {
-        print!("Wire {attempt}/5 > ");
-        let _ = std::io::stdout().flush();
-        let mut line = String::new();
-        if input.read_line(&mut line).unwrap_or(0) == 0 {
-            break;
-        }
+        let Some(line) = read_game_line(input, &format!("Wire {attempt}/5 > ")) else {
+            return ExitCode::SUCCESS;
+        };
         let guess: Vec<u8> = line
             .trim()
             .chars()
@@ -3201,6 +3389,10 @@ fn gauntlet(seed: u64, journey: &mut Journey) -> ExitCode {
         if guess.len() != 4 {
             println!("  Four digits.");
             continue;
+        }
+        if !played {
+            journey.play();
+            played = true;
         }
         let feedback = numinous_core::grade(&secret, &guess);
         if feedback.locked == 4 {
@@ -3233,23 +3425,31 @@ fn gauntlet(seed: u64, journey: &mut Journey) -> ExitCode {
 fn munch(seed: u64, rounds: usize, journey: &mut Journey) -> ExitCode {
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
+    munch_with_input(seed, rounds, journey, &mut input)
+}
+
+fn munch_with_input(
+    seed: u64,
+    rounds: usize,
+    journey: &mut Journey,
+    input: &mut impl BufRead,
+) -> ExitCode {
     let mut total = 0i64;
     println!("MUNCH. Eat by cell number, e.g. \"1 7 22\". Wrong bites cost you. (? explains)\n");
     for round in 0..rounds {
         let board = numinous_core::build_board(seed, round as u64);
-        journey.play();
         println!("Board {} of {rounds}: {}", round + 1, board.rule.describe());
         print!("{}", numinous_core::board_text(&board));
-        print!("Your bites > ");
-        let _ = std::io::stdout().flush();
-        let mut line = String::new();
-        if input.read_line(&mut line).unwrap_or(0) == 0 {
-            println!();
-            break;
-        }
-        if asked_why(&line, "munch") {
-            continue;
-        }
+        let line = loop {
+            let Some(line) = read_game_line(input, "Your bites > ") else {
+                println!("Final score: {total} (seed {seed}).");
+                return ExitCode::SUCCESS;
+            };
+            if !asked_why(&line, "munch") {
+                break line;
+            }
+        };
+        journey.play();
         let bites: Vec<usize> = line
             .split_whitespace()
             .filter_map(|w| w.parse::<usize>().ok())
@@ -3300,7 +3500,20 @@ fn quiz(
 ) -> ExitCode {
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
+    quiz_with_input(rounds, seed, width, height, choices, journey, &mut input)
+}
+
+fn quiz_with_input(
+    rounds: usize,
+    seed: u64,
+    width: usize,
+    height: usize,
+    choices: usize,
+    journey: &mut Journey,
+    input: &mut impl BufRead,
+) -> ExitCode {
     let mut score = 0usize;
+    let mut completed = 0usize;
     let mut recent: Vec<&'static str> = Vec::new();
     println!("Guess the shape. Name the math behind each mystery render.\n");
     for round in 0..rounds {
@@ -3319,28 +3532,35 @@ fn quiz(
                 recent.remove(0);
             }
         }
-        journey.play();
         println!("Mystery #{} of {rounds}:", round + 1);
         print!("{}", r.art);
         println!();
         for choice in &r.choices {
             println!("  {}) {}", choice.letter, choice.title);
         }
-        print!("Your answer: ");
-        let _ = std::io::stdout().flush();
-        let mut line = String::new();
-        if input.read_line(&mut line).unwrap_or(0) == 0 {
-            println!();
-            break;
-        }
-        if asked_why(&line, "quiz") {
-            continue;
-        }
-        let guess = line
-            .chars()
-            .find(char::is_ascii_alphanumeric)
-            .map(|c| c.to_ascii_uppercase());
-        if guess == Some(r.answer) {
+        let guess = loop {
+            let Some(line) = read_game_line(input, "Your answer: ") else {
+                if completed > 0 {
+                    post_score(
+                        &format!("quiz seed:{seed} rounds:{completed}"),
+                        score as i64,
+                    );
+                }
+                println!("Final score: {score}/{completed}.");
+                return ExitCode::SUCCESS;
+            };
+            if asked_why(&line, "quiz") {
+                continue;
+            }
+            let Some(guess) = letter_from_line(&line) else {
+                println!("  Answer with a choice letter.");
+                continue;
+            };
+            break guess;
+        };
+        journey.play();
+        completed += 1;
+        if guess == r.answer {
             score += 1;
             journey.win();
             println!(
@@ -3354,10 +3574,15 @@ fn quiz(
             );
         }
     }
-    post_score(&format!("quiz seed:{seed} rounds:{rounds}"), score as i64);
+    if completed > 0 {
+        post_score(
+            &format!("quiz seed:{seed} rounds:{completed}"),
+            score as i64,
+        );
+    }
     println!(
-        "Final score: {score}/{rounds}. {}",
-        quiz_remark(score, rounds)
+        "Final score: {score}/{completed}. {}",
+        quiz_remark(score, completed)
     );
     ExitCode::SUCCESS
 }
@@ -3442,6 +3667,92 @@ mod tests {
     fn test_persistence_paths_never_resolve_to_the_player_profile() {
         assert!(super::journey_path().starts_with(std::env::temp_dir()));
         assert!(super::scores_path().starts_with(std::env::temp_dir()));
+    }
+
+    #[test]
+    fn eof_is_a_neutral_departure_from_every_cli_game() {
+        fn check(
+            name: &str,
+            run: impl FnOnce(
+                &mut numinous_core::Journey,
+                &mut std::io::Cursor<Vec<u8>>,
+            ) -> std::process::ExitCode,
+        ) {
+            let scores = super::scores_path();
+            let _ = std::fs::remove_file(&scores);
+            let mut journey = numinous_core::Journey::default();
+            let before = journey.clone();
+            let mut eof = std::io::Cursor::new(Vec::new());
+            assert_eq!(run(&mut journey, &mut eof), std::process::ExitCode::SUCCESS);
+            assert_eq!(journey, before, "{name} counted EOF as play");
+            assert!(!scores.exists(), "{name} posted a score for EOF");
+        }
+
+        check("crack", |journey, input| {
+            super::crack_with_input(1, 4, 1, journey, input)
+        });
+        check("seti", |journey, input| {
+            super::seti_with_input(1, 4, 1, journey, input)
+        });
+        check("aliens", |journey, input| {
+            super::aliens_with_input(1, 1, journey, input)
+        });
+        check("munch", |journey, input| {
+            super::munch_with_input(1, 1, journey, input)
+        });
+        check("arcade", |journey, input| {
+            super::arcade_with_input(1, journey, input)
+        });
+        check("hackenbush", |journey, input| {
+            super::hackenbush_with_input(1, journey, input)
+        });
+        check("party", |journey, input| {
+            super::party_with_input(journey, input)
+        });
+        check("fifteen", |journey, input| {
+            super::fifteen_with_input(1, 1, journey, input)
+        });
+        check("nim", |journey, input| {
+            super::nim_with_input(1, journey, input)
+        });
+        check("gauntlet", |journey, input| {
+            super::gauntlet_with_input(1, journey, input)
+        });
+        check("quiz", |journey, input| {
+            super::quiz_with_input(1, 1, 40, 18, 4, journey, input)
+        });
+    }
+
+    #[test]
+    fn room_render_boundaries_reject_empty_nonfinite_and_backwards_input() {
+        for (width, height, phase) in [
+            (0, 20, 0.0),
+            (40, 0, 0.0),
+            (40, 20, -1.0),
+            (40, 20, 1.0),
+            (40, 20, f64::NAN),
+            (40, 20, f64::INFINITY),
+            (4097, 20, 0.0),
+        ] {
+            assert!(
+                super::validate_render_request(width, height, phase).is_err(),
+                "accepted {width}x{height} at {phase}"
+            );
+        }
+        assert!(super::validate_render_request(4096, 4096, 0.5).is_ok());
+
+        let backwards = vec![
+            "down:0.2,0.3,0.8".to_string(),
+            "move:0.4,0.5,0.2".to_string(),
+        ];
+        let error = super::parse_gestures(&backwards).expect_err("backwards timestamp");
+        assert!(error.contains("nondecreasing"));
+        let ordered = vec![
+            "down:0.2,0.3,0.2".to_string(),
+            "move:0.4,0.5,0.8".to_string(),
+            "up:0.4,0.5,0.8".to_string(),
+        ];
+        assert!(super::parse_gestures(&ordered).is_ok());
     }
 
     #[test]
@@ -3723,6 +4034,36 @@ mod tests {
         assert!(
             report.contains("Status: 1 REPAIR"),
             "interaction status must reach the CLI: {report}"
+        );
+    }
+
+    #[test]
+    fn static_render_reports_every_available_core_readout() {
+        let phase = 0.37;
+        let mut checked = 0;
+        for room in numinous_core::all_rooms() {
+            let Some(status) = room.status(phase) else {
+                continue;
+            };
+            let report = render_report(
+                room.meta().id,
+                50,
+                24,
+                phase,
+                false,
+                RoomRenderInput::plain(),
+            )
+            .expect("catalog room renders");
+            assert!(
+                report.contains(&format!("Status: {status}")),
+                "{} must expose its shared-core readout",
+                room.meta().id
+            );
+            checked += 1;
+        }
+        assert!(
+            checked >= 11,
+            "status coverage unexpectedly shrank: {checked}"
         );
     }
 

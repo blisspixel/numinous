@@ -79,5 +79,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-dev
       - name: Workspace tests
         run: cargo test --workspace --locked
+      - name: Windows installer PATH promotion
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/install.ps1 -SelfTest
       - name: Locked build
         run: cargo build --workspace --locked

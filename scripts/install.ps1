@@ -18,12 +18,13 @@
 # Uninstalling never touches play history: ~\.numinous-journey,
 # ~\.numinous-scores, and ~\.numinous-cairn stay yours.
 #
-# Options: -Uninstall, -NoModifyPath.
+# Options: -Uninstall, -NoModifyPath, -SelfTest.
 # Set NUMINOUS_HOME to install somewhere other than ~\.numinous.
 [CmdletBinding()]
 param(
     [switch]$Uninstall,
-    [switch]$NoModifyPath
+    [switch]$NoModifyPath,
+    [switch]$SelfTest
 )
 
 $ErrorActionPreference = 'Stop'
@@ -70,22 +71,49 @@ function Get-UserPathRaw([Microsoft.Win32.RegistryKey]$Key) {
         'Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
 }
 
+# Put one directory first while preserving every unrelated raw entry exactly as
+# written. Expanding only for comparison avoids baking environment-variable
+# values into the stored user Path.
+function Promote-PathEntry([string]$Current, [string]$Dir) {
+    $target = $Dir.TrimEnd('\')
+    $kept = @()
+    foreach ($part in ($Current -split ';')) {
+        if ($part -eq '') { continue }
+        $expanded = [Environment]::ExpandEnvironmentVariables($part).TrimEnd('\')
+        if ($expanded -ine $target) { $kept += $part }
+    }
+    return (@($Dir) + $kept) -join ';'
+}
+
 function Add-UserPath([string]$Dir) {
     $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $true)
     try {
         $current = Get-UserPathRaw $key
-        foreach ($part in ($current -split ';')) {
-            $expanded = [Environment]::ExpandEnvironmentVariables($part).TrimEnd('\')
-            if ($expanded -ieq $Dir.TrimEnd('\')) { return $false }
-        }
         $kind = [Microsoft.Win32.RegistryValueKind]::ExpandString
         if ($key.GetValueNames() -contains 'Path') { $kind = $key.GetValueKind('Path') }
-        $joined = if ($current) { "$current;$Dir" } else { $Dir }
-        $key.SetValue('Path', $joined, $kind)
+        $promoted = Promote-PathEntry $current $Dir
+        if ($promoted -ceq $current) { return $false }
+        $key.SetValue('Path', $promoted, $kind)
         return $true
     } finally {
         $key.Close()
     }
+}
+
+function Test-PathPromotion {
+    $target = 'C:\Users\Player\.numinous\bin'
+    $stale = 'C:\Users\Player\.cargo\bin'
+    $other = '%LOCALAPPDATA%\Programs\Tools'
+    $actual = Promote-PathEntry "$stale;$target\;$other;$TARGET" $target
+    $parts = @($actual -split ';')
+    if ($parts[0] -cne $target) { Fail 'PATH self-test: install directory was not promoted.' }
+    if (@($parts | Where-Object { $_.TrimEnd('\') -ieq $target }).Count -ne 1) {
+        Fail 'PATH self-test: duplicate install entries remain.'
+    }
+    if ($parts[1] -cne $stale -or $parts[2] -cne $other) {
+        Fail 'PATH self-test: unrelated entries changed order or spelling.'
+    }
+    Say 'Windows installer PATH promotion: pass.'
 }
 
 function Remove-UserPath([string]$Dir) {
@@ -276,7 +304,7 @@ function Install-Numinous {
     if (-not $NoModifyPath) {
         $pathChanged = Add-UserPath $BinDir
         if ($pathChanged) { Send-EnvironmentChange }
-        if (($env:Path -split ';') -notcontains $BinDir) { $env:Path = "$BinDir;$env:Path" }
+        $env:Path = Promote-PathEntry $env:Path $BinDir
     }
     Say ''
     Say 'Numinous is installed.'
@@ -296,12 +324,29 @@ function Install-Numinous {
         Say 'Type numinous-app to begin.'
     }
     Say ''
+    Say 'Installed commands:'
+    foreach ($binary in $Binaries) {
+        Say "  $(Join-Path $BinDir $binary)"
+    }
+    $installedCli = Join-Path $BinDir 'numinous.exe'
+    $resolvedCli = if ($NoModifyPath) {
+        $installedCli
+    } else {
+        (Get-Command numinous -CommandType Application -ErrorAction Stop).Source
+    }
+    if (-not $NoModifyPath -and $resolvedCli -ine $installedCli) {
+        Fail "PATH still resolves numinous to $resolvedCli instead of the new install."
+    }
+    Invoke-Checked 'installed CLI version check' { & $resolvedCli --version }
+    Say ''
     Say "Read PLAY.md first if you read anything: $SrcDir\PLAY.md"
     Say 'Update any time by re-running this installer. Uninstall with -Uninstall.'
 }
 
 try {
-    if ($Uninstall) {
+    if ($SelfTest) {
+        Test-PathPromotion
+    } elseif ($Uninstall) {
         Uninstall-Numinous
     } else {
         Install-Numinous
