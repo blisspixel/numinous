@@ -474,7 +474,36 @@ fn process_may_be_running(pid: u32) -> bool {
     String::from_utf8_lossy(&output.stdout).contains(&format!("\",\"{pid}\","))
 }
 
-#[cfg(not(any(target_os = "linux", windows)))]
+#[cfg(target_os = "macos")]
+fn process_may_be_running(pid: u32) -> bool {
+    let own_pid = std::process::id();
+    if pid == own_pid {
+        return true;
+    }
+    let selection = format!("{pid},{own_pid}");
+    let Ok(output) = std::process::Command::new("ps")
+        .args(["-p", &selection, "-o", "pid="])
+        .env("LC_ALL", "C")
+        .output()
+    else {
+        return true;
+    };
+    if !output.status.success() {
+        return true;
+    }
+    let mut own_pid_is_listed = false;
+    let mut target_pid_is_listed = false;
+    for listed_pid in String::from_utf8_lossy(&output.stdout)
+        .split_ascii_whitespace()
+        .filter_map(|value| value.parse::<u32>().ok())
+    {
+        own_pid_is_listed |= listed_pid == own_pid;
+        target_pid_is_listed |= listed_pid == pid;
+    }
+    !own_pid_is_listed || target_pid_is_listed
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 fn process_may_be_running(_pid: u32) -> bool {
     true
 }
@@ -600,7 +629,7 @@ mod tests {
     use std::fs::File;
     use std::io;
     use std::path::PathBuf;
-    use std::process::Command;
+    use std::process::{Command, Stdio};
     use std::sync::atomic::{AtomicUsize, Ordering};
     #[cfg(windows)]
     use std::sync::{Arc, atomic::AtomicBool, mpsc};
@@ -608,6 +637,48 @@ mod tests {
     use std::time::Duration;
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    struct LiveChild(std::process::Child);
+
+    impl LiveChild {
+        fn spawn() -> Self {
+            #[cfg(windows)]
+            let mut command = {
+                let mut command = Command::new("ping");
+                command.args(["-n", "30", "127.0.0.1"]);
+                command
+            };
+            #[cfg(not(windows))]
+            let mut command = {
+                let mut command = Command::new("sleep");
+                command.arg("30");
+                command
+            };
+            command
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null());
+            Self(command.spawn().expect("spawn live child"))
+        }
+
+        fn id(&self) -> u32 {
+            self.0.id()
+        }
+
+        fn stop_and_wait(&mut self) {
+            if self.0.try_wait().expect("inspect live child").is_none() {
+                self.0.kill().expect("stop live child");
+            }
+            self.0.wait().expect("reap live child");
+        }
+    }
+
+    impl Drop for LiveChild {
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
 
     fn temp_file(name: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
@@ -837,6 +908,30 @@ mod tests {
         assert!(!super::recover_stale_lock(&lock));
         assert!(lock.exists());
 
+        std::fs::remove_file(lock).expect("cleanup lock");
+    }
+
+    #[test]
+    fn foreign_live_process_stale_lock_is_not_recovered() {
+        let path = temp_file("foreign_process_lock");
+        let lock = super::lock_path_for(&path);
+        let mut child = LiveChild::spawn();
+        let stale_started = super::current_unix_secs()
+            .saturating_sub(super::LOCK_STALE_AFTER_SECS)
+            .saturating_sub(1);
+        std::fs::write(
+            &lock,
+            format!(
+                "pid {}\ntoken active\nstarted_unix_secs {stale_started}\n",
+                child.id()
+            ),
+        )
+        .expect("foreign process lock");
+
+        assert!(!super::recover_stale_lock(&lock));
+        assert!(lock.exists());
+
+        child.stop_and_wait();
         std::fs::remove_file(lock).expect("cleanup lock");
     }
 
