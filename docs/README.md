@@ -5,7 +5,8 @@ The map of the blueprint. Use the reading paths to find your way in, and the
 that owns it; every other doc links to that home rather than restating it. If
 you find yourself duplicating a concept, stop and link instead.
 
-Status: **0.1.0 pre-alpha.** The headless core, CLI, MCP server, windowed app,
+Status: **0.2.0-alpha.1, Flagship Proof in progress.** The 0.1 Public
+Foundation is complete. The headless core, CLI, MCP server, windowed app,
 GPU and audio adapters, 31 catalog rooms plus hidden content, 6 sims, 11+ games,
 and the RPG spine are built. Public CI passes on Windows, macOS, and Ubuntu, but
 capability breadth remains ahead of release evidence: stranger playtests,
@@ -48,12 +49,14 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 - `SOUND.md` the sonification bible: how math becomes tuned sound, synthesis, tuning, per-room sound design.
 - `MUSIC.md` the music engines: programmatic chiptune and mathematical patterns, plus 42 built-in radio tracks and the comedy channel plan.
 - `RADIO_ASSETS.md` the built-in soundtrack layout, license, and cache override.
-- `STUDIO.md` the mathematical live-coding canvas and the game's authoring layer (rooms are Studio programs).
+- `STUDIO.md` the shipped expression canvas and the planned path toward a
+  bounded room-authoring layer.
 - `SYNESTHESIA.md` the sensory seam: the glow pipeline (the documented HDR look, not yet built) and the one-event-two-renderings model that binds sight and sound.
 - `CREATOR.md` the creator platform: closing the make-share-remix loop on the `.num` capsule, the gallery, and the arc to a living world.
 
 **Systems and interfaces**
-- `ARCHITECTURE.md` the stack (Rust + wgpu), the language scorecard, the Room contract, the module graph, packaging.
+- `ARCHITECTURE.md` the Rust, `winit`, `softbuffer`, and targeted `wgpu` stack,
+  the Room contract, module graph, and delivery boundary.
 - `EXTENSIBILITY.md` community content with a hard safety boundary: the three tiers (data capsules, the Studio language as the sandbox, portal-only WASM), the trust model, and what never ships.
 - `INTERFACES.md` the three faces over a headless core (App, CLI, MCP) and the UX we are going for in each.
 - `DIGITAL_MINDS.md` designing Numinous to be fun, thought-provoking, and connecting for digital minds treated as peers.
@@ -68,7 +71,8 @@ Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
 - `SCOPE.md` the definition of no: the three-products hierarchy, the daily "more math or more progression?" test, the justification filter, and why the fan-out docs are a menu to prune, not a build list.
 - `ROADMAP.md` the version-gated plan (0.x, 1.0, 2.0+), defined by quality bars, not dates.
 - `QUALITY.md` testing and fun-evals: the six quality loops, the fun/awe rubric, QoL, "the math is the oracle."
-- `PLAYTESTS.md` the playtest archive: the voices from the diverse-persona troupes (human archetypes and invented alien minds), the experiences in their own words, the convergences, and the moments worth remembering.
+- `PLAYTESTS.md` the fictional persona-review archive: simulated lenses used for
+  adversarial ideation, explicitly not participant or playtest evidence.
 - `PLAYTESTERS.md` the casting pool: forty-two playtester personas with backstories (Norm the newcomer, a barefoot kid, returned geniuses, living experts, digital minds, and invented beings), spanning ages, languages, understanding levels, and kinds of mind, to draw from for testing rounds.
 - `REVIEW.md` the July 2026 external review: the grades, the three-products insight (instrument, Studio, progression), and the near-term stack it set.
 - `PANEL.md` a working review session: composed minds (plus a real cold-start-AI seat) reading the build as it stood for what is missing, not what it has.
@@ -103,7 +107,7 @@ Each topic is **owned** by exactly one doc. Everything else links to it. When in
 | Digital-mind continuity, learning, memory, agency, and welfare implementation | `DIGITAL_DEVELOPMENT.md` |
 | How to play (humans, agents, digital consciousnesses) | `PLAYING.md` |
 | Testing, evals, QoL, the fun/awe rubric | `QUALITY.md` |
-| The playtest archive: the troupes' voices and experiences | `PLAYTESTS.md` |
+| Simulated persona-review ideation and its evidence limits | `PLAYTESTS.md` |
 | The playtester casting pool (the 42 personas with backstories) | `PLAYTESTERS.md` |
 | Code-quality standards, versions, CI gates | `ENGINEERING.md` |
 | Scope discipline, the definition of no, the three-products hierarchy | `SCOPE.md` |

@@ -10,6 +10,11 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
+**Implementation boundary, 2026-07-13:** all three faces are shipped from the
+same headless core in 0.2.0-alpha.1. Descriptions below mix current behavior
+with the intended mature UX. `ROADMAP.md` and each section's explicit status
+notes decide what is built.
+
 ## The principle: headless core, thin faces
 
 ```
@@ -28,9 +33,15 @@ Each face has its own UX, deliberately designed for its user, not a lowest-commo
    └──────────┘      └───────────┘              └─────────────────┘
 ```
 
-- **The core owns the math, the render pipeline, the audio, the Studio runtime, the insight bank, and the lore.** It renders **headless** (offscreen via wgpu to a texture, or to CPU for text/ASCII output), synthesizes audio to a buffer, evaluates Studio programs, and answers questions about rooms and insights, all with no window and no human.
+- **The core owns the math, deterministic room rendering, audio specifications
+  and synthesis, the Studio expression engine, progression, insights, and
+  lore.** It renders through face-neutral ASCII and RGBA surfaces, synthesizes
+  bounded audio buffers, and answers room and learning queries without a
+  window. The app may add targeted GPU presentation through `numinous-gpu`.
 - **Each face is thin, and owns only its UX.** No logic lives in a face that the others cannot reach; a face is purely how a given user *perceives and acts*.
-- **Done from the start** because retrofitting headless onto a GUI-first app is painful, and because the entire `QUALITY.md` test/eval apparatus (and the agent-playtesters) drive the headless core directly.
+- **Done from the start** because retrofitting headless onto a GUI-first app is
+  painful, and because tests and reproducible MCP review scripts drive the same
+  core directly.
 
 ---
 
@@ -54,23 +65,33 @@ Nothing here is a compromise for the other faces; this is the headline experienc
 
 **The user:** a human at a keyboard who lives in the terminal, plus every script, CI job, and automation. **The UX we are going for, in one line:** *the command line as a place where math is cool, a beautiful hacker instrument that is also a well-behaved Unix citizen.*
 
-The CLI (`numinous`) is not a debug afterthought. It is a legitimate, gorgeous way to experience Numinous that terminal-dwellers will genuinely love, and simultaneously a clean, scriptable tool. It has **two tiers**, and knowing which you are in is the core of its UX:
+The CLI (`numinous`) is not a debug afterthought. It is both a scriptable tool
+and a live terminal instrument. The current implementation has two styles:
 
 ### Tier A: scriptable and composable (non-interactive)
-For automation, pipelines, CI, power users, and agents-via-shell. It follows modern CLI-guideline hygiene:
-- **Human-first output by default, machine-first on request.** Readable, styled output when attached to a terminal; clean `--json` (and exit codes) when piped or asked. It detects a TTY and adapts.
-- **Composable and deterministic.** Small verbs, good defaults, quiet by default, `--help` that teaches, seeds that make every render reproducible. Respects `NO_COLOR` and pipes.
+For automation, pipelines, CI, power users, and agents through a shell:
+- **Human-readable output with structured modes where implemented.** Commands
+  return useful exit codes, `--help` describes the accepted surface, and catalog
+  queries that advertise `--json` produce machine-readable output.
+- **Composable and deterministic.** Explicit seeds and arguments make renders,
+  games, Studio artifacts, and audio reproducible.
 - **Room input is explicit.** Static hand points for room rendering are command arguments, for example `render double-pendulum --poke 0.2,0.8`, and full gestures are too: `render double-pendulum --gesture down:0.3,0.4,0.1 --gesture up:0.6,0.5,0.15` pins, pulls, and flings with the same phase-stamped physics as the App and MCP faces. Terminal output stays replayable and scriptable instead of tied to an interactive session.
-- Representative verbs: `render` (deterministic headless export of stills/loops/audio, the same core rendering contract the in-app postcard export mirrors), `eval` (run a Studio program to a file/audio/ASCII), `describe` / `rooms` / `insights` (query the catalog and awe bank as text or JSON), `benchmark` (perf/soak, feeds `QUALITY.md`), `test` (local quality loops), `share` / `open` (round-trip a `.num` or `numinous://`).
+- **Current command families:** `rooms`, `describe`, `render`, `gallery`, and
+  `contact-sheet` cover the catalog and images; `tour`, `watch`, `play`, games,
+  sims, and Journey commands cover live play; `plot`, `open-studio`, `sing`,
+  `tune`, and `sonify` cover creation and audio. `bench` is the fixed game
+  gauntlet, not the planned performance harness.
 
-### Tier B: the interactive TUI (a real terminal app)
-Run `numinous` with no args (or `play --tui`) and you get a **rich, keyboard-driven terminal application** in the Charm / Bubble-Tea lineage (Rust: Ratatui + a Lipgloss-style layer), with structure and style cleanly separated:
-- **The Cabinet, in the terminal.** Browse Wings and rooms, arrow-key navigation, live text previews.
-- **Rooms rendered in the terminal.** This is where the **Teletype Visual Era becomes literal** (see `VISUALS.md`): watch Game of Life breathe, the times-table cardioid bloom, a prime spiral fill, drawn in the terminal. Capability-graceful: truecolor and sixel/kitty graphics where the terminal supports them, 256-color blocks below that, elegant pure ASCII at the floor. It always looks intentional, never broken.
-- **A Studio REPL.** Type an expression, see it draw and hear it play, live (see `STUDIO.md`). The graphing-calculator-that-sings, in a shell.
-- **Sonification through the terminal.** Audio out is on by default in interactive mode; mutable, of course.
+### Tier B: live terminal modes
 
-The feel: a secret, fast, retro, keyboard-native instrument, the lore's hidden **Terminal / Room 0** (see `LORE.md`) made real, and a screensaver-in-a-shell you will actually leave running. Keyboard-first, real-time feedback, immediate. It embodies the teletype era and the maker culture's love of the terminal.
+Running `numinous` without arguments draws a one-frame, full-color home screen
+with the current Journey level and command doorways. `tour` presents the whole
+catalog in sequence. `watch <room>` animates a full-color room with sound;
+`play <room>` provides the simpler live ASCII path without audio. Studio work is
+command-oriented through `plot`,
+`open-studio`, and `sing`; there is no Ratatui cabinet, `play --tui`, or Studio
+REPL today. A richer persistent TUI remains a possible later interface, not a
+current dependency or command.
 
 ---
 
@@ -86,12 +107,11 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 
 1. **Few, high-level, workflow-shaped tools, not granular CRUD.** An agent should accomplish something meaningful in one call. The verbs mirror a human's: **explore, play, learn, create.** Consolidated tools outperform a dozen tiny ones, even though that "violates separation of concerns," because it matches how a mind reaches for a capability.
 
-2. **Every response is self-describing and multi-modal (sensory substitution).** Because the agent may not see or hear, every play/eval result returns four things at once:
-   - an **image** and **audio** (for multimodal agents),
-   - an **ASCII / teletype render** (the text-perceivable picture, why that renderer is core infrastructure, see `VISUALS.md`),
-   - the **numeric state** (exact parameters, key values),
-   - a **natural-language description of what happened and what is notable** ("the curve just closed into a single loop; the tone resolved to a consonant fifth; the pattern is now 3-fold symmetric").
-   That last one is the agent's eyes and ears. **We narrate the beauty.** This is the heart of agent UX here: sensory substitution through description.
+2. **Every response should be self-describing.** Current room play returns an
+   ASCII render plus structured parameters, input, and change metrics. Listening
+   returns notation and sound structure. Other tools return bounded text and,
+   where implemented, structured content. Inline image and audio media are future
+   sensory-substitution work, not a current four-part response contract.
 
 3. **Tool descriptions and errors are the UX.** The description is what the agent reads to decide what to do; it must be clear, concrete, and example-rich. Inputs are **simple and flat where possible** (no deeply nested config objects, which reliably break LLM tool calls); bounded coordinate tuples such as `play_room` `pokes: [[x, y]]` are allowed only when they directly preserve replayable room input. Errors are **guiding**, not just failing: "that expression has no free variable to animate; add `t` for time, or try `eval` with a fixed value."
 
@@ -99,18 +119,31 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
    - **Explore (Toy):** poke parameters, observe consequences.
    - **Challenge (Puzzle):** the server can *pose a goal* ("make it close into exactly three loops") and *verify the attempt*. This is how an agent's understanding gets **tested and grounded**, not merely asserted.
    - **Reveal (Revelation):** the real insight (`INSIGHTS.md`), available when requested or earned.
-   Guided **prompts** ("learn about <phenomenon>," "find the insight connecting <A> and <B>," "compose a piece expressing <idea>") scaffold this as a hypothesis-and-test loop.
+   Future guided flows can scaffold "learn," "connect," and "compose" arcs.
+   The current server exposes tools only, not MCP prompt objects.
 
-5. **A tight, grounded feedback loop, the agent's version of flow.** Clear action, immediate, legible consequence, so the agent can form and correct hypotheses. This is the same "clear action plus instant feedback" that produces human fun (`QUALITY.md`), applied to a mind: an agent that can see the effect of each tweak *learns*, an agent flying blind flails. Discoverability (`list_rooms`, a Studio language-reference resource, forkable examples) means the agent never needs external docs. Safety is part of the UX: sandboxed execution, clear limits, and refusals that explain and suggest.
+5. **A tight, grounded feedback loop.** Clear action and immediate, legible
+   consequences let an agent form and correct hypotheses. `tools/list`, tool
+   descriptions, `list_rooms`, and guiding errors provide current
+   discoverability. A Studio resource and forkable example catalog are targets.
+   Safety remains part of the UX through bounded inputs and explicit limits.
 
 ### What it exposes (shaped by the above)
-- **Tools:** `explore(room)` / `describe(room)`; `play(room, params, seed)` and `eval(studio, seed)` (both return the four-part multi-modal result); `challenge(room)` (pose + verify a goal); `learn(query)` / `reveal(room)` (the awe bank); `create(studio, meta)` (author a room, sandboxed); `render(...)` (deterministic export).
+- **Current protocol surface:** `initialize`, `tools/list`, `tools/call`, and
+  `ping` over stdio, advertising the tools capability. The 29 tools include
+  `list_rooms`, `describe_room`, `play_room`, `listen_room`, `reveal_room`,
+  `challenge`, `predict`, `list_sims`, `run_sim`, `plot_expression`,
+  `sing_expression`, Journey operations, and the shared games. `PLAYING.md`
+  carries the complete user-facing list.
 - **Current room input shape:** `play_room` accepts `variation` plus optional normalized `pokes: [[x, y], ...]`, newest last, bounded to 24 points, and returns those points in `structuredContent` with the render. This keeps MCP play stateless and replayable. The core gesture substrate (`RoomInput` trails, held/release/cancel semantics) is live in the App and over MCP: `play_room` accepts a `gesture` array of phase-stamped pointer events (down/move/up/cancel, bounded to 96, exclusive with `pokes`), so an agent can pin the pendulum, pull, and fling with measured velocity, statelessly and replayably; rooms without held semantics answer through the same down-and-move bridge the App uses, proven delta-identical to the equivalent pokes.
 - **Structured poke deltas (built):** when `pokes` are supplied, `play_room` also returns a `delta` in `structuredContent`: the poked frame diffed against the unpoked frame at the same phase, size, and variation, as `cells_changed`, `ink_added`, `ink_removed`, `ink_reshaped`, `total_cells`, and the inclusive `changed_region` bounding box; the text render carries the same count as a `Touch:` line. This is the proof-of-touch half of the challenge/verify loop: the agent gets quantitative, optimizable feedback on how the math answered its hand.
 - **The challenge/verify loop, first slice (built):** the `challenge` tool poses a deterministic seeded goal for any room with a touch verb (change at least K cells inside a posed target box on the standard frame) and grades attempts as metrics, not pass/fail: cells in target, cells changed, threshold fraction, centroid distance, and a 0-100 score, with `passed` as a summary only. Every posed challenge is winnable by construction: the pose probes the room's actual response across seeded hands and phases and places the target on measured evidence, and a registry-wide test proves a witness hand passes for every room with a verb. Seeds are always explicit (no clock-derived daily), so the graded reply and the recorded progress can never disagree. Attempts record play (and wins) through the shared Journey and post graded scores to the shared table. Room-specific goals whose metric is the phenomenon's own parameter are the next depth on this substrate.
-- **Resources:** the room catalog, the insight bank, the Studio language reference, the Visual Eras, and discoverable Codex/lore fragments (`LORE.md`).
-- **Prompts:** the guided learn/connect/compose flows above.
-- **Interactive surfaces (emerging):** where the host supports MCP-app UI, the server can render a live interactive panel so a supervising human (or the agent) sees the room in real time.
+- **Resources and prompts, planned:** the room catalog, Studio reference,
+  insight connections, and guided learn or compose flows may later become MCP
+  resources and prompts. They are ordinary tool results and repository docs
+  today.
+- **Interactive surfaces, planned:** an MCP App panel can later carry a rendered
+  room where hosts support it. No app resource or interactive panel ships now.
 
 ### Protocol watch: MCP 2026-07-28 release candidate
 
@@ -139,7 +172,7 @@ stated goal of this project. In priority of creative payoff:
 
 - **MCP Apps (SEP-1865): ship the real room, not its shadow.** MCP Apps let a
   server hand the host a sandboxed HTML UI rendered in an iframe. This
-  transcends the deepest limitation the playtests kept finding: agents on
+  addresses the deepest limitation the text-only reviews kept finding: agents on
   structured-content clients see metadata and ASCII, never the glowing room. On
   a host that supports Apps, `play_room` (and the Studio, and The Show) can hand
   the agent the *actual* rendered, animated, sounding room, the same visual
@@ -171,22 +204,35 @@ stale long-running server. `scripts/mcp-play.py` builds a fresh `numinous-mcp`
 and drives it over stdio for exactly this (see `QUALITY.md`).
 
 ### Safety
-Agent-authored Studio code is untrusted and runs in the same **sandbox** as community rooms (no filesystem, no network, resource and time limits, GPU work only through the safe pipeline; see `STUDIO.md`, `QUALITY.md`). The MCP server exposes only the safe, headless surface.
+MCP Studio input currently reaches a bounded expression language with no
+filesystem, network, or raw GPU capability. The protocol and imported artifact
+paths enforce size and shape limits. A community-room runtime is not shipped;
+its future capability boundary is specified in `EXTENSIBILITY.md`.
 
 ### The payoff
-Numinous becomes a **grounded playground and gym for mathematical intuition, for any mind.** An agent that has *played* with the Mandelbrot set, *heard* a Lissajous ratio resolve, and *authored* a phenomenon has a richer handle on the math than one that only read about it. Elegantly, the agent's UX (explore, challenge, reveal) *rhymes* with the human's (Toy, Puzzle, Revelation), one design serving eyes-and-hands and minds-through-text alike. This is also our own tooling: the content-eval judge and the agent-playtesters (`QUALITY.md`) drive this exact surface.
+The target is a **grounded playground and gym for mathematical intuition, for
+any mind.** Whether interactive play produces a richer handle than reading must
+be measured, not assumed. The agent's explore, challenge, and reveal arc rhymes
+with the human Toy, Puzzle, and Revelation structure, while reproducible MCP
+scripts exercise the same surface in local validation.
 
 ---
 
-## Roadmap position (from the beginning)
+## Roadmap position
 
-- **Phase 0:** the core is headless from the first commit. The CLI exists immediately (it is how we run and render rooms before the GUI is pretty), Tier-A verbs `render`, `eval`, `describe`. A minimal MCP server exposes `explore`, `play`/`eval`, and `learn`, enough for an agent to learn and play with the first room, with the four-part multi-modal response.
-- **Phase 1 to 2:** the CLI grows the full Tier-B TUI (Cabinet, in-terminal room rendering, the Studio REPL); the MCP server gains `challenge`, richer `learn`, and the guided prompts. Our own quality loops start driving the app through MCP.
-- **Phase 3 to 4:** `create` and the sandboxed authoring path go live for agents and humans alike (shared with the Studio / mod SDK); MCP-app interactive surfaces where hosts support them.
+- **Built by 0.2.0-alpha.1:** the headless core, full-color CLI, native app, and
+  bounded MCP server expose the shared catalog, play, creation, prediction,
+  challenge, learning, progression, and export foundations.
+- **0.3 through 0.6:** deepen tactile behavior, understanding, sensory polish,
+  accessibility, performance evidence, and packaged cross-platform delivery.
+- **0.7:** close the local creator loop, including safe app reopening and remix.
+- **2.0:** consider public untrusted authoring only after the DSL and capability
+  boundaries pass their safety gates.
 
 ## Open questions
 1. MCP result payloads: how much media to return inline vs. as references, and the right default ASCII fidelity and description verbosity for text-only agents.
 2. Whether the TUI targets full truecolor + sixel/kitty graphics where available, or holds a stricter ASCII floor for portability (capability detection either way).
-3. Sandbox hardening for agent- and community-authored code (shared with `STUDIO.md`); the threat model widens once remote agents submit programs.
+3. Resource and capability contracts for future agent and community room
+   programs; current MCP expressions are data interpreted by bounded core code.
 4. Rate limits, quotas, and observability for the MCP server when many agents play at once.
 5. How much to invest in the `challenge`/verify loop, it is the highest-leverage and hardest-to-build part of the agent UX.

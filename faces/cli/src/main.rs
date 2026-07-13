@@ -1,8 +1,8 @@
 //! The `numinous` command line: the terminal face of the headless core.
 //!
-//! See `docs/INTERFACES.md`. This increment lists the catalog, describes a room,
-//! and renders a room as ASCII in the terminal (the Teletype face). GPU preview,
-//! audio, and the Studio REPL arrive in later increments.
+//! See `docs/INTERFACES.md`. The CLI exposes the shared catalog, rooms, games,
+//! progression, Studio, audio, rendering, export, and digital-mind play paths
+//! without owning their domain logic.
 //!
 //! The command handlers are split into pure `*_report` functions that return the
 //! text to emit, so they can be unit-tested without capturing stdout; `main`

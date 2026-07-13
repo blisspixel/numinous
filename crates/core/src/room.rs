@@ -1,9 +1,9 @@
 //! The [`Room`] contract: the plugin every mathematical phenomenon implements.
 //!
-//! This is the seam described in `docs/ARCHITECTURE.md`. It is intentionally
-//! small in this first increment (metadata plus a deterministic ASCII render);
-//! audio, parameters, challenges, and reveals join the trait as those systems
-//! come online.
+//! This is the face-neutral seam described in `docs/ARCHITECTURE.md`. It keeps
+//! deterministic rendering, reveal text, interaction, notation, and sound
+//! specifications in the core while windows, protocols, and persistence remain
+//! responsibilities of the faces.
 
 use crate::sound::SoundSpec;
 use crate::surface::Surface;

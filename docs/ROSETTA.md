@@ -123,10 +123,10 @@ a mind.
   content is a truth rather than an English sentence (Tier 3 move 4).
 - **Language-independence as a protected invariant** (`QUALITY.md`): the
   probe-and-observe property (determinism, guiding errors, no hidden state) is
-  the substrate of Tier 3 onboarding and must not regress. The diverse-persona
-  playtests already include the hardest cases on purpose (a Latin nun, a
-  Japanese monk, Rocky, the Heptapod, the Lattice); convergence across them is
-  the test that the doorway holds.
+  the substrate of Tier 3 onboarding and must not regress. Fictional persona
+  reviews have exercised candidate hard cases, but they are ideation only. The
+  doorway holds only when real participants without a shared language can use
+  it under an observed protocol.
 
 The one-line thesis: **for a mind that shares your language, translate the
 doorway; for a mind that shares none, hand it math and let it read by being a

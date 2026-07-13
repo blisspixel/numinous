@@ -1,27 +1,50 @@
 # Visuals: The Rendering & Look Bible
 
-How Numinous is drawn. The rule above all others: **every single frame is screenshot-worthy.** If you pause at a random instant and it is not beautiful, that is a bug. This doc covers the rendering philosophy, the shared pipeline, the technique toolbox, the color and motion systems, and how each Visual Era is rendered. It is written for the Rust + `wgpu` stack in `ARCHITECTURE.md`.
+How Numinous is drawn. The rule above all others: **every single frame is
+screenshot-worthy.** If you pause at a random instant and it is not beautiful,
+that is a bug. This document owns both the current rendering boundary and the
+target visual system.
+
+**Implementation boundary, 2026-07-13:** 0.2.0-alpha.1 renders every room
+deterministically through CPU `Surface` implementations and presents app frames
+with `softbuffer`. Mandelbrot and Julia alone have targeted `wgpu` paths. Four
+CPU-styled Eras ship: phosphor, 8-bit, vector, and modern. PNG room renders,
+gallery sheets, and app postcards ship. HDR, bloom, feedback persistence, a
+universal GPU pipeline, 16-bit and blueprint Eras, audio voice swaps, loop or
+video export, and native link reopening are targets, not current evidence.
 
 ## Philosophy
 
-- **The math draws itself.** We do not paint pictures of math; we render the actual mathematical object, computed live on the GPU. A fractal is not a texture, it is an escape-time field evaluated per pixel this frame. This is why it holds up to infinite zoom and interaction.
+- **The math draws itself.** We render the mathematical object rather than a
+  prerecorded texture. Most rooms compute on the CPU today; the two shipped
+  fractal GPU paths evaluate escape-time fields in WGSL.
 - **Lit from within, not lit from above.** The aesthetic is additive light on a near-black stage (see `DESIGN.md`), not flat UI and not photorealism. Think glowing lines and points, HDR bloom, phosphor. The image looks *emissive*.
 - **Restraint is the style.** One idea per screen, one accent color per room, generous negative space. Beauty comes from precision and motion, not from clutter or spectacle.
 - **Beauty in stillness and in motion.** Both the paused frame and the animation must be gorgeous. Much of the magic lives in smooth, eased, continuous motion at a locked 60fps (120 where the display allows).
 
-## The shared render pipeline
+## Current and target render pipelines
 
-Every room, in every Era, flows through the same stages so the whole app looks like one place and inherits polish for free. Implemented in wgpu/WGSL.
+The current shared seam is `Surface`: each room emits deterministic drawing
+operations that can become terminal cells or RGBA pixels. The app presents the
+RGBA raster, adaptively reducing live resolution when a room exceeds its 33 ms
+budget. The GPU adapter can replace the fractal raster for Mandelbrot and Julia
+while preserving CPU fallback and deterministic exports.
 
-1. **Compute pass (simulate).** The room's math runs as a GPU compute shader into buffers/textures: escape-time fields, reaction-diffusion state, cellular-automata grids, particle positions, N-body steps. Millions of elements, off the CPU.
-2. **Scene pass (draw).** The state is rendered: instanced lines and points for 2D fields (the times-table chords, prime dots), raymarched SDFs for 3D/4D objects, full-screen fragment work for domain-colored fields. Output is HDR (values above 1.0 so glow reads).
-3. **Post pass (glow and grade).** HDR bloom (bright-pass, blur, composite) for the emissive look, tone-mapping, a subtle unified color grade, optional vignette and film-grain-free dithering to kill banding.
-4. **Era filter (skin).** The active Visual Era is applied here as a post-process plus a per-Era draw mode: CRT curvature and scanlines, palette quantization and dithering, phosphor persistence, blueprint grid, or the clean modern glow. Because this is a pipeline stage, one room renders in every Era with no per-room work (see `DESIGN.md` "Visual Eras").
-5. **Capture tap.** Still and loop export reads the HDR buffer pre-or-post grade, at arbitrary resolution, deterministically (seeded), for high-quality shareable output.
+The target systemic GPU post-stack has five stages:
 
-## The technique toolbox
+1. **Compute pass:** run only measured simulations or fields that benefit from
+   GPU parallelism.
+2. **Scene pass:** draw line, point, field, or SDF primitives into an HDR target.
+3. **Post pass:** apply bright-pass bloom, tone mapping, and a restrained grade.
+4. **Era filter:** express an Era as a shared post-process where that can replace
+   per-face duplication without erasing room meaning.
+5. **Capture tap:** export deterministic stills and, later, bounded loops from a
+   defined pre-grade or post-grade surface.
 
-The rendering vocabulary rooms draw from. All GPU-side.
+## Target technique toolbox
+
+These techniques are candidates for the staged GPU system, not a list of
+already shipped room implementations.
 
 - **Signed distance fields (SDF) + raymarching.** The workhorse for 3D and 4D scenes: define shapes as distance functions, march rays per pixel. Intuitive to build and blend, and pure math all the way down (reference: Inigo Quilez's articles are the canon). Used for 4D objects, hyperbolic space, smooth organic forms.
 - **Smooth-minimum blending.** `smin` to melt SDF shapes into each other for the organic, liquid look (reaction-diffusion coral, L-system growth).
@@ -39,31 +62,41 @@ Color is data, never decoration. Rules:
 - **One accent per room.** Each room owns a single signature accent that glows; everything else stays monochrome or low-saturation. A shared cross-room palette keeps the whole app coherent (a room's accent is a value in that shared system, not a random pick).
 - **Color carries meaning.** Hue maps to a real quantity, pitch, phase, iteration-to-escape, curvature, so the color *is* information you can read, not styling.
 - **Perceptually uniform ramps.** Use perceptually-uniform colormaps (viridis-family) for scalar fields so equal steps in value look like equal steps in color, and so it stays honest.
-- **HDR for emission.** Accent values push above 1.0 so bloom makes them glow. This is what sells "lit from within."
-- **Accessible by construction.** Every palette is validated for contrast and colorblind-safety (run the `dataviz` skill's validator when building the design system), and every color mapping has a colorblind-safe variant. Never encode meaning in hue alone; pair with brightness or shape.
+- **HDR for emission, planned.** Accent values above 1.0 will drive the future
+  bloom pass. The current raster approximates glow in 8-bit color.
+- **Accessible by construction, required.** Validate every palette for contrast
+  and color-vision deficiencies, and pair hue with brightness or shape. That
+  complete validation has not happened yet and remains in the 0.5 gate.
 
-## Motion design
+## Target motion design
+
+Rooms currently animate deterministically from phase, and the app can reduce
+live render resolution to protect its 33 ms room budget. The rules below are the
+remaining product bar, not claims that every room already satisfies it.
 
 - **Everything eases.** Nothing snaps. Physical, continuous, momentum-based. Dials have inertia; values glide.
 - **Idle "breathing."** A room left alone never freezes; it drifts in a slow, generative, gorgeous idle loop (this is also what makes Watch mode and the Cabinet's live tile-previews work, see `DESIGN.md`).
 - **Transitions are dissolves through black.** Room-to-room is a soft cross-dissolve, never a hard cut, always in the near-black.
-- **60fps floor, 120 ceiling.** Motion is where the beauty lives; frame drops are a visible defect. Each room declares a GPU cost tier so Watch mode never stacks two heavy rooms (see `ARCHITECTURE.md`).
+- **Frame budget.** Work toward smooth display pacing on representative
+  hardware. The current evidence is the adaptive 33 ms room-render budget on
+  one Windows machine, not a universal 60 or 120 fps guarantee.
 - **Reduce-motion is real.** A genuine reduced-motion mode (calmer idles, no fast strobing, no aggressive zoom) that stays beautiful, not a degraded fallback.
 
-## Rendering the Visual Eras (concrete)
+## Rendering the Visual Eras
 
-Each Era is a draw-mode plus a post-filter, all in the pipeline's stage 4. Same room, radically different skin.
+Four Eras ship as deterministic CPU styling in the app, CLI, and PNG paths:
 
-- **Teletype.** Character-cell rasterizer: the scene is quantized to a grid of glyphs on green phosphor, with a soft phosphor glow, scanlines, and a blinking cursor. The math rendered as living ASCII.
-- **8-bit / CRT.** Hard palette quantization (a strict small palette), a chunky pixel grid, ordered dithering for gradients, then a CRT shader: barrel curvature, scanlines, aperture-grille mask, corner vignette, and bloom. Lovingly-crafted retro, never lazy pixels (the guardrail from `DESIGN.md`).
-- **16-bit.** A richer quantized palette, dithering, a cleaner sprite-era feel, slightly softer CRT. The "SNES/Genesis" look.
-- **Oscilloscope / vector.** Lines only, no fills, on black, with heavy phosphor persistence (feedback-buffer decay) and additive green/amber glow. The waveform you hear is the waveform you see. Natural home for Lissajous and Fourier.
-- **Blueprint.** A drafting look: graph-paper grid, thin ink lines, dimension annotations, ink-on-cyan or ink-on-white. Natural home for the Straightedge & Compass room.
-- **Modern (native).** The full HDR additive-glow system described above: bloom, subtle depth, the polished default and the endpoint of the progression.
+- **Phosphor:** a green character-display treatment.
+- **8-bit:** a small-palette, chunky-pixel treatment.
+- **Vector:** a sparse line-forward treatment inspired by an oscilloscope.
+- **Modern:** the native near-black and single-accent raster look.
 
-Each Era also swaps the audio voice to match (chiptune, FM, analog, modern), see `SOUND.md` and `MUSIC.md`. Eras unlock in historical order as the player collects Constants (see `PROGRESSION.md`).
+The fuller CRT effects, feedback persistence, 16-bit and blueprint treatments,
+HDR modern pass, and per-Era audio voices are planned. Era progression must not
+be described as complete until those visual and sonic variants are both built
+and tested.
 
-## Per-wing visual identity (so 25 rooms feel varied but unified)
+## Per-wing visual identity (so 31 rooms feel varied but unified)
 
 The shared pipeline guarantees coherence; these keep the wings distinct:
 - **Emergence:** dense fields and grids, particle clouds, feedback trails. Cellular, alive.
@@ -75,9 +108,12 @@ The shared pipeline guarantees coherence; these keep the wings distinct:
 
 ## Export & capture
 
-- **Deterministic.** Seeded RNG means a captured loop or a shared deep-link reproduces the exact frame the sharer saw (see `ARCHITECTURE.md`).
-- **High quality.** Capture reads the HDR buffer and can render above screen resolution for crisp shareable stills and loops (video/GIF), with a single tasteful glyph watermark.
-- **Sharing is native, not web.** Exports are real image/video files and reproducible seed strings that reopen in the app. There is no browser build (see `ARCHITECTURE.md`).
+- **Shipped:** deterministic CPU PNG renders, full catalog galleries and contact
+  sheets, and app postcards of the live room state.
+- **Separate shipped artifacts:** Studio `.num` files and matching links round
+  trip through the CLI, but do not reopen in the app yet.
+- **Planned:** HDR still capture after that pipeline exists, bounded loop or
+  video export, and native application reopening for files and links.
 
 ## Open questions
 1. Bloom approach: physically-based HDR bloom vs. a cheaper stylized glow, per performance budget on integrated GPUs.

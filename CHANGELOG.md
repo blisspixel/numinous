@@ -113,6 +113,19 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - The Cairn now whispers reciprocity (the Heptapod's find in the second playtest round, and the founder's leave-it-better ethos made concrete): when a stone resolves, the reader is told how many voices the cairn holds and invited to add the next at the journey's end, because a message stays alive by being re-left, not only re-read; the initial factor prompt shows the count too. New core `cairn::count` (re-exported as `cairn_count`), test-first, counting the founding stones plus every local deposit.
 - A deterministic pre-commit gate (`scripts/hooks/pre-commit`, wired once per clone with `git config core.hooksPath scripts/hooks`, documented in `docs/ENGINEERING.md`). It blocks any commit that would fail the fast gate: the house-style guard on every commit, and the cargo gate (fmt, clippy `-D warnings`, the full test suite) only when the commit touches Rust, `Cargo.*`, or a shader, so docs-only commits stay fast. Coverage and the locked build remain the release gate (`scripts/verify.sh`). A wired gate that blocks a bad commit beats any reminder to run the checks.
 
+### Changed
+- The development package advances to `0.2.0-alpha.1`. The 0.1 Public
+  Foundation exit criterion is complete on the public `main` branch; the alpha
+  identifier states that 0.2 Flagship Proof is active but not complete. README,
+  the docs index, roadmap, verification guide, digital-minds evidence boundary,
+  workspace manifests, lockfile, and current test and coverage evidence now
+  agree on that state.
+- Evidence labels now identify the diverse fictional persona troupes recorded
+  in earlier entries as simulated reviews, not human or digital-mind participant
+  sessions. Their prompts count only when a defect is independently reproduced;
+  their reactions do not satisfy the hallway, universality, learning, or fun
+  gates.
+
 ### Fixed
 - Maintenance hardening closes five resource and installation boundary gaps.
   The POSIX installer now normalizes custom roots through their physical parent,
@@ -125,7 +138,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   generation caps success audio by requested duration, caps error details, and
   writes PCM without a second full-size sample allocation. Audio devices that
   report zero channels or a zero sample rate now fail before callback setup.
-  Focused regressions cover every bound and degenerate configuration.
+  Focused regressions cover the new core, app, CLI, and audio bounds.
 - Lorenz's divergence instrument now begins at its actual 0.0001 twin
   perturbation and climbs as an honestly labeled running peak at the classic
   chaotic parameter, rather than showing the non-monotonic distance between

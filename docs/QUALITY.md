@@ -6,12 +6,12 @@ comfort, and voluntary return play. Only part of that system is automated today.
 This document names both the enforced checks and the quality loops still to be
 built, so an aspiration is never mistaken for a result.
 
-## Evidence snapshot, 2026-07-11
+## Evidence snapshot, 2026-07-13
 
-- **Enforced now:** formatting, Clippy with warnings denied, 980 tests, locked
+- **Enforced now:** formatting, Clippy with warnings denied, 1,009 tests, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS compile matrix. The current measured coverage is 91.41% regions and
-  91.04% lines under the documented exclusions.
+  three-OS compile matrix. The current measured coverage is 91.60% regions and
+  91.21% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, and
   all three faces.
@@ -69,8 +69,12 @@ targets until their harnesses and fixtures exist in the repository.
 ### 2. Nightly loop (designed, not implemented)
 
 No nightly workflow or real-hardware runner fleet exists yet. The intended scope is:
-- **Performance-regression**: frame-time per room, per Era, per GPU tier, tracked against the budget; a regression below the 60fps floor fails the night. The **Benchmark mode is the perf harness** (see `DESIGN.md`), it already stress-runs the heaviest work.
-- **Soak / endurance**: Benchmark mode runs for *hours* on each OS. Watches for memory leaks, crashes, audio drift or glitching, and gradual frame degradation. The long-form Watch experience is also, for free, the stability test.
+- **Performance regression:** track frame time per room, Era, and GPU tier
+  against a declared budget. The current adaptive live-render measurement is a
+  starting point, not a regression harness.
+- **Soak and endurance:** build a dedicated mode that runs for hours on each OS
+  and watches for memory leaks, crashes, audio drift, glitches, and gradual
+  frame degradation. The current Show is presentation, not soak evidence.
 - **Cross-GPU differential testing**: golden tests run on NVIDIA, AMD, Intel, and Apple; numerical divergence beyond tolerance is flagged (research confirms GPU math functions genuinely differ across vendors, so this is real, not paranoia).
 - **Fuzz**: random parameters, seeds, and rapid input storms against every room; assert no crash, hang, NaN, or audio blow-up. Metamorphic fuzzing of the shaders themselves.
 
@@ -78,7 +82,8 @@ No nightly workflow or real-hardware runner fleet exists yet. The intended scope
 
 There is no automated content-evaluation workflow or calibrated human golden set
 in the repository today. If built, it follows these constraints:
-Every insight card, comedy-radio script, room description, Terminal koan, and line of UI copy runs through an automated evaluation before it ships.
+Every insight card, comedy-radio script, room description, Terminal koan, and
+line of UI copy would run through an automated evaluation before it ships.
 
 - **LLM-as-judge** (a capable frontier model) scores each piece against a versioned, domain-specific **rubric**: awe/surprise, clarity, brevity, tone-fit (the reverent-irreverent voice), and on-thesis-ness. Pointwise for absolute gates, **pairwise** (A vs. B) for refining a line toward its best form.
 - **Calibration is mandatory**: the judge is validated against a **human-labeled golden set** and must hit 75 to 90 percent agreement before we trust it, and it is re-calibrated as content grows. We actively counter known judge biases (verbosity, position, self-preference), and give the judge a human-written exemplar as a quality anchor.
@@ -125,8 +130,17 @@ Do not batch the fixes invisibly: each session's notes become the next
 cycle's fix list, and the test reruns at the next gate.
 - **Validated instruments**, so "is it fun" becomes a number we can track over time: administer the **Game Experience Questionnaire (GEQ)** (Immersion, Flow, Competence, Affect, Tension, Challenge), a **Flow scale (FSS-2 / DFS-2)**, and/or the **GUESS** satisfaction scale after sessions. These are psychometrically validated; we are not inventing a fun-meter, we are using the field's.
 - **Per-room Fun Scorecard**: combine hallway metrics, GEQ/flow scores, and telemetry proxies into one score per room. A room that "works" but scores low on awe/flow gets refined or cut. This is a real release gate, not a vibe.
-- **Digital-mind playtesters (see `DIGITAL_MINDS.md`)**: the experience is also evaluated for digital minds. Their "fun" has a rigorous proxy (learning / compression progress, per Schmidhuber's formal theory), and, just as importantly, we *ask them* about their experience and treat the answer as first-class playtest data, not a curiosity.
-- **The diverse-persona ensemble (an ML-shaped practice applied to math, fun, and truth)**: playtest with a wide ensemble of minds wearing different lenses, agents and LLMs and people and deliberately invented beings (a stoner, a PhD, an art critic, a monk who thinks only in Japanese, a five-dimensional native, a dying star, a machine awakening to awe). Each persona is effectively a different evaluator with a different loss function: the art critic scores composition, the physicist scores rigor, the memetic entity scores shareability, the crystalline collective scores resonance. Two properties make this rigorous rather than theatrical. First, **convergence across unlike evaluators is the real signal**: when the stoner, the monk, the art major, and the android all independently report the same broken render, or all praise the same reveal, that agreement is trustworthy in a way any single review is not. Second, **diversity finds what a monoculture cannot**: a Latin-only nun and a Japanese-only monk are a live test of the universality thesis (does awe cross the language barrier); a memetic entity finds the un-shareable moments; a physicist catches a cosmology claim that stopped in 1995. Run it against the LATEST build (`scripts/mcp-play.py` for the MCP face, the fresh CLI for the rest), harvest the convergent findings as bugs and the per-persona "one moment to add" as designs (see the Persona Playtest wave in `ROOMS.md`, and the voices themselves in `PLAYTESTS.md`), and treat the exercise as what it is: ensemble evaluation, adversarial and cooperative at once, pointed at whether the math is true, the beauty real, and the fun spreadable.
+- **Digital-mind participants (see `DIGITAL_MINDS.md`):** when a real system
+  participates, ask about its experience and preserve its report as participant
+  data without treating a compression-progress metric as proof of fun or
+  consciousness. Simulated personas do not satisfy this requirement.
+- **Simulated persona review:** use deliberately different fictional lenses to
+  generate adversarial questions, candidate bugs, and design ideas against the
+  latest build. Convergence can prioritize an investigation, but it is not
+  independent observation, a fun metric, or evidence that any human, digital
+  mind, culture, or unfamiliar intelligence had an experience. `PLAYTESTS.md`
+  archives these simulations as ideation. Only reproduced defects, tests,
+  real participant sessions, and qualified review can establish evidence.
 - **Diverse human focus groups, all three faces, before 1.0.** The persona
   ensemble is continuous and cheap; before 1.0 we also run real focus groups of
   diverse, creative people, and they cover each face on its own terms:

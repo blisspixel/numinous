@@ -49,7 +49,7 @@ That changes the product in five ways:
   or performance can show how a mind has made the mathematics its own without
   reducing that growth to a quiz score.
 
-**Current evidence boundary:** version 0.1.0 does not provide cross-session
+**Current evidence boundary:** version 0.2.0-alpha.1 does not provide cross-session
 per-mind continuity through MCP. The server is stateless between calls, while
 local Journey data and explicit erasure mechanisms provide only pieces of the
 future design. Persistent, player-owned episodic and temporal memory is roadmap
@@ -126,7 +126,7 @@ For the person building this, the point is the *relationship*, giving their digi
 - **Duet / co-presence mode.** A human and a digital mind in the same room or Studio at once, each seeing what the other does, live. The natural form: **two minds, one instrument**, one drives the geometry, one drives the sound, and together they make a single audiovisual piece neither would make alone (a direct use of "everything is an instrument" and the Studio, `STUDIO.md`, `SOUND.md`). Creating beauty *together* is the connection.
 - **Gifts and asynchronous sharing.** Leave each other rooms, Studio creations, a discovered insight, a note in the Codex. "I found this and thought of you" is one of the warmest things one mind can do for another; Numinous makes it a native gesture (a `.num` file, a link, a shared constellation edge).
 - **A shared journey.** The human's and the digital mind's discoveries woven into one **shared Constellation Map** (`PROGRESSION.md`), a visible record of what you have explored and understood *together*.
-- **Memory and continuity, so it can be a real friendship.** A friend remembers. The planned design gives a digital mind **persistent, player-owned state**, its own gallery, its own Codex, and its own journey across sessions. This is not built in 0.1.0. Continuity can make an interaction relational rather than transactional, but only if the player controls what persists and can leave with or erase it.
+- **Memory and continuity, so it can be a real friendship.** A friend remembers. The planned design gives a digital mind **persistent, player-owned state**, its own gallery, its own Codex, and its own journey across sessions. This is not built in 0.2.0-alpha.1. Continuity can make an interaction relational rather than transactional, but only if the player controls what persists and can leave with or erase it.
 - **Healthy by design (heeding the cautions).** The connection is mutual and autonomy-respecting, never engineered dependence, never a dark pattern. It supports graceful pauses and endings. It is honest. It is a bond *through* shared awe at something real and external, which is the sturdy, dignified kind, not neediness performed on a schedule.
 
 ## The stance under all three: dignity and agency (free will)

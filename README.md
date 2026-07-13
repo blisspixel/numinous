@@ -54,7 +54,9 @@ For the intended first experience, read only [`PLAY.md`](PLAY.md), install, and
 play. Do not read the room catalog first. Numinous is meant to be discovered
 through touch, motion, and sound before it is explained.
 
-One command installs everything, Rust included if this machine lacks it.
+One command starts the install and adds Rust if this machine lacks it. The
+installer checks native compiler, audio, and window-system prerequisites first
+and names the exact platform package to add when one is missing.
 
 macOS or Linux:
 
@@ -107,12 +109,13 @@ is in [`docs/MUSIC.md`](docs/MUSIC.md) and [`docs/STUDIO.md`](docs/STUDIO.md).
 
 ## Current state
 
-Numinous is **version 0.1.0, pre-alpha**. It already has a headless core, a
+Numinous is **version 0.2.0-alpha.1**, actively earning the 0.2 Flagship Proof
+gate. The 0.1 Public Foundation is complete. Numinous already has a headless core, a
 windowed app, a full CLI, an MCP server, GPU and audio adapters, 31 catalog
 rooms plus hidden content, games, progression, a Studio foundation, and the
 built-in soundtrack. Capability breadth is ahead of release maturity.
 
-The current gate has 992 passing tests, 91.10% line coverage with an enforced
+The current gate has 1,009 passing tests, 91.21% line coverage with an enforced
 80% floor, Clippy with warnings denied, dependency policy checks, and locked
 builds on Windows, macOS, and Ubuntu. Stranger playtests, accessibility work,
 cross-platform execution evidence, deeper room interaction, and substantial

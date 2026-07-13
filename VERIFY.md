@@ -6,9 +6,10 @@ the first dependency fetch.
 
 ## 0. Prerequisites
 
-Just want to play? The one-line installers in `README.md` set up everything,
-Rust included, without this document. What follows is the from-source
-verification path for contributors and the curious.
+Just want to play? The one-line installers in `README.md` check the native
+prerequisites, explain any missing platform package, install Rust when needed,
+and build Numinous. What follows is the from-source verification path for
+contributors and the curious.
 
 - **Rust** (edition 2024; pinned to 1.96.0 in `rust-toolchain.toml`). Install from
   <https://rustup.rs>. On Windows, cargo lands in `%USERPROFILE%\.cargo\bin`; if a
@@ -43,8 +44,8 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 992 tests pass, 91.47% region
-cover, and 91.10% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
+Expected right now: **format and clippy clean, 1,009 tests pass, 91.60% region
+cover, and 91.21% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
 integration-tested on real hardware and excluded from the coverage gate, see
 `docs/QUALITY.md`).
 
@@ -168,7 +169,7 @@ tool list and an ASCII render of the room as text.
 - `crates/gpu` adaptive wgpu rendering; `crates/audio` adaptive cpal output.
 - `faces/cli` the `numinous` binary; `faces/mcp` the `numinous-mcp` server.
 - `docs/` the full design and plan (start at `docs/README.md`); `CHANGELOG.md` the
-  running record of what shipped; `ROADMAP.md` the version-gated plan.
+  running record of what shipped; `docs/ROADMAP.md` the version-gated plan.
 - `.agent/` (gitignored) the working log; `renders/` (gitignored) generated output.
 
 ## 6. What is done vs pending
@@ -179,6 +180,8 @@ complete RPG spine (levels to 42 with lore, locks, 18 trophies with pings, the
 Gauntlet run, boons, daily streaks, resonances), the Studio (plot, animate,
 sing, in the terminal and the window), Visual Eras (including PNG output),
 Music Engine A (the seeded chiptune, `numinous tune`), GPU real-time fractals,
-live sound everywhere, the `forget` right for players who are minds, and
-29 MCP tools (full CLI parity for the games; challenge, predict, and cairn are MCP-first) so agents play the same content. Pending (see `ROADMAP.md`):
+live sound in the app and CLI plus structured notation over MCP, the `forget`
+right for players who are minds, and 29 MCP tools (full CLI parity for the
+games; challenge, predict, and cairn are MCP-first) so agents play the same
+content. Pending (see `docs/ROADMAP.md`):
 deeper room-specific pokes, human playtests, cross-platform proof, full Studio save/share beyond the first CLI `.num` save/open slice, the music visualizer, and more GPU room paths.

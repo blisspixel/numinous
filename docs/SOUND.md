@@ -1,6 +1,15 @@
 # Sound: The Sonification & Sound-Design Bible
 
-How Numinous *sounds*, and specifically how math *becomes* sound. This is the design bible for the "everything is an instrument" pillar. It complements `MUSIC.md` (which covers the two music engines and the radio stations); this doc covers the grammar of sonification, the synthesis architecture, and the per-room sound design. Built for the Rust `cpal` + `fundsp` stack in `ARCHITECTURE.md`.
+How Numinous *sounds*, and specifically how math *becomes* sound. This is the design bible for the "everything is an instrument" pillar. It complements `MUSIC.md` (which covers the two music engines and the radio stations); this doc covers the grammar of sonification, the synthesis architecture, and the per-room sound design.
+
+**Implementation status, 2026-07-13:** every catalog room ships a structured
+motif and deterministic sonification. The app plays room voices over its
+chiptune score, or hands the sole audio player to built-in radio playback. Mute
+and radio volume are live, but radio and room voices do not mix simultaneously.
+DSP is implemented locally without `fundsp`. The shared master bus,
+sample-accurate scheduling, per-Era voices, global tuning, spatialization, and
+independent room/UI volume controls below are design targets, not shipped
+claims.
 
 ## Philosophy: synesthesia, not sound effects
 
@@ -31,14 +40,16 @@ The shared vocabulary every room draws from. Consistency here is what lets a pla
 - **A shared house voice + master bus.** One coherent synth identity and one master chain (reverb, gentle compression, limiter, global volume, mute) so the whole app sounds like one instrument, the way it looks like one place. Rooms request notes and drones; the bus keeps them coherent.
 - **Per-Era voices.** The synth voice swaps with the Visual Era (see `VISUALS.md` and `MUSIC.md`): 4-bit and 8-bit chiptune (pulse/triangle/noise), 16-bit FM, oscilloscope analog (pure sine/saw, the waveform you see), and the modern tuned house synth. One room, every Era, from one mapping.
 - **Sample-accurate scheduling.** Sound is scheduled ahead on the audio thread against the **audio clock, which is the app's master timeline**; visuals read from that clock. Nothing musical is fired from the render loop. This is what makes sight and sound feel locked together instead of loosely correlated.
-- **Global key and tempo.** The app holds a global key and BPM; room sonification quantizes to them so play harmonizes with whatever radio station (Engine B, `MUSIC.md`) is on, instead of clashing. (This is itself math: everything tuned to one ratio lattice.)
+- **Global key and tempo target.** A future shared bus can hold one key and BPM
+  so room sonification harmonizes with a station instead of clashing.
 - **Ambient by default, expressive on touch.** Untouched, a room breathes a calm generative drone. Touched, it becomes an instrument you are playing.
 
 ## Tuning: the math is the tuning system
 
 - **Just intonation from the math's own ratios.** Where a room's math produces exact integer ratios (Lissajous, harmonic series, additive synth), tune those intervals *justly*, so the consonance you hear is the consonance the math describes. This is not a stylistic choice; it is the most honest possible sonification.
 - **Microtonality where the math demands it.** Some phenomena are not on the 12-note grid, and should not be forced onto it. The golden-angle detune, for instance, produces slow *beating* between nearly-but-not-quite-aligned tones, and that beating is the audible signature of irrationality. Let it.
-- **Scales as mood.** Different rooms/wings can default to different scales (pentatonic for the calm exploratory rooms, richer sets for the intense ones) while all snapping to the global key.
+- **Scales as mood.** Different rooms and wings can use distinct scales. The
+  current motifs do this locally; global-key coordination remains planned.
 
 ## Per-room sound design
 
@@ -67,7 +78,8 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 
 ## Interaction & UI sound
 
-- **Touch has a voice.** Dials, taps, and drags have subtle, tuned ticks (in the global key), so even navigating the UI is a little musical.
+- **Touch has a voice, planned.** Dials, taps, and drags should gain subtle tuned
+  ticks after the shared bus and input-audio path exist.
 - **Transitions are washes.** Room-to-room dissolves carry a reverb wash through black, matching the visual cross-dissolve (see `VISUALS.md`).
 - **Reveal has a resolution.** Summoning a Revelation card lands on a small, satisfying harmonic resolution, the sonic version of the floor tilting.
 
@@ -79,6 +91,7 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 
 ## Open questions
 1. How hard to quantize room sonification to the global radio key before a room stops sounding like *itself* (shared with `MUSIC.md`).
-2. DSP budget: how many simultaneous voices/grains `fundsp` sustains per platform under render load (verify in the Phase 0 audio-latency spike, `ARCHITECTURE.md`).
+2. DSP budget: how many simultaneous voices and grains the future custom DSP
+   sustains per platform under render load.
 3. Default scale/tuning per wing: one house scale for coherence vs. per-wing scales for identity.
 4. Binaural on by default for headphones, or opt-in (some players dislike HRTF coloration).

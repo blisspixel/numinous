@@ -2,16 +2,27 @@
 
 How Numinous is structured as a journey, without ever feeling like a course, a grind, or a game you can lose. This is the "levels and insights" plan.
 
+**Implementation boundary, 2026-07-13:** the alpha ships an optional local
+ceremony layer with XP, levels, trophies, boons, streaks, scores, lore locks,
+and resonances. Core rooms and creation remain open. The knowledge-only
+metroidbrainia below is the target meaning of progress, while the ceremony
+records contact with the world. The ruling at the end reconciles both layers.
+
 ## The core model: knowledge is the only progression
 
-The most important design decision in this document: Numinous is a **metroidbrainia**, a knowledge-gated experience in the lineage of *Outer Wilds*, *The Witness*, *Tunic*, and *Fez*. In those games, you do not collect items or levels; you collect **understanding**, and understanding is the only thing that actually moves you forward. A player who already knows everything could beat them on a fresh save in minutes.
+The target progression model is a **metroidbrainia** in the lineage of *Outer
+Wilds*, *The Witness*, *Tunic*, and *Fez*. Understanding, not a spendable stat,
+should be what opens the deepest conceptual paths.
 
 Numinous adapts this to mathematics, where it fits better than in any other subject, because **math is literally a web of connected insights**. The thing you unlock is not a key or a door. It is a realization. And the realization is real: you actually understand something you did not before.
 
 This gives us a progression system that is:
-- **Invisible and optional.** Like Outer Wilds' best gates, you often will not even notice a gate until an insight recontextualizes something you already saw. Nothing is ever locked with a visible "you need X" barrier.
-- **Impossible to grind.** There is no XP, no currency you farm. You cannot buy your way forward. You either see it or you do not, yet.
-- **Honest.** The progression is your own mind. That is the whole product's thesis made into a mechanic.
+- **Optional at the core.** Insight connections may reveal deeper paths, but
+  must never block rooms, creation, or free play behind a stat requirement.
+- **Impossible to buy.** Ceremony can record visits and wins, but no amount of
+  XP substitutes for an insight or purchases mathematical understanding.
+- **Honest.** The durable progression claim is what the player understands.
+  Levels are celebration and local memory, not proof of learning.
 
 ## Two players, one design
 
@@ -53,11 +64,12 @@ The long arc (see `DESIGN.md` and `LORE.md`):
 
 ## Onboarding: the first ninety seconds
 
-No tutorial, ever. Onboarding is a designed *first room*, not a lesson.
-- The app opens (after first launch) directly into a single, wordless, foolproof room, the recommended choice is **Times Tables**, because one dial produces instant, morphing, audible beauty with zero explanation.
-- The only affordance is the dial, and it visually invites dragging. Within seconds the player has caused beauty and heard it. That is the entire tutorial.
-- The Cabinet is revealed only after the first "whoa," so the first impression is a phenomenon, not a menu.
-- Everything else (Reveal, Share, Eras, the Constellation, the radio) is discovered, never pushed.
+The current app opens on a dismissible menu and then enters the selected room
+with an arrival card that names its action. The menu remains available from the
+start. Times Tables is the recommended 0.2 hallway-test flagship, but it is not
+forced as a first room. The stranger test must decide whether this doorway
+creates action and awe without explanation before a more restrictive first-run
+sequence is considered.
 
 ## The difficulty curve (for the parts that have one)
 
@@ -76,12 +88,14 @@ Only the optional Puzzle layer and the deeper insight-gates have difficulty, and
 
 ## Anti-patterns (progression edition)
 
-- No XP, no currency, no grind, no daily streaks, no "energy," no lives.
-- No fail state anywhere in the Toy. You cannot lose Numinous.
-- No visible "locked, you need X" walls. Gates are invisible until an insight opens them.
-- No forced tutorial, no forced text, no forced order. The Cabinet is open from the start.
-- No progression the Wanderer can trip over, and no shallow bottom the Seeker can hit and feel cheated by.
-- Progress is understanding. If we ever find ourselves rewarding time-spent instead of insight-gained, we have broken the thesis.
+- No XP, streak, score, or currency may gate a core room or creative surface.
+- No punishment for absence, paid acceleration, energy timer, or lives economy.
+- No fail state in the Toy layer. Scored games may end; free play does not.
+- Lore and deep-cut locks may create curiosity, but must not disguise a stat
+  wall as mathematical understanding.
+- No forced tutorial, text, or order. The menu remains available from the start.
+- No progression the Wanderer must manage, and no shallow bottom for the Seeker.
+- If ceremony begins rewarding idle time or coercive repetition, cut it back.
 
 ## Open questions
 1. How explicit should the Constellation Map be? Fully hidden (Outer Wilds style, you hold it in your head) versus a visible filling-in web. Leaning visible-but-uncluttered, because the web itself is beautiful and on-thesis.

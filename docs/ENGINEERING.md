@@ -81,7 +81,11 @@ beta and is not a release baseline.
 
 ## Performance discipline
 
-- **Measure before optimizing.** `criterion` benchmarks on hot paths; the 60/120fps floor is a CI-tracked budget (`QUALITY.md` nightly soak/perf). No optimization lands without a benchmark showing it helped.
+- **Measure before optimizing.** Use focused timings or `criterion` benchmarks
+  on hot paths. The app currently enforces an adaptive 33 ms room-render target
+  on the measured Windows machine; broader CI performance and soak budgets are
+  planned in `QUALITY.md`. No optimization lands without evidence that it
+  helped.
 - **Documented release profile** (LTO, `codegen-units`, panic strategy, opt-level) with the reasoning; a `bench`/`profiling` profile for flamegraphs.
 - Prefer clear code that the compiler optimizes well over hand-rolled cleverness; reach for `unsafe`/SIMD only with a benchmark that justifies it, behind the unsafe policy above.
 

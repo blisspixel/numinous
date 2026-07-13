@@ -141,9 +141,11 @@ or in any MCP client's config (build once with
 ```
 
 Transport is JSON-RPC 2.0 over newline-delimited stdio, protocol revision
-2025-06-18. Twenty-nine tools, mostly flat schemas, all stateless per call;
-the bounded `play_room` `pokes` tuple array and `gesture` event objects are
-the deliberate exceptions for replayable hand input:
+2025-06-18. Twenty-nine tools use mostly flat schemas. Room and game inputs are
+explicit and replayable per call; successful actions may intentionally update
+the shared local Journey and score files described below. The bounded
+`play_room` `pokes` tuple array and `gesture` event objects carry replayable hand
+input without hidden session state:
 
 | Tool | What it does |
 |---|---|
