@@ -27,8 +27,6 @@ SNAPSHOT_URL="https://codeload.github.com/${REPO}/tar.gz/refs/heads/main"
 INSTALL_SH_URL="https://raw.githubusercontent.com/${REPO}/main/scripts/install.sh"
 INSTALL_PS1_URL="https://raw.githubusercontent.com/${REPO}/main/scripts/install.ps1"
 NUMINOUS_HOME="${NUMINOUS_HOME:-$HOME/.numinous}"
-SRC_DIR="$NUMINOUS_HOME/src"
-BIN_DIR="$NUMINOUS_HOME/bin"
 
 say() { printf '%s\n' "$1"; }
 fail() {
@@ -36,6 +34,27 @@ fail() {
     exit 1
 }
 have() { command -v "$1" >/dev/null 2>&1; }
+
+posix_quote() {
+    printf "'"
+    printf '%s' "$1" | sed "s/'/'\\\\''/g"
+    printf "'"
+}
+
+fish_quote() {
+    printf "'"
+    printf '%s' "$1" | sed "s/\\\\/\\\\\\\\/g; s/'/\\\\'/g"
+    printf "'"
+}
+
+directory_is_empty() {
+    for entry in "$1"/.[!.]* "$1"/..?* "$1"/*; do
+        if [ -e "$entry" ] || [ -L "$entry" ]; then
+            return 1
+        fi
+    done
+    return 0
+}
 
 usage() {
     say "Numinous installer (macOS and Linux)."
@@ -63,6 +82,51 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+case "$NUMINOUS_HOME" in
+    "" | / | "$HOME") fail "NUMINOUS_HOME must name a dedicated absolute directory" ;;
+    /*) ;;
+    *) fail "NUMINOUS_HOME must be an absolute path" ;;
+esac
+if printf '%s' "$NUMINOUS_HOME" | LC_ALL=C grep -q '[[:cntrl:]]'; then
+    fail "NUMINOUS_HOME must not contain control characters"
+fi
+while [ "${NUMINOUS_HOME%/}" != "$NUMINOUS_HOME" ]; do
+    NUMINOUS_HOME="${NUMINOUS_HOME%/}"
+done
+case "$NUMINOUS_HOME" in
+    "" | /) fail "NUMINOUS_HOME must name a dedicated absolute directory" ;;
+esac
+while [ "${NUMINOUS_HOME#//}" != "$NUMINOUS_HOME" ]; do
+    NUMINOUS_HOME="${NUMINOUS_HOME#/}"
+done
+case "$NUMINOUS_HOME/" in
+    */./* | */../*) fail "NUMINOUS_HOME must not contain . or .. path components" ;;
+esac
+home_physical="$(CDPATH= cd -P "$HOME" 2>/dev/null && pwd)" \
+    || fail "HOME is not an accessible directory"
+install_parent="$(dirname "$NUMINOUS_HOME")"
+install_name="$(basename "$NUMINOUS_HOME")"
+install_parent="$(CDPATH= cd -P "$install_parent" 2>/dev/null && pwd)" \
+    || fail "the parent directory of NUMINOUS_HOME must already exist"
+NUMINOUS_HOME="$install_parent/$install_name"
+if [ "$NUMINOUS_HOME" = "$home_physical" ] || [ -L "$NUMINOUS_HOME" ]; then
+    fail "NUMINOUS_HOME must name a dedicated directory, not HOME or a symbolic link"
+fi
+SOURCE_PATH="$NUMINOUS_HOME/src"
+BINARY_PATH="$NUMINOUS_HOME/bin"
+INSTALL_MARKER="$NUMINOUS_HOME/.numinous-install-root"
+DEFAULT_HOME="$home_physical/.numinous"
+if [ -e "$NUMINOUS_HOME" ] && [ ! -d "$NUMINOUS_HOME" ]; then
+    fail "NUMINOUS_HOME exists but is not a directory"
+fi
+if [ -d "$NUMINOUS_HOME" ] \
+    && [ "$NUMINOUS_HOME" != "$DEFAULT_HOME" ] \
+    && [ ! -f "$INSTALL_MARKER" ] \
+    && ! directory_is_empty "$NUMINOUS_HOME" \
+    && { [ ! -x "$BINARY_PATH/numinous" ] || [ ! -f "$SOURCE_PATH/Cargo.toml" ]; }; then
+    fail "custom NUMINOUS_HOME exists but is not a recognized Numinous install root"
+fi
+
 case "$(uname -s)" in
     Darwin) os=macos ;;
     Linux) os=linux ;;
@@ -78,12 +142,13 @@ esac
 # never a user's own PATH edits. The path marker only keeps re-runs from
 # appending a duplicate when any line already provides the directory.
 installer_note='added by the Numinous installer'
-if [ "$NUMINOUS_HOME" = "$HOME/.numinous" ]; then
+if [ "$NUMINOUS_HOME" = "$DEFAULT_HOME" ]; then
     path_line="export PATH=\"\$HOME/.numinous/bin:\$PATH\" # $installer_note"
     path_marker='.numinous/bin'
 else
-    path_line="export PATH=\"$BIN_DIR:\$PATH\" # $installer_note"
-    path_marker="$BIN_DIR"
+    quoted_bin_dir="$(posix_quote "$BINARY_PATH")"
+    path_line="export PATH=$quoted_bin_dir:\$PATH # $installer_note"
+    path_marker="$BINARY_PATH"
 fi
 
 strip_path_line() {
@@ -96,7 +161,16 @@ strip_path_line() {
 }
 
 if [ "$UNINSTALL" -eq 1 ]; then
-    rm -rf "$NUMINOUS_HOME"
+    cd "$install_parent"
+    if [ -L "$install_name" ]; then
+        fail "refusing to remove a symbolic-link install root: $NUMINOUS_HOME"
+    fi
+    if [ -e "$install_name" ] \
+        && [ "$NUMINOUS_HOME" != "$DEFAULT_HOME" ] \
+        && [ ! -f "$install_name/.numinous-install-root" ]; then
+        fail "refusing to remove an unmarked custom install root: $NUMINOUS_HOME"
+    fi
+    rm -rf -- "$install_name"
     for profile in "$HOME/.profile" "$HOME/.bash_profile" "$HOME/.bashrc" \
         "$HOME/.zprofile" "$HOME/.zshrc"; do
         strip_path_line "$profile"
@@ -106,6 +180,21 @@ if [ "$UNINSTALL" -eq 1 ]; then
     say "Your play history stays: ~/.numinous-journey, ~/.numinous-scores, ~/.numinous-cairn."
     exit 0
 fi
+
+cd "$install_parent"
+if [ ! -e "$install_name" ]; then
+    mkdir "$install_name"
+fi
+if [ ! -d "$install_name" ] || [ -L "$install_name" ]; then
+    fail "NUMINOUS_HOME changed while the installer was starting"
+fi
+cd -P "$install_name"
+if [ "$(pwd -P)" != "$NUMINOUS_HOME" ]; then
+    fail "NUMINOUS_HOME changed while the installer was starting"
+fi
+printf '%s\n' 'Numinous install root' >.numinous-install-root
+SRC_DIR=src
+BIN_DIR=bin
 
 # A downloader is needed for rustup and for the no-git source fallback.
 if have curl; then
@@ -174,13 +263,12 @@ fi
 
 # Fetch the source. git gives cheap updates; without it, download a snapshot.
 # Either way the previous build cache is kept so updates do not start over.
-mkdir -p "$NUMINOUS_HOME"
 if [ -d "$SRC_DIR/.git" ] && have git; then
     say "Updating the source in $SRC_DIR"
     git -C "$SRC_DIR" fetch --depth 1 origin main
     git -C "$SRC_DIR" reset --hard --quiet origin/main
 else
-    stage="$NUMINOUS_HOME/.staging-$$"
+    stage=".staging-$$"
     trap 'rm -rf "$stage"' EXIT
     rm -rf "$stage"
     mkdir -p "$stage"
@@ -221,7 +309,7 @@ for binary in numinous numinous-app numinous-mcp; do
     install -m 755 "$SRC_DIR/target/release/$binary" "$BIN_DIR/$binary"
 done
 # The app finds the built-in radio next to its executable.
-ln -sfn "$SRC_DIR/assets/radio" "$BIN_DIR/radio"
+ln -sfn "$SOURCE_PATH/assets/radio" "$BIN_DIR/radio"
 
 if [ "$MODIFY_PATH" -eq 1 ]; then
     add_path_line() {
@@ -243,10 +331,11 @@ if [ "$MODIFY_PATH" -eq 1 ]; then
     fi
     if [ -d "$HOME/.config/fish" ]; then
         mkdir -p "$HOME/.config/fish/conf.d"
+        quoted_fish_bin="$(fish_quote "$BINARY_PATH")"
         printf '%s\n' \
             "# added by the Numinous installer" \
-            "if test -d \"$BIN_DIR\"" \
-            "    fish_add_path --prepend \"$BIN_DIR\"" \
+            "if test -d $quoted_fish_bin" \
+            "    fish_add_path --prepend $quoted_fish_bin" \
             "end" >"$HOME/.config/fish/conf.d/numinous.fish"
     fi
 fi
@@ -258,14 +347,14 @@ say "  numinous-app     the window: rooms, sound, games, the radio"
 say "  numinous         the same world, live in the terminal"
 say ""
 say "Digital minds connect over MCP:"
-say "  claude mcp add numinous -- $BIN_DIR/numinous-mcp"
+say "  claude mcp add numinous -- $BINARY_PATH/numinous-mcp"
 say ""
 if [ "$MODIFY_PATH" -eq 1 ]; then
-    say "Open a new terminal so PATH picks up $BIN_DIR, then type: numinous-app"
+    say "Open a new terminal so PATH picks up $BINARY_PATH, then type: numinous-app"
 else
     say "PATH was not modified. Add this yourself, or run the binaries by full path:"
     say "  $path_line"
 fi
 say ""
-say "Read PLAY.md first if you read anything: $SRC_DIR/PLAY.md"
+say "Read PLAY.md first if you read anything: $SOURCE_PATH/PLAY.md"
 say "Update any time by re-running this installer. Uninstall with --uninstall."
