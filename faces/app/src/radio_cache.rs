@@ -10,7 +10,7 @@ use symphonia::core::{
     codecs::audio::AudioDecoderOptions,
     errors::Error as SymphoniaError,
     formats::{FormatOptions, TrackType, probe::Hint},
-    io::MediaSourceStream,
+    io::{MediaSource, MediaSourceStream},
     meta::MetadataOptions,
 };
 
@@ -335,15 +335,12 @@ fn decode_mp3(path: &Path) -> Option<(TrackInfo, Vec<f32>)> {
 }
 
 fn open_symphonia(path: &Path) -> Option<(Box<dyn symphonia::core::formats::FormatReader>, u32)> {
-    if !audio_is_bounded(path) {
-        return None;
-    }
-    let file = std::fs::File::open(path).ok()?;
+    let source = BoundedMediaSource::open(path)?;
     let mut hint = Hint::new();
     if let Some(extension) = path.extension().and_then(|extension| extension.to_str()) {
         hint.with_extension(extension);
     }
-    let stream = MediaSourceStream::new(Box::new(file), Default::default());
+    let stream = MediaSourceStream::new(Box::new(source), Default::default());
     let format = symphonia::default::get_probe()
         .probe(
             &hint,
@@ -354,6 +351,62 @@ fn open_symphonia(path: &Path) -> Option<(Box<dyn symphonia::core::formats::Form
         .ok()?;
     let track_id = format.default_track(TrackType::Audio)?.id;
     Some((format, track_id))
+}
+
+struct BoundedMediaSource {
+    file: std::fs::File,
+    len: u64,
+}
+
+impl BoundedMediaSource {
+    fn open(path: &Path) -> Option<Self> {
+        let file = std::fs::File::open(path).ok()?;
+        let metadata = file.metadata().ok()?;
+        (metadata.is_file() && metadata.len() <= MAX_AUDIO_BYTES).then_some(Self {
+            file,
+            len: metadata.len(),
+        })
+    }
+}
+
+impl std::io::Read for BoundedMediaSource {
+    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+        let position = std::io::Seek::stream_position(&mut self.file)?;
+        let remaining = self.len.saturating_sub(position);
+        let readable = buffer
+            .len()
+            .min(usize::try_from(remaining).unwrap_or(usize::MAX));
+        std::io::Read::read(&mut self.file, &mut buffer[..readable])
+    }
+}
+
+impl std::io::Seek for BoundedMediaSource {
+    fn seek(&mut self, position: std::io::SeekFrom) -> std::io::Result<u64> {
+        let (base, offset) = match position {
+            std::io::SeekFrom::Start(position) => {
+                return std::io::Seek::seek(&mut self.file, std::io::SeekFrom::Start(position));
+            }
+            std::io::SeekFrom::Current(offset) => {
+                (std::io::Seek::stream_position(&mut self.file)?, offset)
+            }
+            std::io::SeekFrom::End(offset) => (self.len, offset),
+        };
+        let target = i128::from(base) + i128::from(offset);
+        let target = u64::try_from(target).map_err(|_| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, "invalid media seek")
+        })?;
+        std::io::Seek::seek(&mut self.file, std::io::SeekFrom::Start(target))
+    }
+}
+
+impl MediaSource for BoundedMediaSource {
+    fn is_seekable(&self) -> bool {
+        true
+    }
+
+    fn byte_len(&self) -> Option<u64> {
+        Some(self.len)
+    }
 }
 
 #[cfg(test)]
@@ -608,6 +661,32 @@ mod tests {
 
         assert!(read_wav_samples(&path, &info).is_none());
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn symphonia_source_enforces_the_opened_file_length_for_its_lifetime() {
+        let path = std::env::temp_dir().join("numinous_radio_cache_swapped_bounds.mp3");
+        std::fs::write(&path, b"bounded placeholder").expect("write placeholder");
+        assert!(audio_is_bounded(&path));
+        let mut source = BoundedMediaSource::open(&path).expect("open bounded source");
+        let file = std::fs::OpenOptions::new()
+            .write(true)
+            .open(&path)
+            .expect("reopen media");
+        file.set_len(MAX_AUDIO_BYTES + 1)
+            .expect("inflate after metadata pass");
+
+        assert_eq!(
+            std::io::Seek::seek(&mut source, std::io::SeekFrom::End(0))
+                .expect("seek to bounded end"),
+            19
+        );
+        std::io::Seek::seek(&mut source, std::io::SeekFrom::Start(0)).expect("rewind source");
+        let mut bytes = Vec::new();
+        std::io::Read::read_to_end(&mut source, &mut bytes).expect("read bounded source");
+        assert_eq!(bytes, b"bounded placeholder");
+        assert!(open_symphonia(&path).is_none());
+        let _ = std::fs::remove_file(path);
     }
 
     #[test]

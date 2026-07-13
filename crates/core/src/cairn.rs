@@ -270,15 +270,22 @@ fn parse_bequest_line(line: &str) -> Option<Bequest> {
     Some(Bequest::new(author, text))
 }
 
+fn read_bounded_text(reader: impl std::io::Read) -> Option<String> {
+    use std::io::Read;
+
+    let mut text = String::new();
+    let read = reader.take(MAX_CAIRN_BYTES + 1).read_to_string(&mut text);
+    (read.is_ok() && text.len() as u64 <= MAX_CAIRN_BYTES).then_some(text)
+}
+
 /// Every bequest the cairn holds: the founding stones plus every one deposited
 /// locally, oldest first. A missing or oversized file yields only the founding
 /// stones, never an error.
 #[must_use]
 pub fn all_bequests(path: &std::path::Path) -> Vec<Bequest> {
     let mut out = founding_bequests();
-    if let Ok(meta) = std::fs::metadata(path)
-        && meta.len() <= MAX_CAIRN_BYTES
-        && let Ok(text) = std::fs::read_to_string(path)
+    if let Ok(file) = std::fs::File::open(path)
+        && let Some(text) = read_bounded_text(file)
     {
         out.extend(text.lines().filter_map(parse_bequest_line));
     }
@@ -342,8 +349,8 @@ pub fn draw_stone(path: &std::path::Path, seed: u64) -> CairnStone {
 #[cfg(test)]
 mod tests {
     use super::{
-        Bequest, MAX_BEQUEST_CHARS, all_bequests, deposit, draw_stone, encode, founding_bequests,
-        is_prime, next_prime, picture, read_at,
+        Bequest, MAX_BEQUEST_CHARS, MAX_CAIRN_BYTES, all_bequests, deposit, draw_stone, encode,
+        founding_bequests, is_prime, next_prime, picture, read_at, read_bounded_text,
     };
 
     #[test]
@@ -445,6 +452,25 @@ mod tests {
         assert_eq!(after.len(), founding.len() + 1);
         assert_eq!(draw_stone(&path, 7), draw_stone(&path, 7));
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn oversized_cairn_files_are_read_through_a_strict_byte_limit() {
+        let path = std::env::temp_dir().join("numinous_cairn_oversized_test.txt");
+        let _ = std::fs::remove_file(&path);
+        let mut bytes = vec![b'x'; MAX_CAIRN_BYTES as usize + 1];
+        bytes[0..4].copy_from_slice(b"a\tb\n");
+        std::fs::write(&path, bytes).expect("write oversized cairn");
+
+        assert_eq!(all_bequests(&path), founding_bequests());
+        assert!(
+            read_bounded_text(std::io::Cursor::new(vec![
+                b'x';
+                MAX_CAIRN_BYTES as usize + 1
+            ]))
+            .is_none()
+        );
+        let _ = std::fs::remove_file(path);
     }
 
     #[test]

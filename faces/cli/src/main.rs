@@ -1377,7 +1377,7 @@ fn fetch_track(
     let response = match response {
         Ok(r) => r,
         Err(ureq::Error::Status(code, r)) => {
-            let detail = r.into_string().unwrap_or_default();
+            let detail = bounded_response_detail(r.into_reader());
             eprintln!("The station is off the air (HTTP {code}): {detail}");
             return false;
         }
@@ -1386,22 +1386,25 @@ fn fetch_track(
             return false;
         }
     };
-    let mut pcm = Vec::new();
-    if let Err(e) = std::io::copy(&mut response.into_reader(), &mut pcm) {
-        eprintln!("The signal broke up: {e}");
+    let Some(max_pcm_bytes) = max_track_bytes(seconds) else {
+        eprintln!("The requested track duration is too large.");
         return false;
-    }
+    };
+    let pcm = match read_bounded(response.into_reader(), max_pcm_bytes) {
+        Ok(Some(bytes)) => bytes,
+        Ok(None) => {
+            eprintln!("The tower sent more audio than the requested duration permits.");
+            return false;
+        }
+        Err(e) => {
+            eprintln!("The signal broke up: {e}");
+            return false;
+        }
+    };
     // Raw 16-bit little-endian PCM at 44.1k, stereo interleaved (verified
     // against the live API): cache it as a stereo WAV, width intact.
-    let samples: Vec<i16> = pcm
-        .chunks_exact(2)
-        .map(|b| i16::from_le_bytes([b[0], b[1]]))
-        .collect();
-    if samples.len() < 8_820 {
-        eprintln!(
-            "The tower sent almost nothing ({} bytes). Try again.",
-            pcm.len()
-        );
+    if let Err(message) = validate_pcm_body(&pcm) {
+        eprintln!("{message} ({} bytes). Try again.", pcm.len());
         return false;
     }
     let path = dir.join(format!("{}-{:03}.wav", station.id, track + 1));
@@ -1412,8 +1415,8 @@ fn fetch_track(
         sample_format: hound::SampleFormat::Int,
     };
     let write = hound::WavWriter::create(&path, spec).and_then(|mut writer| {
-        for &sample in &samples {
-            writer.write_sample(sample)?;
+        for bytes in pcm.chunks_exact(2) {
+            writer.write_sample(i16::from_le_bytes([bytes[0], bytes[1]]))?;
         }
         writer.finalize()
     });
@@ -1422,7 +1425,7 @@ fn fetch_track(
             println!(
                 "  ON AIR: {} ({:.0}s, stereo)",
                 path.display(),
-                samples.len() as f64 / 2.0 / 44_100.0
+                pcm.len() as f64 / 4.0 / 44_100.0
             );
             true
         }
@@ -1431,6 +1434,39 @@ fn fetch_track(
             false
         }
     }
+}
+
+fn read_bounded(mut reader: impl std::io::Read, limit: usize) -> std::io::Result<Option<Vec<u8>>> {
+    let byte_limit = u64::try_from(limit).unwrap_or(u64::MAX).saturating_add(1);
+    let mut bytes = Vec::new();
+    reader.by_ref().take(byte_limit).read_to_end(&mut bytes)?;
+    Ok((bytes.len() <= limit).then_some(bytes))
+}
+
+fn bounded_response_detail(reader: impl std::io::Read) -> String {
+    read_bounded(reader, 8 * 1024)
+        .ok()
+        .flatten()
+        .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
+        .unwrap_or_else(|| "response detail unavailable or oversized".to_string())
+}
+
+fn max_track_bytes(seconds: u64) -> Option<usize> {
+    seconds
+        .checked_add(2)?
+        .checked_mul(44_100 * 2 * 2)?
+        .try_into()
+        .ok()
+}
+
+fn validate_pcm_body(pcm: &[u8]) -> Result<(), &'static str> {
+    if pcm.len() % 4 != 0 {
+        return Err("The tower sent an incomplete 16-bit stereo frame");
+    }
+    if pcm.len() < 8_820 * 2 {
+        return Err("The tower sent almost nothing");
+    }
+    Ok(())
 }
 
 /// Compose the seeded chiptune and write it to a WAV file.
@@ -3302,13 +3338,49 @@ fn to_pretty(value: &serde_json::Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        Cli, Command, RoomRenderInput, describe_report, load_studio_creation, meta_json,
-        not_found_message, open_studio_report, parse_poke_arg, parse_pokes, render_report,
-        rooms_report, run, save_studio_creation,
+        Cli, Command, RoomRenderInput, bounded_response_detail, describe_report,
+        load_studio_creation, max_track_bytes, meta_json, not_found_message, open_studio_report,
+        parse_poke_arg, parse_pokes, read_bounded, render_report, rooms_report, run,
+        save_studio_creation, validate_pcm_body,
     };
     use clap::Parser;
     use numinous_core::room_by_id;
     use serde_json::Value;
+
+    #[test]
+    fn bounded_response_reader_distinguishes_exact_and_oversized_bodies() {
+        let exact = read_bounded(std::io::Cursor::new(b"1234"), 4).expect("bounded read");
+        assert_eq!(exact.as_deref(), Some(b"1234".as_slice()));
+        let oversized = read_bounded(std::io::Cursor::new(b"12345"), 4).expect("bounded read");
+        assert!(oversized.is_none());
+    }
+
+    #[test]
+    fn music_response_helpers_bound_diagnostics_duration_and_pcm_shape() {
+        assert_eq!(
+            bounded_response_detail(std::io::Cursor::new(b"detail")),
+            "detail"
+        );
+        assert_eq!(
+            bounded_response_detail(std::io::Cursor::new(vec![b'x'; 8 * 1024 + 1])),
+            "response detail unavailable or oversized"
+        );
+        assert_eq!(max_track_bytes(10), Some(12 * 44_100 * 4));
+        assert_eq!(max_track_bytes(u64::MAX), None);
+        assert_eq!(
+            validate_pcm_body(&[0]),
+            Err("The tower sent an incomplete 16-bit stereo frame")
+        );
+        assert_eq!(
+            validate_pcm_body(&vec![0; 8_820 * 2 + 2]),
+            Err("The tower sent an incomplete 16-bit stereo frame")
+        );
+        assert_eq!(
+            validate_pcm_body(&[0, 0, 0, 0]),
+            Err("The tower sent almost nothing")
+        );
+        assert!(validate_pcm_body(&vec![0; 8_820 * 2]).is_ok());
+    }
 
     #[test]
     fn rooms_report_lists_times_tables() {

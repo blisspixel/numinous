@@ -14,6 +14,16 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 /// A gentle amplitude so a test tone is never harsh.
 const AMPLITUDE: f32 = 0.2;
 
+fn validate_output_dimensions(sample_rate: u32, channels: u16) -> Result<(), String> {
+    if sample_rate == 0 {
+        return Err("output device reported a zero sample rate".to_string());
+    }
+    if channels == 0 {
+        return Err("output device reported zero channels".to_string());
+    }
+    Ok(())
+}
+
 /// The system default output device and its default configuration.
 pub struct AudioContext {
     device: cpal::Device,
@@ -64,6 +74,7 @@ impl AudioContext {
     /// Returns an error string if the stream cannot be built or started, or if
     /// the device uses an unsupported sample format.
     pub fn play_tone(&self, frequency: f32, seconds: f32) -> Result<(), String> {
+        validate_output_dimensions(self.sample_rate(), self.channels())?;
         let sample_rate = self.sample_rate() as f32;
         let channels = self.channels() as usize;
         let config: cpal::StreamConfig = self.config.clone().into();
@@ -174,7 +185,9 @@ impl LoopPlayer {
     pub fn new() -> Result<Self, String> {
         let context = AudioContext::new()?;
         let sample_rate = context.sample_rate();
-        let channels = context.channels() as usize;
+        let channel_count = context.channels();
+        validate_output_dimensions(sample_rate, channel_count)?;
+        let channels = channel_count as usize;
         let config: cpal::StreamConfig = context.config.clone().into();
         let state = Arc::new(Mutex::new(LoopState {
             samples: Vec::new(),
@@ -261,7 +274,20 @@ impl LoopPlayer {
 
 #[cfg(test)]
 mod tests {
-    use super::{AMPLITUDE, LoopState, read_frame, synthesize_sine};
+    use super::{AMPLITUDE, LoopState, read_frame, synthesize_sine, validate_output_dimensions};
+
+    #[test]
+    fn output_dimensions_reject_degenerate_device_configs() {
+        assert!(validate_output_dimensions(44_100, 2).is_ok());
+        assert_eq!(
+            validate_output_dimensions(0, 2).expect_err("zero rate must fail"),
+            "output device reported a zero sample rate"
+        );
+        assert_eq!(
+            validate_output_dimensions(44_100, 0).expect_err("zero channels must fail"),
+            "output device reported zero channels"
+        );
+    }
 
     #[test]
     fn synthesize_has_the_requested_length() {

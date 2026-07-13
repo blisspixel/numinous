@@ -114,6 +114,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - A deterministic pre-commit gate (`scripts/hooks/pre-commit`, wired once per clone with `git config core.hooksPath scripts/hooks`, documented in `docs/ENGINEERING.md`). It blocks any commit that would fail the fast gate: the house-style guard on every commit, and the cargo gate (fmt, clippy `-D warnings`, the full test suite) only when the commit touches Rust, `Cargo.*`, or a shader, so docs-only commits stay fast. Coverage and the locked build remain the release gate (`scripts/verify.sh`). A wired gate that blocks a bad commit beats any reminder to run the checks.
 
 ### Fixed
+- Maintenance hardening closes five resource and installation boundary gaps.
+  The POSIX installer now normalizes custom roots through their physical parent,
+  rejects control characters, dot components, HOME aliases, symbolic-link
+  roots, and unrecognized nonempty directories, shell-quotes profile entries,
+  marks owned roots before fallible work, and refuses to delete unmarked custom
+  trees. Cairn reads are capped on the opened file handle. Cached compressed
+  audio is exposed to the decoder through a seekable source whose opened length
+  remains the lifetime byte ceiling even if the file grows concurrently. Music
+  generation caps success audio by requested duration, caps error details, and
+  writes PCM without a second full-size sample allocation. Audio devices that
+  report zero channels or a zero sample rate now fail before callback setup.
+  Focused regressions cover every bound and degenerate configuration.
 - Lorenz's divergence instrument now begins at its actual 0.0001 twin
   perturbation and climbs as an honestly labeled running peak at the classic
   chaotic parameter, rather than showing the non-monotonic distance between
