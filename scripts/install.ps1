@@ -85,6 +85,16 @@ function Promote-PathEntry([string]$Current, [string]$Dir) {
     return (@($Dir) + $kept) -join ';'
 }
 
+# PowerShell can return every matching executable even without -All. Select the
+# first PATH match explicitly so a valid promoted install is not mistaken for
+# the stale fallback that follows it.
+function Select-FirstCommandSource([object[]]$Commands) {
+    if ($null -eq $Commands -or $Commands.Count -eq 0) {
+        Fail 'PATH verification could not resolve the numinous command.'
+    }
+    return [string]$Commands[0].Source
+}
+
 function Add-UserPath([string]$Dir) {
     $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $true)
     try {
@@ -112,6 +122,14 @@ function Test-PathPromotion {
     }
     if ($parts[1] -cne $stale -or $parts[2] -cne $other) {
         Fail 'PATH self-test: unrelated entries changed order or spelling.'
+    }
+    $commands = @(
+        [pscustomobject]@{ Source = "$target\numinous.exe" },
+        [pscustomobject]@{ Source = "$stale\numinous.exe" }
+    )
+    $resolved = Select-FirstCommandSource $commands
+    if ($resolved -cne "$target\numinous.exe") {
+        Fail 'PATH self-test: resolver did not select the first executable.'
     }
     Say 'Windows installer PATH promotion: pass.'
 }
@@ -332,7 +350,9 @@ function Install-Numinous {
     $resolvedCli = if ($NoModifyPath) {
         $installedCli
     } else {
-        (Get-Command numinous -CommandType Application -ErrorAction Stop).Source
+        Select-FirstCommandSource @(
+            Get-Command numinous -CommandType Application -ErrorAction Stop
+        )
     }
     if (-not $NoModifyPath -and $resolvedCli -ine $installedCli) {
         Fail "PATH still resolves numinous to $resolvedCli instead of the new install."
