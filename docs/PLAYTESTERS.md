@@ -20,7 +20,8 @@ For release-candidate QA, split the draw into three independent groups instead
 of asking one troupe to notice everything. The first-contact group reviews all
 240 app captures from the perspective of newcomers, children, math-wounded
 players, and sensory-access needs. The interaction group starts each room at
-true phase-zero and traverses its click, delayed gesture, release, and reset
+its deterministic opening state and traverses its click, delayed gesture,
+release, and reset
 behavior plus every game stage and result. The face-parity group exercises the
 latest CLI and MCP builds, including
 structured output, guiding errors, persistence isolation, and agreement with
@@ -28,6 +29,15 @@ the app's rules. Each finding must cite a reproducible screen, command, tool
 result, or test. A simulated reaction is design input only; a reproduced defect
 is engineering evidence. The full release protocol and blocking rules live in
 `QUALITY.md`.
+
+The app matrix is renderer-path evidence, not native event-dispatch evidence.
+Reviewers must pair it with production input-routing tests and must not call it
+end-to-end GUI automation. Its per-room scenarios apply changed-pixel,
+spatial-support, density, adjacent-tile, and color thresholds. The adjacent-tile
+regression rejects four isolated corner markers, but these coarse gates do not
+replace visual judgment. For shell-safe MCP review, `scripts/mcp-play.py call TOOL -` reads a
+JSON object from stdin, owns an isolated temporary Journey, score table, and
+Cairn, then removes the complete profile on exit.
 
 Each entry ends with a compact tag: **Lens** (what they judge), **Tongue**,
 **Level** (0 = math-wounded, 5 = research mathematician), **Face**.

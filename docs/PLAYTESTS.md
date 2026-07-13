@@ -305,3 +305,70 @@ predator-prey room (the Xenomorph), and the cross-room identity bridges
 (Ramanujan). The convergence held: thirteen minds sharing almost nothing found
 the same two weak spots (dense ASCII renders, thin sound) and the same strong
 one (the reveals and the Cairn are the soul), which is the method working.
+
+---
+
+# The third round (July 2026): complete face and screen QA
+
+This was a simulated lens review followed by direct engineering reproduction,
+not a participant session. Three independent groups covered first contact and
+accessibility, room and game flow, and CLI, MCP, and release behavior. The App
+group inspected the exact 240-path manifest across all 31 rooms, compact states,
+games, overlays, The Show, Times Tables phases, and Mandelbrot reset. The face
+group exercised current local binaries, invalid inputs, closed stdin, isolated
+state, and Windows install resolution. No fictional reaction from this round
+counts toward a hallway, accessibility, universality, learning, fun, or
+digital-mind evidence gate.
+
+## Reproduced findings
+
+- Several deterministic opening states technically contained ink but read as empty
+  once App chrome was present. Goldbach and L-System content sat under the
+  footer; Langton's Ant and Random Walk had weak starting actors; Double
+  Pendulum drew an ambiguous chord; Julia's low iteration bands were too faint.
+- Nim labels disappeared against the result treatment, losses ejected on an
+  arbitrary key without teaching, Munch omitted the exact wrong bites, and the
+  arcade clear message was both off-center and visually crossed by board text.
+- The screenshot driver used one generic gesture and accepted tiny or scattered
+  changes. It rendered production drawing paths but did not traverse native
+  operating-system event dispatch, a boundary that its evidence language had to
+  state explicitly.
+- CLI room renders silently omitted the mathematical readout in untouched
+  states. Invalid dimensions, phases, and backward gesture time were accepted,
+  redirected celebration animation could flood output, and pure EOF counted as
+  play in all 11 games.
+- MCP accepted wrong types, unknown fields, invalid dimensions and phase, and
+  backward gesture time through silent defaults. Catalog description, reveal,
+  listening, scores, and forget results lacked complete structured output.
+- The MCP play helper reused persistence paths and returned weak errors. On
+  Windows, a stale Cargo install earlier in PATH could remain the command that
+  actually launched after the current installer completed.
+- Arecibo's square message was not centered in its postcard, while Strange Loop
+  read as disconnected arms and floating bars rather than connected recursion.
+- A fresh visual checker then proved the first density oracle still accepted
+  four isolated 10 by 10 corner markers. The same checker found the Nim win
+  retry action too dim and five opening compositions still too sparse.
+
+## What changed
+
+Every reproduced high and medium finding above was fixed and given a direct
+regression, structural gate, or both. The room matrix now owns an explicit
+scenario for each catalog room across click, drag-release, repeated-action, and
+boundary families. It validates normalized ordered input and release closure,
+requires interaction-aware status or a named action contract, and rejects
+responses that fail changed-pixel, spatial-support, density, adjacent 32-pixel
+spatial-tile, or mean-color thresholds. A direct regression proves four
+isolated corner markers fail the adjacent-tile gate. The result is still a
+coarse structural oracle, not subjective polish certification. Langton's Ant,
+Random Walk, Double Pendulum, L-System Garden, and Goldbach now open on richer
+true mathematical states rather than a nearly empty instant. The L-System tree
+rule now contains actual left and right turns. Nim win names retry and leave in
+the high-contrast result panel. The matrix remains renderer evidence and is
+paired with production input routing tests rather than mislabeled as native GUI
+automation.
+
+The final local release gate reports 1,096 tests, 92.93 percent region coverage,
+92.55 percent line coverage, the exact 240-screen matrix, locked build, house
+style, and supply-chain policy all passing. Real hallway participants, disabled
+player review, and real macOS and Linux execution remain open exactly where the
+roadmap places them.
