@@ -127,9 +127,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   forced Windows retry with a synchronized concurrent reader, injected
   postcommit sync failure without counter duplication, temp cleanup, pending
   lock ownership, and Unix directory-sync support. CI now runs the locked
-  workspace tests as well as locked builds on Linux, macOS, and Windows. The
-  complete suite has 1,016 tests, 91.80% region coverage, and 91.40% line
-  coverage.
+  workspace tests as well as locked builds on Linux, macOS, and Windows. That
+  broader test surface exposed and fixed macOS abandoned-lock recovery, which
+  now uses the platform process list to distinguish a live holder from an
+  exited process instead of conservatively treating every recorded process as
+  live. The complete suite has 1,017 tests, 91.80% region coverage, and 91.41%
+  line coverage.
 - The cross-room identities from the simulated Ramanujan review now live in the
   experience instead of only in planning prose. Logistic Map and Mandelbrot
   name their affine conjugacy under `c = r(2-r)/4`, checked algebraically in
