@@ -250,10 +250,10 @@ impl Room for Epicycles {
     }
 
     fn reveal(&self) -> &'static str {
-        "Any closed drawing, any at all, can be traced by circles rotating on \
-         circles at fixed speeds. The star was never stored as a star: it is a \
-         short list of circle sizes and speeds. Compressing shapes into spinning \
-         circles is what your phone does to every song and photo it holds."
+        "Any closed drawing can be traced by fixed-speed rotating circles; the star \
+         is stored as a short list of their sizes and speeds. A cardioid needs only \
+         two rotating vectors, so up to scale and rotation this same machinery draws \
+         the heart wrapped by Times Tables and the main body of the Mandelbrot set."
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {
@@ -434,8 +434,12 @@ mod tests {
     }
 
     #[test]
-    fn reveal_connects_to_compression() {
-        assert!(Epicycles::new().reveal().contains("Compressing"));
+    fn reveal_names_the_cardioid_connection() {
+        let reveal = Epicycles::new().reveal();
+        assert!(reveal.contains("cardioid"));
+        assert!(reveal.contains("Times Tables"));
+        assert!(reveal.contains("Mandelbrot"));
+        assert!(reveal.contains("scale and rotation"));
     }
 
     #[test]

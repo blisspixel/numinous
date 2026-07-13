@@ -168,9 +168,10 @@ impl Room for TimesTables {
     }
 
     fn reveal(&self) -> &'static str {
-        "Set the dial to 2 and this table draws a heart. That cardioid is the \
-         exact outline of the Mandelbrot set's main body: a homework grid and the \
-         most complex object in mathematics trace the same shape."
+        "Set the dial to 2 and the chords wrap a cardioid. Up to scale and rotation, \
+         that shape outlines the Mandelbrot set's main body, and Fourier Epicycles \
+         draw it with only two rotating vectors: arithmetic, fractals, and waves \
+         meet in one heart."
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {
@@ -193,6 +194,8 @@ impl Room for TimesTables {
 
 #[cfg(test)]
 mod tests {
+    use std::f64::consts::{PI, TAU};
+
     use super::TimesTables;
     use crate::canvas::Canvas;
     use crate::room::Room;
@@ -206,7 +209,31 @@ mod tests {
 
     #[test]
     fn reveal_names_the_connection() {
-        assert!(TimesTables::new().reveal().contains("Mandelbrot"));
+        let reveal = TimesTables::new().reveal();
+        assert!(reveal.contains("cardioid"));
+        assert!(reveal.contains("Mandelbrot"));
+        assert!(reveal.contains("Fourier Epicycles"));
+        assert!(reveal.contains("scale and rotation"));
+    }
+
+    #[test]
+    fn chord_envelope_is_a_scaled_and_rotated_mandelbrot_cardioid() {
+        for fraction in [0.0_f64, 0.125, 0.25, 0.5, 0.875] {
+            let t = TAU * fraction;
+            let envelope = (
+                2.0 / 3.0 * t.cos() + 1.0 / 3.0 * (2.0 * t).cos(),
+                2.0 / 3.0 * t.sin() + 1.0 / 3.0 * (2.0 * t).sin(),
+            );
+            let theta = t + PI;
+            let mandelbrot = (
+                0.5 * theta.cos() - 0.25 * (2.0 * theta).cos(),
+                0.5 * theta.sin() - 0.25 * (2.0 * theta).sin(),
+            );
+            let transformed = (-4.0 / 3.0 * mandelbrot.0, -4.0 / 3.0 * mandelbrot.1);
+
+            assert!((envelope.0 - transformed.0).abs() < 1e-12);
+            assert!((envelope.1 - transformed.1).abs() < 1e-12);
+        }
     }
 
     #[test]

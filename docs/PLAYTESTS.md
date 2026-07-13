@@ -217,9 +217,11 @@ named notes the sound did not play.
 **Ramanujan.** Did not read first; touched, then checked. Delighted by the
 cardioid that is a times table *and* the Mandelbrot main bulb. Found no math
 error in the whole house (Mandelbrot area, Feigenbaum, the golden angle, all
-verified). His gift: the deepest unspoken identity here is that the logistic map
-*is* the Mandelbrot set along its real axis, one Feigenbaum constant governing
-both. A door worth building (recorded in `ROOMS.md`).
+verified). His gift: the deepest unspoken identity here was that the logistic
+map is affine-conjugate in its orbit coordinate to the real quadratic family
+under `c = r(2-r)/4`, with the same Feigenbaum cascade. The
+Logistic Map and Mandelbrot Reveal cards now name that bridge, while Times
+Tables, Mandelbrot, and Fourier Epicycles name their shared cardioid.
 
 **Sofia (cryptographer).** Cracked the Cairn and caught its soundness bug: the
 reading width was always 97, so after the first stone you never factor again.

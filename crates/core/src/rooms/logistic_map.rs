@@ -132,9 +132,10 @@ impl Room for LogisticMap {
     }
 
     fn reveal(&self) -> &'static str {
-        "The point where order breaks into chaos arrives at the same rate for this \
-         equation, for dripping taps, and for heartbeats: Feigenbaum's constant, \
-         4.669. A single number governs how simple things fall apart."
+        "Stretch and shift the population and this rule becomes z squared plus c, \
+         the rule inside the Mandelbrot room. As r sweeps, c = r(2 - r)/4 follows \
+         the set's real parameter slice, where Feigenbaum's 4.669 governs the same \
+         cascade."
     }
 
     fn status(&self, t: f64) -> Option<String> {
@@ -261,8 +262,24 @@ mod tests {
     }
 
     #[test]
-    fn reveal_mentions_feigenbaum() {
-        assert!(LogisticMap::new().reveal().contains("Feigenbaum"));
+    fn reveal_names_the_mandelbrot_real_slice_connection() {
+        let reveal = LogisticMap::new().reveal();
+        assert!(reveal.contains("Feigenbaum"));
+        assert!(reveal.contains("Mandelbrot"));
+        assert!(reveal.contains("real parameter slice"));
+    }
+
+    #[test]
+    fn affine_change_of_coordinates_matches_quadratic_iteration() {
+        for (r, x) in [(1.0_f64, 0.2_f64), (2.5, 0.6), (3.57, 0.413), (4.0, 0.75)] {
+            let logistic_next = r * x * (1.0 - x);
+            let z = r / 2.0 - r * x;
+            let c = r * (2.0 - r) / 4.0;
+            let quadratic_next = z * z + c;
+            let transformed_next = r / 2.0 - r * logistic_next;
+
+            assert!((quadratic_next - transformed_next).abs() < 1e-12);
+        }
     }
 
     #[test]

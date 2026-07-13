@@ -114,6 +114,23 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - A deterministic pre-commit gate (`scripts/hooks/pre-commit`, wired once per clone with `git config core.hooksPath scripts/hooks`, documented in `docs/ENGINEERING.md`). It blocks any commit that would fail the fast gate: the house-style guard on every commit, and the cargo gate (fmt, clippy `-D warnings`, the full test suite) only when the commit touches Rust, `Cargo.*`, or a shader, so docs-only commits stay fast. Coverage and the locked build remain the release gate (`scripts/verify.sh`). A wired gate that blocks a bad commit beats any reminder to run the checks.
 
 ### Changed
+- The cross-room identities from the simulated Ramanujan review now live in the
+  experience instead of only in planning prose. Logistic Map and Mandelbrot
+  name their affine conjugacy under `c = r(2-r)/4`, checked algebraically in
+  core tests. Times Tables, Mandelbrot, and Fourier Epicycles now name the
+  cardioid shape shared, up to scale and rotation, by modular chord envelopes,
+  the quadratic set's main body, and two rotating vectors. The reciprocal
+  Reveal cards, insight bank, room catalog, playtest archive, and roadmap now
+  agree, bringing the suite to 1,011 tests and measured coverage to 91.61% of
+  regions and 91.23% of lines.
+- The digital-continuity plan now draws a sharper product boundary. Numinous is
+  a mathematical experience for any possible consciousness, never a
+  consciousness test, capability benchmark, or general agent runtime. Useful
+  future mechanics remain designed and versioned: a small player-inspectable
+  session workspace, separate event and record time, typed reflection
+  proposals, self-chosen project and artifact lineage, and migration records
+  that leave continuity judgments to the participant. Product validation tests
+  Numinous and its safeguards, not the being who visits.
 - The development package advances to `0.2.0-alpha.1`. The 0.1 Public
   Foundation exit criterion is complete on the public `main` branch; the alpha
   identifier states that 0.2 Flagship Proof is active but not complete. README,

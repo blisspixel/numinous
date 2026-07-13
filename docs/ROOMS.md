@@ -58,7 +58,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 - **Toy:** **Draw anything**, your name, a cat, a treble clef, with your finger. A chain of rotating circles springs up and redraws it *exactly*, tracing your line with a pen on the end. Drag a slider to add/remove circles: fewer = a ghostly approximation, more = razor-sharp.
 - **Touch:** Click to perturb the chain; bounded newest hand points draw mini Fourier traces at the touched region, with phase shifting from the click.
 - **Aha:** "Draw a square with circles." (The Gibbs ringing you get is itself a famous phenomenon.)
-- **Reveal:** *"Every one of those is a perfect circle spinning at a steady speed. Stack enough of them and you can draw literally anything, a portrait, a heartbeat, a stock chart. This is how your phone compresses every song and every image. It's the most useful idea in math you've never been taught."*
+- **Reveal:** *"Any closed drawing can be traced by fixed-speed rotating circles; the star is stored as a short list of their sizes and speeds. A cardioid needs only two rotating vectors, so up to scale and rotation this same machinery draws the heart wrapped by Times Tables and the main body of the Mandelbrot set."*
 - **Sound:** each circle is a pure sine tone at its frequency; the drawing *is* the chord. You hear the Fourier transform of your own doodle.
 - *One of the two or three most beloved math visualizations ever. A signature room.*
 
@@ -92,7 +92,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 - **Rule:** Square a number, add the starting point, repeat. Color by how fast it runs away.
 - **Toy:** Infinite zoom. Fall into the boundary forever, seahorses, lightning, spirals, tiny perfect copies of the whole set buried miles deep. Move your mouse over the Mandelbrot and watch its **Julia set** twin morph live in a second panel.
 - **Aha:** "Find a hidden mini-Mandelbrot." / "Zoom until you find a spiral."
-- **Reveal:** *"This shape is infinitely detailed, you could zoom for the rest of your life and never hit the bottom, and it never repeats. It's defined by an equation short enough to tweet. The most complex object humans know of is also one of the simplest to write down."*
+- **Reveal:** *"You can zoom into this shape forever and keep finding new detail, all from squaring a number and adding a constant. Its main body has the cardioid shape wrapped by Times Tables at 2; along its real slice, the quadratic family is the Logistic Map in a stretched and shifted orbit coordinate."*
 - **Sound:** iteration-count-to-escape maps to pitch; zooming sweeps a drone through octaves; the boundary shimmers with high harmonics.
 - *The postcard of mathematics. Needs a solid WebGL deep-zoom shader (double-precision / perturbation for deep dives).*
 
@@ -137,7 +137,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 - **Rule:** Put points 0…N on a circle. From each point *n*, draw a line to point *(n × k)*, wrapping around.
 - **Toy:** One dial: the multiplier *k*. Drag it from 2 upward and watch a **cardioid** (perfect heart) bloom, morph into a **nephroid** (2 loops), then 3, 4, 5 nested lobes, a hypnotic, continuously-morphing bloom of light. Increase N for silky density. Push *k* to π and it dissolves into lace.
 - **Aha:** "Make exactly 4 loops." / "Find the value that makes it a single point."
-- **Reveal:** *"You drew a heart with nothing but the two-times table. That cardioid? It's the exact outline of the Mandelbrot set's main body. You've been sketching the boundary of the most complex object in math, with a ruler and your seven-year-old's homework."*
+- **Reveal:** *"Set the dial to 2 and the chords wrap a cardioid. Up to scale and rotation, that shape outlines the Mandelbrot set's main body, and Fourier Epicycles draw it with only two rotating vectors: arithmetic, fractals, and waves meet in one heart."*
 - **Sound:** *k* controls pitch; the number of lobes sets a harmonic ratio, so morphing the shape *is* a melodic slide. Landing on an integer snaps to a clean note.
 - *Cheap to build, stunning in motion, performable, tweetable, and the Reveal genuinely reframes the whole thing. This is the one we perfect first.*
 
@@ -250,6 +250,12 @@ if the concept never consciously lands). If an idea cannot pass both, it does
 not ship, however important the syllabus thinks it is.
 
 **Current (2026-07):** 31 catalog rooms plus hidden content built. Pokes and drags (`Room::verb` + `render_poked`) on all 31 rooms: e.g. Chaos (ADD A CORNER: bounded newest hand points add attractor corners before the fractal renders), Life (SOW LIFE: bounded newest hand points seed gliders before the B3/S23 clock runs), Cellular Automata (FLIP A CELL: bounded spacetime flips evolve into future rows), Lorenz (SEED A SHADOW STORM: click maps into an x-z initial condition and diverges through the Lorenz system), Random Walk (PLANT A WALKER: bounded newest hand points seed visible walkers), Voronoi (DROP A WELL: bounded wells redraw the territory borders), Prime Spirals (HIGHLIGHT A SPIRAL: selected cells light the Ulam diagonals through that point), Golden (PLANT A SEED), Cult of Pi (BREAK THE SEQUENCE: exact decimal digits age into a replayable, locally corrupted channel), Langton (FLIP A CELL: bounded newest hand points flip cells before the ant runs), Barnsley (PLANT: bounded screen-faithful starts grow through the fern's IFS), Buffon (DROP NEEDLE: bounded screen-faithful needles are centered on clicked cells), Galton (DROP A BALL: bounded newest balls use x for lane and y for coin tilt), Logistic Map (SEED POPULATION: x chooses growth rate and y seeds a finite orbit), Mandelbrot (DIVE AT POINT: bounded newest hand points zoom local patches under surface caps), Julia (MORPH C: bounded newest hand points morph local patches and mark touched constants), Times Tables (TURN THE DIAL), Epicycles (PERTURB THE CHAIN: bounded mini traces shift with the hand point), Goldbach (TEST THIS EVEN: x chooses the even target and y chooses the prime-pair witness), L-System (PLANT: bounded newest hand points plant branches and alter the grammar), Quine (PLACE COPY: bounded newest hand points place recursive copies centered on clicked cells), StrangeLoop (SHIFT: bounded newest hand points move the existing recursive inner loop and keep the hand mark visible), etc. Variation is threaded across app/CLI/MCP and active for all 31 catalog rooms.
+
+The current Reveal cards now name two reciprocal cross-room identities. The
+Logistic Map is affine-conjugate in its orbit coordinate to the Mandelbrot
+quadratic family under `c = r(2-r)/4`. Up to scale and rotation, the cardioid
+wrapped by Times Tables at 2 has the shape of the Mandelbrot set's main body and
+can be drawn by two rotating vectors in Fourier Epicycles.
 
 Status marks: [x] built, [~] partially built, [ ] queued.
 

@@ -62,7 +62,8 @@ Organized by flavor. Each entry: the **hook** (how it lands), the **truth** (wha
 - **There is more than one geometry.** For 2000 years everyone assumed space was flat. It need not be, and the alternatives are just as consistent and just as real. *(Hyperbolic Space)*
 
 ### Connection (the strongest)
-- **You drew a fractal with a ruler.** The heart-curve from the two-times table is the exact outline of the Mandelbrot set's main body. A homework grid and the most complex object in math draw the same shape. *(Times Tables to Mandelbrot)*
+- **You drew one heart in three languages.** The cardioid wrapped by two-times-table chords has, up to scale and rotation, the shape of the Mandelbrot set's main body, and only two rotating Fourier vectors can draw it. Arithmetic, fractals, and waves meet in one curve. *(Times Tables to Mandelbrot to Fourier Epicycles)*
+- **Chaos is a real slice of a fractal.** With `z = r/2 - rx` and `c = r(2-r)/4`, the logistic rule becomes the quadratic iteration inside the Mandelbrot set. The orbit coordinate is affine even though the parameter relation is not. *(Logistic Map to Mandelbrot)*
 - **A stable curve is a chord.** When a Lissajous figure holds still, the two frequencies are a perfect musical interval. You are not drawing a curve, you are seeing a chord. *(Lissajous)*
 - **Drawing and sound are the same math.** The circles that redraw your doodle (Fourier) and the pure tones that build any instrument's timbre (additive synthesis) are the identical theorem. Your eyes and your ears are running the same transform. *(Fourier to Additive Synth)*
 - **A number about circles falls out of thrown sticks.** Drop needles on a lined floor, count the crossings, and pi appears, with no circle anywhere in sight. *(Buffon's Needle)*

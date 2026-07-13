@@ -115,7 +115,7 @@ windowed app, a full CLI, an MCP server, GPU and audio adapters, 31 catalog
 rooms plus hidden content, games, progression, a Studio foundation, and the
 built-in soundtrack. Capability breadth is ahead of release maturity.
 
-The current gate has 1,009 passing tests, 91.21% line coverage with an enforced
+The current gate has 1,011 passing tests, 91.23% line coverage with an enforced
 80% floor, Clippy with warnings denied, dependency policy checks, and locked
 builds on Windows, macOS, and Ubuntu. Stranger playtests, accessibility work,
 cross-platform execution evidence, deeper room interaction, and substantial
