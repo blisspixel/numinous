@@ -77,4 +77,7 @@ jobs:
       - name: Install ALSA (Linux, for cpal)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-dev
-      - run: cargo build --workspace --locked
+      - name: Workspace tests
+        run: cargo test --workspace --locked
+      - name: Locked build
+        run: cargo build --workspace --locked

@@ -95,8 +95,14 @@ pub fn record_score_file(path: &Path, key: &str, score: i64) -> io::Result<bool>
 /// Missing files are already forgotten and are treated as success.
 pub fn remove_persisted_file(path: &Path) -> io::Result<()> {
     let _lock = PersistLock::acquire(path)?;
+    #[cfg(unix)]
+    let parent = open_parent_directory(path)?;
     match fs::remove_file(path) {
-        Ok(()) => Ok(()),
+        Ok(()) => {
+            #[cfg(unix)]
+            drop(parent.sync_all());
+            Ok(())
+        }
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
         Err(error) => Err(error),
     }
@@ -162,6 +168,29 @@ struct PendingPersistLock {
     armed: bool,
 }
 
+struct PendingTempFile {
+    path: PathBuf,
+    armed: bool,
+}
+
+impl PendingTempFile {
+    fn new(path: PathBuf) -> Self {
+        Self { path, armed: true }
+    }
+
+    fn disarm(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for PendingTempFile {
+    fn drop(&mut self) {
+        if self.armed {
+            let _ = fs::remove_file(&self.path);
+        }
+    }
+}
+
 impl PendingPersistLock {
     fn new(path: PathBuf, token: String) -> Self {
         Self {
@@ -207,13 +236,18 @@ impl PersistLock {
                 Ok(mut file) => {
                     let token = lock_token();
                     if let Err(error) = writeln!(file, "token {token}") {
+                        drop(file);
                         let _ = fs::remove_file(&lock_path);
                         return Err(error);
                     }
                     let pending = PendingPersistLock::new(lock_path.clone(), token);
-                    writeln!(file, "pid {}", std::process::id())?;
-                    writeln!(file, "started_unix_secs {}", current_unix_secs())?;
-                    file.sync_all()?;
+                    let metadata_result = (|| -> io::Result<()> {
+                        writeln!(file, "pid {}", std::process::id())?;
+                        writeln!(file, "started_unix_secs {}", current_unix_secs())?;
+                        file.sync_all()
+                    })();
+                    drop(file);
+                    metadata_result?;
                     if recovery_path_for(&lock_path).exists() {
                         drop(pending);
                         thread::sleep(LOCK_SLEEP);
@@ -275,18 +309,6 @@ fn temp_path_for(path: &Path) -> PathBuf {
     name.push(file_name(path));
     name.push(format!(
         ".{}.{}.tmp",
-        std::process::id(),
-        TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)
-    ));
-    path.with_file_name(name)
-}
-
-#[cfg(windows)]
-fn backup_path_for(path: &Path) -> PathBuf {
-    let mut name = OsString::from(".");
-    name.push(file_name(path));
-    name.push(format!(
-        ".{}.{}.bak",
         std::process::id(),
         TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)
     ));
@@ -466,13 +488,24 @@ fn current_unix_secs() -> u64 {
 
 fn atomic_write(path: &Path, bytes: &[u8]) -> io::Result<()> {
     ensure_parent(path)?;
+    #[cfg(unix)]
+    let parent = open_parent_directory(path)?;
+    let (temp, file) = allocate_temp_file(path)?;
+    #[cfg(unix)]
+    {
+        write_and_commit(path, &temp, file, bytes, || parent.sync_all())
+    }
+    #[cfg(not(unix))]
+    {
+        write_and_commit(path, &temp, file, bytes, || Ok(()))
+    }
+}
+
+fn allocate_temp_file(path: &Path) -> io::Result<(PathBuf, File)> {
     for _ in 0..16 {
         let temp = temp_path_for(path);
         match OpenOptions::new().write(true).create_new(true).open(&temp) {
-            Ok(file) => {
-                write_and_commit(path, &temp, file, bytes)?;
-                return Ok(());
-            }
+            Ok(file) => return Ok((temp, file)),
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
             Err(error) => return Err(error),
         }
@@ -483,61 +516,69 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> io::Result<()> {
     ))
 }
 
-fn write_and_commit(path: &Path, temp: &Path, mut file: File, bytes: &[u8]) -> io::Result<()> {
-    file.write_all(bytes)?;
-    file.sync_all()?;
+fn write_and_commit(
+    path: &Path,
+    temp: &Path,
+    mut file: File,
+    bytes: &[u8],
+    sync_parent: impl FnOnce() -> io::Result<()>,
+) -> io::Result<()> {
+    let mut pending = PendingTempFile::new(temp.to_path_buf());
+    let prepare_result = file.write_all(bytes).and_then(|()| file.sync_all());
     drop(file);
-    match fs::rename(temp, path) {
-        Ok(()) => Ok(()),
-        Err(error) => {
-            #[cfg(windows)]
-            if should_retry_windows_replace(&error) {
-                return replace_existing_windows(path, temp);
-            }
-            let _ = fs::remove_file(temp);
-            Err(error)
-        }
+    prepare_result?;
+    replace_temp_file(path, temp)?;
+    pending.disarm();
+    // The rename is the commit point for callers that merge deltas. A parent
+    // sync failure after that point cannot be reported as an uncommitted write:
+    // retrying the same delta would apply its counters twice. Attempt the
+    // metadata barrier, then preserve the committed result on failure.
+    drop(sync_parent());
+    Ok(())
+}
+
+fn replace_temp_file(path: &Path, temp: &Path) -> io::Result<()> {
+    #[cfg(windows)]
+    {
+        retry_atomic_replace_with(path, || fs::rename(temp, path))
+    }
+    #[cfg(not(windows))]
+    {
+        fs::rename(temp, path)
     }
 }
 
-#[cfg(windows)]
-fn should_retry_windows_replace(error: &io::Error) -> bool {
+#[cfg(unix)]
+fn open_parent_directory(path: &Path) -> io::Result<File> {
+    let parent = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    File::open(parent)
+}
+
+#[cfg(any(windows, test))]
+fn should_retry_atomic_replace(error: &io::Error) -> bool {
     matches!(
         error.kind(),
         io::ErrorKind::AlreadyExists | io::ErrorKind::PermissionDenied
     )
 }
 
-#[cfg(windows)]
-fn replace_existing_windows(path: &Path, temp: &Path) -> io::Result<()> {
+#[cfg(any(windows, test))]
+fn retry_atomic_replace_with(
+    path: &Path,
+    mut replace: impl FnMut() -> io::Result<()>,
+) -> io::Result<()> {
     let mut last_error = None;
-    for _ in 0..16 {
-        let backup = backup_path_for(path);
-        match fs::rename(path, &backup) {
-            Ok(()) => match fs::rename(temp, path) {
-                Ok(()) => {
-                    let _ = fs::remove_file(&backup);
-                    return Ok(());
-                }
-                Err(error) => {
-                    let restore = fs::rename(&backup, path);
-                    return Err(restore.err().unwrap_or(error));
-                }
-            },
-            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-            Err(error) if should_retry_windows_replace(&error) => {
-                last_error = Some(error);
-                thread::sleep(LOCK_SLEEP);
-                continue;
-            }
-            Err(error) => return Err(error),
-        }
-
-        match fs::rename(temp, path) {
+    for attempt in 0..16 {
+        match replace() {
             Ok(()) => return Ok(()),
-            Err(error) if should_retry_windows_replace(&error) => {
+            Err(error) if should_retry_atomic_replace(&error) => {
                 last_error = Some(error);
-                thread::sleep(LOCK_SLEEP);
+                if attempt + 1 < 16 {
+                    thread::sleep(LOCK_SLEEP);
+                }
             }
             Err(error) => return Err(error),
         }
@@ -556,10 +597,13 @@ mod tests {
         Journey, Scoreboard, load_journey_file, load_scoreboard_file, persist_journey_delta,
         record_score_file, remove_persisted_file,
     };
+    use std::fs::File;
     use std::io;
     use std::path::PathBuf;
     use std::process::Command;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    #[cfg(windows)]
+    use std::sync::{Arc, atomic::AtomicBool, mpsc};
     use std::thread;
     use std::time::Duration;
 
@@ -894,6 +938,171 @@ mod tests {
         let board = load_scoreboard_file(&path);
         assert_eq!(board.entries["delayed"], 1);
         remove_persisted_file(&path).expect("cleanup");
+    }
+
+    #[test]
+    fn atomic_replace_retries_without_hiding_the_destination() {
+        let path = temp_file("atomic_replace_destination");
+        let temp = temp_file("atomic_replace_source");
+        std::fs::write(&path, b"old").expect("old destination");
+        std::fs::write(&temp, b"new").expect("new temp");
+        let mut attempts = 0;
+
+        super::retry_atomic_replace_with(&path, || {
+            assert_eq!(
+                std::fs::read(&path).expect("destination remains readable"),
+                b"old"
+            );
+            attempts += 1;
+            if attempts < 3 {
+                Err(io::Error::new(
+                    io::ErrorKind::PermissionDenied,
+                    "simulated transient sharing violation",
+                ))
+            } else {
+                std::fs::rename(&temp, &path)
+            }
+        })
+        .expect("atomic replace eventually succeeds");
+
+        assert_eq!(attempts, 3);
+        assert_eq!(std::fs::read(&path).expect("new destination"), b"new");
+        assert!(!temp.exists());
+        remove_persisted_file(&path).expect("cleanup");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_sharing_retry_keeps_the_destination_readable() {
+        use std::os::windows::fs::OpenOptionsExt;
+
+        const FILE_SHARE_READ: u32 = 0x0000_0001;
+        const FILE_SHARE_WRITE: u32 = 0x0000_0002;
+
+        let path = temp_file("windows_sharing_destination");
+        let temp = temp_file("windows_sharing_source");
+        std::fs::write(&path, b"old").expect("old destination");
+        std::fs::write(&temp, b"new").expect("new temp");
+        let mut blocker = Some(
+            std::fs::OpenOptions::new()
+                .read(true)
+                .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
+                .open(&path)
+                .expect("open handle that denies replacement"),
+        );
+
+        let stop = Arc::new(AtomicBool::new(false));
+        let missing = Arc::new(AtomicBool::new(false));
+        let reads = Arc::new(AtomicUsize::new(0));
+        let (ready_tx, ready_rx) = mpsc::channel();
+        let reader_path = path.clone();
+        let reader_stop = Arc::clone(&stop);
+        let reader_missing = Arc::clone(&missing);
+        let reader_reads = Arc::clone(&reads);
+        let reader = thread::spawn(move || {
+            let mut ready_tx = Some(ready_tx);
+            while !reader_stop.load(Ordering::Relaxed) {
+                match std::fs::read(&reader_path) {
+                    Ok(bytes) => {
+                        assert!(bytes == b"old" || bytes == b"new");
+                        reader_reads.fetch_add(1, Ordering::Relaxed);
+                        if let Some(sender) = ready_tx.take() {
+                            sender.send(()).expect("signal first read");
+                        }
+                    }
+                    Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                        reader_missing.store(true, Ordering::Relaxed);
+                    }
+                    Err(error) => panic!("unexpected concurrent read error: {error}"),
+                }
+            }
+        });
+        ready_rx.recv().expect("reader observes old destination");
+        let mut attempts = 0;
+
+        super::retry_atomic_replace_with(&path, || {
+            attempts += 1;
+            let result = std::fs::rename(&temp, &path);
+            if attempts == 1 {
+                assert!(result.is_err(), "sharing handle must block first replace");
+                drop(blocker.take());
+            }
+            result
+        })
+        .expect("replace after sharing handle closes");
+        stop.store(true, Ordering::Relaxed);
+        reader.join().expect("reader joined");
+
+        assert!(attempts >= 2);
+        assert!(reads.load(Ordering::Relaxed) > 0);
+        assert!(!missing.load(Ordering::Relaxed));
+        assert_eq!(std::fs::read(&path).expect("new destination"), b"new");
+        remove_persisted_file(&path).expect("cleanup");
+    }
+
+    #[test]
+    fn failed_precommit_write_removes_its_temp_file() {
+        let path = temp_file("failed_write_destination");
+        let temp = temp_file("failed_write_temp");
+        std::fs::write(&path, b"old").expect("old destination");
+        std::fs::write(&temp, b"partial").expect("temp placeholder");
+        let read_only = File::open(&temp).expect("open temp without write access");
+
+        let _error = super::write_and_commit(&path, &temp, read_only, b"new", || Ok(()))
+            .expect_err("read-only temp must reject the write");
+
+        assert_eq!(std::fs::read(&path).expect("old destination"), b"old");
+        assert!(!temp.exists(), "failed temp must not become an orphan");
+        remove_persisted_file(&path).expect("cleanup");
+    }
+
+    #[test]
+    fn postcommit_sync_failure_does_not_turn_a_committed_delta_into_an_error() {
+        let path = temp_file("postcommit_sync_destination");
+        let temp = temp_file("postcommit_sync_temp");
+        let base = Journey::default();
+        let mut first = base.clone();
+        first.play();
+        let file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temp)
+            .expect("create temp");
+
+        super::write_and_commit(&path, &temp, file, first.to_text().as_bytes(), || {
+            Err(io::Error::other("simulated postcommit sync failure"))
+        })
+        .expect("the visible commit remains successful");
+
+        let mut second = first.clone();
+        second.play();
+        let merged = persist_journey_delta(&path, &first, &second).expect("next delta");
+        assert_eq!(merged.plays, 2, "the committed first delta is not replayed");
+        remove_persisted_file(&path).expect("cleanup");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_filesystem_accepts_parent_directory_sync() {
+        let path = temp_file("parent_sync_support");
+        std::fs::write(&path, b"state").expect("state file");
+        super::open_parent_directory(&path)
+            .expect("open parent directory")
+            .sync_all()
+            .expect("sync parent directory");
+        remove_persisted_file(&path).expect("cleanup");
+    }
+
+    #[test]
+    fn pending_lock_drop_removes_the_owned_error_path_lock() {
+        let path = temp_file("pending_lock_cleanup");
+        let lock = super::lock_path_for(&path);
+        let token = "pending-token".to_string();
+        std::fs::write(&lock, format!("token {token}\n")).expect("pending lock");
+
+        drop(super::PendingPersistLock::new(lock.clone(), token));
+
+        assert!(!lock.exists());
     }
 
     #[test]

@@ -114,6 +114,22 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - A deterministic pre-commit gate (`scripts/hooks/pre-commit`, wired once per clone with `git config core.hooksPath scripts/hooks`, documented in `docs/ENGINEERING.md`). It blocks any commit that would fail the fast gate: the house-style guard on every commit, and the cargo gate (fmt, clippy `-D warnings`, the full test suite) only when the commit touches Rust, `Cargo.*`, or a shader, so docs-only commits stay fast. Coverage and the locked build remain the release gate (`scripts/verify.sh`). A wired gate that blocks a bad commit beats any reminder to run the checks.
 
 ### Changed
+- Shared persistence closes its remaining bounded durability gaps without
+  changing merge semantics. Windows replacement now retries the same atomic
+  rename instead of moving the old file through a backup name, so readers see
+  either the old state or the new state during a real sharing violation. Temp
+  and lock guards close their handles before cleaning owned files on every
+  precommit error path. On Unix, the parent directory is opened before mutation
+  and receives an operating-system metadata sync after replace or explicit
+  forget; a postcommit sync error remains a committed write so a caller cannot
+  replay an already visible Journey delta. This is an OS-level best-effort
+  barrier, not a claim of hardware power-loss immunity. Focused tests cover a
+  forced Windows retry with a synchronized concurrent reader, injected
+  postcommit sync failure without counter duplication, temp cleanup, pending
+  lock ownership, and Unix directory-sync support. CI now runs the locked
+  workspace tests as well as locked builds on Linux, macOS, and Windows. The
+  complete suite has 1,016 tests, 91.80% region coverage, and 91.40% line
+  coverage.
 - The cross-room identities from the simulated Ramanujan review now live in the
   experience instead of only in planning prose. Logistic Map and Mandelbrot
   name their affine conjugacy under `c = r(2-r)/4`, checked algebraically in
