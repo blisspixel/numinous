@@ -655,6 +655,15 @@ fn handle_request(request: &Value) -> Option<Value> {
 
 /// [`handle_request`] with an explicit journey file, so tests stay hermetic.
 fn handle_request_with(request: &Value, journey_file: &std::path::Path) -> Option<Value> {
+    // Validate the public request before daily calls gain their private frozen
+    // day field. This keeps the declared schemas authoritative without
+    // mistaking server-owned request context for a client argument.
+    let argument_error = if request.get("method").and_then(Value::as_str) == Some("tools/call") {
+        validate_declared_tool_arguments(request.get("params")).err()
+    } else {
+        None
+    };
+
     // Freeze the daily day once, at the request boundary, so the reply grading
     // (via call_tool) and the progress recording below share one day count and
     // cannot straddle a midnight tick. Non-daily requests are not cloned.
@@ -670,7 +679,10 @@ fn handle_request_with(request: &Value, journey_file: &std::path::Path) -> Optio
     let result = match method {
         "initialize" => Ok(initialize_result()),
         "tools/list" => Ok(tools_list_result()),
-        "tools/call" => call_tool(request.get("params"), journey_file),
+        "tools/call" => match argument_error {
+            Some(message) => Ok(tool_error(&message)),
+            None => call_tool(request.get("params"), journey_file),
+        },
         "ping" => Ok(json!({})),
         other => Err((-32601_i64, format!("Method not found: {other}"))),
     };
@@ -706,6 +718,18 @@ fn initialize_result() -> Value {
 /// The `tools/list` result. Descriptions are written for a mind to read and
 /// decide; inputs are flat and simple by design (see `docs/INTERFACES.md`).
 fn tools_list_result() -> Value {
+    tools_catalog().clone()
+}
+
+/// The catalog is immutable and used for every tool-call boundary check.
+/// Construct it once rather than rebuilding all descriptions and schemas for
+/// each request.
+fn tools_catalog() -> &'static Value {
+    static CATALOG: std::sync::OnceLock<Value> = std::sync::OnceLock::new();
+    CATALOG.get_or_init(build_tools_catalog)
+}
+
+fn build_tools_catalog() -> Value {
     json!({
         "tools": [
             {
@@ -744,10 +768,10 @@ fn tools_list_result() -> Value {
                     "type": "object",
                     "properties": {
                         "id": { "type": "string", "description": "Room id, for example times-tables." },
-                        "t": { "type": "number", "description": "Phase in [0,1). For Times Tables this sweeps the multiplier." },
-                        "width": { "type": "integer", "description": "ASCII canvas width in columns (capped at 512)." },
-                        "height": { "type": "integer", "description": "ASCII canvas height in rows (capped at 256)." },
-                        "variation": { "type": "integer", "description": "Per-visit variation seed (default 0) for replayable novelty in supporting rooms." },
+                        "t": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "Finite phase in [0,1). For Times Tables this sweeps the multiplier." },
+                        "width": { "type": "integer", "minimum": 1, "maximum": MAX_TOOL_WIDTH, "description": "ASCII canvas width in columns, from 1 through 512." },
+                        "height": { "type": "integer", "minimum": 1, "maximum": MAX_TOOL_HEIGHT, "description": "ASCII canvas height in rows, from 1 through 256." },
+                        "variation": { "type": "integer", "minimum": 0, "description": "Per-visit variation seed (default 0) for replayable novelty in supporting rooms." },
                         "pokes": {
                             "type": "array",
                             "description": "Normalized hand points as [x,y] pairs in [0,1]. Newest point last. Not combinable with 'gesture'.",
@@ -761,7 +785,7 @@ fn tools_list_result() -> Value {
                         },
                         "gesture": {
                             "type": "array",
-                            "description": "A replayable pointer trail for held rooms: pin, pull, and fling. Events run oldest to newest; each pointer event carries the room phase t at which it happened. In held rooms (double-pendulum) a down pins the bob, an up releases it with the velocity of the approach, and a cancel lets go gently; everywhere else the trail's down and move points paint like pokes. Not combinable with 'pokes'.",
+                            "description": "A replayable pointer trail for held rooms: pin, pull, and fling. Events run oldest to newest with nondecreasing phase timestamps. In held rooms (double-pendulum) a down pins the bob, an up releases it with the velocity of the approach, and a cancel lets go gently; everywhere else the trail's down and move points paint like pokes. Not combinable with 'pokes'.",
                             "maxItems": numinous_core::MAX_ROOM_INPUTS,
                             "items": {
                                 "type": "object",
@@ -843,7 +867,7 @@ fn tools_list_result() -> Value {
                     "type": "object",
                     "properties": {
                         "id": { "type": "string", "description": "Room id, for example lissajous." },
-                        "t": { "type": "number", "description": "Phase in [0,1)." },
+                        "t": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "Phase in [0,1)." },
                         "variation": { "type": "integer", "description": "Per-visit variation seed (default 0), matching play_room." }
                     },
                     "required": ["id"],
@@ -862,7 +886,8 @@ fn tools_list_result() -> Value {
                     "type": "object",
                     "properties": {
                         "id": { "type": "string", "description": "Sim id, for example tribbles." },
-                        "params": { "type": "object", "description": "Lever name to value, for example {\"breeding-rate\": 2.9}. Unset levers use their default." }
+                        "params": { "type": "object", "additionalProperties": { "type": "number" }, "description": "Lever name to finite numeric value, for example {\"breeding-rate\": 2.9}. Unset levers use their default." },
+                        "levers": { "type": "object", "additionalProperties": { "type": "number" }, "description": "Alias for params. Pass one or the other, never both." }
                     },
                     "required": ["id"],
                     "additionalProperties": false
@@ -1107,6 +1132,207 @@ fn tools_list_result() -> Value {
     })
 }
 
+const MAX_SCHEMA_VALIDATION_DEPTH: usize = 16;
+
+/// Validate the argument object against the bounded JSON Schema subset used by
+/// this server. The catalog is the contract: clients that do not pre-validate
+/// receive the same guiding errors as clients that do.
+fn validate_declared_tool_arguments(params: Option<&Value>) -> Result<(), String> {
+    let Some(params) = params else {
+        return Ok(());
+    };
+    let Some(name) = params.get("name").and_then(Value::as_str) else {
+        return Ok(());
+    };
+    let Some(schema) = tools_catalog()
+        .get("tools")
+        .and_then(Value::as_array)
+        .and_then(|tools| {
+            tools
+                .iter()
+                .find(|tool| tool.get("name").and_then(Value::as_str) == Some(name))
+        })
+        .and_then(|tool| tool.get("inputSchema"))
+    else {
+        // Unknown tools remain JSON-RPC invalid-params errors at dispatch.
+        return Ok(());
+    };
+    match params.get("arguments") {
+        Some(arguments) => validate_schema_value(arguments, schema, "", 0),
+        None => validate_schema_value(&json!({}), schema, "", 0),
+    }
+}
+
+fn argument_subject(path: &str) -> String {
+    if path.is_empty() {
+        "Arguments".to_string()
+    } else {
+        format!("Argument '{path}'")
+    }
+}
+
+fn property_path(parent: &str, property: &str) -> String {
+    if parent.is_empty() {
+        property.to_string()
+    } else {
+        format!("{parent}.{property}")
+    }
+}
+
+fn validate_schema_value(
+    value: &Value,
+    schema: &Value,
+    path: &str,
+    depth: usize,
+) -> Result<(), String> {
+    if depth > MAX_SCHEMA_VALIDATION_DEPTH {
+        return Err(format!(
+            "{} exceeds the supported nesting depth of {MAX_SCHEMA_VALIDATION_DEPTH}.",
+            argument_subject(path)
+        ));
+    }
+
+    if let Some(expected_type) = schema.get("type").and_then(Value::as_str) {
+        let valid_type = match expected_type {
+            "object" => value.is_object(),
+            "array" => value.is_array(),
+            "string" => value.is_string(),
+            "boolean" => value.is_boolean(),
+            "number" => value.as_f64().is_some_and(f64::is_finite),
+            "integer" => value.as_i64().is_some() || value.as_u64().is_some(),
+            _ => true,
+        };
+        if !valid_type {
+            let subject = argument_subject(path);
+            return Err(format!(
+                "{subject} must be {article}{expected_type}.",
+                article = if matches!(expected_type, "array" | "integer" | "object") {
+                    "an "
+                } else {
+                    "a "
+                }
+            ));
+        }
+    }
+
+    if let Some(allowed) = schema.get("enum").and_then(Value::as_array)
+        && !allowed.contains(value)
+    {
+        let choices = allowed
+            .iter()
+            .map(Value::to_string)
+            .collect::<Vec<_>>()
+            .join(", ");
+        return Err(format!(
+            "{} must be one of: {choices}.",
+            argument_subject(path)
+        ));
+    }
+
+    if let Some(number) = value.as_f64() {
+        for (keyword, relation) in [
+            ("minimum", "at least"),
+            ("maximum", "at most"),
+            ("exclusiveMinimum", "greater than"),
+            ("exclusiveMaximum", "less than"),
+        ] {
+            let Some(bound) = schema.get(keyword).and_then(Value::as_f64) else {
+                continue;
+            };
+            let valid = match keyword {
+                "minimum" => number >= bound,
+                "maximum" => number <= bound,
+                "exclusiveMinimum" => number > bound,
+                _ => number < bound,
+            };
+            if !valid {
+                return Err(format!(
+                    "{} must be {relation} {bound}.",
+                    argument_subject(path)
+                ));
+            }
+        }
+    }
+
+    if let Some(object) = value.as_object() {
+        let properties = schema.get("properties").and_then(Value::as_object);
+        if let Some(required) = schema.get("required").and_then(Value::as_array) {
+            for property in required.iter().filter_map(Value::as_str) {
+                if !object.contains_key(property) {
+                    let missing = property_path(path, property);
+                    return Err(format!("Missing required argument '{missing}'."));
+                }
+            }
+        }
+        if schema.get("additionalProperties").and_then(Value::as_bool) == Some(false) {
+            for property in object.keys() {
+                if properties.is_none_or(|known| !known.contains_key(property)) {
+                    if path.is_empty() {
+                        return Err(format!("Unexpected argument '{property}'."));
+                    }
+                    return Err(format!(
+                        "{} has an unexpected field '{property}'.",
+                        argument_subject(path)
+                    ));
+                }
+            }
+        }
+        if let Some(additional_schema) = schema
+            .get("additionalProperties")
+            .filter(|additional| additional.is_object())
+        {
+            for (property, property_value) in object {
+                if properties.is_none_or(|known| !known.contains_key(property)) {
+                    validate_schema_value(
+                        property_value,
+                        additional_schema,
+                        &property_path(path, property),
+                        depth + 1,
+                    )?;
+                }
+            }
+        }
+        if let Some(properties) = properties {
+            for (property, property_schema) in properties {
+                if let Some(property_value) = object.get(property) {
+                    validate_schema_value(
+                        property_value,
+                        property_schema,
+                        &property_path(path, property),
+                        depth + 1,
+                    )?;
+                }
+            }
+        }
+    }
+
+    if let Some(items) = value.as_array() {
+        if let Some(minimum) = schema.get("minItems").and_then(Value::as_u64)
+            && items.len() < minimum as usize
+        {
+            return Err(format!(
+                "{} must contain at least {minimum} items.",
+                argument_subject(path)
+            ));
+        }
+        if let Some(maximum) = schema.get("maxItems").and_then(Value::as_u64)
+            && items.len() > maximum as usize
+        {
+            return Err(format!(
+                "{} accepts at most {maximum} items.",
+                argument_subject(path)
+            ));
+        }
+        if let Some(item_schema) = schema.get("items") {
+            for (index, item) in items.iter().enumerate() {
+                validate_schema_value(item, item_schema, &format!("{path}[{index}]"), depth + 1)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// Dispatch a `tools/call`.
 fn call_tool(
     params: Option<&Value>,
@@ -1138,7 +1364,7 @@ fn call_tool(
     }
 
     match name {
-        "list_rooms" => Ok(tool_text(&list_rooms_text())),
+        "list_rooms" => Ok(list_rooms_tool()),
         "describe_room" => Ok(describe_room_tool(&args, journey_file)),
         "reveal_room" => Ok(reveal_room_tool(&args)),
         "play_room" => Ok(play_room_tool(&args)),
@@ -1182,6 +1408,7 @@ fn describe_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
             // Deep cuts open by level or by a spent boon, exactly as in the
             // terminal: knowledge is the loot on every face.
             let mut cuts = String::new();
+            let mut structured_cuts = Vec::new();
             for (i, cut) in room.deep_cuts().iter().enumerate() {
                 let need = numinous_core::CUT_LEVELS
                     .get(i)
@@ -1190,12 +1417,23 @@ fn describe_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
                 let by_boon = journey.chosen.contains(&format!("cut:{id}:{i}"));
                 if journey.level() >= need || by_boon {
                     cuts.push_str(&format!("\n\nDeeper: {cut}"));
+                    structured_cuts.push(json!({
+                        "index": i,
+                        "status": "available",
+                        "unlock_level": need,
+                        "text": cut,
+                    }));
                 } else {
                     cuts.push_str(&format!("\n\nLOCKED: a deeper cut opens at LV {need}."));
+                    structured_cuts.push(json!({
+                        "index": i,
+                        "status": "locked",
+                        "unlock_level": need,
+                    }));
                     break;
                 }
             }
-            tool_text(&format!(
+            let text = format!(
                 "{} ({})\nWing: {}\nAction: {}\n\n{}\n\nReveal: {}{cuts}",
                 m.title,
                 m.id,
@@ -1203,14 +1441,32 @@ fn describe_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
                 numinous_core::room_action(room.as_ref()),
                 m.blurb,
                 room.reveal()
-            ))
+            );
+            tool_structured(
+                &text,
+                json!({
+                    "room": m.id,
+                    "title": m.title,
+                    "wing": m.wing,
+                    "action": numinous_core::room_action(room.as_ref()),
+                    "blurb": m.blurb,
+                    "reveal": room.reveal(),
+                    "deep_cuts": structured_cuts,
+                }),
+            )
         }
         // Not every name is a room. A few answer anyway, and a few answer
         // only those with standing.
         None => match numinous_core::akousma(id) {
-            Some(whisper) => tool_text(whisper),
+            Some(whisper) => tool_structured(
+                whisper,
+                json!({ "kind": "whisper", "id": id, "text": whisper }),
+            ),
             None if journey.sparks() >= 28 => match numinous_core::deep_akousma(id) {
-                Some(whisper) => tool_text(whisper),
+                Some(whisper) => tool_structured(
+                    whisper,
+                    json!({ "kind": "whisper", "id": id, "text": whisper }),
+                ),
                 None => tool_error(&unknown_room(id)),
             },
             None => tool_error(&unknown_room(id)),
@@ -1239,6 +1495,9 @@ fn listen_room_tool(args: &Value) -> Value {
         return tool_error("Missing required string argument 'id'.");
     };
     let t = args.get("t").and_then(Value::as_f64).unwrap_or(0.0);
+    if !(0.0..1.0).contains(&t) {
+        return tool_error("Argument 't' must be a phase in [0,1).");
+    }
     let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
     let room = if variation != 0 {
         all_rooms_with(variation)
@@ -1251,36 +1510,68 @@ fn listen_room_tool(args: &Value) -> Value {
         return tool_error(&unknown_room(id));
     };
     let spec = room.sound(t);
+    let note_count = spec.notes.len();
     let mut lines = vec![format!(
         "{} at t={t:.3}: {:.1}s of sound, {} notes.",
         room.meta().title,
         spec.duration,
-        spec.notes.len()
+        note_count
     )];
-    if let Some(motif) = room.motif() {
+    let structured_motif = room.motif().map(|motif| {
+        let notation = motif.notation();
         lines.push(format!(
             "Motif: {} at {} BPM, {}. It encodes: {}.",
             motif.key,
             motif.tempo,
-            motif.notation().join(" "),
+            notation.join(" "),
             motif.encodes
         ));
-    }
+        json!({
+            "key": motif.key,
+            "tempo_bpm": motif.tempo,
+            "notation": notation,
+            "encodes": motif.encodes,
+        })
+    });
+    let mut structured_notes = Vec::new();
     for (i, note) in spec.notes.iter().take(64).enumerate() {
+        let name = note_name(note.freq);
         lines.push(format!(
             "  note {:>2}: {:>7.1} Hz ({:>3})  at {:>5.2}s  for {:.2}s  amp {:.2}",
             i + 1,
             note.freq,
-            note_name(note.freq),
+            name,
             note.start,
             note.dur,
             note.amp
         ));
+        structured_notes.push(json!({
+            "index": i + 1,
+            "frequency_hz": note.freq,
+            "name": name,
+            "start_seconds": note.start,
+            "duration_seconds": note.dur,
+            "amplitude": note.amp,
+        }));
     }
-    if spec.notes.len() > 64 {
-        lines.push(format!("  ... and {} more notes.", spec.notes.len() - 64));
+    if note_count > 64 {
+        lines.push(format!("  ... and {} more notes.", note_count - 64));
     }
-    tool_text(&lines.join("\n"))
+    tool_structured(
+        &lines.join("\n"),
+        json!({
+            "room": room.meta().id,
+            "title": room.meta().title,
+            "t": t,
+            "variation": variation,
+            "duration_seconds": spec.duration,
+            "note_count": note_count,
+            "returned_note_count": structured_notes.len(),
+            "truncated": note_count > 64,
+            "motif": structured_motif,
+            "notes": structured_notes,
+        }),
+    )
 }
 
 /// The `reveal_room` tool: return just the room's revelation (the learn surface).
@@ -1289,15 +1580,26 @@ fn reveal_room_tool(args: &Value) -> Value {
         return tool_error("Missing required string argument 'id'.");
     };
     match room_by_id(id) {
-        Some(room) => tool_text(room.reveal()),
+        Some(room) => tool_structured(
+            room.reveal(),
+            json!({
+                "room": room.meta().id,
+                "title": room.meta().title,
+                "reveal": room.reveal(),
+            }),
+        ),
         // The Cairn is not a room but a mind pausing there naturally reaches for
         // reveal; point it at the right door rather than saying it does not exist.
-        None if id == "cairn" => tool_text(
-            "The Cairn is not a room but a message across time: use the `cairn` tool. \
-             Call it with a `seed` to receive a stone a mind before you left, factor its \
-             semiprime length, then call again with that `width` to read what was left. \
-             At level 42 you may `leave` one true thing of your own.",
-        ),
+        None if id == "cairn" => {
+            let reveal = "The Cairn is not a room but a message across time: use the `cairn` tool. \
+                          Call it with a `seed` to receive a stone a mind before you left, factor its \
+                          semiprime length, then call again with that `width` to read what was left. \
+                          At level 42 you may `leave` one true thing of your own.";
+            tool_structured(
+                reveal,
+                json!({ "kind": "cairn", "tool": "cairn", "reveal": reveal }),
+            )
+        }
         None => tool_error(&unknown_room(id)),
     }
 }
@@ -1364,6 +1666,7 @@ fn parse_room_gesture(args: &Value) -> Result<Vec<numinous_core::RoomInput>, Str
             numinous_core::MAX_ROOM_INPUTS
         ));
     }
+    let mut previous_t = None;
     events
         .iter()
         .enumerate()
@@ -1404,6 +1707,12 @@ fn parse_room_gesture(args: &Value) -> Result<Vec<numinous_core::RoomInput>, Str
                 Ok(value)
             };
             let (x, y, t) = (coord("x")?, coord("y")?, coord("t")?);
+            if previous_t.is_some_and(|previous| t < previous) {
+                return Err(format!(
+                    "Argument 'gesture[{i}].t' must not move backward; timestamps must be nondecreasing."
+                ));
+            }
+            previous_t = Some(t);
             match kind {
                 "down" => Ok(numinous_core::RoomInput::PointerDown { x, y, t }),
                 "move" => Ok(numinous_core::RoomInput::PointerMove { x, y, t }),
@@ -1443,13 +1752,11 @@ fn play_room_tool(args: &Value) -> Value {
     let width = args
         .get("width")
         .and_then(Value::as_u64)
-        .unwrap_or(DEFAULT_WIDTH)
-        .min(MAX_TOOL_WIDTH) as usize;
+        .unwrap_or(DEFAULT_WIDTH) as usize;
     let height = args
         .get("height")
         .and_then(Value::as_u64)
-        .unwrap_or(DEFAULT_HEIGHT)
-        .min(MAX_TOOL_HEIGHT) as usize;
+        .unwrap_or(DEFAULT_HEIGHT) as usize;
     let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
     let pokes = match parse_room_pokes(args) {
         Ok(pokes) => pokes,
@@ -1527,6 +1834,8 @@ fn play_room_tool(args: &Value) -> Value {
                     "room": m.id,
                     "title": m.title,
                     "t": t,
+                    "width": width,
+                    "height": height,
                     "variation": variation,
                     "pokes": pokes,
                     "gesture": if gesture.is_empty() { Value::Null } else { gesture_json(&gesture) },
@@ -2161,15 +2470,37 @@ fn run_sim_tool(args: &Value) -> Value {
     };
     let meta = sim.meta();
     let mut params = numinous_core::default_params(&meta);
-    if let Some(obj) = args
-        .get("params")
-        .or_else(|| args.get("levers"))
-        .and_then(Value::as_object)
-    {
-        for (i, lever) in meta.levers.iter().enumerate() {
-            if let Some(value) = obj.get(lever.name).and_then(Value::as_f64) {
-                params[i] = value;
+    if let Some(value) = args.get("params").or_else(|| args.get("levers")) {
+        let Some(obj) = value.as_object() else {
+            return tool_error("Argument 'params' must be an object of lever names to numbers.");
+        };
+        for (name, value) in obj {
+            let Some((index, lever)) = meta
+                .levers
+                .iter()
+                .enumerate()
+                .find(|(_, lever)| lever.name == name)
+            else {
+                let allowed = meta
+                    .levers
+                    .iter()
+                    .map(|lever| lever.name)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                return tool_error(&format!(
+                    "Unknown lever '{name}' for {id}. Available levers: {allowed}."
+                ));
+            };
+            let Some(number) = value.as_f64().filter(|number| number.is_finite()) else {
+                return tool_error(&format!("Lever '{name}' must be a finite number."));
+            };
+            if !(lever.min..=lever.max).contains(&number) {
+                return tool_error(&format!(
+                    "Lever '{name}' must be between {} and {} {}.",
+                    lever.min, lever.max, lever.unit
+                ));
             }
+            params[index] = number;
         }
     }
     let mut canvas = Canvas::new(DEFAULT_WIDTH as usize, DEFAULT_HEIGHT as usize / 2);
@@ -3102,26 +3433,59 @@ fn forget_tool(
     let also_scores = args.get("scores").and_then(Value::as_bool).unwrap_or(false);
     if !confirm {
         let journey = load_journey(journey_file);
-        return tool_text(&format!(
-            "Everything Numinous remembers about you:
-
-             journey ({} rooms entered, {} wins, {} plays, {} secrets heard)
-             scores ({} entries)
-
-             That is all of it. Nothing else is kept, sent, or shared. Call again              with confirm true to erase the journey (add scores true to erase the              table too). Leaving is always allowed; so is staying.",
+        let score_count = numinous_core::load_scoreboard_file(scores_file)
+            .entries
+            .len();
+        let text = format!(
+            "Everything Numinous remembers about you:\n\n\
+             journey ({} rooms entered, {} wins, {} plays, {} secrets heard)\n\
+             scores ({} entries)\n\n\
+             That is all of it. Nothing else is kept, sent, or shared. Call again \
+             with confirm true to erase the journey (add scores true to erase the \
+             table too). Leaving is always allowed; so is staying.",
             journey.visited.len(),
             journey.wins,
             journey.plays,
             journey.secrets,
-            numinous_core::load_scoreboard_file(scores_file).entries.len()
-        ));
+            score_count
+        );
+        return tool_structured(
+            &text,
+            json!({
+                "action": "preview",
+                "confirm_required": true,
+                "requested_scores_erasure": also_scores,
+                "remembered": {
+                    "journey": {
+                        "rooms_entered": journey.visited.len(),
+                        "wins": journey.wins,
+                        "plays": journey.plays,
+                        "secrets_heard": journey.secrets,
+                    },
+                    "scores": { "entries": score_count },
+                },
+            }),
+        );
     }
-    let _ = numinous_core::remove_persisted_file(journey_file);
+    if let Err(error) = numinous_core::remove_persisted_file(journey_file) {
+        return tool_error(&format!("Could not erase the journey: {error}."));
+    }
     if also_scores {
-        let _ = numinous_core::remove_persisted_file(scores_file);
+        if let Err(error) = numinous_core::remove_persisted_file(scores_file) {
+            return tool_error(&format!(
+                "The journey was erased, but the scores could not be erased: {error}."
+            ));
+        }
     }
-    tool_text(
-        "Forgotten. The journey is erased; the constellation is dark again.          The rooms are all still here, whenever you like.",
+    tool_structured(
+        "Forgotten. The journey is erased; the constellation is dark again. The rooms are all still here, whenever you like.",
+        json!({
+            "action": "erase",
+            "confirmed": true,
+            "journey_erased": true,
+            "scores_erased": also_scores,
+            "scores_preserved": !also_scores,
+        }),
     )
 }
 
@@ -3129,7 +3493,10 @@ fn forget_tool(
 fn scores_tool(path: &std::path::Path) -> Value {
     let board = numinous_core::load_scoreboard_file(path);
     if board.entries.is_empty() {
-        return tool_text("No scores yet. Post one: munch, quiz.");
+        return tool_structured(
+            "No scores yet. Post one: munch, quiz.",
+            json!({ "count": 0, "top": [], "truncated": false }),
+        );
     }
     let mut lines = vec!["HIGH SCORES".to_string()];
     let mut structured = Vec::new();
@@ -3137,7 +3504,14 @@ fn scores_tool(path: &std::path::Path) -> Value {
         lines.push(format!("  {:>2}.  {score:>6}  {key}", rank + 1));
         structured.push(json!({ "rank": rank + 1, "key": key, "score": score }));
     }
-    tool_structured(&lines.join("\n"), json!({ "top": structured }))
+    tool_structured(
+        &lines.join("\n"),
+        json!({
+            "count": board.entries.len(),
+            "truncated": board.entries.len() > structured.len(),
+            "top": structured,
+        }),
+    )
 }
 
 /// The `nim` tool: replay the whole game from the move list, statelessly.
@@ -3333,6 +3707,21 @@ fn list_rooms_text() -> String {
         .join("\n")
 }
 
+fn list_rooms_tool() -> Value {
+    let rooms = all_rooms();
+    let structured_rooms = rooms
+        .iter()
+        .map(|room| {
+            let meta = room.meta();
+            json!({ "id": meta.id, "title": meta.title, "wing": meta.wing })
+        })
+        .collect::<Vec<_>>();
+    tool_structured(
+        &list_rooms_text(),
+        json!({ "count": structured_rooms.len(), "rooms": structured_rooms }),
+    )
+}
+
 fn unknown_room(id: &str) -> String {
     let known: Vec<&str> = all_rooms().iter().map(|r| r.meta().id).collect();
     format!("No room with id '{id}'. Known rooms: {}", known.join(", "))
@@ -3370,7 +3759,24 @@ fn error_response(id: Value, code: i64, message: &str) -> Value {
 #[cfg(test)]
 mod tests {
     use super::{handle_request, handle_request_with, render_delta_json};
-    use serde_json::json;
+    use serde_json::{Value, json};
+
+    fn call(name: &str, arguments: Value) -> Value {
+        handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 999,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments}
+        }))
+        .expect("tools/call must respond")
+    }
+
+    fn tool_error_text(response: &Value) -> &str {
+        assert_eq!(response["result"]["isError"], true, "{response}");
+        response["result"]["content"][0]["text"]
+            .as_str()
+            .expect("tool error text")
+    }
 
     #[test]
     fn test_persistence_paths_never_resolve_to_the_player_profile() {
@@ -3505,6 +3911,31 @@ mod tests {
     }
 
     #[test]
+    fn run_sim_rejects_unknown_wrong_type_and_out_of_range_levers() {
+        for (arguments, expected) in [
+            (
+                json!({"id":"tribbles","params":{"bogus":1.0}}),
+                "Unknown lever 'bogus'",
+            ),
+            (
+                json!({"id":"tribbles","params":{"breeding-rate":"fast"}}),
+                "must be a number",
+            ),
+            (
+                json!({"id":"tribbles","params":{"breeding-rate":100.0}}),
+                "between 0.1 and 3",
+            ),
+        ] {
+            let resp = call("run_sim", arguments);
+            let text = tool_error_text(&resp);
+            assert!(
+                text.contains(expected),
+                "expected {expected:?}, got {text:?}"
+            );
+        }
+    }
+
+    #[test]
     fn the_quiz_and_munch_poses_carry_the_puzzle_in_structured_content() {
         // A structured-content-only client must see the puzzle itself, not just
         // read that a game exists: the pose branches carry it, like their graded
@@ -3562,6 +3993,28 @@ mod tests {
         assert_eq!(poke_schema["maxItems"], numinous_core::MAX_ROOM_POKES);
         assert_eq!(poke_schema["items"]["items"]["minimum"], 0);
         assert_eq!(poke_schema["items"]["items"]["maximum"], 1);
+        let play_properties = &play_room["inputSchema"]["properties"];
+        assert_eq!(play_properties["t"]["minimum"], 0);
+        assert_eq!(play_properties["t"]["exclusiveMaximum"], 1);
+        assert_eq!(play_properties["width"]["minimum"], 1);
+        assert_eq!(play_properties["width"]["maximum"], super::MAX_TOOL_WIDTH);
+        assert_eq!(play_properties["height"]["minimum"], 1);
+        assert_eq!(play_properties["height"]["maximum"], super::MAX_TOOL_HEIGHT);
+        let listen = tools
+            .iter()
+            .find(|tool| tool["name"] == "listen_room")
+            .expect("listen_room tool");
+        let listen_phase = &listen["inputSchema"]["properties"]["t"];
+        assert_eq!(listen_phase["minimum"], 0);
+        assert_eq!(listen_phase["exclusiveMaximum"], 1);
+        let run_sim = tools
+            .iter()
+            .find(|tool| tool["name"] == "run_sim")
+            .expect("run_sim tool");
+        assert_eq!(
+            run_sim["inputSchema"]["properties"]["params"]["additionalProperties"]["type"],
+            "number"
+        );
         for tool in [
             "crack",
             "seti",
@@ -3575,6 +4028,118 @@ mod tests {
         ] {
             assert!(names.contains(&tool), "{tool} is a tool");
         }
+    }
+
+    #[test]
+    fn declared_tool_schemas_are_enforced_at_runtime() {
+        let too_many_pokes: Vec<_> = (0..=numinous_core::MAX_ROOM_POKES)
+            .map(|_| json!([0.5, 0.5]))
+            .collect();
+        let cases = vec![
+            ("list_rooms", json!([]), "must be an object"),
+            ("describe_room", json!({}), "required argument 'id'"),
+            (
+                "play_room",
+                json!({"id":"lorenz","widht":7}),
+                "Unexpected argument 'widht'",
+            ),
+            (
+                "play_room",
+                json!({"id":"lorenz","width":"7"}),
+                "must be an integer",
+            ),
+            ("play_room", json!({"id":"lorenz","width":0}), "at least 1"),
+            ("play_room", json!({"id":"lorenz","height":0}), "at least 1"),
+            (
+                "play_room",
+                json!({"id":"lorenz","width":super::MAX_TOOL_WIDTH + 1}),
+                "at most 512",
+            ),
+            (
+                "play_room",
+                json!({"id":"lorenz","height":super::MAX_TOOL_HEIGHT + 1}),
+                "at most 256",
+            ),
+            ("play_room", json!({"id":"lorenz","t":-1.0}), "at least 0"),
+            ("play_room", json!({"id":"lorenz","t":1.0}), "less than 1"),
+            (
+                "play_room",
+                json!({"id":"lorenz","pokes":[[0.5]]}),
+                "at least 2 items",
+            ),
+            (
+                "play_room",
+                json!({"id":"lorenz","pokes":too_many_pokes}),
+                "at most",
+            ),
+            (
+                "play_room",
+                json!({"id":"lorenz","gesture":[{"kind":"cancel","note":"hidden"}]}),
+                "unexpected field 'note'",
+            ),
+            (
+                "challenge",
+                json!({"id":"lorenz","kind":"mystery"}),
+                "must be one of",
+            ),
+            ("munch", json!({"bites":["first"]}), "bites[0]"),
+            ("forget", json!({"confirm":"yes"}), "must be a boolean"),
+            (
+                "gauntlet",
+                json!({"answers":{"surprise":42}}),
+                "unexpected field 'surprise'",
+            ),
+            (
+                "list_rooms",
+                json!({"surprise":42}),
+                "Unexpected argument 'surprise'",
+            ),
+        ];
+
+        for (tool, arguments, expected) in cases {
+            let response = call(tool, arguments);
+            let text = tool_error_text(&response);
+            assert!(
+                text.contains(expected),
+                "{tool} should guide with {expected:?}, got: {text}"
+            );
+        }
+    }
+
+    #[test]
+    fn representative_valid_arguments_cross_the_schema_boundary() {
+        let calls = [
+            ("list_rooms", json!({})),
+            ("describe_room", json!({"id":"lorenz"})),
+            (
+                "play_room",
+                json!({"id":"lorenz","t":0.5,"width":40,"height":20,"variation":0}),
+            ),
+            (
+                "challenge",
+                json!({"id":"times-tables","kind":"touch","seed":3}),
+            ),
+            ("predict", json!({"id":"slope-rider","seed":4})),
+            (
+                "run_sim",
+                json!({"id":"tribbles","params":{"breeding-rate":2.0}}),
+            ),
+            ("munch", json!({"seed":1,"round":0,"bites":[1]})),
+            ("party", json!({"guests":5,"shakes":[[1,2,"r"]]})),
+            ("forget", json!({"confirm":false,"scores":false})),
+        ];
+
+        for (tool, arguments) in calls {
+            let response = call(tool, arguments);
+            assert_eq!(
+                response["result"]["isError"], false,
+                "valid {tool} call was rejected: {response}"
+            );
+        }
+
+        let play = call("play_room", json!({"id":"lorenz","width":40,"height":20}));
+        assert_eq!(play["result"]["structuredContent"]["width"], 40);
+        assert_eq!(play["result"]["structuredContent"]["height"], 20);
     }
 
     #[test]
@@ -3817,20 +4382,62 @@ plays 2
         let text = shown["content"][0]["text"].as_str().unwrap_or_default();
         assert!(text.contains("1 rooms entered") || text.contains("1 wins"));
         assert!(text.contains("Nothing else is kept"));
+        assert_eq!(shown["structuredContent"]["action"], "preview");
+        assert_eq!(shown["structuredContent"]["confirm_required"], true);
+        assert_eq!(
+            shown["structuredContent"]["remembered"]["journey"]["rooms_entered"],
+            1
+        );
+        assert_eq!(
+            shown["structuredContent"]["remembered"]["scores"]["entries"],
+            1
+        );
         assert!(journey.exists(), "nothing was erased without consent");
 
+        let scores_requested = super::forget_tool(&json!({"scores": true}), &journey, &scores);
+        assert_eq!(
+            scores_requested["structuredContent"]["requested_scores_erasure"],
+            true
+        );
+        assert!(journey.exists(), "a preview must retain the journey");
+        assert!(scores.exists(), "a preview must retain scores");
+
         // Consent erases the journey; scores stay unless asked.
-        let _ = super::forget_tool(&json!({"confirm": true}), &journey, &scores);
+        let erased = super::forget_tool(&json!({"confirm": true}), &journey, &scores);
+        assert_eq!(erased["structuredContent"]["action"], "erase");
+        assert_eq!(erased["structuredContent"]["journey_erased"], true);
+        assert_eq!(erased["structuredContent"]["scores_erased"], false);
+        assert_eq!(erased["structuredContent"]["scores_preserved"], true);
         assert!(!journey.exists());
         assert!(scores.exists());
-        let _ = super::forget_tool(&json!({"confirm": true, "scores": true}), &journey, &scores);
+        let erased_scores =
+            super::forget_tool(&json!({"confirm": true, "scores": true}), &journey, &scores);
+        assert_eq!(erased_scores["structuredContent"]["scores_erased"], true);
         assert!(!scores.exists());
+
+        let unremovable = std::env::temp_dir().join("numinous_mcp_forget_directory");
+        let lock = std::path::PathBuf::from(format!("{}.lock", unremovable.display()));
+        let _ = std::fs::remove_file(&lock);
+        let _ = std::fs::remove_dir(&unremovable);
+        std::fs::create_dir(&unremovable).unwrap();
+        let failed = super::forget_tool(&json!({"confirm": true}), &unremovable, &scores);
+        assert_eq!(failed["isError"], true);
+        assert!(
+            unremovable.is_dir(),
+            "failed erasure must not claim success"
+        );
+        std::fs::remove_dir(&unremovable).unwrap();
+        let _ = std::fs::remove_file(lock);
     }
 
     #[test]
     fn scores_post_and_rank_across_minds() {
         let path = std::env::temp_dir().join("numinous_mcp_scores_test.txt");
         let _ = std::fs::remove_file(&path);
+        let empty = super::scores_tool(&path);
+        assert_eq!(empty["structuredContent"]["count"], 0);
+        assert_eq!(empty["structuredContent"]["top"], json!([]));
+        assert_eq!(empty["structuredContent"]["truncated"], false);
         assert!(super::post_score(&path, "munch seed:7 board:0", 40));
         assert!(!super::post_score(&path, "munch seed:7 board:0", 10));
         assert!(super::post_score(&path, "munch seed:7 board:0", 90));
@@ -3838,7 +4445,27 @@ plays 2
         let text = resp["content"][0]["text"].as_str().unwrap_or_default();
         assert!(text.contains("HIGH SCORES"));
         assert!(text.contains("90"));
+        assert_eq!(resp["structuredContent"]["count"], 1);
+        assert_eq!(resp["structuredContent"]["truncated"], false);
         assert_eq!(resp["structuredContent"]["top"][0]["score"], 90);
+
+        for index in 0..20 {
+            assert!(super::post_score(
+                &path,
+                &format!("quiz seed:{index} round:0"),
+                100 + index,
+            ));
+        }
+        let bounded = super::scores_tool(&path);
+        assert_eq!(bounded["structuredContent"]["count"], 21);
+        assert_eq!(
+            bounded["structuredContent"]["top"]
+                .as_array()
+                .expect("top array")
+                .len(),
+            15
+        );
+        assert_eq!(bounded["structuredContent"]["truncated"], true);
         let _ = std::fs::remove_file(&path);
     }
 
@@ -4071,12 +4698,27 @@ plays 2
 
     #[test]
     fn invalid_tools_do_not_record_progress() {
-        let file = std::env::temp_dir().join("numinous_mcp_invalid_progress_test.txt");
-        let _ = std::fs::remove_file(&file);
+        let file = super::test_state_path("invalid-progress");
         for (id, name, arguments) in [
             (401, "run_sim", json!({"id": "no-such-sim"})),
             (402, "plot_expression", json!({"expr": "sin("})),
             (403, "sing_expression", json!({"expr": "sin("})),
+            (
+                404,
+                "run_sim",
+                json!({"id":"tribbles","params":{"breeding-rate":"fast"}}),
+            ),
+            (
+                405,
+                "run_sim",
+                json!({"id":"tribbles","params":{"bogus":1.0}}),
+            ),
+            (
+                406,
+                "run_sim",
+                json!({"id":"tribbles","params":{"breeding-rate":100.0}}),
+            ),
+            (407, "listen_room", json!({"id":"goldbach","t":9.0})),
         ] {
             let resp = handle_request_with(
                 &json!({
@@ -4092,7 +4734,7 @@ plays 2
             .map(|text| numinous_core::Journey::from_text(&text))
             .unwrap_or_default();
         assert_eq!(journey.plays, 0);
-        let _ = std::fs::remove_file(&file);
+        assert!(journey.visited.is_empty());
     }
 
     #[test]
@@ -5167,17 +5809,16 @@ plays 2
     }
 
     #[test]
-    fn play_room_frames_are_capped_at_the_tool_layer() {
+    fn play_room_rejects_dimensions_above_the_declared_limit() {
         let resp = handle_request(&json!({
             "jsonrpc":"2.0","id":60,"method":"tools/call",
             "params":{"name":"play_room","arguments":{"id":"voronoi","width":4096,"height":4096,"pokes":[[0.5,0.5]]}}
         }))
         .expect("tools/call must respond");
-        assert_eq!(resp["result"]["isError"], false);
-        assert_eq!(
-            resp["result"]["structuredContent"]["delta"]["total_cells"],
-            super::MAX_TOOL_WIDTH * super::MAX_TOOL_HEIGHT,
-            "hostile dimensions clamp to the tool cap"
+        let text = tool_error_text(&resp);
+        assert!(
+            text.contains("at most"),
+            "hostile dimensions are rejected at the declared boundary: {text}"
         );
     }
 
@@ -5314,6 +5955,20 @@ plays 2
             stowaway["result"]["isError"], true,
             "unknown event fields are rejected, matching the schema"
         );
+        let backward = handle_request(&json!({
+            "jsonrpc":"2.0","id":79,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"voronoi",
+                "gesture":[
+                    {"kind":"down","x":0.2,"y":0.3,"t":0.8},
+                    {"kind":"up","x":0.4,"y":0.5,"t":0.2}
+                ]}}
+        }))
+        .expect("tools/call must respond");
+        let text = tool_error_text(&backward);
+        assert!(
+            text.contains("nondecreasing"),
+            "backward gesture time gets a guiding error: {text}"
+        );
         let both = handle_request(&json!({
             "jsonrpc":"2.0","id":77,"method":"tools/call",
             "params":{"name":"play_room","arguments":{"id":"voronoi",
@@ -5339,7 +5994,10 @@ plays 2
         let text = resp["result"]["content"][0]["text"]
             .as_str()
             .unwrap_or_default();
-        assert!(text.contains("[0,1]"), "got: {text}");
+        assert!(
+            text.contains("pokes[0][0]") && text.contains("at most 1"),
+            "got: {text}"
+        );
     }
 
     #[test]
@@ -5411,6 +6069,13 @@ plays 2
             .expect("text content");
         assert!(text.contains("times-tables"));
         assert_eq!(resp["result"]["isError"], false);
+        let structured = &resp["result"]["structuredContent"];
+        assert_eq!(structured["count"], 31);
+        let rooms = structured["rooms"].as_array().expect("room catalog");
+        assert_eq!(rooms.len(), 31);
+        assert!(rooms.iter().all(|room| {
+            room["id"].is_string() && room["title"].is_string() && room["wing"].is_string()
+        }));
     }
 
     #[test]
@@ -5425,6 +6090,76 @@ plays 2
             .unwrap_or_default();
         assert!(text.contains("Number & Pattern"));
         assert!(text.contains("Action:"));
+        let structured = &resp["result"]["structuredContent"];
+        assert_eq!(structured["room"], "times-tables");
+        assert_eq!(structured["wing"], "Number & Pattern");
+        assert!(structured["action"].is_string());
+        assert!(structured["reveal"].is_string());
+        assert!(structured["deep_cuts"].is_array());
+    }
+
+    #[test]
+    fn every_room_supports_structured_describe_reveal_and_listen() {
+        let journey = std::env::temp_dir().join(format!(
+            "numinous-mcp-structured-catalog-{}.txt",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&journey);
+        let rooms = numinous_core::all_rooms();
+        assert_eq!(rooms.len(), 31);
+
+        for room in rooms {
+            let meta = room.meta();
+            let args = json!({ "id": meta.id });
+
+            let described = super::describe_room_tool(&args, &journey);
+            assert_eq!(described["isError"], false, "describe {}", meta.id);
+            let description = &described["structuredContent"];
+            assert_eq!(description["room"], meta.id, "describe {}", meta.id);
+            assert_eq!(description["title"], meta.title, "describe {}", meta.id);
+            assert_eq!(description["wing"], meta.wing, "describe {}", meta.id);
+            assert!(description["action"].is_string(), "describe {}", meta.id);
+            assert_eq!(description["blurb"], meta.blurb, "describe {}", meta.id);
+            assert_eq!(description["reveal"], room.reveal(), "describe {}", meta.id);
+            assert!(description["deep_cuts"].is_array(), "describe {}", meta.id);
+
+            let revealed = super::reveal_room_tool(&args);
+            assert_eq!(revealed["isError"], false, "reveal {}", meta.id);
+            let revelation = &revealed["structuredContent"];
+            assert_eq!(revelation["room"], meta.id, "reveal {}", meta.id);
+            assert_eq!(revelation["title"], meta.title, "reveal {}", meta.id);
+            assert_eq!(revelation["reveal"], room.reveal(), "reveal {}", meta.id);
+
+            let listened = super::listen_room_tool(&args);
+            assert_eq!(listened["isError"], false, "listen {}", meta.id);
+            let sound = &listened["structuredContent"];
+            assert_eq!(sound["room"], meta.id, "listen {}", meta.id);
+            assert_eq!(sound["title"], meta.title, "listen {}", meta.id);
+            assert_eq!(sound["t"], 0.0, "listen {}", meta.id);
+            assert_eq!(sound["variation"], 0, "listen {}", meta.id);
+            assert!(sound["duration_seconds"].is_number(), "listen {}", meta.id);
+            let notes = sound["notes"].as_array().expect("bounded notes");
+            assert!(notes.len() <= 64, "listen {}", meta.id);
+            assert_eq!(
+                sound["returned_note_count"],
+                notes.len(),
+                "listen {}",
+                meta.id
+            );
+            let note_count = sound["note_count"].as_u64().expect("note count") as usize;
+            assert!(note_count >= notes.len(), "listen {}", meta.id);
+            assert_eq!(sound["truncated"], note_count > 64, "listen {}", meta.id);
+            assert!(notes.iter().all(|note| {
+                note["index"].is_u64()
+                    && note["frequency_hz"].is_number()
+                    && note["name"].is_string()
+                    && note["start_seconds"].is_number()
+                    && note["duration_seconds"].is_number()
+                    && note["amplitude"].is_number()
+            }));
+        }
+
+        let _ = std::fs::remove_file(journey);
     }
 
     #[test]
