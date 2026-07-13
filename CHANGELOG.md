@@ -251,6 +251,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   gates.
 
 ### Fixed
+- The Windows installer now selects the first executable returned by PATH
+  resolution explicitly. PowerShell can return both the promoted Numinous
+  install and a later stale Cargo copy without `-All`; treating that collection
+  as one path falsely failed an otherwise correct update. The installer
+  self-test now covers the two-match case.
 - Opening-state and postcard review now shows an intentional first composition
   instead of technical ink hidden by surrounding chrome. Langton's Ant opens
   on a true early pattern, Random Walk on a visible crowd and square-root ring,
