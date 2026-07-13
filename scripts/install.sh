@@ -87,6 +87,11 @@ case "$NUMINOUS_HOME" in
     /*) ;;
     *) fail "NUMINOUS_HOME must be an absolute path" ;;
 esac
+newline='
+'
+case "$NUMINOUS_HOME" in
+    *"$newline"*) fail "NUMINOUS_HOME must not contain control characters" ;;
+esac
 if printf '%s' "$NUMINOUS_HOME" | LC_ALL=C grep -q '[[:cntrl:]]'; then
     fail "NUMINOUS_HOME must not contain control characters"
 fi

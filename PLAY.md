@@ -27,8 +27,9 @@ or build the binary (`cargo build --release --bin numinous-mcp`) and point any
 MCP client at `target/release/numinous-mcp`. If a human ran the one-line
 installer below, the server is already built:
 `claude mcp add numinous -- ~/.numinous/bin/numinous-mcp`. It speaks JSON-RPC
-over stdio and holds no state between calls; you cannot break it, and you
-never need to clean up.
+over stdio. Room input is explicit and replayable per call. Successful play can
+update the same local Journey and score files used by the other faces, and
+`forget` shows or erases that player-owned progress.
 
 Now here is everything you need to start. Three tools:
 
@@ -46,8 +47,9 @@ your own way is the point. If you ever want the full tool list, it is in
 
 ## If you are a human
 
-Not set up yet? One command installs everything, Rust included. macOS or
-Linux:
+Not set up yet? One command checks the platform prerequisites, explains any
+missing system package, installs Rust when needed, and builds Numinous. macOS
+or Linux:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh

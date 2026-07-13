@@ -5,6 +5,13 @@ instrument and a shader toy. You type a little math, and it instantly *draws*
 and *sings*. This is the "Create" posture (see `DESIGN.md`), and it is a core
 part of the experience rather than a bonus feature.
 
+**Implementation boundary, 2026-07-13:** 0.2.0-alpha.1 ships a bounded scalar
+expression parser and evaluator, animated plots, deterministic melody mapping,
+an editable app panel, CLI and MCP operations, and first-version `.num` plus
+link round trips in the CLI. Pattern algebra, tracker, step grid, piano roll,
+MIDI, raw shader authoring, app reopen, gallery, remix, and community rooms are
+design targets. `ROADMAP.md` is the status authority.
+
 ## The one-liner
 
 > **A live, forgiving audiovisual math playground where one expression can be
@@ -24,7 +31,10 @@ listening tests, not claimed from the design alone.
 
 - It is where **"math is fun, non-ironically, seriously" stops being a slogan and becomes something a person made with their own hands.** Consuming beauty (Watch) and poking it (Play) are great; *creating* it is the conversion that sticks.
 - It is the deepest expression of **everything is an instrument**: the whole of math becomes a playable, performable surface.
-- It is the **authoring layer for the entire game**. The built-in rooms are, at heart, polished Studio programs (see "Rooms are Studio programs," below). The tool we give players is the tool we build the game with. That is how the catalog scales from 25 rooms to hundreds (the Phase 4 mod SDK is really "the Studio, shared").
+- It is intended to become an **authoring layer for the wider world**. Built-in
+  rooms are native Rust today. A bounded pattern language can become a second
+  authoring path only after it satisfies the safety and compatibility contracts
+  in `EXTENSIBILITY.md`.
 - It is **infinitely replayable and endlessly shareable**: every creation is text plus deterministic parameters, so it exports as a clip and a `.num` file / `numinous://` link (native, no browser, see `ARCHITECTURE.md`). The first CLI `.num` save/open slice exists for expression plots; exact app reopening, gallery, and fork/remix remain roadmap work.
 
 ## The core idea: one expression, two senses
@@ -53,14 +63,19 @@ The Studio is a ramp, not a cliff. Same tool, radically different ceilings.
 
 A player can stop at any level and have made something real and beautiful.
 
-## Rooms are Studio programs
+## Target: Studio programs can become rooms
 
-The unifying architectural idea. There are two ways to author a room, and they meet in the same engine:
+The planned architecture adds a second authoring path without replacing the
+native one:
 
-- **The Studio path (high-level, sandboxed):** a room expressed as Studio code/patterns. Fast to write, safe to run untrusted, the path for **community rooms** and for rapidly prototyping first-party ones. This is the Phase 4 mod SDK, it is just the Studio, shared.
-- **The Rust `Room` trait (low-level, native):** hand-written Rust + custom WGSL for the heaviest spectacle rooms (deep Mandelbrot, reaction-diffusion), where we want maximum control (see `ARCHITECTURE.md`).
+- **The planned Studio path:** a room expressed as total, budgeted patterns.
+  This is not a shipped untrusted-code surface.
+- **The current Rust `Room` trait:** reviewed first-party Rust, with targeted
+  WGSL where measurement justifies it. Every shipped room uses this path.
 
-Both compile to the same primitives and the same render/audio pipeline. Practically: we **dogfood**, most rooms start life as Studio programs, and only the few that need it drop to native Rust. This means the Studio is exercised and polished continuously by our own room-building, and community authors get the exact tool we trust.
+Both paths should eventually produce the same bounded face-neutral rendering,
+interaction, motif, and sound concepts. That convergence is a design goal, not
+a claim about the current catalog.
 
 ## The interface (fun, interactive, visual)
 
@@ -307,7 +322,9 @@ tolerances. Every lossy or notational export names what it cannot preserve.
 - **Your name, drawn by circles:** feed a drawn path to the Fourier operator and a chain of epicycles redraws it while playing its own spectrum.
 - **The Riemann zeta function:** one expression, domain-colored, its zeros lighting up along the critical line, humming.
 
-The point of the examples: the famous built-in rooms are reachable in a few lines of the same language, which is exactly what makes it feel powerful and what makes the whole game moddable.
+The target demonstrated by these examples is that familiar rooms should become
+expressible in a few lines of the same language. That compactness must be
+proven by the future pattern implementation, not assumed from the design.
 
 ## Sharing and safety
 

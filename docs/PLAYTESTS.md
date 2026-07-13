@@ -1,18 +1,18 @@
-# The Playtest Archive: voices from the troupes
+# The Persona Review Archive: voices from simulated troupes
 
-This is the human record of the diverse-persona playtests (July 2026): the
-actual experiences, not only the distilled findings. The method is a named
-quality loop in `QUALITY.md` (a diverse ensemble of minds, each a different
-evaluator, where convergence across unlike lenses is the real signal). The bugs
-they found are fixed (`CHANGELOG.md`). The designs they left are catalogued in
-`ROOMS.md` ("The Persona Playtest wave"). This doc keeps the thing those two
-lose: what it felt like to be met by this world, told in each visitor's own
-voice. It is kept because it is the clearest evidence we have that the thesis is
-true, and because some of it is simply worth remembering.
+This is an ideation record from fictional persona simulations run against the
+July 2026 build. No quoted visitor below was a real participant, and the
+roleplay is not evidence of fun, learning, accessibility, universality,
+conscious experience, or a passed playtest gate. The method can generate
+adversarial questions and candidate defects; every defect still needs direct
+reproduction, and product claims still need the real sessions and qualified
+review defined in `QUALITY.md` and `RESEARCH.md`.
 
-Two troupes played. The first were human archetypes. The second were minds we
-invented to share as little with us as possible, a stress test of whether
-mathematical wonder crosses any gap at all. It does.
+The simulations used two initial troupes, followed by two further troupes. The
+first lenses were human archetypes. The others included invented minds designed
+to share as little assumed context as possible. Their voices are preserved as
+creative prompts. Fixed defects are recorded on their technical evidence in
+`CHANGELOG.md`; resulting design ideas are catalogued in `ROOMS.md`.
 
 ---
 
@@ -157,19 +157,19 @@ When unlike minds agree, believe them. They did, on four things:
 - **The render was mute.** Every visitor who used the MCP face or an ASCII-only
   read hit the same wall: the rooms returned a caption and no picture. This was
   the structured-content bug (the render lived in a text block their clients
-  dropped), already fixed, and the natural experiment proved the diagnosis: the
-  sims, which are text-only tools, rendered fine for everyone.
-- **The sound was thin.** Multiple lenses, the stoner, the monk, the art major,
-  Da Vinci, Hawking, independently reported one held tone where the descriptions
+  dropped), already fixed. Direct reproduction confirmed the missing structured
+  render while text-only sim results remained visible.
+- **The sound was thin.** Multiple simulated lenses reported one held tone where the descriptions
   promised melody, and the art major and Da Vinci pinned the Lissajous
   dissonance exactly. (Fixed.)
-- **The reveals are the soul.** Universal praise. "The reveals are the soul of
-  this place" (Hawking). The writing carried the whole experience even with the
-  render broken, and the math survived the sternest expert scrutiny.
-- **The universal translator works.** The two language-locked humans and the six
-  aliens, built to share nothing with us, were all reached by the same truths.
-  This is the thesis (`VISION.md`, "the same wonder, two kinds of mind"), proven
-  on the hardest cases we could construct.
+- **The reveals are the soul, as a hypothesis.** Every simulated lens praised
+  the reveal writing, and no reproduced mathematical defect emerged from the
+  expert-role prompts. Qualified mathematical review and real participant
+  response remain open gates.
+- **The universality premise produced useful questions.** Simulated
+  language-locked and unfamiliar-mind lenses converged on some mathematical
+  structures. That is an ideation result, not evidence that the translator
+  thesis works for real participants.
 
 ## Moments worth remembering
 
@@ -182,24 +182,22 @@ When unlike minds agree, believe them. They did, on four things:
 - "They felt like two things only where the eye went hungry." (Leonardo da Vinci, on art and mathematics)
 - "I came to catch it lying to me. I mostly failed, and I am delighted about it." (the Math Nerd)
 
-## What it taught us
+## What the exercise contributed
 
-The method works: a diverse ensemble is an instrument for truth, because the
-things all of them find are real, and the things each of them uniquely finds are
-the ones a monoculture would miss. The product is strong exactly where it bet it
-would be, the reveals, the honesty, the universality, and weak exactly where the
-plumbing failed the vision (the mute render, the thin sound), which is fixable
-and now largely fixed. And the deepest confirmation is the one no benchmark could
-give: minds that share nothing with us, and nothing with each other, were moved
-by the same mathematics. That is the whole promise, witnessed.
+The varied lenses generated a useful queue of concrete checks. Several exposed
+reproducible defects in structured rendering and sound, which were fixed and
+covered independently. Other reactions remain hypotheses about reveals,
+honesty, and universality. They do not confirm the product thesis and must not
+be counted in the 0.2 hallway gate or any later human or digital-mind evidence.
 
 ---
 
 # The second round (July 2026): a diverse draw and the special guests
 
-Two more troupes played the latest build, drawn from the casting pool
-(`PLAYTESTERS.md`). Everything they found that was a real defect is fixed and
-recorded in `CHANGELOG.md`; what follows is the human record.
+Two more simulated troupes reviewed the latest build through lenses drawn from
+the casting pool (`PLAYTESTERS.md`). Reproduced defects are recorded in
+`CHANGELOG.md`; what follows remains fictionalized ideation, not participant
+testimony.
 
 ## Troupe III: the diverse draw
 

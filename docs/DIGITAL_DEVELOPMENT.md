@@ -5,7 +5,8 @@ in the digital-mind experience. The founding philosophy lives in
 `DIGITAL_MINDS.md`; the broader maker perspective lives in `VISION.md`. This
 document owns the technical plan and evidence standard.
 
-Status: **Designed, not built.** Research reviewed 2026-07-11. Numinous 0.1.0
+Status: **Designed, not built.** Research reviewed 2026-07-11. Numinous
+0.2.0-alpha.1
 speaks MCP but holds no per-mind state between calls. Nothing below should be
 described as a shipped capability until its roadmap gate passes.
 

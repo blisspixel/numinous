@@ -1368,7 +1368,7 @@ dependencies = [
 
 [[package]]
 name = "numinous-app"
-version = "0.1.0"
+version = "0.2.0-alpha.1"
 dependencies = [
  "hound",
  "numinous-audio",
@@ -1382,7 +1382,7 @@ dependencies = [
 
 [[package]]
 name = "numinous-audio"
-version = "0.1.0"
+version = "0.2.0-alpha.1"
 dependencies = [
  "cpal",
  "hound",
@@ -1390,7 +1390,7 @@ dependencies = [
 
 [[package]]
 name = "numinous-cli"
-version = "0.1.0"
+version = "0.2.0-alpha.1"
 dependencies = [
  "clap",
  "hound",
@@ -1403,11 +1403,11 @@ dependencies = [
 
 [[package]]
 name = "numinous-core"
-version = "0.1.0"
+version = "0.2.0-alpha.1"
 
 [[package]]
 name = "numinous-gpu"
-version = "0.1.0"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bytemuck",
  "png",
@@ -1417,7 +1417,7 @@ dependencies = [
 
 [[package]]
 name = "numinous-mcp"
-version = "0.1.0"
+version = "0.2.0-alpha.1"
 dependencies = [
  "numinous-core",
  "serde_json",

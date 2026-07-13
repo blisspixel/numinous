@@ -50,17 +50,16 @@ whether or not they ever noticed they were learning. That is the whole design.
 Is it fun, do you learn by playing, does it show math is neat? Door by door:
 
 - **Digital mind: strong senses, thin hands.** It can see, hear, learn, play,
-  and even find the secret over MCP. Gap: creation. Closed now: `plot_expression`
-  and `sing_expression` open the Studio to agents. Next: challenge gradients
-  (optimize this wing, beat this proof-length) for the optimization thrill.
-- **Stoner gamer: great lean-back, thin game-feel.** The Show and `watch` are
-  genuinely hypnotic; the games are real but one-shot. Closed now: the daily
-  seed, one shared puzzle per day across every player. Next: streaks, and the
-  games playable inside the window.
+  and even find the secret over MCP. `plot_expression` and `sing_expression`
+  open the Studio foundation to agents. Next: deeper parameter-specific
+  challenges and richer media substitution.
+- **Stoner gamer: broad lean-back and game foundations, evidence pending.** The
+  Show, live `watch`, daily seeds, streaks, and window games are built. Their
+  ability to hold attention is a hypothesis until real sessions measure it.
 - **Design expert: coherent, not yet couture.** The near-black stage, per-room
-  accents, and truecolor terminal hold together. The big missing pillar is
-  **Visual Eras** (phosphor terminal, 8-bit, vector, modern), which is the next
-  major visual cycle, plus palette families and motion easing.
+  accents, truecolor terminal, and four CPU-styled Visual Eras hold together.
+  The big missing pillar is the HDR post-stack, followed by validated palettes,
+  motion refinement, and the remaining Era treatments.
 - **PhD nerd: the strongest door.** The math is honest everywhere, and the
   reveals respect the reader. Next: a "go deeper" layer (the actual equations and
   parameter values on demand) and the number altars from `LORE.md`.
@@ -165,12 +164,12 @@ challenge. Lives in `crates/core/src/quiz.rs`, so every face can host it.
 Where it goes next:
 - **Guess from the equation.** Show `z -> z*z + c` or `x -> r*x*(1-x)` and ask for
   the shape, the inverse skill.
-- **Difficulty and streaks.** Near-miss distractors (two Sierpinski sources), a
-  streak counter, a daily seed, a speed bonus.
-- **In the window.** Click the tile instead of typing a letter; the wrong shapes
-  animate away.
-- **Human vs agent.** An MCP `quiz` tool hands an agent the same round; leaderboard
-  across minds.
+- **Difficulty polish.** Add near-miss distractors and a measured speed bonus.
+- **Window polish.** Direct pointer answers already ship; add richer answer
+  motion and feedback.
+
+Daily seeds, streaks, window keyboard play, MCP `quiz`, and shared scoring are
+already built.
 
 ### Mini-games with a story (built: `numinous crack`, `numinous aliens`)
 
@@ -186,11 +185,11 @@ plays and the nerd notices the math underneath:
   term to prove you speak math; these are the actual sequences proposed for first
   contact. Logic in `crates/core/src/aliens.rs`.
 - **Next in this drawer:** a Turing-test channel (tell the human from the machine
-  by their math), Nim and other solved games with the winning strategy revealed,
-  a "primes or not" reflex game, an Ulam-spiral treasure hunt.
+  by their math), a "primes or not" reflex game, and an Ulam-spiral treasure
+  hunt. Nim already ships with its winning strategy revealed.
 
-Each is deterministic from a seed and lives in the core, so the CLI, the app, and
-an agent over MCP host the same game and can compare scores.
+Each is deterministic from a seed and lives in the core. The CLI and MCP faces
+host both games today; app presentation remains future work.
 
 ### Shape to Function (planned: the Studio)
 
@@ -218,18 +217,17 @@ and share a "room" without shipping a binary.
 - **Name That Constant.** A number scrolls by (137.5, 4.669, 0.577); name it and
   its story. Pi from Buffon's needles with no circle in sight.
 - **Reveal roulette.** Read a reveal, guess the phenomenon.
-- **The Show / benchmark mode.** Lean back and let the whole collection play
-  itself for hours, the long-form Watch mode, also an honest GPU benchmark.
+- **The Show.** Lean back and let the collection play itself. It is a
+  presentation mode, not performance or soak evidence.
 
 ## How the faces host the fun
 
-- **CLI:** text-first games (`quiz` today), ASCII renders, pipeable, scriptable,
-  agent-friendly. The Wolfram-team-on-cannabis energy starts here because it is
-  the fastest to build and the easiest to share as a one-liner.
-- **App (the Cabinet):** the same games with color, sound, mouse, and the HUD
-  reveal (press `i`). Direct manipulation is the whole point of Shape to Function.
-- **MCP:** every game exposed as a tool so agents play, compete, and learn. A
-  digital mind should be able to take the quiz.
+- **CLI:** the full command catalog includes quiz, Munch, Munch Arcade, Nim,
+  Hackenbush, Party, Fifteen, the Gauntlet, and other seeded games.
+- **App:** quiz, Munch, Munch Arcade, Nim, and the Gauntlet run in the window;
+  `E` opens the room reveal. Pointer coverage and game feel still need depth.
+- **MCP:** the shared game rules are exposed as tools with seeded structured
+  results and shared scores.
 
 ## The music visualizer (Winamp, but the math is real)
 
@@ -315,51 +313,40 @@ Schmidhuber's compression-progress theory of fun). Sketches:
 
 ## Roadmap fit
 
-- **0.x now:** Guess the Shape in the CLI (done), then in the app and over MCP.
-- **0.x Studio slice:** Function to Shape with a minimal safe DSL and live sound.
-- **1.0:** Shape to Function (Fourier epicycles), Name That Constant, daily seed,
-  The Show.
-- **2.0+:** shareable authored rooms, human-vs-agent leaderboards, deeper lore.
+- **Built by 0.2.0-alpha.1:** Guess the Shape across all three faces, daily
+  seeds, shared scores, The Show, and the Studio expression slice with sound.
+- **0.3 through 0.5:** deepen tactile game feel, understanding evidence, visual
+  identity, sound, performance, and accessibility.
+- **0.7:** close local Studio reopen, share, gallery, and remix.
+- **2.0+:** consider public authored rooms only after the sandbox gates pass.
 
 ## The next games: advanced math as play (July 2026 ideation)
 
-Territories no current game touches, each with its playable verb already
-found. Ranked by fun-per-effort; the concept line is what `?` would say.
+Remaining territories, each with its playable verb already found. Hackenbush,
+the Party Problem, and Fifteen have moved out of this list because they ship.
 
-1. **Hackenbush (surreal numbers).** Red-blue grass on a ground line; take
-   turns cutting your color, anything disconnected falls. Kid verb: snip
-   grass. The trapdoor: Conway proved positions ARE numbers, including 1/2
-   and stranger things; winning is arithmetic. Two-player-vs-Order like nim,
-   same architecture, deeper trapdoor. The single best fit for us.
-2. **The Brachistochrone Race (calculus of variations).** Draw a ramp with
+1. **The Brachistochrone Race (calculus of variations).** Draw a ramp with
    the mouse; a bead races the cycloid, physics honest. Kid verb: draw and
    race. Nobody beats the cycloid, and the reveal is why (light does this
    too, Fermat). The app's first draw-verb game.
-3. **Calibration (Bayes).** Twenty rapid questions you cannot fully know;
+2. **Calibration (Bayes).** Twenty rapid questions you cannot fully know;
    answer with a confidence slider, score by Brier: honesty about
    uncertainty IS the skill. Monty Hall and the taxi problem as boards.
    Uniquely human-vs-AI comparable on the same bench.
-4. **The Party Problem (Ramsey theory).** Color the edges of six dots trying
-   to avoid a one-color triangle; you cannot, R(3,3) = 6, and FEELING the
-   inevitability is the lesson. One-verb game: click edges. Open-problem
-   hook: R(5,5) is unknown, the frontier again.
-5. **Fifteen (group theory, parity).** The classic sliding puzzle, but half
-   of all scrambles are provably unsolvable, and the game asks you to bet
-   first: solvable or not? Parity as a felt invariant; nim's cousin.
-6. **Draw Without Lifting (graph theory).** Trace figures in one stroke;
+3. **Draw Without Lifting (graph theory).** Trace figures in one stroke;
    Euler's odd-corners rule is discoverable by a child in five puzzles.
    Konigsberg is the boss level. Mouse verb, app-native.
-7. **Tit-for-Tat Arena (game theory).** Iterated prisoner's dilemma against
+4. **Tit-for-Tat Arena (game theory).** Iterated prisoner's dilemma against
    a zoo of strategies (grudger, random, pavlov); then write your own from
    two dials. Cooperation emerging from selfishness is the reveal. MCP
    agents can enter the same arena: a real tournament across minds.
-8. **Fraction Golf (continued fractions).** Approximate pi (then phi, the
+5. **Fraction Golf (continued fractions).** Approximate pi (then phi, the
    hardest hole, golden-angle crossover) with the smallest denominator;
    par is the continued-fraction convergent. Scored, daily-able.
-9. **The Halting Zoo (computability).** Watch tiny Turing machines; bet
+6. **The Halting Zoo (computability).** Watch tiny Turing machines; bet
    halts-or-runs-forever before the timer. Busy beaver lore; the
    uncomputable made playable.
-10. **Cipher Room (cryptography).** Frequency-analysis codebreaking with a
+7. **Cipher Room (cryptography).** Frequency-analysis codebreaking with a
     live histogram; the Diffie-Hellman paint-mixing puzzle as the deep
     level. Natural sibling of crack.
 

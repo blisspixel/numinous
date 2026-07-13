@@ -31,9 +31,9 @@ Doom-WAD model, and its safety record is perfect for a structural reason:
 there is no code to escape with.
 
 Where the ceiling bites: pure data cannot express new behavior, only new
-parameterizations. For a game whose promise is "rooms are Studio programs,"
-that wall arrives fast. So Tier 1 is the link-safe sharing format, not the
-creative ceiling.
+parameterizations. The long-term goal is that Studio programs can become
+rooms, so that wall arrives fast. Tier 1 is therefore the link-safe sharing
+format, not the creative ceiling.
 
 Hardening rules, all cheap, all in force from now:
 - Keep the hand-written parser. No general deserializer for untrusted input.

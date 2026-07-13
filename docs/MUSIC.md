@@ -28,20 +28,29 @@ There are two engines, and they are designed to coexist and even harmonize.
 > Status: v1 shipped. `crates/core/src/chiptune.rs` composes deterministic
 > pentatonic chiptunes (square lead, triangle bass, noise ticks, click-free
 > envelopes) from a seed; `numinous tune --seed N --out chip.wav` writes them.
-> Next: wire it into the app as the score, then the pattern engine below.
+> The app already uses this engine as its per-room score. Next is the pattern
+> engine below.
 
-This is the native, generative, "everything is an instrument" engine. It runs locally, in real time, in Rust (`cpal` + `fundsp`), and it is driven by the math itself. No files, no streaming, infinite and never-repeating.
+The shipped engine is native Rust: custom deterministic DSP in
+`numinous-core`, with `cpal` output through `numinous-audio`. It runs locally
+without streaming. The larger sample-accurate house synth and pattern engine
+described below remain staged roadmap work.
 
 ### A1. Room sonification (the instrument layer)
-Every room turns its own math into tuned, musical sound (detailed per-room in `ROOMS.md`). The rules that keep it musical instead of noisy:
+Every room turns its own math into tuned, musical sound (detailed per-room in
+`ROOMS.md`). The first three rules describe the shipped motif and sonification
+model. Euclidean rhythm generation is a target for the larger pattern engine.
 
 - **Quantize to scales / just intonation.** Map continuous math to notes in a chosen scale so exploration always sounds like music. Integer frequency ratios (which is what consonance *is*) come straight out of the math: a 2:3 Lissajous figure *is* a perfect fifth. The ear learns the math.
 - **Consonance carries truth.** When numbers align (closed curves, resonance, integer ratios) it resolves; when they do not, it gently tenses.
 - **Number sequences become melody and rhythm.** Primes, Fibonacci, Collatz orbits, digits of pi, all play themselves. A prime spiral has a prime beat.
-- **Euclidean rhythms.** The Bjorklund algorithm (spreading k beats as evenly as possible over n steps) is pure math and produces almost every traditional world rhythm. It is a first-class rhythm generator in the engine.
+- **Euclidean rhythms, planned.** The Bjorklund algorithm spreads k beats as
+  evenly as possible over n steps. It belongs in the future pattern engine.
 
-### A2. The bit-depth stations (chiptune, synced to the Visual Eras)
-The programmatic engine has its own retro voices that pair with the Visual Eras (see `DESIGN.md`). Flip the app into 8-bit and the *sound* goes 8-bit too:
+### A2. Target: bit-depth voices synchronized to the Visual Eras
+The current chiptune engine supplies one square, triangle, and noise palette.
+The fuller target pairs a distinct voice with each Visual Era (see
+`DESIGN.md`):
 
 - **4-bit**: the crudest square/noise, one or two voices, brutal and charming.
 - **8-bit**: NES-flavored: pulse, triangle, noise channels. Chiptune melodies generated from the room's math.
@@ -49,7 +58,7 @@ The programmatic engine has its own retro voices that pair with the Visual Eras 
 - **Oscilloscope era**: pure analog sine/saw; the waveform you hear is the waveform you see.
 - **Modern era**: the full tuned house synth, reverb, the polished default.
 
-Because the melodies are *generated from the math*, the same room produces an endless chiptune in 8-bit and an endless ambient piece in modern, from one source of truth.
+The target is for the same mathematical motif to survive every voice change.
 
 ### A3. The mathematical pattern instrument
 The centerpiece of the programmatic engine, and the beating heart of the **Studio** (see `DESIGN.md`): an independently designed **pattern language** where terse patterns describe rhythm, pitch, and timbre as functions of time, and can be layered, transformed (reverse, every-n, degrade, euclid), and modulated live.
@@ -152,8 +161,11 @@ The comedy channel is generated, not hand-recorded, so it can be endless and cur
 
 ### Technical shape
 - **`crates/core/src/radio.rs`** owns the pure station identities and rotation decks. `faces/app/src/radio_cache.rs` owns bounded local discovery, MP3 and WAV validation, decoding, resampling, and playback preparation.
-- **Generation is offline-first where possible:** tracks and comedy segments are generated ahead, cached to disk, validated under bounded local cache rules, and assembled by a local **station scheduler**, so the radio works without a live connection after first fetch. Optional online refresh pulls new bits.
-- **Station identity** (idents, stingers, DJ drops) is generated once and reused; music beds and talk are ducked/crossfaded by the scheduler for that seamless-radio feel.
+- **Current playback is offline:** the V0 tracks ship in the repository and the
+  app validates bounded local files before decoding. Optional generation is a
+  CLI workflow, not an in-app refresh service.
+- **Target station production:** reusable idents, stingers, DJ drops, and music
+  beds can later be assembled and crossfaded by a local scheduler.
 - **Asset distribution:** the V0 MP3 soundtrack ships in `assets/radio`; the WAV masters remain outside source control.
 
 ---
@@ -161,7 +173,8 @@ The comedy channel is generated, not hand-recorded, so it can be endless and cur
 ## How the two engines coexist
 
 - **One master bus target.** Both engines should feed a shared mix with a global master volume and mute. Current app radio v1 keeps long station tracks stable by handing the station buffer to the player; the room-over-radio overlay is still a mixer upgrade so it can happen without restarting records.
-- **Global key and tempo.** The app holds a global key and BPM. Room sonification quantizes to that key so your poking harmonizes with the current station instead of fighting it. (This is itself a piece of math: everything tuned to one ratio lattice.)
+- **Global key and tempo target.** A future shared bus can quantize room
+  sonification to the current station. The app has no global key or BPM today.
 - **Mode-aware mixing.**
   - *Watch* mode: radio forward, room sonification as gentle texture. Lean back.
   - *Play* mode: room sonification forward (you are the instrument), radio as a bed you can turn down.

@@ -2,6 +2,13 @@
 
 How Numinous feels, moment to moment, and the rules that keep it feeling that way.
 
+**Implementation boundary, 2026-07-13:** this is the experience specification,
+not a claim that every element below ships in 0.2.0-alpha.1. The native app,
+CLI, MCP face, catalog, Show, deterministic room voices, four Visual Eras,
+Studio expression surface, and PNG postcard export are built. The full theme
+system, loop export, native deep-link reopening, creator platform, and complete
+audio architecture remain roadmap work. `ROADMAP.md` is the status authority.
+
 ## The design pillars (and how to obey them)
 
 ### 1. Awe before instruction
@@ -60,7 +67,11 @@ The minimalist glow above is Numinous's **native** look, but it is not the *only
 2. **Progression (the meta-thread).** Collecting **Constants** (see the Cabinet section) unlocks eras **in historical order**, so the app literally *ages up* from teletype to modern glow as you go deeper. Reaching the modern era feels earned, and the journey re-tells the history of visualizing math.
 3. **Native era per room/wing (variety by default).** Some phenomena have an obvious home era, so the collection has built-in visual variety even before you touch a skin: *Game of Life* and *Cellular Automata* are gorgeous in **8-bit**; *Lissajous* and *Fourier* belong on the **oscilloscope**; *Straightedge & Compass* wants **Blueprint**; *Mandelbrot* sings in **modern glow**. Each room ships with a "native" era and inherits the rest for free.
 
-**The rule that makes this cheap:** rooms never hardcode colors, line styles, or synth voices. They draw and sound in **theme-relative terms** (`gfx.stroke(accent)`, `bus.note(...)`), and the `engine/theme` layer swaps the entire era, pixels vs. glow vs. scanlines, chiptune vs. house synth, underneath them. One room, every era, no per-room work. (See `ARCHITECTURE.md`.)
+**The target rule that keeps this coherent:** rooms describe face-neutral math,
+accent color, motif, and sound intent in the core. Faces render that shared
+meaning into their own medium. The current app and CLI implement four Visual
+Eras above the shared room contract; the fuller theme-relative render and voice
+system remains design work. See `ARCHITECTURE.md`.
 
 > Design guardrail: an era is a *lens on the same beauty*, never an excuse for an ugly frame. Every era gets the same beauty-QA bar. Retro means lovingly-crafted CRT, not lazy pixels.
 
@@ -111,10 +122,16 @@ The creator tier, and the thing that makes Numinous a tool people *live in*, not
 
 - **Live-code sight and sound at once.** You write terse **patterns** (see `MUSIC.md`, Engine A3) that drive geometry and audio from the *same* expression. Change a number, the visual and the music both shift, instantly, no recompile. The feedback loop is sub-second, which is what makes it feel like an instrument and not an IDE.
 - **A ladder, not a cliff.** The surface is a friendly expression box ("type `sin(x)` and watch it sing") that a curious newcomer can enjoy in ten seconds. Underneath, it goes as deep as raw WGSL shaders and full pattern algebra for people who want it. Same tool, radically different ceilings.
-- **Everything is shareable and reproducible.** A Studio creation is just text + a seed, so it exports as a deep-link that reopens *exactly* what you made, and a loop you can post. The best community creations become candidate **rooms** (the on-ramp to the Phase 4 mod SDK).
+- **Everything should become shareable and reproducible.** A current Studio
+  expression can be saved as a bounded `.num` file and matching link, then
+  reopened through the CLI. Exact app reopening, loop export, remix, and
+  promotion into community rooms are later creator milestones.
 - **The point of it all:** this is where "math is fun, non-ironically, seriously" stops being a slogan and becomes something a person *did with their own hands*. Consuming beauty is good; making it is the conversion that sticks.
 
-The full Studio is a Phase 3 build, but its *runtime* is engine-foundational and built from day one, because **rooms are Studio programs** (rooms are patterns, patterns drive both channels, every configuration serializes to a shareable link). See **`STUDIO.md`** for the complete design.
+The current Studio foundation is the bounded expression engine used by the app,
+CLI, and MCP face. Built-in rooms are native Rust implementations today. The
+future pattern language may become an additional room-authoring surface after
+its resource and compatibility contracts are proven. See **`STUDIO.md`**.
 
 ## The Cabinet (the shell / hub)
 

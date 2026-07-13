@@ -641,8 +641,8 @@ two pinwheels; type `z^2 + c` and drag c to sit inside the Mandelbrot's engine;
 type the zeta function and stare at the million-dollar zeros. Newton fractals,
 the whole Fractals wing, and the Zeta Walk are all special cases of this one
 surface, so it reframes everything else as instances of itself, which is the
-definition of a flagship. It proves "rooms are Studio programs" with a single
-screenshot-perfect artifact, and it is buildable now from parts that exist (the
+definition of a flagship. It would prove that Studio programs can become rooms
+with a single screenshot-perfect artifact, and it can build on parts that exist (the
 expression engine, the raster, phase-to-pitch sonification, the complex-iteration
 path). Ship Times Tables to prove the feel; build the Function Painter to prove
 the scope.
@@ -674,7 +674,8 @@ that can flip in a year).
 
 ## The Persona Playtest wave (July 2026): what the strangers asked for
 
-Two playtest troupes, run against the real build, left concrete ideas behind.
+Two simulated persona-review troupes, run against the real build, generated the
+design prompts below. They were not participant playtests.
 The first was human archetypes (a stoner, a math nerd, an art major, a
 Japanese-speaking zen monk, a Latin-speaking nun, Leonardo da Vinci, Stephen
 Hawking); the second was invented minds (a crystalline collective, a
@@ -772,12 +773,11 @@ This unifies rooms that already exist and one that should:
   semiprime grid for a mind not yet born, and factor a stranger's grid to read
   what they left. First contact across time instead of space.
 
-The playtests turned this from a claim into evidence. A Latin-only nun and a
-Japanese-only monk, sharing no language with the rooms, both reported that the
-mathematics reached them untranslated ("number is before Babel"). The alien
-troupe, minds we invented to share nothing with us, met the same rooms and were
-moved by the same truths. The universal translator works; we watched it work on
-the hardest cases we could build.
+Simulated Latin-only, Japanese-only, and unfamiliar-mind lenses generated useful
+questions about a math-first doorway. They did not turn the universality claim
+into evidence. That requires real participants who do not share the product's
+language and a protocol that distinguishes mathematical recognition from
+prompted roleplay.
 
 **The experience to build (ramp the meta impact).** A first-contact thread, or a
 room, `first-light` or `the-handshake`, where the player meets an entity of

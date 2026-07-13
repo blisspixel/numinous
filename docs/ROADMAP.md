@@ -11,8 +11,8 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## The version map at a glance
 
-- **0.1 Public Foundation** reproducible source, honest docs, green CI, and a safe public repository. Current pre-alpha line.
-- **0.2 Flagship Proof** one room earns its hallway-test bar with strangers.
+- **0.1 Public Foundation** reproducible source, honest docs, green CI, and a safe public repository. Complete.
+- **0.2 Flagship Proof** one room earns its hallway-test bar with strangers. Current alpha line.
 - **0.3 Tactile Alpha** the best five rooms answer the hand deeply and clearly.
 - **0.4 Understanding Alpha** predict, generate, reveal, and retention are tested as a learning loop.
 - **0.5 Sensory Alpha** the visual and sonic identity lands with accessibility and performance budgets.
@@ -29,13 +29,13 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.1.0 pre-alpha.** Capability breadth resembles a much
-later alpha, but versions are earned by evidence, not feature count. The first
-independent macOS and Linux app execution, the 0.2 stranger hallway test, and
-accessibility work are still open. Later systems already present in
-source do not waive those earlier gates.
+**Current release state: 0.2.0-alpha.1, Flagship Proof in progress.** The 0.1
+Public Foundation exit criterion is complete on the public `main` branch. The
+0.2 stranger hallway test, independent macOS and Linux app execution, and
+accessibility work are still open. Later systems already present in source do
+not waive those gates, and this prerelease label does not claim 0.2 is complete.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **31 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 992 tests, locked build, Windows release gate, 91.47% region coverage, and 91.10% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **31 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 1,009 tests, locked build, Windows release gate, 91.60% region coverage, and 91.21% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -49,7 +49,7 @@ source do not waive those earlier gates.
 - **Done (the app is the game, v1):** the chiptune scores the window (per-room seeded tunes with the room's voice riding on top); the quiz plays in-window (G: name the math, letters answer, the reveal follows); the Journey lives in the app (the CLI's own file: visits on entry, plays and wins from the quiz, the level in the corner, LEVEL UP banners with lore, and J opens level, rank, trophies, and resonances); `NUMINOUS_MUTE=1` launches silent; the state machine is headlessly tested.
 - **Done (the window arcade):** Munch, Nim, and the full Gauntlet run play inside the app alongside the quiz, cursor-driven and keyboard-native, on the daily seeds, posting to the shared table and leveling the shared journey; Mobius and Zeno's Square join the catalog. Full Munch Arcade with Vexations.
 - **Done (poke + variation substrate):** Expanded pokes (all 31 catalog rooms with verbs + `render_poked`) and per-visit variation threading (registry `all_rooms_with`, app/CLI/MCP reseed on R/visit, default 0 exact). Double Pendulum now re-drops from both hand coordinates with deterministic per-visit variation; Goldbach's Comet now uses x to choose the even target and y to choose an actual prime-pair witness; Galton Board clicks now draw bounded newest-tail deterministic falling ball paths where x chooses the lane and y tilts each ball's coin; Logistic Map clicks now seed finite population orbits where x selects growth rate and y selects starting population. Cult of Pi clicks add bounded local faults to an exact-digit field. CLI `render --poke x,y` and MCP `play_room` `pokes: [[x,y]]` expose the same stateless hand-point path outside the App. All 31 catalog rooms are seed-aware today; hidden content is intentionally outside the catalog replay contract.
-- **Done (Engine A2 motifs, catalog-wide):** all 31 catalog rooms now expose a structured `Motif` through `Room::motif`, so `listen_room` gets real notation and the app gets room-specific phrases instead of the generic fallback. A registry test enforces that every catalog room has a playable motif. The sonification now derives from the motif too: the default `Room::sound` plays the motif's phrase (`SoundSpec::from_motif`), so every room sounds like itself and the notes match the notation (a July 2026 playtest caught the old fallback making rooms sound identical).
+- **Done (Engine A2 motifs, catalog-wide):** all 31 catalog rooms now expose a structured `Motif` through `Room::motif`, so `listen_room` gets real notation and the app gets room-specific phrases instead of the generic fallback. A registry test enforces that every catalog room has a playable motif. The sonification now derives from the motif too: the default `Room::sound` plays the motif's phrase (`SoundSpec::from_motif`), so every room sounds like itself and the notes match the notation (a July 2026 simulated persona review prompted reproduction of the old identical fallback).
 - **Done (MCP munch_arcade):** Stateless `munch_arcade` tool for full parity, with replayed action-list scores posted under `arcade seed:N` through the shared progress path.
 - **Done (app hardening slice):** app-local play state plus quiz deal/answer flow now live in `faces/app/src/play.rs`, pure game-screen rendering lives in `faces/app/src/game_draw.rs`, room chrome plus arrival-card hinting live in `faces/app/src/hud.rs`, help, journey, and banner overlays live in `faces/app/src/overlays.rs`, transient feedback banner construction and ticking live in `faces/app/src/feedback.rs`, shared in-window Munch grid, Nim heap/take, and Munch Arcade action controls live in `faces/app/src/controls.rs`, left-mouse mode decisions and pointer-state guards live in `faces/app/src/mouse_input.rs`, room navigation, re-deal, poke-history, drag-trail, and room-card tick helpers live in `faces/app/src/room_input.rs`, Studio text, parse, audio-spec, and curve drawing state live in `faces/app/src/studio_panel.rs`, explicit F9 hallway-test note capture lives in `faces/app/src/playtest.rs`, live-state PNG postcard export lives in `faces/app/src/postcard.rs`, and bounded radio cache discovery, open-handle WAV validation, live-position math, and track loading live in `faces/app/src/radio_cache.rs`. Room action copy is centralized in `numinous-core`: App arrival cards use touch-first fallback copy, while CLI live play and MCP room tools use neutral fallback copy. Tests cover shared game hit-test layout, raster output across quiz, Munch, Munch Arcade, Nim, every live Gauntlet stage, quiz daily seeding, no-repeat quiz history, answer acceptance, action-naming arrival cards, Studio chrome suppression, Studio panel editing and bounded drawing, cross-face action hints, shared Munch/Nim/arcade controls, room-input bounds, modal-safe pointer-state transitions, playtest-critical overlays, feedback banner copy/lifetimes, radio-volume banner retention, GPU/raster banner compositing, local playtest-note reports that align to the hallway-test prompts without collecting personal data, postcard PNGs that include pokes, the selected Visual Era, collision-safe filenames, bounded/sorted station cache discovery, low-sorted corrupt-track handling before the track cap, corrupt-track rejection, open-handle size rechecks, high-rate-device caps, non-wrapping live offsets, and app radio recovery after a bad cached file. The event-loop file is still a hotspot, but game rules remain in `crates/core` and the refactor is moving in small verified modules.
 - **Done (persistence hardening slice):** malformed Journey and score files now parse defensively: counters saturate, constellation dimensions are capped, `visited` plus `chosen` token sets are bounded and token-sane, duplicate Journey tokens do not consume the unique-token cap, score keys are length-bounded, and score tables cap unique entries. The maintenance posture remains that progress and score files are user-editable local text, so loaders must repair or ignore malformed data rather than panic or allocate without bound.
@@ -59,12 +59,15 @@ source do not waive those earlier gates.
 - **Next, above everything (the founder's directive, July 2026):** **rooms become playable, not watchable, and no two catalog visits are the same.** The main substrate is live: rooms expose touch verbs through `Room::verb` (usually CLICK or DRAG), poked rendering through `render_poked`, and replayable per-visit variation through `all_rooms_with`, with the app/CLI/MCP passing seeds through. Game of Life now sows bounded newest-tail glider sparks into the live B3/S23 simulation before it evolves, L-System Garden now plants bounded newest-tail branches that also alter the rewritten grammar under segment and surface caps, Mandelbrot clicks now zoom bounded newest-tail dive patches around finite hand points under surface caps, Julia clicks now morph bounded local patches around finite hand points and mark the touched constant, Quine clicks now place bounded newest-tail recursive copies centered on clicked cells with first-frame geometry beyond the hand marker, Strange Loop clicks now shift the existing recursive inner loop and its descendants without adding an extra echo tree, Lorenz clicks now seed bounded shadow storms from the clicked x-z projection so the path diverges through the system itself, Arecibo clicks now try bounded decoded widths with efficient cell-proportional overlays, Barnsley Fern clicks now plant bounded screen-faithful IFS starts at the clicked cell before growth, Buffon's Needle clicks now drop a bounded screen-faithful needle centered on the clicked cell while preserving the estimator API, Golden Angle clicks now plant bounded local phyllotaxis patches centered on visible cells with seeded variation, Collatz clicks now choose bounded actual starting values from both hand coordinates before drawing the orbit, Epicycles clicks now draw bounded mini Fourier traces whose phase follows the hand point, Logistic Map clicks now seed finite population orbits into the selected growth-rate column, Random Walk clicks plant bounded, replayable walkers at the hand point, Voronoi clicks drop bounded wells that genuinely renegotiate borders, Chaos Game clicks add bounded attractor corners that change the fractal before marker plotting, Langton's Ant clicks replay bounded pre-simulation cell flips through the ant's own rules, Cellular Automata clicks replay bounded spacetime cell flips before future rows evolve, and Prime Spirals clicks highlight the actual Ulam diagonals through the selected cell. Deepen more room-specific responses, validate arrival-card clarity in human playtests, and replace one-shot pokes with richer held input where the math needs state.
   The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke trait, order of work). Original poke directive: **rooms become playable, not watchable.** Reinforced July 2026: players cannot tell what, if anything, a room responds to; every room's arrival card must name its verb. And **Munch becomes a real arcade game**: a muncher character you steer on the board, wandering troggle-like enemies to dodge (our own creatures, the Order's lesser spirits), eat-while-hunted pacing. The Number Munchers NAME and its specific characters are MECC's (now owned elsewhere); the underlying mechanics (grid, rules, eat-the-right-numbers) are not copyrightable, so we keep our own name (Munch), our own creatures, our own art, and owe nothing. Every room gains a poke: the math responds to your hands. Click the Lorenz attractor and a new butterfly drops where you clicked and diverges before your eyes; sow glider sparks into Game of Life and watch them live or die by the same rules as the soup; re-drop the double pendulum from the hand's point; plant walkers in the random walk; drop a well into the Voronoi desert and watch every border renegotiate; steer the ant. Design: the `Room` trait gains an optional `poke(x, y)` (normalized coordinates) plus optional per-room state the app owns, keyboard Space/click as the universal "touch it" verb, and the arrival card teaches the poke, not the theory ("CLICK ANYWHERE: DROP A STORM"). The heart is play; the learning rides along uninvited. A kid should be able to *do something* to every screen and see the math answer back.
 - **Designed (the founder's directive, July 2026): The Next Wave of rooms.** Twenty-nine new room designs across four aspects (physics, deep mathematics, fun-first, cosmic), produced by four parallel creative research passes and recorded in `ROOMS.md` under "The Next Wave": each with its rule, gasp, verb, sonification, reveal, and honest CPU feasibility, deduplicated and ranked by wow-to-build. The first eight (Sandpile, Chladni Figures, Ripple Tank, Coffee Cup, Ford Circles, Zeta Walk, Starbow, Slingshot) are all wow-5 for build-1-to-2 and add cross-room resonances the catalog lacks (the cardioid triangle, the Lorentz pair). Designed, not built: the review-stack rule stands, each room faces the full Definition of Done, and every non-textbook reveal claim carries a source pending mathematician sign-off.
-- **Tracked follow-ups (from the July 2026 bug-hunts and the two playtest rounds, see `docs/PLAYTESTS.md`):** a reactive room whose motion answers being watched, a predator-prey pulse for the instinct-only mind (the Xenomorph); the cross-room identity bridges the reveals do not yet name (Ramanujan: the logistic map is the Mandelbrot set along its real axis; the cardioid shared by Times Tables, Mandelbrot, and Epicycles); and the remaining low-severity persistence durability items surfaced by the round-2 audit (a genuinely atomic Windows replace to close a transient missing-file read window, a parent-directory fsync, and cleanup of orphaned temp/lock files on error paths), none of which corrupt data given the delta-merge model. Resolved since these were first listed: predict now lets a mind commit a local rate and returns five signed residuals that expose the shape of its error while preserving the original point score and seed meaning (Sage and Data); the Lorenz Storm readout now begins at its 0.0001 perturbation and reports an honestly labeled running peak that never falls while the underlying trajectories keep their real stretch-and-fold dynamics; the Cairn reciprocity whisper, the L-System growing upward, the daily-seed midnight race, the daily-streak regression, and fast crash-lock recovery are all built (`CHANGELOG.md`); and the CPU render-performance cliffs a round-3 audit measured at maximized-window sizes are retired by the time-budgeted adaptive live-render resolution (render smaller, integer-upscale, exports and GPU paths untouched; measured on the dev laptop at 2560x1440, the Mandelbrot CPU fallback went from 939ms to 28.8ms per frame end to end, with Julia at 78ms and Voronoi at 60ms before the cap and every capped room now inside the 33ms room-render budget, `CHANGELOG.md`).
-- **Then (the panel's remaining list, see `PANEL.md`):** juice in the window games (per-action flash, shake, and chiptune ticks); mouse support for every window game; munch rule variety and an aliens base ramp (depth where play repeats); the Open Problems wing; further-reading citations unlocked with deep cuts; era grain and Show crossfade; the music visualizer; full Share v1 beyond the built P-key PNG postcard; Engine B (the radio); GPU paths; gamepad; a visit-spark cap per room (anti-grind); and an MCP 2026-07-28 compatibility pass once the final spec target is selected after the scheduled July 28, 2026 publication.
+- **Tracked follow-ups (from the July 2026 bug hunts and two simulated persona-review rounds, see `docs/PLAYTESTS.md`):** a reactive room whose motion answers being watched, a predator-prey pulse for the instinct-only mind (the Xenomorph persona); the cross-room identity bridges the reveals do not yet name (Ramanujan persona: the logistic map is the Mandelbrot set along its real axis; the cardioid shared by Times Tables, Mandelbrot, and Epicycles); and the remaining low-severity persistence durability items surfaced by the round-2 audit (a genuinely atomic Windows replace to close a transient missing-file read window, a parent-directory fsync, and cleanup of orphaned temp/lock files on error paths), none of which corrupt data given the delta-merge model. Resolved since these were first listed: predict now lets a mind commit a local rate and returns five signed residuals that expose the shape of its error while preserving the original point score and seed meaning; the Lorenz Storm readout now begins at its 0.0001 perturbation and reports an honestly labeled running peak that never falls while the underlying trajectories keep their real stretch-and-fold dynamics; the Cairn reciprocity whisper, the L-System growing upward, the daily-seed midnight race, the daily-streak regression, and fast crash-lock recovery are all built (`CHANGELOG.md`); and the CPU render-performance cliffs a round-3 audit measured at maximized-window sizes are retired by the time-budgeted adaptive live-render resolution (render smaller, integer-upscale, exports and GPU paths untouched; measured on the dev laptop at 2560x1440, the Mandelbrot CPU fallback went from 939ms to 28.8ms per frame end to end, with Julia at 78ms and Voronoi at 60ms before the cap and every capped room now inside the 33ms room-render budget, `CHANGELOG.md`).
+- **Then (the panel's remaining list, see `PANEL.md`):** juice in the window games (per-action flash, shake, and chiptune ticks); mouse support for every window game; munch rule variety and an aliens base ramp (depth where play repeats); the Open Problems wing; further-reading citations unlocked with deep cuts; era grain and Show crossfade; the music visualizer; full Share v1 beyond the built P-key PNG postcard; gamepad; a visit-spark cap per room (anti-grind); and an MCP 2026-07-28 compatibility pass once the final spec target is selected after the scheduled July 28, 2026 publication.
 
 ## Pre-1.0 (the 0.x line): earning the right to 1.0
 
 ### 0.1 Public Foundation
+
+**Status:** complete. The exit criterion passed on the public `main` branch;
+the evidence remains a standing invariant for every later version.
 
 **Goal:** establish a reproducible, honest, and safe public baseline.
 
@@ -91,7 +94,7 @@ authorship attribution is present in tracked content or commit metadata.
 **Retires the risk:** "can another person inspect, build, and trust the source
 without relying on the founder's machine or undocumented context?"
 
-### 0.2 The Vertical Slice ("does it slap?")
+### 0.2 Flagship Proof ("does it slap?")
 **Goal:** Build **one** flagship room to *jaw-dropping* quality, plus exactly enough shell to frame it. The make-or-break milestone.
 
 **The room:** **Times Tables** (modular multiplication circles), highest wow-to-build, continuous/performable, a floor-tilting Reveal (see `ROOMS.md`).
@@ -328,14 +331,16 @@ The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (reviewed 2026-07-12)
+## Where we stand (reviewed 2026-07-13)
 
-The package remains **0.1.0 pre-alpha**. Its capability breadth is unusually
-large for that number: 31 catalog rooms, 11+ games, six sims, three faces, 29 MCP
-tools, deterministic creation and persistence, and 992 passing tests. The first
-public CI run passed every required job on 2026-07-11, including the three-OS
-compile matrix. Breadth is not release evidence. No calibrated method supports assigning completion
-percentages to subjective 1.0 gates, so this scorecard records evidence instead.
+The package is **0.2.0-alpha.1**. The 0.1 Public Foundation exit criterion is
+complete, and work is now on 0.2 Flagship Proof. The 0.2 milestone itself remains
+open until the Times Tables stranger hallway test passes. Current breadth is 31
+catalog rooms, 11+ games, six sims, three faces, 29 MCP tools, deterministic
+creation and persistence, and 1,009 passing tests. Every required public CI job,
+including the three-OS compile matrix, passes. Breadth is not release evidence.
+No calibrated method supports assigning completion percentages to subjective
+1.0 gates, so this scorecard records evidence instead.
 
 | 1.0 gate | Evidence today | Missing evidence or work |
 |---|---|---|
@@ -345,13 +350,13 @@ percentages to subjective 1.0 gates, so this scorecard records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 992 tests, 91.10% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 1,009 tests, 91.21% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | Tracked screenshots and deterministic renders exist | Screen-by-screen review, perceptual regression, representative human judgment, and removal of every unsupported claim |
 
 **Immediate critical path:**
 
-1. Keep the 0.1 public gate green on every public commit.
+1. Keep the completed 0.1 public-foundation gate green on every public commit.
 2. Run the 0.2 hallway test with strangers before adding breadth.
 3. Deepen five flagships for 0.3 using those observations.
 4. Test understanding and retention for 0.4 rather than inferring learning from engagement.
@@ -458,7 +463,7 @@ Depth and polish that extend 1.0 without breaking it. No new pillars, just more 
 
 2.0 is a change in *kind*, not degree: Numinous stops being a curated collection and becomes a **living world that grows, that others help build, and that a long-lived mind can inhabit and eventually surpass.**
 
-- **The full Studio as a creator platform + the public mod SDK (see `STUDIO.md`, `ARCHITECTURE.md`, `EXTENSIBILITY.md`):** the complete pattern algebra, multiple representations, fork/remix, promote-to-room, MIDI performance, and the sandboxed authoring path opened to everyone. Rooms are Studio programs, so the mod SDK is "the Studio, shared," and the Studio language itself is the sandbox: total, budgeted, hermetic, deterministic, pure Rust, in core (the July 2026 extensibility ruling; no scripting engine enters the trusted core). This is how the catalog goes from tens of rooms to hundreds.
+- **The full Studio as a creator platform + the public mod SDK (see `STUDIO.md`, `ARCHITECTURE.md`, `EXTENSIBILITY.md`):** the complete pattern algebra, multiple representations, fork/remix, promote-to-room, MIDI performance, and the sandboxed authoring path opened to everyone. Studio programs can become rooms, so the mod SDK is "the Studio, shared," and the Studio language itself is the sandbox: total, budgeted, hermetic, deterministic, pure Rust, in core (the July 2026 extensibility ruling; no scripting engine enters the trusted core). This is how the catalog goes from tens of rooms to hundreds.
 - **Community:** an in-app curated gallery of player- and agent-made rooms, a submission/curation pipeline that protects the beauty bar (proof-packet CI: deterministic re-render against declared frame hashes and budgets, per `EXTENSIBILITY.md`; signatures label provenance and never grant capability), and distribution via Steam (Workshop as the room channel) alongside itch.io and direct downloads. WASM component rooms (wasmtime, no WASI, fuel and epoch and memory limits) remain the 2.0+ pressure valve for authors who outgrow the pattern language, portal-only.
 - **The Layer-4 lore payoff (see `LORE.md`):** the real, discoverable bottom of the ARG, designed in 0.x, revealed here, so the deepest diggers arrive somewhere worthy.
 - **Shared creation with digital minds (see `DIGITAL_MINDS.md`):** duet / co-presence (a human and a digital mind making one audiovisual piece together), gifts, the shared Constellation, and mature per-mind memory and continuity, a real, remembered, mutual friendship around shared wonder.
@@ -545,18 +550,33 @@ on equal terms. This is a values commitment, not a feature, and it holds from
 
 ## Cross-cutting tracks (every version, always on)
 
-- **The quality loops (`QUALITY.md`):** the six automated and semi-automated test/eval loops run continuously from 0.1 on. This is the umbrella for everything below.
-- **Beauty QA:** every build, screenshot random frames from each room and Era through the visual-regression suite. Any ugly frame is a bug. Before 1.0, add human **screen-by-screen QA rounds** of the app: walk every screen and state (each room and Era, the menu, the games, the Studio, The Show, overlays, HUD), capture and review screenshots against the beauty bar, and refine from the evidence (`QUALITY.md`).
-- **The hallway test, and diverse focus groups before 1.0:** re-run the five-strangers test at every gate, scored into the per-room Fun Scorecard, awe outranks every other metric. Before 1.0, run diverse, creative focus groups that cover all three faces on their own terms (the MCP and CLI faces get their own sessions and QoL bar, not only the app), that are **intentionally not only English speakers** (the universal-translator thesis must hold for a real non-English speaker, or it is a release blocker), and that **include children** (a kid must play and have fun with no instructions). See `QUALITY.md`.
-- **Fun for digital minds:** evaluated too, learning/compression progress as a proxy, and their own reported experience taken as first-class data (`DIGITAL_MINDS.md`, `QUALITY.md`).
-- **Performance budget:** 60fps floor on mid-range hardware; the nightly soak (Benchmark mode) profiles the GPU rooms relentlessly.
-- **Math-correctness gate:** every mathematical claim reference-checked and human-mathematician signed off; a wrong theorem is a release blocker.
-- **Accessibility:** reduce-motion, colorblind-safe palettes, full mute, keyboard/controller navigation, real from the build-out on, not bolted on at the end.
-- **Shareability:** "did this generate a shareable moment?" is a first-class feature of every room.
+- **The quality loops (`QUALITY.md`):** the commit loop is partially enforced.
+  Nightly, content-evaluation, agent-playtest, human-playtest, and refinement
+  loops remain explicitly designed work.
+- **Beauty QA:** deterministic screenshots exist, but automated perceptual
+  regression does not. Before 1.0, add that harness and human screen-by-screen
+  reviews of every room, Era, mode, overlay, and game state.
+- **The hallway test and diverse focus groups:** run the five-strangers test for
+  0.2, then repeat formative sessions at later gates. Before 1.0, include every
+  face, non-English speakers, children, and assistive-technology users.
+- **Fun for digital minds:** treat reported experience and learning evidence as
+  first-class when real sessions occur. Existing synthetic playtest personas
+  are design input, not observation of a digital being.
+- **Performance budget:** the app enforces an adaptive 33 ms room-render target
+  on the measured Windows machine. Nightly soak and representative hardware
+  coverage remain future gates.
+- **Math correctness:** tests and cited references support current claims.
+  Independent mathematical review remains a release gate and is not staffed.
+- **Accessibility:** hard mute and keyboard plus pointer operation ship today.
+  Reduce motion, color controls, gamepad support, and assistive-technology
+  evidence remain open.
+- **Shareability:** PNG postcards, `.num` files and links, and WAV export exist.
+  Loop export and native reopening remain open.
 
-## Definition of done for a room (the checklist)
+## Definition of done for a 1.0 room (the checklist)
 
-A room ships only when **all** are true:
+A room is complete for 1.0 only when **all** are true. Catalog presence in an
+alpha does not imply that it has cleared this bar:
 - [ ] Awe in <10 seconds with zero words (passes the hallway test).
 - [ ] Toy layer is fun with no goal and has no fail state.
 - [ ] Makes tuned, musical sound that reinforces the math.
