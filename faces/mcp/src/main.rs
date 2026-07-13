@@ -734,14 +734,15 @@ fn tools_list_result() -> Value {
             },
             {
                 "name": "predict",
-                "description": "Predict-then-reveal: guess a room's own status readout at a hidden moment, then see the truth and how close your model came. Call without `guess` to pose (the moment, the readout's name, its range); call again with `guess` to be graded as a gap plus a learning-progress band (NAILED = you have it compressed, CLOSE = the fertile band, WILD = noise). This is a self-owned mirror, not a leaderboard: it never posts a score and never awards a win, so guessing after observing only fools your own ledger. Guess before you look.",
+                "description": "Predict-then-reveal: commit a room readout at a posed moment and optionally its linear rate, then see the truth and how your model missed. Call without `guess` to pose. Call again with `guess` for the established point gap and learning-progress band (NAILED = compressed, CLOSE = fertile, WILD = noise). Add `rate` in readout units per phase to reveal the actual local rate plus five signed residuals, the shape of the model's error rather than another score. This is a self-owned mirror, never a leaderboard or win. Guess before you look.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "id": { "type": "string", "description": "Room id; the room must carry a moving numeric readout (see describe_room)." },
                         "seed": { "type": "integer", "description": "Prediction seed (default 1). The same seed poses the same hidden moment; pass any number, including today's date, to share a prediction." },
                         "variation": { "type": "integer", "description": "Which room variation to predict (default 0), matching play_room's variation so the graded truth is the readout you played. Pass the same seed and variation to both the pose and the guess call." },
-                        "guess": { "type": "number", "description": "Your predicted value for the readout at the posed moment. Omit to pose." }
+                        "guess": { "type": "number", "description": "Your predicted value for the readout at the posed moment. Omit to pose." },
+                        "rate": { "type": "number", "description": "Optional slope for your linear model, in readout units per full phase unit. When present with guess, grading reveals the actual local rate and signed residual shape across five nearby phases." }
                     },
                     "required": ["id"],
                     "additionalProperties": false
@@ -1519,10 +1520,28 @@ fn predict_tool(args: &Value) -> Value {
         ));
     };
     let (lo, hi) = prediction.span;
-    let Some(guess) = args.get("guess").and_then(Value::as_f64) else {
+    let guess = match args.get("guess") {
+        Some(value) => match value.as_f64() {
+            Some(guess) => Some(guess),
+            None => return tool_error("'guess' must be a number."),
+        },
+        None => None,
+    };
+    let rate_guess = match args.get("rate") {
+        Some(value) => match value.as_f64() {
+            Some(rate) => Some(rate),
+            None => return tool_error("'rate' must be a number."),
+        },
+        None => None,
+    };
+    if rate_guess.is_some() && guess.is_none() {
+        return tool_error("'rate' requires a numeric 'guess' to anchor the prediction line.");
+    }
+    let Some(guess) = guess else {
+        let rate_window = numinous_core::prediction_rate_window(&prediction);
         return tool_structured(
             &format!(
-                "{}\n\nCall predict again with the same seed and variation ({variation}) and your `guess` (a number) to see the truth and your score.",
+                "{}\n\nCall predict again with the same seed and variation ({variation}), your `guess`, and optionally your `rate` to see the truth, local rate, and signed residual shape.",
                 prediction.prompt
             ),
             json!({
@@ -1533,6 +1552,7 @@ fn predict_tool(args: &Value) -> Value {
                 "label": prediction.label,
                 "phase": prediction.phase,
                 "span": [lo, hi],
+                "rate_window": rate_window,
                 "prompt": prediction.prompt,
             }),
         );
@@ -1540,6 +1560,84 @@ fn predict_tool(args: &Value) -> Value {
     let Some(grade) = numinous_core::grade_prediction(room.as_ref(), &prediction, guess) else {
         return tool_error(&format!("{id}'s readout vanished at the posed moment."));
     };
+    if let Some(rate_guess) = rate_guess {
+        let curve = match numinous_core::grade_prediction_curve(
+            room.as_ref(),
+            &prediction,
+            guess,
+            rate_guess,
+        ) {
+            Ok(curve) => curve,
+            Err(numinous_core::PredictionCurveError::ReadoutUnavailable) => {
+                return tool_error(&format!(
+                    "{id}'s readout vanished inside the posed rate window."
+                ));
+            }
+            Err(numinous_core::PredictionCurveError::NonFiniteModel) => {
+                return tool_error(
+                    "The committed guess and rate produce values outside the numeric range. Use smaller finite values.",
+                );
+            }
+            Err(numinous_core::PredictionCurveError::NonFiniteFeedback) => {
+                return tool_error(
+                    "The room truth and committed model produce feedback outside the numeric range. Pose a different window or use smaller finite values.",
+                );
+            }
+            Err(numinous_core::PredictionCurveError::InvalidWindow) => {
+                return tool_error("The posed rate window is invalid; pose a new prediction.");
+            }
+        };
+        let residuals = curve
+            .samples
+            .iter()
+            .map(|sample| sample.residual)
+            .collect::<Vec<_>>();
+        let error_shape = curve
+            .samples
+            .iter()
+            .map(|sample| {
+                json!({
+                    "phase": sample.phase,
+                    "predicted": sample.predicted,
+                    "actual": sample.actual,
+                    "residual": sample.residual,
+                })
+            })
+            .collect::<Vec<_>>();
+        return tool_structured(
+            &format!(
+                "{}. Point guess {:.3}; actual {:.3} at phase {:.3} ({:.3} off, score {}/100). Your rate {:.3}; actual local rate {:.3} ({:.3} off). Signed residual shape, actual minus predicted: {:?}. This is model feedback, not a leaderboard.",
+                grade.band.name(),
+                grade.guess,
+                grade.actual,
+                prediction.phase,
+                grade.error,
+                grade.score,
+                curve.rate_guess,
+                curve.actual_rate,
+                curve.rate_error,
+                residuals,
+            ),
+            json!({
+                "game": "predict",
+                "room": prediction.room,
+                "seed": seed,
+                "variation": variation,
+                "label": prediction.label,
+                "phase": prediction.phase,
+                "guess": grade.guess,
+                "actual": grade.actual,
+                "error": grade.error,
+                "score": grade.score,
+                "band": grade.band.name(),
+                "rate_guess": curve.rate_guess,
+                "actual_rate": curve.actual_rate,
+                "rate_error": curve.rate_error,
+                "mean_absolute_residual": curve.mean_absolute_residual,
+                "error_shape": error_shape,
+            }),
+        );
+    }
     tool_structured(
         &format!(
             "{}. You guessed {:.3}; {} actually read {:.3} at phase {:.3} ({:.3} off, score {}/100, seed {seed}). The score is a mirror of your model, not a leaderboard.",
@@ -4536,6 +4634,7 @@ plays 2
         let sc = &posed["result"]["structuredContent"];
         assert_eq!(sc["game"], "predict");
         assert!(sc["phase"].as_f64().expect("phase") > 0.0);
+        assert_eq!(sc["rate_window"].as_array().expect("rate window").len(), 5);
         let text = posed["result"]["content"][0]["text"]
             .as_str()
             .unwrap_or_default();
@@ -4566,6 +4665,121 @@ plays 2
         }))
         .expect("tools/call must respond");
         assert_eq!(grade, &again["result"]["structuredContent"]);
+    }
+
+    #[test]
+    fn predict_grades_a_committed_rate_with_a_signed_error_shape() {
+        let room = numinous_core::room_by_id("slope-rider").expect("room");
+        let prediction = numinous_core::pose_prediction(room.as_ref(), 9).expect("poses");
+        let truth = numinous_core::grade_prediction(room.as_ref(), &prediction, prediction.span.0)
+            .expect("grades")
+            .actual;
+        let graded = handle_request(&json!({
+            "jsonrpc":"2.0","id":56,"method":"tools/call",
+            "params":{"name":"predict","arguments":{
+                "id":"slope-rider","seed":9,"guess":truth,"rate":1.25
+            }}
+        }))
+        .expect("tools/call must respond");
+        let grade = &graded["result"]["structuredContent"];
+        assert_eq!(grade["rate_guess"], 1.25);
+        assert!(grade["actual_rate"].is_number());
+        assert!(grade["rate_error"].as_f64().expect("rate error") >= 0.0);
+        assert!(
+            grade["mean_absolute_residual"]
+                .as_f64()
+                .expect("mean residual")
+                >= 0.0
+        );
+        let shape = grade["error_shape"].as_array().expect("error shape");
+        assert_eq!(shape.len(), 5);
+        for sample in shape {
+            let actual = sample["actual"].as_f64().expect("actual");
+            let predicted = sample["predicted"].as_f64().expect("predicted");
+            let residual = sample["residual"].as_f64().expect("residual");
+            assert!((residual - (actual - predicted)).abs() < 1e-12);
+        }
+        let text = graded["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("rate"), "rate feedback is visible: {text}");
+        assert!(
+            text.contains("residual"),
+            "shape feedback is visible: {text}"
+        );
+    }
+
+    #[test]
+    fn predict_requires_a_point_guess_to_anchor_a_rate() {
+        let refused = handle_request(&json!({
+            "jsonrpc":"2.0","id":57,"method":"tools/call",
+            "params":{"name":"predict","arguments":{
+                "id":"slope-rider","seed":9,"rate":1.25
+            }}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(refused["result"]["isError"], true);
+        let text = refused["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(
+            text.contains("requires"),
+            "the correction is explicit: {text}"
+        );
+        assert!(
+            text.contains("guess"),
+            "the missing anchor is named: {text}"
+        );
+    }
+
+    #[test]
+    fn predict_rejects_a_malformed_rate_without_recording_progress() {
+        let journey = std::env::temp_dir().join("numinous_mcp_bad_predict_rate_test.txt");
+        let _ = std::fs::remove_file(&journey);
+        let refused = handle_request_with(
+            &json!({
+                "jsonrpc":"2.0","id":58,"method":"tools/call",
+                "params":{"name":"predict","arguments":{
+                    "id":"slope-rider","seed":9,"guess":1.0,"rate":"fast"
+                }}
+            }),
+            &journey,
+        )
+        .expect("tools/call must respond");
+        assert_eq!(refused["result"]["isError"], true);
+        let text = refused["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(
+            text.contains("rate"),
+            "the malformed field is named: {text}"
+        );
+        assert_eq!(
+            numinous_core::load_journey_file(&journey).plays,
+            0,
+            "an invalid model must not count as play"
+        );
+        let _ = std::fs::remove_file(&journey);
+    }
+
+    #[test]
+    fn predict_names_extreme_model_overflow_instead_of_blaming_the_room() {
+        let refused = handle_request(&json!({
+            "jsonrpc":"2.0","id":59,"method":"tools/call",
+            "params":{"name":"predict","arguments":{
+                "id":"slope-rider","seed":9,"guess":f64::MAX,"rate":-f64::MAX
+            }}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(refused["result"]["isError"], true);
+        let text = refused["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(
+            text.contains("numeric range"),
+            "the model error is explicit: {text}"
+        );
+        assert!(!text.contains("vanished"), "the room is not blamed: {text}");
     }
 
     #[test]
