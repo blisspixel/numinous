@@ -77,6 +77,17 @@ fn trace_from_state(
     offset: f64,
     steps: usize,
 ) -> Vec<(f64, f64)> {
+    trace_and_state(first, second, w1, w2, offset, steps).0
+}
+
+fn trace_and_state(
+    first: f64,
+    second: f64,
+    w1: f64,
+    w2: f64,
+    offset: f64,
+    steps: usize,
+) -> (Vec<(f64, f64)>, State) {
     let bounded_steps = steps.min(MAX_STEPS);
     let mut s = State {
         t1: first + offset,
@@ -93,7 +104,13 @@ fn trace_from_state(
             path.push((x, y));
         }
     }
-    path
+    (path, s)
+}
+
+fn arm_points(state: State) -> ((f64, f64), (f64, f64)) {
+    let joint = (state.t1.sin(), state.t1.cos());
+    let tip = (joint.0 + state.t2.sin(), joint.1 + state.t2.cos());
+    (joint, tip)
 }
 
 /// The double pendulum room.
@@ -117,6 +134,11 @@ impl DoublePendulum {
 
     fn seed_offset(&self) -> f64 {
         (self.seed % 1000) as f64 * 0.0001
+    }
+
+    fn steps_for(t: f64) -> usize {
+        const ENTRY_STEPS: usize = 480;
+        ENTRY_STEPS + (t.clamp(0.0, 1.0) * (MAX_STEPS - ENTRY_STEPS) as f64) as usize
     }
 
     /// Draw the pendulum from a hand-chosen state: the shadow twin's path
@@ -150,18 +172,22 @@ impl DoublePendulum {
             let (px, py) = to_screen(tx, ty);
             canvas.plot(px, py, '-');
         }
-        let path = trace_from_state(first, second, w1, w2, 0.0, steps);
+        let (path, final_state) = trace_and_state(first, second, w1, w2, 0.0, steps);
         for &(tx, ty) in &path {
             let (px, py) = to_screen(tx, ty);
             canvas.plot(px, py, '*');
         }
-        let (tx, ty) = path
-            .last()
-            .copied()
-            .unwrap_or((first.sin() + second.sin(), first.cos() + second.cos()));
         let pivot = to_screen(0.0, 0.0);
-        let tip = to_screen(tx, ty);
-        canvas.line(pivot.0, pivot.1, tip.0, tip.1, '#');
+        let (joint, tip) = arm_points(final_state);
+        let joint = to_screen(joint.0, joint.1);
+        let tip = to_screen(tip.0, tip.1);
+        canvas.line(pivot.0, pivot.1, joint.0, joint.1, '#');
+        canvas.line(joint.0, joint.1, tip.0, tip.1, '#');
+        let bob = (width.min(height) / 100).clamp(2, 5) as i32;
+        for (x, y) in [joint, tip] {
+            canvas.line(x - bob, y, x + bob, y, '#');
+            canvas.line(x, y - bob, x, y + bob, '#');
+        }
     }
 }
 
@@ -215,6 +241,16 @@ fn elapsed_phase(now: f64, since: f64) -> f64 {
     (now - since).rem_euclid(1.0)
 }
 
+fn divergence_status(first: f64, second: f64, w1: f64, w2: f64, steps: usize) -> String {
+    let main = trace_from_state(first, second, w1, w2, 0.0, steps);
+    let shadow = trace_from_state(first, second, w1, w2, SHADOW_OFFSET, steps);
+    let gap = match (main.last(), shadow.last()) {
+        (Some(&(mx, my)), Some(&(sx, sy))) => ((mx - sx).powi(2) + (my - sy).powi(2)).sqrt(),
+        _ => 0.0,
+    };
+    format!("TWINS {gap:.3} APART (from a {SHADOW_OFFSET:.0e} start)")
+}
+
 impl Room for DoublePendulum {
     fn meta(&self) -> RoomMeta {
         RoomMeta {
@@ -231,7 +267,7 @@ impl Room for DoublePendulum {
         // The standard drop is the hand-state drawing with the classic
         // starting angles: first arm seeded, second arm at the textbook 2.0,
         // no momentum. One drawing path serves every way into this room.
-        let steps = (t.clamp(0.0, 1.0) * MAX_STEPS as f64) as usize;
+        let steps = Self::steps_for(t);
         self.draw_hand_state(canvas, 2.0 + self.seed_offset(), 2.0, 0.0, 0.0, steps);
     }
 
@@ -242,18 +278,37 @@ impl Room for DoublePendulum {
         // sensitive dependence takes hold. Because it moves, it also lets this
         // room pose predictions and challenges, and predicting a chaotic gap is
         // exactly the hard, honest kind of guess the predict keystone is for.
-        let steps = (t.clamp(0.0, 1.0) * MAX_STEPS as f64) as usize;
-        let off = self.seed_offset();
-        let main = trace_from_state(2.0 + off, 2.0, 0.0, 0.0, 0.0, steps);
-        let shadow = trace_from_state(2.0 + off, 2.0, 0.0, 0.0, SHADOW_OFFSET, steps);
-        let gap = match (main.last(), shadow.last()) {
-            (Some(&(mx, my)), Some(&(sx, sy))) => ((mx - sx).powi(2) + (my - sy).powi(2)).sqrt(),
-            // Before the first sampled step the twins are still one offset apart.
-            _ => 0.0,
-        };
-        Some(format!(
-            "TWINS {gap:.3} APART (from a {SHADOW_OFFSET:.0e} start)"
+        let steps = Self::steps_for(t);
+        Some(divergence_status(
+            2.0 + self.seed_offset(),
+            2.0,
+            0.0,
+            0.0,
+            steps,
         ))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[crate::room::RoomInput]) -> Option<String> {
+        let seed_offset = self.seed_offset();
+        let (first, second, w1, w2, steps) = match crate::room::latest_gesture(inputs) {
+            None => return self.status(t),
+            Some(crate::room::Gesture::Held { at, .. }) => {
+                let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
+                (first, second, 0.0, 0.0, 0)
+            }
+            Some(crate::room::Gesture::Released { before, at }) => {
+                let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
+                let (w1, w2) = fling_velocities(before, at, seed_offset);
+                let steps = (elapsed_phase(t, at.2) * MAX_STEPS as f64) as usize;
+                (first, second, w1, w2, steps)
+            }
+            Some(crate::room::Gesture::Cancelled { at }) => {
+                let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
+                let steps = (elapsed_phase(t, at.2) * MAX_STEPS as f64) as usize;
+                (first, second, 0.0, 0.0, steps)
+            }
+        };
+        Some(divergence_status(first, second, w1, w2, steps))
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -335,7 +390,9 @@ impl Room for DoublePendulum {
 
 #[cfg(test)]
 mod tests {
-    use super::{DoublePendulum, MAX_STEPS, hand_drop_angles, trace, trace_from_angles};
+    use super::{
+        DoublePendulum, MAX_STEPS, State, arm_points, hand_drop_angles, trace, trace_from_angles,
+    };
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
 
@@ -345,6 +402,19 @@ mod tests {
         for &(x, y) in &trace(0.0, 6_000) {
             assert!(x.hypot(y) <= 2.0 + 1e-6, "escaped: ({x}, {y})");
         }
+    }
+
+    #[test]
+    fn arm_geometry_preserves_two_unit_links() {
+        let state = State {
+            t1: 1.2,
+            t2: 2.1,
+            w1: 0.0,
+            w2: 0.0,
+        };
+        let (joint, tip) = arm_points(state);
+        assert!((joint.0.hypot(joint.1) - 1.0).abs() < 1e-12);
+        assert!(((tip.0 - joint.0).hypot(tip.1 - joint.1) - 1.0).abs() < 1e-12);
     }
 
     #[test]
@@ -383,7 +453,23 @@ mod tests {
         // Never blank, even before the drop.
         let mut zero = Canvas::new(50, 30);
         room.render(&mut zero, 0.0);
-        assert!(zero.ink_count() > 3, "the starting pose shows");
+        assert!(
+            zero.ink_count() > 15,
+            "both linked arms and bobs show at the start"
+        );
+
+        let mut redropped = Canvas::new(50, 30);
+        room.render_poked(&mut redropped, 0.0, &[(0.22, 0.28)]);
+        let changed = zero
+            .to_text()
+            .chars()
+            .zip(redropped.to_text().chars())
+            .filter(|(left, right)| left != right)
+            .count();
+        assert!(
+            changed >= 12,
+            "the first re-drop visibly moves the linked arms"
+        );
     }
 
     #[test]
@@ -510,6 +596,11 @@ mod tests {
             early.to_text(),
             late.to_text(),
             "time must not move a pinned pendulum"
+        );
+        assert_eq!(
+            room.status_input(0.2, &held),
+            room.status_input(0.9, &held),
+            "the readout must describe the same pinned state as the frame"
         );
         let mut bare = crate::canvas::Canvas::new(60, 30);
         room.render(&mut bare, 0.2);

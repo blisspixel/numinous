@@ -142,11 +142,11 @@ fn render_with_c(canvas: &mut dyn Surface, width: usize, height: usize, cx: f64,
             let zx = (px as f64 - half_w) * scale;
             let zy = (py as f64 - half_h) * scale;
             let iters = escape_iters(zx, zy, cx, cy, FRACTAL_MAX_ITER);
-            let mark = if iters == FRACTAL_MAX_ITER {
+            let mark = if iters > 20 {
                 '#'
-            } else if iters > 20 {
-                '*'
             } else if iters > 5 {
+                '*'
+            } else if iters > 2 {
                 '-'
             } else {
                 continue;
@@ -321,6 +321,23 @@ mod tests {
         room.render(&mut b, 0.3);
         assert_eq!(a.to_text(), b.to_text());
         assert!(a.ink_count() > 10);
+    }
+
+    #[test]
+    fn phase_zero_has_a_readable_iteration_band() {
+        let room = Julia::new();
+        let mut raster = Raster::with_accent(256, 192, [255, 120, 60]);
+        room.render(&mut raster, 0.0);
+        let readable = raster
+            .to_rgba()
+            .chunks_exact(4)
+            .filter(|pixel| pixel[0] > 80)
+            .count();
+
+        assert!(
+            readable > 500,
+            "the first Julia frame must not consist only of structural gray"
+        );
     }
 
     #[test]

@@ -105,6 +105,29 @@ fn cell_pixels(cell: usize, cells: usize, pixels: usize) -> std::ops::Range<usiz
     (cell * pixels).div_ceil(cells)..((cell + 1) * pixels).div_ceil(cells)
 }
 
+fn inset_cell(range: std::ops::Range<usize>) -> std::ops::Range<usize> {
+    let len = range.end.saturating_sub(range.start);
+    if len < 6 {
+        return range;
+    }
+    let inset = (len / 10).max(1);
+    range.start + inset..range.end.saturating_sub(inset)
+}
+
+fn grid_cell_pixels(
+    cell: usize,
+    cells: usize,
+    pixels: usize,
+    square_cell: usize,
+) -> std::ops::Range<usize> {
+    if square_cell == 0 {
+        return inset_cell(cell_pixels(cell, cells, pixels));
+    }
+    let grid_pixels = square_cell.saturating_mul(cells);
+    let origin = pixels.saturating_sub(grid_pixels) / 2;
+    inset_cell(origin + cell * square_cell..origin + (cell + 1) * square_cell)
+}
+
 fn draw_message(
     canvas: &mut dyn Surface,
     stream: &[bool],
@@ -122,14 +145,15 @@ fn draw_message(
         return;
     };
     let grid_h = stream.len().div_ceil(grid_w);
+    let square_cell = (width / grid_w).min(height / grid_h);
     for (index, &bit) in stream.iter().enumerate() {
         if !bit {
             continue;
         }
         let gx = index % grid_w;
         let gy = index / grid_w;
-        for py in cell_pixels(gy, grid_h, height) {
-            for px in cell_pixels(gx, grid_w, width) {
+        for py in grid_cell_pixels(gy, grid_h, height, square_cell) {
+            for px in grid_cell_pixels(gx, grid_w, width, square_cell) {
                 let Some(x) = i32::try_from(px).ok().and_then(|x| x.checked_add(shift_x)) else {
                     continue;
                 };
@@ -215,7 +239,7 @@ impl Room for Arecibo {
 
 #[cfg(test)]
 mod tests {
-    use super::{ART, Arecibo, MAX_WIDTH, MIN_WIDTH, bits};
+    use super::{ART, Arecibo, MAX_WIDTH, MIN_WIDTH, bits, grid_cell_pixels};
     use crate::MAX_ROOM_POKES;
     use crate::canvas::Canvas;
     use crate::room::Room;
@@ -259,6 +283,33 @@ mod tests {
         let mut right = Canvas::new(44, 26);
         Arecibo::new().render(&mut right, t_true);
         assert!(right.ink_count() > 20);
+    }
+
+    #[test]
+    fn decoded_message_uses_centered_square_cells_with_visible_boundaries() {
+        let width = 220;
+        let height = 130;
+        let cell = 10;
+        let x_cells = grid_cell_pixels(0, 11, width, cell);
+        let y_cells = grid_cell_pixels(1, 13, height, cell);
+        assert_eq!(x_cells, 56..64);
+        assert_eq!(y_cells, 11..19);
+
+        let mut canvas = Canvas::new(width, height);
+        let t_true = (TRUE_WIDTH - MIN_WIDTH) as f64 / (MAX_WIDTH - MIN_WIDTH) as f64;
+        Arecibo::new().render(&mut canvas, t_true);
+        let text = canvas.to_text();
+        let char_at = |x: usize, y: usize| {
+            text.lines()
+                .nth(y)
+                .and_then(|line| line.chars().nth(x))
+                .unwrap_or(' ')
+        };
+
+        assert_eq!(char_at(56, 11), '#');
+        assert_eq!(char_at(55, 11), ' ');
+        assert_eq!(char_at(64, 11), ' ');
+        assert_eq!(char_at(0, 11), ' ');
     }
 
     #[test]

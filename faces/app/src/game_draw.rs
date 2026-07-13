@@ -85,6 +85,10 @@ fn munch_result_lines(outcome: &numinous_core::Munched, width: usize, scale: i32
         "{} EATEN  {} BAD  {} LEFT",
         outcome.hits, outcome.bad_bites, outcome.left_behind
     ));
+    if !outcome.wrongly_eaten.is_empty() {
+        let listed: Vec<String> = outcome.wrongly_eaten.iter().map(u64::to_string).collect();
+        semantic.push(format!("WRONG: {}", listed.join(", ")));
+    }
     if !outcome.missed.is_empty() {
         let listed: Vec<String> = outcome.missed.iter().map(u64::to_string).collect();
         semantic.push(format!("WALKED PAST: {}", listed.join(", ")));
@@ -99,6 +103,10 @@ fn munch_result_lines(outcome: &numinous_core::Munched, width: usize, scale: i32
         .into_iter()
         .flat_map(|line| numinous_core::wrap_text(&line, columns))
         .collect()
+}
+
+fn centered_text_x(text: &str, width: usize, scale: i32) -> i32 {
+    ((width as i32 - text.chars().count() as i32 * 6 * scale) / 2).max(10)
 }
 
 fn gauntlet_message_lines(message: &str, width: usize, scale: i32) -> Vec<String> {
@@ -408,17 +416,21 @@ pub(crate) fn draw_arcade(play: &ArcadePlay, width: usize, height: usize) -> Ras
         }
     }
     if let Some((caught, _)) = play.flash {
-        raster.dim(70);
+        raster.dim(55);
+        let message = if caught {
+            "CAUGHT"
+        } else {
+            "CLEAR. THEY MULTIPLY."
+        };
+        let flash_scale = (scale + 1).min(4);
+        let flash_y = height as i32 / 2 - 6 * scale;
+        raster.clear_rows(flash_y - 6, flash_y + 7 * flash_scale + 6);
         numinous_core::draw_text(
             &mut raster,
-            if caught {
-                "CAUGHT"
-            } else {
-                "CLEAR. THEY MULTIPLY."
-            },
-            width as i32 / 6,
-            height as i32 / 2 - 6 * scale,
-            (scale + 1).min(4),
+            message,
+            centered_text_x(message, width, flash_scale),
+            flash_y,
+            flash_scale,
             '#',
         );
     }
@@ -472,7 +484,7 @@ pub(crate) fn draw_nim(play: &NimPlay, width: usize, height: usize) -> Raster {
             10,
             y - 4 * scale,
             scale,
-            if selected { '#' } else { '-' },
+            if selected { '#' } else { '*' },
         );
         for i in 0..count {
             let x0 = 40 + i as i32 * (stone + 6);
@@ -489,7 +501,7 @@ pub(crate) fn draw_nim(play: &NimPlay, width: usize, height: usize) -> Raster {
             play.take
         )
     } else {
-        "ANY KEY LEAVES".to_string()
+        "ENTER RETRY   ESC LEAVE".to_string()
     };
     numinous_core::draw_text(
         &mut raster,
@@ -516,6 +528,22 @@ pub(crate) fn draw_nim(play: &NimPlay, width: usize, height: usize) -> Raster {
             &numinous_core::nim_secret().to_uppercase(),
             columns,
         ));
+        lines.push("ENTER RETRY   ESC LEAVE".to_string());
+        let lh = 10 * ls;
+        let ttop = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
+        for (i, line) in lines.iter().enumerate() {
+            numinous_core::draw_text(&mut raster, line, 20, ttop + i as i32 * lh, ls, '#');
+        }
+    } else if play.over == Some(false) {
+        raster.dim(25);
+        let ls = (width as i32 / 340).clamp(1, 3);
+        let columns = ((width as i32 / (6 * ls)) - 6).max(12) as usize;
+        let mut lines = vec!["THE ORDER RETURNED THE HEAPS TO XOR 0.".to_string()];
+        lines.extend(numinous_core::wrap_text(
+            "AT XOR 0, EVERY MOVE OPENS A REPLY. BREAK THAT LOOP ON THE NEXT RUN.",
+            columns,
+        ));
+        lines.push("ENTER RETRY   ESC LEAVE".to_string());
         let lh = 10 * ls;
         let ttop = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
         for (i, line) in lines.iter().enumerate() {
@@ -921,10 +949,10 @@ mod tests {
     fn munch_controls_and_worst_case_feedback_fit_small_and_default_widths() {
         let outcome = numinous_core::Munched {
             hits: 0,
-            bad_bites: 0,
-            left_behind: 30,
+            bad_bites: 3,
+            left_behind: 27,
             score: 0,
-            wrongly_eaten: Vec::new(),
+            wrongly_eaten: vec![14, 27, 98],
             missed: (100..130).collect(),
         };
         for width in [320, 900] {
@@ -944,5 +972,47 @@ mod tests {
                 );
             }
         }
+        let lines = munch_result_lines(&outcome, 320, 1);
+        assert!(lines.iter().any(|line| line.contains("WRONG: 14, 27, 98")));
+        assert!(lines.iter().any(|line| line.contains("WALKED PAST")));
+    }
+
+    #[test]
+    fn arcade_flash_text_is_geometrically_centered() {
+        for (width, scale, message) in [(360, 1, "CAUGHT"), (900, 3, "CLEAR. THEY MULTIPLY.")] {
+            let x = centered_text_x(message, width, scale);
+            let text_width = message.chars().count() as i32 * 6 * scale;
+            assert!((2 * x + text_width - width as i32).abs() <= 1);
+        }
+    }
+
+    #[test]
+    fn nim_loss_keeps_heap_labels_and_teaches_a_retry() {
+        let play = NimPlay {
+            heaps: vec![0, 0, 0],
+            seed: 23,
+            selected: 0,
+            take: 1,
+            message: "THE ORDER TOOK THE LAST STONE".to_string(),
+            over: Some(false),
+        };
+        let raster = draw_nim(&play, 360, 240);
+        assert!(raster.lit_count() > 1_000);
+
+        let live = NimPlay {
+            heaps: vec![3, 4, 5],
+            over: None,
+            ..play
+        };
+        let live = draw_nim(&live, 360, 240).to_rgba();
+        let background = [10, 11, 15, 255];
+        let label_band_has_readable_ink = live
+            .chunks_exact(4)
+            .enumerate()
+            .filter(|(index, _)| index % 360 < 35)
+            .any(|(_, pixel)| {
+                pixel != background && pixel.iter().take(3).copied().max() > Some(80)
+            });
+        assert!(label_band_has_readable_ink);
     }
 }
