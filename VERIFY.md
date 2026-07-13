@@ -44,23 +44,29 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 1,079 tests pass, 92.17% region
-cover, and 91.91% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
+Expected right now: **format and clippy clean, 1,096 tests pass, 92.93% region
+cover, and 92.55% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
 integration-tested on real hardware and excluded from the coverage gate, see
 `docs/QUALITY.md`).
 
 The release scripts also regenerate `renders/qa-app/`, a 240-screen app matrix.
-Every catalog room has a true phase-zero entry frame, arrival card, immediate
+Every catalog room has a deterministic opening frame, arrival card, immediate
 pointer response, same-phase delayed-gesture baseline and response, compact
 arrival card, and compact delayed response.
 The matrix also covers every app game state, default and compact overlays,
 production Studio rendering, both ends of The Show, Times Tables phase
 stability, and the Mandelbrot reset flow. Generation removes stale output,
 checks the exact unique scenario inventory, rejects blank or wrong-sized frames,
-and requires every room interaction to change at least 100 raw room-content
-pixels against its same-phase baseline. These are
-structural gates. `MANIFEST.txt` remains the review inventory, and a human or a
-clearly labeled simulated player-profile review still judges clarity and fun.
+and gives every room a declared click, drag-release, repeated-action, or boundary
+scenario. Inputs must be finite, ordered, and closed. Immediate and delayed
+responses must meet changed-pixel, spatial-support, support-density, adjacent
+32-pixel spatial-tile, and mean color-delta thresholds, while the room must
+expose either an interaction-aware status change or an explicit action
+contract. A regression proves four isolated 10 by 10 corner markers fail the
+spatial-tile gate. These are coarse renderer-path structural gates, not a claim
+of native operating-system event automation or subjective visual quality. `MANIFEST.txt`
+remains the review inventory, and a human or a clearly labeled simulated
+player-profile review still judges clarity and fun.
 
 ## 2b. Put `numinous` on your PATH (once)
 
@@ -174,6 +180,18 @@ it newline-delimited requests on stdin, for example:
 Run `cargo run --bin numinous-mcp` and paste those lines; it replies with the
 tool list and an ASCII render of the room as text.
 
+For repeatable MCP QA against a freshly built server, use the isolated helper.
+Passing `-` reads JSON from stdin and avoids shell-specific quote escaping:
+
+```
+python scripts/mcp-play.py list
+python scripts/mcp-play.py tools
+'{"id":"cult-of-pi"}' | python scripts/mcp-play.py call describe_room -
+```
+
+Each helper invocation owns and removes a temporary Journey, score table, and
+Cairn, so it cannot change the player's profile or collide with another run.
+
 ## 5. Where things are
 
 - `crates/core` the headless engine: rooms (31 catalog rooms across 10 wings plus hidden content), sims, games
@@ -197,4 +215,6 @@ live sound in the app and CLI plus structured notation over MCP, the `forget`
 right for players who are minds, and 29 MCP tools (full CLI parity for the
 games; challenge, predict, and cairn are MCP-first) so agents play the same
 content. Pending (see `docs/ROADMAP.md`):
-deeper room-specific pokes, human playtests, cross-platform proof, full Studio save/share beyond the first CLI `.num` save/open slice, the music visualizer, and more GPU room paths.
+deeper held and causal interactions, human playtests, cross-platform proof,
+full Studio save/share beyond the first CLI `.num` save/open slice, the music
+visualizer, and more GPU room paths.

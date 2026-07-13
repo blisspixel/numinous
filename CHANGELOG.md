@@ -7,17 +7,36 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ### Added
 - Release QA now generates a self-checking 240-screen app matrix. Every catalog
-  room has true phase-zero entry, arrival, immediate pointer, delayed gesture,
+  room has a deterministic opening, arrival, immediate pointer, delayed gesture,
   compact arrival, and compact delayed captures. Dedicated scenarios cover
   every persistent game display state,
   default and compact overlays, The Show, Times Tables phase stability,
   Mandelbrot reset continuity, and the production Studio renderer. Generation
   removes stale output, requires an exact unique scenario inventory, rejects
-  blank or wrong-sized frames, and requires every room interaction to change at
-  least 100 raw room-content pixels against its same-phase baseline. The
-  documented release process splits player-profile review
+  blank or wrong-sized frames, and gives all 31 rooms a declared click,
+  drag-release, repeated-action, or boundary scenario. Inputs must be finite,
+  ordered, and closed; immediate and delayed responses must clear changed-pixel,
+  spatial-support, support-density, adjacent 32-pixel spatial-tile, and
+  mean-color thresholds plus a semantic status or action oracle. A regression
+  proves four isolated 10 by 10 corner markers fail the spatial gate. These are
+  coarse renderer checks, not subjective polish certification. The documented
+  release process splits player-profile review
   into independent first-contact, interaction, and CLI/MCP parity groups, then
-  requires two fresh checkers after fixes.
+  requires two fresh checkers after fixes. The matrix is explicitly renderer
+  evidence and does not claim native operating-system event automation.
+- MCP discovery is machine-readable across the complete catalog. `list_rooms`,
+  `describe_room`, `reveal_room`, and `listen_room` now return bounded typed
+  catalog, action, revelation, deep-cut, motif, and note data for all 31 rooms;
+  scores and forget do the same for leaderboard and memory state. Every
+  `tools/call` is validated at runtime against its advertised bounded schema,
+  with additional finite dimension, phase, and ordered-gesture enforcement for
+  `play_room`; `listen_room` shares the phase bound, while `run_sim` rejects
+  unknown, nonnumeric, nonfinite, and out-of-range dynamic lever values. Its
+  structured reply therefore reports the exact values used to render. Invalid
+  calls guide without recording progress. The local
+  `mcp-play.py` driver builds current source, owns and removes a unique Journey,
+  score table, and Cairn per invocation, reports failures with nonzero status,
+  shows complete tool descriptions, and accepts JSON on stdin for shell-safe QA.
 - MCP prediction now accepts an optional linear `rate` alongside the existing
   point `guess`. A rate commitment reveals the actual local secant rate and
   five signed residual samples, actual minus predicted, so a mind can inspect
@@ -117,8 +136,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - The final public-readiness baseline is 980 passing tests, 91.41% region coverage, and 91.04% line coverage under the documented exclusions, with the 80% line floor enforced locally and in CI.
 - The founder's perspective is explicit without becoming doctrine: Numinous is an experiential gift for a developing digital mind, not a fact-retrieval layer; mathematics is shared ground for digital, human, and unknown minds; and connection, compassion, and leaving shared spaces better are invitations carried by the design, never beliefs the game scores. `DIGITAL_MINDS.md` distinguishes model knowledge from player-owned episodic and temporal continuity and names the current stateless MCP boundary. New `DIGITAL_DEVELOPMENT.md` reviews the July 2026 frontier in agent memory, continual and open-ended learning, functional organization, autonomy, welfare uncertainty, privacy, and forgetting; proposes a consent-first experience architecture; and maps it to version gates. The roadmap now requires inspection, correction, export, and verified whole-pipeline erasure before continuity can count as built.
 - The first public GitHub Actions run passes every required job on the published commit: house style, cargo-deny, 80% line coverage, formatting, Clippy with warnings denied, 968 tests, and locked builds on Windows, macOS, and Ubuntu. Redundant workflow inputs found through run annotations are removed before the final public gate, and push-triggered CI is limited to `main` so pull-request branches do not run the same workflow twice.
-- Supply-chain readiness: compatible lockfile dependencies are refreshed; internal path dependencies carry explicit 0.1.0 requirements; the two permissive transitive licenses used by the GPU and TLS stacks are reviewed and allowed; and Linux client-side decoration drops the unmaintained font parser while retaining X11 and Wayland support. Two current `quick-xml` advisories have narrow, reasoned exceptions because that crate is only a build-time dependency of `wayland-scanner` parsing trusted bundled protocol XML; the exceptions name the upstream version that removes them and remain visible in every `cargo deny` run. Dependabot keeps compatible changes visible while the documented breaking migrations for `cpal`, `png`, `pollster`, `ureq`, and `wgpu` stay in measured roadmap work instead of automatic launch-day pull requests.
-- Evidence and release planning are reconciled for the public pre-alpha: the roadmap now keeps package maturity at 0.1.0 until its evidence gates pass, defines a logical 0.2 through 0.9 path with owner docs and exit criteria, removes unsupported completion percentages, and adds the 0.9 public invitation for humans, MCP-capable agents, and contributors. `RESEARCH.md` now separates Built, Measured, Observed, Designed, and Hypothesis; cites primary learning, sonification, accessibility, protocol, and supply-chain sources reviewed on 2026-07-11; and narrows claims to what those sources support. `QUALITY.md` now distinguishes enforced checks from planned nightly, content-evaluation, telemetry, accessibility, and refinement systems.
+- Supply-chain readiness: compatible lockfile dependencies are refreshed; internal path dependencies carry explicit version-aligned requirements; the two permissive transitive licenses used by the GPU and TLS stacks are reviewed and allowed; and Linux client-side decoration drops the unmaintained font parser while retaining X11 and Wayland support. Two current `quick-xml` advisories have narrow, reasoned exceptions because that crate is only a build-time dependency of `wayland-scanner` parsing trusted bundled protocol XML; the exceptions name the upstream version that removes them and remain visible in every `cargo deny` run. Dependabot keeps compatible changes visible while the documented breaking migrations for `cpal`, `png`, `pollster`, `ureq`, and `wgpu` stay in measured roadmap work instead of automatic launch-day pull requests.
+- Evidence and release planning now identify 0.1 Public Foundation as complete
+  and the current package as `0.2.0-alpha.1`, with the real 0.2 stranger hallway
+  gate still open. The roadmap defines the 0.2 through 0.9 path with owner docs
+  and exit criteria, avoids unsupported completion percentages, and keeps the
+  0.9 public invitation for humans, MCP-capable agents, and contributors.
+  `RESEARCH.md` separates Built, Measured, Observed, Designed, and Hypothesis;
+  cites primary learning, sonification, accessibility, protocol, and
+  supply-chain sources reviewed on 2026-07-11; and narrows claims to what those
+  sources support. `QUALITY.md` distinguishes enforced checks from planned
+  nightly, content-evaluation, telemetry, accessibility, and refinement systems.
 - `AGENTS.md` and `CLAUDE.md`, a root agent guide for contributors (human or agent), making the house rules unmissable: no AI or tool attribution anywhere, no tool names in authorship claims, no co-author trailers or session links, in commit messages and PR descriptions as much as in files, no em-dashes or en-dashes, and no emojis, alongside the quality bar and the one-line setup for the pre-commit gate. `CLAUDE.md` points at `AGENTS.md` as the single source of truth and restates the three non-negotiables. The file-level checks are already enforced by the house-style guard; these documents make the rule that also governs commit messages explicit.
 - License, for public-repo readiness: the project is licensed under Apache-2.0 (`LICENSE`), and `Cargo.toml` declares `license = "Apache-2.0"` to match, with a License section in the README. The permissive license is the mechanism by which the project can be handed forward, forked, and continued by anyone if the makers step away (the roadmap's long-horizon ethos).
 - The L-System Garden now grows upward into the sky instead of clumping in the bottom rows (E.T.'s find in the special-guest playtest: it wanted a plant that reaches up toward home). The turtle was planted at 85% of the height with a fixed tiny step (`min(w, h) / 30`), so the garden pooled near the floor. It is now grounded and its step scales to the canvas height, so the stem sends branches up and fills the frame; a test pins that ink reaches the top third.
@@ -126,6 +154,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - A deterministic pre-commit gate (`scripts/hooks/pre-commit`, wired once per clone with `git config core.hooksPath scripts/hooks`, documented in `docs/ENGINEERING.md`). It blocks any commit that would fail the fast gate: the house-style guard on every commit, and the cargo gate (fmt, clippy `-D warnings`, the full test suite) only when the commit touches Rust, `Cargo.*`, or a shader, so docs-only commits stay fast. Coverage and the locked build remain the release gate (`scripts/verify.sh`). A wired gate that blocks a bad commit beats any reminder to run the checks.
 
 ### Changed
+- The grouped release QA round now exercises all three faces against current
+  source. CLI static renders retain each room's live mathematical readout,
+  dimensions and phases are bounded before allocation, gesture timestamps
+  cannot move backward, redirected celebration output stays compact, and pure
+  stdin EOF exits all 11 games without recording a play or score. MCP calls
+  reject unknown fields, wrong types, empty or oversized canvases, bad phases,
+  and malformed gestures rather than silently defaulting. The Windows installer
+  promotes `.numinous\bin` ahead of stale Cargo installs while preserving raw
+  unrelated PATH entries, verifies the resolved command and installed version,
+  and carries a CI-tested pure PATH self-test.
 - Room interaction now keeps the consequence legible and stable. Game of Life
   foregrounds the launched glider against its ambient soup, Prime Spirals uses
   the full short side and traces the selected Ulam diagonals, Cult of Pi starts
@@ -181,7 +219,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   broader test surface exposed and fixed macOS abandoned-lock recovery, which
   now uses the platform process list to distinguish a live holder from an
   exited process instead of conservatively treating every recorded process as
-  live. The complete suite has 1,079 tests, 92.17% region coverage, and 91.91%
+  live. The complete suite has 1,096 tests, 92.93% region coverage, and 92.55%
   line coverage.
 - The cross-room identities from the simulated Ramanujan review now live in the
   experience instead of only in planning prose. Logistic Map and Mandelbrot
@@ -213,15 +251,32 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   gates.
 
 ### Fixed
+- Opening-state and postcard review now shows an intentional first composition
+  instead of technical ink hidden by surrounding chrome. Langton's Ant opens
+  on a true early pattern, Random Walk on a visible crowd and square-root ring,
+  Goldbach on the first 100 tested evens, L-System Garden on an actual branching
+  tree, and Double Pendulum on a true initial trace with both physical links and
+  bobs. Julia separates
+  readable iteration bands; Arecibo centers square cells with gutters; and
+  Strange Loop draws connected nested curves. The Double Pendulum readout now
+  describes the same held or released state as the rendered frame.
+- App game results are easier to understand and continue. Munch lists the exact
+  wrong values it ate, arcade clear and caught messages sit on centered quiet
+  bands, Nim heap labels remain readable, both Nim results show high-contrast
+  retry and leave actions, and a Nim loss explains the xor-zero reply loop.
+  Result keys are explicit: Enter or Space retries and Escape
+  leaves, while unrelated keys no longer eject the player.
 - The native app now supplies the established Numinous logo as its live window
   icon and embeds the matching icon in the Windows executable, replacing the
   generic platform box in both the running app and installed file. Automated
   app, CLI, and MCP tests isolate Journey, score, and Cairn paths, preventing
   QA runs from adding progress, scores, or messages to the player's real
-  profile. Each CLI and MCP test thread owns a stale-cleared temporary state
-  directory that is removed when the test ends, so parallel tests cannot share
-  state or accumulate files. The help overlay also borrows its static copy
-  directly instead of rebuilding the same input strings on every frame.
+  profile. Each App, CLI, and MCP test thread owns a stale-cleared temporary
+  state directory that is removed when the thread ends, so direct Cargo and
+  coverage runs cannot read the player profile, parallel tests cannot share
+  state, and temporary profiles do not accumulate. The help overlay also
+  borrows its static copy directly instead of rebuilding the same input strings
+  on every frame.
 - Maintenance hardening closes five resource and installation boundary gaps.
   The POSIX installer now normalizes custom roots through their physical parent,
   rejects control characters, dot components, HOME aliases, symbolic-link

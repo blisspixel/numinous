@@ -8,17 +8,26 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-13
 
-- **Enforced now:** formatting, Clippy with warnings denied, 1,079 tests, locked
+- **Enforced now:** formatting, Clippy with warnings denied, 1,096 tests, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 92.17%
-  regions and 91.91% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 92.93%
+  regions and 92.55% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
   three faces, and a release-generated 240-screen visual QA matrix. Every room
-  is captured at true phase-zero entry, arrival, immediate interaction,
+  is captured at a deterministic opening state, arrival, immediate interaction,
   same-phase delayed baseline and gesture, compact arrival, and compact delayed
-  states. Games, overlays, The Show, production
-  Studio rendering, and reset and phase flows have dedicated captures.
+  states. Games, overlays, The Show, production Studio rendering, and reset and
+  phase flows have dedicated captures. Each room has an explicit click,
+  drag-release, repeated-action, or boundary scenario. The generator validates
+  ordered finite input, release closure, interaction-aware status or action
+  semantics, at least 100 changed pixels, at least 1% changed-region support,
+  minimum support density, a cluster of at least two adjacent 32-pixel spatial
+  tiles, and minimum mean color change. A direct regression proves that four
+  isolated 10 by 10 corner markers do not satisfy the spatial gate. These are
+  coarse renderer-path checks, not certification of subjective visual quality.
+  Production input routing has separate unit tests; native operating system
+  event dispatch is not claimed as automated end-to-end evidence.
 - **Not yet evidenced:** a completed stranger hallway test, accessibility review
   with disabled players, real execution on macOS and Linux, nightly hardware
   soak, perceptual visual or audio regression, opt-in telemetry, and independent

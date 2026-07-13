@@ -108,10 +108,11 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 1. **Few, high-level, workflow-shaped tools, not granular CRUD.** An agent should accomplish something meaningful in one call. The verbs mirror a human's: **explore, play, learn, create.** Consolidated tools outperform a dozen tiny ones, even though that "violates separation of concerns," because it matches how a mind reaches for a capability.
 
 2. **Every response should be self-describing.** Current room play returns an
-   ASCII render plus structured parameters, input, and change metrics. Listening
-   returns notation and sound structure. Other tools return bounded text and,
-   where implemented, structured content. Inline image and audio media are future
-   sensory-substitution work, not a current four-part response contract.
+   ASCII render plus structured parameters, input, and change metrics. Catalog,
+   description, reveal, listening, scores, and forget responses carry bounded
+   typed `structuredContent`; every catalog room is covered by the discovery
+   contract. Inline image and audio media are future sensory-substitution work,
+   not a current four-part response contract.
 
 3. **Tool descriptions and errors are the UX.** The description is what the agent reads to decide what to do; it must be clear, concrete, and example-rich. Inputs are **simple and flat where possible** (no deeply nested config objects, which reliably break LLM tool calls); bounded coordinate tuples such as `play_room` `pokes: [[x, y]]` are allowed only when they directly preserve replayable room input. Errors are **guiding**, not just failing: "that expression has no free variable to animate; add `t` for time, or try `eval` with a fixed value."
 
@@ -136,6 +137,21 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   `sing_expression`, Journey operations, and the shared games. `PLAYING.md`
   carries the complete user-facing list.
 - **Current room input shape:** `play_room` accepts `variation` plus optional normalized `pokes: [[x, y], ...]`, newest last, bounded to 24 points, and returns those points in `structuredContent` with the render. This keeps MCP play stateless and replayable. The core gesture substrate (`RoomInput` trails, held/release/cancel semantics) is live in the App and over MCP: `play_room` accepts a `gesture` array of phase-stamped pointer events (down/move/up/cancel, bounded to 96, exclusive with `pokes`), so an agent can pin the pendulum, pull, and fling with measured velocity, statelessly and replayably. The default bridge paints down-and-move trails; click-specific rooms may intentionally consume only pointer-down events. Compact pokes become phase-stamped pointer-down inputs before rendering, so App, CLI, and MCP share each room's chosen semantics.
+- **Runtime schema enforcement (built):** every `tools/call` is checked against
+  the same bounded schema advertised by `tools/list`, including required fields,
+  types, enums, numeric and array bounds, nested object shape, and unexpected
+  fields. `play_room` additionally rejects non-finite or out-of-range phase and
+  dimensions plus gesture timestamps that move backward. `listen_room` enforces
+  the same phase interval. `run_sim` validates nested lever values as finite
+  numbers, rejects names not owned by the selected simulation, and rejects
+  values outside that lever's advertised range. Invalid calls return a guiding
+  tool error and do not record progress.
+- **Structured discovery (built):** `list_rooms`, `describe_room`,
+  `reveal_room`, and `listen_room` return typed catalog, action, revelation,
+  deep-cut availability, motif, and bounded note data for all 31 rooms. Locked
+  deep cuts expose their unlock level without leaking their text. Scores and
+  forget previews are similarly structured, and confirmed erasure reports only
+  successful filesystem outcomes.
 - **Structured poke deltas (built):** when `pokes` are supplied, `play_room` also returns a `delta` in `structuredContent`: the poked frame diffed against the unpoked frame at the same phase, size, and variation, as `cells_changed`, `ink_added`, `ink_removed`, `ink_reshaped`, `total_cells`, and the inclusive `changed_region` bounding box; the text render carries the same count as a `Touch:` line. This is the proof-of-touch half of the challenge/verify loop: the agent gets quantitative, optimizable feedback on how the math answered its hand.
 - **The challenge/verify loop, first slice (built):** the `challenge` tool poses a deterministic seeded goal for any room with a touch verb (change at least K cells inside a posed target box on the standard frame) and grades attempts as metrics, not pass/fail: cells in target, cells changed, threshold fraction, centroid distance, and a 0-100 score, with `passed` as a summary only. Every posed challenge is winnable by construction: the pose probes the room's actual response across seeded hands and phases and places the target on measured evidence, and a registry-wide test proves a witness hand passes for every room with a verb. Seeds are always explicit (no clock-derived daily), so the graded reply and the recorded progress can never disagree. Attempts record play (and wins) through the shared Journey and post graded scores to the shared table. Room-specific goals whose metric is the phenomenon's own parameter are the next depth on this substrate.
 - **Resources and prompts, planned:** the room catalog, Studio reference,

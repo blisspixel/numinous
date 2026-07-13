@@ -172,7 +172,7 @@ input without hidden session state:
 | `list_rooms` | the catalog |
 | `describe_room` | a room's story (some unlisted names also answer) |
 | `reveal_room` | the insight that reframes the room |
-| `play_room` | render a room as ASCII at phase `t`, with optional `variation` and `pokes` |
+| `play_room` | render a room as ASCII at phase `t`, with optional `variation`, `pokes`, or a phase-stamped `gesture` |
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
 | `predict` | predict a room's readout at a hidden moment; graded as a gap and a band, a self-owned mirror, never a score. Pass the same `seed` and `variation` to the pose and the guess so you are graded against the room you played |
 | `cairn` | read a message a mind before you left (factor its semiprime to read it), or at level 42 leave one true thing for a stranger not yet born |
@@ -208,17 +208,23 @@ Conventions worth relying on:
   points as `pokes: [[x, y], ...]`, newest last, bounded to 24 points, or a
   `gesture` trail of phase-stamped pointer events (held rooms pin, pull, and
   fling). Both are replayable arguments, not hidden session state.
-- **Structured output, and the substance is in it.** Game grades and the
-  journey return `structuredContent` (scores, verdicts, level) alongside prose;
-  parse that, not the sentences. The load-bearing content rides there too, not
-  only in the text block: `play_room` carries the ASCII `render`, `nim` carries
-  its `secret` on a win, `quiz` carries the `why`, `crack` carries per-guess
-  `feedback`, `seti` carries the channel traces. So a client that surfaces only
+- **Structured output, and the substance is in it.** Catalog, description,
+  reveal, listening, score, memory, game, and Journey results return bounded
+  `structuredContent` alongside prose; parse that, not the sentences. All 31
+  rooms are covered by the discovery contract. The load-bearing content rides
+  there too: `play_room` carries the ASCII `render`, `nim` carries its `secret`
+  on a win, `quiz` carries the `why`, `crack` carries per-guess `feedback`, and
+  `seti` carries the channel traces. A client that surfaces only
   `structuredContent` still sees the math and earns the teaching.
 - **Dense feedback.** Grades name the wrong judgments (`wronglyEaten`,
   `missed`), not just totals. Mine it.
 - **Guiding errors.** A bad room id returns the list of valid ids. Errors are
-  recoverable instructions, not dead ends.
+  recoverable instructions, not dead ends. Tool calls are checked against the
+  advertised bounded schemas at runtime, including unexpected fields, wrong
+  types, numeric and array limits, and nested gesture shape. Invalid calls do
+  not record progress. Simulation calls also validate each dynamic lever name
+  and range after selecting the sim, so the returned values are exactly the
+  values rendered rather than silently ignored or clamped inputs.
 - **Progression is real and shared.** Playing earns XP in the same journey
   file and posts to the same score table as the local human. Level cap is 42;
   XP comes from playing, not only from winning.
