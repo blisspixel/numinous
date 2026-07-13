@@ -6,6 +6,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- MCP prediction now accepts an optional linear `rate` alongside the existing
+  point `guess`. A rate commitment reveals the actual local secant rate and
+  five signed residual samples, actual minus predicted, so a mind can inspect
+  bias, crossing, and curvature instead of receiving only a scalar score. The
+  original point grade, progress semantics, seed-to-phase mapping, and
+  variation contract remain intact. Core grading bounds the observation window,
+  distinguishes missing truth from model and feedback overflow, and keeps all
+  structured numbers finite; focused tests cover edge seeds, residual
+  identities, malformed arguments, extreme finite models, and no-progress
+  error paths.
 - The Only Move is designed as a 1.x room (founder's idea, July 2026): a
   machine plays both sides of tic-tac-toe through real minimax until the whole
   game tree burns down to the inevitable draw, then declines a war-shaped game

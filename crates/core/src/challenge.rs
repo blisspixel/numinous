@@ -92,7 +92,7 @@ pub struct ParameterGrade {
 }
 
 /// How many phases the sweep is sampled at while posing a parameter goal.
-const PARAMETER_SAMPLES: usize = 64;
+pub(crate) const PARAMETER_SAMPLES: usize = 64;
 
 /// Every number in a status line, as (byte offset of its first character,
 /// parsed value), left to right. A sign counts as part of a number only when

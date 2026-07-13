@@ -85,7 +85,11 @@ pub use persistence::{
     load_journey_file, load_scoreboard_file, persist_journey_delta, record_score_file,
     remove_persisted_file,
 };
-pub use predict::{Band, Prediction, PredictionGrade, grade_prediction, pose_prediction};
+pub use predict::{
+    Band, Prediction, PredictionCurveError, PredictionCurveGrade, PredictionCurveSample,
+    PredictionGrade, grade_prediction, grade_prediction_curve, pose_prediction,
+    prediction_rate_window,
+};
 pub use quiz::{ICONIC, QuizChoice, QuizRound, build_round, build_round_pool, build_round_sized};
 pub use radio::{STATIONS, Station, brief_for, length_for, station};
 pub use raster::Raster;
