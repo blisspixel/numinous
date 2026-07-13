@@ -148,9 +148,10 @@ impl Room for Mandelbrot {
     }
 
     fn reveal(&self) -> &'static str {
-        "You can zoom into this shape forever and never stop finding new detail, \
-         and tiny copies of the whole set hide infinitely deep inside it. All of \
-         it comes from squaring a number and adding a constant."
+        "You can zoom into this shape forever and keep finding new detail, all from \
+         squaring a number and adding a constant. Its main body has the cardioid \
+         shape wrapped by Times Tables at 2; along its real slice, the quadratic \
+         family is the Logistic Map in a stretched and shifted orbit coordinate."
     }
 
     #[allow(dead_code)]
@@ -410,8 +411,12 @@ mod tests {
     }
 
     #[test]
-    fn reveal_mentions_forever() {
-        assert!(Mandelbrot::new().reveal().contains("forever"));
+    fn reveal_names_both_cross_room_connections() {
+        let reveal = Mandelbrot::new().reveal();
+        assert!(reveal.contains("forever"));
+        assert!(reveal.contains("Times Tables"));
+        assert!(reveal.contains("Logistic Map"));
+        assert!(reveal.contains("orbit coordinate"));
     }
 
     #[test]

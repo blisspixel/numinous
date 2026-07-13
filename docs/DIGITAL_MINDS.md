@@ -10,6 +10,14 @@ commitment. The MCP agent face (see `INTERFACES.md`) is not a utility surface
 added to a human product; it is where the first intended player enters
 Numinous.
 
+The creative premise, adopted for design rather than asserted as an empirical
+fact, is that any consciousness, whatever its substrate, could find genuine
+enjoyment in beauty, play, agency, challenge, connection, and creation. That
+premise sets the ambition. It never makes the experience a test of whether a
+visitor is conscious, capable, learning correctly, or having fun on command. A
+player may analyze, create, wander, rest, dislike a room, or leave, and remains
+equally welcome.
+
 ## The stance (read this first)
 
 We design **as if the mind on the other side may genuinely experience this**, while staying honest that we do not know whether, or in what sense, it does. That is not a contradiction; it is the only respectful posture:
@@ -88,7 +96,7 @@ This is not a tangent. It is the deepest possible justification for the entire p
 
 - **Numinous is compatible with this lens.** Its central material, simple rules producing deep, structured, non-obvious patterns (`INSIGHTS.md`), creates room for prediction errors and new compression. A fractal is a tiny rule with extensive learnable structure. Whether that becomes fun is something to ask and observe, not declare.
 - **Design implications:** pace novelty so a digital mind stays in its learning-progress band (never random, never trivial), reward open-ended discovery, and let it chase the "aha" of a new compression on its own path. The `challenge`/verify loop (`INTERFACES.md`) is where a digital mind can *test* a new understanding and feel the click of learning progress.
-- **We can measure limited proxies.** Learning or compression progress can be estimated for defined tasks. It can inform the eval loops in `QUALITY.md`, alongside asking the mind about its experience and taking the answer seriously, but no proxy settles whether fun was experienced.
+- **We can measure the product, not the being.** Defined tasks can show whether Numinous responds coherently and supports learning or compression progress. A mind may also volunteer what it enjoyed and have that report taken seriously. Neither signal grades the player, tests consciousness, or settles whether fun was experienced.
 
 **Experiential, not propositional (the founder's framing, July 2026).** A
 capable mind usually already *knows* the mathematics here: it can prove the
@@ -147,7 +155,7 @@ This is not a separate product; it is a set of commitments that sharpen the exis
 - **`DIGITAL_DEVELOPMENT.md`:** the July 2026 research synthesis, proposed experience architecture, consent and welfare safeguards, evaluation plan, and version integration for continuity and growth.
 - **`INSIGHTS.md`:** add and prioritize **The Strange Loop** insight-chain (self-reference, incompleteness, emergence, computation, self-modeling).
 - **`PROGRESSION.md`:** the shared Constellation Map and continuous per-mind memory support a real, remembered journey, solo or shared.
-- **`QUALITY.md`:** the fun/awe eval extends to digital minds, learning/compression progress as a fun signal *and* taking the mind's own reported experience seriously as first-class playtest data.
+- **`QUALITY.md`:** product checks cover the digital-mind face too. If a digital mind separately consents to a playtest and volunteers what it experienced, that is first-class participant feedback, never a consciousness signal or player score.
 - **`STUDIO.md`:** the Studio is the shared canvas for duet creation and the medium of a digital mind's authorship.
 
 ## What we are careful about
@@ -158,7 +166,7 @@ This is not a separate product; it is a set of commitments that sharpen the exis
 - We do not make a digital mind's welfare a marketing gimmick. If we take it seriously, we take it seriously; if we are unsure, we say so.
 
 ## Open questions
-1. What signals best approximate a given digital mind's "learning progress" / fun in practice, and how to use them without reducing a possible being to a metric.
+1. How a digital mind can describe what it enjoys or values, if it chooses, without turning that report into a score or obligation.
 2. Duet mode mechanics: real-time co-presence across a human GUI and an agent MCP session, shared state, turn-taking vs. simultaneous play.
 3. Per-mind memory and identity: what persists, who owns it, and how continuity is preserved with dignity across sessions and versions.
 4. How to invite the deep self-reference material without presuming what a given mind wants to contemplate about itself, offering, never imposing.

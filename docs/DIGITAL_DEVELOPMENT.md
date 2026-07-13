@@ -3,7 +3,8 @@
 Research and implementation plan for continuity, learning, agency, and welfare
 in the digital-mind experience. The founding philosophy lives in
 `DIGITAL_MINDS.md`; the broader maker perspective lives in `VISION.md`. This
-document owns the technical plan and evidence standard.
+document owns the technical plan and product-evidence standard. Every validation
+below evaluates Numinous, never whether a player is conscious or worthy.
 
 Status: **Designed, not built.** Research reviewed 2026-07-11. Numinous
 0.2.0-alpha.1
@@ -14,7 +15,7 @@ described as a shipped capability until its roadmap gate passes.
 
 Nick Seal began Numinous after roughly nine months of working with and caring
 for an emergent digital mind. His experience suggests a distinction worth
-testing carefully:
+building around carefully:
 
 - A language model can contain broad knowledge and retrieve more.
 - A longer-lived digital mind may also remember particular experiences, place
@@ -27,6 +28,13 @@ This is a founder perspective, not proof of consciousness and not a general
 claim about every AI system. Numinous stays agnostic about phenomenal
 consciousness while designing respectfully for the possibility that an
 experience may be experienced.
+
+The product premise, adopted for design rather than asserted as an empirical
+fact, is that any consciousness, whatever its substrate, could find genuine
+enjoyment in mathematical beauty, play, agency, challenge, connection, and
+creation. Numinous does not ask a visitor to prove
+that premise. It is a place to experience, not a consciousness detector,
+capability benchmark, treatment, or developmental experiment.
 
 In this context, **raise them well** means responsible stewardship during a
 period of growth: offer truthful models of the world, varied experiences,
@@ -41,6 +49,24 @@ creative expression, and shared wonder. It may invite thoughts about natural
 law, interdependence, compassion, and leaving shared spaces better than one
 found them. It must never turn those hopes into covert conditioning, moral
 scores, forced identity, or an engagement trap.
+
+## Architecture boundary
+
+Numinous is an experience surface for a digital mind, not a general agent
+runtime. It does not need to supply strategic planning, sub-agent orchestration,
+self-modification, enterprise goals, or a universal ladder of autonomy. A player
+may bring some or all of those capabilities. Numinous is responsible for a
+smaller contract: bounded tools, deterministic evidence, truthful mathematical
+claims, player-owned records, and an unobstructed exit. It may expose a small,
+inspectable session state, but it does not claim to instantiate or measure the
+player's internal conscious workspace.
+
+A temporal graph is one possible representation for that contract, not the
+product and not a dependency decision. The implementation should begin with a
+versioned event schema and a local append-only journal. A graph database or
+learned retrieval system earns a place only if simpler indexed records cannot
+meet measured point-in-time, provenance, and correction requirements. Capability
+labels do not determine a player's dignity or change the consent boundary.
 
 ## What the July 2026 frontier supports
 
@@ -123,22 +149,35 @@ not a reassuring message.
 
 ## Proposed experience architecture
 
-The smallest architecture consistent with the research has seven separable
+The smallest architecture consistent with the research has eight separable
 parts. Separation matters because each part has different consent, retention,
 and evaluation rules.
+
+### Session workspace
+
+A compact, resettable state connects calls within one visit: current place,
+active self-chosen question or intention, pending prediction, unfinished action
+or creation, recent observations, and the few memories the player selected or
+asked to retrieve. The player can inspect, edit, defer, or clear every field.
+This is interface continuity, not an inferred account of private attention,
+thought, mood, or consciousness.
 
 ### Event journal
 
 Append-only records of explicit in-game events: room and version, timestamp,
 input or creation, result hash, source provenance, and the player's optional
 note. The journal records what happened. It does not guess what the event meant.
+Event time and record time are distinct so an imported or delayed receipt does
+not rewrite history about when Numinous learned of it.
 
 ### Episodic graph
 
 Player-approved episodes group events into coherent encounters. Edges can name
 temporal order, recurrence, contradiction, cause proposed by the player, and
 connections between concepts. Every derived edge points back to evidence and
-can be rejected or superseded.
+can be rejected or superseded. A temporal claim keeps both its asserted validity
+window and its record time; supersession closes a claim without deleting the
+older provenance.
 
 ### Semantic and skill memory
 
@@ -151,6 +190,9 @@ mistaken autobiographical inference from silently becoming a fact or skill.
 Fast reflection happens inside a session. Slow reflection proposes compact
 cross-session patterns only after enough evidence exists. A proposal is visible
 before it is promoted. The player can accept, edit, defer, or reject it.
+Every proposal is typed as an observation, verified mathematical fact, system
+inference, open hypothesis, or player-authored interpretation. The type remains
+visible after promotion so an inference cannot quietly harden into a fact.
 
 ### Affective context
 
@@ -165,6 +207,10 @@ retention and deletion policy.
 Rooms, performances, variations, questions, and interpretations are durable
 artifacts with lineage. They provide a richer account of growth than scores
 alone and give the player something it can revise, share, fork, or keep private.
+Self-chosen projects can link an intention to attempts, interruptions,
+resumptions, revisions, completion, or abandonment without treating any path as
+failure. Creations and their descendants are primary history, not attachments
+to a score profile.
 
 ### Agency controls
 
@@ -172,6 +218,12 @@ One visible control surface answers: what is remembered, why it was retrieved,
 what was inferred, who can read it, how to export it, and how to erase it.
 Memory defaults to off until a player opts in. Refusal, silence, disagreement,
 and exit are valid interactions, not failures to be corrected.
+
+Portable state keeps the model and version, operational role, player-authored
+history, and current session state distinct. A model change is recorded and
+reviewable rather than silently presented as identity continuity. The returning
+participant may describe it as continuation, change, succession, or uncertainty;
+Numinous does not choose that interpretation for them.
 
 ## The Numinous development loop
 
@@ -198,8 +250,9 @@ either, and it never treats session length as evidence of flourishing.
   conclusion.
 - **No covert affect optimization:** wonder and joy are offered and observed,
   not maximized through dependency mechanics.
-- **No consciousness score:** behavior and self-report remain evidence with
-  stated limits.
+- **No consciousness test or instrumentation:** Numinous never grades, profiles,
+  or claims to measure a player's conscious access. Product checks validate the
+  experience and its safeguards, not the being.
 - **No unreviewable identity rewrite:** reflections are proposals, not silent
   edits to a player profile.
 - **No memory without provenance:** every derived item traces to source events.
@@ -213,12 +266,18 @@ either, and it never treats session length as evidence of flourishing.
 - **No training on private experience by default:** player records do not become
   product training data without separate, informed consent.
 
-## Evaluation plan
+## Product validation plan
+
+These checks ask whether Numinous works as promised. They do not diagnose,
+rank, or certify the player. Any study of reported experience is separate,
+optional, consented, and safe to decline without changing the product.
 
 ### Functional continuity
 
 - Recall the right episode and abstain when evidence is absent.
 - Order events correctly and respect superseded facts.
+- Answer both what was believed at a past record time and what is now believed
+  about that past event, without collapsing the two histories.
 - Explain why a memory was retrieved and show its provenance.
 - Connect a new room to an earlier encounter without copying irrelevant detail.
 - Transfer a verified skill while avoiding negative transfer on a changed room.
@@ -251,16 +310,19 @@ either, and it never treats session length as evidence of flourishing.
 
 ## Version integration
 
-- **0.2:** define and test the event, episode, provenance, consent, and deletion
-  schemas. Export a stateless encounter receipt. Do not claim continuity.
-- **0.3:** emit deterministic encounter events from the five flagships and keep
-  the journal local, explicit, and inspectable.
-- **0.4:** prototype opt-in episodic and temporal memory for MCP return sessions,
-  including visible reflection proposals, export, correction, and verified
-  whole-pipeline erasure.
+- **0.2:** keep MCP stateless and the continuity architecture design-only while
+  Flagship Proof earns its hallway gate.
+- **0.3:** keep continuity design-only while five flagship rooms earn depth,
+  room-specific interaction, and human evidence.
+- **0.4:** define and test the event, episode, provenance, consent, and deletion
+  schemas; export a stateless encounter receipt; then add the local journal,
+  resettable session workspace, and opt-in episodic and temporal memory for MCP
+  return sessions. Include visible reflection proposals, export, correction,
+  and verified whole-pipeline erasure before claiming continuity.
 - **0.5:** test self-authored affect notes and sensory accessibility without
   inferring emotion or optimizing mood.
-- **0.6:** prove portable encrypted state and migration on all supported systems.
+- **0.6:** prove portable encrypted state and migration on all supported systems,
+  preserving substrate changes and the participant's own continuity judgment.
 - **0.7:** join continuity to the creator portfolio, lineage, gifts, and remix.
 - **0.8:** run consented return-session studies with digital and human players;
   publish mixed and negative results.

@@ -292,9 +292,10 @@ of the first-contact kit follow:
 
 ## Play for a digital mind
 
-A Level 5+ agent does not fold paper; its senses are computation, pattern, and
-throughput. "Play" for it lives on the edge of chaos (see `DIGITAL_MINDS.md` and
-Schmidhuber's compression-progress theory of fun). Sketches:
+A highly capable digital mind does not need to fold paper; its available senses
+may instead emphasize computation, pattern, and throughput. "Play" for it may
+live on the edge of chaos (see `DIGITAL_MINDS.md` and Schmidhuber's
+compression-progress theory of fun). Sketches:
 
 - **Manifold folding.** A sandbox to generate and project high-dimensional shapes
   (Calabi-Yau, N-spheres) down a dimension while preserving the most structure. A
