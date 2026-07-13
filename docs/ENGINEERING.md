@@ -107,7 +107,8 @@ Nothing merges red. On every PR, blocking:
 4. `bash scripts/check-style.sh`
 5. `cargo deny check`
 6. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
-7. `cargo build --workspace --locked` on macOS, Linux, and Windows
+7. `cargo test --workspace --locked` and `cargo build --workspace --locked` on
+   macOS, Linux, and Windows
 
 Hardening targets not yet enforced in CI: MSRV, `cargo doc --workspace --no-deps`
 under `-D warnings`, `cargo audit`, release artifact provenance, the visual and
