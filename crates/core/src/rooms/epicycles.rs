@@ -9,7 +9,7 @@
 use std::f64::consts::TAU;
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::sound::SoundSpec;
 use crate::surface::{MAX_DIM, Surface};
 
@@ -309,9 +309,8 @@ impl Room for Epicycles {
             };
 
             // Mini traced path for this perturbed phase (the "chain" response).
-            let steps = (trace.tau * 180.0) as usize; // shorter trace for mini
             let mut previous: Option<(i32, i32)> = None;
-            for i in 0..=steps {
+            for i in 0..=180 {
                 let (x, y) = tip(i as f64 / 180.0);
                 let point = to_screen(x, y);
                 if let Some((px0, py0)) = previous {
@@ -324,6 +323,22 @@ impl Room for Epicycles {
             let (sx, sy) = to_screen(fx, fy);
             canvas.plot(sx, sy, '#');
         }
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let (x, y) = inputs.iter().rev().find_map(|input| match *input {
+            RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite() => {
+                Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
+            }
+            _ => None,
+        })?;
+        let local_phase = (phase_for(t) + phase_offset(self.seed) + (x + y) * 0.1).rem_euclid(1.0);
+        Some(format!(
+            "MINIATURE CHAIN AT {:.0}% {:.0}%   PEN PHASE {:.0}%",
+            x * 100.0,
+            y * 100.0,
+            local_phase * 100.0
+        ))
     }
 
     fn sound(&self, t: f64) -> SoundSpec {
@@ -340,7 +355,7 @@ mod tests {
         safe_aspect, target, tip,
     };
     use crate::canvas::Canvas;
-    use crate::room::{MAX_ROOM_POKES, Room};
+    use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
     use crate::surface::{MAX_DIM, Surface};
 
     fn assert_close(actual: f64, expected: f64) {
@@ -454,6 +469,26 @@ mod tests {
         let mut cp = Canvas::new(40, 30);
         r0.render_poked(&mut cp, 0.5, &[(0.5, 0.5)]);
         assert!(cp.ink_count() >= a.ink_count());
+    }
+
+    #[test]
+    fn entry_click_draws_a_complete_miniature_and_names_it() {
+        let room = Epicycles::new();
+        let mut base = Canvas::new(80, 40);
+        let mut poked = Canvas::new(80, 40);
+        room.render(&mut base, 0.0);
+        room.render_poked(&mut poked, 0.0, &[(0.53, 0.47)]);
+        let input = [RoomInput::PointerDown {
+            x: 0.53,
+            y: 0.47,
+            t: 0.0,
+        }];
+
+        assert!(poked.ink_count() > base.ink_count());
+        assert_eq!(
+            room.status_input(0.0, &input).as_deref(),
+            Some("MINIATURE CHAIN AT 53% 47%   PEN PHASE 10%")
+        );
     }
 
     #[test]

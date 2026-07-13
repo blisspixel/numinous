@@ -17,7 +17,7 @@ use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::{Key, NamedKey};
-use winit::window::{Window, WindowId};
+use winit::window::{Icon, Window, WindowId};
 
 mod controls;
 mod feedback;
@@ -37,7 +37,43 @@ use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_tota
 
 /// Near-black background (matches the `Raster` stage), packed `0x00RRGGBB`.
 const BACKGROUND: u32 = 0x000A_0B0F;
-const RASTER_BACKGROUND_RGB: [u8; 3] = [0x0A, 0x0B, 0x0F];
+
+fn mandelbrot_gpu_view(
+    t: f64,
+    variation: u64,
+    width: u32,
+    height: u32,
+    inputs: &[numinous_core::RoomInput],
+) -> (f32, f32, f32) {
+    let (center_x, center_y, horizontal_half_span) =
+        numinous_core::rooms::mandelbrot::selected_view_input(
+            inputs,
+            width as usize,
+            height as usize,
+            variation,
+            t,
+        );
+    let vertical_span = if width == 0 {
+        0.0
+    } else {
+        2.0 * horizontal_half_span * f64::from(height) / f64::from(width)
+    };
+    (center_x as f32, center_y as f32, vertical_span as f32)
+}
+
+fn julia_gpu_c(t: f64, variation: u64, pokes: &[(f64, f64)]) -> (f32, f32) {
+    let (cx, cy) = numinous_core::rooms::julia::selected_c(t, variation, pokes);
+    (cx as f32, cy as f32)
+}
+
+fn julia_gpu_vertical_span(width: u32, height: u32) -> f32 {
+    if width == 0 {
+        0.0
+    } else {
+        3.2 * height as f32 / width as f32
+    }
+}
+
 /// How far the phase advances each frame.
 const T_STEP: f64 = 0.004;
 /// In The Show, how far the phase advances each frame (slower, hypnotic).
@@ -92,6 +128,10 @@ struct App {
     quiz_recent: Vec<&'static str>,
     /// Munch, when playing in the window.
     munch: Option<MunchPlay>,
+    /// The next standalone full-deck board to consider.
+    munch_next_round: u64,
+    /// The previous standalone rule, so consecutive boards change families.
+    munch_last_rule: Option<numinous_core::munchers::Rule>,
     /// Nim, when playing in the window.
     nim: Option<NimPlay>,
     /// The Gauntlet, when running in the window.
@@ -111,7 +151,7 @@ struct App {
     inputs: Vec<numinous_core::RoomInput>,
     /// A press began on a listening room: drags keep poking.
     poking: bool,
-    /// Per-visit variation seed for rooms that support replayable novelty (R reseeds).
+    /// Per-visit variation seed for rooms that support replayable novelty.
     variation: u64,
     /// The radio: Some(index into STATIONS) when a cached station plays.
     radio: Option<usize>,
@@ -127,11 +167,14 @@ struct App {
     radio_until: Option<std::time::Instant>,
     /// Where the journey persists (the CLI's file; a scratch file in tests).
     journey_file: std::path::PathBuf,
+    /// Where scores persist (the shared table; a scratch file in tests).
+    scores_file: std::path::PathBuf,
 }
 
 impl App {
     fn new() -> Self {
         let journey_file = journey_path();
+        let scores_file = scores_path();
         let journey = numinous_core::load_journey_file(&journey_file);
         Self {
             window: None,
@@ -150,7 +193,7 @@ impl App {
             live_scale: live_render::LiveScale::new(),
             era: numinous_core::Era::default(),
             muted: false,
-            volume: 0.7,
+            volume: 0.45,
             show_help: true,
             start_fullscreen: false,
             frame: 0,
@@ -162,6 +205,8 @@ impl App {
             quiz: None,
             quiz_recent: Vec::new(),
             munch: None,
+            munch_next_round: numinous_core::FULL_DECK_ROUND,
+            munch_last_rule: None,
             nim: None,
             gauntlet: None,
             arcade: None,
@@ -179,6 +224,7 @@ impl App {
             radio_index: 0,
             radio_until: None,
             journey_file,
+            scores_file,
         }
     }
 
@@ -236,7 +282,7 @@ impl App {
 
     /// Post a score to the shared table (the CLI's file and rules).
     fn post_score(&self, key: &str, score: i64) -> bool {
-        numinous_core::record_score_file(&scores_path(), key, score).unwrap_or(false)
+        numinous_core::record_score_file(&self.scores_file, key, score).unwrap_or(false)
     }
 
     /// Deal a Munch board (today's).
@@ -246,9 +292,13 @@ impl App {
         let seed = play::daily_seed();
         self.journey.play();
         self.journey_changed();
+        let (round, board) = play::deal_munch(seed, self.munch_next_round, self.munch_last_rule);
+        self.munch_next_round = round.saturating_add(1);
+        self.munch_last_rule = Some(board.rule);
         self.munch = Some(MunchPlay {
-            board: numinous_core::build_board(seed, 0),
+            board,
             seed,
+            round,
             cursor: 0,
             bites: std::collections::BTreeSet::new(),
             graded: None,
@@ -266,9 +316,9 @@ impl App {
         let bites: Vec<usize> = play.bites.iter().copied().collect();
         let outcome = numinous_core::grade_munch(&play.board, &bites);
         let clean = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
-        let (seed, score) = (play.seed, outcome.score);
+        let (seed, round, score) = (play.seed, play.round, outcome.score);
         play.graded = Some(outcome);
-        self.post_score(&format!("munch seed:{seed} board:0"), score);
+        self.post_score(&format!("munch seed:{seed} board:{round}"), score);
         if clean {
             self.journey.win();
         }
@@ -396,6 +446,7 @@ impl App {
             munch: MunchPlay {
                 board: numinous_core::build_board(seed, 0),
                 seed,
+                round: 0,
                 cursor: 0,
                 bites: std::collections::BTreeSet::new(),
                 graded: None,
@@ -559,8 +610,14 @@ impl App {
             .as_ref()
             .is_some_and(|play| play.graded.is_some());
         if graded {
-            self.munch = None;
-            self.update_audio();
+            match key {
+                Key::Named(NamedKey::Escape) => {
+                    self.munch = None;
+                    self.update_audio();
+                }
+                Key::Named(NamedKey::Enter | NamedKey::Space) => self.munch_start(),
+                _ => {}
+            }
             return;
         }
         match key {
@@ -883,32 +940,37 @@ impl App {
     /// GPU-render the current room if it has a real-time GPU path (the deep
     /// fractal zooms), returning the RGBA frame; `None` means draw on the CPU.
     fn gpu_frame(&mut self, width: usize, height: usize) -> Option<Vec<u8>> {
-        use std::f64::consts::TAU;
         let id = self.rooms[self.current].meta().id;
-        let gpu = self.gpu.as_mut()?;
         let (w, h) = (width as u32, height as u32);
+        let mandelbrot_view = (id == "mandelbrot")
+            .then(|| mandelbrot_gpu_view(self.t, self.variation, w, h, &self.inputs));
+        let julia_c = (id == "julia").then(|| julia_gpu_c(self.t, self.variation, &self.pokes));
+        let gpu = self.gpu.as_mut()?;
         match id {
             "mandelbrot" => {
-                // Zoom from the whole set deep into the seahorse valley.
-                let zoom = 3.0 * 0.001_f64.powf(self.t) as f32;
+                let (center_x, center_y, scale) = mandelbrot_view?;
                 Some(gpu.render(
                     w,
                     h,
-                    -0.745,
-                    0.113,
-                    zoom,
-                    400,
+                    center_x,
+                    center_y,
+                    scale,
+                    numinous_core::rooms::FRACTAL_MAX_ITER,
                     numinous_gpu::Fractal::Mandelbrot,
                 ))
             }
             "julia" => {
-                // c walks a circle, morphing the set in real time.
-                let theta = TAU * self.t;
-                let c = numinous_gpu::Fractal::Julia {
-                    cx: (0.7885 * theta.cos()) as f32,
-                    cy: (0.7885 * theta.sin()) as f32,
-                };
-                Some(gpu.render(w, h, 0.0, 0.0, 3.2, 300, c))
+                let (cx, cy) = julia_c?;
+                let c = numinous_gpu::Fractal::Julia { cx, cy };
+                Some(gpu.render(
+                    w,
+                    h,
+                    0.0,
+                    0.0,
+                    julia_gpu_vertical_span(w, h),
+                    numinous_core::rooms::FRACTAL_MAX_ITER,
+                    c,
+                ))
             }
             _ => None,
         }
@@ -1030,6 +1092,16 @@ impl App {
         self.update_audio();
     }
 
+    fn reset_current_room(&mut self) {
+        room_input::reset_room_view(
+            &mut self.t,
+            &mut self.room_card,
+            &mut self.pokes,
+            &mut self.inputs,
+        );
+        self.update_audio();
+    }
+
     fn draw_studio(&self, raster: &mut Raster, width: usize, height: usize) {
         self.studio_panel.draw(raster, width, height, self.t);
     }
@@ -1067,26 +1139,20 @@ impl App {
         let (width, height) = (w.get() as usize, h.get() as usize);
 
         // Render the frame fully before borrowing the window surface. Fractal
-        // rooms take the GPU path when one exists (full-bleed, no HUD); all else
-        // draws on the CPU raster.
+        // rooms take the GPU path when one exists; their frames rejoin the same
+        // interface path as CPU rooms before presentation.
         if let Some(raster) = self.modal_frame(width, height) {
             self.present_raster(raster, width, height);
             return;
         }
-        // A touched frame always answers the hand: the GPU pipeline renders
-        // from phase alone, so the moment a gesture trail exists the fractal
-        // rooms fall back to the CPU poked path. The verb on screen promises
-        // a response; swallowing the click on GPU machines would break it,
-        // and the postcard (which renders the trail) would show a frame the
-        // player never saw. R or a room switch clears the trail and returns
-        // the deep-zoom GPU view.
         if !self.studio
-            && self.inputs.is_empty()
-            && let Some(mut rgba) = self.gpu_frame(width, height)
+            && let Some(rgba) = self.gpu_frame(width, height)
+            && let Some(mut raster) =
+                Raster::from_rgba(width, height, self.rooms[self.current].meta().accent, &rgba)
         {
-            self.draw_banner_on_rgba(&mut rgba, width, height);
-            self.era.apply(&mut rgba, width, height);
-            self.blit(&rgba, width, height, width, height);
+            let room = &self.rooms[self.current];
+            self.draw_room_interface(&mut raster, room.as_ref(), width, height);
+            self.present_raster(raster, width, height);
             return;
         }
         let room = &self.rooms[self.current];
@@ -1112,9 +1178,20 @@ impl App {
             }
         };
 
+        self.draw_room_interface(&mut raster, room.as_ref(), width, height);
+        self.present_raster(raster, width, height);
+    }
+
+    fn draw_room_interface(
+        &self,
+        raster: &mut Raster,
+        room: &dyn Room,
+        width: usize,
+        height: usize,
+    ) {
         hud::draw_room_chrome(
-            &mut raster,
-            room.as_ref(),
+            raster,
+            room,
             &hud::RoomChrome {
                 t: self.t,
                 room_card: self.room_card,
@@ -1127,18 +1204,19 @@ impl App {
                 muted: self.muted,
                 level: self.journey.level(),
             },
+            &self.inputs,
             width,
             height,
         );
 
         if self.show_help && !self.the_show {
-            overlays::draw_help_overlay(&mut raster, width, height);
+            overlays::draw_help_overlay(raster, width, height);
         }
 
         if self.show_journey && !self.the_show {
-            let board = numinous_core::load_scoreboard_file(&scores_path());
+            let board = numinous_core::load_scoreboard_file(&self.scores_file);
             overlays::draw_journey_overlay(
-                &mut raster,
+                raster,
                 &self.journey,
                 &board,
                 self.rooms.len(),
@@ -1146,7 +1224,6 @@ impl App {
                 height,
             );
         }
-        self.present_raster(raster, width, height);
     }
 
     fn present_raster(&mut self, mut raster: Raster, width: usize, height: usize) {
@@ -1160,20 +1237,6 @@ impl App {
     fn draw_banner_on_raster(&self, raster: &mut Raster, width: usize, height: usize) {
         if let Some(banner) = &self.banner {
             overlays::draw_banner(raster, banner.lines(), width, height);
-        }
-    }
-
-    fn draw_banner_on_rgba(&self, rgba: &mut [u8], width: usize, height: usize) {
-        if self.banner.is_none() || rgba.len() != width.saturating_mul(height).saturating_mul(4) {
-            return;
-        }
-        let mut overlay = Raster::with_accent(width, height, [255, 255, 255]);
-        self.draw_banner_on_raster(&mut overlay, width, height);
-        let overlay_rgba = overlay.to_rgba();
-        for (dst, src) in rgba.chunks_exact_mut(4).zip(overlay_rgba.chunks_exact(4)) {
-            if src[0..3] != RASTER_BACKGROUND_RGB {
-                dst.copy_from_slice(src);
-            }
         }
     }
 
@@ -1215,6 +1278,7 @@ impl ApplicationHandler for App {
         let attributes = Window::default_attributes()
             .with_title(self.title())
             .with_inner_size(winit::dpi::LogicalSize::new(900.0, 900.0))
+            .with_window_icon(app_icon())
             .with_maximized(true);
         let Ok(window) = event_loop.create_window(attributes) else {
             return;
@@ -1416,17 +1480,10 @@ impl ApplicationHandler for App {
                                 window.set_title(&self.title());
                             }
                         }
-                        // R reloads the sweep and re-deals variation seed for replayable rooms.
+                        // R returns this visit to its initial state. Moving to a
+                        // different room still deals the next variation.
                         Key::Character(c) if c.as_str() == "r" => {
-                            self.rooms =
-                                room_input::redeal_rooms(&mut self.variation, &mut self.current);
-                            room_input::reset_room_view(
-                                &mut self.t,
-                                &mut self.room_card,
-                                &mut self.pokes,
-                                &mut self.inputs,
-                            );
-                            self.update_audio();
+                            self.reset_current_room();
                         }
                         // F cycles fullscreen modes for full screen view + options (windowed, borderless, exclusive).
                         // Borderless for compat; exclusive uses primary monitor's first video mode for "true" fullscreen.
@@ -1753,6 +1810,25 @@ fn journey_path() -> std::path::PathBuf {
     std::path::PathBuf::from(home).join(".numinous-journey")
 }
 
+fn app_icon() -> Option<Icon> {
+    let decoder = png::Decoder::new(std::io::Cursor::new(include_bytes!(
+        "../../../assets/logo.png"
+    )));
+    let mut reader = decoder.read_info().ok()?;
+    let mut pixels = vec![0; reader.output_buffer_size()];
+    let info = reader.next_frame(&mut pixels).ok()?;
+    let bytes = &pixels[..info.buffer_size()];
+    let rgba = match info.color_type {
+        png::ColorType::Rgba => bytes.to_vec(),
+        png::ColorType::Rgb => bytes
+            .chunks_exact(3)
+            .flat_map(|rgb| [rgb[0], rgb[1], rgb[2], 255])
+            .collect(),
+        _ => return None,
+    };
+    Icon::from_rgba(rgba, info.width, info.height).ok()
+}
+
 /// The score table, read for the journey overlay's trophy evidence.
 fn scores_path() -> std::path::PathBuf {
     if let Ok(path) = std::env::var("NUMINOUS_SCORES") {
@@ -1808,7 +1884,9 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{App, RASTER_BACKGROUND_RGB, radio_cache};
+    use super::{
+        App, app_icon, julia_gpu_c, julia_gpu_vertical_span, mandelbrot_gpu_view, radio_cache,
+    };
     use std::time::{Duration, UNIX_EPOCH};
 
     /// An app pointed at scratch files, with no window, player, or GPU.
@@ -1817,6 +1895,9 @@ mod tests {
         app.journey = numinous_core::Journey::default();
         app.journey_saved = app.journey.clone();
         app.journey_file = std::env::temp_dir().join(name);
+        app.scores_file = app.journey_file.with_extension("scores");
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
         app.level_seen = 1;
         app
     }
@@ -1920,6 +2001,121 @@ mod tests {
     }
 
     #[test]
+    fn room_reset_preserves_visit_and_clears_interaction() {
+        let mut app = headless("numinous_app_test_room_reset.txt");
+        app.variation = 17;
+        app.t = 0.8;
+        app.pokes.push((0.2, 0.7));
+        app.inputs.push(numinous_core::RoomInput::PointerDown {
+            x: 0.2,
+            y: 0.7,
+            t: 0.8,
+        });
+        let room_id = app.rooms[app.current].meta().id;
+
+        app.reset_current_room();
+
+        assert_eq!(app.rooms[app.current].meta().id, room_id);
+        assert_eq!(app.variation, 17);
+        assert_eq!(app.t, 0.0);
+        assert!(app.pokes.is_empty());
+        assert!(app.inputs.is_empty());
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn embedded_app_icon_decodes() {
+        assert!(app_icon().is_some());
+    }
+
+    #[test]
+    fn accelerated_mandelbrot_uses_the_core_camera_and_shared_chrome() {
+        let phase = 0.63;
+        let variation = 17;
+        let (center_x, center_y, half_span) =
+            numinous_core::rooms::mandelbrot::automatic_view(phase, variation);
+        let gpu = mandelbrot_gpu_view(phase, variation, 900, 700, &[]);
+        assert!((f64::from(gpu.0) - center_x).abs() < 1e-6);
+        assert!((f64::from(gpu.1) - center_y).abs() < 1e-6);
+        let expected_vertical_span = 2.0 * half_span * 700.0 / 900.0;
+        assert!((f64::from(gpu.2) - expected_vertical_span).abs() < 1e-6);
+
+        let inputs = [
+            numinous_core::RoomInput::PointerDown {
+                x: 0.5,
+                y: 0.5,
+                t: phase,
+            },
+            numinous_core::RoomInput::PointerDown {
+                x: 0.75,
+                y: 0.25,
+                t: phase + 0.1,
+            },
+        ];
+        let (selected_x, selected_y, selected_half_span) =
+            numinous_core::rooms::mandelbrot::selected_view_input(
+                &inputs, 900, 700, variation, phase,
+            );
+        let selected_gpu = mandelbrot_gpu_view(phase, variation, 900, 700, &inputs);
+        assert!((f64::from(selected_gpu.0) - selected_x).abs() < 1e-6);
+        assert!((f64::from(selected_gpu.1) - selected_y).abs() < 1e-6);
+        assert!(selected_half_span < half_span);
+        assert!(
+            (f64::from(selected_gpu.2) - 2.0 * selected_half_span * 700.0 / 900.0).abs() < 1e-6
+        );
+        assert_eq!(
+            selected_gpu,
+            mandelbrot_gpu_view(0.99, variation, 900, 700, &inputs),
+            "the accelerated camera remains held after the first click"
+        );
+
+        let mut app = headless("numinous_app_test_gpu_chrome.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "mandelbrot")
+            .expect("Mandelbrot room");
+        app.show_help = false;
+        app.room_card = 0;
+        app.t = phase;
+        let source = vec![64u8; 320 * 220 * 4];
+        let mut raster = numinous_core::Raster::from_rgba(
+            320,
+            220,
+            app.rooms[app.current].meta().accent,
+            &source,
+        )
+        .expect("GPU frame import");
+        let before = raster.to_rgba();
+        let room = &app.rooms[app.current];
+        app.draw_room_interface(&mut raster, room.as_ref(), 320, 220);
+        let after = raster.to_rgba();
+        assert_ne!(
+            after, before,
+            "GPU frames must receive title and footer chrome"
+        );
+        assert!(
+            after[(220 - 8) * 320 * 4..]
+                .chunks_exact(4)
+                .any(|pixel| pixel[0..3] != [64, 64, 64]),
+            "the reset footer reaches the accelerated frame"
+        );
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn accelerated_julia_uses_the_core_selected_constant() {
+        let pokes = [(0.2, 0.8), (0.75, 0.25)];
+        let expected = numinous_core::rooms::julia::selected_c(0.4, 13, &pokes);
+        let actual = julia_gpu_c(0.4, 13, &pokes);
+        assert!((f64::from(actual.0) - expected.0).abs() < 1e-6);
+        assert!((f64::from(actual.1) - expected.1).abs() < 1e-6);
+        assert_ne!(actual, julia_gpu_c(0.4, 13, &[]));
+        assert!((julia_gpu_vertical_span(900, 700) - 3.2 * 700.0 / 900.0).abs() < 1e-6);
+        assert_eq!(julia_gpu_vertical_span(0, 700), 0.0);
+    }
+
+    #[test]
     fn playtest_note_writes_current_session_context() {
         let mut app = headless("numinous_app_test_playtest_note.txt");
         app.journey.visit(app.rooms[app.current].meta().id);
@@ -1990,7 +2186,7 @@ mod tests {
     }
 
     #[test]
-    fn banner_overlay_is_visible_on_raster_and_rgba_frames() {
+    fn banner_overlay_is_visible_on_the_shared_raster_path() {
         let mut app = headless("numinous_app_test_banner_overlay.txt");
         app.banner = Some(super::feedback::playtest_note(Ok(
             std::path::PathBuf::from("playtest-note.md"),
@@ -2000,35 +2196,6 @@ mod tests {
         let before_raster = raster.to_rgba();
         app.draw_banner_on_raster(&mut raster, 320, 220);
         assert_ne!(raster.to_rgba(), before_raster);
-
-        let mut rgba = vec![0u8; 320 * 220 * 4];
-        for pixel in rgba.chunks_exact_mut(4) {
-            pixel[0] = RASTER_BACKGROUND_RGB[0];
-            pixel[1] = RASTER_BACKGROUND_RGB[1];
-            pixel[2] = RASTER_BACKGROUND_RGB[2];
-            pixel[3] = 255;
-        }
-        app.draw_banner_on_rgba(&mut rgba, 320, 220);
-        assert!(
-            rgba.chunks_exact(4)
-                .any(|pixel| pixel[0..3] != RASTER_BACKGROUND_RGB),
-            "the banner should alter a raw GPU frame before blit"
-        );
-
-        let mut non_background = vec![42u8; 320 * 220 * 4];
-        for pixel in non_background.chunks_exact_mut(4) {
-            pixel[0] = 32;
-            pixel[1] = 48;
-            pixel[2] = 64;
-            pixel[3] = 255;
-        }
-        app.draw_banner_on_rgba(&mut non_background, 320, 220);
-        assert!(
-            non_background
-                .chunks_exact(4)
-                .any(|pixel| pixel[0..3] == [32, 48, 64]),
-            "transparent banner background must not replace the whole GPU frame"
-        );
         let _ = std::fs::remove_file(&app.journey_file);
     }
 
@@ -2040,9 +2207,9 @@ mod tests {
 
         app.change_volume(0.1);
 
-        assert!((app.volume - 0.8).abs() < f32::EPSILON);
+        assert!((app.volume - 0.55).abs() < f32::EPSILON);
         let banner = app.banner.as_ref().expect("volume banner");
-        assert_eq!(banner.lines()[0], "VOLUME 80%");
+        assert_eq!(banner.lines()[0], "VOLUME 55%");
         assert_eq!(app.radio_track, vec![0.25, -0.25, 0.5, -0.5]);
         let _ = std::fs::remove_file(&app.journey_file);
     }
@@ -2146,6 +2313,11 @@ mod tests {
     fn munch_in_the_window_grades_and_posts() {
         let mut app = headless("numinous_app_test_munch.txt");
         app.munch_start();
+        let first_round = app.munch.as_ref().unwrap().round;
+        assert!(
+            first_round >= 4,
+            "standalone Munch opens the full rule deck"
+        );
         assert_eq!(app.journey.plays, 1, "a dealt board is a play");
         {
             let play = app.munch.as_mut().unwrap();
@@ -2158,7 +2330,10 @@ mod tests {
         assert_eq!(outcome.hits + outcome.bad_bites, 2, "two bites graded");
         app.munch_grade(); // grading twice changes nothing
         assert_eq!(app.journey.plays, 1);
+        let scores = std::fs::read_to_string(&app.scores_file).expect("score persisted");
+        assert!(scores.contains(&format!("board:{first_round}")));
         let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
     }
 
     #[test]
@@ -2173,6 +2348,27 @@ mod tests {
         app.munch_key(&Key::Named(NamedKey::Space));
         assert!(!app.munch.as_ref().unwrap().bites.contains(&1));
         let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn graded_munch_advances_only_on_enter_or_space() {
+        use winit::keyboard::{Key, NamedKey};
+        let mut app = headless("numinous_app_test_munch_next.txt");
+        app.munch_start();
+        let first_round = app.munch.as_ref().unwrap().round;
+        let first_rule = app.munch.as_ref().unwrap().board.rule;
+        app.munch_grade();
+
+        app.munch_key(&Key::Character("x".into()));
+        assert_eq!(app.munch.as_ref().unwrap().round, first_round);
+        app.munch_key(&Key::Named(NamedKey::Enter));
+
+        let next = app.munch.as_ref().expect("next board remains in Munch");
+        assert!(next.round > first_round);
+        assert!(!super::play::same_rule_family(first_rule, next.board.rule));
+        assert_eq!(app.journey.plays, 2);
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
     }
 
     #[test]

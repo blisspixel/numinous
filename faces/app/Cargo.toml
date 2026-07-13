@@ -1,6 +1,7 @@
 [package]
 name = "numinous-app"
 description = "Numinous windowed app: a real window showing a room, animating in full color."
+build = "build.rs"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -28,6 +29,9 @@ hound = "3"
 symphonia = { version = "0.6", default-features = false, features = ["mp3"] }
 
 [dev-dependencies]
+
+[build-dependencies]
+winresource = "0.1.31"
 
 [lints]
 workspace = true

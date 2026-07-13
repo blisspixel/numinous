@@ -47,13 +47,15 @@ doors' design goals. The point is what we are missing, not what we have.
   true, well-written facts, failures pay out in named mistakes, and the map
   visibly has edges beyond the catalog. The number was never the point, and
   unusually for a game, this one means it."
-- "Munch became bookkeeping after round three": **the rules repeat and are
-  trivially machine-checkable. Rule variety is a depth fix for every mind:**
-  digit sums, powers, one-away-from-prime, composites with exactly three
-  divisors.
+- "Munch became bookkeeping after round three": **the original shallow app
+  loop repeated one opening board.** The standalone game now starts in the full
+  seeded rule deck, advances continuously, and avoids adjacent repeats from the
+  same rule family. Target-density balancing remains a versioned generator
+  follow-up because changing board contents would invalidate comparable scores.
 - "Aliens got real when the base changed. More of that, earlier."
-- "`listen_room` disappointed everywhere": **the sound layer is one drone
-  note deep. Rooms should sing motifs (Engine A2), not tones.**
+- "`listen_room` disappointed everywhere": **resolved in Engine A2.** Every
+  catalog room now exposes a structured phrase, and automatic room beds use a
+  softer triangle voice at a conservative default level.
 - XP accrues fastest through the least interesting play (idle-looping
   play_room). Not a casino, but the grind path exists; consider capping
   visit sparks per room.
@@ -68,17 +70,18 @@ is absent anymore; everything on this list makes an existing organ stronger.
 
 ## The list, in order
 
-> Progress: items 1 (first serving), 2, 3, 5, and the phosphor half of 8 are
+> Progress: items 1 (first serving), 2, 3, 4, 5, and the phosphor half of 8 are
 > built. Open Problems opened (Goldbach); Engine B v0 shipped (the dial, the
-> fetch pipeline, Y in the app). Motifs (4), citations (7), full Share v1,
+> fetch pipeline, Y in the app). Citations (7), full Share v1,
 > crossfade, the visualizer, gamepad, and the spark cap remain.
 
 
 1. **Juice in the window games**: per-action feedback (flash on eat, shake
    on bad bite, a tick sound per action from the chiptune voices).
 2. **Mouse support**: click a munch cell, click a quiz choice, click stones.
-3. **Munch rule variety** (core, seeded by round depth) and an **aliens base
-   ramp** (their base drifts from 10 earlier).
+3. **Munch rule variety** (core, seeded by round depth, with the standalone app
+   now starting in the full deck and avoiding adjacent rule-family repeats) and
+   an **aliens base ramp** (their base drifts from 10 earlier).
 4. **Engine A2, room motifs**: every room's sound becomes a short chiptune
    phrase in its own key; `listen_room` returns real notation.
 5. **Save-postcard key** in the app (P writes the live room frame to a PNG,

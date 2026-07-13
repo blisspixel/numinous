@@ -129,13 +129,16 @@ prerequisite. This is a hard guardrail for every game we add.
 ## Scored, competitive, human versus AI (built: Munch)
 
 `numinous munch` is Number Munchers reborn: a seeded board of numbers and a
-rule (eat the primes, the multiples of 7, the perfect squares). Right bites
-+10, wrong bites -5, a perfect clear +20. The exact same seed gives the exact
-same boards to a human in a terminal and to an agent over the MCP `munch`
-tool, so totals are directly comparable: the first game here where a kid, a
-retired math teacher, and a digital mind can compete on even terms, and the
-kid might win. `--daily` makes it a shared league. Perfect clears count as
-wins on the journey; every board counts as a play.
+rule drawn from primes, composites, Fibonacci numbers, perfect squares,
+varied multiples, and digit sums. Right bites +10, wrong bites -5, a perfect
+clear +20. The CLI's default seven-board session reaches the complete deck;
+the app and MCP default to its first complete-deck round, while explicit rounds
+0 through 3 retain the gentle ramp. The exact same seed and round give the exact
+same board to a human in a terminal and to an agent over the MCP `munch` tool,
+so totals are directly comparable: the first game here where a kid, a retired
+math teacher, and a digital mind can compete on even terms, and the kid might
+win. `--daily` makes it a shared league. Perfect clears count as wins on the
+journey; every board counts as a play.
 
 ## Principles
 

@@ -12,12 +12,48 @@ pub(crate) struct QuizPlay {
 pub(crate) struct MunchPlay {
     pub(crate) board: numinous_core::Board,
     pub(crate) seed: u64,
+    pub(crate) round: u64,
     /// Cursor cell, 0-based (5 rows of 6).
     pub(crate) cursor: usize,
     /// Cells bitten so far, 0-based.
     pub(crate) bites: BTreeSet<usize>,
     /// After Enter: the graded outcome, shown until a key.
     pub(crate) graded: Option<numinous_core::Munched>,
+}
+
+const MUNCH_RULE_LOOKAHEAD: u64 = 16;
+
+pub(crate) fn same_rule_family(
+    a: numinous_core::munchers::Rule,
+    b: numinous_core::munchers::Rule,
+) -> bool {
+    use numinous_core::munchers::Rule;
+    matches!(
+        (a, b),
+        (Rule::Primes, Rule::Primes)
+            | (Rule::MultiplesOf(_), Rule::MultiplesOf(_))
+            | (Rule::Squares, Rule::Squares)
+            | (Rule::DigitSum(_), Rule::DigitSum(_))
+            | (Rule::Composites, Rule::Composites)
+            | (Rule::Fibonacci, Rule::Fibonacci)
+    )
+}
+
+pub(crate) fn deal_munch(
+    seed: u64,
+    start_round: u64,
+    previous: Option<numinous_core::munchers::Rule>,
+) -> (u64, numinous_core::Board) {
+    let start_round = start_round.max(numinous_core::FULL_DECK_ROUND);
+    for offset in 0..MUNCH_RULE_LOOKAHEAD {
+        let round = start_round.saturating_add(offset);
+        let board = numinous_core::build_board(seed, round);
+        if previous.is_none_or(|rule| !same_rule_family(rule, board.rule)) {
+            return (round, board);
+        }
+    }
+    let board = numinous_core::build_board(seed, start_round);
+    (start_round, board)
 }
 
 /// The in-window Gauntlet: four stages riding the other games' state.
@@ -239,5 +275,18 @@ mod tests {
         assert_eq!(quiz.flash.map(|flash| flash.0), Some(false));
         let answer = quiz.round.answer;
         assert_eq!(super::answer_quiz(&mut quiz, answer), None);
+    }
+
+    #[test]
+    fn munch_sessions_start_with_the_full_deck_and_change_rule_family() {
+        let seed = 20_647;
+        let (first_round, first) = super::deal_munch(seed, 0, None);
+        let (second_round, second) = super::deal_munch(seed, first_round + 1, Some(first.rule));
+        let replay = super::deal_munch(seed, first_round + 1, Some(first.rule));
+
+        assert!(first_round >= numinous_core::FULL_DECK_ROUND);
+        assert!(second_round > first_round);
+        assert!(!super::same_rule_family(first.rule, second.rule));
+        assert_eq!((second_round, second), replay);
     }
 }

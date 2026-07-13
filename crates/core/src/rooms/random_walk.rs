@@ -9,7 +9,7 @@
 use std::f64::consts::TAU;
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
 /// Fixed seed so the crowd stumbles the same way every time.
@@ -18,6 +18,8 @@ const SEED: u64 = 0x0A1C_0000_5EED_0007;
 const WALKERS: usize = 60;
 /// The most steps `t` reaches.
 const MAX_STEPS: usize = 900;
+/// A fresh planted walker shows enough of its trail to make the click legible.
+const PLANTED_MIN_STEPS: usize = 64;
 
 /// One walker's path: unit steps in seeded random directions.
 fn walk(id: u64, steps: usize, variation: u64) -> Vec<(f64, f64)> {
@@ -168,17 +170,16 @@ impl Room for RandomWalk {
             / (MAX_STEPS as f64).sqrt();
         // Each planted walker stumbles from the hand's point, bright.
         for (which, (x, y)) in planted_points(pokes).enumerate() {
-            let path = walk(1000 + which as u64, steps, self.seed);
+            let path = walk(1000 + which as u64, steps.max(PLANTED_MIN_STEPS), self.seed);
             let ox = x * width.saturating_sub(1) as f64;
             let oy = y * height.saturating_sub(1) as f64;
-            for (i, &(px, py)) in path.iter().enumerate() {
-                if i % 5 == 0 {
-                    canvas.plot(
-                        (ox + px * scale) as i32,
-                        (oy + py * scale * aspect) as i32,
-                        '*',
-                    );
+            let mut previous: Option<(i32, i32)> = None;
+            for &(px, py) in &path {
+                let point = ((ox + px * scale) as i32, (oy + py * scale * aspect) as i32);
+                if let Some(from) = previous {
+                    canvas.line(from.0, from.1, point.0, point.1, '*');
                 }
+                previous = Some(point);
             }
             if let Some(&(px, py)) = path.last() {
                 canvas.plot(
@@ -187,7 +188,43 @@ impl Room for RandomWalk {
                     '#',
                 );
             }
+            let radius = (width.min(height) / 40).clamp(4, 12) as i32;
+            let origin = (ox as i32, oy as i32);
+            canvas.line(
+                origin.0 - radius,
+                origin.1,
+                origin.0 + radius,
+                origin.1,
+                '+',
+            );
+            canvas.line(
+                origin.0,
+                origin.1 - radius,
+                origin.0,
+                origin.1 + radius,
+                '+',
+            );
+            canvas.plot(origin.0, origin.1, '*');
         }
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let count = inputs
+            .iter()
+            .filter(|input| {
+                matches!(
+                    input,
+                    RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite()
+                )
+            })
+            .count()
+            .min(MAX_ROOM_POKES);
+        (count > 0).then(|| {
+            format!(
+                "{count} PLANTED WALKER(S)   {} STEPS SHOWN",
+                Self::steps_for(t).max(PLANTED_MIN_STEPS)
+            )
+        })
     }
 
     fn postcard_t(&self) -> f64 {
@@ -199,7 +236,7 @@ impl Room for RandomWalk {
 mod tests {
     use super::{MAX_STEPS, RandomWalk, WALKERS, walk};
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::room::{Room, RoomInput};
 
     fn char_at(canvas: &Canvas, x: usize, y: usize) -> char {
         canvas
@@ -260,6 +297,26 @@ mod tests {
 
         assert_ne!(base.to_text(), poked.to_text());
         assert_eq!(char_at(&poked, 29, 14), '*');
+    }
+
+    #[test]
+    fn entry_click_shows_a_starter_trail_and_status() {
+        let room = RandomWalk::new();
+        let mut base = Canvas::new(80, 40);
+        let mut poked = Canvas::new(80, 40);
+        room.render(&mut base, 0.0);
+        room.render_poked(&mut poked, 0.0, &[(0.5, 0.5)]);
+        let input = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.0,
+        }];
+
+        assert!(poked.ink_count() > base.ink_count());
+        assert_eq!(
+            room.status_input(0.0, &input).as_deref(),
+            Some("1 PLANTED WALKER(S)   64 STEPS SHOWN")
+        );
     }
 
     #[test]

@@ -28,7 +28,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 
 ### 2. Conway's Game of Life  Wow 4 / Build 2
 - **Rule:** A cell lives or dies based only on how many neighbors it has. Four tiny rules.
-- **Toy:** Sow glider-shaped sparks into the soup and watch them evolve under the same four rules. A living, breathing petri dish that plays like an instrument.
+- **Toy:** Launch a five-cell glider into the soup. The existing universe dims so the cells changed by the launch stay bright, and the readout names the generation plus the birth and survival counts while the glider obeys the real rules.
 - **Aha:** "Build something that never dies" / "make a pattern that moves."
 - **Reveal:** *"Those four rules are enough to build a working computer. People have built Tetris, and Conway's Game of Life itself, inside this. It's not a toy. It's a universe."*
 - **Sound:** each birth triggers a note pitched by its position; dense colonies swell the pad. A living generative sequencer.
@@ -143,7 +143,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 
 ### 14. Prime Spirals (Ulam & Sacks)  Wow 4 / Build 2
 - **Rule:** Write the whole numbers in a spiral. Light up the primes.
-- **Toy:** Watch primes, supposedly the most "random" numbers, snap onto unmistakable **diagonal streaks**. Switch to the Sacks spiral for sweeping curved rivers of primes. Zoom out to thousands; the pattern refuses to go away.
+- **Toy:** Watch primes, supposedly the most "random" numbers, snap onto unmistakable **diagonal streaks**. The Ulam field fills the available square; click anywhere to trace both prime-rich diagonals through that point with bright primes and visible guides.
 - **Aha:** "Find the longest prime diagonal."
 - **Reveal:** *"Primes are famously unpredictable, we still can't fully explain how they're spread out; a million-dollar prize (the Riemann Hypothesis) rides on it. And yet, arrange them like this and they line up in streaks nobody has fully explained. There's a pattern in the most patternless thing we know, hiding in plain sight."*
 - **Sound:** scanning the spiral, each prime is a click/note → an irregular-but-not-random rhythm you can *hear* has structure.
@@ -165,8 +165,8 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 - **Sound:** each seed plinks; the golden angle produces an evenly-spaced, satisfying rhythm, off-angles clump into stumbling beats.
 
 ### 17. Cult of Pi: Code Art in an Irrational Channel  Wow 4 / Build 1  [x]
-- **Rule:** Feed exact decimal digits of pi into a low-flicker green field. A finite prefix can approach pi with increasing precision, but no finite frame becomes the entire expansion. Time thins the older field; interaction introduces deterministic errors into the display, not into pi.
-- **Toy:** Watch the procession move from fresh digits to dust. CLICK: BREAK THE SEQUENCE creates a local fault around the hand, while replay seeds preserve or vary the same ritual. The opening digits also become the room's melody.
+- **Rule:** Feed exact decimal digits of pi into a low-flicker green field. A finite prefix can approach pi with increasing precision, but no finite frame becomes the entire expansion. Time thins the older field and introduces deterministic display errors, never errors in pi.
+- **Toy:** The visible channel always begins `PI = 3.141592653589793...`. CLICK: REPAIR THE SIGNAL restores exact digits around the hand while the rest of the finite channel keeps aging. A repaired screen is still only a finite window onto an expansion that never ends. The opening digits also become the room's melody.
 - **Aha:** The machine can keep counting and keep improving without ever finishing the infinite object. The decay belongs to the finite channel that tries to hold it.
 - **Reveal:** *"Every finite decimal here is only an approximation. After n digits its error is less than 10 to the negative n, but pi's expansion never ends. The corruption is ours, not pi's."* The historical notes treat the Pythagorean communities as richer and less uniform than later legend, and identify the drowning of Hippasus for revealing irrationality as a later story rather than established history.
 - **Sound:** 3, 1, 4, 1, 5, 9, 2, 6, 5, 3 becomes a slow decimal procession. As the field changes, its tuning drifts without losing finite, playable notes.
@@ -213,7 +213,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 
 ### 22. Buffon's Needle → π  Wow 4 / Build 1
 - **Rule:** Drop needles on a lined floor. Count how many cross a line.
-- **Toy:** Rain thousands of needles; a running tally slowly, magically converges on **π**. A number about *circles* falls out of *randomly dropping sticks* with no circle in sight.
+- **Toy:** Rain thousands of needles; a running tally slowly converges on **π**. Click to throw a clearly foregrounded, viewport-scaled needle into a dimmed crowd and watch it meet or miss a floor line. A number about *circles* falls out of *randomly dropping sticks* with no circle in sight.
 - **Aha:** "Get π to three decimal places." (Watch how many throws it takes, the slow crawl of accuracy is its own lesson.)
 - **Reveal:** *"There is no circle here. Just sticks on a floor. And yet π, the circle's own number, appears out of nowhere. This is the seed of the Monte Carlo method, which physicists used to design the atom bomb and which powers modern finance and AI. You can compute the universe by throwing dice."*
 - **Sound:** each needle ticks; every *crossing* rings a bell; the pitch bends toward "in tune" as the estimate homes in on π.
@@ -249,7 +249,24 @@ you are not told it), and **the kid principle** (the play carries itself even
 if the concept never consciously lands). If an idea cannot pass both, it does
 not ship, however important the syllabus thinks it is.
 
-**Current (2026-07):** 31 catalog rooms plus hidden content built. Pokes and drags (`Room::verb` + `render_poked`) on all 31 rooms: e.g. Chaos (ADD A CORNER: bounded newest hand points add attractor corners before the fractal renders), Life (SOW LIFE: bounded newest hand points seed gliders before the B3/S23 clock runs), Cellular Automata (FLIP A CELL: bounded spacetime flips evolve into future rows), Lorenz (SEED A SHADOW STORM: click maps into an x-z initial condition and diverges through the Lorenz system), Random Walk (PLANT A WALKER: bounded newest hand points seed visible walkers), Voronoi (DROP A WELL: bounded wells redraw the territory borders), Prime Spirals (HIGHLIGHT A SPIRAL: selected cells light the Ulam diagonals through that point), Golden (PLANT A SEED), Cult of Pi (BREAK THE SEQUENCE: exact decimal digits age into a replayable, locally corrupted channel), Langton (FLIP A CELL: bounded newest hand points flip cells before the ant runs), Barnsley (PLANT: bounded screen-faithful starts grow through the fern's IFS), Buffon (DROP NEEDLE: bounded screen-faithful needles are centered on clicked cells), Galton (DROP A BALL: bounded newest balls use x for lane and y for coin tilt), Logistic Map (SEED POPULATION: x chooses growth rate and y seeds a finite orbit), Mandelbrot (DIVE AT POINT: bounded newest hand points zoom local patches under surface caps), Julia (MORPH C: bounded newest hand points morph local patches and mark touched constants), Times Tables (TURN THE DIAL), Epicycles (PERTURB THE CHAIN: bounded mini traces shift with the hand point), Goldbach (TEST THIS EVEN: x chooses the even target and y chooses the prime-pair witness), L-System (PLANT: bounded newest hand points plant branches and alter the grammar), Quine (PLACE COPY: bounded newest hand points place recursive copies centered on clicked cells), StrangeLoop (SHIFT: bounded newest hand points move the existing recursive inner loop and keep the hand mark visible), etc. Variation is threaded across app/CLI/MCP and active for all 31 catalog rooms.
+**Current interaction inventory (2026-07):** 31 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, LAUNCH A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, REPAIR THE SIGNAL in Cult of Pi, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
+
+**Interaction update, 2026-07-13:** the verb inventory above records the first
+complete poke substrate. The current contract also includes `render_input` and
+`status_input`, so a face can report the consequence from the same bounded input
+history it renders. Life now launches a legible glider against a dimmed soup;
+Prime Spirals fills the short side and traces bright selected diagonals; Cult of
+Pi repairs a local signal beneath a canonical prefix; Buffon foregrounds
+viewport-scaled throws; and Mandelbrot selects full-frame dives that remain
+fixed until another click or R reset. Room switching deals a new replayable
+visit, while R resets the current one.
+
+Goldbach now accepts any selected even at entry and names the prime witnesses.
+Langton's Ant marks and reports the selected cell. Fourier Epicycles draws a
+complete perturbed miniature chain. Random Walk plants a connected trail.
+Mobius paints and marks the selected region. Quine places a connected recursive
+copy. These immediate consequences are pinned by the phase-zero release matrix,
+not inferred from ambient animation.
 
 The current Reveal cards now name two reciprocal cross-room identities. The
 Logistic Map is affine-conjugate in its orbit coordinate to the Mandelbrot

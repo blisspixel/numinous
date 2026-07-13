@@ -9,15 +9,16 @@
 use std::f64::consts::PI;
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
 /// Fixed seed so the throw reproduces exactly (determinism, see `docs/QUALITY.md`).
 const SEED: u64 = 0x0B0F_0000_5EED_F00D;
 /// Number of needles dropped.
 const NEEDLES: usize = 1500;
-/// Rows between floor lines, in canvas cells.
-const SPACING: f64 = 4.0;
+/// The shared normalized floor. Six strips keep the boards legible in a
+/// terminal while making displayed intersections identical across faces.
+const FLOOR_STRIPS: f64 = 6.0;
 
 /// The Buffon's Needle room.
 #[derive(Debug, Default)]
@@ -51,6 +52,11 @@ impl BuffonNeedle {
         }
     }
 
+    fn floor_spacing(canvas: &dyn Surface) -> f64 {
+        let (_, height) = canvas.draw_bounds();
+        (height.saturating_sub(1) as f64 / FLOOR_STRIPS).max(1.0)
+    }
+
     fn screen_cell(px: f64, py: f64, width: usize, height: usize) -> Option<(f64, f64, i32, i32)> {
         if width == 0 || height == 0 || !px.is_finite() || !py.is_finite() {
             return None;
@@ -71,6 +77,38 @@ impl BuffonNeedle {
         pokes[start..]
             .iter()
             .filter_map(move |&(px, py)| Self::screen_cell(px, py, width, height))
+    }
+
+    fn player_results(
+        pokes: &[(f64, f64)],
+        t: f64,
+        seed: u64,
+    ) -> impl Iterator<Item = (f64, bool)> + '_ {
+        let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
+        let half = Self::length_ratio_for(t) / 2.0;
+        let mut rng = SplitMix64::new(SEED ^ seed);
+        pokes[start..].iter().filter_map(move |&(px, py)| {
+            if !px.is_finite() || !py.is_finite() {
+                return None;
+            }
+            let angle = rng.next_f64() * PI;
+            let center = py.clamp(0.0, 1.0) * FLOOR_STRIPS;
+            Some((angle, crosses(center, angle, half, 1.0)))
+        })
+    }
+
+    fn click_pokes(inputs: &[RoomInput]) -> Vec<(f64, f64)> {
+        let mut points: Vec<_> = inputs
+            .iter()
+            .filter_map(|input| match *input {
+                RoomInput::PointerDown { x, y, .. } => Some((x, y)),
+                _ => None,
+            })
+            .collect();
+        if points.len() > MAX_ROOM_POKES {
+            points.drain(..points.len() - MAX_ROOM_POKES);
+        }
+        points
     }
 
     /// Estimate pi by dropping `needles` needles with the given length ratio.
@@ -101,46 +139,33 @@ impl BuffonNeedle {
         }
         2.0 * length_ratio * needles as f64 / crossings as f64
     }
-}
 
-impl Room for BuffonNeedle {
-    fn meta(&self) -> RoomMeta {
-        RoomMeta {
-            id: "buffon-needle",
-            title: "Buffon's Needle",
-            wing: "Chance & Order",
-            blurb: "Drop needles on a lined floor and count how many cross a line; the count \
-                    secretly holds pi, with no circle in sight. t changes the needle length.",
-            accent: [140, 100, 230],
-        }
-    }
-
-    fn render(&self, canvas: &mut dyn Surface, t: f64) {
+    fn render_scene(&self, canvas: &mut dyn Surface, t: f64, dim_ambient: bool) {
         let (width, height) = canvas.draw_bounds();
         if width == 0 || height == 0 {
             return;
         }
-        // Draw the floor lines.
-        let mut row = 0usize;
-        while row < height {
+        let spacing = Self::floor_spacing(canvas);
+        let mut row = 0.0_f64;
+        while row < height as f64 {
             for x in 0..width {
-                canvas.plot(x as i32, row as i32, '-');
+                canvas.plot(x as i32, row.round() as i32, '*');
             }
-            row += SPACING as usize;
+            row += spacing;
         }
 
-        let half_len = Self::length_ratio_for(t) * SPACING / 2.0;
+        let half_len = Self::length_ratio_for(t) * spacing / 2.0;
         let (fw, fh) = (width as f64, height as f64);
         let mut rng = SplitMix64::new(SEED ^ self.seed);
-        // Needle count scales with area so postcards read as needles, not
-        // static; huge canvases still cap at NEEDLES.
         let count = (width * height / 300).clamp(150, NEEDLES);
         for _ in 0..count {
             let cx = rng.next_f64() * fw;
             let cy = rng.next_f64() * fh;
             let angle = rng.next_f64() * PI;
             let (hx, hy) = (half_len * angle.cos(), half_len * angle.sin());
-            let mark = if crosses(cy, angle, half_len, SPACING) {
+            let mark = if dim_ambient {
+                '-'
+            } else if crosses(cy, angle, half_len, spacing) {
                 '#'
             } else {
                 '*'
@@ -154,11 +179,28 @@ impl Room for BuffonNeedle {
             );
         }
     }
+}
+
+impl Room for BuffonNeedle {
+    fn meta(&self) -> RoomMeta {
+        RoomMeta {
+            id: "buffon-needle",
+            title: "Buffon's Needle",
+            wing: "Chance & Order",
+            blurb: "Throw sticks onto parallel floorboards. Bright sticks cross a line; the ratio \
+                    of crossings to throws wanders toward pi, with no circle anywhere in sight.",
+            accent: [140, 100, 230],
+        }
+    }
+
+    fn render(&self, canvas: &mut dyn Surface, t: f64) {
+        self.render_scene(canvas, t, false);
+    }
 
     fn reveal(&self) -> &'static str {
         "There is no circle here, just sticks on a floor, yet pi, the circle's own \
          number, appears out of nowhere. This is the seed of the Monte Carlo \
-         method, which helped design the atom bomb and powers modern finance and AI.\
+         method, which helped design the atom bomb and powers modern finance and AI. \
          You can compute the universe by throwing dice."
     }
 
@@ -185,7 +227,44 @@ impl Room for BuffonNeedle {
     }
 
     fn verb(&self) -> Option<&'static str> {
-        Some("CLICK: DROP A NEEDLE")
+        Some("CLICK: THROW A NEEDLE")
+    }
+
+    fn status(&self, t: f64) -> Option<String> {
+        let phase = Self::phase_for(t);
+        let throws = 100 + (phase * 1_400.0).round() as usize;
+        let estimate =
+            Self::estimate_pi_with_variation(throws, Self::length_ratio_for(t), self.seed);
+        Some(format!("{throws} THROWS   PI ABOUT {estimate:.3}"))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = Self::click_pokes(inputs);
+        let results: Vec<_> = Self::player_results(&pokes, t, self.seed).collect();
+        let throws = results.len();
+        if throws == 0 {
+            return self.status(t);
+        }
+        let crossings = results.iter().filter(|(_, crossed)| *crossed).count();
+        let latest = if results.last().is_some_and(|(_, crossed)| *crossed) {
+            "CROSS"
+        } else {
+            "MISS"
+        };
+        if crossings == 0 {
+            return Some(format!(
+                "YOUR THROWS {throws}   LAST {latest}   0 CROSSES   PI NEEDS A CROSS"
+            ));
+        }
+        let estimate = 2.0 * Self::length_ratio_for(t) * throws as f64 / crossings as f64;
+        Some(format!(
+            "YOUR THROWS {throws}   LAST {latest}   {crossings} CROSSES   PI ABOUT {estimate:.3}"
+        ))
+    }
+
+    fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
+        let pokes = Self::click_pokes(inputs);
+        self.render_poked(canvas, t, &pokes);
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -197,25 +276,23 @@ impl Room for BuffonNeedle {
         if width == 0 || height == 0 {
             return;
         }
-        self.render(canvas, t);
-        let half_len = Self::length_ratio_for(t) * SPACING / 2.0;
-        let mut rng = SplitMix64::new(SEED ^ self.seed);
-        for (cx, cy, sx, sy) in Self::dropped_needles(pokes, width, height) {
-            let angle = rng.next_f64() * PI;
+        self.render_scene(canvas, t, true);
+        let spacing = Self::floor_spacing(canvas);
+        let half_len = Self::length_ratio_for(t) * spacing / 2.0;
+        for ((cx, cy, sx, sy), (angle, crossed)) in Self::dropped_needles(pokes, width, height)
+            .zip(Self::player_results(pokes, t, self.seed))
+        {
             let (hx, hy) = (half_len * angle.cos(), half_len * angle.sin());
-            let mark = if crosses(cy, angle, half_len, SPACING) {
-                '#'
-            } else {
-                '*'
-            };
-            canvas.line(
-                (cx - hx).round() as i32,
-                (cy - hy).round() as i32,
-                (cx + hx).round() as i32,
-                (cy + hy).round() as i32,
-                mark,
-            );
-            canvas.plot(sx, sy, mark);
+            let mark = if crossed { '#' } else { '*' };
+            let x0 = (cx - hx).round() as i32;
+            let y0 = (cy - hy).round() as i32;
+            let x1 = (cx + hx).round() as i32;
+            let y1 = (cy + hy).round() as i32;
+            for offset in -1..=1 {
+                canvas.line(x0, y0 + offset, x1, y1 + offset, mark);
+            }
+            canvas.line(sx - 2, sy, sx + 2, sy, '#');
+            canvas.line(sx, sy - 2, sx, sy + 2, '#');
         }
     }
 }
@@ -234,7 +311,8 @@ mod tests {
     use super::{BuffonNeedle, crosses};
     use crate::MAX_ROOM_POKES;
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::raster::Raster;
+    use crate::room::{Room, RoomInput};
     use std::f64::consts::PI;
 
     #[test]
@@ -243,6 +321,27 @@ mod tests {
         assert!(crosses(0.5, PI / 2.0, 0.5, 1.0));
         // A needle parallel to the lines has no vertical reach; mid-strip it misses.
         assert!(!crosses(0.5, 0.0, 0.5, 1.0));
+    }
+
+    #[test]
+    fn player_grading_matches_the_displayed_floor_across_surfaces() {
+        for y in [0.13, 0.31, 0.47, 0.72, 0.91] {
+            let poke = [(0.5, y)];
+            let (angle, reported) = BuffonNeedle::player_results(&poke, 0.0, 0)
+                .next()
+                .expect("finite throw");
+            for (width, height) in [(50, 24), (360, 240), (640, 480)] {
+                let surface = Raster::new(width, height);
+                let spacing = BuffonNeedle::floor_spacing(&surface);
+                let (_, center, _, _) =
+                    BuffonNeedle::screen_cell(0.5, y, width, height).expect("screen point");
+                let visible = crosses(center, angle, spacing / 2.0, spacing);
+                assert_eq!(
+                    reported, visible,
+                    "grading differs at {width}x{height}, y={y}, angle={angle}"
+                );
+            }
+        }
     }
 
     #[test]
@@ -335,7 +434,59 @@ mod tests {
 
     #[test]
     fn reveal_names_monte_carlo() {
-        assert!(BuffonNeedle::new().reveal().contains("Monte Carlo"));
+        let reveal = BuffonNeedle::new().reveal();
+        assert!(reveal.contains("Monte Carlo"));
+        assert!(
+            reveal.contains("AI. You"),
+            "continued prose keeps its word boundary"
+        );
+    }
+
+    #[test]
+    fn player_status_reports_outcome_crossings_and_a_running_estimate() {
+        let room = BuffonNeedle::new();
+        let inputs: Vec<_> = (0..20)
+            .map(|i| RoomInput::PointerDown {
+                x: 0.5,
+                y: (i as f64 + 0.25) / 20.0,
+                t: 0.0,
+            })
+            .collect();
+        let status = room.status_input(0.0, &inputs).expect("status");
+        assert!(status.contains("YOUR THROWS 20"), "{status}");
+        assert!(status.contains("LAST "), "{status}");
+        assert!(status.contains("CROSSES"), "{status}");
+        assert!(status.contains("PI ABOUT"), "{status}");
+    }
+
+    #[test]
+    fn pointer_motion_does_not_invent_extra_click_throws() {
+        let room = BuffonNeedle::new();
+        let inputs = [
+            RoomInput::PointerDown {
+                x: 0.5,
+                y: 0.5,
+                t: 0.0,
+            },
+            RoomInput::PointerMove {
+                x: 0.51,
+                y: 0.51,
+                t: 0.01,
+            },
+            RoomInput::PointerUp {
+                x: 0.51,
+                y: 0.51,
+                t: 0.02,
+            },
+        ];
+        let status = room.status_input(0.0, &inputs).expect("status");
+        assert!(status.contains("YOUR THROWS 1"), "{status}");
+
+        let mut from_input = Canvas::new(50, 24);
+        let mut from_click = Canvas::new(50, 24);
+        room.render_input(&mut from_input, 0.0, &inputs);
+        room.render_poked(&mut from_click, 0.0, &[(0.5, 0.5)]);
+        assert_eq!(from_input.to_text(), from_click.to_text());
     }
 
     #[test]
@@ -349,6 +500,40 @@ mod tests {
             cp.ink_count() != c0.ink_count() || cp.to_text() != c0.to_text(),
             "poke should change output"
         );
+    }
+
+    #[test]
+    fn player_needle_is_legible_on_a_large_raster() {
+        let room = BuffonNeedle::new();
+        let mut base = Raster::with_accent(900, 700, room.meta().accent);
+        let mut poked = Raster::with_accent(900, 700, room.meta().accent);
+        room.render_scene(&mut base, 0.0, true);
+        room.render_poked(&mut poked, 0.0, &[(0.5, 0.5)]);
+
+        let mut min_x = 900;
+        let mut max_x = 0;
+        let mut min_y = 700;
+        let mut max_y = 0;
+        let mut changed = 0;
+        for (index, (a, b)) in base
+            .to_rgba()
+            .chunks_exact(4)
+            .zip(poked.to_rgba().chunks_exact(4))
+            .enumerate()
+        {
+            if a != b {
+                changed += 1;
+                let x = index % 900;
+                let y = index / 900;
+                min_x = min_x.min(x);
+                max_x = max_x.max(x);
+                min_y = min_y.min(y);
+                max_y = max_y.max(y);
+            }
+        }
+        assert!(changed > 20, "only {changed} pixels answered the throw");
+        let span = max_x.saturating_sub(min_x).max(max_y.saturating_sub(min_y));
+        assert!(span >= 12, "needle still reads as a dot");
     }
 
     #[test]

@@ -4,13 +4,14 @@
 //! the primes. The primes, famously unpredictable, snap into unmistakable
 //! diagonal streaks. `t` shifts the starting number. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
-use crate::surface::Surface;
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta, renderable_poke_count};
+use crate::surface::{MAX_DIM, Surface};
 
 /// How far `t` shifts the starting number (41 gives Euler's long prime diagonal).
 const MAX_START_OFFSET: u64 = 40;
 /// Cap on cells walked, so a huge canvas stays bounded (see `.agent` skill S7).
 const MAX_CELLS: usize = 200_000;
+const MAX_LOGICAL_SIDE: usize = 447;
 
 /// The Prime Spirals room.
 #[derive(Debug, Default)]
@@ -59,6 +60,53 @@ struct HighlightDiagonals {
     sum: i32,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct SpiralLayout {
+    origin_x: i32,
+    origin_y: i32,
+    viewport_side: usize,
+    logical_side: usize,
+}
+
+impl SpiralLayout {
+    fn new(width: usize, height: usize) -> Option<Self> {
+        let width = width.min(MAX_DIM);
+        let height = height.min(MAX_DIM);
+        let viewport_side = width.min(height);
+        if viewport_side == 0 {
+            return None;
+        }
+        Some(Self {
+            origin_x: width.saturating_sub(viewport_side) as i32 / 2,
+            origin_y: height.saturating_sub(viewport_side) as i32 / 2,
+            viewport_side,
+            logical_side: viewport_side.min(MAX_LOGICAL_SIDE),
+        })
+    }
+
+    fn screen(self, x: i32, y: i32) -> (i32, i32) {
+        let side = self.logical_side as i64;
+        let px = (i64::from(x) * self.viewport_side as i64 + side / 2) / side;
+        let py = (i64::from(y) * self.viewport_side as i64 + side / 2) / side;
+        (self.origin_x + px as i32, self.origin_y + py as i32)
+    }
+
+    fn logical(self, nx: f64, ny: f64, width: usize, height: usize) -> (i32, i32) {
+        let screen_x = normalized_cell(nx, width);
+        let screen_y = normalized_cell(ny, height);
+        let local_x =
+            (screen_x - self.origin_x).clamp(0, self.viewport_side.saturating_sub(1) as i32);
+        let local_y =
+            (screen_y - self.origin_y).clamp(0, self.viewport_side.saturating_sub(1) as i32);
+        let x = local_x as usize * self.logical_side / self.viewport_side;
+        let y = local_y as usize * self.logical_side / self.viewport_side;
+        (
+            x.min(self.logical_side - 1) as i32,
+            y.min(self.logical_side - 1) as i32,
+        )
+    }
+}
+
 impl HighlightDiagonals {
     fn new(x: i32, y: i32) -> Self {
         Self {
@@ -78,16 +126,19 @@ fn normalized_cell(value: f64, len: usize) -> i32 {
     ((value.clamp(0.0, 1.0) * len as f64) as usize).min(len.saturating_sub(1)) as i32
 }
 
-fn poked_diagonals(pokes: &[(f64, f64)], width: usize, height: usize) -> Vec<HighlightDiagonals> {
+fn poked_diagonals(
+    pokes: &[(f64, f64)],
+    layout: SpiralLayout,
+    width: usize,
+    height: usize,
+) -> Vec<HighlightDiagonals> {
     let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
     pokes[start..]
         .iter()
         .filter_map(|&(px, py)| {
             if px.is_finite() && py.is_finite() {
-                Some(HighlightDiagonals::new(
-                    normalized_cell(px, width),
-                    normalized_cell(py, height),
-                ))
+                let (x, y) = layout.logical(px, py, width, height);
+                Some(HighlightDiagonals::new(x, y))
             } else {
                 None
             }
@@ -136,18 +187,39 @@ fn draw_spiral(
     start: u64,
     highlights: &[HighlightDiagonals],
 ) {
-    walk_spiral(width, height, start, |x, y, n| {
-        if is_prime(n) {
-            let mark = if highlights.iter().any(|h| h.contains(x, y)) {
-                '+'
-            } else {
-                '*'
-            };
-            canvas.plot(x, y, mark);
-        }
-    });
+    let Some(layout) = SpiralLayout::new(width, height) else {
+        return;
+    };
     for highlight in highlights {
-        canvas.plot(highlight.x, highlight.y, '#');
+        for x in 0..layout.logical_side as i32 {
+            for y in [x - highlight.diff, highlight.sum - x] {
+                if (0..layout.logical_side as i32).contains(&y) {
+                    let (sx, sy) = layout.screen(x, y);
+                    canvas.plot(sx, sy, '+');
+                }
+            }
+        }
+    }
+    walk_spiral(
+        layout.logical_side,
+        layout.logical_side,
+        start,
+        |x, y, n| {
+            if is_prime(n) {
+                let mark = if highlights.iter().any(|h| h.contains(x, y)) {
+                    '#'
+                } else {
+                    '*'
+                };
+                let (sx, sy) = layout.screen(x, y);
+                canvas.plot(sx, sy, mark);
+            }
+        },
+    );
+    for highlight in highlights {
+        let (sx, sy) = layout.screen(highlight.x, highlight.y);
+        canvas.line(sx - 4, sy, sx + 4, sy, '+');
+        canvas.line(sx, sy - 4, sx, sy + 4, '+');
     }
 }
 
@@ -157,15 +229,14 @@ impl Room for PrimeSpirals {
             id: "prime-spirals",
             title: "Prime Spirals",
             wing: "Number & Pattern",
-            blurb: "Write the whole numbers in a spiral and light up the primes; the most \
-                    patternless numbers we know snap into diagonal streaks. t shifts the start.",
+            blurb: "Whole numbers spiral from the center and only primes light up. Click a point \
+                    to trace the two prime-rich diagonals crossing there.",
             accent: [190, 70, 170],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        let width = canvas.width();
-        let height = canvas.height();
+        let (width, height) = canvas.draw_bounds();
         if width == 0 || height == 0 {
             return;
         }
@@ -201,7 +272,18 @@ impl Room for PrimeSpirals {
     }
 
     fn verb(&self) -> Option<&'static str> {
-        Some("CLICK: HIGHLIGHT A SPIRAL")
+        Some("CLICK: TRACE PRIME DIAGONALS")
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let traces = renderable_poke_count(inputs);
+        if traces == 0 {
+            return Some(format!("CENTER {}   PRIMES GLOW", self.varied_start_for(t)));
+        }
+        Some(format!(
+            "{traces} TRACE{}   BRIGHT POINTS ARE PRIMES",
+            if traces == 1 { "" } else { "S" }
+        ))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -209,12 +291,14 @@ impl Room for PrimeSpirals {
             self.render(canvas, t);
             return;
         }
-        let width = canvas.width();
-        let height = canvas.height();
+        let (width, height) = canvas.draw_bounds();
         if width == 0 || height == 0 {
             return;
         }
-        let highlights = poked_diagonals(pokes, width, height);
+        let Some(layout) = SpiralLayout::new(width, height) else {
+            return;
+        };
+        let highlights = poked_diagonals(pokes, layout, width, height);
         if highlights.is_empty() {
             self.render(canvas, t);
             return;
@@ -243,8 +327,14 @@ fn is_prime(n: u64) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{HighlightDiagonals, PrimeSpirals, draw_spiral, is_prime, poked_diagonals};
+    use std::collections::BTreeSet;
+
+    use super::{
+        HighlightDiagonals, PrimeSpirals, SpiralLayout, draw_spiral, is_prime, poked_diagonals,
+        walk_spiral,
+    };
     use crate::canvas::Canvas;
+    use crate::raster::Raster;
     use crate::room::MAX_ROOM_POKES;
     use crate::room::Room;
 
@@ -265,22 +355,18 @@ mod tests {
         canvas.to_text().lines().enumerate().any(|(row, line)| {
             line.chars()
                 .enumerate()
-                .any(|(col, ch)| ch == '+' && row.abs_diff(y).saturating_add(col.abs_diff(x)) > 2)
+                .any(|(col, ch)| ch == '#' && row.abs_diff(y).saturating_add(col.abs_diff(x)) > 2)
         })
     }
 
-    fn assert_highlights_are_exact_diagonals(canvas: &Canvas, highlight: HighlightDiagonals) {
+    fn assert_highlights_keep_base_primes(canvas: &Canvas) {
         let mut saw_base_prime = false;
         let mut saw_highlight = false;
-        for (row, line) in canvas.to_text().lines().enumerate() {
-            for (col, ch) in line.chars().enumerate() {
-                let on_selected = highlight.contains(col as i32, row as i32);
+        for line in canvas.to_text().lines() {
+            for ch in line.chars() {
                 match ch {
-                    '+' => {
-                        assert!(on_selected, "unexpected highlight at ({col},{row})");
-                        saw_highlight = true;
-                    }
-                    '*' if !on_selected => saw_base_prime = true,
+                    '#' => saw_highlight = true,
+                    '*' => saw_base_prime = true,
                     _ => {}
                 }
             }
@@ -378,17 +464,19 @@ mod tests {
 
     #[test]
     fn poked_diagonals_preserve_order_clamp_and_filter() {
+        let layout = SpiralLayout::new(41, 25).expect("layout");
         let diagonals = poked_diagonals(
             &[(0.2, 0.3), (f64::NAN, 0.5), (2.0, -1.0), (1.0, 1.0)],
+            layout,
             41,
             25,
         );
         assert_eq!(
             diagonals,
             vec![
-                HighlightDiagonals::new(8, 7),
-                HighlightDiagonals::new(40, 0),
-                HighlightDiagonals::new(40, 24)
+                HighlightDiagonals::new(0, 7),
+                HighlightDiagonals::new(24, 0),
+                HighlightDiagonals::new(24, 24)
             ]
         );
     }
@@ -399,10 +487,34 @@ mod tests {
         let mut actual = Canvas::new(41, 25);
         room.render_poked(&mut actual, 0.0, &[(0.5, 0.5)]);
 
-        assert_eq!(char_at(&actual, 20, 12), '#');
-        assert!(count_char(&actual, '+') > 5);
+        assert!(count_char(&actual, '#') > 5);
         assert!(has_far_highlight(&actual, 20, 12));
-        assert_highlights_are_exact_diagonals(&actual, HighlightDiagonals::new(20, 12));
+        assert_highlights_keep_base_primes(&actual);
+
+        let layout = SpiralLayout::new(41, 25).expect("layout");
+        let highlights = poked_diagonals(&[(0.5, 0.5)], layout, 41, 25);
+        let mut expected = BTreeSet::new();
+        walk_spiral(
+            layout.logical_side,
+            layout.logical_side,
+            PrimeSpirals::start_for(0.0),
+            |x, y, n| {
+                if is_prime(n) && highlights.iter().any(|highlight| highlight.contains(x, y)) {
+                    expected.insert(layout.screen(x, y));
+                }
+            },
+        );
+        let observed: BTreeSet<_> = actual
+            .to_text()
+            .lines()
+            .enumerate()
+            .flat_map(|(y, line)| {
+                line.chars()
+                    .enumerate()
+                    .filter_map(move |(x, mark)| (mark == '#').then_some((x as i32, y as i32)))
+            })
+            .collect();
+        assert_eq!(observed, expected);
     }
 
     #[test]
@@ -410,9 +522,9 @@ mod tests {
         let room = PrimeSpirals::new();
         let mut actual = Canvas::new(41, 25);
         room.render_poked(&mut actual, 0.0, &[(1.0, 1.0)]);
-        assert_eq!(char_at(&actual, 40, 24), '#');
-        assert!(has_far_highlight(&actual, 40, 24));
-        assert_highlights_are_exact_diagonals(&actual, HighlightDiagonals::new(40, 24));
+        assert_eq!(char_at(&actual, 32, 24), '+');
+        assert!(has_far_highlight(&actual, 32, 24));
+        assert_highlights_keep_base_primes(&actual);
     }
 
     #[test]
@@ -485,8 +597,12 @@ mod tests {
         room.render_poked(&mut actual, 0.0, &with_invalid_tail);
         assert_eq!(actual.to_text(), expected.to_text());
 
-        let filter_first_highlights =
-            poked_diagonals(&with_invalid_tail[..MAX_ROOM_POKES - 1], 41, 25);
+        let filter_first_highlights = poked_diagonals(
+            &with_invalid_tail[..MAX_ROOM_POKES - 1],
+            SpiralLayout::new(41, 25).expect("layout"),
+            41,
+            25,
+        );
         let mut filter_first = Canvas::new(41, 25);
         draw_spiral(
             &mut filter_first,
@@ -496,5 +612,69 @@ mod tests {
             &filter_first_highlights,
         );
         assert_ne!(filter_first.to_text(), expected.to_text());
+    }
+
+    #[test]
+    fn large_raster_fills_the_short_side_and_click_is_unmistakable() {
+        let room = PrimeSpirals::new();
+        let mut base = Raster::with_accent(900, 700, room.meta().accent);
+        let mut traced = Raster::with_accent(900, 700, room.meta().accent);
+        room.render(&mut base, 0.0);
+        room.render_poked(&mut traced, 0.0, &[(0.5, 0.5)]);
+
+        let background = [10, 11, 15, 255];
+        let rgba = base.to_rgba();
+        let mut min_y = 700;
+        let mut max_y = 0;
+        for (index, pixel) in rgba.chunks_exact(4).enumerate() {
+            if pixel != background {
+                let y = index / 900;
+                min_y = min_y.min(y);
+                max_y = max_y.max(y);
+            }
+        }
+        assert!(
+            max_y.saturating_sub(min_y) >= 595,
+            "prime field is too small"
+        );
+
+        let changed = base
+            .to_rgba()
+            .chunks_exact(4)
+            .zip(traced.to_rgba().chunks_exact(4))
+            .filter(|(a, b)| a != b)
+            .count();
+        assert!(changed > 300, "only {changed} pixels answered the click");
+    }
+
+    #[test]
+    fn hostile_surface_dimensions_are_bounded_before_layout() {
+        #[derive(Default)]
+        struct HostileSurface {
+            plots: usize,
+            max_abs_coord: i32,
+        }
+
+        impl crate::surface::Surface for HostileSurface {
+            fn width(&self) -> usize {
+                usize::MAX
+            }
+
+            fn height(&self) -> usize {
+                usize::MAX
+            }
+
+            fn plot(&mut self, x: i32, y: i32, _mark: char) {
+                self.plots += 1;
+                self.max_abs_coord = self.max_abs_coord.max(x.abs()).max(y.abs());
+            }
+        }
+
+        let room = PrimeSpirals::new();
+        let mut surface = HostileSurface::default();
+        room.render_poked(&mut surface, 0.5, &[(0.5, 0.5)]);
+
+        assert!(surface.plots < 250_000);
+        assert!(surface.max_abs_coord <= crate::surface::MAX_DIM as i32);
     }
 }

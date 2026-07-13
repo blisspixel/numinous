@@ -7,7 +7,7 @@
 
 use std::f64::consts::{FRAC_PI_2, TAU};
 
-use crate::room::{Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
@@ -54,6 +54,51 @@ impl TimesTables {
             (phase + offset).fract()
         }
     }
+
+    fn input_phase(&self, t: f64, pokes: &[(f64, f64)]) -> f64 {
+        let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
+        pokes[start..]
+            .iter()
+            .rev()
+            .find_map(|&(x, y)| (x.is_finite() && y.is_finite()).then(|| x.clamp(0.0, 1.0)))
+            .unwrap_or_else(|| self.phase_for(t))
+    }
+
+    fn status_for_phase(phase: f64) -> String {
+        let k = K_MIN + K_SWEEP * phase;
+        let nearest = k.round();
+        let off = (k - nearest).abs();
+        let note = if off < 0.02 {
+            format!("CLOSED: {} LOBES", (nearest as i64 - 1).max(0))
+        } else if off < 0.15 {
+            format!("ALMOST: {} LOBES FORMING", (nearest as i64 - 1).max(0))
+        } else {
+            "OPEN, WANDERING".to_string()
+        };
+        format!("K = {k:.2}   {note}")
+    }
+
+    fn render_phase(canvas: &mut dyn Surface, phase: f64) {
+        let multiplier = K_MIN + K_SWEEP * phase;
+        let width = canvas.width() as f64;
+        let height = canvas.height() as f64;
+        let cx = width / 2.0;
+        let cy = height / 2.0;
+        let aspect = canvas.char_aspect();
+        let radius = (width / 2.0).min(height / (2.0 * aspect)) * 0.9;
+        let point = |i: usize| -> (i32, i32) {
+            let angle = (i as f64 / POINTS as f64) * TAU - FRAC_PI_2;
+            let x = cx + radius * angle.cos();
+            let y = cy + radius * angle.sin() * aspect;
+            (x.round() as i32, y.round() as i32)
+        };
+        for n in 0..POINTS {
+            let target = ((n as f64) * multiplier).round() as usize % POINTS;
+            let (x0, y0) = point(n);
+            let (x1, y1) = point(target);
+            canvas.line(x0, y0, x1, y1, '*');
+        }
+    }
 }
 
 impl Room for TimesTables {
@@ -83,88 +128,28 @@ impl Room for TimesTables {
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
-        if pokes.is_empty() {
-            self.render(canvas, t);
-            return;
-        }
-        let width = canvas.width();
-        let height = canvas.height();
-        if width == 0 || height == 0 {
-            return;
-        }
-        let n = POINTS;
-        let (fw, fh) = (width as f64, height as f64);
-        let cx = fw / 2.0;
-        let cy = fh / 2.0;
-        let r = (fw.min(fh) / 2.0) * 0.45;
-        let phase = self.phase_for(t);
-        // base
-        self.render(canvas, t);
-        // poked: extra "twisted" copies at poke positions, using y for local k shift
-        for &(px, py) in pokes {
-            let shift = (py - 0.5) * 0.5;
-            let k = K_MIN + K_SWEEP * (phase + shift).clamp(0.0, 1.0);
-            for i in 0..n {
-                let a = (i as f64 / n as f64) * TAU;
-                let b = (i as f64 * k / n as f64) * TAU;
-                let x1 = cx + r * a.cos();
-                let y1 = cy + r * a.sin();
-                let x2 = cx + r * b.cos();
-                let y2 = cy + r * b.sin();
-                // offset by poke
-                let ox = (px - 0.5) * 20.0;
-                let oy = (py - 0.5) * 20.0;
-                canvas.line(
-                    (x1 + ox) as i32,
-                    (y1 + oy) as i32,
-                    (x2 + ox) as i32,
-                    (y2 + oy) as i32,
-                    '*',
-                );
-            }
-        }
+        Self::render_phase(canvas, self.input_phase(t, pokes));
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        let k = K_MIN + K_SWEEP * self.phase_for(t);
-        let nearest = k.round();
-        let off = (k - nearest).abs();
-        let note = if off < 0.02 {
-            format!("CLOSED: {} LOBES", (nearest as i64 - 1).max(0))
-        } else if off < 0.15 {
-            format!("ALMOST: {} LOBES FORMING", (nearest as i64 - 1).max(0))
-        } else {
-            "OPEN, WANDERING".to_string()
-        };
-        Some(format!("K = {k:.2}   {note}"))
+        Some(Self::status_for_phase(self.phase_for(t)))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes: Vec<_> = inputs
+            .iter()
+            .filter_map(|input| match *input {
+                RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. } => {
+                    Some((x, y))
+                }
+                _ => None,
+            })
+            .collect();
+        Some(Self::status_for_phase(self.input_phase(t, &pokes)))
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        let multiplier = K_MIN + K_SWEEP * self.phase_for(t);
-
-        let width = canvas.width() as f64;
-        let height = canvas.height() as f64;
-        let cx = width / 2.0;
-        let cy = height / 2.0;
-        // Squash y by the surface's aspect (0.5 for tall terminal cells, 1.0 for
-        // square pixels) so the circle stays round on any surface.
-        let aspect = canvas.char_aspect();
-        // Fit both extents: x uses width/2, y uses radius*aspect <= height/2.
-        let radius = (width / 2.0).min(height / (2.0 * aspect)) * 0.9;
-
-        let point = |i: usize| -> (i32, i32) {
-            let angle = (i as f64 / POINTS as f64) * TAU - FRAC_PI_2;
-            let x = cx + radius * angle.cos();
-            let y = cy + radius * angle.sin() * aspect;
-            (x.round() as i32, y.round() as i32)
-        };
-
-        for n in 0..POINTS {
-            let target = ((n as f64) * multiplier).round() as usize % POINTS;
-            let (x0, y0) = point(n);
-            let (x1, y1) = point(target);
-            canvas.line(x0, y0, x1, y1, '*');
-        }
+        Self::render_phase(canvas, self.phase_for(t));
     }
 
     fn reveal(&self) -> &'static str {
@@ -198,7 +183,26 @@ mod tests {
 
     use super::TimesTables;
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::room::{Room, RoomInput};
+
+    #[test]
+    fn a_drag_directly_turns_the_shared_dial() {
+        let room = TimesTables::new();
+        let mut base = Canvas::new(44, 18);
+        let mut touched = Canvas::new(44, 18);
+        room.render(&mut base, 0.6);
+        room.render_poked(&mut touched, 0.6, &[(0.53, 0.47)]);
+        assert_ne!(base.to_text(), touched.to_text());
+
+        let inputs = [RoomInput::PointerDown {
+            x: 0.53,
+            y: 0.47,
+            t: 0.6,
+        }];
+        let status = room.status_input(0.6, &inputs).expect("dial readout");
+        assert!(status.starts_with("K = 6.24"), "{status}");
+        assert_ne!(Some(status), room.status(0.6));
+    }
 
     #[test]
     fn meta_is_stable() {

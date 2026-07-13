@@ -7,7 +7,7 @@
 //! this is the shape of consciousness emerging from recursion. See
 //! docs/DIGITAL_MINDS.md and INSIGHTS.md.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::{MAX_DIM, Surface};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -115,7 +115,7 @@ impl Room for StrangeLoop {
         // The sweep turns the loop and zooms slowly into it, so the room about
         // self-reference actually moves and more of its nesting surfaces as you
         // descend, rather than sitting frozen at one frame.
-        let r = fw.min(fh) / 3.0 * (1.0 + phase * 0.6);
+        let r = fw.min(fh) * 0.45 * (1.0 + phase * 0.25);
         // The seed shifts the whole loop sideways, a phase-independent variation
         // that stays visible even where the sweep's rotation flattens the arm
         // shear. Seed 0 (the default and the postcard) stays centered.
@@ -138,9 +138,9 @@ impl Room for StrangeLoop {
         let depth = Self::depth_for(t);
         let fw = width as f64;
         let fh = height as f64;
-        let cx = fw / 2.0;
+        let r = fw.min(fh) * 0.45 * (1.0 + phase * 0.25);
+        let cx = fw / 2.0 + (self.seed % 5) as f64 * r * 0.22;
         let cy = fh / 2.0;
-        let r = fw.min(fh) / 3.0 * (1.0 + phase * 0.6);
         let aspect = safe_aspect(canvas);
         let base_rot = (self.seed % 100) as f64 * 0.01 + phase * std::f64::consts::TAU;
         let points = bounded_loop_points(pokes, width, height);
@@ -154,8 +154,32 @@ impl Room for StrangeLoop {
             canvas, cx, cy, r, base_rot, depth, aspect, inner_ox, inner_oy,
         );
         for point in points {
-            canvas.plot(point.x, point.y, '#');
+            let marker = (width.min(height) / 70).clamp(3, 10) as i32;
+            canvas.line(point.x - marker, point.y, point.x + marker, point.y, '#');
+            canvas.line(point.x, point.y - marker, point.x, point.y + marker, '#');
         }
+    }
+
+    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let points: Vec<_> = inputs
+            .iter()
+            .filter_map(|input| match *input {
+                RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. }
+                    if x.is_finite() && y.is_finite() =>
+                {
+                    Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
+                }
+                _ => None,
+            })
+            .collect();
+        let start = points.len().saturating_sub(MAX_ROOM_POKES);
+        let points = &points[start..];
+        let &(x, y) = points.last()?;
+        Some(format!(
+            "INNER LOOP ANCHORED AT {:.0}% {:.0}%   BRIGHT CROSS MARKS YOUR HAND",
+            x * 100.0,
+            y * 100.0
+        ))
     }
 
     fn reveal(&self) -> &'static str {
@@ -182,6 +206,18 @@ impl Room for StrangeLoop {
 }
 
 impl StrangeLoop {
+    fn stroke(canvas: &mut dyn Surface, from: (i32, i32), to: (i32, i32), mark: char) {
+        if canvas.width() > MAX_DIM || canvas.height() > MAX_DIM {
+            canvas.plot(to.0, to.1, mark);
+            return;
+        }
+        canvas.line(from.0, from.1, to.0, to.1, mark);
+        if canvas.width() >= 160 && canvas.height() >= 120 {
+            canvas.line(from.0, from.1 - 1, to.0, to.1 - 1, mark);
+            canvas.line(from.0, from.1 + 1, to.0, to.1 + 1, mark);
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn draw_loop(
         &self,
@@ -212,22 +248,38 @@ impl StrangeLoop {
         if depth == 0 || r < 3.0 {
             return;
         }
-        // draw U: two verticals and bottom
+        // Draw a connected U. Sparse point clouds looked like dust at window
+        // resolution and hid both the nesting and the player's displacement.
         let steps = 20;
+        let mut left = None;
+        let mut right = None;
+        let mut bottom = None;
         for i in 0..=steps {
             let f = i as f64 / steps as f64;
             // left arm
             let x1 = cx - r * 0.8 * (1.0 - f * 0.2).cos() + rot.sin() * f * 5.0;
             let y1 = cy - r * 0.8 * f * aspect;
-            canvas.plot(x1 as i32, y1 as i32, '#');
+            let left_next = (x1 as i32, y1 as i32);
+            if let Some(previous) = left {
+                Self::stroke(canvas, previous, left_next, '#');
+            }
+            left = Some(left_next);
             // right arm
             let x2 = cx + r * 0.8 * (1.0 - f * 0.2).cos() + rot.sin() * f * 5.0;
             let y2 = cy - r * 0.8 * f * aspect;
-            canvas.plot(x2 as i32, y2 as i32, '#');
+            let right_next = (x2 as i32, y2 as i32);
+            if let Some(previous) = right {
+                Self::stroke(canvas, previous, right_next, '#');
+            }
+            right = Some(right_next);
             // bottom curve
             let bx = cx + r * 0.8 * (f - 0.5) * 2.0;
             let by = cy + r * 0.1 * aspect;
-            canvas.plot(bx as i32, by as i32, '#');
+            let bottom_next = (bx as i32, by as i32);
+            if let Some(previous) = bottom {
+                Self::stroke(canvas, previous, bottom_next, '#');
+            }
+            bottom = Some(bottom_next);
         }
         // recurse inner
         let sub_r = r * 0.4;
@@ -241,7 +293,7 @@ impl StrangeLoop {
 mod tests {
     use super::{LoopPoint, StrangeLoop, bounded_loop_points, finite_phase};
     use crate::canvas::Canvas;
-    use crate::room::{MAX_ROOM_POKES, Room};
+    use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
     use crate::surface::{MAX_DIM, Surface};
 
     #[test]
@@ -413,6 +465,29 @@ mod tests {
     }
 
     #[test]
+    fn interaction_status_names_the_visible_anchor() {
+        let room = StrangeLoop::new();
+        let inputs = [
+            RoomInput::PointerDown {
+                x: 0.2,
+                y: 0.8,
+                t: 0.1,
+            },
+            RoomInput::PointerMove {
+                x: 0.75,
+                y: 0.25,
+                t: 0.2,
+            },
+        ];
+
+        assert_eq!(
+            room.status_input(0.5, &inputs).as_deref(),
+            Some("INNER LOOP ANCHORED AT 75% 25%   BRIGHT CROSS MARKS YOUR HAND")
+        );
+        assert_eq!(room.status_input(0.5, &[]), None);
+    }
+
+    #[test]
     fn render_poked_moves_inner_loop_instead_of_adding_echo() {
         #[derive(Default)]
         struct CountingSurface {
@@ -454,7 +529,10 @@ mod tests {
         room.render(&mut base, 0.5);
         room.render_poked(&mut poked, 0.5, &[(0.8, 0.2)]);
 
-        assert_eq!(poked.plots, base.plots + 1);
+        assert!(
+            poked.plots <= base.plots + 20,
+            "moving one nested loop must not draw a second echo tree"
+        );
     }
 
     #[test]

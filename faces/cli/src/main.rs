@@ -17,8 +17,8 @@ use std::time::Duration;
 
 use clap::{Parser, Subcommand};
 use numinous_core::{
-    Canvas, Journey, Rank, Raster, Room, RoomMeta, Surface, all_rooms, all_rooms_with, draw_text,
-    hidden_room_by_id, room_by_id,
+    CUT_LEVELS, Canvas, Journey, Rank, Raster, Room, RoomMeta, Surface, all_rooms, all_rooms_with,
+    draw_text, hidden_room_by_id, room_by_id,
 };
 
 const MAX_STUDIO_IMPORT_BYTES: u64 = 8 * 1024;
@@ -275,7 +275,7 @@ enum Command {
         #[arg(long)]
         daily: bool,
         /// Number of boards.
-        #[arg(long, default_value_t = 3)]
+        #[arg(long, default_value_t = 7)]
         rounds: usize,
     },
     /// The Munch arcade: eat what fits while the Vexations hunt you.
@@ -616,6 +616,10 @@ impl<'a> RoomRenderInput<'a> {
             gesture,
         }
     }
+
+    fn has_interaction(self) -> bool {
+        !self.pokes.is_empty() || !self.gesture.is_empty()
+    }
 }
 
 impl RoomRenderInput<'static> {
@@ -626,6 +630,20 @@ impl RoomRenderInput<'static> {
             gesture: &[],
         }
     }
+}
+
+fn interaction_status(room: &dyn Room, t: f64, input: RoomRenderInput<'_>) -> Option<String> {
+    if !input.has_interaction() {
+        return None;
+    }
+    let base = room.status(t);
+    let status = if !input.gesture.is_empty() {
+        room.status_input(t, input.gesture)
+    } else {
+        let inputs = numinous_core::inputs_from_pokes(input.pokes, t);
+        room.status_input(t, &inputs)
+    };
+    (status != base).then_some(status).flatten()
 }
 
 /// Clear the screen so a game owns a clean console.
@@ -670,13 +688,23 @@ fn trophy_pings(
 /// Where the journey file lives: `NUMINOUS_JOURNEY` if set, else the home
 /// directory, else the current directory.
 fn journey_path() -> PathBuf {
-    if let Ok(path) = std::env::var("NUMINOUS_JOURNEY") {
-        return PathBuf::from(path);
+    #[cfg(test)]
+    {
+        std::env::temp_dir().join(format!(
+            "numinous-cli-test-{}-journey.txt",
+            std::process::id()
+        ))
     }
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(".numinous-journey")
+    #[cfg(not(test))]
+    {
+        if let Ok(path) = std::env::var("NUMINOUS_JOURNEY") {
+            return PathBuf::from(path);
+        }
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        PathBuf::from(home).join(".numinous-journey")
+    }
 }
 
 /// Load the journey, or start a fresh one.
@@ -686,13 +714,23 @@ fn load_journey() -> Journey {
 
 /// Where the high-score table lives: `NUMINOUS_SCORES` if set, else home.
 fn scores_path() -> PathBuf {
-    if let Ok(path) = std::env::var("NUMINOUS_SCORES") {
-        return PathBuf::from(path);
+    #[cfg(test)]
+    {
+        std::env::temp_dir().join(format!(
+            "numinous-cli-test-{}-scores.txt",
+            std::process::id()
+        ))
     }
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(".numinous-scores")
+    #[cfg(not(test))]
+    {
+        if let Ok(path) = std::env::var("NUMINOUS_SCORES") {
+            return PathBuf::from(path);
+        }
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        PathBuf::from(home).join(".numinous-scores")
+    }
 }
 
 /// Load the high-score table, or start a fresh one.
@@ -1757,9 +1795,6 @@ fn rooms_report(json: bool) -> String {
     }
 }
 
-/// The levels at which a room's first and second deep cuts unlock.
-const CUT_LEVELS: [u32; 2] = [5, 12];
-
 /// One room's description, or a guiding error if the id is unknown.
 fn describe_report(
     id: &str,
@@ -1837,9 +1872,14 @@ fn render_color_report(
     } else if input.pokes.is_empty() {
         room.render(&mut raster, t);
     } else {
-        room.render_poked(&mut raster, t, input.pokes);
+        let events = numinous_core::inputs_from_pokes(input.pokes, t);
+        room.render_input(&mut raster, t, &events);
     }
-    Ok(ansi_in_era(&raster, era))
+    let mut report = ansi_in_era(&raster, era);
+    if let Some(status) = interaction_status(room.as_ref(), t, input) {
+        report.push_str(&format!("\x1b[0mStatus: {status}\n"));
+    }
+    Ok(report)
 }
 
 /// Encode a raster as truecolor ANSI after applying a visual era.
@@ -2017,9 +2057,14 @@ fn render_report(
     } else if input.pokes.is_empty() {
         room.render(&mut canvas, t);
     } else {
-        room.render_poked(&mut canvas, t, input.pokes);
+        let events = numinous_core::inputs_from_pokes(input.pokes, t);
+        room.render_input(&mut canvas, t, &events);
     }
-    Ok(canvas.to_text())
+    let mut report = canvas.to_text();
+    if let Some(status) = interaction_status(room.as_ref(), t, input) {
+        report.push_str(&format!("Status: {status}\n"));
+    }
+    Ok(report)
 }
 
 /// Spend a banked boon: pick one of three deep cuts to open ahead of level.
@@ -2133,7 +2178,8 @@ fn render_png(
     } else if input.pokes.is_empty() {
         room.render(&mut raster, t);
     } else {
-        room.render_poked(&mut raster, t, input.pokes);
+        let events = numinous_core::inputs_from_pokes(input.pokes, t);
+        room.render_input(&mut raster, t, &events);
     }
     if era != numinous_core::Era::Modern {
         let (w, h) = (raster.width(), raster.height());
@@ -2142,12 +2188,16 @@ fn render_png(
         raster.set_rgba(&rgba);
     }
     write_png(path, &raster)?;
-    Ok(format!(
+    let mut report = format!(
         "wrote {} ({}x{})\n",
         path.display(),
         raster.width(),
         raster.height()
-    ))
+    );
+    if let Some(status) = interaction_status(room.as_ref(), t, input) {
+        report.push_str(&format!("Status: {status}\n"));
+    }
+    Ok(report)
 }
 
 /// Encode a raster as an RGBA PNG at `path`.
@@ -3343,6 +3393,12 @@ mod tests {
         parse_poke_arg, parse_pokes, read_bounded, render_report, rooms_report, run,
         save_studio_creation, validate_pcm_body,
     };
+
+    #[test]
+    fn test_persistence_paths_never_resolve_to_the_player_profile() {
+        assert!(super::journey_path().starts_with(std::env::temp_dir()));
+        assert!(super::scores_path().starts_with(std::env::temp_dir()));
+    }
     use clap::Parser;
     use numinous_core::room_by_id;
     use serde_json::Value;
@@ -3558,6 +3614,67 @@ mod tests {
             last_only, newest_last,
             "Double Pendulum should treat the newest hand point as the re-drop"
         );
+    }
+
+    #[test]
+    fn interacted_render_reports_the_room_specific_consequence() {
+        let report = render_report(
+            "cult-of-pi",
+            50,
+            24,
+            0.5,
+            false,
+            RoomRenderInput::new(0, &[(0.5, 0.5)]),
+        )
+        .expect("cult render");
+        assert!(
+            report.contains("Status: 1 REPAIR"),
+            "interaction status must reach the CLI: {report}"
+        );
+    }
+
+    #[test]
+    fn default_munch_session_reaches_the_complete_rule_deck() {
+        use clap::Parser;
+        let cli = super::Cli::try_parse_from(["numinous", "munch"]).expect("parse");
+        let Some(super::Command::Munch { rounds, .. }) = cli.command else {
+            panic!("munch command");
+        };
+        assert!(
+            rounds as u64 > numinous_core::FULL_DECK_ROUND,
+            "the default session must reach multiple full-deck boards"
+        );
+    }
+
+    #[test]
+    fn compact_life_poke_matches_a_phase_stamped_click() {
+        use numinous_core::RoomInput;
+        let point = (0.23, 0.71);
+        let phase = 0.47;
+        let compact = render_report(
+            "game-of-life",
+            64,
+            48,
+            phase,
+            false,
+            RoomRenderInput::new(0, &[point]),
+        )
+        .expect("compact poke");
+        let event = [RoomInput::PointerDown {
+            x: point.0,
+            y: point.1,
+            t: phase,
+        }];
+        let gesture = render_report(
+            "game-of-life",
+            64,
+            48,
+            phase,
+            false,
+            RoomRenderInput::with_gesture(0, &event),
+        )
+        .expect("gesture");
+        assert_eq!(compact, gesture);
     }
 
     #[test]
@@ -3889,6 +4006,22 @@ mod tests {
         )
         .expect("describe");
         assert!(high.contains("Deeper still:") && high.contains("Shishikura"));
+
+        let cap = super::describe_report(
+            "cult-of-pi",
+            false,
+            false,
+            &numinous_core::Journey {
+                plays: u32::MAX,
+                ..Default::default()
+            },
+        )
+        .expect("describe");
+        assert!(
+            cap.contains("Feynman point"),
+            "third cut is reachable: {cap}"
+        );
+        assert!(!cap.contains("4294967295"), "no sentinel leaks: {cap}");
     }
 
     #[test]

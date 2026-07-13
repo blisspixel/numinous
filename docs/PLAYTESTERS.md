@@ -16,6 +16,19 @@ they are. Convergence across unlike members is the real signal; their individual
 finds are what a monoculture would miss. Past transcripts live in `PLAYTESTS.md`;
 the designs they have left are in `ROOMS.md`.
 
+For release-candidate QA, split the draw into three independent groups instead
+of asking one troupe to notice everything. The first-contact group reviews all
+240 app captures from the perspective of newcomers, children, math-wounded
+players, and sensory-access needs. The interaction group starts each room at
+true phase-zero and traverses its click, delayed gesture, release, and reset
+behavior plus every game stage and result. The face-parity group exercises the
+latest CLI and MCP builds, including
+structured output, guiding errors, persistence isolation, and agreement with
+the app's rules. Each finding must cite a reproducible screen, command, tool
+result, or test. A simulated reaction is design input only; a reproduced defect
+is engineering evidence. The full release protocol and blocking rules live in
+`QUALITY.md`.
+
 Each entry ends with a compact tag: **Lens** (what they judge), **Tongue**,
 **Level** (0 = math-wounded, 5 = research mathematician), **Face**.
 

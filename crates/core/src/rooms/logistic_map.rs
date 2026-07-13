@@ -6,7 +6,7 @@
 //! bifurcation diagram. `t` zooms the left edge into the chaos. See `docs/ROOMS.md`.
 
 use super::variation_unit;
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
 /// Iterations discarded so only the long-run attractor is drawn.
@@ -166,6 +166,30 @@ impl Room for LogisticMap {
         Some("CLICK: SEED POPULATION")
     }
 
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let points: Vec<_> = inputs
+            .iter()
+            .filter_map(|input| match *input {
+                RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. }
+                    if x.is_finite() && y.is_finite() =>
+                {
+                    Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
+                }
+                _ => None,
+            })
+            .collect();
+        let start = points.len().saturating_sub(MAX_ROOM_POKES);
+        let points = &points[start..];
+        let &(hand_x, hand_y) = points.last()?;
+        let (r_min, r_max) = self.r_window_for(t);
+        let r = r_min + (r_max - r_min) * hand_x;
+        Some(format!(
+            "{} ORBIT(S)   LATEST X0 {:.2} AT R {r:.3}   BRIGHT TRACE",
+            points.len(),
+            1.0 - hand_y
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         self.render(canvas, t);
         let (width, height) = canvas.draw_bounds();
@@ -180,20 +204,31 @@ impl Room for LogisticMap {
             let column = (hand_x * max_x).round().clamp(0.0, max_x) as i32;
             let r = r_min + (r_max - r_min) * hand_x;
             let mut population = (1.0 - hand_y).clamp(0.001, 0.999);
-            canvas.plot(column, population_row(height, population), '@');
-            for step in 0..POKED_ORBIT_STEPS {
+            let first_row = population_row(height, population);
+            let marker = (width.min(height) / 80).clamp(2, 8) as i32;
+            canvas.line(column - marker, first_row, column + marker, first_row, '#');
+            canvas.line(column, first_row - marker, column, first_row + marker, '#');
+            let trace_steps = POKED_ORBIT_STEPS.min(48);
+            let trace_span = (width / 4).max(20) as i32;
+            let direction = if column + trace_span < width as i32 {
+                1
+            } else {
+                -1
+            };
+            let mut previous = (column, first_row);
+            for step in 1..=trace_steps {
                 population = r * population * (1.0 - population);
                 if !population.is_finite() {
                     break;
                 }
-                let lane = column + (step % 5) as i32 - 2;
-                canvas.plot(
-                    lane.clamp(0, max_i),
+                let offset = step as i32 * trace_span / trace_steps as i32;
+                let point = (
+                    (column + direction * offset).clamp(0, max_i),
                     population_row(height, population),
-                    '*',
                 );
+                canvas.line(previous.0, previous.1, point.0, point.1, '#');
+                previous = point;
             }
-            canvas.plot(column, population_row(height, 1.0 - hand_y), '@');
         }
     }
 
@@ -213,7 +248,34 @@ impl Room for LogisticMap {
 mod tests {
     use super::{LogisticMap, TRANSIENT};
     use crate::canvas::Canvas;
-    use crate::room::{MAX_ROOM_POKES, Room};
+    use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
+
+    #[test]
+    fn status_describes_the_latest_bounded_orbit_seed() {
+        let room = LogisticMap::new();
+        assert_eq!(room.status_input(0.25, &[]), None);
+        let mut inputs = vec![RoomInput::PointerUp {
+            x: 0.2,
+            y: 0.8,
+            t: 0.0,
+        }];
+        inputs.push(RoomInput::PointerDown {
+            x: f64::NAN,
+            y: 0.4,
+            t: 0.1,
+        });
+        inputs.extend((0..MAX_ROOM_POKES + 2).map(|i| RoomInput::PointerMove {
+            x: i as f64 / MAX_ROOM_POKES as f64,
+            y: -1.0,
+            t: i as f64,
+        }));
+        let status = room
+            .status_input(0.25, &inputs)
+            .expect("finite orbit seeds");
+        assert!(status.starts_with(&format!("{MAX_ROOM_POKES} ORBIT(S)")));
+        assert!(status.contains("LATEST X0 1.00"));
+        assert!(status.contains("BRIGHT TRACE"));
+    }
 
     /// The attractor value after the transient, for testing.
     fn settle(r: f64) -> f64 {
@@ -297,10 +359,13 @@ mod tests {
         room.render_poked(&mut poked, 0.35, &[(0.75, 0.2)]);
 
         assert_ne!(base.to_text(), poked.to_text());
-        assert!(
-            poked.to_text().matches('*').count() > 5,
-            "the click should draw an orbit, not just a marker"
-        );
+        let changed = base
+            .to_text()
+            .bytes()
+            .zip(poked.to_text().bytes())
+            .filter(|(before, after)| before != after)
+            .count();
+        assert!(changed > 20, "the orbit trace changed only {changed} cells");
     }
 
     #[test]
@@ -329,8 +394,7 @@ mod tests {
         room.render_poked(&mut canvas, 0.2, &[(2.0, -1.0), (-1.0, 2.0)]);
         let text = canvas.to_text();
 
-        assert!(text.contains('@'));
-        assert!(text.contains('*'));
+        assert!(text.matches('#').count() > 30);
     }
 
     #[test]

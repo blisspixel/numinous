@@ -72,7 +72,7 @@ impl StudioPanel {
         let width = width.min(raster.width());
         let height = height.min(raster.height());
         let scale = (width as i32 / 500).clamp(1, 3);
-        numinous_core::draw_text(raster, "THE STUDIO", 10, 10, scale, '-');
+        numinous_core::draw_text(raster, "THE STUDIO", 10, 10, scale, '#');
         let typed = format!("Y = {}_", self.source.to_uppercase());
         numinous_core::draw_text(raster, &typed, 10, 10 + 12 * scale, scale + 1, '#');
         if let Some(error) = &self.error {
@@ -84,6 +84,11 @@ impl StudioPanel {
                 scale,
                 '-',
             );
+        }
+        if height >= 20 {
+            let footer = "TYPE A FORMULA   TAB CLOSES   ESC MENU";
+            raster.clear_rows(height as i32 - 16 * scale, height as i32);
+            numinous_core::draw_text(raster, footer, 10, height as i32 - 11 * scale, scale, '#');
         }
 
         let Some(expr) = &self.expr else {
@@ -111,7 +116,7 @@ impl StudioPanel {
             .fold(f64::NEG_INFINITY, f64::max);
         let yspan = (ymax - ymin).max(1e-9);
         let top = (60 * scale) as f64;
-        let plot_h = height as f64 - top - 12.0;
+        let plot_h = height as f64 - top - f64::from(24 * scale);
         if plot_h < 8.0 {
             return;
         }

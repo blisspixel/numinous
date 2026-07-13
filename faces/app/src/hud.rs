@@ -1,4 +1,4 @@
-use numinous_core::{Raster, Room, Surface};
+use numinous_core::{Raster, Room, RoomInput, Surface};
 
 pub(crate) struct RoomChrome {
     pub(crate) t: f64,
@@ -19,30 +19,60 @@ pub(crate) fn room_action(room: &dyn Room) -> &'static str {
 
 fn arrival_lines(room: &dyn Room, columns: usize) -> Vec<String> {
     let mut lines = vec![room_action(room).to_string()];
-    lines.extend(
-        numinous_core::wrap_text(&room.meta().blurb.to_uppercase(), columns)
-            .into_iter()
-            .take(2),
-    );
+    let mut blurb = numinous_core::wrap_text(&room.meta().blurb.to_uppercase(), columns);
+    if blurb.len() > 3 {
+        blurb.truncate(3);
+        let last = blurb.last_mut().expect("truncated blurb has a final line");
+        if last.chars().count() + 3 > columns {
+            *last = last.chars().take(columns.saturating_sub(3)).collect();
+        }
+        last.push_str("...");
+    }
+    lines.extend(blurb);
     lines
 }
 
-fn hint_text(room: &dyn Room, t: f64, muted: bool) -> String {
-    let verb = room_action(room);
-    let mut hint = match room.status(t) {
-        Some(readout) => format!("{verb}   {readout}   ESC MENU"),
-        None => format!("{verb}     ESC  PLAY + MENU   E INSPECT"),
-    };
-    if muted {
-        hint.push_str("   (MUTED)");
+#[derive(Debug, PartialEq, Eq)]
+struct FooterCopy {
+    action: String,
+    status: String,
+    controls: &'static str,
+}
+
+fn fit_footer_text(text: &str, pixel_budget: i32, scale: i32) -> String {
+    let columns = (pixel_budget / (6 * scale.max(1))).max(0) as usize;
+    let length = text.chars().count();
+    if length <= columns {
+        return text.to_string();
     }
-    hint
+    if columns <= 3 {
+        return ".".repeat(columns);
+    }
+    let mut fitted = text.chars().take(columns - 3).collect::<String>();
+    fitted.push_str("...");
+    fitted
+}
+
+fn footer_copy(room: &dyn Room, t: f64, inputs: &[RoomInput], muted: bool) -> FooterCopy {
+    let status = room
+        .status_input(t, inputs)
+        .unwrap_or_else(|| "E INSPECT".to_string());
+    FooterCopy {
+        action: room_action(room).to_string(),
+        status: if muted {
+            format!("{status}   MUTED")
+        } else {
+            status
+        },
+        controls: "R RESET ROOM   ESC MENU",
+    }
 }
 
 pub(crate) fn draw_room_chrome(
     raster: &mut Raster,
     room: &dyn Room,
     state: &RoomChrome,
+    inputs: &[RoomInput],
     width: usize,
     height: usize,
 ) {
@@ -50,6 +80,19 @@ pub(crate) fn draw_room_chrome(
     let reveal_lines = if state.show_info && !state.the_show && !state.studio {
         let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
         numinous_core::wrap_text(&room.reveal().to_uppercase(), columns)
+    } else {
+        Vec::new()
+    };
+    let arrival = if state.room_card > 0
+        && !state.show_info
+        && !state.show_help
+        && !state.show_journey
+        && !state.banner_active
+        && !state.the_show
+        && !state.studio
+    {
+        let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
+        arrival_lines(room, columns)
     } else {
         Vec::new()
     };
@@ -69,21 +112,15 @@ pub(crate) fn draw_room_chrome(
                 '-',
             );
         }
-        let card_lines = if state.room_card > 0 && !state.show_info {
-            3
-        } else {
-            0
-        };
-        let footer_top = height as i32 - (14 + card_lines * 9) * scale;
+        let card_lines = arrival.len() as i32;
+        let footer_top = height as i32 - (24 + card_lines * 9) * scale;
         raster.clear_rows(footer_top, height as i32);
         raster.line(0, footer_top, width as i32 - 1, footer_top, '-');
     }
 
     if state.the_show {
-        if state.t < 0.12 || state.t > 0.9 {
-            raster.dim_rows(height as i32 - 34 * scale, height as i32, 45);
-        }
         if state.t < 0.12 {
+            raster.dim_rows(height as i32 - 34 * scale, height as i32, 45);
             numinous_core::draw_text(
                 raster,
                 &room.meta().title.to_uppercase(),
@@ -94,16 +131,17 @@ pub(crate) fn draw_room_chrome(
             );
         } else if state.t > 0.9 {
             let columns = ((width as i32 / (6 * scale)) - 8).max(12) as usize;
-            for (i, line) in numinous_core::wrap_text(&room.reveal().to_uppercase(), columns)
-                .iter()
-                .take(3)
-                .enumerate()
-            {
+            let lines = numinous_core::wrap_text(&room.reveal().to_uppercase(), columns);
+            let band_height = (lines.len() as i32 * 9 * scale + 16).min(height as i32);
+            let band_top = height as i32 - band_height;
+            raster.clear_rows(band_top, height as i32);
+            raster.line(0, band_top, width.saturating_sub(1) as i32, band_top, '-');
+            for (i, line) in lines.iter().enumerate() {
                 numinous_core::draw_text(
                     raster,
                     line,
                     width as i32 / 10,
-                    height as i32 - (30 - i as i32 * 9) * scale,
+                    band_top + 8 + i as i32 * 9 * scale,
                     scale,
                     '#',
                 );
@@ -120,19 +158,15 @@ pub(crate) fn draw_room_chrome(
             scale + 1,
             '#',
         );
-        if state.room_card > 0
-            && !state.show_info
-            && !state.show_help
-            && !state.show_journey
-            && !state.banner_active
-        {
-            let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
-            for (i, line) in arrival_lines(room, columns).iter().take(3).enumerate() {
+        if !arrival.is_empty() {
+            let footer_band_top = height as i32 - 24 * scale;
+            let line_count = arrival.len() as i32;
+            for (i, line) in arrival.iter().enumerate() {
                 numinous_core::draw_text(
                     raster,
                     line,
                     10,
-                    height as i32 - (39 - i as i32 * 9) * scale,
+                    footer_band_top - (line_count - i as i32) * 9 * scale,
                     scale,
                     '#',
                 );
@@ -158,10 +192,19 @@ pub(crate) fn draw_room_chrome(
     }
 
     if !state.show_help && !state.the_show && !state.studio {
+        let footer = footer_copy(room, state.t, inputs, state.muted);
+        let controls_width = footer.controls.chars().count() as i32 * 6 * scale;
+        let controls_x = width as i32 - controls_width - 10;
+        let action = fit_footer_text(&footer.action, width as i32 - 20, scale);
+        let status = fit_footer_text(&footer.status, controls_x - 20, scale);
+        if state.room_card == 0 || state.show_info || state.banner_active {
+            numinous_core::draw_text(raster, &action, 10, height as i32 - 19 * scale, scale, '.');
+        }
+        numinous_core::draw_text(raster, &status, 10, height as i32 - 10 * scale, scale, '.');
         numinous_core::draw_text(
             raster,
-            &hint_text(room, state.t, state.muted),
-            10,
+            footer.controls,
+            controls_x,
             height as i32 - 10 * scale,
             scale,
             '.',
@@ -219,12 +262,48 @@ mod tests {
     }
 
     #[test]
-    fn hint_text_includes_status_and_mute_state() {
+    fn compact_arrival_copy_is_bounded_and_marks_truncation() {
+        let room = room("golden-angle");
+        let lines = arrival_lines(room.as_ref(), 24);
+
+        assert_eq!(lines.len(), 4, "one action plus three blurb lines");
+        assert_eq!(lines[0], room_action(room.as_ref()));
+        assert!(lines[3].ends_with("..."));
+        assert!(lines.iter().all(|line| line.chars().count() <= 24));
+    }
+
+    #[test]
+    fn footer_keeps_controls_fixed_while_status_changes() {
+        let room = room("times-tables");
+        let closed = footer_copy(room.as_ref(), 0.0, &[], false);
+        let open = footer_copy(room.as_ref(), 0.1, &[], true);
+
+        assert_ne!(closed.status, open.status);
+        assert_eq!(closed.action, open.action);
+        assert_eq!(closed.controls, "R RESET ROOM   ESC MENU");
+        assert_eq!(closed.controls, open.controls);
+        assert!(open.status.ends_with("MUTED"));
+    }
+
+    #[test]
+    fn footer_copy_is_clipped_without_moving_controls() {
+        assert_eq!(fit_footer_text("ABCDEFGHIJ", 42, 1), "ABCD...");
+        assert_eq!(fit_footer_text("ABC", 18, 1), "ABC");
+        assert_eq!(fit_footer_text("LONG", 12, 1), "..");
+    }
+
+    #[test]
+    fn footer_uses_interaction_aware_status() {
         let room = room("game-of-life");
-        let hint = hint_text(room.as_ref(), 0.25, true);
-        assert!(hint.starts_with("CLICK:"));
-        assert!(hint.contains("ESC"));
-        assert!(hint.contains("(MUTED)"));
+        let input = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.25,
+        }];
+        let footer = footer_copy(room.as_ref(), 0.25, &input, false);
+        assert!(footer.action.starts_with("CLICK:"));
+        assert!(footer.status.contains("1 GLIDER"));
+        assert_eq!(footer.controls, "R RESET ROOM   ESC MENU");
     }
 
     #[test]
@@ -246,6 +325,7 @@ mod tests {
                 muted: false,
                 level: 3,
             },
+            &[],
             320,
             220,
         );
@@ -274,10 +354,43 @@ mod tests {
                 muted: true,
                 level: 3,
             },
+            &[],
             320,
             220,
         );
         assert_eq!(raster.to_rgba(), before);
+    }
+
+    #[test]
+    fn the_show_draws_arrival_and_departure_copy() {
+        let room = room("lorenz");
+        let mut arrival = Raster::with_accent(420, 300, room.meta().accent);
+        let mut departure = Raster::with_accent(420, 300, room.meta().accent);
+        for (raster, t) in [(&mut arrival, 0.05), (&mut departure, 0.95)] {
+            room.render(raster, t);
+            draw_room_chrome(
+                raster,
+                room.as_ref(),
+                &RoomChrome {
+                    t,
+                    room_card: 0,
+                    show_info: false,
+                    show_help: false,
+                    show_journey: false,
+                    banner_active: false,
+                    the_show: true,
+                    studio: false,
+                    muted: false,
+                    level: 1,
+                },
+                &[],
+                420,
+                300,
+            );
+        }
+        assert_ne!(arrival.to_rgba(), departure.to_rgba());
+        assert!(arrival.lit_count() > 100);
+        assert!(departure.lit_count() > 100);
     }
 
     #[test]
@@ -301,6 +414,7 @@ mod tests {
                 muted: false,
                 level: 1,
             },
+            &[],
             width,
             height,
         );

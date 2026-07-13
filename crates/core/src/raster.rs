@@ -51,6 +51,32 @@ impl Raster {
         }
     }
 
+    /// Import a tightly packed RGBA frame while retaining an accent for later
+    /// interface drawing. Alpha is ignored because Numinous frames are opaque.
+    ///
+    /// Returns `None` when dimensions exceed the shared surface bound, their
+    /// byte size overflows, or the slice length does not exactly match.
+    #[must_use]
+    pub fn from_rgba(width: usize, height: usize, accent: [u8; 3], rgba: &[u8]) -> Option<Self> {
+        if width > MAX_DIM || height > MAX_DIM {
+            return None;
+        }
+        let expected = width.checked_mul(height)?.checked_mul(4)?;
+        if rgba.len() != expected {
+            return None;
+        }
+        let pixels = rgba
+            .chunks_exact(4)
+            .map(|pixel| [pixel[0], pixel[1], pixel[2]])
+            .collect();
+        Some(Self {
+            width,
+            height,
+            accent,
+            pixels,
+        })
+    }
+
     /// The color added for a mark: the accent, a brighter accent for `'#'`, or a
     /// faint structural gray for `'-'`.
     fn ink(&self, mark: char) -> [u8; 3] {
@@ -245,6 +271,15 @@ mod tests {
         assert_eq!(bytes.len(), 3 * 2 * 4);
         assert_eq!(bytes[0..3], BACKGROUND);
         assert_eq!(bytes[3], 255);
+    }
+
+    #[test]
+    fn rgba_import_round_trips_rgb_and_rejects_bad_shapes() {
+        let source = [1, 2, 3, 4, 5, 6, 7, 8];
+        let raster = Raster::from_rgba(2, 1, [9, 10, 11], &source).expect("valid frame");
+        assert_eq!(raster.to_rgba(), [1, 2, 3, 255, 5, 6, 7, 255]);
+        assert!(Raster::from_rgba(2, 1, [0; 3], &source[..7]).is_none());
+        assert!(Raster::from_rgba(usize::MAX, 1, [0; 3], &[]).is_none());
     }
 
     #[test]

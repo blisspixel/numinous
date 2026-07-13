@@ -26,7 +26,8 @@ pub struct Motif {
 
 impl Motif {
     /// Render the phrase as a looping chiptune pattern: the room's bed.
-    /// The line plays on the square lead over a root drone every bar.
+    /// Room ambience uses the softer triangle voice; explicit chiptune exports
+    /// retain the square lead when that brighter timbre is the point.
     #[must_use]
     pub fn pattern(&self) -> Pattern {
         let step_seconds = 60.0 / self.tempo as f32 / 2.0; // eighth notes
@@ -34,9 +35,9 @@ impl Motif {
         for (i, &degree) in self.line.iter().enumerate() {
             if i % 8 == 0 {
                 // The bar turns over: the root breathes underneath.
-                steps.push(Some((self.root / 2.0, Voice::Triangle, 0.4)));
+                steps.push(Some((self.root / 2.0, Voice::Triangle, 0.22)));
             }
-            steps.push(Some((pitch(self.root, degree), Voice::Square, 0.3)));
+            steps.push(Some((pitch(self.root, degree), Voice::Triangle, 0.22)));
         }
         Pattern {
             steps,
@@ -83,6 +84,18 @@ mod tests {
         assert!(pattern.seconds() > 1.0, "a phrase, not a blip");
         let samples = pattern.render(22_050);
         assert!(samples.iter().any(|&s| s != 0.0));
+        assert!(
+            pattern
+                .steps
+                .iter()
+                .flatten()
+                .all(|(_, voice, _)| *voice != super::Voice::Square)
+        );
+        let max_step = samples
+            .windows(2)
+            .map(|pair| (pair[1] - pair[0]).abs())
+            .fold(0.0_f32, f32::max);
+        assert!(max_step <= 0.03, "room motif step was {max_step}");
     }
 
     #[test]

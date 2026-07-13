@@ -8,16 +8,20 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-13
 
-- **Enforced now:** formatting, Clippy with warnings denied, 1,017 tests, locked
+- **Enforced now:** formatting, Clippy with warnings denied, 1,074 tests, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 91.80%
-  regions and 91.41% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 92.13%
+  regions and 91.89% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
-  playtest-note capture, deterministic room rendering, audio generation, and
-  all three faces.
+  playtest-note capture, deterministic room rendering, audio generation, all
+  three faces, and a release-generated 240-screen visual QA matrix. Every room
+  is captured at true phase-zero entry, arrival, immediate interaction,
+  same-phase delayed baseline and gesture, compact arrival, and compact delayed
+  states. Games, overlays, The Show, production
+  Studio rendering, and reset and phase flows have dedicated captures.
 - **Not yet evidenced:** a completed stranger hallway test, accessibility review
   with disabled players, real execution on macOS and Linux, nightly hardware
-  soak, automated visual or audio regression, opt-in telemetry, and independent
+  soak, perceptual visual or audio regression, opt-in telemetry, and independent
   mathematical sign-off of every reveal.
 - **Rule:** `RESEARCH.md` defines Built, Measured, Observed, Designed, and
   Hypothesis. Every release decision uses those labels.
@@ -141,6 +145,34 @@ cycle's fix list, and the test reruns at the next gate.
   mind, culture, or unfamiliar intelligence had an experience. `PLAYTESTS.md`
   archives these simulations as ideation. Only reproduced defects, tests,
   real participant sessions, and qualified review can establish evidence.
+
+#### Grouped QA round for every release candidate
+
+The automated matrix and the playtester pool work together as one repeatable
+review, never as a claim that fictional participants had an experience.
+
+1. **First-contact and accessibility group:** draw several unlike app profiles,
+   including a newcomer, a child, a math-wounded player, and a sensory-access
+   lens. Review every path in `renders/qa-app/MANIFEST.txt`, including arrival
+   cards and compact states. Record clipping, low contrast, unclear controls,
+   hidden consequences, unstable layout, and screens that fail to invite a
+   first action.
+2. **Interaction and game-flow group:** traverse all 31 rooms through immediate
+   click, delayed gesture, release, and reset. Traverse every game from initial
+   state through each stage and result. Compare the rendered consequence with
+   its status copy and with the underlying mathematical rule. A changed image
+   is insufficient if the change is not legible or meaningful.
+3. **CLI, MCP, and release group:** run the latest local build through the CLI
+   and MCP play paths with isolated test profiles. Check catalog reachability,
+   structured output, guiding errors, cross-face rule parity, package evidence,
+   house style, the locked build, coverage, and clean repository state.
+
+The maker fixes reproduced defects, regenerates the complete matrix, and reruns
+the relevant face. At least two fresh independent checkers then review the
+fixed evidence without inheriting the maker's conclusions. High and medium
+findings block release until fixed or explicitly recorded as unresolved roadmap
+risk. The round ends only when the expected matrix is complete, every automated
+gate is green, and the independent checkers report no unaddressed blocker.
 - **Diverse human focus groups, all three faces, before 1.0.** The persona
   ensemble is continuous and cheap; before 1.0 we also run real focus groups of
   diverse, creative people, and they cover each face on its own terms:

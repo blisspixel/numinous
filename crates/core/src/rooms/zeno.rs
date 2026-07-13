@@ -7,7 +7,7 @@
 //! tiles. See the Full Map in `docs/ROOMS.md`.
 
 use super::variation_unit;
-use crate::room::{Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
 /// How many halvings `t` reaches (past ~14 the tiles are subpixel anyway).
@@ -149,6 +149,33 @@ impl Room for Zeno {
         Some("CLICK: SEND THE RUNNER")
     }
 
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let runners = inputs
+            .iter()
+            .filter(|input| {
+                matches!(
+                    input,
+                    RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. }
+                        if x.is_finite() && y.is_finite()
+                )
+            })
+            .count()
+            .min(MAX_ROOM_POKES);
+        if runners == 0 {
+            return None;
+        }
+        let phase = if t.is_finite() {
+            t.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        let hops = ((phase * (MAX_TILES as f64 + 1.0)) as usize).clamp(1, MAX_TILES);
+        let reached = (1.0 - 0.5_f64.powi(hops as i32)) * 100.0;
+        Some(format!(
+            "{runners} RUNNER(S)   {hops} HALVING HOPS   {reached:.2}% OF THE WAY"
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         // The newest bounded raw tail first, finite filtering after, matching
         // the catalog input contract.
@@ -199,17 +226,27 @@ impl Room for Zeno {
         let laid = ((phase * (MAX_TILES as f64 + 1.0)) as usize).clamp(1, MAX_TILES);
         let mut draw_runner = |target: (f64, f64), mark: char| {
             let square = hand_to_square(target.0, target.1);
+            let mut previous = to_screen(0.0, square.1);
+            let mut hop_points = Vec::new();
             for hop in runner_hops(square, laid) {
                 let (px, py) = to_screen(hop.0, hop.1);
-                canvas.plot(px, py, mark);
+                canvas.line(previous.0, previous.1, px, py, mark);
+                hop_points.push((px, py));
+                previous = (px, py);
             }
             let (tx, ty) = to_screen(square.0, square.1);
-            canvas.plot(tx, ty, '+');
+            let marker = (width.min(height) / 80).clamp(2, 8) as i32;
+            canvas.line(tx - marker, ty, tx + marker, ty, mark);
+            canvas.line(tx, ty - marker, tx, ty + marker, mark);
+            for (px, py) in hop_points {
+                canvas.plot(px, py, if mark == '#' { 'o' } else { mark });
+            }
+            canvas.plot(tx, ty, if mark == '#' { '+' } else { mark });
         };
         for &target in older {
             draw_runner(target, '.');
         }
-        draw_runner(newest, 'o');
+        draw_runner(newest, '#');
     }
 
     fn reveal(&self) -> &'static str {
@@ -253,7 +290,37 @@ impl Room for Zeno {
 mod tests {
     use super::{MAX_TILES, Zeno, tiles};
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::room::{Room, RoomInput};
+
+    #[test]
+    fn status_turns_finite_gestures_into_halving_progress() {
+        let room = Zeno::new();
+        assert_eq!(room.status_input(0.5, &[]), None);
+        let inputs = [
+            RoomInput::PointerUp {
+                x: 0.1,
+                y: 0.2,
+                t: 0.0,
+            },
+            RoomInput::PointerDown {
+                x: 0.7,
+                y: 0.4,
+                t: 0.1,
+            },
+            RoomInput::PointerMove {
+                x: f64::INFINITY,
+                y: 0.5,
+                t: 0.2,
+            },
+        ];
+        assert_eq!(
+            room.status_input(f64::NAN, &inputs).as_deref(),
+            Some("1 RUNNER(S)   1 HALVING HOPS   50.00% OF THE WAY")
+        );
+        let complete = room.status_input(1.0, &inputs).expect("runner progress");
+        assert!(complete.contains(&format!("{MAX_TILES} HALVING HOPS")));
+        assert!(complete.ends_with("% OF THE WAY"));
+    }
 
     #[test]
     fn the_tiles_halve_and_sum_toward_one() {
