@@ -108,13 +108,60 @@ fn read_bounded_line(reader: &mut impl io::BufRead, line: &mut Vec<u8>) -> io::R
 
 /// Where the journey file lives (shared with the CLI face, so a mind's play
 /// counts the same wherever it plays): `NUMINOUS_JOURNEY` if set, else home.
+#[cfg(test)]
+struct TestStateRoot {
+    path: std::path::PathBuf,
+}
+
+#[cfg(test)]
+impl TestStateRoot {
+    fn new() -> Self {
+        use std::hash::{Hash, Hasher};
+
+        let thread = std::thread::current();
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        thread.id().hash(&mut hasher);
+        thread.name().hash(&mut hasher);
+        let path = std::env::temp_dir().join(format!(
+            "numinous-mcp-test-{}-{:016x}",
+            std::process::id(),
+            hasher.finish()
+        ));
+        Self::at(path)
+    }
+
+    fn at(path: std::path::PathBuf) -> Self {
+        match std::fs::remove_dir_all(&path) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => panic!("cannot clear test state directory: {error}"),
+        }
+        std::fs::create_dir_all(&path).expect("test state directory should be writable");
+        Self { path }
+    }
+}
+
+#[cfg(test)]
+impl Drop for TestStateRoot {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.path);
+    }
+}
+
+#[cfg(test)]
+std::thread_local! {
+    static TEST_STATE_ROOT: TestStateRoot = TestStateRoot::new();
+}
+
+#[cfg(test)]
+fn test_state_path(kind: &str) -> std::path::PathBuf {
+    TEST_STATE_ROOT.with(|root| root.path.join(format!("{kind}.txt")))
+}
+
 fn journey_path() -> std::path::PathBuf {
     #[cfg(test)]
     {
-        std::env::temp_dir().join(format!(
-            "numinous-mcp-test-{}-journey.txt",
-            std::process::id()
-        ))
+        test_state_path("journey")
     }
     #[cfg(not(test))]
     {
@@ -138,10 +185,7 @@ fn load_journey(path: &std::path::Path) -> numinous_core::Journey {
 fn scores_path() -> std::path::PathBuf {
     #[cfg(test)]
     {
-        std::env::temp_dir().join(format!(
-            "numinous-mcp-test-{}-scores.txt",
-            std::process::id()
-        ))
+        test_state_path("scores")
     }
     #[cfg(not(test))]
     {
@@ -165,10 +209,7 @@ fn post_score(path: &std::path::Path, key: &str, score: i64) -> bool {
 fn cairn_path() -> std::path::PathBuf {
     #[cfg(test)]
     {
-        std::env::temp_dir().join(format!(
-            "numinous-mcp-test-{}-cairn.txt",
-            std::process::id()
-        ))
+        test_state_path("cairn")
     }
     #[cfg(not(test))]
     {
@@ -3336,6 +3377,56 @@ mod tests {
         assert!(super::journey_path().starts_with(std::env::temp_dir()));
         assert!(super::scores_path().starts_with(std::env::temp_dir()));
         assert!(super::cairn_path().starts_with(std::env::temp_dir()));
+    }
+
+    #[test]
+    fn test_persistence_paths_are_stable_per_test_and_isolated_between_threads() {
+        let journey = super::journey_path();
+        assert_eq!(journey, super::journey_path());
+        assert_ne!(journey, super::scores_path());
+        assert_ne!(journey, super::cairn_path());
+
+        let other = std::thread::spawn(|| {
+            let path = super::journey_path();
+            std::fs::write(&path, b"other test").expect("test state should be writable");
+            path
+        })
+        .join()
+        .expect("path worker should finish");
+        assert_ne!(journey, other);
+        assert!(!other.exists());
+        assert!(
+            !other
+                .parent()
+                .expect("state path should have a parent")
+                .exists()
+        );
+    }
+
+    #[test]
+    fn test_state_root_clears_stale_data_rejects_files_and_cleans_on_drop() {
+        let parent = super::journey_path()
+            .parent()
+            .expect("state path should have a parent")
+            .to_path_buf();
+        let stale_root = parent.join("stale-root");
+        std::fs::create_dir_all(&stale_root).expect("stale root should be creatable");
+        std::fs::write(stale_root.join("old.txt"), b"stale")
+            .expect("stale state should be writable");
+
+        let root = super::TestStateRoot::at(stale_root.clone());
+        assert!(stale_root.exists());
+        assert!(!stale_root.join("old.txt").exists());
+        drop(root);
+        assert!(!stale_root.exists());
+
+        let file_collision = parent.join("file-collision");
+        std::fs::write(&file_collision, b"not a directory")
+            .expect("collision file should be writable");
+        let rejected =
+            std::panic::catch_unwind(|| super::TestStateRoot::at(file_collision.clone()));
+        assert!(rejected.is_err());
+        std::fs::remove_file(file_collision).expect("collision file should be removable");
     }
 
     #[test]

@@ -23,8 +23,7 @@ const HELP_LINES: &[&str] = &[
 
 pub(crate) fn draw_help_overlay(raster: &mut Raster, width: usize, height: usize) {
     raster.dim(22);
-    let semantic: Vec<String> = HELP_LINES.iter().map(|line| (*line).to_string()).collect();
-    let (lines, scale, line_step) = overlay_layout(&semantic, width, height);
+    let (lines, scale, line_step) = overlay_layout(HELP_LINES, width, height);
     draw_centered_lines(raster, &lines, width, height, scale, line_step);
 }
 
@@ -116,13 +115,18 @@ pub(crate) fn draw_banner(raster: &mut Raster, lines: &[String], width: usize, h
     }
 }
 
-fn overlay_layout(semantic: &[String], width: usize, height: usize) -> (Vec<String>, i32, i32) {
+fn overlay_layout<T: AsRef<str>>(
+    semantic: &[T],
+    width: usize,
+    height: usize,
+) -> (Vec<String>, i32, i32) {
     let largest = (width as i32 / 300).clamp(1, 4);
     for scale in (1..=largest).rev() {
         let columns = ((width as i32 - 20) / (6 * scale)).max(8) as usize;
         let lines: Vec<String> = semantic
             .iter()
             .flat_map(|line| {
+                let line = line.as_ref();
                 if line.is_empty() {
                     vec![String::new()]
                 } else {
@@ -140,6 +144,7 @@ fn overlay_layout(semantic: &[String], width: usize, height: usize) -> (Vec<Stri
     let lines = semantic
         .iter()
         .flat_map(|line| {
+            let line = line.as_ref();
             if line.is_empty() {
                 vec![String::new()]
             } else {
@@ -190,9 +195,8 @@ mod tests {
 
     #[test]
     fn help_overlay_lines_fit_the_default_window() {
-        let semantic: Vec<String> = HELP_LINES.iter().map(|line| (*line).to_string()).collect();
         for (width, height) in [(900, 700), (360, 240)] {
-            let (lines, scale, line_step) = overlay_layout(&semantic, width, height);
+            let (lines, scale, line_step) = overlay_layout(HELP_LINES, width, height);
             assert!(lines.len() as i32 * line_step * scale <= height as i32);
             for line in lines {
                 assert!(
@@ -201,6 +205,16 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn layout_falls_back_safely_when_no_candidate_can_fit() {
+        let semantic = ["", "A BOUNDED LINE THAT MUST WRAP"];
+        let (lines, scale, line_step) = overlay_layout(&semantic, 40, 0);
+        assert_eq!(scale, 1);
+        assert_eq!(line_step, 9);
+        assert_eq!(lines.first().map(String::as_str), Some(""));
+        assert!(lines.iter().any(|line| line.contains("BOUNDED")));
     }
 
     #[test]

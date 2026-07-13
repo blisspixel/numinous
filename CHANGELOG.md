@@ -181,7 +181,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   broader test surface exposed and fixed macOS abandoned-lock recovery, which
   now uses the platform process list to distinguish a live holder from an
   exited process instead of conservatively treating every recorded process as
-  live. The complete suite has 1,074 tests, 92.13% region coverage, and 91.89%
+  live. The complete suite has 1,079 tests, 92.17% region coverage, and 91.91%
   line coverage.
 - The cross-room identities from the simulated Ramanujan review now live in the
   experience instead of only in planning prose. Logistic Map and Mandelbrot
@@ -218,7 +218,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   generic platform box in both the running app and installed file. Automated
   app, CLI, and MCP tests isolate Journey, score, and Cairn paths, preventing
   QA runs from adding progress, scores, or messages to the player's real
-  profile.
+  profile. Each CLI and MCP test thread owns a stale-cleared temporary state
+  directory that is removed when the test ends, so parallel tests cannot share
+  state or accumulate files. The help overlay also borrows its static copy
+  directly instead of rebuilding the same input strings on every frame.
 - Maintenance hardening closes five resource and installation boundary gaps.
   The POSIX installer now normalizes custom roots through their physical parent,
   rejects control characters, dot components, HOME aliases, symbolic-link
