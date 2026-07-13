@@ -4,8 +4,11 @@ How Numinous *sounds*, and specifically how math *becomes* sound. This is the de
 
 **Implementation status, 2026-07-13:** every catalog room ships a structured
 motif and deterministic sonification. The app plays room voices over its
-chiptune score, or hands the sole audio player to built-in radio playback. Mute
-and radio volume are live, but radio and room voices do not mix simultaneously.
+chiptune score, or hands the sole audio player to built-in radio playback.
+Automatic room beds use a softened triangle voice and a conservative 45 percent
+default master level; explicit chiptune composition retains its brighter
+square lead. Mute and radio volume are live, but radio and room voices do not
+mix simultaneously.
 DSP is implemented locally without `fundsp`. The shared master bus,
 sample-accurate scheduling, per-Era voices, global tuning, spatialization, and
 independent room/UI volume controls below are design targets, not shipped

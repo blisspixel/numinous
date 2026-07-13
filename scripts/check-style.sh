@@ -63,7 +63,9 @@ tool_a='cla'
 tool_b='ude'
 tool_c='co'
 tool_d='dex'
-check "(?i)${attr_a}${attr_b}|generated with (${tool_a}${tool_b}|${tool_c}${tool_d})" "AI/tool attribution"
+agent_a='sub'
+agent_b='agent'
+check "(?i)${attr_a}${attr_b}|generated with (${tool_a}${tool_b}|${tool_c}${tool_d})|(by|with|via|from|per) (${tool_a}${tool_b}|${tool_c}${tool_d})|${agent_a}${agent_b} (review|recommendation)|per ${agent_a}${agent_b}" "AI/tool attribution"
 
 if [ "$fail" -ne 0 ]; then
   echo ""

@@ -7,7 +7,7 @@
 //! ends. `t` runs the clock. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
 /// Simulation grid side (fixed, toroidal), independent of the surface.
@@ -127,6 +127,20 @@ fn apply_poked_flips(grid: &mut [bool], pokes: &[(f64, f64)]) {
     }
 }
 
+fn draw_poked_cells(canvas: &mut dyn Surface, pokes: &[(f64, f64)], width: usize, height: usize) {
+    let radius = (width.min(height) / 40).clamp(4, 14) as i32;
+    for (gx, gy) in poked_cells(pokes) {
+        let x = ((gx as f64 + 0.5) * width as f64 / GRID as f64) as i32;
+        let y = ((gy as f64 + 0.5) * height as f64 / GRID as f64) as i32;
+        canvas.line(x - radius, y - radius, x + radius, y - radius, '+');
+        canvas.line(x - radius, y + radius, x + radius, y + radius, '+');
+        canvas.line(x - radius, y - radius, x - radius, y + radius, '+');
+        canvas.line(x + radius, y - radius, x + radius, y + radius, '+');
+        canvas.line(x - radius, y, x + radius, y, '+');
+        canvas.line(x, y - radius, x, y + radius, '+');
+    }
+}
+
 /// Draw the grid state to the canvas (shared to avoid duplication between render and poked).
 fn draw_grid(canvas: &mut dyn Surface, grid: &[bool], width: usize, height: usize) {
     if width == 0 || height == 0 {
@@ -198,6 +212,20 @@ impl Room for LangtonsAnt {
         apply_poked_flips(&mut grid, pokes);
         let grid = run_ant(grid, steps, self.seed);
         draw_grid(canvas, &grid, width, height);
+        draw_poked_cells(canvas, pokes, width, height);
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let (x, y) = inputs.iter().rev().find_map(|input| match *input {
+            RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite() => {
+                Some((normalized_grid_cell(x), normalized_grid_cell(y)))
+            }
+            _ => None,
+        })?;
+        Some(format!(
+            "CELL {x},{y} FLIPPED   ANT REPLAYED {} STEPS",
+            Self::steps_for(t)
+        ))
     }
 
     fn reveal(&self) -> &'static str {
@@ -214,8 +242,7 @@ mod tests {
         simulate_varied,
     };
     use crate::canvas::Canvas;
-    use crate::room::MAX_ROOM_POKES;
-    use crate::room::Room;
+    use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
 
     #[test]
     fn one_step_paints_exactly_one_cell() {
@@ -281,6 +308,26 @@ mod tests {
         let mut grid = init_grid(0);
         apply_poked_flips(&mut grid, &[(0.4, 0.6), (0.4, 0.6)]);
         assert_eq!(grid, init_grid(0));
+    }
+
+    #[test]
+    fn entry_click_draws_a_legible_marker_and_status() {
+        let room = LangtonsAnt::new();
+        let mut base = Canvas::new(80, 40);
+        let mut poked = Canvas::new(80, 40);
+        room.render(&mut base, 0.0);
+        room.render_poked(&mut poked, 0.0, &[(0.5, 0.5)]);
+        let input = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.0,
+        }];
+
+        assert!(poked.ink_count() >= base.ink_count() + 20);
+        assert_eq!(
+            room.status_input(0.0, &input).as_deref(),
+            Some("CELL 50,50 FLIPPED   ANT REPLAYED 0 STEPS")
+        );
     }
 
     #[test]

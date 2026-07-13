@@ -7,15 +7,12 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::{MAX_DIM, Surface};
 
-/// Escape-iteration budget.
-const MAX_ITER: u32 = 160;
+use super::FRACTAL_MAX_ITER;
 /// Radius of the circle in the `c` plane that `t` walks around.
 const C_RADIUS: f64 = 0.7885;
-const MORPH_RADIUS: i32 = 5;
-const MORPH_STEP: i32 = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct MorphPoint {
@@ -89,13 +86,39 @@ impl Julia {
 
     /// The constant `c` at phase `t`.
     fn c_for(&self, t: f64) -> (f64, f64) {
-        let theta = TAU * finite_phase(t);
-        let s_off = (self.seed % 1000) as f64 * 0.00001;
-        (
-            C_RADIUS * theta.cos() + s_off,
-            C_RADIUS * theta.sin() + s_off,
-        )
+        automatic_c(t, self.seed)
     }
+}
+
+/// Return the automatic complex constant for the current sweep.
+#[must_use]
+pub fn automatic_c(t: f64, seed: u64) -> (f64, f64) {
+    let theta = TAU * finite_phase(t);
+    let seed_offset = (seed % 1000) as f64 * 0.00001;
+    (
+        C_RADIUS * theta.cos() + seed_offset,
+        C_RADIUS * theta.sin() + seed_offset,
+    )
+}
+
+/// Return the complex constant selected by the newest finite hand point.
+///
+/// The accelerated app and core renderer share this function so a morph keeps
+/// the same whole-fractal response and rendering pipeline on GPU systems.
+#[must_use]
+pub fn selected_c(t: f64, seed: u64, pokes: &[(f64, f64)]) -> (f64, f64) {
+    let (base_x, base_y) = automatic_c(t, seed);
+    let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
+    let selected = pokes[start..]
+        .iter()
+        .rev()
+        .find(|(x, y)| x.is_finite() && y.is_finite());
+    selected.map_or((base_x, base_y), |&(x, y)| {
+        (
+            base_x + (x.clamp(0.0, 1.0) - 0.5) * 0.2,
+            base_y + (y.clamp(0.0, 1.0) - 0.5) * 0.2,
+        )
+    })
 }
 
 /// Iterations of `z -> z*z + c` from `(zx, zy)` before escaping.
@@ -108,6 +131,29 @@ fn escape_iters(mut zx: f64, mut zy: f64, cx: f64, cy: f64, max: u32) -> u32 {
         i += 1;
     }
     i
+}
+
+fn render_with_c(canvas: &mut dyn Surface, width: usize, height: usize, cx: f64, cy: f64) {
+    let scale = 3.2 / width as f64;
+    let half_w = width as f64 / 2.0;
+    let half_h = height as f64 / 2.0;
+    for py in 0..height {
+        for px in 0..width {
+            let zx = (px as f64 - half_w) * scale;
+            let zy = (py as f64 - half_h) * scale;
+            let iters = escape_iters(zx, zy, cx, cy, FRACTAL_MAX_ITER);
+            let mark = if iters == FRACTAL_MAX_ITER {
+                '#'
+            } else if iters > 20 {
+                '*'
+            } else if iters > 5 {
+                '-'
+            } else {
+                continue;
+            };
+            canvas.plot(px as i32, py as i32, mark);
+        }
+    }
 }
 
 impl Room for Julia {
@@ -127,28 +173,7 @@ impl Room for Julia {
             return;
         };
         let (cx, cy) = self.c_for(t);
-        // A fixed window on the z plane, roughly [-1.6, 1.6] on the shorter axis.
-        let scale = 3.2 / width as f64;
-        let half_w = width as f64 / 2.0;
-        let half_h = height as f64 / 2.0;
-
-        for py in 0..height {
-            for px in 0..width {
-                let zx = (px as f64 - half_w) * scale;
-                let zy = (py as f64 - half_h) * scale;
-                let iters = escape_iters(zx, zy, cx, cy, MAX_ITER);
-                let mark = if iters == MAX_ITER {
-                    '#'
-                } else if iters > 20 {
-                    '*'
-                } else if iters > 5 {
-                    '-'
-                } else {
-                    continue;
-                };
-                canvas.plot(px as i32, py as i32, mark);
-            }
-        }
+        render_with_c(canvas, width, height, cx, cy);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -187,6 +212,25 @@ impl Room for Julia {
         Some("CLICK: MORPH C")
     }
 
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes: Vec<_> = inputs
+            .iter()
+            .filter_map(|input| match *input {
+                RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. } => {
+                    Some((x, y))
+                }
+                _ => None,
+            })
+            .collect();
+        if !pokes.iter().any(|(x, y)| x.is_finite() && y.is_finite()) {
+            return None;
+        }
+        let (cx, cy) = selected_c(t, self.seed, &pokes);
+        Some(format!(
+            "C MORPHED TO {cx:+.3} {cy:+.3}I   WHOLE FRACTAL UPDATED"
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
             self.render(canvas, t);
@@ -195,39 +239,17 @@ impl Room for Julia {
         let Some((width, height)) = drawing_dims(canvas) else {
             return;
         };
-        self.render(canvas, t);
-        let (base_cx, base_cy) = self.c_for(t);
-        for morph in bounded_morph_points(pokes, width, height) {
-            let dcx = (morph.nx - 0.5) * 0.2;
-            let dcy = (morph.ny - 0.5) * 0.2;
-            let cx = base_cx + dcx;
-            let cy = base_cy + dcy;
-            let scale = 3.0 / width as f64;
-            let half_w = width as f64 / 2.0;
-            let half_h = height as f64 / 2.0;
-            for dy in -MORPH_RADIUS..=MORPH_RADIUS {
-                for dx in -MORPH_RADIUS..=MORPH_RADIUS {
-                    let lx = morph.x + dx * MORPH_STEP;
-                    let ly = morph.y + dy * MORPH_STEP;
-                    if lx < 0 || lx >= width as i32 || ly < 0 || ly >= height as i32 {
-                        continue;
-                    }
-                    let zx = (f64::from(lx) - half_w) * scale;
-                    let zy = (f64::from(ly) - half_h) * scale;
-                    let iters = escape_iters(zx, zy, cx, cy, MAX_ITER);
-                    let mark = if iters == MAX_ITER {
-                        '#'
-                    } else if iters > 24 {
-                        '*'
-                    } else if iters > 6 {
-                        '-'
-                    } else {
-                        continue;
-                    };
-                    canvas.plot(lx, ly, mark);
-                }
-            }
-            canvas.plot(morph.x, morph.y, '#');
+        let morphs = bounded_morph_points(pokes, width, height);
+        if morphs.is_empty() {
+            self.render(canvas, t);
+            return;
+        }
+        let (cx, cy) = selected_c(t, self.seed, pokes);
+        render_with_c(canvas, width, height, cx, cy);
+        if let Some(morph) = morphs.last() {
+            let marker = (width.min(height) / 70).clamp(3, 10) as i32;
+            canvas.line(morph.x - marker, morph.y, morph.x + marker, morph.y, '#');
+            canvas.line(morph.x, morph.y - marker, morph.x, morph.y + marker, '#');
         }
     }
 }
@@ -237,8 +259,38 @@ mod tests {
     use super::{Julia, MorphPoint, bounded_morph_points, escape_iters, finite_phase};
     use crate::canvas::Canvas;
     use crate::raster::Raster;
-    use crate::room::{MAX_ROOM_POKES, Room};
+    use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
     use crate::surface::{MAX_DIM, Surface};
+
+    #[test]
+    fn status_reports_only_a_finite_selected_constant() {
+        let room = Julia::new();
+        assert_eq!(room.status_input(0.3, &[]), None);
+        let ignored = [
+            RoomInput::PointerUp {
+                x: 0.2,
+                y: 0.8,
+                t: 0.0,
+            },
+            RoomInput::PointerMove {
+                x: f64::NAN,
+                y: 0.4,
+                t: 0.1,
+            },
+        ];
+        assert_eq!(room.status_input(0.3, &ignored), None);
+        let selected = [
+            ignored[1],
+            RoomInput::PointerDown {
+                x: 0.75,
+                y: 0.25,
+                t: 0.2,
+            },
+        ];
+        let status = room.status_input(0.3, &selected).expect("finite selection");
+        assert!(status.starts_with("C MORPHED TO "));
+        assert!(status.ends_with("I   WHOLE FRACTAL UPDATED"));
+    }
 
     #[test]
     fn origin_survives_for_a_small_c() {

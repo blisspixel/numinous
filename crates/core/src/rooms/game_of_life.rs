@@ -7,7 +7,7 @@
 //! bounded no matter how large the surface is. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::{MAX_DIM, Surface};
 
 /// Simulation grid width and height (fixed, independent of the surface).
@@ -51,7 +51,8 @@ impl GameOfLife {
 
     /// The generation shown at phase `t`.
     fn generation_for(t: f64) -> usize {
-        (t.clamp(0.0, 1.0) * MAX_GEN as f64).round() as usize
+        let phase = if t.is_nan() { 0.0 } else { t.clamp(0.0, 1.0) };
+        (phase * MAX_GEN as f64).round() as usize
     }
 }
 
@@ -61,8 +62,8 @@ impl Room for GameOfLife {
             id: "game-of-life",
             title: "Game of Life",
             wing: "Emergence",
-            blurb: "A cell lives or dies from four tiny rules about its neighbors; a random soup \
-                    breeds gliders and oscillators. t sweeps the generation, so the life evolves.",
+            blurb: "Each dot is a living cell. Click to launch a five-cell glider: cells are born \
+                    with 3 neighbors and survive with 2 or 3, so the small shape moves by itself.",
             accent: [90, 210, 120],
         }
     }
@@ -87,8 +88,27 @@ impl Room for GameOfLife {
         })
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        Some(format!(
+            "GEN {}   BORN 3   SURVIVES 2 OR 3",
+            Self::generation_for(t)
+        ))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let gliders = launch_events(inputs).len();
+        if gliders == 0 {
+            return self.status(t);
+        }
+        Some(format!(
+            "GEN {}   {gliders} GLIDER{} LAUNCHED",
+            Self::generation_for(t),
+            if gliders == 1 { "" } else { "S" }
+        ))
+    }
+
     fn verb(&self) -> Option<&'static str> {
-        Some("CLICK: SOW LIFE")
+        Some("CLICK: LAUNCH A 5-CELL GLIDER")
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -97,10 +117,41 @@ impl Room for GameOfLife {
         if width == 0 || height == 0 {
             return;
         }
-        // Every poke sows a small glider into the world before the clock runs,
-        // so the hand's life evolves under the same B3/S23 rules as the soup.
-        let grid = simulate_with_pokes(Self::generation_for(t), self.seed, pokes);
-        draw_grid(canvas, &grid);
+        // Keep the random universe as a faint reference and brighten only the
+        // living cells the player's launch changed. The glider still obeys the
+        // same B3/S23 evolution, but its consequence is now possible to follow.
+        let generations = Self::generation_for(t);
+        let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
+        let launches: Vec<_> = pokes[start..]
+            .iter()
+            .filter_map(|&(x, y)| {
+                (x.is_finite() && y.is_finite()).then_some(GliderLaunch {
+                    point: (x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)),
+                    generation: generations,
+                })
+            })
+            .collect();
+        if launches.is_empty() {
+            self.render(canvas, t);
+            return;
+        }
+        let base = simulate(generations, self.seed);
+        let grid = simulate_with_launches(generations, self.seed, &launches);
+        draw_grid_mark(canvas, &base, '-');
+        draw_grid_difference(canvas, &base, &grid);
+    }
+
+    fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
+        let launches = launch_events(inputs);
+        if launches.is_empty() {
+            self.render(canvas, t);
+            return;
+        }
+        let generations = Self::generation_for(t);
+        let base = simulate(generations, self.seed);
+        let grid = simulate_with_launches(generations, self.seed, &launches);
+        draw_grid_mark(canvas, &base, '-');
+        draw_grid_difference(canvas, &base, &grid);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -127,6 +178,10 @@ impl Room for GameOfLife {
 }
 
 fn draw_grid(canvas: &mut dyn Surface, grid: &[bool]) {
+    draw_grid_mark(canvas, grid, '*');
+}
+
+fn draw_grid_mark(canvas: &mut dyn Surface, grid: &[bool], mark: char) {
     let Some((width, height)) = drawing_dims(canvas) else {
         return;
     };
@@ -135,7 +190,23 @@ fn draw_grid(canvas: &mut dyn Surface, grid: &[bool]) {
             let gx = px * GRID_W / width;
             let gy = py * GRID_H / height;
             if grid[gy * GRID_W + gx] {
-                canvas.plot(px as i32, py as i32, '*');
+                canvas.plot(px as i32, py as i32, mark);
+            }
+        }
+    }
+}
+
+fn draw_grid_difference(canvas: &mut dyn Surface, base: &[bool], changed: &[bool]) {
+    let Some((width, height)) = drawing_dims(canvas) else {
+        return;
+    };
+    for py in 0..height {
+        for px in 0..width {
+            let gx = px * GRID_W / width;
+            let gy = py * GRID_H / height;
+            let index = gy * GRID_W + gx;
+            if changed[index] && changed[index] != base[index] {
+                canvas.plot(px as i32, py as i32, '#');
             }
         }
     }
@@ -161,18 +232,81 @@ fn sown_glider_cells(point: (f64, f64)) -> Option<[(usize, usize); 5]> {
     Some(cells)
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct GliderLaunch {
+    point: (f64, f64),
+    generation: usize,
+}
+
+fn plant_glider(grid: &mut [bool], point: (f64, f64)) -> bool {
+    let Some(cells) = sown_glider_cells(point) else {
+        return false;
+    };
+    let (cx, cy) = cells[0];
+    for dy in -5_i32..=5 {
+        for dx in -5_i32..=5 {
+            let x = (cx as i32 + dx).rem_euclid(GRID_W as i32) as usize;
+            let y = (cy as i32 + dy).rem_euclid(GRID_H as i32) as usize;
+            grid[y * GRID_W + x] = false;
+        }
+    }
+    for (x, y) in cells {
+        grid[y * GRID_W + x] = true;
+    }
+    true
+}
+
+#[cfg(test)]
 fn sow_pokes(grid: &mut [bool], pokes: &[(f64, f64)]) {
     let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
     for &point in &pokes[start..] {
-        let Some(cells) = sown_glider_cells(point) else {
-            continue;
-        };
-        for (x, y) in cells {
-            grid[y * GRID_W + x] = true;
-        }
+        plant_glider(grid, point);
     }
 }
 
+fn launch_events(inputs: &[RoomInput]) -> Vec<GliderLaunch> {
+    let raw: Vec<_> = inputs
+        .iter()
+        .filter_map(|input| match *input {
+            RoomInput::PointerDown { x, y, t } => Some((x, y, t)),
+            _ => None,
+        })
+        .collect();
+    let start = raw.len().saturating_sub(MAX_ROOM_POKES);
+    raw[start..]
+        .iter()
+        .filter_map(|&(x, y, t)| {
+            (x.is_finite() && y.is_finite() && t.is_finite()).then_some(GliderLaunch {
+                point: (x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)),
+                generation: GameOfLife::generation_for(t),
+            })
+        })
+        .collect()
+}
+
+fn simulate_with_launches(
+    generations: usize,
+    variation: u64,
+    launches: &[GliderLaunch],
+) -> Vec<bool> {
+    let generations = generations.min(MAX_GEN);
+    let mut grid = seed(variation);
+    let mut current = 0;
+    for launch in launches {
+        let target = launch.generation.min(generations).max(current);
+        for _ in current..target {
+            grid = step(&grid, GRID_W, GRID_H);
+        }
+        plant_glider(&mut grid, launch.point);
+        current = target;
+    }
+    for _ in current..generations {
+        grid = step(&grid, GRID_W, GRID_H);
+    }
+    grid
+}
+
+#[cfg(test)]
 fn simulate_with_pokes(generations: usize, variation: u64, pokes: &[(f64, f64)]) -> Vec<bool> {
     let mut grid = seed(variation);
     sow_pokes(&mut grid, pokes);
@@ -238,11 +372,11 @@ fn step(grid: &[bool], w: usize, h: usize) -> Vec<bool> {
 #[cfg(test)]
 mod tests {
     use super::{
-        GRID_W, GameOfLife, glider_on_empty_grid, simulate, simulate_with_pokes, sow_pokes,
-        sown_glider_cells, step,
+        GRID_W, GameOfLife, GliderLaunch, glider_on_empty_grid, launch_events, simulate,
+        simulate_with_launches, simulate_with_pokes, sow_pokes, sown_glider_cells, step,
     };
     use crate::canvas::Canvas;
-    use crate::room::{MAX_ROOM_POKES, Room};
+    use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
     use crate::surface::{MAX_DIM, Surface};
 
     fn grid_with(w: usize, h: usize, live: &[(usize, usize)]) -> Vec<bool> {
@@ -360,6 +494,88 @@ mod tests {
             edge.iter().any(|&(_, y)| y == super::GRID_H - 1),
             "top edge wraps upward"
         );
+    }
+
+    #[test]
+    fn phase_stamped_launch_clears_and_plants_at_the_clicked_generation() {
+        let phase = 0.5;
+        let generation = GameOfLife::generation_for(phase);
+        let inputs = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: phase,
+        }];
+        let launches = launch_events(&inputs);
+        assert_eq!(
+            launches,
+            vec![GliderLaunch {
+                point: (0.5, 0.5),
+                generation
+            }]
+        );
+        let grid = simulate_with_launches(generation, 0, &launches);
+        let cells = sown_glider_cells((0.5, 0.5)).expect("glider");
+        let (cx, cy) = cells[0];
+        for dy in -4_i32..=4 {
+            for dx in -4_i32..=4 {
+                let x = (cx as i32 + dx).rem_euclid(GRID_W as i32) as usize;
+                let y = (cy as i32 + dy).rem_euclid(super::GRID_H as i32) as usize;
+                assert_eq!(
+                    grid[y * GRID_W + x],
+                    cells.contains(&(x, y)),
+                    "launch neighborhood differs at ({x},{y})"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_drag_launches_only_once_at_pointer_down() {
+        let inputs = [
+            RoomInput::PointerDown {
+                x: 0.4,
+                y: 0.6,
+                t: 0.2,
+            },
+            RoomInput::PointerMove {
+                x: 0.5,
+                y: 0.5,
+                t: 0.21,
+            },
+            RoomInput::PointerMove {
+                x: 0.6,
+                y: 0.4,
+                t: 0.22,
+            },
+            RoomInput::PointerUp {
+                x: 0.6,
+                y: 0.4,
+                t: 0.23,
+            },
+        ];
+        let launches = launch_events(&inputs);
+        assert_eq!(launches.len(), 1);
+        assert_eq!(launches[0].point, (0.4, 0.6));
+    }
+
+    #[test]
+    fn compact_poke_and_phase_stamped_click_render_identically() {
+        let room = GameOfLife::new();
+        let phase = 0.47;
+        let point = (0.23, 0.71);
+        let mut compact = Canvas::new(64, 48);
+        let mut event = Canvas::new(64, 48);
+        room.render_poked(&mut compact, phase, &[point]);
+        room.render_input(
+            &mut event,
+            phase,
+            &[RoomInput::PointerDown {
+                x: point.0,
+                y: point.1,
+                t: phase,
+            }],
+        );
+        assert_eq!(compact.to_text(), event.to_text());
     }
 
     fn live_cells(grid: &[bool]) -> Vec<(usize, usize)> {

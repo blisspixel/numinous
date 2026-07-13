@@ -51,8 +51,9 @@ theirs; nothing is borrowed.
   action line) and `poke(x, y, variation)` where meaningful; the registry
   threads a per-visit `variation` seed (default 0 pins all current tests
   and postcards exactly).
-- Expanded pokes and drags (touch verbs on arrival cards for playable rooms): first wave (Lorenz: DROP A STORM, Life: SOW LIFE, Voronoi: DROP A WELL, Double: RE-DROP from the hand's point, Chaos: MOVE A CORNER, Random: PLANT A WALKER) plus many more including Golden (PLANT A SEED), Langton (FLIP A CELL), Barnsley (PLANT A NEW POINT), Buffon (DROP A NEEDLE), Galton (DROP A BALL: x chooses the lane, y tilts its coin), Mandelbrot (DIVE), Julia (MORPH C), Times Tables (TURN THE DIAL), Epicycles (PERTURB), Goldbach (TEST THIS EVEN: x chooses an even target, y chooses a prime-pair witness), L-System (PLANT), Quine (PLACE A COPY), StrangeLoop (SHIFT), and Cult of Pi (BREAK THE SEQUENCE). 31 total: the whole catalog.
-- The app maps clicks to normalized coordinates; R re-deals the variation.
+- Expanded pokes and drags (touch verbs on arrival cards for playable rooms): first wave (Lorenz: DROP A STORM, Life: LAUNCH A GLIDER, Voronoi: DROP A WELL, Double: RE-DROP from the hand's point, Chaos: MOVE A CORNER, Random: PLANT A WALKER) plus many more including Golden (PLANT A SEED), Langton (FLIP A CELL), Barnsley (PLANT A NEW POINT), Buffon (THROW A NEEDLE), Galton (DROP A BALL: x chooses the lane, y tilts its coin), Mandelbrot (DIVE), Julia (MORPH C), Times Tables (TURN THE DIAL), Epicycles (PERTURB), Goldbach (TEST THIS EVEN: x chooses an even target, y chooses a prime-pair witness), L-System (PLANT), Quine (PLACE A COPY), StrangeLoop (SHIFT), and Cult of Pi (REPAIR THE SIGNAL). 31 total: the whole catalog.
+- The app maps clicks to normalized coordinates; R resets the current visit,
+  while moving to another room deals the next replayable variation.
   The CLI gets `watch --vary`; MCP `play_room` gains `variation`.
 - MCP `munch_arcade` tool added for full parity (stateless action-list replay + state + score posting through progress).
 

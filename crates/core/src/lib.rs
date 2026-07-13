@@ -76,7 +76,9 @@ pub use journey::{
     Boon, CUT_LEVELS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options, constellation, level_lore,
 };
 pub use motifs::Motif;
-pub use munchers::{Board, Munched, board_text, build_board, grade as grade_munch};
+pub use munchers::{
+    Board, FULL_DECK_ROUND, Munched, board_text, build_board, grade as grade_munch,
+};
 pub use nim::{
     apply as nim_apply, finished as nim_finished, new_game as nim_new, order_move as nim_order,
     the_secret as nim_secret,
@@ -98,7 +100,8 @@ pub use resonance::{Resonance, resonances};
 pub use rng::SplitMix64;
 pub use room::{
     DEFAULT_ROOM_ACTION, DEFAULT_TOUCH_ROOM_ACTION, Gesture, MAX_ROOM_INPUTS, MAX_ROOM_POKES, Room,
-    RoomInput, RoomMeta, latest_gesture, pokes_from_inputs, room_action, room_touch_action,
+    RoomInput, RoomMeta, inputs_from_pokes, latest_gesture, pokes_from_inputs,
+    renderable_poke_count, room_action, room_touch_action,
 };
 pub use scores::Scoreboard;
 pub use secret::{akousma, deep_akousma};

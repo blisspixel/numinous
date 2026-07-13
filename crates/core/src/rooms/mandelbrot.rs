@@ -5,20 +5,22 @@
 //! escape, shaded by how fast, form its infinitely detailed halo. `t` zooms from
 //! the whole set toward the seahorse valley. See `docs/ROOMS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::{MAX_DIM, Surface};
 
-/// Escape-iteration budget (also the "in the set" sentinel).
-const MAX_ITER: u32 = 160;
-const DIVE_RADIUS: i32 = 5;
-const DIVE_STEP: i32 = 2;
+use super::FRACTAL_MAX_ITER;
+const DIVE_FACTOR: f64 = 0.5;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct DivePoint {
     x: i32,
     y: i32,
-    nx: f64,
-    ny: f64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct DiveEvent {
+    point: DivePoint,
+    t: f64,
 }
 
 fn finite_phase(t: f64) -> f64 {
@@ -57,8 +59,6 @@ fn bounded_dive_points(pokes: &[(f64, f64)], width: usize, height: usize) -> Vec
             Some(DivePoint {
                 x: screen_coord(nx, width),
                 y: screen_coord(ny, height),
-                nx,
-                ny,
             })
         })
         .collect()
@@ -102,6 +102,149 @@ fn lerp(a: f64, b: f64, t: f64) -> f64 {
     a + (b - a) * t
 }
 
+fn render_view(
+    canvas: &mut dyn Surface,
+    width: usize,
+    height: usize,
+    center_x: f64,
+    center_y: f64,
+    zoom: f64,
+) {
+    let scale = 2.0 * zoom / width as f64;
+    let half_w = width as f64 / 2.0;
+    let half_h = height as f64 / 2.0;
+    for py in 0..height {
+        for px in 0..width {
+            let cx = center_x + (px as f64 - half_w) * scale;
+            let cy = center_y + (py as f64 - half_h) * scale;
+            let iters = escape_iters(cx, cy, FRACTAL_MAX_ITER);
+            let mark = if iters == FRACTAL_MAX_ITER {
+                '#'
+            } else if iters > 24 {
+                '*'
+            } else if iters > 6 {
+                '-'
+            } else {
+                continue;
+            };
+            canvas.plot(px as i32, py as i32, mark);
+        }
+    }
+}
+
+/// Return the automatic camera as `(center_x, center_y, horizontal_half_span)`.
+///
+/// The CPU room and accelerated app path share this calculation so touching
+/// the room cannot jump between two unrelated cameras.
+#[must_use]
+pub fn automatic_view(t: f64, seed: u64) -> (f64, f64, f64) {
+    let t = finite_phase(t);
+    let seed_offset = (seed % 1000) as f64 * 0.00001;
+    (
+        lerp(-0.5, -0.745, t) + seed_offset,
+        lerp(0.0, 0.113, t) + seed_offset,
+        1.5 * 0.15_f64.powf(t),
+    )
+}
+
+fn selected_view_from_points(
+    dives: &[DivePoint],
+    width: usize,
+    height: usize,
+    seed: u64,
+    initial_t: f64,
+) -> (f64, f64, f64) {
+    let (mut center_x, mut center_y, mut zoom) = automatic_view(initial_t, seed);
+    for dive in dives {
+        let scale = 2.0 * zoom / width as f64;
+        center_x += (f64::from(dive.x) - width as f64 / 2.0) * scale;
+        center_y += (f64::from(dive.y) - height as f64 / 2.0) * scale;
+        zoom *= DIVE_FACTOR;
+    }
+    (center_x, center_y, zoom)
+}
+
+/// Return the persistent camera selected by normalized click points.
+///
+/// The app GPU path and the core render path share this calculation so a click
+/// keeps the same palette, iteration budget, and camera on accelerated systems.
+#[must_use]
+pub fn selected_view(
+    pokes: &[(f64, f64)],
+    width: usize,
+    height: usize,
+    seed: u64,
+    initial_t: f64,
+) -> (f64, f64, f64) {
+    if width == 0 || height == 0 {
+        return automatic_view(initial_t, seed);
+    }
+    selected_view_from_points(
+        &bounded_dive_points(pokes, width, height),
+        width,
+        height,
+        seed,
+        initial_t,
+    )
+}
+
+/// Return the persistent camera selected by phase-stamped input events.
+///
+/// The first valid click fixes the automatic camera at the instant of the
+/// click. Later animation frames retain that camera while additional clicks
+/// dive farther into it.
+#[must_use]
+pub fn selected_view_input(
+    inputs: &[RoomInput],
+    width: usize,
+    height: usize,
+    seed: u64,
+    current_t: f64,
+) -> (f64, f64, f64) {
+    if width == 0 || height == 0 {
+        return automatic_view(current_t, seed);
+    }
+    let events = dive_events(inputs, width, height);
+    let Some(first) = events.first() else {
+        return automatic_view(current_t, seed);
+    };
+    let dives: Vec<_> = events.iter().map(|event| event.point).collect();
+    selected_view_from_points(&dives, width, height, seed, first.t)
+}
+
+fn valid_dive_inputs(inputs: &[RoomInput]) -> Vec<(f64, f64, f64)> {
+    let events: Vec<_> = inputs
+        .iter()
+        .filter_map(|input| match *input {
+            RoomInput::PointerDown { x, y, t } => Some((x, y, t)),
+            _ => None,
+        })
+        .collect();
+    let start = events.len().saturating_sub(MAX_ROOM_POKES);
+    events[start..]
+        .iter()
+        .filter_map(|&(x, y, t)| {
+            if !x.is_finite() || !y.is_finite() || !t.is_finite() {
+                return None;
+            }
+            Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0), finite_phase(t)))
+        })
+        .collect()
+}
+
+fn dive_events(inputs: &[RoomInput], width: usize, height: usize) -> Vec<DiveEvent> {
+    valid_dive_inputs(inputs)
+        .into_iter()
+        .map(|(x, y, t)| DiveEvent {
+            point: DivePoint {
+                x: screen_coord(x, width),
+                y: screen_coord(y, height),
+            },
+            t,
+        })
+        .collect()
+}
+
 impl Room for Mandelbrot {
     fn meta(&self) -> RoomMeta {
         RoomMeta {
@@ -118,33 +261,8 @@ impl Room for Mandelbrot {
         let Some((width, height)) = drawing_dims(canvas) else {
             return;
         };
-        let t = finite_phase(t);
-        // Zoom from the whole set toward the seahorse valley at -0.745 + 0.113i.
-        let zoom = 1.5 * 0.15_f64.powf(t);
-        let s_off = (self.seed % 1000) as f64 * 0.00001;
-        let center_x = lerp(-0.5, -0.745, t) + s_off;
-        let center_y = lerp(0.0, 0.113, t) + s_off;
-        let scale = 2.0 * zoom / width as f64;
-        let half_w = width as f64 / 2.0;
-        let half_h = height as f64 / 2.0;
-
-        for py in 0..height {
-            for px in 0..width {
-                let cx = center_x + (px as f64 - half_w) * scale;
-                let cy = center_y + (py as f64 - half_h) * scale;
-                let iters = escape_iters(cx, cy, MAX_ITER);
-                let mark = if iters == MAX_ITER {
-                    '#'
-                } else if iters > 24 {
-                    '*'
-                } else if iters > 6 {
-                    '-'
-                } else {
-                    continue;
-                };
-                canvas.plot(px as i32, py as i32, mark);
-            }
-        }
+        let (center_x, center_y, zoom) = automatic_view(t, self.seed);
+        render_view(canvas, width, height, center_x, center_y, zoom);
     }
 
     fn reveal(&self) -> &'static str {
@@ -169,6 +287,15 @@ impl Room for Mandelbrot {
         Some("CLICK: DIVE AT POINT")
     }
 
+    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let dives = valid_dive_inputs(inputs).len();
+        if dives == 0 {
+            return Some("AUTO DIVE   CLICK TO HOLD A VIEW".to_string());
+        }
+        let magnification = 1_u64 << dives.min(63);
+        Some(format!("DIVE {dives}   ZOOM {magnification}X   VIEW HELD"))
+    }
+
     #[allow(dead_code)]
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
@@ -178,42 +305,22 @@ impl Room for Mandelbrot {
         let Some((width, height)) = drawing_dims(canvas) else {
             return;
         };
-        // base
-        self.render(canvas, t);
         let dives = bounded_dive_points(pokes, width, height);
-        // for each poke, draw a small "dive" at that normalized pos with extra zoom
-        for dive in dives {
-            let dive_t = (finite_phase(t) + 0.2).clamp(0.0, 1.0);
-            let dive_zoom = 1.5 * 0.15_f64.powf(dive_t);
-            let dive_cx = lerp(-0.5, -0.745, dive_t) + (dive.nx - 0.5) * 0.2;
-            let dive_cy = lerp(0.0, 0.113, dive_t) + (dive.ny - 0.5) * 0.2;
-            let scale = 2.0 * dive_zoom / width as f64;
-            let half_w = width as f64 / 2.0;
-            let half_h = height as f64 / 2.0;
-            // draw small region around poke, scaled
-            for dy in -DIVE_RADIUS..=DIVE_RADIUS {
-                for dx in -DIVE_RADIUS..=DIVE_RADIUS {
-                    let lx = dive.x + dx * DIVE_STEP;
-                    let ly = dive.y + dy * DIVE_STEP;
-                    if lx < 0 || lx >= width as i32 || ly < 0 || ly >= height as i32 {
-                        continue;
-                    }
-                    let cx = dive_cx + (f64::from(lx) - half_w) * scale * 0.5;
-                    let cy = dive_cy + (f64::from(ly) - half_h) * scale * 0.5;
-                    let iters = escape_iters(cx, cy, MAX_ITER);
-                    let mark = if iters == MAX_ITER {
-                        '#'
-                    } else if iters > 24 {
-                        '*'
-                    } else if iters > 6 {
-                        '-'
-                    } else {
-                        continue;
-                    };
-                    canvas.plot(lx, ly, mark);
-                }
-            }
+        if dives.is_empty() {
+            self.render(canvas, t);
+            return;
         }
+        let (center_x, center_y, zoom) =
+            selected_view_from_points(&dives, width, height, self.seed, t);
+        render_view(canvas, width, height, center_x, center_y, zoom);
+    }
+
+    fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
+        let Some((width, height)) = drawing_dims(canvas) else {
+            return;
+        };
+        let (center_x, center_y, zoom) = selected_view_input(inputs, width, height, self.seed, t);
+        render_view(canvas, width, height, center_x, center_y, zoom);
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {
@@ -231,9 +338,12 @@ impl Room for Mandelbrot {
 
 #[cfg(test)]
 mod tests {
-    use super::{DivePoint, Mandelbrot, bounded_dive_points, escape_iters, finite_phase};
+    use super::{
+        DivePoint, Mandelbrot, automatic_view, bounded_dive_points, escape_iters, finite_phase,
+        selected_view, selected_view_from_points, selected_view_input,
+    };
     use crate::canvas::Canvas;
-    use crate::room::{MAX_ROOM_POKES, Room};
+    use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
     use crate::surface::{MAX_DIM, Surface};
 
     #[test]
@@ -257,9 +367,37 @@ mod tests {
         assert!(a.ink_count() > 20);
     }
 
+    #[test]
+    fn selected_input_camera_stays_fixed_after_the_click() {
+        let inputs = [RoomInput::PointerDown {
+            x: 0.65,
+            y: 0.35,
+            t: 0.2,
+        }];
+        let early = selected_view_input(&inputs, 900, 700, 17, 0.3);
+        let late = selected_view_input(&inputs, 900, 700, 17, 0.8);
+
+        assert_eq!(early, late);
+    }
+
     fn render_text(room: &Mandelbrot, t: f64, pokes: &[(f64, f64)]) -> String {
         let mut canvas = Canvas::new(48, 32);
         room.render_poked(&mut canvas, t, pokes);
+        canvas.to_text()
+    }
+
+    fn render_input_text(
+        room: &Mandelbrot,
+        current_t: f64,
+        event_t: f64,
+        points: &[(f64, f64)],
+    ) -> String {
+        let inputs: Vec<_> = points
+            .iter()
+            .map(|&(x, y)| RoomInput::PointerDown { x, y, t: event_t })
+            .collect();
+        let mut canvas = Canvas::new(48, 32);
+        room.render_input(&mut canvas, current_t, &inputs);
         canvas.to_text()
     }
 
@@ -313,8 +451,8 @@ mod tests {
             render_text(&room, 0.4, &newest)
         );
         assert_ne!(
-            render_text(&room, 0.4, &all),
-            render_text(&room, 0.4, &prefix)
+            selected_view_from_points(&bounded_dive_points(&all, 48, 32), 48, 32, 0, 0.4),
+            selected_view_from_points(&bounded_dive_points(&prefix, 48, 32), 48, 32, 0, 0.4)
         );
     }
 
@@ -351,12 +489,7 @@ mod tests {
     fn finite_dive_points_clamp_to_visible_edges() {
         assert_eq!(
             bounded_dive_points(&[(1.5, -1.0)], 10, 8),
-            vec![DivePoint {
-                x: 9,
-                y: 0,
-                nx: 1.0,
-                ny: 0.0,
-            }]
+            vec![DivePoint { x: 9, y: 0 }]
         );
     }
 
@@ -426,5 +559,45 @@ mod tests {
         let mut c = Canvas::new(20, 15);
         room.render_poked(&mut c, 0.5, &[(0.5, 0.5)]);
         // just no panic, ink may vary
+    }
+
+    #[test]
+    fn selected_dive_ignores_global_phase_until_reset() {
+        let room = Mandelbrot::new();
+        let selected_early = render_input_text(&room, 0.1, 0.6, &[(0.5, 0.5)]);
+        let selected_late = render_input_text(&room, 0.9, 0.6, &[(0.5, 0.5)]);
+        let deeper = render_input_text(&room, 0.9, 0.6, &[(0.5, 0.5), (0.5, 0.5)]);
+
+        assert_eq!(selected_early, selected_late);
+        assert_ne!(selected_late, deeper);
+        assert_ne!(selected_late, render_text(&room, 0.9, &[]));
+    }
+
+    #[test]
+    fn first_dive_uses_the_automatic_view_that_was_clicked() {
+        let automatic = automatic_view(0.6, 0);
+        let selected = selected_view_from_points(&[DivePoint { x: 24, y: 16 }], 48, 32, 0, 0.6);
+
+        assert!((selected.0 - automatic.0).abs() < 1e-12);
+        assert!((selected.1 - automatic.1).abs() < 1e-12);
+        assert!((selected.2 - automatic.2 * super::DIVE_FACTOR).abs() < 1e-12);
+        assert_ne!(
+            selected,
+            selected_view_from_points(&[DivePoint { x: 24, y: 16 }], 48, 32, 0, 0.0)
+        );
+    }
+
+    #[test]
+    fn normalized_selected_view_matches_the_internal_camera() {
+        let pokes = [(0.5, 0.5), (0.75, 0.25)];
+        let points = bounded_dive_points(&pokes, 900, 700);
+        assert_eq!(
+            selected_view(&pokes, 900, 700, 17, 0.63),
+            selected_view_from_points(&points, 900, 700, 17, 0.63)
+        );
+        assert_eq!(
+            selected_view(&pokes, 0, 700, 17, 0.63),
+            automatic_view(0.63, 17)
+        );
     }
 }

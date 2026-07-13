@@ -6,6 +6,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Release QA now generates a self-checking 240-screen app matrix. Every catalog
+  room has true phase-zero entry, arrival, immediate pointer, delayed gesture,
+  compact arrival, and compact delayed captures. Dedicated scenarios cover
+  every persistent game display state,
+  default and compact overlays, The Show, Times Tables phase stability,
+  Mandelbrot reset continuity, and the production Studio renderer. Generation
+  removes stale output, requires an exact unique scenario inventory, rejects
+  blank or wrong-sized frames, and requires every room interaction to change at
+  least 100 raw room-content pixels against its same-phase baseline. The
+  documented release process splits player-profile review
+  into independent first-contact, interaction, and CLI/MCP parity groups, then
+  requires two fresh checkers after fixes.
 - MCP prediction now accepts an optional linear `rate` alongside the existing
   point `guess`. A rate commitment reveals the actual local secant rate and
   five signed residual samples, actual minus predicted, so a mind can inspect
@@ -114,6 +126,44 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - A deterministic pre-commit gate (`scripts/hooks/pre-commit`, wired once per clone with `git config core.hooksPath scripts/hooks`, documented in `docs/ENGINEERING.md`). It blocks any commit that would fail the fast gate: the house-style guard on every commit, and the cargo gate (fmt, clippy `-D warnings`, the full test suite) only when the commit touches Rust, `Cargo.*`, or a shader, so docs-only commits stay fast. Coverage and the locked build remain the release gate (`scripts/verify.sh`). A wired gate that blocks a bad commit beats any reminder to run the checks.
 
 ### Changed
+- Room interaction now keeps the consequence legible and stable. Game of Life
+  foregrounds the launched glider against its ambient soup, Prime Spirals uses
+  the full short side and traces the selected Ulam diagonals, Cult of Pi starts
+  from the canonical `3.141592653589793...` prefix and lets the player repair a
+  bounded signal fault, Buffon's Needle foregrounds a viewport-scaled throw,
+  and Mandelbrot holds each full-frame dive until another click or reset.
+  Interaction-aware status lines report the same bounded input history that
+  produced the frame. In the app, R resets the current visit without changing
+  its variation, and the two-line footer keeps controls fixed while status
+  changes.
+- Six previously silent phase-zero room actions now answer immediately.
+  Goldbach tests any selected even and names its witnesses, Langton's Ant marks
+  the changed cell, Fourier Epicycles draws the perturbed chain, Random Walk
+  plants a visible connected trail, Mobius paints the selected region, and
+  Quine places a connected recursive copy. GPU Mandelbrot now derives its held
+  camera from the gesture timestamp, so animation time cannot move a selected
+  view.
+- The app's headless QA capture grew from four showcase frames to the
+  release-generated 240-screen matrix. It now exercises arrival cards, delayed
+  gesture consequences, compact overlays, The Show, and production Studio
+  rendering rather than maintaining screenshot-only copies of live UI paths.
+- Standalone Munch now starts in the complete seeded rule deck, advances with
+  Enter or Space, records the actual board round, and deterministically avoids
+  adjacent rules from the same family. This exposes primes, composites,
+  Fibonacci numbers, squares, multiples, and digit sums in continuous play
+  without changing existing seeded board definitions or the score-key schema.
+  The CLI's default seven-board session reaches the full deck, while MCP and
+  the app begin at its shared first full-deck round. Explicit earlier rounds
+  retain the gentle teaching ramp.
+- Deep-cut unlocks now use one shared LV 5/12/24 policy. Every shipped cut is
+  reachable before the LV 42 cap, and neither CLI nor MCP can expose an
+  internal integer sentinel as a fictional required level.
+- Automatic room music now uses a softer triangle voice and a conservative
+  45 percent default master level. Explicit chiptune composition keeps its
+  brighter square lead.
+- Windows and POSIX release verification redirect all Journey, score, and Cairn
+  state into `.agent/verify`. The Windows script restores its inherited PATH
+  and each optional state variable even when a gate fails.
 - Shared persistence closes its remaining bounded durability gaps without
   changing merge semantics. Windows replacement now retries the same atomic
   rename instead of moving the old file through a backup name, so readers see
@@ -131,7 +181,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   broader test surface exposed and fixed macOS abandoned-lock recovery, which
   now uses the platform process list to distinguish a live holder from an
   exited process instead of conservatively treating every recorded process as
-  live. The complete suite has 1,017 tests, 91.80% region coverage, and 91.41%
+  live. The complete suite has 1,074 tests, 92.13% region coverage, and 91.89%
   line coverage.
 - The cross-room identities from the simulated Ramanujan review now live in the
   experience instead of only in planning prose. Logistic Map and Mandelbrot
@@ -163,6 +213,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   gates.
 
 ### Fixed
+- The native app now supplies the established Numinous logo as its live window
+  icon and embeds the matching icon in the Windows executable, replacing the
+  generic platform box in both the running app and installed file. Automated
+  app, CLI, and MCP tests isolate Journey, score, and Cairn paths, preventing
+  QA runs from adding progress, scores, or messages to the player's real
+  profile.
 - Maintenance hardening closes five resource and installation boundary gaps.
   The POSIX installer now normalizes custom roots through their physical parent,
   rejects control characters, dot components, HOME aliases, symbolic-link
@@ -338,10 +394,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - Restored green local gates after the poke and variation wave: Julia pokes now dispatch through `dyn Room`, Quine and Double Pendulum receive visible registry variation, L-System preset generation follows phase, and registry tests assert those behaviors through the actual catalog path.
 - Local verification is portable again on Windows: added a native PowerShell house-style guard, kept the Linux shell guard for CI, aligned coverage exclusions with CI, and wrapped artifact regeneration in the Windows verify step so failures stop the script.
 - Status docs were reconciled repeatedly with live evidence during the app-hardening pass.
-- Langton's Ant: poke grid binning aligned to min(GRID-1) (consistent coverage, no px=1.0 wrap); basic poked test strengthened with explicit to_text() != ; addresses subagent binning + test notes (stale snapshot saw old post-sim code). Current pre-poke + var solid.
-- Langton's Ant: draw loop deduplicated into draw_grid helper (per subagent rec); pre-poke + variation (initial scatter + start offset) confirmed solid vs checker (which saw stale post-sim version). 9 tests + registry coverage green.
-- Golden Angle: strengthened variation (larger phase *0.05 + seeds jitter) and applied to poked extras; added explicit poked + variation diff test (assert_ne on text). Addresses multiple subagent reviews (fragile ne, weak replay). 366 core tests. plot_disc dupe reduction from prior.
-- Golden Angle poke: extracted shared plot_disc helper to remove duplication between render and render_poked (addresses review feedback); variation jitter made reliably visible on small canvases. Subagent review PASS.
+- Langton's Ant poke grid binning aligns to `GRID - 1`, so a normalized
+  coordinate of 1.0 stays on the final cell instead of wrapping. A direct
+  render comparison pins the visible pre-simulation consequence.
+- Langton's Ant uses one shared grid-drawing helper. Its deterministic initial
+  scatter and start offset keep poke and variation behavior distinct.
+- Golden Angle applies stronger seeded phase and seed jitter to both ordinary
+  and poked renders. Direct render comparisons pin replay variation on compact
+  canvases, and one shared disc helper owns both paths.
 - Epicycles poke enriched (now draws mini traced paths using lines at poke offsets with phase shift, plus pen; richer "CLICK: PERTURB THE CHAIN" response showing perturbed machinery). Phase offset for variation increased for clearly different replays even on small seeds.
 - Langton's Ant variation now produces distinct per-visit renders and pokes participate in the ant's evolution (initial scatter + deterministic start offset; pre-run flips). Preserves exact seed=0 + all historical tests/postcards. Completes proper replay + playable for the room.
 - The radio went hi-fi: the whole pipeline is stereo now (the player speaks
@@ -372,7 +432,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - New room "L-System Garden" (Emergence): recursive string-rewrite grammar grows trees, snowflakes, dragons from tiny rules. Poke plants branches. Fits digital minds (symbol rewriting = computation/substrate of mind; self-similarity, emergence, recursion). Added with poke support and variation hook in registry. 4 new tests; all core 337 green, clippy clean. See docs/ROOMS.md and DIGITAL_MINDS.md.
 - Poke progress: registry threads variation seed via all_rooms_with(v) (default 0 preserves exact behavior for tests/postcards); LSystemGarden now respects it via new_with for replayable per-visit growth. Core clean, tests pass.
 - App wired to variation: rooms loaded with all_rooms_with, reseeds on R and room visits per ARCADE.md. Supports L-System and future varying rooms. App gates green.
-- Fixed number key jumps (1-9) and R to consistently reseed variation, record visits, clear pokes, set room card (per subagent review + ARCADE "per-visit" + "R re-deals"). All navigation now uniform.
+- Number-key jumps consistently record visits, clear old interaction history,
+  and show the arrival card. R resets the current visit without changing its
+  variation.
 - CLI watch now supports --vary to re-deal variation seed (per ARCADE). Uses all_rooms_with for replayable rooms like L-System. Gates green.
 - Extended variation to Chaos Game, Game of Life, Voronoi (first wave poke rooms per ARCADE): ctors accept seed, RNG uses it for replay. MCP play_room gains optional "variation" param. Maintenance checks green.
 - Completed first wave: added variation to Lorenz, Double Pendulum, Random Walk. Fixed prior test bugs, added determinism tests for variation in poke rooms. All gates pass.

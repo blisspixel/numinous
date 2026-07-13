@@ -1,5 +1,10 @@
 //! Built-in rooms. Each module implements the [`crate::room::Room`] contract.
 
+/// Shared escape-time budget for the CPU and accelerated Mandelbrot and Julia
+/// renderers. Keeping one budget prevents interaction from changing detail
+/// merely because a machine has a compatible GPU.
+pub const FRACTAL_MAX_ITER: u32 = 160;
+
 pub mod arecibo;
 pub mod barnsley_fern;
 pub mod buffon_needle;

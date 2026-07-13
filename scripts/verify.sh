@@ -3,6 +3,12 @@
 # artifacts into renders/. See VERIFY.md.
 set -euo pipefail
 
+verify_state=".agent/verify"
+mkdir -p "$verify_state"
+export NUMINOUS_JOURNEY="$verify_state/journey.txt"
+export NUMINOUS_SCORES="$verify_state/scores.txt"
+export NUMINOUS_CAIRN="$verify_state/cairn.txt"
+
 echo "== format =="
 cargo fmt --all --check
 echo "== clippy =="
@@ -30,6 +36,7 @@ echo "== house-style =="
 bash scripts/check-style.sh
 
 echo "== regenerate artifacts into renders/ =="
+cargo run -q -p numinous-app --example screens
 cargo run -q --bin numinous -- gallery --dir renders --width 600 --height 600
 cargo run -q --bin numinous -- contact-sheet --out renders/contact.png --cols 3 --tile 360
 cargo run -q --bin numinous -- sonify lissajous --out renders/lissajous.wav

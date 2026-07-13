@@ -2,14 +2,14 @@
 //!
 //! Exact decimal digits enter a low-flicker green channel. Every finite prefix
 //! approaches pi without becoming its infinite expansion; the older field
-//! thins, and a deterministic fault slowly changes the rite. A click adds a
-//! local corruption. See `docs/ROOMS.md`.
+//! thins, and a deterministic fault slowly changes the rite. A click repairs a
+//! bounded part of the finite signal. See `docs/ROOMS.md`.
 
 use std::sync::OnceLock;
 
 use crate::font::draw_text;
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta, renderable_poke_count};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
@@ -19,6 +19,7 @@ const PHASE_TICKS: usize = 64;
 const STREAM_STEP: usize = 37;
 const PI_SPAWN_MODULUS: u64 = 1301;
 const SEED_SALT: u64 = 0x3141_5926_5358_9793;
+const PI_HEADER: &str = "PI = 3.141592653589793...";
 const DIGIT_TEXT: [&str; 10] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 static PI_DIGITS: OnceLock<Vec<u8>> = OnceLock::new();
@@ -162,7 +163,7 @@ fn hand_points(pokes: &[(f64, f64)]) -> impl Iterator<Item = (f64, f64)> + '_ {
     })
 }
 
-fn near_fault(column: usize, row: usize, field: FieldLayout, pokes: &[(f64, f64)]) -> bool {
+fn near_repair(column: usize, row: usize, field: FieldLayout, pokes: &[(f64, f64)]) -> bool {
     let x = (column as f64 + 0.5) / field.columns as f64;
     let y = (row as f64 + 0.5) / field.rows as f64;
     hand_points(pokes).any(|(px, py)| (x - px).hypot(y - py) < 0.16)
@@ -174,21 +175,21 @@ fn glyph_for(
     total: usize,
     hash: u64,
     corruption: f64,
-    local_fault: bool,
+    local_repair: bool,
 ) -> Option<(char, char)> {
     if hash % PI_SPAWN_MODULUS == 0 {
         return Some(('π', '#'));
     }
-    let threshold = if local_fault { 0.92 } else { corruption * 0.42 };
+    let threshold = corruption * 0.42;
     let changed = (hash % 10_000) as f64 / 10_000.0 < threshold;
-    let shown = if changed {
+    let shown = if changed && !local_repair {
         (exact + 1 + (hash % 9) as u8) % 10
     } else {
         exact
     };
     let recency = index as f64 / total.saturating_sub(1).max(1) as f64;
     let noise = hash % 100;
-    if recency >= 0.72 || local_fault {
+    if recency >= 0.72 || local_repair {
         Some((char::from(b'0' + shown), '#'))
     } else if recency >= 0.46 {
         if noise < 72 {
@@ -217,8 +218,8 @@ fn render_field(surface: &mut dyn Surface, seed: u64, t: f64, pokes: &[(f64, f64
         let row = index / field.columns;
         let exact = digits()[offset + index];
         let hash = cell_hash(seed, tick, index);
-        let local_fault = near_fault(column, row, field, pokes);
-        let Some((glyph, mark)) = glyph_for(exact, index, total, hash, phase, local_fault) else {
+        let local_repair = near_repair(column, row, field, pokes);
+        let Some((glyph, mark)) = glyph_for(exact, index, total, hash, phase, local_repair) else {
             continue;
         };
         let x = column * field.step_x;
@@ -235,6 +236,19 @@ fn render_field(surface: &mut dyn Surface, seed: u64, t: f64, pokes: &[(f64, f64
             surface.plot(x as i32, y as i32, glyph);
         }
     }
+
+    let header_scale = if field.pixel_font {
+        field.glyph_scale.max(1)
+    } else {
+        1
+    };
+    let header_y = if field.pixel_font {
+        let interface_scale = (surface.width() as i32 / 400).clamp(1, 4);
+        18 + 7 * (interface_scale + 1)
+    } else {
+        0
+    };
+    draw_text(surface, PI_HEADER, 0, header_y, header_scale, '#');
 }
 
 /// A ritualized, decaying computation of pi.
@@ -263,7 +277,7 @@ impl Room for CultOfPi {
             id: "cult-of-pi",
             title: "Cult of Pi",
             wing: "Number & Pattern",
-            blurb: "A green channel counts toward pi but never finishes. Exact digits arrive, age into dust, and slowly change as the ritual interferes with its own calculation.",
+            blurb: "The exact digits of pi enter a finite channel, age, and develop faults. Click to repair a local patch, but no finite screen can ever contain all of pi.",
             accent: [40, 210, 90],
         }
     }
@@ -298,13 +312,24 @@ impl Room for CultOfPi {
         let phase = finite_phase(t);
         let tick = (phase * (PHASE_TICKS - 1) as f64).floor() as usize + 1;
         Some(format!(
-            "CHANNEL PHASE {tick:02}/{PHASE_TICKS}   RITUAL CORRUPTION {:.0}%",
+            "CHANNEL {tick:02}/{PHASE_TICKS}   SIGNAL CORRUPTION {:.0}%",
             phase * 42.0
         ))
     }
 
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let repairs = renderable_poke_count(inputs);
+        if repairs == 0 {
+            return self.status(t);
+        }
+        Some(format!(
+            "{repairs} REPAIR{}   THIS WINDOW IS FINITE   PI NEVER ENDS",
+            if repairs == 1 { "" } else { "S" }
+        ))
+    }
+
     fn verb(&self) -> Option<&'static str> {
-        Some("CLICK: BREAK THE SEQUENCE")
+        Some("CLICK: REPAIR THE SIGNAL")
     }
 
     fn render_poked(&self, surface: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -332,7 +357,10 @@ impl Room for CultOfPi {
 
 #[cfg(test)]
 mod tests {
-    use super::{CultOfPi, MAX_FIELD_CELLS, generate_pi_digits, layout, stream_offset};
+    use super::{
+        CultOfPi, MAX_FIELD_CELLS, PI_HEADER, generate_pi_digits, glyph_for, layout, near_repair,
+        stream_offset,
+    };
     use crate::canvas::Canvas;
     use crate::room::Room;
     use crate::surface::Surface;
@@ -362,14 +390,33 @@ mod tests {
     }
 
     #[test]
-    fn a_click_adds_a_local_fault() {
+    fn a_click_repairs_a_local_patch() {
         let room = CultOfPi::new();
         let mut base = Canvas::new(60, 30);
-        let mut broken = Canvas::new(60, 30);
+        let mut repaired = Canvas::new(60, 30);
         room.render(&mut base, 0.4);
-        room.render_poked(&mut broken, 0.4, &[(0.5, 0.5)]);
+        room.render_poked(&mut repaired, 0.4, &[(0.5, 0.5)]);
 
-        assert_ne!(base.to_text(), broken.to_text());
+        assert_ne!(base.to_text(), repaired.to_text());
+
+        let hash = (1..100_000)
+            .find(|&hash| {
+                glyph_for(3, 9, 10, hash, 1.0, false)
+                    .is_some_and(|(glyph, _)| glyph.is_ascii_digit() && glyph != '3')
+            })
+            .expect("a deterministic corrupted digit");
+        assert_eq!(glyph_for(3, 9, 10, hash, 1.0, true), Some(('3', '#')));
+
+        let canvas = Canvas::new(60, 30);
+        let field = layout(&canvas).expect("field");
+        let column = field.columns / 2;
+        let row = field.rows / 2;
+        let hand = (
+            (column as f64 + 0.5) / field.columns as f64,
+            (row as f64 + 0.5) / field.rows as f64,
+        );
+        assert!(near_repair(column, row, field, &[hand]));
+        assert!(!near_repair(0, 0, field, &[hand]));
     }
 
     #[test]
@@ -450,6 +497,44 @@ mod tests {
         let room = CultOfPi::new();
         assert!(room.reveal().contains("approximation"));
         assert!(room.deep_cuts()[1].contains("not established history"));
-        assert_eq!(room.verb(), Some("CLICK: BREAK THE SEQUENCE"));
+        assert_eq!(room.verb(), Some("CLICK: REPAIR THE SIGNAL"));
+    }
+
+    #[test]
+    fn every_frame_names_the_canonical_pi_prefix() {
+        let room = CultOfPi::new_with(42);
+        let mut actual = Canvas::new(180, 30);
+        let mut header = Canvas::new(180, 30);
+        room.render(&mut actual, 0.8);
+        crate::draw_text(&mut header, PI_HEADER, 0, 0, 1, '#');
+
+        for y in 0..30 {
+            for x in 0..180 {
+                if header.cell(x, y) == Some('#') {
+                    assert_eq!(actual.cell(x, y), Some('#'));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn raster_header_sits_below_the_app_title_band() {
+        let room = CultOfPi::new();
+        let mut actual = crate::Raster::with_accent(640, 480, room.meta().accent);
+        let mut header = crate::Raster::with_accent(640, 480, room.meta().accent);
+        room.render(&mut actual, 0.8);
+        let y = 18 + 7 * (1 + 1);
+        crate::draw_text(&mut header, PI_HEADER, 0, y, 1, '#');
+
+        let background = [10, 11, 15, 255];
+        for (expected, observed) in header
+            .to_rgba()
+            .chunks_exact(4)
+            .zip(actual.to_rgba().chunks_exact(4))
+        {
+            if expected != background {
+                assert_ne!(observed, background);
+            }
+        }
     }
 }

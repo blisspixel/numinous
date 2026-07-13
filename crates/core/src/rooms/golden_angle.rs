@@ -9,7 +9,7 @@
 use std::f64::consts::PI;
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
 /// How far `t` can push the angle away from golden, in radians. A small nudge is
@@ -115,6 +115,29 @@ impl GoldenAngle {
             .iter()
             .filter_map(move |&(px, py)| Self::screen_cell(px, py, width, height))
     }
+
+    fn mark_origin(canvas: &mut dyn Surface, sx: i32, sy: i32, width: usize, height: usize) {
+        let radius = (width.min(height) / 60).clamp(3, 10) as i32;
+        canvas.line(
+            sx.saturating_sub(radius),
+            sy,
+            sx.saturating_add(radius),
+            sy,
+            '#',
+        );
+        canvas.line(
+            sx,
+            sy.saturating_sub(radius),
+            sx,
+            sy.saturating_add(radius),
+            '#',
+        );
+        for offset in -radius..=radius {
+            let edge = radius - offset.abs();
+            canvas.plot(sx.saturating_add(offset), sy.saturating_sub(edge), '#');
+            canvas.plot(sx.saturating_add(offset), sy.saturating_add(edge), '#');
+        }
+    }
 }
 
 impl Room for GoldenAngle {
@@ -196,6 +219,26 @@ impl Room for GoldenAngle {
         Some("CLICK: PLANT A SEED")
     }
 
+    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let planted = inputs
+            .iter()
+            .filter(|input| {
+                matches!(
+                    input,
+                    RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. }
+                        if x.is_finite() && y.is_finite()
+                )
+            })
+            .count()
+            .min(MAX_ROOM_POKES);
+        (planted > 0).then(|| {
+            format!(
+                "{planted} BRIGHT SEED {} PLANTED",
+                if planted == 1 { "CLUSTER" } else { "CLUSTERS" }
+            )
+        })
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
             self.render(canvas, t);
@@ -217,14 +260,15 @@ impl Room for GoldenAngle {
         for (sx, sy, _px, py) in Self::planted_seeds(pokes, width, height) {
             let local_detune = (py - 0.5) * 0.1;
             let local_step = step + local_detune;
-            Self::plot_disc(canvas, sx, sy, seed_radius, '+');
+            Self::plot_disc(canvas, sx, sy, seed_radius, '#');
             for k in 1..=POKE_SEEDS {
                 let theta = k as f64 * local_step + phase_off;
                 let radius = scale * (k as f64).sqrt();
                 let x = sx as f64 + radius * theta.cos();
                 let y = sy as f64 + radius * theta.sin() * aspect;
-                Self::plot_disc(canvas, x.round() as i32, y.round() as i32, seed_radius, '+');
+                Self::plot_disc(canvas, x.round() as i32, y.round() as i32, seed_radius, '#');
             }
+            Self::mark_origin(canvas, sx, sy, width, height);
         }
     }
 }
@@ -234,7 +278,39 @@ mod tests {
     use super::GoldenAngle;
     use crate::MAX_ROOM_POKES;
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::room::{Room, RoomInput};
+
+    #[test]
+    fn status_uses_clear_singular_and_plural_seed_counts() {
+        let room = GoldenAngle::new();
+        assert_eq!(room.status_input(0.0, &[]), None);
+        let one = [RoomInput::PointerDown {
+            x: 0.4,
+            y: 0.5,
+            t: 0.0,
+        }];
+        assert_eq!(
+            room.status_input(0.0, &one).as_deref(),
+            Some("1 BRIGHT SEED CLUSTER PLANTED")
+        );
+        let mixed = [
+            one[0],
+            RoomInput::PointerMove {
+                x: 0.6,
+                y: 0.7,
+                t: 0.1,
+            },
+            RoomInput::PointerDown {
+                x: f64::INFINITY,
+                y: 0.5,
+                t: 0.2,
+            },
+        ];
+        assert_eq!(
+            room.status_input(0.0, &mixed).as_deref(),
+            Some("2 BRIGHT SEED CLUSTERS PLANTED")
+        );
+    }
 
     #[test]
     fn step_is_the_golden_angle_at_zero() {
@@ -396,7 +472,7 @@ mod tests {
 
         let text = canvas.to_text();
         let top_row = text.lines().next().expect("top row");
-        assert_eq!(top_row.as_bytes()[39], b'+');
+        assert_eq!(top_row.as_bytes()[39], b'#');
     }
 
     #[test]

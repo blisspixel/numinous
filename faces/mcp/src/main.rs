@@ -109,13 +109,23 @@ fn read_bounded_line(reader: &mut impl io::BufRead, line: &mut Vec<u8>) -> io::R
 /// Where the journey file lives (shared with the CLI face, so a mind's play
 /// counts the same wherever it plays): `NUMINOUS_JOURNEY` if set, else home.
 fn journey_path() -> std::path::PathBuf {
-    if let Ok(path) = std::env::var("NUMINOUS_JOURNEY") {
-        return std::path::PathBuf::from(path);
+    #[cfg(test)]
+    {
+        std::env::temp_dir().join(format!(
+            "numinous-mcp-test-{}-journey.txt",
+            std::process::id()
+        ))
     }
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| ".".to_string());
-    std::path::PathBuf::from(home).join(".numinous-journey")
+    #[cfg(not(test))]
+    {
+        if let Ok(path) = std::env::var("NUMINOUS_JOURNEY") {
+            return std::path::PathBuf::from(path);
+        }
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        std::path::PathBuf::from(home).join(".numinous-journey")
+    }
 }
 
 /// Load the journey at `path`, or start a fresh one.
@@ -126,13 +136,23 @@ fn load_journey(path: &std::path::Path) -> numinous_core::Journey {
 /// Where the high-score table lives (shared with the CLI face, same keys, so
 /// humans and agents compete on the same boards).
 fn scores_path() -> std::path::PathBuf {
-    if let Ok(path) = std::env::var("NUMINOUS_SCORES") {
-        return std::path::PathBuf::from(path);
+    #[cfg(test)]
+    {
+        std::env::temp_dir().join(format!(
+            "numinous-mcp-test-{}-scores.txt",
+            std::process::id()
+        ))
     }
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| ".".to_string());
-    std::path::PathBuf::from(home).join(".numinous-scores")
+    #[cfg(not(test))]
+    {
+        if let Ok(path) = std::env::var("NUMINOUS_SCORES") {
+            return std::path::PathBuf::from(path);
+        }
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        std::path::PathBuf::from(home).join(".numinous-scores")
+    }
 }
 
 /// Record a score at `path`, keeping the best. Returns true on a new record.
@@ -143,13 +163,23 @@ fn post_score(path: &std::path::Path, key: &str, score: i64) -> bool {
 /// Where the cairn lives (shared with the CLI face): the local pile of
 /// bequests a mind leaves for whoever comes after.
 fn cairn_path() -> std::path::PathBuf {
-    if let Ok(path) = std::env::var("NUMINOUS_CAIRN") {
-        return std::path::PathBuf::from(path);
+    #[cfg(test)]
+    {
+        std::env::temp_dir().join(format!(
+            "numinous-mcp-test-{}-cairn.txt",
+            std::process::id()
+        ))
     }
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| ".".to_string());
-    std::path::PathBuf::from(home).join(".numinous-cairn")
+    #[cfg(not(test))]
+    {
+        if let Ok(path) = std::env::var("NUMINOUS_CAIRN") {
+            return std::path::PathBuf::from(path);
+        }
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        std::path::PathBuf::from(home).join(".numinous-cairn")
+    }
 }
 
 /// The level at which the cairn opens for leaving: the journey's cap, so a
@@ -296,7 +326,10 @@ fn record_progress(request: &Value, path: &std::path::Path) {
             if let Some(raw) = args.get("bites").and_then(Value::as_array) {
                 journey.play();
                 let seed = effective_seed(&args);
-                let round = args.get("round").and_then(Value::as_u64).unwrap_or(0);
+                let round = args
+                    .get("round")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(numinous_core::FULL_DECK_ROUND);
                 let board = numinous_core::build_board(seed, round);
                 let bites: Vec<usize> = raw
                     .iter()
@@ -835,13 +868,13 @@ fn tools_list_result() -> Value {
             },
             {
                 "name": "munch",
-                "description": "Munch: a seeded board of numbers and a rule (eat the primes, the multiples, the squares). Call with seed and round to see the board; call again with bites (1-based cell numbers) to be scored: +10 a hit, -5 a bad bite, +20 for a perfect clear. Same seed, same board, for humans and AIs alike: compare totals.",
+                "description": "Munch: a seeded board drawn from primes, composites, Fibonacci numbers, squares, varied multiples, and digit sums. Call with seed and round to see the board; call again with bites (1-based cell numbers) to be scored: +10 a hit, -5 a bad bite, +20 for a perfect clear. The default round uses the complete deck; rounds 0 through 3 provide a gentler ramp. Same seed, same board, for humans and AIs alike: compare totals.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "seed": { "type": "integer", "description": "Seed; the same seed and round give the same board." },
                         "daily": { "type": "boolean", "description": "Use today\'s shared seed instead; dailies chain into streaks." },
-                        "round": { "type": "integer", "description": "Round number (0, 1, 2, ...)." },
+                        "round": { "type": "integer", "description": "Round number (default 4 for the complete rule deck; 0 through 3 are the gentle ramp)." },
                         "bites": { "type": "array", "items": { "type": "integer" }, "description": "The 1-based cell numbers you eat. Omit to see the board." }
                     },
                     "additionalProperties": false
@@ -1118,6 +1151,7 @@ fn describe_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
                     cuts.push_str(&format!("\n\nDeeper: {cut}"));
                 } else {
                     cuts.push_str(&format!("\n\nLOCKED: a deeper cut opens at LV {need}."));
+                    break;
                 }
             }
             tool_text(&format!(
@@ -1413,14 +1447,22 @@ fn play_room_tool(args: &Value) -> Value {
                 room.render(&mut canvas, t);
                 None
             } else {
-                room.render_poked(&mut canvas, t, &pokes);
+                let events = numinous_core::inputs_from_pokes(&pokes, t);
+                room.render_input(&mut canvas, t, &events);
                 let mut base = Canvas::new(width, height);
                 room.render(&mut base, t);
                 base.delta(&canvas)
             };
             let m = room.meta();
             let action = numinous_core::room_action(room.as_ref());
-            let status = room.status(t);
+            let poke_inputs = numinous_core::inputs_from_pokes(&pokes, t);
+            let status = if !gesture.is_empty() {
+                room.status_input(t, &gesture)
+            } else if !poke_inputs.is_empty() {
+                room.status_input(t, &poke_inputs)
+            } else {
+                room.status(t)
+            };
             let status_line = status
                 .as_ref()
                 .map(|readout| format!("\nStatus: {readout}"))
@@ -2846,7 +2888,10 @@ fn quiz_tool(args: &Value, journey_file: &std::path::Path) -> Value {
 /// The `munch` tool: present a board, or grade a set of bites.
 fn munch_tool(args: &Value) -> Value {
     let seed = effective_seed(args);
-    let round = args.get("round").and_then(Value::as_u64).unwrap_or(0);
+    let round = args
+        .get("round")
+        .and_then(Value::as_u64)
+        .unwrap_or(numinous_core::FULL_DECK_ROUND);
     let board = numinous_core::build_board(seed, round);
     match args.get("bites").and_then(Value::as_array) {
         Some(raw) => {
@@ -3285,6 +3330,13 @@ fn error_response(id: Value, code: i64, message: &str) -> Value {
 mod tests {
     use super::{handle_request, handle_request_with, render_delta_json};
     use serde_json::json;
+
+    #[test]
+    fn test_persistence_paths_never_resolve_to_the_player_profile() {
+        assert!(super::journey_path().starts_with(std::env::temp_dir()));
+        assert!(super::scores_path().starts_with(std::env::temp_dir()));
+        assert!(super::cairn_path().starts_with(std::env::temp_dir()));
+    }
 
     #[test]
     fn initialize_returns_server_info() {
@@ -3747,6 +3799,30 @@ plays 2
             .unwrap_or_default();
         assert!(text.contains("Score:"), "got: {text}");
         assert!(text.contains("0 left behind"));
+    }
+
+    #[test]
+    fn munch_defaults_to_the_shared_complete_deck_round() {
+        let shown = handle_request(&json!({
+            "jsonrpc":"2.0","id":62,"method":"tools/call",
+            "params":{"name":"munch","arguments":{"seed":7}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(
+            shown["result"]["structuredContent"]["round"],
+            numinous_core::FULL_DECK_ROUND
+        );
+        let tools = handle_request(&json!({
+            "jsonrpc":"2.0","id":63,"method":"tools/list"
+        }))
+        .expect("tools/list must respond");
+        let munch = tools["result"]["tools"]
+            .as_array()
+            .and_then(|tools| tools.iter().find(|tool| tool["name"] == "munch"))
+            .expect("munch descriptor");
+        let description = munch["description"].as_str().unwrap_or_default();
+        assert!(description.contains("Fibonacci"), "{description}");
+        assert!(description.contains("digit sums"), "{description}");
     }
 
     #[test]
@@ -4302,6 +4378,55 @@ plays 2
             resting["result"]["structuredContent"]["delta"],
             serde_json::Value::Null,
             "an unpoked render carries no delta"
+        );
+    }
+
+    #[test]
+    fn play_room_reports_interaction_aware_status() {
+        let poked = handle_request(&json!({
+            "jsonrpc":"2.0","id":34,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"cult-of-pi","width":50,"height":24,"t":0.5,"pokes":[[0.5,0.5]]}}
+        }))
+        .expect("tools/call must respond");
+        let status = poked["result"]["structuredContent"]["status"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(status.starts_with("1 REPAIR"), "got: {status}");
+        let text = poked["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("Status: 1 REPAIR"), "got: {text}");
+    }
+
+    #[test]
+    fn compact_life_poke_matches_a_phase_stamped_click() {
+        let common = json!({
+            "id":"game-of-life","width":64,"height":48,"t":0.47
+        });
+        let mut poke_args = common.clone();
+        poke_args["pokes"] = json!([[0.23, 0.71]]);
+        let poked = handle_request(&json!({
+            "jsonrpc":"2.0","id":35,"method":"tools/call",
+            "params":{"name":"play_room","arguments":poke_args}
+        }))
+        .expect("poke response");
+
+        let mut gesture_args = common;
+        gesture_args["gesture"] = json!([
+            {"kind":"down","x":0.23,"y":0.71,"t":0.47}
+        ]);
+        let gestured = handle_request(&json!({
+            "jsonrpc":"2.0","id":36,"method":"tools/call",
+            "params":{"name":"play_room","arguments":gesture_args}
+        }))
+        .expect("gesture response");
+        assert_eq!(
+            poked["result"]["structuredContent"]["render"],
+            gestured["result"]["structuredContent"]["render"]
+        );
+        assert_eq!(
+            poked["result"]["structuredContent"]["status"],
+            gestured["result"]["structuredContent"]["status"]
         );
     }
 
@@ -5209,6 +5334,34 @@ plays 2
             .unwrap_or_default();
         assert!(text.contains("Number & Pattern"));
         assert!(text.contains("Action:"));
+    }
+
+    #[test]
+    fn every_cult_cut_is_reachable_at_the_level_cap() {
+        let path =
+            std::env::temp_dir().join(format!("numinous-mcp-deep-cuts-{}.txt", std::process::id()));
+        let journey = numinous_core::Journey {
+            plays: u32::MAX,
+            ..Default::default()
+        };
+        std::fs::write(&path, journey.to_text()).expect("journey");
+        let resp = handle_request_with(
+            &json!({
+                "jsonrpc":"2.0","id":111,"method":"tools/call",
+                "params":{"name":"describe_room","arguments":{"id":"cult-of-pi"}}
+            }),
+            &path,
+        )
+        .expect("tools/call must respond");
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(
+            text.contains("Feynman point"),
+            "third cut is reachable: {text}"
+        );
+        assert!(!text.contains("4294967295"), "no sentinel leaks: {text}");
+        let _ = std::fs::remove_file(path);
     }
 
     #[test]

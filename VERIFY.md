@@ -44,10 +44,23 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 1,017 tests pass, 91.80% region
-cover, and 91.41% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
+Expected right now: **format and clippy clean, 1,074 tests pass, 92.13% region
+cover, and 91.89% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
 integration-tested on real hardware and excluded from the coverage gate, see
 `docs/QUALITY.md`).
+
+The release scripts also regenerate `renders/qa-app/`, a 240-screen app matrix.
+Every catalog room has a true phase-zero entry frame, arrival card, immediate
+pointer response, same-phase delayed-gesture baseline and response, compact
+arrival card, and compact delayed response.
+The matrix also covers every app game state, default and compact overlays,
+production Studio rendering, both ends of The Show, Times Tables phase
+stability, and the Mandelbrot reset flow. Generation removes stale output,
+checks the exact unique scenario inventory, rejects blank or wrong-sized frames,
+and requires every room interaction to change at least 100 raw room-content
+pixels against its same-phase baseline. These are
+structural gates. `MANIFEST.txt` remains the review inventory, and a human or a
+clearly labeled simulated player-profile review still judges clarity and fun.
 
 ## 2b. Put `numinous` on your PATH (once)
 

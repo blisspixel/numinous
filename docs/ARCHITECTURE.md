@@ -120,6 +120,7 @@ trait Room {
     fn postcard_t(&self) -> f64;
     fn motif(&self) -> Option<Motif>;
     fn status(&self, t: f64) -> Option<String>;
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String>;
     fn verb(&self) -> Option<&'static str>;
     fn render_poked(&self, surface: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]);
     fn render_input(&self, surface: &mut dyn Surface, t: f64, inputs: &[RoomInput]);

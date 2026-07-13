@@ -273,8 +273,8 @@ pub struct Boon {
 }
 
 /// The levels at which a room's deep cuts unlock by level alone.
-/// (Kept in sync with the faces; boons open them early, levels open them all.)
-pub const CUT_LEVELS: [u32; 2] = [5, 12];
+/// Boons open them early, and the level road opens every shipped depth.
+pub const CUT_LEVELS: [u32; 3] = [5, 12, 24];
 
 /// Up to three boons on offer: rooms whose next deep cut is still locked at
 /// this level and not already chosen. Deterministic for a given journey, and
@@ -589,6 +589,25 @@ mod tests {
             super::boon_options(&chosen)
                 .iter()
                 .all(|b| b.id != options[0].id)
+        );
+    }
+
+    #[test]
+    fn every_catalog_deep_cut_has_an_attainable_level() {
+        let deepest = super::all_rooms()
+            .iter()
+            .map(|room| room.deep_cuts().len())
+            .max()
+            .unwrap_or(0);
+        assert!(
+            deepest <= super::CUT_LEVELS.len(),
+            "{deepest} deep cuts exceed the shared unlock road"
+        );
+        assert!(
+            super::CUT_LEVELS
+                .iter()
+                .all(|&level| level <= super::MAX_LEVEL),
+            "every automatic cut unlock must be reachable"
         );
     }
 

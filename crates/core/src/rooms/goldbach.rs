@@ -6,7 +6,7 @@
 //! four quintillion and proven never. `t` grows the comet. Nobody knows. You
 //! could be first. See the Full Map in `docs/ROOMS.md`.
 
-use crate::room::{Room, RoomMeta};
+use crate::room::{Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
 /// The largest even number the comet reaches.
@@ -66,6 +66,10 @@ fn even_x(n: u64, width: usize) -> i32 {
 
 fn prime_x(n: u64, width: usize) -> i32 {
     ((n.saturating_sub(2)) as f64 / (N_MAX - 2) as f64 * (width as f64 - 1.0)) as i32
+}
+
+fn witness_row(height: usize) -> i32 {
+    ((height.saturating_sub(1) as f64) * 0.9) as i32
 }
 
 /// Goldbach's Comet.
@@ -169,21 +173,17 @@ impl Room for Goldbach {
         // The hand chooses the even number with x; y chooses one concrete
         // Goldbach witness pair for that number. The comet is the count, and
         // the bottom bracket is the proof pair: p + q = n.
-        let reach = self.reach_for(t);
         let y_max = (ways(N_MAX).max(ways(N_MAX - 2)) + 4) as f64;
         for &(px, py) in pokes {
             if !px.is_finite() {
                 continue;
             }
             let n = even_at_hand(px);
-            if n > reach || n < 4 || n % 2 != 0 {
-                continue;
-            }
             let count = ways(n) as f64;
             let x = even_x(n, width);
             let y = ((1.0 - count / y_max) * (height as f64 - 3.0)) as i32 + 1;
             if let Some((p, q)) = witness_for(n, py) {
-                let row = (height as i32 - 2).max(0);
+                let row = witness_row(height);
                 let px = prime_x(p, width);
                 let qx = prime_x(q, width);
                 canvas.line(x, y, x, row, '|');
@@ -199,6 +199,17 @@ impl Room for Goldbach {
             // mark the floor test
             canvas.plot(x, height as i32 - 1, 'o');
         }
+    }
+
+    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let (x, y) = inputs.iter().rev().find_map(|input| match *input {
+            RoomInput::PointerDown { x, y, .. } if x.is_finite() => Some((x, y)),
+            _ => None,
+        })?;
+        let n = even_at_hand(x);
+        let count = ways(n);
+        let (p, q) = witness_for(n, y)?;
+        Some(format!("{n} = {p} + {q}   {count} PRIME PAIR(S)"))
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {
@@ -222,9 +233,9 @@ impl Room for Goldbach {
 
 #[cfg(test)]
 mod tests {
-    use super::{Goldbach, prime_pairs, prime_x, ways, witness_for};
+    use super::{Goldbach, prime_pairs, prime_x, ways, witness_for, witness_row};
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::room::{Room, RoomInput};
 
     fn text_char_at(text: &str, x: i32, y: i32) -> char {
         text.lines()
@@ -318,13 +329,28 @@ mod tests {
     }
 
     #[test]
-    fn poked_reach_respects_variation() {
+    fn entry_click_tests_an_even_beyond_the_growing_comet() {
         let varied = Goldbach::new_with(42);
         let mut base = Canvas::new(60, 30);
         let mut poked = Canvas::new(60, 30);
         varied.render(&mut base, 0.0);
-        varied.render_poked(&mut poked, 0.0, &[(0.006, 0.5)]);
+        varied.render_poked(&mut poked, 0.0, &[(0.5, 0.5)]);
         assert_ne!(base.to_text(), poked.to_text());
+    }
+
+    #[test]
+    fn entry_click_status_names_the_even_and_its_witness() {
+        let room = Goldbach::new();
+        let input = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.0,
+            t: 0.0,
+        }];
+        let status = room.status_input(0.0, &input).expect("Goldbach witness");
+
+        assert!(status.starts_with("302 = "));
+        assert!(status.ends_with("PRIME PAIR(S)"));
+        assert_eq!(room.status_input(0.0, &[]), None);
     }
 
     #[test]
@@ -332,7 +358,7 @@ mod tests {
         let room = Goldbach::new();
         let width = 180;
         let height = 30;
-        let witness_row = height as i32 - 2;
+        let witness_row = witness_row(height);
         let x_for_100 = (100.0 - 4.0) / (super::N_MAX - 4) as f64;
         let mut low = Canvas::new(width, height);
         let mut high = Canvas::new(width, height);
@@ -369,7 +395,7 @@ mod tests {
         room.render_poked(&mut canvas, 1.0, &[(x_for_10, 1.0)]);
         let text = canvas.to_text();
         assert_eq!(
-            text_char_at(&text, prime_x(5, width), height as i32 - 2),
+            text_char_at(&text, prime_x(5, width), witness_row(height)),
             '2'
         );
     }

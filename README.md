@@ -115,8 +115,9 @@ windowed app, a full CLI, an MCP server, GPU and audio adapters, 31 catalog
 rooms plus hidden content, games, progression, a Studio foundation, and the
 built-in soundtrack. Capability breadth is ahead of release maturity.
 
-The current local gate has 1,017 passing tests, 91.41% line coverage with an
-enforced 80% floor, Clippy with warnings denied, and dependency policy checks.
+The current local gate has 1,074 passing tests, 92.13% region coverage and
+91.89% line coverage with an enforced 80% line floor, Clippy with warnings
+denied, and dependency policy checks.
 CI is configured for locked tests and builds on Windows, macOS, and Ubuntu.
 Stranger playtests, accessibility work, cross-platform execution evidence,
 deeper room interaction, and substantial visual and Studio work remain ahead.

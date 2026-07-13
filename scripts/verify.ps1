@@ -1,15 +1,29 @@
 # One-command verification (Windows): runs every gate and regenerates all
 # artifacts into renders\. See VERIFY.md.
 $ErrorActionPreference = "Stop"
+$savedEnvironment = @{}
+foreach ($name in @("Path", "NUMINOUS_JOURNEY", "NUMINOUS_SCORES", "NUMINOUS_CAIRN")) {
+    $item = Get-Item "Env:$name" -ErrorAction SilentlyContinue
+    $savedEnvironment[$name] = @{
+        Present = $null -ne $item
+        Value = if ($null -ne $item) { $item.Value } else { $null }
+    }
+}
 $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+$verifyState = Join-Path (Resolve-Path (Join-Path $PSScriptRoot "..")) ".agent\verify"
+New-Item -ItemType Directory -Force $verifyState | Out-Null
+$env:NUMINOUS_JOURNEY = Join-Path $verifyState "journey.txt"
+$env:NUMINOUS_SCORES = Join-Path $verifyState "scores.txt"
+$env:NUMINOUS_CAIRN = Join-Path $verifyState "cairn.txt"
 
 function Step($name, $block) {
     Write-Host ""
     Write-Host "== $name ==" -ForegroundColor Cyan
     & $block
-    if ($LASTEXITCODE -ne 0) { Write-Error "$name FAILED"; exit 1 }
+    if ($LASTEXITCODE -ne 0) { throw "$name FAILED" }
 }
 
+try {
 Step "format" { cargo fmt --all --check }
 Step "clippy" { cargo clippy --workspace --all-targets -- -D warnings }
 Step "tests"  { cargo test --workspace }
@@ -31,6 +45,7 @@ if ($null -ne (Get-Command cargo-deny -ErrorAction SilentlyContinue)) {
 
 Step "house-style" { powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1 }
 
+Step "regenerate 240-screen app QA matrix" { cargo run -q -p numinous-app --example screens }
 Step "regenerate gallery into renders\" { cargo run -q --bin numinous -- gallery --dir renders --width 600 --height 600 }
 Step "regenerate contact sheet" { cargo run -q --bin numinous -- contact-sheet --out renders\contact.png --cols 3 --tile 360 }
 Step "regenerate lissajous audio" { cargo run -q --bin numinous -- sonify lissajous --out renders\lissajous.wav }
@@ -38,3 +53,13 @@ Step "regenerate collatz audio" { cargo run -q --bin numinous -- sonify collatz 
 
 Write-Host "`nAll checks passed." -ForegroundColor Green
 Write-Host "Open renders\contact.png for the whole collection; renders\*.wav are the room sounds."
+} finally {
+    foreach ($name in $savedEnvironment.Keys) {
+        $saved = $savedEnvironment[$name]
+        if ($saved.Present) {
+            Set-Item "Env:$name" $saved.Value
+        } else {
+            Remove-Item "Env:$name" -ErrorAction SilentlyContinue
+        }
+    }
+}

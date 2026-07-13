@@ -50,16 +50,30 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         let ny = 2.0 * zx * zy + cy;
         zx = nx;
         zy = ny;
-        if (zx * zx + zy * zy > 4.0) { break; }
         i = i + 1u;
+        if (zx * zx + zy * zy > 4.0) { break; }
     }
 
-    // Inside the set: near-black (the Numinous stage). Outside: a glowing palette.
-    var color = vec3<f32>(0.02, 0.02, 0.05);
-    if (i < params.max_iter) {
-        let t = f32(i) / f32(params.max_iter);
-        let tau = 6.2831853;
-        color = 0.5 + 0.5 * cos(tau * (t + vec3<f32>(0.0, 0.33, 0.67)));
+    // Match the core Raster marks exactly: background, structural gray,
+    // accent, and bright accent. The mode selects the room's established
+    // palette and escape bands.
+    var color = vec3<f32>(10.0, 11.0, 15.0) / 255.0;
+    if (params.mode == 0u) {
+        if (i == params.max_iter) {
+            color = vec3<f32>(119.0, 221.0, 255.0) / 255.0;
+        } else if (i > 24u) {
+            color = vec3<f32>(70.0, 130.0, 255.0) / 255.0;
+        } else if (i > 6u) {
+            color = vec3<f32>(16.0, 20.0, 34.0) / 255.0;
+        }
+    } else {
+        if (i == params.max_iter) {
+            color = vec3<f32>(255.0, 204.0, 102.0) / 255.0;
+        } else if (i > 20u) {
+            color = vec3<f32>(255.0, 120.0, 60.0) / 255.0;
+        } else if (i > 5u) {
+            color = vec3<f32>(16.0, 20.0, 34.0) / 255.0;
+        }
     }
 
     let r = u32(clamp(color.x, 0.0, 1.0) * 255.0);

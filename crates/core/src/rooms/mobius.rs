@@ -8,13 +8,26 @@
 use std::f64::consts::TAU;
 
 use super::variation_unit;
-use crate::room::{Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
 /// The ring radius.
 const R: f64 = 1.0;
 /// The half-width of the band.
 const W: f64 = 0.35;
+
+fn paint_spread(t: f64) -> f64 {
+    let phase = if t.is_finite() {
+        t.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    (0.14 + phase * 0.56) * TAU
+}
+
+fn painted_edge_percent(t: f64) -> f64 {
+    (2.0 * paint_spread(t) / TAU).min(1.0) * 100.0
+}
 
 /// A point on the strip at ring angle `u` and width position `v` in [-W, W],
 /// with the half twist that makes it what it is.
@@ -164,6 +177,26 @@ impl Room for Mobius {
         Some("CLICK: PAINT THE EDGE")
     }
 
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let brushes = inputs
+            .iter()
+            .filter(|input| {
+                matches!(
+                    input,
+                    RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. }
+                        if x.is_finite() && y.is_finite()
+                )
+            })
+            .count()
+            .min(MAX_ROOM_POKES);
+        (brushes > 0).then(|| {
+            format!(
+                "{brushes} BRUSH POINT(S)   {:.0}% OF THE ONE EDGE LIT",
+                painted_edge_percent(t)
+            )
+        })
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         // The newest bounded raw tail first, finite filtering after, matching
         // the catalog input contract.
@@ -188,12 +221,7 @@ impl Room for Mobius {
         // grows with the sweep. By the end of the sweep the paint has flowed
         // onto the "other" edge without ever jumping, because there is only
         // one edge. That is the room's whole truth, now under the hand.
-        let phase = if t.is_finite() {
-            t.clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
-        let spread = phase * TAU;
+        let spread = paint_spread(t);
         for &(x, y) in &sources {
             let px = (x.clamp(0.0, 1.0) * (width - 1) as f64).round() as i32;
             let py = (y.clamp(0.0, 1.0) * (height - 1) as f64).round() as i32;
@@ -210,10 +238,16 @@ impl Room for Mobius {
                 let raw = (w - w_start).abs();
                 let around = (2.0 * TAU - raw).abs();
                 if raw.min(around) <= spread {
-                    canvas.plot(ex, ey, 'o');
+                    canvas.plot(ex, ey, '#');
                 }
             }
-            canvas.plot(px, py, '+');
+            let marker = (width.min(height) / 40).clamp(4, 12) as i32;
+            canvas.line(px - marker, py - marker, px + marker, py - marker, '#');
+            canvas.line(px - marker, py + marker, px + marker, py + marker, '#');
+            canvas.line(px - marker, py - marker, px - marker, py + marker, '#');
+            canvas.line(px + marker, py - marker, px + marker, py + marker, '#');
+            canvas.line(px - marker, py, px + marker, py, '#');
+            canvas.line(px, py - marker, px, py + marker, '#');
         }
     }
 
@@ -256,8 +290,51 @@ impl Room for Mobius {
 mod tests {
     use super::{Mobius, W, strip};
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::room::{Room, RoomInput};
     use std::f64::consts::TAU;
+
+    #[test]
+    fn status_counts_finite_brushes_and_handles_unknown_phase() {
+        let room = Mobius::new();
+        assert_eq!(room.status_input(0.5, &[]), None);
+        let inputs = [
+            RoomInput::PointerDown {
+                x: 0.2,
+                y: 0.3,
+                t: 0.0,
+            },
+            RoomInput::PointerMove {
+                x: 0.4,
+                y: 0.5,
+                t: 0.1,
+            },
+            RoomInput::PointerMove {
+                x: f64::NAN,
+                y: 0.5,
+                t: 0.2,
+            },
+        ];
+        assert_eq!(
+            room.status_input(f64::NAN, &inputs).as_deref(),
+            Some("2 BRUSH POINT(S)   28% OF THE ONE EDGE LIT")
+        );
+        assert_eq!(
+            room.status_input(0.5, &inputs).as_deref(),
+            Some("2 BRUSH POINT(S)   84% OF THE ONE EDGE LIT")
+        );
+    }
+
+    #[test]
+    fn entry_click_paints_a_visible_edge_segment() {
+        let room = Mobius::new();
+        let mut base = Canvas::new(80, 40);
+        let mut poked = Canvas::new(80, 40);
+        room.render(&mut base, 0.0);
+        room.render_poked(&mut poked, 0.0, &[(0.53, 0.47)]);
+
+        assert_ne!(base.to_text(), poked.to_text());
+        assert!(poked.ink_count() >= base.ink_count());
+    }
 
     #[test]
     fn the_half_twist_swaps_the_sides_after_one_lap() {
@@ -304,7 +381,7 @@ mod tests {
         let count_paint = |t: f64| {
             let mut canvas = Canvas::new(60, 30);
             room.render_poked(&mut canvas, t, &[(0.5, 0.15)]);
-            canvas.to_text().chars().filter(|&c| c == 'o').count()
+            canvas.to_text().chars().filter(|&c| c == '#').count()
         };
         let early = count_paint(0.05);
         let late = count_paint(0.6);
@@ -356,12 +433,12 @@ mod tests {
         };
         assert_ne!(
             paint_at(0.3),
-            Some('o'),
+            Some('#'),
             "a short spread has not crossed the twist yet"
         );
         assert_eq!(
             paint_at(0.9),
-            Some('o'),
+            Some('#'),
             "the spread crosses the twist onto the other lap without a jump"
         );
     }

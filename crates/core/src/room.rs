@@ -73,6 +73,15 @@ pub trait Room {
         None
     }
 
+    /// The live readout after the player has touched the room. The default
+    /// preserves the phase-only status exactly; rooms whose action has a
+    /// count, result, or persistent state can explain that consequence from
+    /// the same bounded input history they render.
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let _ = inputs;
+        self.status(t)
+    }
+
     /// The touch-surface verb: what a hand can do here, named for the arrival
     /// card ("CLICK: DROP A STORM", "DRAG: TURN THE DIAL"). None means the room
     /// has no dedicated poke or drag behavior; faces may still offer generic
@@ -225,6 +234,39 @@ pub fn pokes_from_inputs(inputs: &[RoomInput]) -> Vec<(f64, f64)> {
     points[start..].to_vec()
 }
 
+/// Number of finite poke effects in the newest bounded raw tail.
+///
+/// This is the status-line twin of [`pokes_from_inputs`]: invalid points still
+/// occupy their place in the raw tail, then disappear exactly as they do in a
+/// room renderer. Rooms can therefore report only effects that can reach the
+/// frame without each reimplementing the ordering rule.
+#[must_use]
+pub fn renderable_poke_count(inputs: &[RoomInput]) -> usize {
+    pokes_from_inputs(inputs)
+        .into_iter()
+        .filter(|(x, y)| x.is_finite() && y.is_finite())
+        .count()
+}
+
+/// Bridge static hand points into replayable pointer-down inputs at phase `t`.
+///
+/// Text and protocol faces accept compact poke arrays as well as full gesture
+/// histories. This bridge lets both paths ask [`Room::status_input`] about the
+/// exact newest bounded raw tail without face-specific conversion rules.
+#[must_use]
+pub fn inputs_from_pokes(pokes: &[(f64, f64)], t: f64) -> Vec<RoomInput> {
+    let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
+    let t = if t.is_finite() {
+        t.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    pokes[start..]
+        .iter()
+        .map(|&(x, y)| RoomInput::PointerDown { x, y, t })
+        .collect()
+}
+
 /// The newest pointer gesture in an input trail, summarized for held rooms.
 ///
 /// Rooms that give gestures physical meaning (pin the bob, fling on release)
@@ -360,7 +402,10 @@ pub fn room_touch_action(room: &dyn Room) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::{MAX_ROOM_INPUTS, MAX_ROOM_POKES, Room, RoomInput, RoomMeta, pokes_from_inputs};
+    use super::{
+        MAX_ROOM_INPUTS, MAX_ROOM_POKES, Room, RoomInput, RoomMeta, inputs_from_pokes,
+        pokes_from_inputs, renderable_poke_count,
+    };
     use crate::surface::Surface;
 
     struct DefaultSoundRoom;
@@ -393,6 +438,34 @@ mod tests {
             assert_eq!(spec, base);
             assert!(spec.notes.iter().all(|note| note.freq.is_finite()));
         }
+    }
+
+    #[test]
+    fn default_interaction_status_preserves_phase_status() {
+        struct StatusRoom;
+        impl Room for StatusRoom {
+            fn meta(&self) -> RoomMeta {
+                DefaultSoundRoom.meta()
+            }
+
+            fn render(&self, _surface: &mut dyn Surface, _t: f64) {}
+
+            fn reveal(&self) -> &'static str {
+                "Interaction status is opt-in."
+            }
+
+            fn status(&self, t: f64) -> Option<String> {
+                Some(format!("PHASE {t:.2}"))
+            }
+        }
+
+        let room = StatusRoom;
+        let inputs = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.2,
+        }];
+        assert_eq!(room.status_input(0.75, &inputs), room.status(0.75));
     }
 
     #[test]
@@ -446,6 +519,42 @@ mod tests {
             Some(((MAX_ROOM_POKES + 4) as f64 / 40.0, 0.5)),
             "the newest event survives the cap"
         );
+    }
+
+    #[test]
+    fn renderable_count_filters_after_the_raw_tail_cap() {
+        let mut inputs = vec![
+            RoomInput::PointerDown {
+                x: 0.5,
+                y: 0.5,
+                t: 0.0,
+            };
+            MAX_ROOM_POKES
+        ];
+        inputs.extend(vec![
+            RoomInput::PointerMove {
+                x: f64::NAN,
+                y: f64::INFINITY,
+                t: 0.0,
+            };
+            MAX_ROOM_POKES + 1
+        ]);
+        assert_eq!(renderable_poke_count(&inputs), 0);
+    }
+
+    #[test]
+    fn static_pokes_bridge_to_bounded_phase_stamped_inputs() {
+        let pokes = vec![(0.25, 0.75); MAX_ROOM_POKES + 3];
+        let inputs = inputs_from_pokes(&pokes, 2.0);
+        assert_eq!(inputs.len(), MAX_ROOM_POKES);
+        assert!(inputs.iter().all(|input| {
+            *input
+                == RoomInput::PointerDown {
+                    x: 0.25,
+                    y: 0.75,
+                    t: 1.0,
+                }
+        }));
     }
 
     #[test]

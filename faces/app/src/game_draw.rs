@@ -38,7 +38,7 @@ impl MunchLayout {
         let scale = game_scale(width);
         let top = 14 * scale + 10;
         let cell_w = (width as i32 - 20) / 6;
-        let cell_h = (height as i32 - top - 14 * scale) / 5;
+        let cell_h = (height as i32 - top - 24 * scale) / 5;
         Self {
             top,
             cell_w,
@@ -63,8 +63,46 @@ impl MunchLayout {
     }
 }
 
+fn munch_columns(width: usize, scale: i32, left: i32) -> usize {
+    ((width as i32 - left - 10) / (6 * scale.max(1))).max(8) as usize
+}
+
+fn munch_control_lines(width: usize, scale: i32) -> Vec<String> {
+    numinous_core::wrap_text(
+        "MOVE WASD/ARROWS   EAT SPACE   DONE ENTER   ESC LEAVE",
+        munch_columns(width, scale, 10),
+    )
+}
+
+fn munch_result_lines(outcome: &numinous_core::Munched, width: usize, scale: i32) -> Vec<String> {
+    let clean = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
+    let mut semantic = vec![format!(
+        "{} +{}",
+        if clean { "PERFECT." } else { "DONE." },
+        outcome.score
+    )];
+    semantic.push(format!(
+        "{} EATEN  {} BAD  {} LEFT",
+        outcome.hits, outcome.bad_bites, outcome.left_behind
+    ));
+    if !outcome.missed.is_empty() {
+        let listed: Vec<String> = outcome.missed.iter().map(u64::to_string).collect();
+        semantic.push(format!("WALKED PAST: {}", listed.join(", ")));
+        if outcome.bad_bites == 0 && outcome.missed.len() == 1 {
+            semantic.push("ONE AWAY. THE BOARD REMEMBERS.".to_string());
+        }
+    }
+    semantic.push("ENTER NEXT BOARD   ESC MENU".to_string());
+
+    let columns = munch_columns(width, scale, width as i32 / 8);
+    semantic
+        .into_iter()
+        .flat_map(|line| numinous_core::wrap_text(&line, columns))
+        .collect()
+}
+
 fn gauntlet_message_lines(message: &str, width: usize, scale: i32) -> Vec<String> {
-    let columns = ((width as i32 / (6 * scale)) - 4).max(8) as usize;
+    let columns = ((width as i32 - 20) / (6 * scale)).max(8) as usize;
     let mut lines: Vec<String> = numinous_core::wrap_text(message, columns)
         .into_iter()
         .take(2)
@@ -75,14 +113,56 @@ fn gauntlet_message_lines(message: &str, width: usize, scale: i32) -> Vec<String
     lines
 }
 
-fn gauntlet_message_x(line: &str, width: usize, scale: i32) -> i32 {
-    let width = width as i32;
-    let text_w = line.len() as i32 * 6 * scale;
-    if text_w + 14 <= width / 2 {
-        (width - text_w - 14).max(width / 2)
-    } else {
-        10.min(width.saturating_sub(1).max(0))
+fn gauntlet_stage_title(stage: usize) -> &'static str {
+    match stage {
+        0 => "GAUNTLET 1/4: MUNCH",
+        1 => "GAUNTLET 2/4: SHAPE",
+        2 => "GAUNTLET 3/4: SKY",
+        3 => "GAUNTLET 4/4: BOMB",
+        _ => "GAUNTLET COMPLETE",
     }
+}
+
+fn draw_signal_trace(raster: &mut Raster, trace: &str, x: i32, y: i32, width: usize, scale: i32) {
+    let available = (width as i32 - x - 10).max(1);
+    let count = trace.chars().count().max(1) as i32;
+    let step = (available / count).max(1);
+    for (index, pulse) in trace.chars().enumerate() {
+        if pulse == '#' {
+            let px = x + index as i32 * step;
+            raster.line(px, y, px, y + 6 * scale, '#');
+            if step > 1 {
+                raster.line(px + 1, y, px + 1, y + 6 * scale, '#');
+            }
+        }
+    }
+}
+
+fn gauntlet_header_height(message_lines: usize, scale: i32) -> i32 {
+    18 * scale + message_lines as i32 * 9 * scale
+}
+
+fn gauntlet_result_lines(run: &GauntletPlay, width: usize, scale: i32) -> Vec<String> {
+    let total = gauntlet_total(&run.scores, &run.cleared);
+    let clears = run.cleared.iter().filter(|&&clean| clean).count();
+    let names = ["MUNCH", "SHAPE", "SKY", "BOMB"];
+    let mut semantic = vec![format!("RUN COMPLETE  {clears}/4 CLEAN")];
+    let mut combo = 1;
+    for ((name, score), &clean) in names.iter().zip(&run.scores).zip(&run.cleared) {
+        semantic.push(format!(
+            "{name}  +{score} X{combo} = {}{}",
+            score * combo,
+            if clean { "  CLEAN" } else { "" }
+        ));
+        combo = if clean { combo + 1 } else { 1 };
+    }
+    semantic.push(format!("TOTAL {total}  GAUNTLET SEED {}", run.seed));
+    semantic.push("ANY KEY LEAVES".to_string());
+    let columns = ((width as i32 - 20) / (6 * scale)).max(8) as usize;
+    semantic
+        .into_iter()
+        .flat_map(|line| numinous_core::wrap_text(&line, columns))
+        .collect()
 }
 
 /// Draw the quiz: the mystery room fullscreen, the choices at the bottom,
@@ -113,7 +193,7 @@ pub(crate) fn draw_quiz(
     let line_height = layout.line_height;
     match &quiz.flash {
         None => {
-            raster.dim_rows(0, 14 + 7 * (scale + 1), 40);
+            raster.clear_rows(0, 14 + 7 * (scale + 1));
             numinous_core::draw_text(&mut raster, "WHICH MATH MADE THIS?", 10, 10, scale + 1, '#');
             raster.dim_rows(layout.base - 6, height as i32, 40);
             for (i, choice) in quiz.round.choices.iter().enumerate() {
@@ -129,7 +209,7 @@ pub(crate) fn draw_quiz(
             }
         }
         Some((correct, _)) => {
-            raster.dim(35);
+            raster.clear_rows(0, height as i32);
             let verdict = if *correct {
                 "CORRECT".to_string()
             } else {
@@ -164,7 +244,7 @@ pub(crate) fn draw_quiz(
                 10,
                 height as i32 - line_height - 4,
                 scale,
-                '-',
+                '*',
             );
         }
     }
@@ -176,7 +256,7 @@ pub(crate) fn draw_munch(play: &MunchPlay, frame: u64, width: usize, height: usi
     let mut raster = Raster::with_accent(width, height, [140, 230, 120]);
     let scale = game_scale(width);
     raster.dim_rows(0, 12 + 7 * scale, 40);
-    raster.dim_rows(height as i32 - 14 * scale, height as i32, 40);
+    raster.dim_rows(height as i32 - 24 * scale, height as i32, 40);
     numinous_core::draw_text(
         &mut raster,
         &format!("MUNCH: {}", play.board.rule.describe().to_uppercase()),
@@ -215,38 +295,29 @@ pub(crate) fn draw_munch(play: &MunchPlay, frame: u64, width: usize, height: usi
     }
     match &play.graded {
         None => {
-            numinous_core::draw_text(
-                &mut raster,
-                "MOVE  WASD/ARROWS   EAT  SPACE   DONE  ENTER   ESC  LEAVE",
-                10,
-                height as i32 - 10 * scale,
-                scale,
-                '-',
-            );
+            let lines = munch_control_lines(width, scale);
+            for (i, line) in lines.iter().enumerate() {
+                let y = height as i32 - (lines.len() - i) as i32 * 9 * scale;
+                numinous_core::draw_text(&mut raster, line, 10, y, scale, '*');
+            }
         }
         Some(outcome) => {
             raster.dim(30);
-            let clean = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
-            let mut lines = vec![format!(
-                "{} +{}",
-                if clean { "PERFECT." } else { "DONE." },
-                outcome.score
-            )];
-            lines.push(format!(
-                "{} EATEN  {} BAD  {} LEFT",
-                outcome.hits, outcome.bad_bites, outcome.left_behind
-            ));
-            if !outcome.missed.is_empty() {
-                let listed: Vec<String> = outcome.missed.iter().map(u64::to_string).collect();
-                lines.push(format!("WALKED PAST: {}", listed.join(", ")));
-                if outcome.bad_bites == 0 && outcome.missed.len() == 1 {
-                    lines.push("ONE AWAY. THE BOARD REMEMBERS.".to_string());
-                }
-            }
-            lines.push("ANY KEY LEAVES".to_string());
-            let ls = (width as i32 / 300).clamp(2, 4);
-            let lh = 12 * ls;
+            let ls = (width as i32 / 400).clamp(1, 3);
+            let lines = munch_result_lines(outcome, width, ls);
+            let lh = 10 * ls;
             let ttop = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
+            let panel_top = (ttop - 6).max(0);
+            let panel_bottom = (ttop + lines.len() as i32 * lh + 6).min(height as i32);
+            raster.clear_rows(panel_top, panel_bottom);
+            raster.line(0, panel_top, width.saturating_sub(1) as i32, panel_top, '-');
+            raster.line(
+                0,
+                panel_bottom.saturating_sub(1),
+                width.saturating_sub(1) as i32,
+                panel_bottom.saturating_sub(1),
+                '-',
+            );
             for (i, line) in lines.iter().enumerate() {
                 numinous_core::draw_text(
                     &mut raster,
@@ -377,7 +448,7 @@ pub(crate) fn draw_arcade(play: &ArcadePlay, width: usize, height: usize) -> Ras
         10,
         height as i32 - 10 * scale,
         scale,
-        '-',
+        '*',
     );
     raster
 }
@@ -434,7 +505,7 @@ pub(crate) fn draw_nim(play: &NimPlay, width: usize, height: usize) -> Raster {
         10,
         height as i32 - 10 * scale,
         scale,
-        '-',
+        '*',
     );
     if play.over == Some(true) {
         raster.dim(25);
@@ -463,11 +534,66 @@ pub(crate) fn draw_gauntlet(
     height: usize,
 ) -> Raster {
     let scale = game_scale(width);
-    let mut raster = match run.stage {
-        0 => draw_munch(&run.munch, frame, width, height),
-        1 => draw_quiz(rooms, &run.quiz, width, height),
+    if run.stage >= 4 {
+        let mut raster = Raster::with_accent(width, height, [230, 210, 120]);
+        let result_scale = (width as i32 / 400).clamp(1, 3);
+        let lines = gauntlet_result_lines(run, width, result_scale);
+        let line_height = 10 * result_scale;
+        let margin = (12 * result_scale).min(width.min(height) as i32 / 8).max(4);
+        raster.line(margin, margin, width as i32 - margin - 1, margin, '#');
+        raster.line(
+            margin,
+            height as i32 - margin - 1,
+            width as i32 - margin - 1,
+            height as i32 - margin - 1,
+            '#',
+        );
+        raster.line(margin, margin, margin, height as i32 - margin - 1, '#');
+        raster.line(
+            width as i32 - margin - 1,
+            margin,
+            width as i32 - margin - 1,
+            height as i32 - margin - 1,
+            '#',
+        );
+        let title = "GAUNTLET COMPLETE";
+        let title_scale = (result_scale + 1).min(3);
+        let title_width = title.len() as i32 * 6 * title_scale;
+        let title_x = ((width as i32 - title_width) / 2).max(margin + 4);
+        let title_y = (height as i32 / 7).max(margin + 6);
+        numinous_core::draw_text(&mut raster, title, title_x, title_y, title_scale, '#');
+        let center_x = width as i32 / 2;
+        let ray_y = title_y + 10 * title_scale;
+        for offset in [18, 28, 38] {
+            let offset = offset * result_scale;
+            raster.line(center_x - offset, ray_y, center_x - offset + 8, ray_y, '*');
+            raster.line(center_x + offset - 8, ray_y, center_x + offset, ray_y, '*');
+        }
+        let top = (title_y + 16 * title_scale)
+            .max((height as i32 - lines.len() as i32 * line_height) / 2);
+        for (i, line) in lines.iter().enumerate() {
+            numinous_core::draw_text(
+                &mut raster,
+                line,
+                10,
+                top + i as i32 * line_height,
+                result_scale,
+                '#',
+            );
+        }
+        return raster;
+    }
+
+    let message_lines = gauntlet_message_lines(&run.message, width, scale);
+    let header_height = gauntlet_header_height(message_lines.len(), scale)
+        .min(height.saturating_sub(1) as i32)
+        .max(1);
+    let content_height = height.saturating_sub(header_height as usize);
+    let content = match run.stage {
+        0 => draw_munch(&run.munch, frame, width, content_height),
+        1 => draw_quiz(rooms, &run.quiz, width, content_height),
         2 => {
-            let mut raster = Raster::with_accent(width, height, [150, 210, 255]);
+            let mut raster = Raster::with_accent(width, content_height, [150, 210, 255]);
             numinous_core::draw_text(
                 &mut raster,
                 "THE SKY: WHICH CHANNEL IS A MIND?",
@@ -478,31 +604,24 @@ pub(crate) fn draw_gauntlet(
             );
             let lh = 14 * scale;
             for (i, channel) in run.scan.channels.iter().enumerate() {
-                let line = format!(
-                    "{}  {:>10}  {}",
-                    channel.letter, channel.frequency, channel.trace
-                );
-                numinous_core::draw_text(
-                    &mut raster,
-                    &line,
-                    10,
-                    30 * scale + i as i32 * lh,
-                    scale,
-                    '*',
-                );
+                let line = format!("{}  {:>10}", channel.letter, channel.frequency);
+                let y = 30 * scale + i as i32 * lh;
+                numinous_core::draw_text(&mut raster, &line, 10, y, scale, '*');
+                let trace_x = 10 + (line.chars().count() as i32 * 6 + 3) * scale;
+                draw_signal_trace(&mut raster, &channel.trace, trace_x, y, width, scale);
             }
             numinous_core::draw_text(
                 &mut raster,
                 "PRESS THE LETTER",
                 10,
-                height as i32 - 22 * scale,
+                content_height as i32 - 22 * scale,
                 scale,
-                '-',
+                '*',
             );
             raster
         }
         3 => {
-            let mut raster = Raster::with_accent(width, height, [255, 140, 120]);
+            let mut raster = Raster::with_accent(width, content_height, [255, 140, 120]);
             numinous_core::draw_text(
                 &mut raster,
                 "THE BOMB: FOUR DIGITS, FIVE WIRES",
@@ -542,55 +661,58 @@ pub(crate) fn draw_gauntlet(
                 &mut raster,
                 "TYPE DIGITS   ENTER CUTS   BACKSPACE FIXES",
                 10,
-                height as i32 - 22 * scale,
+                content_height as i32 - 22 * scale,
                 scale,
-                '-',
+                '*',
             );
             raster
         }
-        _ => {
-            let mut raster = Raster::with_accent(width, height, [230, 210, 120]);
-            let total = gauntlet_total(&run.scores, &run.cleared);
-            let clears = run.cleared.iter().filter(|&&c| c).count();
-            let names = ["MUNCH", "SHAPE", "SKY", "BOMB"];
-            let mut lines = vec![format!("RUN COMPLETE  {clears}/4 CLEAN")];
-            for ((name, score), &clean) in names.iter().zip(&run.scores).zip(&run.cleared) {
-                lines.push(format!(
-                    "{name}  +{score}{}",
-                    if clean { "  CLEAN" } else { "" }
-                ));
-            }
-            lines.push(format!("TOTAL {total}  (GAUNTLET SEED:{})", run.seed));
-            lines.push("ANY KEY LEAVES".to_string());
-            let ls = (width as i32 / 300).clamp(2, 4);
-            let lh = 12 * ls;
-            let top = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
-            for (i, line) in lines.iter().enumerate() {
-                numinous_core::draw_text(
-                    &mut raster,
-                    line,
-                    width as i32 / 8,
-                    top + i as i32 * lh,
-                    ls,
-                    '#',
-                );
-            }
-            raster
-        }
+        _ => unreachable!("completed Gauntlet returned above"),
     };
-    if run.stage < 4 {
-        let lines = gauntlet_message_lines(&run.message, width, scale);
-        raster.dim_rows(0, 12 + lines.len() as i32 * 9 * scale, 40);
-        for (i, line) in lines.iter().enumerate() {
-            numinous_core::draw_text(
-                &mut raster,
-                line,
-                gauntlet_message_x(line, width, scale),
-                10 + i as i32 * 9 * scale,
-                scale,
-                '#',
-            );
-        }
+
+    let accent = match run.stage {
+        0 => [140, 230, 120],
+        1 => rooms
+            .iter()
+            .find(|room| {
+                run.quiz
+                    .round
+                    .choices
+                    .iter()
+                    .find(|choice| choice.letter == run.quiz.round.answer)
+                    .is_some_and(|choice| choice.id == room.meta().id)
+            })
+            .map_or([120, 220, 190], |room| room.meta().accent),
+        2 => [150, 210, 255],
+        3 => [255, 140, 120],
+        _ => unreachable!("completed Gauntlet returned above"),
+    };
+    let mut raster = Raster::with_accent(width, height, accent);
+    raster.blit(&content, 0, header_height as usize);
+    raster.line(
+        0,
+        header_height - 1,
+        width.saturating_sub(1) as i32,
+        header_height - 1,
+        '-',
+    );
+    numinous_core::draw_text(
+        &mut raster,
+        gauntlet_stage_title(run.stage),
+        10,
+        5,
+        scale,
+        '#',
+    );
+    for (i, line) in message_lines.iter().enumerate() {
+        numinous_core::draw_text(
+            &mut raster,
+            line,
+            10,
+            5 + (i as i32 + 1) * 9 * scale,
+            scale,
+            '*',
+        );
     }
     raster
 }
@@ -614,6 +736,7 @@ mod tests {
         MunchPlay {
             board: numinous_core::build_board(17, 0),
             seed: 17,
+            round: 0,
             cursor: 0,
             bites: BTreeSet::new(),
             graded: None,
@@ -733,6 +856,19 @@ mod tests {
     }
 
     #[test]
+    fn gauntlet_signal_trace_draws_pulses_without_font_glyphs() {
+        let mut raster = Raster::with_accent(160, 60, [150, 210, 255]);
+        let before = raster.lit_count();
+
+        draw_signal_trace(&mut raster, "#..##...#", 20, 12, 160, 1);
+
+        assert!(
+            raster.lit_count() >= before + 24,
+            "four six-pixel pulses must be visible independently of the text font"
+        );
+    }
+
+    #[test]
     fn gauntlet_done_screen_uses_combo_total() {
         let rooms = numinous_core::all_rooms_with(0);
         let mut run = sample_gauntlet();
@@ -753,12 +889,60 @@ mod tests {
         );
         assert!(lines.len() > 1, "long narration should wrap");
         for line in lines {
-            let x = gauntlet_message_x(&line, 320, scale);
-            assert!(x >= 0, "message starts inside the raster");
             assert!(
-                x + line.len() as i32 * 6 * scale <= 320,
-                "message line fits: x={x}, line={line}"
+                10 + line.len() as i32 * 6 * scale <= 320,
+                "message line fits: {line}"
             );
+        }
+    }
+
+    #[test]
+    fn gauntlet_results_fit_small_and_default_widths() {
+        let mut run = sample_gauntlet();
+        run.stage = 4;
+        run.scores = vec![10, 20, 30, 40];
+        run.cleared = vec![true, true, false, true];
+        for width in [320, 360, 900] {
+            let scale = (width as i32 / 400).clamp(1, 3);
+            for line in gauntlet_result_lines(&run, width, scale) {
+                assert!(
+                    10 + line.chars().count() as i32 * 6 * scale <= width as i32,
+                    "result line clips at {width}: {line}"
+                );
+            }
+        }
+        let lines = gauntlet_result_lines(&run, 360, 1);
+        assert!(lines.iter().any(|line| line.contains("+20 X2 = 40")));
+        assert!(lines.iter().any(|line| line.contains("+30 X3 = 90")));
+        assert!(lines.join(" ").contains("TOTAL 180 GAUNTLET SEED 41"));
+    }
+
+    #[test]
+    fn munch_controls_and_worst_case_feedback_fit_small_and_default_widths() {
+        let outcome = numinous_core::Munched {
+            hits: 0,
+            bad_bites: 0,
+            left_behind: 30,
+            score: 0,
+            wrongly_eaten: Vec::new(),
+            missed: (100..130).collect(),
+        };
+        for width in [320, 900] {
+            let control_scale = game_scale(width);
+            for line in munch_control_lines(width, control_scale) {
+                assert!(
+                    10 + line.chars().count() as i32 * 6 * control_scale <= width as i32,
+                    "control line clips at {width}: {line}"
+                );
+            }
+            let result_scale = (width as i32 / 400).clamp(1, 3);
+            let left = width as i32 / 8;
+            for line in munch_result_lines(&outcome, width, result_scale) {
+                assert!(
+                    left + line.chars().count() as i32 * 6 * result_scale <= width as i32,
+                    "result line clips at {width}: {line}"
+                );
+            }
         }
     }
 }

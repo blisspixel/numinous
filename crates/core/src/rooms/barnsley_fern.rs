@@ -7,7 +7,7 @@
 
 use crate::MAX_ROOM_POKES;
 use crate::rng::SplitMix64;
-use crate::room::{Room, RoomMeta};
+use crate::room::{Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
 /// Fixed seed so the fern grows the same way every time.
@@ -171,6 +171,21 @@ impl Room for BarnsleyFern {
         Some("CLICK: PLANT A NEW POINT")
     }
 
+    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let points = inputs
+            .iter()
+            .filter(|input| {
+                matches!(
+                    input,
+                    RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. }
+                        if x.is_finite() && y.is_finite()
+                )
+            })
+            .count()
+            .min(MAX_ROOM_POKES);
+        (points > 0).then(|| format!("{points} GROWTH ORIGIN(S) PLANTED   BRIGHT TRAIL GROWING"))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
             self.render(canvas, t);
@@ -184,16 +199,25 @@ impl Room for BarnsleyFern {
         self.render(canvas, t);
         let mut rng = SplitMix64::new(SEED ^ self.seed);
         for (mut x, mut y, sx, sy) in Self::planted_points(pokes, width, height) {
-            canvas.plot(sx, sy, '+');
-            for _ in 0..100 {
+            let marker = (width.min(height) / 70).clamp(3, 9) as i32;
+            canvas.line(sx - marker, sy, sx + marker, sy, '#');
+            canvas.line(sx, sy - marker, sx, sy + marker, '#');
+            let mut previous = (sx, sy);
+            for step in 0..100 {
                 let r = rng.next_f64();
                 let (nx, ny) = next_point(x, y, r);
                 x = nx;
                 y = ny;
-                if let Some((sx, sy)) = Self::project_point(x, y, width, height) {
-                    canvas.plot(sx, sy, '+');
+                if let Some(point) = Self::project_point(x, y, width, height) {
+                    if step < 8 {
+                        canvas.line(previous.0, previous.1, point.0, point.1, '#');
+                    } else {
+                        canvas.plot(point.0, point.1, '#');
+                    }
+                    previous = point;
                 }
             }
+            canvas.plot(sx, sy, '+');
         }
     }
 
@@ -222,7 +246,39 @@ mod tests {
     use crate::MAX_ROOM_POKES;
     use crate::canvas::Canvas;
     use crate::rng::SplitMix64;
-    use crate::room::Room;
+    use crate::room::{Room, RoomInput};
+
+    #[test]
+    fn status_counts_only_finite_growth_origins() {
+        let room = BarnsleyFern::new();
+        assert_eq!(room.status_input(0.4, &[]), None);
+        let inputs = [
+            RoomInput::PointerUp {
+                x: 0.1,
+                y: 0.2,
+                t: 0.0,
+            },
+            RoomInput::PointerDown {
+                x: f64::NAN,
+                y: 0.3,
+                t: 0.1,
+            },
+            RoomInput::PointerDown {
+                x: 0.4,
+                y: 0.5,
+                t: 0.2,
+            },
+            RoomInput::PointerMove {
+                x: 0.6,
+                y: 0.7,
+                t: 0.3,
+            },
+        ];
+        assert_eq!(
+            room.status_input(0.4, &inputs).as_deref(),
+            Some("2 GROWTH ORIGIN(S) PLANTED   BRIGHT TRAIL GROWING")
+        );
+    }
 
     #[test]
     fn points_stay_within_the_fern_bounds() {

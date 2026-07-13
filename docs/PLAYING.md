@@ -44,7 +44,7 @@ your hands already know it:
 | E | inspect: why this matters |
 | H | bring the help overlay back after it is dismissed |
 | Q | swap the visual era (phosphor, 8-bit, vector, modern) |
-| R | restart the sweep |
+| R | reset the current room, including its clock and interactions |
 | F | fullscreen |
 | M | sound on / off |
 | B | The Show: sit back, it plays itself |
@@ -115,6 +115,26 @@ the way is an extra, never a toll. Wrong answers still teach: every game tells
 you exactly which judgments were wrong, and every room will explain itself if
 you ask (`numinous describe <room>`). Some things are not listed anywhere. If
 you ever wonder whether a name means something, ask about it.
+
+The level belongs to the local Journey, not to the room you just entered. The J
+overlay shows how many plays that profile contains. To try a clean profile
+without deleting or changing an existing history, point both persistence files
+at new paths before launching. In PowerShell:
+
+```
+$env:NUMINOUS_JOURNEY="$HOME/.numinous-journey-try"
+$env:NUMINOUS_SCORES="$HOME/.numinous-scores-try"
+numinous-app
+```
+
+On macOS or Linux:
+
+```
+NUMINOUS_JOURNEY="$HOME/.numinous-journey-try" NUMINOUS_SCORES="$HOME/.numinous-scores-try" numinous-app
+```
+
+Removing or replacing an existing profile is never part of an update and
+should happen only by the player's explicit choice.
 
 ---
 

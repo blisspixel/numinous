@@ -1,11 +1,11 @@
 //! Munch: eat the numbers that fit the rule. Number Munchers, reborn.
 //!
-//! A seeded grid of numbers and a rule (primes, multiples, squares). Eat the
-//! right ones for points, bite a wrong one and it costs you, clear the board
-//! perfectly for a bonus. The same seed gives the same board to a human in a
-//! terminal and an agent over MCP, so scores are directly comparable: the first
-//! game here that humans and digital minds can play against each other on even
-//! terms. See `docs/PLAYFUL.md`.
+//! A seeded grid of numbers and a rule from primes, composites, Fibonacci
+//! numbers, squares, varied multiples, and digit sums. Eat the right ones for
+//! points, bite a wrong one and it costs you, clear the board perfectly for a
+//! bonus. The same seed and round give the same board to a human in a terminal
+//! and an agent over MCP, so scores are directly comparable. See
+//! `docs/PLAYFUL.md`.
 
 use crate::rng::SplitMix64;
 
@@ -21,6 +21,8 @@ pub const HIT_POINTS: i64 = 10;
 pub const MISS_PENALTY: i64 = 5;
 /// Bonus for a perfect round: every fit eaten, nothing else touched.
 pub const PERFECT_BONUS: i64 = 20;
+/// First round that deals from the complete rule family deck.
+pub const FULL_DECK_ROUND: u64 = 4;
 
 /// The rule a round asks you to munch by.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -151,7 +153,7 @@ pub fn build_board(seed: u64, round: u64) -> Board {
             },
             60,
         ),
-        _ => (
+        FULL_DECK_ROUND.. => (
             match rng.below(7) {
                 0 => Rule::Primes,
                 1 => Rule::MultiplesOf(2 + rng.below(4)), // 2..=5

@@ -1,7 +1,10 @@
 # House-style guard for Windows.
 $ErrorActionPreference = "Stop"
 
-$patterns = @("*.rs", "*.md", "*.toml", "*.wgsl", "*.sh", "*.ps1")
+$patterns = @(
+    "*.rs", "*.md", "*.toml", "*.wgsl", "*.sh", "*.ps1",
+    "*.yml", "*.yaml", "*.py", "*.txt", "*.json"
+)
 $files = @()
 foreach ($pattern in $patterns) {
     $files += git ls-files -- $pattern
@@ -11,14 +14,18 @@ if ($files.Count -eq 0) {
     exit 0
 }
 
-$attributionPattern = "(?i)" + "co-" + "authored-by:|" + "generated with (cla" + "ude|co" + "dex)"
-$dashPattern = "[" + [regex]::Escape([string][char]0x2013) + [regex]::Escape([string][char]0x2014) + "]"
-$bmpEmojiPattern = "[\u2600-\u27BF]"
+$agentTerm = "sub" + "agent"
+$attributionPattern = "(?i)" + "co-" + "authored-by:|" +
+    "generated with (cla" + "ude|co" + "dex)|" +
+    "(by|with|via|from|per) (cla" + "ude|co" + "dex)|" +
+    "$agentTerm (review|recommendation)|per $agentTerm"
+$dashPattern = "[\u2012-\u2015\u2212]"
+$bmpEmojiPattern = "[\u2600-\u27BF\u2B00-\u2BFF]"
 $surrogateCandidatePattern = "[\uD83C-\uD83E][\uDC00-\uDFFF]"
 $violations = New-Object System.Collections.Generic.List[string]
 
 function Test-EmojiCodePoint([int]$codePoint) {
-    return (($codePoint -ge 0x1F300 -and $codePoint -le 0x1FAFF) -or
+    return (($codePoint -ge 0x1F000 -and $codePoint -le 0x1FAFF) -or
         ($codePoint -ge 0x2600 -and $codePoint -le 0x27BF) -or
         $codePoint -eq 0x2728)
 }

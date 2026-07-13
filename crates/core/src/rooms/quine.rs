@@ -7,7 +7,7 @@
 //! this is the visual of self-reference and the strange loop at the heart of
 //! "I". See docs/INSIGHTS.md and DIGITAL_MINDS.md.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::{MAX_DIM, Surface};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -167,8 +167,24 @@ impl Room for Quine {
                 depth.saturating_sub(1).max(1),
                 aspect,
             );
-            canvas.plot(point.x, point.y, '*');
+            let marker = (width.min(height) / 70).clamp(3, 9) as i32;
+            canvas.line(point.x - marker, point.y, point.x + marker, point.y, '#');
+            canvas.line(point.x, point.y - marker, point.x, point.y + marker, '#');
         }
+    }
+
+    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let (x, y) = inputs.iter().rev().find_map(|input| match *input {
+            RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite() => {
+                Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
+            }
+            _ => None,
+        })?;
+        Some(format!(
+            "SELF-COPY PLACED AT {:.0}% {:.0}%   CROSS MARKS ITS CENTER",
+            x * 100.0,
+            y * 100.0
+        ))
     }
 
     fn reveal(&self) -> &'static str {
@@ -210,11 +226,22 @@ impl Quine {
         if depth == 0 || r < 2.0 {
             return;
         }
+        let mut first: Option<(i32, i32)> = None;
+        let mut previous: Option<(i32, i32)> = None;
         for i in 0..n {
             let a = (i as f64 / n as f64) * std::f64::consts::TAU + rot;
             let x = cx + r * a.cos();
             let y = cy + r * a.sin() * aspect;
-            canvas.plot(x as i32, y as i32, '*');
+            let point = (x as i32, y as i32);
+            if let Some(from) = previous {
+                canvas.line(from.0, from.1, point.0, point.1, '*');
+            } else {
+                first = Some(point);
+            }
+            previous = Some(point);
+        }
+        if let (Some(from), Some(to)) = (previous, first) {
+            canvas.line(from.0, from.1, to.0, to.1, '*');
         }
         // recurse smaller copy inside
         let sub_r = r * 0.45;
@@ -229,7 +256,7 @@ impl Quine {
 mod tests {
     use super::{CopyPoint, Quine, bounded_copy_points, finite_phase};
     use crate::canvas::Canvas;
-    use crate::room::{MAX_ROOM_POKES, Room};
+    use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
     use crate::surface::{MAX_DIM, Surface};
     use std::collections::BTreeSet;
 
@@ -286,6 +313,26 @@ mod tests {
         let mut c = Canvas::new(40, 30);
         room.render_poked(&mut c, 0.5, &[(0.5, 0.5)]);
         assert!(c.ink_count() > 10);
+    }
+
+    #[test]
+    fn entry_click_places_a_connected_copy_and_names_it() {
+        let room = Quine::new();
+        let mut base = Canvas::new(80, 40);
+        let mut poked = Canvas::new(80, 40);
+        room.render(&mut base, 0.0);
+        room.render_poked(&mut poked, 0.0, &[(0.53, 0.47)]);
+        let input = [RoomInput::PointerDown {
+            x: 0.53,
+            y: 0.47,
+            t: 0.0,
+        }];
+
+        assert!(poked.ink_count() > base.ink_count());
+        assert_eq!(
+            room.status_input(0.0, &input).as_deref(),
+            Some("SELF-COPY PLACED AT 53% 47%   CROSS MARKS ITS CENTER")
+        );
     }
 
     #[test]
@@ -477,10 +524,10 @@ mod tests {
             .map(|line| line.chars().collect())
             .collect();
 
-        assert_eq!(rows[0][0], '*');
-        assert_eq!(rows[0][9], '*');
-        assert_eq!(rows[7][0], '*');
-        assert_eq!(rows[7][9], '*');
+        assert_eq!(rows[0][0], '#');
+        assert_eq!(rows[0][9], '#');
+        assert_eq!(rows[7][0], '#');
+        assert_eq!(rows[7][9], '#');
     }
 
     #[test]
