@@ -100,7 +100,7 @@ pub fn remove_persisted_file(path: &Path) -> io::Result<()> {
     match fs::remove_file(path) {
         Ok(()) => {
             #[cfg(unix)]
-            drop(parent.sync_all());
+            let _sync_result = parent.sync_all();
             Ok(())
         }
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
@@ -562,7 +562,7 @@ fn write_and_commit(
     // sync failure after that point cannot be reported as an uncommitted write:
     // retrying the same delta would apply its counters twice. Attempt the
     // metadata barrier, then preserve the committed result on failure.
-    drop(sync_parent());
+    let _sync_result = sync_parent();
     Ok(())
 }
 
@@ -1110,6 +1110,7 @@ mod tests {
                     }
                     Err(error) => panic!("unexpected concurrent read error: {error}"),
                 }
+                thread::yield_now();
             }
         });
         ready_rx.recv().expect("reader observes old destination");
