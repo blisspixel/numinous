@@ -527,6 +527,22 @@ enum Tok {
     RParen,
 }
 
+impl Tok {
+    fn diagnostic_name(&self) -> String {
+        match self {
+            Self::Num(_) => "number".to_string(),
+            Self::Ident(name) => format!("name '{name}'"),
+            Self::Plus => "'+'".to_string(),
+            Self::Minus => "'-'".to_string(),
+            Self::Star => "'*'".to_string(),
+            Self::Slash => "'/'".to_string(),
+            Self::Caret => "'^'".to_string(),
+            Self::LParen => "'('".to_string(),
+            Self::RParen => "')'".to_string(),
+        }
+    }
+}
+
 /// Split `source` into tokens.
 struct Tokenized {
     tokens: Vec<Tok>,
@@ -622,7 +638,8 @@ impl Parser {
                 Ok(())
             }
             Some(token) => Err(format!(
-                "expected ')' {context}at column {column}; found {token:?}"
+                "expected ')' {context}at column {column}; found {}",
+                token.diagnostic_name()
             )),
             None => Err(format!(
                 "expression ended at column {column}; expected ')' {context}"
@@ -708,7 +725,10 @@ impl Parser {
             None => Err(format!(
                 "expression ended at column {column}; expected a number, variable, function, or '('",
             )),
-            Some(other) => Err(format!("unexpected token {other:?} at column {column}")),
+            Some(other) => Err(format!(
+                "unexpected token {} at column {column}",
+                other.diagnostic_name()
+            )),
         }
     }
 
@@ -874,6 +894,14 @@ mod tests {
         assert_eq!(
             parse("2 3").expect_err("trailing input must fail"),
             "unexpected trailing input at column 3"
+        );
+        assert_eq!(
+            parse("(1 2)").expect_err("missing right parenthesis must name the token"),
+            "expected ')' at column 4; found number"
+        );
+        assert_eq!(
+            parse("+1").expect_err("unexpected token must be readable"),
+            "unexpected token '+' at column 1"
         );
     }
 
