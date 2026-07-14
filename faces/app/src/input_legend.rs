@@ -275,7 +275,7 @@ pub(crate) fn help_lines(
             "J          JOURNEY    F  FULLSCREEN",
             "Y          RADIO    P  POSTCARD",
             "F9         PLAYTEST NOTE",
-            "M          SOUND   -/= VOLUME   SPACE PAUSE",
+            "M          MUTE    [/] VOLUME   SPACE PAUSE",
             "",
             "ESC        CLOSE MENU AND WANDER",
         ]
@@ -296,6 +296,7 @@ pub(crate) fn help_lines(
                     "LB / RB ROOMS   LT / RT SPEED   RIGHT STICK TIME",
                     "SELECT INSPECT   L3 RESET   R3 PAUSE",
                     "WEST ERA   NORTH RADIO",
+                    "HOLD NORTH + D-PAD VOLUME   + SOUTH MUTE",
                     "START MENU   EAST BACK",
                 ]
                 .into_iter()
@@ -323,9 +324,9 @@ pub(crate) fn compact_controller_help_lines(selected: usize) -> Vec<String> {
         pair(4, "ARCADE", 5, "SHOW"),
         pair(6, "STUDIO", 7, "JOURNEY"),
         "LB/RB ROOMS  LT/RT SPEED".to_string(),
-        "LEFT STICK   SOUTH TOUCH".to_string(),
-        "SELECT INSPECT  L3 RESET".to_string(),
-        "R3 PAUSE     START MENU".to_string(),
+        "STICK+SOUTH TOUCH SEL INFO".to_string(),
+        "HOLD NORTH: D-PAD VOL/S MUTE".to_string(),
+        "L3 RESET R3 PAUSE START MENU".to_string(),
         "EAST BACK    NORTH RADIO".to_string(),
     ]
 }

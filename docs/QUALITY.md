@@ -8,14 +8,14 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-14
 
-- **Enforced now:** formatting, Clippy with warnings denied, 1,282 all-target
+- **Enforced now:** formatting, Clippy with warnings denied, 1,296 all-target
   test cases, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 93.41%
-  regions and 93.19% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 93.46%
+  regions and 93.25% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
-  three faces, and a release-generated 259-screen visual QA matrix. Every room
+  three faces, and a release-generated 275-screen visual QA matrix. Every room
   is captured at a deterministic opening state, arrival, immediate interaction,
   same-phase delayed baseline and gesture, compact arrival, and compact delayed
   states. Games, overlays, The Show, production Studio rendering, and reset and
@@ -23,7 +23,9 @@ built, so an aspiration is never mistaken for a result.
   sequence through launch, generation 4, generation 141, and exact reset.
   Fourteen compact receipts add
   controller-first room, help, Show, Journey, Studio, game-result, and visible
-  pause coverage. Each room has an explicit click,
+  pause coverage. Sixteen audio-state receipts cover room score, radio,
+  radio-off fallback, Studio, mute, zero volume, background silence, and a
+  missing output device at default and compact sizes. Each room has an explicit click,
   drag-release, repeated-action, or boundary scenario. The generator validates
   ordered finite input, release closure, interaction-aware status or action
   semantics, at least 100 changed pixels, at least 1% changed-region support,

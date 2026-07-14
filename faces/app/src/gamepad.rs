@@ -31,6 +31,9 @@ pub(crate) enum Command {
     Right,
     CycleEra,
     CycleRadio,
+    ToggleMute,
+    VolumeDown,
+    VolumeUp,
     Pause,
     PointerMoved { point: (f64, f64), held: bool },
     PhaseDelta(f64),
@@ -44,6 +47,9 @@ struct VirtualHand {
     phase_axis: f64,
     held: bool,
     visible: bool,
+    audio_modifier: bool,
+    audio_chord_used: bool,
+    audio_primary: bool,
 }
 
 impl Default for VirtualHand {
@@ -54,6 +60,9 @@ impl Default for VirtualHand {
             phase_axis: 0.0,
             held: false,
             visible: false,
+            audio_modifier: false,
+            audio_chord_used: false,
+            audio_primary: false,
         }
     }
 }
@@ -73,12 +82,52 @@ impl VirtualHand {
     }
 
     fn press(&mut self, button: Button) -> Option<Command> {
+        if button == Button::North {
+            self.visible = true;
+            if !self.audio_modifier {
+                self.audio_modifier = true;
+                self.audio_chord_used = false;
+            }
+            return None;
+        }
+        if self.audio_modifier {
+            self.visible = true;
+            self.audio_chord_used = true;
+            return match button {
+                Button::DPadUp => Some(Command::VolumeUp),
+                Button::DPadDown => Some(Command::VolumeDown),
+                Button::South => {
+                    self.audio_primary = true;
+                    Some(Command::ToggleMute)
+                }
+                _ => None,
+            };
+        }
         let command = pressed_command(button)?;
         self.visible = true;
         if button == Button::South {
             self.held = true;
         }
         Some(command)
+    }
+
+    fn release(&mut self, button: Button) -> Option<Command> {
+        match button {
+            Button::North if self.audio_modifier => {
+                self.audio_modifier = false;
+                let used = std::mem::take(&mut self.audio_chord_used);
+                (!used).then_some(Command::CycleRadio)
+            }
+            Button::South if self.audio_primary => {
+                self.audio_primary = false;
+                None
+            }
+            Button::South if self.held => {
+                self.held = false;
+                Some(Command::PrimaryUp)
+            }
+            _ => None,
+        }
     }
 
     fn tick(&mut self, seconds: f64) -> Vec<Command> {
@@ -102,6 +151,9 @@ impl VirtualHand {
     fn cancel(&mut self) -> Option<Command> {
         self.stick = (0.0, 0.0);
         self.phase_axis = 0.0;
+        self.audio_modifier = false;
+        self.audio_chord_used = false;
+        self.audio_primary = false;
         self.held.then(|| {
             self.held = false;
             Command::CancelPointer
@@ -155,9 +207,10 @@ impl GamepadInput {
                             commands.push(command);
                         }
                     }
-                    EventType::ButtonReleased(Button::South, _) => {
-                        self.hand.held = false;
-                        commands.push(Command::PrimaryUp);
+                    EventType::ButtonReleased(button, _) => {
+                        if let Some(command) = self.hand.release(button) {
+                            commands.push(command);
+                        }
                     }
                     EventType::AxisChanged(axis, value, _) => self.hand.set_axis(axis, value),
                     EventType::Disconnected => {
@@ -222,7 +275,6 @@ fn pressed_command(button: Button) -> Option<Command> {
         Button::DPadLeft => Command::Left,
         Button::DPadRight => Command::Right,
         Button::West => Command::CycleEra,
-        Button::North => Command::CycleRadio,
         Button::RightThumb => Command::Pause,
         _ => return None,
     })
@@ -328,12 +380,12 @@ mod tests {
             (Button::DPadLeft, Command::Left),
             (Button::DPadRight, Command::Right),
             (Button::West, Command::CycleEra),
-            (Button::North, Command::CycleRadio),
             (Button::RightThumb, Command::Pause),
         ];
         for (button, expected) in cases {
             assert_eq!(pressed_command(button), Some(expected));
         }
+        assert_eq!(pressed_command(Button::North), None);
         assert_eq!(pressed_command(Button::Mode), None);
     }
 
@@ -346,6 +398,36 @@ mod tests {
         assert_eq!(hand.press(Button::RightThumb), Some(Command::Pause));
         assert!(hand.visible);
         assert!(!hand.held);
+    }
+
+    #[test]
+    fn north_is_radio_on_release_and_a_global_audio_modifier_when_held() {
+        let mut hand = VirtualHand::default();
+        assert_eq!(hand.press(Button::North), None);
+        assert_eq!(hand.release(Button::North), Some(Command::CycleRadio));
+
+        assert_eq!(hand.press(Button::North), None);
+        assert_eq!(hand.press(Button::DPadUp), Some(Command::VolumeUp));
+        assert_eq!(hand.release(Button::North), None);
+
+        assert_eq!(hand.press(Button::North), None);
+        assert_eq!(hand.press(Button::DPadDown), Some(Command::VolumeDown));
+        assert_eq!(hand.release(Button::North), None);
+
+        assert_eq!(hand.press(Button::North), None);
+        assert_eq!(hand.press(Button::South), Some(Command::ToggleMute));
+        assert_eq!(hand.release(Button::South), None);
+        assert_eq!(hand.release(Button::North), None);
+        assert!(!hand.held);
+    }
+
+    #[test]
+    fn deactivation_discards_an_unfinished_audio_chord() {
+        let mut input = GamepadInput::new();
+        assert_eq!(input.hand.press(Button::North), None);
+        assert_eq!(input.deactivate(), None);
+        input.activate();
+        assert_eq!(input.hand.release(Button::North), None);
     }
 
     #[test]

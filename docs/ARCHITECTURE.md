@@ -102,7 +102,10 @@ dependency.
 
 - **Real-time synthesis:** `cpal` for output and workspace-owned deterministic
   DSP for room voices and 32-step stereo chiptune arrangements, with smoothed
-  gain, focus ramps, source crossfades, and separate validated radio playback.
+  gain, focus ramps, source crossfades, explicit room, Studio, or radio source
+  ownership, global keyboard and controller gain controls, and separate
+  validated radio playback. The App renders the effective source, level, and
+  silence reason through one persistent HUD state.
   A shared mix bus and
   sample-accurate scheduler remain roadmap work (see `MUSIC.md` and `SOUND.md`).
 - **The Studio today:** a bounded expression engine shared by the app, CLI, and

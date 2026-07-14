@@ -160,6 +160,11 @@ impl StudioPanel {
             previous = Some((sx, sy));
         }
     }
+
+    #[cfg(test)]
+    pub(crate) fn source_for_test(&self) -> &str {
+        &self.source
+    }
 }
 
 #[cfg(test)]

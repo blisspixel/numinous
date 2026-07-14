@@ -2,7 +2,7 @@
 
 How Numinous *sounds*, and specifically how math *becomes* sound. This is the design bible for the "everything is an instrument" pillar. It complements `MUSIC.md` (which covers the two music engines and the radio stations); this doc covers the grammar of sonification, the synthesis architecture, and the per-room sound design.
 
-**Implementation status, 2026-07-13:** every catalog room ships a structured
+**Implementation status, 2026-07-14:** every catalog room ships a structured
 motif and deterministic sonification. The App's default room bed is a 32-step
 stereo arrangement with a soft triangle lead, rests, four-bar development,
 quiet consonant anchors, and a silent loop seam. Changed sources use a short,
@@ -11,8 +11,12 @@ so neither restarts the source; minimizing or switching away fades the App.
 Completed crossfade storage is retired by the callback and destroyed by the
 control thread, keeping large radio buffers out of real-time destruction and
 preventing indefinite retention. Restoring the App first rejoins the radio's
-wall-clock track and offset, then fades audio in. The audio source is no longer
-rebuilt from render-loop cadence. Native device rates from 44.1 through 192 kHz
+wall-clock track and offset, then fades audio in. Studio owns formula audio
+until it closes, at which point a selected station rejoins live. A shared
+master level and mute work in every App mode through keyboard and controller
+routes. A persistent badge names the active source, numeric level, and
+effective mute, zero-volume, background-silent, or missing-device state. The
+audio source is no longer rebuilt from render-loop cadence. Native device rates from 44.1 through 192 kHz
 are covered by pitch and duration tests. Built-in radio remains the sole source
 while tuned.
 

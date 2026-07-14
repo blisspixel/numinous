@@ -147,7 +147,9 @@ audiovisual piece.
 > Code status (July 2026): v1 live. The repository contains three station
 > identities, rotation decks, the local generation command, wall-clock live
 > sync, full-stereo playback, and bounded cache validation. The dial is Y in
-> the app, - and = control volume, `numinous radio` lists rotations, and
+> the app, [ and ] control global volume, M controls global mute, and - and =
+> remain volume aliases outside Studio. Controller users hold North with D-pad
+> up or down for volume or with South for mute. `numinous radio` lists rotations, and
 > `numinous tune2 <station> --count N` grows a private local cache.
 >
 > Asset status: Nick Seal made the soundtrack specifically for Numinous. It is
@@ -196,7 +198,11 @@ The comedy channel is generated, not hand-recorded, so it can be endless and cur
 
 ## How the two engines coexist
 
-- **One master bus target.** Both engines should feed a shared mix with a global master volume and mute. Current app radio v1 keeps long station tracks stable by handing the station buffer to the player; the room-over-radio overlay is still a mixer upgrade so it can happen without restarting records.
+- **One master bus, partially shipped.** Room score, Studio, and radio share one
+  global master level and mute, with a persistent effective-state badge. Source
+  ownership is exclusive today: Studio owns formula audio while open, radio
+  rejoins live after Studio, and the room score is the fallback. Simultaneous
+  room-over-radio mixing and separate source levels remain upgrades.
 - **Global key and tempo target.** A future shared bus can quantize room
   sonification to the current station. The app has no global key or BPM today.
 - **Mode-aware mixing.**
