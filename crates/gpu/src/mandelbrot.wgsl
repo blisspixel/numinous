@@ -54,17 +54,19 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         if (zx * zx + zy * zy > 4.0) { break; }
     }
 
-    // Match the core Raster marks exactly: background, structural gray,
-    // accent, and bright accent. The mode selects the room's established
-    // palette and escape bands.
+    // Julia retains its established warm bands. Mandelbrot maps smooth escape
+    // time to a vivid cosine palette: hue identifies iteration depth while
+    // the dark interior keeps the set itself legible as negative space.
     var color = vec3<f32>(10.0, 11.0, 15.0) / 255.0;
     if (params.mode == 0u) {
-        if (i == params.max_iter) {
-            color = vec3<f32>(119.0, 221.0, 255.0) / 255.0;
-        } else if (i > 24u) {
-            color = vec3<f32>(70.0, 130.0, 255.0) / 255.0;
-        } else if (i > 6u) {
-            color = vec3<f32>(16.0, 20.0, 34.0) / 255.0;
+        if (i < params.max_iter) {
+            let magnitude_squared = max(zx * zx + zy * zy, 4.000001);
+            let smooth_i = f32(i) + 1.0 - log2(0.5 * log2(magnitude_squared));
+            let band = smooth_i * 0.071;
+            let phase = vec3<f32>(0.00, 0.34, 0.68);
+            let acid = vec3<f32>(0.55) + 0.45 * cos(6.2831853 * (vec3<f32>(band) + phase));
+            let pulse = 0.62 + 0.38 * (0.5 + 0.5 * cos(6.2831853 * band * 0.37));
+            color = clamp(acid * pulse + vec3<f32>(0.02, 0.04, 0.08), vec3<f32>(0.0), vec3<f32>(1.0));
         }
     } else {
         if (i == params.max_iter) {

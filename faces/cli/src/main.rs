@@ -2049,6 +2049,9 @@ fn watch(
             watch_frame(room.as_ref(), t, width, height, era)
         );
         let _ = stdout.flush();
+        if let Some(player) = &player {
+            player.service();
+        }
         // Refresh the room's voice a few times per sweep.
         if frame % 24 == 0
             && let Some(player) = &player
@@ -2105,6 +2108,9 @@ fn tour(
                 }
                 let _ = write!(stdout, "{screen}\x1b[J");
                 let _ = stdout.flush();
+                if let Some(player) = &player {
+                    player.service();
+                }
                 if frame % 24 == 0
                     && let Some(player) = &player
                 {

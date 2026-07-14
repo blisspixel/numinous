@@ -8,22 +8,32 @@ There are two engines, and they are designed to coexist and even harmonize.
 
 ## Engine A: Programmatic music (the math makes the sound)
 
-> A2 status (July 2026): motifs shipped for all 31 catalog rooms. A motif is
+> A2 listening pass (July 13, 2026): motifs ship for all 31 catalog rooms. A motif is
 > a room's musical identity (key, tempo, a line of semitone degrees, and
 > what it encodes): Times Tables circles and returns in D minor pentatonic;
 > Lorenz wanders ten notes and never resolves; the Random Walk stumbles
 > chromatically; Voronoi rings open fifths; Lissajous locks a visible fifth;
 > Zeno's Square shrinks toward arrival; the Logistic Map splits into chaos.
-> In the app the motif IS the room's bed; over MCP, listen_room returns the
+> In the app the motif is the room's bed; over MCP, listen_room returns the
 > phrase structurally (key, BPM, note names, what it encodes). And the room's
-> actual sonification now derives from the motif too: the default `Room::sound`
-> plays the motif's own phrase (`SoundSpec::from_motif`), so every room sounds
-> like itself rather than a shared root-fifth-octave fallback, and the notes you
-> hear match the notation listen_room reports (a July 2026 playtest caught the
-> old fallback making every room sound identical and disagree with its motif).
-> Rooms whose math has richer, phase-varying music (Collatz's orbit, Epicycles'
-> harmonic stack, Lissajous' tuned ratio) still override with something truer.
-> Next: state-dependent tension (the phrase resolves when the dial closes).
+> listening review found that the App was layering the motif and its
+> sonification at different loop lengths, restarting the result from a render
+> counter, and interrupting melody steps with what was described as an
+> accompaniment. The default is now one deterministic 32-step stereo
+> arrangement: a sparse triangle lead, intentional rests, four-bar variation,
+> a final root resolution, and quiet sine root and fifth anchors underneath.
+> It has a silent seam, low DC, and measured headroom. Source changes use a
+> normalized crossfade; volume and focus ramp in the audio callback without
+> moving the playhead. Completed source buffers are handed back to the control
+> thread for destruction, so long recordings are not freed in real-time code or
+> retained indefinitely. Radio keeps its produced stereo source during normal
+> playback and rejoins its wall-clock track and offset before focus fades in.
+> Phase-varying `SoundSpec` renderings remain available to headless consumers.
+> The App currently favors one stable motif arrangement per room, so changing
+> render cadence cannot retune or restart its bed.
+> `SoundSpec` now preserves duration and pitch at 44.1, 48, 96, and 192 kHz.
+> Next: musician-led long-listening sessions and state-dependent tension where
+> the phrase resolves when a room's mathematics closes.
 
 > Status: v1 shipped. `crates/core/src/chiptune.rs` composes deterministic
 > pentatonic chiptunes (square lead, triangle bass, noise ticks, click-free
@@ -35,6 +45,16 @@ The shipped engine is native Rust: custom deterministic DSP in
 `numinous-core`, with `cpal` output through `numinous-audio`. It runs locally
 without streaming. The larger sample-accurate house synth and pattern engine
 described below remain staged roadmap work.
+
+The listening pass follows current interactive-audio practice: fatigue-free
+loops need intentional seams and phrase form, and adaptive music should change
+musically meaningful layers rather than restart an entire cue. Relevant
+references are the [GDC Loop Clinic](https://gdcvault.com/play/1025942/Audio-Bootcamp-XVIII-Loop-Clinic),
+the [GDC adaptive-music session](https://www.gdcvault.com/play/1012601/Adaptive-Music-The-Secret-Lies),
+and the 2026 GDC session on
+[cohesive musical identity](https://schedule.gdconf.com/session/signature-sounds-crafting-a-cohesive-musical-identity-across-games/915870).
+The code can enforce seam, bounds, headroom, and continuity. It cannot certify
+that music is enjoyable, so a real listening panel remains a release gate.
 
 ### A1. Room sonification (the instrument layer)
 Every room turns its own math into tuned, musical sound (detailed per-room in

@@ -59,14 +59,23 @@ your hands already know it:
 | Y | the radio dial: off, trance, chill, arcade (42 built-in tracks) |
 | - / = | volume down / up (banner shows the level) |
 | mouse | click munch cells and quiz choices directly |
+| controller left stick / south | move the visible virtual hand / touch or confirm |
+| controller bumpers / D-pad | change rooms / choose and navigate games |
+| controller triggers / right stick | change speed / scrub time |
+| controller Start / East / Select | menu / back / inspect |
+| controller L3 / West / North | reset / visual era / radio or available submit action |
 | Tab | the Studio: type math, watch and hear it live |
 | Esc | menu |
 
 The art keeps the frame. Room titles, arrival hints, and inspection copy use
 separate quiet bands rather than sitting on the active visual. Arrival hints
 fade on their own, E toggles inspection, H restores help, and Esc closes an
-open overlay. A clean install always has the programmatic soundtrack. Radio
-stations appear only when compatible local tracks are present.
+open overlay. A clean install always has the 32-step stereo programmatic
+soundtrack. Room changes crossfade, and volume or window focus changes do not
+restart it. Start pauses a live game behind the menu without discarding its
+state. On restore, radio rejoins the wall-clock broadcast position before audio
+fades back in. Radio stations appear only when compatible local tracks are
+present.
 
 **Or live in the terminal.** Everything also runs in a terminal, in full color:
 

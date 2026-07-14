@@ -40,7 +40,9 @@ doors' design goals. The point is what we are missing, not what we have.
 - "The Show should crossfade rooms, not cut. And where is the visualizer?
   You promised Winamp." **Still the roadmap's biggest unbuilt promise.**
 - "Couch mode: gamepad plus fullscreen tour equals the best screensaver ever
-  shipped." (gilrs; already queued.)
+  shipped." The first standard-controller path now ships through `gilrs`, with
+  a virtual hand, room travel, time control, and all current games. Remapping,
+  platform certification, and adaptive button glyphs remain.
 
 ### The agent (the AI door, real data)
 - Verdict, verbatim: "yes, I would play again... correct answers pay out in
@@ -70,10 +72,11 @@ is absent anymore; everything on this list makes an existing organ stronger.
 
 ## The list, in order
 
-> Progress: items 1 (first serving), 2, 3, 4, 5, and the phosphor half of 8 are
+> Progress: items 1 (first serving), 2, 3, 4, 5, controller input, and the
+> phosphor half of 8 are
 > built. Open Problems opened (Goldbach); Engine B v0 shipped (the dial, the
 > fetch pipeline, Y in the app). Citations (7), full Share v1,
-> crossfade, the visualizer, gamepad, and the spark cap remain.
+> Show crossfade, the visualizer, controller remapping, and the spark cap remain.
 
 
 1. **Juice in the window games**: per-action feedback (flash on eat, shake
@@ -89,7 +92,8 @@ is absent anymore; everything on this list makes an existing organ stronger.
 6. **Open Problems wing** (Collatz has friends: twin primes, Goldbach).
 7. **Further reading**: one citation per room, unlocked with its deep cut.
 8. **Era grain** (scanlines, bloom, dither), **Show crossfade**, then the
-   **music visualizer** and **gamepad** as already queued.
+   **music visualizer**. Standard-controller play is built; remapping, adaptive
+   glyphs, and cross-platform hardware certification remain.
 9. **Visit-spark cap** per room (anti-grind; play stays the fast path).
 
 Everything above holds the standing laws: rewards stay earned, math is never

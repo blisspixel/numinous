@@ -10,7 +10,7 @@
 
 use std::num::NonZeroU32;
 use std::rc::Rc;
-use std::time::SystemTime;
+use std::time::{Duration, Instant, SystemTime};
 
 use numinous_core::{Journey, Raster, Room, Surface, all_rooms_with};
 use winit::application::ApplicationHandler;
@@ -22,6 +22,7 @@ use winit::window::{Icon, Window, WindowId};
 mod controls;
 mod feedback;
 mod game_draw;
+mod gamepad;
 mod hud;
 mod live_render;
 mod mouse_input;
@@ -38,6 +39,7 @@ use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_tota
 /// Near-black background (matches the `Raster` stage), packed `0x00RRGGBB`.
 const BACKGROUND: u32 = 0x000A_0B0F;
 
+#[cfg(test)]
 fn mandelbrot_gpu_view(
     t: f64,
     variation: u64,
@@ -61,6 +63,44 @@ fn mandelbrot_gpu_view(
     (center_x as f32, center_y as f32, vertical_span as f32)
 }
 
+fn live_mandelbrot_gpu_view(
+    camera: numinous_core::rooms::mandelbrot::MandelbrotCamera,
+    width: u32,
+    height: u32,
+) -> Option<(f32, f32, f32)> {
+    let (center_x, center_y, horizontal_half_span) = camera.view();
+    if width == 0
+        || height == 0
+        || !center_x.is_finite()
+        || !center_y.is_finite()
+        || !horizontal_half_span.is_finite()
+        || horizontal_half_span <= 0.0
+    {
+        return None;
+    }
+    let center_x_f32 = center_x as f32;
+    let center_y_f32 = center_y as f32;
+    let pixel_step = 2.0 * horizontal_half_span / f64::from(width);
+    let spacing = f32_spacing(center_x_f32).max(f32_spacing(center_y_f32));
+    if pixel_step < spacing {
+        return None;
+    }
+    let vertical_span = 2.0 * horizontal_half_span * f64::from(height) / f64::from(width);
+    Some((center_x_f32, center_y_f32, vertical_span as f32))
+}
+
+fn f32_spacing(value: f32) -> f64 {
+    if !value.is_finite() {
+        return f64::INFINITY;
+    }
+    let adjacent_bits = if value >= 0.0 {
+        value.to_bits().saturating_add(1)
+    } else {
+        value.to_bits().saturating_sub(1)
+    };
+    f64::from((f32::from_bits(adjacent_bits) - value).abs())
+}
+
 fn julia_gpu_c(t: f64, variation: u64, pokes: &[(f64, f64)]) -> (f32, f32) {
     let (cx, cy) = numinous_core::rooms::julia::selected_c(t, variation, pokes);
     (cx as f32, cy as f32)
@@ -74,16 +114,26 @@ fn julia_gpu_vertical_span(width: u32, height: u32) -> f32 {
     }
 }
 
-/// How far the phase advances each frame.
-const T_STEP: f64 = 0.004;
-/// In The Show, how far the phase advances each frame (slower, hypnotic).
-const SHOW_T_STEP: f64 = 0.0016;
+/// Normal room phase cycles per elapsed second.
+const T_RATE: f64 = 0.24;
+/// The Show advances more slowly for a deliberate, hypnotic pace.
+const SHOW_T_RATE: f64 = 0.096;
+/// A restored or stalled window never consumes a giant simulation step.
+const MAX_TICK_SECONDS: f64 = 0.05;
+/// Target presentation cadence. The simulation still uses measured time.
+const FRAME_INTERVAL: Duration = Duration::from_micros(16_667);
+
+fn bounded_tick_seconds(elapsed: Duration) -> f64 {
+    elapsed.as_secs_f64().clamp(0.0, MAX_TICK_SECONDS)
+}
 
 /// The application state driven by the winit event loop.
 struct App {
     window: Option<Rc<Window>>,
     surface: Option<softbuffer::Surface<Rc<Window>, Rc<Window>>>,
     player: Option<numinous_audio::LoopPlayer>,
+    gamepad: gamepad::GamepadInput,
+    mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera,
     rooms: Vec<Box<dyn Room>>,
     current: usize,
     t: f64,
@@ -110,8 +160,12 @@ struct App {
     show_help: bool,
     /// Start in fullscreen (from --fullscreen / -f arg or env). Supports user's request for full screen view.
     start_fullscreen: bool,
-    /// Frame counter, used to refresh the audio as the phase sweeps.
+    /// Presentation frame counter for animation and game cadence.
     frame: u64,
+    /// Elapsed-time anchor, so motion does not depend on event-loop load.
+    last_tick: Instant,
+    /// Focused windows animate and speak; background windows hold their state.
+    window_active: bool,
     /// Time speed multiplier (W faster, S slower), like sprint and sneak.
     time_scale: f64,
     /// The player's journey: the same file the CLI levels (visits, plays, wins).
@@ -138,6 +192,10 @@ struct App {
     gauntlet: Option<GauntletPlay>,
     /// The arcade, when the Vexations are loose.
     arcade: Option<ArcadePlay>,
+    /// Controller-selected digit for the Gauntlet code stage.
+    controller_digit: u8,
+    /// Controller-selected game in the launch menu.
+    controller_menu_selection: usize,
     /// The chiptune bed for the current room, rendered once per room.
     tune: Vec<f32>,
     /// The journey overlay ('j' toggles): level, rank, trophies, resonances.
@@ -180,6 +238,8 @@ impl App {
             window: None,
             surface: None,
             player: None,
+            gamepad: gamepad::GamepadInput::new(),
+            mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera::new(0),
             rooms: all_rooms_with(0),
             current: 0,
             t: 0.0,
@@ -197,6 +257,8 @@ impl App {
             show_help: true,
             start_fullscreen: false,
             frame: 0,
+            last_tick: Instant::now(),
+            window_active: true,
             time_scale: 1.0,
             journey: journey.clone(),
             journey_saved: journey,
@@ -210,6 +272,8 @@ impl App {
             nim: None,
             gauntlet: None,
             arcade: None,
+            controller_digit: 0,
+            controller_menu_selection: 0,
             tune: Vec::new(),
             show_journey: false,
             mouse: (0.0, 0.0),
@@ -818,8 +882,8 @@ impl App {
     fn change_volume(&mut self, step: f32) {
         self.volume = (self.volume + step).clamp(0.0, 1.0);
         self.banner = Some(feedback::volume(self.volume));
-        if !self.refresh_radio_audio() {
-            self.update_audio();
+        if let Some(player) = &self.player {
+            player.set_master_gain(if self.muted { 0.0 } else { self.volume });
         }
     }
 
@@ -865,6 +929,274 @@ impl App {
         }
     }
 
+    fn set_mouse_from_normalized(&mut self, point: (f64, f64)) {
+        let Some(window) = &self.window else {
+            return;
+        };
+        let size = window.inner_size();
+        self.mouse = (
+            point.0.clamp(0.0, 1.0) * f64::from(size.width),
+            point.1.clamp(0.0, 1.0) * f64::from(size.height),
+        );
+    }
+
+    fn begin_pointer_at(&mut self, point: (f64, f64)) {
+        self.set_mouse_from_normalized(point);
+        let action = mouse_input::left_press_action(self.left_press_context());
+        self.set_pointer_state(mouse_input::pointer_state_after_left_press(action));
+        match action {
+            mouse_input::LeftPressAction::GameClick => self.click(),
+            mouse_input::LeftPressAction::RoomPoke => {
+                self.poking = true;
+                room_input::push_poke(&mut self.pokes, point);
+                room_input::record_pointer_down(&mut self.inputs, point, self.t);
+                if self.rooms[self.current].meta().id == "mandelbrot"
+                    && let Some(window) = &self.window
+                {
+                    let size = window.inner_size();
+                    let _ = self.mandelbrot_camera.dive(
+                        point.0,
+                        point.1,
+                        size.width as usize,
+                        size.height as usize,
+                    );
+                }
+            }
+            mouse_input::LeftPressAction::PhaseDrag | mouse_input::LeftPressAction::Ignore => {}
+        }
+    }
+
+    fn move_pointer_to(&mut self, point: (f64, f64), held: bool) {
+        self.set_mouse_from_normalized(point);
+        if held && self.poking && room_input::extend_poke_trail(&mut self.pokes, point) {
+            room_input::record_pointer_move(&mut self.inputs, point, self.t);
+        }
+    }
+
+    fn end_pointer_at(&mut self, point: (f64, f64)) {
+        self.set_mouse_from_normalized(point);
+        if self.poking {
+            room_input::record_pointer_up(&mut self.inputs, point, self.t);
+        }
+        self.set_pointer_state(mouse_input::pointer_state_after_left_release());
+    }
+
+    fn gamepad_direction(&mut self, command: gamepad::Command) {
+        if self.show_help && self.modal_mode_active() {
+            return;
+        }
+        if self.show_help {
+            let count = 5;
+            self.controller_menu_selection = match command {
+                gamepad::Command::Up | gamepad::Command::Left => {
+                    (self.controller_menu_selection + count - 1) % count
+                }
+                gamepad::Command::Down | gamepad::Command::Right => {
+                    (self.controller_menu_selection + 1) % count
+                }
+                _ => return,
+            };
+            return;
+        }
+        let key = match command {
+            gamepad::Command::Up => Key::Named(NamedKey::ArrowUp),
+            gamepad::Command::Down => Key::Named(NamedKey::ArrowDown),
+            gamepad::Command::Left => Key::Named(NamedKey::ArrowLeft),
+            gamepad::Command::Right => Key::Named(NamedKey::ArrowRight),
+            _ => return,
+        };
+        if let Some(play) = &mut self.arcade {
+            if let Some(action) = controls::arcade_action_for_key(&key)
+                && !play.over
+            {
+                self.arcade_act(action);
+            }
+        } else if let Some(stage) = self.gauntlet.as_ref().map(|run| run.stage) {
+            match stage {
+                1 | 2 => {
+                    let letter = match command {
+                        gamepad::Command::Up => 'A',
+                        gamepad::Command::Right => 'B',
+                        gamepad::Command::Down => 'C',
+                        gamepad::Command::Left => 'D',
+                        _ => return,
+                    };
+                    self.gauntlet_key(&Key::Character(letter.to_string().into()));
+                }
+                3 => match command {
+                    gamepad::Command::Up => {
+                        self.controller_digit = (self.controller_digit + 1) % 10;
+                        if let Some(run) = &mut self.gauntlet {
+                            run.message = format!(
+                                "SELECTED DIGIT {}. SOUTH ADDS, NORTH SUBMITS.",
+                                self.controller_digit
+                            );
+                        }
+                    }
+                    gamepad::Command::Down => {
+                        self.controller_digit = (self.controller_digit + 9) % 10;
+                        if let Some(run) = &mut self.gauntlet {
+                            run.message = format!(
+                                "SELECTED DIGIT {}. SOUTH ADDS, NORTH SUBMITS.",
+                                self.controller_digit
+                            );
+                        }
+                    }
+                    gamepad::Command::Left => {
+                        self.gauntlet_key(&Key::Named(NamedKey::Backspace));
+                    }
+                    gamepad::Command::Right => self.gamepad_primary(),
+                    _ => {}
+                },
+                _ => self.gauntlet_key(&key),
+            }
+        } else if self.munch.is_some() {
+            self.munch_key(&key);
+        } else if self.nim.is_some() {
+            self.nim_key(&key);
+        } else if self.quiz.is_some() {
+            let letter = match command {
+                gamepad::Command::Up => 'A',
+                gamepad::Command::Right => 'B',
+                gamepad::Command::Down => 'C',
+                gamepad::Command::Left => 'D',
+                _ => return,
+            };
+            self.quiz_answer(letter);
+        } else {
+            match command {
+                gamepad::Command::Left => self.switch(-1),
+                gamepad::Command::Right => self.switch(1),
+                gamepad::Command::Up => self.time_scale = (self.time_scale * 2.0).min(8.0),
+                gamepad::Command::Down => self.time_scale = (self.time_scale / 2.0).max(0.25),
+                _ => {}
+            }
+        }
+    }
+
+    fn gamepad_primary(&mut self) {
+        if self.show_help && self.modal_mode_active() {
+            self.show_help = false;
+        } else if self.show_help {
+            self.show_help = false;
+            match self.controller_menu_selection {
+                0 => self.quiz_next(),
+                1 => self.munch_start(),
+                2 => self.nim_start(),
+                3 => self.gauntlet_start(),
+                _ => self.arcade_start(),
+            }
+        } else if self.arcade.is_some() {
+            self.arcade_act(numinous_core::munch_arcade::Action::Eat);
+        } else if self.gauntlet.as_ref().is_some_and(|run| run.stage == 3) {
+            self.gauntlet_key(&Key::Character(
+                char::from(b'0' + self.controller_digit).to_string().into(),
+            ));
+        } else if self.gauntlet.is_some() {
+            self.gauntlet_key(&Key::Named(NamedKey::Space));
+        } else if self.munch.is_some() {
+            self.munch_key(&Key::Named(NamedKey::Space));
+        } else if self.nim.is_some() {
+            self.nim_key(&Key::Named(NamedKey::Enter));
+        } else if self.quiz.as_ref().is_some_and(|quiz| quiz.flash.is_some()) {
+            self.quiz_next();
+        } else if self.quiz.is_some() {
+            self.quiz_answer('A');
+        } else if let Some(point) = self.gamepad.cursor() {
+            self.begin_pointer_at(point);
+        }
+    }
+
+    fn gamepad_back(&mut self) {
+        if self.show_help {
+            self.show_help = false;
+        } else if self.arcade.is_some() {
+            if let Some(play) = self.arcade.take() {
+                self.post_score(&format!("arcade seed:{}", play.seed), play.run.score);
+            }
+            self.update_audio();
+        } else if self.gauntlet.is_some() {
+            self.gauntlet_key(&Key::Named(NamedKey::Escape));
+        } else if self.munch.is_some() {
+            self.munch_key(&Key::Named(NamedKey::Escape));
+        } else if self.nim.is_some() {
+            self.nim_key(&Key::Named(NamedKey::Escape));
+        } else if self.quiz.is_some() {
+            self.quiz = None;
+            self.update_audio();
+        } else if self.studio {
+            self.exit_studio();
+        } else {
+            self.show_help = !self.show_help;
+        }
+    }
+
+    fn gamepad_menu(&mut self) {
+        self.clear_pointer_state();
+        self.show_journey = false;
+        self.show_help = !self.show_help;
+    }
+
+    fn gamepad_confirm_secondary(&mut self) {
+        if self.show_help || self.arcade.is_some() || self.quiz.is_some() || self.studio {
+            return;
+        }
+        if self.gauntlet.is_some() {
+            self.gauntlet_key(&Key::Named(NamedKey::Enter));
+        } else if self.munch.is_some() {
+            self.munch_key(&Key::Named(NamedKey::Enter));
+        } else if self.nim.is_some() {
+            self.nim_key(&Key::Named(NamedKey::Enter));
+        } else {
+            let stations = numinous_core::STATIONS.len();
+            self.radio = match self.radio {
+                None => Some(0),
+                Some(i) if i + 1 < stations => Some(i + 1),
+                Some(_) => None,
+            };
+            self.tune_in();
+        }
+    }
+
+    fn handle_gamepad_command(&mut self, command: gamepad::Command) {
+        match command {
+            gamepad::Command::PrimaryDown => self.gamepad_primary(),
+            gamepad::Command::PrimaryUp => {
+                if let Some(point) = self.gamepad.cursor() {
+                    self.end_pointer_at(point);
+                }
+            }
+            gamepad::Command::Back => self.gamepad_back(),
+            gamepad::Command::Menu => self.gamepad_menu(),
+            gamepad::Command::Inspect => self.show_info = !self.show_info,
+            gamepad::Command::Reset => self.reset_current_room(),
+            gamepad::Command::PreviousRoom if !self.modal_mode_active() => self.switch(-1),
+            gamepad::Command::NextRoom if !self.modal_mode_active() => self.switch(1),
+            gamepad::Command::Slower => {
+                self.time_scale = (self.time_scale / 2.0).max(0.25);
+            }
+            gamepad::Command::Faster => {
+                self.time_scale = (self.time_scale * 2.0).min(8.0);
+            }
+            gamepad::Command::Up
+            | gamepad::Command::Down
+            | gamepad::Command::Left
+            | gamepad::Command::Right => self.gamepad_direction(command),
+            gamepad::Command::CycleEra => self.era = self.era.next(),
+            gamepad::Command::CycleRadio => self.gamepad_confirm_secondary(),
+            gamepad::Command::PointerMoved { point, held } => {
+                self.move_pointer_to(point, held);
+            }
+            gamepad::Command::PhaseDelta(delta) if !self.modal_mode_active() => {
+                self.t = (self.t + delta).rem_euclid(1.0);
+            }
+            gamepad::Command::CancelPointer => self.clear_pointer_state(),
+            gamepad::Command::PreviousRoom
+            | gamepad::Command::NextRoom
+            | gamepad::Command::PhaseDelta(_) => {}
+        }
+    }
+
     /// Tune in to the current dial position: build the playlist, join the
     /// broadcast mid-stream (the station was always on the air), and play.
     fn tune_in(&mut self) {
@@ -879,14 +1211,7 @@ impl App {
         let dir = radio_cache::default_dir();
         self.radio_paths = radio_cache::station_tracks(&dir, st.id);
         // Join the broadcast live: the wall clock decides which track is on.
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs_f64())
-            .unwrap_or(0.0);
-        if let Some((index, position)) = radio_cache::live_position(&self.radio_paths, now) {
-            self.radio_index = index;
-            self.radio_play_or_advance(position);
-        }
+        let _ = self.sync_radio_to_wall_clock();
         if let Some(window) = &self.window {
             let st = &numinous_core::STATIONS[i];
             window.set_title(&format!(
@@ -903,6 +1228,26 @@ impl App {
         let st = &numinous_core::STATIONS[i];
         self.banner = Some(feedback::radio(st.name, st.id, self.radio_paths.len()));
         self.update_audio();
+    }
+
+    fn sync_radio_at(&mut self, now_secs: f64) -> bool {
+        if self.radio.is_none() {
+            return false;
+        }
+        let Some((index, position)) = radio_cache::live_position(&self.radio_paths, now_secs)
+        else {
+            return false;
+        };
+        self.radio_index = index;
+        self.radio_play_or_advance(position)
+    }
+
+    fn sync_radio_to_wall_clock(&mut self) -> bool {
+        let now = SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|duration| duration.as_secs_f64())
+            .unwrap_or(0.0);
+        self.sync_radio_at(now)
     }
 
     fn radio_play_or_advance(&mut self, offset: f64) -> bool {
@@ -941,27 +1286,9 @@ impl App {
         };
         self.radio_track = loaded.stereo;
         self.radio_until = Some(std::time::Instant::now() + loaded.remaining);
-        if !self.muted
-            && let Some(player) = &self.player
-        {
-            let volume = self.volume;
-            player.set_stereo(self.radio_track.iter().map(|&s| s * volume).collect());
-        }
-        true
-    }
-
-    fn refresh_radio_audio(&self) -> bool {
-        if self.radio.is_none() || self.radio_track.is_empty() {
-            return false;
-        }
-        let Some(player) = &self.player else {
-            return true;
-        };
-        if self.muted {
-            player.set_samples(Vec::new());
-        } else {
-            let volume = self.volume;
-            player.set_stereo(self.radio_track.iter().map(|&s| s * volume).collect());
+        if let Some(player) = &self.player {
+            player.set_stereo(self.radio_track.clone());
+            player.set_master_gain(if self.muted { 0.0 } else { self.volume });
         }
         true
     }
@@ -972,7 +1299,8 @@ impl App {
         let id = self.rooms[self.current].meta().id;
         let (w, h) = (width as u32, height as u32);
         let mandelbrot_view = (id == "mandelbrot")
-            .then(|| mandelbrot_gpu_view(self.t, self.variation, w, h, &self.inputs));
+            .then(|| live_mandelbrot_gpu_view(self.mandelbrot_camera, w, h))
+            .flatten();
         let julia_c = (id == "julia").then(|| julia_gpu_c(self.t, self.variation, &self.pokes));
         let gpu = self.gpu.as_mut()?;
         match id {
@@ -1014,75 +1342,46 @@ impl App {
         let Some(player) = &self.player else {
             return;
         };
-        if self.muted {
-            player.set_samples(Vec::new());
-            return;
-        }
+        player.set_master_gain(if self.muted { 0.0 } else { self.volume });
         if let Some(spec) = spec {
-            let volume = self.volume;
-            player.set_samples(
-                spec.render(player.sample_rate())
-                    .into_iter()
-                    .map(|sample| sample * volume)
-                    .collect(),
-            );
+            player.set_samples(spec.render(player.sample_rate()));
         }
     }
 
     fn exit_studio(&mut self) {
         self.studio = false;
         if self.radio.is_some() && !self.radio_track.is_empty() {
-            if !self.muted
-                && let Some(player) = &self.player
-            {
-                let volume = self.volume;
-                player.set_stereo(self.radio_track.iter().map(|&s| s * volume).collect());
+            if let Some(player) = &self.player {
+                player.set_stereo(self.radio_track.clone());
+                player.set_master_gain(if self.muted { 0.0 } else { self.volume });
             }
         } else {
             self.update_audio();
         }
     }
 
-    /// Render the current room's sound at the current phase and send it to the
-    /// looping player, so the room you see is the room you hear.
+    /// Render the current room's stable score and crossfade to it.
     fn update_audio(&mut self) {
         let Some(player) = &self.player else {
             return;
         };
-        if self.muted {
-            player.set_samples(Vec::new());
-            return;
-        }
-        let spec = self.rooms[self.current].sound(self.t);
-        let tone: Vec<f32> = spec
-            .render(player.sample_rate())
-            .into_iter()
-            .map(|s| s * 0.5)
-            .collect();
-        // Engine A is the room bed while radio is off. Radio v1 owns the
-        // player buffer while it is on so long records do not restart.
-        if self.tune.is_empty() {
-            // The room's own phrase when it has one; the seeded chip otherwise.
-            let pattern = match self.rooms[self.current].motif() {
-                Some(motif) => motif.pattern(),
-                None => numinous_core::compose(self.current as u64 + 1, 8),
-            };
-            self.tune = pattern.render(player.sample_rate());
-        }
+        player.set_master_gain(if self.muted { 0.0 } else { self.volume });
+        // Radio owns the source while it is on. Gain changes and focus changes
+        // never replace it, so its playhead and wall-clock schedule stay true.
         if self.radio.is_some() && !self.radio_track.is_empty() {
-            // The station is the sound, and radio_play already handed the
-            // record to the player. Full one-bus room-over-radio mixing needs
-            // a non-restarting overlay path in the player.
             return;
         }
-        let mut mix = self.tune.clone();
-        if !tone.is_empty() {
-            for (i, sample) in mix.iter_mut().enumerate() {
-                *sample = (*sample * 0.55 + tone[i % tone.len()] * 0.45).clamp(-1.0, 1.0);
-            }
+        if self.tune.is_empty() {
+            self.tune = match self.rooms[self.current].motif() {
+                Some(motif) => motif.arrangement().render_stereo(player.sample_rate()),
+                None => numinous_core::compose(self.current as u64 + 1, 8)
+                    .render(player.sample_rate())
+                    .into_iter()
+                    .flat_map(|sample| [sample, sample])
+                    .collect(),
+            };
         }
-        let volume = self.volume;
-        player.set_samples(mix.into_iter().map(|s| s * volume).collect());
+        player.set_stereo(self.tune.clone());
     }
 
     fn title(&self) -> String {
@@ -1113,6 +1412,7 @@ impl App {
             &mut self.pokes,
             &mut self.inputs,
         );
+        self.mandelbrot_camera.reset(self.variation);
         self.tune.clear();
         if let Some(window) = &self.window {
             window.set_title(&self.title());
@@ -1128,6 +1428,7 @@ impl App {
             &mut self.pokes,
             &mut self.inputs,
         );
+        self.mandelbrot_camera.reset(self.variation);
         self.update_audio();
     }
 
@@ -1136,6 +1437,9 @@ impl App {
     }
 
     fn modal_frame(&self, width: usize, height: usize) -> Option<Raster> {
+        if self.show_help && self.modal_mode_active() {
+            return None;
+        }
         if let Some(play) = &self.arcade {
             Some(game_draw::draw_arcade(play, width, height))
         } else if let Some(run) = &self.gauntlet {
@@ -1197,7 +1501,11 @@ impl App {
             let (rw, rh) = self.live_scale.render_size(width, height);
             let started = std::time::Instant::now();
             let mut raster = Raster::with_accent(rw, rh, room.meta().accent);
-            room.render_input(&mut raster, self.t, &self.inputs);
+            if room.meta().id == "mandelbrot" {
+                self.mandelbrot_camera.render(&mut raster);
+            } else {
+                room.render_input(&mut raster, self.t, &self.inputs);
+            }
             self.live_scale
                 .observe(started.elapsed().as_secs_f64() * 1000.0);
             if factor > 1 {
@@ -1239,7 +1547,11 @@ impl App {
         );
 
         if self.show_help && !self.the_show {
-            overlays::draw_help_overlay(raster, width, height);
+            let selection = self
+                .gamepad
+                .cursor()
+                .map(|_| self.controller_menu_selection);
+            overlays::draw_help_overlay(raster, width, height, selection);
         }
 
         if self.show_journey && !self.the_show {
@@ -1252,6 +1564,10 @@ impl App {
                 width,
                 height,
             );
+        }
+
+        if let Some(point) = self.gamepad.cursor() {
+            gamepad::draw_cursor(raster, point, width, height);
         }
     }
 
@@ -1302,6 +1618,15 @@ impl App {
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.window.is_some() {
+            self.window_active = true;
+            self.last_tick = Instant::now();
+            self.gamepad.activate();
+            if self.radio.is_some() {
+                let _ = self.sync_radio_to_wall_clock();
+            }
+            if let Some(player) = &self.player {
+                player.set_active(true);
+            }
             return;
         }
         let attributes = Window::default_attributes()
@@ -1361,6 +1686,17 @@ impl ApplicationHandler for App {
         self.level_seen = self.journey.level();
         self.visit_current();
         self.update_audio();
+    }
+
+    fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
+        self.window_active = false;
+        self.clear_pointer_state();
+        if let Some(command) = self.gamepad.deactivate() {
+            self.handle_gamepad_command(command);
+        }
+        if let Some(player) = &self.player {
+            player.set_active(false);
+        }
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
@@ -1541,11 +1877,7 @@ impl ApplicationHandler for App {
                         }
                         Key::Character(c) if c.as_str() == "m" => {
                             self.muted = !self.muted;
-                            if !self.muted && self.radio.is_some() {
-                                self.tune_in();
-                            } else {
-                                self.update_audio();
-                            }
+                            self.update_audio();
                         }
                         Key::Character(c) if c.as_str() == "h" => {
                             self.show_help = !self.show_help;
@@ -1640,6 +1972,7 @@ impl ApplicationHandler for App {
                                     &mut self.pokes,
                                     &mut self.inputs,
                                 );
+                                self.mandelbrot_camera.reset(self.variation);
                                 self.tune.clear();
                                 if let Some(window) = &self.window {
                                     window.set_title(&self.title());
@@ -1657,55 +1990,40 @@ impl ApplicationHandler for App {
                 button: MouseButton::Left,
                 ..
             } => {
-                if state == ElementState::Pressed {
-                    let action = mouse_input::left_press_action(self.left_press_context());
-                    self.set_pointer_state(mouse_input::pointer_state_after_left_press(action));
-                    match action {
-                        mouse_input::LeftPressAction::GameClick => self.click(),
-                        mouse_input::LeftPressAction::RoomPoke => {
-                            // The poke: the room answers the hand, and keeps
-                            // answering while the hand drags.
-                            self.poking = true;
-                            if let Some(window) = &self.window {
-                                let size = window.inner_size();
-                                if let Some(point) = mouse_input::normalized_window_point(
-                                    self.mouse,
-                                    (size.width, size.height),
-                                ) {
-                                    room_input::push_poke(&mut self.pokes, point);
-                                    room_input::record_pointer_down(
-                                        &mut self.inputs,
-                                        point,
-                                        self.t,
-                                    );
-                                } else {
-                                    self.poking = false;
-                                }
-                            } else {
-                                self.poking = false;
-                            }
-                        }
-                        mouse_input::LeftPressAction::PhaseDrag => {}
-                        mouse_input::LeftPressAction::Ignore => {}
+                let point = self.window.as_ref().and_then(|window| {
+                    let size = window.inner_size();
+                    mouse_input::normalized_window_point(self.mouse, (size.width, size.height))
+                });
+                match (state, point) {
+                    (ElementState::Pressed, Some(point)) => self.begin_pointer_at(point),
+                    (ElementState::Released, Some(point)) => self.end_pointer_at(point),
+                    (ElementState::Pressed, None) => self.clear_pointer_state(),
+                    (ElementState::Released, None) => {
+                        self.set_pointer_state(mouse_input::pointer_state_after_left_release());
                     }
-                } else {
-                    // Record the lift before the state change, so the
-                    // gesture completes as a release rather than a cancel.
-                    if self.poking
-                        && let Some(window) = &self.window
-                    {
-                        let size = window.inner_size();
-                        if let Some(point) = mouse_input::normalized_window_point(
-                            self.mouse,
-                            (size.width, size.height),
-                        ) {
-                            room_input::record_pointer_up(&mut self.inputs, point, self.t);
-                        }
-                    }
-                    self.set_pointer_state(mouse_input::pointer_state_after_left_release());
                 }
             }
-            WindowEvent::Focused(false) => self.clear_pointer_state(),
+            WindowEvent::Focused(false) => {
+                self.window_active = false;
+                self.clear_pointer_state();
+                if let Some(command) = self.gamepad.deactivate() {
+                    self.handle_gamepad_command(command);
+                }
+                if let Some(player) = &self.player {
+                    player.set_active(false);
+                }
+            }
+            WindowEvent::Focused(true) => {
+                self.window_active = true;
+                self.last_tick = Instant::now();
+                self.gamepad.activate();
+                if self.radio.is_some() {
+                    let _ = self.sync_radio_to_wall_clock();
+                }
+                if let Some(player) = &self.player {
+                    player.set_active(true);
+                }
+            }
             WindowEvent::MouseWheel { delta, .. } if !self.studio => {
                 let lines = match delta {
                     winit::event::MouseScrollDelta::LineDelta(_, y) => f64::from(y),
@@ -1727,9 +2045,7 @@ impl ApplicationHandler for App {
                     ) {
                         // Gestures share the poke trail's decimation, so
                         // legacy rooms see identical hands either way.
-                        if room_input::extend_poke_trail(&mut self.pokes, point) {
-                            room_input::record_pointer_move(&mut self.inputs, point, self.t);
-                        }
+                        self.move_pointer_to(point, true);
                     } else {
                         // The window lost its size mid-drag: the gesture
                         // ends without a lift, so close it gently.
@@ -1748,47 +2064,39 @@ impl ApplicationHandler for App {
         }
     }
 
-    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        let now = Instant::now();
+        event_loop.set_control_flow(ControlFlow::WaitUntil(now + FRAME_INTERVAL));
+        let elapsed = bounded_tick_seconds(now.saturating_duration_since(self.last_tick));
+        self.last_tick = now;
+        if let Some(player) = &self.player {
+            player.service();
+        }
+        if !self.window_active {
+            return;
+        }
+        let commands = self.gamepad.poll(now);
+        for command in commands {
+            self.handle_gamepad_command(command);
+        }
         self.refresh_pointer_state();
-        if !self.paused && !self.dragging {
+        if !(self.paused || self.dragging || self.show_help && self.modal_mode_active()) {
+            if self.rooms[self.current].meta().id == "mandelbrot" {
+                self.mandelbrot_camera.advance(elapsed * self.time_scale);
+            }
             let show_active = self.show_mode_active();
-            let base = if show_active { SHOW_T_STEP } else { T_STEP };
-            let step = base * self.time_scale;
-            if self.t + step >= 1.0 {
-                self.t = 0.0;
+            let rate = if show_active { SHOW_T_RATE } else { T_RATE };
+            let next = self.t + rate * elapsed * self.time_scale;
+            if next >= 1.0 {
+                self.t = next.rem_euclid(1.0);
                 // In The Show, a finished sweep drifts into the next room.
                 if show_active {
                     self.switch(1);
                 }
             } else {
-                self.t += step;
+                self.t = next;
             }
-            // The sound follows the sweep instead of droning on one tone.
             self.frame += 1;
-            // The room's voice follows the sweep, but never while the radio
-            // is on the air: resetting the loop buffer would restart the
-            // record every couple of seconds.
-            if self.frame % 120 == 0
-                && !self.studio
-                && self.radio.is_none()
-                && self.quiz.is_none()
-                && self.munch.is_none()
-                && self.nim.is_none()
-                && self.gauntlet.is_none()
-                && self.arcade.is_none()
-            {
-                self.update_audio();
-            }
-            // The station rotates: when a track ends, the next takes the air.
-            if self.radio.is_some()
-                && let Some(until) = self.radio_until
-                && std::time::Instant::now() >= until
-                && !self.radio_paths.is_empty()
-            {
-                self.radio_index = (self.radio_index + 1) % self.radio_paths.len();
-                self.radio_play_or_advance(0.0);
-                self.update_audio();
-            }
             room_input::tick_room_card(&mut self.room_card);
             // The arcade's heartbeat: the spirits step on the beat, faster
             // each level; the flash counts itself down.
@@ -1807,6 +2115,15 @@ impl ApplicationHandler for App {
             if self.banner.as_mut().is_some_and(|banner| !banner.tick()) {
                 self.banner = None;
             }
+        }
+        // A station is a wall-clock broadcast, independent of room pause or a
+        // modal menu. Rejoin the exact live position at every track boundary.
+        if self.radio.is_some()
+            && let Some(until) = self.radio_until
+            && Instant::now() >= until
+            && !self.radio_paths.is_empty()
+        {
+            let _ = self.sync_radio_to_wall_clock();
         }
         if let Some(window) = &self.window {
             window.request_redraw();
@@ -1946,7 +2263,7 @@ fn main() {
         }
     }));
     let event_loop = EventLoop::new().expect("create event loop");
-    event_loop.set_control_flow(ControlFlow::Poll);
+    event_loop.set_control_flow(ControlFlow::Wait);
     let mut app = App::new();
     // Support --fullscreen / -f / -F and NUMINOUS_FULLSCREEN=1 for launch full screen view.
     // Gives user-requested video options at entry without adding deps.
@@ -1964,8 +2281,8 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{
-        App, TestStateRoot, app_icon, julia_gpu_c, julia_gpu_vertical_span, mandelbrot_gpu_view,
-        radio_cache,
+        App, TestStateRoot, app_icon, bounded_tick_seconds, julia_gpu_c, julia_gpu_vertical_span,
+        live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache,
     };
     use std::time::{Duration, UNIX_EPOCH};
 
@@ -2201,7 +2518,7 @@ mod tests {
         assert_eq!(
             selected_gpu,
             mandelbrot_gpu_view(0.99, variation, 900, 700, &inputs),
-            "the accelerated camera remains held after the first click"
+            "deterministic face rendering preserves the selected camera"
         );
 
         let mut app = headless("numinous_app_test_gpu_chrome.txt");
@@ -2236,6 +2553,196 @@ mod tests {
             "the reset footer reaches the accelerated frame"
         );
         let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn elapsed_simulation_time_is_measured_and_bounded() {
+        let ordinary = bounded_tick_seconds(Duration::from_millis(16));
+        assert!((ordinary - 0.016).abs() < 1e-9);
+        assert_eq!(bounded_tick_seconds(Duration::from_secs(10)), 0.05);
+    }
+
+    #[test]
+    fn live_mandelbrot_view_tracks_the_persistent_camera() {
+        let mut camera = numinous_core::rooms::mandelbrot::MandelbrotCamera::new(17);
+        let initial = live_mandelbrot_gpu_view(camera, 900, 700).expect("opening GPU view");
+        camera.advance(1.0);
+        let advanced = live_mandelbrot_gpu_view(camera, 900, 700).expect("advanced GPU view");
+        assert_ne!(advanced, initial, "elapsed time advances the live camera");
+
+        assert!(camera.dive(0.75, 0.25, 900, 700));
+        let selected = live_mandelbrot_gpu_view(camera, 900, 700).expect("selected GPU view");
+        camera.advance(1.0);
+        let deeper = live_mandelbrot_gpu_view(camera, 900, 700).expect("deeper GPU view");
+        assert_ne!(deeper, selected, "a selected target keeps zooming");
+        assert!(deeper.2 < selected.2, "the vertical span keeps shrinking");
+    }
+
+    #[test]
+    fn deep_mandelbrot_view_falls_back_before_gpu_coordinates_collapse() {
+        let mut camera = numinous_core::rooms::mandelbrot::MandelbrotCamera::new(17);
+        camera.advance(200.0);
+        assert!(live_mandelbrot_gpu_view(camera, 900, 700).is_none());
+    }
+
+    #[test]
+    fn controller_dpad_navigates_rooms_without_a_mouse() {
+        let mut app = headless("numinous_app_test_controller_room.txt");
+        app.show_help = false;
+        let original = app.current;
+
+        app.handle_gamepad_command(crate::gamepad::Command::Right);
+
+        assert_ne!(app.current, original);
+        assert!(app.inputs.is_empty());
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn controller_can_choose_and_launch_every_menu_game() {
+        for selection in 0..5 {
+            let mut app = headless(&format!(
+                "numinous_app_test_controller_game_{selection}.txt"
+            ));
+            app.controller_menu_selection = selection;
+
+            app.handle_gamepad_command(crate::gamepad::Command::PrimaryDown);
+
+            assert!(!app.show_help);
+            assert!(
+                [
+                    app.quiz.is_some(),
+                    app.munch.is_some(),
+                    app.nim.is_some(),
+                    app.gauntlet.is_some(),
+                    app.arcade.is_some(),
+                ][selection],
+                "controller menu selection {selection} launches its game"
+            );
+        }
+    }
+
+    #[test]
+    fn controller_menu_pauses_and_resumes_without_discarding_a_game() {
+        let mut app = headless("numinous_app_test_controller_pause_menu.txt");
+        app.show_help = false;
+        app.quiz_next();
+
+        app.handle_gamepad_command(crate::gamepad::Command::Menu);
+        assert!(app.show_help);
+        assert!(app.quiz.is_some());
+        assert!(app.modal_frame(320, 220).is_none());
+
+        app.handle_gamepad_command(crate::gamepad::Command::PrimaryDown);
+        assert!(!app.show_help);
+        assert!(app.quiz.is_some());
+        assert!(app.modal_frame(320, 220).is_some());
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn controller_routes_each_game_and_every_gauntlet_stage() {
+        use crate::gamepad::Command;
+
+        let command_for = |letter: char| match letter.to_ascii_uppercase() {
+            'A' => Command::Up,
+            'B' => Command::Right,
+            'C' => Command::Down,
+            'D' => Command::Left,
+            _ => panic!("choice must be A through D"),
+        };
+
+        let mut quiz = headless("numinous_app_test_controller_quiz_route.txt");
+        quiz.show_help = false;
+        quiz.quiz_next();
+        quiz.handle_gamepad_command(Command::Right);
+        assert!(quiz.quiz.as_ref().is_some_and(|play| play.flash.is_some()));
+        quiz.handle_gamepad_command(Command::CycleRadio);
+        assert!(quiz.radio.is_none());
+
+        let mut munch = headless("numinous_app_test_controller_munch_route.txt");
+        munch.show_help = false;
+        munch.munch_start();
+        munch.handle_gamepad_command(Command::Right);
+        munch.handle_gamepad_command(Command::PrimaryDown);
+        assert!(
+            munch
+                .munch
+                .as_ref()
+                .is_some_and(|play| play.bites.contains(&1))
+        );
+        munch.handle_gamepad_command(Command::CycleRadio);
+        assert!(munch.munch.is_some());
+        assert!(munch.radio.is_none());
+
+        let mut nim = headless("numinous_app_test_controller_nim_route.txt");
+        nim.show_help = false;
+        nim.nim_start();
+        let before: u32 = nim.nim.as_ref().unwrap().heaps.iter().sum();
+        nim.handle_gamepad_command(Command::Right);
+        nim.handle_gamepad_command(Command::PrimaryDown);
+        let after: u32 = nim.nim.as_ref().unwrap().heaps.iter().sum();
+        assert!(after < before);
+
+        let mut arcade = headless("numinous_app_test_controller_arcade_route.txt");
+        arcade.show_help = false;
+        arcade.arcade_start();
+        let before = arcade.arcade.as_ref().unwrap().run.muncher;
+        arcade.handle_gamepad_command(Command::Right);
+        assert_ne!(arcade.arcade.as_ref().unwrap().run.muncher, before);
+        let target = {
+            let run = &arcade.arcade.as_ref().unwrap().run;
+            run.board
+                .numbers
+                .iter()
+                .position(|&number| run.board.rule.fits(number))
+                .expect("arcade board has an edible number")
+        };
+        arcade.arcade.as_mut().unwrap().run.muncher = target;
+        let score = arcade.arcade.as_ref().unwrap().run.score;
+        arcade.handle_gamepad_command(Command::PrimaryDown);
+        assert!(
+            arcade.arcade.as_ref().unwrap().run.eaten[target]
+                || arcade.arcade.as_ref().unwrap().run.score > score
+        );
+        arcade.handle_gamepad_command(Command::CycleRadio);
+        assert!(arcade.radio.is_none());
+
+        let mut gauntlet = headless("numinous_app_test_controller_gauntlet_route.txt");
+        gauntlet.show_help = false;
+        gauntlet.gauntlet_start();
+        gauntlet.handle_gamepad_command(Command::Right);
+        gauntlet.handle_gamepad_command(Command::PrimaryDown);
+        gauntlet.handle_gamepad_command(Command::CycleRadio);
+        assert_eq!(gauntlet.gauntlet.as_ref().unwrap().stage, 1);
+
+        let shape = gauntlet.gauntlet.as_ref().unwrap().quiz.round.answer;
+        gauntlet.handle_gamepad_command(command_for(shape));
+        assert_eq!(gauntlet.gauntlet.as_ref().unwrap().stage, 2);
+        let sky = gauntlet.gauntlet.as_ref().unwrap().scan.answer;
+        gauntlet.handle_gamepad_command(command_for(sky));
+        assert_eq!(gauntlet.gauntlet.as_ref().unwrap().stage, 3);
+
+        let secret = gauntlet.gauntlet.as_ref().unwrap().secret.clone();
+        for digit in secret {
+            gauntlet.controller_digit = digit;
+            gauntlet.handle_gamepad_command(Command::PrimaryDown);
+        }
+        gauntlet.handle_gamepad_command(Command::CycleRadio);
+        assert_eq!(gauntlet.gauntlet.as_ref().unwrap().stage, 4);
+        gauntlet.handle_gamepad_command(Command::PrimaryDown);
+        assert!(gauntlet.gauntlet.is_none());
+
+        let mut studio = headless("numinous_app_test_controller_studio_route.txt");
+        studio.show_help = false;
+        studio.studio = true;
+        studio.handle_gamepad_command(Command::CycleRadio);
+        assert!(studio.radio.is_none());
+
+        for app in [&quiz, &munch, &nim, &arcade, &gauntlet, &studio] {
+            let _ = std::fs::remove_file(&app.journey_file);
+            let _ = std::fs::remove_file(&app.scores_file);
+        }
     }
 
     #[test]
@@ -2430,6 +2937,7 @@ mod tests {
     #[test]
     fn modal_frames_take_priority_over_gpu_eligible_rooms() {
         let mut app = headless("numinous_app_test_modal_frame_priority.txt");
+        app.show_help = false;
         app.current = app
             .rooms
             .iter()
@@ -2664,6 +3172,29 @@ mod tests {
             "the record has music in it"
         );
         let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn radio_resync_selects_the_wall_clock_track_after_an_inactive_gap() {
+        let dir = std::env::temp_dir().join("numinous_radio_resync_test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create dir");
+        let first = dir.join("trance-001.wav");
+        let second = dir.join("trance-002.wav");
+        write_test_wav(&first, 1, 2);
+        write_test_wav(&second, 1, 2);
+
+        let mut app = headless("numinous_app_test_radio_resync.txt");
+        app.radio = Some(0);
+        app.radio_paths = vec![first, second];
+        assert!(app.sync_radio_at(2.5));
+        assert_eq!(app.radio_index, 1);
+        assert!(app.radio_until.is_some());
+        assert!(app.sync_radio_at(8.25));
+        assert_eq!(app.radio_index, 0);
+
+        let _ = std::fs::remove_dir_all(dir);
         let _ = std::fs::remove_file(&app.journey_file);
     }
 

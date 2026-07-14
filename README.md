@@ -113,19 +113,25 @@ Numinous is **version 0.2.0-alpha.1**, actively earning the 0.2 Flagship Proof
 gate. The 0.1 Public Foundation is complete. Numinous already has a headless core, a
 windowed app, a full CLI, an MCP server, GPU and audio adapters, 31 catalog
 rooms plus hidden content, games, progression, a Studio foundation, and the
-built-in soundtrack. This is an alpha build, not a pre-alpha build. Capability
-breadth is ahead of release maturity because the real 0.2 hallway evidence is
-still open.
+built-in soundtrack. Mouse, keyboard, and hotplugged controllers share the
+native App, including a controller-driven virtual hand for every room. The
+programmatic room score now uses a 32-step stereo arrangement, smooth source
+crossfades, control-thread buffer retirement, focus-safe gain, and wall-clock
+radio resynchronization instead of restarting or retaining stale loops.
+This is an alpha-tagged prerelease. Capability breadth is ahead of release
+maturity because the 0.2 Flagship Proof gate, including the real hallway
+evidence, remains open.
 
-The current local gate has 1,096 passing tests, 92.93% region coverage and
-92.55% line coverage with an enforced 80% line floor, Clippy with warnings
+The current local gate has 1,143 passing tests, 93.00% region coverage and
+92.61% line coverage with an enforced 80% line floor, Clippy with warnings
 denied, and dependency policy checks. Release QA also regenerates an exact
 240-screen App matrix with per-room interaction scenarios, semantic checks,
 and coarse perceptual response thresholds, including a regression that rejects
 four isolated corner markers as a meaningful interaction.
 CI is configured for locked tests and builds on Windows, macOS, and Ubuntu.
 Stranger playtests, accessibility work, cross-platform execution evidence,
-deeper room interaction, and substantial visual and Studio work remain ahead.
+real-controller-model sessions, musician-led long-listening review, deeper room
+interaction, and substantial visual and Studio work remain ahead.
 Versions are earned by evidence, not by feature count.
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the ordered 0.2 through 2.0 plan and

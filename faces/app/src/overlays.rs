@@ -18,12 +18,48 @@ const HELP_LINES: &[&str] = &[
     "F9         PLAYTEST NOTE",
     "M          SOUND   -/= VOLUME   SPACE PAUSE",
     "",
+    "CONTROLLER",
+    "LEFT STICK HAND   SOUTH SELECT / TOUCH   BUMPERS ROOMS",
+    "D-PAD MENU / PLAY   TRIGGERS SPEED   RIGHT STICK TIME",
+    "EAST BACK   START MENU   SELECT INFO   L3 RESET",
+    "WEST ERA   NORTH RADIO OR SUBMIT",
+    "",
     "ESC        CLOSE MENU AND WANDER",
 ];
 
-pub(crate) fn draw_help_overlay(raster: &mut Raster, width: usize, height: usize) {
-    raster.dim(22);
-    let (lines, scale, line_step) = overlay_layout(HELP_LINES, width, height);
+fn help_lines(selected_game: Option<usize>) -> Vec<String> {
+    HELP_LINES
+        .iter()
+        .enumerate()
+        .map(|(index, line)| {
+            if let Some(selected) = selected_game
+                && (1..=5).contains(&index)
+            {
+                let marker = if index - 1 == selected { "> " } else { "  " };
+                return format!("{marker}{line}");
+            }
+            (*line).to_string()
+        })
+        .collect()
+}
+
+pub(crate) fn draw_help_overlay(
+    raster: &mut Raster,
+    width: usize,
+    height: usize,
+    selected_game: Option<usize>,
+) {
+    raster.clear_rows(0, height as i32);
+    raster.line(0, 0, width.saturating_sub(1) as i32, 0, '-');
+    raster.line(
+        0,
+        height.saturating_sub(1) as i32,
+        width.saturating_sub(1) as i32,
+        height.saturating_sub(1) as i32,
+        '-',
+    );
+    let semantic = help_lines(selected_game);
+    let (lines, scale, line_step) = overlay_layout(&semantic, width, height);
     draw_centered_lines(raster, &lines, width, height, scale, line_step);
 }
 
@@ -187,16 +223,23 @@ mod tests {
     #[test]
     fn help_overlay_draws_playtest_controls() {
         let mut raster = Raster::with_accent(420, 360, [120, 220, 190]);
-        draw_help_overlay(&mut raster, 420, 360);
+        for y in 0..360 {
+            raster.line(0, y, 419, y, '#');
+        }
+        draw_help_overlay(&mut raster, 420, 360, Some(2));
         assert!(raster.lit_count() > 300);
         assert_eq!(raster.width(), 420);
         assert_eq!(raster.height(), 360);
+        let rgba = raster.to_rgba();
+        let cleared = (2 * 420 + 2) * 4;
+        assert_eq!(&rgba[cleared..cleared + 4], [10, 11, 15, 255]);
     }
 
     #[test]
     fn help_overlay_lines_fit_the_default_window() {
         for (width, height) in [(900, 700), (360, 240)] {
-            let (lines, scale, line_step) = overlay_layout(HELP_LINES, width, height);
+            let semantic = help_lines(Some(4));
+            let (lines, scale, line_step) = overlay_layout(&semantic, width, height);
             assert!(lines.len() as i32 * line_step * scale <= height as i32);
             for line in lines {
                 assert!(

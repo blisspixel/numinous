@@ -10,6 +10,13 @@ use crate::surface::{MAX_DIM, Surface};
 
 use super::FRACTAL_MAX_ITER;
 const DIVE_FACTOR: f64 = 0.5;
+/// Exponential live-camera zoom per elapsed second.
+const LIVE_ZOOM_RATE: f64 = 0.18;
+/// Exponential approach to the automatic seahorse-valley destination.
+const LIVE_CENTER_RATE: f64 = 0.35;
+/// Precision floor for the live camera. Smaller spans cease to move reliably
+/// once their pixel offsets approach `f64` precision at the current center.
+const MIN_LIVE_HALF_SPAN: f64 = 1.0e-12;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct DivePoint {
@@ -68,6 +75,107 @@ fn bounded_dive_points(pokes: &[(f64, f64)], width: usize, height: usize) -> Vec
 #[derive(Debug, Default)]
 pub struct Mandelbrot {
     seed: u64,
+}
+
+/// Persistent camera for a live Mandelbrot encounter.
+///
+/// The deterministic room renderer continues to map normalized phase to a
+/// reproducible postcard. An interactive face can own this separate state so
+/// elapsed time keeps moving inward across phase boundaries and bounded input
+/// history cannot discard the selected view.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MandelbrotCamera {
+    center_x: f64,
+    center_y: f64,
+    horizontal_half_span: f64,
+    target_x: f64,
+    target_y: f64,
+}
+
+impl MandelbrotCamera {
+    /// Start at the deterministic opening view for `seed`.
+    #[must_use]
+    pub fn new(seed: u64) -> Self {
+        Self::from_phase(0.0, seed)
+    }
+
+    /// Start at one deterministic room phase before continuing persistently.
+    #[must_use]
+    pub fn from_phase(t: f64, seed: u64) -> Self {
+        let (center_x, center_y, horizontal_half_span) = automatic_view(t, seed);
+        let (target_x, target_y, _) = automatic_view(1.0, seed);
+        Self {
+            center_x,
+            center_y,
+            horizontal_half_span,
+            target_x,
+            target_y,
+        }
+    }
+
+    /// Return `(center_x, center_y, horizontal_half_span)` for CPU or GPU use.
+    #[must_use]
+    pub fn view(self) -> (f64, f64, f64) {
+        (self.center_x, self.center_y, self.horizontal_half_span)
+    }
+
+    /// Continue the inward zoom by an elapsed duration in seconds.
+    ///
+    /// Non-finite and non-positive durations are ignored. The precision floor
+    /// prevents underflow and an apparent frozen or invalid camera after a
+    /// long unattended session.
+    pub fn advance(&mut self, elapsed_seconds: f64) {
+        if !elapsed_seconds.is_finite() || elapsed_seconds <= 0.0 {
+            return;
+        }
+        let center_blend = 1.0 - (-LIVE_CENTER_RATE * elapsed_seconds).exp();
+        self.center_x += (self.target_x - self.center_x) * center_blend;
+        self.center_y += (self.target_y - self.center_y) * center_blend;
+        self.horizontal_half_span = (self.horizontal_half_span
+            * (-LIVE_ZOOM_RATE * elapsed_seconds).exp())
+        .max(MIN_LIVE_HALF_SPAN);
+    }
+
+    /// Center the camera on a normalized screen point and dive one level.
+    ///
+    /// Returns `false` for a zero-size viewport or non-finite point. Valid
+    /// coordinates are clamped to the visible viewport before conversion to
+    /// the complex plane.
+    pub fn dive(&mut self, x: f64, y: f64, width: usize, height: usize) -> bool {
+        if width == 0 || height == 0 || !x.is_finite() || !y.is_finite() {
+            return false;
+        }
+        let x = x.clamp(0.0, 1.0);
+        let y = y.clamp(0.0, 1.0);
+        let vertical_half_span = self.horizontal_half_span * height as f64 / width as f64;
+        self.center_x += (2.0 * x - 1.0) * self.horizontal_half_span;
+        self.center_y += (2.0 * y - 1.0) * vertical_half_span;
+        self.target_x = self.center_x;
+        self.target_y = self.center_y;
+        self.horizontal_half_span =
+            (self.horizontal_half_span * DIVE_FACTOR).max(MIN_LIVE_HALF_SPAN);
+        true
+    }
+
+    /// Restore the deterministic opening view for `seed`.
+    pub fn reset(&mut self, seed: u64) {
+        *self = Self::new(seed);
+    }
+
+    /// Render this exact camera through the shared deterministic CPU path.
+    pub fn render(&self, canvas: &mut dyn Surface) {
+        let Some((width, height)) = drawing_dims(canvas) else {
+            return;
+        };
+        render_view(
+            canvas,
+            width,
+            height,
+            self.center_x,
+            self.center_y,
+            self.horizontal_half_span,
+        );
+    }
 }
 
 impl Mandelbrot {
@@ -290,10 +398,12 @@ impl Room for Mandelbrot {
     fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
         let dives = valid_dive_inputs(inputs).len();
         if dives == 0 {
-            return Some("AUTO DIVE   CLICK TO HOLD A VIEW".to_string());
+            return Some("AUTO DIVE   CLICK TO CHOOSE A TARGET".to_string());
         }
         let magnification = 1_u64 << dives.min(63);
-        Some(format!("DIVE {dives}   ZOOM {magnification}X   VIEW HELD"))
+        Some(format!(
+            "DIVE {dives}   ZOOM {magnification}X   TARGET SELECTED"
+        ))
     }
 
     #[allow(dead_code)]
@@ -339,8 +449,9 @@ impl Room for Mandelbrot {
 #[cfg(test)]
 mod tests {
     use super::{
-        DivePoint, Mandelbrot, automatic_view, bounded_dive_points, escape_iters, finite_phase,
-        selected_view, selected_view_from_points, selected_view_input,
+        DivePoint, MIN_LIVE_HALF_SPAN, Mandelbrot, MandelbrotCamera, automatic_view,
+        bounded_dive_points, escape_iters, finite_phase, selected_view, selected_view_from_points,
+        selected_view_input,
     };
     use crate::canvas::Canvas;
     use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
@@ -378,6 +489,75 @@ mod tests {
         let late = selected_view_input(&inputs, 900, 700, 17, 0.8);
 
         assert_eq!(early, late);
+    }
+
+    #[test]
+    fn persistent_camera_keeps_zooming_across_normalized_phase_boundaries() {
+        let mut camera = MandelbrotCamera::from_phase(0.99, 17);
+        let before = camera.view();
+        let target = automatic_view(1.0, 17);
+        camera.advance(0.5);
+        let after_boundary = camera.view();
+        camera.advance(12.0);
+        let later = camera.view();
+
+        let distance = |view: (f64, f64, f64)| (view.0 - target.0).hypot(view.1 - target.1);
+        assert!(distance(after_boundary) < distance(before));
+        assert!(distance(later) < distance(after_boundary));
+        assert!(after_boundary.2 < before.2);
+        assert!(later.2 < after_boundary.2);
+        assert!(later.2 >= MIN_LIVE_HALF_SPAN);
+    }
+
+    #[test]
+    fn persistent_camera_dives_at_the_screen_point_then_continues() {
+        let mut camera = MandelbrotCamera::new(0);
+        let opening = camera.view();
+        assert!(camera.dive(0.75, 0.25, 900, 600));
+        let selected = camera.view();
+
+        assert!((selected.0 - (opening.0 + opening.2 * 0.5)).abs() < 1e-12);
+        assert!((selected.1 - (opening.1 - opening.2 / 3.0)).abs() < 1e-12);
+        assert!((selected.2 - opening.2 * 0.5).abs() < 1e-12);
+
+        camera.advance(1.0);
+        let continued = camera.view();
+        assert_eq!((continued.0, continued.1), (selected.0, selected.1));
+        assert!(continued.2 < selected.2);
+    }
+
+    #[test]
+    fn persistent_camera_rejects_hostile_updates_and_resets_exactly() {
+        let opening = MandelbrotCamera::new(23);
+        let mut camera = opening;
+        for elapsed in [f64::NAN, f64::INFINITY, -1.0, 0.0] {
+            camera.advance(elapsed);
+        }
+        assert_eq!(camera, opening);
+        assert!(!camera.dive(f64::NAN, 0.5, 900, 700));
+        assert!(!camera.dive(0.5, f64::INFINITY, 900, 700));
+        assert!(!camera.dive(0.5, 0.5, 0, 700));
+        assert_eq!(camera, opening);
+
+        assert!(camera.dive(2.0, -1.0, 900, 700));
+        camera.advance(1.0e9);
+        assert_eq!(camera.view().2, MIN_LIVE_HALF_SPAN);
+        camera.reset(23);
+        assert_eq!(camera, opening);
+    }
+
+    #[test]
+    fn persistent_camera_cpu_render_is_deterministic() {
+        let mut camera = MandelbrotCamera::new(5);
+        assert!(camera.dive(0.63, 0.41, 64, 40));
+        camera.advance(0.75);
+        let mut a = Canvas::new(64, 40);
+        let mut b = Canvas::new(64, 40);
+        camera.render(&mut a);
+        camera.render(&mut b);
+
+        assert_eq!(a.to_text(), b.to_text());
+        assert!(a.ink_count() > 20);
     }
 
     fn render_text(room: &Mandelbrot, t: f64, pokes: &[(f64, f64)]) -> String {

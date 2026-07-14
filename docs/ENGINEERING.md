@@ -6,7 +6,7 @@ perfection. This document separates gates enforced today from hardening work
 that still has to earn its place. The automated enforcement that exists lives
 in `QUALITY.md` and `.github/workflows/ci.yml`.
 
-## Toolchain and versions (verified 2026-07-11)
+## Toolchain and versions (verified 2026-07-13)
 
 The current baseline is deliberate and green. A newer major release is a review
 candidate, not an automatic upgrade. Patch updates within the lockfile are kept
@@ -19,6 +19,7 @@ current through Dependabot and must pass the full gate.
 | `wgpu` | **29.x** | Current green GPU stack. Version 30 is an evaluated migration, not a blind launch-day bump. |
 | `winit`, `softbuffer` | **0.30.x, 0.4.x** | Current native window and software presentation path. |
 | `cpal` | **0.16.x** | Current native audio I/O. DSP and chiptune synthesis are implemented in the workspace without `fundsp`. |
+| `gilrs` | **0.11.2** | Current cross-platform gamepad input. This release requires Rust 1.84, fits the declared MSRV, and Linux CI installs `libudev-dev`. |
 | Test runner | **cargo test** | Enforced today. `cargo-nextest` is a possible speed improvement, not a current dependency. |
 | Supply chain | **cargo-deny** | Enforced in CI for advisories, licenses, bans, and sources. `cargo-audit` and `cargo-auditable` remain release-hardening candidates. |
 | Coverage | **cargo-llvm-cov** | Tracked, not fetishized (see Testing). |

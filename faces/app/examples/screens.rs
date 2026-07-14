@@ -984,7 +984,7 @@ fn main() {
     for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
         let (width, height) = size;
         let mut help = room_screen(launch, 0.12, &[], size, 0, false, 1);
-        overlays::draw_help_overlay(&mut help, width, height);
+        overlays::draw_help_overlay(&mut help, width, height, Some(2));
         save(
             &help,
             &format!("overlays/launch-help-{label}-{width}x{height}.png"),

@@ -16,8 +16,6 @@ use crate::surface::Surface;
 const MAX_FIELD_CELLS: usize = 2048;
 const GENERATED_DIGITS: usize = MAX_FIELD_CELLS * 2;
 const PHASE_TICKS: usize = 64;
-const STREAM_STEP: usize = 37;
-const PI_SPAWN_MODULUS: u64 = 1301;
 const SEED_SALT: u64 = 0x3141_5926_5358_9793;
 const PI_HEADER: &str = "PI = 3.141592653589793...";
 const DIGIT_TEXT: [&str; 10] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -32,6 +30,9 @@ struct FieldLayout {
     step_y: usize,
     glyph_scale: i32,
     pixel_font: bool,
+    origin_y: usize,
+    surface_width: usize,
+    surface_height: usize,
 }
 
 impl FieldLayout {
@@ -114,12 +115,26 @@ fn layout(surface: &dyn Surface) -> Option<FieldLayout> {
     } else {
         1
     };
+    let interface_scale = (width as i32 / 400).clamp(1, 4);
+    let header_y = if pixel_font {
+        18 + 7 * (interface_scale + 1)
+    } else {
+        0
+    } as usize;
+    let origin_y = if pixel_font {
+        header_y
+            .saturating_add(8 * glyph_scale as usize)
+            .saturating_add(4)
+    } else {
+        8
+    };
+    let available_height = height.saturating_sub(origin_y).max(1);
     let mut spacing = 1_usize;
     loop {
         let step_x = base_x.saturating_mul(spacing).max(1);
         let step_y = base_y.saturating_mul(spacing).max(1);
         let columns = width.div_ceil(step_x);
-        let rows = height.div_ceil(step_y);
+        let rows = available_height.div_ceil(step_y);
         if columns.saturating_mul(rows) <= MAX_FIELD_CELLS {
             return Some(FieldLayout {
                 columns,
@@ -128,21 +143,13 @@ fn layout(surface: &dyn Surface) -> Option<FieldLayout> {
                 step_y,
                 glyph_scale,
                 pixel_font,
+                origin_y,
+                surface_width: width,
+                surface_height: height,
             });
         }
         spacing += 1;
     }
-}
-
-fn stream_offset(seed: u64, t: f64) -> usize {
-    let tick = (finite_phase(t) * (PHASE_TICKS - 1) as f64).floor() as usize;
-    let seed_offset = if seed == 0 {
-        0
-    } else {
-        let mut rng = SplitMix64::new(seed ^ SEED_SALT);
-        rng.below(MAX_FIELD_CELLS as u64) as usize
-    };
-    (seed_offset + tick * STREAM_STEP) % MAX_FIELD_CELLS
 }
 
 fn cell_hash(seed: u64, tick: usize, index: usize) -> u64 {
@@ -164,22 +171,20 @@ fn hand_points(pokes: &[(f64, f64)]) -> impl Iterator<Item = (f64, f64)> + '_ {
 }
 
 fn near_repair(column: usize, row: usize, field: FieldLayout, pokes: &[(f64, f64)]) -> bool {
-    let x = (column as f64 + 0.5) / field.columns as f64;
-    let y = (row as f64 + 0.5) / field.rows as f64;
+    let x = ((column as f64 + 0.5) * field.step_x as f64) / field.surface_width as f64;
+    let y = (field.origin_y as f64 + (row as f64 + 0.5) * field.step_y as f64)
+        / field.surface_height as f64;
     hand_points(pokes).any(|(px, py)| (x - px).hypot(y - py) < 0.16)
 }
 
 fn glyph_for(
     exact: u8,
-    index: usize,
-    total: usize,
+    _index: usize,
+    _total: usize,
     hash: u64,
     corruption: f64,
     local_repair: bool,
 ) -> Option<(char, char)> {
-    if hash % PI_SPAWN_MODULUS == 0 {
-        return Some(('π', '#'));
-    }
     let threshold = corruption * 0.42;
     let changed = (hash % 10_000) as f64 / 10_000.0 < threshold;
     let shown = if changed && !local_repair {
@@ -187,56 +192,51 @@ fn glyph_for(
     } else {
         exact
     };
-    let recency = index as f64 / total.saturating_sub(1).max(1) as f64;
-    let noise = hash % 100;
-    if recency >= 0.72 || local_repair {
-        Some((char::from(b'0' + shown), '#'))
-    } else if recency >= 0.46 {
-        if noise < 72 {
-            Some((char::from(b'0' + shown), '.'))
-        } else {
-            Some(('·', '.'))
-        }
-    } else if recency >= 0.20 {
-        (noise < 58).then_some(('·', '.'))
-    } else {
-        (noise < 9).then_some(('.', '.'))
-    }
+    Some((
+        char::from(b'0' + shown),
+        if changed || local_repair { '#' } else { '.' },
+    ))
 }
 
-fn render_field(surface: &mut dyn Surface, seed: u64, t: f64, pokes: &[(f64, f64)]) {
+fn render_field(
+    surface: &mut dyn Surface,
+    seed: u64,
+    t: f64,
+    pokes: &[(f64, f64)],
+    repairs_only: bool,
+) {
     let Some(field) = layout(surface) else {
         return;
     };
     let phase = finite_phase(t);
     let tick = (phase * (PHASE_TICKS - 1) as f64).floor() as usize;
-    let offset = stream_offset(seed, phase);
     let total = field.cells();
 
     for index in 0..total {
         let column = index % field.columns;
         let row = index / field.columns;
-        let exact = digits()[offset + index];
+        let exact = digits()[index];
         let hash = cell_hash(seed, tick, index);
         let local_repair = near_repair(column, row, field, pokes);
+        if repairs_only && !local_repair {
+            continue;
+        }
         let Some((glyph, mark)) = glyph_for(exact, index, total, hash, phase, local_repair) else {
             continue;
         };
         let x = column * field.step_x;
-        let y = row * field.step_y;
+        let y = field.origin_y + row * field.step_y;
         if field.pixel_font {
-            let text = match glyph {
-                'π' => "π",
-                '·' => "·",
-                '.' => ".",
-                _ => DIGIT_TEXT[(glyph as u8 - b'0') as usize],
-            };
+            let text = DIGIT_TEXT[(glyph as u8 - b'0') as usize];
             draw_text(surface, text, x as i32, y as i32, field.glyph_scale, mark);
         } else {
             surface.plot(x as i32, y as i32, glyph);
         }
     }
 
+    if repairs_only {
+        return;
+    }
     let header_scale = if field.pixel_font {
         field.glyph_scale.max(1)
     } else {
@@ -283,7 +283,7 @@ impl Room for CultOfPi {
     }
 
     fn render(&self, surface: &mut dyn Surface, t: f64) {
-        render_field(surface, self.seed, t, &[]);
+        render_field(surface, self.seed, t, &[], false);
     }
 
     fn reveal(&self) -> &'static str {
@@ -312,7 +312,7 @@ impl Room for CultOfPi {
         let phase = finite_phase(t);
         let tick = (phase * (PHASE_TICKS - 1) as f64).floor() as usize + 1;
         Some(format!(
-            "CHANNEL {tick:02}/{PHASE_TICKS}   SIGNAL CORRUPTION {:.0}%",
+            "CHANNEL {tick:02}/{PHASE_TICKS}   EXPECTED FAULT RATE {:.0}%",
             phase * 42.0
         ))
     }
@@ -323,7 +323,7 @@ impl Room for CultOfPi {
             return self.status(t);
         }
         Some(format!(
-            "{repairs} REPAIR{}   THIS WINDOW IS FINITE   PI NEVER ENDS",
+            "{repairs} REPAIR PATCH{}   VISIBLE DIGITS RESTORED   PI NEVER ENDS",
             if repairs == 1 { "" } else { "S" }
         ))
     }
@@ -333,7 +333,8 @@ impl Room for CultOfPi {
     }
 
     fn render_poked(&self, surface: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
-        render_field(surface, self.seed, t, pokes);
+        self.render(surface, t);
+        render_field(surface, self.seed, t, pokes, true);
     }
 
     fn sound(&self, t: f64) -> SoundSpec {
@@ -358,8 +359,8 @@ impl Room for CultOfPi {
 #[cfg(test)]
 mod tests {
     use super::{
-        CultOfPi, MAX_FIELD_CELLS, PI_HEADER, generate_pi_digits, glyph_for, layout, near_repair,
-        stream_offset,
+        CultOfPi, MAX_FIELD_CELLS, PI_HEADER, digits, generate_pi_digits, glyph_for, layout,
+        near_repair,
     };
     use crate::canvas::Canvas;
     use crate::room::Room;
@@ -412,8 +413,9 @@ mod tests {
         let column = field.columns / 2;
         let row = field.rows / 2;
         let hand = (
-            (column as f64 + 0.5) / field.columns as f64,
-            (row as f64 + 0.5) / field.rows as f64,
+            ((column as f64 + 0.5) * field.step_x as f64) / field.surface_width as f64,
+            (field.origin_y as f64 + (row as f64 + 0.5) * field.step_y as f64)
+                / field.surface_height as f64,
         );
         assert!(near_repair(column, row, field, &[hand]));
         assert!(!near_repair(0, 0, field, &[hand]));
@@ -447,7 +449,20 @@ mod tests {
 
         assert_eq!(a.to_text(), b.to_text());
         assert_ne!(a.to_text(), c.to_text());
-        assert_ne!(stream_offset(0, 0.5), stream_offset(42, 0.5));
+    }
+
+    #[test]
+    fn visible_field_begins_with_pi_and_has_no_blank_age_band() {
+        let room = CultOfPi::new();
+        let mut canvas = Canvas::new(60, 12);
+        room.render(&mut canvas, 0.0);
+        let field = layout(&canvas).expect("field");
+
+        for (index, &digit) in digits().iter().take(40).enumerate() {
+            let x = (index % field.columns) * field.step_x;
+            let y = field.origin_y + (index / field.columns) * field.step_y;
+            assert_eq!(canvas.cell(x, y), Some(char::from(b'0' + digit)));
+        }
     }
 
     struct HostileSurface {

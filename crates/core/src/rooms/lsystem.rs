@@ -48,15 +48,6 @@ fn drawing_dims(canvas: &dyn Surface) -> Option<(usize, usize)> {
     }
 }
 
-fn safe_aspect(canvas: &dyn Surface) -> f64 {
-    let aspect = canvas.char_aspect();
-    if aspect.is_finite() && aspect > 0.0 {
-        aspect.clamp(0.05, 4.0)
-    } else {
-        1.0
-    }
-}
-
 fn screen_coord(norm: f64, extent: usize) -> i32 {
     debug_assert!(extent > 0);
     (norm.clamp(0.0, 1.0) * extent.saturating_sub(1) as f64).round() as i32
@@ -187,10 +178,8 @@ fn line_in_frame(
 }
 
 fn draw_seed_marker(canvas: &mut dyn Surface, width: usize, height: usize, x: f64, y: f64) {
-    let radius = (width.min(height) / 18).clamp(8, 24) as f64;
+    let radius = (width.min(height) / 80).clamp(2, 6) as f64;
     line_in_frame(canvas, width, height, (x - radius, y), (x + radius, y), '*');
-    line_in_frame(canvas, width, height, (x - radius, y), (x, y - radius), '#');
-    line_in_frame(canvas, width, height, (x + radius, y), (x, y - radius), '#');
     canvas.plot(x.round() as i32, y.round() as i32, '#');
 }
 
@@ -214,17 +203,106 @@ fn bounded_plants(pokes: &[(f64, f64)], width: usize, height: usize) -> Vec<Plan
         .collect()
 }
 
-fn plant_variation(plants: &[Plant]) -> u64 {
-    let hash = plants.iter().enumerate().fold(0_u64, |acc, (i, plant)| {
-        let x = (plant.nx * 4095.0).round() as u64;
-        let y = (plant.ny * 4095.0).round() as u64;
-        let mixed = x
-            .wrapping_mul(0x9E37_79B9_7F4A_7C15)
-            .rotate_left((i % 63) as u32)
-            ^ y.wrapping_mul(0xBF58_476D_1CE4_E5B9);
-        acc ^ mixed ^ (i as u64).wrapping_mul(0x94D0_49BB_1331_11EB)
-    });
-    hash.rotate_left(8) ^ plants.len() as u64
+type Segment = ((f64, f64), (f64, f64));
+
+fn turtle_segments(program: &str, angle: f64) -> Vec<Segment> {
+    let mut segments = Vec::new();
+    let (mut x, mut y, mut dir) = (0.0_f64, 0.0_f64, -PI / 2.0);
+    let mut stack = Vec::new();
+    for symbol in program.chars() {
+        match symbol {
+            'F' | 'G' | 'A' | 'B' | '0' | '1' | 'X' | 'Y' => {
+                if segments.len() >= MAX_SEGS {
+                    break;
+                }
+                let next = (x + dir.cos(), y + dir.sin());
+                segments.push(((x, y), next));
+                (x, y) = next;
+            }
+            '+' => dir += angle,
+            '-' => dir -= angle,
+            '[' => stack.push((x, y, dir)),
+            ']' => {
+                if let Some(state) = stack.pop() {
+                    (x, y, dir) = state;
+                }
+            }
+            _ => {}
+        }
+        if stack.len() > 32 {
+            break;
+        }
+    }
+    segments
+}
+
+fn segment_bounds(segments: &[Segment]) -> Option<(f64, f64, f64, f64)> {
+    let first = segments.first()?;
+    let mut min_x = first.0.0.min(first.1.0);
+    let mut max_x = first.0.0.max(first.1.0);
+    let mut min_y = first.0.1.min(first.1.1);
+    let mut max_y = first.0.1.max(first.1.1);
+    for &(from, to) in segments {
+        min_x = min_x.min(from.0).min(to.0);
+        max_x = max_x.max(from.0).max(to.0);
+        min_y = min_y.min(from.1).min(to.1);
+        max_y = max_y.max(from.1).max(to.1);
+    }
+    Some((min_x, max_x, min_y, max_y))
+}
+
+fn draw_fitted(
+    canvas: &mut dyn Surface,
+    width: usize,
+    height: usize,
+    segments: &[Segment],
+    rect: (f64, f64, f64, f64),
+    mark: char,
+) {
+    let Some((min_x, max_x, min_y, max_y)) = segment_bounds(segments) else {
+        return;
+    };
+    let (left, top, right, bottom) = rect;
+    let scale = ((right - left) / (max_x - min_x).max(1.0))
+        .min((bottom - top) / (max_y - min_y).max(1.0))
+        * 0.94;
+    let content_w = (max_x - min_x) * scale;
+    let offset_x = left + (right - left - content_w) / 2.0 - min_x * scale;
+    let offset_y = bottom - max_y * scale;
+    for &(from, to) in segments {
+        line_in_frame(
+            canvas,
+            width,
+            height,
+            (offset_x + from.0 * scale, offset_y + from.1 * scale),
+            (offset_x + to.0 * scale, offset_y + to.1 * scale),
+            mark,
+        );
+    }
+}
+
+fn draw_rooted(
+    canvas: &mut dyn Surface,
+    width: usize,
+    height: usize,
+    segments: &[Segment],
+    root: (f64, f64),
+) {
+    let Some((min_x, max_x, min_y, max_y)) = segment_bounds(segments) else {
+        return;
+    };
+    let extent = width.min(height) as f64 * 0.32;
+    let scale = (extent / (max_x - min_x).max(1.0)).min(extent / (max_y - min_y).max(1.0));
+    for &(from, to) in segments {
+        line_in_frame(
+            canvas,
+            width,
+            height,
+            (root.0 + from.0 * scale, root.1 + from.1 * scale),
+            (root.0 + to.0 * scale, root.1 + to.1 * scale),
+            '+',
+        );
+    }
 }
 
 /// A simple L-system with axiom, rules, and angle.
@@ -259,38 +337,19 @@ impl LSystemGarden {
         ]
     }
 
-    fn current(&self, phase: f64) -> &'static Preset {
-        let idx = ((finite_phase(phase) * 5.0) as usize) % Self::presets().len();
+    fn current(&self, _phase: f64) -> &'static Preset {
+        let idx = (self.seed % Self::presets().len() as u64) as usize;
         &Self::presets()[idx]
     }
 
     fn generate(&self, phase: f64, iters: usize, poke_var: u64) -> String {
         // Use room seed (from variation) xor poke for replayable per-visit + poke variety.
-        let effective = self.seed ^ poke_var;
+        let _ = poke_var;
         let (_, axiom, rules_list, _) = *self.current(phase);
-        let mut rules: HashMap<char, String> = rules_list
+        let rules: HashMap<char, String> = rules_list
             .iter()
             .map(|(k, v)| (k.chars().next().unwrap(), v.to_string()))
             .collect();
-        if effective != 0 && !rules_list.is_empty() {
-            let rule_index = (effective.rotate_right(8) as usize) % rules_list.len();
-            let (k, _v) = rules_list[rule_index];
-            if let Some(kc) = k.chars().next() {
-                if let Some(rv) = rules.get_mut(&kc) {
-                    let token = match effective & 0b11 {
-                        0 => 'F',
-                        1 => 'G',
-                        2 => '+',
-                        _ => '-',
-                    };
-                    if effective & 0b100 == 0 {
-                        rv.push(token);
-                    } else {
-                        rv.insert(0, token);
-                    }
-                }
-            }
-        }
         let mut s = axiom.to_string();
         for _ in 0..iters.min(MAX_ITERS) {
             let mut next = String::new();
@@ -338,81 +397,37 @@ impl Room for LSystemGarden {
         let Some((w, h)) = drawing_dims(canvas) else {
             return;
         };
-        let t = finite_phase(t);
-        let iters = 3 + (t.clamp(0.0, 1.0) * 5.0) as usize;
+        let t = finite_phase(t).clamp(0.0, 1.0);
         let plants = bounded_plants(pokes, w, h);
-        let var = plant_variation(&plants);
-        let s = self.generate(t, iters, var);
-        let (_, _, _, base) = *self.current(t);
-        let angle = base * PI / 180.0 + (t.clamp(0.0, 1.0) - 0.5) * 10.0 * PI / 180.0;
-        let mut x = w as f64 / 2.0;
-        // Plant it on the ground and scale the step to the canvas height, so the
-        // garden grows UP toward the sky and fills the frame instead of clumping
-        // in the bottom rows (a homesick playtester wanted a thing that reaches
-        // upward). The step is tied to height, not min(w, h), because a wide
-        // short frame should still send the stem up rather than shrink it.
-        // Keep the ground above face-level controls and captions. Starting at
-        // the physical last row hid the opening growth behind the app footer.
-        let ground = ((h.saturating_sub(1)) as f64 * 0.72).max(5.0);
-        let mut y = ground;
-        let mut dir = -PI / 2.0; // up
-        let len = (h as f64 / 14.0).max(2.0);
-        let aspect = safe_aspect(canvas);
-        let mut stack: Vec<(f64, f64, f64)> = vec![];
-        let draw_len = len.max(2.0); // ensure visible marks on small test canvases
-        let mut drawn = 0_usize;
-        for c in s.chars() {
-            match c {
-                'F' | 'G' | 'A' | 'B' | '0' | '1' | 'X' | 'Y' => {
-                    if drawn >= MAX_SEGS {
-                        break;
-                    }
-                    let nx = x + draw_len * dir.cos();
-                    let ny = y + draw_len * dir.sin() * aspect;
-                    line_in_frame(canvas, w, h, (x, y), (nx, ny), '*');
-                    x = nx;
-                    y = ny;
-                    drawn += 1;
-                }
-                '+' => dir += angle,
-                '-' => dir -= angle,
-                '[' => stack.push((x, y, dir)),
-                ']' => {
-                    if let Some((px, py, pd)) = stack.pop() {
-                        x = px;
-                        y = py;
-                        dir = pd;
-                    }
-                }
-                _ => {}
-            }
-            if stack.len() > 32 {
-                break;
-            } // bound
-        }
-        draw_seed_marker(canvas, w, h, w as f64 / 2.0, ground);
-        // Poke effect: plant extra "seeds" or small branches at click points.
-        let branch_len = (len * 2.0).max(4.0);
-        for plant in plants {
+        let (name, _, _, base) = *self.current(t);
+        let iters = match name {
+            "tree" => 7,
+            "koch" => 4,
+            "sierpinski" => 6,
+            "bush" => 4,
+            "dragon" => 10,
+            _ => 5,
+        };
+        let s = self.generate(t, iters, 0);
+        let sway = (t * 2.0 * PI).sin() * 4.0;
+        let angle = (base + sway) * PI / 180.0;
+        let segments = turtle_segments(&s, angle);
+        let bottom = h.saturating_sub(1) as f64 * 0.72;
+        draw_fitted(
+            canvas,
+            w,
+            h,
+            &segments,
+            (w as f64 * 0.08, h as f64 * 0.06, w as f64 * 0.92, bottom),
+            '*',
+        );
+        draw_seed_marker(canvas, w, h, w as f64 / 2.0, bottom);
+        for (which, plant) in plants.into_iter().enumerate() {
             let sx = f64::from(plant.x);
             let sy = f64::from(plant.y);
             draw_seed_marker(canvas, w, h, sx, sy);
-            line_in_frame(
-                canvas,
-                w,
-                h,
-                (sx, sy),
-                (sx + branch_len, sy - branch_len / 2.0),
-                '+',
-            );
-            line_in_frame(
-                canvas,
-                w,
-                h,
-                (sx, sy),
-                (sx - branch_len / 2.0, sy + branch_len),
-                '+',
-            );
+            let echo = (which % 5) as f64 * 1.5;
+            draw_rooted(canvas, w, h, &segments, (sx + echo, sy - echo));
         }
     }
 
@@ -431,7 +446,7 @@ impl Room for LSystemGarden {
     }
 
     fn verb(&self) -> Option<&'static str> {
-        Some("CLICK: PLANT OR BEND")
+        Some("CLICK: PLANT A TREE")
     }
 
     fn postcard_t(&self) -> f64 {
@@ -477,7 +492,7 @@ mod tests {
         let b = r.generate(0.0, 4, 0);
         assert_eq!(a, b);
         let c = r.generate(0.0, 4, 1);
-        assert_ne!(a, c);
+        assert_eq!(a, c, "hand history must not mutate the global grammar");
     }
 
     #[test]
@@ -490,11 +505,17 @@ mod tests {
     }
 
     #[test]
-    fn phase_selects_different_presets() {
+    fn phase_keeps_the_visit_preset_stable() {
         let r = LSystemGarden::new();
         let tree = r.generate(0.0, 4, 0);
-        let koch = r.generate(0.25, 4, 0);
-        assert_ne!(tree, koch);
+        let later = r.generate(0.75, 4, 0);
+        assert_eq!(tree, later);
+
+        let mut first = Canvas::new(80, 40);
+        let mut wrapped = Canvas::new(80, 40);
+        r.render(&mut first, 0.0);
+        r.render(&mut wrapped, 1.0);
+        assert_eq!(first.to_text(), wrapped.to_text());
     }
 
     #[test]
@@ -611,19 +632,16 @@ mod tests {
     }
 
     #[test]
-    fn plant_variation_changes_the_rewritten_grammar() {
+    fn planted_copy_has_real_branch_depth_and_stays_rooted() {
         let room = LSystemGarden::new();
-        let one = bounded_plants(&[(0.25, 0.75)], 52, 34);
-        let two = bounded_plants(&[(0.25, 0.75), (0.25, 0.75)], 52, 34);
-        let one_var = plant_variation(&one);
-        let two_var = plant_variation(&two);
+        let program = room.generate(0.0, 7, 0);
+        let segments = turtle_segments(&program, 25.0 * PI / 180.0);
+        assert!(segments.len() > 100, "a planted tree needs actual branches");
 
-        assert_ne!(one_var, two_var);
-        assert_ne!(room.generate(0.0, 4, 0), room.generate(0.0, 4, one_var));
-        assert_ne!(
-            room.generate(0.0, 4, one_var),
-            room.generate(0.0, 4, two_var)
-        );
+        let mut canvas = Canvas::new(80, 50);
+        draw_rooted(&mut canvas, 80, 50, &segments, (24.0, 38.0));
+        assert!(canvas.ink_count() > 20);
+        assert_eq!(canvas.cell(24, 38), Some('+'));
     }
 
     #[test]

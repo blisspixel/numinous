@@ -66,7 +66,7 @@ pub use challenge::{
     Challenge, ChallengeGrade, ParameterGoal, ParameterGrade, grade_challenge, grade_parameter,
     pose_challenge, pose_parameter_goal,
 };
-pub use chiptune::{Pattern, Voice, compose, pitch};
+pub use chiptune::{Arrangement, ChipNote, Pattern, Voice, compose, pitch};
 pub use codebreaker::{Feedback, grade, hint, secret_code};
 pub use concepts::concept;
 pub use era::Era;

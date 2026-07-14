@@ -8,9 +8,10 @@ How Numinous is built. Non-negotiables: it is a **real native application** (not
 > headless core powers the App, CLI, and MCP faces. Details below.
 
 **Shipped stack, 2026-07-13:** the app uses a bespoke `winit` event loop,
-`softbuffer` CPU presentation, and targeted `wgpu` paths for Mandelbrot and
-Julia. The headless core renders every room through `Surface`; the CLI and MCP
-faces consume the same core. Audio uses `cpal`, custom deterministic synthesis,
+`softbuffer` CPU presentation, `gilrs` standard-controller input, and targeted
+`wgpu` paths for Mandelbrot and Julia. The headless core renders every room
+through `Surface`; the CLI and MCP faces consume the same core. Audio uses
+`cpal`, custom deterministic stereo synthesis with crossfaded loop sources,
 `hound`, and a bounded `symphonia` MP3 decoder. Bevy, `fundsp`, `kira`, CUDA,
 Triton, Wasmtime plugins, the full pattern DSL, bloom, and packaged installers
 are not current dependencies. They remain options or roadmap targets where this
@@ -100,8 +101,9 @@ dependency.
 ## The audio + live-coding stack
 
 - **Real-time synthesis:** `cpal` for output and workspace-owned deterministic
-  DSP for room voices and chiptune score, with separate validated radio
-  playback. A shared mix bus and
+  DSP for room voices and 32-step stereo chiptune arrangements, with smoothed
+  gain, focus ramps, source crossfades, and separate validated radio playback.
+  A shared mix bus and
   sample-accurate scheduler remain roadmap work (see `MUSIC.md` and `SOUND.md`).
 - **The Studio today:** a bounded expression engine shared by the app, CLI, and
   MCP face. The larger pattern DSL, multiple synchronized representations, and
@@ -180,7 +182,7 @@ numinous/
 │   ├── gpu/             # optional wgpu fractal renderer with CPU fallback
 │   └── audio/           # cpal output and looping sample player
 ├── faces/
-│   ├── app/             # winit window, softbuffer presentation, input, radio
+│   ├── app/             # winit window, softbuffer, mouse/controller input, radio
 │   ├── cli/             # terminal play, render, export, Studio, games
 │   └── mcp/             # bounded stdio JSON-RPC surface for digital minds
 ├── assets/              # shipped radio and tracked screenshots

@@ -8,7 +8,7 @@
 use std::f64::consts::{FRAC_PI_2, TAU};
 
 use super::variation_unit;
-use crate::room::{Room, RoomMeta};
+use crate::room::{Room, RoomInput, RoomMeta, pokes_from_inputs};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
@@ -81,7 +81,7 @@ impl Lissajous {
     }
 
     /// Draw one full closed curve at the given frequencies.
-    fn draw_tuned(&self, canvas: &mut dyn Surface, freq_x: f64, freq_y: f64, mark: char) {
+    fn draw_tuned(&self, canvas: &mut dyn Surface, freq_x: f64, freq_y: f64, t: f64, mark: char) {
         let width = canvas.width();
         let height = canvas.height();
         if width == 0 || height == 0 {
@@ -92,8 +92,13 @@ impl Lissajous {
         let rx = (fw / 2.0 - 1.0).max(0.0);
         let ry = (fh / 2.0 - 1.0).max(0.0);
         let (phase_x, phase_y) = self.phase_offsets();
+        let motion = if t.is_finite() {
+            t.clamp(0.0, 1.0) * TAU
+        } else {
+            0.0
+        };
         let to_pixel = |theta: f64| -> (i32, i32) {
-            let (nx, ny) = Self::point_tuned(theta, freq_x, freq_y, phase_x, phase_y);
+            let (nx, ny) = Self::point_tuned(theta, freq_x, freq_y, phase_x, phase_y + motion);
             ((cx + nx * rx).round() as i32, (cy + ny * ry).round() as i32)
         };
         let mut prev = to_pixel(0.0);
@@ -179,10 +184,10 @@ impl Room for Lissajous {
             let tuning = Self::tuned_freqs(x, y);
             if !drawn.contains(&tuning) {
                 drawn.push(tuning);
-                self.draw_tuned(canvas, tuning.0, tuning.1, '.');
+                self.draw_tuned(canvas, tuning.0, tuning.1, t, '.');
             }
         }
-        self.draw_tuned(canvas, fx, fy, '*');
+        self.draw_tuned(canvas, fx, fy, t, '*');
         for &(x, y) in &tuned {
             let px = (x.clamp(0.0, 1.0) * (width - 1) as f64).round() as i32;
             let py = (y.clamp(0.0, 1.0) * (height - 1) as f64).round() as i32;
@@ -193,6 +198,20 @@ impl Room for Lissajous {
     fn status(&self, t: f64) -> Option<String> {
         let freq_y = Self::freq_y_for(if t.is_finite() { t } else { 0.0 });
         Some(format!("X:Y = {FREQ_X:.0}:{freq_y:.2}"))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = pokes_from_inputs(inputs);
+        let Some((x, y)) = pokes
+            .iter()
+            .rev()
+            .copied()
+            .find(|(x, y)| x.is_finite() && y.is_finite())
+        else {
+            return self.status(t);
+        };
+        let (fx, fy) = Self::tuned_freqs(x, y);
+        Some(format!("TUNED X:Y = {fx:.0}:{fy:.0}   MOVING PHASE"))
     }
 
     fn reveal(&self) -> &'static str {
@@ -294,6 +313,17 @@ mod tests {
     }
 
     #[test]
+    fn interaction_status_reports_the_persistent_tuning() {
+        let room = Lissajous::new();
+        let inputs = crate::room::inputs_from_pokes(&[(0.72, 0.35)], 0.2);
+        let early = room.status_input(0.2, &inputs).expect("tuned status");
+        let late = room.status_input(0.8, &inputs).expect("tuned status");
+        assert_eq!(early, late);
+        assert!(early.contains("TUNED X:Y = 3:6"));
+        assert!(early.contains("MOVING PHASE"));
+    }
+
+    #[test]
     fn a_poke_changes_the_figure_and_marks_the_hand() {
         let room = Lissajous::new();
         let mut bare = Canvas::new(48, 24);
@@ -303,6 +333,35 @@ mod tests {
         assert_ne!(bare.to_text(), poked.to_text(), "the tuned figure differs");
         // The clicked cell carries the hand marker.
         assert_eq!(poked.cell((0.9_f64 * 47.0).round() as usize, 2), Some('+'));
+    }
+
+    #[test]
+    fn a_tuned_interval_keeps_moving_after_the_click() {
+        let room = Lissajous::new();
+        let click = [(0.83, 0.21)];
+        let mut early = Canvas::new(64, 40);
+        room.render_poked(&mut early, 0.2, &click);
+        let mut late = Canvas::new(64, 40);
+        room.render_poked(&mut late, 0.7, &click);
+
+        assert_ne!(early.to_text(), late.to_text());
+        let px = (click[0].0 * 63.0_f64).round() as usize;
+        let py = (click[0].1 * 39.0_f64).round() as usize;
+        assert_eq!(early.cell(px, py), Some('+'));
+        assert_eq!(late.cell(px, py), Some('+'));
+    }
+
+    #[test]
+    fn tuned_motion_is_continuous_at_the_phase_boundary() {
+        let room = Lissajous::new();
+        let click = [(0.73, 0.36)];
+        let mut start = Canvas::new(64, 40);
+        room.render_poked(&mut start, 0.0, &click);
+        let mut end = Canvas::new(64, 40);
+        room.render_poked(&mut end, 1.0, &click);
+
+        assert_eq!(start.to_text(), end.to_text());
+        assert_eq!(Lissajous::tuned_freqs(click[0].0, click[0].1), (4.0, 6.0));
     }
 
     #[test]

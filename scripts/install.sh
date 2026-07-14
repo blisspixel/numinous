@@ -225,15 +225,15 @@ elif ! have cc && ! have gcc && ! have clang; then
   Arch:          sudo pacman -S --needed base-devel"
 fi
 
-# The audio and window builds need the ALSA and xkbcommon headers on Linux
-# (the same packages CI installs).
+# The audio, window, and controller builds need ALSA, xkbcommon, and libudev
+# headers on Linux (the same packages CI installs).
 if [ "$os" = linux ]; then
-    if ! have pkg-config || ! pkg-config --exists alsa xkbcommon 2>/dev/null; then
-        fail "the build needs pkg-config plus the ALSA and xkbcommon headers. Install them, then re-run.
-  Debian/Ubuntu: sudo apt-get install -y pkg-config libasound2-dev libxkbcommon-dev
-  Fedora:        sudo dnf install -y pkgconf-pkg-config alsa-lib-devel libxkbcommon-devel
-  Arch:          sudo pacman -S --needed pkgconf alsa-lib libxkbcommon
-  openSUSE:      sudo zypper install pkg-config alsa-devel libxkbcommon-devel"
+    if ! have pkg-config || ! pkg-config --exists alsa xkbcommon libudev 2>/dev/null; then
+        fail "the build needs pkg-config plus the ALSA, xkbcommon, and libudev headers. Install them, then re-run.
+  Debian/Ubuntu: sudo apt-get install -y pkg-config libasound2-dev libxkbcommon-dev libudev-dev
+  Fedora:        sudo dnf install -y pkgconf-pkg-config alsa-lib-devel libxkbcommon-devel systemd-devel
+  Arch:          sudo pacman -S --needed pkgconf alsa-lib libxkbcommon systemd-libs
+  openSUSE:      sudo zypper install pkg-config alsa-devel libxkbcommon-devel libudev-devel"
     fi
 fi
 
