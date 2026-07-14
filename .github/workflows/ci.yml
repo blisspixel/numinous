@@ -28,7 +28,7 @@ jobs:
       - name: Clippy (deny warnings)
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Tests
-        run: cargo test --workspace
+        run: cargo test --workspace --all-targets --locked
 
   house-style:
     name: house style
@@ -78,7 +78,7 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
       - name: Workspace tests
-        run: cargo test --workspace --locked
+        run: cargo test --workspace --all-targets --locked
       - name: Windows installer PATH promotion
         if: runner.os == 'Windows'
         shell: pwsh

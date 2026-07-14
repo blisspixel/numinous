@@ -53,8 +53,8 @@ impl Room for Collatz {
             id: "collatz",
             title: "Collatz",
             wing: "Emergence",
-            blurb: "Halve it if even, triple it and add one if odd, and repeat; every number \
-                    always crashes to 1, eventually. t picks the number; watch its wild journey.",
+            blurb: "Halve it if even, triple it and add one if odd, and repeat. Every tested \
+                    start reaches 1, but nobody has proved that all do. t picks the number.",
             accent: [220, 130, 50],
         }
     }
@@ -286,6 +286,14 @@ mod tests {
     #[test]
     fn reveal_names_the_mystery() {
         assert!(Collatz::new().reveal().contains("prove they all"));
+    }
+
+    #[test]
+    fn blurb_preserves_the_open_problem() {
+        let blurb = Collatz::new().meta().blurb;
+        assert!(blurb.contains("Every tested start"));
+        assert!(blurb.contains("nobody has proved that all do"));
+        assert!(!blurb.contains("every number always"));
     }
 
     #[test]

@@ -490,16 +490,25 @@ const MAX_PARSE_DEPTH: usize = 64;
 /// too deep, unexpected token, unknown name, unbalanced parentheses, or
 /// trailing input).
 pub fn parse(source: &str) -> Result<Expr, String> {
-    let tokens = tokenize(source)?;
+    let tokenized = tokenize(source)?;
+    let tokens = tokenized.tokens;
     if tokens.len() > MAX_EXPR_TOKENS {
         return Err(format!(
             "expression is too complex; limit is {MAX_EXPR_TOKENS} tokens"
         ));
     }
-    let mut parser = Parser { tokens, pos: 0 };
+    let mut parser = Parser {
+        tokens,
+        columns: tokenized.columns,
+        end_column: tokenized.end_column,
+        pos: 0,
+    };
     let expr = parser.expr(0)?;
     if parser.pos != parser.tokens.len() {
-        return Err(format!("unexpected trailing input at token {}", parser.pos));
+        return Err(format!(
+            "unexpected trailing input at column {}",
+            parser.current_column()
+        ));
     }
     Ok(expr)
 }
@@ -519,8 +528,15 @@ enum Tok {
 }
 
 /// Split `source` into tokens.
-fn tokenize(source: &str) -> Result<Vec<Tok>, String> {
+struct Tokenized {
+    tokens: Vec<Tok>,
+    columns: Vec<usize>,
+    end_column: usize,
+}
+
+fn tokenize(source: &str) -> Result<Tokenized, String> {
     let mut tokens = Vec::new();
+    let mut columns = Vec::new();
     let chars: Vec<char> = source.chars().collect();
     let mut i = 0;
     while i < chars.len() {
@@ -535,15 +551,18 @@ fn tokenize(source: &str) -> Result<Vec<Tok>, String> {
             let text: String = chars[start..i].iter().collect();
             let value = text
                 .parse::<f64>()
-                .map_err(|_| format!("bad number '{text}'"))?;
+                .map_err(|_| format!("bad number '{text}' at column {}", start + 1))?;
             tokens.push(Tok::Num(value));
+            columns.push(start + 1);
         } else if c.is_ascii_alphabetic() {
             let start = i;
             while i < chars.len() && chars[i].is_ascii_alphanumeric() {
                 i += 1;
             }
             tokens.push(Tok::Ident(chars[start..i].iter().collect()));
+            columns.push(start + 1);
         } else {
+            let column = i + 1;
             tokens.push(match c {
                 '+' => Tok::Plus,
                 '-' => Tok::Minus,
@@ -552,17 +571,26 @@ fn tokenize(source: &str) -> Result<Vec<Tok>, String> {
                 '^' => Tok::Caret,
                 '(' => Tok::LParen,
                 ')' => Tok::RParen,
-                other => return Err(format!("unexpected character '{other}'")),
+                other => {
+                    return Err(format!("unexpected character '{other}' at column {column}"));
+                }
             });
+            columns.push(column);
             i += 1;
         }
     }
-    Ok(tokens)
+    Ok(Tokenized {
+        tokens,
+        columns,
+        end_column: chars.len() + 1,
+    })
 }
 
 /// A recursive-descent parser over a token slice.
 struct Parser {
     tokens: Vec<Tok>,
+    columns: Vec<usize>,
+    end_column: usize,
     pos: usize,
 }
 
@@ -577,6 +605,29 @@ impl Parser {
             self.pos += 1;
         }
         tok
+    }
+
+    fn current_column(&self) -> usize {
+        self.columns
+            .get(self.pos)
+            .copied()
+            .unwrap_or(self.end_column)
+    }
+
+    fn expect_right_paren(&mut self, context: &str) -> Result<(), String> {
+        let column = self.current_column();
+        match self.peek() {
+            Some(Tok::RParen) => {
+                self.pos += 1;
+                Ok(())
+            }
+            Some(token) => Err(format!(
+                "expected ')' {context}at column {column}; found {token:?}"
+            )),
+            None => Err(format!(
+                "expression ended at column {column}; expected ')' {context}"
+            )),
+        }
     }
 
     /// Guard one level of recursion: fail before the stack, not with it. A
@@ -645,22 +696,24 @@ impl Parser {
 
     /// atom := number | name | name '(' expr ')' | '(' expr ')'
     fn atom(&mut self, depth: usize) -> Result<Expr, String> {
+        let column = self.current_column();
         match self.bump() {
             Some(Tok::Num(n)) => Ok(Expr::Num(n)),
             Some(Tok::LParen) => {
                 let inner = self.expr(depth)?;
-                match self.bump() {
-                    Some(Tok::RParen) => Ok(inner),
-                    _ => Err("expected ')'".to_string()),
-                }
+                self.expect_right_paren("")?;
+                Ok(inner)
             }
-            Some(Tok::Ident(name)) => self.ident(&name, depth),
-            other => Err(format!("unexpected token {other:?}")),
+            Some(Tok::Ident(name)) => self.ident(&name, depth, column),
+            None => Err(format!(
+                "expression ended at column {column}; expected a number, variable, function, or '('",
+            )),
+            Some(other) => Err(format!("unexpected token {other:?} at column {column}")),
         }
     }
 
     /// Resolve an identifier: the variable, a constant, or a function call.
-    fn ident(&mut self, name: &str, depth: usize) -> Result<Expr, String> {
+    fn ident(&mut self, name: &str, depth: usize, name_column: usize) -> Result<Expr, String> {
         if matches!(self.peek(), Some(Tok::LParen)) {
             let func = match name {
                 "sin" => Func::Sin,
@@ -670,21 +723,23 @@ impl Parser {
                 "ln" | "log" => Func::Ln,
                 "abs" => Func::Abs,
                 "sqrt" => Func::Sqrt,
-                other => return Err(format!("unknown function '{other}'")),
+                other => {
+                    return Err(format!(
+                        "unknown function '{other}' at column {name_column}"
+                    ));
+                }
             };
             self.pos += 1; // consume '('
             let arg = self.expr(depth)?;
-            match self.bump() {
-                Some(Tok::RParen) => Ok(Expr::Call(func, Box::new(arg))),
-                _ => Err(format!("expected ')' after {name}(")),
-            }
+            self.expect_right_paren(&format!("after {name}( "))?;
+            Ok(Expr::Call(func, Box::new(arg)))
         } else {
             match name {
                 "x" => Ok(Expr::Var),
                 "a" => Ok(Expr::Param),
                 "pi" => Ok(Expr::Num(PI)),
                 "e" => Ok(Expr::Num(E)),
-                other => Err(format!("unknown name '{other}'")),
+                other => Err(format!("unknown name '{other}' at column {name_column}")),
             }
         }
     }
@@ -804,6 +859,22 @@ mod tests {
         assert!(parse("nope(x)").is_err());
         assert!(parse("wut").is_err());
         assert!(parse("2 @ 3").is_err());
+    }
+
+    #[test]
+    fn errors_name_the_source_column_and_expected_expression() {
+        assert_eq!(
+            parse("sin(").expect_err("incomplete call must fail"),
+            "expression ended at column 5; expected a number, variable, function, or '('"
+        );
+        assert_eq!(
+            parse("2 @ 3").expect_err("invalid character must fail"),
+            "unexpected character '@' at column 3"
+        );
+        assert_eq!(
+            parse("2 3").expect_err("trailing input must fail"),
+            "unexpected trailing input at column 3"
+        );
     }
 
     #[test]

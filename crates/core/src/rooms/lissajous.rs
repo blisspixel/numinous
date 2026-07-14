@@ -215,9 +215,10 @@ impl Room for Lissajous {
     }
 
     fn reveal(&self) -> &'static str {
-        "A stable figure means the two frequencies are a perfect musical interval; \
-         a 2:3 ratio is a perfect fifth. You are not drawing a curve, you are \
-         seeing a chord. This is exactly what old oscilloscopes showed."
+        "A rational frequency ratio closes the figure, and small-integer ratios \
+         can also sound consonant. The 2:3 ratio is a perfect fifth. You are not \
+         just drawing a curve: old oscilloscopes made the same connection between \
+         shape and interval visible."
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -293,7 +294,11 @@ mod tests {
 
     #[test]
     fn reveal_names_the_interval() {
-        assert!(Lissajous::new().reveal().contains("perfect fifth"));
+        let reveal = Lissajous::new().reveal();
+        assert!(reveal.contains("rational frequency ratio closes"));
+        assert!(reveal.contains("small-integer ratios"));
+        assert!(reveal.contains("2:3 ratio is a perfect fifth"));
+        assert!(!reveal.contains("stable figure means"));
     }
 
     #[test]

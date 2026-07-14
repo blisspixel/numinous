@@ -2,7 +2,8 @@
 //!
 //! Each ball falls through a field of pegs, taking a left/right coin flip at
 //! every row; its final bin is how many times it went right. No single ball is
-//! predictable, yet thousands of them always settle into the same bell curve.
+//! predictable, yet the aggregate distribution approaches a stable binomial
+//! curve as the number of trials grows.
 //! `t` biases the coin and skews the curve. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
@@ -201,8 +202,8 @@ impl Room for GaltonBoard {
             id: "galton-board",
             title: "Galton Board",
             wing: "Chance & Order",
-            blurb: "Drop thousands of balls through pegs, each a coin flip left or right, and pure \
-                    chaos piles into the same bell curve every time. t biases the coin.",
+            blurb: "Drop thousands of balls through pegs, each a coin flip left or right, and the \
+                    pile approaches a predictable binomial curve. t biases the coin.",
             accent: [80, 120, 220],
         }
     }
@@ -216,10 +217,11 @@ impl Room for GaltonBoard {
     }
 
     fn reveal(&self) -> &'static str {
-        "You cannot predict where a single ball lands, yet together thousands of \
-         them form the same bell curve every time, to the millimeter. This is the \
-         Central Limit Theorem, the reason the bell curve rules heights, test \
-         scores, and the stock market. Chaos, in bulk, is perfectly predictable."
+        "You cannot predict where a single ball lands. As trials accumulate, their \
+         bin counts approach the binomial distribution, which becomes bell-shaped \
+         at a fair bias. This is the Central Limit Theorem in action: sums of many \
+         small independent effects are often approximately normal. Individual \
+         outcomes remain uncertain while the aggregate pattern grows more stable."
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -424,11 +426,14 @@ mod tests {
 
     #[test]
     fn reveal_names_the_theorem() {
-        assert!(
-            GaltonBoard::new()
-                .reveal()
-                .contains("Central Limit Theorem")
-        );
+        let room = GaltonBoard::new();
+        let reveal = room.reveal();
+        assert!(reveal.contains("Central Limit Theorem"));
+        assert!(reveal.contains("approximately normal"));
+        assert!(reveal.contains("remain uncertain"));
+        assert!(!room.meta().blurb.contains("every time"));
+        assert!(!reveal.contains("stock market"));
+        assert!(!reveal.contains("perfectly predictable"));
     }
 
     #[test]

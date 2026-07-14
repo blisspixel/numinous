@@ -8,7 +8,7 @@ cargo fmt --all --check
 echo "== clippy =="
 cargo clippy --workspace --all-targets -- -D warnings
 echo "== test =="
-cargo test --workspace
+cargo test --workspace --all-targets --locked
 echo "== house style =="
 bash scripts/check-style.sh
 echo "All checks passed."

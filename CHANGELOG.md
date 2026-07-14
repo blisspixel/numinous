@@ -6,6 +6,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Full-roster QA now assigns all 42 documented simulated review lenses exactly
+  once across first contact and accessibility, interaction and truth, and games
+  plus agent faces. Every lens supplies a standout, complaint, refinement, and
+  evidence classification against the exact 240-screen matrix plus focused CLI,
+  MCP, audio, pixel, and test evidence. Simulated reactions remain design input;
+  only independently reproduced behavior enters the defect queue.
+- Local, pre-commit, release, and three-OS CI test gates now run
+  `cargo test --workspace --all-targets --locked`. This adds the 43
+  example-target cases, including the screen matrix's isolated-marker
+  regression, to the enforced test set.
 - Release QA now generates a self-checking 240-screen app matrix. Every catalog
   room has a deterministic opening, arrival, immediate pointer, delayed gesture,
   compact arrival, and compact delayed captures. Dedicated scenarios cover
@@ -155,6 +165,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - A deterministic pre-commit gate (`scripts/hooks/pre-commit`, wired once per clone with `git config core.hooksPath scripts/hooks`, documented in `docs/ENGINEERING.md`). It blocks any commit that would fail the fast gate: the house-style guard on every commit, and the cargo gate (fmt, clippy `-D warnings`, the full test suite) only when the commit touches Rust, `Cargo.*`, or a shader, so docs-only commits stay fast. Coverage and the locked build remain the release gate (`scripts/verify.sh`). A wired gate that blocks a bad commit beats any reminder to run the checks.
 
 ### Changed
+- Human hallway evidence still controls the 0.2 milestone claim, but no longer
+  idles verified 0.3 depth, accessibility, input, audio, truth, or quality work
+  while sessions are arranged. Current evidence is 1,191 all-target test cases, 93.17
+  percent region coverage, and 92.82 percent line coverage.
+- MCP `listen_room` now labels `motif` as the ambient motif and `notes` as the
+  mathematical sonification through a `sound_roles` map and matching text
+  headings. Existing structured paths remain compatible, with no duplicated
+  note payload.
 - Evidence language now agrees across the quality snapshot, vision, arcade plan,
   and room map. Current test and coverage metrics are consistent; physical
   controller sessions and musician-led long listening remain open; simulated
@@ -281,6 +299,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   gates.
 
 ### Fixed
+- Redirected no-argument CLI output now contains a concise plain command map and
+  zero ANSI escape characters, while an interactive terminal retains the
+  full-color cabinet. Quiz wrong-result screens retain their complete reveal and
+  continuation controls at both 360 by 240 and 900 by 700. Studio parse failures
+  now report one-based source columns and expected expression input instead of
+  exposing `unexpected token None`.
+- Galton Board now describes convergence rather than millimeter-identical finite
+  samples or stock-market normality. Collatz identifies the universal claim as
+  unproved, Arecibo separates factoring from recognizing meaning, and Lissajous
+  separates rational closure from the specific 3:2 perfect fifth.
 - Galton Board now maps each row to one physical peg decision and one binomial
   landing bin instead of squeezing hundreds of fake horizontal decisions into
   a needle-like pile. Cult of Pi starts with the complete canonical digit field

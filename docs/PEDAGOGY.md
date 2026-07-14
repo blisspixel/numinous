@@ -105,9 +105,10 @@ arrive last and confirm what the player already felt.
   uncanny.
 - **Galton Board to the Central Limit Theorem.** Prime: "Drop your bet: where
   does this one ball land?" (They will be wrong.) Restructure: a thousand
-  un-guessable balls pile into the identical curve every reset; the analytic
-  Gaussian overlays to the pixel. The point is the contrast between the
-  un-guessable one and the perfectly predictable many.
+  uncertain balls approach the predicted binomial distribution; an analytic
+  overlay shows the convergence without pretending finite samples are
+  identical. The point is the contrast between an uncertain trial and an
+  increasingly stable aggregate.
 
 ## The mechanic library
 

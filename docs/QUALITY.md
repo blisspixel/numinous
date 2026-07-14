@@ -8,10 +8,11 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-13
 
-- **Enforced now:** formatting, Clippy with warnings denied, 1,143 tests, locked
+- **Enforced now:** formatting, Clippy with warnings denied, 1,191 all-target
+  test cases, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 93.00%
-  regions and 92.61% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 93.17%
+  regions and 92.82% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
   three faces, and a release-generated 240-screen visual QA matrix. Every room
@@ -142,6 +143,10 @@ five to fifteen minutes per person.
 
 Do not batch the fixes invisibly: each session's notes become the next
 cycle's fix list, and the test reruns at the next gate.
+The hallway result gates the milestone claim, not ongoing engineering. While
+participants are being arranged, reproduced defects and structured simulated
+review continue to drive 0.3 depth, input, accessibility, audio, and quality
+work. Simulated review never substitutes for participant evidence.
 - **Validated instruments**, so "is it fun" becomes a number we can track over time: administer the **Game Experience Questionnaire (GEQ)** (Immersion, Flow, Competence, Affect, Tension, Challenge), a **Flow scale (FSS-2 / DFS-2)**, and/or the **GUESS** satisfaction scale after sessions. These are psychometrically validated; we are not inventing a fun-meter, we are using the field's.
 - **Per-room Fun Scorecard**: combine hallway metrics, GEQ/flow scores, and telemetry proxies into one score per room. A room that "works" but scores low on awe/flow gets refined or cut. This is a real release gate, not a vibe.
 - **Digital-mind participants (see `DIGITAL_MINDS.md`):** when a real system
@@ -273,7 +278,8 @@ tests establish what is verified today.
 
 - **0.1**: keep the current commit gate green and add honest public evidence.
 - **0.2**: run the first stranger hallway test and establish a reproducible
-  baseline for the flagship room.
+  baseline for the flagship room. Keep that milestone open until the evidence
+  passes, while continuing verified 0.3 refinement in parallel.
 - **0.3 to 0.5**: add property, perceptual, audio, accessibility, and performance
   harnesses as their corresponding product systems mature.
 - **0.6 to 0.9**: add real-platform execution, soak, packaging, and release

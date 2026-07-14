@@ -14,8 +14,12 @@ There are two engines, and they are designed to coexist and even harmonize.
 > Lorenz wanders ten notes and never resolves; the Random Walk stumbles
 > chromatically; Voronoi rings open fifths; Lissajous locks a visible fifth;
 > Zeno's Square shrinks toward arrival; the Logistic Map splits into chaos.
-> In the app the motif is the room's bed; over MCP, listen_room returns the
-> phrase structurally (key, BPM, note names, what it encodes). And the room's
+> In the app the motif is the room's bed; over MCP, `listen_room` returns the
+> ambient phrase structurally (key, BPM, note names, what it encodes) and names
+> the phase-specific mathematical sonification separately. Most rooms inherit
+> the motif-derived default sound. A few rooms intentionally override it with a
+> direct mapping of the current mathematical state, so the two note lists must
+> never be presented as one score. The room's
 > listening review found that the App was layering the motif and its
 > sonification at different loop lengths, restarting the result from a render
 > counter, and interrupting melody steps with what was described as an

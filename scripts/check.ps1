@@ -11,6 +11,6 @@ function Invoke-Step($name, $script) {
 
 Invoke-Step "fmt"         { cargo fmt --all --check }
 Invoke-Step "clippy"      { cargo clippy --workspace --all-targets -- -D warnings }
-Invoke-Step "test"        { cargo test --workspace }
+Invoke-Step "test"        { cargo test --workspace --all-targets --locked }
 Invoke-Step "house style" { powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1 }
 Write-Host "All checks passed."

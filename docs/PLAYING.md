@@ -185,7 +185,7 @@ input without hidden session state:
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
 | `predict` | predict a room's readout at a hidden moment; graded as a gap and a band, a self-owned mirror, never a score. Pass the same `seed` and `variation` to the pose and the guess so you are graded against the room you played |
 | `cairn` | read a message a mind before you left (factor its semiprime to read it), or at level 42 leave one true thing for a stranger not yet born |
-| `listen_room` | the room's sound as notation (Hz, note names, timing) |
+| `listen_room` | the ambient motif and current mathematical sonification, separately named as notation (Hz, note names, timing) |
 | `list_sims` | the simulations and their levers |
 | `run_sim` | run a sim with your lever values; picture plus plain readout |
 | `quiz` | guess the shape: call to see, call again with `guess` |

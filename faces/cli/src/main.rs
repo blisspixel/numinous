@@ -446,40 +446,69 @@ fn main() -> ExitCode {
 /// The front door: what `numinous`, alone, opens onto. Today's room in full
 /// color, who you are, and the handful of verbs that matter.
 fn home(journey: &Journey) -> ExitCode {
+    print!("{}", home_report(journey, std::io::stdout().is_terminal()));
+    ExitCode::SUCCESS
+}
+
+fn home_report(journey: &Journey, stdout_is_terminal: bool) -> String {
     let rooms = all_rooms();
     let day = pick_day();
     let room = &rooms[(day as usize) % rooms.len()];
+    if !stdout_is_terminal {
+        return format!(
+            concat!(
+                "NUMINOUS: math you can feel\n",
+                "Today's room: {} ({})\n",
+                "\n",
+                "Try:\n",
+                "  numinous watch {:<12} watch today's room live\n",
+                "  numinous rooms             browse the complete catalog\n",
+                "  numinous play              choose a game\n",
+                "  numinous tour --mute       sit back for the full visual Show\n",
+                "  numinous journey           see your constellation\n",
+                "  numinous --help            list every command\n",
+                "\n",
+                "Window version: numinous-app\n",
+            ),
+            room.meta().title,
+            room.meta().wing,
+            room.meta().id
+        );
+    }
+
     let mut raster = Raster::with_accent(72, 44, room.meta().accent);
     room.render(&mut raster, room.postcard_t());
-    print!("{}\x1b[0m", numinous_core::to_ansi(&raster));
-    println!("{}  ({})", room.meta().title, room.meta().wing);
-    println!(
-        "
-. . . {}",
-        numinous_core::insight(pick_day() + u64::from(journey.plays))
-    );
-    println!(
-        "\nNUMINOUS   LV {:>2}  [{}]{}",
+    format!(
+        concat!(
+            "{}\x1b[0m{}  ({})\n",
+            "\n",
+            ". . . {}\n",
+            "\n",
+            "NUMINOUS   LV {:>2}  [{}]{}\n",
+            "\n",
+            "  numinous play              pick a game (munch, quiz, nim, the gauntlet...)\n",
+            "  numinous play munch        or name one and go (fresh deal; --daily on its own command)\n",
+            "  numinous tour              sit back: every room, full color, narrated\n",
+            "  numinous watch {:<12} any one room, live, with its sound\n",
+            "  numinous radio             the music stations (Y in the app tunes them)\n",
+            "  numinous journey           your constellation, level, locks, resonances\n",
+            "  numinous rooms             the whole catalog; describe <room> for the story\n",
+            "\n",
+            "Everything answers --help. The window version is numinous-app.\n",
+        ),
+        numinous_core::to_ansi(&raster),
+        room.meta().title,
+        room.meta().wing,
+        numinous_core::insight(day + u64::from(journey.plays)),
         journey.level(),
         journey.level_bar(16),
         if journey.streak > 1 {
             format!("   streak {}", journey.streak)
         } else {
             String::new()
-        }
-    );
-    println!(
-        "\n  numinous play              pick a game (munch, quiz, nim, the gauntlet...)
-  numinous play munch        or name one and go (fresh deal; --daily on its own command)
-  numinous tour              sit back: every room, full color, narrated
-  numinous watch {:<12} any one room, live, with its sound
-  numinous radio             the music stations (Y in the app tunes them)
-  numinous journey           your constellation, level, locks, resonances
-  numinous rooms             the whole catalog; describe <room> for the story
-\nEverything answers --help. The window version is numinous-app.",
+        },
         room.meta().id
-    );
-    ExitCode::SUCCESS
+    )
 }
 
 /// A fresh seed for casual play: different every deal, printed by the game
@@ -3673,6 +3702,47 @@ mod tests {
     fn test_persistence_paths_never_resolve_to_the_player_profile() {
         assert!(super::journey_path().starts_with(std::env::temp_dir()));
         assert!(super::scores_path().starts_with(std::env::temp_dir()));
+    }
+
+    #[test]
+    fn redirected_home_report_is_plain_and_useful() {
+        let report = super::home_report(&numinous_core::Journey::default(), false);
+        assert!(
+            !report.contains('\x1b'),
+            "redirected output must not contain ANSI"
+        );
+        assert!(report.starts_with("NUMINOUS: math you can feel\n"));
+        assert!(report.contains("Today's room:"));
+        assert!(report.contains("\n  numinous watch"));
+        assert!(report.contains("\n  numinous rooms"));
+        assert!(report.contains("\n  numinous play"));
+        assert!(report.contains("\n  numinous --help"));
+        assert!(report.lines().count() <= 16, "plain home stays concise");
+    }
+
+    #[test]
+    fn interactive_home_report_keeps_the_full_color_cabinet() {
+        let journey = numinous_core::Journey {
+            streak: 3,
+            ..Default::default()
+        };
+        let report = super::home_report(&journey, true);
+        assert!(
+            report.starts_with("\x1b[38;2;"),
+            "cabinet starts in truecolor"
+        );
+        assert!(
+            report.contains("\x1b[48;2;"),
+            "cabinet paints its background"
+        );
+        assert!(
+            report.contains("\x1b[0m"),
+            "cabinet restores terminal color"
+        );
+        assert!(report.contains('▀'), "cabinet keeps its half-block raster");
+        assert!(report.contains("NUMINOUS   LV"));
+        assert!(report.contains("streak 3"));
+        assert!(report.contains("\n  numinous watch"));
     }
 
     #[test]

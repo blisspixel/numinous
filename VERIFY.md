@@ -36,7 +36,7 @@ If it prints "All checks passed" and exits 0, everything is green.
 ```
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
+cargo test --workspace --all-targets --locked
 cargo build --workspace --locked
 cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'
 cargo deny check                         # if cargo-deny is installed; CI always runs it
@@ -44,8 +44,8 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 1,143 tests pass, 93.00% region
-cover, and 92.61% line cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 1,191 all-target test cases pass, 93.17% region
+cover, and 92.82% line cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.

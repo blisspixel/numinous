@@ -8,13 +8,15 @@ human, historical, digital, and invented. Each is a role a playtester (a person,
 an LLM, or an agent) can inhabit fully, with enough backstory to give them a
 real perspective instead of a label.
 
-How to use it: for a round, draw a diverse handful, never all one group, run them
-against the LATEST build (`scripts/mcp-play.py` for MCP, the fresh CLI otherwise,
-the app for screen QA), give each a face that suits them, and ask each for their
-standout moment, their honest complaint, and one thing to add or refine from who
-they are. Convergence across unlike members is the real signal; their individual
-finds are what a monoculture would miss. Past transcripts live in `PLAYTESTS.md`;
-the designs they have left are in `ROOMS.md`.
+How to use it: for an ordinary round, draw a diverse handful, never all one
+group. For a scheduled full-roster audit, assign all 42 exactly once across
+non-overlapping teams with explicit screen and face ownership. Run every lens
+against the latest build (`scripts/mcp-play.py` for MCP, the fresh CLI otherwise,
+the app for screen QA), give each a face that suits them, and require a standout,
+an honest complaint, one refinement, and an evidence classification. Convergence
+across unlike members prioritizes investigation; only reproduced behavior enters
+the defect queue. Past transcripts live in `PLAYTESTS.md`; the designs they have
+left are in `ROOMS.md`.
 
 For release-candidate QA, split the draw into three independent groups instead
 of asking one troupe to notice everything. The first-contact group reviews all
