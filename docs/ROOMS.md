@@ -777,14 +777,13 @@ which the Cairn turns into a door.
 
 ## First Contact: math as the universal translator (July 2026, founder-directed)
 
-The deepest meta-frame the project has, and the one to ramp hardest. In the
-film *Contact*, the aliens open with prime numbers, because primes are the one
-signal no natural process fakes and any mind capable of listening will
-recognize. That is not a plot device; it is a truth about minds. Mathematics is
-the single language two consciousnesses are guaranteed to share even when they
-share nothing else: no words, no culture, no senses, no dimensions in common.
-So math is a **universal translator**, and Numinous, whether it announced it or
-not, has been one all along.
+The deepest meta-frame the project has is a working thesis, not a fact about all
+minds. In the film *Contact*, primes serve as a deliberately structured signal.
+Numinous asks whether mathematical patterns can provide shared structure when
+two minds lack common words or culture. It does not assume that every mind can
+sense, recognize, or value the same representation. "Universal translator" is
+the design aspiration; real participant research must establish where it works,
+where it fails, and which alternative representations are required.
 
 This unifies rooms that already exist and one that should:
 
