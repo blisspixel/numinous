@@ -8,7 +8,7 @@ There are two engines, and they are designed to coexist and even harmonize.
 
 ## Engine A: Programmatic music (the math makes the sound)
 
-> A2 listening pass (July 13, 2026): motifs ship for all 31 catalog rooms. A motif is
+> A2 engineering pass (July 14, 2026): motifs ship for all 31 catalog rooms. A motif is
 > a room's musical identity (key, tempo, a line of semitone degrees, and
 > what it encodes): Times Tables circles and returns in D minor pentatonic;
 > Lorenz wanders ten notes and never resolves; the Random Walk stumbles
@@ -23,18 +23,35 @@ There are two engines, and they are designed to coexist and even harmonize.
 > listening review found that the App was layering the motif and its
 > sonification at different loop lengths, restarting the result from a render
 > counter, and interrupting melody steps with what was described as an
-> accompaniment. The default is now one deterministic 32-step stereo
-> arrangement: a sparse triangle lead, intentional rests, four-bar variation,
-> a final root resolution, and quiet sine root and fifth anchors underneath.
-> It has a silent seam, low DC, and measured headroom. Source changes use a
+> accompaniment. A later all-roster audit found that every room still shared
+> one short form, 25 declared lines were not played in full, individual octave
+> folding changed some interval directions, and a forced root cadence
+> contradicted Lorenz's unresolved identity. The default is now one
+> deterministic 128-step stereo macro-arrangement. Each authored line opens
+> literally in one coherent register, moves through two deterministic
+> developments, then returns. Eight restrained rhythm and accompaniment
+> families provide catalog and within-bed variety. Soft sine or triangle leads
+> sit over short, low-level root and fifth anchors with real gaps, and each
+> motif retains its own final degree. The catalog has silent seams, bounded
+> RMS and sample steps, low DC, and measured headroom. These structural checks
+> reject specific failures, but do not prove that the result is pleasant.
+> Source changes use a
 > normalized crossfade; volume and focus ramp in the audio callback without
 > moving the playhead. Completed source buffers are handed back to the control
 > thread for destruction, so long recordings are not freed in real-time code or
 > retained indefinitely. Radio keeps its produced stereo source during normal
 > playback and rejoins its wall-clock track and offset before focus fades in.
 > Phase-varying `SoundSpec` renderings remain available to headless consumers.
-> The App currently favors one stable motif arrangement per room, so changing
-> render cadence cannot retune or restart its bed.
+> The App favors one stable macro-arrangement per room, lasting about 27 to 55
+> seconds before a bit-exact repeat, so render cadence cannot retune or restart
+> its bed. It renders the low-register source once at 16 kHz, shares that
+> immutable buffer with the mixer, and linearly resamples to the device rate.
+> This bounds room-switch memory and work independently of a 48, 96, or 192 kHz
+> device without changing pitch or arrangement time. `listen_room.motif`
+> reports the authored theme, while
+> `listen_room.notes` and CLI `sonify` report the phase-specific mathematical
+> sonification. Neither headless surface currently exports the App's complete
+> stereo arrangement event graph; that parity gap remains tracked.
 > `SoundSpec` now preserves duration and pitch at 44.1, 48, 96, and 192 kHz.
 > Next: musician-led long-listening sessions and state-dependent tension where
 > the phrase resolves when a room's mathematics closes.
@@ -59,6 +76,12 @@ and the 2026 GDC session on
 [cohesive musical identity](https://schedule.gdconf.com/session/signature-sounds-crafting-a-cohesive-musical-identity-across-games/915870).
 The code can enforce seam, bounds, headroom, and continuity. It cannot certify
 that music is enjoyable, so a real listening panel remains a release gate.
+For reproducible level vocabulary, [EBU R 128 version 5.0](https://tech.ebu.ch/publications/r128),
+published November 21, 2023, defines LUFS programme loudness, Loudness Range,
+and Maximum True Peak descriptors. Its broadcast target is not adopted as a
+game-mix target here. Current room-bed gates use sample peak and RMS; a future
+metered listening harness should report integrated loudness and true peak while
+leaving the artistic decision to reference listening on representative devices.
 
 ### A1. Room sonification (the instrument layer)
 Every room turns its own math into tuned, musical sound (detailed per-room in

@@ -1059,3 +1059,78 @@ The technical Flagship Proof is substantially stronger, but the 0.2 gate is not
 closed. A real stranger hallway session must still show that players discover
 and value the four-lobe goal without coaching. A musician-led long-listening
 session and representative physical-controller session also remain required.
+
+---
+
+# The fourteenth round (July 14, 2026): programmatic room music
+
+The full 42-profile roster was assigned exactly once across three fresh groups.
+The first group examined first contact, motif identity, and listening theory.
+The second examined comfort risks, DSP, source lifecycle, accessibility, and
+long-loop behavior. The third examined App, CLI, and MCP truth plus audio QA
+automation. Each group inspected the pre-change source and generated local
+audio evidence. These profiles are simulated design lenses. Their reactions do
+not establish pleasure, pain, fatigue, accessibility, or participant value.
+
+## Reproduced findings
+
+- All 31 App beds used the same 15 lead onsets, one-step triangle voice, pan
+  rule, and two pairs of uninterrupted 16-step root and fifth anchors. Exact
+  buffers lasted 6.86 to 13.71 seconds and repeated 44 to 88 times in ten
+  minutes.
+- The arranger did not schedule every declared degree for 25 of 31 motifs.
+  Cult of Pi stopped stating its documented digit sequence literally, while
+  MCP continued to publish the complete line as the ambient motif.
+- Folding each lead note independently into a fixed register changed authored
+  interval directions. Voronoi's ascending root, fifth, and octave became a
+  repeated pitch followed by a descending fourth.
+- Every line was forced to degree zero at the end, contradicting Lorenz's
+  explicitly unresolved identity. Golden Angle was labeled pentatonic even
+  though its line contains eight pitch classes.
+- CLI `sonify` and MCP `listen_room.notes` expose the mathematical
+  sonification, not the App's stereo ambient arrangement. Release verification
+  generated WAVs without a spectral fingerprint or cross-face ambient-bed
+  comparison. Those remain explicit follow-ups.
+
+The groups also rejected several suspected defects. Baseline renders had ample
+headroom, exact silent seams, negligible DC, very little energy above 2 kHz,
+deterministic output, and no reproduced source leak, focus restart, or
+controller routing failure. That evidence rules out specific technical causes;
+it does not invalidate the founder's listening experience.
+
+## What changed
+
+Every motif now opens with its complete authored line in one shared octave
+register, preserving relative intervals. Its own final degree remains the
+cadence. The room bed expands from one 32-step phrase into a 128-step
+macro-arrangement: a literal opening, two deterministic developments, and a
+literal return. Eight curated rhythm and accompaniment families provide at
+least three phrase forms inside every stable bed and at least six forms across
+the catalog. Short, low-level sine anchors leave actual gaps, while the lead
+uses a bounded soft sine or triangle voice. Golden Angle's public key label is
+now the truthful `F# phyllotaxis cycle`.
+
+New regressions enforce literal degree order, interval preservation, a bounded
+lead register, authored cadence, within-bed and catalog structural diversity,
+anchor breaths, voice level, RMS, sample steps, headroom, DC, exact seams,
+determinism, and common device rates. Canonical docs now distinguish the App
+ambient arrangement, the authored motif returned by MCP, and the separate
+mathematical sonification returned by CLI and MCP.
+
+The App renders the low-register bed once at 16 kHz, shares that allocation
+with the mixer, uses constant-time shared-source identity, and resamples to the
+device rate. This keeps the 128-step source below two million interleaved
+samples and avoids repeated cloning and hashing during hand input.
+
+Three fresh post-change checkers independently reviewed musical truth and
+variety, the shared audio lifecycle, and App, CLI, MCP, and documentation
+claims. All final rechecks pass with no remaining actionable finding. The
+complete local release gate passes 1,341 all-target test cases, 93.63 percent
+region coverage, 93.43 percent line coverage, and the exact 349-screen matrix.
+
+A musician-led long-listening panel remains the authority for composition,
+comfort, memorable identity, source balance, and device translation. Direct
+CLI and MCP export of the App arrangement, perceptual audio fingerprints,
+independent source levels, and room-transition energy remain ranked engineering
+work. This round reduces specific sources of semantic mismatch and mechanical
+repetition. It does not claim to have proven that the music is enjoyable.

@@ -8,11 +8,11 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-14
 
-- **Enforced now:** formatting, Clippy with warnings denied, 1,336 all-target
+- **Enforced now:** formatting, Clippy with warnings denied, 1,341 all-target
   test cases, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 93.60%
-  regions and 93.41% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 93.63%
+  regions and 93.43% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
   three faces, and a release-generated 349-screen visual QA matrix. Every room
@@ -42,6 +42,13 @@ built, so an aspiration is never mistaken for a result.
   and the earned four-lobe Aha at both sizes. The generator asserts all five
   spectral inks and the dial marker, while core tests bound compact ASCII
   density so the terminal picture retains negative space.
+  Programmatic room-bed tests preserve every authored interval in one register,
+  require catalog and within-bed phrase diversity, and bound oscillator level,
+  RMS, adjacent sample steps, headroom, DC, exact seams, determinism, and common
+  device rates. This is structural audio regression coverage, not a perceptual
+  fingerprint or listening result. The App's fixed 16 kHz room-score source is
+  capped below two million interleaved samples and shared with the mixer, so
+  device rate and repeated hand input cannot multiply that source allocation.
 - **Not yet evidenced:** a completed stranger hallway test, accessibility review
   with disabled players, representative physical-controller sessions,
   musician-led long-listening review, real execution on macOS and Linux,

@@ -3,9 +3,17 @@
 How Numinous *sounds*, and specifically how math *becomes* sound. This is the design bible for the "everything is an instrument" pillar. It complements `MUSIC.md` (which covers the two music engines and the radio stations); this doc covers the grammar of sonification, the synthesis architecture, and the per-room sound design.
 
 **Implementation status, 2026-07-14:** every catalog room ships a structured
-motif and deterministic sonification. The App's default room bed is a 32-step
-stereo arrangement with a soft triangle lead, rests, four-bar development,
-quiet consonant anchors, and a silent loop seam. Changed sources use a short,
+motif and deterministic sonification. The App's default room bed is a 128-step
+stereo macro-arrangement with a soft sine or triangle lead, a literal authored
+theme, two developed forms, a return, breathing consonant anchors, and a silent
+loop seam. Eight rhythm and accompaniment families replace one universal form;
+one shared register preserves authored intervals, and each motif keeps its own
+cadence. Catalog checks bound RMS, sample steps, headroom, DC, seams, and output
+at common device rates. Those checks do not establish listening comfort.
+The App pre-renders each low-register bed once at 16 kHz, shares the immutable
+allocation with the mixer, and linearly resamples it to the device rate. The
+catalog source stays below two million interleaved samples, avoiding
+device-rate-scaled buffers and repeated copies on room input. Changed sources use a short,
 normalized crossfade. Master volume and window-focus state use smoothed gain,
 so neither restarts the source; minimizing or switching away fades the App.
 Completed crossfade storage is retired by the callback and destroyed by the

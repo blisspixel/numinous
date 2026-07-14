@@ -256,6 +256,12 @@ struct LoopBuffer {
     identity: u64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum IdentityKind {
+    Content,
+    SharedAllocation,
+}
+
 impl LoopBuffer {
     fn new(samples: impl Into<Arc<Vec<f32>>>, channels: usize) -> Self {
         Self::new_at_rate(samples, channels, 1, 1)
@@ -267,11 +273,46 @@ impl LoopBuffer {
         source_rate: u32,
         output_rate: u32,
     ) -> Self {
-        let samples = samples.into();
+        Self::from_samples(
+            samples.into(),
+            channels,
+            source_rate,
+            output_rate,
+            IdentityKind::Content,
+        )
+    }
+
+    fn new_shared_at_rate(
+        samples: Arc<Vec<f32>>,
+        channels: usize,
+        source_rate: u32,
+        output_rate: u32,
+    ) -> Self {
+        Self::from_samples(
+            samples,
+            channels,
+            source_rate,
+            output_rate,
+            IdentityKind::SharedAllocation,
+        )
+    }
+
+    fn from_samples(
+        samples: Arc<Vec<f32>>,
+        channels: usize,
+        source_rate: u32,
+        output_rate: u32,
+        identity_kind: IdentityKind,
+    ) -> Self {
         let channels = channels.clamp(1, 2);
         let sample_len = samples.len() - samples.len() % channels;
         let source_rate = source_rate.max(1);
-        let identity = source_identity(&samples[..sample_len], channels, source_rate);
+        let identity = match identity_kind {
+            IdentityKind::Content => source_identity(&samples[..sample_len], channels, source_rate),
+            IdentityKind::SharedAllocation => {
+                shared_source_identity(&samples, sample_len, channels, source_rate)
+            }
+        };
         Self {
             samples,
             sample_len,
@@ -323,6 +364,19 @@ fn source_identity(samples: &[f32], channels: usize, source_rate: u32) -> u64 {
         }
     }
     hash ^ samples.len() as u64
+}
+
+fn shared_source_identity(
+    samples: &Arc<Vec<f32>>,
+    sample_len: usize,
+    channels: usize,
+    source_rate: u32,
+) -> u64 {
+    let allocation = Arc::as_ptr(samples) as usize as u64;
+    allocation.rotate_left(17)
+        ^ (sample_len as u64).rotate_left(41)
+        ^ (channels as u64)
+        ^ u64::from(source_rate).rotate_left(7)
 }
 
 /// Callback-owned state. All storage is prepared by the control thread, so
@@ -571,17 +625,19 @@ impl LoopPlayer {
     /// Crossfade to shared interleaved-stereo samples without copying them.
     ///
     /// This is useful when a caller must retain the same immutable source for
-    /// later playback. An incomplete final frame is ignored without copying.
+    /// later playback. Reusing the same shared allocation preserves the
+    /// playhead. An incomplete final frame is ignored without copying.
     pub fn set_shared_stereo(&self, interleaved: Arc<Vec<f32>>) {
-        let next = LoopBuffer::new(interleaved, 2);
+        let next = LoopBuffer::new_shared_at_rate(interleaved, 2, 1, 1);
         self.replace_source(next);
     }
 
     /// Crossfade to shared stereo samples rendered at their original rate.
     /// The real-time loop interpolates them at the device rate, so high-rate
     /// devices do not require a second amplified copy of the entire track.
+    /// Reusing the same allocation and source rate preserves the playhead.
     pub fn set_shared_stereo_at_rate(&self, interleaved: Arc<Vec<f32>>, source_rate: u32) {
-        let next = LoopBuffer::new_at_rate(interleaved, 2, source_rate, self.sample_rate);
+        let next = LoopBuffer::new_shared_at_rate(interleaved, 2, source_rate, self.sample_rate);
         self.replace_source(next);
     }
 
@@ -726,6 +782,18 @@ mod tests {
         let buffer = LoopBuffer::new(samples.clone(), 2);
 
         assert!(Arc::ptr_eq(&buffer.samples, &samples));
+    }
+
+    #[test]
+    fn shared_loop_identity_is_constant_time_and_tracks_the_allocation() {
+        let samples = Arc::new(vec![0.1, -0.1, 0.2, -0.2]);
+        let first = LoopBuffer::new_shared_at_rate(samples.clone(), 2, 16_000, 48_000);
+        let repeated = LoopBuffer::new_shared_at_rate(samples, 2, 16_000, 48_000);
+        let equal_content =
+            LoopBuffer::new_shared_at_rate(Arc::new(vec![0.1, -0.1, 0.2, -0.2]), 2, 16_000, 48_000);
+
+        assert_eq!(first.identity, repeated.identity);
+        assert_ne!(first.identity, equal_content.identity);
     }
 
     #[test]

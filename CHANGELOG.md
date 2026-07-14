@@ -6,6 +6,31 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Programmatic room music now preserves the score it claims to play and varies
+  over a substantially longer form. A full-roster audit reproduced one shared
+  15-onset scaffold, omitted degrees in 25 of 31 declared motifs, per-note
+  octave folding that changed interval direction, a false universal root
+  cadence, continuous 16-step anchors, and an incorrect Golden Angle
+  pentatonic label. Every room bed is now a deterministic 128-step stereo
+  macro-arrangement: the literal authored line opens in one coherent register,
+  two alternate forms develop it, and the theme returns. Eight rhythm and
+  accompaniment families, soft sine or triangle leads, short breathing
+  anchors, modest pan motion, and each line's own cadence replace the universal
+  short loop. Catalog regressions enforce literal pitch order, interval and
+  register truth, at least three forms per bed, at least six forms across the
+  catalog, RMS, sample-step bounds, headroom, DC, exact seams, determinism, and
+  common device rates. Golden Angle is truthfully named an F# phyllotaxis
+  cycle. Objective structure and meters do not certify subjective pleasure, so
+  musician-led long-listening remains open. The App pre-renders the
+  low-register bed at 16 kHz, shares its immutable allocation with the mixer,
+  uses constant-time identity for shared sources, and linearly resamples to the
+  device rate. A two-million-sample catalog bound and unchanged-source routing
+  prevent the longer form from scaling memory with 192 kHz hardware or being
+  cloned and rehashed on wheel and drag input. Three independent post-change
+  reviews accept the musical structure, audio path, and face and documentation
+  truth with no remaining actionable finding. The complete local release gate
+  passes 1,341 all-target test cases at 93.63 percent region and 93.43 percent
+  line coverage while regenerating the exact 349-screen matrix.
 - Times Tables now completes its technical Flagship Proof across App, CLI, and
   MCP. Ordinary App visits hold the K=2 cardioid until input, while The Show
   keeps its deliberate visual and audible sweep. Variation changes the route

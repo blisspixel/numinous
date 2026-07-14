@@ -136,7 +136,7 @@ impl SoundSpec {
 
     /// Play a motif's notated line as a spacious counterphrase.
     ///
-    /// Its total duration matches the four-bar chiptune arrangement, so faces
+    /// Its total duration matches the four-cycle chiptune arrangement, so faces
     /// can combine the two without independent loop lengths drifting against
     /// each other. Every notated pitch appears once, separated by a short rest.
     #[must_use]
