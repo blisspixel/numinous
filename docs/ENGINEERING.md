@@ -71,8 +71,10 @@ beta and is not a release baseline.
 
 ## Testing (the enforcement of `QUALITY.md`)
 
-- **Runner:** `cargo test --workspace` is the current enforced runner. Consider
-  `cargo-nextest` only when measured CI time justifies another tool.
+- **Runner:** `cargo test --workspace --all-targets --locked` is the current
+  enforced runner. This includes example-target tests, such as the screen
+  matrix's structural-oracle regressions. Consider `cargo-nextest` only when
+  measured CI time justifies another tool.
 - **Layers enforced now:** unit and integration tests, deterministic fixtures,
   direct invariants, hostile-input tests, and end-to-end stdio coverage.
   Property-test, snapshot, GPU-golden, and benchmark harnesses are roadmap work
@@ -104,12 +106,12 @@ Nothing merges red. On every PR, blocking:
 
 1. `cargo fmt --all --check`
 2. `cargo clippy --workspace --all-targets -- -D warnings`
-3. `cargo test --workspace`
+3. `cargo test --workspace --all-targets --locked`
 4. `bash scripts/check-style.sh`
 5. `cargo deny check`
 6. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
-7. `cargo test --workspace --locked` and `cargo build --workspace --locked` on
-   macOS, Linux, and Windows
+7. `cargo test --workspace --all-targets --locked` and
+   `cargo build --workspace --locked` on macOS, Linux, and Windows
 
 Hardening targets not yet enforced in CI: MSRV, `cargo doc --workspace --no-deps`
 under `-D warnings`, `cargo audit`, release artifact provenance, the visual and

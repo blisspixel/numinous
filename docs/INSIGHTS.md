@@ -43,7 +43,7 @@ Organized by flavor. Each entry: the **hook** (how it lands), the **truth** (wha
 
 ### Hidden order
 - **The most patternless thing has a pattern.** Primes are famously unpredictable, yet arrange the numbers in a spiral and the primes fall into unmistakable diagonal streaks nobody has fully explained. *(Prime Spirals)*
-- **Chaos, in bulk, is perfectly predictable.** No one can predict a single ball's path through the pegs, but a thousand of them always pile into the exact same bell curve, to the millimeter. *(Galton Board)*
+- **Uncertain trials can build a stable pattern.** No one can predict a single ball's path through the pegs, but as independent drops accumulate their bin counts approach a predictable binomial curve. *(Galton Board)*
 - **Evolution found the most irrational number.** Sunflowers space their seeds by 137.5 degrees, built from the golden ratio, the "most irrational" number, so seeds never line up and never waste space. *(Golden Angle)*
 - **Faked numbers break a law.** In real-world data, the leading digit is a 1 about 30 percent of the time, not 11. It is so reliable that accountants use it to catch fraud. *(Benford)*
 - **There is always a cowlick.** You cannot comb a hairy ball flat without a cowlick, which means there is always at least one point on Earth with no wind at all. *(candidate room, Hairy Ball Theorem)*

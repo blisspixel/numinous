@@ -438,3 +438,59 @@ certify that music is pleasant over a long session. Standard-controller logic
 is pure-tested, while real controller models still need hardware sessions.
 Those two listening and hardware checks remain explicit release work rather
 than being hidden behind the size of the automated suite.
+
+---
+
+# The fifth round (July 13, 2026): all 42 lenses
+
+This was the first full-roster simulated audit. All 42 profiles in
+`PLAYTESTERS.md` were assigned exactly once across three non-overlapping teams:
+first contact and accessibility, interaction and truth, and games plus agent
+faces. Every lens supplied a standout, complaint, refinement, and evidence
+classification. The teams reviewed the exact 240-screen App matrix and then
+reproduced suspicious behavior through focused screenshots, pixel comparison,
+CLI, MCP, audio exports, source inspection, and tests.
+
+The 42 reactions remain simulated design input. They are not hallway,
+accessibility, cultural, musical-taste, fun, or digital-mind participant
+evidence. Only the defects reproduced independently of the persona framing were
+accepted into the implementation batch.
+
+## Reproduced findings
+
+- Redirecting the no-argument CLI stored 805 ANSI ESC characters instead of a
+  useful plain welcome.
+- The Quiz wrong-result layout could lose its reveal and continuation controls
+  at 900 by 700.
+- Galton Board overstated finite repeatability and normality, Collatz stated an
+  unproved universal claim as fact, Arecibo treated factoring as sufficient for
+  picture recognition, and Lissajous treated rational closure as equivalent to
+  a perfect musical interval.
+- `listen_room` placed an ambient motif label beside a different specialized
+  mathematical sonification without naming the two roles.
+- Studio reported `unexpected token None` for an incomplete expression instead
+  of a source position and expected input.
+
+The suspected immediate Barnsley Fern deletion did not survive reproduction.
+A direct comparison found 22,379 lit base pixels and only 84 absent from the
+interacted frame, retaining 99.6 percent of the base geometry. Its immediate
+composition can still be refined, but it was not logged as object deletion.
+
+## What changed
+
+Redirected CLI home output is now a concise plain command map with zero ANSI,
+while terminals retain the full-color cabinet. Quiz results use measured text
+bounds and reserve the continuation band at compact and default sizes. The four
+mathematical explanations now state their evidence boundaries. MCP separately
+names and structures the ambient motif and mathematical sonification. Studio
+parse errors carry one-based source columns and useful expected-expression
+copy across every face.
+
+The full local release gate passes with 1,191 all-target test cases, 93.17 percent region
+coverage, 92.82 percent line coverage, the exact 240-screen matrix, Clippy with
+warnings denied, locked build, house style, and supply-chain policy. The ranked
+next queue begins with input-aware controller legends, compact MCP responses,
+deeper Galton and Life interaction loops, causal first-touch presentation,
+visual audio state, and continued music composition review. Human hallway
+evidence still controls the 0.2 milestone claim, but no longer idles verified
+0.3 refinement while sessions are arranged.

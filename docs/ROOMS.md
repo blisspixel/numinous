@@ -66,7 +66,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 - **Rule:** Two pendulums swinging at right angles, each a different speed.
 - **Toy:** Two frequency dials. When the ratio is simple (2:3, 3:4) a clean, stable curve hangs in the air; nudge it off-ratio and the whole figure slowly tumbles and precesses forever. Add damping for the gorgeous decaying spirals of a real sand-pendulum. Clicking Lissajous chooses an exact whole-number ratio while its relative oscillator phase keeps moving. Clicking Harmonograph chooses damping and center detune while the pendulums continue breathing around that setting. Interaction changes the instrument without freezing it.
 - **Aha:** "Freeze the figure" (find an exact integer ratio, it stops tumbling).
-- **Reveal:** *"A stable figure means the two frequencies are a perfect musical interval. You're not drawing a curve, you're seeing a chord. This is what old oscilloscopes did, and it's why a 2:3 ratio looks calm and sounds like a perfect fifth."*
+- **Reveal:** *"A rational frequency ratio closes the figure, and small-integer ratios can also sound consonant. The 2:3 ratio is a perfect fifth. You are not just drawing a curve: old oscilloscopes made the same connection between shape and interval visible."*
 - **Sound:** the two frequencies are literally the two audio tones. Consonant ratio → consonant interval. Sight and sound are the *same number.* The thesis room for "everything is an instrument."
 
 ### 7. Pendulum Wave  Wow 4 / Build 1
@@ -208,7 +208,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 - **Rule:** Drop balls through a field of pegs. Each peg is a coin flip: left or right.
 - **Toy:** Pour thousands of balls and watch pure random bouncing pile up into a **bell curve**. The built board uses a physical 16-row triangular peg lattice and 17 bins rather than treating every screen column as a coin flip. Click left or right to set a visible bias and drop a ball from the top source. Every traced step follows one legal lattice edge. Bins are numbered 0 through 16, so the landing bin equals its count of right turns, and the compact status reports bias, landing bin, and right-flip count even at the small viewport.
 - **Aha:** "Make a lopsided pile." (Bias the pegs.)
-- **Reveal:** *"Each ball's path is pure chaos, you can't predict a single one. But together they form the exact same curve, every time, to the millimeter. This is the Central Limit Theorem, the reason the bell curve rules everything from heights to test scores to the stock market. Chaos, in bulk, is perfectly predictable."*
+- **Reveal:** *"You cannot predict where a single ball lands. As trials accumulate, their bin counts approach the binomial distribution, which becomes bell-shaped at a fair bias. This is the Central Limit Theorem in action: sums of many small independent effects are often approximately normal. Individual outcomes remain uncertain while the aggregate pattern grows more stable."*
 - **Sound:** balls tick on pegs (rain-stick / bucket-drum texture); the pile's growth swells a soft pad.
 
 ### 22. Buffon's Needle → π  Wow 4 / Build 1

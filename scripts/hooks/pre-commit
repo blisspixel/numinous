@@ -36,7 +36,7 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
   echo "== clippy =="
   cargo clippy --workspace --all-targets -- -D warnings
   echo "== test =="
-  cargo test --workspace
+  cargo test --workspace --all-targets --locked
 fi
 
 echo "pre-commit: all checks passed."

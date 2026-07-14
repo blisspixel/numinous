@@ -1517,10 +1517,10 @@ fn listen_room_tool(args: &Value) -> Value {
         spec.duration,
         note_count
     )];
-    let structured_motif = room.motif().map(|motif| {
+    let ambient_motif = room.motif().map(|motif| {
         let notation = motif.notation();
         lines.push(format!(
-            "Motif: {} at {} BPM, {}. It encodes: {}.",
+            "Ambient motif: {} at {} BPM, {}. It encodes: {}.",
             motif.key,
             motif.tempo,
             notation.join(" "),
@@ -1534,6 +1534,9 @@ fn listen_room_tool(args: &Value) -> Value {
         })
     });
     let mut structured_notes = Vec::new();
+    if note_count > 0 {
+        lines.push("Mathematical sonification:".to_string());
+    }
     for (i, note) in spec.notes.iter().take(64).enumerate() {
         let name = note_name(note.freq);
         lines.push(format!(
@@ -1568,8 +1571,12 @@ fn listen_room_tool(args: &Value) -> Value {
             "note_count": note_count,
             "returned_note_count": structured_notes.len(),
             "truncated": note_count > 64,
-            "motif": structured_motif,
+            "motif": ambient_motif,
             "notes": structured_notes,
+            "sound_roles": {
+                "ambient_motif": { "field": "motif" },
+                "mathematical_sonification": { "field": "notes" },
+            },
         }),
     )
 }
@@ -4598,6 +4605,10 @@ plays 2
         }))
         .expect("tools/call must respond");
         assert_eq!(bad["result"]["isError"], true);
+        assert_eq!(
+            bad["result"]["content"][0]["text"],
+            "expression ended at column 5; expected a number, variable, function, or '('",
+        );
 
         // A crafted deeply nested expression must return an error, never
         // overflow the stack and abort the server (a Rust stack overflow is
@@ -4665,7 +4676,8 @@ plays 2
             text.contains("1 notes"),
             "the times-tables default tone has one note"
         );
-        assert!(text.contains("Motif:"), "got: {text}");
+        assert!(text.contains("Ambient motif:"), "got: {text}");
+        assert!(text.contains("Mathematical sonification:"), "got: {text}");
         assert!(
             text.contains("D minor pentatonic") && text.contains("D3 G3 A3 D4"),
             "interactive room motifs must surface readable notation: {text}"
@@ -4683,6 +4695,19 @@ plays 2
         assert!(
             tuned_text.contains("G visible fifth") && tuned_text.contains("G3 D4 G4"),
             "room motifs must surface readable notation: {tuned_text}"
+        );
+        let sound = &tuned["result"]["structuredContent"];
+        assert_eq!(sound["motif"]["key"], "G visible fifth");
+        assert!(
+            sound["notes"]
+                .as_array()
+                .is_some_and(|notes| !notes.is_empty()),
+            "the specialized sonification is separately named"
+        );
+        assert_eq!(sound["sound_roles"]["ambient_motif"]["field"], "motif");
+        assert_eq!(
+            sound["sound_roles"]["mathematical_sonification"]["field"],
+            "notes"
         );
 
         let varied = handle_request(&json!({
@@ -6138,7 +6163,20 @@ plays 2
             assert_eq!(sound["t"], 0.0, "listen {}", meta.id);
             assert_eq!(sound["variation"], 0, "listen {}", meta.id);
             assert!(sound["duration_seconds"].is_number(), "listen {}", meta.id);
-            let notes = sound["notes"].as_array().expect("bounded notes");
+            assert!(sound["motif"].is_object(), "ambient motif {}", meta.id);
+            let notes = sound["notes"]
+                .as_array()
+                .expect("bounded sonification notes");
+            assert_eq!(
+                sound["sound_roles"]["ambient_motif"]["field"], "motif",
+                "listen {}",
+                meta.id
+            );
+            assert_eq!(
+                sound["sound_roles"]["mathematical_sonification"]["field"], "notes",
+                "listen {}",
+                meta.id
+            );
             assert!(notes.len() <= 64, "listen {}", meta.id);
             assert_eq!(
                 sound["returned_note_count"],

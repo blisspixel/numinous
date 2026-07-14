@@ -8,7 +8,9 @@ part of the experience rather than a bonus feature.
 **Implementation boundary, 2026-07-13:** 0.2.0-alpha.1 ships a bounded scalar
 expression parser and evaluator, animated plots, deterministic melody mapping,
 an editable app panel, CLI and MCP operations, and first-version `.num` plus
-link round trips in the CLI. Pattern algebra, tracker, step grid, piano roll,
+link round trips in the CLI. Parse diagnostics use one-based source columns and
+name the expected expression input across every face. Pattern algebra, tracker,
+step grid, piano roll,
 MIDI, raw shader authoring, app reopen, gallery, remix, and community rooms are
 design targets. `ROADMAP.md` is the status authority.
 

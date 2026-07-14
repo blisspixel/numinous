@@ -14,7 +14,7 @@ cargo fmt --all --check
 echo "== clippy =="
 cargo clippy --workspace --all-targets -- -D warnings
 echo "== tests =="
-cargo test --workspace
+cargo test --workspace --all-targets --locked
 echo "== build =="
 cargo build --workspace --locked
 

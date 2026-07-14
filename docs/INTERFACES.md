@@ -155,7 +155,10 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   tool error and do not record progress.
 - **Structured discovery (built):** `list_rooms`, `describe_room`,
   `reveal_room`, and `listen_room` return typed catalog, action, revelation,
-  deep-cut availability, motif, and bounded note data for all 31 rooms. Locked
+  deep-cut availability, ambient motif, and bounded mathematical-sonification
+  note data for all 31 rooms. `listen_room` names those two sound roles
+  separately because a specialized room sound can intentionally differ from
+  the ambient score. Locked
   deep cuts expose their unlock level without leaking their text. Scores and
   forget previews are similarly structured, and confirmed erasure reports only
   successful filesystem outcomes.

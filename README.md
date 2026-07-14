@@ -122,12 +122,16 @@ This is an alpha-tagged prerelease. Capability breadth is ahead of release
 maturity because the 0.2 Flagship Proof gate, including the real hallway
 evidence, remains open.
 
-The current local gate has 1,143 passing tests, 93.00% region coverage and
-92.61% line coverage with an enforced 80% line floor, Clippy with warnings
+The current local gate has 1,191 passing all-target test cases, 93.17% region coverage and
+92.82% line coverage with an enforced 80% line floor, Clippy with warnings
 denied, and dependency policy checks. Release QA also regenerates an exact
 240-screen App matrix with per-room interaction scenarios, semantic checks,
 and coarse perceptual response thresholds, including a regression that rejects
-four isolated corner markers as a meaningful interaction.
+four isolated corner markers as a meaningful interaction. The latest
+full-roster QA pass applied all 42 documented simulated review lenses once,
+split across first contact, interaction and truth, and games plus agent faces.
+It fixed reproduced App, CLI, MCP, Studio, and mathematical-copy defects; the
+simulated reactions themselves are not participant evidence.
 CI is configured for locked tests and builds on Windows, macOS, and Ubuntu.
 Stranger playtests, accessibility work, cross-platform execution evidence,
 real-controller-model sessions, musician-led long-listening review, deeper room

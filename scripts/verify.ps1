@@ -26,7 +26,7 @@ function Step($name, $block) {
 try {
 Step "format" { cargo fmt --all --check }
 Step "clippy" { cargo clippy --workspace --all-targets -- -D warnings }
-Step "tests"  { cargo test --workspace }
+Step "tests"  { cargo test --workspace --all-targets --locked }
 Step "build"  { cargo build --workspace --locked }
 
 if ($null -ne (Get-Command cargo-llvm-cov -ErrorAction SilentlyContinue)) {

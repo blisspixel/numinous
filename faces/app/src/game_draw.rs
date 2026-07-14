@@ -109,6 +109,62 @@ fn centered_text_x(text: &str, width: usize, scale: i32) -> i32 {
     ((width as i32 - text.chars().count() as i32 * 6 * scale) / 2).max(10)
 }
 
+const QUIZ_RESULT_CONTROLS: &str = "ANY KEY  NEXT     ESC  LEAVE";
+const FONT_PIXEL_HEIGHT: i32 = 7;
+
+struct QuizResultLayout {
+    verdict: String,
+    reveal_lines: Vec<String>,
+    reveal_y: i32,
+    controls_y: i32,
+    body_scale: i32,
+    verdict_scale: i32,
+    line_height: i32,
+}
+
+impl QuizResultLayout {
+    fn new(quiz: &QuizPlay, correct: bool, width: usize, height: usize) -> Self {
+        let margin = 10;
+        let body_scale = game_scale(width);
+        let verdict_scale = body_scale + 1;
+        let line_height = 10 * body_scale;
+        let verdict = if correct {
+            "CORRECT".to_string()
+        } else {
+            format!(
+                "IT WAS {}: {}",
+                quiz.round.answer,
+                quiz.round.answer_title.to_uppercase()
+            )
+        };
+
+        let reveal_y = margin + FONT_PIXEL_HEIGHT * verdict_scale + line_height;
+        let controls_y = height as i32 - FONT_PIXEL_HEIGHT * body_scale - margin;
+        let reveal_bottom = controls_y - line_height;
+        let max_lines = if reveal_bottom < reveal_y + FONT_PIXEL_HEIGHT * body_scale {
+            0
+        } else {
+            1 + (reveal_bottom - reveal_y - FONT_PIXEL_HEIGHT * body_scale) / line_height
+        } as usize;
+        let columns = ((width as i32 - 2 * margin) / (6 * body_scale)).max(12) as usize;
+        let reveal_lines =
+            numinous_core::wrap_text(&quiz.round.answer_reveal.to_uppercase(), columns)
+                .into_iter()
+                .take(max_lines)
+                .collect();
+
+        Self {
+            verdict,
+            reveal_lines,
+            reveal_y,
+            controls_y,
+            body_scale,
+            verdict_scale,
+            line_height,
+        }
+    }
+}
+
 fn gauntlet_message_lines(message: &str, width: usize, scale: i32) -> Vec<String> {
     let columns = ((width as i32 - 20) / (6 * scale)).max(8) as usize;
     let mut lines: Vec<String> = numinous_core::wrap_text(message, columns)
@@ -218,40 +274,31 @@ pub(crate) fn draw_quiz(
         }
         Some((correct, _)) => {
             raster.clear_rows(0, height as i32);
-            let verdict = if *correct {
-                "CORRECT".to_string()
-            } else {
-                format!(
-                    "IT WAS {}: {}",
-                    quiz.round.answer,
-                    quiz.round.answer_title.to_uppercase()
-                )
-            };
-            numinous_core::draw_text(&mut raster, &verdict, 10, 10, scale + 1, '#');
-            let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
-            let room_for =
-                ((height as i32 - 3 * line_height - 20) / line_height - 3).max(2) as usize;
-            for (i, line) in
-                numinous_core::wrap_text(&quiz.round.answer_reveal.to_uppercase(), columns)
-                    .iter()
-                    .take(room_for)
-                    .enumerate()
-            {
+            let result = QuizResultLayout::new(quiz, *correct, width, height);
+            numinous_core::draw_text(
+                &mut raster,
+                &result.verdict,
+                10,
+                10,
+                result.verdict_scale,
+                '#',
+            );
+            for (i, line) in result.reveal_lines.iter().enumerate() {
                 numinous_core::draw_text(
                     &mut raster,
                     line,
                     10,
-                    10 + (3 + i as i32) * line_height,
-                    scale,
+                    result.reveal_y + i as i32 * result.line_height,
+                    result.body_scale,
                     '#',
                 );
             }
             numinous_core::draw_text(
                 &mut raster,
-                "ANY KEY  NEXT     ESC  LEAVE",
+                QUIZ_RESULT_CONTROLS,
                 10,
-                height as i32 - line_height - 4,
-                scale,
+                result.controls_y,
+                result.body_scale,
                 '*',
             );
         }
@@ -863,6 +910,80 @@ mod tests {
             "gauntlet",
             draw_gauntlet(&rooms, &sample_gauntlet(), 0, 320, 220),
         );
+    }
+
+    #[test]
+    fn quiz_wrong_result_keeps_reveal_and_controls_at_supported_sizes() {
+        let rooms = numinous_core::all_rooms_with(0);
+        let mut quiz = sample_quiz();
+        quiz.flash = Some((false, 40));
+        let expected_reveal = quiz.round.answer_reveal.to_uppercase();
+
+        for (width, height) in [(360, 240), (900, 700)] {
+            let layout = QuizResultLayout::new(&quiz, false, width, height);
+            assert_eq!(layout.reveal_lines.join(" "), expected_reveal);
+            assert!(!layout.reveal_lines.is_empty());
+            assert_eq!(QUIZ_RESULT_CONTROLS, "ANY KEY  NEXT     ESC  LEAVE");
+
+            assert!(
+                10 + numinous_core::text_width(&layout.verdict, layout.verdict_scale)
+                    <= width as i32,
+                "verdict clips at {width}x{height}"
+            );
+            for line in &layout.reveal_lines {
+                assert!(
+                    10 + numinous_core::text_width(line, layout.body_scale) <= width as i32,
+                    "reveal line clips at {width}x{height}: {line}"
+                );
+            }
+            assert!(
+                10 + numinous_core::text_width(QUIZ_RESULT_CONTROLS, layout.body_scale)
+                    <= width as i32,
+                "controls clip at {width}x{height}"
+            );
+
+            let last_reveal_bottom = layout.reveal_y
+                + (layout.reveal_lines.len() as i32 - 1) * layout.line_height
+                + FONT_PIXEL_HEIGHT * layout.body_scale;
+            assert!(
+                last_reveal_bottom <= layout.controls_y - layout.line_height,
+                "reveal collides with controls at {width}x{height}"
+            );
+            assert!(
+                layout.controls_y + FONT_PIXEL_HEIGHT * layout.body_scale <= height as i32,
+                "controls clip vertically at {width}x{height}"
+            );
+
+            let raster = draw_quiz(&rooms, &quiz, width, height);
+            assert!(raster.lit_count() > 1_000);
+            let rgba = raster.to_rgba();
+            let lit_in_rows = |from: i32, to: i32| {
+                let from = from.max(0) as usize;
+                let to = to.max(0).min(height as i32) as usize;
+                rgba.chunks_exact(4)
+                    .enumerate()
+                    .filter(|(index, pixel)| {
+                        let y = index / width;
+                        (from..to).contains(&y)
+                            && (pixel[0] != 10
+                                || pixel[1] != 11
+                                || pixel[2] != 15
+                                || pixel[3] != 255)
+                    })
+                    .count()
+            };
+            assert!(
+                lit_in_rows(layout.reveal_y, layout.controls_y - layout.line_height) > 100,
+                "rendered reveal is absent at {width}x{height}"
+            );
+            assert!(
+                lit_in_rows(
+                    layout.controls_y,
+                    layout.controls_y + FONT_PIXEL_HEIGHT * layout.body_scale,
+                ) > 25,
+                "rendered continuation controls are absent at {width}x{height}"
+            );
+        }
     }
 
     #[test]

@@ -204,9 +204,10 @@ impl Room for Arecibo {
 
     fn reveal(&self) -> &'static str {
         "This message is 143 bits, and 143 is 11 times 13, so it has one \
-         nontrivial rectangular factor pair, up to rotation. Any species that could factor it would \
-         find the picture. In 1974 we sent 1,679 bits, which is 23 times 73, at a \
-         star cluster 25,000 light-years away. The reply is not due for a while."
+         nontrivial rectangular factor pair, up to rotation. Factoring exposes the \
+         candidate rectangle; recognizing structure and meaning is the next \
+         inference. In 1974 we sent 1,679 bits, which is 23 times 73, at a star \
+         cluster 25,000 light-years away. The reply is not due for a while."
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -419,6 +420,9 @@ mod tests {
         let reveal = Arecibo::new().reveal();
         assert!(reveal.contains("11 times 13"));
         assert!(reveal.contains("up to rotation"));
+        assert!(reveal.contains("candidate rectangle"));
+        assert!(reveal.contains("next inference"));
+        assert!(!reveal.contains("Any species"));
     }
 
     #[test]
