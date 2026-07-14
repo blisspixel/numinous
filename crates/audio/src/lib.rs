@@ -253,7 +253,18 @@ struct LoopBuffer {
     fraction: f64,
     step: f64,
     channels: usize,
-    identity: u64,
+    identity: SourceIdentity,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SourceIdentity {
+    Content(u64),
+    SharedAllocation {
+        allocation: usize,
+        sample_len: usize,
+        channels: usize,
+        source_rate: u32,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -308,7 +319,11 @@ impl LoopBuffer {
         let sample_len = samples.len() - samples.len() % channels;
         let source_rate = source_rate.max(1);
         let identity = match identity_kind {
-            IdentityKind::Content => source_identity(&samples[..sample_len], channels, source_rate),
+            IdentityKind::Content => SourceIdentity::Content(source_identity(
+                &samples[..sample_len],
+                channels,
+                source_rate,
+            )),
             IdentityKind::SharedAllocation => {
                 shared_source_identity(&samples, sample_len, channels, source_rate)
             }
@@ -371,12 +386,15 @@ fn shared_source_identity(
     sample_len: usize,
     channels: usize,
     source_rate: u32,
-) -> u64 {
-    let allocation = Arc::as_ptr(samples) as usize as u64;
-    allocation.rotate_left(17)
-        ^ (sample_len as u64).rotate_left(41)
-        ^ (channels as u64)
-        ^ u64::from(source_rate).rotate_left(7)
+) -> SourceIdentity {
+    // Every comparable identity belongs to a LoopBuffer that retains this Arc,
+    // so the allocator cannot reuse the address while the identity is live.
+    SourceIdentity::SharedAllocation {
+        allocation: Arc::as_ptr(samples) as usize,
+        sample_len,
+        channels,
+        source_rate,
+    }
 }
 
 /// Callback-owned state. All storage is prepared by the control thread, so
@@ -787,6 +805,7 @@ mod tests {
     #[test]
     fn shared_loop_identity_is_constant_time_and_tracks_the_allocation() {
         let samples = Arc::new(vec![0.1, -0.1, 0.2, -0.2]);
+        let retained = Arc::downgrade(&samples);
         let first = LoopBuffer::new_shared_at_rate(samples.clone(), 2, 16_000, 48_000);
         let repeated = LoopBuffer::new_shared_at_rate(samples, 2, 16_000, 48_000);
         let equal_content =
@@ -794,6 +813,13 @@ mod tests {
 
         assert_eq!(first.identity, repeated.identity);
         assert_ne!(first.identity, equal_content.identity);
+        assert!(
+            retained.upgrade().is_some(),
+            "the identity keeps its Arc live"
+        );
+        drop(first);
+        drop(repeated);
+        assert!(retained.upgrade().is_none());
     }
 
     #[test]
