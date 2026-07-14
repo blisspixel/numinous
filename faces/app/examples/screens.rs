@@ -12,6 +12,8 @@ use std::path::{Path, PathBuf};
 
 use numinous_core::{Journey, Raster, Room, RoomInput, Scoreboard, Surface, all_rooms};
 
+#[path = "../src/audio_state.rs"]
+mod audio_state;
 #[allow(dead_code)]
 #[path = "../src/feedback.rs"]
 mod feedback;
@@ -75,12 +77,29 @@ struct Difference {
 }
 
 fn save(raster: &Raster, relative: &str, manifest: &mut Vec<String>) {
+    let program = if relative.contains("studio") {
+        audio_state::Program::Studio
+    } else {
+        audio_state::Program::RoomScore
+    };
+    let state = audio_state::describe(program, None, 0.45, false, true, true);
+    save_with_audio(raster, relative, state, manifest);
+}
+
+fn save_with_audio(
+    raster: &Raster,
+    relative: &str,
+    state: hud::AudioState,
+    manifest: &mut Vec<String>,
+) {
     assert_eq!(
         (raster.width(), raster.height()),
         expected_dimensions(relative),
         "{relative} has its declared dimensions"
     );
     assert!(raster.lit_count() > 20, "{relative} is not a blank screen");
+    let mut presented = raster.clone();
+    hud::draw_audio_state(&mut presented, &state, raster.width());
     let path = Path::new(OUTPUT).join(relative);
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).expect("create screenshot directory");
@@ -95,7 +114,7 @@ fn save(raster: &Raster, relative: &str, manifest: &mut Vec<String>) {
     encoder.set_depth(png::BitDepth::Eight);
     let mut writer = encoder.write_header().expect("png header");
     writer
-        .write_image_data(&raster.to_rgba())
+        .write_image_data(&presented.to_rgba())
         .expect("png data");
     manifest.push(relative.replace('\\', "/"));
     println!("wrote {}", path.display());
@@ -167,6 +186,25 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
             expected.insert(format!("overlays/{name}-{label}-{}x{}.png", size.0, size.1));
         }
     }
+    for state in [
+        "room-score",
+        "radio",
+        "radio-off",
+        "muted",
+        "volume-zero",
+        "studio",
+        "background-silent",
+        "no-device",
+    ] {
+        expected.insert(format!(
+            "overlays/audio-{state}-keyboard-default-{}x{}.png",
+            DEFAULT_SIZE.0, DEFAULT_SIZE.1
+        ));
+        expected.insert(format!(
+            "overlays/audio-{state}-controller-small-{}x{}.png",
+            SMALL_SIZE.0, SMALL_SIZE.1
+        ));
+    }
     for phase in ["arrival", "departure"] {
         for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
             expected.insert(format!(
@@ -222,7 +260,7 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
         .into_iter()
         .map(str::to_string),
     );
-    assert_eq!(expected.len(), 259, "documented QA scenario count");
+    assert_eq!(expected.len(), 275, "documented QA scenario count");
     expected
 }
 
@@ -1253,6 +1291,124 @@ fn main() {
             &format!("overlays/level-up-banner-{label}-{width}x{height}.png"),
             &mut manifest,
         );
+    }
+
+    let audio_states = [
+        (
+            "room-score",
+            audio_state::Program::RoomScore,
+            None,
+            0.45,
+            false,
+            true,
+            true,
+            "ROOM SCORE | 45%",
+        ),
+        (
+            "radio",
+            audio_state::Program::Radio,
+            Some("NUMINA FM"),
+            0.45,
+            false,
+            true,
+            true,
+            "RADIO NUMINA FM | 45%",
+        ),
+        (
+            "radio-off",
+            audio_state::Program::RoomScore,
+            None,
+            0.45,
+            false,
+            true,
+            true,
+            "ROOM SCORE | 45%",
+        ),
+        (
+            "muted",
+            audio_state::Program::RoomScore,
+            None,
+            0.45,
+            true,
+            true,
+            true,
+            "ROOM SCORE | MUTED",
+        ),
+        (
+            "volume-zero",
+            audio_state::Program::RoomScore,
+            None,
+            0.0,
+            false,
+            true,
+            true,
+            "ROOM SCORE | VOLUME 0",
+        ),
+        (
+            "studio",
+            audio_state::Program::Studio,
+            None,
+            0.45,
+            false,
+            true,
+            true,
+            "STUDIO | 45%",
+        ),
+        (
+            "background-silent",
+            audio_state::Program::RoomScore,
+            None,
+            0.45,
+            false,
+            false,
+            true,
+            "ROOM SCORE | BACKGROUND SILENT",
+        ),
+        (
+            "no-device",
+            audio_state::Program::RoomScore,
+            None,
+            0.45,
+            false,
+            true,
+            false,
+            "NO SOUND DEVICE",
+        ),
+    ];
+    for (name, program, station, volume, muted, active, output, expected) in audio_states {
+        let state = audio_state::describe(program, station, volume, muted, active, output);
+        assert_eq!(state.label(), expected, "{name} label is semantic");
+        for (mode_name, size, input_mode) in [
+            (
+                "keyboard-default",
+                DEFAULT_SIZE,
+                input_legend::InputMode::KeyboardMouse,
+            ),
+            (
+                "controller-small",
+                SMALL_SIZE,
+                input_legend::InputMode::Controller,
+            ),
+        ] {
+            let mut raster = if name == "studio" {
+                studio_screen_with_mode(size.0, size.1, input_mode)
+            } else {
+                room_screen_with_mode(golden, 0.42, &[], size, 0, false, 7, input_mode)
+            };
+            if name == "radio-off" {
+                let banner = feedback::radio_off();
+                overlays::draw_banner(&mut raster, banner.lines(), size.0, size.1);
+            }
+            save_with_audio(
+                &raster,
+                &format!(
+                    "overlays/audio-{name}-{mode_name}-{}x{}.png",
+                    size.0, size.1
+                ),
+                state,
+                &mut manifest,
+            );
+        }
     }
 
     for (phase_name, phase) in [("arrival", 0.05), ("departure", 0.95)] {

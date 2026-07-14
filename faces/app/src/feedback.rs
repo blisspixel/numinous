@@ -70,11 +70,12 @@ pub(crate) fn fullscreen(label: &str) -> Banner {
     Banner::new(vec![format!("FULLSCREEN {label}")], FULLSCREEN_FRAMES)
 }
 
-pub(crate) fn volume(volume: f32) -> Banner {
-    Banner::new(
-        vec![format!("VOLUME {:.0}%", volume.clamp(0.0, 1.0) * 100.0)],
-        VOLUME_FRAMES,
-    )
+pub(crate) fn volume(volume: f32, muted: bool) -> Banner {
+    let mut lines = vec![format!("VOLUME {:.0}%", volume.clamp(0.0, 1.0) * 100.0)];
+    if muted {
+        lines.push("OUTPUT REMAINS MUTED".to_string());
+    }
+    Banner::new(lines, VOLUME_FRAMES)
 }
 
 pub(crate) fn radio(station_name: &str, station_id: &str, track_count: usize) -> Banner {
@@ -93,6 +94,13 @@ pub(crate) fn radio(station_name: &str, station_id: &str, track_count: usize) ->
         )]
     };
     Banner::new(lines, RADIO_FRAMES)
+}
+
+pub(crate) fn radio_off() -> Banner {
+    Banner::new(
+        vec!["RADIO OFF".to_string(), "ROOM SCORE".to_string()],
+        RADIO_FRAMES,
+    )
 }
 
 pub(crate) fn sound_device_unavailable(error: &str) -> Banner {
@@ -136,12 +144,15 @@ mod tests {
     #[test]
     fn short_status_banners_have_stable_durations() {
         let full = fullscreen("BORDERLESS");
-        let audio = volume(0.734);
+        let audio = volume(0.734, false);
 
         assert_eq!(full.lines(), ["FULLSCREEN BORDERLESS"].as_slice());
         assert_eq!(full.frames_left(), 120);
         assert_eq!(audio.lines()[0], "VOLUME 73%");
         assert_eq!(audio.frames_left(), 90);
+
+        let muted = volume(0.5, true);
+        assert_eq!(muted.lines(), ["VOLUME 50%", "OUTPUT REMAINS MUTED"]);
     }
 
     #[test]
@@ -149,6 +160,7 @@ mod tests {
         let empty = super::radio("Axiom FM", "axiom", 0);
         let ready = super::radio("Axiom FM", "axiom", 3);
         let sound = super::sound_device_unavailable("no device");
+        let off = super::radio_off();
 
         assert_eq!(empty.lines()[0], "RADIO: Axiom FM");
         assert_eq!(empty.lines()[2], "IN A TERMINAL: NUMINOUS TUNE2 AXIOM");
@@ -157,11 +169,13 @@ mod tests {
         assert_eq!(sound.lines()[0], "SOUND DEVICE UNAVAILABLE");
         assert_eq!(sound.lines()[1], "NO DEVICE");
         assert_eq!(sound.frames_left(), 600);
+        assert_eq!(off.lines(), ["RADIO OFF", "ROOM SCORE"]);
+        assert_eq!(off.frames_left(), 180);
     }
 
     #[test]
     fn tick_reports_whether_banner_should_remain_visible() {
-        let mut banner = volume(1.0);
+        let mut banner = volume(1.0, false);
 
         for _ in 0..89 {
             assert!(banner.tick());

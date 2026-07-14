@@ -61,6 +61,11 @@ The full interactive audiovisual experience. The UX is specified in depth across
   room events as the mouse. Bumpers navigate rooms, the D-pad selects and drives games,
   triggers change time speed, the right stick scrubs phase, and controller
   buttons expose back, menu, inspect, reset, pause, era, radio, and game submission.
+  Holding North makes D-pad up or down adjust global volume and makes South
+  toggle global mute; releasing North without a chord keeps the radio action.
+  Keyboard M, [, and ] provide the same global controls. A persistent audio
+  badge reports source, level, and effective silence without relying on a
+  transient banner.
   Input-aware legends cover rooms, all games, The Show, the Journey, and the
   Studio. The controller opens and closes all eight menu destinations; Studio
   formula entry remains honestly keyboard-required.

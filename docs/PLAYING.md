@@ -47,7 +47,7 @@ your hands already know it:
 | Q | swap the visual era (phosphor, 8-bit, vector, modern) |
 | R | reset the current room, including its clock and interactions |
 | F | fullscreen |
-| M | sound on / off |
+| M | global sound on / off, including games, pause, radio, and Studio |
 | B | The Show: sit back, it plays itself |
 | Esc | the menu: all games, Show, Studio, Journey, and every control |
 | G (in the menu) | the quiz: name the math |
@@ -59,7 +59,7 @@ your hands already know it:
 | P | keep the picture: saves the room as a PNG postcard |
 | F9 | save a local hallway-test note in repo-root `logs/` |
 | Y | the radio dial: off, trance, chill, arcade (42 built-in tracks) |
-| - / = | volume down / up (banner shows the level) |
+| [ / ] | global volume down / up; - / = are aliases outside Studio |
 | mouse | click munch cells and quiz choices directly |
 | controller left stick / south | move the visible virtual hand / touch or confirm |
 | controller bumpers / D-pad | change rooms / choose and navigate games |
@@ -67,6 +67,8 @@ your hands already know it:
 | controller Start / East / Select | menu / back / inspect |
 | controller L3 / R3 | reset room / pause or resume |
 | controller West / North | visual era / radio or available submit action |
+| hold controller North + D-pad up / down | global volume up / down |
+| hold controller North + South | global sound on / off |
 | Tab | the Studio: type math, watch and hear it live |
 | Esc | menu |
 
@@ -77,7 +79,10 @@ open overlay. A clean install always has the 32-step stereo programmatic
 soundtrack. Room changes crossfade, and volume or window focus changes do not
 restart it. Start pauses a live game behind the menu without discarding its
 state. On restore, radio rejoins the wall-clock broadcast position before audio
-fades back in. Radio stations appear only when compatible local tracks are
+fades back in. Studio keeps ownership of formula audio through focus changes
+and radio boundaries, then rejoins a selected station live when Studio closes.
+A persistent top-right badge names the active source, level, mute, zero-volume,
+background-silent, or no-device state. Radio stations appear only when compatible local tracks are
 present. Visible controller legends use generic directional button names, not
 platform-specific glyphs. The Studio can be entered and left with a controller,
 but formula entry requires a keyboard and the footer states that boundary.

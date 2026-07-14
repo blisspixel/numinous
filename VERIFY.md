@@ -44,21 +44,24 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 1,282 all-target test cases pass, 93.41% region
-cover, and 93.19% line cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 1,296 all-target test cases pass, 93.46% region
+cover, and 93.25% line cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
 
-The release scripts also regenerate `renders/qa-app/`, a 259-screen app matrix.
+The release scripts also regenerate `renders/qa-app/`, a 275-screen app matrix.
 Every catalog room has a deterministic opening frame, arrival card, immediate
 pointer response, same-phase delayed-gesture baseline and response, compact
 arrival card, and compact delayed response.
 The matrix also covers every app game state, default and compact overlays,
 production Studio rendering, both ends of The Show, Times Tables phase
 stability, the Mandelbrot reset flow, a persistent Life sequence from opening
-through launch, generation 4, generation 141, and exact reset, and 14 compact
-controller or pause receipts spanning rooms, overlays, and game results.
+through launch, generation 4, generation 141, and exact reset, 14 compact
+controller or pause receipts spanning rooms, overlays, and game results, and 16
+default or compact audio-state receipts. Those audio receipts cover room score,
+radio, radio-off fallback, Studio, mute, zero volume, background silence, and a
+missing output device.
 Generation removes stale output,
 checks the exact unique scenario inventory, rejects blank or wrong-sized frames,
 and gives every room a declared click, drag-release, repeated-action, or boundary
@@ -100,7 +103,7 @@ sonification riding on top), and a menu explaining itself (Esc brings it
 back). Game-native controls: A/D or arrows change rooms, 1-9 jump straight to
 one, W/S run time faster or slower, drag or mouse-wheel scrubs, E inspects the
 math, Q swaps the visual era (phosphor, 8-bit, vector, modern), R restarts the
-sweep, P saves the current room frame as a PNG postcard, F goes fullscreen, M mutes, B starts The Show (lean back), G deals the
+sweep, P saves the current room frame as a PNG postcard, F goes fullscreen, M mutes, [ and ] change global volume, B starts The Show (lean back), G deals the
 quiz (name the math, right in the window), C plays today's Munch board with a
 cursor (WASD moves, Space eats, Enter grades), N plays Nim against the Order
 (aim with W/S and A/D, Enter takes; win and the xor secret shows), T runs the

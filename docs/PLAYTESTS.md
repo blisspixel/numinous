@@ -837,3 +837,66 @@ coverage, Clippy with warnings denied, locked build, house style, and
 supply-chain policy. The evidence proves deterministic causal mechanics and
 captured control truth. It does not prove that a new player will enjoy the room
 or understand Conway's rules without observation.
+
+---
+
+# The eleventh round (July 14, 2026): audio-state truth
+
+Three independent QA groups reviewed the App's sound state from different
+evidence. One traced source ownership and radio transitions. One audited the
+controller chord state machine and mode barriers. One inspected first-contact
+and compact screenshots. These were structured simulated reviews backed by
+code, focused tests, and rendered receipts, not claims about human listening
+comfort or participant preference.
+
+## Reproduced findings
+
+- Studio formula audio could be replaced by a selected station after focus
+  return or a radio track boundary, even while Studio remained open.
+- Mute and volume were not global. Several games and pause intercepted the
+  keyboard route, while controllers had no route at all.
+- Turning the radio off could leave the former station in the native title and
+  transient feedback. The App also lacked one persistent display of the source,
+  level, and effective reason for silence.
+- Compact room copy could truncate the only mute confirmation. A later checker
+  also found that focus loss did not request the redraw needed to display
+  background silence.
+- The first audio screenshot set constructed presentation state directly. It
+  could prove label geometry but not the production runtime mapping. The first
+  compact controller chord copy abbreviated North without defining it or saying
+  that it must be held. The default-size badge was too small for a persistent
+  silence explanation.
+- Plain North was advertised as radio on the root controller help screen, but
+  the route discarded it while that screen was open.
+
+## What changed
+
+The App now owns one explicit room-score, Studio, or radio program. Studio
+retains formula audio through focus and station boundaries. On exit it rejoins
+the selected station at the live wall-clock position. Radio off, an unavailable
+playlist, or a failed boundary reload restores the room score and title.
+
+M, [, and ] are global keyboard controls. The existing - and = volume aliases
+remain outside Studio so formula input stays intact. Holding controller North
+with D-pad up or down changes volume, and holding North with South toggles mute;
+a plain North release keeps radio or game-submit behavior. Focus loss clears
+unfinished chords and requests a state redraw. The root help menu now honors
+the radio action without allowing a modal game menu to submit hidden input.
+
+One shared production mapper derives the persistent badge from program,
+station, volume, mute, focus, and output-device availability. Both the live App
+and release receipt generator use it. The badge distinguishes normal level,
+mute, zero volume, background silence, and no sound device. It renders larger
+at the default viewport while staying bounded at compact size. The exact
+275-screen matrix adds 16 receipts covering eight audio states at both sizes.
+
+Deterministic mapping, controller chord, mode-routing, title fallback, source
+ownership, focus, badge geometry, semantic-label, and screenshot-inventory
+checks cover these claims. The evidence establishes state truth and control
+reachability. It does not establish that the soundtrack is pleasant during a
+long session, which remains a musician-led listening gate.
+
+The complete local release gate passes with 1,296 all-target test cases, 93.46
+percent region coverage, 93.25 percent line coverage, the exact 275-screen App
+matrix, Clippy with warnings denied, locked build, house style, and supply-chain
+policy.

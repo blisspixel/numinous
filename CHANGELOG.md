@@ -6,6 +6,21 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The native App now has one explicit audio source of truth for room score,
+  Studio, or radio. Studio retains formula audio across focus returns and radio
+  boundaries, then rejoins a selected station at its live wall-clock position
+  only after Studio closes. Failed station reloads and radio-off restore the
+  room score without a stale title or banner. Global keyboard controls use M
+  for mute and [ or ] for master volume, with - and = retained outside Studio;
+  controller users hold North with D-pad up or down for volume or with South
+  for mute, while a plain North release keeps its existing radio or submit
+  action. The controls remain active in rooms, games, pause, radio, and Studio.
+  A persistent badge reports the effective source, numeric level, and mute,
+  zero-volume, background-silent, or missing-device state. Release QA grows to
+  275 screens with 16 dedicated audio-state receipts at default and compact
+  sizes, plus semantic and routing regressions. The complete local gate passes
+  1,296 all-target test cases at 93.46 percent region and 93.25 percent line
+  coverage.
 - Game of Life is now a causal persistent visit in the native App. A settled
   deterministic soup advances on a bounded B3/S23 clock for the whole visit,
   including beyond the former generation-140 phase wrap. Each mouse or

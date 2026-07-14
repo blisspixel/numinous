@@ -123,7 +123,11 @@ and says so directly.
 
 The programmatic room score now uses a 32-step stereo arrangement, smooth source
 crossfades, control-thread buffer retirement, focus-safe gain, and wall-clock
-radio resynchronization instead of restarting or retaining stale loops.
+radio resynchronization instead of restarting or retaining stale loops. One
+persistent badge names the effective source, master level, and why output is
+silent. Mute and volume are global across rooms, games, pause, radio, and
+Studio, with keyboard and controller routes. Studio owns its formula sound
+until exit, then rejoins a selected station at the live position.
 This is an alpha-tagged prerelease. Capability breadth is ahead of release
 maturity because the 0.2 Flagship Proof gate, including the real hallway
 evidence, remains open.
@@ -135,14 +139,16 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 1,282 passing all-target test cases, 93.41% region coverage and
-93.19% line coverage with an enforced 80% line floor, Clippy with warnings
+The current local gate has 1,296 passing all-target test cases, 93.46% region coverage and
+93.25% line coverage with an enforced 80% line floor, Clippy with warnings
 denied, and dependency policy checks. Release QA also regenerates an exact
-259-screen App matrix with per-room interaction scenarios, semantic checks,
+275-screen App matrix with per-room interaction scenarios, semantic checks,
 and coarse perceptual response thresholds, including a regression that rejects
 four isolated corner markers as a meaningful interaction. Fourteen compact
 receipts cover controller legends and visible pause states through production
-render paths, including a Life controller receipt. The latest
+render paths, including a Life controller receipt. Sixteen additional receipts
+cover the global audio sources, levels, and effective-silence states at default
+and compact sizes. The latest
 full-roster QA pass applied all 42 documented simulated review lenses once,
 split across first contact, interaction and truth, and games plus agent faces.
 It fixed reproduced App, CLI, MCP, Studio, and mathematical-copy defects; the

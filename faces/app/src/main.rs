@@ -20,6 +20,7 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::{Icon, Window, WindowId};
 
+mod audio_state;
 mod controls;
 mod feedback;
 mod game_draw;
@@ -37,6 +38,7 @@ mod room_input;
 mod save_gate;
 mod studio_panel;
 
+use crate::audio_state::Program as AudioProgram;
 use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_total};
 
 /// Near-black background (matches the `Raster` stage), packed `0x00RRGGBB`.
@@ -165,8 +167,10 @@ struct App {
     era: numinous_core::Era,
     /// Sound off ('m' toggles).
     muted: bool,
-    /// Master volume, 0.0 to 1.0 ('-' and '=' step it).
+    /// Master volume, 0.0 to 1.0 ('[' and ']' step it globally).
     volume: f32,
+    /// The program that owns the player source, independent of focus and gain.
+    audio_program: AudioProgram,
     /// The help overlay ('h' toggles; shown at launch so nobody is lost).
     show_help: bool,
     /// Start in fullscreen (from --fullscreen / -f arg or env). Supports user's request for full screen view.
@@ -272,6 +276,7 @@ impl App {
             era: numinous_core::Era::default(),
             muted: false,
             volume: 0.45,
+            audio_program: AudioProgram::RoomScore,
             show_help: true,
             start_fullscreen: false,
             frame: 0,
@@ -832,7 +837,11 @@ impl App {
         self.show_help = false;
         self.show_journey = false;
         self.studio = true;
+        self.audio_program = AudioProgram::Studio;
         self.studio_reparse();
+        if let Some(window) = &self.window {
+            window.set_title(&self.title());
+        }
     }
 
     fn toggle_show(&mut self) {
@@ -979,10 +988,45 @@ impl App {
 
     fn change_volume(&mut self, step: f32) {
         self.volume = (self.volume + step).clamp(0.0, 1.0);
-        self.banner = Some(feedback::volume(self.volume));
+        self.banner = Some(feedback::volume(self.volume, self.muted));
+        self.apply_master_gain();
+    }
+
+    fn apply_master_gain(&self) {
         if let Some(player) = &self.player {
             player.set_master_gain(if self.muted { 0.0 } else { self.volume });
         }
+    }
+
+    fn toggle_mute(&mut self) {
+        self.muted = !self.muted;
+        self.apply_master_gain();
+    }
+
+    fn handle_global_audio_key(&mut self, key: &Key, repeat: bool) -> bool {
+        let Key::Character(text) = key else {
+            return false;
+        };
+        if text.eq_ignore_ascii_case("m") {
+            self.input_mode = input_legend::InputMode::KeyboardMouse;
+            if !repeat {
+                self.toggle_mute();
+            }
+            return true;
+        }
+        let step = match text.as_str() {
+            "[" => Some(-0.1),
+            "]" => Some(0.1),
+            "-" if !self.studio => Some(-0.1),
+            "=" if !self.studio => Some(0.1),
+            _ => None,
+        };
+        if let Some(step) = step {
+            self.input_mode = input_legend::InputMode::KeyboardMouse;
+            self.change_volume(step);
+            return true;
+        }
+        false
     }
 
     /// A click lands in the games: munch toggles the cell, the quiz answers.
@@ -1282,7 +1326,11 @@ impl App {
     }
 
     fn gamepad_confirm_secondary(&mut self) {
-        if self.show_help || self.arcade.is_some() || self.quiz.is_some() || self.studio {
+        if self.arcade.is_some()
+            || self.quiz.is_some()
+            || self.studio
+            || self.show_help && self.modal_mode_active()
+        {
             return;
         }
         if self.gauntlet.is_some() {
@@ -1303,6 +1351,24 @@ impl App {
     }
 
     fn handle_gamepad_command(&mut self, command: gamepad::Command) {
+        match command {
+            gamepad::Command::ToggleMute => {
+                self.input_mode = input_legend::InputMode::Controller;
+                self.toggle_mute();
+                return;
+            }
+            gamepad::Command::VolumeDown => {
+                self.input_mode = input_legend::InputMode::Controller;
+                self.change_volume(-0.1);
+                return;
+            }
+            gamepad::Command::VolumeUp => {
+                self.input_mode = input_legend::InputMode::Controller;
+                self.change_volume(0.1);
+                return;
+            }
+            _ => {}
+        }
         if self.paused
             && !matches!(
                 command,
@@ -1367,6 +1433,9 @@ impl App {
                 self.t = (self.t + delta).rem_euclid(1.0);
             }
             gamepad::Command::CancelPointer => self.clear_pointer_state(),
+            gamepad::Command::ToggleMute
+            | gamepad::Command::VolumeDown
+            | gamepad::Command::VolumeUp => {}
             gamepad::Command::PreviousRoom
             | gamepad::Command::NextRoom
             | gamepad::Command::PhaseDelta(_) => {}
@@ -1382,6 +1451,10 @@ impl App {
         self.radio_until = None;
         let Some(i) = self.radio else {
             self.update_audio();
+            if let Some(window) = &self.window {
+                window.set_title(&self.title());
+            }
+            self.banner = Some(feedback::radio_off());
             return;
         };
         let st = &numinous_core::STATIONS[i];
@@ -1389,34 +1462,38 @@ impl App {
         self.radio_paths = radio_cache::station_tracks(&dir, st.id);
         // Join the broadcast live: the wall clock decides which track is on.
         let _ = self.sync_radio_to_wall_clock();
-        if let Some(window) = &self.window {
-            let st = &numinous_core::STATIONS[i];
-            window.set_title(&format!(
-                "Numinous  |  radio: {}{}",
-                st.name,
-                if self.radio_paths.is_empty() {
-                    "  (no tracks yet: numinous tune2)"
-                } else {
-                    ""
-                }
-            ));
-        }
         // The dial speaks on screen, especially when the station is silent.
         let st = &numinous_core::STATIONS[i];
         self.banner = Some(feedback::radio(st.name, st.id, self.radio_paths.len()));
         self.update_audio();
+        if let Some(window) = &self.window {
+            window.set_title(&self.title());
+        }
     }
 
     fn sync_radio_at(&mut self, now_secs: f64) -> bool {
+        if self.studio {
+            return false;
+        }
         if self.radio.is_none() {
+            self.radio_track = Arc::new(Vec::new());
+            self.radio_until = None;
+            self.update_audio();
             return false;
         }
         let Some((index, position)) = radio_cache::live_position(&self.radio_paths, now_secs)
         else {
+            self.radio_track = Arc::new(Vec::new());
+            self.radio_until = None;
+            self.update_audio();
             return false;
         };
         self.radio_index = index;
-        self.radio_play_or_advance(position)
+        let playing = self.radio_play_or_advance(position);
+        if !playing {
+            self.update_audio();
+        }
+        playing
     }
 
     fn sync_radio_to_wall_clock(&mut self) -> bool {
@@ -1467,6 +1544,7 @@ impl App {
         self.radio_track = loaded.stereo;
         self.radio_track_rate = loaded.sample_rate;
         self.radio_until = Some(std::time::Instant::now() + loaded.remaining);
+        self.audio_program = AudioProgram::Radio;
         if let Some(player) = &self.player {
             player.set_shared_stereo_at_rate(self.radio_track.clone(), self.radio_track_rate);
             player.set_master_gain(if self.muted { 0.0 } else { self.volume });
@@ -1529,7 +1607,8 @@ impl App {
         self.set_studio_sound(spec);
     }
 
-    fn set_studio_sound(&self, spec: Option<numinous_core::SoundSpec>) {
+    fn set_studio_sound(&mut self, spec: Option<numinous_core::SoundSpec>) {
+        self.audio_program = AudioProgram::Studio;
         let Some(player) = &self.player else {
             return;
         };
@@ -1541,27 +1620,31 @@ impl App {
 
     fn exit_studio(&mut self) {
         self.studio = false;
-        if self.radio.is_some() && !self.radio_track.is_empty() {
-            if let Some(player) = &self.player {
-                player.set_shared_stereo_at_rate(self.radio_track.clone(), self.radio_track_rate);
-                player.set_master_gain(if self.muted { 0.0 } else { self.volume });
-            }
-        } else {
+        if self.radio.is_none() || !self.sync_radio_to_wall_clock() {
             self.update_audio();
+        }
+        if let Some(window) = &self.window {
+            window.set_title(&self.title());
         }
     }
 
     /// Render the current room's stable score and crossfade to it.
     fn update_audio(&mut self) {
+        if self.studio {
+            self.audio_program = AudioProgram::Studio;
+            self.apply_master_gain();
+            return;
+        }
+        if self.radio.is_some() && !self.radio_track.is_empty() {
+            self.audio_program = AudioProgram::Radio;
+            self.apply_master_gain();
+            return;
+        }
+        self.audio_program = AudioProgram::RoomScore;
         let Some(player) = &self.player else {
             return;
         };
         player.set_master_gain(if self.muted { 0.0 } else { self.volume });
-        // Radio owns the source while it is on. Gain changes and focus changes
-        // never replace it, so its playhead and wall-clock schedule stay true.
-        if self.radio.is_some() && !self.radio_track.is_empty() {
-            return;
-        }
         if self.tune.is_empty() {
             self.tune = match self.rooms[self.current].motif() {
                 Some(motif) => motif.arrangement().render_stereo(player.sample_rate()),
@@ -1576,7 +1659,13 @@ impl App {
     }
 
     fn title(&self) -> String {
-        if self.the_show {
+        if self.audio_program == AudioProgram::Radio
+            && let Some(station) = self
+                .radio
+                .and_then(|index| numinous_core::STATIONS.get(index))
+        {
+            format!("Numinous  |  radio: {}", station.name)
+        } else if self.the_show {
             format!(
                 "Numinous  |  The Show  |  {}",
                 self.rooms[self.current].meta().title
@@ -1844,10 +1933,24 @@ impl App {
             overlays::draw_pause_overlay(&mut raster, width, height, self.input_mode);
         }
         self.draw_banner_on_raster(&mut raster, width, height);
+        hud::draw_audio_state(&mut raster, &self.audio_state(), width);
         let (rw, rh) = (raster.width(), raster.height());
         let mut rgba = raster.to_rgba();
         self.era.apply(&mut rgba, rw, rh);
         self.blit(&rgba, rw, rh, width, height);
+    }
+
+    fn audio_state(&self) -> hud::AudioState {
+        audio_state::describe(
+            self.audio_program,
+            self.radio
+                .and_then(|index| numinous_core::STATIONS.get(index))
+                .map(|station| station.name),
+            self.volume,
+            self.muted,
+            self.window_active,
+            self.player.is_some(),
+        )
     }
 
     fn draw_banner_on_raster(&self, raster: &mut Raster, width: usize, height: usize) {
@@ -1892,8 +1995,11 @@ impl ApplicationHandler for App {
             self.window_active = true;
             self.last_tick = Instant::now();
             self.gamepad.activate();
-            if self.radio.is_some() {
+            if self.radio.is_some() && !self.studio {
                 let _ = self.sync_radio_to_wall_clock();
+                if let Some(window) = &self.window {
+                    window.set_title(&self.title());
+                }
             }
             if let Some(player) = &self.player {
                 player.set_active(true);
@@ -1992,6 +2098,9 @@ impl ApplicationHandler for App {
                 ..
             } => {
                 self.clear_pointer_state();
+                if self.handle_global_audio_key(&logical_key, repeat) {
+                    return;
+                }
                 if self.paused {
                     if logical_key == Key::Named(NamedKey::Space) {
                         self.input_mode = input_legend::InputMode::KeyboardMouse;
@@ -2150,15 +2259,6 @@ impl ApplicationHandler for App {
                                 self.banner = Some(feedback::fullscreen(&label));
                             }
                         }
-                        // Volume steps: '-' softer, '=' louder.
-                        Key::Character(c) if c.as_str() == "-" || c.as_str() == "=" => {
-                            let step = if c.as_str() == "-" { -0.1 } else { 0.1 };
-                            self.change_volume(step);
-                        }
-                        Key::Character(c) if c.as_str() == "m" => {
-                            self.muted = !self.muted;
-                            self.update_audio();
-                        }
                         Key::Character(c) if c.as_str() == "h" => {
                             self.show_help = !self.show_help;
                         }
@@ -2285,13 +2385,19 @@ impl ApplicationHandler for App {
                 if let Some(player) = &self.player {
                     player.set_active(false);
                 }
+                if let Some(window) = &self.window {
+                    window.request_redraw();
+                }
             }
             WindowEvent::Focused(true) => {
                 self.window_active = true;
                 self.last_tick = Instant::now();
                 self.gamepad.activate();
-                if self.radio.is_some() {
+                if self.radio.is_some() && !self.studio {
                     let _ = self.sync_radio_to_wall_clock();
+                    if let Some(window) = &self.window {
+                        window.set_title(&self.title());
+                    }
                 }
                 if let Some(player) = &self.player {
                     player.set_active(true);
@@ -2392,11 +2498,15 @@ impl ApplicationHandler for App {
         // A station is a wall-clock broadcast, independent of room pause or a
         // modal menu. Rejoin the exact live position at every track boundary.
         if self.radio.is_some()
+            && !self.studio
             && let Some(until) = self.radio_until
             && Instant::now() >= until
             && !self.radio_paths.is_empty()
+            && !self.sync_radio_to_wall_clock()
         {
-            let _ = self.sync_radio_to_wall_clock();
+            if let Some(window) = &self.window {
+                window.set_title(&self.title());
+            }
         }
         if let Some(window) = &self.window {
             window.request_redraw();
@@ -2554,8 +2664,8 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{
-        App, TestStateRoot, app_icon, bounded_tick_seconds, julia_gpu_c, julia_gpu_vertical_span,
-        live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache,
+        App, AudioProgram, TestStateRoot, app_icon, bounded_tick_seconds, julia_gpu_c,
+        julia_gpu_vertical_span, live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache,
     };
     use crate::input_legend::{InputMode, MenuChoice};
     use std::sync::Arc;
@@ -3497,6 +3607,154 @@ mod tests {
         assert_eq!(banner.lines()[0], "VOLUME 55%");
         assert_eq!(app.radio_track.as_slice(), [0.25, -0.25, 0.5, -0.5]);
         let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn global_audio_keys_work_in_every_mode_without_consuming_studio_text() {
+        let mut modes = Vec::new();
+
+        let mut quiz = headless("numinous_app_test_audio_quiz.txt");
+        quiz.quiz_next();
+        modes.push(quiz);
+
+        let mut munch = headless("numinous_app_test_audio_munch.txt");
+        munch.munch_start();
+        modes.push(munch);
+
+        let mut nim = headless("numinous_app_test_audio_nim.txt");
+        nim.nim_start();
+        modes.push(nim);
+
+        let mut gauntlet = headless("numinous_app_test_audio_gauntlet.txt");
+        gauntlet.gauntlet_start();
+        modes.push(gauntlet);
+
+        let mut arcade = headless("numinous_app_test_audio_arcade.txt");
+        arcade.arcade_start();
+        modes.push(arcade);
+
+        let mut paused = headless("numinous_app_test_audio_paused.txt");
+        paused.paused = true;
+        modes.push(paused);
+
+        for app in &mut modes {
+            let mode = app.playtest_mode();
+            assert!(app.handle_global_audio_key(&Key::Character("m".into()), false));
+            assert!(app.muted, "mute works in {mode}");
+            assert!(app.handle_global_audio_key(&Key::Character("]".into()), false));
+            assert!(
+                (app.volume - 0.55).abs() < f32::EPSILON,
+                "volume works in {mode}"
+            );
+            assert_eq!(app.playtest_mode(), mode, "audio keys preserve {mode}");
+        }
+
+        let mut studio = headless("numinous_app_test_audio_studio.txt");
+        studio.enter_studio();
+        let source = studio.studio_panel.source_for_test().to_string();
+        assert!(studio.handle_global_audio_key(&Key::Character("m".into()), false));
+        assert!(studio.handle_global_audio_key(&Key::Character("[".into()), false));
+        assert_eq!(studio.studio_panel.source_for_test(), source);
+        assert!(!studio.handle_global_audio_key(&Key::Character("-".into()), false));
+        assert_eq!(studio.audio_program, AudioProgram::Studio);
+    }
+
+    #[test]
+    fn controller_audio_commands_are_global_while_paused_and_in_studio() {
+        let mut app = headless("numinous_app_test_controller_audio.txt");
+        app.enter_studio();
+        app.paused = true;
+        let source = app.studio_panel.source_for_test().to_string();
+
+        app.handle_gamepad_command(crate::gamepad::Command::ToggleMute);
+        app.handle_gamepad_command(crate::gamepad::Command::VolumeUp);
+
+        assert!(app.muted);
+        assert!((app.volume - 0.55).abs() < f32::EPSILON);
+        assert_eq!(app.audio_program, AudioProgram::Studio);
+        assert_eq!(app.studio_panel.source_for_test(), source);
+        assert_eq!(app.input_mode, InputMode::Controller);
+    }
+
+    #[test]
+    fn controller_radio_action_works_from_the_root_help_menu() {
+        let mut app = headless("numinous_app_test_controller_menu_radio.txt");
+        app.show_help = true;
+        app.radio = Some(numinous_core::STATIONS.len() - 1);
+
+        app.handle_gamepad_command(crate::gamepad::Command::CycleRadio);
+
+        assert!(app.show_help);
+        assert!(app.radio.is_none());
+        assert_eq!(
+            app.banner.as_ref().expect("radio off banner").lines(),
+            ["RADIO OFF", "ROOM SCORE"]
+        );
+    }
+
+    #[test]
+    fn studio_owns_audio_until_exit_then_rejoins_live_radio() {
+        let path =
+            std::env::temp_dir().join(format!("numinous_studio_radio_{}.wav", std::process::id()));
+        write_test_wav(&path, 2, 2);
+        let mut app = headless("numinous_app_test_studio_radio.txt");
+        app.radio = Some(0);
+        app.radio_paths = vec![path.clone()];
+        app.radio_index = 0;
+        app.radio_track = Arc::new(vec![0.25, -0.25]);
+        app.audio_program = AudioProgram::Radio;
+
+        app.enter_studio();
+        let selected_radio = app.radio_track.clone();
+        assert_eq!(app.audio_program, AudioProgram::Studio);
+        assert!(!app.sync_radio_at(1.0));
+        assert!(Arc::ptr_eq(&app.radio_track, &selected_radio));
+        app.update_audio();
+        assert_eq!(app.audio_program, AudioProgram::Studio);
+
+        app.exit_studio();
+        assert_eq!(app.audio_program, AudioProgram::Radio);
+        assert!(!app.radio_track.is_empty());
+        assert!(app.radio_until.is_some());
+        assert!(app.title().contains("radio:"));
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn failed_radio_resync_restores_the_room_score_source() {
+        let mut app = headless("numinous_app_test_radio_resync_failure.txt");
+        app.radio = Some(0);
+        app.radio_paths = vec![std::env::temp_dir().join("numinous_missing_radio_track.wav")];
+        app.radio_track = Arc::new(vec![0.25, -0.25]);
+        app.radio_until = Some(Instant::now());
+        app.audio_program = AudioProgram::Radio;
+
+        assert!(!app.sync_radio_at(1.0));
+
+        assert_eq!(app.audio_program, AudioProgram::RoomScore);
+        assert!(app.radio_track.is_empty());
+        assert!(app.radio_until.is_none());
+        assert!(!app.title().contains("radio:"));
+    }
+
+    #[test]
+    fn radio_off_restores_room_score_title_and_feedback_together() {
+        let mut app = headless("numinous_app_test_radio_off.txt");
+        app.radio = Some(numinous_core::STATIONS.len() - 1);
+        app.radio_track = Arc::new(vec![0.25, -0.25]);
+        app.audio_program = AudioProgram::Radio;
+        assert!(app.title().contains("radio:"));
+
+        app.radio = None;
+        app.tune_in();
+
+        assert_eq!(app.audio_program, AudioProgram::RoomScore);
+        assert!(!app.title().contains("radio:"));
+        assert_eq!(
+            app.banner.as_ref().expect("radio off banner").lines(),
+            ["RADIO OFF", "ROOM SCORE"]
+        );
+        assert_eq!(app.audio_state().label(), "NO SOUND DEVICE");
     }
 
     #[test]

@@ -2,6 +2,70 @@ use numinous_core::{Raster, Room, RoomInput, Surface};
 
 use crate::input_legend::{self, InputMode};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum AudioSource {
+    RoomScore,
+    Studio,
+    Radio(&'static str),
+    NoDevice,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct AudioState {
+    source: AudioSource,
+    volume_percent: u8,
+    muted: bool,
+    active: bool,
+}
+
+impl AudioState {
+    pub(crate) fn new(source: AudioSource, volume_percent: u8, muted: bool, active: bool) -> Self {
+        Self {
+            source,
+            volume_percent: volume_percent.min(100),
+            muted,
+            active,
+        }
+    }
+
+    pub(crate) fn no_device() -> Self {
+        Self::new(AudioSource::NoDevice, 0, false, false)
+    }
+
+    pub(crate) fn label(self) -> String {
+        let source = match self.source {
+            AudioSource::RoomScore => "ROOM SCORE".to_string(),
+            AudioSource::Studio => "STUDIO".to_string(),
+            AudioSource::Radio(station) => format!("RADIO {}", station.to_uppercase()),
+            AudioSource::NoDevice => return "NO SOUND DEVICE".to_string(),
+        };
+        if self.muted {
+            format!("{source} | MUTED")
+        } else if self.volume_percent == 0 {
+            format!("{source} | VOLUME 0")
+        } else if !self.active {
+            format!("{source} | BACKGROUND SILENT")
+        } else {
+            format!("{source} | {}%", self.volume_percent)
+        }
+    }
+}
+
+pub(crate) fn draw_audio_state(raster: &mut Raster, state: &AudioState, width: usize) {
+    let scale = if width >= 720 { 2 } else { 1 };
+    let level_reserve = if scale == 2 { 110 } else { 0 };
+    let label = fit_footer_text(
+        &state.label(),
+        width.saturating_sub(20 + level_reserve) as i32,
+        scale,
+    );
+    let x = width
+        .saturating_sub(label.chars().count() * 6 * scale as usize)
+        .saturating_sub(level_reserve)
+        .saturating_sub(10) as i32;
+    numinous_core::draw_text(raster, &label, x, 2, scale, '.');
+}
+
 pub(crate) struct RoomChrome {
     pub(crate) t: f64,
     pub(crate) room_card: u64,
@@ -357,6 +421,65 @@ mod tests {
         assert_eq!(fit_footer_text("ABCDEFGHIJ", 42, 1), "ABCD...");
         assert_eq!(fit_footer_text("ABC", 18, 1), "ABC");
         assert_eq!(fit_footer_text("LONG", 12, 1), "..");
+    }
+
+    #[test]
+    fn audio_state_labels_name_source_level_and_effective_silence() {
+        let cases = [
+            (
+                AudioState::new(AudioSource::RoomScore, 45, false, true),
+                "ROOM SCORE | 45%",
+            ),
+            (
+                AudioState::new(AudioSource::Studio, 70, false, true),
+                "STUDIO | 70%",
+            ),
+            (
+                AudioState::new(AudioSource::Radio("NUMINA FM"), 30, false, true),
+                "RADIO NUMINA FM | 30%",
+            ),
+            (
+                AudioState::new(AudioSource::RoomScore, 45, true, true),
+                "ROOM SCORE | MUTED",
+            ),
+            (
+                AudioState::new(AudioSource::RoomScore, 0, false, true),
+                "ROOM SCORE | VOLUME 0",
+            ),
+            (
+                AudioState::new(AudioSource::RoomScore, 45, false, false),
+                "ROOM SCORE | BACKGROUND SILENT",
+            ),
+            (AudioState::no_device(), "NO SOUND DEVICE"),
+        ];
+
+        for (state, expected) in cases {
+            assert_eq!(state.label(), expected);
+        }
+    }
+
+    #[test]
+    fn audio_state_badge_is_visible_and_bounded_at_supported_sizes() {
+        for (width, height) in [(360, 240), (900, 700)] {
+            let mut raster = Raster::with_accent(width, height, [120, 220, 190]);
+            let state = AudioState::new(AudioSource::Radio("EIGHT BIT SUNRISE"), 45, false, true);
+            draw_audio_state(&mut raster, &state, width);
+
+            let rgba = raster.to_rgba();
+            let mut changed = Vec::new();
+            for (index, pixel) in rgba.chunks_exact(4).enumerate() {
+                if pixel[..3] != [10, 11, 15] {
+                    changed.push((index % width, index / width));
+                }
+            }
+            assert!(!changed.is_empty());
+            assert!(changed.iter().all(|&(x, y)| x < width && y < 20));
+            assert!(changed.iter().any(|&(x, _)| x >= width / 2));
+            if width >= 720 {
+                assert!(changed.iter().any(|&(_, y)| y >= 9));
+                assert!(changed.iter().all(|&(x, _)| x < width - 110));
+            }
+        }
     }
 
     #[test]
