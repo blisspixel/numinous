@@ -8,17 +8,18 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-14
 
-- **Enforced now:** formatting, Clippy with warnings denied, 1,296 all-target
+- **Enforced now:** formatting, Clippy with warnings denied, 1,307 all-target
   test cases, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 93.46%
-  regions and 93.25% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 93.49%
+  regions and 93.28% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
-  three faces, and a release-generated 275-screen visual QA matrix. Every room
-  is captured at a deterministic opening state, arrival, immediate interaction,
-  same-phase delayed baseline and gesture, compact arrival, and compact delayed
-  states. Games, overlays, The Show, production Studio rendering, and reset and
+  three faces, and a release-generated 341-screen visual QA matrix. Every room
+  is captured at default and compact sizes in deterministic opening, arrival,
+  immediate-interaction, and same-phase delayed-interaction states. Default
+  room receipts are 900 by 700 and compact room receipts are 360 by 240. Games,
+  overlays, The Show, production Studio rendering, and reset and
   phase flows have dedicated captures. Life also has a five-frame persistent
   sequence through launch, generation 4, generation 141, and exact reset.
   Fourteen compact receipts add
@@ -28,9 +29,11 @@ built, so an aspiration is never mistaken for a result.
   missing output device at default and compact sizes. Each room has an explicit click,
   drag-release, repeated-action, or boundary scenario. The generator validates
   ordered finite input, release closure, interaction-aware status or action
-  semantics, at least 100 changed pixels, at least 1% changed-region support,
-  minimum support density, a cluster of at least two adjacent 32-pixel spatial
-  tiles, and minimum mean color change. A direct regression proves that four
+  semantics, at least 100 changed pixels at default size and 32 at compact
+  size, at least 1% changed-region support, minimum support density, a cluster
+  of at least two adjacent 32-pixel spatial tiles, and minimum mean color
+  change. A cross-process single-writer guard prevents competing generators
+  from replacing the same evidence directory. A direct regression proves that four
   isolated 10 by 10 corner markers do not satisfy the spatial gate. These are
   coarse renderer-path checks, not certification of subjective visual quality.
   Production input routing has separate unit tests; native operating system

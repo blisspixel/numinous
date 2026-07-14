@@ -128,6 +128,10 @@ persistent badge names the effective source, master level, and why output is
 silent. Mute and volume are global across rooms, games, pause, radio, and
 Studio, with keyboard and controller routes. Studio owns its formula sound
 until exit, then rejoins a selected station at the live position.
+The separate `JOURNEY LV` label is accumulated local-profile progress, never a
+room difficulty rating. Cult of Pi now opens on the canonical `3.14159...`
+prefix and explains its finite-channel premise through visible faults and
+bounded exact patches that the player can restore and hold.
 This is an alpha-tagged prerelease. Capability breadth is ahead of release
 maturity because the 0.2 Flagship Proof gate, including the real hallway
 evidence, remains open.
@@ -139,11 +143,12 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 1,296 passing all-target test cases, 93.46% region coverage and
-93.25% line coverage with an enforced 80% line floor, Clippy with warnings
+The current local gate has 1,307 passing all-target test cases, 93.49% region coverage and
+93.28% line coverage with an enforced 80% line floor, Clippy with warnings
 denied, and dependency policy checks. Release QA also regenerates an exact
-275-screen App matrix with per-room interaction scenarios, semantic checks,
-and coarse perceptual response thresholds, including a regression that rejects
+341-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
+room receipts, per-room interaction scenarios, semantic checks, and coarse
+perceptual response thresholds, including a regression that rejects
 four isolated corner markers as a meaningful interaction. Fourteen compact
 receipts cover controller legends and visible pause states through production
 render paths, including a Life controller receipt. Sixteen additional receipts

@@ -900,3 +900,80 @@ The complete local release gate passes with 1,296 all-target test cases, 93.46
 percent region coverage, 93.25 percent line coverage, the exact 275-screen App
 matrix, Clippy with warnings denied, locked build, house style, and supply-chain
 policy.
+
+---
+
+# The twelfth round (July 14, 2026): Cult of Pi causal first contact
+
+Three independent QA groups reviewed Cult of Pi through separate first-contact,
+cross-face causality, and interaction-contract lenses. They inspected source,
+App receipts at both supported sizes, exact CLI and MCP outputs, controller and
+reset routes, timing, and canonical documentation. These were structured
+simulated reviews backed by reproduced evidence, not participant testimony and
+not evidence that the room is fun.
+
+## Reproduced findings
+
+- A phase-zero touch claimed to repair digits even though the opening field had
+  no fault. CLI and MCP changed the status but not the character picture at that
+  phase.
+- Raster rendering painted a repaired exact glyph on top of a wrong glyph,
+  leaving ghost strokes. Faults and held exact digits also shared one visual
+  mark, so the later state did not explain itself.
+- Compact status dropped the expected-rate qualifier after a hold and could
+  truncate the untouched fault value. The reveal also applied the decimal error
+  bound without limiting it to an exact prefix and decimal places.
+- The audio badge used an unsupported separator, visually placing an unlabeled
+  percentage next to `ROOM SCORE`. The generic `LV` label could similarly look
+  like a room rating.
+- A Journey level banner preserved neither the room card's visible lifetime nor
+  the clean phase-zero interval. Cult of Pi could complete a hidden fault sweep
+  before the player saw the room.
+- Compact QA kept only the delayed three-touch state. It did not preserve a
+  same-size base and first phase-zero touch as inspectable receipts.
+- Competing screenshot generators could both remove and write the shared
+  evidence directory. A read during that race appeared to show blank field
+  bands even though exclusive generations falsified the product defect.
+
+## What changed
+
+The channel now begins with the canonical `PI = 3.141592653589793...` header
+and a complete exact field. Exact digits are green, deterministic display
+faults are coral, and retained exact patches are bright with visible diamond
+boundaries. The core draws each field once with its final local state, so a held
+exact glyph replaces a fault instead of accumulating over it. The boundary is
+part of the shared `Surface` output, giving phase-zero App, CLI, and MCP calls a
+real visual consequence; MCP also requires a nonzero structured cell delta.
+
+Status uses compact, explicit forms such as `CH01/64 EXP FAULT 0%` and `3 HELD
+CH26 EXP FAULT 17%`. The newest-24 retention contract stays visible when the
+input history saturates. The reveal now states the error bound only for an exact
+prefix truncated after n decimal places. Canonical room docs use the same
+restore-and-hold language and keep faults on the finite display rather than on
+pi.
+
+The persistent progress label is `JOURNEY LV`, and its transient banner says
+`JOURNEY LEVEL UP`. While that banner obscures a new room, the App freezes the
+room clock, Mandelbrot camera, Life session, and arrival-card countdown. The
+first frame after dismissal is therefore the intended phase-zero baseline with
+the complete arrival-card lifetime still available. The audio badge now reads
+forms such as `ROOM MUSIC: VOL 45%`, using a rendered delimiter and naming the
+quantity.
+
+The exact App matrix grows from 275 to 341 images. Every room now has default
+and compact base, arrival, immediate-interaction, and delayed-interaction
+receipts. The generator applies its causal response checks at both sizes, with
+a 100-pixel default floor and a resolution-aware 32-pixel compact floor.
+Dedicated Cult of Pi receipts cover the Journey banner and the untouched first
+frame after it closes. The generator now acquires a cross-process single-writer
+guard before deleting stale output. A normal exit or unwind removes the guard;
+after forced process termination, the next run reports the exact lock path for
+an operator to remove rather than guessing that a slow active writer is stale.
+
+All three acceptance rechecks close their reproduced in-scope findings. The
+complete local release gate passes with 1,307 all-target test cases, 93.49
+percent region coverage, 93.28 percent line coverage, the exact 341-screen App
+matrix, Clippy with warnings denied, locked build, house style, and supply-chain
+policy. A deeper placement decision loop and Pi-specific no-instructions fun
+evidence remain open. The room is now causal and legible in captured evidence;
+that is not a claim that real participants will choose to keep playing it.

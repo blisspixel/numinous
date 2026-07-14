@@ -1,9 +1,9 @@
 //! Cult of Pi: approximation and corruption as code art.
 //!
 //! Exact decimal digits enter a low-flicker green channel. Every finite prefix
-//! approaches pi without becoming its infinite expansion; the older field
-//! thins, and a deterministic fault slowly changes the rite. A click repairs a
-//! bounded part of the finite signal. See `docs/ROOMS.md`.
+//! approaches pi without becoming its infinite expansion. Deterministic faults
+//! alter the finite display, while each retained hand holds one bounded patch
+//! exact. See `docs/ROOMS.md`.
 
 use std::sync::OnceLock;
 
@@ -192,19 +192,44 @@ fn glyph_for(
     } else {
         exact
     };
-    Some((
-        char::from(b'0' + shown),
-        if changed || local_repair { '#' } else { '.' },
-    ))
+    let mark = if local_repair {
+        '#'
+    } else if changed {
+        '!'
+    } else {
+        '.'
+    };
+    Some((char::from(b'0' + shown), mark))
 }
 
-fn render_field(
-    surface: &mut dyn Surface,
-    seed: u64,
-    t: f64,
-    pokes: &[(f64, f64)],
-    repairs_only: bool,
-) {
+fn draw_hold_markers(surface: &mut dyn Surface, field: FieldLayout, pokes: &[(f64, f64)]) {
+    let max_x = field.surface_width.saturating_sub(1) as i32;
+    let min_y = field.origin_y.min(field.surface_height.saturating_sub(1)) as i32;
+    let max_y = field.surface_height.saturating_sub(1) as i32;
+    let radius_x = (field.surface_width as f64 * 0.16).round().max(1.0) as i32;
+    let radius_y = (field.surface_height as f64 * 0.16).round().max(1.0) as i32;
+
+    for (px, py) in hand_points(pokes) {
+        let center_x = (px * max_x as f64).round() as i32;
+        let center_y = (py * max_y as f64).round() as i32;
+        let top = (center_x, (center_y - radius_y).clamp(min_y, max_y));
+        let right = (
+            (center_x + radius_x).clamp(0, max_x),
+            center_y.clamp(min_y, max_y),
+        );
+        let bottom = (center_x, (center_y + radius_y).clamp(min_y, max_y));
+        let left = (
+            (center_x - radius_x).clamp(0, max_x),
+            center_y.clamp(min_y, max_y),
+        );
+        surface.line(top.0, top.1, right.0, right.1, '+');
+        surface.line(right.0, right.1, bottom.0, bottom.1, '+');
+        surface.line(bottom.0, bottom.1, left.0, left.1, '+');
+        surface.line(left.0, left.1, top.0, top.1, '+');
+    }
+}
+
+fn render_field(surface: &mut dyn Surface, seed: u64, t: f64, pokes: &[(f64, f64)]) {
     let Some(field) = layout(surface) else {
         return;
     };
@@ -218,9 +243,6 @@ fn render_field(
         let exact = digits()[index];
         let hash = cell_hash(seed, tick, index);
         let local_repair = near_repair(column, row, field, pokes);
-        if repairs_only && !local_repair {
-            continue;
-        }
         let Some((glyph, mark)) = glyph_for(exact, index, total, hash, phase, local_repair) else {
             continue;
         };
@@ -234,9 +256,8 @@ fn render_field(
         }
     }
 
-    if repairs_only {
-        return;
-    }
+    draw_hold_markers(surface, field, pokes);
+
     let header_scale = if field.pixel_font {
         field.glyph_scale.max(1)
     } else {
@@ -277,17 +298,17 @@ impl Room for CultOfPi {
             id: "cult-of-pi",
             title: "Cult of Pi",
             wing: "Number & Pattern",
-            blurb: "The exact digits of pi enter a finite channel, age, and develop faults. Click to repair a local patch, but no finite screen can ever contain all of pi.",
+            blurb: "The exact digits of pi enter a finite channel, age, and develop faults. Click to restore and hold one local patch exact, but no finite screen can ever contain all of pi.",
             accent: [40, 210, 90],
         }
     }
 
     fn render(&self, surface: &mut dyn Surface, t: f64) {
-        render_field(surface, self.seed, t, &[], false);
+        render_field(surface, self.seed, t, &[]);
     }
 
     fn reveal(&self) -> &'static str {
-        "Every finite decimal here is only an approximation: after n digits its error is less than 10 to the negative n, but pi's expansion never ends. The corruption is ours, not pi's. A finite process can approach an exact limit forever without any finite frame becoming the whole thing."
+        "Every exact prefix truncated after n decimal places differs from pi by less than 10 to the negative n, but pi's expansion never ends. The display faults are ours, not pi's. A finite process can approach an exact limit forever without any finite frame becoming the whole thing."
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {
@@ -312,7 +333,7 @@ impl Room for CultOfPi {
         let phase = finite_phase(t);
         let tick = (phase * (PHASE_TICKS - 1) as f64).floor() as usize + 1;
         Some(format!(
-            "CHANNEL {tick:02}/{PHASE_TICKS}   EXPECTED FAULT RATE {:.0}%",
+            "CH{tick:02}/{PHASE_TICKS}  EXP FAULT {:.0}%",
             phase * 42.0
         ))
     }
@@ -322,19 +343,37 @@ impl Room for CultOfPi {
         if repairs == 0 {
             return self.status(t);
         }
-        Some(format!(
-            "{repairs} REPAIR PATCH{}   VISIBLE DIGITS RESTORED   PI NEVER ENDS",
-            if repairs == 1 { "" } else { "S" }
-        ))
+        let phase = finite_phase(t);
+        let tick = (phase * (PHASE_TICKS - 1) as f64).floor() as usize + 1;
+        let retained = inputs
+            .iter()
+            .filter(|input| {
+                matches!(
+                    input,
+                    RoomInput::PointerDown { .. } | RoomInput::PointerMove { .. }
+                )
+            })
+            .count()
+            > MAX_ROOM_POKES;
+        if retained {
+            Some(format!(
+                "{repairs} RECENT  CH{tick:02}  EXP FAULT {:.0}%",
+                phase * 42.0
+            ))
+        } else {
+            Some(format!(
+                "{repairs} HELD  CH{tick:02}  EXP FAULT {:.0}%",
+                phase * 42.0
+            ))
+        }
     }
 
     fn verb(&self) -> Option<&'static str> {
-        Some("CLICK: REPAIR THE SIGNAL")
+        Some("CLICK: RESTORE AND HOLD A PATCH")
     }
 
     fn render_poked(&self, surface: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
-        self.render(surface, t);
-        render_field(surface, self.seed, t, pokes, true);
+        render_field(surface, self.seed, t, pokes);
     }
 
     fn sound(&self, t: f64) -> SoundSpec {
@@ -362,6 +401,7 @@ mod tests {
         CultOfPi, MAX_FIELD_CELLS, PI_HEADER, digits, generate_pi_digits, glyph_for, layout,
         near_repair,
     };
+    use crate::MAX_ROOM_POKES;
     use crate::canvas::Canvas;
     use crate::room::Room;
     use crate::surface::Surface;
@@ -406,6 +446,9 @@ mod tests {
                     .is_some_and(|(glyph, _)| glyph.is_ascii_digit() && glyph != '3')
             })
             .expect("a deterministic corrupted digit");
+        let (wrong, mark) = glyph_for(3, 9, 10, hash, 1.0, false).expect("corrupted glyph");
+        assert_ne!(wrong, '3');
+        assert_eq!(mark, '!', "faults must look different from exact holds");
         assert_eq!(glyph_for(3, 9, 10, hash, 1.0, true), Some(('3', '#')));
 
         let canvas = Canvas::new(60, 30);
@@ -419,6 +462,95 @@ mod tests {
         );
         assert!(near_repair(column, row, field, &[hand]));
         assert!(!near_repair(0, 0, field, &[hand]));
+    }
+
+    #[test]
+    fn a_phase_zero_touch_truthfully_holds_a_patch_exact() {
+        let room = CultOfPi::new();
+        let inputs = crate::inputs_from_pokes(&[(0.5, 0.5)], 0.0);
+        let mut base = Canvas::new(50, 24);
+        let mut held = Canvas::new(50, 24);
+        room.render(&mut base, 0.0);
+        room.render_input(&mut held, 0.0, &inputs);
+
+        assert_eq!(
+            room.status_input(0.0, &inputs).as_deref(),
+            Some("1 HELD  CH01  EXP FAULT 0%")
+        );
+        assert_ne!(base.to_text(), held.to_text());
+        assert!(
+            base.delta(&held)
+                .is_some_and(|delta| delta.cells_changed > 0),
+            "the held-patch boundary must be visible without color"
+        );
+    }
+
+    #[test]
+    fn status_names_when_only_the_recent_patch_window_is_held() {
+        let room = CultOfPi::new();
+        let inputs: Vec<crate::RoomInput> = (0..MAX_ROOM_POKES + 1)
+            .map(|index| crate::RoomInput::PointerMove {
+                x: index as f64 / MAX_ROOM_POKES as f64,
+                y: 0.5,
+                t: 0.5,
+            })
+            .collect();
+
+        assert_eq!(
+            room.status_input(0.5, &inputs).as_deref(),
+            Some("24 RECENT  CH32  EXP FAULT 21%")
+        );
+        assert!(room.status_input(0.5, &inputs).unwrap().chars().count() <= 30);
+    }
+
+    #[test]
+    fn delayed_hold_status_keeps_the_expected_rate_qualifier() {
+        let room = CultOfPi::new();
+        let inputs = crate::inputs_from_pokes(&[(0.26, 0.34), (0.54, 0.48), (0.76, 0.66)], 0.4);
+
+        assert_eq!(
+            room.status_input(0.4, &inputs).as_deref(),
+            Some("3 HELD  CH26  EXP FAULT 17%")
+        );
+    }
+
+    #[test]
+    fn raster_repairs_replace_wrong_glyphs_instead_of_overdrawing_them() {
+        let room = CultOfPi::new();
+        let pokes = [(0.5, 0.5)];
+        let mut opening = crate::Raster::with_accent(640, 480, room.meta().accent);
+        let mut degraded = crate::Raster::with_accent(640, 480, room.meta().accent);
+        room.render_poked(&mut opening, 0.0, &pokes);
+        room.render_poked(&mut degraded, 1.0, &pokes);
+
+        let field = layout(&opening).expect("field");
+        let opening_rgba = opening.to_rgba();
+        let degraded_rgba = degraded.to_rgba();
+        let mut compared_cells = 0;
+        for index in 0..field.cells() {
+            let column = index % field.columns;
+            let row = index / field.columns;
+            if !near_repair(column, row, field, &pokes) {
+                continue;
+            }
+            compared_cells += 1;
+            for y in field.origin_y + row * field.step_y
+                ..(field.origin_y + (row + 1) * field.step_y).min(field.surface_height)
+            {
+                for x in
+                    column * field.step_x..((column + 1) * field.step_x).min(field.surface_width)
+                {
+                    let offset = (y * field.surface_width + x) * 4;
+                    assert_eq!(
+                        &degraded_rgba[offset..offset + 4],
+                        &opening_rgba[offset..offset + 4],
+                        "held cell {column},{row} differs at pixel {x},{y}"
+                    );
+                }
+            }
+        }
+        assert!(compared_cells > 0);
+        assert_ne!(degraded_rgba, opening_rgba, "unheld digits still age");
     }
 
     #[test]
@@ -510,9 +642,10 @@ mod tests {
     #[test]
     fn reveal_and_history_keep_the_boundaries_honest() {
         let room = CultOfPi::new();
-        assert!(room.reveal().contains("approximation"));
+        assert!(room.reveal().contains("truncated after n decimal places"));
+        assert!(room.reveal().contains("display faults are ours"));
         assert!(room.deep_cuts()[1].contains("not established history"));
-        assert_eq!(room.verb(), Some("CLICK: REPAIR THE SIGNAL"));
+        assert_eq!(room.verb(), Some("CLICK: RESTORE AND HOLD A PATCH"));
     }
 
     #[test]

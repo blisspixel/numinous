@@ -136,6 +136,24 @@ fn bounded_tick_seconds(elapsed: Duration) -> f64 {
     elapsed.as_secs_f64().clamp(0.0, MAX_TICK_SECONDS)
 }
 
+fn advance_gallery_phase(
+    phase: f64,
+    elapsed: f64,
+    time_scale: f64,
+    rate: f64,
+    first_contact_obscured: bool,
+) -> (f64, bool) {
+    if first_contact_obscured {
+        return (phase, false);
+    }
+    let next = phase + rate * elapsed * time_scale;
+    if next >= 1.0 {
+        (next.rem_euclid(1.0), true)
+    } else {
+        (next, false)
+    }
+}
+
 /// The application state driven by the winit event loop.
 struct App {
     window: Option<Rc<Window>>,
@@ -317,7 +335,7 @@ impl App {
         }
     }
 
-    /// Persist the journey and raise the LEVEL UP banner when the level moves.
+    /// Persist the journey and raise the Journey banner when the level moves.
     fn journey_changed(&mut self) {
         if let Ok(saved) = numinous_core::persist_journey_delta(
             &self.journey_file,
@@ -2458,25 +2476,32 @@ impl ApplicationHandler for App {
             self.handle_gamepad_command(command);
         }
         self.refresh_pointer_state();
-        self.advance_life_if_active(elapsed);
+        let first_contact_obscured = self.banner.is_some() && self.room_card > 0;
+        if !first_contact_obscured {
+            self.advance_life_if_active(elapsed);
+        }
         if !(self.paused || self.dragging || self.show_help && self.modal_mode_active()) {
-            if self.rooms[self.current].meta().id == "mandelbrot" {
+            if !first_contact_obscured && self.rooms[self.current].meta().id == "mandelbrot" {
                 self.mandelbrot_camera.advance(elapsed * self.time_scale);
             }
             let show_active = self.show_mode_active();
             let rate = if show_active { SHOW_T_RATE } else { T_RATE };
-            let next = self.t + rate * elapsed * self.time_scale;
-            if next >= 1.0 {
-                self.t = next.rem_euclid(1.0);
+            let (next_phase, wrapped) = advance_gallery_phase(
+                self.t,
+                elapsed,
+                self.time_scale,
+                rate,
+                first_contact_obscured,
+            );
+            self.t = next_phase;
+            if wrapped {
                 // In The Show, a finished sweep drifts into the next room.
                 if show_active {
                     self.switch(1);
                 }
-            } else {
-                self.t = next;
             }
             self.frame += 1;
-            room_input::tick_room_card(&mut self.room_card);
+            room_input::tick_room_card(&mut self.room_card, self.banner.is_some());
             // The arcade's heartbeat: the spirits step on the beat, faster
             // each level; the flash counts itself down.
             if let Some(play) = &mut self.arcade {
@@ -2664,8 +2689,9 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{
-        App, AudioProgram, TestStateRoot, app_icon, bounded_tick_seconds, julia_gpu_c,
-        julia_gpu_vertical_span, live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache,
+        App, AudioProgram, TestStateRoot, advance_gallery_phase, app_icon, bounded_tick_seconds,
+        julia_gpu_c, julia_gpu_vertical_span, live_mandelbrot_gpu_view, mandelbrot_gpu_view,
+        radio_cache,
     };
     use crate::input_legend::{InputMode, MenuChoice};
     use std::sync::Arc;
@@ -3160,6 +3186,33 @@ mod tests {
         let ordinary = bounded_tick_seconds(Duration::from_millis(16));
         assert!((ordinary - 0.016).abs() < 1e-9);
         assert_eq!(bounded_tick_seconds(Duration::from_secs(10)), 0.05);
+    }
+
+    #[test]
+    fn journey_banner_preserves_the_first_contact_clock_and_card() {
+        let mut banner = Some(super::feedback::level_up(2, 0));
+        let mut phase = 0.0;
+        let mut room_card = crate::room_input::ROOM_CARD_FRAMES;
+
+        for _ in 0..300 {
+            let obscured = banner.is_some() && room_card > 0;
+            let (next, wrapped) = advance_gallery_phase(phase, 1.0 / 60.0, 1.0, 0.24, obscured);
+            phase = next;
+            assert!(!wrapped);
+            crate::room_input::tick_room_card(&mut room_card, banner.is_some());
+            if banner.as_mut().is_some_and(|value| !value.tick()) {
+                banner = None;
+            }
+        }
+
+        assert!(banner.is_none());
+        assert_eq!(phase, 0.0);
+        assert_eq!(room_card, crate::room_input::ROOM_CARD_FRAMES);
+        let (next, wrapped) = advance_gallery_phase(phase, 1.0 / 60.0, 1.0, 0.24, false);
+        assert!(next > 0.0);
+        assert!(!wrapped);
+        crate::room_input::tick_room_card(&mut room_card, false);
+        assert_eq!(room_card, crate::room_input::ROOM_CARD_FRAMES - 1);
     }
 
     #[test]
@@ -3688,7 +3741,7 @@ mod tests {
         assert!(app.radio.is_none());
         assert_eq!(
             app.banner.as_ref().expect("radio off banner").lines(),
-            ["RADIO OFF", "ROOM SCORE"]
+            ["RADIO OFF", "ROOM MUSIC"]
         );
     }
 
@@ -3752,7 +3805,7 @@ mod tests {
         assert!(!app.title().contains("radio:"));
         assert_eq!(
             app.banner.as_ref().expect("radio off banner").lines(),
-            ["RADIO OFF", "ROOM SCORE"]
+            ["RADIO OFF", "ROOM MUSIC"]
         );
         assert_eq!(app.audio_state().label(), "NO SOUND DEVICE");
     }

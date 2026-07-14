@@ -71,8 +71,10 @@ pub(crate) fn extend_poke_trail(pokes: &mut Vec<(f64, f64)>, point: (f64, f64)) 
     false
 }
 
-pub(crate) fn tick_room_card(room_card: &mut u64) {
-    *room_card = room_card.saturating_sub(1);
+pub(crate) fn tick_room_card(room_card: &mut u64, obscured: bool) {
+    if !obscured {
+        *room_card = room_card.saturating_sub(1);
+    }
 }
 
 fn keep_newest_inputs(inputs: &mut Vec<RoomInput>) {
@@ -288,9 +290,18 @@ mod tests {
     #[test]
     fn room_card_tick_saturates() {
         let mut room_card = 1;
-        tick_room_card(&mut room_card);
+        tick_room_card(&mut room_card, false);
         assert_eq!(room_card, 0);
-        tick_room_card(&mut room_card);
+        tick_room_card(&mut room_card, false);
         assert_eq!(room_card, 0);
+    }
+
+    #[test]
+    fn obscured_room_card_keeps_its_full_visible_lifetime() {
+        let mut room_card = ROOM_CARD_FRAMES;
+        tick_room_card(&mut room_card, true);
+        assert_eq!(room_card, ROOM_CARD_FRAMES);
+        tick_room_card(&mut room_card, false);
+        assert_eq!(room_card, ROOM_CARD_FRAMES - 1);
     }
 }

@@ -5586,17 +5586,26 @@ plays 2
     fn play_room_reports_interaction_aware_status() {
         let poked = handle_request(&json!({
             "jsonrpc":"2.0","id":34,"method":"tools/call",
-            "params":{"name":"play_room","arguments":{"id":"cult-of-pi","width":50,"height":24,"t":0.5,"pokes":[[0.5,0.5]]}}
+            "params":{"name":"play_room","arguments":{"id":"cult-of-pi","width":50,"height":24,"t":0.0,"pokes":[[0.5,0.5]]}}
         }))
         .expect("tools/call must respond");
         let status = poked["result"]["structuredContent"]["status"]
             .as_str()
             .unwrap_or_default();
-        assert!(status.starts_with("1 REPAIR"), "got: {status}");
+        assert_eq!(status, "1 HELD  CH01  EXP FAULT 0%");
         let text = poked["result"]["content"][0]["text"]
             .as_str()
             .unwrap_or_default();
-        assert!(text.contains("Status: 1 REPAIR"), "got: {text}");
+        assert!(
+            text.contains("Status: 1 HELD  CH01  EXP FAULT 0%"),
+            "got: {text}"
+        );
+        assert!(
+            poked["result"]["structuredContent"]["delta"]["cells_changed"]
+                .as_u64()
+                .is_some_and(|changed| changed > 0),
+            "a phase-zero hold must visibly change the character frame"
+        );
     }
 
     #[test]

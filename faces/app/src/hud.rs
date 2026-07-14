@@ -34,19 +34,19 @@ impl AudioState {
 
     pub(crate) fn label(self) -> String {
         let source = match self.source {
-            AudioSource::RoomScore => "ROOM SCORE".to_string(),
+            AudioSource::RoomScore => "ROOM MUSIC".to_string(),
             AudioSource::Studio => "STUDIO".to_string(),
             AudioSource::Radio(station) => format!("RADIO {}", station.to_uppercase()),
             AudioSource::NoDevice => return "NO SOUND DEVICE".to_string(),
         };
         if self.muted {
-            format!("{source} | MUTED")
+            format!("{source}: MUTED")
         } else if self.volume_percent == 0 {
-            format!("{source} | VOLUME 0")
+            format!("{source}: VOL 0")
         } else if !self.active {
-            format!("{source} | BACKGROUND SILENT")
+            format!("{source}: BACKGROUND SILENT")
         } else {
-            format!("{source} | {}%", self.volume_percent)
+            format!("{source}: VOL {}%", self.volume_percent)
         }
     }
 }
@@ -86,6 +86,10 @@ pub(crate) fn room_action(room: &dyn Room) -> &'static str {
 
 fn displayed_room_action(room: &dyn Room, input_mode: InputMode) -> String {
     input_legend::room_action(input_mode, room_action(room))
+}
+
+fn journey_level_label(level: u32) -> String {
+    format!("JOURNEY LV {level}")
 }
 
 fn arrival_lines(room: &dyn Room, columns: usize, input_mode: InputMode) -> Vec<String> {
@@ -282,9 +286,11 @@ pub(crate) fn draw_room_chrome(
                 );
             }
         }
-        let level = format!("LV {}", state.level);
-        let lx = width as i32 - (level.len() as i32 * 6 * scale) - 10;
-        numinous_core::draw_text(raster, &level, lx, 10, scale, '#');
+        let level = journey_level_label(state.level);
+        let level_scale = 1;
+        let lx = width as i32 - (level.len() as i32 * 6 * level_scale) - 10;
+        let ly = if scale > 1 { 20 } else { 10 };
+        numinous_core::draw_text(raster, &level, lx, ly, level_scale, '#');
     }
 
     if state.show_info && !state.the_show && !state.studio {
@@ -428,27 +434,27 @@ mod tests {
         let cases = [
             (
                 AudioState::new(AudioSource::RoomScore, 45, false, true),
-                "ROOM SCORE | 45%",
+                "ROOM MUSIC: VOL 45%",
             ),
             (
                 AudioState::new(AudioSource::Studio, 70, false, true),
-                "STUDIO | 70%",
+                "STUDIO: VOL 70%",
             ),
             (
                 AudioState::new(AudioSource::Radio("NUMINA FM"), 30, false, true),
-                "RADIO NUMINA FM | 30%",
+                "RADIO NUMINA FM: VOL 30%",
             ),
             (
                 AudioState::new(AudioSource::RoomScore, 45, true, true),
-                "ROOM SCORE | MUTED",
+                "ROOM MUSIC: MUTED",
             ),
             (
                 AudioState::new(AudioSource::RoomScore, 0, false, true),
-                "ROOM SCORE | VOLUME 0",
+                "ROOM MUSIC: VOL 0",
             ),
             (
                 AudioState::new(AudioSource::RoomScore, 45, false, false),
-                "ROOM SCORE | BACKGROUND SILENT",
+                "ROOM MUSIC: BACKGROUND SILENT",
             ),
             (AudioState::no_device(), "NO SOUND DEVICE"),
         ];
@@ -462,7 +468,8 @@ mod tests {
     fn audio_state_badge_is_visible_and_bounded_at_supported_sizes() {
         for (width, height) in [(360, 240), (900, 700)] {
             let mut raster = Raster::with_accent(width, height, [120, 220, 190]);
-            let state = AudioState::new(AudioSource::Radio("EIGHT BIT SUNRISE"), 45, false, true);
+            let state = AudioState::new(AudioSource::RoomScore, 45, false, true);
+            let label = state.label();
             draw_audio_state(&mut raster, &state, width);
 
             let rgba = raster.to_rgba();
@@ -475,6 +482,21 @@ mod tests {
             assert!(!changed.is_empty());
             assert!(changed.iter().all(|&(x, y)| x < width && y < 20));
             assert!(changed.iter().any(|&(x, _)| x >= width / 2));
+            let scale = if width >= 720 { 2 } else { 1 };
+            let level_reserve = if scale == 2 { 110 } else { 0 };
+            let x = width
+                .saturating_sub(label.chars().count() * 6 * scale)
+                .saturating_sub(level_reserve)
+                .saturating_sub(10);
+            for token in [":", "VOL", "45%"] {
+                let offset = label.find(token).expect("audio token") * 6 * scale;
+                assert!(
+                    changed.iter().any(|&(px, _)| {
+                        px >= x + offset && px < x + offset + token.len() * 6 * scale
+                    }),
+                    "{token} must have visible pixels at width {width}"
+                );
+            }
             if width >= 720 {
                 assert!(changed.iter().any(|&(_, y)| y >= 9));
                 assert!(changed.iter().all(|&(x, _)| x < width - 110));
@@ -502,6 +524,11 @@ mod tests {
         assert_eq!(controller.status, "SELECT INSPECT");
         assert_eq!(controller.controls, "L3 RESET ROOM   START MENU");
         assert!(controller.controls.chars().count() * 6 <= 360 - 20);
+    }
+
+    #[test]
+    fn room_header_names_global_journey_progress() {
+        assert_eq!(super::journey_level_label(42), "JOURNEY LV 42");
     }
 
     #[test]

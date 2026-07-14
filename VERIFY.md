@@ -44,16 +44,19 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 1,296 all-target test cases pass, 93.46% region
-cover, and 93.25% line cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 1,307 all-target test cases pass, 93.49% region
+cover, and 93.28% line cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
 
-The release scripts also regenerate `renders/qa-app/`, a 275-screen app matrix.
-Every catalog room has a deterministic opening frame, arrival card, immediate
-pointer response, same-phase delayed-gesture baseline and response, compact
-arrival card, and compact delayed response.
+The release scripts also regenerate `renders/qa-app/`, a 341-screen app matrix.
+Every catalog room has deterministic default and compact opening frames,
+arrival cards, immediate pointer responses, and same-phase delayed-gesture
+responses. Default room receipts are 900 by 700; compact room receipts are 360
+by 240. Dedicated Cult of Pi receipts also cover a Journey threshold banner
+and the untouched first frame after it closes. The generator holds an exclusive
+single-writer guard before removing stale receipts.
 The matrix also covers every app game state, default and compact overlays,
 production Studio rendering, both ends of The Show, Times Tables phase
 stability, the Mandelbrot reset flow, a persistent Life sequence from opening
@@ -110,7 +113,8 @@ cursor (WASD moves, Space eats, Enter grades), N plays Nim against the Order
 Gauntlet (all four stages in sequence, combo and total at the end), J opens
 your journey (level, rank, trophies, resonances), Tab opens the Studio (type math, watch and hear it
 live). The app plays the same Journey the CLI does: entering rooms records
-visits, quiz rounds record plays and wins, your level rides in the corner, and
+visits, quiz rounds record plays and wins, your accumulated local-profile
+progress rides in the corner as `JOURNEY LV`, and
 LEVEL UP banners rise with the level's lore. Set `NUMINOUS_MUTE=1` to launch
 silent. If the app ever crashes, the panic and its file:line land in
 `~/.numinous-crash.log`; include it in any report. The Mandelbrot and Julia rooms render on the GPU when the machine has
