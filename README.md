@@ -135,25 +135,30 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 1,259 passing all-target test cases, 93.34% region coverage and
-93.11% line coverage with an enforced 80% line floor, Clippy with warnings
+The current local gate has 1,282 passing all-target test cases, 93.41% region coverage and
+93.19% line coverage with an enforced 80% line floor, Clippy with warnings
 denied, and dependency policy checks. Release QA also regenerates an exact
-253-screen App matrix with per-room interaction scenarios, semantic checks,
+259-screen App matrix with per-room interaction scenarios, semantic checks,
 and coarse perceptual response thresholds, including a regression that rejects
-four isolated corner markers as a meaningful interaction. Thirteen compact
+four isolated corner markers as a meaningful interaction. Fourteen compact
 receipts cover controller legends and visible pause states through production
-render paths. The latest
+render paths, including a Life controller receipt. The latest
 full-roster QA pass applied all 42 documented simulated review lenses once,
 split across first contact, interaction and truth, and games plus agent faces.
 It fixed reproduced App, CLI, MCP, Studio, and mathematical-copy defects; the
 simulated reactions themselves are not participant evidence.
 CI is configured for locked tests and builds on Windows, macOS, and Ubuntu.
 Stranger playtests, accessibility work, cross-platform execution evidence,
-real-controller-model sessions, musician-led long-listening review, deeper Life
-and other room interaction, and substantial visual and Studio work remain
+real-controller-model sessions, musician-led long-listening review, deeper
+causal interaction in other rooms, and substantial visual and Studio work remain
 ahead. Galton Board now ships the first deeper causal experiment loop: choose a
 fixed coin, add replayable 64-ball waves, compare the empirical pile with its
 exact binomial reference, and reset without phase-driven drift.
+Game of Life now ships the second: one click clears a local patch and plants
+exactly five cells, the App universe advances continuously for the whole visit,
+birth and death consequences remain visible after the old phase boundary, and
+R restores the exact opening. CLI and MCP calls remain explicit, deterministic,
+stateless replays rather than implying a hidden session.
 Versions are earned by evidence, not by feature count.
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the ordered 0.2 through 2.0 plan and

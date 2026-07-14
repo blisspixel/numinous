@@ -17,8 +17,186 @@ const GRID_H: usize = 96;
 const SEED: u64 = 0x11FE_0DED_5EED_600D;
 /// Fraction of cells alive in the initial soup.
 const DENSITY: f64 = 0.32;
+/// Let the raw random soup open into legible colonies before first contact.
+const SETTLE_GENERATIONS: usize = 12;
 /// The most generations `t` reaches.
 const MAX_GEN: usize = 140;
+/// The last meaningful change to a persistent Life session.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LifeEvent {
+    /// The untouched opening universe.
+    Opening,
+    /// A hand cleared a local patch and planted one five-cell glider.
+    Launch {
+        /// Exact cells placed by the glider stamp.
+        planted: usize,
+        /// Previously living cells removed to make the glider legible.
+        cleared: usize,
+    },
+    /// One B3/S23 generation completed.
+    Step {
+        /// Dead cells born with exactly three neighbors.
+        births: usize,
+        /// Living cells that did not survive with two or three neighbors.
+        deaths: usize,
+    },
+}
+
+/// Bounded incremental state for one visit to Conway's Game of Life.
+///
+/// The App advances this state over elapsed time, so the universe does not jump
+/// back when the gallery's normalized phase wraps. Stateless faces replay the
+/// same state machine from their bounded input histories.
+#[derive(Debug)]
+pub struct LifeSession {
+    generation: u64,
+    launches: u64,
+    live_cells: usize,
+    event: LifeEvent,
+    recent_launches: Vec<bool>,
+    baseline: Vec<bool>,
+    world: Vec<bool>,
+    next_baseline: Vec<bool>,
+    next_world: Vec<bool>,
+}
+
+impl LifeSession {
+    /// Start one deterministic visit with the selected variation.
+    #[must_use]
+    pub fn new(variation: u64) -> Self {
+        let world = seed(variation);
+        let live_cells = world.iter().filter(|&&alive| alive).count();
+        Self {
+            generation: 0,
+            launches: 0,
+            live_cells,
+            event: LifeEvent::Opening,
+            recent_launches: vec![false; GRID_W * GRID_H],
+            baseline: world.clone(),
+            world,
+            next_baseline: vec![false; GRID_W * GRID_H],
+            next_world: vec![false; GRID_W * GRID_H],
+        }
+    }
+
+    /// Advance one exact B3/S23 generation.
+    pub fn advance(&mut self) {
+        step_into(&self.world, GRID_W, GRID_H, &mut self.next_world);
+        step_into(&self.baseline, GRID_W, GRID_H, &mut self.next_baseline);
+        let mut births = 0;
+        let mut deaths = 0;
+        for index in 0..self.world.len() {
+            births += usize::from(!self.world[index] && self.next_world[index]);
+            deaths += usize::from(self.world[index] && !self.next_world[index]);
+        }
+        std::mem::swap(&mut self.world, &mut self.next_world);
+        std::mem::swap(&mut self.baseline, &mut self.next_baseline);
+        self.live_cells = self.live_cells + births - deaths;
+        self.generation = self.generation.saturating_add(1);
+        self.event = LifeEvent::Step { births, deaths };
+        self.recent_launches.fill(false);
+    }
+
+    /// Clear a small local patch and place one five-cell glider at `point`.
+    ///
+    /// Nonfinite points are rejected without changing the session.
+    pub fn launch(&mut self, point: (f64, f64)) -> bool {
+        let Some(cells) = sown_glider_cells(point) else {
+            return false;
+        };
+        let (cx, cy) = cells[0];
+        let mut cleared = 0;
+        for dy in -5_i32..=5 {
+            for dx in -5_i32..=5 {
+                let x = (cx as i32 + dx).rem_euclid(GRID_W as i32) as usize;
+                let y = (cy as i32 + dy).rem_euclid(GRID_H as i32) as usize;
+                cleared += usize::from(self.world[y * GRID_W + x] && !cells.contains(&(x, y)));
+            }
+        }
+        let newly_living = cells
+            .iter()
+            .filter(|&&(x, y)| !self.world[y * GRID_W + x])
+            .count();
+        if !plant_glider(&mut self.world, point) {
+            return false;
+        }
+        self.live_cells = self.live_cells + newly_living - cleared;
+        self.launches = self.launches.saturating_add(1);
+        for &(x, y) in &cells {
+            self.recent_launches[y * GRID_W + x] = true;
+        }
+        self.event = LifeEvent::Launch {
+            planted: 5,
+            cleared,
+        };
+        true
+    }
+
+    /// Generations completed since this visit began.
+    #[must_use]
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+
+    /// Gliders launched during this visit.
+    #[must_use]
+    pub fn launches(&self) -> u64 {
+        self.launches
+    }
+
+    /// A compact truthful readout for the App footer and agent faces.
+    #[must_use]
+    pub fn status(&self) -> String {
+        let glider = if self.launches == 1 {
+            "GLIDER"
+        } else {
+            "GLIDERS"
+        };
+        match self.event {
+            LifeEvent::Opening => format!(
+                "B3/S23  GEN {}  LIVE {}  {glider} {}",
+                self.generation, self.live_cells, self.launches
+            ),
+            LifeEvent::Launch { planted, cleared } => format!(
+                "PLANTED {planted}  CLEARED {cleared}  GEN {}  LIVE {}  {glider} {}",
+                self.generation, self.live_cells, self.launches
+            ),
+            LifeEvent::Step { births, deaths } => format!(
+                "BORN {births}  DIED {deaths}  GEN {}  LIVE {}  {glider} {}",
+                self.generation, self.live_cells, self.launches
+            ),
+        }
+    }
+
+    /// A compact footer readout that keeps the causal fields on small windows.
+    #[must_use]
+    pub fn compact_status(&self) -> String {
+        match self.event {
+            LifeEvent::Opening => format!(
+                "RULE B3/S23 G{} L{} GL{}",
+                self.generation, self.live_cells, self.launches
+            ),
+            LifeEvent::Launch { planted, cleared } => format!(
+                "PLANT{planted} CLEAR{cleared} G{} L{} GL{}",
+                self.generation, self.live_cells, self.launches
+            ),
+            LifeEvent::Step { births, deaths } => format!(
+                "BORN{births} DIED{deaths} G{} L{} GL{}",
+                self.generation, self.live_cells, self.launches
+            ),
+        }
+    }
+
+    /// Draw the untouched universe normally and causal deviations brightly.
+    pub fn render(&self, canvas: &mut dyn Surface) {
+        if self.launches == 0 {
+            draw_grid(canvas, &self.world);
+            return;
+        }
+        draw_grid_comparison(canvas, &self.baseline, &self.world);
+        draw_grid_mask(canvas, &self.world, &self.recent_launches, '#');
+    }
+}
 
 fn drawing_dims(canvas: &dyn Surface) -> Option<(usize, usize)> {
     let width = canvas.width();
@@ -62,20 +240,16 @@ impl Room for GameOfLife {
             id: "game-of-life",
             title: "Game of Life",
             wing: "Emergence",
-            blurb: "Each dot is a living cell. Click to launch a five-cell glider: cells are born \
-                    with 3 neighbors and survive with 2 or 3, so the small shape moves by itself.",
+            blurb: "Aim at a quiet patch and place five living cells. Birth with 3 neighbors and \
+                    survival with 2 or 3 make that glider move by itself.",
             accent: [90, 210, 120],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        let width = canvas.width();
-        let height = canvas.height();
-        if width == 0 || height == 0 {
-            return;
-        }
-        let grid = simulate(Self::generation_for(t), self.seed);
-        draw_grid(canvas, &grid);
+        let mut session = LifeSession::new(self.seed);
+        advance_session(&mut session, Self::generation_for(t));
+        session.render(canvas);
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -89,26 +263,20 @@ impl Room for GameOfLife {
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        Some(format!(
-            "GEN {}   BORN 3   SURVIVES 2 OR 3",
-            Self::generation_for(t)
-        ))
+        let mut session = LifeSession::new(self.seed);
+        advance_session(&mut session, Self::generation_for(t));
+        Some(session.status())
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let gliders = launch_events(inputs).len();
-        if gliders == 0 {
-            return self.status(t);
-        }
-        Some(format!(
-            "GEN {}   {gliders} GLIDER{} LAUNCHED",
-            Self::generation_for(t),
-            if gliders == 1 { "" } else { "S" }
-        ))
+        Some(
+            session_with_launches(Self::generation_for(t), self.seed, &launch_events(inputs))
+                .status(),
+        )
     }
 
     fn verb(&self) -> Option<&'static str> {
-        Some("CLICK: LAUNCH A 5-CELL GLIDER")
+        Some("AIM + CLICK: PLACE A 5-CELL GLIDER")
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -117,12 +285,9 @@ impl Room for GameOfLife {
         if width == 0 || height == 0 {
             return;
         }
-        // Keep the random universe as a faint reference and brighten only the
-        // living cells the player's launch changed. The glider still obeys the
-        // same B3/S23 evolution, but its consequence is now possible to follow.
         let generations = Self::generation_for(t);
         let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
-        let launches: Vec<_> = pokes[start..]
+        let launches = pokes[start..]
             .iter()
             .filter_map(|&(x, y)| {
                 (x.is_finite() && y.is_finite()).then_some(GliderLaunch {
@@ -130,15 +295,12 @@ impl Room for GameOfLife {
                     generation: generations,
                 })
             })
-            .collect();
+            .collect::<Vec<_>>();
         if launches.is_empty() {
             self.render(canvas, t);
             return;
         }
-        let base = simulate(generations, self.seed);
-        let grid = simulate_with_launches(generations, self.seed, &launches);
-        draw_grid_mark(canvas, &base, '-');
-        draw_grid_difference(canvas, &base, &grid);
+        session_with_launches(generations, self.seed, &launches).render(canvas);
     }
 
     fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
@@ -147,11 +309,7 @@ impl Room for GameOfLife {
             self.render(canvas, t);
             return;
         }
-        let generations = Self::generation_for(t);
-        let base = simulate(generations, self.seed);
-        let grid = simulate_with_launches(generations, self.seed, &launches);
-        draw_grid_mark(canvas, &base, '-');
-        draw_grid_difference(canvas, &base, &grid);
+        session_with_launches(Self::generation_for(t), self.seed, &launches).render(canvas);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -196,7 +354,7 @@ fn draw_grid_mark(canvas: &mut dyn Surface, grid: &[bool], mark: char) {
     }
 }
 
-fn draw_grid_difference(canvas: &mut dyn Surface, base: &[bool], changed: &[bool]) {
+fn draw_grid_comparison(canvas: &mut dyn Surface, baseline: &[bool], world: &[bool]) {
     let Some((width, height)) = drawing_dims(canvas) else {
         return;
     };
@@ -205,8 +363,28 @@ fn draw_grid_difference(canvas: &mut dyn Surface, base: &[bool], changed: &[bool
             let gx = px * GRID_W / width;
             let gy = py * GRID_H / height;
             let index = gy * GRID_W + gx;
-            if changed[index] && changed[index] != base[index] {
-                canvas.plot(px as i32, py as i32, '#');
+            if world[index] {
+                canvas.plot(
+                    px as i32,
+                    py as i32,
+                    if baseline[index] { '*' } else { '#' },
+                );
+            }
+        }
+    }
+}
+
+fn draw_grid_mask(canvas: &mut dyn Surface, world: &[bool], mask: &[bool], mark: char) {
+    let Some((width, height)) = drawing_dims(canvas) else {
+        return;
+    };
+    for py in 0..height {
+        for px in 0..width {
+            let gx = px * GRID_W / width;
+            let gy = py * GRID_H / height;
+            let index = gy * GRID_W + gx;
+            if world[index] && mask[index] {
+                canvas.plot(px as i32, py as i32, mark);
             }
         }
     }
@@ -284,26 +462,44 @@ fn launch_events(inputs: &[RoomInput]) -> Vec<GliderLaunch> {
         .collect()
 }
 
+#[cfg(test)]
 fn simulate_with_launches(
     generations: usize,
     variation: u64,
     launches: &[GliderLaunch],
 ) -> Vec<bool> {
+    session_with_launches(generations, variation, launches).world
+}
+
+fn session_with_launches(
+    generations: usize,
+    variation: u64,
+    launches: &[GliderLaunch],
+) -> LifeSession {
     let generations = generations.min(MAX_GEN);
-    let mut grid = seed(variation);
+    let mut session = LifeSession::new(variation);
+    let mut ordered = launches
+        .iter()
+        .copied()
+        .enumerate()
+        .filter(|(_, launch)| launch.generation <= generations)
+        .collect::<Vec<_>>();
+    ordered.sort_by_key(|(index, launch)| (launch.generation, *index));
     let mut current = 0;
-    for launch in launches {
-        let target = launch.generation.min(generations).max(current);
-        for _ in current..target {
-            grid = step(&grid, GRID_W, GRID_H);
-        }
-        plant_glider(&mut grid, launch.point);
+    for (_, launch) in ordered {
+        let target = launch.generation;
+        advance_session(&mut session, target - current);
+        session.launch(launch.point);
         current = target;
     }
-    for _ in current..generations {
-        grid = step(&grid, GRID_W, GRID_H);
+    advance_session(&mut session, generations - current);
+    session
+}
+
+fn advance_session(session: &mut LifeSession, generations: usize) {
+    for _ in 0..generations {
+        session.advance();
     }
-    grid
 }
 
 #[cfg(test)]
@@ -329,12 +525,17 @@ fn glider_on_empty_grid(point: (f64, f64), generations: usize) -> Vec<bool> {
 /// The initial soup, seeded deterministically.
 fn seed(variation: u64) -> Vec<bool> {
     let mut rng = SplitMix64::new(SEED ^ variation);
-    (0..GRID_W * GRID_H)
+    let mut grid = (0..GRID_W * GRID_H)
         .map(|_| rng.next_f64() < DENSITY)
-        .collect()
+        .collect::<Vec<_>>();
+    for _ in 0..SETTLE_GENERATIONS {
+        grid = step(&grid, GRID_W, GRID_H);
+    }
+    grid
 }
 
 /// Run the Game of Life for `generations` steps from the seed.
+#[cfg(test)]
 fn simulate(generations: usize, variation: u64) -> Vec<bool> {
     let mut grid = seed(variation);
     for _ in 0..generations.min(MAX_GEN) {
@@ -346,6 +547,12 @@ fn simulate(generations: usize, variation: u64) -> Vec<bool> {
 /// Advance one generation on a toroidal grid (rules B3/S23).
 fn step(grid: &[bool], w: usize, h: usize) -> Vec<bool> {
     let mut next = vec![false; w * h];
+    step_into(grid, w, h, &mut next);
+    next
+}
+
+fn step_into(grid: &[bool], w: usize, h: usize, next: &mut [bool]) {
+    next.fill(false);
     for y in 0..h {
         for x in 0..w {
             let mut neighbors = 0u8;
@@ -366,14 +573,14 @@ fn step(grid: &[bool], w: usize, h: usize) -> Vec<bool> {
             next[y * w + x] = neighbors == 3 || (alive && neighbors == 2);
         }
     }
-    next
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        GRID_W, GameOfLife, GliderLaunch, glider_on_empty_grid, launch_events, simulate,
-        simulate_with_launches, simulate_with_pokes, sow_pokes, sown_glider_cells, step,
+        GRID_W, GameOfLife, GliderLaunch, LifeEvent, LifeSession, advance_session,
+        glider_on_empty_grid, launch_events, simulate, simulate_with_launches, simulate_with_pokes,
+        sow_pokes, sown_glider_cells, step,
     };
     use crate::canvas::Canvas;
     use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
@@ -401,6 +608,199 @@ mod tests {
         let a = step(&horizontal, 5, 5);
         assert_eq!(a, vertical, "a horizontal blinker becomes vertical");
         assert_eq!(step(&a, 5, 5), horizontal, "and back after two steps");
+    }
+
+    #[test]
+    fn b3_s23_truth_table_is_exhaustive() {
+        let neighbors = [
+            (1, 1),
+            (2, 1),
+            (3, 1),
+            (1, 2),
+            (3, 2),
+            (1, 3),
+            (2, 3),
+            (3, 3),
+        ];
+        for alive in [false, true] {
+            for count in 0..=8 {
+                let mut live = neighbors[..count].to_vec();
+                if alive {
+                    live.push((2, 2));
+                }
+                let grid = grid_with(5, 5, &live);
+                let next = step(&grid, 5, 5);
+                let expected = count == 3 || alive && count == 2;
+                assert_eq!(
+                    next[2 * 5 + 2],
+                    expected,
+                    "alive={alive}, neighbors={count}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn life_session_advances_the_exact_b3_s23_world() {
+        let mut session = LifeSession::new(7);
+        let opening = session.world.clone();
+        let expected = step(&opening, GRID_W, super::GRID_H);
+        let births = opening
+            .iter()
+            .zip(&expected)
+            .filter(|(before, after)| !**before && **after)
+            .count();
+        let deaths = opening
+            .iter()
+            .zip(&expected)
+            .filter(|(before, after)| **before && !**after)
+            .count();
+
+        session.advance();
+        assert_eq!(session.world, expected);
+        assert_eq!(session.generation(), 1);
+        assert_eq!(session.event, LifeEvent::Step { births, deaths });
+        assert_eq!(
+            opening.iter().filter(|&&alive| alive).count() + births,
+            session.live_cells + deaths,
+            "population change equals births minus deaths"
+        );
+    }
+
+    #[test]
+    fn life_session_launch_sequence_preserves_derived_state() {
+        let opening = LifeSession::new(3).world;
+        let mut session = LifeSession::new(3);
+        let points = [(0.02, 0.02), (0.70, 0.70), (0.02, 0.02)];
+        for point in points {
+            assert!(session.launch(point));
+            assert_eq!(session.baseline, opening, "launches do not rewrite history");
+            assert_eq!(
+                session.live_cells,
+                session.world.iter().filter(|&&alive| alive).count(),
+                "population remains derived after {point:?}"
+            );
+        }
+        let mut canvas = Canvas::new(super::GRID_W, super::GRID_H);
+        session.render(&mut canvas);
+        for point in &points[..2] {
+            for (x, y) in sown_glider_cells(*point).expect("finite glider") {
+                if session.world[y * super::GRID_W + x] {
+                    assert_eq!(canvas.cell(x, y), Some('#'));
+                }
+            }
+        }
+
+        session.advance();
+        assert_eq!(
+            session.baseline,
+            step(&opening, super::GRID_W, super::GRID_H)
+        );
+        assert!(!session.recent_launches.iter().any(|&recent| recent));
+        assert_eq!(
+            session.live_cells,
+            session.world.iter().filter(|&&alive| alive).count()
+        );
+    }
+
+    #[test]
+    fn life_session_launch_is_causal_and_survives_phase_sized_runs() {
+        let mut session = LifeSession::new(11);
+        assert!(session.launch((0.5, 0.5)));
+        assert_eq!(session.generation(), 0);
+        assert_eq!(session.launches(), 1);
+        assert!(matches!(
+            session.event,
+            LifeEvent::Launch {
+                planted: 5,
+                cleared: _
+            }
+        ));
+        for (x, y) in sown_glider_cells((0.5, 0.5)).expect("finite glider") {
+            assert!(session.world[y * GRID_W + x]);
+        }
+
+        advance_session(&mut session, super::MAX_GEN);
+        assert_eq!(session.generation(), super::MAX_GEN as u64);
+        assert_eq!(session.launches(), 1);
+        session.advance();
+        assert_eq!(
+            session.generation(),
+            super::MAX_GEN as u64 + 1,
+            "a normalized gallery sweep is not a session reset"
+        );
+    }
+
+    #[test]
+    fn life_session_reset_restores_the_selected_variation() {
+        let opening = LifeSession::new(3).world;
+        let mut session = LifeSession::new(3);
+        session.launch((0.2, 0.8));
+        advance_session(&mut session, 12);
+        session = LifeSession::new(3);
+
+        assert_eq!(session.world, opening);
+        assert_eq!(session.baseline, session.world);
+        assert_eq!(session.generation(), 0);
+        assert_eq!(session.launches(), 0);
+        assert_eq!(session.event, LifeEvent::Opening);
+    }
+
+    #[test]
+    fn life_session_status_names_the_action_then_the_rule_consequence() {
+        let mut session = LifeSession::new(0);
+        session.launch((0.4, 0.6));
+        let launched = session.status();
+        assert!(launched.contains("GLIDER 1"), "got: {launched}");
+        assert!(launched.contains("PLANTED 5"), "got: {launched}");
+
+        session.advance();
+        let advanced = session.status();
+        assert!(advanced.starts_with("BORN "), "got: {advanced}");
+        assert!(advanced.contains("GEN 1"), "got: {advanced}");
+        assert!(advanced.contains("GLIDER 1"), "got: {advanced}");
+        assert!(advanced.contains("LIVE "), "got: {advanced}");
+        assert!(advanced.contains("BORN "), "got: {advanced}");
+        assert!(advanced.contains("DIED "), "got: {advanced}");
+        let compact = session.compact_status();
+        assert!(compact.starts_with("BORN"), "got: {compact}");
+        assert!(compact.contains("DIED"), "got: {compact}");
+        assert!(compact.contains("G1"), "got: {compact}");
+        assert!(compact.contains("GL1"), "got: {compact}");
+    }
+
+    #[test]
+    fn nonfinite_launch_is_a_bit_for_bit_no_op() {
+        let mut session = LifeSession::new(5);
+        advance_session(&mut session, 7);
+        let before_world = session.world.clone();
+        let before_baseline = session.baseline.clone();
+        let before_status = session.status();
+        let before_event = session.event;
+
+        assert!(!session.launch((f64::NAN, 0.5)));
+        assert_eq!(session.world, before_world);
+        assert_eq!(session.baseline, before_baseline);
+        assert_eq!(session.status(), before_status);
+        assert_eq!(session.event, before_event);
+    }
+
+    #[test]
+    fn render_and_status_are_pure_session_observations() {
+        let mut session = LifeSession::new(9);
+        session.launch((0.4, 0.6));
+        advance_session(&mut session, 141);
+        let generation = session.generation();
+        let status = session.status();
+        let mut first = Canvas::new(72, 36);
+        let mut second = Canvas::new(72, 36);
+
+        session.render(&mut first);
+        session.render(&mut second);
+
+        assert_eq!(first.to_text(), second.to_text());
+        assert_eq!(session.generation(), generation);
+        assert_eq!(session.status(), status);
     }
 
     #[test]
@@ -527,6 +927,37 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn a_future_launch_is_absent_when_scrubbing_before_it() {
+        let launch = GliderLaunch {
+            point: (0.5, 0.5),
+            generation: 90,
+        };
+        assert_eq!(
+            simulate_with_launches(40, 0, &[launch]),
+            simulate(40, 0),
+            "an event cannot change the universe before its recorded generation"
+        );
+    }
+
+    #[test]
+    fn stateless_replay_orders_decreasing_timestamps_chronologically() {
+        let late = GliderLaunch {
+            point: (0.8, 0.2),
+            generation: 80,
+        };
+        let early = GliderLaunch {
+            point: (0.2, 0.8),
+            generation: 20,
+        };
+
+        assert_eq!(
+            simulate_with_launches(100, 3, &[late, early]),
+            simulate_with_launches(100, 3, &[early, late]),
+            "timestamps define the stateless causal order, not array position"
+        );
     }
 
     #[test]

@@ -6,6 +6,26 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Game of Life is now a causal persistent visit in the native App. A settled
+  deterministic soup advances on a bounded B3/S23 clock for the whole visit,
+  including beyond the former generation-140 phase wrap. Each mouse or
+  controller touch clears one local patch, plants exactly five cells, holds the
+  new glider bright for one beat, and then reports births, deaths, generation,
+  live population, and total launches as it evolves. Pause, focus, and speed
+  controls govern the simulation; reset closes any held pointer and restores the
+  exact selected opening; and PNG postcards use the actual session even after
+  more touches than the generic input history retains. CLI and MCP remain
+  explicitly stateless and replay timestamped launches in generation order,
+  keeping the newest 24 launch events with deterministic cross-face results and
+  no cross-call MCP state. CLI renders now accept an exact `--variation` seed;
+  the convenience `--vary` path prints the seed it chose so every varied room
+  can be replayed. Exact
+  B3/S23, still-life, oscillator, moving-glider, torus, reset, generation 141,
+  controller, export, chronological replay, and interleaved request tests cover
+  the contract. Release QA grows to 259 screens with opening, immediate launch,
+  generation 4, generation 141, exact reset, and compact controller receipts.
+  The complete local gate passes 1,282 all-target test cases at 93.41 percent
+  region and 93.19 percent line coverage.
 - Galton Board is now a causal fixed-coin experiment instead of a completed
   phase-driven pile with unrelated foreground traces. The opening shows its
   physical 16-row peg lattice, five coarse coin choices from `p = 0.30` through

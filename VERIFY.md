@@ -44,20 +44,22 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 1,259 all-target test cases pass, 93.34% region
-cover, and 93.11% line cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 1,282 all-target test cases pass, 93.41% region
+cover, and 93.19% line cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
 
-The release scripts also regenerate `renders/qa-app/`, a 253-screen app matrix.
+The release scripts also regenerate `renders/qa-app/`, a 259-screen app matrix.
 Every catalog room has a deterministic opening frame, arrival card, immediate
 pointer response, same-phase delayed-gesture baseline and response, compact
 arrival card, and compact delayed response.
 The matrix also covers every app game state, default and compact overlays,
 production Studio rendering, both ends of The Show, Times Tables phase
-stability, the Mandelbrot reset flow, and 13 compact controller or pause
-receipts spanning rooms, overlays, and game results. Generation removes stale output,
+stability, the Mandelbrot reset flow, a persistent Life sequence from opening
+through launch, generation 4, generation 141, and exact reset, and 14 compact
+controller or pause receipts spanning rooms, overlays, and game results.
+Generation removes stale output,
 checks the exact unique scenario inventory, rejects blank or wrong-sized frames,
 and gives every room a declared click, drag-release, repeated-action, or boundary
 scenario. Inputs must be finite, ordered, and closed. Immediate and delayed
@@ -225,7 +227,8 @@ Music Engine A (the seeded chiptune, `numinous tune`), GPU real-time fractals,
 live sound in the app and CLI plus structured notation over MCP, the `forget`
 right for players who are minds, and 29 MCP tools (full CLI parity for the
 games; challenge, predict, and cairn are MCP-first) so agents play the same
-content. Pending (see `docs/ROADMAP.md`): deeper held and causal interactions,
+content. Pending (see `docs/ROADMAP.md`): deeper held and causal interactions
+in other rooms,
 human playtests, representative physical-controller sessions, musician-led
 long-listening review, cross-platform proof, full Studio save/share beyond the
 first CLI `.num` save/open slice, the music visualizer, and more GPU room paths.

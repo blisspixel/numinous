@@ -92,6 +92,7 @@ numinous watch lorenz --era phosphor
 numinous play times-tables        classic ASCII
 numinous render double-pendulum --poke 0.2,0.8
 numinous render double-pendulum --gesture down:0.3,0.4,0.1 --gesture up:0.6,0.5,0.15
+numinous render game-of-life --variation 7 --t 0.5 --gesture down:0.5,0.5,0.1 --gesture up:0.5,0.5,0.12
 numinous plot "sin(a*x)" --animate
 numinous sing "sin(x) + x/3" --out song.wav
 numinous tune --seed 7 --out chip.wav   a seeded chiptune (Music Engine A)
@@ -222,7 +223,13 @@ Conventions worth relying on:
 - **Stateless room input.** `play_room` accepts optional normalized hand
   points as `pokes: [[x, y], ...]`, newest last, bounded to 24 points, or a
   `gesture` trail of phase-stamped pointer events (held rooms pin, pull, and
-  fling). Both are replayable arguments, not hidden session state.
+  fling). In Game of Life, an early pointer-down plants five cells at its own
+  generation and the final phase shows their later B3/S23 evolution; the newest
+  24 pointer-down events become launches. Both input forms are replayable
+  arguments, not hidden session state. Use `--variation N` to replay a specific
+  CLI room seed; `--vary` chooses and prints one. The native App has a different
+  explicit contract: its Life universe persists for one room visit until reset
+  or room departure and does not inherit the 24-launch replay bound.
 - **Structured output, and the substance is in it.** Catalog, description,
   reveal, listening, score, memory, game, and Journey results return bounded
   `structuredContent` alongside prose; parse that, not the sentences. All 31

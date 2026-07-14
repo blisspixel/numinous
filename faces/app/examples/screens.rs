@@ -151,6 +151,11 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
     expected.extend([
         "flows/mandelbrot-before-reset.png".to_string(),
         "flows/mandelbrot-after-reset.png".to_string(),
+        "flows/game-of-life-session-opening.png".to_string(),
+        "flows/game-of-life-launch-immediate.png".to_string(),
+        "flows/game-of-life-generation-4.png".to_string(),
+        "flows/game-of-life-generation-141.png".to_string(),
+        "flows/game-of-life-after-reset.png".to_string(),
     ]);
     for name in [
         "launch-help",
@@ -201,6 +206,7 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
         [
             "rooms/controller-click-arrival-small-360x240.png",
             "rooms/controller-drag-arrival-small-360x240.png",
+            "rooms/game-of-life-controller-launch-small-360x240.png",
             "overlays/controller-help-small-360x240.png",
             "overlays/keyboard-paused-small-360x240.png",
             "overlays/controller-paused-small-360x240.png",
@@ -216,7 +222,7 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
         .into_iter()
         .map(str::to_string),
     );
-    assert_eq!(expected.len(), 253, "documented QA scenario count");
+    assert_eq!(expected.len(), 259, "documented QA scenario count");
     expected
 }
 
@@ -342,6 +348,29 @@ fn assert_legible(id: &str, state: &str, before: &Raster, after: &Raster) {
         diff.mean_channel_delta >= MIN_MEAN_CHANNEL_DELTA,
         "{id} {state} response mean channel delta {} is too faint",
         diff.mean_channel_delta
+    );
+}
+
+fn assert_life_cause_is_local_and_visible(state: &str, before: &Raster, after: &Raster) {
+    let diff = difference(before, after);
+    let area = before.width() * before.height();
+    assert!(
+        diff.changed >= MIN_CHANGED_PIXELS,
+        "Life {state} changes only {} pixels",
+        diff.changed
+    );
+    assert!(
+        diff.support * 100 <= area * 8,
+        "Life {state} spreads across {} of {area} pixels before one glider can be followed",
+        diff.support
+    );
+    assert!(
+        diff.largest_tile_cluster >= 1,
+        "Life {state} has no coherent changed tile"
+    );
+    assert!(
+        diff.mean_channel_delta >= MIN_MEAN_CHANNEL_DELTA,
+        "Life {state} is too faint"
     );
 }
 
@@ -476,10 +505,10 @@ fn room_scenario(id: &str) -> RoomScenario {
             StatusChanges,
         ),
         "game-of-life" => scenario(
-            Repeated,
-            (0.30, 0.34),
-            0.35,
-            repeated(&[(0.30, 0.34), (0.50, 0.50), (0.70, 0.66)]),
+            Click,
+            (0.50, 0.50),
+            4.0 / 140.0,
+            vec![down(0.50, 0.50, 0.0), up(0.50, 0.50, 0.02)],
             StatusChanges,
         ),
         "mandelbrot" => scenario(
@@ -783,6 +812,7 @@ fn room_screen_with_mode(
             input_mode,
         },
         inputs,
+        None,
         width,
         height,
     );
@@ -792,6 +822,53 @@ fn room_screen_with_mode(
 fn room_content(room: &dyn Room, t: f64, inputs: &[RoomInput], size: (usize, usize)) -> Raster {
     let mut raster = Raster::with_accent(size.0, size.1, room.meta().accent);
     room.render_input(&mut raster, t, inputs);
+    raster
+}
+
+fn life_session_screen(
+    room: &dyn Room,
+    session: &numinous_core::rooms::game_of_life::LifeSession,
+    size: (usize, usize),
+    input_mode: input_legend::InputMode,
+) -> Raster {
+    let (width, height) = size;
+    let mut raster = life_session_content(room, session, size);
+    let status = if width <= 400 {
+        session.compact_status()
+    } else {
+        session.status()
+    };
+    hud::draw_room_chrome(
+        &mut raster,
+        room,
+        &hud::RoomChrome {
+            t: 0.0,
+            room_card: 0,
+            show_info: false,
+            show_help: false,
+            show_journey: false,
+            banner_active: false,
+            the_show: false,
+            studio: false,
+            muted: false,
+            level: 7,
+            input_mode,
+        },
+        &[],
+        Some(&status),
+        width,
+        height,
+    );
+    raster
+}
+
+fn life_session_content(
+    room: &dyn Room,
+    session: &numinous_core::rooms::game_of_life::LifeSession,
+    size: (usize, usize),
+) -> Raster {
+    let mut raster = Raster::with_accent(size.0, size.1, room.meta().accent);
+    session.render(&mut raster);
     raster
 }
 
@@ -825,6 +902,7 @@ fn show_screen_with_mode(
             input_mode,
         },
         &[],
+        None,
         width,
         height,
     );
@@ -935,8 +1013,13 @@ fn main() {
             false,
             7,
         );
-        assert_legible(id, "immediate", &raw_base, &raw_interacted);
-        assert_legible(id, "delayed", &raw_delayed_base, &raw_delayed);
+        if id == "game-of-life" {
+            assert_life_cause_is_local_and_visible("immediate", &raw_base, &raw_interacted);
+            assert_life_cause_is_local_and_visible("generation 4", &raw_delayed_base, &raw_delayed);
+        } else {
+            assert_legible(id, "immediate", &raw_base, &raw_interacted);
+            assert_legible(id, "delayed", &raw_delayed_base, &raw_delayed);
+        }
         save(
             &base,
             &format!("rooms/{id}-base-{}x{}.png", ROOM_SIZE.0, ROOM_SIZE.1),
@@ -1030,6 +1113,83 @@ fn main() {
     save(
         &room_screen(mandelbrot, 0.0, &[], (900, 700), 0, false, 7),
         "flows/mandelbrot-after-reset.png",
+        &mut manifest,
+    );
+
+    let life = room_by_id(&rooms, "game-of-life");
+    let mut life_session = numinous_core::rooms::game_of_life::LifeSession::new(0);
+    let life_opening_content = life_session_content(life, &life_session, DEFAULT_SIZE);
+    let life_opening = life_session_screen(
+        life,
+        &life_session,
+        DEFAULT_SIZE,
+        input_legend::InputMode::KeyboardMouse,
+    );
+    save(
+        &life_opening,
+        "flows/game-of-life-session-opening.png",
+        &mut manifest,
+    );
+    assert!(life_session.launch((0.5, 0.5)));
+    save(
+        &life_session_screen(
+            life,
+            &life_session,
+            DEFAULT_SIZE,
+            input_legend::InputMode::KeyboardMouse,
+        ),
+        "flows/game-of-life-launch-immediate.png",
+        &mut manifest,
+    );
+    for _ in 0..4 {
+        life_session.advance();
+    }
+    save(
+        &life_session_screen(
+            life,
+            &life_session,
+            DEFAULT_SIZE,
+            input_legend::InputMode::KeyboardMouse,
+        ),
+        "flows/game-of-life-generation-4.png",
+        &mut manifest,
+    );
+    for _ in 4..141 {
+        life_session.advance();
+    }
+    assert_eq!(life_session.generation(), 141);
+    let life_generation_141_content = life_session_content(life, &life_session, DEFAULT_SIZE);
+    assert_ne!(
+        life_generation_141_content.to_rgba(),
+        life_opening_content.to_rgba(),
+        "generation 141 room content must not wrap to the opening"
+    );
+    let life_generation_141 = life_session_screen(
+        life,
+        &life_session,
+        DEFAULT_SIZE,
+        input_legend::InputMode::KeyboardMouse,
+    );
+    save(
+        &life_generation_141,
+        "flows/game-of-life-generation-141.png",
+        &mut manifest,
+    );
+    life_session = numinous_core::rooms::game_of_life::LifeSession::new(0);
+    let life_after_reset = life_session_screen(
+        life,
+        &life_session,
+        DEFAULT_SIZE,
+        input_legend::InputMode::KeyboardMouse,
+    );
+    assert_eq!(
+        life_after_reset.to_rgba(),
+        life_opening.to_rgba(),
+        "reset restores the exact opening for the same variation"
+    );
+    save(
+        &life_after_reset,
+        "flows/game-of-life-after-reset.png",
         &mut manifest,
     );
 
@@ -1311,6 +1471,13 @@ fn main() {
     save(
         &room_screen_with_mode(times, 0.05, &[], SMALL_SIZE, 240, false, 7, controller),
         "rooms/controller-drag-arrival-small-360x240.png",
+        &mut manifest,
+    );
+    let mut controller_life = numinous_core::rooms::game_of_life::LifeSession::new(0);
+    assert!(controller_life.launch((0.5, 0.5)));
+    save(
+        &life_session_screen(life, &controller_life, SMALL_SIZE, controller),
+        "rooms/game-of-life-controller-launch-small-360x240.png",
         &mut manifest,
     );
 

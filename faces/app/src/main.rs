@@ -125,6 +125,10 @@ const SHOW_T_RATE: f64 = 0.096;
 const MAX_TICK_SECONDS: f64 = 0.05;
 /// Target presentation cadence. The simulation still uses measured time.
 const FRAME_INTERVAL: Duration = Duration::from_micros(16_667);
+/// Deliberate Life cadence: fast enough to move, slow enough to read births.
+const LIFE_STEP_SECONDS: f64 = 0.12;
+/// One presentation tick cannot consume an unbounded simulation backlog.
+const MAX_LIFE_STEPS_PER_TICK: usize = 8;
 
 fn bounded_tick_seconds(elapsed: Duration) -> f64 {
     elapsed.as_secs_f64().clamp(0.0, MAX_TICK_SECONDS)
@@ -139,6 +143,8 @@ struct App {
     /// The last input family that performed a meaningful action.
     input_mode: input_legend::InputMode,
     mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera,
+    life_session: numinous_core::rooms::game_of_life::LifeSession,
+    life_accumulator: f64,
     rooms: Vec<Box<dyn Room>>,
     current: usize,
     t: f64,
@@ -250,6 +256,8 @@ impl App {
             gamepad: gamepad::GamepadInput::new(),
             input_mode: input_legend::InputMode::default(),
             mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera::new(0),
+            life_session: numinous_core::rooms::game_of_life::LifeSession::new(0),
+            life_accumulator: 0.0,
             rooms: all_rooms_with(0),
             current: 0,
             t: 0.0,
@@ -742,14 +750,32 @@ impl App {
     /// Write the current room's frame to a PNG next to the save files: the
     /// postcard key. Returns the path it wrote.
     fn save_postcard(&self) -> Option<std::path::PathBuf> {
+        self.save_postcard_to(&postcard::default_postcard_dir())
+            .ok()
+    }
+
+    fn save_postcard_to(&self, dir: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
+        if self.current_room_is_life() {
+            let room = self.rooms[self.current].as_ref();
+            let size = postcard::POSTCARD_SIZE as usize;
+            let mut raster = Raster::with_accent(size, size, room.meta().accent);
+            self.life_session.render(&mut raster);
+            let mut rgba = raster.to_rgba();
+            self.era.apply(&mut rgba, size, size);
+            return postcard::write_rendered_postcard(
+                room.meta().id,
+                self.life_session.generation(),
+                &rgba,
+                dir,
+            );
+        }
         postcard::write_room_postcard(
             self.rooms[self.current].as_ref(),
             self.t,
             &self.inputs,
             self.era,
-            &postcard::default_postcard_dir(),
+            dir,
         )
-        .ok()
     }
 
     fn save_playtest_note(&self) -> std::io::Result<std::path::PathBuf> {
@@ -1023,8 +1049,7 @@ impl App {
             mouse_input::LeftPressAction::GameClick => self.click(),
             mouse_input::LeftPressAction::RoomPoke => {
                 self.poking = true;
-                room_input::push_poke(&mut self.pokes, point);
-                room_input::record_pointer_down(&mut self.inputs, point, self.t);
+                self.record_room_touch(point);
                 if self.rooms[self.current].meta().id == "mandelbrot"
                     && let Some(window) = &self.window
                 {
@@ -1069,6 +1094,14 @@ impl App {
             return false;
         }
         self.input_mode = input_legend::InputMode::KeyboardMouse;
+        if self.current_room_is_life() {
+            self.time_scale = if lines.is_sign_positive() {
+                (self.time_scale * 2.0).min(8.0)
+            } else {
+                (self.time_scale / 2.0).max(0.25)
+            };
+            return true;
+        }
         self.t = (self.t + lines * 0.02).rem_euclid(1.0);
         self.update_audio();
         true
@@ -1325,6 +1358,11 @@ impl App {
             gamepad::Command::PointerMoved { point, held } => {
                 self.move_pointer_to(point, held);
             }
+            gamepad::Command::PhaseDelta(delta)
+                if !self.modal_mode_active() && self.current_room_is_life() =>
+            {
+                self.time_scale = (self.time_scale * 2.0_f64.powf(delta * 4.0)).clamp(0.25, 8.0);
+            }
             gamepad::Command::PhaseDelta(delta) if !self.modal_mode_active() => {
                 self.t = (self.t + delta).rem_euclid(1.0);
             }
@@ -1559,13 +1597,7 @@ impl App {
     fn switch(&mut self, delta: isize) {
         self.current = room_input::wrapped_room_index(self.current, delta, self.rooms.len());
         self.rooms = room_input::redeal_rooms(&mut self.variation, &mut self.current);
-        room_input::reset_room_view(
-            &mut self.t,
-            &mut self.room_card,
-            &mut self.pokes,
-            &mut self.inputs,
-        );
-        self.mandelbrot_camera.reset(self.variation);
+        self.reset_room_runtime();
         self.tune.clear();
         if let Some(window) = &self.window {
             window.set_title(&self.title());
@@ -1574,7 +1606,8 @@ impl App {
         self.update_audio();
     }
 
-    fn reset_current_room(&mut self) {
+    fn reset_room_runtime(&mut self) {
+        self.clear_pointer_state();
         room_input::reset_room_view(
             &mut self.t,
             &mut self.room_card,
@@ -1582,7 +1615,70 @@ impl App {
             &mut self.inputs,
         );
         self.mandelbrot_camera.reset(self.variation);
+        self.reset_life_session();
+    }
+
+    fn reset_current_room(&mut self) {
+        self.reset_room_runtime();
         self.update_audio();
+    }
+
+    fn current_room_is_life(&self) -> bool {
+        self.rooms[self.current].meta().id == "game-of-life"
+    }
+
+    fn current_status_override(&self, width: usize) -> Option<String> {
+        self.current_room_is_life().then(|| {
+            if width <= 400 {
+                self.life_session.compact_status()
+            } else {
+                self.life_session.status()
+            }
+        })
+    }
+
+    fn reset_life_session(&mut self) {
+        self.life_session = numinous_core::rooms::game_of_life::LifeSession::new(self.variation);
+        self.life_accumulator = 0.0;
+    }
+
+    fn record_room_touch(&mut self, point: (f64, f64)) -> bool {
+        let poke_added = room_input::push_poke(&mut self.pokes, point);
+        let input_added = room_input::record_pointer_down(&mut self.inputs, point, self.t);
+        if poke_added && input_added && self.current_room_is_life() {
+            let launched = self.life_session.launch(point);
+            if launched {
+                self.life_accumulator = 0.0;
+            }
+            return launched;
+        }
+        poke_added && input_added
+    }
+
+    fn advance_life(&mut self, elapsed: f64) -> usize {
+        if !self.current_room_is_life() || !elapsed.is_finite() || elapsed <= 0.0 {
+            return 0;
+        }
+        let max_backlog = LIFE_STEP_SECONDS * MAX_LIFE_STEPS_PER_TICK as f64;
+        self.life_accumulator = (self.life_accumulator + elapsed).min(max_backlog);
+        let steps = ((self.life_accumulator + 1e-9) / LIFE_STEP_SECONDS).floor() as usize;
+        let steps = steps.min(MAX_LIFE_STEPS_PER_TICK);
+        for _ in 0..steps {
+            self.life_session.advance();
+        }
+        self.life_accumulator -= steps as f64 * LIFE_STEP_SECONDS;
+        steps
+    }
+
+    fn advance_life_if_active(&mut self, elapsed: f64) -> usize {
+        if !self.window_active
+            || self.paused
+            || self.dragging
+            || self.show_help && self.modal_mode_active()
+        {
+            return 0;
+        }
+        self.advance_life(elapsed * self.time_scale)
     }
 
     fn draw_studio(&self, raster: &mut Raster, width: usize, height: usize) {
@@ -1664,6 +1760,8 @@ impl App {
             let mut raster = Raster::with_accent(rw, rh, room.meta().accent);
             if room.meta().id == "mandelbrot" {
                 self.mandelbrot_camera.render(&mut raster);
+            } else if room.meta().id == "game-of-life" {
+                self.life_session.render(&mut raster);
             } else {
                 room.render_input(&mut raster, self.t, &self.inputs);
             }
@@ -1687,6 +1785,7 @@ impl App {
         width: usize,
         height: usize,
     ) {
+        let status_override = self.current_status_override(width);
         hud::draw_room_chrome(
             raster,
             room,
@@ -1704,6 +1803,7 @@ impl App {
                 input_mode: self.input_mode,
             },
             &self.inputs,
+            status_override.as_deref(),
             width,
             height,
         );
@@ -2136,13 +2236,7 @@ impl ApplicationHandler for App {
                                     &mut self.variation,
                                     &mut self.current,
                                 );
-                                room_input::reset_room_view(
-                                    &mut self.t,
-                                    &mut self.room_card,
-                                    &mut self.pokes,
-                                    &mut self.inputs,
-                                );
-                                self.mandelbrot_camera.reset(self.variation);
+                                self.reset_room_runtime();
                                 self.tune.clear();
                                 if let Some(window) = &self.window {
                                     window.set_title(&self.title());
@@ -2258,6 +2352,7 @@ impl ApplicationHandler for App {
             self.handle_gamepad_command(command);
         }
         self.refresh_pointer_state();
+        self.advance_life_if_active(elapsed);
         if !(self.paused || self.dragging || self.show_help && self.modal_mode_active()) {
             if self.rooms[self.current].meta().id == "mandelbrot" {
                 self.mandelbrot_camera.advance(elapsed * self.time_scale);
@@ -2480,6 +2575,16 @@ mod tests {
         app
     }
 
+    fn select_life(app: &mut App) {
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "game-of-life")
+            .expect("Life room");
+        app.show_help = false;
+        app.reset_life_session();
+    }
+
     fn write_test_wav(path: &std::path::Path, channels: u16, seconds: u32) {
         let spec = hound::WavSpec {
             channels,
@@ -2653,6 +2758,210 @@ mod tests {
         assert_eq!(app.t, 0.0);
         assert!(app.pokes.is_empty());
         assert!(app.inputs.is_empty());
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn life_session_keeps_advancing_after_a_gallery_phase_wrap() {
+        let mut app = headless("numinous_app_test_life_continuity.txt");
+        select_life(&mut app);
+        let mut advanced = 0;
+        while advanced < 140 {
+            let remaining = 140 - advanced;
+            let batch = remaining.min(super::MAX_LIFE_STEPS_PER_TICK);
+            advanced += app.advance_life(super::LIFE_STEP_SECONDS * batch as f64);
+        }
+        app.t = 0.999;
+        app.t = 0.0;
+        assert_eq!(app.advance_life(super::LIFE_STEP_SECONDS), 1);
+        assert_eq!(app.life_session.generation(), 141);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn life_touch_uses_the_shared_room_input_and_session_route() {
+        let mut app = headless("numinous_app_test_life_touch.txt");
+        select_life(&mut app);
+
+        assert!(app.record_room_touch((0.3, 0.7)));
+        assert_eq!(app.pokes, vec![(0.3, 0.7)]);
+        assert!(matches!(
+            app.inputs.as_slice(),
+            [numinous_core::RoomInput::PointerDown { x: 0.3, y: 0.7, .. }]
+        ));
+        assert_eq!(app.life_session.launches(), 1);
+        assert_eq!(app.life_accumulator, 0.0);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn room_reset_restores_life_and_closes_a_held_pointer() {
+        let mut app = headless("numinous_app_test_life_reset.txt");
+        select_life(&mut app);
+        app.record_room_touch((0.4, 0.6));
+        app.poking = true;
+        app.advance_life(super::LIFE_STEP_SECONDS * 9.0);
+
+        app.reset_current_room();
+
+        assert!(!app.poking);
+        assert!(app.inputs.is_empty());
+        assert!(app.pokes.is_empty());
+        assert_eq!(app.life_session.generation(), 0);
+        assert_eq!(app.life_session.launches(), 0);
+        assert_eq!(app.life_accumulator, 0.0);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn life_status_uses_the_persistent_session_after_history_limits() {
+        let mut app = headless("numinous_app_test_life_status.txt");
+        select_life(&mut app);
+        for i in 0..25 {
+            let x = 0.1 + (i % 5) as f64 * 0.18;
+            let y = 0.1 + (i / 5) as f64 * 0.18;
+            assert!(app.record_room_touch((x, y)));
+        }
+        for _ in 0..141 {
+            app.life_session.advance();
+        }
+        app.t = 0.0;
+
+        assert_eq!(app.pokes.len(), numinous_core::MAX_ROOM_POKES);
+        assert_eq!(app.life_session.launches(), 25);
+        let wide = app.current_status_override(900).expect("wide Life status");
+        let compact = app
+            .current_status_override(360)
+            .expect("compact Life status");
+        assert!(wide.contains("GEN 141"), "got: {wide}");
+        assert!(wide.contains("GLIDERS 25"), "got: {wide}");
+        assert!(compact.contains("G141"), "got: {compact}");
+        assert!(compact.contains("GL25"), "got: {compact}");
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn life_advancement_obeys_pause_focus_and_speed_controls() {
+        let mut app = headless("numinous_app_test_life_pause.txt");
+        select_life(&mut app);
+        app.paused = true;
+        assert_eq!(app.advance_life_if_active(super::LIFE_STEP_SECONDS), 0);
+        assert_eq!(app.life_session.generation(), 0);
+        app.paused = false;
+        app.window_active = false;
+        assert_eq!(app.advance_life_if_active(super::LIFE_STEP_SECONDS), 0);
+        app.window_active = true;
+        assert_eq!(app.advance_life_if_active(super::LIFE_STEP_SECONDS), 1);
+
+        let phase = app.t;
+        let speed = app.time_scale;
+        assert!(app.apply_wheel_delta(1.0));
+        assert_eq!(app.t, phase, "Life wheel changes cadence, not hidden phase");
+        assert!(app.time_scale > speed);
+        let after_wheel = app.time_scale;
+        app.handle_gamepad_command(crate::gamepad::Command::PhaseDelta(-0.1));
+        assert_eq!(app.t, phase);
+        assert!(app.time_scale < after_wheel);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn controller_reset_closes_a_held_life_touch() {
+        let mut app = headless("numinous_app_test_life_controller_reset.txt");
+        select_life(&mut app);
+        assert!(app.record_room_touch((0.5, 0.5)));
+        app.poking = true;
+
+        app.handle_gamepad_command(crate::gamepad::Command::Reset);
+
+        assert!(!app.poking);
+        assert!(app.inputs.is_empty());
+        assert!(app.pokes.is_empty());
+        assert_eq!(app.life_session.generation(), 0);
+        assert_eq!(app.life_session.launches(), 0);
+        app.handle_gamepad_command(crate::gamepad::Command::PointerMoved {
+            point: (0.7, 0.7),
+            held: true,
+        });
+        app.handle_gamepad_command(crate::gamepad::Command::PrimaryUp);
+        assert!(app.inputs.is_empty());
+        assert!(app.pokes.is_empty());
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn controller_primary_routes_one_complete_life_launch() {
+        let mut app = headless("numinous_app_test_life_controller_touch.txt");
+        select_life(&mut app);
+        app.gamepad.set_cursor_for_test((0.35, 0.65));
+
+        app.handle_gamepad_command(crate::gamepad::Command::PrimaryDown);
+        assert!(app.poking);
+        assert_eq!(app.life_session.launches(), 1);
+        assert!(matches!(
+            app.inputs.as_slice(),
+            [numinous_core::RoomInput::PointerDown {
+                x: 0.35,
+                y: 0.65,
+                ..
+            }]
+        ));
+
+        app.handle_gamepad_command(crate::gamepad::Command::PrimaryUp);
+        assert!(!app.poking);
+        assert!(matches!(
+            app.inputs.last(),
+            Some(numinous_core::RoomInput::PointerUp {
+                x: 0.35,
+                y: 0.65,
+                ..
+            })
+        ));
+        assert_eq!(app.life_session.launches(), 1);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn life_postcard_matches_the_persistent_session() {
+        let mut app = headless("numinous_app_test_life_postcard.txt");
+        select_life(&mut app);
+        app.record_room_touch((0.35, 0.65));
+        for _ in 0..141 {
+            app.life_session.advance();
+        }
+        let dir = std::env::temp_dir().join(format!(
+            "numinous-life-postcard-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create postcard directory");
+
+        let path = app.save_postcard_to(&dir).expect("save Life postcard");
+        assert!(
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.contains("game-of-life-141")),
+            "Life postcard names the persistent generation: {}",
+            path.display()
+        );
+        let file = std::fs::File::open(path).expect("open Life postcard");
+        let decoder = png::Decoder::new(std::io::BufReader::new(file));
+        let mut reader = decoder.read_info().expect("read Life postcard header");
+        let mut decoded = vec![0; reader.output_buffer_size()];
+        let output = reader
+            .next_frame(&mut decoded)
+            .expect("decode Life postcard");
+        let decoded = &decoded[..output.buffer_size()];
+
+        let size = crate::postcard::POSTCARD_SIZE as usize;
+        let room = app.rooms[app.current].as_ref();
+        let mut expected = numinous_core::Raster::with_accent(size, size, room.meta().accent);
+        app.life_session.render(&mut expected);
+        let mut expected = expected.to_rgba();
+        app.era.apply(&mut expected, size, size);
+        assert_eq!(decoded, expected);
+
+        let _ = std::fs::remove_dir_all(dir);
         let _ = std::fs::remove_file(&app.journey_file);
     }
 

@@ -775,3 +775,65 @@ coverage, the exact 253-screen App matrix, Clippy with warnings denied, locked
 build, house style, supply-chain policy, and both installer self-tests. Real
 macOS and Linux installer execution and physical-device soak remain separate
 release evidence.
+
+---
+
+# The tenth round (July 14, 2026): Game of Life causal continuity
+
+Three independent QA groups reviewed the same narrow room from different
+evidence. The first followed first contact and compact controller screenshots.
+The second checked the state machine and Conway invariants. The third checked
+App lifecycle, reset, postcard, CLI, and MCP behavior. These were structured
+simulated reviews backed by reproduced code and render evidence, not participant
+testimony.
+
+## Reproduced findings
+
+- The old normalized phase sweep could return an App visit to its opening after
+  generation 140, so a player-created pattern did not have a continuous life.
+- A compact poke only described a point at the final phase. It could not express
+  that a glider was planted earlier and then evolved through later generations.
+- The random opening was too visually dense at first contact. A launch needed a
+  quiet local stage and one immediate beat before the rules transformed it.
+- The first comparison renderer dimmed every unchanged living cell after one
+  touch. The click was local, but the whole screen appeared to change. The
+  screenshot locality gate reproduced this before the renderer was corrected.
+- Life status had to lead with the latest cause and retain generation,
+  population, and launch count at compact width. Reset also had to close a held
+  controller pointer so its later release could not create a phantom action.
+- A persistent App world and stateless CLI or MCP calls are different honest
+  contracts. Treating process memory as implied agent state would make replay
+  order-dependent and hard to audit.
+
+## What changed
+
+The core now exposes one fixed-size incremental Life session with a settled,
+deterministic opening, exact toroidal B3/S23 steps, local 11 by 11 launch
+clearing, exactly five planted cells, and reusable scratch grids. The App owns
+that session for the whole room visit. A fixed-size recent-cell mask lets every
+rapid same-beat launch remain visible without unbounded history. It advances on
+a bounded wall-clock
+cadence, obeys pause, focus, and speed controls, continues beyond generation
+140, accepts mouse and controller touches through one route, and resets every
+runtime input and simulation field through one lifecycle path. Its PNG postcard
+is the actual current universe, not a reconstruction from the bounded generic
+input tail.
+
+CLI and MCP remain stateless. Their timestamped pointer-down events replay in
+generation order within a call, with the newest 24 down events becoming
+launches, so an early launch can evolve to a later final phase without hidden
+cross-call state. CLI `--variation` accepts an exact room seed, while `--vary`
+prints its chosen seed. Interleaved MCP calls prove that one request cannot
+change another. Compact and wide readouts name the latest cause first, then
+generation, live population, and total gliders.
+
+The exact App matrix now contains 259 images. Six new Life receipts cover the
+opening, immediate five-cell launch, generation 4, generation 141, exact reset,
+and the compact controller launch. The launch-locality oracle rejects a response
+whose support spreads across more than eight percent of the frame before the
+glider can be followed. The complete local release gate passes with 1,282
+all-target test cases, 93.41 percent region coverage, 93.19 percent line
+coverage, Clippy with warnings denied, locked build, house style, and
+supply-chain policy. The evidence proves deterministic causal mechanics and
+captured control truth. It does not prove that a new player will enjoy the room
+or understand Conway's rules without observation.

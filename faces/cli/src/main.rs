@@ -78,15 +78,19 @@ enum Command {
         /// Visual era for color output: phosphor, 8bit, vector, or modern.
         #[arg(long, default_value = "modern")]
         era: String,
-        /// Re-deal variation seed for replayable rooms (default 0 pins postcards).
-        #[arg(long)]
+        /// Choose and print a fresh room variation. Use --variation to replay it.
+        #[arg(long, conflicts_with = "variation")]
         vary: bool,
+        /// Use this exact room variation seed (default 0).
+        #[arg(long, value_name = "SEED", conflicts_with = "vary")]
+        variation: Option<u64>,
         /// Add a normalized hand point, as x,y in [0,1]. Repeat for multiple points.
         #[arg(long = "poke")]
         pokes: Vec<String>,
         /// Add a gesture event: down:x,y,t, move:x,y,t, up:x,y,t, or cancel.
-        /// Repeat, oldest first; held rooms pin, pull, and fling. Not
-        /// combinable with --poke.
+        /// Repeat, oldest first; held rooms pin, pull, and fling. In Life, a
+        /// down earlier than --t shows the glider's later evolution; its newest
+        /// 24 down events become launches. Not combinable with --poke.
         #[arg(long = "gesture")]
         gestures: Vec<String>,
     },
@@ -526,7 +530,7 @@ fn fresh_seed() -> u64 {
     seed
 }
 
-/// Fresh variation for --vary in watch: different every deal for replayable rooms.
+/// Fresh variation for `render --vary`: different every deal for replayable rooms.
 fn fresh_variation_seed() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -1023,6 +1027,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             color,
             era,
             vary,
+            variation,
             pokes,
             gestures,
         } => {
@@ -1054,7 +1059,15 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 );
                 return ExitCode::FAILURE;
             }
-            let variation = if vary { fresh_variation_seed() } else { 0 };
+            let variation = variation.unwrap_or_else(|| {
+                if vary {
+                    let variation = fresh_variation_seed();
+                    eprintln!("Variation {variation}: replay with --variation {variation}");
+                    variation
+                } else {
+                    0
+                }
+            });
             let input = if gesture.is_empty() {
                 RoomRenderInput::new(variation, &pokes)
             } else {
@@ -4469,6 +4482,102 @@ mod tests {
     }
 
     #[test]
+    fn life_gesture_replays_a_causal_launch_then_evolution() {
+        use numinous_core::RoomInput;
+        let variation = 7;
+        let final_phase = 0.5;
+        let launch_phase = 0.1;
+        let point = (0.23, 0.71);
+        let event = [RoomInput::PointerDown {
+            x: point.0,
+            y: point.1,
+            t: launch_phase,
+        }];
+        let report = render_report(
+            "game-of-life",
+            64,
+            48,
+            final_phase,
+            false,
+            RoomRenderInput::with_gesture(variation, &event),
+        )
+        .expect("causal Life replay");
+        let repeated = render_report(
+            "game-of-life",
+            64,
+            48,
+            final_phase,
+            false,
+            RoomRenderInput::with_gesture(variation, &event),
+        )
+        .expect("repeated Life replay");
+        let untouched = render_report(
+            "game-of-life",
+            64,
+            48,
+            final_phase,
+            false,
+            RoomRenderInput::new(variation, &[]),
+        )
+        .expect("untouched Life frame");
+        let compact_now = render_report(
+            "game-of-life",
+            64,
+            48,
+            final_phase,
+            false,
+            RoomRenderInput::new(variation, &[point]),
+        )
+        .expect("same-phase compact poke");
+
+        let mut session = numinous_core::rooms::game_of_life::LifeSession::new(variation);
+        for _ in 0..14 {
+            session.advance();
+        }
+        assert!(session.launch(point));
+        for _ in 14..70 {
+            session.advance();
+        }
+        let mut canvas = numinous_core::Canvas::new(64, 48);
+        session.render(&mut canvas);
+        let expected = format!("{}Status: {}\n", canvas.to_text(), session.status());
+
+        assert_eq!(report, expected);
+        assert_eq!(report, repeated);
+        assert_ne!(report, untouched);
+        assert_ne!(report, compact_now);
+        assert!(report.contains("Status: BORN"), "got: {report}");
+        assert!(report.contains("GEN 70"), "got: {report}");
+        assert!(report.contains("GLIDER 1"), "got: {report}");
+    }
+
+    #[test]
+    fn render_exposes_one_explicit_replayable_variation_seed() {
+        let cli = Cli::try_parse_from(["numinous", "render", "game-of-life", "--variation", "7"])
+            .expect("explicit variation parses");
+        assert!(matches!(
+            cli.command,
+            Some(Command::Render {
+                variation: Some(7),
+                vary: false,
+                ..
+            })
+        ));
+        assert!(
+            Cli::try_parse_from([
+                "numinous",
+                "render",
+                "game-of-life",
+                "--variation",
+                "7",
+                "--vary",
+            ])
+            .is_err(),
+            "clock variation and an explicit seed are mutually exclusive"
+        );
+    }
+
+    #[test]
     fn invalid_render_pokes_do_not_record_progress() {
         let mut journey = numinous_core::Journey::default();
         let before = journey.clone();
@@ -4482,6 +4591,7 @@ mod tests {
                 color: false,
                 era: "modern".to_string(),
                 vary: false,
+                variation: None,
                 pokes: vec!["2,0.5".to_string()],
                 gestures: Vec::new(),
             },
