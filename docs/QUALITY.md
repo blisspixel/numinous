@@ -8,10 +8,10 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-13
 
-- **Enforced now:** formatting, Clippy with warnings denied, 1,096 tests, locked
+- **Enforced now:** formatting, Clippy with warnings denied, 1,143 tests, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 92.93%
-  regions and 92.55% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 93.00%
+  regions and 92.61% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
   three faces, and a release-generated 240-screen visual QA matrix. Every room
@@ -29,9 +29,10 @@ built, so an aspiration is never mistaken for a result.
   Production input routing has separate unit tests; native operating system
   event dispatch is not claimed as automated end-to-end evidence.
 - **Not yet evidenced:** a completed stranger hallway test, accessibility review
-  with disabled players, real execution on macOS and Linux, nightly hardware
-  soak, perceptual visual or audio regression, opt-in telemetry, and independent
-  mathematical sign-off of every reveal.
+  with disabled players, representative physical-controller sessions,
+  musician-led long-listening review, real execution on macOS and Linux,
+  nightly hardware soak, perceptual visual or audio regression, opt-in
+  telemetry, and independent mathematical sign-off of every reveal.
 - **Rule:** `RESEARCH.md` defines Built, Measured, Observed, Designed, and
   Hypothesis. Every release decision uses those labels.
 
