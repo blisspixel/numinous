@@ -144,7 +144,7 @@ impl LifeSession {
         self.launches
     }
 
-    /// A compact truthful readout for the App footer and agent faces.
+    /// A truthful readout for wide App layouts and agent faces.
     #[must_use]
     pub fn status(&self) -> String {
         let glider = if self.launches == 1 {
