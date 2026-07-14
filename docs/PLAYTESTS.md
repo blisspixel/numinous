@@ -637,3 +637,70 @@ The complete local release gate passes with 1,221 all-target test cases, 93.24
 percent region coverage, 93.00 percent line coverage, the exact 253-screen
 matrix, Clippy with warnings denied, locked build, house style, and supply-chain
 policy.
+
+---
+
+# The eighth round (July 13, 2026): Galton cause and experiment truth
+
+Three independent groups reviewed Galton Board as a probability model, a
+first-contact interaction, and a cross-face release surface. They reproduced
+behavior in focused renders, the App matrix, CLI and MCP calls, compact HUD
+copy, and the bounded core input contract. Simulated review only widened the
+search. Every accepted finding below was reproduced in code, output, or pixels.
+
+Current external guidance supported two narrow decisions. The
+[NIST binomial reference](https://www.itl.nist.gov/div898/handbook/eda/section3/eda366i.htm),
+checked July 13, 2026, defines the distribution with one probability fixed
+across the trials. The
+[PhET design principles](https://phet.colorado.edu/en/about), checked July 13,
+2026, emphasize immediate cause-and-effect feedback, visible mental models,
+multiple representations, and limited controls for productive exploration.
+
+## Reproduced findings
+
+- The merged opening showed a completed 20,000-ball pile driven by room phase.
+  A click drew one path from a different probability but never added its
+  landing to that pile, so the aggregate answered time rather than the player.
+- Horizontal position secretly set a continuous probability, vertical position
+  did nothing, and the compact status required decoding `P`, `BIN`, and
+  `R-FLIPS`. A held pointer also became many balls because generic drag moves
+  were bridged into pokes despite the click verb.
+- Input identity was assigned after the newest-24 tail was sliced. A 25th touch
+  could reroll retained paths while the reported sample count stayed fixed.
+- The room's copy blurred two limits. Repeated samples estimate one exact
+  finite binomial distribution; increasing the row count under suitable
+  conditions is the separate route to a normal approximation.
+- Early implementation review caught a first-versus-last ball mismatch, a
+  compact status that lost the landing, a selector hidden under App chrome,
+  avoidable per-frame trace allocation, and a design that silently hid and
+  resumed parallel coin histories.
+
+## What changed
+
+The opening now separates an empty empirical experiment from a thin analytic
+`Binomial(16, p)` outline. Five coarse visible coin positions choose fixed
+probabilities from 0.30 through 0.70. Each pointer-down or compact poke adds one
+deterministic 64-ball wave to the current contiguous run. Another coin starts a
+fresh run; moves and releases add nothing; phase cannot redeal results; and the
+24-wave bound reports `FULL=1536` without rerolling the retained sample.
+
+The filled pile, exact outline, physical peg lattice, selected coin, highlighted
+last legal path, sample arithmetic, and compact landing now agree. The random
+stream is keyed by visit and coin, generated as a prefix, and tallied without a
+temporary trace allocation per ball. The App matrix compares one immediate
+fair wave with three repeated fair waves at a fixed phase and checks the status
+semantically. Full and compact controller wording use the same action source.
+
+The evidence boundary remains explicit. The exact matrix and focused tests show
+causal rendering, deterministic replay, compact legibility, and mathematical
+invariants. They do not prove delight, physical-controller familiarity, or the
+clarity of the five compact probability labels to a new participant. The explicit
+one-ball prediction wager and a one-shot falling animation remain possible
+Puzzle and motion refinements rather than claims about this completed Toy loop.
+
+The complete local release gate passes with 1,230 all-target test cases, 93.34
+percent region coverage, 93.10 percent line coverage, the exact 253-screen
+matrix, Clippy with warnings denied, locked build, house style, and supply-chain
+policy. A 360 by 240 interacted render regression separately proves that all
+five probability labels and the complete selector band survive the active path
+and pile render.

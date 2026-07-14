@@ -103,12 +103,15 @@ arrive last and confirm what the player already felt.
   Restructure: as the tally converges, a circle grows out of the needle geometry
   to show why pi was always hiding. The wrong guess is what makes pi's arrival
   uncanny.
-- **Galton Board to the Central Limit Theorem.** Prime: "Drop your bet: where
-  does this one ball land?" (They will be wrong.) Restructure: a thousand
-  uncertain balls approach the predicted binomial distribution; an analytic
-  overlay shows the convergence without pretending finite samples are
-  identical. The point is the contrast between an uncertain trial and an
-  increasingly stable aggregate.
+- **Galton Board to the binomial and its normal approximation.** Prime: "Drop
+  your bet: where does this one ball land?" Restructure: 64-ball waves build an
+  empirical pile against a distinct exact `Binomial(16, p)` outline without
+  pretending finite samples are identical. The built Toy provides five fixed
+  probabilities, contiguous deterministic runs, exact totals, and reset. The
+  explicit one-ball prediction wager remains Puzzle-layer work. More waves make
+  the empirical frequencies estimate the fixed binomial; the Central Limit
+  Theorem connection is the separate many-row normal approximation, not a claim
+  that sample count changes the landing distribution.
 
 ## The mechanic library
 

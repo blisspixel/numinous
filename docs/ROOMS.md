@@ -206,9 +206,9 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 
 ### 21. Galton Board / Bell Curve  Wow 4 / Build 1
 - **Rule:** Drop balls through a field of pegs. Each peg is a coin flip: left or right.
-- **Toy:** Pour thousands of balls and watch pure random bouncing pile up into a **bell curve**. The built board uses a physical 16-row triangular peg lattice and 17 bins rather than treating every screen column as a coin flip. Click left or right to set a visible bias and drop a ball from the top source. Every traced step follows one legal lattice edge. Bins are numbered 0 through 16, so the landing bin equals its count of right turns, and the compact status reports bias, landing bin, and right-flip count even at the small viewport.
-- **Aha:** "Make a lopsided pile." (Bias the pegs.)
-- **Reveal:** *"You cannot predict where a single ball lands. As trials accumulate, their bin counts approach the binomial distribution, which becomes bell-shaped at a fair bias. This is the Central Limit Theorem in action: sums of many small independent effects are often approximately normal. Individual outcomes remain uncertain while the aggregate pattern grows more stable."*
+- **Toy:** Pick one of five fixed coins, from `p = 0.30` through `p = 0.70`, then drop a deterministic 64-ball wave through one physical 16-row lattice. Repeated touches at the same coin extend one empirical run; selecting another coin starts a new run so probabilities are never mixed silently. The 17-bin pile grows from the player's waves while a thin exact binomial outline stays distinct from finite evidence. The highlighted last ball follows 16 legal edges and lands in the pile it helped build. Pointer moves add no hidden waves, phase never redeals a run, and the bounded 24-wave experiment reports `FULL=1536` before reset or another coin.
+- **Aha:** "Make the pile match the outline, then make it lean." The finite pile stays noisy while its shape becomes easier to recognize.
+- **Reveal:** *"The coin probability alone does not determine the next landing. With one probability fixed, the number of right turns in a 16-flip landing follows exactly Binomial(16, p), and repeated waves make the empirical pile estimate that discrete distribution. With many rows and a coin away from either extreme, a normal curve can approximate the binomial, the direction formalized by the Central Limit Theorem. This board displays the finite binomial itself."*
 - **Sound:** balls tick on pegs (rain-stick / bucket-drum texture); the pile's growth swells a soft pad.
 
 ### 22. Buffon's Needle → π  Wow 4 / Build 1
@@ -260,7 +260,9 @@ Pi keeps every visible digit readable while marking and repairing deterministic
 wrong digits; Buffon foregrounds viewport-scaled throws; Barnsley Fern plants
 bounded miniature attractors that remain near the selected origin; and the
 native Mandelbrot camera continues inward after every retargeting click instead
-of freezing or snapping out. Galton uses one physical triangular lattice, the
+of freezing or snapping out. Galton uses one physical triangular lattice, five
+fixed coins, replayable 64-ball runs, and a distinct exact reference instead of
+letting time move a prefilled pile independently of the player's balls. The
 Garden plants fitted complete grammars, and Arecibo shows one explained
 candidate width at a time. Room switching deals a new replayable visit, while R
 resets the current one.

@@ -96,6 +96,9 @@ pub(crate) fn room_action(mode: InputMode, action: &str) -> String {
         return action.to_string();
     }
     if let Some((gesture, result)) = action.split_once(':') {
+        if gesture == "AIM + CLICK" {
+            return format!("LEFT STICK + SOUTH: {}", result.trim_start());
+        }
         if let Some(qualifier) = gesture.strip_prefix("CLICK") {
             return format!("SOUTH{qualifier}: {}", result.trim_start());
         }
@@ -395,6 +398,13 @@ mod tests {
         assert_eq!(
             room_action(InputMode::KeyboardMouse, "CLICK: plant a glider"),
             "CLICK: plant a glider"
+        );
+        assert_eq!(
+            room_action(
+                InputMode::Controller,
+                "AIM + CLICK: pick coin, drop 64 balls"
+            ),
+            "LEFT STICK + SOUTH: pick coin, drop 64 balls"
         );
         assert_eq!(
             room_action(

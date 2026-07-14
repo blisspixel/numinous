@@ -135,8 +135,8 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 1,221 passing all-target test cases, 93.24% region coverage and
-93.00% line coverage with an enforced 80% line floor, Clippy with warnings
+The current local gate has 1,230 passing all-target test cases, 93.34% region coverage and
+93.10% line coverage with an enforced 80% line floor, Clippy with warnings
 denied, and dependency policy checks. Release QA also regenerates an exact
 253-screen App matrix with per-room interaction scenarios, semantic checks,
 and coarse perceptual response thresholds, including a regression that rejects
@@ -149,8 +149,11 @@ It fixed reproduced App, CLI, MCP, Studio, and mathematical-copy defects; the
 simulated reactions themselves are not participant evidence.
 CI is configured for locked tests and builds on Windows, macOS, and Ubuntu.
 Stranger playtests, accessibility work, cross-platform execution evidence,
-real-controller-model sessions, musician-led long-listening review, deeper room
-interaction, and substantial visual and Studio work remain ahead.
+real-controller-model sessions, musician-led long-listening review, deeper Life
+and other room interaction, and substantial visual and Studio work remain
+ahead. Galton Board now ships the first deeper causal experiment loop: choose a
+fixed coin, add replayable 64-ball waves, compare the empirical pile with its
+exact binomial reference, and reset without phase-driven drift.
 Versions are earned by evidence, not by feature count.
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the ordered 0.2 through 2.0 plan and

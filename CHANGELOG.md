@@ -6,6 +6,19 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Galton Board is now a causal fixed-coin experiment instead of a completed
+  phase-driven pile with unrelated foreground traces. The opening shows its
+  physical 16-row peg lattice, five coarse coin choices from `p = 0.30` through
+  `p = 0.70`, and a thin exact binomial reference without claiming it is an
+  empirical result. Each pointer-down or compact poke drops one deterministic
+  64-ball wave into the current contiguous run at the selected probability.
+  Repeated touches build 128, 192, and up to 1,536 actual samples; choosing a
+  different coin starts a clean run. The pile and highlighted last ball share
+  one random stream, remain invariant across room phase, and replay identically
+  in the App, CLI, and MCP faces. Pointer moves cannot create hidden waves, the
+  bounded run reports when it is full instead of rerolling retained history,
+  and the compact HUD retains probability, sample total, and last landing. The App
+  matrix now exercises immediate and repeated Galton states at one fixed coin.
 - All 29 MCP tools now advertise an additive `response_mode` argument. The
   default and explicit `full` modes preserve existing tool-call results exactly.
   Opt-in `compact` mode keeps `structuredContent`, error state, replay values,
@@ -20,7 +33,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   schema, made choice count part of pose and grade replay data and guidance,
   and upgraded real-stdio coverage to a conforming 2025-06-18 initialization
   exchange. The complete release gate passes with
-  1,221 all-target test cases, 93.24 percent region coverage, and 93.00 percent
+  1,230 all-target test cases, 93.34 percent region coverage, and 93.10 percent
   line coverage.
 - The native App now presents controls for the input family that last performed
   a meaningful action. One face-local vocabulary drives room chrome, arrival
@@ -197,8 +210,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ### Changed
 - Human hallway evidence still controls the 0.2 milestone claim, but no longer
   idles verified 0.3 depth, accessibility, input, audio, truth, or quality work
-  while sessions are arranged. Current evidence is 1,221 all-target test cases, 93.24
-  percent region coverage, and 93.00 percent line coverage.
+  while sessions are arranged. Current evidence is 1,230 all-target test cases, 93.34
+  percent region coverage, and 93.10 percent line coverage.
 - MCP `listen_room` now labels `motif` as the ambient motif and `notes` as the
   mathematical sonification through a `sound_roles` map and matching text
   headings. Existing structured paths remain compatible, with no duplicated
