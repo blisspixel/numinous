@@ -3,7 +3,7 @@
 The evidence and influences behind Numinous: what may support engagement and
 learning, why these mathematical phenomena are promising, what prior art can
 teach us, and where the project is still making a hypothesis. Evidence links
-were reviewed on 2026-07-12.
+were reviewed on 2026-07-14.
 
 ## Evidence posture
 
@@ -222,6 +222,7 @@ independently implemented programmatic language.
   independent implementation.
 
 **Sonification / audiovisual / aesthetic**
+- [EBU R 128 v5.0, Loudness normalisation and permitted maximum level of audio signals (November 21, 2023)](https://tech.ebu.ch/publications/r128)
 - [Ryoji Ikeda, Artist Profile](https://visualalchemist.in/2024/10/11/artist-profile-ryoji-ikeda/)
 - [Open Your Ears and Take a Look: sonification + visualization (arXiv)](https://arxiv.org/pdf/2402.16558)
 - [Listening to the Mandelbrot set, North Coast Synthesis](https://northcoastsynthesis.com/news/listening-to-the-mandelbrot-set/)

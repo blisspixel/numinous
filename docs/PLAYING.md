@@ -75,7 +75,7 @@ your hands already know it:
 The art keeps the frame. Room titles, arrival hints, and inspection copy use
 separate quiet bands rather than sitting on the active visual. Arrival hints
 fade on their own, E toggles inspection, H restores help, and Esc closes an
-open overlay. A clean install always has the 32-step stereo programmatic
+open overlay. A clean install always has the four-cycle stereo programmatic
 soundtrack. Room changes crossfade, and volume or window focus changes do not
 restart it. Start pauses a live game behind the menu without discarding its
 state. On restore, radio rejoins the wall-clock broadcast position before audio

@@ -43,6 +43,10 @@ use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_tota
 
 /// Near-black background (matches the `Raster` stage), packed `0x00RRGGBB`.
 const BACKGROUND: u32 = 0x000A_0B0F;
+/// Fixed source rate for the low-register room score. Playback resamples this
+/// immutable buffer to the device rate, bounding room-switch work on 192 kHz
+/// devices without changing the arrangement clock.
+const ROOM_SCORE_SOURCE_RATE: u32 = 16_000;
 
 #[cfg(test)]
 fn mandelbrot_gpu_view(
@@ -279,7 +283,7 @@ struct App {
     /// Controller-selected game in the launch menu.
     controller_menu_selection: usize,
     /// The chiptune bed for the current room, rendered once per room.
-    tune: Vec<f32>,
+    tune: Arc<Vec<f32>>,
     /// The journey overlay ('j' toggles): level, rank, trophies, resonances.
     show_journey: bool,
     /// Where the mouse last was, for clicking cells and choices.
@@ -365,7 +369,7 @@ impl App {
             arcade: None,
             controller_digit: 0,
             controller_menu_selection: 0,
-            tune: Vec::new(),
+            tune: Arc::new(Vec::new()),
             show_journey: false,
             mouse: (0.0, 0.0),
             pokes: Vec::new(),
@@ -1727,22 +1731,26 @@ impl App {
             self.apply_master_gain();
             return;
         }
+        let switching_to_room_score = self.audio_program != AudioProgram::RoomScore;
         self.audio_program = AudioProgram::RoomScore;
         let Some(player) = &self.player else {
             return;
         };
         player.set_master_gain(if self.muted { 0.0 } else { self.volume });
-        if self.tune.is_empty() {
-            self.tune = match self.rooms[self.current].motif() {
-                Some(motif) => motif.arrangement().render_stereo(player.sample_rate()),
+        let rendered_room_score = self.tune.is_empty();
+        if rendered_room_score {
+            self.tune = Arc::new(match self.rooms[self.current].motif() {
+                Some(motif) => motif.arrangement().render_stereo(ROOM_SCORE_SOURCE_RATE),
                 None => numinous_core::compose(self.current as u64 + 1, 8)
-                    .render(player.sample_rate())
+                    .render(ROOM_SCORE_SOURCE_RATE)
                     .into_iter()
                     .flat_map(|sample| [sample, sample])
                     .collect(),
-            };
+            });
         }
-        player.set_stereo(self.tune.clone());
+        if rendered_room_score || switching_to_room_score {
+            player.set_shared_stereo_at_rate(self.tune.clone(), ROOM_SCORE_SOURCE_RATE);
+        }
         self.sync_room_parameter_voice();
     }
 
@@ -1798,7 +1806,7 @@ impl App {
         self.current = room_input::wrapped_room_index(self.current, delta, self.rooms.len());
         self.rooms = room_input::redeal_rooms(&mut self.variation, &mut self.current);
         self.reset_room_runtime();
-        self.tune.clear();
+        self.tune = Arc::new(Vec::new());
         if let Some(window) = &self.window {
             window.set_title(&self.title());
         }
@@ -2477,7 +2485,7 @@ impl ApplicationHandler for App {
                                     &mut self.current,
                                 );
                                 self.reset_room_runtime();
-                                self.tune.clear();
+                                self.tune = Arc::new(Vec::new());
                                 if let Some(window) = &self.window {
                                     window.set_title(&self.title());
                                 }
@@ -2816,9 +2824,9 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{
-        App, AudioProgram, TestStateRoot, advance_gallery_phase, app_icon, bounded_tick_seconds,
-        effective_room_phase, julia_gpu_c, julia_gpu_vertical_span, live_mandelbrot_gpu_view,
-        mandelbrot_gpu_view, radio_cache, selected_parameter_sound,
+        App, AudioProgram, ROOM_SCORE_SOURCE_RATE, TestStateRoot, advance_gallery_phase, app_icon,
+        bounded_tick_seconds, effective_room_phase, julia_gpu_c, julia_gpu_vertical_span,
+        live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache, selected_parameter_sound,
     };
     use crate::input_legend::{InputMode, MenuChoice};
     use std::sync::Arc;
@@ -2836,6 +2844,26 @@ mod tests {
         let _ = std::fs::remove_file(&app.scores_file);
         app.level_seen = 1;
         app
+    }
+
+    #[test]
+    fn room_score_prerender_is_device_independent_and_memory_bounded() {
+        let mut largest = 0;
+        for room in numinous_core::all_rooms() {
+            let motif = room.motif().expect("catalog motif");
+            let samples = motif.arrangement().render_stereo(ROOM_SCORE_SOURCE_RATE);
+            assert_eq!(
+                samples.len(),
+                (motif.arrangement().seconds() * ROOM_SCORE_SOURCE_RATE as f32) as usize * 2,
+                "{} source length",
+                room.meta().id
+            );
+            largest = largest.max(samples.len());
+        }
+        assert!(
+            largest <= 2_000_000,
+            "largest room score held {largest} samples"
+        );
     }
 
     fn select_life(app: &mut App) {

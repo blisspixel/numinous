@@ -122,9 +122,20 @@ all eight menu destinations, while R3 provides a visible pause that blocks
 gameplay input until resumed. Studio formula entry still requires a keyboard
 and says so directly.
 
-The programmatic room score now uses a 32-step stereo arrangement, smooth source
-crossfades, control-thread buffer retirement, focus-safe gain, and wall-clock
-radio resynchronization instead of restarting or retaining stale loops. One
+The programmatic room score now uses a deterministic 128-step stereo
+macro-arrangement. Every authored motif opens literally in one coherent
+register, develops through two alternate phrase forms, and returns. Eight
+curated rhythm and accompaniment families, short breathing anchors, and each
+motif's own cadence replace the former universal short loop and forced root.
+Objective checks cover catalog diversity, interval truth, RMS, transients,
+headroom, DC, seams, determinism, and common device rates. Musician-led
+long-listening remains required before calling the result pleasant. Smooth
+room changes remain responsive because the App renders the low-register bed
+once at a bounded 16 kHz source rate, shares that immutable allocation with the
+audio mixer, and linearly resamples it to the device rate. Smooth source
+crossfades, control-thread buffer retirement, focus-safe gain, and
+wall-clock radio resynchronization prevent source changes from restarting or
+retaining stale loops. One
 persistent badge names the effective source, master level, and why output is
 silent. Mute and volume are global across rooms, games, pause, radio, and
 Studio, with keyboard and controller routes. Studio owns its formula sound
@@ -153,8 +164,8 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 1,336 passing all-target test cases, 93.60% region
-coverage and 93.41% line coverage with an enforced 80% line floor, Clippy with warnings
+The current local gate has 1,341 passing all-target test cases, 93.63% region
+coverage and 93.43% line coverage with an enforced 80% line floor, Clippy with warnings
 denied, and dependency policy checks. Release QA also regenerates an exact
 349-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
 room receipts, per-room interaction scenarios, semantic checks, and coarse

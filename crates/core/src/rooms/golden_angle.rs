@@ -207,7 +207,7 @@ impl Room for GoldenAngle {
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
         Some(crate::motifs::Motif {
-            key: "F# pentatonic",
+            key: "F# phyllotaxis cycle",
             root: 185.0,
             tempo: 118,
             line: &[0, 7, 2, 9, 4, 11, 6, 13],

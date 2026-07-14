@@ -35,7 +35,7 @@ Public Foundation exit criterion is complete on the public `main` branch. The
 accessibility work are still open. Later systems already present in source do
 not waive those gates, and this prerelease label does not claim 0.2 is complete.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **31 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 1,336 all-target test cases, locked build, Windows release gate, 93.60% region coverage, and 93.41% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **31 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 1,341 all-target test cases, locked build, Windows release gate, 93.63% region coverage, and 93.43% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -52,11 +52,17 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
 - **Done (Engine A2 motifs, catalog-wide):** all 31 catalog rooms now expose a structured `Motif` through `Room::motif`, so `listen_room` gets real notation and the app gets room-specific phrases instead of the generic fallback. A registry test enforces that every catalog room has a playable motif. The default `Room::sound` derives from the motif through `SoundSpec::from_motif`; rooms with a specialized mathematical sonification may intentionally override it. `listen_room` gives the ambient motif and mathematical sonification distinct text headings and maps those roles to its compatible `motif` and `notes` fields so it never presents one score as the other.
 - **Done (Engine A2 listening refinement):** the App no longer doubles motifs
   at mismatched loop lengths or restarts sources from render cadence. Every
-  catalog motif expands into a deterministic 32-step stereo arrangement with
-  rests, four-bar phrase development, a final root resolution, and quiet root
-  and fifth anchors. Source changes crossfade. Smoothed master and focus gain
+  catalog motif expands into a deterministic 128-step stereo macro-arrangement.
+  The complete authored line opens in one coherent register, two alternate
+  forms develop it, and the literal theme returns. Eight rhythm and
+  accompaniment families replace one catalog-wide stencil; short root and
+  fifth anchors breathe, and authored cadences remain intact instead of being
+  forced to the root. The App renders one bounded 16 kHz source buffer, shares
+  it without cloning, and resamples it to the device rate; unchanged hand input
+  does not resubmit or rehash the bed. Source changes crossfade. Smoothed master and focus gain
   preserve the playhead, including radio; device-rate tests cover 44.1, 48, 96,
-  and 192 kHz. Structural audio checks cover seams, bounds, headroom, DC, and
+  and 192 kHz. Structural audio checks cover literal interval order, catalog
+  and within-bed diversity, seams, bounds, RMS, sample steps, headroom, DC, and
   deterministic output. Callback-retired buffers are reclaimed on the control
   thread, rapid source changes queue without restarting a fade, and restored
   radio rejoins its wall-clock position before gain rises. A real
@@ -433,7 +439,7 @@ The package is **0.2.0-alpha.1**. The 0.1 Public Foundation exit criterion is
 complete, and work is now on 0.2 Flagship Proof. The 0.2 milestone itself remains
 open until the Times Tables stranger hallway test passes. Current breadth is 31
 catalog rooms, 11+ games, six sims, three faces, 29 MCP tools, deterministic
-creation and persistence, and 1,336 passing all-target test cases. Required public CI is
+creation and persistence, and 1,341 passing all-target test cases. Required public CI is
 configured to run locked tests and builds across all three operating systems;
 runtime evidence belongs to each commit's check results. Breadth is not release evidence.
 No calibrated method supports assigning completion percentages to subjective
@@ -447,7 +453,7 @@ No calibrated method supports assigning completion percentages to subjective
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 1,336 all-target test cases, 93.41% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 1,341 all-target test cases, 93.43% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 349-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 

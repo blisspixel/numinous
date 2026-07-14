@@ -187,7 +187,9 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   deep-cut availability, ambient motif, and bounded mathematical-sonification
   note data for all 31 rooms. `listen_room` names those two sound roles
   separately because a specialized room sound can intentionally differ from
-  the ambient score. Locked
+  the ambient score. The `motif` field is the authored theme, not the App's
+  expanded stereo arrangement event graph; direct headless export of that
+  macro-arrangement remains a parity follow-up. Locked
   deep cuts expose their unlock level without leaking their text. Scores and
   forget previews are similarly structured, and confirmed erasure reports only
   successful filesystem outcomes.

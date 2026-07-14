@@ -44,8 +44,8 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 1,336 all-target test cases pass,
-93.60% region cover, and 93.41% line cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 1,341 all-target test cases pass,
+93.63% region cover, and 93.43% line cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
@@ -145,12 +145,18 @@ cargo run --bin numinous -- contact-sheet --out renders/contact.png
 ```
 Then open `renders/contact.png` to eyeball the whole collection at once.
 
-**Sound:** every room is an instrument; write a WAV and play it:
+**Sound:** write the room's phase-specific mathematical sonification or a
+seeded chiptune to a WAV and play it:
 ```
 cargo run --bin numinous -- sonify lissajous --out renders/lissajous.wav
 cargo run --bin numinous -- sonify collatz  --out renders/collatz.wav
 cargo run --bin numinous -- tune --seed 7 --out renders/chip.wav   # Music Engine A
 ```
+
+The App's stereo room bed is a separate macro-arrangement built from the same
+authored motif. CLI `sonify` does not currently export that bed, and MCP
+`listen_room` reports its authored motif separately from the mathematical
+sonification. Do not use these WAV commands as proof of App-bed parity.
 
 **Games and the RPG spine:** play, level, choose, resonate:
 ```
