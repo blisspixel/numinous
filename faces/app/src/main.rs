@@ -10,6 +10,7 @@
 
 use std::num::NonZeroU32;
 use std::rc::Rc;
+use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
 use numinous_core::{Journey, Raster, Room, Surface, all_rooms_with};
@@ -33,6 +34,7 @@ mod playtest;
 mod postcard;
 mod radio_cache;
 mod room_input;
+mod save_gate;
 mod studio_panel;
 
 use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_total};
@@ -214,10 +216,14 @@ struct App {
     poking: bool,
     /// Per-visit variation seed for rooms that support replayable novelty.
     variation: u64,
+    /// Bounds file-producing shortcuts independently of event-loop key repeat.
+    save_gate: save_gate::SaveGate,
     /// The radio: Some(index into STATIONS) when a cached station plays.
     radio: Option<usize>,
     /// The loaded station track, if any.
-    radio_track: Vec<f32>,
+    radio_track: Arc<Vec<f32>>,
+    /// Native sample rate of `radio_track`; the audio loop converts it live.
+    radio_track_rate: u32,
     /// Frames left on the arrival card (the room explaining itself).
     room_card: u64,
     /// The tuned station's playlist on disk, in rotation order.
@@ -285,9 +291,11 @@ impl App {
             inputs: Vec::new(),
             poking: false,
             variation: 0,
+            save_gate: save_gate::SaveGate::default(),
             room_card: room_input::ROOM_CARD_FRAMES,
             radio: None,
-            radio_track: Vec::new(),
+            radio_track: Arc::new(Vec::new()),
+            radio_track_rate: 44_100,
             radio_paths: Vec::new(),
             radio_index: 0,
             radio_until: None,
@@ -901,9 +909,15 @@ impl App {
         self.set_pointer_state(state);
     }
 
-    fn handle_playtest_shortcut(&mut self, key: &Key) -> bool {
+    fn handle_playtest_shortcut(&mut self, key: &Key, repeated: bool) -> bool {
         if !matches!(key, Key::Named(NamedKey::F9)) {
             return false;
+        }
+        if !self
+            .save_gate
+            .admit(save_gate::SaveKind::PlaytestNote, Instant::now(), repeated)
+        {
+            return true;
         }
         let result = self.save_playtest_note();
         self.set_playtest_note_banner(result);
@@ -915,12 +929,20 @@ impl App {
         &mut self,
         key: &Key,
         dir: &std::path::Path,
-        now: SystemTime,
+        file_time: SystemTime,
+        input_time: Instant,
+        repeated: bool,
     ) -> bool {
         if !matches!(key, Key::Named(NamedKey::F9)) {
             return false;
         }
-        let result = self.save_playtest_note_to(dir, now);
+        if !self
+            .save_gate
+            .admit(save_gate::SaveKind::PlaytestNote, input_time, repeated)
+        {
+            return true;
+        }
+        let result = self.save_playtest_note_to(dir, file_time);
         self.set_playtest_note_banner(result);
         true
     }
@@ -1316,7 +1338,8 @@ impl App {
     /// Tune in to the current dial position: build the playlist, join the
     /// broadcast mid-stream (the station was always on the air), and play.
     fn tune_in(&mut self) {
-        self.radio_track.clear();
+        self.radio_track = Arc::new(Vec::new());
+        self.radio_track_rate = 44_100;
         self.radio_paths.clear();
         self.radio_until = None;
         let Some(i) = self.radio else {
@@ -1369,7 +1392,8 @@ impl App {
     fn radio_play_or_advance(&mut self, offset: f64) -> bool {
         let track_count = self.radio_paths.len();
         if track_count == 0 {
-            self.radio_track.clear();
+            self.radio_track = Arc::new(Vec::new());
+            self.radio_track_rate = 44_100;
             self.radio_until = None;
             return false;
         }
@@ -1382,16 +1406,18 @@ impl App {
             self.radio_index = (self.radio_index + 1) % track_count;
             next_offset = 0.0;
         }
-        self.radio_track.clear();
+        self.radio_track = Arc::new(Vec::new());
+        self.radio_track_rate = 44_100;
         self.radio_until = None;
         false
     }
 
     /// Put the current playlist entry on the air, starting `offset` seconds
-    /// in: read it (mono or stereo), resample to the device's rate so pitch
-    /// and tempo are true, and hand it to the player once.
+    /// in: read it (mono or stereo), retain one source-rate stereo buffer, and
+    /// hand it to the player for live rate conversion.
     fn radio_play(&mut self, offset: f64) -> bool {
-        self.radio_track.clear();
+        self.radio_track = Arc::new(Vec::new());
+        self.radio_track_rate = 44_100;
         self.radio_until = None;
         let Some(path) = self.radio_paths.get(self.radio_index) else {
             return false;
@@ -1401,9 +1427,10 @@ impl App {
             return false;
         };
         self.radio_track = loaded.stereo;
+        self.radio_track_rate = loaded.sample_rate;
         self.radio_until = Some(std::time::Instant::now() + loaded.remaining);
         if let Some(player) = &self.player {
-            player.set_stereo(self.radio_track.clone());
+            player.set_shared_stereo_at_rate(self.radio_track.clone(), self.radio_track_rate);
             player.set_master_gain(if self.muted { 0.0 } else { self.volume });
         }
         true
@@ -1412,6 +1439,9 @@ impl App {
     /// GPU-render the current room if it has a real-time GPU path (the deep
     /// fractal zooms), returning the RGBA frame; `None` means draw on the CPU.
     fn gpu_frame(&mut self, width: usize, height: usize) -> Option<Vec<u8>> {
+        if !numinous_gpu::frame_size_supported(width, height) {
+            return None;
+        }
         let id = self.rooms[self.current].meta().id;
         let (w, h) = (width as u32, height as u32);
         let mandelbrot_view = (id == "mandelbrot")
@@ -1419,10 +1449,10 @@ impl App {
             .flatten();
         let julia_c = (id == "julia").then(|| julia_gpu_c(self.t, self.variation, &self.pokes));
         let gpu = self.gpu.as_mut()?;
-        match id {
+        let frame = match id {
             "mandelbrot" => {
                 let (center_x, center_y, scale) = mandelbrot_view?;
-                Some(gpu.render(
+                gpu.render(
                     w,
                     h,
                     center_x,
@@ -1430,12 +1460,12 @@ impl App {
                     scale,
                     numinous_core::rooms::FRACTAL_MAX_ITER,
                     numinous_gpu::Fractal::Mandelbrot,
-                ))
+                )
             }
             "julia" => {
                 let (cx, cy) = julia_c?;
                 let c = numinous_gpu::Fractal::Julia { cx, cy };
-                Some(gpu.render(
+                gpu.render(
                     w,
                     h,
                     0.0,
@@ -1443,9 +1473,16 @@ impl App {
                     julia_gpu_vertical_span(w, h),
                     numinous_core::rooms::FRACTAL_MAX_ITER,
                     c,
-                ))
+                )
             }
-            _ => None,
+            _ => return None,
+        };
+        match frame {
+            Ok(rgba) => Some(rgba),
+            Err(_) => {
+                self.gpu = None;
+                None
+            }
         }
     }
 
@@ -1468,7 +1505,7 @@ impl App {
         self.studio = false;
         if self.radio.is_some() && !self.radio_track.is_empty() {
             if let Some(player) = &self.player {
-                player.set_stereo(self.radio_track.clone());
+                player.set_shared_stereo_at_rate(self.radio_track.clone(), self.radio_track_rate);
                 player.set_master_gain(if self.muted { 0.0 } else { self.volume });
             }
         } else {
@@ -1849,6 +1886,7 @@ impl ApplicationHandler for App {
                     KeyEvent {
                         state: ElementState::Pressed,
                         logical_key,
+                        repeat,
                         ..
                     },
                 ..
@@ -1865,7 +1903,7 @@ impl ApplicationHandler for App {
                     return;
                 }
                 self.input_mode = input_legend::InputMode::KeyboardMouse;
-                if self.handle_playtest_shortcut(&logical_key) {
+                if self.handle_playtest_shortcut(&logical_key, repeat) {
                     return;
                 }
                 if let Some(play) = &mut self.arcade {
@@ -2054,7 +2092,7 @@ impl ApplicationHandler for App {
                             self.toggle_journey();
                         }
                         // Y turns the radio dial: off, then station by station.
-                        Key::Character(c) if c.as_str() == "y" => {
+                        Key::Character(c) if c.as_str() == "y" && !repeat => {
                             let stations = numinous_core::STATIONS.len();
                             self.radio = match self.radio {
                                 None => Some(0),
@@ -2065,7 +2103,11 @@ impl ApplicationHandler for App {
                         }
                         // P keeps the picture: the postcard key.
                         Key::Character(c) if c.as_str() == "p" => {
-                            if let Some(path) = self.save_postcard()
+                            if self.save_gate.admit(
+                                save_gate::SaveKind::Postcard,
+                                Instant::now(),
+                                repeat,
+                            ) && let Some(path) = self.save_postcard()
                                 && let Some(window) = &self.window
                             {
                                 window.set_title(&format!(
@@ -2421,7 +2463,8 @@ mod tests {
         live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache,
     };
     use crate::input_legend::{InputMode, MenuChoice};
-    use std::time::{Duration, UNIX_EPOCH};
+    use std::sync::Arc;
+    use std::time::{Duration, Instant, UNIX_EPOCH};
     use winit::keyboard::{Key, NamedKey};
 
     /// An app pointed at scratch files, with no window, player, or GPU.
@@ -3064,11 +3107,14 @@ mod tests {
         app.quiz_next();
         let dir = std::env::temp_dir().join("numinous_app_playtest_shortcut");
         let _ = std::fs::remove_dir_all(&dir);
+        let input_start = Instant::now();
 
         assert!(app.handle_playtest_shortcut_to(
             &Key::Named(NamedKey::F9),
             &dir,
             UNIX_EPOCH + Duration::from_secs(88),
+            input_start,
+            false,
         ));
         assert!(
             app.quiz.is_some(),
@@ -3077,6 +3123,17 @@ mod tests {
         let lines = app.banner.as_ref().expect("saved banner").lines();
         assert_eq!(lines[0], "PLAYTEST NOTE SAVED");
         assert!(dir.join("playtest-88.md").exists());
+        assert!(app.handle_playtest_shortcut_to(
+            &Key::Named(NamedKey::F9),
+            &dir,
+            UNIX_EPOCH + Duration::from_secs(89),
+            input_start + Duration::from_millis(1),
+            true,
+        ));
+        assert!(
+            !dir.join("playtest-89.md").exists(),
+            "a repeated key event must not produce another file"
+        );
 
         let blocker = std::env::temp_dir().join("numinous_app_playtest_blocker");
         let _ = std::fs::remove_file(&blocker);
@@ -3084,7 +3141,9 @@ mod tests {
         assert!(app.handle_playtest_shortcut_to(
             &Key::Named(NamedKey::F9),
             &blocker,
-            UNIX_EPOCH + Duration::from_secs(89),
+            UNIX_EPOCH + Duration::from_secs(90),
+            input_start + Duration::from_secs(1),
+            false,
         ));
         let lines = app.banner.as_ref().expect("failure banner").lines();
         assert_eq!(lines[0], "PLAYTEST NOTE FAILED");
@@ -3092,7 +3151,9 @@ mod tests {
         assert!(!app.handle_playtest_shortcut_to(
             &Key::Named(NamedKey::F8),
             &dir,
-            UNIX_EPOCH + Duration::from_secs(90),
+            UNIX_EPOCH + Duration::from_secs(91),
+            input_start + Duration::from_secs(2),
+            false,
         ));
 
         let _ = std::fs::remove_dir_all(dir);
@@ -3118,14 +3179,14 @@ mod tests {
     fn volume_feedback_survives_while_radio_is_active() {
         let mut app = headless("numinous_app_test_radio_volume_banner.txt");
         app.radio = Some(0);
-        app.radio_track = vec![0.25, -0.25, 0.5, -0.5];
+        app.radio_track = Arc::new(vec![0.25, -0.25, 0.5, -0.5]);
 
         app.change_volume(0.1);
 
         assert!((app.volume - 0.55).abs() < f32::EPSILON);
         let banner = app.banner.as_ref().expect("volume banner");
         assert_eq!(banner.lines()[0], "VOLUME 55%");
-        assert_eq!(app.radio_track, vec![0.25, -0.25, 0.5, -0.5]);
+        assert_eq!(app.radio_track.as_slice(), [0.25, -0.25, 0.5, -0.5]);
         let _ = std::fs::remove_file(&app.journey_file);
     }
 
@@ -3500,7 +3561,7 @@ mod tests {
         let mut app = headless("numinous_app_test_radio_oversized.txt");
         app.radio_paths = vec![path.clone()];
         app.radio_index = 0;
-        app.radio_track = vec![0.25, -0.25];
+        app.radio_track = Arc::new(vec![0.25, -0.25]);
         app.radio_until = Some(std::time::Instant::now());
         assert!(!app.radio_play(0.0));
         assert!(app.radio_track.is_empty());

@@ -89,17 +89,20 @@ fn read_bounded_line(reader: &mut impl io::BufRead, line: &mut Vec<u8>) -> io::R
         return Ok(false);
     }
     if line.len() > MAX_REQUEST_BYTES {
+        let newline_was_consumed = line.last() == Some(&b'\n');
         // Drain the rest of the oversized line without holding it.
         line.clear();
         line.push(b'{'); // guaranteed-invalid JSON, so the caller answers with a parse error
-        let mut chunk = Vec::new();
-        loop {
-            chunk.clear();
-            let n = reader
-                .take(MAX_REQUEST_BYTES as u64)
-                .read_until(b'\n', &mut chunk)?;
-            if n == 0 || chunk.last() == Some(&b'\n') {
-                break;
+        if !newline_was_consumed {
+            let mut chunk = Vec::new();
+            loop {
+                chunk.clear();
+                let n = reader
+                    .take(MAX_REQUEST_BYTES as u64)
+                    .read_until(b'\n', &mut chunk)?;
+                if n == 0 || chunk.last() == Some(&b'\n') {
+                    break;
+                }
             }
         }
     }
@@ -841,7 +844,7 @@ fn build_tools_catalog() -> Value {
                         "id": { "type": "string", "description": "Room id; touch goals need a room with a touch verb, parameter goals a room with a moving numeric readout (see describe_room)." },
                         "kind": { "type": "string", "enum": ["touch", "parameter"], "description": "Goal kind (default touch). Parameter goals target the room's own status readout instead of a spatial response." },
                         "seed": { "type": "integer", "description": "Challenge seed (default 1). The same seed poses the same goal; pass any number you like, including today's date, to share a goal." },
-                        "t": { "type": "number", "description": "Phase in [0,1) for the attempt (default 0 for touch). For parameter goals this IS the attempt: omit it to pose, pass it to be graded at that phase." },
+                        "t": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "Phase in [0,1) for the attempt (default 0 for touch). For parameter goals this IS the attempt: omit it to pose, pass it to be graded at that phase." },
                         "pokes": {
                             "type": "array",
                             "description": "Your attempt: normalized hand points as [x,y] pairs in [0,1], newest last. Omit to pose the goal.",
@@ -2039,6 +2042,22 @@ fn challenge_kind(args: &Value) -> Option<&str> {
     args.get("kind").and_then(Value::as_str)
 }
 
+/// Read an optional challenge phase without depending on schema validation.
+/// Internal progress helpers call the same tools directly in tests and replay
+/// paths, so the domain boundary must reject invalid phases on its own.
+fn challenge_phase(args: &Value) -> Result<Option<f64>, &'static str> {
+    let Some(value) = args.get("t") else {
+        return Ok(None);
+    };
+    let Some(t) = value.as_f64() else {
+        return Err("Argument 't' must be a phase in [0,1).");
+    };
+    if !(0.0..1.0).contains(&t) {
+        return Err("Argument 't' must be a phase in [0,1).");
+    }
+    Ok(Some(t))
+}
+
 /// The prediction seed: always explicit, never the clock, so posing and
 /// recording cannot pick two different moments across a midnight boundary.
 fn predict_seed(args: &Value) -> u64 {
@@ -2236,15 +2255,9 @@ fn record_parameter_attempt(
     journey: &mut numinous_core::Journey,
     scores: &std::path::Path,
 ) {
-    let Some(t) = args.get("t").and_then(Value::as_f64) else {
+    let Ok(Some(t)) = challenge_phase(args) else {
         return;
     };
-    // The tool already rejects out-of-range phases before recording runs,
-    // but the gate is re-stated here so this path never depends on that
-    // coupling: a clamped-t attempt must not earn play or win.
-    if !(0.0..1.0).contains(&t) {
-        return;
-    }
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return;
     };
@@ -2289,6 +2302,9 @@ fn record_challenge_attempt(
     if pokes.is_empty() {
         return;
     }
+    let Ok(t) = challenge_phase(args) else {
+        return;
+    };
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return;
     };
@@ -2305,7 +2321,7 @@ fn record_challenge_attempt(
         return;
     };
     journey.play();
-    let t = args.get("t").and_then(Value::as_f64).unwrap_or(0.0);
+    let t = t.unwrap_or(0.0);
     let grade = numinous_core::grade_challenge(room.as_ref(), &challenge, t, &pokes);
     post_score(
         scores,
@@ -2346,6 +2362,10 @@ fn challenge_tool(args: &Value) -> Value {
             ));
         }
     }
+    let t = match challenge_phase(args) {
+        Ok(t) => t.unwrap_or(0.0),
+        Err(message) => return tool_error(message),
+    };
     let Some(challenge) = numinous_core::pose_challenge(
         room.as_ref(),
         seed,
@@ -2356,7 +2376,6 @@ fn challenge_tool(args: &Value) -> Value {
             "{id} does not answer the hand yet, so no challenge can be posed. Challenges need a room with a touch verb; describe_room names each room's action."
         ));
     };
-    let t = args.get("t").and_then(Value::as_f64).unwrap_or(0.0);
     let pokes = match parse_room_pokes(args) {
         Ok(pokes) => pokes,
         Err(message) => return tool_error(&message),
@@ -2426,28 +2445,29 @@ fn parameter_challenge_tool(
         ));
     };
     let (lo, hi) = goal.span;
-    let Some(t) = args.get("t").and_then(Value::as_f64) else {
-        return tool_structured(
-            &format!(
-                "{}\n\nThe readout ranges roughly {lo:.3} to {hi:.3} across the sweep. Call challenge again with the same seed and kind plus your t in [0,1) to be graded. Every attempt gets metrics, not pass/fail: the readout you landed on, its distance from the target, and a 0-100 score to climb.",
-                goal.goal
-            ),
-            json!({
-                "game": "challenge",
-                "kind": "parameter",
-                "room": goal.room,
-                "seed": seed,
-                "goal": goal.goal,
-                "label": goal.label,
-                "target": goal.target,
-                "tolerance": goal.tolerance,
-                "span": [lo, hi],
-            }),
-        );
+    let t = match challenge_phase(args) {
+        Ok(Some(t)) => t,
+        Ok(None) => {
+            return tool_structured(
+                &format!(
+                    "{}\n\nThe readout ranges roughly {lo:.3} to {hi:.3} across the sweep. Call challenge again with the same seed and kind plus your t in [0,1) to be graded. Every attempt gets metrics, not pass/fail: the readout you landed on, its distance from the target, and a 0-100 score to climb.",
+                    goal.goal
+                ),
+                json!({
+                    "game": "challenge",
+                    "kind": "parameter",
+                    "room": goal.room,
+                    "seed": seed,
+                    "goal": goal.goal,
+                    "label": goal.label,
+                    "target": goal.target,
+                    "tolerance": goal.tolerance,
+                    "span": [lo, hi],
+                }),
+            );
+        }
+        Err(message) => return tool_error(message),
     };
-    if !(0.0..1.0).contains(&t) {
-        return tool_error("Argument 't' must be a phase in [0,1).");
-    }
     let Some(grade) = numinous_core::grade_parameter(room, &goal, t) else {
         return tool_error(&format!(
             "{id}'s readout vanished at t={t}; try a different phase."
@@ -2503,7 +2523,12 @@ fn cairn_tool(args: &Value, journey_file: &std::path::Path, path: &std::path::Pa
             .unwrap_or("a visitor");
         let bequest = numinous_core::Bequest::new(author, text);
         let stone = numinous_core::encode(&bequest);
-        if numinous_core::deposit(path, &bequest).is_err() {
+        if let Err(error) = numinous_core::deposit(path, &bequest) {
+            if error.kind() == std::io::ErrorKind::InvalidData {
+                return tool_error(
+                    "The local cairn is full, so this bequest was not written. Keep the returned text somewhere safe or make room in the local cairn before trying again.",
+                );
+            }
             return tool_error("The cairn could not be written.");
         }
         let submission = numinous_core::submission_line(&bequest);
@@ -4187,6 +4212,13 @@ mod tests {
         let listen_phase = &listen["inputSchema"]["properties"]["t"];
         assert_eq!(listen_phase["minimum"], 0);
         assert_eq!(listen_phase["exclusiveMaximum"], 1);
+        let challenge = tools
+            .iter()
+            .find(|tool| tool["name"] == "challenge")
+            .expect("challenge tool");
+        let challenge_phase = &challenge["inputSchema"]["properties"]["t"];
+        assert_eq!(challenge_phase["minimum"], 0);
+        assert_eq!(challenge_phase["exclusiveMaximum"], 1);
         let run_sim = tools
             .iter()
             .find(|tool| tool["name"] == "run_sim")
@@ -5713,6 +5745,35 @@ plays 2
     }
 
     #[test]
+    fn touch_challenges_reject_out_of_range_phases_without_progress() {
+        for t in [-0.5_f64, 1.0, 1.0e308] {
+            let response = handle_request(&json!({
+                "jsonrpc":"2.0","id":45,"method":"tools/call",
+                "params":{"name":"challenge","arguments":{"id":"voronoi","t":t,"pokes":[[0.5,0.5]]}}
+            }))
+            .expect("tools/call must respond");
+            assert_eq!(response["result"]["isError"], true, "accepted t={t}");
+
+            let direct = super::challenge_tool(&json!({"id":"voronoi","t":t,"pokes":[[0.5,0.5]]}));
+            assert_eq!(direct["isError"], true, "direct call accepted t={t}");
+
+            let scores = std::env::temp_dir().join(format!(
+                "numinous_mcp_invalid_touch_phase_{}.txt",
+                t.to_bits()
+            ));
+            let _ = std::fs::remove_file(&scores);
+            let mut journey = numinous_core::Journey::from_text("");
+            super::record_challenge_attempt(
+                &json!({"id":"voronoi","t":t,"pokes":[[0.5,0.5]]}),
+                &mut journey,
+                &scores,
+            );
+            assert_eq!(journey.sparks(), 0, "invalid phase recorded progress");
+            assert!(!scores.exists(), "invalid phase posted a score");
+        }
+    }
+
+    #[test]
     fn a_challenge_attempt_records_play_win_and_a_graded_score() {
         let scores = std::env::temp_dir().join("numinous_mcp_challenge_scores_test.txt");
         let _ = std::fs::remove_file(&scores);
@@ -6217,6 +6278,22 @@ plays 2
             (0..60).any(|s| numinous_core::draw_stone(&cairn, s).text == "primes never run out");
         assert!(drawable, "the deposited bequest joined the cairn");
 
+        let full = vec![b'x'; numinous_core::cairn::MAX_CAIRN_BYTES as usize];
+        std::fs::write(&cairn, &full).expect("fill local cairn");
+        let rejected = super::cairn_tool(
+            &json!({ "leave": "one more truth", "author": "a tester" }),
+            &journey,
+            &cairn,
+        );
+        assert_eq!(rejected["isError"], true);
+        assert!(
+            rejected["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("local cairn is full")
+        );
+        assert_eq!(std::fs::read(&cairn).expect("unchanged cairn"), full);
+
         let _ = std::fs::remove_file(&cairn);
         let _ = std::fs::remove_file(&journey);
     }
@@ -6242,6 +6319,27 @@ plays 2
             "the request after the flood still parses"
         );
         assert!(!super::read_bounded_line(&mut reader, &mut line).expect("read"));
+    }
+
+    #[test]
+    fn exact_limit_oversized_request_does_not_consume_the_next_record() {
+        let mut input = vec![b'x'; super::MAX_REQUEST_BYTES];
+        input.push(b'\n');
+        input.extend_from_slice(br#"{"jsonrpc":"2.0","id":1,"method":"ping"}"#);
+        input.push(b'\n');
+        input.extend_from_slice(br#"{"jsonrpc":"2.0","id":2,"method":"ping"}"#);
+        input.push(b'\n');
+        let mut reader = std::io::BufReader::new(&input[..]);
+        let mut line = Vec::new();
+
+        assert!(super::read_bounded_line(&mut reader, &mut line).expect("oversized"));
+        assert!(serde_json::from_slice::<serde_json::Value>(&line).is_err());
+        for expected_id in [1, 2] {
+            assert!(super::read_bounded_line(&mut reader, &mut line).expect("request"));
+            let request: serde_json::Value = serde_json::from_slice(&line).expect("valid request");
+            assert_eq!(request["id"], expected_id);
+        }
+        assert!(!super::read_bounded_line(&mut reader, &mut line).expect("eof"));
     }
 
     #[test]

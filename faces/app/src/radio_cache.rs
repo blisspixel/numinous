@@ -2,6 +2,7 @@ use std::{
     collections::BinaryHeap,
     io::BufReader,
     path::{Path, PathBuf},
+    sync::Arc,
     time::Duration,
 };
 
@@ -18,10 +19,86 @@ pub(crate) const MAX_TRACKS: usize = 64;
 pub(crate) const MAX_AUDIO_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_SOURCE_SAMPLES: usize = MAX_AUDIO_BYTES as usize / 2;
 const MAX_OUTPUT_SECONDS: usize = 60 * 8;
+const MAX_DECODED_STEREO_BYTES: usize = 128 * 1024 * 1024;
+const MAX_SCAN_ENTRIES: usize = 4096;
+const MAX_SCAN_METADATA_PROBES: usize = 256;
+const MAX_SCAN_AUDIO_BYTES: u64 = 256 * 1024 * 1024;
+const MAX_SCAN_FALLBACK_DECODES: usize = 1;
 
 pub(crate) struct LoadedTrack {
-    pub(crate) stereo: Vec<f32>,
+    pub(crate) stereo: Arc<Vec<f32>>,
+    pub(crate) sample_rate: u32,
     pub(crate) remaining: Duration,
+}
+
+#[derive(Clone, Copy)]
+struct DiscoveryLimits {
+    entries: usize,
+    metadata_probes: usize,
+    audio_bytes: u64,
+    fallback_decodes: usize,
+}
+
+const DISCOVERY_LIMITS: DiscoveryLimits = DiscoveryLimits {
+    entries: MAX_SCAN_ENTRIES,
+    metadata_probes: MAX_SCAN_METADATA_PROBES,
+    audio_bytes: MAX_SCAN_AUDIO_BYTES,
+    fallback_decodes: MAX_SCAN_FALLBACK_DECODES,
+};
+
+struct DiscoveryBudget {
+    limits: DiscoveryLimits,
+    entries: usize,
+    metadata_probes: usize,
+    audio_bytes: u64,
+    fallback_decodes: usize,
+}
+
+impl DiscoveryBudget {
+    fn new(limits: DiscoveryLimits) -> Self {
+        Self {
+            limits,
+            entries: 0,
+            metadata_probes: 0,
+            audio_bytes: 0,
+            fallback_decodes: 0,
+        }
+    }
+
+    fn claim_entry(&mut self) -> bool {
+        if self.entries >= self.limits.entries {
+            return false;
+        }
+        self.entries += 1;
+        true
+    }
+
+    fn claim_metadata_probe(&mut self) -> bool {
+        if self.metadata_probes >= self.limits.metadata_probes {
+            return false;
+        }
+        self.metadata_probes += 1;
+        true
+    }
+
+    fn claim_audio_bytes(&mut self, bytes: u64) -> bool {
+        let Some(total) = self.audio_bytes.checked_add(bytes) else {
+            return false;
+        };
+        if total > self.limits.audio_bytes {
+            return false;
+        }
+        self.audio_bytes = total;
+        true
+    }
+
+    fn claim_fallback_decode(&mut self) -> bool {
+        if self.fallback_decodes >= self.limits.fallback_decodes {
+            return false;
+        }
+        self.fallback_decodes += 1;
+        true
+    }
 }
 
 pub(crate) fn default_dir() -> PathBuf {
@@ -55,6 +132,14 @@ pub(crate) fn default_dir() -> PathBuf {
 }
 
 pub(crate) fn station_tracks(dir: &Path, station_id: &str) -> Vec<PathBuf> {
+    station_tracks_with_limits(dir, station_id, DISCOVERY_LIMITS)
+}
+
+fn station_tracks_with_limits(
+    dir: &Path,
+    station_id: &str,
+    limits: DiscoveryLimits,
+) -> Vec<PathBuf> {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return Vec::new();
     };
@@ -62,17 +147,21 @@ pub(crate) fn station_tracks(dir: &Path, station_id: &str) -> Vec<PathBuf> {
     let legacy_wav = format!("{station_id}.wav");
     let legacy_mp3 = format!("{station_id}.mp3");
     let mut candidates = BinaryHeap::new();
-    for entry in entries.filter_map(Result::ok) {
+    let mut budget = DiscoveryBudget::new(limits);
+    for entry in entries {
+        if !budget.claim_entry() {
+            break;
+        }
+        let Ok(entry) = entry else {
+            continue;
+        };
         let path = entry.path();
         let name = path.file_name().unwrap_or_default().to_string_lossy();
         let supported = matches!(
             path.extension().and_then(|extension| extension.to_str()),
             Some("wav" | "mp3")
         );
-        if !(name.starts_with(&prefix) || name == legacy_wav || name == legacy_mp3)
-            || !supported
-            || !audio_is_bounded(&path)
-        {
+        if !(name.starts_with(&prefix) || name == legacy_wav || name == legacy_mp3) || !supported {
             continue;
         }
         if candidates.len() >= MAX_TRACKS
@@ -80,7 +169,16 @@ pub(crate) fn station_tracks(dir: &Path, station_id: &str) -> Vec<PathBuf> {
         {
             continue;
         }
-        if playable_info(&path).is_some() {
+        if !budget.claim_metadata_probe() {
+            break;
+        }
+        let Some(bytes) = bounded_audio_len(&path) else {
+            continue;
+        };
+        if !budget.claim_audio_bytes(bytes) {
+            break;
+        }
+        if playable_info(&path, &mut budget).is_some() {
             if candidates.len() >= MAX_TRACKS {
                 let _ = candidates.pop();
             }
@@ -113,10 +211,16 @@ pub(crate) fn live_position(paths: &[PathBuf], now_secs: f64) -> Option<(usize, 
     Some((0, 0.0))
 }
 
+#[cfg(test)]
 pub(crate) fn audio_is_bounded(path: &Path) -> bool {
+    bounded_audio_len(path).is_some()
+}
+
+fn bounded_audio_len(path: &Path) -> Option<u64> {
     std::fs::metadata(path)
-        .map(|meta| meta.is_file() && meta.len() > 0 && meta.len() <= MAX_AUDIO_BYTES)
-        .unwrap_or(false)
+        .ok()
+        .filter(|meta| meta.is_file() && meta.len() > 0 && meta.len() <= MAX_AUDIO_BYTES)
+        .map(|meta| meta.len())
 }
 
 pub(crate) fn duration_seconds(path: &Path) -> Option<f64> {
@@ -128,41 +232,60 @@ pub(crate) fn load_track(path: &Path, offset: f64, device_rate: u32) -> Option<L
     if device_rate == 0 {
         return None;
     }
-    let (info, raw) = read_track(path)?;
-    let src_rate = f64::from(info.sample_rate);
-    let channels = info.channels;
-    let src_frames = info.frames;
-    if src_frames < 2 {
-        return None;
+    let (info, mut raw) = read_track(path)?;
+    let skip_frames = ((offset.max(0.0) * f64::from(info.sample_rate)) as usize)
+        .min(info.frames.saturating_sub(1));
+    let skip_samples = skip_frames.checked_mul(info.channels)?;
+    if skip_samples > 0 {
+        raw.drain(..skip_samples);
     }
-    let out_frames = (src_frames as f64 * f64::from(device_rate) / src_rate) as usize;
-    let max_output_frames = device_rate as usize * MAX_OUTPUT_SECONDS;
-    if out_frames == 0 || out_frames > max_output_frames {
-        return None;
-    }
-    let mut stereo = Vec::with_capacity(out_frames * 2);
-    for i in 0..out_frames {
-        let src = i as f64 * src_rate / f64::from(device_rate);
-        let base = (src as usize).min(src_frames - 2);
-        let frac = (src - base as f64) as f32;
-        for ch in [0, channels.saturating_sub(1)] {
-            let a = raw[base * channels + ch];
-            let b = raw[(base + 1) * channels + ch];
-            stereo.push(a + (b - a) * frac);
-        }
-    }
-    let skip_frames =
-        ((offset.max(0.0) * f64::from(device_rate)) as usize).min(out_frames.saturating_sub(1));
-    let stereo = stereo.split_off(skip_frames * 2);
-    let remaining = (out_frames - skip_frames) as f64 / f64::from(device_rate);
+    let remaining_frames = raw.len() / info.channels;
+    let stereo = into_stereo(raw, info.channels)?;
+    let remaining = remaining_frames as f64 / f64::from(info.sample_rate);
     Some(LoadedTrack {
-        stereo,
-        remaining: Duration::from_secs_f64(remaining.max(1.0 / f64::from(device_rate))),
+        stereo: Arc::new(stereo),
+        sample_rate: info.sample_rate,
+        remaining: Duration::from_secs_f64(remaining.max(1.0 / f64::from(info.sample_rate))),
     })
 }
 
-fn playable_info(path: &Path) -> Option<TrackInfo> {
-    track_info(path)
+fn into_stereo(mut raw: Vec<f32>, channels: usize) -> Option<Vec<f32>> {
+    if channels == 2 {
+        return Some(raw);
+    }
+    if channels != 1 {
+        return None;
+    }
+    let frames = raw.len();
+    let stereo_len = frames.checked_mul(2)?;
+    let stereo_bytes = stereo_len.checked_mul(std::mem::size_of::<f32>())?;
+    if stereo_bytes > MAX_DECODED_STEREO_BYTES {
+        return None;
+    }
+    raw.try_reserve_exact(frames).ok()?;
+    raw.resize(stereo_len, 0.0);
+    for frame in (0..frames).rev() {
+        let sample = raw[frame];
+        raw[frame * 2] = sample;
+        raw[frame * 2 + 1] = sample;
+    }
+    Some(raw)
+}
+
+fn playable_info(path: &Path, budget: &mut DiscoveryBudget) -> Option<TrackInfo> {
+    match path.extension().and_then(|extension| extension.to_str()) {
+        Some("wav") => {
+            let reader = open_bounded_wav_reader(path)?;
+            track_info_from_reader(&reader)
+        }
+        Some("mp3") => mp3_track_info(path).or_else(|| {
+            budget
+                .claim_fallback_decode()
+                .then(|| decode_mp3(path).map(|(info, _)| info))
+                .flatten()
+        }),
+        _ => None,
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -171,6 +294,43 @@ struct TrackInfo {
     channels: usize,
     frames: usize,
     samples: usize,
+}
+
+impl TrackInfo {
+    fn new(sample_rate: u32, channels: usize, frames: usize) -> Option<Self> {
+        if sample_rate == 0 || !(1..=2).contains(&channels) || frames < 2 {
+            return None;
+        }
+        let samples = frames.checked_mul(channels)?;
+        let stereo_bytes = frames
+            .checked_mul(2)?
+            .checked_mul(std::mem::size_of::<f32>())?;
+        let max_frames =
+            usize::try_from(u64::from(sample_rate).checked_mul(MAX_OUTPUT_SECONDS as u64)?).ok()?;
+        if frames > max_frames
+            || samples > MAX_SOURCE_SAMPLES
+            || stereo_bytes > MAX_DECODED_STEREO_BYTES
+        {
+            return None;
+        }
+        Some(Self {
+            sample_rate,
+            channels,
+            frames,
+            samples,
+        })
+    }
+
+    fn max_source_samples(sample_rate: u32, channels: usize) -> Option<usize> {
+        let max_frames_by_time =
+            usize::try_from(u64::from(sample_rate).checked_mul(MAX_OUTPUT_SECONDS as u64)?).ok()?;
+        let max_frames_by_stereo =
+            MAX_DECODED_STEREO_BYTES.checked_div(2 * std::mem::size_of::<f32>())?;
+        max_frames_by_time
+            .min(max_frames_by_stereo)
+            .checked_mul(channels)
+            .map(|samples| samples.min(MAX_SOURCE_SAMPLES))
+    }
 }
 
 fn track_info(path: &Path) -> Option<TrackInfo> {
@@ -197,16 +357,7 @@ fn track_info_from_reader(
     }
     let channels = usize::from(spec.channels);
     let frames = usize::try_from(reader.duration()).ok()?;
-    let samples = frames.checked_mul(channels)?;
-    if frames < 2 || samples > MAX_SOURCE_SAMPLES {
-        return None;
-    }
-    Some(TrackInfo {
-        sample_rate: spec.sample_rate,
-        channels,
-        frames,
-        samples,
-    })
+    TrackInfo::new(spec.sample_rate, channels, frames)
 }
 
 fn read_track(path: &Path) -> Option<(TrackInfo, Vec<f32>)> {
@@ -226,16 +377,15 @@ fn read_wav_samples(path: &Path, info: &TrackInfo) -> Option<Vec<f32>> {
     if track_info_from_reader(&reader).as_ref() != Some(info) {
         return None;
     }
-    let raw_i16: Vec<i16> = reader.samples::<i16>().collect::<Result<_, _>>().ok()?;
-    if raw_i16.len() != info.samples || raw_i16.len() % info.channels != 0 {
+    let mut raw = Vec::new();
+    raw.try_reserve_exact(info.samples).ok()?;
+    for sample in reader.samples::<i16>() {
+        raw.push(f32::from(sample.ok()?) / 32_768.0);
+    }
+    if raw.len() != info.samples || raw.len() % info.channels != 0 {
         return None;
     }
-    Some(
-        raw_i16
-            .into_iter()
-            .map(|sample| f32::from(sample) / 32_768.0)
-            .collect(),
-    )
+    Some(raw)
 }
 
 fn open_bounded_wav_reader(path: &Path) -> Option<hound::WavReader<BufReader<std::fs::File>>> {
@@ -254,16 +404,7 @@ fn mp3_track_info(path: &Path) -> Option<TrackInfo> {
     let sample_rate = audio.sample_rate?;
     let channels = audio.channels.as_ref()?.count();
     let frames = usize::try_from(track.num_frames?).ok()?;
-    let samples = frames.checked_mul(channels)?;
-    if frames < 2 || samples > MAX_SOURCE_SAMPLES {
-        return None;
-    }
-    Some(TrackInfo {
-        sample_rate,
-        channels,
-        frames,
-        samples,
-    })
+    TrackInfo::new(sample_rate, channels, frames)
 }
 
 fn decode_mp3(path: &Path) -> Option<(TrackInfo, Vec<f32>)> {
@@ -298,7 +439,7 @@ fn decode_mp3(path: &Path) -> Option<(TrackInfo, Vec<f32>)> {
         };
         let spec = decoded.spec();
         let packet_channels = spec.channels().count();
-        if packet_channels == 0
+        if !(1..=2).contains(&packet_channels)
             || sample_rate.is_some_and(|rate| rate != spec.rate())
             || channels.is_some_and(|count| count != packet_channels)
         {
@@ -307,12 +448,9 @@ fn decode_mp3(path: &Path) -> Option<(TrackInfo, Vec<f32>)> {
         sample_rate = Some(spec.rate());
         channels = Some(packet_channels);
         let packet_samples = decoded.samples_interleaved();
-        if raw.len().checked_add(packet_samples)? > MAX_SOURCE_SAMPLES {
-            return None;
-        }
-        let start = raw.len();
-        raw.resize(start + packet_samples, f32::MID);
-        decoded.copy_to_slice_interleaved(&mut raw[start..]);
+        let max_samples = TrackInfo::max_source_samples(spec.rate(), packet_channels)?;
+        let packet_range = reserve_decode_packet(&mut raw, packet_samples, max_samples)?;
+        decoded.copy_to_slice_interleaved(&mut raw[packet_range]);
     }
     let sample_rate = sample_rate?;
     let channels = channels?;
@@ -323,15 +461,22 @@ fn decode_mp3(path: &Path) -> Option<(TrackInfo, Vec<f32>)> {
     if frames < 2 {
         return None;
     }
-    Some((
-        TrackInfo {
-            sample_rate,
-            channels,
-            frames,
-            samples: raw.len(),
-        },
-        raw,
-    ))
+    Some((TrackInfo::new(sample_rate, channels, frames)?, raw))
+}
+
+fn reserve_decode_packet(
+    raw: &mut Vec<f32>,
+    packet_samples: usize,
+    max_samples: usize,
+) -> Option<std::ops::Range<usize>> {
+    let start = raw.len();
+    let next_len = start.checked_add(packet_samples)?;
+    if next_len > max_samples {
+        return None;
+    }
+    raw.try_reserve(packet_samples).ok()?;
+    raw.resize(next_len, f32::MID);
+    Some(start..next_len)
 }
 
 fn open_symphonia(path: &Path) -> Option<(Box<dyn symphonia::core::formats::FormatReader>, u32)> {
@@ -451,6 +596,62 @@ mod tests {
         writer.finalize().expect("finalize");
     }
 
+    fn write_rate_wav(path: &Path, sample_rate: u32, frames: u32) {
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut writer = hound::WavWriter::create(path, spec).expect("write wav");
+        for _ in 0..frames {
+            writer.write_sample(0i16).expect("sample");
+        }
+        writer.finalize().expect("finalize");
+    }
+
+    #[test]
+    fn discovery_budget_bounds_entries_metadata_bytes_and_fallbacks() {
+        let limits = DiscoveryLimits {
+            entries: 2,
+            metadata_probes: 1,
+            audio_bytes: 5,
+            fallback_decodes: 1,
+        };
+        let mut budget = DiscoveryBudget::new(limits);
+
+        assert!(budget.claim_entry());
+        assert!(budget.claim_entry());
+        assert!(!budget.claim_entry());
+        assert!(budget.claim_metadata_probe());
+        assert!(!budget.claim_metadata_probe());
+        assert!(budget.claim_audio_bytes(5));
+        assert!(!budget.claim_audio_bytes(1));
+        assert!(budget.claim_fallback_decode());
+        assert!(!budget.claim_fallback_decode());
+    }
+
+    #[test]
+    fn station_discovery_stops_at_aggregate_work_limits() {
+        let dir = std::env::temp_dir().join("numinous_radio_cache_scan_budget");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create dir");
+        for i in 0..3 {
+            write_rate_wav(&dir.join(format!("trance-{i}.wav")), 8_000, 2);
+        }
+        let limits = DiscoveryLimits {
+            entries: 3,
+            metadata_probes: 1,
+            audio_bytes: MAX_AUDIO_BYTES,
+            fallback_decodes: 0,
+        };
+
+        let tracks = station_tracks_with_limits(&dir, "trance", limits);
+
+        assert_eq!(tracks.len(), 1);
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
     #[test]
     fn station_tracks_are_bounded_sorted_and_station_scoped() {
         let dir = std::env::temp_dir().join("numinous_radio_cache_tracks");
@@ -558,7 +759,7 @@ mod tests {
     }
 
     #[test]
-    fn load_track_resamples_to_stereo_and_rotates_into_the_broadcast() {
+    fn load_track_keeps_source_rate_stereo_and_rotates_into_the_broadcast() {
         let dir = std::env::temp_dir().join("numinous_radio_cache_load");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
@@ -568,13 +769,14 @@ mod tests {
         let loaded = load_track(&path, 1.0, 48_000).expect("load");
 
         assert!(loaded.stereo.len() > 44_100 * 2);
+        assert_eq!(loaded.sample_rate, 44_100);
         assert!(loaded.stereo.iter().any(|sample| sample.abs() > 0.1));
         assert!(loaded.remaining.as_secs_f64() >= 1.0);
         let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]
-    fn load_track_accepts_high_rate_devices_within_the_time_cap() {
+    fn load_track_does_not_amplify_storage_for_high_rate_devices() {
         let dir = std::env::temp_dir().join("numinous_radio_cache_high_rate");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
@@ -583,8 +785,60 @@ mod tests {
 
         let loaded = load_track(&path, 0.0, 96_000).expect("load at high device rate");
 
-        assert!(loaded.stereo.len() > 96_000 * 2);
+        assert_eq!(loaded.sample_rate, 44_100);
+        assert_eq!(loaded.stereo.len(), 44_100 * 3 * 2);
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn low_rate_tracks_remain_small_at_high_device_rates() {
+        let dir = std::env::temp_dir().join("numinous_radio_cache_output_budget");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create dir");
+        let path = dir.join("low-rate.wav");
+        write_rate_wav(&path, 1, MAX_OUTPUT_SECONDS as u32);
+
+        let complete = load_track(&path, 0.0, 192_000).expect("bounded source-rate track");
+        assert_eq!(complete.sample_rate, 1);
+        assert_eq!(complete.stereo.len(), MAX_OUTPUT_SECONDS * 2);
+        let suffix = load_track(&path, 479.0, 48_000).expect("bounded suffix");
+        assert_eq!(suffix.stereo.len(), 2);
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn normal_rate_long_tracks_fit_the_decoded_budget() {
+        let frames = 44_100 * 6 * 60;
+        let info = TrackInfo::new(44_100, 2, frames).expect("six-minute stereo track");
+
+        assert_eq!(info.frames, frames);
+        assert_eq!(info.samples, frames * 2);
+        assert!(info.samples * std::mem::size_of::<f32>() <= MAX_DECODED_STEREO_BYTES);
+    }
+
+    #[test]
+    fn packetized_decode_growth_is_amortized_and_bounded() {
+        let packet_samples = 1_152;
+        let packet_count = 512;
+        let max_samples = packet_samples * packet_count;
+        let mut raw = Vec::new();
+        let mut capacity_changes = 0;
+
+        for _ in 0..packet_count {
+            let before = raw.capacity();
+            let range = reserve_decode_packet(&mut raw, packet_samples, max_samples)
+                .expect("packet within budget");
+            raw[range].fill(0.25);
+            capacity_changes += usize::from(raw.capacity() != before);
+        }
+
+        assert_eq!(raw.len(), max_samples);
+        assert!(
+            capacity_changes <= 16,
+            "capacity changed {capacity_changes} times"
+        );
+        assert!(reserve_decode_packet(&mut raw, 1, max_samples).is_none());
+        assert_eq!(raw.len(), max_samples);
     }
 
     #[test]
