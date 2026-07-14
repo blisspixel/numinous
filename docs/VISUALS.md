@@ -28,7 +28,11 @@ The current shared seam is `Surface`: each room emits deterministic drawing
 operations that can become terminal cells or RGBA pixels. The app presents the
 RGBA raster, adaptively reducing live resolution when a room exceeds its 33 ms
 budget. The GPU adapter can replace the fractal raster for Mandelbrot and Julia
-while preserving CPU fallback and deterministic exports.
+while preserving CPU fallback and deterministic exports. Mandelbrot uses a
+smooth escape-time field with a dark interior and a high-energy cyan, lime,
+violet, and magenta cosine palette; its native camera keeps advancing after a
+click rather than snapping back at a normalized phase boundary. Julia retains
+its separate palette and interaction identity.
 
 The target systemic GPU post-stack has five stages:
 

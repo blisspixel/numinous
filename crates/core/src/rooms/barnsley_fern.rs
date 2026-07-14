@@ -17,17 +17,19 @@ const SEED: u64 = 0xFE87_0000_5EED_1234;
 /// across resolutions: a coarse ASCII grid gets a sparse dusting that leaves the
 /// fronds and the negative space between them visible (a filled `#` blob is not a
 /// fern), while a high-res raster gets enough points to fill the plant smoothly.
-const BASE_POINTS_PER_CELL: f64 = 0.35;
-const SWEEP_POINTS_PER_CELL: f64 = 0.9;
+const BASE_POINTS_PER_CELL: f64 = 0.10;
+const SWEEP_POINTS_PER_CELL: f64 = 0.20;
 /// A floor so a tiny canvas still grows a recognizable plant.
 const MIN_POINTS: usize = 1_200;
 /// A ceiling so a very large (or hostile) surface cannot drive an unbounded
 /// chaos-game loop: it bounds the per-frame cost and keeps a high-resolution
 /// fern lush without paying to fill every pixel, which the eye does not need.
-const MAX_POINTS: usize = 120_000;
+const MAX_POINTS: usize = 60_000;
 const FERN_X_MIN: f64 = -2.5;
 const FERN_X_SPAN: f64 = 5.5;
 const FERN_Y_MAX: f64 = 10.0;
+const MINI_BASE_POINTS: usize = 700;
+const MINI_SWEEP_POINTS: usize = 900;
 
 /// The Barnsley fern room.
 #[derive(Debug, Default)]
@@ -104,6 +106,29 @@ impl BarnsleyFern {
             Some((x, y, sx as i32, sy as i32))
         })
     }
+
+    fn mini_point(
+        x: f64,
+        y: f64,
+        center_x: i32,
+        center_y: i32,
+        width: usize,
+        height: usize,
+    ) -> Option<(i32, i32)> {
+        if !x.is_finite() || !y.is_finite() || width == 0 || height == 0 {
+            return None;
+        }
+        let scale = width.min(height) as f64 * 0.30;
+        let nx = (x - FERN_X_MIN) / FERN_X_SPAN - 0.5;
+        let ny = y / FERN_Y_MAX - 0.5;
+        let sx = f64::from(center_x) + nx * scale * 0.62;
+        let sy = f64::from(center_y) - ny * scale;
+        if sx >= 0.0 && sx < width as f64 && sy >= 0.0 && sy < height as f64 {
+            Some((sx.round() as i32, sy.round() as i32))
+        } else {
+            None
+        }
+    }
 }
 
 /// Apply one of the fern's four affine maps, chosen by `r` in `[0, 1)`.
@@ -126,7 +151,7 @@ impl Room for BarnsleyFern {
             title: "Barnsley Fern",
             wing: "Fractals & the Infinite",
             blurb: "Pick one of four simple transformations at random, over and over, and a fern \
-                    grows out of the noise. t adds more points, growing the plant before your eyes.",
+                    grows out of the noise. Click to plant a smaller self-similar fern.",
             accent: [60, 200, 90],
         }
     }
@@ -143,12 +168,12 @@ impl Room for BarnsleyFern {
         // saturate so the point count stays bounded and the render never panics,
         // exactly as the Room contract requires. Real surfaces clamp to MAX_DIM.
         let cells = width.saturating_mul(height);
-        for _ in 0..Self::points_for(t, cells) {
+        for step in 0..Self::points_for(t, cells) {
             let (nx, ny) = next_point(x, y, rng.next_f64());
             x = nx;
             y = ny;
             if let Some((sx, sy)) = Self::project_point(x, y, width, height) {
-                canvas.plot(sx, sy, '#');
+                canvas.plot(sx, sy, if step % 5 == 0 { '*' } else { '-' });
             }
         }
     }
@@ -168,7 +193,7 @@ impl Room for BarnsleyFern {
     }
 
     fn verb(&self) -> Option<&'static str> {
-        Some("CLICK: PLANT A NEW POINT")
+        Some("CLICK: PLANT A MINI FERN")
     }
 
     fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -183,7 +208,12 @@ impl Room for BarnsleyFern {
             })
             .count()
             .min(MAX_ROOM_POKES);
-        (points > 0).then(|| format!("{points} GROWTH ORIGIN(S) PLANTED   BRIGHT TRAIL GROWING"))
+        (points > 0).then(|| {
+            format!(
+                "{points} MINI FERN{} PLANTED   EACH REPEATS THE SAME FOUR MAPS",
+                if points == 1 { "" } else { "S" }
+            )
+        })
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -197,26 +227,29 @@ impl Room for BarnsleyFern {
             return;
         }
         self.render(canvas, t);
-        let mut rng = SplitMix64::new(SEED ^ self.seed);
-        for (mut x, mut y, sx, sy) in Self::planted_points(pokes, width, height) {
-            let marker = (width.min(height) / 70).clamp(3, 9) as i32;
-            canvas.line(sx - marker, sy, sx + marker, sy, '#');
-            canvas.line(sx, sy - marker, sx, sy + marker, '#');
-            let mut previous = (sx, sy);
-            for step in 0..100 {
+        for (which, (_world_x, _world_y, sx, sy)) in
+            Self::planted_points(pokes, width, height).enumerate()
+        {
+            let plant_seed = SEED
+                ^ self.seed
+                ^ (which as u64).wrapping_mul(0x9E37_79B9)
+                ^ (sx as u64).rotate_left(17)
+                ^ (sy as u64).rotate_left(33);
+            let mut rng = SplitMix64::new(plant_seed);
+            let (mut x, mut y) = (0.0_f64, 0.0_f64);
+            let points =
+                MINI_BASE_POINTS + (Self::phase_for(t) * MINI_SWEEP_POINTS as f64).round() as usize;
+            for _ in 0..points {
                 let r = rng.next_f64();
                 let (nx, ny) = next_point(x, y, r);
                 x = nx;
                 y = ny;
-                if let Some(point) = Self::project_point(x, y, width, height) {
-                    if step < 8 {
-                        canvas.line(previous.0, previous.1, point.0, point.1, '#');
-                    } else {
-                        canvas.plot(point.0, point.1, '#');
-                    }
-                    previous = point;
+                if let Some((px, py)) = Self::mini_point(x, y, sx, sy, width, height) {
+                    canvas.plot(px, py, '#');
                 }
             }
+            let marker = (width.min(height) / 120).clamp(2, 5) as i32;
+            canvas.line(sx - marker, sy, sx + marker, sy, '+');
             canvas.plot(sx, sy, '+');
         }
     }
@@ -276,7 +309,7 @@ mod tests {
         ];
         assert_eq!(
             room.status_input(0.4, &inputs).as_deref(),
-            Some("2 GROWTH ORIGIN(S) PLANTED   BRIGHT TRAIL GROWING")
+            Some("2 MINI FERNS PLANTED   EACH REPEATS THE SAME FOUR MAPS")
         );
     }
 
@@ -295,7 +328,7 @@ mod tests {
 
     #[test]
     fn more_phase_grows_the_fern() {
-        assert!(BarnsleyFern::points_for(1.0, 4_000) > BarnsleyFern::points_for(0.0, 4_000));
+        assert!(BarnsleyFern::points_for(1.0, 10_000) > BarnsleyFern::points_for(0.0, 10_000));
     }
 
     #[test]
@@ -439,6 +472,41 @@ mod tests {
         let text = canvas.to_text();
         let top_row = text.lines().next().expect("top row");
         assert_eq!(top_row.as_bytes()[39], b'+');
+    }
+
+    #[test]
+    fn miniature_fern_remains_local_to_its_clicked_center() {
+        let mut rng = SplitMix64::new(SEED);
+        let (mut x, mut y) = (0.0, 0.0);
+        let mut projected = Vec::new();
+        for _ in 0..2_000 {
+            (x, y) = next_point(x, y, rng.next_f64());
+            if let Some(point) = BarnsleyFern::mini_point(x, y, 50, 50, 100, 100) {
+                projected.push(point);
+            }
+        }
+
+        assert!(projected.len() > 1_900);
+        assert!(
+            projected
+                .iter()
+                .all(|&(px, py)| (40..=60).contains(&px) && (34..=66).contains(&py))
+        );
+        assert!(projected.iter().any(|&(px, _)| px < 50));
+        assert!(projected.iter().any(|&(px, _)| px > 50));
+    }
+
+    #[test]
+    fn planted_fern_persists_and_gains_detail_with_phase() {
+        let room = BarnsleyFern::new();
+        let mut early = Canvas::new(80, 60);
+        let mut later = Canvas::new(80, 60);
+        room.render_poked(&mut early, 0.0, &[(0.25, 0.6)]);
+        room.render_poked(&mut later, 1.0, &[(0.25, 0.6)]);
+
+        assert_eq!(early.cell(20, 35), Some('+'));
+        assert_eq!(later.cell(20, 35), Some('+'));
+        assert_ne!(early.to_text(), later.to_text());
     }
 
     #[test]

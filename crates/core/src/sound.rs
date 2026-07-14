@@ -72,28 +72,27 @@ impl SoundSpec {
         }
     }
 
-    /// Play a motif's phrase note for note, so the sound a room makes is the
-    /// same phrase `listen_room` reports as its notation, and each room sounds
-    /// like itself instead of a shared fallback. Timing mirrors `Motif::pattern`
-    /// (eighth notes at the motif's tempo).
+    /// Play a motif's notated line as a spacious counterphrase.
+    ///
+    /// Its total duration matches the four-bar chiptune arrangement, so faces
+    /// can combine the two without independent loop lengths drifting against
+    /// each other. Every notated pitch appears once, separated by a short rest.
     #[must_use]
     pub fn from_motif(motif: &crate::motifs::Motif) -> Self {
-        let step = 60.0 / motif.tempo.max(1) as f32 / 2.0;
+        let duration = motif.pattern().seconds();
+        let spacing = duration / motif.line.len().max(1) as f32;
         let notes: Vec<Note> = motif
             .line
             .iter()
             .enumerate()
             .map(|(i, &degree)| Note {
                 freq: crate::chiptune::pitch(motif.root, degree),
-                start: i as f32 * step,
-                dur: step * 0.9,
-                amp: 0.25,
+                start: i as f32 * spacing,
+                dur: spacing * 0.72,
+                amp: 0.12,
             })
             .collect();
-        Self {
-            duration: (motif.line.len() as f32 * step).max(step),
-            notes,
-        }
+        Self { duration, notes }
     }
 
     /// Several simultaneous tones (a chord) for `duration` seconds.
@@ -118,7 +117,7 @@ impl SoundSpec {
     /// Deterministic and device-free.
     #[must_use]
     pub fn render(&self, sample_rate: u32) -> Vec<f32> {
-        let rate = f32::from(u16::try_from(sample_rate.max(1)).unwrap_or(u16::MAX));
+        let rate = sample_rate.max(1) as f32;
         let total = (self.duration.max(0.0) * rate) as usize;
         let mut buffer = vec![0.0f32; total];
         for note in &self.notes {
@@ -155,6 +154,7 @@ fn envelope(t: f32, dur: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::{SoundSpec, envelope};
+    use crate::Motif;
 
     #[test]
     fn tone_has_one_note_and_the_right_length() {
@@ -190,5 +190,43 @@ mod tests {
         assert!(envelope(0.0, 1.0) < 0.01);
         assert!((envelope(0.5, 1.0) - 1.0).abs() < 1e-6);
         assert!(envelope(1.0, 1.0) < 0.01);
+    }
+
+    #[test]
+    fn native_device_rates_preserve_duration_and_pitch() {
+        for sample_rate in [44_100, 48_000, 96_000, 192_000] {
+            let samples = SoundSpec::tone(440.0, 1.0, 0.3).render(sample_rate);
+            assert_eq!(samples.len(), sample_rate as usize);
+
+            let middle = &samples[sample_rate as usize / 4..sample_rate as usize * 3 / 4];
+            let rising_crossings = middle
+                .windows(2)
+                .filter(|pair| pair[0] <= 0.0 && pair[1] > 0.0)
+                .count();
+            assert!(
+                (219..=221).contains(&rising_crossings),
+                "440 Hz drifted to {rising_crossings} half-second cycles at {sample_rate} Hz"
+            );
+        }
+    }
+
+    #[test]
+    fn motif_counterphrase_matches_arrangement_length_and_breathes() {
+        let motif = Motif {
+            key: "A minor",
+            root: 220.0,
+            tempo: 120,
+            line: &[0, 3, 7, 12, 7, 3],
+            encodes: "test",
+        };
+        let spec = SoundSpec::from_motif(&motif);
+        assert_eq!(spec.duration, motif.pattern().seconds());
+        assert_eq!(spec.notes.len(), motif.line.len());
+        assert!(
+            spec.notes
+                .windows(2)
+                .all(|notes| { notes[0].start + notes[0].dur < notes[1].start })
+        );
+        assert!(spec.notes.iter().all(|note| note.amp <= 0.12));
     }
 }

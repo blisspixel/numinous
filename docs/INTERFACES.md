@@ -55,7 +55,14 @@ The full interactive audiovisual experience. The UX is specified in depth across
 - **Zero friction, discovery over instruction.** Under three seconds to first play. No account, no tutorial wall. You learn what a control does by using it (The Witness school), never by reading a tooltip.
 - **Three postures, one surface:** lean back (Watch/Benchmark), grab the dials (Play), or make your own (the Studio). You slide between them freely.
 - **No fail, no dead ends, everything reversible.** One-tap reset, fearless poking, eased motion, dissolves between rooms. Beautiful at every frame.
-- **Input:** mouse / trackpad / touch / pen are primary; keyboard, controller, and MIDI are there for power use and performance.
+- **Input:** mouse and keyboard are complete, and the App now hotplugs standard
+  controllers through `gilrs` 0.11.2. The left stick moves a visible normalized
+  virtual hand and the south button emits the same bounded down, move, and up
+  room events as the mouse. Bumpers navigate rooms, the D-pad selects and drives games,
+  triggers change time speed, the right stick scrubs phase, and controller
+  buttons expose back, menu, inspect, reset, era, radio, and game submission.
+  Focus loss or disconnect cancels a held gesture. Touch, pen, MIDI, remapping,
+  and platform hardware certification remain planned rather than implied.
 
 Nothing here is a compromise for the other faces; this is the headline experience. It is simply *one* consumer of the core.
 

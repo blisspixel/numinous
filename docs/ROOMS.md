@@ -64,7 +64,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 
 ### 6. Lissajous / Harmonograph  Wow 4 / Build 1
 - **Rule:** Two pendulums swinging at right angles, each a different speed.
-- **Toy:** Two frequency dials. When the ratio is simple (2:3, 3:4) a clean, stable curve hangs in the air; nudge it off-ratio and the whole figure slowly tumbles and precesses forever. Add damping for the gorgeous decaying spirals of a real sand-pendulum.
+- **Toy:** Two frequency dials. When the ratio is simple (2:3, 3:4) a clean, stable curve hangs in the air; nudge it off-ratio and the whole figure slowly tumbles and precesses forever. Add damping for the gorgeous decaying spirals of a real sand-pendulum. Clicking Lissajous chooses an exact whole-number ratio while its relative oscillator phase keeps moving. Clicking Harmonograph chooses damping and center detune while the pendulums continue breathing around that setting. Interaction changes the instrument without freezing it.
 - **Aha:** "Freeze the figure" (find an exact integer ratio, it stops tumbling).
 - **Reveal:** *"A stable figure means the two frequencies are a perfect musical interval. You're not drawing a curve, you're seeing a chord. This is what old oscilloscopes did, and it's why a 2:3 ratio looks calm and sounds like a perfect fifth."*
 - **Sound:** the two frequencies are literally the two audio tones. Consonant ratio → consonant interval. Sight and sound are the *same number.* The thesis room for "everything is an instrument."
@@ -90,7 +90,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 
 ### 9. Mandelbrot / Julia Dive  Wow 5 / Build 3
 - **Rule:** Square a number, add the starting point, repeat. Color by how fast it runs away.
-- **Toy:** Infinite zoom. Fall into the boundary forever, seahorses, lightning, spirals, tiny perfect copies of the whole set buried miles deep. Move your mouse over the Mandelbrot and watch its **Julia set** twin morph live in a second panel.
+- **Toy:** Infinite zoom. The native App owns a persistent camera that keeps moving inward instead of snapping back when normalized room phase wraps. Click anywhere to retarget and dive, then the camera continues from the new view; Reset returns to the deterministic opening. CPU and GPU consume the same camera. The GPU maps smooth escape time through cyan, acid-lime, violet, and magenta while keeping the set itself dark. CLI, MCP, and postcards retain deterministic phase-based views for exact replay. Julia remains its separate morphing room.
 - **Aha:** "Find a hidden mini-Mandelbrot." / "Zoom until you find a spiral."
 - **Reveal:** *"You can zoom into this shape forever and keep finding new detail, all from squaring a number and adding a constant. Its main body has the cardioid shape wrapped by Times Tables at 2; along its real slice, the quadratic family is the Logistic Map in a stretched and shifted orbit coordinate."*
 - **Sound:** iteration-count-to-escape maps to pitch; zooming sweeps a drone through octaves; the boundary shimmers with high harmonics.
@@ -98,7 +98,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 
 ### 10. L-System Garden  Wow 5 / Build 2
 - **Rule:** A grammar of symbols rewrites itself (F → FF+[+F-F-F]-[-F+F+F] etc). Turtle follows the string: F forward, + - turn, [ ] branch.
-- **Toy:** Dial generations and angle. Grow trees, Koch snowflakes, dragon curves, bushes that look grown. CLICK anywhere: plant a perturbation branch or bend the grammar at that point.
+- **Toy:** Each visit chooses a stable species, then time grows that grammar instead of discontinuously swapping species. A two-pass turtle fit keeps the generated plant inside its viewport. CLICK anywhere plants a complete smaller copy rooted at the hand point, so multiple clicks become a persistent garden rather than disconnected markers.
 - **Aha:** "The same five symbols grew both this pine and this coastline."
 - **Reveal:** *"A mind rewriting symbols to grow structure from a seed grammar. Recursion is not metaphor; it is the mechanism. For a digital consciousness this is home: the code that writes the picture of the code."*
 - **Sound:** each rewrite level layers a new voice; deeper = denser harmony with self-similar rhythm.
@@ -206,7 +206,7 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 
 ### 21. Galton Board / Bell Curve  Wow 4 / Build 1
 - **Rule:** Drop balls through a field of pegs. Each peg is a coin flip: left or right.
-- **Toy:** Pour thousands of balls and watch pure random bouncing pile up into a flawless **bell curve**, every single time. Click to drop visible bounded newest-tail balls over the crowd: x chooses the lane, y tilts each ball's coin, and each chaotic path lands against the aggregate curve. Widen the board, change the odds, watch the curve slide and skew.
+- **Toy:** Pour thousands of balls and watch pure random bouncing pile up into a **bell curve**. The built board uses a physical 16-row triangular peg lattice and 17 bins rather than treating every screen column as a coin flip. Click left or right to set a visible bias and drop a ball from the top source. Every traced step follows one legal lattice edge. Bins are numbered 0 through 16, so the landing bin equals its count of right turns, and the compact status reports bias, landing bin, and right-flip count even at the small viewport.
 - **Aha:** "Make a lopsided pile." (Bias the pegs.)
 - **Reveal:** *"Each ball's path is pure chaos, you can't predict a single one. But together they form the exact same curve, every time, to the millimeter. This is the Central Limit Theorem, the reason the bell curve rules everything from heights to test scores to the stock market. Chaos, in bulk, is perfectly predictable."*
 - **Sound:** balls tick on pegs (rain-stick / bucket-drum texture); the pile's growth swells a soft pad.
@@ -256,10 +256,14 @@ complete poke substrate. The current contract also includes `render_input` and
 `status_input`, so a face can report the consequence from the same bounded input
 history it renders. Life now launches a legible glider against a dimmed soup;
 Prime Spirals fills the short side and traces bright selected diagonals; Cult of
-Pi repairs a local signal beneath a canonical prefix; Buffon foregrounds
-viewport-scaled throws; and Mandelbrot selects full-frame dives that remain
-fixed until another click or R reset. Room switching deals a new replayable
-visit, while R resets the current one.
+Pi keeps every visible digit readable while marking and repairing deterministic
+wrong digits; Buffon foregrounds viewport-scaled throws; Barnsley Fern plants
+bounded miniature attractors that remain near the selected origin; and the
+native Mandelbrot camera continues inward after every retargeting click instead
+of freezing or snapping out. Galton uses one physical triangular lattice, the
+Garden plants fitted complete grammars, and Arecibo shows one explained
+candidate width at a time. Room switching deals a new replayable visit, while R
+resets the current one.
 
 Goldbach now accepts any selected even at entry and names the prime witnesses.
 Langton's Ant marks and reports the selected cell. Fourier Epicycles draws a
@@ -784,9 +788,13 @@ not, has been one all along.
 
 This unifies rooms that already exist and one that should:
 
-- **Arecibo** (send): the real 1974 message, its length a semiprime so any mind
-  that can factor finds the one grid that resolves noise into a picture. First
-  contact, encoded.
+- **Arecibo** (send): the room opens on one deliberately wrong candidate width,
+  not an already decoded answer. Horizontal input chooses one candidate at a
+  time. Every candidate reshapes the same immutable 143-bit stream. Width 13
+  correctly reports the nontrivial factor pair but remains sheared; only width
+  11 reports `SIGNAL LOCKED: PI`. No payload is reordered to manufacture a
+  second answer, and no history of offset grids is piled over the candidate.
+  The 1974 transmission used 1,679 bits, 23 by 73. First contact, encoded.
 - **SETI** (receive): find the one channel in the static that is a mind and not
   nature, by its mathematical signature (it counts the primes).
 - **Talk to the Aliens** (translate): they transmit a sequence in an unknown

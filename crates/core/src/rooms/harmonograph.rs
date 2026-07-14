@@ -5,8 +5,9 @@
 //! detunes the frequencies, opening and closing the weave. See `docs/ROOMS.md`.
 
 use super::variation_signed;
-use crate::room::{Room, RoomMeta};
+use crate::room::{Room, RoomInput, RoomMeta, pokes_from_inputs};
 use crate::surface::Surface;
+use std::f64::consts::TAU;
 
 /// Points along the traced curve.
 const STEPS: usize = 4_000;
@@ -56,6 +57,15 @@ impl Harmonograph {
         let detune = (x.clamp(0.0, 1.0) - 0.5) * 0.12 + self.seed_detune();
         let damp = 0.004 + y.clamp(0.0, 1.0) * 0.030;
         (detune, damp)
+    }
+
+    fn moving_detune(center: f64, t: f64) -> f64 {
+        let phase = if t.is_finite() {
+            t.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        center + 0.006 * (TAU * phase).sin()
     }
 
     /// Draw one decaying trace with the given physics, sampled at `steps`
@@ -152,10 +162,10 @@ impl Room for Harmonograph {
         // sweep. Older tunings linger dim; the newest draws bright.
         for &(x, y) in older {
             let (detune, damp) = self.hand_params(x, y);
-            self.draw_traced(canvas, detune, damp, '.', STEPS / 4);
+            self.draw_traced(canvas, Self::moving_detune(detune, t), damp, '.', STEPS / 4);
         }
         let (detune, damp) = self.hand_params(newest.0, newest.1);
-        self.draw_traced(canvas, detune, damp, '#', STEPS);
+        self.draw_traced(canvas, Self::moving_detune(detune, t), damp, '#', STEPS);
         for &(x, y) in &tuned {
             let px = (x.clamp(0.0, 1.0) * (width - 1) as f64).round() as i32;
             let py = (y.clamp(0.0, 1.0) * (height - 1) as f64).round() as i32;
@@ -165,6 +175,22 @@ impl Room for Harmonograph {
 
     fn status(&self, t: f64) -> Option<String> {
         Some(format!("DETUNE {:+.3}", self.detune_for(t)))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = pokes_from_inputs(inputs);
+        let Some((x, y)) = pokes
+            .iter()
+            .rev()
+            .copied()
+            .find(|(x, y)| x.is_finite() && y.is_finite())
+        else {
+            return self.status(t);
+        };
+        let (detune, damping) = self.hand_params(x, y);
+        Some(format!(
+            "TUNED DETUNE {detune:+.3}   DAMP {damping:.3}   MOVING"
+        ))
     }
 
     fn reveal(&self) -> &'static str {
@@ -250,6 +276,18 @@ mod tests {
     }
 
     #[test]
+    fn interaction_status_reports_the_persistent_knobs() {
+        let room = Harmonograph::new();
+        let inputs = crate::room::inputs_from_pokes(&[(0.75, 0.25)], 0.2);
+        let early = room.status_input(0.2, &inputs).expect("tuned status");
+        let late = room.status_input(0.8, &inputs).expect("tuned status");
+        assert_eq!(early, late);
+        assert!(early.contains("TUNED DETUNE"));
+        assert!(early.contains("DAMP"));
+        assert!(early.contains("MOVING"));
+    }
+
+    #[test]
     fn a_poke_changes_the_trace_and_marks_the_hand() {
         let room = Harmonograph::new();
         let mut bare = Canvas::new(48, 24);
@@ -264,6 +302,38 @@ mod tests {
             ),
             Some('+')
         );
+    }
+
+    #[test]
+    fn a_retuned_machine_keeps_moving_after_the_click() {
+        let room = Harmonograph::new();
+        let click = [(0.82, 0.27)];
+        let mut early = Canvas::new(64, 40);
+        room.render_poked(&mut early, 0.25, &click);
+        let mut late = Canvas::new(64, 40);
+        room.render_poked(&mut late, 0.75, &click);
+
+        assert_ne!(early.to_text(), late.to_text());
+        let px = (click[0].0 * 63.0_f64).round() as usize;
+        let py = (click[0].1 * 39.0_f64).round() as usize;
+        assert_eq!(early.cell(px, py), Some('+'));
+        assert_eq!(late.cell(px, py), Some('+'));
+    }
+
+    #[test]
+    fn retuned_motion_is_continuous_at_the_phase_boundary() {
+        let room = Harmonograph::new();
+        let click = [(0.74, 0.32)];
+        let (center, damping) = room.hand_params(click[0].0, click[0].1);
+        let mut start = Canvas::new(64, 40);
+        room.render_poked(&mut start, 0.0, &click);
+        let mut end = Canvas::new(64, 40);
+        room.render_poked(&mut end, 1.0, &click);
+
+        assert_eq!(start.to_text(), end.to_text());
+        assert_eq!(Harmonograph::moving_detune(center, 0.0), center);
+        assert!((Harmonograph::moving_detune(center, 0.25) - center - 0.006).abs() < 1e-12);
+        assert_eq!(room.hand_params(click[0].0, click[0].1).1, damping);
     }
 
     #[test]

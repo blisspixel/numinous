@@ -3,16 +3,23 @@
 How Numinous *sounds*, and specifically how math *becomes* sound. This is the design bible for the "everything is an instrument" pillar. It complements `MUSIC.md` (which covers the two music engines and the radio stations); this doc covers the grammar of sonification, the synthesis architecture, and the per-room sound design.
 
 **Implementation status, 2026-07-13:** every catalog room ships a structured
-motif and deterministic sonification. The app plays room voices over its
-chiptune score, or hands the sole audio player to built-in radio playback.
-Automatic room beds use a softened triangle voice and a conservative 45 percent
-default master level; explicit chiptune composition retains its brighter
-square lead. Mute and radio volume are live, but radio and room voices do not
-mix simultaneously.
-DSP is implemented locally without `fundsp`. The shared master bus,
-sample-accurate scheduling, per-Era voices, global tuning, spatialization, and
-independent room/UI volume controls below are design targets, not shipped
-claims.
+motif and deterministic sonification. The App's default room bed is a 32-step
+stereo arrangement with a soft triangle lead, rests, four-bar development,
+quiet consonant anchors, and a silent loop seam. Changed sources use a short,
+normalized crossfade. Master volume and window-focus state use smoothed gain,
+so neither restarts the source; minimizing or switching away fades the App.
+Completed crossfade storage is retired by the callback and destroyed by the
+control thread, keeping large radio buffers out of real-time destruction and
+preventing indefinite retention. Restoring the App first rejoins the radio's
+wall-clock track and offset, then fades audio in. The audio source is no longer
+rebuilt from render-loop cadence. Native device rates from 44.1 through 192 kHz
+are covered by pitch and duration tests. Built-in radio remains the sole source
+while tuned.
+
+DSP is implemented locally without `fundsp`. A first shared gain and source
+bus is shipped. Sample-accurate event scheduling, per-Era voices, global
+tuning, richer spatialization, a soft limiter, and independent room, radio,
+and UI volume controls below remain design targets, not shipped claims.
 
 ## Philosophy: synesthesia, not sound effects
 

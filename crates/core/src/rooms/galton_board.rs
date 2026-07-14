@@ -6,7 +6,7 @@
 //! `t` biases the coin and skews the curve. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta, pokes_from_inputs};
 use crate::surface::{MAX_DIM, Surface};
 
 /// Fixed seed so the pile reproduces exactly (determinism, see `docs/QUALITY.md`).
@@ -15,6 +15,8 @@ const SEED: u64 = 0x6A17_0B04_5EED_ABCD;
 const BALLS: usize = 20_000;
 /// How far `t` biases the coin away from fair.
 const MAX_BIAS: f64 = 0.25;
+/// A physical board has one stable geometry at every viewport size.
+const BOARD_ROWS: usize = 16;
 /// Cap on the simulated bin count, so the work stays bounded no matter how wide
 /// the canvas is. Wider canvases stretch this many bins across their columns.
 const MAX_SIM_BINS: usize = 256;
@@ -29,7 +31,7 @@ fn drawing_dims(canvas: &dyn Surface) -> Option<(usize, usize)> {
     }
 }
 
-fn poked_balls(pokes: &[(f64, f64)]) -> Vec<(usize, f64, f64)> {
+fn poked_balls(pokes: &[(f64, f64)]) -> Vec<(usize, f64)> {
     let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
     pokes[start..]
         .iter()
@@ -41,7 +43,7 @@ fn poked_balls(pokes: &[(f64, f64)]) -> Vec<(usize, f64, f64)> {
             }
         })
         .enumerate()
-        .map(|(which, (px, py))| (which, px, py))
+        .map(|(which, (px, _py))| (which, 0.15 + 0.70 * px))
         .collect()
 }
 
@@ -88,40 +90,83 @@ impl GaltonBoard {
         counts
     }
 
-    fn ball_trace(bins: usize, x: f64, y: f64, variation: u64, which: usize) -> Vec<usize> {
-        let bins = bins.clamp(2, MAX_SIM_BINS);
-        let rows = bins - 1;
-        let mut column = (unit(x, 0.5) * rows as f64).round() as usize;
-        let p_right = 0.15 + 0.70 * unit(y, 0.5);
+    fn ball_trace(rows: usize, p_right: f64, variation: u64, which: usize) -> Vec<usize> {
+        let rows = rows.clamp(1, MAX_SIM_BINS - 1);
+        let p_right = unit(p_right, 0.5);
         let mut rng = SplitMix64::new(
             SEED ^ variation ^ 0xB411_7ACE_u64 ^ (which as u64).wrapping_mul(0x9E37_79B9),
         );
         let mut trace = Vec::with_capacity(rows + 1);
-        trace.push(column);
+        let mut rights = 0usize;
+        trace.push(rights);
         for _ in 0..rows {
             if rng.next_f64() < p_right {
-                column = (column + 1).min(rows);
-            } else {
-                column = column.saturating_sub(1);
+                rights += 1;
             }
-            trace.push(column);
+            trace.push(rights);
         }
         trace
     }
 
-    fn draw_ball_trace(canvas: &mut dyn Surface, trace: &[usize], bins: usize) {
+    fn board_point(
+        width: usize,
+        top: f64,
+        bottom: f64,
+        row: usize,
+        rights: usize,
+        rows: usize,
+    ) -> (i32, i32) {
+        let span = width.saturating_sub(1) as f64 * 0.82;
+        let step = span / rows.max(1) as f64;
+        let lateral = (2.0 * rights as f64 - row as f64) * step / 2.0;
+        let x = width.saturating_sub(1) as f64 / 2.0 + lateral;
+        let y = top + (bottom - top) * row as f64 / rows.max(1) as f64;
+        (x.round() as i32, y.round() as i32)
+    }
+
+    fn draw_board(canvas: &mut dyn Surface, rows: usize, counts: &[u64]) {
+        let Some((width, height)) = drawing_dims(canvas) else {
+            return;
+        };
+        let top = height as f64 * 0.08;
+        let board_bottom = height as f64 * 0.64;
+        let pile_top = height as f64 * 0.70;
+        let pile_bottom = height.saturating_sub(1) as f64;
+        for row in 0..rows {
+            for rights in 0..=row {
+                let (x, y) = Self::board_point(width, top, board_bottom, row, rights, rows);
+                canvas.plot(x, y, '.');
+            }
+        }
+        let max = counts.iter().copied().max().unwrap_or(0);
+        if max == 0 {
+            return;
+        }
+        let bin_width = (width as f64 * 0.82 / rows.max(1) as f64).max(1.0);
+        for (bin, &count) in counts.iter().enumerate() {
+            let (center, _) = Self::board_point(width, top, board_bottom, rows, bin, rows);
+            let half = (bin_width * 0.42).max(1.0) as i32;
+            let bar = ((count as f64 / max as f64) * (pile_bottom - pile_top)).round() as i32;
+            for x in center - half..=center + half {
+                for dy in 0..=bar {
+                    canvas.plot(x, pile_bottom as i32 - dy, '*');
+                }
+            }
+        }
+    }
+
+    fn draw_ball_trace(canvas: &mut dyn Surface, trace: &[usize], rows: usize) {
         let Some((width, height)) = drawing_dims(canvas) else {
             return;
         };
         if trace.is_empty() {
             return;
         }
-        let x_span = (bins.clamp(2, MAX_SIM_BINS) - 1) as f64;
-        let y_span = (trace.len() - 1).max(1) as f64;
+        let top = height as f64 * 0.08;
+        let board_bottom = height as f64 * 0.64;
         let mut previous = None;
-        for (row, &bin) in trace.iter().enumerate() {
-            let sx = ((bin as f64 / x_span) * (width.saturating_sub(1)) as f64).round() as i32;
-            let sy = ((row as f64 / y_span) * (height.saturating_sub(1)) as f64).round() as i32;
+        for (row, &rights) in trace.iter().enumerate() {
+            let (sx, sy) = Self::board_point(width, top, board_bottom, row, rights, rows);
             if let Some((px, py)) = previous {
                 canvas.line(px, py, sx, sy, 'o');
             } else {
@@ -129,9 +174,15 @@ impl GaltonBoard {
             }
             previous = Some((sx, sy));
         }
-        if let Some(&bin) = trace.last() {
-            let sx = ((bin as f64 / x_span) * (width.saturating_sub(1)) as f64).round() as i32;
-            canvas.plot(sx, height.saturating_sub(1) as i32, '#');
+        if let Some(&rights) = trace.last() {
+            let (sx, _) = Self::board_point(width, top, board_bottom, rows, rights, rows);
+            canvas.line(
+                sx - 2,
+                (height as f64 * 0.68) as i32,
+                sx + 2,
+                (height as f64 * 0.68) as i32,
+                '#',
+            );
         }
     }
 }
@@ -157,25 +208,11 @@ impl Room for GaltonBoard {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        let Some((width, height)) = drawing_dims(canvas) else {
+        let Some((_width, _height)) = drawing_dims(canvas) else {
             return;
         };
-        let sim_bins = width.min(MAX_SIM_BINS);
-        let counts = Self::histogram(sim_bins, t, self.seed);
-        let max = counts.iter().copied().max().unwrap_or(0);
-        if max == 0 {
-            return;
-        }
-        for x in 0..width {
-            // Map the canvas column onto a simulated bin. This is the identity
-            // when the canvas fits, and stretches the bins across wider canvases.
-            let bin = (x * sim_bins / width).min(sim_bins - 1);
-            let count = counts[bin];
-            let bar = ((count as f64 / max as f64) * height as f64).round() as usize;
-            for row in 0..bar {
-                canvas.plot(x as i32, (height - 1 - row) as i32, '*');
-            }
-        }
+        let counts = Self::histogram(BOARD_ROWS + 1, t, self.seed);
+        Self::draw_board(canvas, BOARD_ROWS, &counts);
     }
 
     fn reveal(&self) -> &'static str {
@@ -196,7 +233,22 @@ impl Room for GaltonBoard {
     }
 
     fn verb(&self) -> Option<&'static str> {
-        Some("CLICK: DROP A BALL")
+        Some("CLICK LEFT OR RIGHT: BIAS AND DROP A BALL")
+    }
+
+    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = pokes_from_inputs(inputs);
+        let (which, p_right) = poked_balls(&pokes).last().copied()?;
+        let trace = Self::ball_trace(BOARD_ROWS, p_right, self.seed, which);
+        let rights = trace.last().copied().unwrap_or(0);
+        let direction = if p_right < 0.48 {
+            "LEFT"
+        } else if p_right > 0.52 {
+            "RIGHT"
+        } else {
+            "FAIR"
+        };
+        Some(format!("{direction} P={p_right:.2}   BIN{rights}=R-FLIPS"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -204,37 +256,20 @@ impl Room for GaltonBoard {
             self.render(canvas, t);
             return;
         }
-        let Some((width, height)) = drawing_dims(canvas) else {
+        let Some((_width, _height)) = drawing_dims(canvas) else {
             return;
         };
-        let sim_bins = width.min(MAX_SIM_BINS);
-        let counts = Self::histogram(sim_bins, t, self.seed);
-        let max = counts.iter().copied().max().unwrap_or(0);
-        if max == 0 {
-            return;
-        }
-        // base
-        for x in 0..width {
-            let bin = (x * sim_bins / width).min(sim_bins - 1);
-            let count = counts[bin];
-            let bar = ((count as f64 / max as f64) * height as f64).round() as usize;
-            for row in 0..bar {
-                canvas.plot(x as i32, (height - 1 - row) as i32, '*');
-            }
-        }
-        // A click drops a single visible ball over the crowd. Horizontal hand
-        // position chooses the lane; vertical hand position tilts that ball's
-        // coin, making the individual path contrast with the aggregate curve.
-        for (which, px, py) in poked_balls(pokes) {
-            let trace = Self::ball_trace(sim_bins, px, py, self.seed, which);
-            Self::draw_ball_trace(canvas, &trace, sim_bins);
+        self.render(canvas, t);
+        for (which, p_right) in poked_balls(pokes) {
+            let trace = Self::ball_trace(BOARD_ROWS, p_right, self.seed, which);
+            Self::draw_ball_trace(canvas, &trace, BOARD_ROWS);
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{GaltonBoard, poked_balls};
+    use super::{BOARD_ROWS, GaltonBoard, poked_balls};
     use crate::canvas::Canvas;
     use crate::room::{MAX_ROOM_POKES, Room};
     use crate::surface::{MAX_DIM, Surface};
@@ -287,10 +322,10 @@ mod tests {
         r0.render(&mut a, 0.0);
         r_def.render(&mut b, 0.0);
         assert_eq!(a.to_text(), b.to_text());
-        let r42 = GaltonBoard::new_with(42);
-        let mut c = Canvas::new(41, 16);
-        r42.render(&mut c, 0.0);
-        assert_ne!(a.to_text(), c.to_text());
+        assert_ne!(
+            GaltonBoard::histogram(17, 0.0, 0),
+            GaltonBoard::histogram(17, 0.0, 42)
+        );
     }
 
     #[test]
@@ -299,6 +334,12 @@ mod tests {
         let mut canvas = Canvas::new(41, 16);
         room.render(&mut canvas, 0.0);
         assert!(canvas.ink_count() > 10);
+    }
+
+    #[test]
+    fn every_viewport_uses_the_same_physical_row_count() {
+        assert_eq!(BOARD_ROWS, 16);
+        assert_eq!(GaltonBoard::histogram(BOARD_ROWS + 1, 0.0, 0).len(), 17);
     }
 
     #[test]
@@ -323,15 +364,16 @@ mod tests {
 
     #[test]
     fn poked_balls_preserve_order_clamp_and_filter() {
-        assert_eq!(
-            poked_balls(&[
-                (-1.0, 2.0),
-                (0.25, 0.75),
-                (f64::INFINITY, 0.25),
-                (0.5, f64::NAN),
-            ]),
-            vec![(0, 0.0, 1.0), (1, 0.25, 0.75)]
-        );
+        let balls = poked_balls(&[
+            (-1.0, 2.0),
+            (0.25, 0.75),
+            (f64::INFINITY, 0.25),
+            (0.5, f64::NAN),
+        ]);
+        assert_eq!(balls.len(), 2);
+        assert_eq!(balls[0], (0, 0.15));
+        assert_eq!(balls[1].0, 1);
+        assert!((balls[1].1 - 0.325).abs() < 1.0e-12);
     }
 
     #[test]
@@ -365,18 +407,18 @@ mod tests {
     #[test]
     fn duplicate_pokes_replay_as_distinct_balls() {
         let balls = poked_balls(&[(0.5, 0.5), (0.5, 0.5)]);
-        let first = GaltonBoard::ball_trace(21, balls[0].1, balls[0].2, 0, balls[0].0);
-        let second = GaltonBoard::ball_trace(21, balls[1].1, balls[1].2, 0, balls[1].0);
+        let first = GaltonBoard::ball_trace(21, balls[0].1, 0, balls[0].0);
+        let second = GaltonBoard::ball_trace(21, balls[1].1, 0, balls[1].0);
 
-        assert_eq!(balls, vec![(0, 0.5, 0.5), (1, 0.5, 0.5)]);
+        assert_eq!(balls, vec![(0, 0.5), (1, 0.5)]);
         assert_ne!(first, second);
     }
 
     #[test]
     fn variation_changes_the_dropped_ball_trace_directly() {
         assert_ne!(
-            GaltonBoard::ball_trace(21, 0.5, 0.5, 0, 0),
-            GaltonBoard::ball_trace(21, 0.5, 0.5, 42, 0)
+            GaltonBoard::ball_trace(21, 0.5, 0, 0),
+            GaltonBoard::ball_trace(21, 0.5, 42, 0)
         );
     }
 
@@ -402,14 +444,32 @@ mod tests {
     }
 
     #[test]
-    fn dropped_ball_uses_both_hand_coordinates() {
-        let left = GaltonBoard::ball_trace(21, 0.1, 0.5, 0, 0);
-        let right = GaltonBoard::ball_trace(21, 0.9, 0.5, 0, 0);
-        assert!(left.first().unwrap() < right.first().unwrap());
+    fn dropped_ball_follows_only_physical_peg_edges() {
+        let trace = GaltonBoard::ball_trace(24, 0.5, 0, 0);
+        assert_eq!(trace.len(), 25);
+        assert_eq!(trace[0], 0);
+        for (row, pair) in trace.windows(2).enumerate() {
+            assert!(pair[0] <= row);
+            assert!(matches!(pair[1].saturating_sub(pair[0]), 0 | 1));
+            assert!(pair[1] <= row + 1);
+        }
+    }
 
-        let biased_left = GaltonBoard::ball_trace(21, 0.5, 0.0, 0, 0);
-        let biased_right = GaltonBoard::ball_trace(21, 0.5, 1.0, 0, 0);
+    #[test]
+    fn horizontal_hand_position_controls_a_named_bias() {
+        let left = poked_balls(&[(0.0, 0.9)])[0].1;
+        let right = poked_balls(&[(1.0, 0.1)])[0].1;
+        let biased_left = GaltonBoard::ball_trace(200, left, 0, 0);
+        let biased_right = GaltonBoard::ball_trace(200, right, 0, 0);
         assert!(biased_left.last().unwrap() < biased_right.last().unwrap());
+
+        let status = GaltonBoard::new()
+            .status_input(0.0, &crate::room::inputs_from_pokes(&[(1.0, 0.2)], 0.0))
+            .expect("interaction status");
+        assert!(status.starts_with("RIGHT"));
+        assert!(status.contains("P=0.85"));
+        assert!(status.contains("BIN"));
+        assert!(status.contains("R-FLIPS"));
     }
 
     #[test]

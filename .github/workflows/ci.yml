@@ -21,8 +21,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@c0e9df88980754dd93e5833b8dcb1b304c1fe173 # 1.96.0
         with:
           components: rustfmt, clippy
-      - name: Install ALSA (for cpal)
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-dev
+      - name: Install Linux audio and input development libraries
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
       - name: Format check
         run: cargo fmt --all --check
       - name: Clippy (deny warnings)
@@ -53,8 +53,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@c0e9df88980754dd93e5833b8dcb1b304c1fe173 # 1.96.0
         with:
           components: llvm-tools-preview
-      - name: Install ALSA (for cpal)
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-dev
+      - name: Install Linux audio and input development libraries
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
       - uses: taiki-e/install-action@2ca9b94c269419b7b0c711c09d0b21c4e1d51145 # v2.83.1
         with:
           tool: cargo-llvm-cov
@@ -74,9 +74,9 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: dtolnay/rust-toolchain@c0e9df88980754dd93e5833b8dcb1b304c1fe173 # 1.96.0
-      - name: Install ALSA (Linux, for cpal)
+      - name: Install Linux audio and input development libraries
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-dev
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
       - name: Workspace tests
         run: cargo test --workspace --locked
       - name: Windows installer PATH promotion

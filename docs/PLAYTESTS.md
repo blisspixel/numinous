@@ -367,8 +367,74 @@ the high-contrast result panel. The matrix remains renderer evidence and is
 paired with production input routing tests rather than mislabeled as native GUI
 automation.
 
-The final local release gate reports 1,096 tests, 92.93 percent region coverage,
-92.55 percent line coverage, the exact 240-screen matrix, locked build, house
+The final local release gate reports 1,143 tests, 93.00 percent region coverage,
+92.61 percent line coverage, the exact 240-screen matrix, locked build, house
 style, and supply-chain policy all passing. Real hallway participants, disabled
 player review, and real macOS and Linux execution remain open exactly where the
 roadmap places them.
+
+---
+
+# The fourth round (July 13, 2026): hands-on sensory and control QA
+
+This round began with direct player feedback from the installed Windows build,
+then split reproduction across room geometry, persistent motion, music and
+audio runtime behavior, and controller access. The groups inspected production
+room code, focused renders, the exact screenshot matrix, CLI and MCP invariants,
+and the native App coordinator. Simulated review helped widen the search, but
+the accepted findings below were reproduced in code or in a render. No persona
+reaction is treated as evidence of fun or quality.
+
+## Reproduced findings
+
+- Galton Board used horizontal pixels as independent coin flips, producing
+  hundreds of decisions and a needle-like pile rather than a binomial board.
+- Cult of Pi deliberately hid a large opening band and scrolled away from
+  `3.14`, so the repair premise was visually unreadable.
+- Fern clicks were quickly erased by the standard attractor, Garden clicks
+  changed the whole grammar and clipped branches, and Arecibo overlaid width
+  attempts without explaining quotient, remainder, or orientation.
+- Lissajous and Harmonograph froze by construction after input. Mandelbrot
+  wrapped from a deep zoom to the wide opening view at its normalized phase
+  boundary, and a click held the selected camera rather than continuing the
+  journey inward.
+- The default room score doubled phrases with mismatched loop lengths, lacked
+  real polyphony and breath, restarted from render cadence, and reset buffers
+  on volume or focus changes. High device sample rates were truncated through
+  an incorrect integer conversion.
+- The App tied simulation progress to render count, which made minimize and
+  restore behavior unstable, and it had no controller path.
+- Independent checker passes found four second-order defects before release:
+  deep GPU Mandelbrot coordinates eventually collapsed at `f32` precision,
+  completed crossfades retained large prior recordings, rapid source changes
+  restarted a transition, and restored radio could briefly play a stale
+  wall-clock position. They also caught stale room readouts, an adaptive Galton
+  row count, Arecibo payload reordering at width 13, queued controller input
+  across focus loss, and missing controller routes through the live games.
+
+## What changed
+
+The five room redesigns, three motion corrections, persistent Mandelbrot
+camera, smooth high-color shader, stereo arrangement system, focus-safe audio
+player, elapsed-time event loop, and controller virtual hand are now built and
+covered by focused invariants. The screenshot matrix was regenerated against
+all 240 declared states, including the corrected room interactions. The App
+help and player manuals name the controller mapping, while the interface and
+roadmap keep remapping, adaptive glyphs, and cross-platform certification open.
+
+The checker findings are also closed. Mandelbrot falls back to its `f64` CPU
+camera before one GPU pixel step is smaller than the center's `f32` spacing.
+Audio queues rapid replacements, normalizes crossfade weights, retires old
+storage out of the callback, and resynchronizes radio before focus gain rises.
+Controller focus transitions drain queued events, Start opens a nondestructive
+pause menu, and direct tests traverse Quiz, Munch, Nim, Arcade, and Gauntlet
+stages zero through four. Galton uses exactly 16 rows at every viewport and
+reports the traced landing, Lissajous and Harmonograph report the tuning they
+actually render, and Arecibo always reshapes one immutable bitstream.
+
+The evidence boundary remains strict. Automated harmony, seam, DC, headroom,
+device-rate, and continuity checks can reject broken synthesis, but they cannot
+certify that music is pleasant over a long session. Standard-controller logic
+is pure-tested, while real controller models still need hardware sessions.
+Those two listening and hardware checks remain explicit release work rather
+than being hidden behind the size of the automated suite.

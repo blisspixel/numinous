@@ -307,6 +307,23 @@ mod tests {
     }
 
     #[test]
+    fn compact_galton_result_keeps_the_flip_field_before_fixed_controls() {
+        let room = room("galton-board");
+        let input = [RoomInput::PointerDown {
+            x: 0.94,
+            y: 0.5,
+            t: 0.25,
+        }];
+        let footer = footer_copy(room.as_ref(), 0.25, &input, false);
+        let controls_width = footer.controls.chars().count() as i32 * 6;
+        let controls_x = 360 - controls_width - 10;
+        let fitted = fit_footer_text(&footer.status, controls_x - 20, 1);
+
+        assert_eq!(fitted, footer.status);
+        assert!(fitted.ends_with("R-FLIPS"));
+    }
+
+    #[test]
     fn room_chrome_draws_without_a_game_mode() {
         let room = room("lissajous");
         let mut raster = Raster::with_accent(320, 220, room.meta().accent);

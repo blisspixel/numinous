@@ -64,11 +64,20 @@ irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.p
 Then open a new terminal:
 
 ```
-numinous-app     a window; A/D switch rooms, drag to scrub, E to inspect
+numinous-app     a window; A/D switch rooms, touch or use a controller hand
 numinous         or live in the terminal, in full color
 ```
 
 (From a clone, `cargo run --release --bin numinous-app` works directly.)
+
+Mouse, keyboard, and controller can all navigate the App. On a controller,
+the D-pad chooses a game in the opening menu and South launches it. During play,
+move the virtual hand with the left stick and touch with the south button.
+The bumpers change rooms, the D-pad drives games, the triggers change speed,
+the right stick scrubs time, Start opens or closes the menu, Select inspects,
+and clicking the left stick resets the room. West changes the visual era.
+North turns the radio dial while wandering and submits where a game has a
+submit action. Start pauses a live game behind the menu without discarding it.
 
 Same instruction: poke first, read never (until you want to).
 

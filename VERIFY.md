@@ -16,8 +16,8 @@ contributors and the curious.
   fresh shell does not see `cargo`, add that to `PATH`.
 - Optional, for the local coverage gate: `cargo install cargo-llvm-cov`.
 - Optional, for the local supply-chain gate: `cargo install cargo-deny`.
-- The Linux build needs the ALSA and xkbcommon headers (the packages CI
-  installs): `sudo apt-get install -y libasound2-dev libxkbcommon-dev`.
+- The Linux build needs the ALSA, xkbcommon, and libudev headers (the packages
+  CI installs): `sudo apt-get install -y libasound2-dev libxkbcommon-dev libudev-dev`.
 
 ## 1. One command
 
@@ -44,10 +44,11 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 1,096 tests pass, 92.93% region
-cover, and 92.55% line cover** (the `gpu` and `audio` crates plus the app event-loop file are
-integration-tested on real hardware and excluded from the coverage gate, see
-`docs/QUALITY.md`).
+Expected right now: **format and clippy clean, 1,143 tests pass, 93.00% region
+cover, and 92.61% line cover**. The `gpu` and `audio` crates plus the app event
+loop are excluded from the coverage gate and have dev-machine integration
+evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
+with representative physical controller models remain open.
 
 The release scripts also regenerate `renders/qa-app/`, a 240-screen app matrix.
 Every catalog room has a deterministic opening frame, arrival card, immediate
@@ -214,7 +215,7 @@ Music Engine A (the seeded chiptune, `numinous tune`), GPU real-time fractals,
 live sound in the app and CLI plus structured notation over MCP, the `forget`
 right for players who are minds, and 29 MCP tools (full CLI parity for the
 games; challenge, predict, and cairn are MCP-first) so agents play the same
-content. Pending (see `docs/ROADMAP.md`):
-deeper held and causal interactions, human playtests, cross-platform proof,
-full Studio save/share beyond the first CLI `.num` save/open slice, the music
-visualizer, and more GPU room paths.
+content. Pending (see `docs/ROADMAP.md`): deeper held and causal interactions,
+human playtests, representative physical-controller sessions, musician-led
+long-listening review, cross-platform proof, full Studio save/share beyond the
+first CLI `.num` save/open slice, the music visualizer, and more GPU room paths.

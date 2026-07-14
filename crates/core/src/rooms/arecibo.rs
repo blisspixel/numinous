@@ -7,7 +7,7 @@
 //! (The real 1974 message was 1,679 bits: 23 times 73.) See `docs/ROOMS.md`.
 
 use crate::MAX_ROOM_POKES;
-use crate::room::{Room, RoomMeta};
+use crate::room::{Room, RoomInput, RoomMeta, pokes_from_inputs};
 use crate::surface::Surface;
 
 /// The hidden payload, drawn at the one width that reads it: a big letter pi.
@@ -49,26 +49,10 @@ impl Arecibo {
         Self { seed }
     }
 
-    /// A finite playback phase. Non-finite values fall back to the first frame.
-    fn phase_for(t: f64) -> f64 {
-        if t.is_finite() {
-            t.clamp(0.0, 1.0)
-        } else {
-            0.0
-        }
-    }
-
-    /// The width the player is trying at phase `t`.
-    fn width_for(t: f64, seed: u64) -> usize {
-        let span = (MAX_WIDTH - MIN_WIDTH) as f64;
-        let base = MIN_WIDTH + (Self::phase_for(t) * span).round() as usize;
-        if seed == 0 {
-            base
-        } else {
-            // Nonzero seeds must visibly re-deal while seed 0 keeps exact postcards.
-            let j = (seed % 3) as usize + 1;
-            (base + j).min(MAX_WIDTH)
-        }
+    /// The deliberately unsolved width shown before the player chooses one.
+    fn width_for(_t: f64, seed: u64) -> usize {
+        const WRONG_WIDTHS: [usize; 11] = [10, 6, 7, 8, 9, 12, 14, 15, 16, 17, 18];
+        WRONG_WIDTHS[(seed % WRONG_WIDTHS.len() as u64) as usize]
     }
 
     fn width_from_point(px: f64) -> usize {
@@ -77,20 +61,31 @@ impl Arecibo {
                 .min(MAX_WIDTH - MIN_WIDTH)
     }
 
-    fn poked_attempts(pokes: &[(f64, f64)]) -> impl Iterator<Item = (usize, i32, i32)> + '_ {
+    fn poked_attempts(pokes: &[(f64, f64)]) -> impl Iterator<Item = usize> + '_ {
         let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
-        pokes[start..].iter().filter_map(|&(px, py)| {
-            if !px.is_finite() || !py.is_finite() {
-                return None;
-            }
-            let px = px.clamp(0.0, 1.0);
-            let py = py.clamp(0.0, 1.0);
-            Some((
-                Self::width_from_point(px),
-                ((px - 0.5) * 5.0) as i32,
-                ((py - 0.5) * 5.0) as i32,
-            ))
-        })
+        pokes[start..]
+            .iter()
+            .rev()
+            .filter_map(|&(px, py)| {
+                if !px.is_finite() || !py.is_finite() {
+                    return None;
+                }
+                Some(Self::width_from_point(px))
+            })
+            .take(1)
+    }
+
+    fn width_status(width: usize) -> String {
+        let total = bits().len();
+        let rows = total / width;
+        let remainder = total % width;
+        if remainder == 0 && width == 11 {
+            format!("{total} BITS   WIDTH {width} x {rows}   SIGNAL LOCKED: PI")
+        } else if remainder == 0 && width == 13 {
+            format!("{total} BITS   WIDTH {width} x {rows}   FACTOR PAIR FOUND   TRY WIDTH 11")
+        } else {
+            format!("{total} BITS   WIDTH {width} x {rows}   {remainder} BITS LEFT OVER")
+        }
     }
 }
 
@@ -175,7 +170,7 @@ impl Room for Arecibo {
             title: "Arecibo Message",
             wing: "Signals & Codes",
             blurb: "A stream of bits that looks like noise until you line it up at the right width. \
-                    The length is a semiprime, so there is only one width that works. t hunts for it.",
+                    The length is a semiprime, so it has one nontrivial rectangle up to rotation.",
             accent: [120, 230, 180],
         }
     }
@@ -186,8 +181,8 @@ impl Room for Arecibo {
         if width == 0 || height == 0 {
             return;
         }
-        let stream = bits();
         let grid_w = Self::width_for(t, self.seed);
+        let stream = bits();
         draw_message(canvas, &stream, grid_w, '#', 0, 0);
     }
 
@@ -195,9 +190,21 @@ impl Room for Arecibo {
         0.42
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        Some(Self::width_status(Self::width_for(t, self.seed)))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = pokes_from_inputs(inputs);
+        let width = Self::poked_attempts(&pokes)
+            .next()
+            .unwrap_or_else(|| Self::width_for(t, self.seed));
+        Some(Self::width_status(width))
+    }
+
     fn reveal(&self) -> &'static str {
-        "This message is 143 bits, and 143 is 11 times 13 and nothing else, so \
-         there is exactly one grid it fits. Any species that could factor it would \
+        "This message is 143 bits, and 143 is 11 times 13, so it has one \
+         nontrivial rectangular factor pair, up to rotation. Any species that could factor it would \
          find the picture. In 1974 we sent 1,679 bits, which is 23 times 73, at a \
          star cluster 25,000 light-years away. The reply is not due for a while."
     }
@@ -213,7 +220,7 @@ impl Room for Arecibo {
     }
 
     fn verb(&self) -> Option<&'static str> {
-        Some("CLICK: TRY THIS WIDTH")
+        Some("CLICK LEFT OR RIGHT: TRY A WIDTH")
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -226,14 +233,11 @@ impl Room for Arecibo {
         if width == 0 || height == 0 {
             return;
         }
-        // base
+        let grid_w = Self::poked_attempts(pokes)
+            .next()
+            .unwrap_or_else(|| Self::width_for(t, self.seed));
         let stream = bits();
-        let grid_w = Self::width_for(t, self.seed);
         draw_message(canvas, &stream, grid_w, '#', 0, 0);
-        // Poked overlays try the clicked width and offset the decoded message slightly.
-        for (try_w, shift_x, shift_y) in Self::poked_attempts(pokes) {
-            draw_message(canvas, &stream, try_w, '+', shift_x, shift_y);
-        }
     }
 }
 
@@ -255,9 +259,9 @@ mod tests {
     }
 
     #[test]
-    fn the_true_width_is_reachable_by_some_phase() {
-        let hit = (0..=100).any(|i| Arecibo::width_for(f64::from(i) / 100.0, 0) == TRUE_WIDTH);
-        assert!(hit, "no phase produces the true width");
+    fn opening_width_is_unsolved_and_does_not_auto_solve() {
+        assert_ne!(Arecibo::width_for(0.0, 0), TRUE_WIDTH);
+        assert_eq!(Arecibo::width_for(0.0, 0), Arecibo::width_for(1.0, 0));
     }
 
     #[test]
@@ -275,13 +279,9 @@ mod tests {
 
     #[test]
     fn the_true_width_shows_more_of_the_picture_than_a_wrong_one() {
-        // Find phases for the true width and a deliberately wrong one, compare ink.
-        let t_true = (0..=100)
-            .map(|i| f64::from(i) / 100.0)
-            .find(|&t| Arecibo::width_for(t, 0) == TRUE_WIDTH)
-            .unwrap();
         let mut right = Canvas::new(44, 26);
-        Arecibo::new().render(&mut right, t_true);
+        let x = (TRUE_WIDTH - MIN_WIDTH) as f64 / (MAX_WIDTH - MIN_WIDTH) as f64;
+        Arecibo::new().render_poked(&mut right, 0.0, &[(x, 0.5)]);
         assert!(right.ink_count() > 20);
     }
 
@@ -296,8 +296,8 @@ mod tests {
         assert_eq!(y_cells, 11..19);
 
         let mut canvas = Canvas::new(width, height);
-        let t_true = (TRUE_WIDTH - MIN_WIDTH) as f64 / (MAX_WIDTH - MIN_WIDTH) as f64;
-        Arecibo::new().render(&mut canvas, t_true);
+        let x = (TRUE_WIDTH - MIN_WIDTH) as f64 / (MAX_WIDTH - MIN_WIDTH) as f64;
+        Arecibo::new().render_poked(&mut canvas, 0.0, &[(x, 0.5)]);
         let text = canvas.to_text();
         let char_at = |x: usize, y: usize| {
             text.lines()
@@ -341,7 +341,7 @@ mod tests {
     }
 
     #[test]
-    fn poked_attempts_preserve_order_clamp_and_filter() {
+    fn latest_finite_attempt_owns_the_candidate_width() {
         let attempts: Vec<_> = Arecibo::poked_attempts(&[
             (-1.0, 0.0),
             (f64::NAN, 0.5),
@@ -351,14 +351,7 @@ mod tests {
         ])
         .collect();
 
-        assert_eq!(
-            attempts,
-            vec![
-                (MIN_WIDTH, -2, -2),
-                (Arecibo::width_from_point(0.5), 0, 0),
-                (MAX_WIDTH, 2, 2),
-            ]
-        );
+        assert_eq!(attempts, vec![MAX_WIDTH]);
     }
 
     #[test]
@@ -371,7 +364,7 @@ mod tests {
         let actual: Vec<_> = Arecibo::poked_attempts(&many).collect();
 
         assert_eq!(actual, expected);
-        assert_eq!(actual.len(), MAX_ROOM_POKES);
+        assert_eq!(actual.len(), 1);
     }
 
     #[test]
@@ -392,12 +385,7 @@ mod tests {
 
         let attempts: Vec<_> = Arecibo::poked_attempts(&with_invalid_tail).collect();
 
-        assert_eq!(attempts.len(), MAX_ROOM_POKES - 1);
-        assert!(
-            attempts
-                .iter()
-                .all(|attempt| attempt.0 == Arecibo::width_from_point(0.25))
-        );
+        assert_eq!(attempts, vec![Arecibo::width_from_point(0.25)]);
     }
 
     #[test]
@@ -428,7 +416,23 @@ mod tests {
 
     #[test]
     fn reveal_explains_the_semiprime() {
-        assert!(Arecibo::new().reveal().contains("11 times 13"));
+        let reveal = Arecibo::new().reveal();
+        assert!(reveal.contains("11 times 13"));
+        assert!(reveal.contains("up to rotation"));
+    }
+
+    #[test]
+    fn status_distinguishes_the_readable_orientation_from_its_factor_pair() {
+        let wrong = Arecibo::width_status(10);
+        assert!(wrong.contains("3 BITS LEFT OVER"));
+        let readable = Arecibo::width_status(11);
+        assert!(readable.contains("11 x 13"));
+        assert!(readable.contains("SIGNAL LOCKED: PI"));
+        let rotated_shape = Arecibo::width_status(13);
+        assert!(rotated_shape.contains("13 x 11"));
+        assert!(rotated_shape.contains("FACTOR PAIR FOUND"));
+        assert!(rotated_shape.contains("TRY WIDTH 11"));
+        assert!(!rotated_shape.contains("SIGNAL LOCKED"));
     }
 
     #[test]
