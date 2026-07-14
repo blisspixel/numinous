@@ -14,13 +14,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   listening, simulation, Quiz, Gauntlet, and trophy results. Results whose text
   carries unique information, all text-only tools, and every guiding error stay
   complete. The projection is nonexpanding and real-stdio tested. In the
-  representative profile, room renders fall from 1,869 text bytes to 192
+  representative profile, room renders fall from 1,869 text bytes to 201
   without dropping the typed render or any other structured field. The same
   review restored Quiz's implemented 2-to-6 `choices` input to its public
   schema, made choice count part of pose and grade replay data and guidance,
   and upgraded real-stdio coverage to a conforming 2025-06-18 initialization
   exchange. The complete release gate passes with
-  1,221 all-target test cases, 93.27 percent region coverage, and 93.03 percent
+  1,221 all-target test cases, 93.24 percent region coverage, and 93.00 percent
   line coverage.
 - The native App now presents controls for the input family that last performed
   a meaningful action. One face-local vocabulary drives room chrome, arrival
@@ -197,8 +197,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ### Changed
 - Human hallway evidence still controls the 0.2 milestone claim, but no longer
   idles verified 0.3 depth, accessibility, input, audio, truth, or quality work
-  while sessions are arranged. Current evidence is 1,221 all-target test cases, 93.27
-  percent region coverage, and 93.03 percent line coverage.
+  while sessions are arranged. Current evidence is 1,221 all-target test cases, 93.24
+  percent region coverage, and 93.00 percent line coverage.
 - MCP `listen_room` now labels `motif` as the ambient motif and `notes` as the
   mathematical sonification through a `sound_roles` map and matching text
   headings. Existing structured paths remain compatible, with no duplicated
