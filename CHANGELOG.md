@@ -6,6 +6,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The native App now presents controls for the input family that last performed
+  a meaningful action. One face-local vocabulary drives room chrome, arrival
+  cards, the help menu, The Show, the Journey, the Studio, Quiz, Munch, Arcade,
+  Nim, and every Gauntlet stage. Controller-only routes now open and close all
+  eight menu destinations, adjust Nim takes, leave a completed Arcade run, and
+  pause or resume with R3. Pause is a real input barrier, so neither keyboard,
+  pointer, nor controller actions can move or score inside a frozen game.
+  Unsupported buttons and stick noise do not steal the visible controller
+  state. The exact App matrix grows from 240 to 253 screens with 13 compact
+  controller and pause receipts, while routing, bounds, and fixed-content
+  geometry remain independently tested. Physical-controller sessions and
+  adaptive platform glyphs remain open evidence and product work.
 - Full-roster QA now assigns all 42 documented simulated review lenses exactly
   once across first contact and accessibility, interaction and truth, and games
   plus agent faces. Every lens supplies a standout, complaint, refinement, and
@@ -16,12 +28,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   `cargo test --workspace --all-targets --locked`. This adds the 43
   example-target cases, including the screen matrix's isolated-marker
   regression, to the enforced test set.
-- Release QA now generates a self-checking 240-screen app matrix. Every catalog
+- Release QA now generates a self-checking 253-screen app matrix. Every catalog
   room has a deterministic opening, arrival, immediate pointer, delayed gesture,
   compact arrival, and compact delayed captures. Dedicated scenarios cover
   every persistent game display state,
   default and compact overlays, The Show, Times Tables phase stability,
-  Mandelbrot reset continuity, and the production Studio renderer. Generation
+  Mandelbrot reset continuity, the production Studio renderer, and 13 compact
+  controller or pause receipts across representative room, overlay, and game
+  states. Generation
   removes stale output, requires an exact unique scenario inventory, rejects
   blank or wrong-sized frames, and gives all 31 rooms a declared click,
   drag-release, repeated-action, or boundary scenario. Inputs must be finite,
@@ -167,8 +181,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ### Changed
 - Human hallway evidence still controls the 0.2 milestone claim, but no longer
   idles verified 0.3 depth, accessibility, input, audio, truth, or quality work
-  while sessions are arranged. Current evidence is 1,191 all-target test cases, 93.17
-  percent region coverage, and 92.82 percent line coverage.
+  while sessions are arranged. Current evidence is 1,217 all-target test cases, 93.28
+  percent region coverage, and 92.95 percent line coverage.
 - MCP `listen_room` now labels `motif` as the ambient motif and `notes` as the
   mathematical sonification through a `sound_roles` map and matching text
   headings. Existing structured paths remain compatible, with no duplicated

@@ -25,11 +25,11 @@ pub(crate) struct LeftPressContext {
 }
 
 pub(crate) fn left_press_action(context: LeftPressContext) -> LeftPressAction {
-    if context.game_click_mode {
-        return LeftPressAction::GameClick;
-    }
     if blocked_by_modal_context(context) {
         return LeftPressAction::Ignore;
+    }
+    if context.game_click_mode {
+        return LeftPressAction::GameClick;
     }
     if context.room_has_verb {
         return LeftPressAction::RoomPoke;
@@ -116,6 +116,15 @@ mod tests {
         };
 
         assert_eq!(left_press_action(context), LeftPressAction::GameClick);
+
+        assert_eq!(
+            left_press_action(LeftPressContext {
+                show_help: true,
+                ..context
+            }),
+            LeftPressAction::Ignore,
+            "modal help blocks the otherwise active game click"
+        );
     }
 
     #[test]

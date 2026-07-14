@@ -1,6 +1,9 @@
 use numinous_core::{Raster, Room, Surface};
 
-use crate::play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_total};
+use crate::{
+    input_legend::{self, InputMode},
+    play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_total},
+};
 
 fn game_scale(width: usize) -> i32 {
     (width as i32 / 400).clamp(1, 3)
@@ -67,14 +70,20 @@ fn munch_columns(width: usize, scale: i32, left: i32) -> usize {
     ((width as i32 - left - 10) / (6 * scale.max(1))).max(8) as usize
 }
 
-fn munch_control_lines(width: usize, scale: i32) -> Vec<String> {
-    numinous_core::wrap_text(
-        "MOVE WASD/ARROWS   EAT SPACE   DONE ENTER   ESC LEAVE",
-        munch_columns(width, scale, 10),
-    )
+fn control_lines(copy: &str, width: usize, scale: i32, left: i32) -> Vec<String> {
+    numinous_core::wrap_text(copy, munch_columns(width, scale, left))
 }
 
-fn munch_result_lines(outcome: &numinous_core::Munched, width: usize, scale: i32) -> Vec<String> {
+fn munch_control_lines(mode: InputMode, width: usize, scale: i32) -> Vec<String> {
+    control_lines(&input_legend::munch_live(mode), width, scale, 10)
+}
+
+fn munch_result_lines(
+    outcome: &numinous_core::Munched,
+    mode: InputMode,
+    width: usize,
+    scale: i32,
+) -> Vec<String> {
     let clean = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
     let mut semantic = vec![format!(
         "{} +{}",
@@ -96,7 +105,7 @@ fn munch_result_lines(outcome: &numinous_core::Munched, width: usize, scale: i32
             semantic.push("ONE AWAY. THE BOARD REMEMBERS.".to_string());
         }
     }
-    semantic.push("ENTER NEXT BOARD   ESC MENU".to_string());
+    semantic.push(input_legend::munch_result(mode));
 
     let columns = munch_columns(width, scale, width as i32 / 8);
     semantic
@@ -109,12 +118,12 @@ fn centered_text_x(text: &str, width: usize, scale: i32) -> i32 {
     ((width as i32 - text.chars().count() as i32 * 6 * scale) / 2).max(10)
 }
 
-const QUIZ_RESULT_CONTROLS: &str = "ANY KEY  NEXT     ESC  LEAVE";
 const FONT_PIXEL_HEIGHT: i32 = 7;
 
 struct QuizResultLayout {
     verdict: String,
     reveal_lines: Vec<String>,
+    controls: String,
     reveal_y: i32,
     controls_y: i32,
     body_scale: i32,
@@ -123,7 +132,7 @@ struct QuizResultLayout {
 }
 
 impl QuizResultLayout {
-    fn new(quiz: &QuizPlay, correct: bool, width: usize, height: usize) -> Self {
+    fn new(quiz: &QuizPlay, correct: bool, mode: InputMode, width: usize, height: usize) -> Self {
         let margin = 10;
         let body_scale = game_scale(width);
         let verdict_scale = body_scale + 1;
@@ -137,6 +146,7 @@ impl QuizResultLayout {
                 quiz.round.answer_title.to_uppercase()
             )
         };
+        let controls = input_legend::quiz_result(mode);
 
         let reveal_y = margin + FONT_PIXEL_HEIGHT * verdict_scale + line_height;
         let controls_y = height as i32 - FONT_PIXEL_HEIGHT * body_scale - margin;
@@ -156,6 +166,7 @@ impl QuizResultLayout {
         Self {
             verdict,
             reveal_lines,
+            controls,
             reveal_y,
             controls_y,
             body_scale,
@@ -206,7 +217,12 @@ fn gauntlet_header_height(message_lines: usize, scale: i32) -> i32 {
     18 * scale + message_lines as i32 * 9 * scale
 }
 
-fn gauntlet_result_lines(run: &GauntletPlay, width: usize, scale: i32) -> Vec<String> {
+fn gauntlet_result_lines(
+    run: &GauntletPlay,
+    mode: InputMode,
+    width: usize,
+    scale: i32,
+) -> Vec<String> {
     let total = gauntlet_total(&run.scores, &run.cleared);
     let clears = run.cleared.iter().filter(|&&clean| clean).count();
     let names = ["MUNCH", "SHAPE", "SKY", "BOMB"];
@@ -221,7 +237,7 @@ fn gauntlet_result_lines(run: &GauntletPlay, width: usize, scale: i32) -> Vec<St
         combo = if clean { combo + 1 } else { 1 };
     }
     semantic.push(format!("TOTAL {total}  GAUNTLET SEED {}", run.seed));
-    semantic.push("ANY KEY LEAVES".to_string());
+    semantic.push(input_legend::gauntlet_done(mode));
     let columns = ((width as i32 - 20) / (6 * scale)).max(8) as usize;
     semantic
         .into_iter()
@@ -234,6 +250,7 @@ fn gauntlet_result_lines(run: &GauntletPlay, width: usize, scale: i32) -> Vec<St
 pub(crate) fn draw_quiz(
     rooms: &[Box<dyn Room>],
     quiz: &QuizPlay,
+    mode: InputMode,
     width: usize,
     height: usize,
 ) -> Raster {
@@ -261,7 +278,16 @@ pub(crate) fn draw_quiz(
             numinous_core::draw_text(&mut raster, "WHICH MATH MADE THIS?", 10, 10, scale + 1, '#');
             raster.dim_rows(layout.base - 6, height as i32, 40);
             for (i, choice) in quiz.round.choices.iter().enumerate() {
-                let line = format!("{}  {}", choice.letter, choice.title.to_uppercase());
+                let direction = input_legend::quiz_direction(mode, i);
+                let line = if direction.is_empty() {
+                    format!("{}  {}", choice.letter, choice.title.to_uppercase())
+                } else {
+                    format!(
+                        "{direction:<5} {}  {}",
+                        choice.letter,
+                        choice.title.to_uppercase()
+                    )
+                };
                 numinous_core::draw_text(
                     &mut raster,
                     &line,
@@ -274,7 +300,7 @@ pub(crate) fn draw_quiz(
         }
         Some((correct, _)) => {
             raster.clear_rows(0, height as i32);
-            let result = QuizResultLayout::new(quiz, *correct, width, height);
+            let result = QuizResultLayout::new(quiz, *correct, mode, width, height);
             numinous_core::draw_text(
                 &mut raster,
                 &result.verdict,
@@ -295,7 +321,7 @@ pub(crate) fn draw_quiz(
             }
             numinous_core::draw_text(
                 &mut raster,
-                QUIZ_RESULT_CONTROLS,
+                &result.controls,
                 10,
                 result.controls_y,
                 result.body_scale,
@@ -307,7 +333,13 @@ pub(crate) fn draw_quiz(
 }
 
 /// Draw Munch: the 5x6 board as a grid, the cursor, your bites, and the rule.
-pub(crate) fn draw_munch(play: &MunchPlay, frame: u64, width: usize, height: usize) -> Raster {
+pub(crate) fn draw_munch(
+    play: &MunchPlay,
+    frame: u64,
+    mode: InputMode,
+    width: usize,
+    height: usize,
+) -> Raster {
     let mut raster = Raster::with_accent(width, height, [140, 230, 120]);
     let scale = game_scale(width);
     raster.dim_rows(0, 12 + 7 * scale, 40);
@@ -350,7 +382,7 @@ pub(crate) fn draw_munch(play: &MunchPlay, frame: u64, width: usize, height: usi
     }
     match &play.graded {
         None => {
-            let lines = munch_control_lines(width, scale);
+            let lines = munch_control_lines(mode, width, scale);
             for (i, line) in lines.iter().enumerate() {
                 let y = height as i32 - (lines.len() - i) as i32 * 9 * scale;
                 numinous_core::draw_text(&mut raster, line, 10, y, scale, '*');
@@ -359,7 +391,7 @@ pub(crate) fn draw_munch(play: &MunchPlay, frame: u64, width: usize, height: usi
         Some(outcome) => {
             raster.dim(30);
             let ls = (width as i32 / 400).clamp(1, 3);
-            let lines = munch_result_lines(outcome, width, ls);
+            let lines = munch_result_lines(outcome, mode, width, ls);
             let lh = 10 * ls;
             let ttop = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
             let panel_top = (ttop - 6).max(0);
@@ -389,14 +421,19 @@ pub(crate) fn draw_munch(play: &MunchPlay, frame: u64, width: usize, height: usi
 }
 
 /// Draw the live arcade: the board, the Muncher, the spirits, and the beat.
-pub(crate) fn draw_arcade(play: &ArcadePlay, width: usize, height: usize) -> Raster {
+pub(crate) fn draw_arcade(
+    play: &ArcadePlay,
+    mode: InputMode,
+    width: usize,
+    height: usize,
+) -> Raster {
     use numinous_core::munch_arcade::Mind;
     use numinous_core::munchers::{COLS, ROWS};
 
     let mut raster = Raster::with_accent(width, height, [255, 205, 100]);
     let scale = game_scale(width);
     raster.dim_rows(0, 12 + 7 * scale, 40);
-    raster.dim_rows(height as i32 - 14 * scale, height as i32, 40);
+    raster.dim_rows(height as i32 - 24 * scale, height as i32, 40);
     let run = &play.run;
     numinous_core::draw_text(
         &mut raster,
@@ -413,7 +450,7 @@ pub(crate) fn draw_arcade(play: &ArcadePlay, width: usize, height: usize) -> Ras
     );
     let top = 14 * scale + 10;
     let cell_w = (width as i32 - 20) / COLS as i32;
-    let cell_h = (height as i32 - top - 14 * scale) / ROWS as i32;
+    let cell_h = (height as i32 - top - 24 * scale) / ROWS as i32;
     for cell in 0..ROWS * COLS {
         let (col, row) = (cell as i32 % COLS as i32, cell as i32 / COLS as i32);
         let (x0, y0) = (10 + col * cell_w, top + row * cell_h);
@@ -486,7 +523,7 @@ pub(crate) fn draw_arcade(play: &ArcadePlay, width: usize, height: usize) -> Ras
         let lines = [
             "THE SPIRITS SEND REGARDS".to_string(),
             format!("LEVEL {}  SCORE {}", run.level, run.score),
-            "ANY KEY LEAVES".to_string(),
+            input_legend::arcade_over(mode),
         ];
         let ls = (width as i32 / 300).clamp(2, 4);
         let top = height as i32 / 2 - 18 * ls;
@@ -501,26 +538,25 @@ pub(crate) fn draw_arcade(play: &ArcadePlay, width: usize, height: usize) -> Ras
             );
         }
     }
-    numinous_core::draw_text(
-        &mut raster,
-        "WASD  RUN   SPACE  EAT   DON'T BE CAUGHT   ESC  LEAVE",
-        10,
-        height as i32 - 10 * scale,
-        scale,
-        '*',
-    );
+    if !play.over {
+        let controls = control_lines(&input_legend::arcade_live(mode), width, scale, 10);
+        for (index, line) in controls.iter().enumerate() {
+            let y = height as i32 - (controls.len() - index) as i32 * 9 * scale;
+            numinous_core::draw_text(&mut raster, line, 10, y, scale, '*');
+        }
+    }
     raster
 }
 
 /// Draw Nim: heaps as stones, your aim highlighted, and the Order's last word.
-pub(crate) fn draw_nim(play: &NimPlay, width: usize, height: usize) -> Raster {
+pub(crate) fn draw_nim(play: &NimPlay, mode: InputMode, width: usize, height: usize) -> Raster {
     let mut raster = Raster::with_accent(width, height, [230, 200, 120]);
     let scale = game_scale(width);
     raster.dim_rows(0, 12 + 7 * scale, 40);
-    raster.dim_rows(height as i32 - 26 * scale, height as i32, 40);
+    raster.dim_rows(height as i32 - 38 * scale, height as i32, 40);
     numinous_core::draw_text(&mut raster, "NIM: LAST STONE WINS", 10, 10, scale, '#');
     let top = 20 * scale + 10;
-    let row_h = (height as i32 - top - 30 * scale) / 3;
+    let row_h = (height as i32 - top - 42 * scale) / 3;
     let stone = (row_h / 2).clamp(4, 10 * scale);
     for (heap, &count) in play.heaps.iter().enumerate() {
         let y = top + heap as i32 * row_h + row_h / 2;
@@ -542,30 +578,21 @@ pub(crate) fn draw_nim(play: &NimPlay, width: usize, height: usize) -> Raster {
             }
         }
     }
-    let hint = if play.over.is_none() {
-        format!(
-            "AIM  W/S HEAP   A/D TAKE {}   ENTER TAKE   ESC LEAVE",
-            play.take
-        )
-    } else {
-        "ENTER RETRY   ESC LEAVE".to_string()
-    };
-    numinous_core::draw_text(
-        &mut raster,
-        &play.message,
-        10,
-        height as i32 - 22 * scale,
-        scale,
-        '#',
-    );
-    numinous_core::draw_text(
-        &mut raster,
-        &hint,
-        10,
-        height as i32 - 10 * scale,
-        scale,
-        '*',
-    );
+    if play.over.is_none() {
+        numinous_core::draw_text(
+            &mut raster,
+            &play.message,
+            10,
+            height as i32 - 31 * scale,
+            scale,
+            '#',
+        );
+        let controls = control_lines(&input_legend::nim_live(mode, play.take), width, scale, 10);
+        for (index, line) in controls.iter().enumerate() {
+            let y = height as i32 - (controls.len() - index) as i32 * 9 * scale;
+            numinous_core::draw_text(&mut raster, line, 10, y, scale, '*');
+        }
+    }
     if play.over == Some(true) {
         raster.dim(25);
         let ls = (width as i32 / 340).clamp(1, 3);
@@ -575,7 +602,7 @@ pub(crate) fn draw_nim(play: &NimPlay, width: usize, height: usize) -> Raster {
             &numinous_core::nim_secret().to_uppercase(),
             columns,
         ));
-        lines.push("ENTER RETRY   ESC LEAVE".to_string());
+        lines.push(input_legend::nim_result(mode));
         let lh = 10 * ls;
         let ttop = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
         for (i, line) in lines.iter().enumerate() {
@@ -590,7 +617,7 @@ pub(crate) fn draw_nim(play: &NimPlay, width: usize, height: usize) -> Raster {
             "AT XOR 0, EVERY MOVE OPENS A REPLY. BREAK THAT LOOP ON THE NEXT RUN.",
             columns,
         ));
-        lines.push("ENTER RETRY   ESC LEAVE".to_string());
+        lines.push(input_legend::nim_result(mode));
         let lh = 10 * ls;
         let ttop = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
         for (i, line) in lines.iter().enumerate() {
@@ -605,6 +632,7 @@ pub(crate) fn draw_gauntlet(
     rooms: &[Box<dyn Room>],
     run: &GauntletPlay,
     frame: u64,
+    mode: InputMode,
     width: usize,
     height: usize,
 ) -> Raster {
@@ -612,7 +640,7 @@ pub(crate) fn draw_gauntlet(
     if run.stage >= 4 {
         let mut raster = Raster::with_accent(width, height, [230, 210, 120]);
         let result_scale = (width as i32 / 400).clamp(1, 3);
-        let lines = gauntlet_result_lines(run, width, result_scale);
+        let lines = gauntlet_result_lines(run, mode, width, result_scale);
         let line_height = 10 * result_scale;
         let margin = (12 * result_scale).min(width.min(height) as i32 / 8).max(4);
         raster.line(margin, margin, width as i32 - margin - 1, margin, '#');
@@ -665,8 +693,8 @@ pub(crate) fn draw_gauntlet(
         .max(1);
     let content_height = height.saturating_sub(header_height as usize);
     let content = match run.stage {
-        0 => draw_munch(&run.munch, frame, width, content_height),
-        1 => draw_quiz(rooms, &run.quiz, width, content_height),
+        0 => draw_munch(&run.munch, frame, mode, width, content_height),
+        1 => draw_quiz(rooms, &run.quiz, mode, width, content_height),
         2 => {
             let mut raster = Raster::with_accent(width, content_height, [150, 210, 255]);
             numinous_core::draw_text(
@@ -687,7 +715,7 @@ pub(crate) fn draw_gauntlet(
             }
             numinous_core::draw_text(
                 &mut raster,
-                "PRESS THE LETTER",
+                &input_legend::gauntlet_choice(mode),
                 10,
                 content_height as i32 - 22 * scale,
                 scale,
@@ -734,7 +762,7 @@ pub(crate) fn draw_gauntlet(
             );
             numinous_core::draw_text(
                 &mut raster,
-                "TYPE DIGITS   ENTER CUTS   BACKSPACE FIXES",
+                &input_legend::gauntlet_bomb(mode),
                 10,
                 content_height as i32 - 22 * scale,
                 scale,
@@ -876,8 +904,14 @@ mod tests {
     #[test]
     fn game_drawers_produce_visible_rasters() {
         let rooms = numinous_core::all_rooms_with(0);
-        assert_visible("quiz", draw_quiz(&rooms, &sample_quiz(), 320, 220));
-        assert_visible("munch", draw_munch(&sample_munch(), 0, 320, 220));
+        assert_visible(
+            "quiz",
+            draw_quiz(&rooms, &sample_quiz(), InputMode::KeyboardMouse, 320, 220),
+        );
+        assert_visible(
+            "munch",
+            draw_munch(&sample_munch(), 0, InputMode::KeyboardMouse, 320, 220),
+        );
         assert_visible(
             "arcade",
             draw_arcade(
@@ -887,6 +921,7 @@ mod tests {
                     flash: None,
                     over: false,
                 },
+                InputMode::KeyboardMouse,
                 320,
                 220,
             ),
@@ -902,13 +937,21 @@ mod tests {
                     message: "YOUR MOVE".to_string(),
                     over: None,
                 },
+                InputMode::KeyboardMouse,
                 320,
                 220,
             ),
         );
         assert_visible(
             "gauntlet",
-            draw_gauntlet(&rooms, &sample_gauntlet(), 0, 320, 220),
+            draw_gauntlet(
+                &rooms,
+                &sample_gauntlet(),
+                0,
+                InputMode::KeyboardMouse,
+                320,
+                220,
+            ),
         );
     }
 
@@ -920,10 +963,11 @@ mod tests {
         let expected_reveal = quiz.round.answer_reveal.to_uppercase();
 
         for (width, height) in [(360, 240), (900, 700)] {
-            let layout = QuizResultLayout::new(&quiz, false, width, height);
+            let layout =
+                QuizResultLayout::new(&quiz, false, InputMode::KeyboardMouse, width, height);
             assert_eq!(layout.reveal_lines.join(" "), expected_reveal);
             assert!(!layout.reveal_lines.is_empty());
-            assert_eq!(QUIZ_RESULT_CONTROLS, "ANY KEY  NEXT     ESC  LEAVE");
+            assert_eq!(layout.controls, "ENTER NEXT   ESC LEAVE");
 
             assert!(
                 10 + numinous_core::text_width(&layout.verdict, layout.verdict_scale)
@@ -937,8 +981,7 @@ mod tests {
                 );
             }
             assert!(
-                10 + numinous_core::text_width(QUIZ_RESULT_CONTROLS, layout.body_scale)
-                    <= width as i32,
+                10 + numinous_core::text_width(&layout.controls, layout.body_scale) <= width as i32,
                 "controls clip at {width}x{height}"
             );
 
@@ -954,7 +997,7 @@ mod tests {
                 "controls clip vertically at {width}x{height}"
             );
 
-            let raster = draw_quiz(&rooms, &quiz, width, height);
+            let raster = draw_quiz(&rooms, &quiz, InputMode::KeyboardMouse, width, height);
             assert!(raster.lit_count() > 1_000);
             let rgba = raster.to_rgba();
             let lit_in_rows = |from: i32, to: i32| {
@@ -987,6 +1030,112 @@ mod tests {
     }
 
     #[test]
+    fn controller_control_copy_fits_supported_game_widths() {
+        let quiz = sample_quiz();
+        for (width, height) in [(360, 240), (900, 700)] {
+            let scale = game_scale(width);
+            let fits = |line: &str, text_scale: i32| {
+                10 + numinous_core::text_width(line, text_scale) <= width as i32
+            };
+
+            let quiz_result =
+                QuizResultLayout::new(&quiz, false, InputMode::Controller, width, height);
+            assert_eq!(quiz_result.controls, "SOUTH NEXT   EAST LEAVE");
+            assert!(fits(&quiz_result.controls, quiz_result.body_scale));
+
+            for line in munch_control_lines(InputMode::Controller, width, scale) {
+                assert!(fits(&line, scale), "Munch controls clip: {line}");
+            }
+            for copy in [
+                input_legend::arcade_live(InputMode::Controller),
+                input_legend::nim_live(InputMode::Controller, 3),
+            ] {
+                let lines = control_lines(&copy, width, scale, 10);
+                assert!(
+                    lines.len() <= 2,
+                    "compact footer exceeds its reserve: {copy}"
+                );
+                for line in lines {
+                    assert!(fits(&line, scale), "controls clip: {line}");
+                }
+            }
+            for copy in [
+                input_legend::gauntlet_choice(InputMode::Controller),
+                input_legend::gauntlet_bomb(InputMode::Controller),
+            ] {
+                assert!(fits(&copy, scale), "Gauntlet controls clip: {copy}");
+            }
+        }
+    }
+
+    #[test]
+    fn controller_game_drawers_keep_fixed_viewport_geometry() {
+        fn assert_rows_equal(name: &str, keyboard: &Raster, controller: &Raster, bottom: usize) {
+            assert_eq!((keyboard.width(), keyboard.height()), (360, 240));
+            assert_eq!((controller.width(), controller.height()), (360, 240));
+            let bytes = bottom * 360 * 4;
+            assert_eq!(
+                &keyboard.to_rgba()[..bytes],
+                &controller.to_rgba()[..bytes],
+                "{name} content moved outside its reserved control band"
+            );
+        }
+
+        let rooms = numinous_core::all_rooms_with(0);
+        let quiz = sample_quiz();
+        let munch = sample_munch();
+        let arcade = ArcadePlay {
+            run: numinous_core::munch_arcade::Arcade::new(19),
+            seed: 19,
+            flash: None,
+            over: false,
+        };
+        let nim = NimPlay {
+            heaps: numinous_core::nim_new(23),
+            seed: 23,
+            selected: 0,
+            take: 1,
+            message: "YOUR MOVE".to_string(),
+            over: None,
+        };
+        let gauntlet = sample_gauntlet();
+
+        let quiz_bottom = QuizChoiceLayout::new(360, 240, quiz.round.choices.len())
+            .base
+            .saturating_sub(6) as usize;
+        assert_rows_equal(
+            "Quiz",
+            &draw_quiz(&rooms, &quiz, InputMode::KeyboardMouse, 360, 240),
+            &draw_quiz(&rooms, &quiz, InputMode::Controller, 360, 240),
+            quiz_bottom,
+        );
+        assert_rows_equal(
+            "Munch",
+            &draw_munch(&munch, 0, InputMode::KeyboardMouse, 360, 240),
+            &draw_munch(&munch, 0, InputMode::Controller, 360, 240),
+            216,
+        );
+        assert_rows_equal(
+            "Arcade",
+            &draw_arcade(&arcade, InputMode::KeyboardMouse, 360, 240),
+            &draw_arcade(&arcade, InputMode::Controller, 360, 240),
+            216,
+        );
+        assert_rows_equal(
+            "Nim",
+            &draw_nim(&nim, InputMode::KeyboardMouse, 360, 240),
+            &draw_nim(&nim, InputMode::Controller, 360, 240),
+            202,
+        );
+        assert_rows_equal(
+            "Gauntlet",
+            &draw_gauntlet(&rooms, &gauntlet, 0, InputMode::KeyboardMouse, 360, 240),
+            &draw_gauntlet(&rooms, &gauntlet, 0, InputMode::Controller, 360, 240),
+            210,
+        );
+    }
+
+    #[test]
     fn gauntlet_stage_screens_draw() {
         let rooms = numinous_core::all_rooms_with(0);
         for stage in 0..=3 {
@@ -999,7 +1148,7 @@ mod tests {
             }
             assert_visible(
                 &format!("gauntlet stage {stage}"),
-                draw_gauntlet(&rooms, &run, 0, 320, 220),
+                draw_gauntlet(&rooms, &run, 0, InputMode::KeyboardMouse, 320, 220),
             );
         }
     }
@@ -1025,7 +1174,10 @@ mod tests {
         run.scores = vec![10, 20, 30, 40];
         run.cleared = vec![true, true, false, true];
         assert_eq!(gauntlet_total(&run.scores, &run.cleared), 10 + 40 + 90 + 40);
-        assert_visible("gauntlet done", draw_gauntlet(&rooms, &run, 0, 320, 220));
+        assert_visible(
+            "gauntlet done",
+            draw_gauntlet(&rooms, &run, 0, InputMode::KeyboardMouse, 320, 220),
+        );
     }
 
     #[test]
@@ -1053,14 +1205,14 @@ mod tests {
         run.cleared = vec![true, true, false, true];
         for width in [320, 360, 900] {
             let scale = (width as i32 / 400).clamp(1, 3);
-            for line in gauntlet_result_lines(&run, width, scale) {
+            for line in gauntlet_result_lines(&run, InputMode::KeyboardMouse, width, scale) {
                 assert!(
                     10 + line.chars().count() as i32 * 6 * scale <= width as i32,
                     "result line clips at {width}: {line}"
                 );
             }
         }
-        let lines = gauntlet_result_lines(&run, 360, 1);
+        let lines = gauntlet_result_lines(&run, InputMode::KeyboardMouse, 360, 1);
         assert!(lines.iter().any(|line| line.contains("+20 X2 = 40")));
         assert!(lines.iter().any(|line| line.contains("+30 X3 = 90")));
         assert!(lines.join(" ").contains("TOTAL 180 GAUNTLET SEED 41"));
@@ -1078,7 +1230,7 @@ mod tests {
         };
         for width in [320, 900] {
             let control_scale = game_scale(width);
-            for line in munch_control_lines(width, control_scale) {
+            for line in munch_control_lines(InputMode::KeyboardMouse, width, control_scale) {
                 assert!(
                     10 + line.chars().count() as i32 * 6 * control_scale <= width as i32,
                     "control line clips at {width}: {line}"
@@ -1086,14 +1238,15 @@ mod tests {
             }
             let result_scale = (width as i32 / 400).clamp(1, 3);
             let left = width as i32 / 8;
-            for line in munch_result_lines(&outcome, width, result_scale) {
+            for line in munch_result_lines(&outcome, InputMode::KeyboardMouse, width, result_scale)
+            {
                 assert!(
                     left + line.chars().count() as i32 * 6 * result_scale <= width as i32,
                     "result line clips at {width}: {line}"
                 );
             }
         }
-        let lines = munch_result_lines(&outcome, 320, 1);
+        let lines = munch_result_lines(&outcome, InputMode::KeyboardMouse, 320, 1);
         assert!(lines.iter().any(|line| line.contains("WRONG: 14, 27, 98")));
         assert!(lines.iter().any(|line| line.contains("WALKED PAST")));
     }
@@ -1117,7 +1270,7 @@ mod tests {
             message: "THE ORDER TOOK THE LAST STONE".to_string(),
             over: Some(false),
         };
-        let raster = draw_nim(&play, 360, 240);
+        let raster = draw_nim(&play, InputMode::KeyboardMouse, 360, 240);
         assert!(raster.lit_count() > 1_000);
 
         let live = NimPlay {
@@ -1125,7 +1278,7 @@ mod tests {
             over: None,
             ..play
         };
-        let live = draw_nim(&live, 360, 240).to_rgba();
+        let live = draw_nim(&live, InputMode::KeyboardMouse, 360, 240).to_rgba();
         let background = [10, 11, 15, 255];
         let label_band_has_readable_ink = live
             .chunks_exact(4)

@@ -24,6 +24,7 @@ mod feedback;
 mod game_draw;
 mod gamepad;
 mod hud;
+mod input_legend;
 mod live_render;
 mod mouse_input;
 mod overlays;
@@ -133,6 +134,8 @@ struct App {
     surface: Option<softbuffer::Surface<Rc<Window>, Rc<Window>>>,
     player: Option<numinous_audio::LoopPlayer>,
     gamepad: gamepad::GamepadInput,
+    /// The last input family that performed a meaningful action.
+    input_mode: input_legend::InputMode,
     mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera,
     rooms: Vec<Box<dyn Room>>,
     current: usize,
@@ -239,6 +242,7 @@ impl App {
             surface: None,
             player: None,
             gamepad: gamepad::GamepadInput::new(),
+            input_mode: input_legend::InputMode::default(),
             mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera::new(0),
             rooms: all_rooms_with(0),
             current: 0,
@@ -797,6 +801,36 @@ impl App {
         self.studio_reparse();
     }
 
+    fn toggle_show(&mut self) {
+        self.the_show = !self.the_show;
+        if self.the_show {
+            self.show_help = false;
+            self.show_journey = false;
+        }
+        self.paused = false;
+        if let Some(window) = &self.window {
+            window.set_title(&self.title());
+        }
+    }
+
+    fn toggle_journey(&mut self) {
+        if self.the_show {
+            self.the_show = false;
+            if let Some(window) = &self.window {
+                window.set_title(&self.title());
+            }
+        }
+        self.show_help = false;
+        self.show_journey = !self.show_journey;
+    }
+
+    fn toggle_pause(&mut self) {
+        self.paused = !self.paused;
+        if self.paused {
+            self.clear_pointer_state();
+        }
+    }
+
     fn modal_mode_active(&self) -> bool {
         self.studio
             || self.quiz.is_some()
@@ -804,6 +838,22 @@ impl App {
             || self.nim.is_some()
             || self.gauntlet.is_some()
             || self.arcade.is_some()
+    }
+
+    fn help_menu_selection(&self) -> Option<usize> {
+        (self.input_mode == input_legend::InputMode::Controller && !self.modal_mode_active())
+            .then_some(self.controller_menu_selection)
+    }
+
+    fn handle_modal_help_key(&mut self, key: &Key) -> bool {
+        if !(self.show_help && self.modal_mode_active()) {
+            return false;
+        }
+        if key == &Key::Named(NamedKey::Escape) {
+            self.input_mode = input_legend::InputMode::KeyboardMouse;
+            self.show_help = false;
+        }
+        true
     }
 
     fn show_mode_active(&self) -> bool {
@@ -941,6 +991,9 @@ impl App {
     }
 
     fn begin_pointer_at(&mut self, point: (f64, f64)) {
+        if self.paused {
+            return;
+        }
         self.set_mouse_from_normalized(point);
         let action = mouse_input::left_press_action(self.left_press_context());
         self.set_pointer_state(mouse_input::pointer_state_after_left_press(action));
@@ -967,6 +1020,9 @@ impl App {
     }
 
     fn move_pointer_to(&mut self, point: (f64, f64), held: bool) {
+        if self.paused {
+            return;
+        }
         self.set_mouse_from_normalized(point);
         if held && self.poking && room_input::extend_poke_trail(&mut self.pokes, point) {
             room_input::record_pointer_move(&mut self.inputs, point, self.t);
@@ -981,12 +1037,27 @@ impl App {
         self.set_pointer_state(mouse_input::pointer_state_after_left_release());
     }
 
+    fn apply_wheel_delta(&mut self, lines: f64) -> bool {
+        if self.studio
+            || self.paused
+            || self.show_help && self.modal_mode_active()
+            || lines == 0.0
+            || !lines.is_finite()
+        {
+            return false;
+        }
+        self.input_mode = input_legend::InputMode::KeyboardMouse;
+        self.t = (self.t + lines * 0.02).rem_euclid(1.0);
+        self.update_audio();
+        true
+    }
+
     fn gamepad_direction(&mut self, command: gamepad::Command) {
         if self.show_help && self.modal_mode_active() {
             return;
         }
         if self.show_help {
-            let count = 5;
+            let count = input_legend::MenuChoice::ALL.len();
             self.controller_menu_selection = match command {
                 gamepad::Command::Up | gamepad::Command::Left => {
                     (self.controller_menu_selection + count - 1) % count
@@ -996,6 +1067,9 @@ impl App {
                 }
                 _ => return,
             };
+            return;
+        }
+        if self.studio || self.show_journey || self.the_show {
             return;
         }
         let key = match command {
@@ -1079,15 +1153,23 @@ impl App {
             self.show_help = false;
         } else if self.show_help {
             self.show_help = false;
-            match self.controller_menu_selection {
-                0 => self.quiz_next(),
-                1 => self.munch_start(),
-                2 => self.nim_start(),
-                3 => self.gauntlet_start(),
-                _ => self.arcade_start(),
+            match input_legend::MenuChoice::at(self.controller_menu_selection) {
+                input_legend::MenuChoice::Quiz => self.quiz_next(),
+                input_legend::MenuChoice::Munch => self.munch_start(),
+                input_legend::MenuChoice::Nim => self.nim_start(),
+                input_legend::MenuChoice::Gauntlet => self.gauntlet_start(),
+                input_legend::MenuChoice::Arcade => self.arcade_start(),
+                input_legend::MenuChoice::Show => self.toggle_show(),
+                input_legend::MenuChoice::Studio => self.enter_studio(),
+                input_legend::MenuChoice::Journey => self.toggle_journey(),
             }
-        } else if self.arcade.is_some() {
-            self.arcade_act(numinous_core::munch_arcade::Action::Eat);
+        } else if let Some(over) = self.arcade.as_ref().map(|play| play.over) {
+            if over {
+                self.arcade = None;
+                self.update_audio();
+            } else {
+                self.arcade_act(numinous_core::munch_arcade::Action::Eat);
+            }
         } else if self.gauntlet.as_ref().is_some_and(|run| run.stage == 3) {
             self.gauntlet_key(&Key::Character(
                 char::from(b'0' + self.controller_digit).to_string().into(),
@@ -1110,6 +1192,10 @@ impl App {
     fn gamepad_back(&mut self) {
         if self.show_help {
             self.show_help = false;
+        } else if self.the_show {
+            self.toggle_show();
+        } else if self.show_journey {
+            self.show_journey = false;
         } else if self.arcade.is_some() {
             if let Some(play) = self.arcade.take() {
                 self.post_score(&format!("arcade seed:{}", play.seed), play.run.score);
@@ -1133,6 +1219,9 @@ impl App {
 
     fn gamepad_menu(&mut self) {
         self.clear_pointer_state();
+        if self.the_show {
+            self.toggle_show();
+        }
         self.show_journey = false;
         self.show_help = !self.show_help;
     }
@@ -1159,6 +1248,32 @@ impl App {
     }
 
     fn handle_gamepad_command(&mut self, command: gamepad::Command) {
+        if self.paused
+            && !matches!(
+                command,
+                gamepad::Command::Pause
+                    | gamepad::Command::PrimaryUp
+                    | gamepad::Command::CancelPointer
+            )
+        {
+            return;
+        }
+        if self.show_help
+            && self.modal_mode_active()
+            && !matches!(
+                command,
+                gamepad::Command::PrimaryDown
+                    | gamepad::Command::PrimaryUp
+                    | gamepad::Command::Back
+                    | gamepad::Command::Menu
+                    | gamepad::Command::CancelPointer
+            )
+        {
+            return;
+        }
+        if command != gamepad::Command::CancelPointer {
+            self.input_mode = input_legend::InputMode::Controller;
+        }
         match command {
             gamepad::Command::PrimaryDown => self.gamepad_primary(),
             gamepad::Command::PrimaryUp => {
@@ -1184,6 +1299,7 @@ impl App {
             | gamepad::Command::Right => self.gamepad_direction(command),
             gamepad::Command::CycleEra => self.era = self.era.next(),
             gamepad::Command::CycleRadio => self.gamepad_confirm_secondary(),
+            gamepad::Command::Pause => self.toggle_pause(),
             gamepad::Command::PointerMoved { point, held } => {
                 self.move_pointer_to(point, held);
             }
@@ -1433,7 +1549,8 @@ impl App {
     }
 
     fn draw_studio(&self, raster: &mut Raster, width: usize, height: usize) {
-        self.studio_panel.draw(raster, width, height, self.t);
+        self.studio_panel
+            .draw(raster, self.input_mode, width, height, self.t);
     }
 
     fn modal_frame(&self, width: usize, height: usize) -> Option<Raster> {
@@ -1441,23 +1558,30 @@ impl App {
             return None;
         }
         if let Some(play) = &self.arcade {
-            Some(game_draw::draw_arcade(play, width, height))
+            Some(game_draw::draw_arcade(play, self.input_mode, width, height))
         } else if let Some(run) = &self.gauntlet {
             Some(game_draw::draw_gauntlet(
                 &self.rooms,
                 run,
                 self.frame,
+                self.input_mode,
                 width,
                 height,
             ))
         } else if let Some(play) = &self.munch {
-            Some(game_draw::draw_munch(play, self.frame, width, height))
+            Some(game_draw::draw_munch(
+                play,
+                self.frame,
+                self.input_mode,
+                width,
+                height,
+            ))
         } else if let Some(play) = &self.nim {
-            Some(game_draw::draw_nim(play, width, height))
+            Some(game_draw::draw_nim(play, self.input_mode, width, height))
         } else {
             self.quiz
                 .as_ref()
-                .map(|quiz| game_draw::draw_quiz(&self.rooms, quiz, width, height))
+                .map(|quiz| game_draw::draw_quiz(&self.rooms, quiz, self.input_mode, width, height))
         }
     }
 
@@ -1540,6 +1664,7 @@ impl App {
                 studio: self.studio,
                 muted: self.muted,
                 level: self.journey.level(),
+                input_mode: self.input_mode,
             },
             &self.inputs,
             width,
@@ -1547,11 +1672,14 @@ impl App {
         );
 
         if self.show_help && !self.the_show {
-            let selection = self
-                .gamepad
-                .cursor()
-                .map(|_| self.controller_menu_selection);
-            overlays::draw_help_overlay(raster, width, height, selection);
+            overlays::draw_help_overlay(
+                raster,
+                width,
+                height,
+                self.help_menu_selection(),
+                self.input_mode,
+                self.modal_mode_active(),
+            );
         }
 
         if self.show_journey && !self.the_show {
@@ -1563,15 +1691,21 @@ impl App {
                 self.rooms.len(),
                 width,
                 height,
+                self.input_mode,
             );
         }
 
-        if let Some(point) = self.gamepad.cursor() {
+        if self.input_mode == input_legend::InputMode::Controller
+            && let Some(point) = self.gamepad.cursor()
+        {
             gamepad::draw_cursor(raster, point, width, height);
         }
     }
 
     fn present_raster(&mut self, mut raster: Raster, width: usize, height: usize) {
+        if self.paused {
+            overlays::draw_pause_overlay(&mut raster, width, height, self.input_mode);
+        }
         self.draw_banner_on_raster(&mut raster, width, height);
         let (rw, rh) = (raster.width(), raster.height());
         let mut rgba = raster.to_rgba();
@@ -1720,6 +1854,17 @@ impl ApplicationHandler for App {
                 ..
             } => {
                 self.clear_pointer_state();
+                if self.paused {
+                    if logical_key == Key::Named(NamedKey::Space) {
+                        self.input_mode = input_legend::InputMode::KeyboardMouse;
+                        self.toggle_pause();
+                    }
+                    return;
+                }
+                if self.handle_modal_help_key(&logical_key) {
+                    return;
+                }
+                self.input_mode = input_legend::InputMode::KeyboardMouse;
                 if self.handle_playtest_shortcut(&logical_key) {
                     return;
                 }
@@ -1789,11 +1934,8 @@ impl ApplicationHandler for App {
                         // the window's close button.
                         Key::Named(NamedKey::Escape) => {
                             if self.the_show {
-                                self.the_show = false;
+                                self.toggle_show();
                                 self.show_help = false;
-                                if let Some(window) = &self.window {
-                                    window.set_title(&self.title());
-                                }
                             } else {
                                 self.show_help = !self.show_help;
                             }
@@ -1819,7 +1961,7 @@ impl ApplicationHandler for App {
                         Key::Character(c) if c.as_str() == "s" => {
                             self.time_scale = (self.time_scale / 2.0).max(0.25);
                         }
-                        Key::Named(NamedKey::Space) => self.paused = !self.paused,
+                        Key::Named(NamedKey::Space) => self.toggle_pause(),
                         // E inspects, like use in every shooter.
                         Key::Character(c) if c.as_str() == "e" => {
                             self.show_info = !self.show_info;
@@ -1909,13 +2051,7 @@ impl ApplicationHandler for App {
                         }
                         // J opens the journey: what the play has made of you.
                         Key::Character(c) if c.as_str() == "j" => {
-                            if self.the_show {
-                                self.the_show = false;
-                                if let Some(window) = &self.window {
-                                    window.set_title(&self.title());
-                                }
-                            }
-                            self.show_journey = !self.show_journey;
+                            self.toggle_journey();
                         }
                         // Y turns the radio dial: off, then station by station.
                         Key::Character(c) if c.as_str() == "y" => {
@@ -1940,15 +2076,7 @@ impl ApplicationHandler for App {
                         }
                         // B for the big show (lean back).
                         Key::Character(c) if c.as_str() == "b" => {
-                            self.the_show = !self.the_show;
-                            if self.the_show {
-                                self.show_help = false;
-                                self.show_journey = false;
-                            }
-                            self.paused = false;
-                            if let Some(window) = &self.window {
-                                window.set_title(&self.title());
-                            }
+                            self.toggle_show();
                         }
                         // Number keys are room slots, like weapon slots.
                         Key::Character(c)
@@ -1990,6 +2118,15 @@ impl ApplicationHandler for App {
                 button: MouseButton::Left,
                 ..
             } => {
+                if self.paused {
+                    self.clear_pointer_state();
+                    return;
+                }
+                if self.show_help && self.modal_mode_active() {
+                    self.clear_pointer_state();
+                    return;
+                }
+                self.input_mode = input_legend::InputMode::KeyboardMouse;
                 let point = self.window.as_ref().and_then(|window| {
                     let size = window.inner_size();
                     mouse_input::normalized_window_point(self.mouse, (size.width, size.height))
@@ -2024,13 +2161,12 @@ impl ApplicationHandler for App {
                     player.set_active(true);
                 }
             }
-            WindowEvent::MouseWheel { delta, .. } if !self.studio => {
+            WindowEvent::MouseWheel { delta, .. } => {
                 let lines = match delta {
                     winit::event::MouseScrollDelta::LineDelta(_, y) => f64::from(y),
                     winit::event::MouseScrollDelta::PixelDelta(p) => p.y / 40.0,
                 };
-                self.t = (self.t + lines * 0.02).rem_euclid(1.0);
-                self.update_audio();
+                let _ = self.apply_wheel_delta(lines);
             }
             WindowEvent::CursorMoved { position, .. } => {
                 self.mouse = (position.x, position.y);
@@ -2284,7 +2420,9 @@ mod tests {
         App, TestStateRoot, app_icon, bounded_tick_seconds, julia_gpu_c, julia_gpu_vertical_span,
         live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache,
     };
+    use crate::input_legend::{InputMode, MenuChoice};
     use std::time::{Duration, UNIX_EPOCH};
+    use winit::keyboard::{Key, NamedKey};
 
     /// An app pointed at scratch files, with no window, player, or GPU.
     fn headless(name: &str) -> App {
@@ -2599,27 +2737,83 @@ mod tests {
     }
 
     #[test]
-    fn controller_can_choose_and_launch_every_menu_game() {
-        for selection in 0..5 {
+    fn controller_can_open_and_leave_every_menu_destination() {
+        for selection in 0..MenuChoice::ALL.len() {
             let mut app = headless(&format!(
-                "numinous_app_test_controller_game_{selection}.txt"
+                "numinous_app_test_controller_destination_{selection}.txt"
             ));
             app.controller_menu_selection = selection;
 
             app.handle_gamepad_command(crate::gamepad::Command::PrimaryDown);
 
             assert!(!app.show_help);
+            match MenuChoice::at(selection) {
+                MenuChoice::Quiz => assert!(app.quiz.is_some()),
+                MenuChoice::Munch => assert!(app.munch.is_some()),
+                MenuChoice::Nim => assert!(app.nim.is_some()),
+                MenuChoice::Gauntlet => assert!(app.gauntlet.is_some()),
+                MenuChoice::Arcade => assert!(app.arcade.is_some()),
+                MenuChoice::Show => assert!(app.the_show),
+                MenuChoice::Studio => assert!(app.studio),
+                MenuChoice::Journey => assert!(app.show_journey),
+            }
+
+            app.handle_gamepad_command(crate::gamepad::Command::Back);
+            assert!(!app.the_show);
+            assert!(!app.studio);
+            assert!(!app.show_journey);
             assert!(
-                [
-                    app.quiz.is_some(),
-                    app.munch.is_some(),
-                    app.nim.is_some(),
-                    app.gauntlet.is_some(),
-                    app.arcade.is_some(),
-                ][selection],
-                "controller menu selection {selection} launches its game"
+                app.quiz.is_none()
+                    && app.munch.is_none()
+                    && app.nim.is_none()
+                    && app.gauntlet.is_none()
+                    && app.arcade.is_none(),
+                "controller Back leaves menu destination {selection}"
             );
+            let _ = std::fs::remove_file(&app.journey_file);
+            let _ = std::fs::remove_file(&app.scores_file);
         }
+    }
+
+    #[test]
+    fn controller_pause_is_explicit_and_sets_the_active_input_mode() {
+        use crate::gamepad::Command;
+
+        let mut app = headless("numinous_app_test_controller_pause.txt");
+        app.show_help = false;
+        assert_eq!(app.input_mode, InputMode::KeyboardMouse);
+
+        app.handle_gamepad_command(Command::CancelPointer);
+        assert_eq!(app.input_mode, InputMode::KeyboardMouse);
+        assert!(!app.paused);
+
+        app.handle_gamepad_command(Command::Pause);
+        assert_eq!(app.input_mode, InputMode::Controller);
+        assert!(app.paused);
+
+        app.arcade_start();
+        app.paused = true;
+        app.input_mode = InputMode::KeyboardMouse;
+        let before = {
+            let play = app.arcade.as_ref().unwrap();
+            (play.run.muncher, play.run.score, play.run.eaten.clone())
+        };
+        app.handle_gamepad_command(Command::Right);
+        app.handle_gamepad_command(Command::PrimaryDown);
+        let after = {
+            let play = app.arcade.as_ref().unwrap();
+            (play.run.muncher, play.run.score, play.run.eaten.clone())
+        };
+        assert_eq!(after, before, "paused Arcade rejects movement and eating");
+        assert_eq!(
+            app.input_mode,
+            InputMode::KeyboardMouse,
+            "ignored controller input does not steal the active legend"
+        );
+
+        app.handle_gamepad_command(Command::Pause);
+        assert!(!app.paused);
+        let _ = std::fs::remove_file(&app.journey_file);
     }
 
     #[test]
@@ -2632,11 +2826,79 @@ mod tests {
         assert!(app.show_help);
         assert!(app.quiz.is_some());
         assert!(app.modal_frame(320, 220).is_none());
+        assert_eq!(app.help_menu_selection(), None);
+        assert_eq!(
+            crate::input_legend::help_lines(app.input_mode, app.help_menu_selection(), true),
+            [
+                "ACTIVITY PAUSED",
+                "SOUTH / START / EAST RETURN",
+                "THE CURRENT RUN STAYS INTACT"
+            ]
+        );
+
+        let selection = app.controller_menu_selection;
+        app.handle_gamepad_command(crate::gamepad::Command::Right);
+        assert_eq!(app.controller_menu_selection, selection);
+        assert!(app.quiz.as_ref().is_some_and(|quiz| quiz.flash.is_none()));
 
         app.handle_gamepad_command(crate::gamepad::Command::PrimaryDown);
         assert!(!app.show_help);
         assert!(app.quiz.is_some());
         assert!(app.modal_frame(320, 220).is_some());
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn modal_help_blocks_keyboard_gameplay_until_escape_returns() {
+        let mut app = headless("numinous_app_test_modal_help_keyboard.txt");
+        app.show_help = false;
+        app.quiz_next();
+        app.show_help = true;
+
+        assert!(app.handle_modal_help_key(&Key::Character("a".into())));
+        assert!(app.quiz.as_ref().is_some_and(|quiz| quiz.flash.is_none()));
+        assert!(app.show_help);
+        assert!(app.handle_modal_help_key(&Key::Named(NamedKey::Escape)));
+        assert!(!app.show_help);
+        assert!(app.quiz.is_some());
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn modal_help_and_zero_motion_block_wheel_state_changes() {
+        let mut app = headless("numinous_app_test_modal_help_wheel.txt");
+        app.show_help = false;
+        app.quiz_next();
+        app.show_help = true;
+        app.input_mode = InputMode::Controller;
+        app.t = 0.4;
+
+        assert!(!app.apply_wheel_delta(3.0));
+        assert_eq!(app.t, 0.4);
+        assert_eq!(app.input_mode, InputMode::Controller);
+
+        app.show_help = false;
+        assert!(!app.apply_wheel_delta(0.0));
+        assert_eq!(app.t, 0.4);
+        assert_eq!(app.input_mode, InputMode::Controller);
+        assert!(app.apply_wheel_delta(2.0));
+        assert!((app.t - 0.44).abs() < f64::EPSILON);
+        assert_eq!(app.input_mode, InputMode::KeyboardMouse);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn paused_pointer_input_cannot_touch_a_room() {
+        let mut app = headless("numinous_app_test_paused_pointer.txt");
+        app.show_help = false;
+        app.paused = true;
+
+        app.begin_pointer_at((0.5, 0.5));
+        app.move_pointer_to((0.7, 0.5), true);
+
+        assert!(app.inputs.is_empty());
+        assert!(app.pokes.is_empty());
+        assert!(!app.poking);
         let _ = std::fs::remove_file(&app.journey_file);
     }
 
@@ -2707,6 +2969,9 @@ mod tests {
         );
         arcade.handle_gamepad_command(Command::CycleRadio);
         assert!(arcade.radio.is_none());
+        arcade.arcade.as_mut().unwrap().over = true;
+        arcade.handle_gamepad_command(Command::PrimaryDown);
+        assert!(arcade.arcade.is_none());
 
         let mut gauntlet = headless("numinous_app_test_controller_gauntlet_route.txt");
         gauntlet.show_help = false;
@@ -2738,6 +3003,14 @@ mod tests {
         studio.studio = true;
         studio.handle_gamepad_command(Command::CycleRadio);
         assert!(studio.radio.is_none());
+        studio.handle_gamepad_command(Command::Menu);
+        assert!(studio.show_help);
+        assert!(studio.studio);
+        studio.handle_gamepad_command(Command::Right);
+        assert!(studio.studio);
+        studio.handle_gamepad_command(Command::PrimaryDown);
+        assert!(!studio.show_help);
+        assert!(studio.studio);
 
         for app in [&quiz, &munch, &nim, &arcade, &gauntlet, &studio] {
             let _ = std::fs::remove_file(&app.journey_file);

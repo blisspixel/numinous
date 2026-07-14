@@ -1,5 +1,7 @@
 use numinous_core::{Raster, Room, RoomInput, Surface};
 
+use crate::input_legend::{self, InputMode};
+
 pub(crate) struct RoomChrome {
     pub(crate) t: f64,
     pub(crate) room_card: u64,
@@ -11,14 +13,19 @@ pub(crate) struct RoomChrome {
     pub(crate) studio: bool,
     pub(crate) muted: bool,
     pub(crate) level: u32,
+    pub(crate) input_mode: InputMode,
 }
 
 pub(crate) fn room_action(room: &dyn Room) -> &'static str {
     numinous_core::room_touch_action(room)
 }
 
-fn arrival_lines(room: &dyn Room, columns: usize) -> Vec<String> {
-    let mut lines = vec![room_action(room).to_string()];
+fn displayed_room_action(room: &dyn Room, input_mode: InputMode) -> String {
+    input_legend::room_action(input_mode, room_action(room))
+}
+
+fn arrival_lines(room: &dyn Room, columns: usize, input_mode: InputMode) -> Vec<String> {
+    let mut lines = vec![displayed_room_action(room, input_mode)];
     let mut blurb = numinous_core::wrap_text(&room.meta().blurb.to_uppercase(), columns);
     if blurb.len() > 3 {
         blurb.truncate(3);
@@ -36,7 +43,7 @@ fn arrival_lines(room: &dyn Room, columns: usize) -> Vec<String> {
 struct FooterCopy {
     action: String,
     status: String,
-    controls: &'static str,
+    controls: String,
 }
 
 fn fit_footer_text(text: &str, pixel_budget: i32, scale: i32) -> String {
@@ -53,19 +60,29 @@ fn fit_footer_text(text: &str, pixel_budget: i32, scale: i32) -> String {
     fitted
 }
 
-fn footer_copy(room: &dyn Room, t: f64, inputs: &[RoomInput], muted: bool) -> FooterCopy {
+fn footer_copy(
+    room: &dyn Room,
+    t: f64,
+    inputs: &[RoomInput],
+    muted: bool,
+    input_mode: InputMode,
+) -> FooterCopy {
     let status = room
         .status_input(t, inputs)
-        .unwrap_or_else(|| "E INSPECT".to_string());
+        .unwrap_or_else(|| input_legend::room_inspect(input_mode));
     FooterCopy {
-        action: room_action(room).to_string(),
+        action: displayed_room_action(room, input_mode),
         status: if muted {
             format!("{status}   MUTED")
         } else {
             status
         },
-        controls: "R RESET ROOM   ESC MENU",
+        controls: input_legend::room_controls(input_mode),
     }
+}
+
+fn show_control_band_height(scale: i32) -> i32 {
+    18 * scale
 }
 
 pub(crate) fn draw_room_chrome(
@@ -92,7 +109,7 @@ pub(crate) fn draw_room_chrome(
         && !state.studio
     {
         let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
-        arrival_lines(room, columns)
+        arrival_lines(room, columns, state.input_mode)
     } else {
         Vec::new()
     };
@@ -119,22 +136,24 @@ pub(crate) fn draw_room_chrome(
     }
 
     if state.the_show {
+        let control_band_height = show_control_band_height(scale).min(height as i32);
+        let content_bottom = height as i32 - control_band_height;
         if state.t < 0.12 {
-            raster.dim_rows(height as i32 - 34 * scale, height as i32, 45);
+            raster.dim_rows((content_bottom - 34 * scale).max(0), content_bottom, 45);
             numinous_core::draw_text(
                 raster,
                 &room.meta().title.to_uppercase(),
                 width as i32 / 10,
-                height as i32 - 24 * scale,
+                content_bottom - 24 * scale,
                 scale + 1,
                 '#',
             );
         } else if state.t > 0.9 {
             let columns = ((width as i32 / (6 * scale)) - 8).max(12) as usize;
             let lines = numinous_core::wrap_text(&room.reveal().to_uppercase(), columns);
-            let band_height = (lines.len() as i32 * 9 * scale + 16).min(height as i32);
-            let band_top = height as i32 - band_height;
-            raster.clear_rows(band_top, height as i32);
+            let band_height = (lines.len() as i32 * 9 * scale + 16).min(content_bottom);
+            let band_top = content_bottom - band_height;
+            raster.clear_rows(band_top, content_bottom);
             raster.line(0, band_top, width.saturating_sub(1) as i32, band_top, '-');
             for (i, line) in lines.iter().enumerate() {
                 numinous_core::draw_text(
@@ -147,6 +166,27 @@ pub(crate) fn draw_room_chrome(
                 );
             }
         }
+        raster.clear_rows(content_bottom, height as i32);
+        raster.line(
+            0,
+            content_bottom,
+            width.saturating_sub(1) as i32,
+            content_bottom,
+            '-',
+        );
+        let controls = fit_footer_text(
+            &input_legend::show_controls(state.input_mode),
+            width as i32 - 20,
+            scale,
+        );
+        numinous_core::draw_text(
+            raster,
+            &controls,
+            10,
+            height as i32 - 11 * scale,
+            scale,
+            '.',
+        );
     }
 
     if !state.the_show && !state.studio {
@@ -192,7 +232,7 @@ pub(crate) fn draw_room_chrome(
     }
 
     if !state.show_help && !state.the_show && !state.studio {
-        let footer = footer_copy(room, state.t, inputs, state.muted);
+        let footer = footer_copy(room, state.t, inputs, state.muted, state.input_mode);
         let controls_width = footer.controls.chars().count() as i32 * 6 * scale;
         let controls_x = width as i32 - controls_width - 10;
         let action = fit_footer_text(&footer.action, width as i32 - 20, scale);
@@ -203,7 +243,7 @@ pub(crate) fn draw_room_chrome(
         numinous_core::draw_text(raster, &status, 10, height as i32 - 10 * scale, scale, '.');
         numinous_core::draw_text(
             raster,
-            footer.controls,
+            &footer.controls,
             controls_x,
             height as i32 - 10 * scale,
             scale,
@@ -255,7 +295,7 @@ mod tests {
             "interactive rooms keep their verb"
         );
         assert_eq!(
-            arrival_lines(&quiet, 32)[0],
+            arrival_lines(&quiet, 32, InputMode::KeyboardMouse)[0],
             DEFAULT_TOUCH_ROOM_ACTION,
             "quiet rooms still teach what hands do"
         );
@@ -264,7 +304,7 @@ mod tests {
     #[test]
     fn compact_arrival_copy_is_bounded_and_marks_truncation() {
         let room = room("golden-angle");
-        let lines = arrival_lines(room.as_ref(), 24);
+        let lines = arrival_lines(room.as_ref(), 24, InputMode::KeyboardMouse);
 
         assert_eq!(lines.len(), 4, "one action plus three blurb lines");
         assert_eq!(lines[0], room_action(room.as_ref()));
@@ -275,8 +315,8 @@ mod tests {
     #[test]
     fn footer_keeps_controls_fixed_while_status_changes() {
         let room = room("times-tables");
-        let closed = footer_copy(room.as_ref(), 0.0, &[], false);
-        let open = footer_copy(room.as_ref(), 0.1, &[], true);
+        let closed = footer_copy(room.as_ref(), 0.0, &[], false, InputMode::KeyboardMouse);
+        let open = footer_copy(room.as_ref(), 0.1, &[], true, InputMode::KeyboardMouse);
 
         assert_ne!(closed.status, open.status);
         assert_eq!(closed.action, open.action);
@@ -293,6 +333,21 @@ mod tests {
     }
 
     #[test]
+    fn room_copy_follows_the_active_input_mode() {
+        let room = room("golden-angle");
+        let keyboard = footer_copy(room.as_ref(), 0.0, &[], false, InputMode::KeyboardMouse);
+        let controller = footer_copy(room.as_ref(), 0.0, &[], false, InputMode::Controller);
+
+        assert_eq!(keyboard.action, "CLICK: PLANT A SEED");
+        assert_eq!(keyboard.status, "E INSPECT");
+        assert_eq!(keyboard.controls, "R RESET ROOM   ESC MENU");
+        assert_eq!(controller.action, "SOUTH: PLANT A SEED");
+        assert_eq!(controller.status, "SELECT INSPECT");
+        assert_eq!(controller.controls, "L3 RESET ROOM   START MENU");
+        assert!(controller.controls.chars().count() * 6 <= 360 - 20);
+    }
+
+    #[test]
     fn footer_uses_interaction_aware_status() {
         let room = room("game-of-life");
         let input = [RoomInput::PointerDown {
@@ -300,7 +355,7 @@ mod tests {
             y: 0.5,
             t: 0.25,
         }];
-        let footer = footer_copy(room.as_ref(), 0.25, &input, false);
+        let footer = footer_copy(room.as_ref(), 0.25, &input, false, InputMode::KeyboardMouse);
         assert!(footer.action.starts_with("CLICK:"));
         assert!(footer.status.contains("1 GLIDER"));
         assert_eq!(footer.controls, "R RESET ROOM   ESC MENU");
@@ -314,7 +369,7 @@ mod tests {
             y: 0.5,
             t: 0.25,
         }];
-        let footer = footer_copy(room.as_ref(), 0.25, &input, false);
+        let footer = footer_copy(room.as_ref(), 0.25, &input, false, InputMode::KeyboardMouse);
         let controls_width = footer.controls.chars().count() as i32 * 6;
         let controls_x = 360 - controls_width - 10;
         let fitted = fit_footer_text(&footer.status, controls_x - 20, 1);
@@ -341,6 +396,7 @@ mod tests {
                 studio: false,
                 muted: false,
                 level: 3,
+                input_mode: InputMode::KeyboardMouse,
             },
             &[],
             320,
@@ -370,6 +426,7 @@ mod tests {
                 studio: true,
                 muted: true,
                 level: 3,
+                input_mode: InputMode::KeyboardMouse,
             },
             &[],
             320,
@@ -399,6 +456,7 @@ mod tests {
                     studio: false,
                     muted: false,
                     level: 1,
+                    input_mode: InputMode::KeyboardMouse,
                 },
                 &[],
                 420,
@@ -408,6 +466,59 @@ mod tests {
         assert_ne!(arrival.to_rgba(), departure.to_rgba());
         assert!(arrival.lit_count() > 100);
         assert!(departure.lit_count() > 100);
+    }
+
+    #[test]
+    fn show_input_copy_stays_inside_one_fixed_compact_band() {
+        let room = room("lorenz");
+        let (width, height) = (360, 240);
+        let mut keyboard = Raster::with_accent(width, height, room.meta().accent);
+        let mut controller = Raster::with_accent(width, height, room.meta().accent);
+        room.render(&mut keyboard, 0.5);
+        room.render(&mut controller, 0.5);
+
+        for (raster, input_mode) in [
+            (&mut keyboard, InputMode::KeyboardMouse),
+            (&mut controller, InputMode::Controller),
+        ] {
+            draw_room_chrome(
+                raster,
+                room.as_ref(),
+                &RoomChrome {
+                    t: 0.5,
+                    room_card: 0,
+                    show_info: false,
+                    show_help: false,
+                    show_journey: false,
+                    banner_active: false,
+                    the_show: true,
+                    studio: false,
+                    muted: false,
+                    level: 1,
+                    input_mode,
+                },
+                &[],
+                width,
+                height,
+            );
+        }
+
+        let band_top = (height as i32 - show_control_band_height(1)) as usize;
+        let split = band_top * width * 4;
+        let keyboard_pixels = keyboard.to_rgba();
+        let controller_pixels = controller.to_rgba();
+        assert_eq!(
+            &keyboard_pixels[..split],
+            &controller_pixels[..split],
+            "input copy must not move the Show content"
+        );
+        assert_ne!(&keyboard_pixels[split..], &controller_pixels[split..]);
+        for copy in [
+            input_legend::show_controls(InputMode::KeyboardMouse),
+            input_legend::show_controls(InputMode::Controller),
+        ] {
+            assert!(copy.chars().count() * 6 <= width - 20);
+        }
     }
 
     #[test]
@@ -430,6 +541,7 @@ mod tests {
                 studio: false,
                 muted: false,
                 level: 1,
+                input_mode: InputMode::KeyboardMouse,
             },
             &[],
             width,

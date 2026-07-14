@@ -41,6 +41,7 @@ your hands already know it:
 | 1 - 9 | jump straight to a room |
 | W / S | run time faster / slower |
 | mouse drag or wheel | scrub time yourself |
+| Space | pause or resume while wandering |
 | E | inspect: why this matters |
 | H | bring the help overlay back after it is dismissed |
 | Q | swap the visual era (phosphor, 8-bit, vector, modern) |
@@ -48,11 +49,12 @@ your hands already know it:
 | F | fullscreen |
 | M | sound on / off |
 | B | The Show: sit back, it plays itself |
-| Esc | the menu: play (G quiz, C munch, N nim, T gauntlet) and every control |
+| Esc | the menu: all games, Show, Studio, Journey, and every control |
 | G (in the menu) | the quiz: name the math |
 | C (in the menu) | Munch: cursor over the board, eat what fits |
 | N (in the menu) | Nim: aim your take, beat the Order |
 | T (in the menu) | the Gauntlet: four stages, a combo, one number |
+| V (in the menu) | the Arcade: eat while the Vexations hunt |
 | J | your journey: level, rank, trophies, resonances |
 | P | keep the picture: saves the room as a PNG postcard |
 | F9 | save a local hallway-test note in repo-root `logs/` |
@@ -63,7 +65,8 @@ your hands already know it:
 | controller bumpers / D-pad | change rooms / choose and navigate games |
 | controller triggers / right stick | change speed / scrub time |
 | controller Start / East / Select | menu / back / inspect |
-| controller L3 / West / North | reset / visual era / radio or available submit action |
+| controller L3 / R3 | reset room / pause or resume |
+| controller West / North | visual era / radio or available submit action |
 | Tab | the Studio: type math, watch and hear it live |
 | Esc | menu |
 
@@ -75,7 +78,9 @@ soundtrack. Room changes crossfade, and volume or window focus changes do not
 restart it. Start pauses a live game behind the menu without discarding its
 state. On restore, radio rejoins the wall-clock broadcast position before audio
 fades back in. Radio stations appear only when compatible local tracks are
-present.
+present. Visible controller legends use generic directional button names, not
+platform-specific glyphs. The Studio can be entered and left with a controller,
+but formula entry requires a keyboard and the footer states that boundary.
 
 **Or live in the terminal.** Everything also runs in a terminal, in full color:
 

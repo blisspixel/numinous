@@ -60,7 +60,10 @@ The full interactive audiovisual experience. The UX is specified in depth across
   virtual hand and the south button emits the same bounded down, move, and up
   room events as the mouse. Bumpers navigate rooms, the D-pad selects and drives games,
   triggers change time speed, the right stick scrubs phase, and controller
-  buttons expose back, menu, inspect, reset, era, radio, and game submission.
+  buttons expose back, menu, inspect, reset, pause, era, radio, and game submission.
+  Input-aware legends cover rooms, all games, The Show, the Journey, and the
+  Studio. The controller opens and closes all eight menu destinations; Studio
+  formula entry remains honestly keyboard-required.
   Focus loss or disconnect cancels a held gesture. Touch, pen, MIDI, remapping,
   and platform hardware certification remain planned rather than implied.
 
