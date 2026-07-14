@@ -1,26 +1,30 @@
 //! Galton Board: pure chance piling into a bell curve.
 //!
 //! Each ball falls through a field of pegs, taking a left/right coin flip at
-//! every row; its final bin is how many times it went right. No single ball is
-//! predictable, yet the aggregate distribution approaches a stable binomial
-//! curve as the number of trials grows.
-//! `t` biases the coin and skews the curve. See `docs/ROOMS.md`.
+//! every row; its final bin is how many times it went right. One probability
+//! does not identify the next landing, yet repeated waves at that fixed
+//! probability build an empirical binomial distribution. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta, pokes_from_inputs};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::{MAX_DIM, Surface};
 
 /// Fixed seed so the pile reproduces exactly (determinism, see `docs/QUALITY.md`).
 const SEED: u64 = 0x6A17_0B04_5EED_ABCD;
-/// How many balls to drop.
-const BALLS: usize = 20_000;
-/// How far `t` biases the coin away from fair.
-const MAX_BIAS: f64 = 0.25;
+/// One touch drops enough balls to make progress visible without hiding the
+/// early noise that repeated sampling gradually settles.
+const BALLS_PER_WAVE: usize = 64;
 /// A physical board has one stable geometry at every viewport size.
 const BOARD_ROWS: usize = 16;
-/// Cap on the simulated bin count, so the work stays bounded no matter how wide
-/// the canvas is. Wider canvases stretch this many bins across their columns.
-const MAX_SIM_BINS: usize = 256;
+/// Cap ad hoc trace requests in tests and future callers independently of the
+/// viewport. Production experiments always use [`BOARD_ROWS`].
+const MAX_TRACE_ROWS: usize = 255;
+const SELECTOR_Y: f64 = 0.13;
+const BOARD_TOP: f64 = 0.18;
+const BOARD_BOTTOM: f64 = 0.55;
+const LANDING_Y: f64 = 0.565;
+const PILE_TOP: f64 = 0.58;
+const PILE_BOTTOM: f64 = 0.74;
 
 fn drawing_dims(canvas: &dyn Surface) -> Option<(usize, usize)> {
     let width = canvas.width();
@@ -32,7 +36,22 @@ fn drawing_dims(canvas: &dyn Surface) -> Option<(usize, usize)> {
     }
 }
 
-fn poked_balls(pokes: &[(f64, f64)]) -> Vec<(usize, f64)> {
+/// Five deliberately coarse coins keep each experiment repeatable. The fixed
+/// probability within a run is part of the binomial model, not presentation.
+const COIN_PROBABILITIES: [f64; 5] = [0.30, 0.40, 0.50, 0.60, 0.70];
+const COIN_LABELS: [&str; 5] = [".3", ".4", ".5", ".6", ".7"];
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct DropWave {
+    coin: usize,
+}
+
+fn coin_at(x: f64) -> usize {
+    ((unit(x, 0.5) * COIN_PROBABILITIES.len() as f64).floor() as usize)
+        .min(COIN_PROBABILITIES.len() - 1)
+}
+
+fn drop_waves(pokes: &[(f64, f64)]) -> Vec<DropWave> {
     let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
     pokes[start..]
         .iter()
@@ -43,9 +62,29 @@ fn poked_balls(pokes: &[(f64, f64)]) -> Vec<(usize, f64)> {
                 None
             }
         })
-        .enumerate()
-        .map(|(which, (px, _py))| (which, 0.15 + 0.70 * px))
+        .map(|(px, _py)| DropWave { coin: coin_at(px) })
         .collect()
+}
+
+fn drop_waves_from_inputs(inputs: &[RoomInput]) -> Vec<DropWave> {
+    let points: Vec<_> = inputs
+        .iter()
+        .filter_map(|input| match *input {
+            RoomInput::PointerDown { x, y, .. } => Some((x, y)),
+            _ => None,
+        })
+        .collect();
+    drop_waves(&points)
+}
+
+fn selected_run(waves: &[DropWave]) -> Option<(usize, usize)> {
+    let selected = waves.last()?.coin;
+    let wave_count = waves
+        .iter()
+        .rev()
+        .take_while(|wave| wave.coin == selected)
+        .count();
+    Some((selected, wave_count))
 }
 
 /// The Galton Board room.
@@ -67,36 +106,40 @@ impl GaltonBoard {
         Self { seed }
     }
 
-    /// Drop the balls and tally how many land in each of `bins` bins.
-    ///
-    /// A ball takes `bins - 1` coin flips, so its bin (the number of rights) is
-    /// always in `0..bins`. `t` biases the probability of going right.
-    fn histogram(bins: usize, t: f64, variation: u64) -> Vec<u64> {
-        let mut counts = vec![0u64; bins];
-        if bins == 0 {
-            return counts;
-        }
-        let rows = bins - 1;
-        let p_right = 0.5 + MAX_BIAS * t.clamp(0.0, 1.0);
-        let mut rng = SplitMix64::new(SEED ^ variation);
-        for _ in 0..BALLS {
-            let mut bin = 0usize;
-            for _ in 0..rows {
-                if rng.next_f64() < p_right {
-                    bin += 1;
-                }
-            }
-            counts[bin] += 1;
+    fn experiment_variation(variation: u64, coin: usize) -> u64 {
+        variation ^ (coin as u64).wrapping_mul(0xD1B5_4A32_D192_ED03)
+    }
+
+    fn experiment_histogram(coin: usize, wave_count: usize, variation: u64) -> Vec<u64> {
+        let mut counts = vec![0u64; BOARD_ROWS + 1];
+        let coin = coin.min(COIN_PROBABILITIES.len() - 1);
+        let p_right = COIN_PROBABILITIES[coin];
+        let variation = Self::experiment_variation(variation, coin);
+        let ball_count = wave_count
+            .min(MAX_ROOM_POKES)
+            .saturating_mul(BALLS_PER_WAVE);
+        for ball in 0..ball_count {
+            let bin = Self::landing_bin(BOARD_ROWS, p_right, variation, ball);
+            counts[bin] = counts[bin].saturating_add(1);
         }
         counts
     }
 
-    fn ball_trace(rows: usize, p_right: f64, variation: u64, which: usize) -> Vec<usize> {
-        let rows = rows.clamp(1, MAX_SIM_BINS - 1);
+    fn trace_seed(variation: u64, which: usize) -> u64 {
+        SEED ^ variation ^ 0xB411_7ACE_u64 ^ (which as u64).wrapping_mul(0x9E37_79B9)
+    }
+
+    fn landing_bin(rows: usize, p_right: f64, variation: u64, which: usize) -> usize {
+        let rows = rows.clamp(1, MAX_TRACE_ROWS);
         let p_right = unit(p_right, 0.5);
-        let mut rng = SplitMix64::new(
-            SEED ^ variation ^ 0xB411_7ACE_u64 ^ (which as u64).wrapping_mul(0x9E37_79B9),
-        );
+        let mut rng = SplitMix64::new(Self::trace_seed(variation, which));
+        (0..rows).filter(|_| rng.next_f64() < p_right).count()
+    }
+
+    fn ball_trace(rows: usize, p_right: f64, variation: u64, which: usize) -> Vec<usize> {
+        let rows = rows.clamp(1, MAX_TRACE_ROWS);
+        let p_right = unit(p_right, 0.5);
+        let mut rng = SplitMix64::new(Self::trace_seed(variation, which));
         let mut trace = Vec::with_capacity(rows + 1);
         let mut rights = 0usize;
         trace.push(rights);
@@ -125,20 +168,90 @@ impl GaltonBoard {
         (x.round() as i32, y.round() as i32)
     }
 
-    fn draw_board(canvas: &mut dyn Surface, rows: usize, counts: &[u64]) {
+    fn reference_weights(coin: usize) -> [f64; BOARD_ROWS + 1] {
+        let p = COIN_PROBABILITIES[coin.min(COIN_PROBABILITIES.len() - 1)];
+        let q = 1.0 - p;
+        let mut weights = [0.0; BOARD_ROWS + 1];
+        weights[0] = q.powi(BOARD_ROWS as i32);
+        for k in 0..BOARD_ROWS {
+            weights[k + 1] = weights[k] * (BOARD_ROWS - k) as f64 / (k + 1) as f64 * p / q;
+        }
+        weights
+    }
+
+    fn draw_coin_selector(canvas: &mut dyn Surface, selected: usize) {
         let Some((width, height)) = drawing_dims(canvas) else {
             return;
         };
-        let top = height as f64 * 0.08;
-        let board_bottom = height as f64 * 0.64;
-        let pile_top = height as f64 * 0.70;
-        let pile_bottom = height.saturating_sub(1) as f64;
+        let left = width.saturating_sub(1) as f64 * 0.18;
+        let right = width.saturating_sub(1) as f64 * 0.82;
+        let y = (height as f64 * SELECTOR_Y).round() as i32;
+        let left = left.round() as i32;
+        let right = right.round() as i32;
+        canvas.line(left, y, right, y, '-');
+        if width >= 120 && height >= 80 {
+            canvas.line(left, y - 1, right, y - 1, '-');
+            canvas.line(left, y + 1, right, y + 1, '-');
+        }
+        for (coin, label) in COIN_LABELS.iter().enumerate() {
+            let fraction = coin as f64 / (COIN_PROBABILITIES.len() - 1) as f64;
+            let x = (left as f64 + (right - left) as f64 * fraction).round() as i32;
+            let half_tick = if coin == selected && height >= 20 {
+                3
+            } else {
+                2
+            };
+            canvas.line(x, y - half_tick, x, y + half_tick, '+');
+            if width >= 120 && height >= 80 {
+                crate::draw_text(canvas, label, x - 5, y + 3, 1, '#');
+                if coin == selected {
+                    canvas.line(x - 6, y + 11, x + 6, y + 11, '#');
+                }
+            }
+        }
+    }
+
+    fn draw_reference(canvas: &mut dyn Surface, rows: usize, coin: usize) {
+        let Some((width, height)) = drawing_dims(canvas) else {
+            return;
+        };
+        let top = height as f64 * BOARD_TOP;
+        let board_bottom = height as f64 * BOARD_BOTTOM;
+        let pile_top = height as f64 * PILE_TOP;
+        let pile_bottom = height as f64 * PILE_BOTTOM;
+        let weights = Self::reference_weights(coin);
+        let max = weights.iter().copied().fold(0.0_f64, f64::max);
+        let mut previous = None;
+        for (bin, weight) in weights.into_iter().enumerate() {
+            let (x, _) = Self::board_point(width, top, board_bottom, rows, bin, rows);
+            let y = pile_bottom - weight / max * (pile_bottom - pile_top);
+            if let Some((px, py)) = previous {
+                canvas.line(px, py, x, y.round() as i32, ':');
+            }
+            previous = Some((x, y.round() as i32));
+        }
+    }
+
+    fn draw_board(canvas: &mut dyn Surface, rows: usize, counts: &[u64], selected: usize) {
+        let Some((width, height)) = drawing_dims(canvas) else {
+            return;
+        };
+        Self::draw_coin_selector(canvas, selected);
+        let top = height as f64 * BOARD_TOP;
+        let board_bottom = height as f64 * BOARD_BOTTOM;
+        let pile_top = height as f64 * PILE_TOP;
+        let pile_bottom = height as f64 * PILE_BOTTOM;
         for row in 0..rows {
             for rights in 0..=row {
                 let (x, y) = Self::board_point(width, top, board_bottom, row, rights, rows);
                 canvas.plot(x, y, '.');
+                if width >= 80 && height >= 40 {
+                    canvas.plot(x - 1, y, '.');
+                    canvas.plot(x + 1, y, '.');
+                }
             }
         }
+        Self::draw_reference(canvas, rows, selected);
         let max = counts.iter().copied().max().unwrap_or(0);
         if max == 0 {
             return;
@@ -163,13 +276,17 @@ impl GaltonBoard {
         if trace.is_empty() {
             return;
         }
-        let top = height as f64 * 0.08;
-        let board_bottom = height as f64 * 0.64;
+        let top = height as f64 * BOARD_TOP;
+        let board_bottom = height as f64 * BOARD_BOTTOM;
         let mut previous = None;
         for (row, &rights) in trace.iter().enumerate() {
             let (sx, sy) = Self::board_point(width, top, board_bottom, row, rights, rows);
             if let Some((px, py)) = previous {
                 canvas.line(px, py, sx, sy, 'o');
+                if width >= 80 && height >= 40 {
+                    canvas.line(px - 1, py, sx - 1, sy, 'o');
+                    canvas.line(px + 1, py, sx + 1, sy, 'o');
+                }
             } else {
                 canvas.plot(sx, sy, 'o');
             }
@@ -179,9 +296,9 @@ impl GaltonBoard {
             let (sx, _) = Self::board_point(width, top, board_bottom, rows, rights, rows);
             canvas.line(
                 sx - 2,
-                (height as f64 * 0.68) as i32,
+                (height as f64 * LANDING_Y) as i32,
                 sx + 2,
-                (height as f64 * 0.68) as i32,
+                (height as f64 * LANDING_Y) as i32,
                 '#',
             );
         }
@@ -202,26 +319,26 @@ impl Room for GaltonBoard {
             id: "galton-board",
             title: "Galton Board",
             wing: "Chance & Order",
-            blurb: "Drop thousands of balls through pegs, each a coin flip left or right, and the \
-                    pile approaches a predictable binomial curve. t biases the coin.",
+            blurb: "Choose a left, fair, or right-leaning coin. Each click drops 64 balls through \
+                    16 peg rows; repeat it and watch chance settle into a binomial pile.",
             accent: [80, 120, 220],
         }
     }
 
-    fn render(&self, canvas: &mut dyn Surface, t: f64) {
+    fn render(&self, canvas: &mut dyn Surface, _t: f64) {
         let Some((_width, _height)) = drawing_dims(canvas) else {
             return;
         };
-        let counts = Self::histogram(BOARD_ROWS + 1, t, self.seed);
-        Self::draw_board(canvas, BOARD_ROWS, &counts);
+        Self::draw_board(canvas, BOARD_ROWS, &[], 2);
     }
 
     fn reveal(&self) -> &'static str {
-        "You cannot predict where a single ball lands. As trials accumulate, their \
-         bin counts approach the binomial distribution, which becomes bell-shaped \
-         at a fair bias. This is the Central Limit Theorem in action: sums of many \
-         small independent effects are often approximately normal. Individual \
-         outcomes remain uncertain while the aggregate pattern grows more stable."
+        "The coin probability alone does not determine the next landing. With one \
+         probability fixed, the number of right turns in a 16-flip landing follows \
+         exactly Binomial(16, p), and repeated waves make the empirical pile estimate \
+         that discrete distribution. With many rows and a coin away from either \
+         extreme, a normal curve can approximate the binomial, the direction formalized \
+         by the Central Limit Theorem. This board displays the finite binomial itself."
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -235,22 +352,36 @@ impl Room for GaltonBoard {
     }
 
     fn verb(&self) -> Option<&'static str> {
-        Some("CLICK LEFT OR RIGHT: BIAS AND DROP A BALL")
+        Some("AIM + CLICK: PICK COIN, DROP 64 BALLS")
     }
 
     fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let pokes = pokes_from_inputs(inputs);
-        let (which, p_right) = poked_balls(&pokes).last().copied()?;
-        let trace = Self::ball_trace(BOARD_ROWS, p_right, self.seed, which);
+        let waves = drop_waves_from_inputs(inputs);
+        let (coin, wave_count) = selected_run(&waves)?;
+        let p_right = COIN_PROBABILITIES[coin];
+        let which = wave_count.saturating_mul(BALLS_PER_WAVE).saturating_sub(1);
+        let trace = Self::ball_trace(
+            BOARD_ROWS,
+            p_right,
+            Self::experiment_variation(self.seed, coin),
+            which,
+        );
         let rights = trace.last().copied().unwrap_or(0);
-        let direction = if p_right < 0.48 {
-            "LEFT"
-        } else if p_right > 0.52 {
-            "RIGHT"
+        let balls = wave_count.saturating_mul(BALLS_PER_WAVE);
+        let probability = format!("{p_right:.2}");
+        let probability = probability.strip_prefix('0').unwrap_or(&probability);
+        if wave_count == MAX_ROOM_POKES {
+            Some(format!("P{probability}  FULL={balls}  LAST {rights}R"))
         } else {
-            "FAIR"
-        };
-        Some(format!("{direction} P={p_right:.2}   BIN{rights}=R-FLIPS"))
+            Some(format!(
+                "P{probability}  {wave_count}x64={balls}  LAST {rights}R"
+            ))
+        }
+    }
+
+    fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
+        let waves = drop_waves_from_inputs(inputs);
+        self.render_waves(canvas, t, &waves);
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -258,20 +389,36 @@ impl Room for GaltonBoard {
             self.render(canvas, t);
             return;
         }
-        let Some((_width, _height)) = drawing_dims(canvas) else {
+        let waves = drop_waves(pokes);
+        self.render_waves(canvas, t, &waves);
+    }
+}
+
+impl GaltonBoard {
+    fn render_waves(&self, canvas: &mut dyn Surface, t: f64, waves: &[DropWave]) {
+        let Some((coin, wave_count)) = selected_run(waves) else {
+            self.render(canvas, t);
             return;
         };
-        self.render(canvas, t);
-        for (which, p_right) in poked_balls(pokes) {
-            let trace = Self::ball_trace(BOARD_ROWS, p_right, self.seed, which);
-            Self::draw_ball_trace(canvas, &trace, BOARD_ROWS);
-        }
+        let counts = Self::experiment_histogram(coin, wave_count, self.seed);
+        Self::draw_board(canvas, BOARD_ROWS, &counts, coin);
+        let which = wave_count.saturating_mul(BALLS_PER_WAVE).saturating_sub(1);
+        let trace = Self::ball_trace(
+            BOARD_ROWS,
+            COIN_PROBABILITIES[coin],
+            Self::experiment_variation(self.seed, coin),
+            which,
+        );
+        Self::draw_ball_trace(canvas, &trace, BOARD_ROWS);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{BOARD_ROWS, GaltonBoard, poked_balls};
+    use super::{
+        BALLS_PER_WAVE, BOARD_ROWS, BOARD_TOP, COIN_PROBABILITIES, DropWave, GaltonBoard,
+        drop_waves, selected_run,
+    };
     use crate::canvas::Canvas;
     use crate::room::{MAX_ROOM_POKES, Room};
     use crate::surface::{MAX_DIM, Surface};
@@ -287,22 +434,23 @@ mod tests {
 
     #[test]
     fn fair_coin_peaks_at_the_center() {
-        let counts = GaltonBoard::histogram(21, 0.0, 0);
-        // 21 bins means 20 flips, so the mean bin is 10.
-        assert!((argmax(&counts) as i64 - 10).abs() <= 2);
+        let counts = GaltonBoard::experiment_histogram(2, MAX_ROOM_POKES, 0);
+        assert!((argmax(&counts) as i64 - 8).abs() <= 1);
     }
 
     #[test]
     fn biasing_shifts_the_peak_right() {
-        let fair = GaltonBoard::histogram(21, 0.0, 0);
-        let biased = GaltonBoard::histogram(21, 1.0, 0);
-        assert!(argmax(&biased) > argmax(&fair));
+        let left = GaltonBoard::experiment_histogram(0, MAX_ROOM_POKES, 0);
+        let fair = GaltonBoard::experiment_histogram(2, MAX_ROOM_POKES, 0);
+        let right = GaltonBoard::experiment_histogram(4, MAX_ROOM_POKES, 0);
+        assert!(argmax(&left) < argmax(&fair));
+        assert!(argmax(&right) > argmax(&fair));
     }
 
     #[test]
     fn total_count_is_conserved() {
-        let counts = GaltonBoard::histogram(15, 0.3, 0);
-        assert_eq!(counts.iter().sum::<u64>(), super::BALLS as u64);
+        let counts = GaltonBoard::experiment_histogram(1, 3, 0);
+        assert_eq!(counts.iter().sum::<u64>(), (3 * BALLS_PER_WAVE) as u64);
     }
 
     #[test]
@@ -316,6 +464,23 @@ mod tests {
     }
 
     #[test]
+    fn opening_and_experiment_are_phase_invariant() {
+        let room = GaltonBoard::new_with(9);
+        let mut opening_a = Canvas::new(61, 24);
+        let mut opening_b = Canvas::new(61, 24);
+        room.render(&mut opening_a, 0.0);
+        room.render(&mut opening_b, 0.999);
+        assert_eq!(opening_a.to_text(), opening_b.to_text());
+
+        let pokes = [(0.5, 0.2), (0.5, 0.8)];
+        let mut run_a = Canvas::new(61, 24);
+        let mut run_b = Canvas::new(61, 24);
+        room.render_poked(&mut run_a, 0.0, &pokes);
+        room.render_poked(&mut run_b, 0.999, &pokes);
+        assert_eq!(run_a.to_text(), run_b.to_text());
+    }
+
+    #[test]
     fn new_with_zero_matches_default_and_nonzero_differs() {
         let r0 = GaltonBoard::new_with(0);
         let r_def = GaltonBoard::new();
@@ -325,8 +490,8 @@ mod tests {
         r_def.render(&mut b, 0.0);
         assert_eq!(a.to_text(), b.to_text());
         assert_ne!(
-            GaltonBoard::histogram(17, 0.0, 0),
-            GaltonBoard::histogram(17, 0.0, 42)
+            GaltonBoard::experiment_histogram(2, 3, 0),
+            GaltonBoard::experiment_histogram(2, 3, 42)
         );
     }
 
@@ -341,12 +506,12 @@ mod tests {
     #[test]
     fn every_viewport_uses_the_same_physical_row_count() {
         assert_eq!(BOARD_ROWS, 16);
-        assert_eq!(GaltonBoard::histogram(BOARD_ROWS + 1, 0.0, 0).len(), 17);
+        assert_eq!(GaltonBoard::experiment_histogram(2, 1, 0).len(), 17);
     }
 
     #[test]
     fn wide_canvas_stays_bounded_and_fills() {
-        // Wider than MAX_SIM_BINS: exercises the stretch path and stays fast.
+        // A wide target stretches the fixed physical board and stays bounded.
         let room = GaltonBoard::new();
         let mut canvas = Canvas::new(600, 12);
         room.render(&mut canvas, 0.0);
@@ -365,29 +530,26 @@ mod tests {
     }
 
     #[test]
-    fn poked_balls_preserve_order_clamp_and_filter() {
-        let balls = poked_balls(&[
+    fn drop_waves_preserve_order_clamp_and_filter() {
+        let waves = drop_waves(&[
             (-1.0, 2.0),
             (0.25, 0.75),
             (f64::INFINITY, 0.25),
             (0.5, f64::NAN),
         ]);
-        assert_eq!(balls.len(), 2);
-        assert_eq!(balls[0], (0, 0.15));
-        assert_eq!(balls[1].0, 1);
-        assert!((balls[1].1 - 0.325).abs() < 1.0e-12);
+        assert_eq!(waves, vec![DropWave { coin: 0 }, DropWave { coin: 1 }]);
     }
 
     #[test]
-    fn poked_balls_use_the_newest_bounded_raw_tail() {
+    fn drop_waves_use_the_newest_bounded_raw_tail() {
         let mut many = vec![(0.0, 0.0); MAX_ROOM_POKES + 3];
         many.extend(
             (0..MAX_ROOM_POKES).map(|i| (((i as f64) + 0.25) / MAX_ROOM_POKES as f64, 0.5)),
         );
         let newest = many[many.len() - MAX_ROOM_POKES..].to_vec();
 
-        assert_eq!(poked_balls(&many), poked_balls(&newest));
-        assert_eq!(poked_balls(&many).len(), MAX_ROOM_POKES);
+        assert_eq!(drop_waves(&many), drop_waves(&newest));
+        assert_eq!(drop_waves(&many).len(), MAX_ROOM_POKES);
     }
 
     #[test]
@@ -395,7 +557,7 @@ mod tests {
         let mut with_invalid_tail = vec![(0.4, 0.6); MAX_ROOM_POKES];
         with_invalid_tail.extend(vec![(f64::NAN, f64::INFINITY); MAX_ROOM_POKES + 5]);
 
-        assert!(poked_balls(&with_invalid_tail).is_empty());
+        assert!(drop_waves(&with_invalid_tail).is_empty());
     }
 
     #[test]
@@ -403,17 +565,132 @@ mod tests {
         let finite = vec![(0.25, 0.75)];
         let with_bad_points = vec![(f64::NAN, 0.4), (0.25, 0.75), (0.2, f64::INFINITY)];
 
-        assert_eq!(poked_balls(&with_bad_points), poked_balls(&finite));
+        assert_eq!(drop_waves(&with_bad_points), drop_waves(&finite));
     }
 
     #[test]
-    fn duplicate_pokes_replay_as_distinct_balls() {
-        let balls = poked_balls(&[(0.5, 0.5), (0.5, 0.5)]);
-        let first = GaltonBoard::ball_trace(21, balls[0].1, 0, balls[0].0);
-        let second = GaltonBoard::ball_trace(21, balls[1].1, 0, balls[1].0);
+    fn repeated_pokes_extend_the_same_deterministic_stream() {
+        let waves = drop_waves(&[(0.5, 0.5), (0.5, 0.5)]);
+        assert_eq!(waves, vec![DropWave { coin: 2 }, DropWave { coin: 2 }]);
+        assert_eq!(selected_run(&waves), Some((2, 2)));
+        let one = GaltonBoard::experiment_histogram(2, 1, 0);
+        let two = GaltonBoard::experiment_histogram(2, 2, 0);
+        assert_eq!(one.iter().sum::<u64>(), BALLS_PER_WAVE as u64);
+        assert_eq!(two.iter().sum::<u64>(), (2 * BALLS_PER_WAVE) as u64);
+        let variation = GaltonBoard::experiment_variation(0, 2);
+        let mut second_wave = vec![0u64; BOARD_ROWS + 1];
+        for ball in BALLS_PER_WAVE..2 * BALLS_PER_WAVE {
+            let bin = GaltonBoard::landing_bin(BOARD_ROWS, COIN_PROBABILITIES[2], variation, ball);
+            second_wave[bin] += 1;
+        }
+        let expected: Vec<_> = one
+            .iter()
+            .zip(second_wave)
+            .map(|(&prefix, extension)| prefix + extension)
+            .collect();
+        assert_eq!(two, expected);
+    }
 
-        assert_eq!(balls, vec![(0, 0.5), (1, 0.5)]);
-        assert_ne!(first, second);
+    #[test]
+    fn changing_coin_starts_a_fresh_contiguous_run() {
+        let waves = drop_waves(&[(0.1, 0.5), (0.9, 0.5), (0.12, 0.5)]);
+        let (selected, wave_count) = selected_run(&waves).expect("selected coin");
+        assert_eq!(selected, 0);
+        assert_eq!(wave_count, 1);
+        assert_eq!(
+            GaltonBoard::experiment_histogram(selected, wave_count, 0),
+            GaltonBoard::experiment_histogram(0, 1, 0)
+        );
+
+        let repeated = drop_waves(&[(0.1, 0.5), (0.12, 0.5)]);
+        assert_eq!(selected_run(&repeated), Some((0, 2)));
+    }
+
+    #[test]
+    fn pointer_moves_and_releases_do_not_add_waves() {
+        use crate::room::RoomInput;
+
+        let room = GaltonBoard::new();
+        let gesture = [
+            RoomInput::PointerDown {
+                x: 0.5,
+                y: 0.2,
+                t: 0.1,
+            },
+            RoomInput::PointerMove {
+                x: 0.9,
+                y: 0.5,
+                t: 0.2,
+            },
+            RoomInput::PointerMove {
+                x: 0.1,
+                y: 0.8,
+                t: 0.3,
+            },
+            RoomInput::PointerUp {
+                x: 0.1,
+                y: 0.8,
+                t: 0.4,
+            },
+        ];
+        let mut via_gesture = Canvas::new(61, 24);
+        let mut via_poke = Canvas::new(61, 24);
+        room.render_input(&mut via_gesture, 0.8, &gesture);
+        room.render_poked(&mut via_poke, 0.8, &[(0.5, 0.2)]);
+        assert_eq!(via_gesture.to_text(), via_poke.to_text());
+        assert!(
+            room.status_input(0.8, &gesture)
+                .expect("gesture status")
+                .contains("1x64=64")
+        );
+    }
+
+    #[test]
+    fn bounded_run_saturates_truthfully_without_rerolling() {
+        let room = GaltonBoard::new();
+        let full = vec![(0.5, 0.5); MAX_ROOM_POKES];
+        let overfull = vec![(0.5, 0.5); MAX_ROOM_POKES + 1];
+        let mut full_render = Canvas::new(61, 24);
+        let mut overfull_render = Canvas::new(61, 24);
+        room.render_poked(&mut full_render, 0.0, &full);
+        room.render_poked(&mut overfull_render, 0.9, &overfull);
+        assert_eq!(full_render.to_text(), overfull_render.to_text());
+
+        let status = room
+            .status_input(0.0, &crate::room::inputs_from_pokes(&overfull, 0.0))
+            .expect("full-run status");
+        assert!(status.contains("FULL=1536"));
+    }
+
+    #[test]
+    fn fair_reference_uses_exact_binomial_coefficients() {
+        let weights = GaltonBoard::reference_weights(2);
+        let expected = [
+            1.0, 16.0, 120.0, 560.0, 1820.0, 4368.0, 8008.0, 11440.0, 12870.0, 11440.0, 8008.0,
+            4368.0, 1820.0, 560.0, 120.0, 16.0, 1.0,
+        ];
+        for (actual, coefficient) in weights.into_iter().zip(expected) {
+            assert!((actual / weights[0] - coefficient).abs() < 1.0e-8);
+        }
+    }
+
+    #[test]
+    fn highlighted_last_ball_belongs_to_the_accumulated_histogram() {
+        let coin = 3;
+        let wave_count = 4;
+        let histogram = GaltonBoard::experiment_histogram(coin, wave_count, 7);
+        let last = wave_count * BALLS_PER_WAVE - 1;
+        let variation = GaltonBoard::experiment_variation(7, coin);
+        let landing =
+            GaltonBoard::landing_bin(BOARD_ROWS, COIN_PROBABILITIES[coin], variation, last);
+        let mut before_last = vec![0u64; BOARD_ROWS + 1];
+        for ball in 0..last {
+            let bin =
+                GaltonBoard::landing_bin(BOARD_ROWS, COIN_PROBABILITIES[coin], variation, ball);
+            before_last[bin] += 1;
+        }
+        before_last[landing] += 1;
+        assert_eq!(histogram, before_last);
     }
 
     #[test]
@@ -429,8 +706,9 @@ mod tests {
         let room = GaltonBoard::new();
         let reveal = room.reveal();
         assert!(reveal.contains("Central Limit Theorem"));
-        assert!(reveal.contains("approximately normal"));
-        assert!(reveal.contains("remain uncertain"));
+        assert!(reveal.contains("exactly Binomial(16, p)"));
+        assert!(reveal.contains("normal curve can approximate"));
+        assert!(reveal.contains("finite binomial"));
         assert!(!room.meta().blurb.contains("every time"));
         assert!(!reveal.contains("stock market"));
         assert!(!reveal.contains("perfectly predictable"));
@@ -445,6 +723,11 @@ mod tests {
         r0.render_poked(&mut p, 0.0, &[(0.5, 0.5)]);
         assert_ne!(p.to_text(), a.to_text());
         assert!(p.ink_count() >= a.ink_count());
+        assert!(
+            !a.to_text().contains('*'),
+            "the opening has no finished pile"
+        );
+        assert!(p.to_text().contains('*'), "the first wave builds a pile");
         assert!(p.to_text().contains('#'), "the dropped ball lands visibly");
     }
 
@@ -462,19 +745,19 @@ mod tests {
 
     #[test]
     fn horizontal_hand_position_controls_a_named_bias() {
-        let left = poked_balls(&[(0.0, 0.9)])[0].1;
-        let right = poked_balls(&[(1.0, 0.1)])[0].1;
-        let biased_left = GaltonBoard::ball_trace(200, left, 0, 0);
-        let biased_right = GaltonBoard::ball_trace(200, right, 0, 0);
+        let left = drop_waves(&[(0.0, 0.9)])[0].coin;
+        let right = drop_waves(&[(1.0, 0.1)])[0].coin;
+        let biased_left = GaltonBoard::ball_trace(200, COIN_PROBABILITIES[left], 0, 0);
+        let biased_right = GaltonBoard::ball_trace(200, COIN_PROBABILITIES[right], 0, 0);
         assert!(biased_left.last().unwrap() < biased_right.last().unwrap());
 
         let status = GaltonBoard::new()
             .status_input(0.0, &crate::room::inputs_from_pokes(&[(1.0, 0.2)], 0.0))
             .expect("interaction status");
-        assert!(status.starts_with("RIGHT"));
-        assert!(status.contains("P=0.85"));
-        assert!(status.contains("BIN"));
-        assert!(status.contains("R-FLIPS"));
+        assert!(status.starts_with("P.70"));
+        assert!(status.contains("1x64=64"));
+        assert!(status.contains("LAST"));
+        assert!(status.contains('R'));
     }
 
     #[test]
@@ -535,6 +818,61 @@ mod tests {
         room.render_poked(&mut poked, 0.0, &with_valid_prefix);
 
         assert_eq!(poked.to_text(), base.to_text());
+    }
+
+    #[test]
+    fn compact_interaction_preserves_the_complete_coin_selector() {
+        struct RasterProbe {
+            width: usize,
+            height: usize,
+            cells: Vec<char>,
+        }
+
+        impl RasterProbe {
+            fn new(width: usize, height: usize) -> Self {
+                Self {
+                    width,
+                    height,
+                    cells: vec![' '; width * height],
+                }
+            }
+
+            fn selector(&self) -> &[char] {
+                &self.cells[..self.width * (self.height as f64 * BOARD_TOP) as usize]
+            }
+        }
+
+        impl Surface for RasterProbe {
+            fn width(&self) -> usize {
+                self.width
+            }
+
+            fn height(&self) -> usize {
+                self.height
+            }
+
+            fn plot(&mut self, x: i32, y: i32, ch: char) {
+                if x >= 0 && y >= 0 && (x as usize) < self.width && (y as usize) < self.height {
+                    self.cells[y as usize * self.width + x as usize] = ch;
+                }
+            }
+        }
+
+        let room = GaltonBoard::new();
+        let mut arrival = RasterProbe::new(360, 240);
+        let mut interacted = RasterProbe::new(360, 240);
+        room.render(&mut arrival, 0.0);
+        room.render_poked(&mut interacted, 0.0, &[(0.5, 0.5); 4]);
+
+        assert_eq!(interacted.selector(), arrival.selector());
+        assert!(
+            interacted
+                .selector()
+                .iter()
+                .filter(|&&ch| ch == '#')
+                .count()
+                >= 30
+        );
     }
 
     #[test]

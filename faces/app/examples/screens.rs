@@ -434,11 +434,11 @@ fn room_scenario(id: &str) -> RoomScenario {
             StatusChanges,
         ),
         "galton-board" => scenario(
-            Boundary,
-            (0.05, 0.85),
+            Repeated,
+            (0.50, 0.45),
             0.35,
-            click(0.95, 0.15),
-            ActionContains("BALL"),
+            repeated(&[(0.50, 0.25), (0.52, 0.50), (0.48, 0.75)]),
+            StatusChanges,
         ),
         "lissajous" => scenario(
             DragRelease,
@@ -1035,6 +1035,7 @@ fn main() {
 
     let launch = room_by_id(&rooms, "times-tables");
     let golden = room_by_id(&rooms, "golden-angle");
+    let galton = room_by_id(&rooms, "galton-board");
     let mut journey = Journey {
         plays: 1_000,
         wins: 37,
@@ -1303,7 +1304,7 @@ fn main() {
 
     let controller = input_legend::InputMode::Controller;
     save(
-        &room_screen_with_mode(golden, 0.05, &[], SMALL_SIZE, 240, false, 7, controller),
+        &room_screen_with_mode(galton, 0.05, &[], SMALL_SIZE, 240, false, 7, controller),
         "rooms/controller-click-arrival-small-360x240.png",
         &mut manifest,
     );

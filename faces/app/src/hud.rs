@@ -362,7 +362,7 @@ mod tests {
     }
 
     #[test]
-    fn compact_galton_result_keeps_the_flip_field_before_fixed_controls() {
+    fn compact_galton_result_keeps_the_run_and_landing_before_fixed_controls() {
         let room = room("galton-board");
         let input = [RoomInput::PointerDown {
             x: 0.94,
@@ -375,7 +375,45 @@ mod tests {
         let fitted = fit_footer_text(&footer.status, controls_x - 20, 1);
 
         assert_eq!(fitted, footer.status);
-        assert!(fitted.ends_with("R-FLIPS"));
+        assert!(fitted.starts_with("P.70"));
+        assert!(fitted.contains("1x64=64"));
+        assert!(fitted.contains("LAST"));
+        assert!(fitted.ends_with('R'));
+
+        let controller = footer_copy(room.as_ref(), 0.25, &input, false, InputMode::Controller);
+        assert_eq!(
+            controller.action,
+            "LEFT STICK + SOUTH: PICK COIN, DROP 64 BALLS"
+        );
+    }
+
+    #[test]
+    fn compact_galton_full_run_keeps_total_and_landing() {
+        let room = room("galton-board");
+        let inputs = vec![
+            RoomInput::PointerDown {
+                x: 0.94,
+                y: 0.5,
+                t: 0.25,
+            };
+            numinous_core::MAX_ROOM_POKES
+        ];
+        let footer = footer_copy(
+            room.as_ref(),
+            0.25,
+            &inputs,
+            false,
+            InputMode::KeyboardMouse,
+        );
+        let controls_width = footer.controls.chars().count() as i32 * 6;
+        let controls_x = 360 - controls_width - 10;
+        let fitted = fit_footer_text(&footer.status, controls_x - 20, 1);
+
+        assert_eq!(fitted, footer.status);
+        assert!(fitted.starts_with("P.70"));
+        assert!(fitted.contains("FULL=1536"));
+        assert!(fitted.contains("LAST"));
+        assert!(fitted.ends_with('R'));
     }
 
     #[test]
