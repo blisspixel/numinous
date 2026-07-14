@@ -61,7 +61,8 @@ theirs; nothing is borrowed.
 1. `munch_arcade` core + CLI twin + tests (the game exists end to end).
 2. App real-time Munch with juice (the fun lands).
 3. The poke trait + first six rooms + arrival verbs (expanded to all 31 rooms).
-4. MCP `munch_arcade` + variation parity; docs; playtest pass (agent + kid). **DONE** (MCP tool + play_room variation + score posting).
+4. MCP `munch_arcade` + variation parity and docs. **DONE** (MCP tool + `play_room` variation + score posting).
+5. Run the documented human playtest, including a younger participant, before claiming the experience passes for either audience. **OPEN**.
 
 Every law holds: rewards stay knowledge, `?` explains the concept (chase
 adds: greedy pursuit IS gradient descent; you are outrunning an optimizer),

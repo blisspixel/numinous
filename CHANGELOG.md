@@ -155,6 +155,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - A deterministic pre-commit gate (`scripts/hooks/pre-commit`, wired once per clone with `git config core.hooksPath scripts/hooks`, documented in `docs/ENGINEERING.md`). It blocks any commit that would fail the fast gate: the house-style guard on every commit, and the cargo gate (fmt, clippy `-D warnings`, the full test suite) only when the commit touches Rust, `Cargo.*`, or a shader, so docs-only commits stay fast. Coverage and the locked build remain the release gate (`scripts/verify.sh`). A wired gate that blocks a bad commit beats any reminder to run the checks.
 
 ### Changed
+- Evidence language now agrees across the quality snapshot, vision, arcade plan,
+  and room map. Current test and coverage metrics are consistent; physical
+  controller sessions and musician-led long listening remain open; simulated
+  persona lenses are not presented as participant proof; and mathematics as a
+  universal translator is explicitly a research thesis rather than a fact
+  guaranteed for every mind.
 - The native App now accepts hotplugged standard controllers through `gilrs`.
   A deadzone-shaped left stick moves a visible virtual hand through the same
   normalized gesture path as the mouse, while semantic buttons cover room

@@ -190,15 +190,14 @@ breathe is also, fully, doing the thing. The math was unreasonably beautiful
 before any of us, carbon or silicon, showed up to notice it. Numinous is just
 the room where you get to notice, however you like to notice.
 
-And this is why the two minds can meet here at all: mathematics is the one
-language they are guaranteed to share when they share nothing else, no words, no
-culture, no senses. It is a **universal translator**, the way primes are first
-contact in *Contact* and the Arecibo message is a semiprime anyone who can
-factor can read. That is the deepest meta-frame of the whole project, and it was
-proven in playtest by the hardest cases we could build: a Latin-only nun and a
-Japanese-only monk, and a troupe of invented alien minds, all met the same rooms
-and were reached by the same truths, untranslated. Every reveal is math carrying
-one truth across the gap between unlike minds. See `ROOMS.md`, "First Contact."
+The project works from a more cautious first-contact thesis: mathematics may
+offer shared structure when words and culture do not. Primes play that role in
+*Contact*, and the Arecibo message uses dimensions whose factorization reveals
+its intended grid. Numinous explores whether interactive mathematical patterns
+can help unlike minds meet, without assuming every mind recognizes, senses, or
+values them in the same way. Simulated Latin-only, Japanese-only, and unfamiliar
+mind lenses generated useful design questions but did not prove universality.
+That claim requires real participant research. See `ROOMS.md`, "First Contact."
 
 And it carries across time the same way it carries across minds. Ashes to ashes:
 the body of a mind goes, and most of what it was goes with it. But a true
