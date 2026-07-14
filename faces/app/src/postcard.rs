@@ -24,8 +24,9 @@ pub(crate) fn write_room_postcard(
     dir: &Path,
 ) -> std::io::Result<PathBuf> {
     let rgba = render_room_postcard_rgba(room, phase, inputs, era);
+    let encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, &rgba)?;
     for path in postcard_paths(dir, room.meta().id, phase) {
-        match write_rgba_png(&path, POSTCARD_SIZE, POSTCARD_SIZE, &rgba) {
+        match write_png_file(&path, &encoded) {
             Ok(()) => return Ok(path),
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
             Err(error) => return Err(error),
@@ -88,7 +89,7 @@ fn phase_code(phase: f64) -> u32 {
     }
 }
 
-fn write_rgba_png(path: &Path, width: u32, height: u32, rgba: &[u8]) -> std::io::Result<()> {
+fn encode_rgba_png(width: u32, height: u32, rgba: &[u8]) -> std::io::Result<Vec<u8>> {
     let mut encoded = Vec::new();
     let mut encoder = png::Encoder::new(&mut encoded, width, height);
     encoder.set_color(png::ColorType::Rgba);
@@ -96,9 +97,12 @@ fn write_rgba_png(path: &Path, width: u32, height: u32, rgba: &[u8]) -> std::io:
     let mut writer = encoder.write_header().map_err(png_error)?;
     writer.write_image_data(rgba).map_err(png_error)?;
     drop(writer);
+    Ok(encoded)
+}
 
+fn write_png_file(path: &Path, encoded: &[u8]) -> std::io::Result<()> {
     let mut file = OpenOptions::new().write(true).create_new(true).open(path)?;
-    file.write_all(&encoded)
+    file.write_all(encoded)
 }
 
 fn png_error(error: png::EncodingError) -> std::io::Error {

@@ -704,3 +704,74 @@ matrix, Clippy with warnings denied, locked build, house style, and supply-chain
 policy. A 360 by 240 interacted render regression separately proves that all
 five probability labels and the complete selector band survive the active path
 and pile render.
+
+---
+
+# The ninth round (July 14, 2026): boundary and failure-mode maintenance
+
+A repository-wide maintenance pass reviewed protocol framing, user-controlled
+input, persistence, native media, GPU work, installers, and save paths under the
+documented local single-user threat model. Three independent groups then
+checked protocol and CLI behavior, persistence and installer boundaries, and
+native audio, Studio, GPU, and App behavior. Findings counted only after a
+focused reproduction against the current tree.
+
+## Reproduced findings
+
+- An exactly full oversized MCP record could consume the next request, and the
+  challenge phase contract differed between discovery, direct dispatch, and
+  persistence behavior.
+- Several CLI prompt paths could retain an unbounded line. Plot dimensions were
+  checked after work began, failed animated plots could record a play, remote
+  music requests could follow a redirect with an API key, and service errors
+  could print terminal controls unchanged.
+- Cairn size validation happened outside the append lock, and line clipping
+  trusted reported surface dimensions that could be much larger than the
+  actual backing storage.
+- Repeated physical save keys could create a file burst. Postcard collision
+  retries encoded the same PNG repeatedly, and Studio could briefly exceed its
+  portable source limit during character insertion.
+- Radio discovery lacked aggregate work budgets. Decode and device-rate
+  conversion could multiply long-track storage, while exact per-packet reserve
+  behavior amplified decode work. GPU rendering accepted unchecked products
+  and device limits and did not surface every map, poll, allocation, or device
+  error as a recoverable failure.
+- Installer updates reused source origin, untracked state, and build caches.
+  Uninstall ownership relied on weak root recognition, while a first marker
+  design would have stranded recognized pre-marker default and custom installs.
+
+## What changed
+
+MCP now drains one complete oversized record without touching the next and uses
+one challenge phase contract. CLI prompts share a 4 KiB delimiter-aware reader;
+render dimensions and the first animated frame validate before Journey state;
+music requests reject redirects; and external diagnostics escape terminal
+controls. Cairn enforces its encoded size under the persistence lock, while
+surface lines clip to actual drawing bounds.
+
+The App admits one bounded save action per physical press and reuses one encoded
+postcard across collision attempts. Studio insertion is atomic at the portable
+source limit. Radio discovery has file, metadata, and fallback-decode budgets.
+Tracks remain in one shared source-rate stereo buffer, the real-time audio loop
+interpolates at the device rate, decode allocation is fallible and amortized,
+and both duration and decoded-memory caps remain explicit. GPU frame products,
+dispatch limits, buffers, device errors, polling, mapping, and host copies now
+fail through one recoverable result path; the App retires a failed renderer and
+continues on the CPU.
+
+Both installers replace source from the fixed official snapshot on every run,
+discard old build state, require an exact owned marker for current installs,
+and delete links without following them. Exact pre-marker layouts at validated
+default or custom roots can migrate or uninstall without weakening rejection
+of arbitrary nonempty directories. Disposable Windows and POSIX self-tests
+cover hostile roots, adjacent sentinels, links, junctions, old source, and old
+build caches.
+
+The standard repository review found no reportable security issue under the
+stated local trust model. That is scoped evidence, not proof that no
+vulnerability exists. The complete local release gate passes with 1,259
+all-target test cases, 93.34 percent region coverage, 93.11 percent line
+coverage, the exact 253-screen App matrix, Clippy with warnings denied, locked
+build, house style, supply-chain policy, and both installer self-tests. Real
+macOS and Linux installer execution and physical-device soak remain separate
+release evidence.

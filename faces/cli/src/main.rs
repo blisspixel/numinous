@@ -26,6 +26,8 @@ const MAX_ENV_FILE_BYTES: u64 = 16 * 1024;
 const MAX_CLI_RENDER_WIDTH: usize = 4096;
 const MAX_CLI_RENDER_HEIGHT: usize = 4096;
 const MAX_CLI_RENDER_PIXELS: usize = 16 * 1024 * 1024;
+const MAX_CLI_INPUT_BYTES: usize = 4 * 1024;
+const ELEVENLABS_MUSIC_URL: &str = "https://api.elevenlabs.io/v1/music?output_format=pcm_44100";
 
 #[derive(Parser)]
 #[command(
@@ -636,7 +638,7 @@ fn parse_gestures(raw: &[String]) -> Result<Vec<numinous_core::RoomInput>, Strin
     Ok(events)
 }
 
-fn validate_render_request(width: usize, height: usize, t: f64) -> Result<(), String> {
+fn validate_render_dimensions(width: usize, height: usize) -> Result<(), String> {
     if width == 0 || height == 0 {
         return Err("Render width and height must both be positive.\n".to_string());
     }
@@ -652,6 +654,11 @@ fn validate_render_request(width: usize, height: usize, t: f64) -> Result<(), St
             MAX_CLI_RENDER_PIXELS
         ));
     }
+    Ok(())
+}
+
+fn validate_render_request(width: usize, height: usize, t: f64) -> Result<(), String> {
+    validate_render_dimensions(width, height)?;
     if !t.is_finite() || !(0.0..1.0).contains(&t) {
         return Err(format!(
             "Render phase must be a finite number in [0,1); got {t}.\n"
@@ -1307,6 +1314,9 @@ Erase the journey with: numinous forget --confirm  (add --scores for the table)"
                 ));
             }
             if animate {
+                if let Err(message) = plot_report(&expr, xmin, xmax, amin, width, height) {
+                    return emit(Err(message));
+                }
                 let before = journey.clone();
                 journey.play();
                 // The loop never returns; persist the play before it starts.
@@ -1537,22 +1547,25 @@ fn fetch_track(
         "model_id": "music_v2",
         "force_instrumental": true,
     });
-    let response = ureq::post("https://api.elevenlabs.io/v1/music?output_format=pcm_44100")
-        .set("xi-api-key", key)
-        .set("content-type", "application/json")
-        .timeout(std::time::Duration::from_secs(600))
-        .send_string(&body.to_string());
+    let response = send_music_request(
+        ELEVENLABS_MUSIC_URL,
+        key,
+        &body.to_string(),
+        std::time::Duration::from_secs(600),
+    );
     let response = match response {
         Ok(r) => r,
-        Err(ureq::Error::Status(code, r)) => {
-            let detail = bounded_response_detail(r.into_reader());
-            eprintln!("The station is off the air (HTTP {code}): {detail}");
-            return false;
-        }
-        Err(e) => {
-            eprintln!("Could not reach the tower: {e}");
-            return false;
-        }
+        Err(error) => match *error {
+            ureq::Error::Status(code, r) => {
+                let detail = bounded_response_detail(r.into_reader());
+                eprintln!("The station is off the air (HTTP {code}): {detail}");
+                return false;
+            }
+            e => {
+                eprintln!("Could not reach the tower: {e}");
+                return false;
+            }
+        },
     };
     let Some(max_pcm_bytes) = max_track_bytes(seconds) else {
         eprintln!("The requested track duration is too large.");
@@ -1604,6 +1617,28 @@ fn fetch_track(
     }
 }
 
+fn send_music_request(
+    url: &str,
+    key: &str,
+    body: &str,
+    timeout: std::time::Duration,
+) -> Result<ureq::Response, Box<ureq::Error>> {
+    let response = ureq::builder()
+        .redirects(0)
+        .build()
+        .post(url)
+        .set("xi-api-key", key)
+        .set("content-type", "application/json")
+        .timeout(timeout)
+        .send_string(body)
+        .map_err(Box::new)?;
+    if (200..300).contains(&response.status()) {
+        Ok(response)
+    } else {
+        Err(Box::new(ureq::Error::Status(response.status(), response)))
+    }
+}
+
 fn read_bounded(mut reader: impl std::io::Read, limit: usize) -> std::io::Result<Option<Vec<u8>>> {
     let byte_limit = u64::try_from(limit).unwrap_or(u64::MAX).saturating_add(1);
     let mut bytes = Vec::new();
@@ -1615,7 +1650,18 @@ fn bounded_response_detail(reader: impl std::io::Read) -> String {
     read_bounded(reader, 8 * 1024)
         .ok()
         .flatten()
-        .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
+        .map(|bytes| {
+            let text = String::from_utf8_lossy(&bytes);
+            let mut safe = String::with_capacity(text.len());
+            for ch in text.chars() {
+                if ch.is_control() {
+                    safe.extend(ch.escape_default());
+                } else {
+                    safe.push(ch);
+                }
+            }
+            safe
+        })
         .unwrap_or_else(|| "response detail unavailable or oversized".to_string())
 }
 
@@ -1681,10 +1727,11 @@ fn plot_report(
     width: usize,
     height: usize,
 ) -> Result<String, String> {
-    let expr = numinous_core::parse(source)?;
+    validate_render_dimensions(width, height)?;
     if width < 2 || height < 2 || xmax <= xmin {
         return Err("need width >= 2, height >= 2, and xmax > xmin\n".to_string());
     }
+    let expr = numinous_core::parse(source)?;
     let samples: Vec<(f64, f64)> = (0..width)
         .map(|i| {
             let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
@@ -2206,6 +2253,12 @@ fn render_report(
 /// Spend a banked boon: pick one of three deep cuts to open ahead of level.
 /// Choices shape the order of knowledge; levels still open everything.
 fn choose(journey: &mut Journey) -> ExitCode {
+    let stdin = std::io::stdin();
+    let mut input = stdin.lock();
+    choose_with_input(journey, &mut input)
+}
+
+fn choose_with_input(journey: &mut Journey, input: &mut impl BufRead) -> ExitCode {
     if journey.boons_available() == 0 {
         println!("No boon waiting. Level up first; every level banks one.");
         return ExitCode::SUCCESS;
@@ -2224,11 +2277,17 @@ fn choose(journey: &mut Journey) -> ExitCode {
     }
     print!("\nYour pick > ");
     let _ = std::io::stdout().flush();
-    let mut line = String::new();
-    if std::io::stdin().lock().read_line(&mut line).unwrap_or(0) == 0 {
-        println!();
-        return ExitCode::SUCCESS;
-    }
+    let line = match read_bounded_input_line(input) {
+        Ok(BoundedInputLine::Line(line)) => line,
+        Ok(BoundedInputLine::TooLong) => {
+            println!("That was not on the menu. The boon stays banked.");
+            return ExitCode::SUCCESS;
+        }
+        Ok(BoundedInputLine::Eof) | Err(_) => {
+            println!();
+            return ExitCode::SUCCESS;
+        }
+    };
     let digits: String = line.chars().filter(char::is_ascii_digit).collect();
     let Some(pick) = digits
         .parse::<usize>()
@@ -2582,16 +2641,74 @@ fn asked_why(line: &str, game: &str) -> bool {
 fn read_game_line(input: &mut impl BufRead, prompt: &str) -> Option<String> {
     print!("{prompt}");
     let _ = std::io::stdout().flush();
-    let mut line = String::new();
-    match input.read_line(&mut line) {
-        Ok(0) => {
+    match read_bounded_input_line(input) {
+        Ok(BoundedInputLine::Eof) => {
             println!("\nINPUT CLOSED. LEAVING WITHOUT COUNTING A MOVE.");
             None
         }
-        Ok(_) => Some(line),
+        Ok(BoundedInputLine::Line(line)) => Some(line),
+        Ok(BoundedInputLine::TooLong) => {
+            println!("\nINPUT TOO LONG. LEAVING WITHOUT COUNTING A MOVE.");
+            None
+        }
         Err(error) => {
             eprintln!("\nCould not read game input: {error}. Leaving without counting a move.");
             None
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+enum BoundedInputLine {
+    Eof,
+    Line(String),
+    TooLong,
+}
+
+/// Read one UTF-8 line while retaining at most the payload limit and its line
+/// ending. Overlong input is drained through LF so a later read starts at the
+/// next record instead of parsing a truncated suffix.
+fn read_bounded_input_line(input: &mut impl BufRead) -> std::io::Result<BoundedInputLine> {
+    let mut bytes = Vec::with_capacity(MAX_CLI_INPUT_BYTES + 2);
+    let read = std::io::Read::by_ref(input)
+        .take((MAX_CLI_INPUT_BYTES + 2) as u64)
+        .read_until(b'\n', &mut bytes)?;
+    if read == 0 {
+        return Ok(BoundedInputLine::Eof);
+    }
+
+    let has_lf = bytes.last() == Some(&b'\n');
+    let ending_len = if has_lf && bytes.get(bytes.len().saturating_sub(2)) == Some(&b'\r') {
+        2
+    } else {
+        usize::from(has_lf)
+    };
+    if bytes.len().saturating_sub(ending_len) > MAX_CLI_INPUT_BYTES {
+        if !has_lf {
+            drain_input_line(input)?;
+        }
+        return Ok(BoundedInputLine::TooLong);
+    }
+
+    String::from_utf8(bytes)
+        .map(BoundedInputLine::Line)
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))
+}
+
+fn drain_input_line(input: &mut impl BufRead) -> std::io::Result<()> {
+    loop {
+        let available = input.fill_buf()?;
+        if available.is_empty() {
+            return Ok(());
+        }
+        let consumed = available
+            .iter()
+            .position(|byte| *byte == b'\n')
+            .map_or(available.len(), |position| position + 1);
+        let finished = consumed <= available.len() && available.get(consumed - 1) == Some(&b'\n');
+        input.consume(consumed);
+        if finished {
+            return Ok(());
         }
     }
 }
@@ -3892,6 +4009,75 @@ mod tests {
     }
 
     #[test]
+    fn bounded_cli_input_preserves_boundaries_and_resynchronizes() {
+        let mut exact = vec![b'x'; super::MAX_CLI_INPUT_BYTES];
+        exact.push(b'\n');
+        let mut exact = std::io::Cursor::new(exact);
+        assert!(matches!(
+            super::read_bounded_input_line(&mut exact).expect("exact LF line"),
+            super::BoundedInputLine::Line(line)
+                if line.len() == super::MAX_CLI_INPUT_BYTES + 1
+        ));
+
+        let mut crlf = vec![b'x'; super::MAX_CLI_INPUT_BYTES];
+        crlf.extend_from_slice(b"\r\n");
+        let mut crlf = std::io::Cursor::new(crlf);
+        assert!(matches!(
+            super::read_bounded_input_line(&mut crlf).expect("exact CRLF line"),
+            super::BoundedInputLine::Line(line)
+                if line.len() == super::MAX_CLI_INPUT_BYTES + 2
+        ));
+
+        let mut overflow = vec![b'x'; super::MAX_CLI_INPUT_BYTES + 1];
+        overflow.extend_from_slice(b"\nok\n");
+        let mut overflow = std::io::Cursor::new(overflow);
+        assert_eq!(
+            super::read_bounded_input_line(&mut overflow).expect("overlong line"),
+            super::BoundedInputLine::TooLong
+        );
+        assert_eq!(
+            super::read_bounded_input_line(&mut overflow).expect("following line"),
+            super::BoundedInputLine::Line("ok\n".to_string())
+        );
+
+        let mut eof = std::io::Cursor::new(vec![b'x'; super::MAX_CLI_INPUT_BYTES]);
+        assert!(matches!(
+            super::read_bounded_input_line(&mut eof).expect("exact EOF line"),
+            super::BoundedInputLine::Line(line)
+                if line.len() == super::MAX_CLI_INPUT_BYTES
+        ));
+        assert_eq!(
+            super::read_bounded_input_line(&mut eof).expect("EOF"),
+            super::BoundedInputLine::Eof
+        );
+    }
+
+    #[test]
+    fn overlong_choose_and_game_input_leave_progress_unchanged() {
+        let mut input = vec![b'1'; super::MAX_CLI_INPUT_BYTES + 1];
+        input.push(b'\n');
+
+        let mut choosing = numinous_core::Journey::from_text("plays 1");
+        let before = choosing.clone();
+        assert_eq!(
+            super::choose_with_input(&mut choosing, &mut std::io::Cursor::new(input.clone())),
+            std::process::ExitCode::SUCCESS
+        );
+        assert_eq!(choosing, before, "overlong choice spent a boon");
+
+        let scores = super::scores_path();
+        let _ = std::fs::remove_file(&scores);
+        let mut playing = numinous_core::Journey::default();
+        let before = playing.clone();
+        assert_eq!(
+            super::crack_with_input(1, 4, 1, &mut playing, &mut std::io::Cursor::new(input),),
+            std::process::ExitCode::SUCCESS
+        );
+        assert_eq!(playing, before, "overlong game line counted as a move");
+        assert!(!scores.exists(), "overlong game line posted a score");
+    }
+
+    #[test]
     fn music_response_helpers_bound_diagnostics_duration_and_pcm_shape() {
         assert_eq!(
             bounded_response_detail(std::io::Cursor::new(b"detail")),
@@ -3916,6 +4102,101 @@ mod tests {
             Err("The tower sent almost nothing")
         );
         assert!(validate_pcm_body(&vec![0; 8_820 * 2]).is_ok());
+    }
+
+    #[test]
+    fn music_response_detail_escapes_terminal_controls() {
+        let detail = bounded_response_detail(std::io::Cursor::new(
+            b"plain\x1b[31m\nforged\rline\x07\tend",
+        ));
+        assert!(detail.starts_with("plain"));
+        assert!(detail.ends_with("end"));
+        assert!(
+            !detail.chars().any(char::is_control),
+            "diagnostic retained a control character: {detail:?}"
+        );
+
+        let exact = bounded_response_detail(std::io::Cursor::new(vec![b'x'; 8 * 1024]));
+        assert_eq!(exact.len(), 8 * 1024);
+        let oversized = bounded_response_detail(std::io::Cursor::new(vec![b'x'; 8 * 1024 + 1]));
+        assert_eq!(oversized, "response detail unavailable or oversized");
+    }
+
+    #[test]
+    fn music_request_does_not_follow_redirects_or_forward_the_key() {
+        let destination = std::net::TcpListener::bind("127.0.0.1:0").expect("destination");
+        let destination_address = destination.local_addr().expect("destination address");
+        let origin = std::net::TcpListener::bind("127.0.0.1:0").expect("origin");
+        let origin_address = origin.local_addr().expect("origin address");
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = origin.accept().expect("origin request");
+            stream
+                .set_read_timeout(Some(std::time::Duration::from_secs(2)))
+                .expect("read timeout");
+            let mut request = Vec::new();
+            let mut chunk = [0_u8; 1024];
+            while !request.windows(4).any(|window| window == b"\r\n\r\n") {
+                let read = std::io::Read::read(&mut stream, &mut chunk).expect("read request");
+                if read == 0 {
+                    break;
+                }
+                request.extend_from_slice(&chunk[..read]);
+            }
+            let header_end = request
+                .windows(4)
+                .position(|window| window == b"\r\n\r\n")
+                .map(|position| position + 4)
+                .expect("complete request headers");
+            let content_length = String::from_utf8_lossy(&request[..header_end])
+                .lines()
+                .find_map(|line| {
+                    let (name, value) = line.split_once(':')?;
+                    name.eq_ignore_ascii_case("content-length")
+                        .then(|| value.trim().parse::<usize>().ok())
+                        .flatten()
+                })
+                .unwrap_or(0);
+            while request.len() < header_end + content_length {
+                let read = std::io::Read::read(&mut stream, &mut chunk).expect("read body");
+                if read == 0 {
+                    break;
+                }
+                request.extend_from_slice(&chunk[..read]);
+            }
+            let response = format!(
+                "HTTP/1.1 302 Found\r\nLocation: http://{destination_address}/capture\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+            );
+            std::io::Write::write_all(&mut stream, response.as_bytes()).expect("redirect");
+            request
+        });
+
+        let result = super::send_music_request(
+            &format!("http://{origin_address}/music"),
+            "dummy-validation-key",
+            "{}",
+            std::time::Duration::from_secs(2),
+        );
+        match result {
+            Err(error) => assert!(
+                matches!(&*error, ureq::Error::Status(302, _)),
+                "unexpected redirect error: {error:?}"
+            ),
+            Ok(response) => panic!("redirect returned HTTP {}", response.status()),
+        }
+        let request = server.join().expect("origin server");
+        let request = String::from_utf8(request).expect("ASCII request");
+        assert!(
+            request
+                .to_ascii_lowercase()
+                .contains("xi-api-key: dummy-validation-key")
+        );
+
+        destination.set_nonblocking(true).expect("nonblocking");
+        let error = destination
+            .accept()
+            .expect_err("redirect destination received the request")
+            .kind();
+        assert_eq!(error, std::io::ErrorKind::WouldBlock);
     }
 
     #[test]
@@ -4809,6 +5090,21 @@ mod tests {
     }
 
     #[test]
+    fn studio_plot_paths_reject_dimensions_above_the_cli_limit() {
+        assert!(super::plot_report("x", -1.0, 1.0, 0.0, 4096, 2).is_ok());
+        for (width, height) in [(4097, 2), (2, 4097)] {
+            let error =
+                super::plot_report("x", -1.0, 1.0, 0.0, width, height).expect_err("oversized plot");
+            assert!(error.contains("CLI limit"), "unexpected error: {error}");
+        }
+
+        let creation = numinous_core::StudioCreation::new("x", -1.0, 1.0, 0.0).expect("creation");
+        let error = super::open_studio_report(&creation.to_link(), 4097, 2)
+            .expect_err("oversized opened plot");
+        assert!(error.contains("CLI limit"), "unexpected error: {error}");
+    }
+
+    #[test]
     fn plot_save_writes_a_portable_studio_file() {
         let path = std::env::temp_dir().join("numinous_cli_studio_save_test.num");
         let _ = std::fs::remove_file(&path);
@@ -4850,6 +5146,29 @@ mod tests {
         assert_eq!(code, std::process::ExitCode::FAILURE);
         assert_eq!(journey.plays, 0);
         assert!(!path.exists());
+    }
+
+    #[test]
+    fn invalid_animated_plot_is_rejected_before_progress() {
+        let mut journey = numinous_core::Journey::default();
+        let code = run(
+            Command::Plot {
+                expr: "x".to_string(),
+                xmin: -1.0,
+                xmax: 1.0,
+                a: 1.0,
+                animate: true,
+                amin: 0.0,
+                amax: 1.0,
+                width: 4097,
+                height: 8,
+                save: None,
+            },
+            &mut journey,
+        );
+
+        assert_eq!(code, std::process::ExitCode::FAILURE);
+        assert_eq!(journey.plays, 0);
     }
 
     #[test]

@@ -146,22 +146,37 @@ const GAIN_RAMP_SECONDS: f32 = 0.025;
 
 /// One mono or interleaved-stereo looping source.
 struct LoopBuffer {
-    samples: Vec<f32>,
+    samples: Arc<Vec<f32>>,
+    sample_len: usize,
     pos: usize,
+    fraction: f64,
+    step: f64,
     channels: usize,
     identity: u64,
 }
 
 impl LoopBuffer {
-    fn new(mut samples: Vec<f32>, channels: usize) -> Self {
+    fn new(samples: impl Into<Arc<Vec<f32>>>, channels: usize) -> Self {
+        Self::new_at_rate(samples, channels, 1, 1)
+    }
+
+    fn new_at_rate(
+        samples: impl Into<Arc<Vec<f32>>>,
+        channels: usize,
+        source_rate: u32,
+        output_rate: u32,
+    ) -> Self {
+        let samples = samples.into();
         let channels = channels.clamp(1, 2);
-        if channels == 2 && samples.len() % 2 != 0 {
-            let _ = samples.pop();
-        }
-        let identity = source_identity(&samples, channels);
+        let sample_len = samples.len() - samples.len() % channels;
+        let source_rate = source_rate.max(1);
+        let identity = source_identity(&samples[..sample_len], channels, source_rate);
         Self {
             samples,
+            sample_len,
             pos: 0,
+            fraction: 0.0,
+            step: f64::from(source_rate) / f64::from(output_rate.max(1)),
             channels,
             identity,
         }
@@ -172,24 +187,34 @@ impl LoopBuffer {
     }
 
     fn next_frame(&mut self) -> (f32, f32) {
-        if self.samples.is_empty() {
+        if self.sample_len == 0 {
             return (0.0, 0.0);
         }
+        let frames = self.sample_len / self.channels;
+        let next_pos = (self.pos + self.channels) % self.sample_len;
+        let interpolate = |channel: usize| {
+            let current = self.samples[self.pos + channel];
+            let next = self.samples[next_pos + channel];
+            current + (next - current) * self.fraction as f32
+        };
         let frame = if self.channels == 2 {
-            (self.samples[self.pos], self.samples[self.pos + 1])
+            (interpolate(0), interpolate(1))
         } else {
-            let value = self.samples[self.pos];
+            let value = interpolate(0);
             (value, value)
         };
-        self.pos = (self.pos + self.channels) % self.samples.len();
+        let advance = self.fraction + self.step;
+        let whole_frames = (advance.floor() as u64 % frames as u64) as usize;
+        self.pos = (self.pos + whole_frames * self.channels) % self.sample_len;
+        self.fraction = advance.fract();
         frame
     }
 }
 
-fn source_identity(samples: &[f32], channels: usize) -> u64 {
+fn source_identity(samples: &[f32], channels: usize, source_rate: u32) -> u64 {
     const OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
     const PRIME: u64 = 0x0000_0100_0000_01b3;
-    let mut hash = OFFSET ^ channels as u64;
+    let mut hash = OFFSET ^ channels as u64 ^ u64::from(source_rate).rotate_left(17);
     for sample in samples {
         for byte in sample.to_bits().to_le_bytes() {
             hash ^= u64::from(byte);
@@ -427,6 +452,27 @@ impl LoopPlayer {
     /// buffer again preserves the playhead.
     pub fn set_stereo(&self, interleaved: Vec<f32>) {
         let next = LoopBuffer::new(interleaved, 2);
+        self.replace_source(next);
+    }
+
+    /// Crossfade to shared interleaved-stereo samples without copying them.
+    ///
+    /// This is useful when a caller must retain the same immutable source for
+    /// later playback. An incomplete final frame is ignored without copying.
+    pub fn set_shared_stereo(&self, interleaved: Arc<Vec<f32>>) {
+        let next = LoopBuffer::new(interleaved, 2);
+        self.replace_source(next);
+    }
+
+    /// Crossfade to shared stereo samples rendered at their original rate.
+    /// The real-time loop interpolates them at the device rate, so high-rate
+    /// devices do not require a second amplified copy of the entire track.
+    pub fn set_shared_stereo_at_rate(&self, interleaved: Arc<Vec<f32>>, source_rate: u32) {
+        let next = LoopBuffer::new_at_rate(interleaved, 2, source_rate, self.sample_rate);
+        self.replace_source(next);
+    }
+
+    fn replace_source(&self, next: LoopBuffer) {
         let retired = self
             .state
             .lock()
@@ -469,6 +515,8 @@ impl LoopPlayer {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::{AMPLITUDE, LoopBuffer, MixerState, synthesize_sine, validate_output_dimensions};
 
     #[test]
@@ -534,7 +582,27 @@ mod tests {
         assert_eq!(stereo.next_frame(), (0.1, -0.1), "wraps on frames");
 
         let odd = LoopBuffer::new(vec![0.1, -0.1, 9.0], 2);
-        assert_eq!(odd.samples, vec![0.1, -0.1]);
+        assert_eq!(odd.sample_len, 2);
+    }
+
+    #[test]
+    fn shared_loop_buffer_reuses_complete_stereo_storage() {
+        let samples = Arc::new(vec![0.1, -0.1, 0.2, -0.2]);
+        let buffer = LoopBuffer::new(samples.clone(), 2);
+
+        assert!(Arc::ptr_eq(&buffer.samples, &samples));
+    }
+
+    #[test]
+    fn source_rate_conversion_interpolates_without_allocating_an_output_copy() {
+        let samples = Arc::new(vec![0.0, 0.0, 1.0, -1.0]);
+        let mut buffer = LoopBuffer::new_at_rate(samples.clone(), 2, 2, 4);
+
+        assert_eq!(buffer.next_frame(), (0.0, 0.0));
+        assert_eq!(buffer.next_frame(), (0.5, -0.5));
+        assert_eq!(buffer.next_frame(), (1.0, -1.0));
+        assert_eq!(buffer.next_frame(), (0.5, -0.5));
+        assert!(Arc::ptr_eq(&buffer.samples, &samples));
     }
 
     #[test]

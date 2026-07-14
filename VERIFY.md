@@ -44,8 +44,8 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 1,230 all-target test cases pass, 93.34% region
-cover, and 93.10% line cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 1,259 all-target test cases pass, 93.34% region
+cover, and 93.11% line cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.

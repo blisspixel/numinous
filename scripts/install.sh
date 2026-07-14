@@ -5,8 +5,8 @@
 #
 # What it does, in order: checks the tools this machine needs (and says exactly
 # how to get any that are missing), installs Rust through rustup if cargo is
-# absent, fetches the source into ~/.numinous/src (git when available, a
-# snapshot download otherwise), builds the release binaries, puts numinous,
+# absent, fetches a trusted source snapshot into ~/.numinous/src, builds the
+# release binaries, puts numinous,
 # numinous-app, and numinous-mcp in ~/.numinous/bin, links the built-in radio
 # next to them, and adds that directory to PATH.
 #
@@ -17,7 +17,7 @@
 # Uninstalling never touches play history: ~/.numinous-journey,
 # ~/.numinous-scores, and ~/.numinous-cairn stay yours.
 #
-# Options: --uninstall, --no-modify-path, --help.
+# Options: --uninstall, --no-modify-path, --self-test, --help.
 # Set NUMINOUS_HOME to install somewhere other than ~/.numinous.
 set -eu
 
@@ -56,6 +56,212 @@ directory_is_empty() {
     return 0
 }
 
+install_marker_is_valid() {
+    [ -f "$1/.numinous-install-root" ] || return 1
+    [ ! -L "$1/.numinous-install-root" ] || return 1
+    marker_size="$(wc -c <"$1/.numinous-install-root" | tr -d '[:space:]')"
+    [ "$marker_size" = 22 ] || return 1
+    [ "$(cat "$1/.numinous-install-root")" = 'Numinous install root' ]
+}
+
+legacy_install_is_valid() (
+    root="$1"
+    [ -d "$root/src" ] && [ ! -L "$root/src" ] \
+        && [ -d "$root/bin" ] && [ ! -L "$root/bin" ] \
+        && [ -f "$root/src/Cargo.toml" ] && [ ! -L "$root/src/Cargo.toml" ] \
+        || return 1
+    for binary in numinous numinous-app numinous-mcp; do
+        [ -f "$root/bin/$binary" ] && [ ! -L "$root/bin/$binary" ] || return 1
+    done
+    for entry in "$root"/.[!.]* "$root"/..?* "$root"/*; do
+        if [ ! -e "$entry" ] && [ ! -L "$entry" ]; then
+            continue
+        fi
+        case "$entry" in
+            "$root/src" | "$root/bin") ;;
+            *) return 1 ;;
+        esac
+    done
+)
+
+validate_install_root() {
+    case "$NUMINOUS_HOME" in
+        "" | / | "$HOME") fail "NUMINOUS_HOME must name a dedicated absolute directory" ;;
+        /*) ;;
+        *) fail "NUMINOUS_HOME must be an absolute path" ;;
+    esac
+    newline='
+'
+    case "$NUMINOUS_HOME" in
+        *"$newline"*) fail "NUMINOUS_HOME must not contain control characters" ;;
+    esac
+    if printf '%s' "$NUMINOUS_HOME" | LC_ALL=C grep -q '[[:cntrl:]]'; then
+        fail "NUMINOUS_HOME must not contain control characters"
+    fi
+    while [ "${NUMINOUS_HOME%/}" != "$NUMINOUS_HOME" ]; do
+        NUMINOUS_HOME="${NUMINOUS_HOME%/}"
+    done
+    case "$NUMINOUS_HOME" in
+        "" | /) fail "NUMINOUS_HOME must name a dedicated absolute directory" ;;
+    esac
+    while [ "${NUMINOUS_HOME#//}" != "$NUMINOUS_HOME" ]; do
+        NUMINOUS_HOME="${NUMINOUS_HOME#/}"
+    done
+    case "$NUMINOUS_HOME/" in
+        */./* | */../*) fail "NUMINOUS_HOME must not contain . or .. path components" ;;
+    esac
+    home_physical="$(CDPATH= cd -P "$HOME" 2>/dev/null && pwd)" \
+        || fail "HOME is not an accessible directory"
+    install_parent="$(dirname "$NUMINOUS_HOME")"
+    install_name="$(basename "$NUMINOUS_HOME")"
+    install_parent="$(CDPATH= cd -P "$install_parent" 2>/dev/null && pwd)" \
+        || fail "the parent directory of NUMINOUS_HOME must already exist"
+    NUMINOUS_HOME="$install_parent/$install_name"
+    if [ "$NUMINOUS_HOME" = "$home_physical" ] || [ -L "$NUMINOUS_HOME" ]; then
+        fail "NUMINOUS_HOME must name a dedicated directory, not HOME or a symbolic link"
+    fi
+    SOURCE_PATH="$NUMINOUS_HOME/src"
+    BINARY_PATH="$NUMINOUS_HOME/bin"
+    INSTALL_MARKER="$NUMINOUS_HOME/.numinous-install-root"
+    DEFAULT_HOME="$home_physical/.numinous"
+    if [ -e "$NUMINOUS_HOME" ] && [ ! -d "$NUMINOUS_HOME" ]; then
+        fail "NUMINOUS_HOME exists but is not a directory"
+    fi
+    if [ -d "$NUMINOUS_HOME" ] \
+        && ! install_marker_is_valid "$NUMINOUS_HOME" \
+        && ! legacy_install_is_valid "$NUMINOUS_HOME" \
+        && ! directory_is_empty "$NUMINOUS_HOME"; then
+        fail "NUMINOUS_HOME exists but is not a marked Numinous install root"
+    fi
+}
+
+remove_install_root() (
+    NUMINOUS_HOME="$1"
+    validate_install_root
+    [ -e "$NUMINOUS_HOME" ] || exit 0
+    if install_marker_is_valid "$NUMINOUS_HOME"; then
+        root_kind=marked
+    elif legacy_install_is_valid "$NUMINOUS_HOME"; then
+        root_kind=legacy
+    else
+        fail "refusing to remove an unmarked install root: $NUMINOUS_HOME"
+    fi
+    cd "$install_parent"
+    [ ! -L "$install_name" ] \
+        || fail "refusing to remove a symbolic-link install root: $NUMINOUS_HOME"
+    if [ "$root_kind" = marked ]; then
+        install_marker_is_valid "$install_name" \
+            || fail "the install root changed during uninstall"
+        rm -rf -- "$install_name"
+    else
+        legacy_install_is_valid "$install_name" \
+            || fail "the install root changed during uninstall"
+        rm -rf -- "$install_name/src" "$install_name/bin"
+        rmdir -- "$install_name" \
+            || fail "the legacy install root gained unexpected contents during uninstall"
+    fi
+)
+
+install_source_archive() (
+    install_root="$1"
+    source_dir="$2"
+    binary_dir="$3"
+    source_archive="$4"
+    install_marker_is_valid "$install_root" \
+        || fail "source installation requires a marked install root"
+    stage="$(mktemp -d "$install_root/.staging.XXXXXX")" \
+        || fail "could not create a source staging directory"
+    trap 'rm -rf -- "$stage"' EXIT HUP INT TERM
+    tar -xzf "$source_archive" -C "$stage"
+    new_tree="$stage/numinous-main"
+    [ -d "$new_tree" ] || fail "unexpected source snapshot layout"
+    if [ -L "$binary_dir" ]; then
+        rm -f -- "$binary_dir"
+    elif [ -d "$binary_dir" ]; then
+        rm -rf -- "$binary_dir/radio"
+    fi
+    rm -rf -- "$source_dir"
+    mv "$new_tree" "$source_dir"
+)
+
+run_self_test() {
+    have tar || fail "installer self-test requires tar"
+    test_base="$(mktemp -d "${TMPDIR:-/tmp}/numinous-installer-test.XXXXXX")" \
+        || fail "could not create the installer self-test directory"
+    trap 'rm -rf -- "$test_base"' EXIT HUP INT TERM
+
+    if (NUMINOUS_HOME="$HOME"; validate_install_root) >/dev/null 2>&1; then
+        fail "root self-test: HOME was accepted as an install root"
+    fi
+
+    unmarked="$test_base/unmarked"
+    mkdir "$unmarked"
+    printf '%s\n' keep >"$unmarked/keep.txt"
+    printf '%s\n' 'not a marker' >"$unmarked/.numinous-install-root"
+    if remove_install_root "$unmarked" >/dev/null 2>&1; then
+        fail "uninstall self-test: an unmarked root was accepted"
+    fi
+    [ -d "$unmarked" ] || fail "uninstall self-test: an unmarked root was removed"
+
+    legacy_update="$test_base/legacy-update"
+    mkdir -p "$legacy_update/src" "$legacy_update/bin"
+    printf '%s\n' '[workspace]' >"$legacy_update/src/Cargo.toml"
+    for binary in numinous numinous-app numinous-mcp; do
+        printf '%s\n' binary >"$legacy_update/bin/$binary"
+    done
+    (NUMINOUS_HOME="$legacy_update"; validate_install_root) \
+        || fail "root self-test: the exact legacy install shape could not migrate"
+    printf '%s\n' keep >"$legacy_update/unexpected.txt"
+    if (NUMINOUS_HOME="$legacy_update"; validate_install_root) >/dev/null 2>&1; then
+        fail "root self-test: a legacy root with unexpected contents was accepted"
+    fi
+    rm -f -- "$legacy_update/unexpected.txt"
+
+    legacy_uninstall="$test_base/legacy-uninstall"
+    mkdir -p "$legacy_uninstall/src" "$legacy_uninstall/bin"
+    printf '%s\n' '[workspace]' >"$legacy_uninstall/src/Cargo.toml"
+    for binary in numinous numinous-app numinous-mcp; do
+        printf '%s\n' binary >"$legacy_uninstall/bin/$binary"
+    done
+    remove_install_root "$legacy_uninstall"
+    [ ! -e "$legacy_uninstall" ] \
+        || fail "uninstall self-test: the exact legacy install was retained"
+
+    marked="$test_base/marked"
+    mkdir "$marked"
+    printf '%s\n' 'Numinous install root' >"$marked/.numinous-install-root"
+    printf '%s\n' keep >"$test_base/adjacent.txt"
+    remove_install_root "$marked"
+    [ ! -e "$marked" ] && [ -f "$test_base/adjacent.txt" ] \
+        || fail "uninstall self-test: marked-root removal crossed its boundary"
+
+    source_root="$test_base/source-root"
+    source_dir="$source_root/src"
+    binary_dir="$source_root/bin"
+    mkdir -p "$source_dir/.git" "$source_dir/target"
+    printf '%s\n' 'Numinous install root' >"$source_root/.numinous-install-root"
+    printf '%s\n' 'alternate origin' >"$source_dir/.git/config"
+    printf '%s\n' untrusted >"$source_dir/untrusted.txt"
+    printf '%s\n' 'untrusted cache' >"$source_dir/target/cached.txt"
+    mkdir -p "$test_base/source-outside/radio"
+    printf '%s\n' keep >"$test_base/source-outside/radio/keep.txt"
+    ln -s "$test_base/source-outside" "$binary_dir"
+    mkdir -p "$test_base/package/numinous-main"
+    printf '%s\n' trusted >"$test_base/package/numinous-main/trusted.txt"
+    (cd "$test_base/package" && tar -czf "$test_base/trusted.tar.gz" numinous-main)
+    install_source_archive "$source_root" "$source_dir" "$binary_dir" \
+        "$test_base/trusted.tar.gz"
+    [ -f "$source_dir/trusted.txt" ] \
+        && [ ! -e "$source_dir/untrusted.txt" ] \
+        && [ ! -e "$source_dir/target/cached.txt" ] \
+        && [ -f "$test_base/source-outside/radio/keep.txt" ] \
+        || fail "provenance self-test: old source or build cache influenced the update"
+
+    rm -rf -- "$test_base"
+    trap - EXIT HUP INT TERM
+    say "POSIX installer root, uninstall, and provenance checks: pass."
+}
+
 usage() {
     say "Numinous installer (macOS and Linux)."
     say ""
@@ -69,10 +275,12 @@ usage() {
 
 UNINSTALL=0
 MODIFY_PATH=1
+SELF_TEST=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --uninstall) UNINSTALL=1 ;;
         --no-modify-path) MODIFY_PATH=0 ;;
+        --self-test) SELF_TEST=1 ;;
         -h | --help)
             usage
             exit 0
@@ -82,55 +290,12 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-case "$NUMINOUS_HOME" in
-    "" | / | "$HOME") fail "NUMINOUS_HOME must name a dedicated absolute directory" ;;
-    /*) ;;
-    *) fail "NUMINOUS_HOME must be an absolute path" ;;
-esac
-newline='
-'
-case "$NUMINOUS_HOME" in
-    *"$newline"*) fail "NUMINOUS_HOME must not contain control characters" ;;
-esac
-if printf '%s' "$NUMINOUS_HOME" | LC_ALL=C grep -q '[[:cntrl:]]'; then
-    fail "NUMINOUS_HOME must not contain control characters"
+if [ "$SELF_TEST" -eq 1 ]; then
+    run_self_test
+    exit 0
 fi
-while [ "${NUMINOUS_HOME%/}" != "$NUMINOUS_HOME" ]; do
-    NUMINOUS_HOME="${NUMINOUS_HOME%/}"
-done
-case "$NUMINOUS_HOME" in
-    "" | /) fail "NUMINOUS_HOME must name a dedicated absolute directory" ;;
-esac
-while [ "${NUMINOUS_HOME#//}" != "$NUMINOUS_HOME" ]; do
-    NUMINOUS_HOME="${NUMINOUS_HOME#/}"
-done
-case "$NUMINOUS_HOME/" in
-    */./* | */../*) fail "NUMINOUS_HOME must not contain . or .. path components" ;;
-esac
-home_physical="$(CDPATH= cd -P "$HOME" 2>/dev/null && pwd)" \
-    || fail "HOME is not an accessible directory"
-install_parent="$(dirname "$NUMINOUS_HOME")"
-install_name="$(basename "$NUMINOUS_HOME")"
-install_parent="$(CDPATH= cd -P "$install_parent" 2>/dev/null && pwd)" \
-    || fail "the parent directory of NUMINOUS_HOME must already exist"
-NUMINOUS_HOME="$install_parent/$install_name"
-if [ "$NUMINOUS_HOME" = "$home_physical" ] || [ -L "$NUMINOUS_HOME" ]; then
-    fail "NUMINOUS_HOME must name a dedicated directory, not HOME or a symbolic link"
-fi
-SOURCE_PATH="$NUMINOUS_HOME/src"
-BINARY_PATH="$NUMINOUS_HOME/bin"
-INSTALL_MARKER="$NUMINOUS_HOME/.numinous-install-root"
-DEFAULT_HOME="$home_physical/.numinous"
-if [ -e "$NUMINOUS_HOME" ] && [ ! -d "$NUMINOUS_HOME" ]; then
-    fail "NUMINOUS_HOME exists but is not a directory"
-fi
-if [ -d "$NUMINOUS_HOME" ] \
-    && [ "$NUMINOUS_HOME" != "$DEFAULT_HOME" ] \
-    && [ ! -f "$INSTALL_MARKER" ] \
-    && ! directory_is_empty "$NUMINOUS_HOME" \
-    && { [ ! -x "$BINARY_PATH/numinous" ] || [ ! -f "$SOURCE_PATH/Cargo.toml" ]; }; then
-    fail "custom NUMINOUS_HOME exists but is not a recognized Numinous install root"
-fi
+
+validate_install_root
 
 case "$(uname -s)" in
     Darwin) os=macos ;;
@@ -166,16 +331,7 @@ strip_path_line() {
 }
 
 if [ "$UNINSTALL" -eq 1 ]; then
-    cd "$install_parent"
-    if [ -L "$install_name" ]; then
-        fail "refusing to remove a symbolic-link install root: $NUMINOUS_HOME"
-    fi
-    if [ -e "$install_name" ] \
-        && [ "$NUMINOUS_HOME" != "$DEFAULT_HOME" ] \
-        && [ ! -f "$install_name/.numinous-install-root" ]; then
-        fail "refusing to remove an unmarked custom install root: $NUMINOUS_HOME"
-    fi
-    rm -rf -- "$install_name"
+    remove_install_root "$NUMINOUS_HOME"
     for profile in "$HOME/.profile" "$HOME/.bash_profile" "$HOME/.bashrc" \
         "$HOME/.zprofile" "$HOME/.zshrc"; do
         strip_path_line "$profile"
@@ -266,37 +422,17 @@ Install rustup from https://rustup.rs and re-run this installer"
     say "note: using the system cargo without rustup; the pinned toolchain file is ignored."
 fi
 
-# Fetch the source. git gives cheap updates; without it, download a snapshot.
-# Either way the previous build cache is kept so updates do not start over.
-if [ -d "$SRC_DIR/.git" ] && have git; then
-    say "Updating the source in $SRC_DIR"
-    git -C "$SRC_DIR" fetch --depth 1 origin main
-    git -C "$SRC_DIR" reset --hard --quiet origin/main
-else
-    stage=".staging-$$"
-    trap 'rm -rf "$stage"' EXIT
-    rm -rf "$stage"
-    mkdir -p "$stage"
-    if have git; then
-        say "Cloning $REPO_URL into $SRC_DIR"
-        git clone --depth 1 "$REPO_URL" "$stage/src"
-        new_tree="$stage/src"
-    else
-        have tar || fail "neither git nor tar is installed; install git and re-run"
-        say "git is not installed; downloading a source snapshot instead."
-        fetch "$SNAPSHOT_URL" "$stage/numinous.tar.gz"
-        tar -xzf "$stage/numinous.tar.gz" -C "$stage"
-        new_tree="$stage/numinous-main"
-        [ -d "$new_tree" ] || fail "unexpected source snapshot layout"
-    fi
-    if [ -d "$SRC_DIR/target" ]; then
-        mv "$SRC_DIR/target" "$new_tree/target"
-    fi
-    rm -rf "$SRC_DIR"
-    mv "$new_tree" "$SRC_DIR"
-    rm -rf "$stage"
-    trap - EXIT
-fi
+# Replace the source from the fixed snapshot on every run. Existing repository
+# configuration, untracked files, and build caches never influence an update.
+have tar || fail "tar is required to extract the trusted source snapshot"
+source_archive="$(mktemp "$NUMINOUS_HOME/.source.XXXXXX")" \
+    || fail "could not create a source download file"
+trap 'rm -f -- "$source_archive"' EXIT HUP INT TERM
+say "Downloading the trusted source snapshot from $REPO_URL"
+fetch "$SNAPSHOT_URL" "$source_archive"
+install_source_archive "$NUMINOUS_HOME" "$SOURCE_PATH" "$BINARY_PATH" "$source_archive"
+rm -f -- "$source_archive"
+trap - EXIT HUP INT TERM
 
 if have rustup; then
     # Install the pinned toolchain up front so the build step is only a build.

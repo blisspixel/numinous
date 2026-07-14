@@ -4,8 +4,8 @@
 #
 # What it does, in order: checks the tools this machine needs (and says exactly
 # how to get any that are missing), installs Rust through rustup if cargo is
-# absent, fetches the source into ~\.numinous\src (git when available, a
-# snapshot download otherwise), builds the release binaries, puts numinous,
+# absent, replaces ~\.numinous\src from a fixed source snapshot, builds the
+# release binaries, puts numinous,
 # numinous-app, and numinous-mcp in ~\.numinous\bin, links the built-in radio
 # next to them, and adds that directory to the user PATH.
 #
@@ -35,10 +35,16 @@ $ProgressPreference = 'SilentlyContinue'
 $Repo = 'blisspixel/numinous'
 $RepoUrl = "https://github.com/$Repo"
 $SnapshotUrl = "https://codeload.github.com/$Repo/tar.gz/refs/heads/main"
-$NuminousHome = if ($env:NUMINOUS_HOME) { $env:NUMINOUS_HOME } else { Join-Path $HOME '.numinous' }
-$SrcDir = Join-Path $NuminousHome 'src'
-$BinDir = Join-Path $NuminousHome 'bin'
+$RequestedNuminousHome = if ($SelfTest) {
+    Join-Path $HOME '.numinous'
+} elseif ($env:NUMINOUS_HOME) {
+    $env:NUMINOUS_HOME
+} else {
+    Join-Path $HOME '.numinous'
+}
 $Binaries = @('numinous.exe', 'numinous-app.exe', 'numinous-mcp.exe')
+$InstallMarkerName = '.numinous-install-root'
+$InstallMarkerText = 'Numinous install root'
 
 function Say([string]$Message) { Write-Host $Message }
 function Fail([string]$Message) { throw $Message }
@@ -46,22 +52,185 @@ function Have([string]$Name) {
     return [bool](Get-Command $Name -CommandType Application -ErrorAction SilentlyContinue)
 }
 
+function Resolve-InstallRoot([string]$Path, [string]$HomePath) {
+    if ([string]::IsNullOrWhiteSpace($Path) -or $Path -match '[\x00-\x1f\x7f]') {
+        Fail 'NUMINOUS_HOME must name a dedicated absolute directory.'
+    }
+    if (-not [IO.Path]::IsPathRooted($Path) -or $Path -match '^[A-Za-z]:[^\\/]') {
+        Fail 'NUMINOUS_HOME must be an absolute path.'
+    }
+    if (@($Path -split '[\\/]' | Where-Object { $_ -eq '.' -or $_ -eq '..' }).Count -ne 0) {
+        Fail 'NUMINOUS_HOME must not contain . or .. path components.'
+    }
+
+    $full = [IO.Path]::GetFullPath($Path)
+    $volumeRoot = [IO.Path]::GetPathRoot($full)
+    $trimChars = [char[]]@([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+    if ($full.Length -gt $volumeRoot.Length) { $full = $full.TrimEnd($trimChars) }
+    $homeFull = [IO.Path]::GetFullPath($HomePath)
+    $homeRoot = [IO.Path]::GetPathRoot($homeFull)
+    if ($homeFull.Length -gt $homeRoot.Length) { $homeFull = $homeFull.TrimEnd($trimChars) }
+    if ($full.Equals($volumeRoot, [StringComparison]::OrdinalIgnoreCase) -or
+        $full.Equals($homeFull, [StringComparison]::OrdinalIgnoreCase)) {
+        Fail 'NUMINOUS_HOME must name a dedicated directory, not HOME or a volume root.'
+    }
+
+    $parent = Split-Path -Parent $full
+    if (-not (Test-Path -LiteralPath $parent -PathType Container)) {
+        Fail 'the parent directory of NUMINOUS_HOME must already exist.'
+    }
+    $parentItem = Get-Item -LiteralPath $parent -Force
+    if ($parentItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+        Fail 'the parent directory of NUMINOUS_HOME must not be a reparse point.'
+    }
+    if (Test-Path -LiteralPath $full) {
+        $item = Get-Item -LiteralPath $full -Force
+        if (-not $item.PSIsContainer) {
+            Fail 'NUMINOUS_HOME exists but is not a directory.'
+        }
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            Fail 'NUMINOUS_HOME must not be a reparse point.'
+        }
+    }
+    return $full
+}
+
+$NuminousHome = Resolve-InstallRoot $RequestedNuminousHome $HOME
+$SrcDir = Join-Path $NuminousHome 'src'
+$BinDir = Join-Path $NuminousHome 'bin'
+
 # Run a native command and stop with a clear message if it fails.
 function Invoke-Checked([string]$What, [scriptblock]$Action) {
     & $Action
     if ($LASTEXITCODE -ne 0) { Fail "$What failed; the output above says why." }
 }
 
-# Remove a directory that may be a junction: unlink a junction without ever
-# recursing into its target, and only delete real directories recursively.
+# Remove a tree without following any reparse point found inside it.
 function Remove-DirectoryOrJunction([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) { return }
     $item = Get-Item -LiteralPath $Path -Force
     if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
-        [IO.Directory]::Delete($Path, $false)
-    } else {
-        Remove-Item -LiteralPath $Path -Recurse -Force
+        if ($item.PSIsContainer) {
+            [IO.Directory]::Delete($Path, $false)
+        } else {
+            [IO.File]::Delete($Path)
+        }
+        return
     }
+    if (-not $item.PSIsContainer) {
+        Remove-Item -LiteralPath $Path -Force
+        return
+    }
+    foreach ($child in Get-ChildItem -LiteralPath $Path -Force) {
+        Remove-DirectoryOrJunction $child.FullName
+    }
+    Remove-Item -LiteralPath $Path -Force
+}
+
+function Test-DirectoryEmpty([string]$Path) {
+    return @(Get-ChildItem -LiteralPath $Path -Force).Count -eq 0
+}
+
+function Test-InstallMarker([string]$Root) {
+    $marker = Join-Path $Root $InstallMarkerName
+    if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) { return $false }
+    $item = Get-Item -LiteralPath $marker -Force
+    if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { return $false }
+    if ($item.Length -gt 64) { return $false }
+    $content = [IO.File]::ReadAllText($marker)
+    return $content -ceq $InstallMarkerText -or
+        $content -ceq "$InstallMarkerText`n" -or
+        $content -ceq "$InstallMarkerText`r`n"
+}
+
+function Write-InstallMarker([string]$Root) {
+    $marker = Join-Path $Root $InstallMarkerName
+    if (Test-Path -LiteralPath $marker) {
+        $item = Get-Item -LiteralPath $marker -Force
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            Fail 'the install-root marker must not be a reparse point.'
+        }
+    }
+    $encoding = New-Object Text.UTF8Encoding($false)
+    [IO.File]::WriteAllText($marker, "$InstallMarkerText`r`n", $encoding)
+}
+
+function Test-LegacyInstallRoot([string]$Root) {
+    if (-not (Test-Path -LiteralPath $Root -PathType Container)) {
+        return $false
+    }
+    $children = @(Get-ChildItem -LiteralPath $Root -Force)
+    if ($children.Count -ne 2 -or
+        @($children | Where-Object { $_.Name -notin @('src', 'bin') }).Count -ne 0 -or
+        @($children | Where-Object {
+            -not $_.PSIsContainer -or ($_.Attributes -band [IO.FileAttributes]::ReparsePoint)
+        }).Count -ne 0) {
+        return $false
+    }
+    $manifest = Get-Item -LiteralPath (Join-Path $Root 'src\Cargo.toml') -Force -ErrorAction SilentlyContinue
+    if ($null -eq $manifest -or $manifest.PSIsContainer -or
+        ($manifest.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        return $false
+    }
+    foreach ($binary in $Binaries) {
+        $item = Get-Item -LiteralPath (Join-Path $Root "bin\$binary") -Force -ErrorAction SilentlyContinue
+        if ($null -eq $item -or $item.PSIsContainer -or
+            ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            return $false
+        }
+    }
+    return $true
+}
+
+function Test-InstallRootClaimable([string]$Root) {
+    return (Test-InstallMarker $Root) -or
+        (Test-DirectoryEmpty $Root) -or
+        (Test-LegacyInstallRoot $Root)
+}
+
+function Initialize-InstallRoot([string]$Root = $NuminousHome) {
+    $Root = Resolve-InstallRoot $Root $HOME
+    if (Test-Path -LiteralPath $Root) {
+        if (-not (Test-InstallRootClaimable $Root)) {
+            Fail 'NUMINOUS_HOME exists but is not a marked Numinous install root.'
+        }
+    } else {
+        New-Item -ItemType Directory -Path $Root | Out-Null
+    }
+    $rechecked = Resolve-InstallRoot $Root $HOME
+    if ($rechecked -ine $Root) {
+        Fail 'NUMINOUS_HOME changed while the installer was starting.'
+    }
+    if (-not (Test-InstallRootClaimable $Root)) {
+        Fail 'NUMINOUS_HOME contents changed while the installer was starting.'
+    }
+    Write-InstallMarker $Root
+}
+
+function Remove-ValidatedInstallRoot([string]$Root) {
+    $resolved = Resolve-InstallRoot $Root $HOME
+    if (-not (Test-Path -LiteralPath $resolved)) { return }
+    $marked = Test-InstallMarker $resolved
+    $legacy = Test-LegacyInstallRoot $resolved
+    if (-not $marked -and -not $legacy) {
+        Fail "refusing to remove an unmarked install root: $resolved"
+    }
+    $rechecked = Resolve-InstallRoot $resolved $HOME
+    if ($rechecked -ine $resolved -or
+        ($marked -and -not (Test-InstallMarker $resolved)) -or
+        ($legacy -and -not (Test-LegacyInstallRoot $resolved))) {
+        Fail 'the install root changed during uninstall.'
+    }
+    if ($marked) {
+        Remove-DirectoryOrJunction $resolved
+        return
+    }
+    Remove-DirectoryOrJunction (Join-Path $resolved 'src')
+    Remove-DirectoryOrJunction (Join-Path $resolved 'bin')
+    if (-not (Test-DirectoryEmpty $resolved)) {
+        Fail 'the legacy install root gained unexpected contents during uninstall.'
+    }
+    Remove-Item -LiteralPath $resolved -Force
 }
 
 # Read the user Path exactly as stored (no expansion), so editing it never
@@ -134,6 +303,120 @@ function Test-PathPromotion {
     Say 'Windows installer PATH promotion: pass.'
 }
 
+function Test-InstallerSafety {
+    if (-not (Have 'tar')) { Fail 'installer safety self-test requires tar.exe.' }
+    $testBase = Join-Path $env:TEMP ('numinous-installer-test-' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $testBase | Out-Null
+    try {
+        $rejectedHome = $false
+        try { [void](Resolve-InstallRoot $HOME $HOME) } catch { $rejectedHome = $true }
+        if (-not $rejectedHome) { Fail 'root self-test: HOME was accepted as an install root.' }
+
+        $unmarked = Join-Path $testBase 'unmarked'
+        New-Item -ItemType Directory -Path $unmarked | Out-Null
+        Set-Content -LiteralPath (Join-Path $unmarked 'keep.txt') -Value 'keep'
+        Set-Content -LiteralPath (Join-Path $unmarked $InstallMarkerName) -Value 'not a marker'
+        $rejectedUnmarked = $false
+        try { Remove-ValidatedInstallRoot $unmarked } catch { $rejectedUnmarked = $true }
+        if (-not $rejectedUnmarked -or -not (Test-Path -LiteralPath $unmarked)) {
+            Fail 'uninstall self-test: an unmarked root was removed.'
+        }
+
+        $legacy = Join-Path $testBase 'legacy-default'
+        New-Item -ItemType Directory -Path (Join-Path $legacy 'src') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $legacy 'bin') -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $legacy 'src\Cargo.toml') -Value '[workspace]'
+        foreach ($binary in $Binaries) {
+            Set-Content -LiteralPath (Join-Path $legacy "bin\$binary") -Value 'binary'
+        }
+        if (-not (Test-InstallRootClaimable $legacy)) {
+            Fail 'root self-test: the exact legacy install shape could not migrate.'
+        }
+        Set-Content -LiteralPath (Join-Path $legacy 'unexpected.txt') -Value 'keep'
+        if (Test-InstallRootClaimable $legacy) {
+            Fail 'root self-test: a legacy root with unexpected contents was accepted.'
+        }
+        Remove-Item -LiteralPath (Join-Path $legacy 'unexpected.txt') -Force
+        $rejectedArbitrary = $false
+        try { Initialize-InstallRoot $unmarked } catch { $rejectedArbitrary = $true }
+        if (-not $rejectedArbitrary) {
+            Fail 'root self-test: arbitrary nonempty contents were accepted.'
+        }
+        Initialize-InstallRoot $legacy
+        if (-not (Test-InstallMarker $legacy)) {
+            Fail 'root self-test: the legacy install was not marked during migration.'
+        }
+
+        $legacyUninstall = Join-Path $testBase 'legacy-uninstall'
+        New-Item -ItemType Directory -Path (Join-Path $legacyUninstall 'src') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $legacyUninstall 'bin') -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $legacyUninstall 'src\Cargo.toml') -Value '[workspace]'
+        foreach ($binary in $Binaries) {
+            Set-Content -LiteralPath (Join-Path $legacyUninstall "bin\$binary") -Value 'binary'
+        }
+        Remove-ValidatedInstallRoot $legacyUninstall
+        if (Test-Path -LiteralPath $legacyUninstall) {
+            Fail 'uninstall self-test: the exact legacy install was retained.'
+        }
+
+        $marked = Join-Path $testBase 'marked'
+        New-Item -ItemType Directory -Path $marked | Out-Null
+        Write-InstallMarker $marked
+        $adjacent = Join-Path $testBase 'adjacent.txt'
+        Set-Content -LiteralPath $adjacent -Value 'keep'
+        $outside = Join-Path $testBase 'outside'
+        New-Item -ItemType Directory -Path (Join-Path $outside 'radio') -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $outside 'radio\keep.txt') -Value 'keep'
+        New-Item -ItemType Junction -Path (Join-Path $marked 'bin') -Target $outside | Out-Null
+        Remove-ValidatedInstallRoot $marked
+        if ((Test-Path -LiteralPath $marked) -or
+            -not (Test-Path -LiteralPath $adjacent) -or
+            -not (Test-Path -LiteralPath (Join-Path $outside 'radio\keep.txt'))) {
+            Fail 'uninstall self-test: marked-root removal crossed its boundary.'
+        }
+
+        $sourceRoot = Join-Path $testBase 'source-root'
+        New-Item -ItemType Directory -Path $sourceRoot | Out-Null
+        Write-InstallMarker $sourceRoot
+        $sourceDir = Join-Path $sourceRoot 'src'
+        $binaryDir = Join-Path $sourceRoot 'bin'
+        New-Item -ItemType Directory -Path (Join-Path $sourceDir '.git') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $sourceDir 'target') -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $sourceDir '.git\config') -Value 'alternate origin'
+        Set-Content -LiteralPath (Join-Path $sourceDir 'untrusted.txt') -Value 'untrusted'
+        Set-Content -LiteralPath (Join-Path $sourceDir 'target\cached.txt') -Value 'untrusted cache'
+        $sourceOutside = Join-Path $testBase 'source-outside'
+        New-Item -ItemType Directory -Path (Join-Path $sourceOutside 'radio') -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $sourceOutside 'radio\keep.txt') -Value 'keep'
+        New-Item -ItemType Junction -Path $binaryDir -Target $sourceOutside | Out-Null
+
+        $package = Join-Path $testBase 'package'
+        $trustedTree = Join-Path $package 'numinous-main'
+        New-Item -ItemType Directory -Path $trustedTree -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $trustedTree 'trusted.txt') -Value 'trusted'
+        $archive = Join-Path $testBase 'trusted.tar.gz'
+        Push-Location $package
+        try {
+            Invoke-Checked 'creating the installer self-test archive' {
+                tar -czf $archive numinous-main
+            }
+        } finally {
+            Pop-Location
+        }
+        Get-Source -ArchivePath $archive -InstallRoot $sourceRoot `
+            -SourceDir $sourceDir -BinaryDir $binaryDir
+        if (-not (Test-Path -LiteralPath (Join-Path $sourceDir 'trusted.txt')) -or
+            (Test-Path -LiteralPath (Join-Path $sourceDir 'untrusted.txt')) -or
+            (Test-Path -LiteralPath (Join-Path $sourceDir 'target\cached.txt')) -or
+            -not (Test-Path -LiteralPath (Join-Path $sourceOutside 'radio\keep.txt'))) {
+            Fail 'provenance self-test: pre-existing source or build cache influenced the update.'
+        }
+        Say 'Windows installer root, uninstall, and provenance checks: pass.'
+    } finally {
+        Remove-DirectoryOrJunction $testBase
+    }
+}
+
 function Remove-UserPath([string]$Dir) {
     $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $true)
     try {
@@ -171,10 +454,7 @@ public static extern System.IntPtr SendMessageTimeout(
 }
 
 function Uninstall-Numinous {
-    Remove-DirectoryOrJunction (Join-Path $BinDir 'radio')
-    if (Test-Path -LiteralPath $NuminousHome) {
-        Remove-Item -LiteralPath $NuminousHome -Recurse -Force
-    }
+    Remove-ValidatedInstallRoot $NuminousHome
     Remove-UserPath $BinDir
     Send-EnvironmentChange
     Say "Numinous is uninstalled: $NuminousHome is gone and the PATH entry is removed."
@@ -220,41 +500,47 @@ function Test-BuildTools {
         '(If you know your linker is fine, set NUMINOUS_SKIP_MSVC_CHECK=1 to skip this check.)')
 }
 
-function Get-Source {
-    New-Item -ItemType Directory -Force -Path $NuminousHome | Out-Null
-    if ((Test-Path (Join-Path $SrcDir '.git')) -and (Have 'git')) {
-        Say "Updating the source in $SrcDir"
-        Invoke-Checked 'git fetch' { git -C $SrcDir fetch --depth 1 origin main }
-        Invoke-Checked 'git reset' { git -C $SrcDir reset --hard --quiet origin/main }
-        return
+function Get-Source(
+    [string]$ArchivePath = '',
+    [string]$InstallRoot = $NuminousHome,
+    [string]$SourceDir = $SrcDir,
+    [string]$BinaryDir = $BinDir
+) {
+    if (-not (Test-InstallMarker $InstallRoot)) {
+        Fail 'source installation requires a marked install root.'
     }
-    $stage = Join-Path $NuminousHome ".staging-$PID"
-    if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
-    New-Item -ItemType Directory -Force -Path $stage | Out-Null
+    if (-not (Have 'tar')) {
+        Fail 'tar.exe is required to extract the trusted source snapshot.'
+    }
+    $stage = Join-Path $InstallRoot ('.staging-' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $stage | Out-Null
     try {
-        if (Have 'git') {
-            Say "Cloning $RepoUrl into $SrcDir"
-            $newTree = Join-Path $stage 'src'
-            Invoke-Checked 'git clone' { git clone --depth 1 $RepoUrl $newTree }
-        } elseif (Have 'tar') {
-            Say 'git is not installed; downloading a source snapshot instead.'
-            $archive = Join-Path $stage 'numinous.tar.gz'
-            Invoke-WebRequest -UseBasicParsing -Uri $SnapshotUrl -OutFile $archive
-            Invoke-Checked 'extracting the snapshot' { tar -xzf $archive -C $stage }
-            $newTree = Join-Path $stage 'numinous-main'
-            if (-not (Test-Path $newTree)) { Fail 'unexpected source snapshot layout.' }
+        $archive = Join-Path $stage 'numinous.tar.gz'
+        if ($ArchivePath) {
+            Copy-Item -LiteralPath $ArchivePath -Destination $archive
         } else {
-            Fail 'neither git nor tar.exe is available. Install git (winget install Git.Git) and re-run.'
+            Say "Downloading the trusted source snapshot from $RepoUrl"
+            Invoke-WebRequest -UseBasicParsing -Uri $SnapshotUrl -OutFile $archive
         }
-        # Keep the previous build cache so updates do not rebuild from scratch,
-        # and unlink the radio junction before its target moves.
-        Remove-DirectoryOrJunction (Join-Path $BinDir 'radio')
-        $oldTarget = Join-Path $SrcDir 'target'
-        if (Test-Path $oldTarget) { Move-Item $oldTarget (Join-Path $newTree 'target') }
-        if (Test-Path $SrcDir) { Remove-Item $SrcDir -Recurse -Force }
-        Move-Item $newTree $SrcDir
+        Invoke-Checked 'extracting the trusted source snapshot' {
+            tar -xzf $archive -C $stage
+        }
+        $newTree = Join-Path $stage 'numinous-main'
+        if (-not (Test-Path -LiteralPath $newTree -PathType Container)) {
+            Fail 'unexpected source snapshot layout.'
+        }
+        if (Test-Path -LiteralPath $BinaryDir) {
+            $binaryItem = Get-Item -LiteralPath $BinaryDir -Force
+            if ($binaryItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                Remove-DirectoryOrJunction $BinaryDir
+            } else {
+                Remove-DirectoryOrJunction (Join-Path $BinaryDir 'radio')
+            }
+        }
+        Remove-DirectoryOrJunction $SourceDir
+        Move-Item -LiteralPath $newTree -Destination $SourceDir
     } finally {
-        if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+        Remove-DirectoryOrJunction $stage
     }
 }
 
@@ -313,6 +599,7 @@ function Install-Numinous {
     if ($PSVersionTable.PSVersion.Major -lt 5) {
         Fail 'this installer needs Windows PowerShell 5.1 or newer.'
     }
+    Initialize-InstallRoot
     Test-BuildTools
     Install-Rust
     Get-Source
@@ -366,6 +653,7 @@ function Install-Numinous {
 try {
     if ($SelfTest) {
         Test-PathPromotion
+        Test-InstallerSafety
     } elseif ($Uninstall) {
         Uninstall-Numinous
     } else {

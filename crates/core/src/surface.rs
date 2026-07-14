@@ -149,7 +149,8 @@ pub trait Surface {
                 .abs()
                 .max((i64::from(y1) - i64::from(y0)).abs());
             if span > LINE_CLIP_SPAN {
-                match clip_segment(x0, y0, x1, y1, self.width(), self.height()) {
+                let (width, height) = self.draw_bounds();
+                match clip_segment(x0, y0, x1, y1, width, height) {
                     Some(clipped) => clipped,
                     None => return,
                 }
@@ -222,6 +223,22 @@ mod tests {
             s.plots
         );
         assert!(s.plots > 0, "the visible corner should still be drawn");
+    }
+
+    #[test]
+    fn a_saturated_line_clips_extreme_reported_dimensions_safely() {
+        let extreme = 1usize.checked_shl(63).unwrap_or(usize::MAX);
+        let mut s = Counter {
+            w: extreme,
+            h: extreme,
+            plots: 0,
+        };
+        s.line(i32::MIN, i32::MAX, i32::MAX, i32::MIN, '*');
+        assert!(
+            s.plots <= super::MAX_DIM,
+            "expected bounded work, got {} plots",
+            s.plots
+        );
     }
 
     #[test]

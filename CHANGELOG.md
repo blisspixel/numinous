@@ -128,11 +128,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - Setup is now one command on every platform. `scripts/install.sh` (macOS and
   Linux) and `scripts/install.ps1` (Windows) check what the machine needs and
   name the exact fix for anything missing, install Rust through rustup when
-  cargo is absent, fetch the source into `~/.numinous/src` (git when available,
-  a snapshot download otherwise), build the release binaries, install
+  cargo is absent, fetch a fixed-origin source snapshot into
+  `~/.numinous/src`, build the release binaries, install
   `numinous`, `numinous-app`, and `numinous-mcp` into `~/.numinous/bin`, link
   the built-in radio next to the executables, and add that directory to PATH.
-  Re-running either installer updates in place and keeps the build cache;
+  Re-running either installer updates in place from a fresh source tree;
+  existing checkout configuration, untracked source, and build caches cannot
+  influence the update. Exact install-root markers and link-aware removal keep
+  destructive operations inside the owned directory.
   `--uninstall` (Windows `-Uninstall`) removes everything installed while
   leaving `~/.numinous-journey`, `~/.numinous-scores`, and `~/.numinous-cairn`
   untouched. The Windows PATH edit preserves the registry value kind and
@@ -208,10 +211,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - A deterministic pre-commit gate (`scripts/hooks/pre-commit`, wired once per clone with `git config core.hooksPath scripts/hooks`, documented in `docs/ENGINEERING.md`). It blocks any commit that would fail the fast gate: the house-style guard on every commit, and the cargo gate (fmt, clippy `-D warnings`, the full test suite) only when the commit touches Rust, `Cargo.*`, or a shader, so docs-only commits stay fast. Coverage and the locked build remain the release gate (`scripts/verify.sh`). A wired gate that blocks a bad commit beats any reminder to run the checks.
 
 ### Changed
+- Install and update now favor provenance over cached rebuild speed. Both
+  installers replace the source from the fixed official snapshot on every run,
+  reject unrecognized unmarked nonempty roots, and discard prior source and target state.
+  Recognized pre-marker installs at default or custom roots migrate without
+  abandoning existing users; uninstall never creates a marker. Disposable Windows and POSIX self-tests cover hostile
+  origins, caches, custom roots, symlinks, junctions, and adjacent sentinels.
 - Human hallway evidence still controls the 0.2 milestone claim, but no longer
   idles verified 0.3 depth, accessibility, input, audio, truth, or quality work
-  while sessions are arranged. Current evidence is 1,230 all-target test cases, 93.34
-  percent region coverage, and 93.10 percent line coverage.
+  while sessions are arranged. Current evidence is 1,259 all-target test cases, 93.34
+  percent region coverage, and 93.11 percent line coverage.
 - MCP `listen_room` now labels `motif` as the ambient motif and `notes` as the
   mathematical sonification through a `sound_roles` map and matching text
   headings. Existing structured paths remain compatible, with no duplicated
@@ -342,6 +351,26 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   gates.
 
 ### Fixed
+- Protocol and terminal boundaries now stay synchronized and bounded under
+  hostile input. An exact-limit oversized MCP line no longer consumes the next
+  request; challenge phase validation is identical in schemas, direct calls,
+  and progress recording. CLI menu and game input share one bounded,
+  delimiter-aware reader, Studio plots reject oversized dimensions before
+  sampling, music-service redirects cannot forward the API key, and response
+  diagnostics escape terminal controls.
+- Local persistence and native resource boundaries now reject work before it
+  grows without limit. Cairn append size is checked atomically under its
+  persistence lock, extreme line clipping uses bounded drawing dimensions,
+  repeated App save events cannot produce file floods, postcard encoding is
+  reused across collision names, Studio edits stop atomically at the portable
+  source limit, and radio discovery, decode output, GPU frames, device limits,
+  map completion, and host copies all have explicit budgets and fallible paths.
+  The App drops a failed GPU renderer and continues on the CPU. A standard
+  repository-wide security review reported no security findings under the
+  documented local trust model, while every reproduced engineering defect was
+  still remediated. The full gate passes with 1,259 all-target test cases,
+  93.34 percent region coverage, 93.11 percent line coverage, and the exact
+  253-screen App matrix.
 - Redirected no-argument CLI output now contains a concise plain command map and
   zero ANSI escape characters, while an interactive terminal retains the
   full-color cabinet. Quiz wrong-result screens retain their complete reveal and

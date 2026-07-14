@@ -311,15 +311,12 @@ pub fn submission_line(bequest: &Bequest) -> String {
 /// is responsible for any gating (the journey level); this only writes.
 ///
 /// # Errors
-/// Returns any error from opening or writing the file.
+/// Returns an error if the deposit would exceed the local Cairn byte limit, or
+/// if the file cannot be locked, opened, or written.
 pub fn deposit(path: &std::path::Path, bequest: &Bequest) -> std::io::Result<()> {
-    use std::io::Write;
     let bequest = Bequest::new(&bequest.author, &bequest.text);
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)?;
-    writeln!(file, "{}\t{}", bequest.author, bequest.text)
+    let record = format!("{}\t{}\n", bequest.author, bequest.text);
+    crate::persistence::append_local_file_bounded(path, record.as_bytes(), MAX_CAIRN_BYTES)
 }
 
 /// How many voices the cairn holds right now: the founding stones plus every
@@ -469,6 +466,67 @@ mod tests {
                 MAX_CAIRN_BYTES as usize + 1
             ]))
             .is_none()
+        );
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn deposits_stop_at_the_cairn_byte_limit() {
+        let path = std::env::temp_dir().join("numinous_cairn_bounded_append_test.txt");
+        let _ = std::fs::remove_file(&path);
+        let record = Bequest::new("e", "\u{e9}");
+        let record_bytes = "e\t\u{e9}\n".len();
+        std::fs::write(&path, vec![b'x'; MAX_CAIRN_BYTES as usize - record_bytes])
+            .expect("prefill cairn");
+
+        deposit(&path, &record).expect("exact-limit deposit");
+        assert_eq!(
+            std::fs::metadata(&path).expect("cairn metadata").len(),
+            MAX_CAIRN_BYTES
+        );
+        let before = std::fs::read(&path).expect("bounded cairn");
+        let error = deposit(&path, &Bequest::new("a", "b"))
+            .expect_err("deposit past the byte limit must fail");
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert_eq!(std::fs::read(&path).expect("unchanged cairn"), before);
+
+        let oversized = vec![b'x'; MAX_CAIRN_BYTES as usize + 1];
+        std::fs::write(&path, &oversized).expect("write oversized cairn");
+        let error = deposit(&path, &record).expect_err("an oversized cairn must reject deposits");
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert_eq!(
+            std::fs::read(&path).expect("unchanged oversized cairn"),
+            oversized
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn concurrent_deposits_cannot_cross_the_cairn_byte_limit() {
+        let path = std::env::temp_dir().join(format!(
+            "numinous_cairn_concurrent_bounded_append_{}.txt",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&path);
+        std::fs::write(&path, vec![b'x'; MAX_CAIRN_BYTES as usize - 64]).expect("prefill cairn");
+
+        let handles: Vec<_> = (0..32)
+            .map(|_| {
+                let path = path.clone();
+                std::thread::spawn(move || deposit(&path, &Bequest::new("a", "b")))
+            })
+            .collect();
+        let successes = handles
+            .into_iter()
+            .map(|handle| handle.join().expect("deposit thread").is_ok())
+            .filter(|success| *success)
+            .count();
+
+        assert_eq!(successes, 16);
+        assert_eq!(
+            std::fs::metadata(&path).expect("cairn metadata").len(),
+            MAX_CAIRN_BYTES
         );
         let _ = std::fs::remove_file(path);
     }

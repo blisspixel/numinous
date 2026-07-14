@@ -108,6 +108,44 @@ pub fn remove_persisted_file(path: &Path) -> io::Result<()> {
     }
 }
 
+/// Append one record while holding the file's persistence lock, rejecting a
+/// write that would make the file exceed `max_bytes`.
+pub(crate) fn append_local_file_bounded(
+    path: &Path,
+    bytes: &[u8],
+    max_bytes: u64,
+) -> io::Result<()> {
+    let _lock = PersistLock::acquire(path)?;
+    let mut file = OpenOptions::new()
+        .create(true)
+        .read(true)
+        .append(true)
+        .open(path)?;
+    let appended_bytes = u64::try_from(bytes.len()).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "local persistence record is too large",
+        )
+    })?;
+    let resulting_bytes = file
+        .metadata()?
+        .len()
+        .checked_add(appended_bytes)
+        .ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "local persistence file size overflow",
+            )
+        })?;
+    if resulting_bytes > max_bytes {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "local persistence file is too large",
+        ));
+    }
+    file.write_all(bytes)
+}
+
 fn merge_journey_delta(before: &Journey, after: &Journey, latest: &mut Journey) {
     for id in after.visited.difference(&before.visited) {
         latest.visit(id);

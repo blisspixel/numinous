@@ -2,7 +2,7 @@
 
 use std::f64::consts::TAU;
 
-use numinous_core::{Expr, Raster, SoundSpec, Surface};
+use numinous_core::{Expr, MAX_STUDIO_SOURCE_CHARS, Raster, SoundSpec, Surface};
 
 use crate::input_legend::{self, InputMode};
 
@@ -22,21 +22,25 @@ pub struct StudioPanel {
 
 impl Default for StudioPanel {
     fn default() -> Self {
-        Self::new(DEFAULT_SOURCE)
+        Self::new(DEFAULT_SOURCE).expect("default Studio source is within the portable limit")
     }
 }
 
 impl StudioPanel {
     /// Build a Studio panel from source text.
-    #[must_use]
-    pub fn new(source: &str) -> Self {
+    pub fn new(source: &str) -> Result<Self, String> {
+        if source.chars().count() > MAX_STUDIO_SOURCE_CHARS {
+            return Err(format!(
+                "Studio expression is too long; limit is {MAX_STUDIO_SOURCE_CHARS} characters"
+            ));
+        }
         let mut panel = Self {
             source: source.to_string(),
             expr: None,
             error: None,
         };
         let _ = panel.reparse();
-        panel
+        Ok(panel)
     }
 
     /// Re-parse the Studio text, keeping the last good curve alive on errors.
@@ -63,6 +67,9 @@ impl StudioPanel {
 
     /// Append ordinary text and reparse.
     pub fn push_text(&mut self, text: &str) -> Option<SoundSpec> {
+        if !self.can_append(text) {
+            return None;
+        }
         self.source.push_str(text);
         self.reparse()
     }
@@ -70,7 +77,17 @@ impl StudioPanel {
     /// Append a literal space. This preserves the current parse state, matching
     /// the old event-loop behavior.
     pub fn push_space(&mut self) {
-        self.source.push(' ');
+        if self.can_append(" ") {
+            self.source.push(' ');
+        }
+    }
+
+    fn can_append(&self, text: &str) -> bool {
+        let current = self.source.chars().count();
+        let Some(remaining) = MAX_STUDIO_SOURCE_CHARS.checked_sub(current) else {
+            return false;
+        };
+        text.chars().take(remaining + 1).count() <= remaining
     }
 
     /// Draw the Studio panel into the raster.
@@ -147,7 +164,7 @@ impl StudioPanel {
 
 #[cfg(test)]
 mod tests {
-    use super::{StudioPanel, studio_scale};
+    use super::{MAX_STUDIO_SOURCE_CHARS, StudioPanel, studio_scale};
     use crate::input_legend::{self, InputMode};
     use numinous_core::Raster;
 
@@ -163,7 +180,7 @@ mod tests {
 
     #[test]
     fn bad_edits_keep_the_last_good_curve_alive() {
-        let mut panel = StudioPanel::new("x");
+        let mut panel = StudioPanel::new("x").expect("panel");
         assert!(panel.push_text("@").is_none());
         assert!(panel.error.is_some());
         assert!(panel.expr.is_some());
@@ -174,7 +191,7 @@ mod tests {
 
     #[test]
     fn draw_handles_tiny_and_mismatched_sizes() {
-        let panel = StudioPanel::new("sin(x)");
+        let panel = StudioPanel::new("sin(x)").expect("panel");
         let mut zero = Raster::new(0, 0);
         panel.draw(&mut zero, InputMode::KeyboardMouse, 0, 0, 0.0);
         assert_eq!(zero.lit_count(), 0);
@@ -193,7 +210,7 @@ mod tests {
 
     #[test]
     fn editing_operations_update_source_predictably() {
-        let mut panel = StudioPanel::new("x");
+        let mut panel = StudioPanel::new("x").expect("panel");
         panel.push_space();
         assert_eq!(panel.source, "x ");
         assert!(panel.push_text("+ 1").is_some());
@@ -201,6 +218,44 @@ mod tests {
         assert!(panel.backspace().is_none());
         assert_eq!(panel.source, "x + ");
         assert!(panel.error.is_some());
+    }
+
+    #[test]
+    fn editing_stops_at_the_portable_source_limit() {
+        let mut panel = StudioPanel::new("x").expect("panel");
+        for _ in 1..numinous_core::MAX_STUDIO_SOURCE_CHARS {
+            panel.push_space();
+        }
+        assert_eq!(
+            panel.source.chars().count(),
+            numinous_core::MAX_STUDIO_SOURCE_CHARS
+        );
+
+        panel.push_space();
+        assert_eq!(
+            panel.source.chars().count(),
+            numinous_core::MAX_STUDIO_SOURCE_CHARS
+        );
+    }
+
+    #[test]
+    fn over_limit_character_events_are_rejected_atomically() {
+        let source = format!(
+            "{}x",
+            " ".repeat(numinous_core::MAX_STUDIO_SOURCE_CHARS - 1)
+        );
+        let mut panel = StudioPanel::new(&source).expect("panel");
+
+        assert!(panel.push_text("+1").is_none());
+        assert_eq!(panel.source, source);
+        assert!(panel.expr.is_some());
+        assert!(panel.error.is_none());
+    }
+
+    #[test]
+    fn construction_rejects_over_limit_unicode_source() {
+        let source = "π".repeat(MAX_STUDIO_SOURCE_CHARS + 1);
+        assert!(StudioPanel::new(&source).is_err());
     }
 
     #[test]

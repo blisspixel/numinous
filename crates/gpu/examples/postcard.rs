@@ -8,7 +8,9 @@ fn main() {
     println!("Rendering on: {} ({})", ctx.adapter_name(), ctx.backend());
 
     let (width, height) = (1200u32, 900u32);
-    let rgba = ctx.render_mandelbrot(width, height, -0.75, 0.0, 3.0, 300);
+    let rgba = ctx
+        .render_mandelbrot(width, height, -0.75, 0.0, 3.0, 300)
+        .expect("render Mandelbrot frame");
 
     let file = std::fs::File::create("mandelbrot.png").expect("create mandelbrot.png");
     let mut encoder = png::Encoder::new(BufWriter::new(file), width, height);
