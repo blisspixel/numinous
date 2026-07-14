@@ -131,7 +131,7 @@ mod tests {
     }
 
     #[test]
-    fn postcard_path_uses_room_id_and_phase() {
+    fn postcard_path_uses_room_id_and_state_code() {
         let path = postcard_path(Path::new("out"), "times_tables", 42);
         assert_eq!(
             path.file_name().and_then(|name| name.to_str()),
