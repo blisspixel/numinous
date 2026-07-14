@@ -44,13 +44,13 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 1,307 all-target test cases pass, 93.49% region
-cover, and 93.28% line cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 1,336 all-target test cases pass,
+93.60% region cover, and 93.41% line cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
 
-The release scripts also regenerate `renders/qa-app/`, a 341-screen app matrix.
+The release scripts also regenerate `renders/qa-app/`, a 349-screen app matrix.
 Every catalog room has deterministic default and compact opening frames,
 arrival cards, immediate pointer responses, and same-phase delayed-gesture
 responses. Default room receipts are 900 by 700; compact room receipts are 360
@@ -58,8 +58,9 @@ by 240. Dedicated Cult of Pi receipts also cover a Journey threshold banner
 and the untouched first frame after it closes. The generator holds an exclusive
 single-writer guard before removing stale receipts.
 The matrix also covers every app game state, default and compact overlays,
-production Studio rendering, both ends of The Show, Times Tables phase
-stability, the Mandelbrot reset flow, a persistent Life sequence from opening
+production Studio rendering, both ends of The Show, Times Tables K=2, K=3,
+K=pi, K=4, K=5, and earned-goal flows at both sizes, the Mandelbrot reset flow,
+a persistent Life sequence from opening
 through launch, generation 4, generation 141, and exact reset, 14 compact
 controller or pause receipts spanning rooms, overlays, and game results, and 16
 default or compact audio-state receipts. Those audio receipts cover room score,

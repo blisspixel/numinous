@@ -77,13 +77,17 @@ impl Raster {
         })
     }
 
-    /// The color added for a mark: the accent, a brighter accent for `'#'`, a
-    /// warning coral for `'!'`, or a faint structural gray for `'-'`.
+    /// The color added for a mark: semantic interface colors plus four
+    /// spectral inks that rooms can combine additively for prismatic light.
     fn ink(&self, mark: char) -> [u8; 3] {
         match mark {
             '#' => scale(self.accent, 1.7),
             '!' => [230, 72, 72],
             '-' => [16, 20, 34],
+            '@' => [216, 40, 190],
+            '%' => [56, 224, 132],
+            '&' => [242, 148, 36],
+            '~' => [116, 72, 232],
             _ => self.accent,
         }
     }
@@ -265,6 +269,20 @@ mod tests {
         assert_ne!(raster.ink('!'), raster.ink('.'));
         assert_ne!(raster.ink('!'), raster.ink('-'));
         assert_ne!(raster.ink('!'), raster.ink('#'));
+    }
+
+    #[test]
+    fn spectral_inks_are_distinct_and_preserve_semantic_marks() {
+        let raster = Raster::with_accent(4, 4, [40, 210, 90]);
+        let spectral = ['@', '%', '&', '~'].map(|mark| raster.ink(mark));
+
+        for (index, color) in spectral.iter().enumerate() {
+            assert_ne!(*color, raster.ink('.'));
+            assert_ne!(*color, raster.ink('!'));
+            assert!(spectral[index + 1..].iter().all(|other| other != color));
+        }
+        assert_eq!(raster.ink('!'), [230, 72, 72]);
+        assert_eq!(raster.ink('-'), [16, 20, 34]);
     }
 
     #[test]

@@ -141,8 +141,18 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 - **Rule:** Put points 0…N on a circle. From each point *n*, draw a line to point *(n × k)*, wrapping around.
 - **Toy:** One dial: the multiplier *k*. Drag it from 2 upward and watch a **cardioid** (perfect heart) bloom, morph into a **nephroid** (2 loops), then 3, 4, 5 nested lobes, a hypnotic, continuously-morphing bloom of light. Increase N for silky density. Push *k* to π and it dissolves into lace.
 - **Aha:** "Make exactly 4 loops." / "Find the value that makes it a single point."
+- **Current interaction:** The ordinary App visit opens at K=2 and waits for a
+  mouse or controller hand; every variation keeps K=2 as its opening and reset
+  endpoint, while The Show still sweeps automatically. Dragging the
+  visible dial spans K=2 through K=10 and snaps near exact integers. K=5 closes
+  into four lobes, raises one earned Aha, and points to the inspectable Reveal.
+  Resolution-aware chord sampling keeps compact CLI output legible. App, CLI,
+  and MCP share the same goal, status, accepted hand state, and earned reveal.
 - **Reveal:** *"Set the dial to 2 and the chords wrap a cardioid. Up to scale and rotation, that shape outlines the Mandelbrot set's main body, and Fourier Epicycles draw it with only two rotating vectors: arithmetic, fractals, and waves meet in one heart."*
-- **Sound:** *k* controls pitch; the number of lobes sets a harmonic ratio, so morphing the shape *is* a melodic slide. Landing on an integer snaps to a clean note.
+- **Sound:** The room bed stays continuous while the accepted multiplier drives
+  a quiet two-voice ratio `k:(k-1)`: K=2 is an octave, K=3 a fifth, K=4 a
+  fourth, and K=5 a just major third. The real-time voice glides without
+  restarting the bed; CLI and MCP sonification snapshot the same state.
 - *Cheap to build, stunning in motion, performable, tweetable, and the Reveal genuinely reframes the whole thing. This is the one we perfect first.*
 
 ### 14. Prime Spirals (Ulam & Sacks)  Wow 4 / Build 2

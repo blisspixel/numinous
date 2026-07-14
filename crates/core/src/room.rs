@@ -5,7 +5,7 @@
 //! specifications in the core while windows, protocols, and persistence remain
 //! responsibilities of the faces.
 
-use crate::sound::SoundSpec;
+use crate::sound::{ParametricSound, SoundSpec};
 use crate::surface::Surface;
 
 /// The face-neutral default action for rooms without a dedicated touch verb.
@@ -121,6 +121,36 @@ pub trait Room {
     /// see `docs/PLAYFUL.md`). The knowledge is the loot. Empty by default.
     fn deep_cuts(&self) -> &'static [&'static str] {
         &[]
+    }
+
+    /// An optional, player-facing objective for a room with an earned Aha.
+    fn goal(&self) -> Option<&'static str> {
+        None
+    }
+
+    /// Whether the supplied accepted input has completed this room's goal.
+    fn goal_met(&self, t: f64, inputs: &[RoomInput]) -> bool {
+        let _ = (t, inputs);
+        false
+    }
+
+    /// A continuous mathematical voice controlled by the accepted input.
+    ///
+    /// Real-time faces glide this over the stable room bed. Returning `None`
+    /// keeps the bed unchanged and is the safe default for every existing room.
+    fn parameter_sound(&self, t: f64, inputs: &[RoomInput]) -> Option<ParametricSound> {
+        let _ = (t, inputs);
+        None
+    }
+
+    /// The room sound after applying replayable input.
+    ///
+    /// CLI and protocol faces use this snapshot so sound and rendered state
+    /// answer the same gesture. Real-time faces should prefer
+    /// [`Room::parameter_sound`] over repeatedly replacing their room bed.
+    fn sound_input(&self, t: f64, inputs: &[RoomInput]) -> SoundSpec {
+        self.parameter_sound(t, inputs)
+            .map_or_else(|| self.sound(t), ParametricSound::snapshot)
     }
 
     /// This room's sound at phase `t` (the "everything is an instrument" pillar,
@@ -466,6 +496,21 @@ mod tests {
             t: 0.2,
         }];
         assert_eq!(room.status_input(0.75, &inputs), room.status(0.75));
+    }
+
+    #[test]
+    fn goals_and_parametric_sound_are_opt_in() {
+        let room = DefaultSoundRoom;
+        let input = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.2,
+        }];
+
+        assert_eq!(room.goal(), None);
+        assert!(!room.goal_met(0.2, &input));
+        assert_eq!(room.parameter_sound(0.2, &input), None);
+        assert_eq!(room.sound_input(0.2, &input), room.sound(0.2));
     }
 
     #[test]

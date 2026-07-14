@@ -977,3 +977,85 @@ matrix, Clippy with warnings denied, locked build, house style, and supply-chain
 policy. A deeper placement decision loop and Pi-specific no-instructions fun
 evidence remain open. The room is now causal and legible in captured evidence;
 that is not a claim that real participants will choose to keep playing it.
+
+---
+
+# The thirteenth round (July 14, 2026): Times Tables Flagship Proof
+
+The full 42-profile roster was assigned exactly once across three independent
+groups of 14. The first-contact group owned the App opening, default and compact
+receipts, legibility, and visual hierarchy. The interaction and sound group
+owned drag causality, reset, controller routes, status truth, and audible state.
+The face-parity group owned CLI and MCP discovery, render, sound, hostile input,
+compact output, and earned-reveal behavior. Each group inspected source and
+reproducible artifacts before ranking findings. These are simulated review
+lenses and engineering reproductions, not participant testimony.
+
+## Reproduced findings
+
+- The ordinary App advanced K at 1.92 units per second. K=2 survived for only a
+  moment and the full sweep hard-wrapped after about 4.17 seconds, so first
+  contact erased the cardioid before the player acted.
+- The room had no playable goal, success state, or earned path to its documented
+  four-lobe insight in the App, CLI, or MCP.
+- Visual receipts used one cyan line family and no legible in-scene dial.
+  Compact ASCII renders filled 74 to 82 percent of their cells, losing the
+  negative space needed to read the curve.
+- Dragging changed visual and status state but not any sound path. Near-integer
+  ambient phases could claim `CLOSED` while the unsnapped sound disagreed, and
+  K=2 reported the grammatically incorrect `1 LOBES`.
+- CLI static reports omitted the shared action, `sonify` accepted no hand input,
+  and MCP `listen_room` could not hear the state rendered by `play_room`.
+
+The groups also closed false positives. Footer and reset geometry remained
+stable, the existing drag produced a large visual delta, compact controller
+labels fit, input bounds held, and render determinism remained intact.
+
+## What changed
+
+The ordinary App now holds the K=2 cardioid until accepted pointer or controller
+input. The Show retains its automatic sweep. The arrival card names `LAND ON
+EXACTLY 4 LOBES`; landing near K=5 snaps visual, status, and sound to exact K=5,
+raises one `FOUR LOBES FOUND` banner, and points to Inspect for the Reveal.
+Reset clears the discovery and restores K=2.
+
+The 240-point mathematical circle remains fixed, but chord sampling now follows
+available circumference, preserving negative space on 72 by 32 and 40 by 20
+terminal surfaces. Five semantic chord-family marks become cyan, magenta, green,
+amber, and violet in the additive raster. A ticked in-scene dial and bright
+marker show the current parameter. Status distinguishes exact closure from a
+continuous morph, uses correct singular grammar, and names the four-lobe target.
+
+The stable room arrangement no longer restarts when the dial moves. A quiet
+two-oscillator voice keeps persistent phase and smoothly follows a D3 root plus
+the exact ratio `k:(k-1)`. Invalid targets fade closed, target updates leave the
+base playhead untouched, and integer landmarks produce octave, fifth, fourth,
+and major-third ratios. CLI `sonify` and MCP `listen_room` accept the same
+bounded poke or gesture forms as their visual counterparts. CLI reports Action,
+Goal, earned Aha, and Reveal; MCP reports `goal`, `goalMet`, and only the earned
+reveal. Ambient phase alone cannot earn the goal.
+
+The App matrix grows from 341 to 349 exact images. Twelve flagship receipts
+capture K=2, K=3, K=pi, K=4, K=5, and the earned Aha at default and compact
+sizes. The generator asserts the spectral inks and visible dial. The complete
+local release gate passes 1,336 all-target test cases, 93.60 percent region
+coverage, 93.41 percent line coverage, the exact 349-screen matrix, formatting,
+Clippy with warnings denied, locked build, house style, and supply-chain policy.
+
+Three fresh acceptance checkers then reproduced five lifecycle and contract
+defects that the first grouped pass missed. Nonzero visit variation displaced
+the promised K=2 opening and reset, ambient K=5 said `FOUND` without earning the
+goal, a controller arrival receipt bypassed the live hold, game entry retained
+the parameter voice, and The Show initially changed its picture without
+refreshing the moving audio target. A sixth schema finding showed that MCP
+advertised incomplete positioned events and overfilled cancel events. The
+corrections preserve K=2 and K=10 across every variation, reserve `FOUND` for an
+accepted hand, route the controller receipt through the real opening state,
+release audio ownership on every modal entry, update the Show voice on its
+frame clock, and declare exact MCP event variants. All three independent
+rechecks accept the frozen result with no remaining actionable finding.
+
+The technical Flagship Proof is substantially stronger, but the 0.2 gate is not
+closed. A real stranger hallway session must still show that players discover
+and value the four-lobe goal without coaching. A musician-led long-listening
+session and representative physical-controller session also remain required.

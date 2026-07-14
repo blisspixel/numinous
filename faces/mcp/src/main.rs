@@ -760,6 +760,56 @@ fn add_response_mode(mut catalog: Value) -> Value {
     catalog
 }
 
+fn room_pokes_schema() -> Value {
+    json!({
+        "type": "array",
+        "description": "Normalized hand points as [x,y] pairs in [0,1]. Newest point last. Not combinable with 'gesture'.",
+        "maxItems": numinous_core::MAX_ROOM_POKES,
+        "items": {
+            "type": "array",
+            "items": { "type": "number", "minimum": 0, "maximum": 1 },
+            "minItems": 2,
+            "maxItems": 2
+        }
+    })
+}
+
+fn room_gesture_schema() -> Value {
+    let positioned_event = |kind: &str| {
+        json!({
+            "type": "object",
+            "properties": {
+                "kind": { "type": "string", "enum": [kind] },
+                "x": { "type": "number", "minimum": 0, "maximum": 1 },
+                "y": { "type": "number", "minimum": 0, "maximum": 1 },
+                "t": { "type": "number", "minimum": 0, "maximum": 1 }
+            },
+            "required": ["kind", "x", "y", "t"],
+            "additionalProperties": false
+        })
+    };
+    json!({
+        "type": "array",
+        "description": "A replayable pointer trail. Events run oldest to newest with nondecreasing phase timestamps. In held rooms (double-pendulum) a down pins the bob, an up releases it with the velocity of the approach, and a cancel lets go gently. In Life, a down earlier than the final t plants a glider early enough to show its later evolution; the newest 24 down events become launches. Everywhere else the trail's down and move points paint like pokes. Not combinable with 'pokes'.",
+        "maxItems": numinous_core::MAX_ROOM_INPUTS,
+        "items": {
+            "oneOf": [
+                positioned_event("down"),
+                positioned_event("move"),
+                positioned_event("up"),
+                {
+                    "type": "object",
+                    "properties": {
+                        "kind": { "type": "string", "enum": ["cancel"] }
+                    },
+                    "required": ["kind"],
+                    "additionalProperties": false
+                }
+            ]
+        }
+    })
+}
+
 fn build_tools_catalog() -> Value {
     json!({
         "tools": [
@@ -803,33 +853,8 @@ fn build_tools_catalog() -> Value {
                         "width": { "type": "integer", "minimum": 1, "maximum": MAX_TOOL_WIDTH, "description": "ASCII canvas width in columns, from 1 through 512." },
                         "height": { "type": "integer", "minimum": 1, "maximum": MAX_TOOL_HEIGHT, "description": "ASCII canvas height in rows, from 1 through 256." },
                         "variation": { "type": "integer", "minimum": 0, "description": "Per-visit variation seed (default 0) for replayable novelty in supporting rooms." },
-                        "pokes": {
-                            "type": "array",
-                            "description": "Normalized hand points as [x,y] pairs in [0,1]. Newest point last. Not combinable with 'gesture'.",
-                            "maxItems": numinous_core::MAX_ROOM_POKES,
-                            "items": {
-                                "type": "array",
-                                "items": { "type": "number", "minimum": 0, "maximum": 1 },
-                                "minItems": 2,
-                                "maxItems": 2
-                            }
-                        },
-                        "gesture": {
-                            "type": "array",
-                            "description": "A replayable pointer trail. Events run oldest to newest with nondecreasing phase timestamps. In held rooms (double-pendulum) a down pins the bob, an up releases it with the velocity of the approach, and a cancel lets go gently. In Life, a down earlier than the final t plants a glider early enough to show its later evolution; the newest 24 down events become launches. Everywhere else the trail's down and move points paint like pokes. Not combinable with 'pokes'.",
-                            "maxItems": numinous_core::MAX_ROOM_INPUTS,
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "kind": { "type": "string", "enum": ["down", "move", "up", "cancel"] },
-                                    "x": { "type": "number", "minimum": 0, "maximum": 1 },
-                                    "y": { "type": "number", "minimum": 0, "maximum": 1 },
-                                    "t": { "type": "number", "minimum": 0, "maximum": 1 }
-                                },
-                                "required": ["kind"],
-                                "additionalProperties": false
-                            }
-                        }
+                        "pokes": room_pokes_schema(),
+                        "gesture": room_gesture_schema()
                     },
                     "required": ["id"],
                     "additionalProperties": false
@@ -899,7 +924,9 @@ fn build_tools_catalog() -> Value {
                     "properties": {
                         "id": { "type": "string", "description": "Room id, for example lissajous." },
                         "t": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "Phase in [0,1)." },
-                        "variation": { "type": "integer", "description": "Per-visit variation seed (default 0), matching play_room." }
+                        "variation": { "type": "integer", "minimum": 0, "description": "Per-visit variation seed (default 0), matching play_room." },
+                        "pokes": room_pokes_schema(),
+                        "gesture": room_gesture_schema()
                     },
                     "required": ["id"],
                     "additionalProperties": false
@@ -1224,6 +1251,22 @@ fn validate_schema_value(
         ));
     }
 
+    if let Some(alternatives) = schema.get("oneOf").and_then(Value::as_array) {
+        let matches = alternatives
+            .iter()
+            .filter(|alternative| {
+                validate_schema_value(value, alternative, path, depth + 1).is_ok()
+            })
+            .count();
+        if matches != 1 {
+            return Err(format!(
+                "{} must match exactly one declared event shape.",
+                argument_subject(path)
+            ));
+        }
+        return Ok(());
+    }
+
     if let Some(expected_type) = schema.get("type").and_then(Value::as_str) {
         let valid_type = match expected_type {
             "object" => value.is_object(),
@@ -1476,7 +1519,7 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
             structured.get("count")?.as_u64()?
         )),
         "describe_room" => Some(format!(
-            "{} ({}) in {}. Action: {}. Read structuredContent for the blurb, reveal, and deep cuts.",
+            "{} ({}) in {}. Action: {}. Read structuredContent for the goal, blurb, reveal, and deep cuts.",
             structured.get("title")?.as_str()?,
             structured.get("room")?.as_str()?,
             structured.get("wing")?.as_str()?,
@@ -1503,12 +1546,12 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
                 summary.push_str(&format!(" Touch changed {cells} cells."));
             }
             summary.push_str(
-                " Read structuredContent.render, pokes, gesture, status, and delta for the complete result.",
+                " Read structuredContent.render, pokes, gesture, status, delta, goal, goalMet, and the earned reveal for the complete result.",
             );
             Some(summary)
         }
         "listen_room" => Some(format!(
-            "{} ({}) at t={:.3}: {} of {} notes returned over {:.2}s. Read structuredContent.motif, notes, and sound_roles for the complete ambient and mathematical sound.",
+            "{} ({}) at t={:.3}: {} of {} notes returned over {:.2}s. Read structuredContent.pokes, gesture, motif, notes, and sound_roles for the complete input-aware sound.",
             structured.get("title")?.as_str()?,
             structured.get("room")?.as_str()?,
             structured.get("t")?.as_f64()?,
@@ -1599,8 +1642,12 @@ fn describe_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
                     break;
                 }
             }
+            let goal_line = room
+                .goal()
+                .map(|goal| format!("\nGoal: {goal}"))
+                .unwrap_or_default();
             let text = format!(
-                "{} ({})\nWing: {}\nAction: {}\n\n{}\n\nReveal: {}{cuts}",
+                "{} ({})\nWing: {}\nAction: {}{goal_line}\n\n{}\n\nReveal: {}{cuts}",
                 m.title,
                 m.id,
                 m.wing,
@@ -1615,6 +1662,7 @@ fn describe_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
                     "title": m.title,
                     "wing": m.wing,
                     "action": numinous_core::room_action(room.as_ref()),
+                    "goal": room.goal(),
                     "blurb": m.blurb,
                     "reveal": room.reveal(),
                     "deep_cuts": structured_cuts,
@@ -1664,6 +1712,10 @@ fn listen_room_tool(args: &Value) -> Value {
     if !(0.0..1.0).contains(&t) {
         return tool_error("Argument 't' must be a phase in [0,1).");
     }
+    let inputs = match parse_room_inputs(args) {
+        Ok(inputs) => inputs,
+        Err(message) => return tool_error(&message),
+    };
     let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
     let room = if variation != 0 {
         all_rooms_with(variation)
@@ -1675,7 +1727,13 @@ fn listen_room_tool(args: &Value) -> Value {
     let Some(room) = room else {
         return tool_error(&unknown_room(id));
     };
-    let spec = room.sound(t);
+    let poke_inputs = numinous_core::inputs_from_pokes(&inputs.pokes, t);
+    let accepted_inputs = if inputs.gesture.is_empty() {
+        poke_inputs.as_slice()
+    } else {
+        inputs.gesture.as_slice()
+    };
+    let spec = room.sound_input(t, accepted_inputs);
     let note_count = spec.notes.len();
     let mut lines = vec![format!(
         "{} at t={t:.3}: {:.1}s of sound, {} notes.",
@@ -1733,6 +1791,8 @@ fn listen_room_tool(args: &Value) -> Value {
             "title": room.meta().title,
             "t": t,
             "variation": variation,
+            "pokes": inputs.pokes,
+            "gesture": if inputs.gesture.is_empty() { Value::Null } else { gesture_json(&inputs.gesture) },
             "duration_seconds": spec.duration,
             "note_count": note_count,
             "returned_note_count": structured_notes.len(),
@@ -1895,6 +1955,24 @@ fn parse_room_gesture(args: &Value) -> Result<Vec<numinous_core::RoomInput>, Str
         .collect()
 }
 
+#[derive(Debug)]
+struct ParsedRoomInputs {
+    pokes: Vec<(f64, f64)>,
+    gesture: Vec<numinous_core::RoomInput>,
+}
+
+fn parse_room_inputs(args: &Value) -> Result<ParsedRoomInputs, String> {
+    let pokes = parse_room_pokes(args)?;
+    let gesture = parse_room_gesture(args)?;
+    if !pokes.is_empty() && !gesture.is_empty() {
+        return Err(
+            "Use either 'pokes' (static hand points) or 'gesture' (a pointer trail), not both in one call."
+                .to_string(),
+        );
+    }
+    Ok(ParsedRoomInputs { pokes, gesture })
+}
+
 /// The canonical JSON form of a parsed gesture, echoed back so the reply
 /// carries exactly what was played, never raw client bytes.
 fn gesture_json(gesture: &[numinous_core::RoomInput]) -> Value {
@@ -1931,19 +2009,10 @@ fn play_room_tool(args: &Value) -> Value {
         .and_then(Value::as_u64)
         .unwrap_or(DEFAULT_HEIGHT) as usize;
     let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
-    let pokes = match parse_room_pokes(args) {
-        Ok(pokes) => pokes,
+    let inputs = match parse_room_inputs(args) {
+        Ok(inputs) => inputs,
         Err(message) => return tool_error(&message),
     };
-    let gesture = match parse_room_gesture(args) {
-        Ok(gesture) => gesture,
-        Err(message) => return tool_error(&message),
-    };
-    if !pokes.is_empty() && !gesture.is_empty() {
-        return tool_error(
-            "Use either 'pokes' (static hand points) or 'gesture' (a pointer trail), not both in one call.",
-        );
-    }
 
     let room = if variation != 0 {
         all_rooms_with(variation)
@@ -1956,34 +2025,39 @@ fn play_room_tool(args: &Value) -> Value {
     match room {
         Some(room) => {
             let mut canvas = Canvas::new(width, height);
-            let delta = if !gesture.is_empty() {
+            let poke_inputs = numinous_core::inputs_from_pokes(&inputs.pokes, t);
+            let accepted_inputs = if inputs.gesture.is_empty() {
+                poke_inputs.as_slice()
+            } else {
+                inputs.gesture.as_slice()
+            };
+            let delta = if !inputs.gesture.is_empty() {
                 // A gesture trail: held rooms give it pull-and-release
                 // semantics; every other room answers through the same
                 // bridge the App uses.
-                room.render_input(&mut canvas, t, &gesture);
+                room.render_input(&mut canvas, t, accepted_inputs);
                 let mut base = Canvas::new(width, height);
                 room.render(&mut base, t);
                 base.delta(&canvas)
-            } else if pokes.is_empty() {
+            } else if inputs.pokes.is_empty() {
                 room.render(&mut canvas, t);
                 None
             } else {
-                let events = numinous_core::inputs_from_pokes(&pokes, t);
-                room.render_input(&mut canvas, t, &events);
+                room.render_input(&mut canvas, t, accepted_inputs);
                 let mut base = Canvas::new(width, height);
                 room.render(&mut base, t);
                 base.delta(&canvas)
             };
             let m = room.meta();
             let action = numinous_core::room_action(room.as_ref());
-            let poke_inputs = numinous_core::inputs_from_pokes(&pokes, t);
-            let status = if !gesture.is_empty() {
-                room.status_input(t, &gesture)
-            } else if !poke_inputs.is_empty() {
-                room.status_input(t, &poke_inputs)
+            let status = if !accepted_inputs.is_empty() {
+                room.status_input(t, accepted_inputs)
             } else {
                 room.status(t)
             };
+            let goal = room.goal();
+            let goal_met = goal.is_some() && room.goal_met(t, accepted_inputs);
+            let earned_reveal = goal_met.then(|| room.reveal());
             let status_line = status
                 .as_ref()
                 .map(|readout| format!("\nStatus: {readout}"))
@@ -1997,10 +2071,16 @@ fn play_room_tool(args: &Value) -> Value {
                     )
                 })
                 .unwrap_or_default();
+            let goal_line = goal
+                .map(|objective| format!("\nGoal: {objective}"))
+                .unwrap_or_default();
+            let reveal_line = earned_reveal
+                .map(|reveal| format!("\nReveal: {reveal}"))
+                .unwrap_or_default();
             let render = canvas.to_text();
             tool_structured(
                 &format!(
-                    "{} at t={t:.3}:\nAction: {action}{status_line}{touch_line}\n\n{render}",
+                    "{} at t={t:.3}:\nAction: {action}{goal_line}{status_line}{touch_line}{reveal_line}\n\n{render}",
                     m.title,
                 ),
                 json!({
@@ -2010,10 +2090,13 @@ fn play_room_tool(args: &Value) -> Value {
                     "width": width,
                     "height": height,
                     "variation": variation,
-                    "pokes": pokes,
-                    "gesture": if gesture.is_empty() { Value::Null } else { gesture_json(&gesture) },
+                    "pokes": inputs.pokes,
+                    "gesture": if inputs.gesture.is_empty() { Value::Null } else { gesture_json(&inputs.gesture) },
                     "action": action,
                     "status": status,
+                    "goal": goal,
+                    "goalMet": goal_met,
+                    "reveal": earned_reveal,
                     // The picture itself, so a mind on a client that surfaces
                     // only structuredContent still sees the math, not just its
                     // metadata. The render is the substance, never text-only.
@@ -4209,9 +4292,23 @@ mod tests {
             .iter()
             .find(|tool| tool["name"] == "listen_room")
             .expect("listen_room tool");
-        let listen_phase = &listen["inputSchema"]["properties"]["t"];
+        let listen_properties = &listen["inputSchema"]["properties"];
+        let listen_phase = &listen_properties["t"];
         assert_eq!(listen_phase["minimum"], 0);
         assert_eq!(listen_phase["exclusiveMaximum"], 1);
+        assert_eq!(listen_properties["pokes"], play_properties["pokes"]);
+        assert_eq!(listen_properties["gesture"], play_properties["gesture"]);
+        assert_eq!(listen_properties["variation"]["minimum"], 0);
+        let gesture_variants = play_properties["gesture"]["items"]["oneOf"]
+            .as_array()
+            .expect("gesture event variants");
+        assert_eq!(gesture_variants.len(), 4);
+        assert_eq!(
+            gesture_variants[0]["required"],
+            json!(["kind", "x", "y", "t"])
+        );
+        assert_eq!(gesture_variants[3]["required"], json!(["kind"]));
+        assert!(gesture_variants[3]["properties"].get("x").is_none());
         let challenge = tools
             .iter()
             .find(|tool| tool["name"] == "challenge")
@@ -4257,7 +4354,10 @@ mod tests {
                 "play_room",
                 json!({"id":"times-tables","width":72,"height":32,"t":0.25}),
             ),
-            ("listen_room", json!({"id":"lissajous","t":0.25})),
+            (
+                "listen_room",
+                json!({"id":"times-tables","t":0.25,"pokes":[[0.375,0.5]]}),
+            ),
             ("run_sim", json!({"id":"tribbles"})),
             ("quiz", json!({"seed":3})),
             ("quiz", json!({"seed":3,"guess":"A"})),
@@ -4469,7 +4569,22 @@ mod tests {
             (
                 "play_room",
                 json!({"id":"lorenz","gesture":[{"kind":"cancel","note":"hidden"}]}),
-                "unexpected field 'note'",
+                "exactly one declared event shape",
+            ),
+            (
+                "play_room",
+                json!({"id":"lorenz","gesture":[{"kind":"down"}]}),
+                "exactly one declared event shape",
+            ),
+            (
+                "play_room",
+                json!({"id":"lorenz","gesture":[{"kind":"cancel","x":0.5}]}),
+                "exactly one declared event shape",
+            ),
+            (
+                "listen_room",
+                json!({"id":"lorenz","variation":-1}),
+                "at least 0",
             ),
             (
                 "challenge",
@@ -5074,8 +5189,8 @@ plays 2
             .unwrap_or_default();
         assert!(text.contains("Hz"), "got: {text}");
         assert!(
-            text.contains("1 notes"),
-            "the times-tables default tone has one note"
+            text.contains("2 notes"),
+            "the times-tables default voice has two notes"
         );
         assert!(text.contains("Ambient motif:"), "got: {text}");
         assert!(text.contains("Mathematical sonification:"), "got: {text}");
@@ -5111,15 +5226,83 @@ plays 2
             "notes"
         );
 
+        let unvaried = handle_request(&json!({
+            "jsonrpc":"2.0","id":300,"method":"tools/call",
+            "params":{"name":"listen_room","arguments":{"id":"times-tables","t":0.5}}
+        }))
+        .expect("tools/call must respond");
+        let unvaried_text = unvaried["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
         let varied = handle_request(&json!({
             "jsonrpc":"2.0","id":301,"method":"tools/call",
-            "params":{"name":"listen_room","arguments":{"id":"times-tables","t":0.0,"variation":42}}
+            "params":{"name":"listen_room","arguments":{"id":"times-tables","t":0.5,"variation":42}}
         }))
         .expect("tools/call must respond");
         let varied_text = varied["result"]["content"][0]["text"]
             .as_str()
             .unwrap_or_default();
-        assert_ne!(text, varied_text, "listen_room must honor variation");
+        assert_ne!(
+            unvaried_text, varied_text,
+            "listen_room must honor variation away from the shared opening"
+        );
+    }
+
+    #[test]
+    fn listen_room_uses_the_same_accepted_input_as_the_times_tables_dial() {
+        let resting = call("listen_room", json!({"id":"times-tables","t":0.0}));
+        let landed = call(
+            "listen_room",
+            json!({"id":"times-tables","t":0.0,"pokes":[[0.375,0.5]]}),
+        );
+        let resting_notes = resting["result"]["structuredContent"]["notes"]
+            .as_array()
+            .expect("resting notes");
+        let landed_notes = landed["result"]["structuredContent"]["notes"]
+            .as_array()
+            .expect("landed notes");
+        let ratio = |notes: &[Value]| {
+            notes[1]["frequency_hz"].as_f64().expect("upper voice")
+                / notes[0]["frequency_hz"].as_f64().expect("root voice")
+        };
+
+        assert!((ratio(resting_notes) - 2.0).abs() < 1e-6);
+        assert!((ratio(landed_notes) - 1.25).abs() < 1e-6);
+        assert_eq!(
+            landed["result"]["structuredContent"]["pokes"],
+            json!([[0.375, 0.5]])
+        );
+        assert!(landed["result"]["structuredContent"]["gesture"].is_null());
+    }
+
+    #[test]
+    fn listen_room_rejects_unsafe_or_ambiguous_input() {
+        for (arguments, expected) in [
+            (
+                json!({"id":"times-tables","pokes":[[1.2,0.5]]}),
+                "at most 1",
+            ),
+            (
+                json!({"id":"times-tables","gesture":[
+                    {"kind":"down","x":0.5,"y":0.5,"t":0.7},
+                    {"kind":"move","x":0.4,"y":0.5,"t":0.2}
+                ]}),
+                "nondecreasing",
+            ),
+            (
+                json!({"id":"times-tables","pokes":[[0.5,0.5]],"gesture":[
+                    {"kind":"down","x":0.5,"y":0.5,"t":0.2}
+                ]}),
+                "either 'pokes'",
+            ),
+        ] {
+            let response = call("listen_room", arguments);
+            let text = tool_error_text(&response);
+            assert!(
+                text.contains(expected),
+                "expected {expected:?}, got {text:?}"
+            );
+        }
     }
 
     #[test]
@@ -5393,6 +5576,55 @@ plays 2
             .expect("structuredContent carries the render");
         assert!(render.contains('*'), "the structured render has ink too");
         assert_eq!(resp["result"]["isError"], false);
+    }
+
+    #[test]
+    fn times_tables_reveals_only_after_the_k5_goal_is_earned() {
+        let unearned = call(
+            "play_room",
+            json!({"id":"times-tables","t":0.375,"width":40,"height":20}),
+        );
+        let unearned_content = &unearned["result"]["structuredContent"];
+        assert_eq!(unearned_content["goal"], "LAND ON EXACTLY 4 LOBES");
+        assert_eq!(unearned_content["goalMet"], false);
+        assert!(unearned_content["reveal"].is_null());
+        assert!(
+            !unearned["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("Reveal:")
+        );
+
+        let earned_arguments = json!({
+            "id":"times-tables",
+            "t":0.81,
+            "width":40,
+            "height":20,
+            "variation":42,
+            "pokes":[[0.375,0.5]]
+        });
+        let earned = call("play_room", earned_arguments.clone());
+        let earned_content = &earned["result"]["structuredContent"];
+        assert_eq!(earned_content["variation"], 42);
+        assert_eq!(earned_content["status"], "K 5.00  CLOSED  4 LOBES  FOUND");
+        assert_eq!(earned_content["goalMet"], true);
+        assert!(
+            earned_content["reveal"]
+                .as_str()
+                .is_some_and(|reveal| reveal.contains("Mandelbrot"))
+        );
+        assert!(
+            earned["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("Reveal:")
+        );
+
+        let compact = call("play_room", with_response_mode(earned_arguments, "compact"));
+        assert_eq!(
+            compact["result"]["structuredContent"],
+            earned["result"]["structuredContent"]
+        );
     }
 
     #[test]
@@ -6694,10 +6926,12 @@ plays 2
             .unwrap_or_default();
         assert!(text.contains("Number & Pattern"));
         assert!(text.contains("Action:"));
+        assert!(text.contains("Goal: LAND ON EXACTLY 4 LOBES"));
         let structured = &resp["result"]["structuredContent"];
         assert_eq!(structured["room"], "times-tables");
         assert_eq!(structured["wing"], "Number & Pattern");
         assert!(structured["action"].is_string());
+        assert_eq!(structured["goal"], "LAND ON EXACTLY 4 LOBES");
         assert!(structured["reveal"].is_string());
         assert!(structured["deep_cuts"].is_array());
     }
@@ -6723,6 +6957,12 @@ plays 2
             assert_eq!(description["title"], meta.title, "describe {}", meta.id);
             assert_eq!(description["wing"], meta.wing, "describe {}", meta.id);
             assert!(description["action"].is_string(), "describe {}", meta.id);
+            assert_eq!(
+                description["goal"],
+                json!(room.goal()),
+                "describe {}",
+                meta.id
+            );
             assert_eq!(description["blurb"], meta.blurb, "describe {}", meta.id);
             assert_eq!(description["reveal"], room.reveal(), "describe {}", meta.id);
             assert!(description["deep_cuts"].is_array(), "describe {}", meta.id);

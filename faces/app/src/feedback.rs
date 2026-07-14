@@ -7,6 +7,7 @@ const RADIO_FRAMES: u64 = 180;
 const FULLSCREEN_FRAMES: u64 = 120;
 const VOLUME_FRAMES: u64 = 90;
 const SOUND_DEVICE_FRAMES: u64 = 600;
+const ROOM_GOAL_FRAMES: u64 = 240;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Banner {
@@ -103,6 +104,17 @@ pub(crate) fn radio_off() -> Banner {
     )
 }
 
+pub(crate) fn room_goal(goal: &str) -> Banner {
+    let heading = match goal {
+        "LAND ON EXACTLY 4 LOBES" => "FOUR LOBES FOUND".to_string(),
+        _ => format!("GOAL COMPLETE: {}", goal.to_uppercase()),
+    };
+    Banner::new(
+        vec![heading, "INSPECT: WHY THE HEART MATTERS".to_string()],
+        ROOM_GOAL_FRAMES,
+    )
+}
+
 pub(crate) fn sound_device_unavailable(error: &str) -> Banner {
     Banner::new(
         vec!["SOUND DEVICE UNAVAILABLE".to_string(), error.to_uppercase()],
@@ -115,7 +127,7 @@ mod tests {
     use std::io;
     use std::path::PathBuf;
 
-    use super::{fullscreen, level_up, playtest_note, volume};
+    use super::{fullscreen, level_up, playtest_note, room_goal, volume};
 
     #[test]
     fn level_up_banner_names_lore_and_boons() {
@@ -153,6 +165,13 @@ mod tests {
 
         let muted = volume(0.5, true);
         assert_eq!(muted.lines(), ["VOLUME 50%", "OUTPUT REMAINS MUTED"]);
+
+        let goal = room_goal("LAND ON EXACTLY 4 LOBES");
+        assert_eq!(
+            goal.lines(),
+            ["FOUR LOBES FOUND", "INSPECT: WHY THE HEART MATTERS"]
+        );
+        assert_eq!(goal.frames_left(), 240);
     }
 
     #[test]

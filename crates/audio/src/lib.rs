@@ -143,6 +143,107 @@ pub fn synthesize_sine(frequency: f32, sample_rate: u32, count: usize) -> Vec<f3
 
 const SOURCE_CROSSFADE_SECONDS: f32 = 0.03;
 const GAIN_RAMP_SECONDS: f32 = 0.025;
+const PARAMETER_RAMP_SECONDS: f32 = 0.04;
+const PARAMETER_MAX_GAIN: f32 = 0.08;
+const PARAMETER_MIN_FREQUENCY: f32 = 20.0;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct ParameterTarget {
+    root_hz: f32,
+    ratio: f32,
+    gain: f32,
+}
+
+/// A quiet two-oscillator voice that follows a continuously changing ratio.
+///
+/// Phases persist across target changes. Frequency, ratio, and gain approach
+/// their targets inside the callback, so control-thread updates never restart
+/// either oscillator or introduce an abrupt parameter step.
+struct ParameterVoice {
+    target: Option<ParameterTarget>,
+    current_root_hz: f32,
+    current_ratio: f32,
+    current_gain: f32,
+    root_phase: f32,
+    ratio_phase: f32,
+    sample_rate: f32,
+    smoothing: f32,
+    gain_step: f32,
+}
+
+impl ParameterVoice {
+    fn new(sample_rate: u32) -> Self {
+        let sample_rate = sample_rate.max(1) as f32;
+        let ramp_frames = (PARAMETER_RAMP_SECONDS * sample_rate).max(1.0);
+        Self {
+            target: None,
+            current_root_hz: 220.0,
+            current_ratio: 1.0,
+            current_gain: 0.0,
+            root_phase: 0.0,
+            ratio_phase: 0.0,
+            sample_rate,
+            smoothing: 1.0 - (-1.0 / ramp_frames).exp(),
+            gain_step: PARAMETER_MAX_GAIN / ramp_frames,
+        }
+    }
+
+    fn set_target(&mut self, root_hz: f32, ratio: f32, gain: f32) -> bool {
+        let upper_frequency = self.sample_rate * 0.45;
+        let valid = root_hz.is_finite()
+            && ratio.is_finite()
+            && gain.is_finite()
+            && root_hz >= PARAMETER_MIN_FREQUENCY
+            && ratio > 0.0
+            && gain > 0.0
+            && gain <= PARAMETER_MAX_GAIN
+            && root_hz <= upper_frequency
+            && root_hz * ratio <= upper_frequency;
+        if !valid {
+            self.clear_target();
+            return false;
+        }
+
+        if self.target.is_none() && self.current_gain == 0.0 {
+            self.current_root_hz = root_hz;
+            self.current_ratio = ratio;
+        }
+        self.target = Some(ParameterTarget {
+            root_hz,
+            ratio,
+            gain,
+        });
+        true
+    }
+
+    fn clear_target(&mut self) {
+        self.target = None;
+    }
+
+    fn next_sample(&mut self) -> f32 {
+        let (target_root, target_ratio, target_gain) = self
+            .target
+            .map_or((self.current_root_hz, self.current_ratio, 0.0), |target| {
+                (target.root_hz, target.ratio, target.gain)
+            });
+        self.current_root_hz += (target_root - self.current_root_hz) * self.smoothing;
+        self.current_ratio += (target_ratio - self.current_ratio) * self.smoothing;
+        if self.current_gain < target_gain {
+            self.current_gain = (self.current_gain + self.gain_step).min(target_gain);
+        } else if self.current_gain > target_gain {
+            self.current_gain = (self.current_gain - self.gain_step).max(target_gain);
+        }
+
+        let upper_frequency = self.sample_rate * 0.45;
+        let ratio_frequency = (self.current_root_hz * self.current_ratio).min(upper_frequency);
+        self.root_phase =
+            (self.root_phase + TAU * self.current_root_hz / self.sample_rate).rem_euclid(TAU);
+        self.ratio_phase =
+            (self.ratio_phase + TAU * ratio_frequency / self.sample_rate).rem_euclid(TAU);
+        let pair = (self.root_phase.sin() + self.ratio_phase.sin()) * 0.5;
+        (pair * self.current_gain).clamp(-PARAMETER_MAX_GAIN, PARAMETER_MAX_GAIN)
+    }
+}
 
 /// One mono or interleaved-stereo looping source.
 struct LoopBuffer {
@@ -237,6 +338,7 @@ struct MixerState {
     current_gain: f32,
     active: bool,
     gain_step: f32,
+    parameter_voice: ParameterVoice,
 }
 
 impl MixerState {
@@ -253,6 +355,7 @@ impl MixerState {
             current_gain: 1.0,
             active: true,
             gain_step: 1.0 / (GAIN_RAMP_SECONDS * rate).max(1.0),
+            parameter_voice: ParameterVoice::new(sample_rate),
         }
     }
 
@@ -302,6 +405,14 @@ impl MixerState {
         };
     }
 
+    fn set_parameter_voice(&mut self, root_hz: f32, ratio: f32, gain: f32) -> bool {
+        self.parameter_voice.set_target(root_hz, ratio, gain)
+    }
+
+    fn clear_parameter_voice(&mut self) {
+        self.parameter_voice.clear_target();
+    }
+
     fn next_frame(&mut self) -> (f32, f32) {
         let current = self.current.next_frame();
         let mixed = if self.crossfade_remaining == 0 {
@@ -331,6 +442,8 @@ impl MixerState {
             mixed
         };
 
+        let parameter = self.parameter_voice.next_sample();
+        let mixed = (mixed.0 + parameter, mixed.1 + parameter);
         let target = if self.active { self.master_gain } else { 0.0 };
         if self.current_gain < target {
             self.current_gain = (self.current_gain + self.gain_step).min(target);
@@ -502,6 +615,25 @@ impl LoopPlayer {
         }
     }
 
+    /// Set a quiet continuous ratio voice over the current looping source.
+    ///
+    /// `root_hz` and `root_hz * ratio` must be finite, positive, and below
+    /// 45 percent of the device sample rate. `gain` must be in `(0, 0.08]`.
+    /// Invalid input clears the current target and returns `false`. Accepted
+    /// updates preserve oscillator phases and the looping source playhead.
+    pub fn set_parameter_voice(&self, root_hz: f32, ratio: f32, gain: f32) -> bool {
+        self.state
+            .lock()
+            .is_ok_and(|mut state| state.set_parameter_voice(root_hz, ratio, gain))
+    }
+
+    /// Fade out the continuous ratio voice without changing the looping source.
+    pub fn clear_parameter_voice(&self) {
+        if let Ok(mut state) = self.state.lock() {
+            state.clear_parameter_voice();
+        }
+    }
+
     /// Fade output in or out without replacing the source or its playhead.
     ///
     /// The source clock continues while inactive, which keeps radio and room
@@ -517,7 +649,10 @@ impl LoopPlayer {
 mod tests {
     use std::sync::Arc;
 
-    use super::{AMPLITUDE, LoopBuffer, MixerState, synthesize_sine, validate_output_dimensions};
+    use super::{
+        AMPLITUDE, LoopBuffer, MixerState, PARAMETER_MAX_GAIN, synthesize_sine,
+        validate_output_dimensions,
+    };
 
     #[test]
     fn output_dimensions_reject_degenerate_device_configs() {
@@ -731,5 +866,100 @@ mod tests {
         assert_eq!(mixer.master_gain, 0.0);
         mixer.set_master_gain(3.0);
         assert_eq!(mixer.master_gain, 1.0);
+    }
+
+    #[test]
+    fn parameter_target_changes_without_restarting_the_base_playhead() {
+        let mut mixer = MixerState::new(1_000);
+        let _ = mixer.replace(LoopBuffer::new(vec![0.1, 0.2, 0.3, 0.4], 1));
+        for _ in 0..mixer.crossfade_frames {
+            let _ = mixer.next_frame();
+        }
+        let _ = mixer.service_transitions();
+        let before = mixer.current.pos;
+
+        assert!(mixer.set_parameter_voice(110.0, 1.5, 0.04));
+        assert_eq!(mixer.current.pos, before);
+        let _ = mixer.next_frame();
+        assert_eq!(mixer.current.pos, (before + 1) % 4);
+
+        let before_change = mixer.current.pos;
+        assert!(mixer.set_parameter_voice(110.0, 2.0, 0.04));
+        assert_eq!(mixer.current.pos, before_change);
+        let _ = mixer.next_frame();
+        assert_eq!(mixer.current.pos, (before_change + 1) % 4);
+    }
+
+    #[test]
+    fn parameter_transitions_are_smooth_low_and_bounded() {
+        let mut mixer = MixerState::new(4_000);
+        assert!(mixer.set_parameter_voice(110.0, 1.5, PARAMETER_MAX_GAIN));
+        let first: Vec<_> = (0..300).map(|_| mixer.next_frame().0).collect();
+        assert!(
+            first
+                .iter()
+                .all(|sample| sample.is_finite() && sample.abs() <= PARAMETER_MAX_GAIN)
+        );
+
+        let before = *first.last().expect("first voice sample");
+        assert!(mixer.set_parameter_voice(220.0, 1.25, PARAMETER_MAX_GAIN));
+        let after = mixer.next_frame().0;
+        assert!(
+            (after - before).abs() < 0.03,
+            "parameter update stepped by {}",
+            (after - before).abs()
+        );
+        for _ in 0..1_000 {
+            let sample = mixer.next_frame().0;
+            assert!(sample.is_finite());
+            assert!(sample.abs() <= PARAMETER_MAX_GAIN);
+        }
+    }
+
+    #[test]
+    fn parameter_voice_stores_the_exact_target_ratio() {
+        let mut mixer = MixerState::new(48_000);
+        assert!(mixer.set_parameter_voice(146.83, 1.5, 0.04));
+        assert_eq!(
+            mixer.parameter_voice.target.expect("accepted target").ratio,
+            1.5
+        );
+    }
+
+    #[test]
+    fn invalid_parameter_target_fails_closed() {
+        let mut mixer = MixerState::new(48_000);
+        assert!(mixer.set_parameter_voice(220.0, 1.5, 0.04));
+        assert!(!mixer.set_parameter_voice(f32::NAN, 1.5, 0.04));
+        assert!(mixer.parameter_voice.target.is_none());
+        assert!(!mixer.set_parameter_voice(220.0, f32::INFINITY, 0.04));
+        assert!(!mixer.set_parameter_voice(220.0, 1.5, PARAMETER_MAX_GAIN * 2.0));
+        assert!(!mixer.set_parameter_voice(30_000.0, 1.0, 0.04));
+        for _ in 0..2_000 {
+            assert!(mixer.next_frame().0.is_finite());
+        }
+        assert_eq!(mixer.parameter_voice.current_gain, 0.0);
+    }
+
+    #[test]
+    fn parameter_voice_does_not_disturb_crossfade_retirement() {
+        let mut mixer = MixerState::new(1_000);
+        assert!(mixer.set_parameter_voice(110.0, 1.5, 0.04));
+        let _ = mixer.replace(LoopBuffer::new(vec![0.2; 64], 1));
+        for _ in 0..mixer.crossfade_frames {
+            let frame = mixer.next_frame();
+            assert!((-1.0..=1.0).contains(&frame.0));
+            assert!((-1.0..=1.0).contains(&frame.1));
+        }
+        let retired = mixer.service_transitions();
+        assert!(retired.is_some());
+
+        let _ = mixer.replace(LoopBuffer::new(vec![0.6; 64], 1));
+        while mixer.crossfade_remaining > 0 {
+            let _ = mixer.next_frame();
+        }
+        assert!(mixer.retired.is_some());
+        assert!(mixer.previous.is_none());
+        assert!(mixer.service_transitions().is_some());
     }
 }

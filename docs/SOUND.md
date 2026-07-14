@@ -20,6 +20,18 @@ audio source is no longer rebuilt from render-loop cadence. Native device rates 
 are covered by pitch and duration tests. Built-in radio remains the sole source
 while tuned.
 
+Times Tables is the first shipped continuous input-sonification seam. Its
+stable room arrangement remains the bed while a quiet two-oscillator voice
+follows the accepted multiplier. Frequency and ratio targets smooth over 40
+milliseconds inside the callback, oscillator phases persist, invalid targets
+fade closed, and source playhead continuity is tested. At integer K, the upper
+voice uses the exact ratio `k:(k-1)`, so the visual closure and audible
+consonance are one state. CLI `sonify` and MCP `listen_room` accept the same
+bounded pokes or gestures and render a deterministic snapshot of that state.
+The Show supplies the same moving phase to picture and voice on every frame and
+ignores retained hand input. Entering any modal game fades the parameter voice
+instead of leaking room audio across ownership boundaries.
+
 DSP is implemented locally without `fundsp`. A first shared gain and source
 bus is shipped. Sample-accurate event scheduling, per-Era voices, global
 tuning, richer spatialization, a soft limiter, and independent room, radio,
@@ -69,7 +81,9 @@ The shared vocabulary every room draws from. Consistency here is what lets a pla
 
 Extending the one-line sound notes in `ROOMS.md` with technique. The principle in each case: the sound is generated from the *same* state that drives the visual.
 
-- **Times Tables:** the multiplier drives pitch; the number of lobes sets a harmonic ratio, so morphing the shape is a melodic glide that snaps to a clean note on integer multipliers.
+- **Times Tables:** a constant D3 root and the ratio `k:(k-1)` turn the dial
+  into just intervals. K=2 is 2:1, K=3 is 3:2, K=4 is 4:3, and the earned K=5
+  target is 5:4. The App glides this low-level voice over the stable room bed.
 - **Chaos Game:** each corner is a note of a chord; the accumulating dot-density becomes a shimmering granular pad, a cloud of tiny grains thickening as the fractal fills.
 - **Game of Life:** a living polyphonic sequencer, each cell-birth triggers a note pitched by its grid position; dense colonies swell the pad, gliders play little arpeggios as they travel.
 - **Cellular Automata:** each generation's row is read left-to-right as a rhythm; complex rules (30, 110) produce complex, evolving beats, simple rules produce steady pulses.
@@ -92,8 +106,9 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 
 ## Interaction & UI sound
 
-- **Touch has a voice, planned.** Dials, taps, and drags should gain subtle tuned
-  ticks after the shared bus and input-audio path exist.
+- **Touch has a voice, partially built.** Times Tables ships the first
+  persistent input-audio path. Tuned ticks and equivalent continuous voices in
+  other rooms remain planned.
 - **Transitions are washes.** Room-to-room dissolves carry a reverb wash through black, matching the visual cross-dissolve (see `VISUALS.md`).
 - **Reveal has a resolution.** Summoning a Revelation card lands on a small, satisfying harmonic resolution, the sonic version of the floor tilting.
 

@@ -165,14 +165,13 @@ fn expected_dimensions(relative: &str) -> (usize, usize) {
                 ROOM_SIZE
             }
         }
-        Some("games" | "overlays") => {
+        Some("games" | "overlays" | "flows") => {
             if relative.contains("-small-") {
                 SMALL_SIZE
             } else {
                 DEFAULT_SIZE
             }
         }
-        Some("flows") => DEFAULT_SIZE,
         _ => panic!("unknown QA capture category: {relative}"),
     }
 }
@@ -205,10 +204,18 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
             ),
         ]);
     }
-    for index in 0..4 {
+    for landmark in ["k2", "k3", "kpi", "k4", "k5"] {
+        for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
+            expected.insert(format!(
+                "flows/times-tables-{landmark}-{label}-{}x{}.png",
+                size.0, size.1
+            ));
+        }
+    }
+    for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
         expected.insert(format!(
-            "flows/times-tables-phase-{index}-{}x{}.png",
-            DEFAULT_SIZE.0, DEFAULT_SIZE.1
+            "flows/times-tables-goal-{label}-{}x{}.png",
+            size.0, size.1
         ));
     }
     expected.extend([
@@ -309,8 +316,40 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
         .into_iter()
         .map(str::to_string),
     );
-    assert_eq!(expected.len(), 341, "documented QA scenario count");
+    assert_eq!(expected.len(), 349, "documented QA scenario count");
     expected
+}
+
+fn assert_times_tables_spectral_palette(raster: &Raster) {
+    let rgba = raster.to_rgba();
+    let colors: BTreeSet<[u8; 3]> = rgba
+        .chunks_exact(4)
+        .map(|pixel| [pixel[0], pixel[1], pixel[2]])
+        .collect();
+    for expected in [
+        [50, 161, 205],
+        [226, 51, 205],
+        [66, 235, 147],
+        [252, 159, 51],
+        [126, 83, 247],
+    ] {
+        assert!(
+            colors.contains(&expected),
+            "Times Tables is missing spectral ink {expected:?}"
+        );
+    }
+
+    let width = raster.width();
+    let height = raster.height();
+    let x = (width as f64 * 0.08).round() as usize;
+    let reserve = ((height as f64 * 0.22).round() as usize).max(72);
+    let y = height.saturating_sub(reserve).max(1);
+    let offset = (y * width + x) * 4;
+    let marker = &rgba[offset..offset + 3];
+    assert!(
+        marker[0] > 60 && marker[1] > 150,
+        "Times Tables dial marker is not visible at {x},{y}: {marker:?}"
+    );
 }
 
 fn difference(before: &Raster, after: &Raster) -> Difference {
@@ -1281,12 +1320,39 @@ fn main() {
     );
 
     let times = room_by_id(&rooms, "times-tables");
-    for (index, phase) in [0.0, 0.24, 0.51, 0.88].into_iter().enumerate() {
-        save(
-            &room_screen(times, phase, &[], (900, 700), 0, false, 7),
-            &format!("flows/times-tables-phase-{index}-900x700.png"),
-            &mut manifest,
-        );
+    let landmarks = [
+        ("k2", 0.0),
+        ("k3", 0.125),
+        ("kpi", (std::f64::consts::PI - 2.0) / 8.0),
+        ("k4", 0.25),
+        ("k5", 0.375),
+    ];
+    for (landmark, x) in landmarks {
+        let inputs = [down(x, 0.5, 0.0)];
+        for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
+            let raster = room_screen(times, 0.0, &inputs, size, 0, false, 7);
+            if landmark == "k2" {
+                assert_times_tables_spectral_palette(&raster);
+            }
+            save(
+                &raster,
+                &format!(
+                    "flows/times-tables-{landmark}-{label}-{}x{}.png",
+                    size.0, size.1
+                ),
+                &mut manifest,
+            );
+            if landmark == "k5" {
+                let mut earned = raster;
+                let banner = feedback::room_goal("LAND ON EXACTLY 4 LOBES");
+                overlays::draw_banner(&mut earned, banner.lines(), size.0, size.1);
+                save(
+                    &earned,
+                    &format!("flows/times-tables-goal-{label}-{}x{}.png", size.0, size.1),
+                    &mut manifest,
+                );
+            }
+        }
     }
 
     let mandelbrot = room_by_id(&rooms, "mandelbrot");
@@ -1793,7 +1859,7 @@ fn main() {
         &mut manifest,
     );
     save(
-        &room_screen_with_mode(times, 0.05, &[], SMALL_SIZE, 240, false, 7, controller),
+        &room_screen_with_mode(times, 0.0, &[], SMALL_SIZE, 240, false, 7, controller),
         "rooms/controller-drag-arrival-small-360x240.png",
         &mut manifest,
     );

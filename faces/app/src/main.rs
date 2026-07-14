@@ -154,6 +154,53 @@ fn advance_gallery_phase(
     }
 }
 
+fn effective_room_phase(
+    room_id: &str,
+    phase: f64,
+    inputs: &[numinous_core::RoomInput],
+    the_show: bool,
+) -> f64 {
+    let has_finite_pointer = has_finite_parameter_input(inputs);
+    if room_id == "times-tables" && !the_show && !has_finite_pointer {
+        0.0
+    } else {
+        phase
+    }
+}
+
+fn has_finite_parameter_input(inputs: &[numinous_core::RoomInput]) -> bool {
+    inputs.iter().any(|input| match *input {
+        numinous_core::RoomInput::PointerDown { x, y, .. }
+        | numinous_core::RoomInput::PointerMove { x, y, .. } => x.is_finite() && y.is_finite(),
+        _ => false,
+    })
+}
+
+fn effective_room_inputs(
+    inputs: &[numinous_core::RoomInput],
+    the_show: bool,
+) -> &[numinous_core::RoomInput] {
+    if the_show { &[] } else { inputs }
+}
+
+fn selected_parameter_sound(
+    program: AudioProgram,
+    modal_active: bool,
+    room: &dyn Room,
+    phase: f64,
+    inputs: &[numinous_core::RoomInput],
+    the_show: bool,
+) -> Option<numinous_core::ParametricSound> {
+    if program != AudioProgram::RoomScore
+        || modal_active
+        || !the_show && !has_finite_parameter_input(inputs)
+    {
+        return None;
+    }
+    let effective_phase = effective_room_phase(room.meta().id, phase, inputs, the_show);
+    room.parameter_sound(effective_phase, effective_room_inputs(inputs, the_show))
+}
+
 /// The application state driven by the winit event loop.
 struct App {
     window: Option<Rc<Window>>,
@@ -209,6 +256,8 @@ struct App {
     level_seen: u32,
     /// Transient on-screen feedback such as LEVEL UP, volume, and save status.
     banner: Option<feedback::Banner>,
+    /// Whether this visit's room goal has already raised its earned Aha.
+    goal_announced: bool,
     /// The quiz, when playing: the round, its number, and the answer flash.
     quiz: Option<QuizPlay>,
     /// Rooms recently asked about, excluded from the next deals.
@@ -305,6 +354,7 @@ impl App {
             journey_saved: journey,
             level_seen: 1,
             banner: None,
+            goal_announced: false,
             quiz: None,
             quiz_recent: Vec::new(),
             munch: None,
@@ -372,6 +422,7 @@ impl App {
         self.journey.play();
         self.journey_changed();
         self.quiz = Some(quiz);
+        self.sync_room_parameter_voice();
     }
 
     /// Answer the quiz with a letter; right or wrong, the reveal follows.
@@ -410,6 +461,7 @@ impl App {
             bites: std::collections::BTreeSet::new(),
             graded: None,
         });
+        self.sync_room_parameter_voice();
     }
 
     /// Grade the Munch board: the dense feedback, the score, the record.
@@ -448,6 +500,7 @@ impl App {
             message: String::from("THE ORDER PLAYS A SECRET. BEAT IT AND IT IS YOURS."),
             over: None,
         });
+        self.sync_room_parameter_voice();
     }
 
     /// Commit the aimed Nim move; the Order answers at once.
@@ -500,6 +553,7 @@ impl App {
             flash: None,
             over: false,
         });
+        self.sync_room_parameter_voice();
     }
 
     /// One player action into the live arcade.
@@ -570,6 +624,7 @@ impl App {
             cleared: Vec::new(),
             message: String::from("STAGE 1 OF 4  MUNCH. CLEAN STAGES BUILD YOUR COMBO."),
         });
+        self.sync_room_parameter_voice();
     }
 
     /// Bank a gauntlet stage: score, clean flag, journey, and the narration.
@@ -872,6 +927,7 @@ impl App {
         if let Some(window) = &self.window {
             window.set_title(&self.title());
         }
+        self.sync_room_parameter_voice();
     }
 
     fn toggle_journey(&mut self) {
@@ -1135,6 +1191,8 @@ impl App {
         self.set_mouse_from_normalized(point);
         if held && self.poking && room_input::extend_poke_trail(&mut self.pokes, point) {
             room_input::record_pointer_move(&mut self.inputs, point, self.t);
+            self.maybe_announce_room_goal();
+            self.sync_room_parameter_voice();
         }
     }
 
@@ -1144,6 +1202,8 @@ impl App {
             room_input::record_pointer_up(&mut self.inputs, point, self.t);
         }
         self.set_pointer_state(mouse_input::pointer_state_after_left_release());
+        self.maybe_announce_room_goal();
+        self.sync_room_parameter_voice();
     }
 
     fn apply_wheel_delta(&mut self, lines: f64) -> bool {
@@ -1449,6 +1509,7 @@ impl App {
             }
             gamepad::Command::PhaseDelta(delta) if !self.modal_mode_active() => {
                 self.t = (self.t + delta).rem_euclid(1.0);
+                self.sync_room_parameter_voice();
             }
             gamepad::Command::CancelPointer => self.clear_pointer_state(),
             gamepad::Command::ToggleMute
@@ -1564,6 +1625,7 @@ impl App {
         self.radio_until = Some(std::time::Instant::now() + loaded.remaining);
         self.audio_program = AudioProgram::Radio;
         if let Some(player) = &self.player {
+            player.clear_parameter_voice();
             player.set_shared_stereo_at_rate(self.radio_track.clone(), self.radio_track_rate);
             player.set_master_gain(if self.muted { 0.0 } else { self.volume });
         }
@@ -1630,6 +1692,7 @@ impl App {
         let Some(player) = &self.player else {
             return;
         };
+        player.clear_parameter_voice();
         player.set_master_gain(if self.muted { 0.0 } else { self.volume });
         if let Some(spec) = spec {
             player.set_samples(spec.render(player.sample_rate()));
@@ -1650,11 +1713,17 @@ impl App {
     fn update_audio(&mut self) {
         if self.studio {
             self.audio_program = AudioProgram::Studio;
+            if let Some(player) = &self.player {
+                player.clear_parameter_voice();
+            }
             self.apply_master_gain();
             return;
         }
         if self.radio.is_some() && !self.radio_track.is_empty() {
             self.audio_program = AudioProgram::Radio;
+            if let Some(player) = &self.player {
+                player.clear_parameter_voice();
+            }
             self.apply_master_gain();
             return;
         }
@@ -1674,6 +1743,30 @@ impl App {
             };
         }
         player.set_stereo(self.tune.clone());
+        self.sync_room_parameter_voice();
+    }
+
+    fn desired_room_parameter_sound(&self) -> Option<numinous_core::ParametricSound> {
+        selected_parameter_sound(
+            self.audio_program,
+            self.modal_mode_active(),
+            self.rooms[self.current].as_ref(),
+            self.t,
+            &self.inputs,
+            self.the_show,
+        )
+    }
+
+    fn sync_room_parameter_voice(&self) {
+        let Some(player) = &self.player else {
+            return;
+        };
+        let voice = self.desired_room_parameter_sound();
+        if let Some(voice) = voice {
+            let _ = player.set_parameter_voice(voice.root_hz(), voice.ratio(), voice.gain());
+        } else {
+            player.clear_parameter_voice();
+        }
     }
 
     fn title(&self) -> String {
@@ -1715,6 +1808,9 @@ impl App {
 
     fn reset_room_runtime(&mut self) {
         self.clear_pointer_state();
+        if self.goal_announced {
+            self.banner = None;
+        }
         room_input::reset_room_view(
             &mut self.t,
             &mut self.room_card,
@@ -1723,6 +1819,7 @@ impl App {
         );
         self.mandelbrot_camera.reset(self.variation);
         self.reset_life_session();
+        self.goal_announced = false;
     }
 
     fn reset_current_room(&mut self) {
@@ -1759,7 +1856,24 @@ impl App {
             }
             return launched;
         }
-        poke_added && input_added
+        let accepted = poke_added && input_added;
+        if accepted {
+            self.maybe_announce_room_goal();
+            self.sync_room_parameter_voice();
+        }
+        accepted
+    }
+
+    fn maybe_announce_room_goal(&mut self) {
+        if self.goal_announced || !self.rooms[self.current].goal_met(self.t, &self.inputs) {
+            return;
+        }
+        self.goal_announced = true;
+        self.banner = Some(feedback::room_goal(
+            self.rooms[self.current]
+                .goal()
+                .unwrap_or("DISCOVERY COMPLETE"),
+        ));
     }
 
     fn advance_life(&mut self, elapsed: f64) -> usize {
@@ -1870,7 +1984,13 @@ impl App {
             } else if room.meta().id == "game-of-life" {
                 self.life_session.render(&mut raster);
             } else {
-                room.render_input(&mut raster, self.t, &self.inputs);
+                let phase =
+                    effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
+                room.render_input(
+                    &mut raster,
+                    phase,
+                    effective_room_inputs(&self.inputs, self.the_show),
+                );
             }
             self.live_scale
                 .observe(started.elapsed().as_secs_f64() * 1000.0);
@@ -1893,11 +2013,13 @@ impl App {
         height: usize,
     ) {
         let status_override = self.current_status_override(width);
+        let phase = effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
+        let inputs = effective_room_inputs(&self.inputs, self.the_show);
         hud::draw_room_chrome(
             raster,
             room,
             &hud::RoomChrome {
-                t: self.t,
+                t: phase,
                 room_card: self.room_card,
                 show_info: self.show_info,
                 show_help: self.show_help,
@@ -1909,7 +2031,7 @@ impl App {
                 level: self.journey.level(),
                 input_mode: self.input_mode,
             },
-            &self.inputs,
+            inputs,
             status_override.as_deref(),
             width,
             height,
@@ -2500,6 +2622,11 @@ impl ApplicationHandler for App {
                     self.switch(1);
                 }
             }
+            if show_active {
+                // The picture and its mathematical voice share this phase.
+                // Updating the smoothed target does not restart the room bed.
+                self.sync_room_parameter_voice();
+            }
             self.frame += 1;
             room_input::tick_room_card(&mut self.room_card, self.banner.is_some());
             // The arcade's heartbeat: the spirits step on the beat, faster
@@ -2690,8 +2817,8 @@ fn main() {
 mod tests {
     use super::{
         App, AudioProgram, TestStateRoot, advance_gallery_phase, app_icon, bounded_tick_seconds,
-        julia_gpu_c, julia_gpu_vertical_span, live_mandelbrot_gpu_view, mandelbrot_gpu_view,
-        radio_cache,
+        effective_room_phase, julia_gpu_c, julia_gpu_vertical_span, live_mandelbrot_gpu_view,
+        mandelbrot_gpu_view, radio_cache, selected_parameter_sound,
     };
     use crate::input_legend::{InputMode, MenuChoice};
     use std::sync::Arc;
@@ -2719,6 +2846,180 @@ mod tests {
             .expect("Life room");
         app.show_help = false;
         app.reset_life_session();
+    }
+
+    fn select_times_tables(app: &mut App) {
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "times-tables")
+            .expect("Times Tables room");
+        app.show_help = false;
+    }
+
+    #[test]
+    fn times_tables_holds_its_cardioid_until_input_but_the_show_keeps_sweeping() {
+        assert_eq!(effective_room_phase("times-tables", 0.73, &[], false), 0.0);
+        assert_eq!(effective_room_phase("times-tables", 0.73, &[], true), 0.73);
+        assert_eq!(effective_room_phase("lissajous", 0.73, &[], false), 0.73);
+
+        let input = [numinous_core::RoomInput::PointerDown {
+            x: 0.4,
+            y: 0.5,
+            t: 0.2,
+        }];
+        assert_eq!(
+            effective_room_phase("times-tables", 0.73, &input, false),
+            0.73
+        );
+    }
+
+    #[test]
+    fn only_room_score_routes_the_hand_controlled_math_voice() {
+        let app = headless("numinous_app_test_times_voice.txt");
+        let room = app
+            .rooms
+            .iter()
+            .find(|room| room.meta().id == "times-tables")
+            .expect("Times Tables room");
+        let input = [numinous_core::RoomInput::PointerDown {
+            x: 0.375,
+            y: 0.5,
+            t: 0.2,
+        }];
+
+        assert!(
+            selected_parameter_sound(
+                AudioProgram::RoomScore,
+                false,
+                room.as_ref(),
+                0.7,
+                &[],
+                false,
+            )
+            .is_none()
+        );
+        let voice = selected_parameter_sound(
+            AudioProgram::RoomScore,
+            false,
+            room.as_ref(),
+            0.7,
+            &input,
+            false,
+        )
+        .expect("accepted dial voice");
+        assert_eq!(voice.ratio(), 1.25);
+        assert!(
+            selected_parameter_sound(
+                AudioProgram::Studio,
+                false,
+                room.as_ref(),
+                0.7,
+                &input,
+                false,
+            )
+            .is_none()
+        );
+        assert!(
+            selected_parameter_sound(
+                AudioProgram::Radio,
+                false,
+                room.as_ref(),
+                0.7,
+                &input,
+                false,
+            )
+            .is_none()
+        );
+        assert!(
+            selected_parameter_sound(
+                AudioProgram::RoomScore,
+                true,
+                room.as_ref(),
+                0.7,
+                &input,
+                false,
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn the_show_sweeps_the_times_tables_voice_without_retained_hand_input() {
+        let app = headless("numinous_app_test_times_show_voice.txt");
+        let room = app
+            .rooms
+            .iter()
+            .find(|room| room.meta().id == "times-tables")
+            .expect("Times Tables room");
+        let retained = [numinous_core::RoomInput::PointerDown {
+            x: 0.375,
+            y: 0.5,
+            t: 0.2,
+        }];
+
+        let early = selected_parameter_sound(
+            AudioProgram::RoomScore,
+            false,
+            room.as_ref(),
+            0.1,
+            &retained,
+            true,
+        )
+        .expect("Show voice");
+        let late = selected_parameter_sound(
+            AudioProgram::RoomScore,
+            false,
+            room.as_ref(),
+            0.7,
+            &retained,
+            true,
+        )
+        .expect("moving Show voice");
+        assert_ne!(early.ratio(), late.ratio());
+    }
+
+    #[test]
+    fn four_lobes_raise_one_earned_banner_and_reset_cleanly() {
+        let mut app = headless("numinous_app_test_times_goal.txt");
+        select_times_tables(&mut app);
+        app.switch(1);
+        app.switch(-1);
+        assert_ne!(app.variation, 0);
+        assert_eq!(app.rooms[app.current].meta().id, "times-tables");
+        assert_eq!(
+            app.rooms[app.current]
+                .status_input(
+                    effective_room_phase("times-tables", app.t, &app.inputs, false),
+                    &app.inputs,
+                )
+                .as_deref(),
+            Some("K 2.00  CLOSED  1 LOBE  TARGET 4")
+        );
+
+        assert!(app.record_room_touch((0.374, 0.5)));
+        assert!(app.goal_announced);
+        assert_eq!(
+            app.banner.as_ref().expect("earned Aha").lines(),
+            ["FOUR LOBES FOUND", "INSPECT: WHY THE HEART MATTERS"]
+        );
+
+        app.maybe_announce_room_goal();
+        assert!(app.goal_announced, "the same discovery does not spam");
+        app.reset_room_runtime();
+        assert!(!app.goal_announced);
+        assert!(app.banner.is_none());
+        assert!(app.inputs.is_empty());
+        assert_eq!(app.t, 0.0);
+        assert_eq!(
+            app.rooms[app.current]
+                .status_input(
+                    effective_room_phase("times-tables", app.t, &app.inputs, false),
+                    &app.inputs,
+                )
+                .as_deref(),
+            Some("K 2.00  CLOSED  1 LOBE  TARGET 4")
+        );
     }
 
     fn write_test_wav(path: &std::path::Path, channels: u16, seconds: u32) {
@@ -3848,6 +4149,40 @@ mod tests {
         assert!(app.arcade.is_some());
         assert!(!app.the_show);
         let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn every_game_entry_releases_the_room_parameter_voice() {
+        for (name, enter) in [
+            (
+                "numinous_app_test_parameter_voice_quiz.txt",
+                App::quiz_next as fn(&mut App),
+            ),
+            (
+                "numinous_app_test_parameter_voice_munch.txt",
+                App::munch_start,
+            ),
+            ("numinous_app_test_parameter_voice_nim.txt", App::nim_start),
+            (
+                "numinous_app_test_parameter_voice_gauntlet.txt",
+                App::gauntlet_start,
+            ),
+            (
+                "numinous_app_test_parameter_voice_arcade.txt",
+                App::arcade_start,
+            ),
+        ] {
+            let mut app = headless(name);
+            select_times_tables(&mut app);
+            assert!(app.record_room_touch((0.375, 0.5)));
+            assert!(app.desired_room_parameter_sound().is_some());
+
+            enter(&mut app);
+
+            assert!(app.modal_mode_active());
+            assert!(app.desired_room_parameter_sound().is_none());
+            let _ = std::fs::remove_file(&app.journey_file);
+        }
     }
 
     #[test]

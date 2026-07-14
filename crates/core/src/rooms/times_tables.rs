@@ -8,7 +8,7 @@
 use std::f64::consts::{FRAC_PI_2, TAU};
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
-use crate::sound::SoundSpec;
+use crate::sound::{ParametricSound, SoundSpec};
 use crate::surface::Surface;
 
 /// Number of points placed around the circle. Higher is smoother and denser.
@@ -17,6 +17,12 @@ const POINTS: usize = 240;
 const K_MIN: f64 = 2.0;
 /// How far `k` sweeps across the phase range `[0, 1)`.
 const K_SWEEP: f64 = 8.0;
+/// A hand landing this close to an integer hears and sees exact closure.
+const SNAP_DISTANCE: f64 = 0.12;
+/// The room's earned target: `k - 1` lobes means `k = 5` draws four.
+const TARGET_K: f64 = 5.0;
+/// Spectral chord families, distributed around the source circle.
+const SPECTRAL_MARKS: [char; 5] = ['*', '@', '%', '&', '~'];
 
 /// The Times Tables room.
 #[derive(Debug, Default)]
@@ -50,53 +56,116 @@ impl TimesTables {
         if self.seed == 0 {
             phase
         } else {
-            let offset = 0.08 + (self.seed % 997) as f64 / 997.0 * 0.17;
-            (phase + offset).fract()
+            // Variation changes the route through the sweep without changing
+            // either endpoint. Every visit can therefore open and reset on the
+            // canonical K=2 heart while remaining replayably distinct later.
+            let exponent = 0.85 + (self.seed % 997) as f64 / 997.0 * 0.30;
+            phase.powf(exponent)
         }
     }
 
-    fn input_phase(&self, t: f64, pokes: &[(f64, f64)]) -> f64 {
+    fn input_multiplier(&self, pokes: &[(f64, f64)]) -> Option<f64> {
         let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
-        pokes[start..]
+        pokes[start..].iter().rev().find_map(|&(x, y)| {
+            (x.is_finite() && y.is_finite()).then(|| {
+                let raw = K_MIN + K_SWEEP * x.clamp(0.0, 1.0);
+                let nearest = raw.round();
+                if (raw - nearest).abs() <= SNAP_DISTANCE {
+                    nearest
+                } else {
+                    raw
+                }
+            })
+        })
+    }
+
+    fn multiplier(&self, t: f64, pokes: &[(f64, f64)]) -> f64 {
+        self.input_multiplier(pokes)
+            .unwrap_or_else(|| K_MIN + K_SWEEP * self.phase_for(t))
+    }
+
+    fn pokes(inputs: &[RoomInput]) -> Vec<(f64, f64)> {
+        inputs
             .iter()
-            .rev()
-            .find_map(|&(x, y)| (x.is_finite() && y.is_finite()).then(|| x.clamp(0.0, 1.0)))
-            .unwrap_or_else(|| self.phase_for(t))
+            .filter_map(|input| match *input {
+                RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. } => {
+                    Some((x, y))
+                }
+                _ => None,
+            })
+            .collect()
     }
 
-    fn status_for_phase(phase: f64) -> String {
-        let k = K_MIN + K_SWEEP * phase;
+    fn status_for_multiplier(k: f64, earned: bool) -> String {
         let nearest = k.round();
-        let off = (k - nearest).abs();
-        let note = if off < 0.02 {
-            format!("CLOSED: {} LOBES", (nearest as i64 - 1).max(0))
-        } else if off < 0.15 {
-            format!("ALMOST: {} LOBES FORMING", (nearest as i64 - 1).max(0))
+        let exact = (k - nearest).abs() < 1e-9;
+        let state = if exact {
+            let lobes = (nearest as i64 - 1).max(0);
+            let noun = if lobes == 1 { "LOBE" } else { "LOBES" };
+            format!("CLOSED  {lobes} {noun}")
         } else {
-            "OPEN, WANDERING".to_string()
+            let lower = k.floor().max(K_MIN) as i64 - 1;
+            let upper = k.ceil().min(K_MIN + K_SWEEP) as i64 - 1;
+            format!("MORPH  {lower}>{upper} LOBES")
         };
-        format!("K = {k:.2}   {note}")
+        let target = if earned && exact && (nearest - TARGET_K).abs() < f64::EPSILON {
+            "FOUND"
+        } else {
+            "TARGET 4"
+        };
+        format!("K {k:.2}  {state}  {target}")
     }
 
-    fn render_phase(canvas: &mut dyn Surface, phase: f64) {
-        let multiplier = K_MIN + K_SWEEP * phase;
+    fn voice(k: f64) -> ParametricSound {
+        let ratio = (k / (k - 1.0)) as f32;
+        ParametricSound::new(146.83, ratio, 0.04).expect("bounded multiplier makes a valid voice")
+    }
+
+    fn render_multiplier(canvas: &mut dyn Surface, multiplier: f64) {
         let width = canvas.width() as f64;
         let height = canvas.height() as f64;
         let cx = width / 2.0;
         let cy = height / 2.0;
         let aspect = canvas.char_aspect();
-        let radius = (width / 2.0).min(height / (2.0 * aspect)) * 0.9;
+        let radius = (width / 2.0).min(height / (2.0 * aspect)) * 0.84;
         let point = |i: usize| -> (i32, i32) {
             let angle = (i as f64 / POINTS as f64) * TAU - FRAC_PI_2;
             let x = cx + radius * angle.cos();
             let y = cy + radius * angle.sin() * aspect;
             (x.round() as i32, y.round() as i32)
         };
-        for n in 0..POINTS {
+        let sample_count = ((TAU * radius / 3.0).round() as usize).clamp(24, POINTS);
+        for sample in 0..sample_count {
+            let n = sample * POINTS / sample_count;
             let target = ((n as f64) * multiplier).round() as usize % POINTS;
             let (x0, y0) = point(n);
             let (x1, y1) = point(target);
-            canvas.line(x0, y0, x1, y1, '*');
+            let mark = SPECTRAL_MARKS[sample * SPECTRAL_MARKS.len() / sample_count];
+            canvas.line(x0, y0, x1, y1, mark);
+        }
+
+        if canvas.width() > 4 && canvas.height() > 2 {
+            let left = (width * 0.08).round() as i32;
+            let right = (width * 0.92).round() as i32;
+            let reserve = if aspect < 0.75 {
+                2
+            } else {
+                ((height * 0.22).round() as i32).max(72)
+            };
+            let y = (canvas.height() as i32 - reserve).max(1);
+            canvas.line(left, y, right, y, '-');
+            for integer in K_MIN as i32..=(K_MIN + K_SWEEP) as i32 {
+                let phase = (f64::from(integer) - K_MIN) / K_SWEEP;
+                let x = f64::from(left) + f64::from(right - left) * phase;
+                let x = x.round() as i32;
+                canvas.line(x, y - 3, x, y + 3, '*');
+            }
+            let phase = ((multiplier - K_MIN) / K_SWEEP).clamp(0.0, 1.0);
+            let marker_x = f64::from(left) + f64::from(right - left) * phase;
+            let marker_x = marker_x.round() as i32;
+            canvas.line(marker_x, y - 8, marker_x, y + 8, '#');
+            canvas.line(marker_x - 1, y - 2, marker_x - 1, y + 2, '#');
+            canvas.line(marker_x + 1, y - 2, marker_x + 1, y + 2, '#');
         }
     }
 }
@@ -128,28 +197,27 @@ impl Room for TimesTables {
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
-        Self::render_phase(canvas, self.input_phase(t, pokes));
+        Self::render_multiplier(canvas, self.multiplier(t, pokes));
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        Some(Self::status_for_phase(self.phase_for(t)))
+        Some(Self::status_for_multiplier(
+            K_MIN + K_SWEEP * self.phase_for(t),
+            false,
+        ))
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let pokes: Vec<_> = inputs
-            .iter()
-            .filter_map(|input| match *input {
-                RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. } => {
-                    Some((x, y))
-                }
-                _ => None,
-            })
-            .collect();
-        Some(Self::status_for_phase(self.input_phase(t, &pokes)))
+        let pokes = Self::pokes(inputs);
+        let multiplier = self.multiplier(t, &pokes);
+        let earned = self
+            .input_multiplier(&pokes)
+            .is_some_and(|k| (k - TARGET_K).abs() < f64::EPSILON);
+        Some(Self::status_for_multiplier(multiplier, earned))
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        Self::render_phase(canvas, self.phase_for(t));
+        Self::render_multiplier(canvas, K_MIN + K_SWEEP * self.phase_for(t));
     }
 
     fn reveal(&self) -> &'static str {
@@ -170,19 +238,35 @@ impl Room for TimesTables {
              the same idea.",
         ]
     }
+
+    fn goal(&self) -> Option<&'static str> {
+        Some("LAND ON EXACTLY 4 LOBES")
+    }
+
+    fn goal_met(&self, _t: f64, inputs: &[RoomInput]) -> bool {
+        let pokes = Self::pokes(inputs);
+        self.input_multiplier(&pokes)
+            .is_some_and(|k| (k - TARGET_K).abs() < f64::EPSILON)
+    }
+
+    fn parameter_sound(&self, t: f64, inputs: &[RoomInput]) -> Option<ParametricSound> {
+        let pokes = Self::pokes(inputs);
+        Some(Self::voice(self.multiplier(t, &pokes)))
+    }
+
     fn sound(&self, t: f64) -> SoundSpec {
-        // Pitch rises with the multiplier k; landing on a whole number sounds clean.
-        let k = (K_MIN + K_SWEEP * self.phase_for(t)) as f32;
-        SoundSpec::tone(55.0 * k, 1.5, 0.2)
+        Self::voice(K_MIN + K_SWEEP * self.phase_for(t)).snapshot()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use std::f64::consts::{PI, TAU};
 
     use super::TimesTables;
     use crate::canvas::Canvas;
+    use crate::raster::Raster;
     use crate::room::{Room, RoomInput};
 
     #[test]
@@ -200,7 +284,7 @@ mod tests {
             t: 0.6,
         }];
         let status = room.status_input(0.6, &inputs).expect("dial readout");
-        assert!(status.starts_with("K = 6.24"), "{status}");
+        assert!(status.starts_with("K 6.24"), "{status}");
         assert_ne!(Some(status), room.status(0.6));
     }
 
@@ -254,10 +338,10 @@ mod tests {
     }
 
     #[test]
-    fn sound_is_a_single_tone() {
+    fn sound_is_a_consonant_math_interval() {
         let spec = TimesTables::new().sound(0.0);
-        assert_eq!(spec.notes.len(), 1);
-        assert!(spec.notes[0].freq > 0.0);
+        assert_eq!(spec.notes.len(), 2);
+        assert_eq!(spec.notes[1].freq / spec.notes[0].freq, 2.0);
     }
 
     #[test]
@@ -294,7 +378,7 @@ mod tests {
         let t_closed = (2.0 - super::K_MIN) / super::K_SWEEP;
         let closed = room.status(t_closed).expect("the dial speaks");
         assert!(closed.contains("CLOSED"), "{closed}");
-        assert!(closed.contains("K = 2.00"), "{closed}");
+        assert!(closed.contains("K 2.00"), "{closed}");
         let open = room
             .status(t_closed + 0.4 / super::K_SWEEP)
             .expect("still speaks");
@@ -317,6 +401,98 @@ mod tests {
         let mut canvas = Canvas::new(80, 40);
         room.render(&mut canvas, 0.0);
         assert!(canvas.ink_count() > 0, "the cardioid should draw something");
+    }
+
+    #[test]
+    fn compact_ascii_keeps_negative_space() {
+        for (width, height) in [(72, 32), (40, 20)] {
+            let mut canvas = Canvas::new(width, height);
+            TimesTables::new().render(&mut canvas, 0.375);
+            let density = canvas.ink_count() as f64 / (width * height) as f64;
+            assert!(
+                density < 0.62,
+                "{width}x{height} density must stay legible, got {density:.3}"
+            );
+        }
+    }
+
+    #[test]
+    fn raster_uses_a_spectral_palette_and_a_visible_dial() {
+        let mut raster = Raster::with_accent(320, 240, TimesTables::new().meta().accent);
+        TimesTables::new().render(&mut raster, 0.375);
+        let rgba = raster.to_rgba();
+        let colors: HashSet<[u8; 3]> = rgba
+            .chunks_exact(4)
+            .filter_map(|pixel| {
+                let rgb = [pixel[0], pixel[1], pixel[2]];
+                (rgb != [10, 11, 15]).then_some(rgb)
+            })
+            .collect();
+        assert!(colors.len() >= 5, "expected spectral inks, got {colors:?}");
+
+        let y = 168;
+        let dial = &rgba[y * 320 * 4..(y + 1) * 320 * 4];
+        assert!(
+            dial.chunks_exact(4).any(|pixel| pixel[0] > 50),
+            "the dial marker must be visible"
+        );
+    }
+
+    #[test]
+    fn hand_input_snaps_visual_status_goal_and_sound_to_four_lobes() {
+        let room = TimesTables::new();
+        let input = [RoomInput::PointerDown {
+            x: 0.374,
+            y: 0.5,
+            t: 0.8,
+        }];
+        let status = room.status_input(0.8, &input).expect("dial readout");
+        assert_eq!(status, "K 5.00  CLOSED  4 LOBES  FOUND");
+        assert!(room.goal_met(0.8, &input));
+        assert_eq!(room.goal(), Some("LAND ON EXACTLY 4 LOBES"));
+
+        let voice = room.parameter_sound(0.8, &input).expect("dial voice");
+        assert_eq!(voice.ratio(), 1.25);
+        assert_eq!(room.sound_input(0.8, &input), voice.snapshot());
+    }
+
+    #[test]
+    fn every_variation_opens_on_the_same_canonical_heart() {
+        for seed in [0, 1, 42, u64::MAX] {
+            let room = TimesTables::new_with(seed);
+            assert_eq!(
+                room.status(0.0).as_deref(),
+                Some("K 2.00  CLOSED  1 LOBE  TARGET 4"),
+                "seed {seed}"
+            );
+        }
+    }
+
+    #[test]
+    fn ambient_passage_through_four_lobes_does_not_claim_the_hand_goal() {
+        assert_eq!(
+            TimesTables::new().status(0.375).as_deref(),
+            Some("K 5.00  CLOSED  4 LOBES  TARGET 4")
+        );
+    }
+
+    #[test]
+    fn automatic_phase_does_not_claim_near_integer_closure() {
+        let room = TimesTables::new();
+        for k in [2.99, 3.01] {
+            let t = (k - super::K_MIN) / super::K_SWEEP;
+            let status = room.status(t).expect("dial readout");
+            assert!(!status.contains("CLOSED"), "{status}");
+            assert!(!status.contains("FOUND"), "{status}");
+        }
+    }
+
+    #[test]
+    fn singular_lobe_grammar_is_correct() {
+        assert_eq!(
+            TimesTables::new().status(0.0).as_deref(),
+            Some("K 2.00  CLOSED  1 LOBE  TARGET 4")
+        );
     }
 
     #[test]

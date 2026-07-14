@@ -33,6 +33,11 @@ smooth escape-time field with a dark interior and a high-energy cyan, lime,
 violet, and magenta cosine palette; its native camera keeps advancing after a
 click rather than snapping back at a normalized phase boundary. Julia retains
 its separate palette and interaction identity.
+Times Tables uses five fixed spectral chord families on the shared additive
+raster. Their hue identifies source-circle regions, while crossings brighten
+naturally. A resolution-aware sample count preserves negative space in ASCII
+without changing the 240-point mathematical circle used by full-size raster
+frames. Its in-scene dial draws explicit ticks and a bright current marker.
 
 The target systemic GPU post-stack has five stages:
 
@@ -63,7 +68,9 @@ already shipped room implementations.
 Color is data, never decoration. Rules:
 
 - **Near-black stage.** Deep near-black background (around `#0a0b0f`), never pure black, so glow has somewhere to sit.
-- **One accent per room.** Each room owns a single signature accent that glows; everything else stays monochrome or low-saturation. A shared cross-room palette keeps the whole app coherent (a room's accent is a value in that shared system, not a random pick).
+- **One accent per room by default.** Each room owns a signature accent that
+  glows. A deliberate spectral mapping may add a small shared palette when hue
+  carries real state, as the source-circle families do in Times Tables.
 - **Color carries meaning.** Hue maps to a real quantity, pitch, phase, iteration-to-escape, curvature, so the color *is* information you can read, not styling.
 - **Perceptually uniform ramps.** Use perceptually-uniform colormaps (viridis-family) for scalar fields so equal steps in value look like equal steps in color, and so it stays honest.
 - **HDR for emission, planned.** Accent values above 1.0 will drive the future

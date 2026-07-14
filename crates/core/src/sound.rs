@@ -35,6 +35,68 @@ pub struct SoundSpec {
     pub notes: Vec<Note>,
 }
 
+/// A continuous, low-level mathematical voice controlled by room input.
+///
+/// Faces with a real-time mixer can glide this voice without restarting the
+/// room bed. Text and protocol faces can call [`ParametricSound::snapshot`] to
+/// hear the same accepted parameter as a short deterministic chord.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ParametricSound {
+    /// Fundamental frequency in Hz.
+    root_hz: f32,
+    /// Frequency ratio between the upper and lower voices.
+    ratio: f32,
+    /// Peak amplitude per voice in `(0, 0.08]`.
+    gain: f32,
+}
+
+impl ParametricSound {
+    /// Highest supported gain for a continuously mixed parameter voice.
+    pub const MAX_GAIN: f32 = 0.08;
+
+    /// Build a safe voice, rejecting values that could poison an audio mixer.
+    #[must_use]
+    pub fn new(root_hz: f32, ratio: f32, gain: f32) -> Option<Self> {
+        (root_hz.is_finite()
+            && ratio.is_finite()
+            && gain.is_finite()
+            && root_hz > 0.0
+            && ratio > 0.0
+            && root_hz.mul_add(ratio, 0.0).is_finite()
+            && (0.0..=Self::MAX_GAIN).contains(&gain)
+            && gain > 0.0)
+            .then_some(Self {
+                root_hz,
+                ratio,
+                gain,
+            })
+    }
+
+    /// Fundamental frequency in Hz.
+    #[must_use]
+    pub const fn root_hz(self) -> f32 {
+        self.root_hz
+    }
+
+    /// Frequency ratio between the upper and lower voices.
+    #[must_use]
+    pub const fn ratio(self) -> f32 {
+        self.ratio
+    }
+
+    /// Peak amplitude per voice.
+    #[must_use]
+    pub const fn gain(self) -> f32 {
+        self.gain
+    }
+
+    /// Render the current parameter as a short two-voice chord.
+    #[must_use]
+    pub fn snapshot(self) -> SoundSpec {
+        SoundSpec::chord(&[self.root_hz, self.root_hz * self.ratio], 1.5, self.gain)
+    }
+}
+
 impl SoundSpec {
     /// A single tone for `duration` seconds.
     #[must_use]
@@ -153,7 +215,7 @@ fn envelope(t: f32, dur: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{SoundSpec, envelope};
+    use super::{ParametricSound, SoundSpec, envelope};
     use crate::Motif;
 
     #[test]
@@ -167,6 +229,25 @@ mod tests {
     fn chord_has_a_note_per_frequency() {
         let spec = SoundSpec::chord(&[220.0, 330.0], 0.5, 0.2);
         assert_eq!(spec.notes.len(), 2);
+    }
+
+    #[test]
+    fn parametric_sound_rejects_hostile_values_and_preserves_its_ratio() {
+        assert!(ParametricSound::new(f32::NAN, 1.5, 0.1).is_none());
+        assert!(ParametricSound::new(220.0, 0.0, 0.1).is_none());
+        assert!(ParametricSound::new(f32::MAX, 2.0, 0.1).is_none());
+        assert!(ParametricSound::new(220.0, 1.5, 0.0).is_none());
+        assert!(ParametricSound::new(220.0, 1.5, 0.081).is_none());
+
+        let voice = ParametricSound::new(220.0, 1.25, 0.04).expect("valid voice");
+        assert_eq!(voice.root_hz(), 220.0);
+        assert_eq!(voice.ratio(), 1.25);
+        assert_eq!(voice.gain(), 0.04);
+        let spec = voice.snapshot();
+        assert_eq!(spec.notes.len(), 2);
+        assert_eq!(spec.notes[0].freq, 220.0);
+        assert_eq!(spec.notes[1].freq, 275.0);
+        assert_eq!(spec.notes[0].amp, 0.04);
     }
 
     #[test]

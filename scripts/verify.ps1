@@ -45,7 +45,7 @@ if ($null -ne (Get-Command cargo-deny -ErrorAction SilentlyContinue)) {
 
 Step "house-style" { powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1 }
 
-Step "regenerate 341-screen app QA matrix" { cargo run -q -p numinous-app --example screens }
+Step "regenerate 349-screen app QA matrix" { cargo run -q -p numinous-app --example screens }
 Step "regenerate gallery into renders\" { cargo run -q --bin numinous -- gallery --dir renders --width 600 --height 600 }
 Step "regenerate contact sheet" { cargo run -q --bin numinous -- contact-sheet --out renders\contact.png --cols 3 --tile 360 }
 Step "regenerate lissajous audio" { cargo run -q --bin numinous -- sonify lissajous --out renders\lissajous.wav }
