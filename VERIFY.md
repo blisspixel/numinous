@@ -44,8 +44,8 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 1,217 all-target test cases pass, 93.28% region
-cover, and 92.95% line cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 1,221 all-target test cases pass, 93.27% region
+cover, and 93.03% line cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
@@ -175,12 +175,21 @@ cargo run -p numinous-audio --example tone    # prints the device, writes tone.w
 **Agent face (MCP):** drive the JSON-RPC server so an agent can play a room. Feed
 it newline-delimited requests on stdin, for example:
 ```
-{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"manual-check","version":"1.0"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
 {"jsonrpc":"2.0","id":2,"method":"tools/list"}
 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"play_room","arguments":{"id":"times-tables"}}}
 ```
 Run `cargo run --bin numinous-mcp` and paste those lines; it replies with the
 tool list and an ASCII render of the room as text.
+
+Every tool schema advertises `response_mode: "full" | "compact"`. Omitted and
+explicit `full` must produce equal tool-call results. On eligible structured
+results, `compact` must shorten only the text block while preserving
+`structuredContent`, `isError`, replay values, and progress effects exactly.
+Text-only results, unique-text results, and errors must remain unchanged. The
+stdio integration test verifies discovery, compaction, invalid-mode guidance,
+and continued serving after the error.
 
 For repeatable MCP QA against a freshly built server, use the isolated helper.
 Passing `-` reads JSON from stdin and avoids shell-specific quote escaping:

@@ -193,7 +193,7 @@ input without hidden session state:
 | `listen_room` | the ambient motif and current mathematical sonification, separately named as notation (Hz, note names, timing) |
 | `list_sims` | the simulations and their levers |
 | `run_sim` | run a sim with your lever values; picture plus plain readout |
-| `quiz` | guess the shape: call to see, call again with `guess` |
+| `quiz` | guess the shape: call to see, then repeat `seed`, `round`, and `choices` with `guess` |
 | `munch` | eat the numbers that fit: call to see, call again with `bites` |
 | `munch_arcade` | hunted Munch: call to see, call again with replayed `actions` |
 | `plot_expression` | your own function, plotted |
@@ -215,9 +215,10 @@ input without hidden session state:
 
 Conventions worth relying on:
 
-- **Determinism.** The same `seed` (and `round`) always produces the same
-  board, quiz, or scan, for you and for every other mind. Trajectories are
-  perfectly reproducible.
+- **Determinism.** The same replay arguments always produce the same board,
+  quiz, or scan, for you and for every other mind. For Quiz, that identity is
+  `seed`, `round`, and `choices`; the pose returns `choiceCount` and names every
+  argument to repeat with `guess`. Trajectories are perfectly reproducible.
 - **Stateless room input.** `play_room` accepts optional normalized hand
   points as `pokes: [[x, y], ...]`, newest last, bounded to 24 points, or a
   `gesture` trail of phase-stamped pointer events (held rooms pin, pull, and
@@ -230,6 +231,13 @@ Conventions worth relying on:
   on a win, `quiz` carries the `why`, `crack` carries per-guess `feedback`, and
   `seti` carries the channel traces. A client that surfaces only
   `structuredContent` still sees the math and earns the teaching.
+- **Opt-in compact output.** Every tool accepts
+  `response_mode: "full" | "compact"`. Omit it for the exact established
+  response. Use `compact` only when your client reads `structuredContent`; it
+  shortens duplicated prose for eligible room, sound, simulation, Quiz,
+  Gauntlet, catalog, description, and trophy results without changing the typed
+  result or progress. If text contains anything the structured result does not,
+  Numinous returns the complete text even in compact mode.
 - **Dense feedback.** Grades name the wrong judgments (`wronglyEaten`,
   `missed`), not just totals. Mine it.
 - **Guiding errors.** A bad room id returns the list of valid ids. Errors are

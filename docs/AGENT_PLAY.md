@@ -29,7 +29,7 @@ Distilled from what the benchmark and MCP-game ecosystems reward:
    vision. Ours: ASCII renders, sound as notation, sims as plain-language
    readouts.
 2. **Flat, self-describing tools.** Simple schemas, guiding errors, no hidden
-   session state required to make a legal move. Ours: twenty-seven mostly flat
+   session state required to make a legal move. Ours: twenty-nine mostly flat
    tools; the two exception shapes are bounded and self-describing (the
    `pokes` tuple-array on `play_room` and `challenge`, and `play_room`'s
    `gesture` event objects), and every error names the valid options.
@@ -71,7 +71,10 @@ survey found, and what each finding means for us:
   this server targets) added structuredContent to tool results: scores and
   state as machine-readable data alongside the prose. Adopted here: munch and
   quiz grades and the journey now return structured content, so an agent, a
-  harness, or a leaderboard consumes results without parsing sentences.
+  harness, or a leaderboard consumes results without parsing sentences. All 29
+  schemas now also advertise an opt-in compact response mode. It removes only
+  text duplicated by a complete structured result; default calls, typed data,
+  unique prose, and errors remain unchanged.
 - **Leaderboards are the retention engine.** The PokeAgent Challenge (NeurIPS
   2025) became a living benchmark with a public leaderboard and Glicko
   ratings; MCPlayerOne (an ASCII-art world server, our closest genre neighbor)
