@@ -31,6 +31,7 @@ pub(crate) enum Command {
     Right,
     CycleEra,
     CycleRadio,
+    Pause,
     PointerMoved { point: (f64, f64), held: bool },
     PhaseDelta(f64),
     CancelPointer,
@@ -66,7 +67,18 @@ impl VirtualHand {
             Axis::RightStickX => self.phase_axis = value,
             _ => return,
         }
+        if value != 0.0 {
+            self.visible = true;
+        }
+    }
+
+    fn press(&mut self, button: Button) -> Option<Command> {
+        let command = pressed_command(button)?;
         self.visible = true;
+        if button == Button::South {
+            self.held = true;
+        }
+        Some(command)
     }
 
     fn tick(&mut self, seconds: f64) -> Vec<Command> {
@@ -139,11 +151,7 @@ impl GamepadInput {
             while let Some(event) = gilrs.next_event() {
                 match event.event {
                     EventType::ButtonPressed(button, _) => {
-                        self.hand.visible = true;
-                        if button == Button::South {
-                            self.hand.held = true;
-                        }
-                        if let Some(command) = pressed_command(button) {
+                        if let Some(command) = self.hand.press(button) {
                             commands.push(command);
                         }
                     }
@@ -209,6 +217,7 @@ fn pressed_command(button: Button) -> Option<Command> {
         Button::DPadRight => Command::Right,
         Button::West => Command::CycleEra,
         Button::North => Command::CycleRadio,
+        Button::RightThumb => Command::Pause,
         _ => return None,
     })
 }
@@ -314,11 +323,38 @@ mod tests {
             (Button::DPadRight, Command::Right),
             (Button::West, Command::CycleEra),
             (Button::North, Command::CycleRadio),
+            (Button::RightThumb, Command::Pause),
         ];
         for (button, expected) in cases {
             assert_eq!(pressed_command(button), Some(expected));
         }
-        assert_eq!(pressed_command(Button::RightThumb), None);
+        assert_eq!(pressed_command(Button::Mode), None);
+    }
+
+    #[test]
+    fn only_supported_button_presses_reveal_the_virtual_hand() {
+        let mut hand = VirtualHand::default();
+        assert_eq!(hand.press(Button::Mode), None);
+        assert!(!hand.visible);
+
+        assert_eq!(hand.press(Button::RightThumb), Some(Command::Pause));
+        assert!(hand.visible);
+        assert!(!hand.held);
+    }
+
+    #[test]
+    fn deadzone_axis_activity_stays_hidden_and_still_clears_motion() {
+        let mut hand = VirtualHand::default();
+        hand.set_axis(Axis::LeftStickX, 0.17);
+        assert!(!hand.visible);
+        assert_eq!(hand.stick.0, 0.0);
+
+        hand.set_axis(Axis::LeftStickX, 1.0);
+        assert!(hand.visible);
+        assert_eq!(hand.stick.0, 1.0);
+        hand.set_axis(Axis::LeftStickX, 0.0);
+        assert_eq!(hand.stick.0, 0.0);
+        assert!(hand.tick(0.05).is_empty());
     }
 
     #[test]

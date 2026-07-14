@@ -1,53 +1,14 @@
 use numinous_core::{Journey, Raster, Scoreboard, Surface};
 
-const HELP_LINES: &[&str] = &[
-    "PLAY (PRESS A LETTER)",
-    "G          THE QUIZ: NAME THE MATH",
-    "C          MUNCH: EAT WHAT FITS",
-    "N          NIM: BEAT THE ORDER",
-    "T          THE GAUNTLET: ONE RUN",
-    "V          THE ARCADE: EAT WHILE HUNTED",
-    "",
-    "WANDER",
-    "A / D      PREV / NEXT ROOM    1-9 JUMP",
-    "W / S      TIME SPEED   MOUSE  SCRUB",
-    "E          INSPECT    Q  ERA    R  RESET",
-    "B          THE SHOW   TAB  THE STUDIO",
-    "J          JOURNEY    F  FULLSCREEN",
-    "Y          RADIO    P  POSTCARD",
-    "F9         PLAYTEST NOTE",
-    "M          SOUND   -/= VOLUME   SPACE PAUSE",
-    "",
-    "CONTROLLER",
-    "LEFT STICK HAND   SOUTH SELECT / TOUCH   BUMPERS ROOMS",
-    "D-PAD MENU / PLAY   TRIGGERS SPEED   RIGHT STICK TIME",
-    "EAST BACK   START MENU   SELECT INFO   L3 RESET",
-    "WEST ERA   NORTH RADIO OR SUBMIT",
-    "",
-    "ESC        CLOSE MENU AND WANDER",
-];
-
-fn help_lines(selected_game: Option<usize>) -> Vec<String> {
-    HELP_LINES
-        .iter()
-        .enumerate()
-        .map(|(index, line)| {
-            if let Some(selected) = selected_game
-                && (1..=5).contains(&index)
-            {
-                let marker = if index - 1 == selected { "> " } else { "  " };
-                return format!("{marker}{line}");
-            }
-            (*line).to_string()
-        })
-        .collect()
-}
+use crate::input_legend::{self, InputMode};
 
 pub(crate) fn draw_help_overlay(
     raster: &mut Raster,
     width: usize,
     height: usize,
     selected_game: Option<usize>,
+    input_mode: InputMode,
+    activity_paused: bool,
 ) {
     raster.clear_rows(0, height as i32);
     raster.line(0, 0, width.saturating_sub(1) as i32, 0, '-');
@@ -58,8 +19,21 @@ pub(crate) fn draw_help_overlay(
         height.saturating_sub(1) as i32,
         '-',
     );
-    let semantic = help_lines(selected_game);
-    let (lines, scale, line_step) = overlay_layout(&semantic, width, height);
+    let compact_controller = input_mode == InputMode::Controller
+        && !activity_paused
+        && width <= 420
+        && height <= 300
+        && selected_game.is_some();
+    let semantic = if compact_controller {
+        input_legend::compact_controller_help_lines(selected_game.unwrap_or(0))
+    } else {
+        input_legend::help_lines(input_mode, selected_game, activity_paused)
+    };
+    let (lines, scale, line_step) = if compact_controller {
+        overlay_layout_up_to(&semantic, width, height, 2)
+    } else {
+        overlay_layout(&semantic, width, height)
+    };
     draw_centered_lines(raster, &lines, width, height, scale, line_step);
 }
 
@@ -67,6 +41,7 @@ pub(crate) fn journey_lines(
     journey: &Journey,
     board: &Scoreboard,
     room_count: usize,
+    input_mode: InputMode,
 ) -> Vec<String> {
     let mut lines = vec![
         format!("LV {}  [{}]", journey.level(), journey.level_bar(12)),
@@ -102,7 +77,7 @@ pub(crate) fn journey_lines(
     if lit > 0 {
         lines.push(format!("RESONANCES {lit}"));
     }
-    lines.push("J CLOSES".to_string());
+    lines.push(input_legend::journey_close(input_mode));
     lines
 }
 
@@ -113,6 +88,7 @@ pub(crate) fn draw_journey_overlay(
     room_count: usize,
     width: usize,
     height: usize,
+    input_mode: InputMode,
 ) {
     raster.clear_rows(0, height as i32);
     raster.line(0, 0, width.saturating_sub(1) as i32, 0, '-');
@@ -123,8 +99,42 @@ pub(crate) fn draw_journey_overlay(
         height.saturating_sub(1) as i32,
         '-',
     );
-    let semantic = journey_lines(journey, board, room_count);
+    let semantic = journey_lines(journey, board, room_count, input_mode);
     let (lines, scale, line_step) = overlay_layout(&semantic, width, height);
+    draw_centered_lines(raster, &lines, width, height, scale, line_step);
+}
+
+fn pause_lines(input_mode: InputMode) -> Vec<String> {
+    vec!["PAUSED".to_string(), input_legend::pause_resume(input_mode)]
+}
+
+fn pause_band_bounds(line_count: usize, scale: i32, line_step: i32, height: usize) -> (i32, i32) {
+    let content_height = line_count as i32 * line_step * scale;
+    let top = ((height as i32 - content_height) / 2).max(0);
+    (
+        (top - 8).max(0),
+        (top + content_height + 8).min(height as i32),
+    )
+}
+
+pub(crate) fn draw_pause_overlay(
+    raster: &mut Raster,
+    width: usize,
+    height: usize,
+    input_mode: InputMode,
+) {
+    let semantic = pause_lines(input_mode);
+    let (lines, scale, line_step) = overlay_layout(&semantic, width, height);
+    let (band_top, band_bottom) = pause_band_bounds(lines.len(), scale, line_step, height);
+    raster.clear_rows(band_top, band_bottom);
+    raster.line(0, band_top, width.saturating_sub(1) as i32, band_top, '-');
+    raster.line(
+        0,
+        band_bottom.saturating_sub(1),
+        width.saturating_sub(1) as i32,
+        band_bottom.saturating_sub(1),
+        '-',
+    );
     draw_centered_lines(raster, &lines, width, height, scale, line_step);
 }
 
@@ -157,6 +167,15 @@ fn overlay_layout<T: AsRef<str>>(
     height: usize,
 ) -> (Vec<String>, i32, i32) {
     let largest = (width as i32 / 300).clamp(1, 4);
+    overlay_layout_up_to(semantic, width, height, largest)
+}
+
+fn overlay_layout_up_to<T: AsRef<str>>(
+    semantic: &[T],
+    width: usize,
+    height: usize,
+    largest: i32,
+) -> (Vec<String>, i32, i32) {
     for scale in (1..=largest).rev() {
         let columns = ((width as i32 - 20) / (6 * scale)).max(8) as usize;
         let lines: Vec<String> = semantic
@@ -226,7 +245,14 @@ mod tests {
         for y in 0..360 {
             raster.line(0, y, 419, y, '#');
         }
-        draw_help_overlay(&mut raster, 420, 360, Some(2));
+        draw_help_overlay(
+            &mut raster,
+            420,
+            360,
+            Some(2),
+            InputMode::KeyboardMouse,
+            false,
+        );
         assert!(raster.lit_count() > 300);
         assert_eq!(raster.width(), 420);
         assert_eq!(raster.height(), 360);
@@ -237,15 +263,29 @@ mod tests {
 
     #[test]
     fn help_overlay_lines_fit_the_default_window() {
-        for (width, height) in [(900, 700), (360, 240)] {
-            let semantic = help_lines(Some(4));
-            let (lines, scale, line_step) = overlay_layout(&semantic, width, height);
-            assert!(lines.len() as i32 * line_step * scale <= height as i32);
-            for line in lines {
-                assert!(
-                    line_fits(&line, width, scale),
-                    "{line} should fit at {width}"
-                );
+        for input_mode in [InputMode::KeyboardMouse, InputMode::Controller] {
+            for (width, height) in [(900, 700), (360, 240)] {
+                let compact = input_mode == InputMode::Controller && width <= 420 && height <= 300;
+                let semantic = if compact {
+                    input_legend::compact_controller_help_lines(4)
+                } else {
+                    input_legend::help_lines(input_mode, Some(4), false)
+                };
+                let (lines, scale, line_step) = if compact {
+                    overlay_layout_up_to(&semantic, width, height, 2)
+                } else {
+                    overlay_layout(&semantic, width, height)
+                };
+                assert!(lines.len() as i32 * line_step * scale <= height as i32);
+                for line in lines {
+                    assert!(
+                        line_fits(&line, width, scale),
+                        "{line} should fit at {width}"
+                    );
+                }
+                if compact {
+                    assert_eq!(scale, 2);
+                }
             }
         }
     }
@@ -266,10 +306,41 @@ mod tests {
         journey.visit("lissajous");
         journey.play();
         let board = Scoreboard::default();
-        let lines = journey_lines(&journey, &board, 30);
-        assert!(lines.iter().any(|line| line.contains("1 OF 30 ROOMS")));
-        assert!(lines.iter().any(|line| line.starts_with("TROPHIES ")));
-        assert_eq!(lines.last().map(String::as_str), Some("J CLOSES"));
+        let keyboard = journey_lines(&journey, &board, 30, InputMode::KeyboardMouse);
+        let controller = journey_lines(&journey, &board, 30, InputMode::Controller);
+        assert!(keyboard.iter().any(|line| line.contains("1 OF 30 ROOMS")));
+        assert!(keyboard.iter().any(|line| line.starts_with("TROPHIES ")));
+        assert_eq!(keyboard.last().map(String::as_str), Some("J CLOSES"));
+        assert_eq!(controller.last().map(String::as_str), Some("EAST CLOSES"));
+    }
+
+    #[test]
+    fn pause_overlay_is_visible_bounded_and_mode_aware_at_compact_size() {
+        let (width, height) = (360, 240);
+        let mut keyboard = Raster::with_accent(width, height, [120, 220, 190]);
+        let mut controller = Raster::with_accent(width, height, [120, 220, 190]);
+        for y in 0..height as i32 {
+            keyboard.line(0, y, width as i32 - 1, y, '#');
+            controller.line(0, y, width as i32 - 1, y, '#');
+        }
+
+        draw_pause_overlay(&mut keyboard, width, height, InputMode::KeyboardMouse);
+        draw_pause_overlay(&mut controller, width, height, InputMode::Controller);
+
+        for input_mode in [InputMode::KeyboardMouse, InputMode::Controller] {
+            let semantic = pause_lines(input_mode);
+            let (lines, scale, line_step) = overlay_layout(&semantic, width, height);
+            assert!(lines.iter().all(|line| line_fits(line, width, scale)));
+            let (top, bottom) = pause_band_bounds(lines.len(), scale, line_step, height);
+            assert!(top >= 0);
+            assert!(bottom <= height as i32);
+        }
+        assert_ne!(keyboard.to_rgba(), controller.to_rgba());
+        assert_eq!(
+            &keyboard.to_rgba()[..width * 4],
+            &controller.to_rgba()[..width * 4],
+            "input copy remains inside the pause band"
+        );
     }
 
     #[test]

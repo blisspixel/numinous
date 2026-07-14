@@ -21,6 +21,9 @@ mod game_draw;
 #[path = "../src/hud.rs"]
 mod hud;
 #[allow(dead_code)]
+#[path = "../src/input_legend.rs"]
+mod input_legend;
+#[allow(dead_code)]
 #[path = "../src/overlays.rs"]
 mod overlays;
 #[allow(dead_code)]
@@ -194,7 +197,26 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
             ));
         }
     }
-    assert_eq!(expected.len(), 240, "documented QA scenario count");
+    expected.extend(
+        [
+            "rooms/controller-click-arrival-small-360x240.png",
+            "rooms/controller-drag-arrival-small-360x240.png",
+            "overlays/controller-help-small-360x240.png",
+            "overlays/keyboard-paused-small-360x240.png",
+            "overlays/controller-paused-small-360x240.png",
+            "overlays/controller-show-small-360x240.png",
+            "overlays/controller-journey-small-360x240.png",
+            "games/controller-studio-small-360x240.png",
+            "games/controller-quiz-result-small-360x240.png",
+            "games/controller-munch-result-small-360x240.png",
+            "games/controller-arcade-over-small-360x240.png",
+            "games/controller-nim-win-small-360x240.png",
+            "games/controller-gauntlet-bomb-small-360x240.png",
+        ]
+        .into_iter()
+        .map(str::to_string),
+    );
+    assert_eq!(expected.len(), 253, "documented QA scenario count");
     expected
 }
 
@@ -719,6 +741,29 @@ fn room_screen(
     show_info: bool,
     level: u32,
 ) -> Raster {
+    room_screen_with_mode(
+        room,
+        t,
+        inputs,
+        size,
+        room_card,
+        show_info,
+        level,
+        input_legend::InputMode::KeyboardMouse,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn room_screen_with_mode(
+    room: &dyn Room,
+    t: f64,
+    inputs: &[RoomInput],
+    size: (usize, usize),
+    room_card: u64,
+    show_info: bool,
+    level: u32,
+    input_mode: input_legend::InputMode,
+) -> Raster {
     let (width, height) = size;
     let mut raster = room_content(room, t, inputs, size);
     hud::draw_room_chrome(
@@ -735,6 +780,7 @@ fn room_screen(
             studio: false,
             muted: false,
             level,
+            input_mode,
         },
         inputs,
         width,
@@ -750,6 +796,15 @@ fn room_content(room: &dyn Room, t: f64, inputs: &[RoomInput], size: (usize, usi
 }
 
 fn show_screen(room: &dyn Room, t: f64, size: (usize, usize)) -> Raster {
+    show_screen_with_mode(room, t, size, input_legend::InputMode::KeyboardMouse)
+}
+
+fn show_screen_with_mode(
+    room: &dyn Room,
+    t: f64,
+    size: (usize, usize),
+    input_mode: input_legend::InputMode,
+) -> Raster {
     let (width, height) = size;
     let mut raster = Raster::with_accent(width, height, room.meta().accent);
     room.render(&mut raster, t);
@@ -767,6 +822,7 @@ fn show_screen(room: &dyn Room, t: f64, size: (usize, usize)) -> Raster {
             studio: false,
             muted: false,
             level: 7,
+            input_mode,
         },
         &[],
         width,
@@ -790,8 +846,16 @@ fn save_sizes(
 }
 
 fn studio_screen(width: usize, height: usize) -> Raster {
+    studio_screen_with_mode(width, height, input_legend::InputMode::KeyboardMouse)
+}
+
+fn studio_screen_with_mode(
+    width: usize,
+    height: usize,
+    input_mode: input_legend::InputMode,
+) -> Raster {
     let mut raster = Raster::with_accent(width, height, [120, 220, 190]);
-    studio_panel::StudioPanel::default().draw(&mut raster, width, height, 0.35);
+    studio_panel::StudioPanel::default().draw(&mut raster, input_mode, width, height, 0.35);
     raster
 }
 
@@ -984,7 +1048,14 @@ fn main() {
     for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
         let (width, height) = size;
         let mut help = room_screen(launch, 0.12, &[], size, 0, false, 1);
-        overlays::draw_help_overlay(&mut help, width, height, Some(2));
+        overlays::draw_help_overlay(
+            &mut help,
+            width,
+            height,
+            None,
+            input_legend::InputMode::KeyboardMouse,
+            false,
+        );
         save(
             &help,
             &format!("overlays/launch-help-{label}-{width}x{height}.png"),
@@ -1005,6 +1076,7 @@ fn main() {
             rooms.len(),
             width,
             height,
+            input_legend::InputMode::KeyboardMouse,
         );
         save(
             &journey_screen,
@@ -1043,21 +1115,39 @@ fn main() {
         flash: None,
     };
     save_sizes("quiz-question", &mut manifest, |width, height| {
-        game_draw::draw_quiz(&rooms, &quiz_play, width, height)
+        game_draw::draw_quiz(
+            &rooms,
+            &quiz_play,
+            input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
     });
     let quiz_correct = play::QuizPlay {
         round: numinous_core::build_round(19, 1, 44, 18),
         flash: Some((true, 40)),
     };
     save_sizes("quiz-correct", &mut manifest, |width, height| {
-        game_draw::draw_quiz(&rooms, &quiz_correct, width, height)
+        game_draw::draw_quiz(
+            &rooms,
+            &quiz_correct,
+            input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
     });
     let quiz_wrong = play::QuizPlay {
         round: numinous_core::build_round(19, 1, 44, 18),
         flash: Some((false, 40)),
     };
     save_sizes("quiz-wrong", &mut manifest, |width, height| {
-        game_draw::draw_quiz(&rooms, &quiz_wrong, width, height)
+        game_draw::draw_quiz(
+            &rooms,
+            &quiz_wrong,
+            input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
     });
 
     let (munch_round, munch_board) = play::deal_munch(23, numinous_core::FULL_DECK_ROUND, None);
@@ -1070,13 +1160,25 @@ fn main() {
         graded: None,
     };
     save_sizes("munch-play", &mut manifest, |width, height| {
-        game_draw::draw_munch(&munch, 20, width, height)
+        game_draw::draw_munch(
+            &munch,
+            20,
+            input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
     });
     munch.bites = (0..munch.board.numbers.len()).collect();
     let bites: Vec<_> = munch.bites.iter().copied().collect();
     munch.graded = Some(numinous_core::grade_munch(&munch.board, &bites));
     save_sizes("munch-result", &mut manifest, |width, height| {
-        game_draw::draw_munch(&munch, 20, width, height)
+        game_draw::draw_munch(
+            &munch,
+            20,
+            input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
     });
 
     let arcade_live = play::ArcadePlay {
@@ -1086,7 +1188,12 @@ fn main() {
         over: false,
     };
     save_sizes("arcade-live", &mut manifest, |width, height| {
-        game_draw::draw_arcade(&arcade_live, width, height)
+        game_draw::draw_arcade(
+            &arcade_live,
+            input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
     });
     let arcade_caught = play::ArcadePlay {
         run: numinous_core::munch_arcade::Arcade::new(29),
@@ -1095,7 +1202,12 @@ fn main() {
         over: false,
     };
     save_sizes("arcade-caught", &mut manifest, |width, height| {
-        game_draw::draw_arcade(&arcade_caught, width, height)
+        game_draw::draw_arcade(
+            &arcade_caught,
+            input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
     });
     let arcade_clear = play::ArcadePlay {
         run: numinous_core::munch_arcade::Arcade::new(29),
@@ -1104,7 +1216,12 @@ fn main() {
         over: false,
     };
     save_sizes("arcade-clear", &mut manifest, |width, height| {
-        game_draw::draw_arcade(&arcade_clear, width, height)
+        game_draw::draw_arcade(
+            &arcade_clear,
+            input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
     });
     let arcade_over = play::ArcadePlay {
         run: numinous_core::munch_arcade::Arcade::new(29),
@@ -1113,7 +1230,12 @@ fn main() {
         over: true,
     };
     save_sizes("arcade-over", &mut manifest, |width, height| {
-        game_draw::draw_arcade(&arcade_over, width, height)
+        game_draw::draw_arcade(
+            &arcade_over,
+            input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
     });
 
     let nim = play::NimPlay {
@@ -1125,7 +1247,7 @@ fn main() {
         over: None,
     };
     save_sizes("nim-live", &mut manifest, |width, height| {
-        game_draw::draw_nim(&nim, width, height)
+        game_draw::draw_nim(&nim, input_legend::InputMode::KeyboardMouse, width, height)
     });
     let nim_over = play::NimPlay {
         heaps: vec![0, 0, 0],
@@ -1136,15 +1258,28 @@ fn main() {
         over: Some(true),
     };
     save_sizes("nim-win", &mut manifest, |width, height| {
-        game_draw::draw_nim(&nim_over, width, height)
+        game_draw::draw_nim(
+            &nim_over,
+            input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
     });
     let nim_loss = play::NimPlay {
+        heaps: nim_over.heaps.clone(),
+        seed: nim_over.seed,
+        selected: nim_over.selected,
+        take: nim_over.take,
         message: "THE ORDER TOOK THE LAST STONE.".to_string(),
         over: Some(false),
-        ..nim_over
     };
     save_sizes("nim-loss", &mut manifest, |width, height| {
-        game_draw::draw_nim(&nim_loss, width, height)
+        game_draw::draw_nim(
+            &nim_loss,
+            input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
     });
 
     let mut gauntlet = gauntlet(37);
@@ -1153,9 +1288,139 @@ fn main() {
         save_sizes(
             &format!("gauntlet-stage-{stage}"),
             &mut manifest,
-            |width, height| game_draw::draw_gauntlet(&rooms, &gauntlet, 20, width, height),
+            |width, height| {
+                game_draw::draw_gauntlet(
+                    &rooms,
+                    &gauntlet,
+                    20,
+                    input_legend::InputMode::KeyboardMouse,
+                    width,
+                    height,
+                )
+            },
         );
     }
+
+    let controller = input_legend::InputMode::Controller;
+    save(
+        &room_screen_with_mode(golden, 0.05, &[], SMALL_SIZE, 240, false, 7, controller),
+        "rooms/controller-click-arrival-small-360x240.png",
+        &mut manifest,
+    );
+    save(
+        &room_screen_with_mode(times, 0.05, &[], SMALL_SIZE, 240, false, 7, controller),
+        "rooms/controller-drag-arrival-small-360x240.png",
+        &mut manifest,
+    );
+
+    let mut controller_help =
+        room_screen_with_mode(launch, 0.12, &[], SMALL_SIZE, 0, false, 1, controller);
+    overlays::draw_help_overlay(
+        &mut controller_help,
+        SMALL_SIZE.0,
+        SMALL_SIZE.1,
+        Some(5),
+        controller,
+        false,
+    );
+    save(
+        &controller_help,
+        "overlays/controller-help-small-360x240.png",
+        &mut manifest,
+    );
+
+    let mut keyboard_paused = room_screen(golden, 0.42, &[], SMALL_SIZE, 0, false, 7);
+    overlays::draw_pause_overlay(
+        &mut keyboard_paused,
+        SMALL_SIZE.0,
+        SMALL_SIZE.1,
+        input_legend::InputMode::KeyboardMouse,
+    );
+    save(
+        &keyboard_paused,
+        "overlays/keyboard-paused-small-360x240.png",
+        &mut manifest,
+    );
+    let mut controller_paused =
+        room_screen_with_mode(golden, 0.42, &[], SMALL_SIZE, 0, false, 7, controller);
+    overlays::draw_pause_overlay(
+        &mut controller_paused,
+        SMALL_SIZE.0,
+        SMALL_SIZE.1,
+        controller,
+    );
+    save(
+        &controller_paused,
+        "overlays/controller-paused-small-360x240.png",
+        &mut manifest,
+    );
+    save(
+        &show_screen_with_mode(golden, 0.05, SMALL_SIZE, controller),
+        "overlays/controller-show-small-360x240.png",
+        &mut manifest,
+    );
+
+    let mut controller_journey =
+        room_screen_with_mode(golden, 0.0, &[], SMALL_SIZE, 0, false, 42, controller);
+    overlays::draw_journey_overlay(
+        &mut controller_journey,
+        &journey,
+        &Scoreboard::default(),
+        rooms.len(),
+        SMALL_SIZE.0,
+        SMALL_SIZE.1,
+        controller,
+    );
+    save(
+        &controller_journey,
+        "overlays/controller-journey-small-360x240.png",
+        &mut manifest,
+    );
+
+    save(
+        &studio_screen_with_mode(SMALL_SIZE.0, SMALL_SIZE.1, controller),
+        "games/controller-studio-small-360x240.png",
+        &mut manifest,
+    );
+    save(
+        &game_draw::draw_quiz(
+            &rooms,
+            &quiz_correct,
+            controller,
+            SMALL_SIZE.0,
+            SMALL_SIZE.1,
+        ),
+        "games/controller-quiz-result-small-360x240.png",
+        &mut manifest,
+    );
+    save(
+        &game_draw::draw_munch(&munch, 20, controller, SMALL_SIZE.0, SMALL_SIZE.1),
+        "games/controller-munch-result-small-360x240.png",
+        &mut manifest,
+    );
+    save(
+        &game_draw::draw_arcade(&arcade_over, controller, SMALL_SIZE.0, SMALL_SIZE.1),
+        "games/controller-arcade-over-small-360x240.png",
+        &mut manifest,
+    );
+    save(
+        &game_draw::draw_nim(&nim_over, controller, SMALL_SIZE.0, SMALL_SIZE.1),
+        "games/controller-nim-win-small-360x240.png",
+        &mut manifest,
+    );
+    gauntlet.stage = 3;
+    save(
+        &game_draw::draw_gauntlet(
+            &rooms,
+            &gauntlet,
+            20,
+            controller,
+            SMALL_SIZE.0,
+            SMALL_SIZE.1,
+        ),
+        "games/controller-gauntlet-bomb-small-360x240.png",
+        &mut manifest,
+    );
 
     manifest.sort();
     let actual: BTreeSet<_> = manifest.iter().cloned().collect();

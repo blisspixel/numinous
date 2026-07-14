@@ -115,19 +115,27 @@ windowed app, a full CLI, an MCP server, GPU and audio adapters, 31 catalog
 rooms plus hidden content, games, progression, a Studio foundation, and the
 built-in soundtrack. Mouse, keyboard, and hotplugged controllers share the
 native App, including a controller-driven virtual hand for every room. The
-programmatic room score now uses a 32-step stereo arrangement, smooth source
+visible legends follow the last meaningful keyboard, pointer, or controller
+action across rooms, games, Show, Journey, and Studio. Controller routes cover
+all eight menu destinations, while R3 provides a visible pause that blocks
+gameplay input until resumed. Studio formula entry still requires a keyboard
+and says so directly.
+
+The programmatic room score now uses a 32-step stereo arrangement, smooth source
 crossfades, control-thread buffer retirement, focus-safe gain, and wall-clock
 radio resynchronization instead of restarting or retaining stale loops.
 This is an alpha-tagged prerelease. Capability breadth is ahead of release
 maturity because the 0.2 Flagship Proof gate, including the real hallway
 evidence, remains open.
 
-The current local gate has 1,191 passing all-target test cases, 93.17% region coverage and
-92.82% line coverage with an enforced 80% line floor, Clippy with warnings
+The current local gate has 1,217 passing all-target test cases, 93.28% region coverage and
+92.95% line coverage with an enforced 80% line floor, Clippy with warnings
 denied, and dependency policy checks. Release QA also regenerates an exact
-240-screen App matrix with per-room interaction scenarios, semantic checks,
+253-screen App matrix with per-room interaction scenarios, semantic checks,
 and coarse perceptual response thresholds, including a regression that rejects
-four isolated corner markers as a meaningful interaction. The latest
+four isolated corner markers as a meaningful interaction. Thirteen compact
+receipts cover controller legends and visible pause states through production
+render paths. The latest
 full-roster QA pass applied all 42 documented simulated review lenses once,
 split across first contact, interaction and truth, and games plus agent faces.
 It fixed reproduced App, CLI, MCP, Studio, and mathematical-copy defects; the

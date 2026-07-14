@@ -4,6 +4,12 @@ use std::f64::consts::TAU;
 
 use numinous_core::{Expr, Raster, SoundSpec, Surface};
 
+use crate::input_legend::{self, InputMode};
+
+fn studio_scale(width: usize) -> i32 {
+    (width as i32 / 450).clamp(1, 3)
+}
+
 const DEFAULT_SOURCE: &str = "sin(a*x) + x/3";
 
 /// The app-local Studio panel state.
@@ -68,10 +74,17 @@ impl StudioPanel {
     }
 
     /// Draw the Studio panel into the raster.
-    pub fn draw(&self, raster: &mut Raster, width: usize, height: usize, t: f64) {
+    pub(crate) fn draw(
+        &self,
+        raster: &mut Raster,
+        mode: InputMode,
+        width: usize,
+        height: usize,
+        t: f64,
+    ) {
         let width = width.min(raster.width());
         let height = height.min(raster.height());
-        let scale = (width as i32 / 500).clamp(1, 3);
+        let scale = studio_scale(width);
         numinous_core::draw_text(raster, "THE STUDIO", 10, 10, scale, '#');
         let typed = format!("Y = {}_", self.source.to_uppercase());
         numinous_core::draw_text(raster, &typed, 10, 10 + 12 * scale, scale + 1, '#');
@@ -86,9 +99,9 @@ impl StudioPanel {
             );
         }
         if height >= 20 {
-            let footer = "TYPE A FORMULA   TAB CLOSES   ESC MENU";
+            let footer = input_legend::studio_controls(mode);
             raster.clear_rows(height as i32 - 16 * scale, height as i32);
-            numinous_core::draw_text(raster, footer, 10, height as i32 - 11 * scale, scale, '#');
+            numinous_core::draw_text(raster, &footer, 10, height as i32 - 11 * scale, scale, '#');
         }
 
         let Some(expr) = &self.expr else {
@@ -134,7 +147,8 @@ impl StudioPanel {
 
 #[cfg(test)]
 mod tests {
-    use super::StudioPanel;
+    use super::{StudioPanel, studio_scale};
+    use crate::input_legend::{self, InputMode};
     use numinous_core::Raster;
 
     #[test]
@@ -154,7 +168,7 @@ mod tests {
         assert!(panel.error.is_some());
         assert!(panel.expr.is_some());
         let mut raster = Raster::new(120, 90);
-        panel.draw(&mut raster, 120, 90, 0.25);
+        panel.draw(&mut raster, InputMode::KeyboardMouse, 120, 90, 0.25);
         assert!(raster.lit_count() > 0, "last good curve should still draw");
     }
 
@@ -162,18 +176,18 @@ mod tests {
     fn draw_handles_tiny_and_mismatched_sizes() {
         let panel = StudioPanel::new("sin(x)");
         let mut zero = Raster::new(0, 0);
-        panel.draw(&mut zero, 0, 0, 0.0);
+        panel.draw(&mut zero, InputMode::KeyboardMouse, 0, 0, 0.0);
         assert_eq!(zero.lit_count(), 0);
 
         let mut one = Raster::new(1, 1);
-        panel.draw(&mut one, 1, 1, 0.0);
+        panel.draw(&mut one, InputMode::KeyboardMouse, 1, 1, 0.0);
 
         let mut short = Raster::new(80, 20);
-        panel.draw(&mut short, 500, 20, 0.0);
+        panel.draw(&mut short, InputMode::KeyboardMouse, 500, 20, 0.0);
         assert!(short.lit_count() > 0);
 
         let mut mismatched = Raster::new(24, 90);
-        panel.draw(&mut mismatched, 200, 90, 0.5);
+        panel.draw(&mut mismatched, InputMode::KeyboardMouse, 200, 90, 0.5);
         assert!(mismatched.lit_count() > 0);
     }
 
@@ -187,5 +201,24 @@ mod tests {
         assert!(panel.backspace().is_none());
         assert_eq!(panel.source, "x + ");
         assert!(panel.error.is_some());
+    }
+
+    #[test]
+    fn controller_footer_names_the_keyboard_requirement_and_fits() {
+        let copy = input_legend::studio_controls(InputMode::Controller);
+        assert_eq!(copy, "KEYBOARD TYPES   EAST CLOSES   START HELP");
+        assert!(copy.starts_with("KEYBOARD TYPES"));
+
+        for (width, height) in [(360, 240), (900, 700)] {
+            let scale = studio_scale(width);
+            assert!(
+                10 + numinous_core::text_width(&copy, scale) <= width as i32,
+                "Studio controls clip at {width}x{height}"
+            );
+            let panel = StudioPanel::default();
+            let mut raster = Raster::new(width, height);
+            panel.draw(&mut raster, InputMode::Controller, width, height, 0.25);
+            assert!(raster.lit_count() > 100);
+        }
     }
 }

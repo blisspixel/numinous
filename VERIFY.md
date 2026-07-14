@@ -44,19 +44,20 @@ bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
 
-Expected right now: **format and clippy clean, 1,191 all-target test cases pass, 93.17% region
-cover, and 92.82% line cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 1,217 all-target test cases pass, 93.28% region
+cover, and 92.95% line cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
 
-The release scripts also regenerate `renders/qa-app/`, a 240-screen app matrix.
+The release scripts also regenerate `renders/qa-app/`, a 253-screen app matrix.
 Every catalog room has a deterministic opening frame, arrival card, immediate
 pointer response, same-phase delayed-gesture baseline and response, compact
 arrival card, and compact delayed response.
 The matrix also covers every app game state, default and compact overlays,
 production Studio rendering, both ends of The Show, Times Tables phase
-stability, and the Mandelbrot reset flow. Generation removes stale output,
+stability, the Mandelbrot reset flow, and 13 compact controller or pause
+receipts spanning rooms, overlays, and game results. Generation removes stale output,
 checks the exact unique scenario inventory, rejects blank or wrong-sized frames,
 and gives every room a declared click, drag-release, repeated-action, or boundary
 scenario. Inputs must be finite, ordered, and closed. Immediate and delayed

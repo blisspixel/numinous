@@ -74,6 +74,8 @@ fn nim_control(key: &Key) -> Option<NimControl> {
     match key {
         Key::Named(NamedKey::ArrowUp) => Some(NimControl::PreviousHeap),
         Key::Named(NamedKey::ArrowDown) => Some(NimControl::NextHeap),
+        Key::Named(NamedKey::ArrowRight) => Some(NimControl::IncreaseTake),
+        Key::Named(NamedKey::ArrowLeft) => Some(NimControl::DecreaseTake),
         Key::Character(c) => match c.as_str() {
             "w" => Some(NimControl::PreviousHeap),
             "s" => Some(NimControl::NextHeap),
@@ -207,7 +209,7 @@ mod tests {
     }
 
     #[test]
-    fn nim_control_adjusts_take_with_wasd() {
+    fn nim_control_adjusts_take_with_wasd_and_arrows() {
         let mut play = nim_play(vec![2, 0]);
 
         assert!(apply_nim_control(&mut play, &Key::Character("d".into())));
@@ -217,6 +219,16 @@ mod tests {
         assert!(apply_nim_control(&mut play, &Key::Character("a".into())));
         assert_eq!(play.take, 1);
         assert!(apply_nim_control(&mut play, &Key::Character("a".into())));
+        assert_eq!(play.take, 1);
+        assert!(apply_nim_control(
+            &mut play,
+            &Key::Named(NamedKey::ArrowRight)
+        ));
+        assert_eq!(play.take, 2);
+        assert!(apply_nim_control(
+            &mut play,
+            &Key::Named(NamedKey::ArrowLeft)
+        ));
         assert_eq!(play.take, 1);
         assert!(!apply_nim_control(&mut play, &Key::Named(NamedKey::Enter)));
     }

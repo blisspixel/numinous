@@ -494,3 +494,70 @@ deeper Galton and Life interaction loops, causal first-touch presentation,
 visual audio state, and continued music composition review. Human hallway
 evidence still controls the 0.2 milestone claim, but no longer idles verified
 0.3 refinement while sessions are arranged.
+
+---
+
+# The sixth round (July 13, 2026): input truth and controller continuity
+
+Three independent groups audited the App's production controller routes,
+visible control copy, compact screenshots, and release documentation. They
+started from the complete 240-screen keyboard and pointer baseline, mapped
+every room, game phase, overlay, Show, Studio, and Journey route, then added the
+smallest controller-first evidence set that exposed missing or misleading
+paths. Two fresh checkers reviewed the result through source, route tests, and
+original-resolution screenshots. A third checker challenged release claims
+and pause isolation.
+
+## Reproduced findings
+
+- Nim's controller D-pad could select a heap but not adjust the take.
+- Controller South did nothing on Arcade game over even though the screen said
+  any key would leave.
+- Show, Studio, Journey, and wander pause lacked complete controller entry,
+  exit, or visible guidance.
+- Room, game, Studio, and overlay legends continued to advertise keyboard and
+  mouse controls after controller use. Qualified Galton and Arecibo actions
+  even retained the word `CLICK` in an early translation attempt.
+- Unsupported buttons and deadzone noise could reveal the virtual hand without
+  a meaningful action.
+- The first pause implementation froze simulation time but still accepted
+  scoring input. Modal help similarly allowed keyboard or pointer actions to
+  reach a hidden Quiz or Munch board.
+- Studio and Munch initially labeled close routes as menus, while a full modal
+  controller menu was displayed even though its destinations were inactive.
+- The default Studio text and the first compact controller help layout were
+  structurally bounded but unnecessarily small.
+
+## What changed
+
+One face-local control vocabulary now supplies input-aware copy to room chrome,
+arrival cards, help, Show, Journey, Studio, Quiz, Munch, Arcade, Nim, and every
+Gauntlet stage. The last meaningful input selects keyboard and pointer or
+controller copy; passive mouse movement, unsupported buttons, zero wheel
+movement, and stick deadzones do not steal that state. The controller opens and
+leaves all eight menu destinations, R3 pauses, D-pad left and right adjust Nim
+takes, and South leaves Arcade game over. Studio names its keyboard requirement
+without pretending that controller editing exists.
+
+Pause and modal help are now input barriers. Keyboard, pointer, and controller
+actions cannot mutate a frozen or hidden activity, and exact regressions protect
+Arcade score state, room gestures, Quiz answers, menu selection, and the
+mouse-input decision path. Controller room actions are checked across the full
+catalog for leaked device language. Mode pairs preserve game content pixels
+above their reserved control bands.
+
+Release QA now declares exactly 253 screens. The 13 additions are compact
+controller receipts for click and drag rooms, help, Show, Journey, Studio, Quiz,
+Munch, Arcade, Nim, and a Gauntlet bomb stage, plus keyboard and controller
+pause receipts. The compact controller help uses a larger ten-line layout, and
+the default Studio uses a larger measured type scale.
+
+This remains structural and routing evidence. It does not establish comfort on
+specific physical controller models, platform glyph familiarity, motor
+accessibility, or subjective readability and fun. Those require representative
+hardware and participant sessions and remain open.
+
+The final local release gate passes with 1,217 all-target test cases, 93.28
+percent region coverage, 92.95 percent line coverage, the exact 253-screen
+matrix, Clippy with warnings denied, locked build, house style, and supply-chain
+policy.
