@@ -561,3 +561,73 @@ The final local release gate passes with 1,217 all-target test cases, 93.28
 percent region coverage, 92.95 percent line coverage, the exact 253-screen
 matrix, Clippy with warnings denied, locked build, house style, and supply-chain
 policy.
+
+---
+
+# The seventh round (July 13, 2026): MCP context economy without information loss
+
+Three independent groups reviewed the agent face as a protocol contract, a
+small-context client, and a release surface. They inspected all 29 schemas,
+measured representative UTF-8 response sizes through a disposable real server,
+traced progress and error paths, and compared the current 2025-06-18 target with
+the locked 2026-07-28 release candidate. The official
+[2025-06-18 tools specification](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)
+says that structured results accompany a required content block and recommends
+text for older clients. The official
+[release-candidate announcement](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/),
+published May 21, 2026, keeps structured tool output while expanding JSON Schema
+in the future target.
+
+## Reproduced findings
+
+- Large replies repeated the same artifact in prose and `structuredContent`.
+  A representative `play_room` result used 1,869 text bytes while its typed
+  payload already carried the complete render, action, status, input, and delta.
+- A process-wide or hidden compact flag would violate the server's stateless,
+  discoverable per-call shape. Protocol `_meta` would also couple current work
+  to a breaking target that is not final until July 28, 2026.
+- Generic compaction was unsafe. Journey, forget, Cairn, and several other
+  replies carry unique constellation, consent, narrative, or puzzle information
+  in text that is not present in their structured fields.
+- `run_sim` performs its own argument check after schema validation, so a
+  presentation argument had to be removed before domain dispatch.
+- The stdio tests used one fixed profile name, which would collide when a second
+  independent real-binary session ran concurrently.
+- `AGENT_PLAY.md` still described 27 mostly flat tools after the surface reached
+  29.
+- Quiz implemented and replayed a 2-to-6 `choices` input, but its closed public
+  schema omitted the field and rejected every client that tried to use it.
+- The real-stdio tests did not send all required 2025-06-18 initialization
+  fields before exercising the compact contract.
+
+## What changed
+
+Every tool now advertises `response_mode: "full" | "compact"`, defaulting to
+`full`. Omitted and explicit full calls produce equal established tool results.
+Compact mode is a pure face-level projection applied after dispatch: it keeps
+the complete structured result and error state, never expands text, and only
+shortens the eight result families whose structured payloads fully represent
+the omitted detail. Actionable summaries retain identity, headline state, next
+arguments, and exact structured field locators.
+
+Errors, text-only tools, and unique-text results remain byte-identical. Invalid
+modes cannot record progress. Full, compact, and compact notification visits
+produce equal Journey state. The real stdio binary proves discovery, default
+compatibility, compact structured equality, invalid-mode guidance, and continued
+service after an error. Stdio profiles are now unique per test process and
+session. Quiz's public schema now exposes `choices` from 2 through 6, with the
+existing level boundary. Both pose and grade return `choiceCount`, and full and
+compact guidance name every replay argument because choice count changes the
+puzzle. The stdio sessions complete a conforming 2025-06-18 initialization
+exchange before tool discovery.
+
+Measured across representative calls to catalog, description, room play,
+listening, simulation, Quiz, Gauntlet, and trophies, individual text reductions
+range from 29.5 percent for the sampled sim to 94.8 percent for the catalog. The
+sampled room render falls from 1,869 UTF-8 text bytes to 192. The aggregate was
+not retained as a release claim because trophy prose varies with player state.
+These are byte counts, not token-cost claims.
+The complete local release gate passes with 1,221 all-target test cases, 93.27
+percent region coverage, 93.03 percent line coverage, the exact 253-screen
+matrix, Clippy with warnings denied, locked build, house style, and supply-chain
+policy.

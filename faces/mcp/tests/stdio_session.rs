@@ -4,13 +4,17 @@
 
 use std::io::Write;
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
 
 /// Run a full session: send each line, return the parsed response lines.
 fn run_session(requests: &[Value]) -> Vec<Value> {
-    let journey = std::env::temp_dir().join("numinous_mcp_e2e_journey.txt");
-    let scores = std::env::temp_dir().join("numinous_mcp_e2e_scores.txt");
+    static NEXT_SESSION: AtomicU64 = AtomicU64::new(0);
+    let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let suffix = format!("{}-{session}", std::process::id());
+    let journey = std::env::temp_dir().join(format!("numinous_mcp_e2e_journey_{suffix}.txt"));
+    let scores = std::env::temp_dir().join(format!("numinous_mcp_e2e_scores_{suffix}.txt"));
     let _ = std::fs::remove_file(&journey);
     let _ = std::fs::remove_file(&scores);
 
@@ -42,6 +46,69 @@ fn run_session(requests: &[Value]) -> Vec<Value> {
         .collect()
 }
 
+#[test]
+fn compact_mode_is_discoverable_and_compatible_over_real_stdio() {
+    let call = |id: u64, mode: Option<&str>| {
+        let mut arguments = json!({"id":"times-tables","t":0.25});
+        if let Some(mode) = mode {
+            arguments
+                .as_object_mut()
+                .expect("arguments object")
+                .insert("response_mode".to_string(), json!(mode));
+        }
+        json!({
+            "jsonrpc":"2.0","id":id,"method":"tools/call",
+            "params":{"name":"play_room","arguments":arguments}
+        })
+    };
+    let replies = run_session(&[
+        json!({
+            "jsonrpc":"2.0","id":0,"method":"initialize","params":{
+                "protocolVersion":"2025-06-18",
+                "capabilities":{},
+                "clientInfo":{"name":"numinous-test","version":"1.0"}
+            }
+        }),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        json!({"jsonrpc":"2.0","id":1,"method":"tools/list"}),
+        call(2, None),
+        call(3, Some("full")),
+        call(4, Some("compact")),
+        call(5, Some("brief")),
+        json!({"jsonrpc":"2.0","id":6,"method":"ping"}),
+    ]);
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+
+    assert_eq!(by_id(0)["result"]["protocolVersion"], "2025-06-18");
+
+    let play_schema = by_id(1)["result"]["tools"]
+        .as_array()
+        .and_then(|tools| tools.iter().find(|tool| tool["name"] == "play_room"))
+        .expect("play_room schema");
+    assert_eq!(
+        play_schema["inputSchema"]["properties"]["response_mode"]["enum"],
+        json!(["full", "compact"])
+    );
+    assert_eq!(by_id(2)["result"], by_id(3)["result"]);
+    assert_eq!(
+        by_id(2)["result"]["structuredContent"],
+        by_id(4)["result"]["structuredContent"]
+    );
+    assert!(text_of(by_id(4)).len() < text_of(by_id(2)).len());
+    assert!(text_of(by_id(4)).contains("structuredContent.render"));
+    assert_eq!(by_id(5)["result"]["isError"], true);
+    assert!(text_of(by_id(5)).contains("must be one of"));
+    assert!(
+        by_id(6)["result"].is_object(),
+        "server continues after error"
+    );
+}
+
 /// The text content of a tool-call response.
 fn text_of(response: &Value) -> &str {
     response["result"]["content"][0]["text"]
@@ -56,7 +123,13 @@ fn a_full_agent_session_walks_every_tool() {
                "params":{"name":name,"arguments":args}})
     };
     let requests = vec![
-        json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}),
+        json!({
+            "jsonrpc":"2.0","id":1,"method":"initialize","params":{
+                "protocolVersion":"2025-06-18",
+                "capabilities":{},
+                "clientInfo":{"name":"numinous-test","version":"1.0"}
+            }
+        }),
         json!({"jsonrpc":"2.0","method":"notifications/initialized"}), // no reply
         json!({"jsonrpc":"2.0","id":2,"method":"tools/list"}),
         call(3, "list_rooms", json!({})),

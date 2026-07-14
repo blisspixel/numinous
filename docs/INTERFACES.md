@@ -122,7 +122,11 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
    description, reveal, listening, scores, and forget responses carry bounded
    typed `structuredContent`; every catalog room is covered by the discovery
    contract. Inline image and audio media are future sensory-substitution work,
-   not a current four-part response contract.
+   not a current four-part response contract. Every tool also advertises an
+   optional `response_mode`. `full` is the exact default. On eight eligible
+   structured result families, `compact` replaces only duplicated prose with a
+   shorter actionable pointer while leaving the complete typed result intact.
+   Unique text, text-only results, and errors never disappear.
 
 3. **Tool descriptions and errors are the UX.** The description is what the agent reads to decide what to do; it must be clear, concrete, and example-rich. Inputs are **simple and flat where possible** (no deeply nested config objects, which reliably break LLM tool calls); bounded coordinate tuples such as `play_room` `pokes: [[x, y]]` are allowed only when they directly preserve replayable room input. Errors are **guiding**, not just failing: "that expression has no free variable to animate; add `t` for time, or try `eval` with a fixed value."
 
@@ -165,6 +169,18 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   deep cuts expose their unlock level without leaking their text. Scores and
   forget previews are similarly structured, and confirmed erasure reports only
   successful filesystem outcomes.
+- **Compatibility-preserving compact output (built):** every tool schema accepts
+  `response_mode: "full" | "compact"`. The argument is stripped before domain
+  dispatch, so it cannot change grading, replay, persistence, or effective
+  values. Omitted and explicit `full` results are equal. Eligible catalog, room,
+  listening, simulation, Quiz, Gauntlet, and trophy replies keep identical
+  `structuredContent` while replacing only redundant text, and only when the
+  replacement is shorter. Journey, scores, forget, Cairn, other unique-text
+  results, text-only tools, and all errors retain their complete text. This
+  keeps the [MCP 2025-06-18 tools specification](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)
+  requirement for a `content` block and aligns with its structured-result
+  guidance without prematurely migrating to the breaking 2026-07-28 protocol
+  candidate.
 - **Structured poke deltas (built):** when `pokes` are supplied, `play_room` also returns a `delta` in `structuredContent`: the poked frame diffed against the unpoked frame at the same phase, size, and variation, as `cells_changed`, `ink_added`, `ink_removed`, `ink_reshaped`, `total_cells`, and the inclusive `changed_region` bounding box; the text render carries the same count as a `Touch:` line. This is the proof-of-touch half of the challenge/verify loop: the agent gets quantitative, optimizable feedback on how the math answered its hand.
 - **The challenge/verify loop, first slice (built):** the `challenge` tool poses a deterministic seeded goal for any room with a touch verb (change at least K cells inside a posed target box on the standard frame) and grades attempts as metrics, not pass/fail: cells in target, cells changed, threshold fraction, centroid distance, and a 0-100 score, with `passed` as a summary only. Every posed challenge is winnable by construction: the pose probes the room's actual response across seeded hands and phases and places the target on measured evidence, and a registry-wide test proves a witness hand passes for every room with a verb. Seeds are always explicit (no clock-derived daily), so the graded reply and the recorded progress can never disagree. Attempts record play (and wins) through the shared Journey and post graded scores to the shared table. Room-specific goals whose metric is the phenomenon's own parameter are the next depth on this substrate.
 - **Resources and prompts, planned:** the room catalog, Studio reference,
@@ -176,8 +192,8 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 
 ### Protocol watch: MCP 2026-07-28 release candidate
 
-As of 2026-07-08, the official MCP 2026-07-28 release-candidate post
-(`https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/`)
+As of 2026-07-13, the official
+[MCP 2026-07-28 release-candidate post](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/)
 is roadmap-relevant but not an immediate blocker for the current stdio face. The
 final specification is scheduled for July 28, 2026. The compatibility pass
 should happen after the final target is selected, not during current

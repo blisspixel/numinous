@@ -6,6 +6,22 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- All 29 MCP tools now advertise an additive `response_mode` argument. The
+  default and explicit `full` modes preserve existing tool-call results exactly.
+  Opt-in `compact` mode keeps `structuredContent`, error state, replay values,
+  and progress effects unchanged while replacing duplicated prose with a
+  shorter actionable summary for catalog, room description, room play,
+  listening, simulation, Quiz, Gauntlet, and trophy results. Results whose text
+  carries unique information, all text-only tools, and every guiding error stay
+  complete. The projection is nonexpanding and real-stdio tested. In the
+  representative profile, room renders fall from 1,869 text bytes to 192
+  without dropping the typed render or any other structured field. The same
+  review restored Quiz's implemented 2-to-6 `choices` input to its public
+  schema, made choice count part of pose and grade replay data and guidance,
+  and upgraded real-stdio coverage to a conforming 2025-06-18 initialization
+  exchange. The complete release gate passes with
+  1,221 all-target test cases, 93.27 percent region coverage, and 93.03 percent
+  line coverage.
 - The native App now presents controls for the input family that last performed
   a meaningful action. One face-local vocabulary drives room chrome, arrival
   cards, the help menu, The Show, the Journey, the Studio, Quiz, Munch, Arcade,
@@ -181,8 +197,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ### Changed
 - Human hallway evidence still controls the 0.2 milestone claim, but no longer
   idles verified 0.3 depth, accessibility, input, audio, truth, or quality work
-  while sessions are arranged. Current evidence is 1,217 all-target test cases, 93.28
-  percent region coverage, and 92.95 percent line coverage.
+  while sessions are arranged. Current evidence is 1,221 all-target test cases, 93.27
+  percent region coverage, and 93.03 percent line coverage.
 - MCP `listen_room` now labels `motif` as the ambient motif and `notes` as the
   mathematical sonification through a `sound_roles` map and matching text
   headings. Existing structured paths remain compatible, with no duplicated

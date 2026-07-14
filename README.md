@@ -128,8 +128,15 @@ This is an alpha-tagged prerelease. Capability breadth is ahead of release
 maturity because the 0.2 Flagship Proof gate, including the real hallway
 evidence, remains open.
 
-The current local gate has 1,217 passing all-target test cases, 93.28% region coverage and
-92.95% line coverage with an enforced 80% line floor, Clippy with warnings
+The MCP face exposes 29 mostly flat, replayable tools. Every tool advertises an
+optional `response_mode`: `full` remains the exact default, while `compact`
+removes duplicated prose only when the unchanged `structuredContent` already
+carries the complete result. Room renders, notation, simulations, Quiz,
+Gauntlet, catalog, description, and trophy results support the compact path.
+Errors and results whose text carries unique information never lose that text.
+
+The current local gate has 1,221 passing all-target test cases, 93.27% region coverage and
+93.03% line coverage with an enforced 80% line floor, Clippy with warnings
 denied, and dependency policy checks. Release QA also regenerates an exact
 253-screen App matrix with per-room interaction scenarios, semantic checks,
 and coarse perceptual response thresholds, including a regression that rejects

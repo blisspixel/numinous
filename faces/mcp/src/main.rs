@@ -726,7 +726,35 @@ fn tools_list_result() -> Value {
 /// each request.
 fn tools_catalog() -> &'static Value {
     static CATALOG: std::sync::OnceLock<Value> = std::sync::OnceLock::new();
-    CATALOG.get_or_init(build_tools_catalog)
+    CATALOG.get_or_init(|| add_response_mode(build_tools_catalog()))
+}
+
+/// Add one presentation-only option to every tool schema. The option belongs
+/// at the face boundary because it changes neither domain arguments nor the
+/// complete typed result.
+fn add_response_mode(mut catalog: Value) -> Value {
+    let Some(tools) = catalog.get_mut("tools").and_then(Value::as_array_mut) else {
+        return catalog;
+    };
+    for tool in tools {
+        let Some(properties) = tool
+            .get_mut("inputSchema")
+            .and_then(|schema| schema.get_mut("properties"))
+            .and_then(Value::as_object_mut)
+        else {
+            continue;
+        };
+        properties.insert(
+            "response_mode".to_string(),
+            json!({
+                "type": "string",
+                "enum": ["full", "compact"],
+                "default": "full",
+                "description": "Presentation only. 'full' (default) preserves the complete text and structured result. For eligible results, 'compact' keeps structuredContent identical but replaces duplicated prose with a shorter actionable summary; results whose text carries unique information, text-only results, and errors remain complete. Use compact only when your client reads structuredContent."
+            }),
+        );
+    }
+    catalog
 }
 
 fn build_tools_catalog() -> Value {
@@ -1116,13 +1144,14 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "quiz",
-                "description": "Play Guess the Shape. Call with seed and round to get a mystery render and lettered choices; call again with your guess (a letter) to learn if you were right and why.",
+                "description": "Play Guess the Shape. Call with seed, round, and optional choice count to get a mystery render and lettered choices; call again with the same replay values plus your guess letter to learn if you were right and why.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "seed": { "type": "integer", "description": "Seed; the same seed and round give the same puzzle." },
+                        "seed": { "type": "integer", "description": "Seed; the same seed, round, and choice count give the same puzzle." },
                         "daily": { "type": "boolean", "description": "Use today\'s shared seed instead; dailies chain into streaks." },
                         "round": { "type": "integer", "description": "Round number (0, 1, 2, ...)." },
+                        "choices": { "type": "integer", "minimum": 2, "maximum": 6, "description": "Number of answer choices, 2 through 6; default 4. Five-way and six-way rounds open at LV 3." },
                         "guess": { "type": "string", "description": "Your answer letter (A, B, C, ...). Omit to see the puzzle." }
                     },
                     "additionalProperties": false
@@ -1363,37 +1392,171 @@ fn call_tool(
         }
     }
 
+    let response_mode = args.get("response_mode").and_then(Value::as_str);
+    let mut domain_args = args.clone();
+    if let Some(object) = domain_args.as_object_mut() {
+        object.remove("response_mode");
+    }
+
+    let result = match name {
+        "list_rooms" => list_rooms_tool(),
+        "describe_room" => describe_room_tool(&domain_args, journey_file),
+        "reveal_room" => reveal_room_tool(&domain_args),
+        "play_room" => play_room_tool(&domain_args),
+        "challenge" => challenge_tool(&domain_args),
+        "predict" => predict_tool(&domain_args),
+        "cairn" => cairn_tool(&domain_args, journey_file, &cairn_path()),
+        "listen_room" => listen_room_tool(&domain_args),
+        "list_sims" => tool_text(&list_sims_text()),
+        "run_sim" => run_sim_tool(&domain_args),
+        "quiz" => quiz_tool(&domain_args, journey_file),
+        "munch" => munch_tool(&domain_args),
+        "munch_arcade" => munch_arcade_tool(&domain_args),
+        "journey" => journey_tool(journey_file),
+        "nim" => nim_tool(&domain_args),
+        "hackenbush" => hackenbush_tool(&domain_args),
+        "party" => party_tool(&domain_args),
+        "fifteen" => fifteen_tool(&domain_args),
+        "scores" => scores_tool(&scores_path()),
+        "forget" => forget_tool(&domain_args, journey_file, &scores_path()),
+        "crack" => crack_tool(&domain_args, journey_file),
+        "seti" => seti_tool(&domain_args, journey_file),
+        "aliens" => aliens_tool(&domain_args),
+        "gauntlet" => gauntlet_tool(&domain_args),
+        "choose" => choose_tool(&domain_args, journey_file),
+        "trophies" => trophies_tool(journey_file),
+        "plot_expression" => plot_expression_tool(&domain_args),
+        "sing_expression" => sing_expression_tool(&domain_args),
+        "explain_joke" => explain_joke_tool(&domain_args),
+        other => return Err((-32602_i64, format!("Unknown tool: {other}"))),
+    };
+    Ok(apply_response_mode(name, response_mode, result))
+}
+
+/// Compact mode removes only prose that duplicates a complete typed result.
+/// Guiding errors and text-only tools stay untouched because their text is the
+/// result, not presentation overhead.
+fn apply_response_mode(name: &str, response_mode: Option<&str>, mut result: Value) -> Value {
+    if response_mode != Some("compact")
+        || result.get("isError").and_then(Value::as_bool) == Some(true)
+        || result.get("structuredContent").is_none()
+    {
+        return result;
+    }
+
+    let Some(summary) = compact_result_summary(name, &result["structuredContent"]) else {
+        return result;
+    };
+    let Some(current_text) = result
+        .get("content")
+        .and_then(Value::as_array)
+        .and_then(|content| content.first())
+        .and_then(|item| item.get("text"))
+        .and_then(Value::as_str)
+    else {
+        return result;
+    };
+    if summary.len() >= current_text.len() {
+        return result;
+    }
+    result["content"] = json!([{
+        "type": "text",
+        "text": summary,
+    }]);
+    result
+}
+
+fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
     match name {
-        "list_rooms" => Ok(list_rooms_tool()),
-        "describe_room" => Ok(describe_room_tool(&args, journey_file)),
-        "reveal_room" => Ok(reveal_room_tool(&args)),
-        "play_room" => Ok(play_room_tool(&args)),
-        "challenge" => Ok(challenge_tool(&args)),
-        "predict" => Ok(predict_tool(&args)),
-        "cairn" => Ok(cairn_tool(&args, journey_file, &cairn_path())),
-        "listen_room" => Ok(listen_room_tool(&args)),
-        "list_sims" => Ok(tool_text(&list_sims_text())),
-        "run_sim" => Ok(run_sim_tool(&args)),
-        "quiz" => Ok(quiz_tool(&args, journey_file)),
-        "munch" => Ok(munch_tool(&args)),
-        "munch_arcade" => Ok(munch_arcade_tool(&args)),
-        "journey" => Ok(journey_tool(journey_file)),
-        "nim" => Ok(nim_tool(&args)),
-        "hackenbush" => Ok(hackenbush_tool(&args)),
-        "party" => Ok(party_tool(&args)),
-        "fifteen" => Ok(fifteen_tool(&args)),
-        "scores" => Ok(scores_tool(&scores_path())),
-        "forget" => Ok(forget_tool(&args, journey_file, &scores_path())),
-        "crack" => Ok(crack_tool(&args, journey_file)),
-        "seti" => Ok(seti_tool(&args, journey_file)),
-        "aliens" => Ok(aliens_tool(&args)),
-        "gauntlet" => Ok(gauntlet_tool(&args)),
-        "choose" => Ok(choose_tool(&args, journey_file)),
-        "trophies" => Ok(trophies_tool(journey_file)),
-        "plot_expression" => Ok(plot_expression_tool(&args)),
-        "sing_expression" => Ok(sing_expression_tool(&args)),
-        "explain_joke" => Ok(explain_joke_tool(&args)),
-        other => Err((-32602_i64, format!("Unknown tool: {other}"))),
+        "list_rooms" => Some(format!(
+            "{} rooms. Read structuredContent.rooms for every id, title, and wing.",
+            structured.get("count")?.as_u64()?
+        )),
+        "describe_room" => Some(format!(
+            "{} ({}) in {}. Action: {}. Read structuredContent for the blurb, reveal, and deep cuts.",
+            structured.get("title")?.as_str()?,
+            structured.get("room")?.as_str()?,
+            structured.get("wing")?.as_str()?,
+            structured.get("action")?.as_str()?
+        )),
+        "play_room" => {
+            let mut summary = format!(
+                "{} ({}) at t={:.3}, {}x{}. Action: {}.",
+                structured.get("title")?.as_str()?,
+                structured.get("room")?.as_str()?,
+                structured.get("t")?.as_f64()?,
+                structured.get("width")?.as_u64()?,
+                structured.get("height")?.as_u64()?,
+                structured.get("action")?.as_str()?
+            );
+            if let Some(status) = structured.get("status").and_then(Value::as_str) {
+                summary.push_str(&format!(" Status: {status}."));
+            }
+            if let Some(cells) = structured
+                .get("delta")
+                .and_then(|delta| delta.get("cells_changed"))
+                .and_then(Value::as_u64)
+            {
+                summary.push_str(&format!(" Touch changed {cells} cells."));
+            }
+            summary.push_str(
+                " Read structuredContent.render, input, status, and delta for the complete result.",
+            );
+            Some(summary)
+        }
+        "listen_room" => Some(format!(
+            "{} ({}) at t={:.3}: {} of {} notes returned over {:.2}s. Read structuredContent.motif, notes, and sound_roles for the complete ambient and mathematical sound.",
+            structured.get("title")?.as_str()?,
+            structured.get("room")?.as_str()?,
+            structured.get("t")?.as_f64()?,
+            structured.get("returned_note_count")?.as_u64()?,
+            structured.get("note_count")?.as_u64()?,
+            structured.get("duration_seconds")?.as_f64()?
+        )),
+        "run_sim" => Some(format!(
+            "{} ({}): {} Read structuredContent.params, readout, and render for the complete result.",
+            structured.get("title")?.as_str()?,
+            structured.get("sim")?.as_str()?,
+            structured.get("readout")?.as_str()?
+        )),
+        "quiz" => {
+            let seed = structured.get("seed")?.as_u64()?;
+            let round = structured.get("round")?.as_u64()?;
+            let choice_count = structured.get("choiceCount")?.as_u64()?;
+            if let Some(correct) = structured.get("correct").and_then(Value::as_bool) {
+                Some(format!(
+                    "Quiz seed {seed}, round {round}, choices {choice_count}: {} Answer {} ({}). Read structuredContent.why for the explanation.",
+                    if correct { "correct." } else { "not quite." },
+                    structured.get("answer")?.as_str()?,
+                    structured.get("answerTitle")?.as_str()?
+                ))
+            } else {
+                let choices = structured.get("choices")?.as_array()?;
+                Some(format!(
+                    "Quiz seed {seed}, round {round}, choices {choice_count}: choose A through {}. Call quiz again with seed {seed}, round {round}, choices {choice_count}, and guess. Read structuredContent.art and choices for the complete puzzle.",
+                    choices.last()?.get("letter")?.as_str()?
+                ))
+            }
+        }
+        "gauntlet" => {
+            let seed = structured.get("seed")?.as_u64()?;
+            if let Some(total) = structured.get("total").and_then(Value::as_i64) {
+                Some(format!(
+                    "Gauntlet seed {seed}: {}/4 clean, total {total}. Read structuredContent.stageScores and reveals for the complete grade.",
+                    structured.get("clean")?.as_u64()?
+                ))
+            } else {
+                Some(format!(
+                    "Gauntlet seed {seed}: four stages. Call again with answers.bites, shape, sky, and wires. Read structuredContent.munch, shape, sky, and bomb for the complete run."
+                ))
+            }
+        }
+        "trophies" => Some(format!(
+            "Trophy case: {} of {} earned. Read structuredContent.trophies for every name, condition, and earned state.",
+            structured.get("earned")?.as_u64()?,
+            structured.get("total")?.as_u64()?
+        )),
+        _ => None,
     }
 }
 
@@ -3200,14 +3363,14 @@ fn fifteen_tool(args: &Value) -> Value {
 fn quiz_tool(args: &Value, journey_file: &std::path::Path) -> Value {
     let seed = effective_seed(args);
     let round = args.get("round").and_then(Value::as_u64).unwrap_or(0);
-    let choices = args.get("choices").and_then(Value::as_u64).unwrap_or(4) as usize;
-    if !(2..=6).contains(&choices) {
+    let choice_count = args.get("choices").and_then(Value::as_u64).unwrap_or(4) as usize;
+    if !(2..=6).contains(&choice_count) {
         return tool_error("Rounds run 2 to 6 choices.");
     }
-    if choices > 4 && load_journey(journey_file).level() < 3 {
-        return tool_error("Six-way rounds open at LV 3. Keep playing.");
+    if choice_count > 4 && load_journey(journey_file).level() < 3 {
+        return tool_error("Five-way and six-way rounds open at LV 3. Keep playing.");
     }
-    let quiz = numinous_core::build_round_sized(seed, round, 54, 22, choices);
+    let quiz = numinous_core::build_round_sized(seed, round, 54, 22, choice_count);
     match args.get("guess").and_then(Value::as_str) {
         Some(guess) => {
             let letter = guess.trim().chars().next().map(|c| c.to_ascii_uppercase());
@@ -3222,6 +3385,7 @@ fn quiz_tool(args: &Value, journey_file: &std::path::Path) -> Value {
                     "game": "quiz",
                     "seed": seed,
                     "round": round,
+                    "choiceCount": choice_count,
                     "correct": correct,
                     "answer": quiz.answer.to_string(),
                     "answerTitle": quiz.answer_title,
@@ -3232,7 +3396,7 @@ fn quiz_tool(args: &Value, journey_file: &std::path::Path) -> Value {
             )
         }
         None => {
-            let choices: Vec<String> = quiz
+            let choice_lines: Vec<String> = quiz
                 .choices
                 .iter()
                 .map(|c| format!("{}) {}", c.letter, c.title))
@@ -3244,14 +3408,15 @@ fn quiz_tool(args: &Value, journey_file: &std::path::Path) -> Value {
                 .collect();
             tool_structured(
                 &format!(
-                    "Guess the shape (seed {seed}, round {round}):\n\n{}\n{}\n\nCall quiz again with your guess letter.",
+                    "Guess the shape (seed {seed}, round {round}, choices {choice_count}):\n\n{}\n{}\n\nCall quiz again with seed {seed}, round {round}, choices {choice_count}, and your guess letter.",
                     quiz.art,
-                    choices.join("\n")
+                    choice_lines.join("\n")
                 ),
                 json!({
                     "game": "quiz",
                     "seed": seed,
                     "round": round,
+                    "choiceCount": choice_count,
                     // The mystery render and the lettered choices ride in the
                     // structured payload, so a mind on a structured-content-only
                     // client sees the puzzle and can guess, not just read that a
@@ -3778,6 +3943,14 @@ mod tests {
         .expect("tools/call must respond")
     }
 
+    fn with_response_mode(mut arguments: Value, mode: &str) -> Value {
+        arguments
+            .as_object_mut()
+            .expect("tool arguments are an object")
+            .insert("response_mode".to_string(), json!(mode));
+        arguments
+    }
+
     fn tool_error_text(response: &Value) -> &str {
         assert_eq!(response["result"]["isError"], true, "{response}");
         response["result"]["content"][0]["text"]
@@ -4035,6 +4208,176 @@ mod tests {
         ] {
             assert!(names.contains(&tool), "{tool} is a tool");
         }
+        for tool in tools {
+            let response_mode = &tool["inputSchema"]["properties"]["response_mode"];
+            assert_eq!(response_mode["type"], "string", "{}", tool["name"]);
+            assert_eq!(response_mode["enum"], json!(["full", "compact"]));
+            assert_eq!(response_mode["default"], "full");
+        }
+    }
+
+    #[test]
+    fn compact_response_mode_preserves_complete_structured_results() {
+        let cases = [
+            ("list_rooms", json!({})),
+            ("describe_room", json!({"id":"times-tables"})),
+            (
+                "play_room",
+                json!({"id":"times-tables","width":72,"height":32,"t":0.25}),
+            ),
+            ("listen_room", json!({"id":"lissajous","t":0.25})),
+            ("run_sim", json!({"id":"tribbles"})),
+            ("quiz", json!({"seed":3})),
+            ("quiz", json!({"seed":3,"guess":"A"})),
+            ("gauntlet", json!({"seed":3})),
+            (
+                "gauntlet",
+                json!({"seed":5,"answers":{
+                    "bites":[1,2],"shape":"A","sky":"B","wires":["9500"]
+                }}),
+            ),
+            ("trophies", json!({})),
+        ];
+
+        for (tool, arguments) in cases {
+            let default = call(tool, arguments.clone());
+            let explicit_full = call(tool, with_response_mode(arguments.clone(), "full"));
+            let compact = call(tool, with_response_mode(arguments, "compact"));
+
+            assert_eq!(
+                default, explicit_full,
+                "{tool} full mode changed the default"
+            );
+            assert_eq!(
+                default["result"]["structuredContent"], compact["result"]["structuredContent"],
+                "{tool} compact mode changed the typed result"
+            );
+            assert_eq!(compact["result"]["isError"], false);
+            let default_text = default["result"]["content"][0]["text"]
+                .as_str()
+                .expect("default text");
+            let compact_text = compact["result"]["content"][0]["text"]
+                .as_str()
+                .expect("compact text");
+            assert!(
+                compact_text.len() * 4 <= default_text.len() * 3,
+                "{tool} compact text should be smaller: {} versus {} bytes",
+                compact_text.len(),
+                default_text.len()
+            );
+            assert!(compact_text.contains("structuredContent"), "{tool}");
+        }
+    }
+
+    #[test]
+    fn compact_response_mode_never_hides_errors_or_text_only_results() {
+        let full_error = call("play_room", json!({"id":"no-such-room"}));
+        let compact_error = call(
+            "play_room",
+            with_response_mode(json!({"id":"no-such-room"}), "compact"),
+        );
+        assert_eq!(compact_error, full_error);
+
+        let full_text_only = call("list_sims", json!({}));
+        let compact_text_only = call("list_sims", with_response_mode(json!({}), "compact"));
+        assert_eq!(compact_text_only, full_text_only);
+
+        for (tool, arguments) in [
+            ("journey", json!({})),
+            ("scores", json!({})),
+            ("forget", json!({})),
+        ] {
+            let full = call(tool, arguments.clone());
+            let compact = call(tool, with_response_mode(arguments, "compact"));
+            assert_eq!(
+                compact, full,
+                "{tool} text carries information absent from structuredContent"
+            );
+        }
+    }
+
+    #[test]
+    fn response_mode_does_not_change_progress_or_invalid_call_side_effects() {
+        let suffix = format!("{}-response-mode", std::process::id());
+        let full_path = std::env::temp_dir().join(format!("numinous-{suffix}-full.txt"));
+        let compact_path = std::env::temp_dir().join(format!("numinous-{suffix}-compact.txt"));
+        let invalid_path = std::env::temp_dir().join(format!("numinous-{suffix}-invalid.txt"));
+        let notification_path =
+            std::env::temp_dir().join(format!("numinous-{suffix}-notification.txt"));
+        for path in [&full_path, &compact_path, &invalid_path, &notification_path] {
+            let _ = std::fs::remove_file(path);
+        }
+
+        let request = |mode: &str| {
+            json!({
+                "jsonrpc":"2.0","id":77,"method":"tools/call",
+                "params":{"name":"play_room","arguments":{
+                    "id":"times-tables","t":0.25,"response_mode":mode
+                }}
+            })
+        };
+        let full = handle_request_with(&request("full"), &full_path).expect("full response");
+        let compact =
+            handle_request_with(&request("compact"), &compact_path).expect("compact response");
+        assert_eq!(
+            full["result"]["structuredContent"],
+            compact["result"]["structuredContent"]
+        );
+        assert_eq!(
+            numinous_core::load_journey_file(&full_path),
+            numinous_core::load_journey_file(&compact_path)
+        );
+
+        for (invalid, expected) in [
+            (json!("brief"), "must be one of"),
+            (json!(3), "must be a string"),
+            (Value::Null, "must be a string"),
+            (json!([]), "must be a string"),
+        ] {
+            let response = handle_request_with(
+                &json!({
+                    "jsonrpc":"2.0","id":78,"method":"tools/call",
+                    "params":{"name":"play_room","arguments":{
+                        "id":"times-tables","response_mode":invalid
+                    }}
+                }),
+                &invalid_path,
+            )
+            .expect("invalid mode receives guidance");
+            assert_eq!(response["result"]["isError"], true);
+            assert!(
+                response["result"]["content"][0]["text"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .contains(expected)
+            );
+        }
+        assert!(
+            !invalid_path.exists(),
+            "invalid presentation arguments must not record a visit"
+        );
+
+        let notification = json!({
+            "jsonrpc":"2.0","method":"tools/call",
+            "params":{"name":"play_room","arguments":{
+                "id":"times-tables","t":0.25,"response_mode":"compact"
+            }}
+        });
+        assert_eq!(
+            handle_request_with(&notification, &notification_path),
+            None,
+            "notifications record progress but return no response"
+        );
+        assert_eq!(
+            numinous_core::load_journey_file(&full_path),
+            numinous_core::load_journey_file(&notification_path),
+            "compact notifications record exactly the same visit"
+        );
+
+        for path in [full_path, compact_path, invalid_path, notification_path] {
+            let _ = std::fs::remove_file(&path);
+            let _ = std::fs::remove_file(format!("{}.lock", path.display()));
+        }
     }
 
     #[test]
@@ -4101,6 +4444,12 @@ mod tests {
                 json!({"surprise":42}),
                 "Unexpected argument 'surprise'",
             ),
+            (
+                "list_rooms",
+                json!({"response_mode":"brief"}),
+                "must be one of",
+            ),
+            ("quiz", json!({"seed":3,"choices":7}), "must be at most 6"),
         ];
 
         for (tool, arguments, expected) in cases {
@@ -4147,6 +4496,14 @@ mod tests {
         let play = call("play_room", json!({"id":"lorenz","width":40,"height":20}));
         assert_eq!(play["result"]["structuredContent"]["width"], 40);
         assert_eq!(play["result"]["structuredContent"]["height"], 20);
+        let quiz = call("quiz", json!({"seed":3,"choices":3}));
+        assert_eq!(quiz["result"]["isError"], false, "{quiz}");
+        assert_eq!(
+            quiz["result"]["structuredContent"]["choices"]
+                .as_array()
+                .map(Vec::len),
+            Some(3)
+        );
     }
 
     #[test]
@@ -4887,20 +5244,57 @@ plays 2
 
     #[test]
     fn quiz_tool_presents_then_grades() {
+        let seed = 0;
+        let round = 0;
+        let choice_count = 3;
+        let expected = numinous_core::build_round_sized(seed, round, 54, 22, choice_count).answer;
+        assert_ne!(
+            expected,
+            numinous_core::build_round_sized(seed, round, 54, 22, 4).answer,
+            "choice count is part of the replay identity"
+        );
         let puzzle = handle_request(&json!({
             "jsonrpc":"2.0","id":23,"method":"tools/call",
-            "params":{"name":"quiz","arguments":{"seed":7,"round":0}}
+            "params":{"name":"quiz","arguments":{
+                "seed":seed,"round":round,"choices":choice_count
+            }}
         }))
         .expect("tools/call must respond");
+        let puzzle_text = puzzle["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(puzzle_text.contains("Guess the shape"));
+        assert!(puzzle_text.contains("choices 3, and your guess letter"));
+        assert_eq!(
+            puzzle["result"]["structuredContent"]["choiceCount"],
+            choice_count
+        );
+        assert_eq!(
+            puzzle["result"]["structuredContent"]["choices"]
+                .as_array()
+                .map(Vec::len),
+            Some(choice_count)
+        );
+
+        let compact = call(
+            "quiz",
+            json!({
+                "seed":seed,"round":round,"choices":choice_count,
+                "response_mode":"compact"
+            }),
+        );
         assert!(
-            puzzle["result"]["content"][0]["text"]
+            compact["result"]["content"][0]["text"]
                 .as_str()
                 .unwrap_or_default()
-                .contains("Guess the shape")
+                .contains("choices 3, and guess")
         );
         let graded = handle_request(&json!({
             "jsonrpc":"2.0","id":24,"method":"tools/call",
-            "params":{"name":"quiz","arguments":{"seed":7,"round":0,"guess":"A"}}
+            "params":{"name":"quiz","arguments":{
+                "seed":seed,"round":round,"choices":choice_count,
+                "guess":expected.to_string()
+            }}
         }))
         .expect("tools/call must respond");
         assert!(
@@ -4908,6 +5302,11 @@ plays 2
                 .as_str()
                 .unwrap_or_default()
                 .contains("The answer was")
+        );
+        assert_eq!(graded["result"]["structuredContent"]["correct"], true);
+        assert_eq!(
+            graded["result"]["structuredContent"]["choiceCount"],
+            choice_count
         );
     }
 
