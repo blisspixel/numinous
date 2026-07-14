@@ -165,14 +165,14 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 - **Toy:** One dial: the angle. At the **golden angle (137.5°)** the seeds pack into a flawless sunflower spiral. Nudge it a fraction of a degree and the whole beautiful order shatters into clumsy spokes and gaps. Feel *why* nature chose exactly this number.
 - **Touch:** Click to plant a bounded local phyllotaxis patch at the hand point; the clicked cell stays visible and the patch joins the same sunflower-packing rule.
 - **Aha:** "Find the angle that packs seeds perfectly." (It's the most irrational number there is.)
-- **Reveal:** *"Sunflowers, pinecones, and pineapples all use this exact angle, 137.5°, because it's built from the golden ratio, the 'most irrational' number, which means seeds never line up and never waste space. Evolution discovered the same number mathematicians did. The count of spirals is always a Fibonacci number. Go count them."*
+- **Reveal:** *"Sunflowers, pinecones, and pineapples often arrange new growth near this angle, about 137.5 degrees, because it is built from the golden ratio. Its unusually poor rational approximations help successive seeds avoid lining up. Visible spiral counts often occur as neighboring Fibonacci numbers. Go count them."*
 - **Sound:** each seed plinks; the golden angle produces an evenly-spaced, satisfying rhythm, off-angles clump into stumbling beats.
 
 ### 17. Cult of Pi: Code Art in an Irrational Channel  Wow 4 / Build 1  [x]
-- **Rule:** Feed exact decimal digits of pi into a low-flicker green field. A finite prefix can approach pi with increasing precision, but no finite frame becomes the entire expansion. Time thins the older field and introduces deterministic display errors, never errors in pi.
-- **Toy:** The visible channel always begins `PI = 3.141592653589793...`. CLICK: REPAIR THE SIGNAL restores exact digits around the hand while the rest of the finite channel keeps aging. A repaired screen is still only a finite window onto an expansion that never ends. The opening digits also become the room's melody.
+- **Rule:** Feed exact decimal digits of pi into a low-flicker green field. A finite prefix can approach pi with increasing precision, but no finite frame becomes the entire expansion. The finite display introduces deterministic faults, never errors in pi.
+- **Toy:** The visible channel always begins `PI = 3.141592653589793...`. Exact digits are green and display faults are coral. CLICK: RESTORE AND HOLD A PATCH replaces the local fault pattern with exact digits and marks the newest 24 retained hand points with visible boundaries in every face. A repaired screen is still only a finite window onto an expansion that never ends. The opening digits also become the room's melody.
 - **Aha:** The machine can keep counting and keep improving without ever finishing the infinite object. The decay belongs to the finite channel that tries to hold it.
-- **Reveal:** *"Every finite decimal here is only an approximation. After n digits its error is less than 10 to the negative n, but pi's expansion never ends. The corruption is ours, not pi's."* The historical notes treat the Pythagorean communities as richer and less uniform than later legend, and identify the drowning of Hippasus for revealing irrationality as a later story rather than established history.
+- **Reveal:** *"An exact prefix truncated after n decimal places differs from pi by less than 10 to the negative n, but pi's expansion never ends. The display faults are ours, not pi's."* The historical notes treat the Pythagorean communities as richer and less uniform than later legend, and identify the drowning of Hippasus for revealing irrationality as a later story rather than established history.
 - **Sound:** 3, 1, 4, 1, 5, 9, 2, 6, 5, 3 becomes a slow decimal procession. As the field changes, its tuning drifts without losing finite, playable notes.
 - **Implementation:** `crates/core/src/rooms/cult_of_pi.rs`. Exact-prefix, replay, interaction, hostile-surface, sound, and history-boundary tests ship with the room.
 
@@ -253,7 +253,7 @@ you are not told it), and **the kid principle** (the play carries itself even
 if the concept never consciously lands). If an idea cannot pass both, it does
 not ship, however important the syllabus thinks it is.
 
-**Current interaction inventory (2026-07):** 31 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, REPAIR THE SIGNAL in Cult of Pi, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
+**Current interaction inventory (2026-07):** 31 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, RESTORE AND HOLD A PATCH in Cult of Pi, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
 
 **Interaction update, 2026-07-13:** the verb inventory above records the first
 complete poke substrate. The current contract also includes `render_input` and
@@ -302,7 +302,7 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [x] **Modular arithmetic** - Times Tables: strings on a circle bloom into a cardioid.
 - [x] **Primes** - the Ulam spiral; SETI (only minds count in primes); Munch (eat them).
 - [x] **Continued fractions / irrationality** - the Golden Angle: detune the sunflower and it shatters.
-- [x] **Finite approximations and irrational constants** - Cult of Pi: exact decimal prefixes enter a channel that ages and changes, while pi does not.
+- [x] **Finite approximations and irrational constants** - Cult of Pi: exact decimal prefixes enter a finite channel that can display faults and held repairs, while pi does not change.
 - [x] **Number bases** - the aliens count on eight tentacles.
 - [x] **Open conjectures as toys** - Collatz: play with an unsolved problem; Goldbach: choose an even number and one prime-pair witness to see the proof bracket.
 - [ ] **Cardinality of infinities** - Hilbert's Hotel as a management game: always room for one more bus, until the reals check in and the front desk breaks. You feel the difference between countable and not.

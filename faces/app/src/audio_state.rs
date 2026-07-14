@@ -40,27 +40,27 @@ mod tests {
         let cases = [
             (
                 describe(Program::RoomScore, None, 0.45, false, true, true),
-                "ROOM SCORE | 45%",
+                "ROOM MUSIC: VOL 45%",
             ),
             (
                 describe(Program::Radio, Some("NUMINA FM"), 0.3, false, true, true),
-                "RADIO NUMINA FM | 30%",
+                "RADIO NUMINA FM: VOL 30%",
             ),
             (
                 describe(Program::Studio, None, 0.7, false, true, true),
-                "STUDIO | 70%",
+                "STUDIO: VOL 70%",
             ),
             (
                 describe(Program::RoomScore, None, 0.45, true, true, true),
-                "ROOM SCORE | MUTED",
+                "ROOM MUSIC: MUTED",
             ),
             (
                 describe(Program::RoomScore, None, 0.0, false, true, true),
-                "ROOM SCORE | VOLUME 0",
+                "ROOM MUSIC: VOL 0",
             ),
             (
                 describe(Program::RoomScore, None, 0.45, false, false, true),
-                "ROOM SCORE | BACKGROUND SILENT",
+                "ROOM MUSIC: BACKGROUND SILENT",
             ),
             (
                 describe(Program::RoomScore, None, 0.45, false, true, false),
@@ -68,7 +68,7 @@ mod tests {
             ),
             (
                 describe(Program::Radio, None, 0.45, false, true, true),
-                "ROOM SCORE | 45%",
+                "ROOM MUSIC: VOL 45%",
             ),
         ];
 

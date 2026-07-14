@@ -4392,18 +4392,31 @@ mod tests {
 
     #[test]
     fn interacted_render_reports_the_room_specific_consequence() {
+        let resting = render_report(
+            "cult-of-pi",
+            50,
+            24,
+            0.0,
+            false,
+            RoomRenderInput::new(0, &[]),
+        )
+        .expect("resting cult render");
         let report = render_report(
             "cult-of-pi",
             50,
             24,
-            0.5,
+            0.0,
             false,
             RoomRenderInput::new(0, &[(0.5, 0.5)]),
         )
         .expect("cult render");
         assert!(
-            report.contains("Status: 1 REPAIR"),
+            report.contains("Status: 1 HELD  CH01  EXP FAULT 0%"),
             "interaction status must reach the CLI: {report}"
+        );
+        assert!(
+            report.split("\nStatus:").next() != resting.split("\nStatus:").next(),
+            "a phase-zero hold must visibly change the character frame: {report}"
         );
     }
 

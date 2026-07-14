@@ -6,8 +6,8 @@
 //! Run: `cargo run -p numinous-app --example screens`.
 
 use std::collections::{BTreeSet, VecDeque};
-use std::fs::File;
-use std::io::BufWriter;
+use std::fs::{File, OpenOptions};
+use std::io::{self, BufWriter};
 use std::path::{Path, PathBuf};
 
 use numinous_core::{Journey, Raster, Room, RoomInput, Scoreboard, Surface, all_rooms};
@@ -37,9 +37,10 @@ mod studio_panel;
 
 const OUTPUT: &str = "renders/qa-app";
 const DEFAULT_SIZE: (usize, usize) = (900, 700);
-const ROOM_SIZE: (usize, usize) = (640, 480);
+const ROOM_SIZE: (usize, usize) = DEFAULT_SIZE;
 const SMALL_SIZE: (usize, usize) = (360, 240);
-const MIN_CHANGED_PIXELS: usize = 100;
+const DEFAULT_MIN_CHANGED_PIXELS: usize = 100;
+const ABSOLUTE_MIN_CHANGED_PIXELS: usize = 32;
 const MIN_CHANGED_SUPPORT_PERMILLE: usize = 10;
 const MIN_SUPPORT_DENSITY_PERMILLE: usize = 1;
 const SPATIAL_TILE_SIZE: usize = 32;
@@ -74,6 +75,41 @@ struct Difference {
     support: usize,
     largest_tile_cluster: usize,
     mean_channel_delta: usize,
+}
+
+struct GenerationLock {
+    file: Option<File>,
+    path: PathBuf,
+}
+
+impl GenerationLock {
+    fn acquire(path: &Path) -> io::Result<Self> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let create = || OpenOptions::new().create_new(true).write(true).open(path);
+        let file = create().map_err(|error| {
+            if error.kind() == io::ErrorKind::AlreadyExists {
+                io::Error::new(
+                    io::ErrorKind::WouldBlock,
+                    "another App screenshot generator owns the receipt directory; if it was terminated forcibly, remove renders/.qa-app.lock",
+                )
+            } else {
+                error
+            }
+        })?;
+        Ok(Self {
+            file: Some(file),
+            path: path.to_path_buf(),
+        })
+    }
+}
+
+impl Drop for GenerationLock {
+    fn drop(&mut self) {
+        drop(self.file.take());
+        let _ = std::fs::remove_file(&self.path);
+    }
 }
 
 fn save(raster: &Raster, relative: &str, manifest: &mut Vec<String>) {
@@ -152,11 +188,19 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
             format!("rooms/{id}-interacted-{}x{}.png", ROOM_SIZE.0, ROOM_SIZE.1),
             format!("rooms/{id}-delayed-{}x{}.png", ROOM_SIZE.0, ROOM_SIZE.1),
             format!(
+                "rooms/{id}-base-small-{}x{}.png",
+                SMALL_SIZE.0, SMALL_SIZE.1
+            ),
+            format!(
                 "rooms/{id}-arrival-small-{}x{}.png",
                 SMALL_SIZE.0, SMALL_SIZE.1
             ),
             format!(
                 "rooms/{id}-interacted-small-{}x{}.png",
+                SMALL_SIZE.0, SMALL_SIZE.1
+            ),
+            format!(
+                "rooms/{id}-delayed-small-{}x{}.png",
                 SMALL_SIZE.0, SMALL_SIZE.1
             ),
         ]);
@@ -182,6 +226,11 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
         "journey-level-42",
         "level-up-banner",
     ] {
+        for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
+            expected.insert(format!("overlays/{name}-{label}-{}x{}.png", size.0, size.1));
+        }
+    }
+    for name in ["cult-of-pi-journey-banner", "cult-of-pi-post-banner"] {
         for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
             expected.insert(format!("overlays/{name}-{label}-{}x{}.png", size.0, size.1));
         }
@@ -260,7 +309,7 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
         .into_iter()
         .map(str::to_string),
     );
-    assert_eq!(expected.len(), 275, "documented QA scenario count");
+    assert_eq!(expected.len(), 341, "documented QA scenario count");
     expected
 }
 
@@ -361,10 +410,15 @@ fn largest_tile_cluster(changed: &[bool], width: usize, height: usize) -> usize 
 fn assert_legible(id: &str, state: &str, before: &Raster, after: &Raster) {
     let diff = difference(before, after);
     let area = before.width() * before.height();
+    let default_area = ROOM_SIZE.0 * ROOM_SIZE.1;
+    let minimum_changed = DEFAULT_MIN_CHANGED_PIXELS
+        .saturating_mul(area)
+        .div_ceil(default_area)
+        .max(ABSOLUTE_MIN_CHANGED_PIXELS);
     assert!(
-        diff.changed >= MIN_CHANGED_PIXELS,
-        "{id} {state} response changes only {} pixels",
-        diff.changed
+        diff.changed >= minimum_changed,
+        "{id} {state} response changes only {} pixels, below the {minimum_changed}-pixel floor",
+        diff.changed,
     );
     assert!(
         diff.support * 1_000 >= area * MIN_CHANGED_SUPPORT_PERMILLE,
@@ -392,10 +446,15 @@ fn assert_legible(id: &str, state: &str, before: &Raster, after: &Raster) {
 fn assert_life_cause_is_local_and_visible(state: &str, before: &Raster, after: &Raster) {
     let diff = difference(before, after);
     let area = before.width() * before.height();
+    let default_area = ROOM_SIZE.0 * ROOM_SIZE.1;
+    let minimum_changed = DEFAULT_MIN_CHANGED_PIXELS
+        .saturating_mul(area)
+        .div_ceil(default_area)
+        .max(ABSOLUTE_MIN_CHANGED_PIXELS);
     assert!(
-        diff.changed >= MIN_CHANGED_PIXELS,
-        "Life {state} changes only {} pixels",
-        diff.changed
+        diff.changed >= minimum_changed,
+        "Life {state} changes only {} pixels, below the {minimum_changed}-pixel floor",
+        diff.changed,
     );
     assert!(
         diff.support * 100 <= area * 8,
@@ -857,6 +916,39 @@ fn room_screen_with_mode(
     raster
 }
 
+fn room_screen_with_banner(
+    room: &dyn Room,
+    size: (usize, usize),
+    level: u32,
+    lines: &[String],
+) -> Raster {
+    let (width, height) = size;
+    let mut raster = room_content(room, 0.0, &[], size);
+    hud::draw_room_chrome(
+        &mut raster,
+        room,
+        &hud::RoomChrome {
+            t: 0.0,
+            room_card: 240,
+            show_info: false,
+            show_help: false,
+            show_journey: false,
+            banner_active: true,
+            the_show: false,
+            studio: false,
+            muted: false,
+            level,
+            input_mode: input_legend::InputMode::KeyboardMouse,
+        },
+        &[],
+        None,
+        width,
+        height,
+    );
+    overlays::draw_banner(&mut raster, lines, width, height);
+    raster
+}
+
 fn room_content(room: &dyn Room, t: f64, inputs: &[RoomInput], size: (usize, usize)) -> Raster {
     let mut raster = Raster::with_accent(size.0, size.1, room.meta().accent);
     room.render_input(&mut raster, t, inputs);
@@ -1002,6 +1094,8 @@ fn gauntlet(seed: u64) -> play::GauntletPlay {
 }
 
 fn main() {
+    let _generation_lock = GenerationLock::acquire(Path::new("renders/.qa-app.lock"))
+        .expect("another App screenshot generator is already writing renders");
     let output = Path::new(OUTPUT);
     if output.exists() {
         std::fs::remove_dir_all(output).expect("remove stale screenshot matrix");
@@ -1032,6 +1126,17 @@ fn main() {
             &scenario.delayed,
             ROOM_SIZE,
         );
+        let raw_small_base = room_content(room.as_ref(), phase, &[], SMALL_SIZE);
+        let raw_small_interacted =
+            room_content(room.as_ref(), phase, &scenario.immediate, SMALL_SIZE);
+        let raw_small_delayed_base =
+            room_content(room.as_ref(), scenario.delayed_phase, &[], SMALL_SIZE);
+        let raw_small_delayed = room_content(
+            room.as_ref(),
+            scenario.delayed_phase,
+            &scenario.delayed,
+            SMALL_SIZE,
+        );
         let base = room_screen(room.as_ref(), phase, &[], ROOM_SIZE, 0, false, 7);
         let interacted = room_screen(
             room.as_ref(),
@@ -1054,9 +1159,31 @@ fn main() {
         if id == "game-of-life" {
             assert_life_cause_is_local_and_visible("immediate", &raw_base, &raw_interacted);
             assert_life_cause_is_local_and_visible("generation 4", &raw_delayed_base, &raw_delayed);
+            assert_life_cause_is_local_and_visible(
+                "compact immediate",
+                &raw_small_base,
+                &raw_small_interacted,
+            );
+            assert_life_cause_is_local_and_visible(
+                "compact generation 4",
+                &raw_small_delayed_base,
+                &raw_small_delayed,
+            );
         } else {
             assert_legible(id, "immediate", &raw_base, &raw_interacted);
             assert_legible(id, "delayed", &raw_delayed_base, &raw_delayed);
+            assert_legible(
+                id,
+                "compact immediate",
+                &raw_small_base,
+                &raw_small_interacted,
+            );
+            assert_legible(
+                id,
+                "compact delayed",
+                &raw_small_delayed_base,
+                &raw_small_delayed,
+            );
         }
         save(
             &base,
@@ -1079,9 +1206,33 @@ fn main() {
             &mut manifest,
         );
         save(
+            &room_screen(room.as_ref(), phase, &[], SMALL_SIZE, 0, false, 7),
+            &format!(
+                "rooms/{id}-base-small-{}x{}.png",
+                SMALL_SIZE.0, SMALL_SIZE.1
+            ),
+            &mut manifest,
+        );
+        save(
             &room_screen(room.as_ref(), phase, &[], SMALL_SIZE, 240, false, 7),
             &format!(
                 "rooms/{id}-arrival-small-{}x{}.png",
+                SMALL_SIZE.0, SMALL_SIZE.1
+            ),
+            &mut manifest,
+        );
+        save(
+            &room_screen(
+                room.as_ref(),
+                phase,
+                &scenario.immediate,
+                SMALL_SIZE,
+                0,
+                false,
+                7,
+            ),
+            &format!(
+                "rooms/{id}-interacted-small-{}x{}.png",
                 SMALL_SIZE.0, SMALL_SIZE.1
             ),
             &mut manifest,
@@ -1097,13 +1248,13 @@ fn main() {
                 7,
             ),
             &format!(
-                "rooms/{id}-interacted-small-{}x{}.png",
+                "rooms/{id}-delayed-small-{}x{}.png",
                 SMALL_SIZE.0, SMALL_SIZE.1
             ),
             &mut manifest,
         );
     }
-    assert_eq!(manifest.len(), rooms.len() * 6, "six states per room");
+    assert_eq!(manifest.len(), rooms.len() * 8, "eight states per room");
     assert!(
         changed_status_oracles > 0 && explained_action_oracles > 0,
         "room scenarios cover changed status and explanatory action oracles"
@@ -1120,7 +1271,8 @@ fn main() {
     );
     println!(
         "validated {} room scenarios: {changed_status_oracles} changed-status, \
-         {explained_action_oracles} explanatory-action; minimum {MIN_CHANGED_PIXELS} changed \
+         {explained_action_oracles} explanatory-action; minimum \
+         {DEFAULT_MIN_CHANGED_PIXELS} default or {ABSOLUTE_MIN_CHANGED_PIXELS} compact changed \
          pixels, {MIN_CHANGED_SUPPORT_PERMILLE} permille support, \
          {MIN_SUPPORT_DENSITY_PERMILLE} permille support density, and \
          {MIN_COHERENT_TILES} adjacent spatial tiles, and \
@@ -1293,6 +1445,22 @@ fn main() {
         );
     }
 
+    let pi = room_by_id(&rooms, "cult-of-pi");
+    let pi_level = feedback::level_up(12, 3);
+    for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
+        let (width, height) = size;
+        save(
+            &room_screen_with_banner(pi, size, 12, pi_level.lines()),
+            &format!("overlays/cult-of-pi-journey-banner-{label}-{width}x{height}.png"),
+            &mut manifest,
+        );
+        save(
+            &room_screen(pi, 0.0, &[], size, 240, false, 12),
+            &format!("overlays/cult-of-pi-post-banner-{label}-{width}x{height}.png"),
+            &mut manifest,
+        );
+    }
+
     let audio_states = [
         (
             "room-score",
@@ -1302,7 +1470,7 @@ fn main() {
             false,
             true,
             true,
-            "ROOM SCORE | 45%",
+            "ROOM MUSIC: VOL 45%",
         ),
         (
             "radio",
@@ -1312,7 +1480,7 @@ fn main() {
             false,
             true,
             true,
-            "RADIO NUMINA FM | 45%",
+            "RADIO NUMINA FM: VOL 45%",
         ),
         (
             "radio-off",
@@ -1322,7 +1490,7 @@ fn main() {
             false,
             true,
             true,
-            "ROOM SCORE | 45%",
+            "ROOM MUSIC: VOL 45%",
         ),
         (
             "muted",
@@ -1332,7 +1500,7 @@ fn main() {
             true,
             true,
             true,
-            "ROOM SCORE | MUTED",
+            "ROOM MUSIC: MUTED",
         ),
         (
             "volume-zero",
@@ -1342,7 +1510,7 @@ fn main() {
             false,
             true,
             true,
-            "ROOM SCORE | VOLUME 0",
+            "ROOM MUSIC: VOL 0",
         ),
         (
             "studio",
@@ -1352,7 +1520,7 @@ fn main() {
             false,
             true,
             true,
-            "STUDIO | 45%",
+            "STUDIO: VOL 45%",
         ),
         (
             "background-silent",
@@ -1362,7 +1530,7 @@ fn main() {
             false,
             false,
             true,
-            "ROOM SCORE | BACKGROUND SILENT",
+            "ROOM MUSIC: BACKGROUND SILENT",
         ),
         (
             "no-device",
@@ -1770,10 +1938,66 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{
-        MIN_CHANGED_PIXELS, MIN_CHANGED_SUPPORT_PERMILLE, MIN_COHERENT_TILES,
-        MIN_MEAN_CHANNEL_DELTA, MIN_SUPPORT_DENSITY_PERMILLE, ROOM_SIZE, difference,
+        DEFAULT_MIN_CHANGED_PIXELS, GenerationLock, MIN_CHANGED_SUPPORT_PERMILLE,
+        MIN_COHERENT_TILES, MIN_MEAN_CHANNEL_DELTA, MIN_SUPPORT_DENSITY_PERMILLE, ROOM_SIZE,
+        difference,
     };
     use numinous_core::{Raster, Surface};
+
+    #[test]
+    fn screenshot_generation_has_one_cross_process_writer() {
+        let path = std::env::temp_dir().join(format!(
+            "numinous-screenshot-generation-{}.lock",
+            std::process::id()
+        ));
+        let first = GenerationLock::acquire(&path).expect("first writer owns the lock");
+        let output =
+            std::process::Command::new(std::env::current_exe().expect("current test binary"))
+                .args([
+                    "--exact",
+                    "tests::screenshot_generation_lock_probe",
+                    "--nocapture",
+                ])
+                .env("NUMINOUS_SCREEN_LOCK_PROBE", &path)
+                .output()
+                .expect("run competing writer probe");
+        assert!(
+            output.status.success(),
+            "competing process probe failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        drop(first);
+        let second = GenerationLock::acquire(&path).expect("lock releases with its process handle");
+        drop(second);
+        assert!(!path.exists(), "the final owner removes the lock file");
+
+        std::fs::write(&path, "terminated owner").expect("seed stale lock file");
+        let stale_error = GenerationLock::acquire(&path)
+            .err()
+            .expect("stale lock fails closed");
+        assert_eq!(stale_error.kind(), std::io::ErrorKind::WouldBlock);
+        assert!(
+            stale_error
+                .to_string()
+                .contains("remove renders/.qa-app.lock"),
+            "manual recovery names the exact lock file"
+        );
+        std::fs::remove_file(&path).expect("operator removes confirmed stale lock");
+        let recovered = GenerationLock::acquire(&path).expect("generation resumes after recovery");
+        drop(recovered);
+        assert!(!path.exists(), "recovered owner cleans up normally");
+    }
+
+    #[test]
+    fn screenshot_generation_lock_probe() {
+        let Ok(path) = std::env::var("NUMINOUS_SCREEN_LOCK_PROBE") else {
+            return;
+        };
+        let error = GenerationLock::acquire(std::path::Path::new(&path))
+            .err()
+            .expect("the parent process owns the lock");
+        assert_eq!(error.kind(), std::io::ErrorKind::WouldBlock);
+    }
 
     #[test]
     fn scattered_corner_markers_do_not_satisfy_the_spatial_oracle() {
@@ -1789,7 +2013,7 @@ mod tests {
 
         let diff = difference(&before, &after);
         let area = ROOM_SIZE.0 * ROOM_SIZE.1;
-        assert!(diff.changed >= MIN_CHANGED_PIXELS);
+        assert!(diff.changed >= DEFAULT_MIN_CHANGED_PIXELS);
         assert!(diff.support * 1_000 >= area * MIN_CHANGED_SUPPORT_PERMILLE);
         assert!(diff.changed * 1_000 >= diff.support * MIN_SUPPORT_DENSITY_PERMILLE);
         assert!(diff.mean_channel_delta >= MIN_MEAN_CHANNEL_DELTA);

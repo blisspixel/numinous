@@ -77,11 +77,12 @@ impl Raster {
         })
     }
 
-    /// The color added for a mark: the accent, a brighter accent for `'#'`, or a
-    /// faint structural gray for `'-'`.
+    /// The color added for a mark: the accent, a brighter accent for `'#'`, a
+    /// warning coral for `'!'`, or a faint structural gray for `'-'`.
     fn ink(&self, mark: char) -> [u8; 3] {
         match mark {
             '#' => scale(self.accent, 1.7),
+            '!' => [230, 72, 72],
             '-' => [16, 20, 34],
             _ => self.accent,
         }
@@ -254,6 +255,16 @@ mod tests {
         assert_eq!(r.lit_count(), 1);
         r.plot(1, 1, '*'); // additive: brighter, still one lit pixel
         assert_eq!(r.lit_count(), 1);
+    }
+
+    #[test]
+    fn semantic_warning_ink_is_distinct_from_structure_and_accent() {
+        let raster = Raster::with_accent(4, 4, [40, 210, 90]);
+
+        assert_eq!(raster.ink('!'), [230, 72, 72]);
+        assert_ne!(raster.ink('!'), raster.ink('.'));
+        assert_ne!(raster.ink('!'), raster.ink('-'));
+        assert_ne!(raster.ink('!'), raster.ink('#'));
     }
 
     #[test]

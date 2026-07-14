@@ -187,6 +187,11 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   guidance without prematurely migrating to the breaking 2026-07-28 protocol
   candidate.
 - **Structured interaction deltas (built):** when `pokes` or a `gesture` are supplied, `play_room` also returns a `delta` in `structuredContent`: the interacted frame diffed against the untouched frame at the same phase, size, and variation, as `cells_changed`, `ink_added`, `ink_removed`, `ink_reshaped`, `total_cells`, and the inclusive `changed_region` bounding box; the text render carries the same count as a `Touch:` line. This is the proof-of-touch half of the challenge/verify loop: the agent gets quantitative, optimizable feedback on how the math answered its hand.
+- **Phase-zero causality (built):** a room that claims retained state must answer
+  before animation supplies an incidental difference. Cult of Pi therefore
+  draws each held patch boundary through the shared surface in the App, CLI,
+  and MCP, and a phase-zero MCP regression requires a nonzero structured cell
+  delta. The boundary marks the finite display state, not a change to pi.
 - **The challenge/verify loop, first slice (built):** the `challenge` tool poses a deterministic seeded goal for any room with a touch verb (change at least K cells inside a posed target box on the standard frame) and grades attempts as metrics, not pass/fail: cells in target, cells changed, threshold fraction, centroid distance, and a 0-100 score, with `passed` as a summary only. Every posed challenge is winnable by construction: the pose probes the room's actual response across seeded hands and phases and places the target on measured evidence, and a registry-wide test proves a witness hand passes for every room with a verb. Seeds are always explicit (no clock-derived daily), so the graded reply and the recorded progress can never disagree. Attempts record play (and wins) through the shared Journey and post graded scores to the shared table. Room-specific goals whose metric is the phenomenon's own parameter are the next depth on this substrate.
 - **Resources and prompts, planned:** the room catalog, Studio reference,
   insight connections, and guided learn or compose flows may later become MCP

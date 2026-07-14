@@ -39,7 +39,7 @@ impl Banner {
 
 pub(crate) fn level_up(level: u32, boons_available: u32) -> Banner {
     let mut lines = vec![
-        format!("LEVEL UP  LV {level}"),
+        format!("JOURNEY LEVEL UP  LV {level}"),
         numinous_core::level_lore(level).to_uppercase(),
     ];
     if boons_available > 0 {
@@ -98,7 +98,7 @@ pub(crate) fn radio(station_name: &str, station_id: &str, track_count: usize) ->
 
 pub(crate) fn radio_off() -> Banner {
     Banner::new(
-        vec!["RADIO OFF".to_string(), "ROOM SCORE".to_string()],
+        vec!["RADIO OFF".to_string(), "ROOM MUSIC".to_string()],
         RADIO_FRAMES,
     )
 }
@@ -121,7 +121,7 @@ mod tests {
     fn level_up_banner_names_lore_and_boons() {
         let banner = level_up(2, 1);
 
-        assert_eq!(banner.lines()[0], "LEVEL UP  LV 2");
+        assert_eq!(banner.lines()[0], "JOURNEY LEVEL UP  LV 2");
         assert!(!banner.lines()[1].is_empty());
         assert_eq!(banner.lines()[2], "BOON BANKED: NUMINOUS CHOOSE");
         assert_eq!(banner.frames_left(), 300);
@@ -169,7 +169,7 @@ mod tests {
         assert_eq!(sound.lines()[0], "SOUND DEVICE UNAVAILABLE");
         assert_eq!(sound.lines()[1], "NO DEVICE");
         assert_eq!(sound.frames_left(), 600);
-        assert_eq!(off.lines(), ["RADIO OFF", "ROOM SCORE"]);
+        assert_eq!(off.lines(), ["RADIO OFF", "ROOM MUSIC"]);
         assert_eq!(off.frames_left(), 180);
     }
 

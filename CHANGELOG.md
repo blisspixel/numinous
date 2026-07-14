@@ -6,6 +6,21 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Cult of Pi now makes its premise and first touch causal in every face. The
+  channel always begins with the canonical `PI = 3.141592653589793...` header,
+  exact digits remain green, faults are coral, and held exact patches are
+  bright with a visible boundary. Rendering replaces the local patch in one
+  pass, so repaired digits do not retain ghost strokes. Compact status keeps
+  the held-patch count, channel position, fault rate, and recent-history bound.
+  Phase-zero App, CLI, and MCP interactions all change the visible field, and
+  MCP reports a nonzero structured delta. The App labels accumulated progress
+  as `JOURNEY LV` and preserves a room arrival card's full visible lifetime
+  when a level banner temporarily covers it. The 341-screen release matrix now
+  captures default room states at 900 by 700 and compact states at 360 by 240.
+  A single-writer guard prevents competing generators from removing or
+  partially replacing the same evidence directory.
+  The complete local gate passes 1,307 all-target test cases at 93.49 percent
+  region and 93.28 percent line coverage.
 - The native App now has one explicit audio source of truth for room score,
   Studio, or radio. Studio retains formula audio across focus returns and radio
   boundaries, then rejoins a selected station at its live wall-clock position
@@ -17,9 +32,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   action. The controls remain active in rooms, games, pause, radio, and Studio.
   A persistent badge reports the effective source, numeric level, and mute,
   zero-volume, background-silent, or missing-device state. Release QA grows to
-  275 screens with 16 dedicated audio-state receipts at default and compact
+  341 screens with 16 dedicated audio-state receipts at default and compact
   sizes, plus semantic and routing regressions. The complete local gate passes
-  1,296 all-target test cases at 93.46 percent region and 93.25 percent line
+  1,307 all-target test cases at 93.49 percent region and 93.28 percent line
   coverage.
 - Game of Life is now a causal persistent visit in the native App. A settled
   deterministic soup advances on a bounded B3/S23 clock for the whole visit,

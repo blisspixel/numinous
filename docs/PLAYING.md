@@ -81,9 +81,10 @@ restart it. Start pauses a live game behind the menu without discarding its
 state. On restore, radio rejoins the wall-clock broadcast position before audio
 fades back in. Studio keeps ownership of formula audio through focus changes
 and radio boundaries, then rejoins a selected station live when Studio closes.
-A persistent top-right badge names the active source, level, mute, zero-volume,
-background-silent, or no-device state. Radio stations appear only when compatible local tracks are
-present. Visible controller legends use generic directional button names, not
+A persistent top-right audio badge names the active source, volume level, mute,
+zero-volume, background-silent, or no-device state. A separate `JOURNEY LV`
+label reports accumulated progress in the local profile, not room difficulty.
+Radio stations appear only when compatible local tracks are present. Visible controller legends use generic directional button names, not
 platform-specific glyphs. The Studio can be entered and left with a controller,
 but formula entry requires a keyboard and the footer states that boundary.
 

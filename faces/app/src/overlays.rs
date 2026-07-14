@@ -44,7 +44,11 @@ pub(crate) fn journey_lines(
     input_mode: InputMode,
 ) -> Vec<String> {
     let mut lines = vec![
-        format!("LV {}  [{}]", journey.level(), journey.level_bar(12)),
+        format!(
+            "JOURNEY LV {}  [{}]",
+            journey.level(),
+            journey.level_bar(12)
+        ),
         format!(
             "{} XP  {}",
             journey.sparks(),
