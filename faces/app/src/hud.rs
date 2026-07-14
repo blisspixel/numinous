@@ -66,10 +66,15 @@ fn footer_copy(
     inputs: &[RoomInput],
     muted: bool,
     input_mode: InputMode,
+    status_override: Option<&str>,
 ) -> FooterCopy {
-    let status = room
-        .status_input(t, inputs)
-        .unwrap_or_else(|| input_legend::room_inspect(input_mode));
+    let status = status_override.map_or_else(
+        || {
+            room.status_input(t, inputs)
+                .unwrap_or_else(|| input_legend::room_inspect(input_mode))
+        },
+        str::to_owned,
+    );
     FooterCopy {
         action: displayed_room_action(room, input_mode),
         status: if muted {
@@ -90,6 +95,7 @@ pub(crate) fn draw_room_chrome(
     room: &dyn Room,
     state: &RoomChrome,
     inputs: &[RoomInput],
+    status_override: Option<&str>,
     width: usize,
     height: usize,
 ) {
@@ -232,7 +238,14 @@ pub(crate) fn draw_room_chrome(
     }
 
     if !state.show_help && !state.the_show && !state.studio {
-        let footer = footer_copy(room, state.t, inputs, state.muted, state.input_mode);
+        let footer = footer_copy(
+            room,
+            state.t,
+            inputs,
+            state.muted,
+            state.input_mode,
+            status_override,
+        );
         let controls_width = footer.controls.chars().count() as i32 * 6 * scale;
         let controls_x = width as i32 - controls_width - 10;
         let action = fit_footer_text(&footer.action, width as i32 - 20, scale);
@@ -290,9 +303,9 @@ mod tests {
         let quiet = Newborn;
         let interactive = room("game-of-life");
         assert_eq!(room_action(&quiet), DEFAULT_TOUCH_ROOM_ACTION);
-        assert!(
-            room_action(interactive.as_ref()).starts_with("CLICK:"),
-            "interactive rooms keep their verb"
+        assert_eq!(
+            room_action(interactive.as_ref()),
+            "AIM + CLICK: PLACE A 5-CELL GLIDER"
         );
         assert_eq!(
             arrival_lines(&quiet, 32, InputMode::KeyboardMouse)[0],
@@ -315,8 +328,22 @@ mod tests {
     #[test]
     fn footer_keeps_controls_fixed_while_status_changes() {
         let room = room("times-tables");
-        let closed = footer_copy(room.as_ref(), 0.0, &[], false, InputMode::KeyboardMouse);
-        let open = footer_copy(room.as_ref(), 0.1, &[], true, InputMode::KeyboardMouse);
+        let closed = footer_copy(
+            room.as_ref(),
+            0.0,
+            &[],
+            false,
+            InputMode::KeyboardMouse,
+            None,
+        );
+        let open = footer_copy(
+            room.as_ref(),
+            0.1,
+            &[],
+            true,
+            InputMode::KeyboardMouse,
+            None,
+        );
 
         assert_ne!(closed.status, open.status);
         assert_eq!(closed.action, open.action);
@@ -335,8 +362,15 @@ mod tests {
     #[test]
     fn room_copy_follows_the_active_input_mode() {
         let room = room("golden-angle");
-        let keyboard = footer_copy(room.as_ref(), 0.0, &[], false, InputMode::KeyboardMouse);
-        let controller = footer_copy(room.as_ref(), 0.0, &[], false, InputMode::Controller);
+        let keyboard = footer_copy(
+            room.as_ref(),
+            0.0,
+            &[],
+            false,
+            InputMode::KeyboardMouse,
+            None,
+        );
+        let controller = footer_copy(room.as_ref(), 0.0, &[], false, InputMode::Controller, None);
 
         assert_eq!(keyboard.action, "CLICK: PLANT A SEED");
         assert_eq!(keyboard.status, "E INSPECT");
@@ -355,10 +389,48 @@ mod tests {
             y: 0.5,
             t: 0.25,
         }];
-        let footer = footer_copy(room.as_ref(), 0.25, &input, false, InputMode::KeyboardMouse);
-        assert!(footer.action.starts_with("CLICK:"));
-        assert!(footer.status.contains("1 GLIDER"));
+        let footer = footer_copy(
+            room.as_ref(),
+            0.25,
+            &input,
+            false,
+            InputMode::KeyboardMouse,
+            None,
+        );
+        assert_eq!(footer.action, "AIM + CLICK: PLACE A 5-CELL GLIDER");
+        assert!(footer.status.contains("PLANTED 5"));
+        assert!(footer.status.contains("GLIDER 1"));
         assert_eq!(footer.controls, "R RESET ROOM   ESC MENU");
+    }
+
+    #[test]
+    fn compact_life_status_keeps_cause_and_controller_truth() {
+        let room = room("game-of-life");
+        let mut session = numinous_core::rooms::game_of_life::LifeSession::new(0);
+        session.launch((0.5, 0.5));
+        session.advance();
+        let status = session.compact_status();
+        for mode in [InputMode::KeyboardMouse, InputMode::Controller] {
+            let footer = footer_copy(room.as_ref(), 0.0, &[], false, mode, Some(&status));
+            let controls_width = footer.controls.chars().count() as i32 * 6;
+            let controls_x = 360 - controls_width - 10;
+            assert_eq!(fit_footer_text(&footer.status, controls_x - 20, 1), status);
+            assert!(footer.status.starts_with("BORN"));
+            assert!(footer.status.contains("DIED"));
+        }
+        let controller = footer_copy(
+            room.as_ref(),
+            0.0,
+            &[],
+            false,
+            InputMode::Controller,
+            Some(&status),
+        );
+        assert_eq!(
+            controller.action,
+            "LEFT STICK + SOUTH: PLACE A 5-CELL GLIDER"
+        );
+        assert_eq!(controller.controls, "L3 RESET ROOM   START MENU");
     }
 
     #[test]
@@ -369,7 +441,14 @@ mod tests {
             y: 0.5,
             t: 0.25,
         }];
-        let footer = footer_copy(room.as_ref(), 0.25, &input, false, InputMode::KeyboardMouse);
+        let footer = footer_copy(
+            room.as_ref(),
+            0.25,
+            &input,
+            false,
+            InputMode::KeyboardMouse,
+            None,
+        );
         let controls_width = footer.controls.chars().count() as i32 * 6;
         let controls_x = 360 - controls_width - 10;
         let fitted = fit_footer_text(&footer.status, controls_x - 20, 1);
@@ -380,7 +459,14 @@ mod tests {
         assert!(fitted.contains("LAST"));
         assert!(fitted.ends_with('R'));
 
-        let controller = footer_copy(room.as_ref(), 0.25, &input, false, InputMode::Controller);
+        let controller = footer_copy(
+            room.as_ref(),
+            0.25,
+            &input,
+            false,
+            InputMode::Controller,
+            None,
+        );
         assert_eq!(
             controller.action,
             "LEFT STICK + SOUTH: PICK COIN, DROP 64 BALLS"
@@ -404,6 +490,7 @@ mod tests {
             &inputs,
             false,
             InputMode::KeyboardMouse,
+            None,
         );
         let controls_width = footer.controls.chars().count() as i32 * 6;
         let controls_x = 360 - controls_width - 10;
@@ -437,6 +524,7 @@ mod tests {
                 input_mode: InputMode::KeyboardMouse,
             },
             &[],
+            None,
             320,
             220,
         );
@@ -467,6 +555,7 @@ mod tests {
                 input_mode: InputMode::KeyboardMouse,
             },
             &[],
+            None,
             320,
             220,
         );
@@ -497,6 +586,7 @@ mod tests {
                     input_mode: InputMode::KeyboardMouse,
                 },
                 &[],
+                None,
                 420,
                 300,
             );
@@ -536,6 +626,7 @@ mod tests {
                     input_mode,
                 },
                 &[],
+                None,
                 width,
                 height,
             );
@@ -582,6 +673,7 @@ mod tests {
                 input_mode: InputMode::KeyboardMouse,
             },
             &[],
+            None,
             width,
             height,
         );

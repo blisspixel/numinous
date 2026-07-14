@@ -6,7 +6,7 @@ use std::{
 
 use numinous_core::{Era, Raster, Room, RoomInput};
 
-const POSTCARD_SIZE: u32 = 900;
+pub(crate) const POSTCARD_SIZE: u32 = 900;
 const MAX_POSTCARD_COLLISIONS: u16 = 999;
 
 pub(crate) fn default_postcard_dir() -> PathBuf {
@@ -24,8 +24,17 @@ pub(crate) fn write_room_postcard(
     dir: &Path,
 ) -> std::io::Result<PathBuf> {
     let rgba = render_room_postcard_rgba(room, phase, inputs, era);
-    let encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, &rgba)?;
-    for path in postcard_paths(dir, room.meta().id, phase) {
+    write_rendered_postcard(room.meta().id, u64::from(phase_code(phase)), &rgba, dir)
+}
+
+pub(crate) fn write_rendered_postcard(
+    room_id: &str,
+    state_code: u64,
+    rgba: &[u8],
+    dir: &Path,
+) -> std::io::Result<PathBuf> {
+    let encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, rgba)?;
+    for path in postcard_paths(dir, room_id, state_code) {
         match write_png_file(&path, &encoded) {
             Ok(()) => return Ok(path),
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
@@ -34,7 +43,7 @@ pub(crate) fn write_room_postcard(
     }
     Err(std::io::Error::new(
         std::io::ErrorKind::AlreadyExists,
-        "all postcard filenames for this room and phase already exist",
+        "all postcard filenames for this room and state already exist",
     ))
 }
 
@@ -60,24 +69,21 @@ fn render_room_postcard_rgba(
 fn postcard_paths<'a>(
     dir: &'a Path,
     room_id: &'a str,
-    phase: f64,
+    state_code: u64,
 ) -> impl Iterator<Item = PathBuf> + 'a {
-    std::iter::once(postcard_path(dir, room_id, phase)).chain(
+    std::iter::once(postcard_path(dir, room_id, state_code)).chain(
         (1..=MAX_POSTCARD_COLLISIONS)
-            .map(move |serial| postcard_collision_path(dir, room_id, phase, serial)),
+            .map(move |serial| postcard_collision_path(dir, room_id, state_code, serial)),
     )
 }
 
-fn postcard_path(dir: &Path, room_id: &str, phase: f64) -> PathBuf {
-    dir.join(format!("numinous-{}-{:03}.png", room_id, phase_code(phase)))
+fn postcard_path(dir: &Path, room_id: &str, state_code: u64) -> PathBuf {
+    dir.join(format!("numinous-{room_id}-{state_code:03}.png"))
 }
 
-fn postcard_collision_path(dir: &Path, room_id: &str, phase: f64, serial: u16) -> PathBuf {
+fn postcard_collision_path(dir: &Path, room_id: &str, state_code: u64, serial: u16) -> PathBuf {
     dir.join(format!(
-        "numinous-{}-{:03}-{:03}.png",
-        room_id,
-        phase_code(phase),
-        serial
+        "numinous-{room_id}-{state_code:03}-{serial:03}.png"
     ))
 }
 
@@ -126,12 +132,12 @@ mod tests {
 
     #[test]
     fn postcard_path_uses_room_id_and_phase() {
-        let path = postcard_path(Path::new("out"), "times_tables", 0.42);
+        let path = postcard_path(Path::new("out"), "times_tables", 42);
         assert_eq!(
             path.file_name().and_then(|name| name.to_str()),
             Some("numinous-times_tables-042.png")
         );
-        let collision = postcard_collision_path(Path::new("out"), "times_tables", 0.42, 7);
+        let collision = postcard_collision_path(Path::new("out"), "times_tables", 42, 7);
         assert_eq!(
             collision.file_name().and_then(|name| name.to_str()),
             Some("numinous-times_tables-042-007.png")

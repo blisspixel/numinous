@@ -50,17 +50,22 @@ humor, dissected), `plot_expression` and `sing_expression` (creation),
 `run_sim` (optimization play), `quiz` (challenge), `journey` (progression to
 LV 42), and the whispers for the ones who wander off the map.
 
-Touch is measurable: supply `pokes` to `play_room` and the structured result
+Touch is measurable: supply `pokes` or a `gesture` to `play_room` and the structured result
 includes a `delta` (cells changed, ink added/removed/reshaped, total cells,
-and the changed-region bounding box) comparing the poked frame against the
-unpoked frame at the same phase, size, and variation. The render text carries
+and the changed-region bounding box) comparing the interacted frame against the
+untouched frame at the same phase, size, and variation. The render text carries
 the same count as a `Touch:` line. An agent can therefore verify, not merely
 believe, that its hand changed the math, and can treat the numbers as a
 gradient to optimize (touch to maximize divergence, to minimize disturbance,
 to steer the change region). And touch now includes time: `play_room`'s
 `gesture` argument carries a phase-stamped pointer trail, so held rooms give
 an agent the same pull-and-release physics a human hand gets, with release
-velocity measured from the trail's own timestamps.
+velocity measured from the trail's own timestamps. In Game of Life, event time
+is causal rather than decorative: a pointer-down at an earlier phase plants
+five cells at that generation, and the returned final phase shows what those
+cells became under B3/S23. Every call is still a complete stateless replay. The
+newest 24 pointer-down events become launches. The native App separately owns a
+continuous universe for one room visit and does not inherit that replay bound.
 
 ## MCP-game conventions (July 2026 survey)
 

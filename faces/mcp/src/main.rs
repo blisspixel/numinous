@@ -794,7 +794,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "play_room",
-                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. When you supply pokes, the structured result includes a delta (cells changed, ink added/removed/reshaped, changed region) measuring exactly how the math answered your hand.",
+                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. When you supply pokes or a gesture, the structured result includes a delta (cells changed, ink added/removed/reshaped, changed region) measuring exactly how the math answered your hand. This call is stateless: replay the same inputs for the same result.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -816,7 +816,7 @@ fn build_tools_catalog() -> Value {
                         },
                         "gesture": {
                             "type": "array",
-                            "description": "A replayable pointer trail for held rooms: pin, pull, and fling. Events run oldest to newest with nondecreasing phase timestamps. In held rooms (double-pendulum) a down pins the bob, an up releases it with the velocity of the approach, and a cancel lets go gently; everywhere else the trail's down and move points paint like pokes. Not combinable with 'pokes'.",
+                            "description": "A replayable pointer trail. Events run oldest to newest with nondecreasing phase timestamps. In held rooms (double-pendulum) a down pins the bob, an up releases it with the velocity of the approach, and a cancel lets go gently. In Life, a down earlier than the final t plants a glider early enough to show its later evolution; the newest 24 down events become launches. Everywhere else the trail's down and move points paint like pokes. Not combinable with 'pokes'.",
                             "maxItems": numinous_core::MAX_ROOM_INPUTS,
                             "items": {
                                 "type": "object",
@@ -5629,6 +5629,67 @@ plays 2
             poked["result"]["structuredContent"]["status"],
             gestured["result"]["structuredContent"]["status"]
         );
+    }
+
+    #[test]
+    fn life_replay_is_causal_deterministic_and_sessionless() {
+        let interacted_args = json!({
+            "id":"game-of-life",
+            "variation":7,
+            "width":64,
+            "height":48,
+            "t":0.5,
+            "gesture":[{"kind":"down","x":0.23,"y":0.71,"t":0.1}]
+        });
+        let untouched_args = json!({
+            "id":"game-of-life","variation":7,"width":64,"height":48,"t":0.5
+        });
+        let call = |id, arguments| {
+            handle_request(&json!({
+                "jsonrpc":"2.0","id":id,"method":"tools/call",
+                "params":{"name":"play_room","arguments":arguments}
+            }))
+            .expect("Life play_room response")
+        };
+
+        let first = call(37, interacted_args.clone());
+        let untouched = call(38, untouched_args.clone());
+        let repeated = call(39, interacted_args.clone());
+        let untouched_repeated = call(40, untouched_args);
+        let first_content = &first["result"]["structuredContent"];
+        let repeated_content = &repeated["result"]["structuredContent"];
+
+        assert_eq!(first_content["render"], repeated_content["render"]);
+        assert_eq!(first_content["status"], repeated_content["status"]);
+        assert_eq!(
+            untouched["result"]["structuredContent"]["render"],
+            untouched_repeated["result"]["structuredContent"]["render"],
+            "an interacted call cannot create hidden MCP Life state"
+        );
+        assert_ne!(
+            first_content["render"],
+            untouched["result"]["structuredContent"]["render"]
+        );
+        assert_eq!(first_content["variation"], 7);
+        assert_eq!(first_content["gesture"], interacted_args["gesture"]);
+        assert!(first_content["delta"].is_object());
+        let status = first_content["status"].as_str().expect("Life status");
+        assert!(status.starts_with("BORN "), "got: {status}");
+        assert!(status.contains("GEN 70"), "got: {status}");
+        assert!(status.contains("GLIDER 1"), "got: {status}");
+
+        let mut session = numinous_core::rooms::game_of_life::LifeSession::new(7);
+        for _ in 0..14 {
+            session.advance();
+        }
+        assert!(session.launch((0.23, 0.71)));
+        for _ in 14..70 {
+            session.advance();
+        }
+        let mut canvas = numinous_core::Canvas::new(64, 48);
+        session.render(&mut canvas);
+        assert_eq!(first_content["render"], canvas.to_text());
+        assert_eq!(first_content["status"], session.status());
     }
 
     #[test]

@@ -28,7 +28,11 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 
 ### 2. Conway's Game of Life  Wow 4 / Build 2
 - **Rule:** A cell lives or dies based only on how many neighbors it has. Four tiny rules.
-- **Toy:** Launch a five-cell glider into the soup. The existing universe dims so the cells changed by the launch stay bright, and the readout names the generation plus the birth and survival counts while the glider obeys the real rules.
+- **Toy:** Aim at a quiet patch and place a five-cell glider into a settled soup.
+  The placed cells flash bright for one beat, then every cell follows exact
+  B3/S23 rules while the readout names births, deaths, generation, population,
+  and glider count. The App universe persists and advances for the whole visit;
+  reset returns to the same opening.
 - **Aha:** "Build something that never dies" / "make a pattern that moves."
 - **Reveal:** *"Those four rules are enough to build a working computer. People have built Tetris, and Conway's Game of Life itself, inside this. It's not a toy. It's a universe."*
 - **Sound:** each birth triggers a note pitched by its position; dense colonies swell the pad. A living generative sequencer.
@@ -249,12 +253,12 @@ you are not told it), and **the kid principle** (the play carries itself even
 if the concept never consciously lands). If an idea cannot pass both, it does
 not ship, however important the syllabus thinks it is.
 
-**Current interaction inventory (2026-07):** 31 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, LAUNCH A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, REPAIR THE SIGNAL in Cult of Pi, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
+**Current interaction inventory (2026-07):** 31 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, REPAIR THE SIGNAL in Cult of Pi, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
 
 **Interaction update, 2026-07-13:** the verb inventory above records the first
 complete poke substrate. The current contract also includes `render_input` and
 `status_input`, so a face can report the consequence from the same bounded input
-history it renders. Life now launches a legible glider against a dimmed soup;
+history it renders. Life now places a legible glider in a locally cleared patch;
 Prime Spirals fills the short side and traces bright selected diagonals; Cult of
 Pi keeps every visible digit readable while marking and repairing deterministic
 wrong digits; Buffon foregrounds viewport-scaled throws; Barnsley Fern plants
@@ -266,6 +270,18 @@ letting time move a prefilled pile independently of the player's balls. The
 Garden plants fitted complete grammars, and Arecibo shows one explained
 candidate width at a time. Room switching deals a new replayable visit, while R
 resets the current one.
+
+**Life continuity update, 2026-07-14:** the App owns one incremental Life
+session for the whole visit. It advances from the settled opening on a bounded
+cadence, survives the normalized gallery clock wrapping, pauses with the App,
+accepts every mouse or controller launch, and exports the actual live state.
+Reset restores the same variation at generation zero. CLI and MCP room calls
+remain deterministic and stateless: timestamped pointer-down events replay in
+generation order inside that one call, the newest 24 down events become
+launches, and neither process retains a hidden universe between calls. The App
+does not inherit that replay bound. This difference is explicit because
+replayable agent access and a persistent native visit are distinct interaction
+contracts.
 
 Goldbach now accepts any selected even at entry and names the prime witnesses.
 Langton's Ant marks and reports the selected cell. Fourier Epicycles draws a

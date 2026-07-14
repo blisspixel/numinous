@@ -198,6 +198,12 @@ impl GamepadInput {
     pub(crate) fn cursor(&self) -> Option<(f64, f64)> {
         self.hand.visible.then_some(self.hand.point)
     }
+
+    #[cfg(test)]
+    pub(crate) fn set_cursor_for_test(&mut self, point: (f64, f64)) {
+        self.hand.point = (point.0.clamp(0.0, 1.0), point.1.clamp(0.0, 1.0));
+        self.hand.visible = true;
+    }
 }
 
 fn pressed_command(button: Button) -> Option<Command> {
