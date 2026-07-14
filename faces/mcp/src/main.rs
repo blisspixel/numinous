@@ -1500,7 +1500,7 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
                 summary.push_str(&format!(" Touch changed {cells} cells."));
             }
             summary.push_str(
-                " Read structuredContent.render, input, status, and delta for the complete result.",
+                " Read structuredContent.render, pokes, gesture, status, and delta for the complete result.",
             );
             Some(summary)
         }
@@ -4266,6 +4266,18 @@ mod tests {
                 default_text.len()
             );
             assert!(compact_text.contains("structuredContent"), "{tool}");
+            if tool == "play_room" {
+                for field in ["render", "pokes", "gesture", "status", "delta"] {
+                    assert!(
+                        compact_text.contains(field),
+                        "missing {field}: {compact_text}"
+                    );
+                }
+                assert!(
+                    !compact_text.contains("input"),
+                    "compact guidance must name only real fields: {compact_text}"
+                );
+            }
         }
     }
 

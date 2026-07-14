@@ -582,7 +582,8 @@ in the future target.
 
 - Large replies repeated the same artifact in prose and `structuredContent`.
   A representative `play_room` result used 1,869 text bytes while its typed
-  payload already carried the complete render, action, status, input, and delta.
+  payload already carried the complete render, action, status, pokes, gesture,
+  and delta.
 - A process-wide or hidden compact flag would violate the server's stateless,
   discoverable per-call shape. Protocol `_meta` would also couple current work
   to a breaking target that is not final until July 28, 2026.
@@ -599,6 +600,9 @@ in the future target.
   schema omitted the field and rejected every client that tried to use it.
 - The real-stdio tests did not send all required 2025-06-18 initialization
   fields before exercising the compact contract.
+- Final pull-request review found that the compact room summary named a
+  nonexistent `structuredContent.input` field instead of the real `pokes` and
+  `gesture` fields.
 
 ## What changed
 
@@ -619,15 +623,17 @@ session. Quiz's public schema now exposes `choices` from 2 through 6, with the
 existing level boundary. Both pose and grade return `choiceCount`, and full and
 compact guidance name every replay argument because choice count changes the
 puzzle. The stdio sessions complete a conforming 2025-06-18 initialization
-exchange before tool discovery.
+exchange before tool discovery. Compact room guidance now names only real
+structured fields, with an exact regression over render, pokes, gesture,
+status, and delta.
 
 Measured across representative calls to catalog, description, room play,
 listening, simulation, Quiz, Gauntlet, and trophies, individual text reductions
 range from 29.5 percent for the sampled sim to 94.8 percent for the catalog. The
-sampled room render falls from 1,869 UTF-8 text bytes to 192. The aggregate was
+sampled room render falls from 1,869 UTF-8 text bytes to 201. The aggregate was
 not retained as a release claim because trophy prose varies with player state.
 These are byte counts, not token-cost claims.
-The complete local release gate passes with 1,221 all-target test cases, 93.27
-percent region coverage, 93.03 percent line coverage, the exact 253-screen
+The complete local release gate passes with 1,221 all-target test cases, 93.24
+percent region coverage, 93.00 percent line coverage, the exact 253-screen
 matrix, Clippy with warnings denied, locked build, house style, and supply-chain
 policy.
