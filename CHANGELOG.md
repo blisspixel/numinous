@@ -6,6 +6,25 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Times Tables now completes its technical Flagship Proof across App, CLI, and
+  MCP. Ordinary App visits hold the K=2 cardioid until input, while The Show
+  keeps its deliberate visual and audible sweep. Variation changes the route
+  between fixed K=2 and K=10 endpoints, so every redeal and reset preserves the
+  canonical heart. A visible ticked dial, resolution-aware chord
+  sampling, five spectral inks, exact integer snapping, singular-safe status,
+  and an earned K=5 four-lobe Aha make the objective legible. Reset returns to
+  the untouched cardioid. The accepted multiplier also drives a quiet,
+  persistent just-ratio voice over the stable room arrangement without
+  restarting its playhead. CLI render and sonify plus MCP play and listen now
+  accept and report the same bounded input, goal, status, sound state, and
+  earned reveal. Ambient passage through K=5 no longer claims `FOUND`, modal
+  games release the parameter voice, and the MCP schema declares exact
+  positioned and cancel event variants. The exact App matrix grows to 349 screens with 12 flagship
+  landmark and goal receipts at default and compact sizes. The complete local
+  gate passes 1,336 all-target test cases at 93.60 percent region and 93.41
+  percent line coverage. Stranger hallway, musician-led listening, and
+  representative physical-controller evidence remain open, so the package
+  stays `0.2.0-alpha.1`.
 - Cult of Pi now makes its premise and first touch causal in every face. The
   channel always begins with the canonical `PI = 3.141592653589793...` header,
   exact digits remain green, faults are coral, and held exact patches are

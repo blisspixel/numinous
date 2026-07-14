@@ -108,7 +108,7 @@ pub use secret::{akousma, deep_akousma};
 pub use seti::{SetiChannel, SetiScan, build_scan};
 pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
 pub use sims::{all_sims, sim_by_id};
-pub use sound::{Note, SoundSpec};
+pub use sound::{Note, ParametricSound, SoundSpec};
 pub use studio::{
     Expr, MAX_STUDIO_SOURCE_CHARS, StudioCreation, eval, parse, plot_text, to_melody,
 };

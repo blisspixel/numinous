@@ -8,14 +8,14 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-14
 
-- **Enforced now:** formatting, Clippy with warnings denied, 1,307 all-target
+- **Enforced now:** formatting, Clippy with warnings denied, 1,336 all-target
   test cases, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 93.49%
-  regions and 93.28% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 93.60%
+  regions and 93.41% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
-  three faces, and a release-generated 341-screen visual QA matrix. Every room
+  three faces, and a release-generated 349-screen visual QA matrix. Every room
   is captured at default and compact sizes in deterministic opening, arrival,
   immediate-interaction, and same-phase delayed-interaction states. Default
   room receipts are 900 by 700 and compact room receipts are 360 by 240. Games,
@@ -38,6 +38,10 @@ built, so an aspiration is never mistaken for a result.
   coarse renderer-path checks, not certification of subjective visual quality.
   Production input routing has separate unit tests; native operating system
   event dispatch is not claimed as automated end-to-end evidence.
+  Twelve flagship receipts additionally capture K=2, K=3, K=pi, K=4, K=5,
+  and the earned four-lobe Aha at both sizes. The generator asserts all five
+  spectral inks and the dial marker, while core tests bound compact ASCII
+  density so the terminal picture retains negative space.
 - **Not yet evidenced:** a completed stranger hallway test, accessibility review
   with disabled players, representative physical-controller sessions,
   musician-led long-listening review, real execution on macOS and Linux,

@@ -110,7 +110,8 @@ is in [`docs/MUSIC.md`](docs/MUSIC.md) and [`docs/STUDIO.md`](docs/STUDIO.md).
 ## Current state
 
 Numinous is **version 0.2.0-alpha.1**, actively earning the 0.2 Flagship Proof
-gate. The 0.1 Public Foundation is complete. Numinous already has a headless core, a
+gate. It is not on the old 0.1 line: the 0.1 Public Foundation is complete.
+Numinous already has a headless core, a
 windowed app, a full CLI, an MCP server, GPU and audio adapters, 31 catalog
 rooms plus hidden content, games, progression, a Studio foundation, and the
 built-in soundtrack. Mouse, keyboard, and hotplugged controllers share the
@@ -132,6 +133,15 @@ The separate `JOURNEY LV` label is accumulated local-profile progress, never a
 room difficulty rating. Cult of Pi now opens on the canonical `3.14159...`
 prefix and explains its finite-channel premise through visible faults and
 bounded exact patches that the player can restore and hold.
+Times Tables now opens on its K=2 cardioid and waits for a hand instead of
+sweeping the discovery away. Its resolution-aware chords keep terminal
+negative space, a spectral five-ink field and visible dial make the state
+legible, and landing on K=5 earns a four-lobe Aha. The same snapped multiplier
+drives visual status and a quiet just-ratio voice without restarting the room
+music. App, CLI, and MCP expose the same action, goal, accepted input, sound,
+and earned reveal. Ambient motion cannot claim that earned discovery. The Show
+retains its intentional automatic visual and audible sweep, independent of any
+retained hand position.
 This is an alpha-tagged prerelease. Capability breadth is ahead of release
 maturity because the 0.2 Flagship Proof gate, including the real hallway
 evidence, remains open.
@@ -143,17 +153,19 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 1,307 passing all-target test cases, 93.49% region coverage and
-93.28% line coverage with an enforced 80% line floor, Clippy with warnings
+The current local gate has 1,336 passing all-target test cases, 93.60% region
+coverage and 93.41% line coverage with an enforced 80% line floor, Clippy with warnings
 denied, and dependency policy checks. Release QA also regenerates an exact
-341-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
+349-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
 room receipts, per-room interaction scenarios, semantic checks, and coarse
 perceptual response thresholds, including a regression that rejects
 four isolated corner markers as a meaningful interaction. Fourteen compact
 receipts cover controller legends and visible pause states through production
 render paths, including a Life controller receipt. Sixteen additional receipts
 cover the global audio sources, levels, and effective-silence states at default
-and compact sizes. The latest
+and compact sizes. Twelve Times Tables flow receipts cover K=2, K=3, K=pi,
+K=4, K=5, and the earned Aha at both sizes, with deterministic palette and dial
+assertions. The latest
 full-roster QA pass applied all 42 documented simulated review lenses once,
 split across first contact, interaction and truth, and games plus agent faces.
 It fixed reproduced App, CLI, MCP, Studio, and mathematical-copy defects; the

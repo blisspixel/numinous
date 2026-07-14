@@ -139,6 +139,22 @@ independently implemented programmatic language.
 
 ## Sources
 
+**Current implementation guidance checked 2026-07-14**
+- [FMOD Studio 2.03 parameters](https://www.fmod.com/docs/2.03/studio/parameters.html)
+  documents changing user parameters on a playing event and smoothing movement
+  through parameter velocity rather than replacing the event. Numinous applies
+  the same architectural principle locally: Times Tables updates a persistent
+  secondary voice while its room bed and oscillator phases continue.
+- [FMOD Studio 2.03 concepts](https://www.fmod.com/docs/2.03/studio/fmod-studio-concepts.html)
+  documents continuous, discrete, and labeled parameters. This supports exact
+  integer landmarks without forcing the whole continuous dial onto a note grid.
+- [WCAG 2.2, Animation from Interactions](https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions)
+  was updated 2025-08-25 and warns that unnecessary interaction-triggered
+  motion can distract or harm. Numinous therefore keeps the ordinary Times
+  Tables opening still at K=2 until input while preserving the explicitly
+  requested Show sweep. This is alignment evidence, not an accessibility
+  certification.
+
 **Learning and motivation evidence**
 - [Active learning increases student performance in STEM, PNAS meta-analysis](https://doi.org/10.1073/pnas.1319030111)
 - [The generation effect, meta-analytic review](https://pubmed.ncbi.nlm.nih.gov/17645161/)

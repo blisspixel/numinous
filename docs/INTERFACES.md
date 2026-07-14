@@ -90,7 +90,13 @@ For automation, pipelines, CI, power users, and agents through a shell:
   queries that advertise `--json` produce machine-readable output.
 - **Composable and deterministic.** Explicit seeds and arguments make renders,
   games, Studio artifacts, and audio reproducible.
-- **Room input is explicit.** Static hand points for room rendering are command arguments, for example `render double-pendulum --poke 0.2,0.8`, and full gestures are too: `render double-pendulum --gesture down:0.3,0.4,0.1 --gesture up:0.6,0.5,0.15` pins, pulls, and flings with the same phase-stamped physics as the App and MCP faces. Terminal output stays replayable and scriptable instead of tied to an interactive session.
+- **Room input is explicit.** Static hand points for room rendering are command
+  arguments, for example `render double-pendulum --poke 0.2,0.8`, and full
+  gestures are too: `render double-pendulum --gesture down:0.3,0.4,0.1
+  --gesture up:0.6,0.5,0.15` pins, pulls, and flings with the same phase-stamped
+  physics as the App and MCP faces. `sonify` accepts the same mutually exclusive
+  forms, so an input-driven visual and WAV describe one state. Terminal output
+  stays replayable and scriptable instead of tied to an interactive session.
 - **Current command families:** `rooms`, `describe`, `render`, `gallery`, and
   `contact-sheet` cover the catalog and images; `tour`, `watch`, `play`, games,
   sims, and Journey commands cover live play; `plot`, `open-studio`, `sing`,
@@ -155,18 +161,29 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   `challenge`, `predict`, `list_sims`, `run_sim`, `plot_expression`,
   `sing_expression`, Journey operations, and the shared games. `PLAYING.md`
   carries the complete user-facing list.
-- **Current room input shape:** `play_room` accepts `variation` plus optional normalized `pokes: [[x, y], ...]`, newest last, bounded to 24 points, and returns those points in `structuredContent` with the render. This keeps MCP play stateless and replayable. The core gesture substrate (`RoomInput` trails, held/release/cancel semantics) is live in the App and over MCP: `play_room` accepts a `gesture` array of phase-stamped pointer events (down/move/up/cancel, bounded to 96, exclusive with `pokes`), so an agent can pin the pendulum, pull, and fling with measured velocity, statelessly and replayably. The default bridge paints down-and-move trails; click-specific rooms may intentionally consume only pointer-down events. Compact pokes become phase-stamped pointer-down inputs before rendering, so App, CLI, and MCP share each room's chosen semantics.
+- **Current room input shape:** `play_room` and `listen_room` accept `variation`
+  plus optional normalized `pokes: [[x, y], ...]`, newest last and bounded to 24
+  points. Both also accept a `gesture` array of phase-stamped pointer events,
+  down, move, up, or cancel, bounded to 96 and exclusive with `pokes`. The
+  advertised schema requires x, y, and t on positioned events and forbids those
+  fields on cancel, matching runtime acceptance exactly.
+  `play_room` echoes the input with the render; `listen_room` echoes it with the
+  mathematical sound. This keeps MCP play stateless and replayable. The default
+  bridge paints down-and-move trails; click-specific rooms may intentionally
+  consume only pointer-down events. Compact pokes become phase-stamped
+  pointer-down inputs before rendering, so App, CLI, and MCP share each room's
+  chosen semantics.
 - **Runtime schema enforcement (built):** every `tools/call` is checked against
   the same bounded schema advertised by `tools/list`, including required fields,
   types, enums, numeric and array bounds, nested object shape, and unexpected
   fields. `play_room` additionally rejects non-finite or out-of-range phase and
   dimensions plus gesture timestamps that move backward. `listen_room` enforces
-  the same phase interval. `run_sim` validates nested lever values as finite
+  the same phase and input contract. `run_sim` validates nested lever values as finite
   numbers, rejects names not owned by the selected simulation, and rejects
   values outside that lever's advertised range. Invalid calls return a guiding
   tool error and do not record progress.
 - **Structured discovery (built):** `list_rooms`, `describe_room`,
-  `reveal_room`, and `listen_room` return typed catalog, action, revelation,
+  `reveal_room`, and `listen_room` return typed catalog, action, optional goal, revelation,
   deep-cut availability, ambient motif, and bounded mathematical-sonification
   note data for all 31 rooms. `listen_room` names those two sound roles
   separately because a specialized room sound can intentionally differ from
@@ -174,6 +191,10 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   deep cuts expose their unlock level without leaking their text. Scores and
   forget previews are similarly structured, and confirmed erasure reports only
   successful filesystem outcomes.
+- **Earned room goal, first slice (built):** Times Tables exposes `LAND ON
+  EXACTLY 4 LOBES`. `play_room` returns `goal`, `goalMet`, and a null reveal
+  until accepted K=5 input closes four lobes. The earned response then includes
+  the same reveal the App points to. Ambient phase alone cannot earn it.
 - **Compatibility-preserving compact output (built):** every tool schema accepts
   `response_mode: "full" | "compact"`. The argument is stripped before domain
   dispatch, so it cannot change grading, replay, persistence, or effective
@@ -192,7 +213,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   draws each held patch boundary through the shared surface in the App, CLI,
   and MCP, and a phase-zero MCP regression requires a nonzero structured cell
   delta. The boundary marks the finite display state, not a change to pi.
-- **The challenge/verify loop, first slice (built):** the `challenge` tool poses a deterministic seeded goal for any room with a touch verb (change at least K cells inside a posed target box on the standard frame) and grades attempts as metrics, not pass/fail: cells in target, cells changed, threshold fraction, centroid distance, and a 0-100 score, with `passed` as a summary only. Every posed challenge is winnable by construction: the pose probes the room's actual response across seeded hands and phases and places the target on measured evidence, and a registry-wide test proves a witness hand passes for every room with a verb. Seeds are always explicit (no clock-derived daily), so the graded reply and the recorded progress can never disagree. Attempts record play (and wins) through the shared Journey and post graded scores to the shared table. Room-specific goals whose metric is the phenomenon's own parameter are the next depth on this substrate.
+- **The challenge/verify loop, first slice (built):** the `challenge` tool poses a deterministic seeded goal for any room with a touch verb (change at least K cells inside a posed target box on the standard frame) and grades attempts as metrics, not pass/fail: cells in target, cells changed, threshold fraction, centroid distance, and a 0-100 score, with `passed` as a summary only. Every posed challenge is winnable by construction: the pose probes the room's actual response across seeded hands and phases and places the target on measured evidence, and a registry-wide test proves a witness hand passes for every room with a verb. Seeds are always explicit (no clock-derived daily), so the graded reply and the recorded progress can never disagree. Attempts record play (and wins) through the shared Journey and post graded scores to the shared table. Times Tables now adds the first room-owned parameter goal outside that generic challenge tool; extending this domain-specific pattern is the next depth.
 - **Resources and prompts, planned:** the room catalog, Studio reference,
   insight connections, and guided learn or compose flows may later become MCP
   resources and prompts. They are ordinary tool results and repository docs

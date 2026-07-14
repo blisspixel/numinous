@@ -94,6 +94,9 @@ fn journey_level_label(level: u32) -> String {
 
 fn arrival_lines(room: &dyn Room, columns: usize, input_mode: InputMode) -> Vec<String> {
     let mut lines = vec![displayed_room_action(room, input_mode)];
+    if let Some(goal) = room.goal() {
+        lines.push(format!("GOAL: {goal}"));
+    }
     let mut blurb = numinous_core::wrap_text(&room.meta().blurb.to_uppercase(), columns);
     if blurb.len() > 3 {
         blurb.truncate(3);
@@ -393,6 +396,15 @@ mod tests {
         assert_eq!(lines[0], room_action(room.as_ref()));
         assert!(lines[3].ends_with("..."));
         assert!(lines.iter().all(|line| line.chars().count() <= 24));
+    }
+
+    #[test]
+    fn flagship_arrival_names_its_earned_goal() {
+        let room = room("times-tables");
+        let lines = arrival_lines(room.as_ref(), 40, InputMode::KeyboardMouse);
+
+        assert_eq!(lines[0], "DRAG: TURN THE DIAL");
+        assert_eq!(lines[1], "GOAL: LAND ON EXACTLY 4 LOBES");
     }
 
     #[test]

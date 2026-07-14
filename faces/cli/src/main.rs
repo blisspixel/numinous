@@ -28,6 +28,7 @@ const MAX_CLI_RENDER_HEIGHT: usize = 4096;
 const MAX_CLI_RENDER_PIXELS: usize = 16 * 1024 * 1024;
 const MAX_CLI_INPUT_BYTES: usize = 4 * 1024;
 const ELEVENLABS_MUSIC_URL: &str = "https://api.elevenlabs.io/v1/music?output_format=pcm_44100";
+type ParsedRoomInputs = (Vec<(f64, f64)>, Vec<numinous_core::RoomInput>);
 
 #[derive(Parser)]
 #[command(
@@ -150,6 +151,13 @@ enum Command {
         /// Write a WAV audio file to this path.
         #[arg(long)]
         out: PathBuf,
+        /// Add a normalized hand point, as x,y in [0,1]. Repeat for multiple points.
+        #[arg(long = "poke")]
+        pokes: Vec<String>,
+        /// Add a gesture event: down:x,y,t, move:x,y,t, up:x,y,t, or cancel.
+        /// Repeat, oldest first. Not combinable with --poke.
+        #[arg(long = "gesture")]
+        gestures: Vec<String>,
     },
     /// Render every room to a PNG image in a directory (a showcase and beauty-QA).
     Gallery {
@@ -682,6 +690,21 @@ fn parse_pokes(raw: &[String]) -> Result<Vec<(f64, f64)>, String> {
     raw.iter().map(|poke| parse_poke_arg(poke)).collect()
 }
 
+fn parse_room_inputs(
+    raw_pokes: &[String],
+    raw_gestures: &[String],
+) -> Result<ParsedRoomInputs, String> {
+    let pokes = parse_pokes(raw_pokes)?;
+    let gestures = parse_gestures(raw_gestures)?;
+    if !pokes.is_empty() && !gestures.is_empty() {
+        return Err(
+            "Use either --poke (static hand points) or --gesture (a pointer trail), not both.\n"
+                .to_string(),
+        );
+    }
+    Ok((pokes, gestures))
+}
+
 #[derive(Clone, Copy)]
 struct RoomRenderInput<'a> {
     variation: u64,
@@ -1039,26 +1062,13 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 eprintln!("Unknown era '{era}'. Eras: phosphor, 8bit, vector, modern.");
                 return ExitCode::FAILURE;
             };
-            let pokes = match parse_pokes(&pokes) {
-                Ok(pokes) => pokes,
+            let (pokes, gesture) = match parse_room_inputs(&pokes, &gestures) {
+                Ok(input) => input,
                 Err(message) => {
                     eprint!("{message}");
                     return ExitCode::FAILURE;
                 }
             };
-            let gesture = match parse_gestures(&gestures) {
-                Ok(gesture) => gesture,
-                Err(message) => {
-                    eprint!("{message}");
-                    return ExitCode::FAILURE;
-                }
-            };
-            if !pokes.is_empty() && !gesture.is_empty() {
-                eprintln!(
-                    "Use either --poke (static hand points) or --gesture (a pointer trail), not both."
-                );
-                return ExitCode::FAILURE;
-            }
             let variation = variation.unwrap_or_else(|| {
                 if vary {
                     let variation = fresh_variation_seed();
@@ -1122,15 +1132,33 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             let variation = if vary { fresh_variation_seed() } else { 0 };
             watch(&id, fps, width, height, mute, allow_hidden, era, variation)
         }
-        Command::Sonify { id, t, out } => {
+        Command::Sonify {
+            id,
+            t,
+            out,
+            pokes,
+            gestures,
+        } => {
             if let Err(message) = validate_render_request(1, 1, t) {
                 eprint!("{message}");
                 return ExitCode::FAILURE;
             }
+            let (pokes, gesture) = match parse_room_inputs(&pokes, &gestures) {
+                Ok(input) => input,
+                Err(message) => {
+                    eprint!("{message}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let input = if gesture.is_empty() {
+                RoomRenderInput::new(0, &pokes)
+            } else {
+                RoomRenderInput::with_gesture(0, &gesture)
+            };
             if find_room(&id, allow_hidden).is_some() {
                 journey.visit(&id);
             }
-            emit(sonify_wav(&id, t, &out, allow_hidden))
+            emit(sonify_wav(&id, t, &out, allow_hidden, input))
         }
         Command::Gallery { dir, width, height } => emit(gallery(&dir, width, height)),
         Command::ContactSheet { out, cols, tile } => emit(contact_sheet(&out, cols, tile)),
@@ -2022,8 +2050,14 @@ fn describe_report(
         }
     }
     let m = room.meta();
+    let action = numinous_core::room_action(room.as_ref());
+    let goal = room.goal();
     Ok(if json {
         let mut value = meta_json(&m);
+        value["action"] = serde_json::Value::String(action.to_string());
+        if let Some(goal) = goal {
+            value["goal"] = serde_json::Value::String(goal.to_string());
+        }
         value["reveal"] = serde_json::Value::String(room.reveal().to_string());
         value["deep_cuts"] = serde_json::Value::Array(
             unlocked
@@ -2033,8 +2067,9 @@ fn describe_report(
         );
         format!("{}\n", to_pretty(&value))
     } else {
+        let goal = goal.map_or_else(String::new, |goal| format!("\nGoal: {goal}"));
         format!(
-            "{} ({})\nWing: {}\n\n{}\n\nReveal: {}\n{cuts}",
+            "{} ({})\nWing: {}\nAction: {action}{goal}\n\n{}\n\nReveal: {}\n{cuts}",
             m.title,
             m.id,
             m.wing,
@@ -2066,9 +2101,8 @@ fn render_color_report(
         room.render_input(&mut raster, t, &events);
     }
     let mut report = ansi_in_era(&raster, era);
-    if let Some(status) = visible_status(room.as_ref(), t, input) {
-        report.push_str(&format!("\x1b[0mStatus: {status}\n"));
-    }
+    report.push_str("\x1b[0m");
+    report.push_str(&render_guidance(room.as_ref(), t, input));
     Ok(report)
 }
 
@@ -2257,10 +2291,32 @@ fn render_report(
         room.render_input(&mut canvas, t, &events);
     }
     let mut report = canvas.to_text();
-    if let Some(status) = visible_status(room.as_ref(), t, input) {
-        report.push_str(&format!("Status: {status}\n"));
-    }
+    report.push_str(&render_guidance(room.as_ref(), t, input));
     Ok(report)
+}
+
+fn accepted_inputs(t: f64, input: RoomRenderInput<'_>) -> Vec<numinous_core::RoomInput> {
+    if input.gesture.is_empty() {
+        numinous_core::inputs_from_pokes(input.pokes, t)
+    } else {
+        input.gesture.to_vec()
+    }
+}
+
+fn render_guidance(room: &dyn Room, t: f64, input: RoomRenderInput<'_>) -> String {
+    let inputs = accepted_inputs(t, input);
+    let mut guidance = String::new();
+    if let Some(status) = visible_status(room, t, input) {
+        guidance.push_str(&format!("Status: {status}\n"));
+    }
+    guidance.push_str(&format!("Action: {}\n", numinous_core::room_action(room)));
+    if let Some(goal) = room.goal() {
+        guidance.push_str(&format!("Goal: {goal}\n"));
+        if input.has_interaction() && room.goal_met(t, &inputs) {
+            guidance.push_str(&format!("Aha earned: {goal}\nReveal: {}\n", room.reveal()));
+        }
+    }
+    guidance
 }
 
 /// Spend a banked boon: pick one of three deep cuts to open ahead of level.
@@ -2402,9 +2458,7 @@ fn render_png(
         raster.width(),
         raster.height()
     );
-    if let Some(status) = visible_status(room.as_ref(), t, input) {
-        report.push_str(&format!("Status: {status}\n"));
-    }
+    report.push_str(&render_guidance(room.as_ref(), t, input));
     Ok(report)
 }
 
@@ -2463,17 +2517,28 @@ fn contact_sheet(path: &Path, cols: usize, tile: usize) -> Result<String, String
 }
 
 /// Render a room's sound to a 16-bit mono WAV at `path`, returning a status message.
-fn sonify_wav(id: &str, t: f64, path: &Path, allow_hidden: bool) -> Result<String, String> {
+fn sonify_wav(
+    id: &str,
+    t: f64,
+    path: &Path,
+    allow_hidden: bool,
+    input: RoomRenderInput<'_>,
+) -> Result<String, String> {
     let room = find_room(id, allow_hidden).ok_or_else(|| not_found_message(id))?;
-    let spec = room.sound(t);
+    let inputs = accepted_inputs(t, input);
+    let spec = room.sound_input(t, &inputs);
     let sample_rate = 44_100u32;
     write_wav(path, &spec.render(sample_rate), sample_rate)?;
-    Ok(format!(
+    let mut report = format!(
         "wrote {} ({:.1}s, {} notes)\n",
         path.display(),
         spec.duration,
         spec.notes.len()
-    ))
+    );
+    if let Some(status) = visible_status(room.as_ref(), t, input) {
+        report.push_str(&format!("Status: {status}\n"));
+    }
+    Ok(report)
 }
 
 /// Write mono 16-bit samples to a WAV file at `path`.
@@ -4257,6 +4322,8 @@ mod tests {
         )
         .expect("known room");
         assert!(text.contains("Number & Pattern"));
+        assert!(text.contains("Action: DRAG: TURN THE DIAL"));
+        assert!(text.contains("Goal: LAND ON EXACTLY 4 LOBES"));
     }
 
     #[test]
@@ -4270,6 +4337,8 @@ mod tests {
         .expect("known room");
         let value: Value = serde_json::from_str(&text).expect("valid json");
         assert_eq!(value["id"], "times-tables");
+        assert_eq!(value["action"], "DRAG: TURN THE DIAL");
+        assert_eq!(value["goal"], "LAND ON EXACTLY 4 LOBES");
     }
 
     #[test]
@@ -4319,6 +4388,44 @@ mod tests {
         let text = render_report("times-tables", 40, 20, 0.0, false, RoomRenderInput::plain())
             .expect("known room");
         assert!(text.contains('*'));
+        assert!(text.contains("Action: DRAG: TURN THE DIAL"));
+        assert!(text.contains("Goal: LAND ON EXACTLY 4 LOBES"));
+        assert!(!text.contains("Aha earned:"));
+    }
+
+    #[test]
+    fn times_tables_goal_earns_the_aha_and_reveal_from_hand_input() {
+        let report = render_report(
+            "times-tables",
+            72,
+            32,
+            0.8,
+            false,
+            RoomRenderInput::new(0, &[(0.374, 0.5)]),
+        )
+        .expect("goal render");
+
+        assert!(report.contains("Status: K 5.00  CLOSED  4 LOBES  FOUND"));
+        assert!(report.contains("Goal: LAND ON EXACTLY 4 LOBES"));
+        assert!(report.contains("Aha earned: LAND ON EXACTLY 4 LOBES"));
+        assert!(report.contains("Reveal: Set the dial to 2"));
+    }
+
+    #[test]
+    fn times_tables_ambient_target_does_not_claim_an_earned_discovery() {
+        let report = render_report(
+            "times-tables",
+            72,
+            32,
+            0.375,
+            false,
+            RoomRenderInput::plain(),
+        )
+        .expect("ambient target render");
+
+        assert!(report.contains("Status: K 5.00  CLOSED  4 LOBES  TARGET 4"));
+        assert!(!report.contains("FOUND"));
+        assert!(!report.contains("Aha earned:"));
     }
 
     #[test]
@@ -4442,6 +4549,21 @@ mod tests {
                 "{} must expose its shared-core readout",
                 room.meta().id
             );
+            assert!(
+                report.contains(&format!(
+                    "Action: {}",
+                    numinous_core::room_action(room.as_ref())
+                )),
+                "{} must expose its shared-core action",
+                room.meta().id
+            );
+            if let Some(goal) = room.goal() {
+                assert!(
+                    report.contains(&format!("Goal: {goal}")),
+                    "{} must expose its shared-core goal",
+                    room.meta().id
+                );
+            }
             checked += 1;
         }
         assert!(
@@ -4553,7 +4675,13 @@ mod tests {
         }
         let mut canvas = numinous_core::Canvas::new(64, 48);
         session.render(&mut canvas);
-        let expected = format!("{}Status: {}\n", canvas.to_text(), session.status());
+        let room = numinous_core::room_by_id("game-of-life").expect("Life room");
+        let expected = format!(
+            "{}Status: {}\nAction: {}\n",
+            canvas.to_text(),
+            session.status(),
+            numinous_core::room_action(room.as_ref())
+        );
 
         assert_eq!(report, expected);
         assert_eq!(report, repeated);
@@ -4671,7 +4799,8 @@ mod tests {
     fn sonify_wav_writes_a_non_empty_file() {
         let mut path = std::env::temp_dir();
         path.push("numinous_cli_sonify_test.wav");
-        let message = super::sonify_wav("lissajous", 0.0, &path, false).expect("sonify");
+        let message = super::sonify_wav("lissajous", 0.0, &path, false, RoomRenderInput::plain())
+            .expect("sonify");
         assert!(message.contains("wrote"));
         let size = std::fs::metadata(&path).expect("file exists").len();
         assert!(size > 0, "wav should not be empty");
@@ -4679,9 +4808,114 @@ mod tests {
     }
 
     #[test]
+    fn sonify_replays_times_tables_hand_input_into_the_sound() {
+        let dir = std::env::temp_dir();
+        let target = dir.join("numinous_cli_times_target.wav");
+        let other = dir.join("numinous_cli_times_other.wav");
+        let gesture_path = dir.join("numinous_cli_times_gesture.wav");
+        let target_points = [(0.374, 0.5)];
+        let other_points = [(0.75, 0.5)];
+        let gesture = [numinous_core::RoomInput::PointerDown {
+            x: 0.374,
+            y: 0.5,
+            t: 0.8,
+        }];
+
+        let report = super::sonify_wav(
+            "times-tables",
+            0.8,
+            &target,
+            false,
+            RoomRenderInput::new(0, &target_points),
+        )
+        .expect("target sound");
+        super::sonify_wav(
+            "times-tables",
+            0.8,
+            &other,
+            false,
+            RoomRenderInput::new(0, &other_points),
+        )
+        .expect("other dial sound");
+        super::sonify_wav(
+            "times-tables",
+            0.8,
+            &gesture_path,
+            false,
+            RoomRenderInput::with_gesture(0, &gesture),
+        )
+        .expect("gesture sound");
+
+        assert!(report.contains("Status: K 5.00  CLOSED  4 LOBES  FOUND"));
+        let target_audio = std::fs::read(&target).expect("target WAV");
+        assert_ne!(
+            target_audio,
+            std::fs::read(&other).expect("other WAV"),
+            "different effective multipliers must produce different audio"
+        );
+        assert_eq!(
+            target_audio,
+            std::fs::read(&gesture_path).expect("gesture WAV"),
+            "a compact poke and equivalent gesture must sonify identically"
+        );
+        let _ = std::fs::remove_file(target);
+        let _ = std::fs::remove_file(other);
+        let _ = std::fs::remove_file(gesture_path);
+    }
+
+    #[test]
+    fn sonify_parses_replay_input_and_rejects_invalid_or_mixed_forms() {
+        let cli = Cli::try_parse_from([
+            "numinous",
+            "sonify",
+            "times-tables",
+            "--out",
+            "times.wav",
+            "--poke",
+            "0.374,0.5",
+        ])
+        .expect("sonify poke parses");
+        assert!(matches!(
+            cli.command,
+            Some(Command::Sonify { ref pokes, ref gestures, .. })
+                if pokes == &["0.374,0.5"] && gestures.is_empty()
+        ));
+
+        for (name, pokes, gestures) in [
+            ("invalid", vec!["2,0.5".to_string()], Vec::new()),
+            (
+                "mixed",
+                vec!["0.5,0.5".to_string()],
+                vec!["down:0.5,0.5,0".to_string()],
+            ),
+        ] {
+            let path = std::env::temp_dir().join(format!("numinous_cli_sonify_{name}.wav"));
+            let _ = std::fs::remove_file(&path);
+            let mut journey = numinous_core::Journey::default();
+            let before = journey.clone();
+            let code = run(
+                Command::Sonify {
+                    id: "times-tables".to_string(),
+                    t: 0.0,
+                    out: path.clone(),
+                    pokes,
+                    gestures,
+                },
+                &mut journey,
+            );
+            assert_eq!(code, std::process::ExitCode::FAILURE);
+            assert_eq!(journey, before, "invalid input must not record progress");
+            assert!(!path.exists(), "invalid input must not write output");
+        }
+    }
+
+    #[test]
     fn sonify_unknown_room_is_error() {
         let path = std::env::temp_dir().join("numinous_cli_no.wav");
-        assert!(super::sonify_wav("no-such-room", 0.0, &path, false).is_err());
+        assert!(
+            super::sonify_wav("no-such-room", 0.0, &path, false, RoomRenderInput::plain(),)
+                .is_err()
+        );
     }
 
     #[test]
@@ -4858,7 +5092,9 @@ mod tests {
     #[test]
     fn sonify_to_an_unwritable_path_is_error() {
         let bad = std::path::Path::new("no_such_dir_zzz/x.wav");
-        assert!(super::sonify_wav("lissajous", 0.0, bad, false).is_err());
+        assert!(
+            super::sonify_wav("lissajous", 0.0, bad, false, RoomRenderInput::plain(),).is_err()
+        );
     }
 
     #[test]

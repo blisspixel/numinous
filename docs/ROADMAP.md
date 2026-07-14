@@ -35,7 +35,7 @@ Public Foundation exit criterion is complete on the public `main` branch. The
 accessibility work are still open. Later systems already present in source do
 not waive those gates, and this prerelease label does not claim 0.2 is complete.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **31 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 1,307 all-target test cases, locked build, Windows release gate, 93.49% region coverage, and 93.28% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **31 catalog rooms across 10 wings** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 1,336 all-target test cases, locked build, Windows release gate, 93.60% region coverage, and 93.41% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -61,6 +61,17 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   thread, rapid source changes queue without restarting a fade, and restored
   radio rejoins its wall-clock position before gain rises. A real
   long-listening panel remains required before calling the score excellent.
+- **Done (Times Tables technical Flagship Proof):** the ordinary App visit holds
+  the K=2 cardioid until the player acts across every visit variation and reset,
+  while The Show keeps its deliberate synchronized visual and audible
+  sweep. A visible dial, resolution-aware chord sampling, five spectral inks,
+  exact integer snapping, singular-safe status, and an earned K=5 four-lobe Aha
+  make the goal readable. The same accepted multiplier drives a persistent,
+  smoothed just-ratio voice over the stable room bed without restarting its
+  playhead. CLI render and sonify plus MCP play and listen accept the same
+  bounded input, and all three faces agree on action, goal, status, sound, and
+  earned reveal. The real stranger hallway and musician-led listening gates
+  remain open, so the package stays `0.2.0-alpha.1`.
 - **Done (Cycle 100 audio-state truth):** the App now owns exactly one explicit
   room-score, Studio, or radio program. Studio keeps formula audio through
   focus returns and radio boundaries, selected radio rejoins live only after
@@ -99,9 +110,9 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   tuning. The native Mandelbrot camera advances monotonically across the former
   phase reset, retargets on click, shares CPU and GPU coordinates, and adds a
   smooth high-color escape palette while leaving Julia unchanged. Focused
-  invariant tests and the regenerated 341-screen matrix cover these claims;
+  invariant tests and the regenerated 349-screen matrix cover these claims;
   hardware input and subjective long-session quality remain separate gates.
-- **Next, above everything (the founder's directive, July 2026):** **rooms become playable, not watchable, and no two catalog visits are the same.** The substrate is live across app, CLI, and MCP. The legibility pass makes weak responses explicit across Life, Mandelbrot, Buffon, Prime Spirals, Cult of Pi, Golden Angle, Barnsley Fern, Mobius, Logistic Map, Zeno, Julia, Goldbach, Langton's Ant, Fourier Epicycles, Random Walk, and Quine. `Room::status_input` lets every face explain the consequence from the same bounded history used to render it. The automated all-room, all-game, all-screen matrix is complete at 341 states, with exact inventory, nonblank, size, stale-output, deterministic opening states, every persistent game display branch, 14 controller or pause receipts, 16 explicit audio-state receipts, default and compact immediate and delayed interaction families, ordered and closed gestures, semantic response checks, changed-pixel and spatial-support thresholds, support density, adjacent 32-pixel spatial-tile coherence, and minimum color change. A regression rejects four isolated corner markers, while this remains coarse renderer-path evidence rather than native event automation or subjective polish certification. The latest grouped QA rounds also hardened controller-visible control truth, pause isolation, CLI and MCP input boundaries, pure-EOF game exits, structured discovery, isolated MCP play profiles, and Windows PATH precedence. Next, validate arrival-card clarity with real human participants and deepen held or causal interaction wherever a one-shot response still fails the kid principle.
+- **Next, above everything (the founder's directive, July 2026):** **rooms become playable, not watchable, and no two catalog visits are the same.** The substrate is live across app, CLI, and MCP. The legibility pass makes weak responses explicit across Life, Mandelbrot, Buffon, Prime Spirals, Cult of Pi, Golden Angle, Barnsley Fern, Mobius, Logistic Map, Zeno, Julia, Goldbach, Langton's Ant, Fourier Epicycles, Random Walk, and Quine. `Room::status_input` lets every face explain the consequence from the same bounded history used to render it. The automated all-room, all-game, all-screen matrix is complete at 349 states, with exact inventory, nonblank, size, stale-output, deterministic opening states, every persistent game display branch, 14 controller or pause receipts, 16 explicit audio-state receipts, 12 Times Tables landmark and earned-goal receipts, default and compact immediate and delayed interaction families, ordered and closed gestures, semantic response checks, changed-pixel and spatial-support thresholds, support density, adjacent 32-pixel spatial-tile coherence, and minimum color change. A regression rejects four isolated corner markers, while this remains coarse renderer-path evidence rather than native event automation or subjective polish certification. The latest grouped QA rounds also hardened controller-visible control truth, pause isolation, CLI and MCP input boundaries, pure-EOF game exits, structured discovery, isolated MCP play profiles, and Windows PATH precedence. Next, validate arrival-card clarity with real human participants and deepen held or causal interaction wherever a one-shot response still fails the kid principle.
 - **Done (full-roster refinement round):** all 42 simulated review lenses were split exactly once across first contact and accessibility, interaction and truth, and games plus agent faces. The pass fixed redirected CLI ANSI, responsive Quiz-result loss, four overbroad mathematical claims, ambiguous motif-versus-sonification output, and positionless Studio parse errors. It also falsified an apparent Fern deletion by direct pixel comparison. These are engineering findings from reproduced evidence; none of the simulated reactions satisfies a participant gate. Controller HUD parity, its route gaps, compatibility-preserving compact MCP responses, causal first-touch presentation, and visual sound state are now closed. Its ranked queue began with deeper Galton and Life interaction loops, both now complete; continued music composition review remains.
 - **Done (Galton causal experiment loop):** the completed pile no longer moves
   with phase while clicked balls follow another probability. Five visible fixed
@@ -422,7 +433,7 @@ The package is **0.2.0-alpha.1**. The 0.1 Public Foundation exit criterion is
 complete, and work is now on 0.2 Flagship Proof. The 0.2 milestone itself remains
 open until the Times Tables stranger hallway test passes. Current breadth is 31
 catalog rooms, 11+ games, six sims, three faces, 29 MCP tools, deterministic
-creation and persistence, and 1,307 passing all-target test cases. Required public CI is
+creation and persistence, and 1,336 passing all-target test cases. Required public CI is
 configured to run locked tests and builds across all three operating systems;
 runtime evidence belongs to each commit's check results. Breadth is not release evidence.
 No calibrated method supports assigning completion percentages to subjective
@@ -436,9 +447,9 @@ No calibrated method supports assigning completion percentages to subjective
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 1,307 all-target test cases, 93.28% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 1,336 all-target test cases, 93.41% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
-| Beautiful and honest throughout | An exact 341-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, and audio-state branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
+| Beautiful and honest throughout | An exact 349-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
 **Immediate critical path:**
 
@@ -639,7 +650,7 @@ on equal terms. This is a values commitment, not a feature, and it holds from
 - **The quality loops (`QUALITY.md`):** the commit loop is partially enforced.
   Nightly, content-evaluation, agent-playtest, human-playtest, and refinement
   loops remain explicitly designed work.
-- **Beauty QA:** a deterministic 341-screen matrix covers eight states per room
+- **Beauty QA:** a deterministic 349-screen matrix covers eight states per room
   plus every persistent game display branch, overlays, The Show, Studio, and
   reset and phase flows, plus a five-frame persistent Life sequence, with 14
   compact controller and pause receipts, plus 16 explicit audio-state receipts. It
