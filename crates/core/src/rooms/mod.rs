@@ -27,6 +27,7 @@ pub mod fastest_fall;
 pub mod first_rain;
 pub mod ford_circles;
 pub mod fourteen_beacons;
+pub mod function_painter;
 pub mod galton_board;
 pub mod game_of_life;
 pub mod goldbach;

@@ -654,9 +654,10 @@ easy-first, since these are the batch to open the post-substrate content wave.
   nested kissing circles with integer curvatures (Descartes). CLICK A GAP.
 - **Circle Inversion, "The Mirror That Bends"** **built** (`inversion`): lines
   become circles; the hub that unifies Apollonian, Steiner, and Ford circles.
-- **Domain Coloring, "The Color of a Function"** (Fractals): every complex
-  function painted (hue is phase, brightness is size); zeros are pinwheels you
-  can count. Ties directly to the Studio engine; see the flagship note below.
+- **Domain Coloring / Function Painter** **built** (`function-painter`): every
+  complex map painted (phase as symbol, magnitude as density); zeros are
+  pinwheels you can count. Curated rack of maps; free Studio expression path
+  remains open for later.
 - **Diffusion-Limited Aggregation, "The Frost"** **built** (`dla-frost`): random
   walkers freeze on contact and build lightning, frost, and coral. CLICK: PLANT
   A SEED.
@@ -676,20 +677,13 @@ easy-first, since these are the batch to open the post-substrate content wave.
 - **Steiner Chains, "The Ring That Always Closes"** **built** (`steiner`): a ring
   of circles that, once it closes, closes from every angle.
 
-**The scope flagship: the Studio Function Painter (domain coloring).** Times
-Tables is the onboarding flagship (one dial, a floor-tilting reveal, hits a
-seven-year-old). The product-defining flagship should express the ceiling: domain
-coloring wired to the Studio expression engine is the one room that is
-simultaneously a Toy, a Studio, and a museum of the whole catalog. Type `z^2` for
-two pinwheels; type `z^2 + c` and drag c to sit inside the Mandelbrot's engine;
-type the zeta function and stare at the million-dollar zeros. Newton fractals,
-the whole Fractals wing, and the Zeta Walk are all special cases of this one
-surface, so it reframes everything else as instances of itself, which is the
-definition of a flagship. It would prove that Studio programs can become rooms
-with a single screenshot-perfect artifact, and it can build on parts that exist (the
-expression engine, the raster, phase-to-pitch sonification, the complex-iteration
-path). Ship Times Tables to prove the feel; build the Function Painter to prove
-the scope.
+**The scope flagship: the Studio Function Painter (domain coloring).** **Built**
+as catalog room `function-painter`: a curated rack of complex maps with domain
+coloring (phase as symbol, magnitude as density), DRAG to pick map and tune c.
+Times Tables remains the onboarding flagship; Function Painter is the ceiling
+toy. Free-text Studio expression wiring into this surface is still a later path
+(the real expression engine already plots reals; complex field programs are the
+next Studio step).
 
 **New causal insight-chains** (each room's reveal hands you the next room's tool
 or question, deeper than thematic grouping; fold into `CONSTELLATION.md`):

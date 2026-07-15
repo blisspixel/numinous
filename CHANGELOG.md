@@ -6,6 +6,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Function Painter (`function-painter`, catalog 77): domain coloring of a rack
+  of complex maps (z^2, z^2+c, 1/z, sin z, e^z, z^3-1); phase as symbol,
+  magnitude as density; DRAG picks map and tunes c.
 - Awe Engine Tier A/B completion (catalog 76): Apollonian gasket, Circle
   Inversion, DLA Frost, Kaprekar 6174, Steiner chain, Hopf linked rings,
   Wireworld, Buddhabrot, Spherical Harmonics.
