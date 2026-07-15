@@ -6,6 +6,7 @@
 pub const FRACTAL_MAX_ITER: u32 = 160;
 
 pub mod arecibo;
+pub mod audioactive;
 pub mod barnsley_fern;
 pub mod buffon_needle;
 pub mod cellular_automata;
@@ -16,6 +17,7 @@ pub mod collatz;
 pub mod cult_of_pi;
 pub mod double_pendulum;
 pub mod epicycles;
+pub mod fastest_fall;
 pub mod first_rain;
 pub mod ford_circles;
 pub mod galton_board;
@@ -32,6 +34,7 @@ pub mod lorenz;
 pub mod lsystem;
 pub mod mandelbrot;
 pub mod mobius;
+pub mod phantom_jam;
 pub mod prime_spirals;
 pub mod quine;
 pub mod random_walk;

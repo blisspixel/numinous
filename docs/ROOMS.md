@@ -437,21 +437,20 @@ Physarum Tokyo result).
 
 - Physics: **The Magnet** **built** (`the-magnet`; DRAG: TURN THE HEAT; Ising
   criticality near Onsager Tc), **The First Rain** **built** (`first-rain`),
-  **Kepler's Loom** **built** (`kepler-loom`; DRAG: FLING A MOON; ellipses and
-  equal areas), **The Fastest Fall** (DRAG: DRAW YOUR TRACK; race the cycloid
-  and lose; the calculus of variations door).
-- Deep math: **Audioactive Decay** (CLICK: SPEAK THE NEXT LINE; look-and-say
-  shatters into 92 elements, Conway's constant), **The Busy Beaver** (CLICK:
+  **Kepler's Loom** **built** (`kepler-loom`), **The Fastest Fall** **built**
+  (`fastest-fall`; DRAG: DRAW YOUR TRACK; cycloid brachistochrone).
+- Deep math: **Audioactive Decay** **built** (`audioactive`; CLICK: SPEAK THE
+  NEXT LINE; look-and-say and Conway's constant), **The Busy Beaver** (CLICK:
   FLIP ONE RULE; five rules run 47,176,870 steps then stop on purpose;
   undecidability worn lightly), **The Chord Game** (elliptic-curve addition
   as bank shots; the group law that locks your credit card), **The
   Upside-Down Ruler** (p-adic tower; ...999999 + 1 = 0, so ...999999 = -1),
   **The 720 Degree Room** (Dirac's belt; DRAG rotates a tethered stone; 360
   is not enough, 720 is; the quaternion double cover felt in the wrist).
-- Fun-first: **Phantom Jam** (HOLD: BRAKE; one tap births a jam that rolls
-  backward forever; Sugiyama 2008), **The Whispering Table** (PULL AND
-  RELEASE: SHOOT; elliptic billiards weave caustics; chaos is impossible
-  here), **Murmuration** (HOLD: BE THE FALCON; boids with seven neighbors;
+- Fun-first: **Phantom Jam** **built** (`phantom-jam`; HOLD: BRAKE; Sugiyama
+  2008 upstream jam), **The Whispering Table** (PULL AND RELEASE: SHOOT;
+  elliptic billiards weave caustics; chaos is impossible here), **Murmuration**
+  (HOLD: BE THE FALCON; boids with seven neighbors;
   the shape exists in no bird's head), **The Wet Oracle** (DRAG: SMEAR THE
   FOOD; race a slime mold to the shortest path and lose; Tero 2010), **The
   Unlit Room** (DRAG: CRANK THE LANTERN; the illumination problem; one point
@@ -869,15 +868,16 @@ edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
 
 ### What we already have (feel, not curriculum)
 
-**Built now (42 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+**Built now (45 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
 Julia, Cult of Pi, Life and Cellular Automata and Langton, The Sandpile, The
-First Rain, The Magnet, Chaos Game, Golden Angle, Galton and Buffon, Lissajous,
-Chladni Figures, Ripple Tank, The Coffee Cup, Ford Circles, The Zeta Walk, The
-Starbow, Slingshot, Kepler's Loom, Harmonograph, Epicycles, L-System and
-Barnsley, Lorenz and Double Pendulum and Logistic Map, Collatz, Prime Spirals,
-Goldbach, Voronoi, Random Walk, Arecibo, Mobius, Zeno, The Pour, Slope Rider,
-Quine, Strange Loop, plus games (Quiz, Munch, Arcade, Nim, Gauntlet, SETI,
-Aliens, Codebreaker, and kin), Studio, radio, Journey, Cairn, predict.
+First Rain, The Magnet, Phantom Jam, Chaos Game, Golden Angle, Galton and
+Buffon, Lissajous, Chladni Figures, Ripple Tank, The Coffee Cup, Ford Circles,
+The Zeta Walk, The Starbow, Slingshot, Kepler's Loom, The Fastest Fall,
+Audioactive Decay, Harmonograph, Epicycles, L-System and Barnsley, Lorenz and
+Double Pendulum and Logistic Map, Collatz, Prime Spirals, Goldbach, Voronoi,
+Random Walk, Arecibo, Mobius, Zeno, The Pour, Slope Rider, Quine, Strange Loop,
+plus games (Quiz, Munch, Arcade, Nim, Gauntlet, SETI, Aliens, Codebreaker, and
+kin), Studio, radio, Journey, Cairn, predict.
 
 **Designed in earlier waves (do not redesign, do build):** Next Wave remainder
 (physics/math/fun/cosmic cards still listed under The Next Wave); Awe Engine

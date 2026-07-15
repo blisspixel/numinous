@@ -6,9 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Phantom Jam (`phantom-jam`), The Fastest Fall (`fastest-fall`), and
+  Audioactive Decay (`audioactive`): Sugiyama upstream traffic jam; cycloid
+  brachistochrone race; look-and-say generations toward Conway's constant.
+  Catalog is 45 rooms.
 - Kepler's Loom room (`kepler-loom`, Motion & Dynamics): inverse-square orbit
   integration; ambient elliptical moon; DRAG: FLING A MOON reports eccentricity
-  and peri/apo. Catalog is 42 rooms.
+  and peri/apo.
 - The Magnet room (`the-magnet`, Emergence): Metropolis Ising lattice; ambient
   and DRAG heat through Onsager Tc; magnetization grades ORDER/CRIT/NOISE.
 - The First Rain room (`first-rain`, Emergence): site percolation on a square
