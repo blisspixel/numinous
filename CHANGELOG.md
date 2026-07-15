@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six classical inventions (catalog 268): Kampyle of Eudoxus, Hippopede,
+  Cartesian Oval, Berry Phase, Runge Phenomenon, Chebyshev Nodes.
 - Six classical inventions (catalog 262): Maclaurin Trisectrix, Watt Curve,
   Devil Curve, Capillary Meniscus, Rabi Flopping, Sphere Geodesics.
 - Six classical inventions (catalog 256): Tautochrone, Catenoid, Helicoid,
