@@ -6,10 +6,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
-- Registry invariant `poke_changes_status_or_room_is_phase_scrub`: every
-  touchable catalog room must change status after a center poke, except an
-  explicit allowlist of phase-scrub rooms (pour, slope, Times Tables, logistic
-  map, Lissajous, Harmonograph, Arecibo).
+- The Pour and Slope Rider action status now freeze the theorem at the hand:
+  a probe reports fill rate equals height plus the poured total, and a dropped
+  rider reports board tilt plus hill height. The catalog invariant
+  `poke_changes_status_for_every_catalog_room` requires every room to change
+  status after a center poke (no phase-scrub allowlist). Focused regressions
+  lock both rooms.
+- Registry invariant that every touchable catalog room changes status after a
+  center poke (evolved from the earlier allowlisted phase-scrub form).
 - Lorenz action status names seeded shadow storms; Double Pendulum status
   labels PINNED, FLUNG, RE-DROP, or CANCELLED beside the twin gap so gesture
   and poke paths both speak after a hand act.
