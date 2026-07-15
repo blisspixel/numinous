@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six classical inventions (catalog 124): Ikeda Map, Duffing Well, Levy C Curve,
+  Tinkerbell Map, Gingerbreadman Map, Menger Face.
 - Six classical inventions (catalog 118): Thue-Morse, Rossler Scroll, Cantor /
   Devil's Staircase, Weierstrass, Peano Curve, Van der Pol Cycle.
 - Six classical inventions (catalog 112): Dragon Curve, Fibonacci Word, Cubic

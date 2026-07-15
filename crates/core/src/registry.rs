@@ -148,6 +148,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::weierstrass::Weierstrass::new_with(variation)),
         Box::new(rooms::peano_curve::PeanoCurve::new_with(variation)),
         Box::new(rooms::van_der_pol::VanDerPol::new_with(variation)),
+        Box::new(rooms::ikeda::Ikeda::new_with(variation)),
+        Box::new(rooms::duffing::Duffing::new_with(variation)),
+        Box::new(rooms::levy_c::LevyC::new_with(variation)),
+        Box::new(rooms::tinkerbell::Tinkerbell::new_with(variation)),
+        Box::new(rooms::gingerbread::Gingerbread::new_with(variation)),
+        Box::new(rooms::menger_slice::MengerSlice::new_with(variation)),
     ]
 }
 
