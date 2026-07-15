@@ -6,6 +6,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Frontier and universal wonder catalog pass: `ROOMS.md` gains a research-backed
+  designed-not-built wave (high-dimension concentration, uncertainty dials,
+  learning landscapes, topology eversions, channel repair, labeled frontier
+  gestures) with cross-mind filters and sequencing; `ROADMAP.md` adds Exceptional
+  Path Phase F and 1.x hooks. No product 0.2 claim; planning only.
 - Munch crunch one-shot: each bite toggle plays a short deterministic noise
   tick over the room score without restarting the bed. Core `munch_crunch`
   renders the sample; audio mixer `play_oneshot` consumes it once. Focused

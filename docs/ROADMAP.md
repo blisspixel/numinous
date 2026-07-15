@@ -176,6 +176,13 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   (~21s dwell, advance only near 1/8-phase edges), and F1 dismissible Help that
   opens on first entry. Edits pause Auto. Phrase-aligned crossfade morphs and
   formative stranger sessions remain open for the 0.3 exit criterion.
+- **Designed (Frontier and universal wonder wave, July 2026 research pass):** a
+  step-back inventory of built rooms, existing designed waves, and new
+  counterintuitive experiences for any mind (high-dimension concentration,
+  uncertainty dials, learning landscapes, topology eversions, channel repair,
+  carefully labeled frontier gestures). Full cards live in `ROOMS.md`. Not a
+  claim that product 0.2 is complete; a catalog ambition ledger for Phase F and
+  1.x.
 - **Next, above everything (the founder's directive, July 2026):** **rooms become playable, not watchable, and no two catalog visits are the same.** The substrate is live across app, CLI, and MCP. The legibility pass makes weak responses explicit across Life, Mandelbrot, Buffon, Prime Spirals, Cult of Pi, Golden Angle, Barnsley Fern, Mobius, Logistic Map, Zeno, Julia, Goldbach, Langton's Ant, Fourier Epicycles, Random Walk, and Quine. `Room::status_input` lets every face explain the consequence from the same bounded history used to render it. The automated all-room, all-game, all-screen matrix is complete at 349 states, with exact inventory, nonblank, size, stale-output, deterministic opening states, every persistent game display branch, 14 controller or pause receipts, 16 explicit audio-state receipts, 12 Times Tables landmark and earned-goal receipts, default and compact immediate and delayed interaction families, ordered and closed gestures, semantic response checks, changed-pixel and spatial-support thresholds, support density, adjacent 32-pixel spatial-tile coherence, and minimum color change. A regression rejects four isolated corner markers, while this remains coarse renderer-path evidence rather than native event automation or subjective polish certification. The latest grouped QA rounds also hardened controller-visible control truth, pause isolation, CLI and MCP input boundaries, pure-EOF game exits, structured discovery, isolated MCP play profiles, and Windows PATH precedence. Next, validate arrival-card clarity with real human participants and deepen held or causal interaction wherever a one-shot response still fails the kid principle.
 - **Done (full-roster refinement round):** all 42 simulated review lenses were split exactly once across first contact and accessibility, interaction and truth, and games plus agent faces. The pass fixed redirected CLI ANSI, responsive Quiz-result loss, four overbroad mathematical claims, ambiguous motif-versus-sonification output, and positionless Studio parse errors. It also falsified an apparent Fern deletion by direct pixel comparison. These are engineering findings from reproduced evidence; none of the simulated reactions satisfies a participant gate. Controller HUD parity, its route gaps, compatibility-preserving compact MCP responses, causal first-touch presentation, and visual sound state are now closed. Its ranked queue began with deeper Galton and Life interaction loops, both now complete; continued music composition review remains.
 - **Done (Galton causal experiment loop):** the completed pile no longer moves
@@ -566,6 +573,15 @@ above, in leverage order. They deepen what exists rather than jumping the
 - **Phase E, the catalog deepens.** The cheap-and-gorgeous classical-geometry and
   sonification-first batch, the causal insight-chains, and the scope-flagship
   (the Studio Function Painter). Owner doc: `ROOMS.md` (the Awe Engine wave).
+- **Phase F, frontier and universal wonder (designed July 2026 research pass).**
+  After the human 0.2 gates and the first content waves, deepen the catalog with
+  rooms that any mind might find counterintuitive: high-dimension concentration,
+  uncertainty as a dial, learning landscapes, error-correcting channels, soap
+  films, topology eversions, and carefully labeled frontier gestures (duality,
+  soft deformation, causal intervention, Landauer cost). Owner doc: `ROOMS.md`
+  section "Frontier and universal wonder wave." Explicit non-rooms (full
+  Langlands, full string landscapes) stay plaques or Function Painter subjects,
+  never fake solved-universe toys. Keep open-door claims on a dated ledger.
 
 The standing anti-pattern all six lanes named, added to the always-on tracks:
 **nothing counts as learned, mastered, collected, or won without an act of
@@ -598,6 +614,11 @@ XP-treadmill failure mode.
 Depth and polish that extend 1.0 without breaking it. No new pillars, just more of the good, higher.
 
 - More rooms, more insight-chains, more radio stations and Visual Eras.
+- Build the **Frontier and universal wonder** tier S batch from `ROOMS.md`
+  (dimension concentration, uncertainty dial, gradient valley, attention light,
+  soap film, error that heals) so modern high-D and learning intuition sits
+  beside classical awe. Then the labeled frontier gestures (dual views, soft
+  deformation, causal doors, Landauer) without claiming research results.
 - Build **The Long Shot** after the flagship gates: a fun-first angle-and-power
   artillery duel whose replay can unfold projectile motion, derivatives,
   integrals, phase space, uncertainty, and clearly labeled scale-shift models.
@@ -610,7 +631,9 @@ Depth and polish that extend 1.0 without breaking it. No new pillars, just more 
   game. Zermelo and backward induction, worn lightly; pairs with the Traveling
   Salesman stub as the two faces of combinatorial search (one space yields to
   exhaustion, one defeats it). Owner doc: `ROOMS.md`.
-- The **boss rooms** (*Sizes of Infinity*, *Hyperbolic Space*), the hardest-to-make-playable, highest-ceiling rooms, as they earn their quality bar.
+- The **boss rooms** (*Sizes of Infinity*, *Hyperbolic Space*, Hopf Fibration,
+  Sphere Eversion), the hardest-to-make-playable, highest-ceiling rooms, as they
+  earn their quality bar.
 - Refinement driven by the telemetry and playtest loops (`QUALITY.md`): tuning defaults, pacing, and difficulty toward measured awe and flow.
 - Localization and broader hardware support.
 - **Extensibility Tier 1 hardening (see `EXTENSIBILITY.md`):** the `.num`

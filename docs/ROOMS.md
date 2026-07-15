@@ -852,3 +852,128 @@ been running the translator the whole time. This is the strongest possible
 statement of the "same wonder, two kinds of mind" thesis (`VISION.md`), the
 digital-mind peerhood in `DIGITAL_MINDS.md`, and the contribution ethos in
 `ROADMAP.md`: math is how anyone leaves a light for anyone else, across any gap.
+
+## Frontier and universal wonder wave (July 2026 research pass)
+
+A step-back pass after the 0.2 machine grind: inventory what is built, what is
+already designed, and which gaps still block "absolutely exceptional" for any
+mind that can touch structure. Owner roadmap hooks: Exceptional Path Phase E,
+1.x depth, and the 2.0 frontier. **Designed, not built.** Every entry still faces
+the Definition of Done, honest feasibility, and mathematician sign-off. Cutting-
+edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
+*full model* (the math is the room). Never claim a research proof from a demo.
+
+### What we already have (feel, not curriculum)
+
+**Built now (31 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+Julia, Cult of Pi, Life and Cellular Automata and Langton, Chaos Game, Golden
+Angle, Galton and Buffon, Lissajous and Harmonograph, Epicycles, L-System and
+Barnsley, Lorenz and Double Pendulum and Logistic Map, Collatz, Prime Spirals,
+Goldbach, Voronoi, Random Walk, Arecibo, Mobius, Zeno, The Pour, Slope Rider,
+Quine, Strange Loop, plus games (Quiz, Munch, Arcade, Nim, Gauntlet, SETI,
+Aliens, Codebreaker, and kin), Studio, radio, Journey, Cairn, predict.
+
+**Designed in earlier waves (do not redesign, do build):** Next Wave first eight
+(Sandpile, Chladni, Ripple, Coffee Cup, Ford Circles, Zeta Walk, Starbow,
+Slingshot) and the rest of that wave; Awe Engine tier S/A/B; Long Shot, Only
+Move, Dimension Dial; First Contact handshake room; Function Painter scope
+flagship; classical geometry and sonification-first batches.
+
+**Honest gaps this pass targets:** high-dimension intuition, information and
+noise as felt structure, quantum and measurement without mysticism, learning
+and optimization (especially for digital minds), topology that bends intuition,
+duality as a play verb, and open-door frontiers that stay current.
+
+### Design filters (any race, world, or time)
+
+A candidate survives only if:
+
+1. **Awe in ten seconds without words** (sight, sound, or both can carry it).
+2. **A counterintuitive gasp** (the hand discovers a law that words spoil).
+3. **Cross-mind portability** (structure first; culture-specific metaphor second).
+4. **Truthful depth** (Toy / Aha / Reveal; open doors dated and sourced).
+5. **Playable, not lecture** (a verb that changes the mathematics).
+6. **CPU-honest** (or GPU-honest with CPU fallback), deterministic, offline.
+
+### Tier S: highest wow per build, still missing
+
+| Room (working title) | Gasp | Verb | Why it is universal | Feasibility |
+| --- | --- | --- | --- | --- |
+| **The Curse of Dimension** | Almost all volume of a high-D ball sits in a thin shell; "middle" disappears. | DRAG: RAISE DIMENSION | Pure measure, no language. | Build 2: shells and histograms. |
+| **The Concentration Bell** | Random points in high D all sit near the same radius; extremes die. | CLICK: DRAW A SAMPLE | Same math as modern ML geometry. | Build 2: sampling + rings. |
+| **Error That Heals** | Flip bits; Hamming (or simple parity) repairs until a cliff. | DRAG: RAISE THE NOISE | Communication across any channel. | Build 2; pairs Message That Heals. |
+| **The Uncertainty Dial** | Narrower in time, wider in frequency; you cannot own both. | DRAG: SQUEEZE THE WINDOW | Fourier truth as a physical trade. | Build 2: dual plots + tones. |
+| **Soap Film** | The surface finds the least area; hard problems look effortless. | PIN: HOLD A WIRE | Nature's calculus of variations. | Build 2-3: discrete relax. |
+| **Sphere Eversion** | A sphere turns inside out without creases (smoothed, not paper). | HOLD: PUSH THROUGH | Topology's permission slip. | Build 3: guided morph. |
+| **The Gradient Valley** | Descent finds a basin; a ridge blocks another; landscape lies. | DROP: A SEEKER | How learning *feels* to any optimizer, including digital minds. | Build 2: 2D loss field. |
+| **Attention as Soft Light** | One query lights a few keys; the rest go dim. Weights are the story. | DRAG: MOVE THE QUERY | Modern sequence models, made geometric. | Build 2-3: toy tokens. |
+
+### Tier A: counterintuitive classics that still empty the floor
+
+| Room | Gasp | Verb | Notes |
+| --- | --- | --- | --- |
+| **Banach-Tarski Shadow** | Two spheres from one, via non-measurable pieces (honest "axiom of choice" label). | SPLIT: FOLLOW THE PIECES | Philosophy-grade gasp; careful copy. Build 3-4. |
+| **Hilbert's Hotel** | Full hotel, room for one more bus, until the reals check in. | ADMIT: THE NEXT GUEST | Boss room for countable infinity; ties Sizes of Infinity. |
+| **Braess Trap** | Add a road; average travel time rises. | BUILD: A SHORTCUT | Social systems as math; pairs Phantom Jam. |
+| **Nontransitive Dice** | A beats B, B beats C, C beats A. | ROLL: THE TRIO | Fairness and ranking collapse. Build 1-2. |
+| **Parrondo's Trap** | Two losing games, alternating, win. | TOGGLE: THE RULE | Counterintuitive probability twin of Braess. |
+| **The Illumination Flaw** | One dark point no light reaches (Tokarsky-style room). | DRAG: THE LANTERN | Already persona-named as Unlit Room; keep priority. |
+| **Linked Rings (Hopf)** | Circles all linked, none touching; qubit shadow. | SPIN: THE FIBER | Awe Engine quantum wing; build 3-4. |
+| **Minimal Path on Soap** | Steiner tree from a film; three 120 degree meets. | PIN: THE PINS | Geometry + nature. Build 2. |
+
+### Tier F: frontier gestures (cutting-edge ideas, honest toys)
+
+These are *not* research simulators. Each is a truthful toy of one idea that
+frontier math and physics currently care about, labeled so a PhD is not misled
+and a newcomer is not sold a lie.
+
+| Room | Frontier idea (gesture) | Playable core | Open door to name honestly |
+| --- | --- | --- | --- |
+| **The Critical Line** | Zeta zeros as cadences (Zeta Walk already designed). | Climb Im(s); hear returns. | RH unsolved; keep OPEN_DOORS ledger. |
+| **The Code That Survives Fire** | Quantum / classical error correction intuition. | Flip, measure, repair until cliff. | Surface-code full model is later GPU. |
+| **Two Descriptions, One Truth** | Duality: one system, two languages (mirror symmetry lite). | Toggle dual views of same object. | Langlands is a deep cut plaque, not a room. |
+| **The Soft Proof** | Homotopy: continuous deform of a path or shape. | DRAG: DEFORM WITHOUT TEAR | Full HoTT is out of scope; morph is in. |
+| **The Learning Clock** | Continual learning: new task, old skill fades or holds. | TRAIN: TASK A, THEN B | Digital-mind relevant; pairs DIGITAL_DEVELOPMENT. |
+| **Causal Doors** | Intervention vs observation (toy do-calculus). | OPEN: A VALVE, WATCH THE REST | Agency without metaphysics. |
+| **Landauer's Price** | Erase a bit, pay heat (toy meter). | FORGET: ONE BIT | Computation has a physical cost. |
+| **The Busy Shore** | Busy Beaver already designed; keep as undecidability worn lightly. | FLIP: ONE RULE | BB(5) known; larger n open. |
+| **Prime Gap Weather** | Twin primes / gaps as a landscape, not a lecture. | DRAG: ALONG N | Open doors stay open. |
+| **The Mirror of Forms** | Category-lite: objects and arrows; compose two maps. | SNAP: ARROW TO ARROW | Composition as the verb; no jargon wall. |
+
+**Explicit non-rooms (depth, not toys):** full geometric Langlands, full string
+landscapes, full AGI alignment proofs, full quantum chemistry. These may appear
+as codex plaques, deep cuts, or Function Painter expressions, never as fake
+"solved the universe" toys.
+
+### New insight-chains (fold into CONSTELLATION.md when built)
+
+- **The Dimension Thread:** Curse of Dimension → Concentration Bell → Gradient
+  Valley → Attention as Soft Light. High-D modern math as one journey from volume
+  to learning.
+- **The Channel Thread:** Arecibo → Error That Heals → Message That Heals →
+  Landauer's Price. Communication, noise, and physical cost.
+- **The Dual Thread:** Uncertainty Dial → Fourier Epicycles → Domain Coloring →
+  Two Descriptions. One object, many faces.
+- **The Fairness Thread:** Nontransitive Dice → Braess Trap → Parrondo → voting
+  / Arrow deep cut. Preference and traffic break naive ranking.
+- **The Open Door Thread:** Kaprekar (solved) → Collatz → Recaman → Prime Gap
+  Weather → Zeta Walk. Childish rules, adult cliffs.
+
+### Sequencing recommendation (after 0.2 human gates)
+
+1. Ship **Function Painter** scope flagship (already designed) so Studio becomes
+   a museum of the catalog.
+2. Open **Tier S** dimension + uncertainty + gradient rooms (cheap, modern, cross-
+   mind).
+3. Build Next Wave first eight and Awe Engine tier S (already ranked).
+4. Add **First Contact handshake** as the meta room that reframes the collection.
+5. Boss rooms (Sizes of Infinity, Hyperbolic, Hopf, Sphere Eversion) when quality
+   bar and GPU glow allow.
+6. Keep **OPEN_DOORS.md** (proposed earlier) current so open problems never rot.
+
+### Bar for "exceptional"
+
+The catalog is not a checklist of theorems. It is a set of *experiences* where
+a seven-year-old, a working mathematician, and a digital mind can each meet the
+same structure and leave with a different private wonder. If a candidate cannot
+survive that test, it stays a deep cut or a plaque, not a room.
