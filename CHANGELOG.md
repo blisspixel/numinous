@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Four more Next Wave rooms (catalog 55): Tilt the Cone, The Stretch, Laplace's
+  Clockwork, The Message That Heals.
 - Six Next Wave rooms (catalog 51): Busy Beaver, The 720 Degree Room,
   Upside-Down Ruler, Murmuration, Whispering Table, Wet Oracle.
 - Phantom Jam (`phantom-jam`), The Fastest Fall (`fastest-fall`), and
