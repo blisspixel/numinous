@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six classical inventions (catalog 136): Clifford, Peter de Jong, Svensson,
+  Bedhead, Hopalong, Gumowski-Mira attractors.
 - Six classical inventions (catalog 130): Bifurcation Weather, Stern-Brocot Tree,
   Josephus Circle, Calkin-Wilf Tree, Gibbs Overshoot, Sierpinski Arrowhead.
 - Six classical inventions (catalog 124): Ikeda Map, Duffing Well, Levy C Curve,

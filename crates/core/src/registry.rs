@@ -162,6 +162,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::sierpinski_arrowhead::SierpinskiArrowhead::new_with(
             variation,
         )),
+        Box::new(rooms::clifford::Clifford::new_with(variation)),
+        Box::new(rooms::dejong::DeJong::new_with(variation)),
+        Box::new(rooms::svensson::Svensson::new_with(variation)),
+        Box::new(rooms::bedhead::Bedhead::new_with(variation)),
+        Box::new(rooms::hopalong::Hopalong::new_with(variation)),
+        Box::new(rooms::gumowski_mira::GumowskiMira::new_with(variation)),
     ]
 }
 
