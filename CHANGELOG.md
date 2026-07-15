@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six fractal and intermittency inventions (catalog 160): Gauss Map, Manneville,
+  Coupled Tents, Koch Snowflake, Cesaro Fractal, Minkowski Sausage.
 - Six chaos-geometry inventions (catalog 154): Smale Horseshoe, Logistic Orbit,
   Sinai Billiard, Henon-Heiles, Quadratic Map, Angle Doubling.
 - Six classical map inventions (catalog 148): Lozi, Baker's Map, Tent Map,

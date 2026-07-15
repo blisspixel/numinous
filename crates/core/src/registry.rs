@@ -190,6 +190,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::henon_heiles::HenonHeiles::new_with(variation)),
         Box::new(rooms::quadratic_map::QuadraticMap::new_with(variation)),
         Box::new(rooms::doubling_map::DoublingMap::new_with(variation)),
+        Box::new(rooms::gauss_map::GaussMap::new_with(variation)),
+        Box::new(rooms::manneville::Manneville::new_with(variation)),
+        Box::new(rooms::coupled_tent::CoupledTent::new_with(variation)),
+        Box::new(rooms::koch_snowflake::KochSnowflake::new_with(variation)),
+        Box::new(rooms::cesaro::Cesaro::new_with(variation)),
+        Box::new(rooms::minkowski::Minkowski::new_with(variation)),
     ]
 }
 
