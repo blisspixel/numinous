@@ -272,6 +272,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::trochoid::Trochoid::new_with(variation)),
         Box::new(rooms::hypotrochoid::Hypotrochoid::new_with(variation)),
         Box::new(rooms::epitrochoid::Epitrochoid::new_with(variation)),
+        Box::new(rooms::involute::Involute::new_with(variation)),
+        Box::new(rooms::evolute::Evolute::new_with(variation)),
+        Box::new(rooms::pedal::Pedal::new_with(variation)),
+        Box::new(rooms::roulette::Roulette::new_with(variation)),
+        Box::new(rooms::damped_sine::DampedSine::new_with(variation)),
+        Box::new(rooms::beats::Beats::new_with(variation)),
     ]
 }
 

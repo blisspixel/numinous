@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six classical inventions (catalog 232): Involute, Ellipse Evolute, Pedal
+  Curve, Roulette Gallery, Damped Sine, Beats.
 - Six classical curve inventions (catalog 226): Semicubical, Kappa, Circular
   Caustic, Trochoid, Hypotrochoid, Epitrochoid.
 - Six classical curve inventions (catalog 220): Gerono Eight, Cissoid, Strophoid,
