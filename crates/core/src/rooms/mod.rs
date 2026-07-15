@@ -35,6 +35,7 @@ pub mod quine;
 pub mod random_walk;
 pub mod ripple;
 pub mod sandpile;
+pub mod slingshot;
 pub mod slope_rider;
 pub mod starbow;
 pub mod strange_loop;

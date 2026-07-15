@@ -6,10 +6,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Slingshot room (`slingshot`, Motion & Dynamics): pull-and-release probe
+  under multi-sun Newtonian gravity; assists counted on speed-gain flybys;
+  HOLD plants a sun; misses become comets. Completes the Next Wave first eight.
+  Catalog is 39 rooms.
 - The Starbow room (`starbow`, Shape & Space): McKinley relativistic aberration
   maps each rest-frame star into a forward cone as beta climbs; `t` burns
   ambient speed; HOLD: BURN under the hand; status reports v/c, gamma, and
-  forward fraction. Catalog is 38 rooms.
+  forward fraction.
 - The Zeta Walk room (`zeta-walk`, Number & Pattern): alternating eta partial
   sums on Re(s)=1/2 draw a spiral that tightens near tabulated Riemann zeros;
   `t` climbs imag height; DRAG: CLIMB THE LINE; sound resolves at cadences.
