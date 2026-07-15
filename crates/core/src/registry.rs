@@ -134,6 +134,14 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::goldbach::Goldbach::new_with(variation)),
         Box::new(rooms::quine::Quine::new_with(variation)),
         Box::new(rooms::strange_loop::StrangeLoop::new_with(variation)),
+        Box::new(rooms::dragon_curve::DragonCurve::new_with(variation)),
+        Box::new(rooms::fibonacci_word::FibonacciWord::new_with(variation)),
+        Box::new(rooms::newton_basins_cubic::NewtonCubic::new_with(variation)),
+        Box::new(rooms::henon::Henon::new_with(variation)),
+        Box::new(rooms::rules30::Rules30::new_with(variation)),
+        Box::new(rooms::mandelbulb_slice::MandelbulbSlice::new_with(
+            variation,
+        )),
     ]
 }
 
