@@ -436,11 +436,11 @@ Physarum Tokyo result).
 **The rest of the wave, by aspect:**
 
 - Physics: **The Magnet** (DRAG: TURN THE HEAT; Ising criticality,
-  universality, honest 1/f crackle), **The First Rain** (DRAG: MAKE IT RAIN;
-  percolation's cliff at p=0.5927), **Kepler's Loom** (DRAG: FLING A MOON;
-  every throw an ellipse, equal areas as metronome), **The Fastest Fall**
-  (DRAG: DRAW YOUR TRACK; race the cycloid and lose; the calculus of
-  variations door).
+  universality, honest 1/f crackle), **The First Rain** **built**
+  (`first-rain`; DRAG: MAKE IT RAIN; percolation's cliff at p=0.5927),
+  **Kepler's Loom** (DRAG: FLING A MOON; every throw an ellipse, equal areas
+  as metronome), **The Fastest Fall** (DRAG: DRAW YOUR TRACK; race the
+  cycloid and lose; the calculus of variations door).
 - Deep math: **Audioactive Decay** (CLICK: SPEAK THE NEXT LINE; look-and-say
   shatters into 92 elements, Conway's constant), **The Busy Beaver** (CLICK:
   FLIP ONE RULE; five rules run 47,176,870 steps then stop on purpose;
@@ -870,15 +870,15 @@ edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
 
 ### What we already have (feel, not curriculum)
 
-**Built now (39 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
-Julia, Cult of Pi, Life and Cellular Automata and Langton, The Sandpile, Chaos
-Game, Golden Angle, Galton and Buffon, Lissajous, Chladni Figures, Ripple Tank,
-The Coffee Cup, Ford Circles, The Zeta Walk, The Starbow, Slingshot,
-Harmonograph, Epicycles, L-System and Barnsley, Lorenz and Double Pendulum and
-Logistic Map, Collatz, Prime Spirals, Goldbach, Voronoi, Random Walk, Arecibo,
-Mobius, Zeno, The Pour, Slope Rider, Quine, Strange Loop, plus games (Quiz,
-Munch, Arcade, Nim, Gauntlet, SETI, Aliens, Codebreaker, and kin), Studio,
-radio, Journey, Cairn, predict.
+**Built now (40 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+Julia, Cult of Pi, Life and Cellular Automata and Langton, The Sandpile, The
+First Rain, Chaos Game, Golden Angle, Galton and Buffon, Lissajous, Chladni
+Figures, Ripple Tank, The Coffee Cup, Ford Circles, The Zeta Walk, The Starbow,
+Slingshot, Harmonograph, Epicycles, L-System and Barnsley, Lorenz and Double
+Pendulum and Logistic Map, Collatz, Prime Spirals, Goldbach, Voronoi, Random
+Walk, Arecibo, Mobius, Zeno, The Pour, Slope Rider, Quine, Strange Loop, plus
+games (Quiz, Munch, Arcade, Nim, Gauntlet, SETI, Aliens, Codebreaker, and kin),
+Studio, radio, Journey, Cairn, predict.
 
 **Designed in earlier waves (do not redesign, do build):** Next Wave remainder
 (physics/math/fun/cosmic cards still listed under The Next Wave); Awe Engine

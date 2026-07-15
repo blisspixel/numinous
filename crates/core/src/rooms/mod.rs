@@ -16,6 +16,7 @@ pub mod collatz;
 pub mod cult_of_pi;
 pub mod double_pendulum;
 pub mod epicycles;
+pub mod first_rain;
 pub mod ford_circles;
 pub mod galton_board;
 pub mod game_of_life;

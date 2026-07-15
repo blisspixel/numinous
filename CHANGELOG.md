@@ -6,10 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The First Rain room (`first-rain`, Emergence): site percolation on a square
+  lattice; `t` and DRAG: MAKE IT RAIN dial occupancy p; status reports SPAN/DRY
+  against p_c about 0.5927. Catalog is 40 rooms.
 - Slingshot room (`slingshot`, Motion & Dynamics): pull-and-release probe
   under multi-sun Newtonian gravity; assists counted on speed-gain flybys;
   HOLD plants a sun; misses become comets. Completes the Next Wave first eight.
-  Catalog is 39 rooms.
 - The Starbow room (`starbow`, Shape & Space): McKinley relativistic aberration
   maps each rest-frame star into a forward cone as beta climbs; `t` burns
   ambient speed; HOLD: BURN under the hand; status reports v/c, gamma, and
