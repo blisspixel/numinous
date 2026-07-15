@@ -40,9 +40,11 @@ cargo test --workspace --all-targets --locked
 cargo build --workspace --locked
 cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'
 cargo deny check                         # if cargo-deny is installed; CI always runs it
+cargo audit                              # if cargo-audit is installed; CI always runs it
 bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
+
 
 Expected right now: **format and clippy clean, 1,350 all-target test cases pass,
 93.64% region cover, and 93.49% line cover**. The `gpu` and `audio` crates plus the app event

@@ -6,6 +6,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Cycle 105 security hardening: MCP tool schemas now declare and enforce
+  `maxLength` on catalog ids, Studio expressions, and Cairn leave/author
+  strings; the schema validator rejects oversize strings before dispatch;
+  `play_room` rejects hostile canvas sizes at the tool body as defense in
+  depth; `sing_expression` notes are schema-bounded to 1 through 64.
+  `cargo-audit` is a CI gate with project ignores in `.cargo/audit.toml`
+  aligned to `deny.toml` (build-time quick-xml via wayland-scanner), and
+  both verify scripts run it when installed. ENGINEERING documents the local
+  single-user threat model and dual supply-chain path. Focused schema
+  regressions cover oversize ids, expressions, bequests, and note counts.
 - The stable App room bed is now a first-class cross-face contract. CLI
   `sonify --layer room-bed` exports a deterministic PCM16 projection of the
   shared 16 kHz stereo floating-point source,

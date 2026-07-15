@@ -34,6 +34,15 @@ const DEFAULT_HEIGHT: u64 = 32;
 const MAX_TOOL_WIDTH: u64 = 512;
 const MAX_TOOL_HEIGHT: u64 = 256;
 
+/// Longest catalog id a tool argument may carry (room, sim, or similar).
+/// Catalog keys today are far shorter; the bound rejects hostile multi-kilobyte
+/// id strings before domain dispatch.
+const MAX_TOOL_ID_CHARS: usize = 64;
+
+/// Longest author credit accepted with a Cairn bequest. Matches the sanitize
+/// bound in `numinous_core::Bequest::new`.
+const MAX_AUTHOR_CHARS: usize = 48;
+
 /// The most bytes one JSON-RPC request line may hold. Every legitimate call
 /// is a few KiB; without a cap a client streaming an endless newline-free
 /// request would grow the line buffer without bound.
@@ -732,6 +741,16 @@ fn tools_catalog() -> &'static Value {
     CATALOG.get_or_init(|| add_response_mode(build_tools_catalog()))
 }
 
+/// Shared schema fragment for catalog room ids (and the same bound for similar
+/// short string keys). Documents and enforces [`MAX_TOOL_ID_CHARS`].
+fn room_id_schema(description: &str) -> Value {
+    json!({
+        "type": "string",
+        "maxLength": MAX_TOOL_ID_CHARS,
+        "description": description,
+    })
+}
+
 /// Add one presentation-only option to every tool schema. The option belongs
 /// at the face boundary because it changes neither domain arguments nor the
 /// complete typed result.
@@ -824,7 +843,7 @@ fn build_tools_catalog() -> Value {
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "id": { "type": "string", "description": "Room id, for example times-tables." }
+                        "id": room_id_schema("Room id, for example times-tables.")
                     },
                     "required": ["id"],
                     "additionalProperties": false
@@ -836,7 +855,7 @@ fn build_tools_catalog() -> Value {
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "id": { "type": "string", "description": "Room id, for example times-tables." }
+                        "id": room_id_schema("Room id, for example times-tables.")
                     },
                     "required": ["id"],
                     "additionalProperties": false
@@ -848,7 +867,7 @@ fn build_tools_catalog() -> Value {
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "id": { "type": "string", "description": "Room id, for example times-tables." },
+                        "id": room_id_schema("Room id, for example times-tables."),
                         "t": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "Finite phase in [0,1). For Times Tables this sweeps the multiplier." },
                         "width": { "type": "integer", "minimum": 1, "maximum": MAX_TOOL_WIDTH, "description": "ASCII canvas width in columns, from 1 through 512." },
                         "height": { "type": "integer", "minimum": 1, "maximum": MAX_TOOL_HEIGHT, "description": "ASCII canvas height in rows, from 1 through 256." },
@@ -866,7 +885,7 @@ fn build_tools_catalog() -> Value {
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "id": { "type": "string", "description": "Room id; touch goals need a room with a touch verb, parameter goals a room with a moving numeric readout (see describe_room)." },
+                        "id": room_id_schema("Room id; touch goals need a room with a touch verb, parameter goals a room with a moving numeric readout (see describe_room)."),
                         "kind": { "type": "string", "enum": ["touch", "parameter"], "description": "Goal kind (default touch). Parameter goals target the room's own status readout instead of a spatial response." },
                         "seed": { "type": "integer", "description": "Challenge seed (default 1). The same seed poses the same goal; pass any number you like, including today's date, to share a goal." },
                         "t": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "Phase in [0,1) for the attempt (default 0 for touch). For parameter goals this IS the attempt: omit it to pose, pass it to be graded at that phase." },
@@ -892,7 +911,7 @@ fn build_tools_catalog() -> Value {
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "id": { "type": "string", "description": "Room id; the room must carry a moving numeric readout (see describe_room)." },
+                        "id": room_id_schema("Room id; the room must carry a moving numeric readout (see describe_room)."),
                         "seed": { "type": "integer", "description": "Prediction seed (default 1). The same seed poses the same hidden moment; pass any number, including today's date, to share a prediction." },
                         "variation": { "type": "integer", "description": "Which room variation to predict (default 0), matching play_room's variation so the graded truth is the readout you played. Pass the same seed and variation to both the pose and the guess call." },
                         "guess": { "type": "number", "description": "Your predicted value for the readout at the posed moment. Omit to pose." },
@@ -910,8 +929,16 @@ fn build_tools_catalog() -> Value {
                     "properties": {
                         "seed": { "type": "integer", "description": "Which predecessor's stone to draw (default 1). The same seed draws the same stranger's message for every reader." },
                         "width": { "type": "integer", "description": "The dimension you factored out of the semiprime, to reshape and read the stone. Omit to receive the stone." },
-                        "leave": { "type": "string", "description": "A short true thing to leave for whoever comes after (opens at level 42). At most 140 characters." },
-                        "author": { "type": "string", "description": "Who to credit for a bequest (default \"a visitor\"). Used only with `leave`." }
+                        "leave": {
+                            "type": "string",
+                            "maxLength": numinous_core::cairn::MAX_BEQUEST_CHARS,
+                            "description": "A short true thing to leave for whoever comes after (opens at level 42). At most 140 characters."
+                        },
+                        "author": {
+                            "type": "string",
+                            "maxLength": MAX_AUTHOR_CHARS,
+                            "description": "Who to credit for a bequest (default \"a visitor\"). Used only with `leave`."
+                        }
                     },
                     "additionalProperties": false
                 }
@@ -922,7 +949,7 @@ fn build_tools_catalog() -> Value {
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "id": { "type": "string", "description": "Room id, for example lissajous." },
+                        "id": room_id_schema("Room id, for example lissajous."),
                         "t": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "Phase in [0,1)." },
                         "variation": { "type": "integer", "minimum": 0, "description": "Per-visit variation seed (default 0), matching play_room." },
                         "ambient_detail": { "type": "string", "enum": ["summary", "events"], "default": "summary", "description": "Stable room-bed detail (default summary). Events returns the complete bounded arrangement event projection and signal metrics, never PCM or a file path." },
@@ -944,7 +971,7 @@ fn build_tools_catalog() -> Value {
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "id": { "type": "string", "description": "Sim id, for example tribbles." },
+                        "id": room_id_schema("Sim id, for example tribbles."),
                         "params": { "type": "object", "additionalProperties": { "type": "number" }, "description": "Lever name to finite numeric value, for example {\"breeding-rate\": 2.9}. Unset levers use their default." },
                         "levers": { "type": "object", "additionalProperties": { "type": "number" }, "description": "Alias for params. Pass one or the other, never both." }
                     },
@@ -958,7 +985,11 @@ fn build_tools_catalog() -> Value {
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "expr": { "type": "string", "description": "The expression in x, for example sin(3*x) + x/2." },
+                        "expr": {
+                            "type": "string",
+                            "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
+                            "description": "The expression in x, for example sin(3*x) + x/2."
+                        },
                         "xmin": { "type": "number", "description": "Left edge of x (default -tau)." },
                         "xmax": { "type": "number", "description": "Right edge of x (default tau)." },
                         "a": { "type": "number", "description": "Value of the knob a (default 1)." }
@@ -973,8 +1004,17 @@ fn build_tools_catalog() -> Value {
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "expr": { "type": "string", "description": "The expression in x." },
-                        "notes": { "type": "integer", "description": "Number of notes (default 24)." }
+                        "expr": {
+                            "type": "string",
+                            "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
+                            "description": "The expression in x."
+                        },
+                        "notes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 64,
+                            "description": "Number of notes (default 24, at most 64)."
+                        }
                     },
                     "required": ["expr"],
                     "additionalProperties": false
@@ -1303,6 +1343,18 @@ fn validate_schema_value(
             "{} must be one of: {choices}.",
             argument_subject(path)
         ));
+    }
+
+    if let Some(text) = value.as_str()
+        && let Some(maximum) = schema.get("maxLength").and_then(Value::as_u64)
+    {
+        let count = text.chars().count() as u64;
+        if count > maximum {
+            return Err(format!(
+                "{} must be at most {maximum} characters.",
+                argument_subject(path)
+            ));
+        }
     }
 
     if let Some(number) = value.as_f64() {
@@ -2113,6 +2165,15 @@ fn play_room_tool(args: &Value) -> Value {
         .get("height")
         .and_then(Value::as_u64)
         .unwrap_or(DEFAULT_HEIGHT) as usize;
+    // Schema validation is the primary gate; this rejects hostile sizes if a
+    // future call path ever reaches the tool without the catalog check.
+    if !(1..=MAX_TOOL_WIDTH as usize).contains(&width)
+        || !(1..=MAX_TOOL_HEIGHT as usize).contains(&height)
+    {
+        return tool_error(&format!(
+            "Canvas size must be between 1x1 and {MAX_TOOL_WIDTH}x{MAX_TOOL_HEIGHT}."
+        ));
+    }
     let variation = args.get("variation").and_then(Value::as_u64).unwrap_or(0);
     let inputs = match parse_room_inputs(args) {
         Ok(inputs) => inputs,
@@ -4382,6 +4443,10 @@ mod tests {
             .iter()
             .find(|tool| tool["name"] == "play_room")
             .expect("play_room tool");
+        assert_eq!(
+            play_room["inputSchema"]["properties"]["id"]["maxLength"],
+            super::MAX_TOOL_ID_CHARS
+        );
         let poke_schema = &play_room["inputSchema"]["properties"]["pokes"];
         assert_eq!(poke_schema["maxItems"], numinous_core::MAX_ROOM_POKES);
         assert_eq!(poke_schema["items"]["items"]["minimum"], 0);
@@ -4666,6 +4731,26 @@ mod tests {
             ),
             ("play_room", json!({"id":"lorenz","t":-1.0}), "at least 0"),
             ("play_room", json!({"id":"lorenz","t":1.0}), "less than 1"),
+            (
+                "play_room",
+                json!({"id":"x".repeat(super::MAX_TOOL_ID_CHARS + 1)}),
+                "at most 64 characters",
+            ),
+            (
+                "plot_expression",
+                json!({"expr":"x".repeat(numinous_core::MAX_STUDIO_SOURCE_CHARS + 1)}),
+                "at most 512 characters",
+            ),
+            (
+                "cairn",
+                json!({"leave":"x".repeat(numinous_core::cairn::MAX_BEQUEST_CHARS + 1)}),
+                "at most 140 characters",
+            ),
+            (
+                "sing_expression",
+                json!({"expr":"sin(x)","notes":65}),
+                "at most 64",
+            ),
             (
                 "play_room",
                 json!({"id":"lorenz","pokes":[[0.5]]}),
