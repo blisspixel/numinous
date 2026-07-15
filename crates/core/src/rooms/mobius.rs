@@ -185,23 +185,31 @@ impl Room for Mobius {
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let brushes = inputs
+        let hands: Vec<(f64, f64)> = inputs
             .iter()
-            .filter(|input| {
-                matches!(
-                    input,
-                    RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. }
-                        if x.is_finite() && y.is_finite()
-                )
+            .filter_map(|input| match *input {
+                RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. }
+                    if x.is_finite() && y.is_finite() =>
+                {
+                    Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
+                }
+                _ => None,
             })
-            .count()
-            .min(MAX_ROOM_POKES);
-        if brushes == 0 {
+            .collect();
+        let start = hands.len().saturating_sub(MAX_ROOM_POKES);
+        let hands = &hands[start..];
+        if hands.is_empty() {
             return self.status(t);
         }
+        let brushes = hands.len();
+        // Hand parameter on the double-cover edge: one full circle is still
+        // the "other" face; two closes the single boundary. Status names that.
+        let (hx, _hy) = *hands.last().expect("nonempty hands");
+        let edge_param = hx * 2.0;
+        let lap = if edge_param < 1.0 { 1 } else { 2 };
+        let reach = painted_edge_percent(t);
         Some(format!(
-            "{brushes} BRUSH POINT(S)   {:.0}% OF THE ONE EDGE LIT",
-            painted_edge_percent(t)
+            "{brushes} BRUSH  EDGE LAP{lap}  REACH {reach:.0}%  STILL ONE EDGE"
         ))
     }
 
@@ -325,14 +333,22 @@ mod tests {
                 t: 0.2,
             },
         ];
-        assert_eq!(
-            room.status_input(f64::NAN, &inputs).as_deref(),
-            Some("2 BRUSH POINT(S)   28% OF THE ONE EDGE LIT")
-        );
-        assert_eq!(
-            room.status_input(0.5, &inputs).as_deref(),
-            Some("2 BRUSH POINT(S)   84% OF THE ONE EDGE LIT")
-        );
+        let nan_status = room.status_input(f64::NAN, &inputs).expect("nan phase");
+        assert!(nan_status.starts_with("2 BRUSH  EDGE LAP1"));
+        assert!(nan_status.contains("REACH 28%"));
+        assert!(nan_status.contains("STILL ONE EDGE"));
+        let mid = room.status_input(0.5, &inputs).expect("mid phase");
+        assert!(mid.starts_with("2 BRUSH  EDGE LAP1"));
+        assert!(mid.contains("REACH 84%"));
+        // A brush on the second half of the double cover is still the same edge.
+        let second_lap = [RoomInput::PointerDown {
+            x: 0.75,
+            y: 0.5,
+            t: 0.0,
+        }];
+        let lap2 = room.status_input(0.5, &second_lap).expect("lap2");
+        assert!(lap2.contains("EDGE LAP2"));
+        assert!(lap2.contains("STILL ONE EDGE"));
     }
 
     #[test]

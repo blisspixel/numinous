@@ -6,6 +6,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Mobius brush status names which lap of the double-covered single edge the
+  newest paint sits on, reports paint reach, and restates that it is still one
+  edge.
 - Prime Spirals trace status counts primes that land on the selected diagonals
   and names the spiral center, so a click reports the Ulam line's prime haul
   rather than only a trace count.
