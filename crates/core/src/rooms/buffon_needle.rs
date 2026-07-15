@@ -256,13 +256,11 @@ impl Room for BuffonNeedle {
             "MISS"
         };
         if crossings == 0 {
-            return Some(format!(
-                "YOUR THROWS {throws}   LAST {latest}   0 CROSSES   PI NEEDS A CROSS"
-            ));
+            return Some(format!("{throws} THROW  LAST {latest}  0 CROSS  NEED HIT"));
         }
         let estimate = 2.0 * Self::length_ratio_for(t) * throws as f64 / crossings as f64;
         Some(format!(
-            "YOUR THROWS {throws}   LAST {latest}   {crossings} CROSSES   PI ABOUT {estimate:.3}"
+            "{throws} THROW  LAST {latest}  {crossings}X  PI~{estimate:.3}"
         ))
     }
 
@@ -484,10 +482,10 @@ mod tests {
             })
             .collect();
         let status = room.status_input(0.0, &inputs).expect("status");
-        assert!(status.contains("YOUR THROWS 20"), "{status}");
+        assert!(status.contains("20 THROW"), "{status}");
         assert!(status.contains("LAST "), "{status}");
-        assert!(status.contains("CROSSES"), "{status}");
-        assert!(status.contains("PI ABOUT"), "{status}");
+        assert!(status.contains('X'), "{status}");
+        assert!(status.contains("PI~"), "{status}");
     }
 
     #[test]
@@ -511,7 +509,7 @@ mod tests {
             },
         ];
         let status = room.status_input(0.0, &inputs).expect("status");
-        assert!(status.contains("YOUR THROWS 1"), "{status}");
+        assert!(status.contains("1 THROW"), "{status}");
 
         let mut from_input = Canvas::new(50, 24);
         let mut from_click = Canvas::new(50, 24);

@@ -183,9 +183,7 @@ impl Room for Zeno {
         };
         let hops = ((phase * (MAX_TILES as f64 + 1.0)) as usize).clamp(1, MAX_TILES);
         let reached = (1.0 - 0.5_f64.powi(hops as i32)) * 100.0;
-        Some(format!(
-            "{runners} RUNNER(S)   {hops} HALVING HOPS   {reached:.2}% OF THE WAY"
-        ))
+        Some(format!("{runners} RUN  {hops} HOP  {reached:.1}% WAY"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -334,13 +332,13 @@ mod tests {
                 t: 0.2,
             },
         ];
-        assert_eq!(
-            room.status_input(f64::NAN, &inputs).as_deref(),
-            Some("1 RUNNER(S)   1 HALVING HOPS   50.00% OF THE WAY")
-        );
+        let early = room.status_input(f64::NAN, &inputs).expect("early runner");
+        assert!(early.starts_with("1 RUN"), "{early}");
+        assert!(early.contains("1 HOP"), "{early}");
+        assert!(early.contains("50.0% WAY"), "{early}");
         let complete = room.status_input(1.0, &inputs).expect("runner progress");
-        assert!(complete.contains(&format!("{MAX_TILES} HALVING HOPS")));
-        assert!(complete.ends_with("% OF THE WAY"));
+        assert!(complete.contains(&format!("{MAX_TILES} HOP")), "{complete}");
+        assert!(complete.contains("% WAY"), "{complete}");
     }
 
     #[test]

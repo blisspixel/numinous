@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Buffon and Zeno action status compacted for footer budgets while keeping
+  throw/cross/pi estimate and hop/progress grades.
 - Julia morph status reports |c| and a NEAR0/MAIN/OUTER band for the selected
   constant so a hand morph is graded by how far c sits from the origin region.
 - Random Walk plant status compacted to MEAN versus SQRTN law with step count,
