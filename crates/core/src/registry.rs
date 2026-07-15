@@ -242,6 +242,16 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
             variation,
         )),
         Box::new(rooms::wolfram_110::Wolfram110::new_with(variation)),
+        Box::new(rooms::hyperbolic_tiling::HyperbolicTiling::new_with(
+            variation,
+        )),
+        Box::new(rooms::mackey_glass::MackeyGlass::new_with(variation)),
+        Box::new(rooms::fermat_spiral::FermatSpiral::new_with(variation)),
+        Box::new(rooms::euclid_algorithm::EuclidAlgorithm::new_with(
+            variation,
+        )),
+        Box::new(rooms::oregonator::Oregonator::new_with(variation)),
+        Box::new(rooms::hofstadter_q::HofstadterQ::new_with(variation)),
     ]
 }
 
