@@ -439,32 +439,25 @@ Physarum Tokyo result).
   criticality near Onsager Tc), **The First Rain** **built** (`first-rain`),
   **Kepler's Loom** **built** (`kepler-loom`), **The Fastest Fall** **built**
   (`fastest-fall`; DRAG: DRAW YOUR TRACK; cycloid brachistochrone).
-- Deep math: **Audioactive Decay** **built** (`audioactive`; CLICK: SPEAK THE
-  NEXT LINE; look-and-say and Conway's constant), **The Busy Beaver** (CLICK:
-  FLIP ONE RULE; five rules run 47,176,870 steps then stop on purpose;
-  undecidability worn lightly), **The Chord Game** (elliptic-curve addition
-  as bank shots; the group law that locks your credit card), **The
-  Upside-Down Ruler** (p-adic tower; ...999999 + 1 = 0, so ...999999 = -1),
-  **The 720 Degree Room** (Dirac's belt; DRAG rotates a tethered stone; 360
-  is not enough, 720 is; the quaternion double cover felt in the wrist).
-- Fun-first: **Phantom Jam** **built** (`phantom-jam`; HOLD: BRAKE; Sugiyama
-  2008 upstream jam), **The Whispering Table** (PULL AND RELEASE: SHOOT;
-  elliptic billiards weave caustics; chaos is impossible here), **Murmuration**
-  (HOLD: BE THE FALCON; boids with seven neighbors;
-  the shape exists in no bird's head), **The Wet Oracle** (DRAG: SMEAR THE
-  FOOD; race a slime mold to the shortest path and lose; Tero 2010), **The
-  Unlit Room** (DRAG: CRANK THE LANTERN; the illumination problem; one point
-  no light can reach, Tokarsky 1995).
-- Cosmic: **Tilt the Cone** (DRAG: BOOST THE FRAME; simultaneity trades
-  places, causality refuses), **The Stretch** (CLICK any galaxy: everyone is
-  the center; redshift played an octave down), **Laplace's Clockwork**
-  (DRAG: DETUNE A MOON; Io-Europa-Ganymede's 1:2:4 lock; the forbidden
-  triple conjunction), **The Message That Heals** (DRAG: RAISE THE NOISE;
-  Hamming codes healing wounds mid-flight, until the cliff), **The Lens**
-  (DRAG: MOVE THE DARK MASS; Einstein rings from a mass you never see),
-  **Fourteen Beacons** (DRAG: GUESS WHERE HOME IS; the Pioneer pulsar map as
-  polyrhythm), **The Loneliness Equation** (seven dials; the last one, L, is
-  drawn longer; the silence is scheduling, not scarcity).
+- Deep math: **Audioactive Decay** **built** (`audioactive`), **The Busy
+  Beaver** **built** (`busy-beaver`), **The Chord Game** **built**
+  (`chord-game`; elliptic addition as bank shots), **The Upside-Down Ruler**
+  **built** (`upside-ruler`), **The 720 Degree Room** **built** (`degree720`).
+- Fun-first: **Phantom Jam** **built** (`phantom-jam`), **The Whispering
+  Table** **built** (`whispering-table`), **Murmuration** **built**
+  (`murmuration`), **The Wet Oracle** **built** (`wet-oracle`), **The Unlit
+  Room** **built** (`unlit-room`).
+- Cosmic: **Tilt the Cone** **built** (`tilt-cone`), **The Stretch** **built**
+  (`the-stretch`), **Laplace's Clockwork** **built** (`laplace-clock`), **The
+  Message That Heals** **built** (`message-heals`), **The Lens** **built**
+  (`the-lens`), **Fourteen Beacons** **built** (`fourteen-beacons`), **The
+  Loneliness Equation** **built** (`loneliness`).
+
+**Awe Engine Tier S (catalog 67):** **The Jumper** **built** (`recaman`),
+**The Weave** **built** (`truchet`), **The Chase** **built** (`pursuit`),
+**The Divisor Fractal** **built** (`pascal-mod`), **The Spinner** **built**
+(`three-gap`), **The Triangle That Cheats** **built** (`morley`), **The
+Menagerie** **built** (`menagerie`; Clifford attractor).
 
 Cross-room resonances the wave adds for free: the cardioid triangle (Coffee
 Cup, Times Tables, Mandelbrot), the Lorentz pair (Starbow, Tilt the Cone),
@@ -632,32 +625,29 @@ first rooms (only pi-as-music), and one-line generative art at scale. Designed,
 not built; each still faces the Definition of Done and math sign-off. Ranked
 easy-first, since these are the batch to open the post-substrate content wave.
 
-**Tier S, buildable now, highest awe per build:**
-- **Recaman's Sequence, "The Jumper"** (Number, sonification-first): jump back by
+**Tier S, buildable now, highest awe per build (all built, catalog 67):**
+- **Recaman's Sequence, "The Jumper"** **built** (`recaman`): jump back by
   n if you can, forward if you cannot, drawing each jump as an arc. A hypnotic
   harp of nested arcs that is also the most beautiful sonification in mathematics,
   hiding an open problem (852655 has never appeared in 10^230 terms; Sloane now
   doubts it does). DRAG: SET THE STRIDE. Chains to Collatz.
-- **Truchet Tiles / 10 PRINT, "The Weave"** (Emergence): one tile, two rotations,
-  a coin flip per cell, endless mazes or interlocking loops from nothing. Retro-
-  perfect for the Teletype and 8-bit Eras. DRAG: PAINT THE BIAS.
-- **Pursuit Curves, "The Chase"** (Motion): four bugs each walk at the next; they
-  spiral into a logarithmic whirlpool and each walks exactly one side length.
-  DRAG a bug; CLICK to add more.
-- **Strange Attractor Zoo, "The Menagerie"** (Fractals): a rack of 2D maps
-  (Clifford, de Jong, Thomas) driven by four numbers; a million iterations
-  condense a luminous alien creature. An infinite gallery where Lorenz is one
-  instance. DRAG THE FOUR CONSTANTS. Reuses the Barnsley IFS density machinery.
-- **Pascal mod n, "The Divisor Fractal"** (Number): color Pascal's triangle by
-  divisibility; mod 2 is exact Sierpinski, and the coloring rule is Kummer's
-  theorem, so the counting and the fractal are one fact. DRAG: TURN THE MODULUS.
-- **The Three-Gap Theorem, "The Spinner"** (Number): points at angles n*theta on
-  a circle have at most three distinct gap sizes, ever, and the largest is the
-  sum of the other two. The hidden law behind Golden Angle. DRAG: TURN THE ANGLE.
-- **Morley's Miracle, "The Triangle That Cheats"** (Shape): trisect any
-  triangle's angles and the inner crossings always form a perfect equilateral
-  triangle. DRAG A VERTEX and watch it refuse to break. Ties to Straightedge and
-  Compass (the impossibility it flirts with).
+- **Truchet Tiles / 10 PRINT, "The Weave"** **built** (`truchet`): one tile, two
+  rotations, a coin flip per cell, endless mazes or interlocking loops from
+  nothing. Retro-perfect for the Teletype and 8-bit Eras. DRAG: PAINT THE BIAS.
+- **Pursuit Curves, "The Chase"** **built** (`pursuit`): four bugs each walk at
+  the next; they spiral into a logarithmic whirlpool and each walks exactly one
+  side length. DRAG a bug.
+- **Strange Attractor Zoo, "The Menagerie"** **built** (`menagerie`; Clifford
+  first): four numbers and a long orbit condense a luminous alien creature.
+  DRAG: TUNE THE FOUR.
+- **Pascal mod n, "The Divisor Fractal"** **built** (`pascal-mod`): color
+  Pascal's triangle by residue; mod 2 is exact Sierpinski. DRAG: TURN THE
+  MODULUS.
+- **The Three-Gap Theorem, "The Spinner"** **built** (`three-gap`): points at
+  angles n*theta on a circle have at most three distinct gap sizes. DRAG: TURN
+  THE ANGLE.
+- **Morley's Miracle, "The Triangle That Cheats"** **built** (`morley`): trisect
+  any triangle's angles and the inner crossings form equilateral. DRAG A VERTEX.
 
 **Tier A, postcard-grade, medium build:**
 - **Apollonian Gasket, "The Kissing Circles"** (Number/Fractals): infinite

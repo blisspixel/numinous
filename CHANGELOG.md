@@ -6,6 +6,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Chord Game plus Awe Engine Tier S (catalog 67): elliptic chord-and-tangent
+  group law; Recaman Jumper; Truchet Weave; Pursuit Chase; Pascal mod n;
+  Three-Gap Spinner; Morley triangle; Clifford Menagerie.
 - Four more Next Wave rooms (catalog 59): Unlit Room, The Lens, Fourteen
   Beacons, The Loneliness Equation.
 - Four more Next Wave rooms (catalog 55): Tilt the Cone, The Stretch, Laplace's
