@@ -214,23 +214,48 @@ fn loop_paths<'a>(
     )
 }
 
+/// Keep share filenames inside the destination directory even if a room id
+/// ever carried separators or shell-hostile characters.
+fn filename_safe_id(room_id: &str) -> String {
+    // Strip leading dots first so a id like "..hidden" does not become a
+    // leading-underscore artifact after character filtering.
+    let stripped = room_id.trim_start_matches('.');
+    let safe: String = stripped
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                ch
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    if safe.is_empty() {
+        "room".to_string()
+    } else {
+        safe
+    }
+}
+
 fn postcard_path(dir: &Path, room_id: &str, state_code: u64) -> PathBuf {
-    dir.join(format!("numinous-{room_id}-{state_code:03}.png"))
+    let id = filename_safe_id(room_id);
+    dir.join(format!("numinous-{id}-{state_code:03}.png"))
 }
 
 fn postcard_collision_path(dir: &Path, room_id: &str, state_code: u64, serial: u16) -> PathBuf {
-    dir.join(format!(
-        "numinous-{room_id}-{state_code:03}-{serial:03}.png"
-    ))
+    let id = filename_safe_id(room_id);
+    dir.join(format!("numinous-{id}-{state_code:03}-{serial:03}.png"))
 }
 
 fn loop_path(dir: &Path, room_id: &str, state_code: u64) -> PathBuf {
-    dir.join(format!("numinous-{room_id}-loop-{state_code:03}.png"))
+    let id = filename_safe_id(room_id);
+    dir.join(format!("numinous-{id}-loop-{state_code:03}.png"))
 }
 
 fn loop_collision_path(dir: &Path, room_id: &str, state_code: u64, serial: u16) -> PathBuf {
+    let id = filename_safe_id(room_id);
     dir.join(format!(
-        "numinous-{room_id}-loop-{state_code:03}-{serial:03}.png"
+        "numinous-{id}-loop-{state_code:03}-{serial:03}.png"
     ))
 }
 
@@ -315,6 +340,23 @@ mod tests {
             collision.file_name().and_then(|name| name.to_str()),
             Some("numinous-times_tables-042-007.png")
         );
+    }
+
+    #[test]
+    fn share_filenames_reject_path_separators_and_dots() {
+        let hostile = postcard_path(Path::new("out"), "../evil/room", 1);
+        assert_eq!(
+            hostile.file_name().and_then(|name| name.to_str()),
+            Some("numinous-_evil_room-001.png")
+        );
+        assert_eq!(hostile.parent(), Some(Path::new("out")));
+        let dotted = loop_path(Path::new("out"), "..hidden", 2);
+        assert_eq!(
+            dotted.file_name().and_then(|name| name.to_str()),
+            Some("numinous-hidden-loop-002.png")
+        );
+        assert_eq!(filename_safe_id(""), "room");
+        assert_eq!(filename_safe_id("..."), "room");
     }
 
     #[test]

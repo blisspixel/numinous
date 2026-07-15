@@ -14,6 +14,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   `numinous-{room}-loop-{state}.png` with collision suffixes. Focused
   regressions cover multi-frame headers, poke preservation, phase motion, and
   Life non-mutation.
+- CLI `numinous loop <room> --out file.png` exports the same short looping APNG
+  path with phase start, era, variation, poke, and gesture flags. Maintenance
+  cycle 133 also sanitizes App postcard and loop filenames so room ids cannot
+  inject path separators or hidden-dot components into the home directory.
 - Registry invariant `action_status_fits_compact_footer`: center-poke status is
   at most 56 characters so compact App footers stay legible beside controls.
 - Buffon and Zeno action status compacted for footer budgets while keeping
