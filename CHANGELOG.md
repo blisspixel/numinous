@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Registry invariant `action_status_fits_compact_footer`: center-poke status is
+  at most 56 characters so compact App footers stay legible beside controls.
 - Buffon and Zeno action status compacted for footer budgets while keeping
   throw/cross/pi estimate and hop/progress grades.
 - Julia morph status reports |c| and a NEAR0/MAIN/OUTER band for the selected

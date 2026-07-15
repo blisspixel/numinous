@@ -182,6 +182,28 @@ mod tests {
     }
 
     #[test]
+    fn action_status_fits_compact_footer() {
+        // Compact App footers have a tight character budget beside fixed
+        // controls. Center-poke status should stay within a short line.
+        use crate::room::RoomInput;
+        const MAX_CHARS: usize = 56;
+        let poke = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.0,
+        }];
+        for room in all_rooms() {
+            let id = room.meta().id;
+            let after = room.status_input(0.0, &poke).unwrap_or_default();
+            assert!(
+                after.chars().count() <= MAX_CHARS,
+                "{id} action status is too long for compact footer ({}): {after:?}",
+                after.chars().count()
+            );
+        }
+    }
+
+    #[test]
     fn lookup_by_id_works_and_misses_are_none() {
         assert!(room_by_id("times-tables").is_some());
         assert!(room_by_id("no-such-room").is_none());
