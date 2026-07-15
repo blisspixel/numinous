@@ -395,7 +395,7 @@ impl Room for CultOfPi {
         let phase = finite_phase(t);
         let tick = (phase * (PHASE_TICKS - 1) as f64).floor() as usize + 1;
         Some(format!(
-            "CH{tick:02}/{PHASE_TICKS}  EXP FAULT {:.0}%",
+            "CH{tick:02}/{PHASE_TICKS}  FAULT {:.0}%  HOLD:FIX",
             phase * 42.0
         ))
     }

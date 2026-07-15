@@ -220,7 +220,7 @@ impl Room for ThePour {
         // poured right now: the fundamental theorem of calculus, stated for an
         // arbitrary curve. Say "fill rate" rather than "height = slope", which a
         // calculus-fluent mind misreads as the e^x fixed point (f = f').
-        Some(format!("FILL RATE = HEIGHT = {:.2}", f(x)))
+        Some(format!("FILL=HEIGHT {:.2}  CLICK:PROBE", f(x)))
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -382,7 +382,8 @@ mod tests {
 
         let room = ThePour::new();
         let open = room.status(0.0).expect("open status");
-        assert!(open.starts_with("FILL RATE = HEIGHT"));
+        assert!(open.starts_with("FILL=HEIGHT"));
+        assert!(open.contains("CLICK:PROBE"), "{open}");
         let empty = room.status_input(0.0, &[]).expect("empty input falls back");
         assert_eq!(empty, open);
 
@@ -465,6 +466,6 @@ mod tests {
         room.render(&mut zero_phase, 0.0);
         assert_eq!(nan_phase.to_text(), zero_phase.to_text());
         let status = room.status(f64::NAN).expect("status");
-        assert!(status.starts_with("FILL RATE = HEIGHT"));
+        assert!(status.starts_with("FILL=HEIGHT"));
     }
 }

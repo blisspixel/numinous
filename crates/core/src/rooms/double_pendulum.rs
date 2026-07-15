@@ -241,14 +241,18 @@ fn elapsed_phase(now: f64, since: f64) -> f64 {
     (now - since).rem_euclid(1.0)
 }
 
-fn divergence_status(first: f64, second: f64, w1: f64, w2: f64, steps: usize) -> String {
+fn divergence_gap(first: f64, second: f64, w1: f64, w2: f64, steps: usize) -> f64 {
     let main = trace_from_state(first, second, w1, w2, 0.0, steps);
     let shadow = trace_from_state(first, second, w1, w2, SHADOW_OFFSET, steps);
-    let gap = match (main.last(), shadow.last()) {
+    match (main.last(), shadow.last()) {
         (Some(&(mx, my)), Some(&(sx, sy))) => ((mx - sx).powi(2) + (my - sy).powi(2)).sqrt(),
         _ => 0.0,
-    };
-    format!("TWINS {gap:.3} APART (from a {SHADOW_OFFSET:.0e} start)")
+    }
+}
+
+fn divergence_status(first: f64, second: f64, w1: f64, w2: f64, steps: usize) -> String {
+    let gap = divergence_gap(first, second, w1, w2, steps);
+    format!("TWINS {gap:.3} (from {SHADOW_OFFSET:.0e})")
 }
 
 impl Room for DoublePendulum {
@@ -279,13 +283,8 @@ impl Room for DoublePendulum {
         // room pose predictions and challenges, and predicting a chaotic gap is
         // exactly the hard, honest kind of guess the predict keystone is for.
         let steps = Self::steps_for(t);
-        Some(divergence_status(
-            2.0 + self.seed_offset(),
-            2.0,
-            0.0,
-            0.0,
-            steps,
-        ))
+        let gap = divergence_gap(2.0 + self.seed_offset(), 2.0, 0.0, 0.0, steps);
+        Some(format!("TWINS {gap:.3}  CLICK:RE-DROP"))
     }
 
     fn status_input(&self, t: f64, inputs: &[crate::room::RoomInput]) -> Option<String> {
@@ -449,6 +448,7 @@ mod tests {
         // the start and larger once sensitive dependence takes hold.
         let start = room.status(0.0).expect("has a readout");
         assert!(start.contains("TWINS 0.000"), "starts together: {start}");
+        assert!(start.contains("CLICK:RE-DROP"), "{start}");
         let value = |t: f64| crate::challenge::status_numbers(&room.status(t).unwrap())[0].1;
         assert!(value(0.6) > value(0.0), "the gap grows across the sweep");
         // Because the readout moves, the room now poses a prediction: a hard,

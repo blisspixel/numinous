@@ -204,7 +204,7 @@ impl Room for SlopeRider {
 
     fn status(&self, t: f64) -> Option<String> {
         let x = (self.phase_for(t) - 0.5) * X_SPAN;
-        Some(format!("TILT = {:+.2}", slope(x)))
+        Some(format!("TILT {:+.2}  CLICK:DROP", slope(x)))
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -285,7 +285,8 @@ mod tests {
 
         let room = SlopeRider::new();
         let open = room.status(0.0).expect("open status");
-        assert!(open.starts_with("TILT ="));
+        assert!(open.starts_with("TILT "));
+        assert!(open.contains("CLICK:DROP"), "{open}");
         let empty = room.status_input(0.0, &[]).expect("empty input falls back");
         assert_eq!(empty, open);
 
@@ -427,6 +428,6 @@ mod tests {
         room.render(&mut zero_phase, 0.0);
         assert_eq!(nan_phase.to_text(), zero_phase.to_text());
         let status = room.status(f64::NAN).expect("status");
-        assert!(status.starts_with("TILT ="));
+        assert!(status.starts_with("TILT "));
     }
 }

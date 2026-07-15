@@ -149,7 +149,7 @@ impl Room for LogisticMap {
         let r = (r_min + r_max) / 2.0;
         let exponent = lyapunov(r);
         let regime = if exponent > 0.0 { "CHAOS" } else { "ORDER" };
-        Some(format!("LYAPUNOV {exponent:+.2} ({regime}) AT R {r:.2}"))
+        Some(format!("LYAP {exponent:+.2} {regime} R{r:.2}  CLICK:SEED"))
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {

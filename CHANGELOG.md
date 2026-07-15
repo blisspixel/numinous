@@ -6,6 +6,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Registry invariant `first_contact_status_names_an_action_or_goal_when_the_room_has_a_verb`:
+  every verb-bearing catalog room must open with an invite or goal token
+  (CLICK/DRAG/TARGET/...), not ambient-only prose. Lissajous, Cult of Pi,
+  Logistic Map, The Pour, Slope Rider, and Double Pendulum first-contact lines
+  now name the act while keeping measured live state and the footer budget.
 - Arecibo first-contact honesty: open status names the unsolved width and
   CLICK:TRY WIDTH; a hand try reports TRIED W{n}, the rectangle, and LOCK:PI,
   PAIR TRY W11, or REM remainder grades. Focused regressions cover open, miss,

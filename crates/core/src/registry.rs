@@ -141,6 +141,39 @@ mod tests {
     }
 
     #[test]
+    fn first_contact_status_names_an_action_or_goal_when_the_room_has_a_verb() {
+        // Rooms that publish a touch verb should invite play on first contact:
+        // either a direct action token (CLICK/DRAG/...) or a clear measured
+        // goal (TARGET/FOUND/GOAL) so the status is not ambient-only prose.
+        const INVITE_TOKENS: &[&str] = &[
+            "CLICK", "DRAG", "HOLD", "DROP", "PLANT", "FLIP", "TRY", "SEED", "THROW", "TEST",
+            "DIVE", "TOUCH", "PIN", "TURN", "MOVE", "PAINT", "TRACE", "BRUSH", "TUNE", "POUR",
+            "RIDE", "SOW", "SCRUB", "PICK", "PUSH", "PULL", "PERTURB", "MORPH", "DIAL", "HAND",
+            "COIN", "WAVE", "BET", "FIX", "PLACE", "PRINT", "NEST", "WELL", "STORM", "GLIDER",
+            "WIDTH", "ORBIT", "TAP", "SWEEP", "STEER", "AIM", "REPLAY", "LAUNCH", "STRIKE", "CUT",
+            "DRAW", "SPIN", "ZOOM", "FOCUS", "POINT", "TARGET", "GOAL", "OPEN", "INVITE", "CHOOSE",
+        ];
+        let mut shallow = Vec::new();
+        for room in all_rooms() {
+            let Some(verb) = room.verb() else {
+                continue;
+            };
+            let id = room.meta().id;
+            let open = room.status(0.0).unwrap_or_default();
+            let upper = open.to_ascii_uppercase();
+            let hit = INVITE_TOKENS.iter().any(|token| upper.contains(token));
+            if !hit {
+                shallow.push(format!("{id}: verb={verb:?} status={open:?}"));
+            }
+        }
+        assert!(
+            shallow.is_empty(),
+            "first-contact invite missing for:\n{}",
+            shallow.join("\n")
+        );
+    }
+
+    #[test]
     fn poke_changes_status_for_every_catalog_room() {
         // Every catalog room must speak after a center poke: first contact and
         // action consequence stay distinct on the status line.

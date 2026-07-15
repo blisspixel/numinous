@@ -197,7 +197,7 @@ impl Room for Lissajous {
 
     fn status(&self, t: f64) -> Option<String> {
         let freq_y = Self::freq_y_for(if t.is_finite() { t } else { 0.0 });
-        Some(format!("X:Y = {FREQ_X:.0}:{freq_y:.2}"))
+        Some(format!("X:Y = {FREQ_X:.0}:{freq_y:.2}  CLICK:TUNE"))
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
