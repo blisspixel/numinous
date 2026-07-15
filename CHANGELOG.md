@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six classical inventions (catalog 130): Bifurcation Weather, Stern-Brocot Tree,
+  Josephus Circle, Calkin-Wilf Tree, Gibbs Overshoot, Sierpinski Arrowhead.
 - Six classical inventions (catalog 124): Ikeda Map, Duffing Well, Levy C Curve,
   Tinkerbell Map, Gingerbreadman Map, Menger Face.
 - Six classical inventions (catalog 118): Thue-Morse, Rossler Scroll, Cantor /
