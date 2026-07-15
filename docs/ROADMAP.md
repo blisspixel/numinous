@@ -147,8 +147,10 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   pointer moves add no waves; a coin change starts fresh; the 24-wave bound
   saturates truthfully at 1,536 balls; and compact App, CLI, and MCP replay share
   the same input contract. Focused invariants and the repeated-action screen
-  scenario cover the implementation. A one-ball prediction beat and subjective
-  participant evidence remain open.
+  scenario cover the implementation. A one-ball prediction beat is live: a
+  pointer-move commits a bin wager, a click still drops a 64-ball wave, and
+  status grades the highlighted last ball hit or miss against that bet.
+  Subjective participant evidence remains open.
 - **Done (Game of Life causal visit loop):** the App now owns one incremental
   B3/S23 universe for the complete room visit. Its settled opening advances on
   a bounded wall-clock cadence, survives the gallery phase wrap, pauses with

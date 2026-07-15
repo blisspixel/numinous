@@ -694,9 +694,10 @@ semantically. Full and compact controller wording use the same action source.
 The evidence boundary remains explicit. The exact matrix and focused tests show
 causal rendering, deterministic replay, compact legibility, and mathematical
 invariants. They do not prove delight, physical-controller familiarity, or the
-clarity of the five compact probability labels to a new participant. The explicit
-one-ball prediction wager and a one-shot falling animation remain possible
-Puzzle and motion refinements rather than claims about this completed Toy loop.
+clarity of the five compact probability labels to a new participant. The
+one-ball prediction wager is now a move-committed bin bet graded against the
+highlighted last ball of the next 64-ball wave; a one-shot falling animation
+remains a possible motion refinement rather than a claim about this Toy loop.
 
 The complete local release gate passes with 1,230 all-target test cases, 93.34
 percent region coverage, 93.10 percent line coverage, the exact 253-screen

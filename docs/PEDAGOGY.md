@@ -108,10 +108,12 @@ arrive last and confirm what the player already felt.
   empirical pile against a distinct exact `Binomial(16, p)` outline without
   pretending finite samples are identical. The built Toy provides five fixed
   probabilities, contiguous deterministic runs, exact totals, and reset. The
-  explicit one-ball prediction wager remains Puzzle-layer work. More waves make
-  the empirical frequencies estimate the fixed binomial; the Central Limit
-  Theorem connection is the separate many-row normal approximation, not a claim
-  that sample count changes the landing distribution.
+  one-ball prediction wager is live as a move-committed bin bet graded against
+  the highlighted last ball of the next wave (Toy-layer status, not a separate
+  Puzzle face). More waves make the empirical frequencies estimate the fixed
+  binomial; the Central Limit Theorem connection is the separate many-row
+  normal approximation, not a claim that sample count changes the landing
+  distribution.
 
 ## The mechanic library
 

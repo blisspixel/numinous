@@ -51,6 +51,12 @@ fn coin_at(x: f64) -> usize {
         .min(COIN_PROBABILITIES.len() - 1)
 }
 
+/// Map a horizontal hand position onto a landing bin (rights count 0..=rows).
+fn bet_bin_at(x: f64) -> usize {
+    let bins = BOARD_ROWS + 1;
+    ((unit(x, 0.5) * bins as f64).floor() as usize).min(bins - 1)
+}
+
 fn drop_waves(pokes: &[(f64, f64)]) -> Vec<DropWave> {
     let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
     pokes[start..]
@@ -75,6 +81,18 @@ fn drop_waves_from_inputs(inputs: &[RoomInput]) -> Vec<DropWave> {
         })
         .collect();
     drop_waves(&points)
+}
+
+/// The newest finite pointer-move commits a one-ball landing bet. Downs never
+/// set the bet: a click still only drops waves, so the wager is a separate
+/// gesture beat before the result is graded against the last ball path.
+fn bet_bin_from_inputs(inputs: &[RoomInput]) -> Option<usize> {
+    inputs.iter().rev().find_map(|input| match *input {
+        RoomInput::PointerMove { x, y, .. } if x.is_finite() && y.is_finite() => {
+            Some(bet_bin_at(x))
+        }
+        _ => None,
+    })
 }
 
 fn selected_run(waves: &[DropWave]) -> Option<(usize, usize)> {
@@ -356,13 +374,17 @@ impl Room for GaltonBoard {
     }
 
     fn status(&self, _t: f64) -> Option<String> {
-        Some("5 COINS   CLICK TO PICK ONE AND DROP 64 BALLS".into())
+        Some("5 COINS  DROP 64  MOVE TO BET ONE BALL".into())
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let waves = drop_waves_from_inputs(inputs);
+        let bet = bet_bin_from_inputs(inputs);
         let Some((coin, wave_count)) = selected_run(&waves) else {
-            return self.status(t);
+            return match bet {
+                Some(bin) => Some(format!("BET {bin}/{BOARD_ROWS}  CLICK DROP 64")),
+                None => self.status(t),
+            };
         };
         let p_right = COIN_PROBABILITIES[coin];
         let which = wave_count.saturating_mul(BALLS_PER_WAVE).saturating_sub(1);
@@ -390,13 +412,23 @@ impl Room for GaltonBoard {
         let probability = probability.strip_prefix('0').unwrap_or(&probability);
         // Compact status: must fit App compact footer budgets (360 wide).
         // M~E is empirical mean versus binomial expectation np.
+        // Optional B{n}H/M grades a move-committed one-ball bet against the
+        // highlighted last ball of the contiguous run (the prediction beat).
+        let grade = bet.map(|bin| {
+            if bin == rights {
+                format!(" B{bin}H")
+            } else {
+                format!(" B{bin}M")
+            }
+        });
+        let grade = grade.as_deref().unwrap_or("");
         if wave_count == MAX_ROOM_POKES {
             Some(format!(
-                "P{probability} FULL={balls} M{mean:.1}~{expected:.1} L{rights}R"
+                "P{probability} FULL={balls} M{mean:.1}~{expected:.1} L{rights}R{grade}"
             ))
         } else {
             Some(format!(
-                "P{probability} {wave_count}x64={balls} M{mean:.1}~{expected:.1} L{rights}R"
+                "P{probability} {wave_count}x64={balls} M{mean:.1}~{expected:.1} L{rights}R{grade}"
             ))
         }
     }
@@ -439,7 +471,7 @@ impl GaltonBoard {
 mod tests {
     use super::{
         BALLS_PER_WAVE, BOARD_ROWS, BOARD_TOP, COIN_PROBABILITIES, DropWave, GaltonBoard,
-        drop_waves, selected_run,
+        bet_bin_at, coin_at, drop_waves, selected_run,
     };
     use crate::canvas::Canvas;
     use crate::room::{MAX_ROOM_POKES, Room};
@@ -782,6 +814,71 @@ mod tests {
         assert!(status.contains("~11.2")); // 16 rows * 0.70
         assert!(status.contains('L'));
         assert!(status.contains('R'));
+        assert!(
+            !status.contains(" B"),
+            "a pure click has no move-committed bet grade"
+        );
+    }
+
+    #[test]
+    fn move_commits_a_one_ball_bet_and_click_grades_the_last_landing() {
+        use crate::room::RoomInput;
+
+        let room = GaltonBoard::new();
+        let open = room.status(0.0).expect("open");
+        assert!(open.contains("MOVE TO BET"));
+        assert!(open.contains("DROP 64"));
+
+        let bet_only = [RoomInput::PointerMove {
+            x: 0.5,
+            y: 0.7,
+            t: 0.0,
+        }];
+        let pending = room.status_input(0.0, &bet_only).expect("bet status");
+        assert!(pending.starts_with("BET "));
+        assert!(pending.contains("CLICK DROP 64"));
+        assert!(!pending.contains("1x64"));
+
+        // Fair coin, center bet: grade the highlighted last ball of the wave.
+        let coin = coin_at(0.5);
+        let p_right = COIN_PROBABILITIES[coin];
+        let rights = GaltonBoard::ball_trace(
+            BOARD_ROWS,
+            p_right,
+            GaltonBoard::experiment_variation(0, coin),
+            BALLS_PER_WAVE - 1,
+        )
+        .last()
+        .copied()
+        .expect("landing");
+        let bet = bet_bin_at(0.5);
+        let graded = [
+            RoomInput::PointerMove {
+                x: 0.5,
+                y: 0.7,
+                t: 0.0,
+            },
+            RoomInput::PointerDown {
+                x: 0.5,
+                y: 0.2,
+                t: 0.1,
+            },
+        ];
+        let status = room.status_input(0.0, &graded).expect("graded status");
+        assert!(status.contains("1x64=64"));
+        assert!(status.contains(&format!("L{rights}R")));
+        if bet == rights {
+            assert!(status.ends_with(&format!("B{bet}H")), "{status}");
+        } else {
+            assert!(status.ends_with(&format!("B{bet}M")), "{status}");
+        }
+        // Moves alone never build a pile; only downs do.
+        let mut move_only = Canvas::new(41, 16);
+        let mut after_drop = Canvas::new(41, 16);
+        room.render_input(&mut move_only, 0.0, &bet_only);
+        room.render_input(&mut after_drop, 0.0, &graded);
+        assert!(!move_only.to_text().contains('*'));
+        assert!(after_drop.to_text().contains('*'));
     }
 
     #[test]

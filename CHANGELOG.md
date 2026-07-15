@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Galton Board one-ball prediction beat: a pointer-move commits a landing-bin
+  wager without dropping balls; the next 64-ball wave still builds the
+  empirical run, and status grades the highlighted last ball as B{n}H or B{n}M
+  against that bet. First contact names the move-to-bet verb; pure clicks keep
+  the prior mean-versus-expectation readout. Focused regressions cover bet
+  pending, hit/miss grading, and move-only render silence.
 - The Pour and Slope Rider action status now freeze the theorem at the hand:
   a probe reports fill rate equals height plus the poured total, and a dropped
   rider reports board tilt plus hill height. The catalog invariant
