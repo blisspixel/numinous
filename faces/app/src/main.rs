@@ -459,6 +459,7 @@ impl App {
             cursor: 0,
             bites: std::collections::BTreeSet::new(),
             graded: None,
+            bite_flash: None,
         });
         self.sync_room_parameter_voice();
     }
@@ -610,6 +611,7 @@ impl App {
                 cursor: 0,
                 bites: std::collections::BTreeSet::new(),
                 graded: None,
+                bite_flash: None,
             },
             quiz: QuizPlay {
                 round: numinous_core::build_round(seed, 1, 44, 18),
@@ -682,12 +684,13 @@ impl App {
                         let (points, what) = (outcome.score, format!("MUNCH +{}.", outcome.score));
                         self.gauntlet_bank(points, clean, &what);
                     }
-                    key if controls::apply_munch_control(
-                        &mut play.cursor,
-                        &mut play.bites,
-                        key,
-                    ) => {}
-                    _ => {}
+                    key => {
+                        if let Some(cell) =
+                            controls::apply_munch_control(&mut play.cursor, &mut play.bites, key)
+                        {
+                            play.flash_bite(cell);
+                        }
+                    }
                 }
             }
             1 => {
@@ -788,8 +791,11 @@ impl App {
             }
             Key::Named(NamedKey::Enter) => self.munch_grade(),
             key => {
-                if let Some(play) = &mut self.munch {
-                    let _ = controls::apply_munch_control(&mut play.cursor, &mut play.bites, key);
+                if let Some(play) = &mut self.munch
+                    && let Some(cell) =
+                        controls::apply_munch_control(&mut play.cursor, &mut play.bites, key)
+                {
+                    play.flash_bite(cell);
                 }
             }
         }
@@ -1166,6 +1172,7 @@ impl App {
             if let Some(cell) = game_draw::MunchLayout::new(width, height).hit(mx, my) {
                 play.cursor = cell;
                 controls::toggle_munch_bite(&mut play.bites, cell);
+                play.flash_bite(cell);
             }
             return;
         }
@@ -1225,6 +1232,7 @@ impl App {
                         if let Some(run) = self.gauntlet.as_mut() {
                             run.munch.cursor = cell;
                             controls::toggle_munch_bite(&mut run.munch.bites, cell);
+                            run.munch.flash_bite(cell);
                         }
                     }
                 }
@@ -2764,6 +2772,12 @@ impl ApplicationHandler for App {
                 if !play.over && self.frame % interval == 0 {
                     self.arcade_beat();
                 }
+            }
+            if let Some(play) = &mut self.munch {
+                let _ = play.tick_bite_flash();
+            }
+            if let Some(run) = &mut self.gauntlet {
+                let _ = run.munch.tick_bite_flash();
             }
             if self.banner.as_mut().is_some_and(|banner| !banner.tick()) {
                 self.banner = None;

@@ -6,6 +6,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Munch bite juice: each toggle (keyboard or mouse) flashes the cell for a
+  short fill pulse so bites are felt before final grading. Gauntlet munch
+  stage shares the same juice. Focused tick-down regression covers the flash.
 - Mouse support for every window game: Nim heaps and stone takes, Arcade step
   and eat, and Gauntlet munch/quiz stages all answer left-click. Quiz and Munch
   already clicked; pointer routing now treats all five live games as click

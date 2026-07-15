@@ -397,14 +397,25 @@ pub(crate) fn draw_munch(
         '#',
     );
     let layout = MunchLayout::new(width, height);
+    let flash_cell = play
+        .bite_flash
+        .filter(|(_, frames)| *frames > 0)
+        .map(|(cell, _)| cell);
     for (i, &value) in play.board.numbers.iter().enumerate() {
         let (x0, y0, x1, y1) = layout.rect(i);
         let bitten = play.bites.contains(&i);
-        let mark = if bitten { '#' } else { '-' };
+        let flashing = flash_cell == Some(i);
+        let mark = if flashing || bitten { '#' } else { '-' };
         raster.line(x0, y0, x1, y0, mark);
         raster.line(x0, y1, x1, y1, mark);
         raster.line(x0, y0, x0, y1, mark);
         raster.line(x1, y0, x1, y1, mark);
+        if flashing {
+            // Bite juice: fill the cell for a few frames so the toggle is felt.
+            for y in (y0 + 1)..y1 {
+                raster.line(x0 + 1, y, x1 - 1, y, '#');
+            }
+        }
         if i == play.cursor && play.graded.is_none() {
             let inset = if (frame / 20) % 2 == 0 { 1 } else { 2 };
             raster.line(x0 + inset, y0 + inset, x1 - inset, y0 + inset, '#');
@@ -421,7 +432,7 @@ pub(crate) fn draw_munch(
             tx,
             ty,
             scale,
-            if bitten { '#' } else { '*' },
+            if flashing || bitten { '#' } else { '*' },
         );
     }
     match &play.graded {
@@ -887,6 +898,7 @@ mod tests {
             cursor: 0,
             bites: BTreeSet::new(),
             graded: None,
+            bite_flash: None,
         }
     }
 

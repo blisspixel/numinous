@@ -137,25 +137,36 @@ pub(crate) fn toggle_munch_bite(bites: &mut BTreeSet<usize>, cell: usize) {
     }
 }
 
+/// Apply keyboard munch control. Returns `Some(cell)` when a bite was toggled.
 pub(crate) fn apply_munch_control(
     cursor: &mut usize,
     bites: &mut BTreeSet<usize>,
     key: &Key,
-) -> bool {
-    let Some(control) = munch_control(key) else {
-        return false;
-    };
+) -> Option<usize> {
+    let control = munch_control(key)?;
     let cell_count = ROWS * COLS;
     match control {
         MunchControl::ToggleBite => {
             toggle_munch_bite(bites, *cursor);
+            Some(*cursor)
         }
-        MunchControl::Right => *cursor = (*cursor + 1) % cell_count,
-        MunchControl::Left => *cursor = (*cursor + cell_count - 1) % cell_count,
-        MunchControl::Down => *cursor = (*cursor + COLS) % cell_count,
-        MunchControl::Up => *cursor = (*cursor + cell_count - COLS) % cell_count,
+        MunchControl::Right => {
+            *cursor = (*cursor + 1) % cell_count;
+            None
+        }
+        MunchControl::Left => {
+            *cursor = (*cursor + cell_count - 1) % cell_count;
+            None
+        }
+        MunchControl::Down => {
+            *cursor = (*cursor + COLS) % cell_count;
+            None
+        }
+        MunchControl::Up => {
+            *cursor = (*cursor + cell_count - COLS) % cell_count;
+            None
+        }
     }
-    true
 }
 
 #[cfg(test)]
@@ -255,23 +266,20 @@ mod tests {
         let mut cursor = 0;
         let mut bites = BTreeSet::new();
 
-        assert!(apply_munch_control(
-            &mut cursor,
-            &mut bites,
-            &Key::Named(NamedKey::ArrowLeft)
-        ));
+        assert_eq!(
+            apply_munch_control(&mut cursor, &mut bites, &Key::Named(NamedKey::ArrowLeft)),
+            None
+        );
         assert_eq!(cursor, ROWS * COLS - 1);
-        assert!(apply_munch_control(
-            &mut cursor,
-            &mut bites,
-            &Key::Character("s".into())
-        ));
+        assert_eq!(
+            apply_munch_control(&mut cursor, &mut bites, &Key::Character("s".into())),
+            None
+        );
         assert_eq!(cursor, COLS - 1);
-        assert!(apply_munch_control(
-            &mut cursor,
-            &mut bites,
-            &Key::Character("w".into())
-        ));
+        assert_eq!(
+            apply_munch_control(&mut cursor, &mut bites, &Key::Character("w".into())),
+            None
+        );
         assert_eq!(cursor, ROWS * COLS - 1);
     }
 
@@ -280,17 +288,15 @@ mod tests {
         let mut cursor = 7;
         let mut bites = BTreeSet::new();
 
-        assert!(apply_munch_control(
-            &mut cursor,
-            &mut bites,
-            &Key::Character("e".into())
-        ));
+        assert_eq!(
+            apply_munch_control(&mut cursor, &mut bites, &Key::Character("e".into())),
+            Some(7)
+        );
         assert!(bites.contains(&7));
-        assert!(apply_munch_control(
-            &mut cursor,
-            &mut bites,
-            &Key::Named(NamedKey::Space)
-        ));
+        assert_eq!(
+            apply_munch_control(&mut cursor, &mut bites, &Key::Named(NamedKey::Space)),
+            Some(7)
+        );
         assert!(!bites.contains(&7));
         assert_eq!(cursor, 7);
     }
