@@ -6,6 +6,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Catalog 100: The Mirror of Forms (category-lite composition).
 - Frontier and topology batch (catalog 99): Sphere Eversion, Causal Doors,
   Soft Proof (homotopy), Learning Clock, Duality.
 - Soap Film, Landauer's Price, and Prime Gap Weather (catalog 94).

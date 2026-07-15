@@ -62,6 +62,7 @@ pub mod lsystem;
 pub mod mandelbrot;
 pub mod menagerie;
 pub mod message_heals;
+pub mod mirror_forms;
 pub mod mobius;
 pub mod morley;
 pub mod murmuration;

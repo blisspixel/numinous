@@ -99,6 +99,7 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::soft_proof::SoftProof::new_with(variation)),
         Box::new(rooms::learning_clock::LearningClock::new_with(variation)),
         Box::new(rooms::duality::Duality::new_with(variation)),
+        Box::new(rooms::mirror_forms::MirrorForms::new_with(variation)),
         Box::new(rooms::prime_spirals::PrimeSpirals::new_with(variation)),
         Box::new(rooms::cult_of_pi::CultOfPi::new_with(variation)),
         Box::new(rooms::collatz::Collatz::new_with(variation)),
