@@ -425,9 +425,9 @@ Physarum Tokyo result).
    on the critical line; DRAG: CLIMB THE LINE; the spiral folds home near
    Riemann zeros, hunted by ear as cadences. The Prime Spirals 0.5 egg, made
    playable.
-7. **The Starbow** (Shape & Space / Cosmos): HOLD: BURN toward lightspeed;
-   relativistic aberration pours the whole sky into a burning ring ahead.
-   One closed-form transform per star (McKinley 1979).
+7. **The Starbow** (Shape & Space / Cosmos) **built** (`starbow`): HOLD: BURN
+   toward lightspeed; relativistic aberration pours the whole sky into a
+   burning ring ahead. One closed-form transform per star (McKinley 1979).
 8. **Slingshot** (Motion & Dynamics): PULL AND RELEASE: LAUNCH A PROBE on
    the gesture substrate; HOLD grows suns; gravity assists discovered, not
    taught. Daily seeded courses; missed probes become comets, never failures.
@@ -869,19 +869,20 @@ edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
 
 ### What we already have (feel, not curriculum)
 
-**Built now (37 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+**Built now (38 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
 Julia, Cult of Pi, Life and Cellular Automata and Langton, The Sandpile, Chaos
 Game, Golden Angle, Galton and Buffon, Lissajous, Chladni Figures, Ripple Tank,
-The Coffee Cup, Ford Circles, The Zeta Walk, Harmonograph, Epicycles, L-System
-and Barnsley, Lorenz and Double Pendulum and Logistic Map, Collatz, Prime
-Spirals, Goldbach, Voronoi, Random Walk, Arecibo, Mobius, Zeno, The Pour, Slope
-Rider, Quine, Strange Loop, plus games (Quiz, Munch, Arcade, Nim, Gauntlet,
-SETI, Aliens, Codebreaker, and kin), Studio, radio, Journey, Cairn, predict.
+The Coffee Cup, Ford Circles, The Zeta Walk, The Starbow, Harmonograph,
+Epicycles, L-System and Barnsley, Lorenz and Double Pendulum and Logistic Map,
+Collatz, Prime Spirals, Goldbach, Voronoi, Random Walk, Arecibo, Mobius, Zeno,
+The Pour, Slope Rider, Quine, Strange Loop, plus games (Quiz, Munch, Arcade,
+Nim, Gauntlet, SETI, Aliens, Codebreaker, and kin), Studio, radio, Journey,
+Cairn, predict.
 
 **Designed in earlier waves (do not redesign, do build):** Next Wave remainder
-(Starbow, Slingshot, and the rest of that wave); Awe Engine tier S/A/B; Long
-Shot, Only Move, Dimension Dial; First Contact handshake room; Function Painter
-scope flagship; classical geometry and sonification-first batches.
+(Slingshot, and the rest of that wave); Awe Engine tier S/A/B; Long Shot, Only
+Move, Dimension Dial; First Contact handshake room; Function Painter scope
+flagship; classical geometry and sonification-first batches.
 
 **Honest gaps this pass targets:** high-dimension intuition, information and
 noise as felt structure, quantum and measurement without mysticism, learning

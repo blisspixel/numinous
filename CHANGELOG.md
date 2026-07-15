@@ -6,10 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The Starbow room (`starbow`, Shape & Space): McKinley relativistic aberration
+  maps each rest-frame star into a forward cone as beta climbs; `t` burns
+  ambient speed; HOLD: BURN under the hand; status reports v/c, gamma, and
+  forward fraction. Catalog is 38 rooms.
 - The Zeta Walk room (`zeta-walk`, Number & Pattern): alternating eta partial
   sums on Re(s)=1/2 draw a spiral that tightens near tabulated Riemann zeros;
   `t` climbs imag height; DRAG: CLIMB THE LINE; sound resolves at cadences.
-  Catalog is 37 rooms.
 - Ford Circles room (`ford-circles`, Number & Pattern): reduced fractions p/q
   own radius-1/(2q^2) circles that never overlap; `t` deepens the denominator
   ceiling; CLICK: BIRTH THE MEDIANT inserts (a+c)/(b+d) into the Farey gap under

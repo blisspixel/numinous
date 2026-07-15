@@ -36,6 +36,7 @@ pub mod random_walk;
 pub mod ripple;
 pub mod sandpile;
 pub mod slope_rider;
+pub mod starbow;
 pub mod strange_loop;
 pub mod tetractys;
 pub mod the_pour;
