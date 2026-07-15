@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Registry invariant `poke_changes_status_or_room_is_phase_scrub`: every
+  touchable catalog room must change status after a center poke, except an
+  explicit allowlist of phase-scrub rooms (pour, slope, Times Tables, logistic
+  map, Lissajous, Harmonograph, Arecibo).
 - Lorenz action status names seeded shadow storms; Double Pendulum status
   labels PINNED, FLUNG, RE-DROP, or CANCELLED beside the twin gap so gesture
   and poke paths both speak after a hand act.

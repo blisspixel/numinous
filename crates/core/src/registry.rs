@@ -141,6 +141,39 @@ mod tests {
     }
 
     #[test]
+    fn poke_changes_status_or_room_is_phase_scrub() {
+        // Touch rooms must speak after a center poke. Phase-scrub rooms may
+        // keep the same readout until phase changes; they are listed below.
+        use crate::room::RoomInput;
+        const PHASE_SCRUB: &[&str] = &[
+            "the-pour",
+            "slope-rider",
+            "times-tables",
+            "logistic-map",
+            "lissajous",
+            "harmonograph",
+            "arecibo",
+        ];
+        let poke = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.0,
+        }];
+        for room in all_rooms() {
+            let id = room.meta().id;
+            let open = room.status(0.0).unwrap_or_default();
+            let after = room.status_input(0.0, &poke).unwrap_or_default();
+            if PHASE_SCRUB.contains(&id) {
+                continue;
+            }
+            assert_ne!(
+                after, open,
+                "{id} is touchable but status does not change after a poke"
+            );
+        }
+    }
+
+    #[test]
     fn lookup_by_id_works_and_misses_are_none() {
         assert!(room_by_id("times-tables").is_some());
         assert!(room_by_id("no-such-room").is_none());
