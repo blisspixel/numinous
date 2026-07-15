@@ -20,9 +20,9 @@ doors' design goals. The point is what we are missing, not what we have.
 - "The menu says PLAY first, good. But I tried to CLICK the munch board and
   nothing happened." **Resolved for machine path:** every window game now
   accepts left-click (Munch, Quiz, Nim, Arcade, Gauntlet stages).
-- "When I eat a number nothing happens until the end." **Partial machine
-  fix:** Munch now flashes the toggled cell on each bite. Crunch sound and
-  wrong-bite shake remain open juice.
+- "When I eat a number nothing happens until the end." **Machine juice path:**
+  Munch flashes the toggled cell and plays a soft crunch one-shot on each
+  bite. Wrong-bite shake after grading remains open.
 - "Can I keep the picture?" **P now saves a PNG postcard in the app.** The
   remaining share gap is polish: loops, links, and a discoverable share flow.
 

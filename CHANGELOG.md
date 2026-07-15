@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Munch crunch one-shot: each bite toggle plays a short deterministic noise
+  tick over the room score without restarting the bed. Core `munch_crunch`
+  renders the sample; audio mixer `play_oneshot` consumes it once. Focused
+  regressions cover sample bounds and oneshot mix isolation.
 - Studio Formula Jam discovery (0.3): F2 Random cycles a curated 12-recipe bank;
   F3 Auto holds each recipe about 21s then advances only near an 1/8-phase
   edge; F1 toggles a dismissible help overlay that opens on first Studio

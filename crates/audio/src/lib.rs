@@ -397,6 +397,13 @@ fn shared_source_identity(
     }
 }
 
+/// One-shot overlay: play once, then drop. Control thread supplies samples.
+struct OneshotPlay {
+    samples: Arc<Vec<f32>>,
+    pos: usize,
+    gain: f32,
+}
+
 /// Callback-owned state. All storage is prepared by the control thread, so
 /// producing a frame performs no allocation.
 struct MixerState {
@@ -411,6 +418,7 @@ struct MixerState {
     active: bool,
     gain_step: f32,
     parameter_voice: ParameterVoice,
+    oneshot: Option<OneshotPlay>,
 }
 
 impl MixerState {
@@ -428,7 +436,44 @@ impl MixerState {
             active: true,
             gain_step: 1.0 / (GAIN_RAMP_SECONDS * rate).max(1.0),
             parameter_voice: ParameterVoice::new(sample_rate),
+            oneshot: None,
         }
+    }
+
+    /// Queue a mono one-shot. Replaces any unfinished oneshot.
+    fn play_oneshot(&mut self, samples: Vec<f32>, gain: f32) {
+        if samples.is_empty() {
+            return;
+        }
+        let gain = if gain.is_finite() {
+            gain.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        if gain <= 0.0 {
+            return;
+        }
+        self.oneshot = Some(OneshotPlay {
+            samples: Arc::new(samples),
+            pos: 0,
+            gain,
+        });
+    }
+
+    fn next_oneshot_sample(&mut self) -> f32 {
+        let Some(play) = self.oneshot.as_mut() else {
+            return 0.0;
+        };
+        if play.pos >= play.samples.len() {
+            self.oneshot = None;
+            return 0.0;
+        }
+        let sample = play.samples[play.pos] * play.gain;
+        play.pos += 1;
+        if play.pos >= play.samples.len() {
+            self.oneshot = None;
+        }
+        sample
     }
 
     fn replace(&mut self, next: LoopBuffer) -> (bool, Option<LoopBuffer>) {
@@ -515,7 +560,8 @@ impl MixerState {
         };
 
         let parameter = self.parameter_voice.next_sample();
-        let mixed = (mixed.0 + parameter, mixed.1 + parameter);
+        let oneshot = self.next_oneshot_sample();
+        let mixed = (mixed.0 + parameter + oneshot, mixed.1 + parameter + oneshot);
         let target = if self.active { self.master_gain } else { 0.0 };
         if self.current_gain < target {
             self.current_gain = (self.current_gain + self.gain_step).min(target);
@@ -705,6 +751,16 @@ impl LoopPlayer {
     pub fn clear_parameter_voice(&self) {
         if let Ok(mut state) = self.state.lock() {
             state.clear_parameter_voice();
+        }
+    }
+
+    /// Play a mono one-shot over the looping source without restarting it.
+    ///
+    /// Samples are consumed once at the device rate. A new oneshot replaces any
+    /// unfinished previous oneshot. Empty or non-finite gain is ignored.
+    pub fn play_oneshot(&self, samples: Vec<f32>, gain: f32) {
+        if let Ok(mut state) = self.state.lock() {
+            state.play_oneshot(samples, gain);
         }
     }
 
@@ -1033,6 +1089,23 @@ mod tests {
             assert!(mixer.next_frame().0.is_finite());
         }
         assert_eq!(mixer.parameter_voice.current_gain, 0.0);
+    }
+
+    #[test]
+    fn oneshot_plays_once_and_does_not_replace_the_loop() {
+        let mut mixer = MixerState::new(8_000);
+        mixer.current = LoopBuffer::new(vec![0.25, 0.25, 0.25, 0.25], 1);
+        let identity = mixer.current.identity;
+        mixer.play_oneshot(vec![0.5, 0.0], 1.0);
+        let first = mixer.next_frame();
+        assert!(first.0 > 0.25, "oneshot adds energy: {first:?}");
+        let _ = mixer.next_frame();
+        let after = mixer.next_frame();
+        assert!(
+            (after.0 - 0.25).abs() < 1e-4,
+            "oneshot ends; loop continues: {after:?}"
+        );
+        assert_eq!(mixer.current.identity, identity);
     }
 
     #[test]

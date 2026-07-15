@@ -313,6 +313,26 @@ fn edge_envelope(index: usize, length: usize, sample_rate: u32) -> f32 {
     0.5 - 0.5 * (std::f32::consts::PI * linear).cos()
 }
 
+/// A short noise crunch for Munch bite juice (one-shot, not a loop bed).
+///
+/// `seed` picks the noise draw; duration is about 45 ms with a fast decay so
+/// repeated bites stay clicky without drowning the room score.
+#[must_use]
+pub fn munch_crunch(sample_rate: u32, seed: u64) -> Vec<f32> {
+    let rate = sample_rate.max(8_000);
+    let length = ((rate as f32) * 0.045).round() as usize;
+    let length = length.clamp(32, rate as usize / 8);
+    let mut noise = SplitMix64::new(TUNE_MIX ^ seed.wrapping_mul(0x9E37_79B9_7F4A_7C15));
+    let mut out = Vec::with_capacity(length);
+    for i in 0..length {
+        let t = i as f32 / length as f32;
+        let envelope = (1.0 - t).powi(3) * edge_envelope(i, length, rate);
+        let sample = wave(Voice::Noise, 0.0, &mut noise) * 0.35 * envelope;
+        out.push(sample.clamp(-1.0, 1.0));
+    }
+    out
+}
+
 impl Arrangement {
     /// Render a stereo interleaved buffer with constant-power panning.
     #[must_use]
@@ -480,6 +500,19 @@ mod tests {
         assert_eq!(a, b, "the same seed is the same tune");
         assert_eq!(a.steps.len(), 32);
         assert!(compose(8, 4) != a, "different seeds differ");
+    }
+
+    #[test]
+    fn munch_crunch_is_short_bounded_and_deterministic() {
+        let a = super::munch_crunch(48_000, 7);
+        let b = super::munch_crunch(48_000, 7);
+        assert_eq!(a, b);
+        assert!(!a.is_empty());
+        assert!(a.len() < 48_000 / 10, "crunch stays a short one-shot");
+        assert!(a.iter().all(|s| s.is_finite() && *s >= -1.0 && *s <= 1.0));
+        assert!(a.iter().any(|s| s.abs() > 0.01), "crunch has energy");
+        let other = super::munch_crunch(48_000, 8);
+        assert_ne!(a, other, "seed changes the noise draw");
     }
 
     #[test]

@@ -689,6 +689,7 @@ impl App {
                             controls::apply_munch_control(&mut play.cursor, &mut play.bites, key)
                         {
                             play.flash_bite(cell);
+                            self.play_munch_crunch(cell as u64 ^ 0x6A17);
                         }
                     }
                 }
@@ -796,9 +797,22 @@ impl App {
                         controls::apply_munch_control(&mut play.cursor, &mut play.bites, key)
                 {
                     play.flash_bite(cell);
+                    self.play_munch_crunch(cell as u64);
                 }
             }
         }
+    }
+
+    /// Soft one-shot noise tick over the room score (Munch bite juice).
+    fn play_munch_crunch(&self, seed: u64) {
+        let Some(player) = &self.player else {
+            return;
+        };
+        if self.muted {
+            return;
+        }
+        let samples = numinous_core::munch_crunch(player.sample_rate(), seed);
+        player.play_oneshot(samples, 0.55 * self.volume);
     }
 
     /// One key into standalone Nim, including an explicit retry after either
@@ -1173,6 +1187,7 @@ impl App {
                 play.cursor = cell;
                 controls::toggle_munch_bite(&mut play.bites, cell);
                 play.flash_bite(cell);
+                self.play_munch_crunch(cell as u64);
             }
             return;
         }
@@ -1234,6 +1249,7 @@ impl App {
                             controls::toggle_munch_bite(&mut run.munch.bites, cell);
                             run.munch.flash_bite(cell);
                         }
+                        self.play_munch_crunch(cell as u64 ^ 0x6A17);
                     }
                 }
                 1 => {
