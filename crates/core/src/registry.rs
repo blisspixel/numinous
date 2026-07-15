@@ -196,6 +196,18 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::koch_snowflake::KochSnowflake::new_with(variation)),
         Box::new(rooms::cesaro::Cesaro::new_with(variation)),
         Box::new(rooms::minkowski::Minkowski::new_with(variation)),
+        Box::new(rooms::bogdanov::Bogdanov::new_with(variation)),
+        Box::new(rooms::kaplan_yorke::KaplanYorke::new_with(variation)),
+        Box::new(rooms::ricker::Ricker::new_with(variation)),
+        Box::new(rooms::farey::Farey::new_with(variation)),
+        Box::new(rooms::gosper::Gosper::new_with(variation)),
+        Box::new(rooms::sierpinski_tri::SierpinskiTri::new_with(variation)),
+        Box::new(rooms::burning_ship::BurningShip::new_with(variation)),
+        Box::new(rooms::tricorn::Tricorn::new_with(variation)),
+        Box::new(rooms::multibrot::Multibrot::new_with(variation)),
+        Box::new(rooms::phoenix::Phoenix::new_with(variation)),
+        Box::new(rooms::lyapunov::Lyapunov::new_with(variation)),
+        Box::new(rooms::collatz_tree::CollatzTree::new_with(variation)),
     ]
 }
 

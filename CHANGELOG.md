@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six fractal escape inventions (catalog 172): Burning Ship, Tricorn, Multibrot,
+  Phoenix, Lyapunov Weather, Collatz Tree.
+- Six map and gasket inventions (catalog 166): Bogdanov, Kaplan-Yorke, Ricker,
+  Farey Sequence, Gosper Curve, Sierpinski Triangle.
 - Six fractal and intermittency inventions (catalog 160): Gauss Map, Manneville,
   Coupled Tents, Koch Snowflake, Cesaro Fractal, Minkowski Sausage.
 - Six chaos-geometry inventions (catalog 154): Smale Horseshoe, Logistic Orbit,
