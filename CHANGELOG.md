@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Harmonograph tune status grades figure state (CLOSED/OPEN/BLOOM) and damping
+  life (LONG/MED/SHORT) beside the detune and damp knobs.
+- L-System plant status names the newest origin and that every copy is the same
+  rewrite species.
 - Langton's Ant flip status reports flip site, flip count, replayed steps, and
   black-cell count after the full ant run so a seed flip is graded by its trail.
 - Chaos Game corner status names the newest vertex position and the rebuilt

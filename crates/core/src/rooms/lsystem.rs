@@ -456,16 +456,20 @@ impl Room for LSystemGarden {
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let pokes = crate::pokes_from_inputs(inputs);
-        let count = pokes
-            .iter()
+        let plants: Vec<(f64, f64)> = pokes
+            .into_iter()
             .filter(|(x, y)| x.is_finite() && y.is_finite())
-            .count();
-        if count == 0 {
+            .collect();
+        if plants.is_empty() {
             return self.status(t);
         }
+        let count = plants.len();
+        let (ox, oy) = *plants.last().expect("nonempty plants");
+        // Every plant is the same rewrite species; the hand only chooses origin.
         Some(format!(
-            "{count} ROOTED COP{} PLANTED   SAME SPECIES, NEW ORIGIN",
-            if count == 1 { "Y" } else { "IES" }
+            "{count} COPY  ORIGIN {:.0}%{:.0}%  SAME SPECIES",
+            ox * 100.0,
+            oy * 100.0
         ))
     }
 
@@ -808,7 +812,9 @@ mod tests {
             t: 0.0,
         }];
         let status = room.status_input(0.0, &inputs).expect("planted");
-        assert!(status.contains("1 ROOTED COPY"), "{status}");
+        assert!(status.starts_with("1 COPY"), "{status}");
+        assert!(status.contains("ORIGIN 25%50%"), "{status}");
+        assert!(status.contains("SAME SPECIES"), "{status}");
     }
 
     #[test]
