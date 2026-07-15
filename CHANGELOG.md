@@ -6,10 +6,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The Ripple Tank room (`ripple`, Waves & Sound): monochromatic point sources
+  superpose into bright fans and dead-calm lanes; ambient double source opens
+  the double slit; CLICK: DROP A PEBBLE replaces sources under the hand. Catalog
+  is 34 rooms.
 - Chladni Figures room (`chladni`, Waves & Sound): free-plate formula draws
   nodal sand for mode pairs (n, m); `t` walks a mode gallery; DRAG: TUNE THE
   PLATE sets integer modes under the hand; drive tone chord is the same two
-  numbers. Reveal cites Gordon-Webb-Wolpert (1992). Catalog is 33 rooms.
+  numbers. Reveal cites Gordon-Webb-Wolpert (1992).
 - The Sandpile room (`sandpile`, Emergence): Bak-Tang-Wiesenfeld topple on an
   open grid; height four or more sends one grain to each neighbor; `t` pours
   the center; HOLD: POUR SAND drops under the hand. Status reports mass,

@@ -410,9 +410,9 @@ Physarum Tokyo result).
    IS the room's pitch). Reveal: you cannot always hear the shape of a drum
    (Gordon-Webb-Wolpert 1992). Sight and sound as the same number: the thesis,
    twice.
-3. **The Ripple Tank** (Waves & Sound): CLICK: DROP A PEBBLE; interference
-   fans, dead-calm lanes, the double slit built by hand. Reveal: the only
-   mystery of quantum mechanics.
+3. **The Ripple Tank** (Waves & Sound) **built** (`ripple`): CLICK: DROP A
+   PEBBLE; interference fans, dead-calm lanes, the double slit built by hand.
+   Reveal: the only mystery of quantum mechanics, drawn in water.
 4. **The Coffee Cup** (Shape & Space): rays bounce once in a circle and
    condense into the cardioid. DRAG: SWING THE SUN. Closes the cardioid
    triangle with Times Tables and Mandelbrot: one curve, three rooms.
@@ -867,20 +867,20 @@ edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
 
 ### What we already have (feel, not curriculum)
 
-**Built now (33 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+**Built now (34 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
 Julia, Cult of Pi, Life and Cellular Automata and Langton, The Sandpile, Chaos
-Game, Golden Angle, Galton and Buffon, Lissajous, Chladni Figures, Harmonograph,
-Epicycles, L-System and Barnsley, Lorenz and Double Pendulum and Logistic Map,
-Collatz, Prime Spirals, Goldbach, Voronoi, Random Walk, Arecibo, Mobius, Zeno,
-The Pour, Slope Rider, Quine, Strange Loop, plus games (Quiz, Munch, Arcade,
-Nim, Gauntlet, SETI, Aliens, Codebreaker, and kin), Studio, radio, Journey,
-Cairn, predict.
+Game, Golden Angle, Galton and Buffon, Lissajous, Chladni Figures, Ripple Tank,
+Harmonograph, Epicycles, L-System and Barnsley, Lorenz and Double Pendulum and
+Logistic Map, Collatz, Prime Spirals, Goldbach, Voronoi, Random Walk, Arecibo,
+Mobius, Zeno, The Pour, Slope Rider, Quine, Strange Loop, plus games (Quiz,
+Munch, Arcade, Nim, Gauntlet, SETI, Aliens, Codebreaker, and kin), Studio,
+radio, Journey, Cairn, predict.
 
 **Designed in earlier waves (do not redesign, do build):** Next Wave remainder
-(Ripple, Coffee Cup, Ford Circles, Zeta Walk, Starbow, Slingshot, and the rest
-of that wave); Awe Engine tier S/A/B; Long Shot, Only Move, Dimension Dial;
-First Contact handshake room; Function Painter scope flagship; classical
-geometry and sonification-first batches.
+(Coffee Cup, Ford Circles, Zeta Walk, Starbow, Slingshot, and the rest of that
+wave); Awe Engine tier S/A/B; Long Shot, Only Move, Dimension Dial; First
+Contact handshake room; Function Painter scope flagship; classical geometry and
+sonification-first batches.
 
 **Honest gaps this pass targets:** high-dimension intuition, information and
 noise as felt structure, quantum and measurement without mysticism, learning

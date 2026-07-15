@@ -31,6 +31,7 @@ pub mod mobius;
 pub mod prime_spirals;
 pub mod quine;
 pub mod random_walk;
+pub mod ripple;
 pub mod sandpile;
 pub mod slope_rider;
 pub mod strange_loop;
