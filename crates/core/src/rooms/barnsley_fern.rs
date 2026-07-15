@@ -201,7 +201,7 @@ impl Room for BarnsleyFern {
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let points = inputs
+        let plants = inputs
             .iter()
             .filter(|input| {
                 matches!(
@@ -212,12 +212,15 @@ impl Room for BarnsleyFern {
             })
             .count()
             .min(MAX_ROOM_POKES);
-        if points == 0 {
+        if plants == 0 {
             return self.status(t);
         }
+        // Each plant is a full IFS chaos game from the hand: same four maps as
+        // the big fern, with the phase-scaled point budget of a mini frond.
+        let pts =
+            MINI_BASE_POINTS + (Self::phase_for(t) * MINI_SWEEP_POINTS as f64).round() as usize;
         Some(format!(
-            "{points} MINI FERN{} PLANTED   EACH REPEATS THE SAME FOUR MAPS",
-            if points == 1 { "" } else { "S" }
+            "{plants} MINI  4 MAPS  {pts} PTS  STEM1 LEAF85 L7 R7"
         ))
     }
 
@@ -315,10 +318,13 @@ mod tests {
                 t: 0.3,
             },
         ];
-        assert_eq!(
-            room.status_input(0.4, &inputs).as_deref(),
-            Some("2 MINI FERNS PLANTED   EACH REPEATS THE SAME FOUR MAPS")
-        );
+        let status = room.status_input(0.4, &inputs).expect("plant status");
+        assert!(status.starts_with("2 MINI  4 MAPS"));
+        assert!(status.contains("1060 PTS"));
+        assert!(status.contains("STEM1 LEAF85 L7 R7"));
+        // Phase scales the mini chaos-game budget.
+        let denser = room.status_input(1.0, &inputs).expect("dense");
+        assert!(denser.contains("1600 PTS"));
     }
 
     #[test]

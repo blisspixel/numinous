@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Barnsley mini-fern status names the shared four-map IFS (stem/leaf/left/right
+  probabilities) and the phase-scaled point budget of each planted chaos game.
 - Mobius brush status names which lap of the double-covered single edge the
   newest paint sits on, reports paint reach, and restates that it is still one
   edge.
