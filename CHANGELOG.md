@@ -6,10 +6,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Ford Circles room (`ford-circles`, Number & Pattern): reduced fractions p/q
+  own radius-1/(2q^2) circles that never overlap; `t` deepens the denominator
+  ceiling; CLICK: BIRTH THE MEDIANT inserts (a+c)/(b+d) into the Farey gap under
+  the hand. Focused tests cover non-overlap, neighbor kisses, and golden gap
+  readout. Catalog is 36 rooms.
 - The Coffee Cup room (`coffee-cup`, Shape & Space): one-bounce circular
   reflections condense into a cardioid caustic; `t` walks the rim sun; DRAG:
   SWING THE SUN aims the cusp. Reveal links the same cardioid to Times Tables
-  and Mandelbrot. Catalog is 35 rooms.
+  and Mandelbrot.
 - The Ripple Tank room (`ripple`, Waves & Sound): monochromatic point sources
   superpose into bright fans and dead-calm lanes; ambient double source opens
   the double slit; CLICK: DROP A PEBBLE replaces sources under the hand.

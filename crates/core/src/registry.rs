@@ -29,6 +29,7 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::chladni::Chladni::new_with(variation)),
         Box::new(rooms::ripple::Ripple::new_with(variation)),
         Box::new(rooms::coffee_cup::CoffeeCup::new_with(variation)),
+        Box::new(rooms::ford_circles::FordCircles::new_with(variation)),
         Box::new(rooms::prime_spirals::PrimeSpirals::new_with(variation)),
         Box::new(rooms::cult_of_pi::CultOfPi::new_with(variation)),
         Box::new(rooms::collatz::Collatz::new_with(variation)),
