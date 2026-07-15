@@ -405,8 +405,11 @@ impl Room for Mandelbrot {
             return self.status(t);
         }
         let magnification = 1_u64 << dives.min(63);
+        // Canonical analysis size so status names the complex target without a
+        // canvas: same dive math as render, fixed aspect for the readout.
+        let (cx, cy, _zoom) = selected_view_input(inputs, 100, 100, self.seed, t);
         Some(format!(
-            "DIVE {dives}   ZOOM {magnification}X   TARGET SELECTED"
+            "DIVE {dives}  C{cx:+.3}{cy:+.3}i  {magnification}X"
         ))
     }
 
@@ -755,6 +758,41 @@ mod tests {
         assert_eq!(selected_early, selected_late);
         assert_ne!(selected_late, deeper);
         assert_ne!(selected_late, render_text(&room, 0.9, &[]));
+    }
+
+    #[test]
+    fn dive_status_names_the_complex_target() {
+        use crate::room::RoomInput;
+
+        let room = Mandelbrot::new();
+        let open = room.status(0.0).expect("open");
+        assert!(open.contains("AUTO DIVE"));
+        let inputs = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.6,
+        }];
+        let status = room.status_input(0.6, &inputs).expect("dive status");
+        assert_ne!(status, open);
+        assert!(status.starts_with("DIVE 1"));
+        assert!(status.contains('C'));
+        assert!(status.contains('i'));
+        assert!(status.ends_with("2X"));
+        let (cx, cy, _) = selected_view_input(&inputs, 100, 100, 0, 0.6);
+        assert!(status.contains(&format!("{cx:+.3}")));
+        assert!(status.contains(&format!("{cy:+.3}")));
+        let deeper = [
+            inputs[0],
+            RoomInput::PointerDown {
+                x: 0.6,
+                y: 0.4,
+                t: 0.7,
+            },
+        ];
+        let two = room.status_input(0.7, &deeper).expect("second dive");
+        assert!(two.starts_with("DIVE 2"));
+        assert!(two.ends_with("4X"));
+        assert_ne!(two, status);
     }
 
     #[test]

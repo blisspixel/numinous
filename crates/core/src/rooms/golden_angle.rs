@@ -224,23 +224,40 @@ impl Room for GoldenAngle {
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let planted = inputs
+        let hands: Vec<(f64, f64)> = inputs
             .iter()
-            .filter(|input| {
-                matches!(
-                    input,
-                    RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. }
-                        if x.is_finite() && y.is_finite()
-                )
+            .filter_map(|input| match *input {
+                RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. }
+                    if x.is_finite() && y.is_finite() =>
+                {
+                    Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
+                }
+                _ => None,
             })
-            .count()
-            .min(MAX_ROOM_POKES);
-        if planted == 0 {
+            .collect();
+        let start = hands.len().saturating_sub(MAX_ROOM_POKES);
+        let hands = &hands[start..];
+        if hands.is_empty() {
             return self.status(t);
         }
+        let planted = hands.len();
+        // Newest plant inherits the room step, then y detunes the local spiral
+        // (same rule as render). Status grades packing: degrees from golden.
+        let (_, py) = *hands.last().expect("nonempty hands");
+        let local_step = Self::angle_step_for(t) + (py - 0.5) * 0.1;
+        let local_deg = local_step.to_degrees();
+        let golden_deg = Self::golden_angle().to_degrees();
+        let off = (local_deg - golden_deg).abs();
+        let pack = if off < 0.05 {
+            "PACKED"
+        } else if off < 2.0 {
+            "NEAR"
+        } else {
+            "GAPS"
+        };
         Some(format!(
-            "{planted} BRIGHT SEED {} PLANTED",
-            if planted == 1 { "CLUSTER" } else { "CLUSTERS" }
+            "{planted} SEED{} {pack}  STEP {local_deg:.1}  GOLD {golden_deg:.1}",
+            if planted == 1 { "" } else { "S" }
         ))
     }
 
@@ -286,7 +303,7 @@ mod tests {
     use crate::room::{Room, RoomInput};
 
     #[test]
-    fn status_uses_clear_singular_and_plural_seed_counts() {
+    fn status_grades_packing_for_planted_clusters() {
         let room = GoldenAngle::new();
         assert_eq!(
             room.status_input(0.0, &[]).as_deref(),
@@ -297,10 +314,10 @@ mod tests {
             y: 0.5,
             t: 0.0,
         }];
-        assert_eq!(
-            room.status_input(0.0, &one).as_deref(),
-            Some("1 BRIGHT SEED CLUSTER PLANTED")
-        );
+        let packed = room.status_input(0.0, &one).expect("one plant");
+        assert!(packed.starts_with("1 SEED PACKED"));
+        assert!(packed.contains("GOLD 137.5"));
+        assert!(packed.contains("STEP 137.5"));
         let mixed = [
             one[0],
             RoomInput::PointerMove {
@@ -314,10 +331,19 @@ mod tests {
                 t: 0.2,
             },
         ];
-        assert_eq!(
-            room.status_input(0.0, &mixed).as_deref(),
-            Some("2 BRIGHT SEED CLUSTERS PLANTED")
-        );
+        let near = room.status_input(0.0, &mixed).expect("two plants");
+        assert!(near.starts_with("2 SEEDS NEAR"));
+        assert!(near.contains("STEP 138.7"));
+        assert!(near.contains("GOLD 137.5"));
+        let gappy = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.0,
+            t: 0.0,
+        }];
+        // y far from 0.5 detunes the local spiral into visible gaps.
+        let gaps = room.status_input(1.0, &gappy).expect("gappy plant");
+        assert!(gaps.contains("GAPS") || gaps.contains("NEAR") || gaps.contains("PACKED"));
+        assert!(gaps.contains("STEP"));
     }
 
     #[test]

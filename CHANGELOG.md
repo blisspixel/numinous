@@ -6,6 +6,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Mandelbrot dive status names the complex target (C real/imag) and zoom power
+  of two; Golden Angle plant status grades local packing (PACKED/NEAR/GAPS)
+  against the golden step in degrees so placement detune is readable.
 - Cult of Pi placement decision loop: hold status grades the newest patch by
   how many display faults it restores (FIX) and names the exact digit under the
   finger (D), so placement is a choice between faulted and clean regions rather
