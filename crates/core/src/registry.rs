@@ -278,6 +278,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::roulette::Roulette::new_with(variation)),
         Box::new(rooms::damped_sine::DampedSine::new_with(variation)),
         Box::new(rooms::beats::Beats::new_with(variation)),
+        Box::new(rooms::gibbs_square::GibbsSquare::new_with(variation)),
+        Box::new(rooms::sawtooth::Sawtooth::new_with(variation)),
+        Box::new(rooms::triangle_wave::TriangleWave::new_with(variation)),
+        Box::new(rooms::am_modulation::AmModulation::new_with(variation)),
+        Box::new(rooms::fm_modulation::FmModulation::new_with(variation)),
+        Box::new(rooms::standing_wave::StandingWave::new_with(variation)),
     ]
 }
 

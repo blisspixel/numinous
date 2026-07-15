@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six wave inventions (catalog 238): Gibbs Square, Sawtooth, Triangle Wave, AM
+  Modulation, FM Modulation, Standing Wave.
 - Six classical inventions (catalog 232): Involute, Ellipse Evolute, Pedal
   Curve, Roulette Gallery, Damped Sine, Beats.
 - Six classical curve inventions (catalog 226): Semicubical, Kappa, Circular
