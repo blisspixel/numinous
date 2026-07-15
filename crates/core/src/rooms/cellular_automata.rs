@@ -154,9 +154,7 @@ impl Room for CellularAutomata {
 
     fn status(&self, t: f64) -> Option<String> {
         let rule = Self::rule_for(t, self.seed);
-        Some(format!(
-            "RULE {rule}   ONE ROW REWRITES ITSELF   CLICK: FLIP A SEED CELL"
-        ))
+        Some(format!("RULE {rule}  ROW REWRITES  CLICK:FLIP SEED"))
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

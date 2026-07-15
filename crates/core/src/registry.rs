@@ -237,6 +237,26 @@ mod tests {
     }
 
     #[test]
+    fn first_contact_status_fits_compact_footer() {
+        // Open status shares the same footer budget as action status.
+        const MAX_CHARS: usize = 56;
+        let mut long = Vec::new();
+        for room in all_rooms() {
+            let id = room.meta().id;
+            let open = room.status(0.0).unwrap_or_default();
+            let len = open.chars().count();
+            if len > MAX_CHARS {
+                long.push(format!("{id} ({len}): {open:?}"));
+            }
+        }
+        assert!(
+            long.is_empty(),
+            "first-contact status too long for compact footer:\n{}",
+            long.join("\n")
+        );
+    }
+
+    #[test]
     fn lookup_by_id_works_and_misses_are_none() {
         assert!(room_by_id("times-tables").is_some());
         assert!(room_by_id("no-such-room").is_none());

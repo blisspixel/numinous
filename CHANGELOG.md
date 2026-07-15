@@ -6,6 +6,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Registry invariant `first_contact_status_fits_compact_footer`: open status is
+  at most 56 characters, matching action status. Cellular Automata open line
+  compacted to keep rule identity, rewrite idea, and flip invite inside budget.
 - Registry invariant `first_contact_status_names_an_action_or_goal_when_the_room_has_a_verb`:
   every verb-bearing catalog room must open with an invite or goal token
   (CLICK/DRAG/TARGET/...), not ambient-only prose. Lissajous, Cult of Pi,
