@@ -12,12 +12,31 @@ fn studio_scale(width: usize) -> i32 {
 
 const DEFAULT_SOURCE: &str = "sin(a*x) + x/3";
 
+/// Curated Formula Jam recipes: each must parse and make a melody.
+/// Random discovery draws only from this bank, never free assembly.
+pub(crate) const STUDIO_RECIPES: &[&str] = &[
+    "sin(a*x) + x/3",
+    "sin(x) + sin(2*x)/2",
+    "cos(x)*sin(a*x)",
+    "abs(sin(x))",
+    "x^2/12 - 1",
+    "sin(x) + cos(a*x)/2",
+    "sin(3*x)/3 + sin(x)",
+    "cos(x + a) + x/8",
+    "abs(x)/3 - cos(x)",
+    "sin(a*x) * cos(x)",
+    "x/4 + sin(2*x)",
+    "cos(x)^2 - sin(x)^2",
+];
+
 /// The app-local Studio panel state.
 #[derive(Debug, Clone)]
 pub struct StudioPanel {
     source: String,
     expr: Option<Expr>,
     error: Option<String>,
+    /// Recipe index for Random (advances each draw).
+    recipe_cursor: u64,
 }
 
 impl Default for StudioPanel {
@@ -38,9 +57,20 @@ impl StudioPanel {
             source: source.to_string(),
             expr: None,
             error: None,
+            // Start at 1 so the first Random draw is not the default recipe.
+            recipe_cursor: 1,
         };
         let _ = panel.reparse();
         Ok(panel)
+    }
+
+    /// Load the next curated recipe. Returns a melody when the recipe parses.
+    pub fn load_random_recipe(&mut self) -> Option<SoundSpec> {
+        let len = STUDIO_RECIPES.len() as u64;
+        let index = (self.recipe_cursor % len) as usize;
+        self.recipe_cursor = self.recipe_cursor.saturating_add(1);
+        self.source = STUDIO_RECIPES[index].to_string();
+        self.reparse()
     }
 
     /// Re-parse the Studio text, keeping the last good curve alive on errors.
@@ -169,7 +199,7 @@ impl StudioPanel {
 
 #[cfg(test)]
 mod tests {
-    use super::{MAX_STUDIO_SOURCE_CHARS, StudioPanel, studio_scale};
+    use super::{MAX_STUDIO_SOURCE_CHARS, STUDIO_RECIPES, StudioPanel, studio_scale};
     use crate::input_legend::{self, InputMode};
     use numinous_core::Raster;
 
@@ -223,6 +253,27 @@ mod tests {
         assert!(panel.backspace().is_none());
         assert_eq!(panel.source, "x + ");
         assert!(panel.error.is_some());
+    }
+
+    #[test]
+    fn every_recipe_parses_and_random_cycles_the_bank() {
+        for recipe in STUDIO_RECIPES {
+            let panel = StudioPanel::new(recipe).expect("recipe must be portable");
+            assert!(
+                panel.error.is_none(),
+                "recipe {recipe:?} must parse cleanly"
+            );
+            assert!(panel.expr.is_some(), "recipe {recipe:?} must yield an expr");
+        }
+        let mut panel = StudioPanel::default();
+        let first = panel.source.clone();
+        assert!(panel.load_random_recipe().is_some());
+        assert_ne!(panel.source, first);
+        // Cursor starts at 1 (second recipe); after remaining bank draws, wrap.
+        for _ in 1..STUDIO_RECIPES.len() {
+            assert!(panel.load_random_recipe().is_some());
+        }
+        assert_eq!(panel.source, STUDIO_RECIPES[0]);
     }
 
     #[test]

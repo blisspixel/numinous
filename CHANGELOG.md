@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Studio Formula Jam Random (0.3 partial): F2 loads the next expression from a
+  curated 12-recipe bank that must parse and sonify. Recipes stay editable.
+  Auto set and Help overlay remain open. Focused regressions cover every recipe
+  and bank cycling.
 - Munch bite juice: each toggle (keyboard or mouse) flashes the cell for a
   short fill pulse so bites are felt before final grading. Gauntlet munch
   stage shares the same juice. Focused tick-down regression covers the flash.

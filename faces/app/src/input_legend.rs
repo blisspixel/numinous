@@ -133,7 +133,7 @@ pub(crate) fn show_controls(mode: InputMode) -> String {
 
 pub(crate) fn studio_controls(mode: InputMode) -> String {
     match mode {
-        InputMode::KeyboardMouse => "TYPE A FORMULA   TAB / ESC CLOSE".to_string(),
+        InputMode::KeyboardMouse => "TYPE A FORMULA   F2 RANDOM   TAB / ESC CLOSE".to_string(),
         InputMode::Controller => "KEYBOARD TYPES   EAST CLOSES   START HELP".to_string(),
     }
 }

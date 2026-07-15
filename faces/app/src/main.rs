@@ -2417,6 +2417,11 @@ impl ApplicationHandler for App {
                         Key::Named(NamedKey::Escape) | Key::Named(NamedKey::Tab) => {
                             self.exit_studio();
                         }
+                        Key::Named(NamedKey::F2) => {
+                            // Formula Jam Random: draw a curated, tested recipe.
+                            let spec = self.studio_panel.load_random_recipe();
+                            self.set_studio_sound(spec);
+                        }
                         Key::Named(NamedKey::Backspace) => {
                             let spec = self.studio_panel.backspace();
                             self.set_studio_sound(spec);
