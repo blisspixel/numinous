@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six chaos and geometry inventions (catalog 184): Chua Circuit, Arnold Cat
+  Map, Blancmange Curve, Rose Curve, Kuramoto Sync, H-Tree.
 - Six fractal and cascade inventions (catalog 178): Nova, Magnet Fractal,
   Lambda Map, Feigenbaum Ladder, Menger Carpet, Vicsek Fractal.
 - Six fractal escape inventions (catalog 172): Burning Ship, Tricorn, Multibrot,

@@ -214,6 +214,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::feigenbaum::Feigenbaum::new_with(variation)),
         Box::new(rooms::menger::Menger::new_with(variation)),
         Box::new(rooms::vicsek::Vicsek::new_with(variation)),
+        Box::new(rooms::chua::Chua::new_with(variation)),
+        Box::new(rooms::cat_map::CatMap::new_with(variation)),
+        Box::new(rooms::blancmange::Blancmange::new_with(variation)),
+        Box::new(rooms::rose::Rose::new_with(variation)),
+        Box::new(rooms::kuramoto::Kuramoto::new_with(variation)),
+        Box::new(rooms::h_tree::HTree::new_with(variation)),
     ]
 }
 
