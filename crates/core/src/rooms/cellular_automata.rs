@@ -52,6 +52,21 @@ impl CellularAutomata {
             NOTABLE_RULES[(index + offset) % span]
         }
     }
+
+    /// Short identity for the notable rules the room tours.
+    fn rule_label(rule: u8) -> &'static str {
+        match rule {
+            90 => "SIERPINSKI",
+            30 => "CHAOS",
+            110 => "TURING",
+            54 => "COMPLEX",
+            150 => "ADDITIVE",
+            18 => "SPARSE",
+            60 => "XOR",
+            105 => "TOTALISTIC",
+            _ => "RULE",
+        }
+    }
 }
 
 fn normalized_index(value: f64, len: usize) -> usize {
@@ -146,17 +161,32 @@ impl Room for CellularAutomata {
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let pokes = crate::pokes_from_inputs(inputs);
-        let flips = pokes
-            .iter()
+        let finite: Vec<(f64, f64)> = pokes
+            .into_iter()
             .filter(|(x, y)| x.is_finite() && y.is_finite())
-            .count();
-        if flips == 0 {
+            .collect();
+        if finite.is_empty() {
             return self.status(t);
         }
+        let flips = finite.len();
         let rule = Self::rule_for(t, self.seed);
+        let label = Self::rule_label(rule);
+        // Canonical analysis width: same seed-flip math as the picture, fixed
+        // size so status can name the column and seed density without a canvas.
+        const ANALYZE_W: usize = 64;
+        let events: Vec<(usize, usize)> = finite
+            .iter()
+            .map(|&(x, y)| (normalized_index(x, ANALYZE_W), normalized_index(y, 1)))
+            .collect();
+        let mut cells = [false; ANALYZE_W];
+        cells[ANALYZE_W / 2] = true;
+        for &(x, _) in &events {
+            cells[x] = !cells[x];
+        }
+        let live = cells.iter().filter(|&&c| c).count();
+        let newest_col = events.last().map(|(x, _)| *x).unwrap_or(ANALYZE_W / 2);
         Some(format!(
-            "RULE {rule}   {flips} SEED FLIP{}   HISTORY REPLAYED FROM THE TOP",
-            if flips == 1 { "" } else { "S" }
+            "R{rule} {label}  {flips}FLIP  COL{newest_col}  SEED{live}/{ANALYZE_W}"
         ))
     }
 
@@ -236,8 +266,19 @@ mod tests {
             t: 0.0,
         }];
         let status = room.status_input(0.0, &inputs).expect("flip");
-        assert!(status.contains("1 SEED FLIP"), "{status}");
-        assert!(status.contains("HISTORY REPLAYED"), "{status}");
+        assert!(status.contains("R90 SIERPINSKI"), "{status}");
+        assert!(status.contains("1FLIP"), "{status}");
+        assert!(status.contains("COL32"), "{status}");
+        assert!(status.contains("SEED"), "{status}");
+        // Center flip of the default middle-1 seed cancels or doubles density.
+        let off_center = [RoomInput::PointerDown {
+            x: 0.1,
+            y: 0.0,
+            t: 0.0,
+        }];
+        let other = room.status_input(0.0, &off_center).expect("off-center");
+        assert!(other.contains("COL6"), "{other}");
+        assert_ne!(status, other);
     }
 
     #[test]

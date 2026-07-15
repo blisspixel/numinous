@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Cellular Automata action status names the notable rule identity (for example
+  SIERPINSKI for Rule 90), the flip count, the newest seed column, and the
+  post-flip seed density on a fixed analysis width so a click is a measured
+  rewrite of the top row, not only a flip counter.
 - Strange Loop hand status names nest depth (1/4 through 4/4) from the anchor
   and restates that each level is the same shape.
 - Barnsley mini-fern status names the shared four-map IFS (stem/leaf/left/right
