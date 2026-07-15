@@ -10,7 +10,7 @@
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::{MAX_DIM, Surface};
 
 /// Max iterations for render (keeps it fast and bounded).
@@ -454,6 +454,21 @@ impl Room for LSystemGarden {
         Some("ONE SPECIES FITS THE VIEW   CLICK: PLANT A ROOTED COPY".into())
     }
 
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = crate::pokes_from_inputs(inputs);
+        let count = pokes
+            .iter()
+            .filter(|(x, y)| x.is_finite() && y.is_finite())
+            .count();
+        if count == 0 {
+            return self.status(t);
+        }
+        Some(format!(
+            "{count} ROOTED COP{} PLANTED   SAME SPECIES, NEW ORIGIN",
+            if count == 1 { "Y" } else { "IES" }
+        ))
+    }
+
     fn postcard_t(&self) -> f64 {
         0.6
     }
@@ -780,6 +795,20 @@ mod tests {
         assert!(r.verb().is_some());
         assert_eq!(r.meta().id, "lsystem-garden");
         assert!(r.meta().wing.contains("Emergence"));
+    }
+
+    #[test]
+    fn action_status_names_planted_copies() {
+        use crate::room::RoomInput;
+        let room = LSystemGarden::new();
+        assert!(room.status(0.0).unwrap().contains("CLICK"));
+        let inputs = [RoomInput::PointerDown {
+            x: 0.25,
+            y: 0.5,
+            t: 0.0,
+        }];
+        let status = room.status_input(0.0, &inputs).expect("planted");
+        assert!(status.contains("1 ROOTED COPY"), "{status}");
     }
 
     #[test]

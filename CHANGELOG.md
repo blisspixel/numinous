@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- L-System Garden action status names how many rooted copies were planted and
+  that they keep the same species.
 - Collatz and Cellular Automata action status now name the mathematical
   consequence of a touch: perturbed orbit start and steps-to-1 for Collatz,
   seed-flip count and history replay for elementary CA, while empty input keeps
