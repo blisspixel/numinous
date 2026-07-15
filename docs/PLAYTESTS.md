@@ -1134,3 +1134,98 @@ CLI and MCP export of the App arrangement, perceptual audio fingerprints,
 independent source levels, and room-transition energy remain ranked engineering
 work. This round reduces specific sources of semantic mismatch and mechanical
 repetition. It does not claim to have proven that the music is enjoyable.
+
+---
+
+# The fifteenth round (July 14, 2026): room-bed evidence across every face
+
+All 42 simulated profiles were assigned exactly once across three fresh
+pre-change groups. Profiles 1 through 14 examined first contact, listening
+utility, command naming, and the boundary between evidence and taste. Profiles
+15 through 28 measured all 31 stable beds for numerical safety, stereo and
+temporal character, portable regression strategy, and long-listening limits.
+Profiles 29 through 42 examined App, CLI, and MCP parity, protocol size,
+variation, deterministic replay, and representation truth. The groups used
+source inspection, generated WAVs, signal analysis, real CLI commands, and real
+MCP stdio calls. Their profile reactions remain simulated lenses, not human or
+digital-mind participant evidence.
+
+## Reproduced findings
+
+- CLI `sonify` exported only the phase-specific 44.1 kHz mono mathematical
+  sonification. It could not export the 16 kHz stereo arrangement heard as the
+  App room bed, and it did not accept room variation.
+- MCP `listen_room` returned the authored motif and mathematical notes but not
+  the expanded ambient arrangement. Adding events to every default response
+  would have burdened short-context clients, while transporting PCM or local
+  file paths would have violated the current stdio capability boundary.
+- The App source-rate constant was private to its face. A headless export could
+  therefore have drifted in source rate even though the arrangement was already
+  core-owned.
+- Broad catalog signal limits caught clipping and gross failures but did not
+  describe channel balance, correlation, crest, stereo width, or silence. Exact
+  whole-buffer hashes were rejected as a portable gate because floating-point
+  transcendental functions can differ harmlessly at low bits across targets.
+- Release verification generated only mathematical-sonification WAVs. It did
+  not produce an ambient-bed artifact that a founder or musician could audition.
+
+## What changed
+
+The shared core now owns the 16 kHz source-rate contract, a 96-event protocol
+cap, stable lowercase voice identifiers, PCM16 quantization, and fixed-order
+stereo signal analysis. The analyzer reports frame integrity, non-finite and
+subnormal samples, clipping, peak, RMS, crest, per-channel level and DC,
+balance, correlation, side-to-mid ratio, maximum adjacent step, and exact-zero
+fraction. Extremely quiet and one-sided signals retain their true bounded dB
+relationship instead of collapsing through an arbitrary numerical floor.
+
+CLI `sonify` keeps `--layer mathematical` as its compatibility default. The new
+`--layer room-bed` writes a deterministic PCM16 projection of the same
+pre-master 16 kHz stereo floating-point arrangement the App consumes, including
+optional room variation. It rejects phase, poke, and gesture controls because
+they cannot affect the stable bed. Its report names duration, event count,
+channels, source rate, variation, objective signal features, and the excluded
+parameter voice, device resampling, crossfade, radio, Studio, and master stages.
+An independent RIFF parser verifies the header and every quantized source
+sample. Release verification now generates `renders/lissajous-bed.wav`.
+
+MCP `listen_room` returns an `ambient_bed` summary by default. A caller that
+chooses `ambient_detail: "events"` receives the complete deterministic event
+projection and pre-master signal features. The versioned result names its
+renderer, sample rate, channels, grid, duration, and every event's pitch, step
+timing, derived seconds, voice, level, and pan. It never includes PCM, base64,
+bytes, a URL, or a machine-local path. All 31 catalog rooms are compared against
+the core arrangement, including the complete timing projection; every result
+stays below 96 events and 64 KiB. Full and compact presentation modes preserve
+identical structured content.
+
+The larger derived command parser crossed the Windows process-entry stack
+limit during real binary smoke testing even though unit tests passed. The CLI
+now executes that parser on one named worker with an explicit fixed stack. Both
+help and a real 40-second Times Tables room-bed export run through the public
+entry point. This is a quality correction, not a product claim.
+
+## Independent checker result
+
+Three fresh post-change checkers reviewed protocol safety, numerical analysis,
+and App and CLI parity. Their first passes found three concrete gaps: derived
+MCP timing fields were not pinned by the exact-projection test, sub-floor dB
+ratios could collapse to zero, and several docs called a quantized WAV the App's
+floating-point source. The implementation and docs were corrected, focused
+tests were rerun, and every checker accepted the recheck with no remaining
+actionable finding.
+
+The complete Windows release gate passes formatting, Clippy with warnings
+denied, 1,350 all-target test cases, locked build, dependency policy, house
+style, 93.64 percent region coverage, 93.49 percent line coverage, the exact
+349-screen App matrix, gallery, contact sheet, mathematical WAVs, and the new
+room-bed PCM16 projection. Coverage improved from the previous 93.63 percent
+regions and 93.43 percent lines without changing exclusions or thresholds.
+
+This round closes objective cross-face room-bed parity and makes the actual App
+bed easy to audition. It does not change the composition and does not establish
+pleasantness, comfort, fatigue resistance, accessibility, or participant value.
+Musician-led long listening on representative devices remains the authority for
+those questions. A tolerant per-room spectral and temporal golden manifest also
+remains a separate engineering follow-up; exact sample hashes will not replace
+it.

@@ -129,8 +129,16 @@ curated rhythm and accompaniment families, short breathing anchors, and each
 motif's own cadence replace the former universal short loop and forced root.
 Objective checks cover catalog diversity, interval truth, RMS, transients,
 headroom, DC, seams, determinism, and common device rates. Musician-led
-long-listening remains required before calling the result pleasant. Smooth
-room changes remain responsive because the App renders the low-register bed
+long-listening remains required before calling the result pleasant.
+The CLI can export a deterministic PCM16 projection of the pre-master App
+source with `sonify <room> --layer room-bed`; its compatibility default remains
+the input-aware mathematical
+sonification. MCP `listen_room` returns a bounded room-bed summary by default,
+or the complete event projection and objective signal metrics with
+`ambient_detail: "events"`. It never transports PCM or a local file reference.
+These typed features expose the score and catch signal regressions without
+pretending to measure enjoyment. Room changes remain responsive because the
+App renders the low-register bed
 once at a bounded 16 kHz source rate, shares that immutable allocation with the
 audio mixer, and linearly resamples it to the device rate. Smooth source
 crossfades, control-thread buffer retirement, focus-safe gain, and
@@ -164,8 +172,8 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 1,341 passing all-target test cases, 93.63% region
-coverage and 93.43% line coverage with an enforced 80% line floor, Clippy with warnings
+The current local gate has 1,350 passing all-target test cases, 93.64% region
+coverage and 93.49% line coverage with an enforced 80% line floor, Clippy with warnings
 denied, and dependency policy checks. Release QA also regenerates an exact
 349-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
 room receipts, per-room interaction scenarios, semantic checks, and coarse
@@ -176,11 +184,11 @@ render paths, including a Life controller receipt. Sixteen additional receipts
 cover the global audio sources, levels, and effective-silence states at default
 and compact sizes. Twelve Times Tables flow receipts cover K=2, K=3, K=pi,
 K=4, K=5, and the earned Aha at both sizes, with deterministic palette and dial
-assertions. The latest
-full-roster QA pass applied all 42 documented simulated review lenses once,
-split across first contact, interaction and truth, and games plus agent faces.
-It fixed reproduced App, CLI, MCP, Studio, and mathematical-copy defects; the
-simulated reactions themselves are not participant evidence.
+assertions. The latest full-roster QA pass applied all 42 documented simulated
+review lenses once across listening and first contact, signal engineering, and
+App, CLI, and MCP parity. It made the actual stable App bed exportable,
+inspectable, bounded, and objectively comparable across faces. The simulated
+reactions and signal features are not participant or pleasantness evidence.
 CI is configured for locked tests and builds on Windows, macOS, and Ubuntu.
 Stranger playtests, accessibility work, cross-platform execution evidence,
 real-controller-model sessions, musician-led long-listening review, deeper

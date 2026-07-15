@@ -109,6 +109,13 @@ dependency.
   silence reason through one persistent HUD state.
   A shared mix bus and
   sample-accurate scheduler remain roadmap work (see `MUSIC.md` and `SOUND.md`).
+- **Headless room-bed evidence:** core owns the 16 kHz stereo arrangement and
+  fixed-order signal analysis. The App consumes that source directly. CLI
+  `sonify --layer room-bed` writes its exact PCM16 projection, while MCP
+  `listen_room` exposes either a compact typed summary or every bounded event
+  plus pre-master signal features. MCP never transports the sample buffer or a
+  machine-local path. This is one shared contract across faces, not three
+  reimplementations of the score.
 - **The Studio today:** a bounded expression engine shared by the app, CLI, and
   MCP face. The larger pattern DSL, multiple synchronized representations, and
   a safe shader authoring surface remain staged creator work. See `STUDIO.md`.

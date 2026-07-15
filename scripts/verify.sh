@@ -41,6 +41,7 @@ cargo run -q --bin numinous -- gallery --dir renders --width 600 --height 600
 cargo run -q --bin numinous -- contact-sheet --out renders/contact.png --cols 3 --tile 360
 cargo run -q --bin numinous -- sonify lissajous --out renders/lissajous.wav
 cargo run -q --bin numinous -- sonify collatz --out renders/collatz.wav
+cargo run -q --bin numinous -- sonify lissajous --layer room-bed --out renders/lissajous-bed.wav
 
 echo ""
-echo "All checks passed. Open renders/contact.png; renders/*.wav are the room sounds."
+echo "All checks passed. Open renders/contact.png; lissajous-bed.wav is the room-bed PCM16 projection."

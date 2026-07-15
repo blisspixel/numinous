@@ -8,11 +8,11 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-14
 
-- **Enforced now:** formatting, Clippy with warnings denied, 1,341 all-target
+- **Enforced now:** formatting, Clippy with warnings denied, 1,350 all-target
   test cases, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 93.63%
-  regions and 93.43% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 93.64%
+  regions and 93.49% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
   three faces, and a release-generated 349-screen visual QA matrix. Every room
@@ -46,7 +46,13 @@ built, so an aspiration is never mistaken for a result.
   require catalog and within-bed phrase diversity, and bound oscillator level,
   RMS, adjacent sample steps, headroom, DC, exact seams, determinism, and common
   device rates. This is structural audio regression coverage, not a perceptual
-  fingerprint or listening result. The App's fixed 16 kHz room-score source is
+  fingerprint or listening result. A shared fixed-order analyzer additionally
+  reports finite-sample integrity, clipping, RMS, crest, channel balance, DC,
+  correlation, side-to-mid ratio, adjacent steps, and exact-zero fraction.
+  CLI tests parse RIFF independently and compare every exported PCM16 sample to
+  the shared quantizer's projection of the App source; MCP tests compare every event for all 31 rooms, enforce a
+  96-event and 64 KiB result budget, and reject binary or local-path transport.
+  The App's fixed 16 kHz room-score source is
   capped below two million interleaved samples and shared with the mixer, so
   device rate and repeated hand input cannot multiply that source allocation.
 - **Not yet evidenced:** a completed stranger hallway test, accessibility review

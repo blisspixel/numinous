@@ -48,10 +48,17 @@ There are two engines, and they are designed to coexist and even harmonize.
 > immutable buffer with the mixer, and linearly resamples to the device rate.
 > This bounds room-switch memory and work independently of a 48, 96, or 192 kHz
 > device without changing pitch or arrangement time. `listen_room.motif`
-> reports the authored theme, while
-> `listen_room.notes` and CLI `sonify` report the phase-specific mathematical
-> sonification. Neither headless surface currently exports the App's complete
-> stereo arrangement event graph; that parity gap remains tracked.
+> reports the authored theme, `listen_room.notes` reports the phase-specific
+> mathematical sonification, and `listen_room.ambient_bed` reports the stable
+> App arrangement. Its default summary stays compact; `ambient_detail: "events"`
+> returns every bounded event and objective pre-master signal feature without
+> PCM or a local path. CLI `sonify` retains the mathematical layer as its
+> compatibility default. `--layer room-bed` writes a deterministic PCM16
+> projection of the 16 kHz stereo floating-point source shared with the App,
+> with optional room variation and no phase or
+> hand controls because those do not affect the bed. Exact export parity and
+> bounded MCP projection are automated. These are engineering facts, not a
+> claim that the composition is pleasant.
 > `SoundSpec` now preserves duration and pitch at 44.1, 48, 96, and 192 kHz.
 > Next: musician-led long-listening sessions and state-dependent tension where
 > the phrase resolves when a room's mathematics closes.
