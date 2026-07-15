@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Three classical fractal rooms (catalog 80): Newton's Basins (`newton`), Koch
+  Infinite Coast (`koch`), Hilbert Space-Filling Path (`hilbert`).
 - Function Painter (`function-painter`, catalog 77): domain coloring of a rack
   of complex maps (z^2, z^2+c, 1/z, sin z, e^z, z^3-1); phase as symbol,
   magnitude as density; DRAG picks map and tunes c.
