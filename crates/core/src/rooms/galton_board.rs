@@ -355,9 +355,15 @@ impl Room for GaltonBoard {
         Some("AIM + CLICK: PICK COIN, DROP 64 BALLS")
     }
 
-    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
+    fn status(&self, _t: f64) -> Option<String> {
+        Some("5 COINS   CLICK TO PICK ONE AND DROP 64 BALLS".into())
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let waves = drop_waves_from_inputs(inputs);
-        let (coin, wave_count) = selected_run(&waves)?;
+        let Some((coin, wave_count)) = selected_run(&waves) else {
+            return self.status(t);
+        };
         let p_right = COIN_PROBABILITIES[coin];
         let which = wave_count.saturating_mul(BALLS_PER_WAVE).saturating_sub(1);
         let trace = Self::ball_trace(

@@ -180,7 +180,9 @@ impl Room for LogisticMap {
             .collect();
         let start = points.len().saturating_sub(MAX_ROOM_POKES);
         let points = &points[start..];
-        let &(hand_x, hand_y) = points.last()?;
+        let Some(&(hand_x, hand_y)) = points.last() else {
+            return self.status(t);
+        };
         let (r_min, r_max) = self.r_window_for(t);
         let r = r_min + (r_max - r_min) * hand_x;
         Some(format!(
@@ -253,7 +255,10 @@ mod tests {
     #[test]
     fn status_describes_the_latest_bounded_orbit_seed() {
         let room = LogisticMap::new();
-        assert_eq!(room.status_input(0.25, &[]), None);
+        assert_eq!(
+            room.status_input(0.25, &[]).as_deref(),
+            room.status(0.25).as_deref()
+        );
         let mut inputs = vec![RoomInput::PointerUp {
             x: 0.2,
             y: 0.8,

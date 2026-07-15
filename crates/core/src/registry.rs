@@ -127,6 +127,20 @@ mod tests {
     }
 
     #[test]
+    fn every_catalog_room_has_first_contact_status() {
+        // The kid-principle invariant: first contact always names something
+        // readable before the player acts. Empty status is not an invitation.
+        for room in all_rooms() {
+            let status = room.status(0.0);
+            assert!(
+                status.as_ref().is_some_and(|s| !s.trim().is_empty()),
+                "{} opens silent; first contact needs a status line",
+                room.meta().id
+            );
+        }
+    }
+
+    #[test]
     fn lookup_by_id_works_and_misses_are_none() {
         assert!(room_by_id("times-tables").is_some());
         assert!(room_by_id("no-such-room").is_none());

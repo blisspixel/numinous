@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Catalog-wide first-contact status is now an invariant: every catalog room
+  opens with a non-empty status line. Remaining silent rooms (Cellular Automata,
+  Collatz, Golden Angle, Galton Board, Prime Spirals, Mandelbrot, Julia,
+  Barnsley Fern, L-System Garden, Fourier Epicycles, Mobius, Strange Loop)
+  gained invitation readouts; empty-input status_input falls back where needed.
+  A registry regression rejects silent first contact.
 - Catalog first-contact honesty pass for seven more rooms. Random Walk names
   steps and the square-root law radius, then reports planted mean distance
   against that law. Voronoi, Chaos Game, Langton's Ant, Quine, Zeno's Square,

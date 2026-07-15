@@ -101,6 +101,13 @@ impl Room for Collatz {
         Some("CLICK: PERTURB THE START")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        let start = Self::start_for(t, self.seed);
+        Some(format!(
+            "START {start}   3N+1 ORBIT   CLICK: PERTURB THE START"
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
             self.render(canvas, t);

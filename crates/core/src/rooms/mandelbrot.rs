@@ -395,10 +395,14 @@ impl Room for Mandelbrot {
         Some("CLICK: DIVE AT POINT")
     }
 
-    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
+    fn status(&self, _t: f64) -> Option<String> {
+        Some("AUTO DIVE   CLICK TO CHOOSE A TARGET".into())
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let dives = valid_dive_inputs(inputs).len();
         if dives == 0 {
-            return Some("AUTO DIVE   CLICK TO CHOOSE A TARGET".to_string());
+            return self.status(t);
         }
         let magnification = 1_u64 << dives.min(63);
         Some(format!(

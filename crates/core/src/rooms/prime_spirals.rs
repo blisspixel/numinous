@@ -275,10 +275,17 @@ impl Room for PrimeSpirals {
         Some("CLICK: TRACE PRIME DIAGONALS")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        Some(format!(
+            "CENTER {}   PRIMES GLOW   CLICK: TRACE DIAGONALS",
+            self.varied_start_for(t)
+        ))
+    }
+
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let traces = renderable_poke_count(inputs);
         if traces == 0 {
-            return Some(format!("CENTER {}   PRIMES GLOW", self.varied_start_for(t)));
+            return self.status(t);
         }
         Some(format!(
             "{traces} TRACE{}   BRIGHT POINTS ARE PRIMES",

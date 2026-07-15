@@ -449,6 +449,11 @@ impl Room for LSystemGarden {
         Some("CLICK: PLANT A TREE")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        let _ = t;
+        Some("ONE SPECIES FITS THE VIEW   CLICK: PLANT A ROOTED COPY".into())
+    }
+
     fn postcard_t(&self) -> f64 {
         0.6
     }

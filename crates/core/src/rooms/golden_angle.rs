@@ -219,7 +219,11 @@ impl Room for GoldenAngle {
         Some("CLICK: PLANT A SEED")
     }
 
-    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
+    fn status(&self, _t: f64) -> Option<String> {
+        Some("GOLDEN ANGLE 137.5 DEG   CLICK: PLANT A SEED".into())
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let planted = inputs
             .iter()
             .filter(|input| {
@@ -231,12 +235,13 @@ impl Room for GoldenAngle {
             })
             .count()
             .min(MAX_ROOM_POKES);
-        (planted > 0).then(|| {
-            format!(
-                "{planted} BRIGHT SEED {} PLANTED",
-                if planted == 1 { "CLUSTER" } else { "CLUSTERS" }
-            )
-        })
+        if planted == 0 {
+            return self.status(t);
+        }
+        Some(format!(
+            "{planted} BRIGHT SEED {} PLANTED",
+            if planted == 1 { "CLUSTER" } else { "CLUSTERS" }
+        ))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -283,7 +288,10 @@ mod tests {
     #[test]
     fn status_uses_clear_singular_and_plural_seed_counts() {
         let room = GoldenAngle::new();
-        assert_eq!(room.status_input(0.0, &[]), None);
+        assert_eq!(
+            room.status_input(0.0, &[]).as_deref(),
+            room.status(0.0).as_deref()
+        );
         let one = [RoomInput::PointerDown {
             x: 0.4,
             y: 0.5,

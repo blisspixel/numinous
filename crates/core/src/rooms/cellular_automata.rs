@@ -137,6 +137,13 @@ impl Room for CellularAutomata {
         Some("CLICK: FLIP A CELL")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        let rule = Self::rule_for(t, self.seed);
+        Some(format!(
+            "RULE {rule}   ONE ROW REWRITES ITSELF   CLICK: FLIP A SEED CELL"
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
             self.render(canvas, t);

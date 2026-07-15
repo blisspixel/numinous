@@ -530,10 +530,18 @@ mod tests {
         let controller = footer_copy(room.as_ref(), 0.0, &[], false, InputMode::Controller, None);
 
         assert_eq!(keyboard.action, "CLICK: PLANT A SEED");
-        assert_eq!(keyboard.status, "E INSPECT");
+        // First-contact status names the room state; inspect only appears when
+        // a room has no status at all.
+        assert_eq!(
+            keyboard.status,
+            "GOLDEN ANGLE 137.5 DEG   CLICK: PLANT A SEED"
+        );
         assert_eq!(keyboard.controls, "R RESET ROOM   ESC MENU");
         assert_eq!(controller.action, "SOUTH: PLANT A SEED");
-        assert_eq!(controller.status, "SELECT INSPECT");
+        assert_eq!(
+            controller.status,
+            "GOLDEN ANGLE 137.5 DEG   CLICK: PLANT A SEED"
+        );
         assert_eq!(controller.controls, "L3 RESET ROOM   START MENU");
         assert!(controller.controls.chars().count() * 6 <= 360 - 20);
     }

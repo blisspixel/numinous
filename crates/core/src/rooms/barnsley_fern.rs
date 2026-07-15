@@ -196,7 +196,11 @@ impl Room for BarnsleyFern {
         Some("CLICK: PLANT A MINI FERN")
     }
 
-    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
+    fn status(&self, _t: f64) -> Option<String> {
+        Some("FOUR MAPS BUILD THE FERN   CLICK: PLANT A MINI FERN".into())
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let points = inputs
             .iter()
             .filter(|input| {
@@ -208,12 +212,13 @@ impl Room for BarnsleyFern {
             })
             .count()
             .min(MAX_ROOM_POKES);
-        (points > 0).then(|| {
-            format!(
-                "{points} MINI FERN{} PLANTED   EACH REPEATS THE SAME FOUR MAPS",
-                if points == 1 { "" } else { "S" }
-            )
-        })
+        if points == 0 {
+            return self.status(t);
+        }
+        Some(format!(
+            "{points} MINI FERN{} PLANTED   EACH REPEATS THE SAME FOUR MAPS",
+            if points == 1 { "" } else { "S" }
+        ))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -284,7 +289,10 @@ mod tests {
     #[test]
     fn status_counts_only_finite_growth_origins() {
         let room = BarnsleyFern::new();
-        assert_eq!(room.status_input(0.4, &[]), None);
+        assert_eq!(
+            room.status_input(0.4, &[]).as_deref(),
+            room.status(0.4).as_deref()
+        );
         let inputs = [
             RoomInput::PointerUp {
                 x: 0.1,

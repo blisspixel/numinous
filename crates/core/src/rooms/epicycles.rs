@@ -287,6 +287,14 @@ impl Room for Epicycles {
         Some("CLICK: PERTURB THE CHAIN")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        let phase = (phase_for(t) + phase_offset(self.seed)).rem_euclid(1.0);
+        Some(format!(
+            "FOURIER CHAIN   PEN PHASE {:.0}%   CLICK: PERTURB",
+            phase * 100.0
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
             self.render(canvas, t);
@@ -326,12 +334,14 @@ impl Room for Epicycles {
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let (x, y) = inputs.iter().rev().find_map(|input| match *input {
+        let Some((x, y)) = inputs.iter().rev().find_map(|input| match *input {
             RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite() => {
                 Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
             }
             _ => None,
-        })?;
+        }) else {
+            return self.status(t);
+        };
         let local_phase = (phase_for(t) + phase_offset(self.seed) + (x + y) * 0.1).rem_euclid(1.0);
         Some(format!(
             "MINIATURE CHAIN AT {:.0}% {:.0}%   PEN PHASE {:.0}%",

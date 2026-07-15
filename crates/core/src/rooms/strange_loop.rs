@@ -168,7 +168,11 @@ impl Room for StrangeLoop {
         }
     }
 
-    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
+    fn status(&self, _t: f64) -> Option<String> {
+        Some("INNER LOOP NESTED   CLICK: SHIFT THE INNER LOOP".into())
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let points: Vec<_> = inputs
             .iter()
             .filter_map(|input| match *input {
@@ -182,7 +186,9 @@ impl Room for StrangeLoop {
             .collect();
         let start = points.len().saturating_sub(MAX_ROOM_POKES);
         let points = &points[start..];
-        let &(x, y) = points.last()?;
+        let Some(&(x, y)) = points.last() else {
+            return self.status(t);
+        };
         Some(format!(
             "INNER LOOP ANCHORED AT {:.0}% {:.0}%   BRIGHT CROSS MARKS YOUR HAND",
             x * 100.0,
@@ -522,7 +528,10 @@ mod tests {
             room.status_input(0.5, &inputs).as_deref(),
             Some("INNER LOOP ANCHORED AT 75% 25%   BRIGHT CROSS MARKS YOUR HAND")
         );
-        assert_eq!(room.status_input(0.5, &[]), None);
+        assert_eq!(
+            room.status_input(0.5, &[]).as_deref(),
+            room.status(0.5).as_deref()
+        );
     }
 
     #[test]

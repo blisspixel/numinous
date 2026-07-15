@@ -177,6 +177,13 @@ impl Room for Mobius {
         Some("CLICK: PAINT THE EDGE")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        Some(format!(
+            "ONE EDGE   {:.0}% LIT BY PHASE   CLICK: PAINT THE EDGE",
+            painted_edge_percent(t)
+        ))
+    }
+
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let brushes = inputs
             .iter()
@@ -189,12 +196,13 @@ impl Room for Mobius {
             })
             .count()
             .min(MAX_ROOM_POKES);
-        (brushes > 0).then(|| {
-            format!(
-                "{brushes} BRUSH POINT(S)   {:.0}% OF THE ONE EDGE LIT",
-                painted_edge_percent(t)
-            )
-        })
+        if brushes == 0 {
+            return self.status(t);
+        }
+        Some(format!(
+            "{brushes} BRUSH POINT(S)   {:.0}% OF THE ONE EDGE LIT",
+            painted_edge_percent(t)
+        ))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -296,7 +304,10 @@ mod tests {
     #[test]
     fn status_counts_finite_brushes_and_handles_unknown_phase() {
         let room = Mobius::new();
-        assert_eq!(room.status_input(0.5, &[]), None);
+        assert_eq!(
+            room.status_input(0.5, &[]).as_deref(),
+            room.status(0.5).as_deref()
+        );
         let inputs = [
             RoomInput::PointerDown {
                 x: 0.2,
