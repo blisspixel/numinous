@@ -6,6 +6,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Galton Board experiment status now reports empirical mean rights versus the
+  binomial expectation np, so a run is graded against its coin, not only the
+  last ball path.
 - L-System Garden action status names how many rooted copies were planted and
   that they keep the same species.
 - Collatz and Cellular Automata action status now name the mathematical

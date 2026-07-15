@@ -626,7 +626,7 @@ mod tests {
         assert_eq!(fitted, footer.status);
         assert!(fitted.starts_with("P.70"));
         assert!(fitted.contains("1x64=64"));
-        assert!(fitted.contains("LAST"));
+        assert!(fitted.contains('~'));
         assert!(fitted.ends_with('R'));
 
         let controller = footer_copy(
@@ -669,7 +669,7 @@ mod tests {
         assert_eq!(fitted, footer.status);
         assert!(fitted.starts_with("P.70"));
         assert!(fitted.contains("FULL=1536"));
-        assert!(fitted.contains("LAST"));
+        assert!(fitted.contains('~'));
         assert!(fitted.ends_with('R'));
     }
 

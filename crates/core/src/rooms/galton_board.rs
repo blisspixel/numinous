@@ -374,13 +374,29 @@ impl Room for GaltonBoard {
         );
         let rights = trace.last().copied().unwrap_or(0);
         let balls = wave_count.saturating_mul(BALLS_PER_WAVE);
+        let counts = Self::experiment_histogram(coin, wave_count, self.seed);
+        let weighted: f64 = counts
+            .iter()
+            .enumerate()
+            .map(|(bin, &count)| bin as f64 * count as f64)
+            .sum();
+        let mean = if balls == 0 {
+            0.0
+        } else {
+            weighted / balls as f64
+        };
+        let expected = BOARD_ROWS as f64 * p_right;
         let probability = format!("{p_right:.2}");
         let probability = probability.strip_prefix('0').unwrap_or(&probability);
+        // Compact status: must fit App compact footer budgets (360 wide).
+        // M~E is empirical mean versus binomial expectation np.
         if wave_count == MAX_ROOM_POKES {
-            Some(format!("P{probability}  FULL={balls}  LAST {rights}R"))
+            Some(format!(
+                "P{probability} FULL={balls} M{mean:.1}~{expected:.1} L{rights}R"
+            ))
         } else {
             Some(format!(
-                "P{probability}  {wave_count}x64={balls}  LAST {rights}R"
+                "P{probability} {wave_count}x64={balls} M{mean:.1}~{expected:.1} L{rights}R"
             ))
         }
     }
@@ -762,7 +778,9 @@ mod tests {
             .expect("interaction status");
         assert!(status.starts_with("P.70"));
         assert!(status.contains("1x64=64"));
-        assert!(status.contains("LAST"));
+        assert!(status.contains('M'));
+        assert!(status.contains("~11.2")); // 16 rows * 0.70
+        assert!(status.contains('L'));
         assert!(status.contains('R'));
     }
 
