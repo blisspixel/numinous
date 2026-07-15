@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six classical map inventions (catalog 148): Lozi, Baker's Map, Tent Map,
+  Arnold Circle Map, Chirikov Standard Map, Elliptical Billiard.
 - Six continuous chaos inventions (catalog 142): Pickover, Aizawa, Thomas,
   Halvorsen, Rabinovich-Fabrikant, Three-Scroll.
 - Six classical inventions (catalog 136): Clifford, Peter de Jong, Svensson,

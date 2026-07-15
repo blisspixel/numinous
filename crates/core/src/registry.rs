@@ -176,6 +176,14 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
             variation,
         )),
         Box::new(rooms::three_scroll::ThreeScroll::new_with(variation)),
+        Box::new(rooms::lozi::Lozi::new_with(variation)),
+        Box::new(rooms::baker::Baker::new_with(variation)),
+        Box::new(rooms::tent_map::TentMap::new_with(variation)),
+        Box::new(rooms::circle_map::CircleMap::new_with(variation)),
+        Box::new(rooms::standard_map::StandardMap::new_with(variation)),
+        Box::new(rooms::elliptical_billiard::EllipticalBilliard::new_with(
+            variation,
+        )),
     ]
 }
 
