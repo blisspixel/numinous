@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Roadmap progress note: machine-completable 0.2 catalog and Share contracts
+  (first-contact invite, measured action status, footer budgets, App/CLI short
+  loops, security gates) are closed with engineering evidence while product
+  0.2 human gates remain open under `0.2.0-alpha.1`.
 - Registry invariant `first_contact_status_fits_compact_footer`: open status is
   at most 56 characters, matching action status. Cellular Automata open line
   compacted to keep rule identity, rewrite idea, and flip invite inside budget.
