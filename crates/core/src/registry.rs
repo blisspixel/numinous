@@ -142,6 +142,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::mandelbulb_slice::MandelbulbSlice::new_with(
             variation,
         )),
+        Box::new(rooms::thue_morse::ThueMorse::new_with(variation)),
+        Box::new(rooms::rossler::Rossler::new_with(variation)),
+        Box::new(rooms::cantor_set::CantorSet::new_with(variation)),
+        Box::new(rooms::weierstrass::Weierstrass::new_with(variation)),
+        Box::new(rooms::peano_curve::PeanoCurve::new_with(variation)),
+        Box::new(rooms::van_der_pol::VanDerPol::new_with(variation)),
     ]
 }
 
