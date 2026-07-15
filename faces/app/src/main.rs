@@ -1005,13 +1005,14 @@ impl App {
 
     fn left_press_context(&self) -> mouse_input::LeftPressContext {
         mouse_input::LeftPressContext {
-            game_click_mode: self.munch.is_some() || self.quiz.is_some(),
+            game_click_mode: self.munch.is_some()
+                || self.quiz.is_some()
+                || self.nim.is_some()
+                || self.arcade.is_some()
+                || self.gauntlet.is_some(),
             studio: self.studio,
             show_help: self.show_help,
             show_journey: self.show_journey,
-            arcade: self.arcade.is_some(),
-            nim: self.nim.is_some(),
-            gauntlet: self.gauntlet.is_some(),
             room_has_verb: self.rooms[self.current].verb().is_some(),
         }
     }
@@ -1129,14 +1130,32 @@ impl App {
         false
     }
 
-    /// A click lands in the games: munch toggles the cell, the quiz answers.
+    /// One step from the Muncher toward a clicked board cell.
+    fn arcade_step_toward(from: usize, to: usize) -> Option<numinous_core::munch_arcade::Action> {
+        let cols = numinous_core::munchers::COLS;
+        let (fr, fc) = (from / cols, from % cols);
+        let (tr, tc) = (to / cols, to % cols);
+        if tr < fr {
+            Some(numinous_core::munch_arcade::Action::Up)
+        } else if tr > fr {
+            Some(numinous_core::munch_arcade::Action::Down)
+        } else if tc < fc {
+            Some(numinous_core::munch_arcade::Action::Left)
+        } else if tc > fc {
+            Some(numinous_core::munch_arcade::Action::Right)
+        } else {
+            None
+        }
+    }
+
+    /// A click lands in the games: cells, heaps, choices, and stages all answer.
     fn click(&mut self) {
         let Some(window) = &self.window else {
             return;
         };
         let size = window.inner_size();
-        let (width, height) = (size.width as f64, size.height as f64);
-        if width < 1.0 || height < 1.0 {
+        let (width, height) = (size.width as usize, size.height as usize);
+        if width == 0 || height == 0 {
             return;
         }
         let (mx, my) = self.mouse;
@@ -1144,9 +1163,7 @@ impl App {
             if play.graded.is_some() {
                 return;
             }
-            if let Some(cell) =
-                game_draw::MunchLayout::new(size.width as usize, size.height as usize).hit(mx, my)
-            {
+            if let Some(cell) = game_draw::MunchLayout::new(width, height).hit(mx, my) {
                 play.cursor = cell;
                 controls::toggle_munch_bite(&mut play.bites, cell);
             }
@@ -1157,16 +1174,76 @@ impl App {
                 self.quiz_next();
                 return;
             }
-            let layout = game_draw::QuizChoiceLayout::new(
-                size.width as usize,
-                size.height as usize,
-                quiz.round.choices.len(),
-            );
+            let layout = game_draw::QuizChoiceLayout::new(width, height, quiz.round.choices.len());
             if let Some(index) = layout.hit(my, quiz.round.choices.len())
                 && let Some(choice) = quiz.round.choices.get(index)
             {
                 let letter = choice.letter;
                 self.quiz_answer(letter);
+            }
+            return;
+        }
+        if self.nim.as_ref().is_some_and(|play| play.over.is_none()) {
+            let heaps = self
+                .nim
+                .as_ref()
+                .map(|play| play.heaps.clone())
+                .unwrap_or_default();
+            if let Some((heap, take)) = game_draw::NimLayout::new(width, height).hit(mx, my, &heaps)
+            {
+                if let Some(play) = self.nim.as_mut() {
+                    play.selected = heap;
+                    let max_take = play.heaps.get(heap).copied().unwrap_or(1).max(1);
+                    play.take = take.max(1).min(max_take);
+                }
+                // A click that names both heap and stones commits the move.
+                self.nim_move();
+            }
+            return;
+        }
+        if let Some(play) = &mut self.arcade {
+            if play.over {
+                return;
+            }
+            if let Some(cell) = game_draw::MunchLayout::new(width, height).hit(mx, my) {
+                let muncher = play.run.muncher;
+                if cell == muncher {
+                    self.arcade_act(numinous_core::munch_arcade::Action::Eat);
+                } else if let Some(action) = Self::arcade_step_toward(muncher, cell) {
+                    self.arcade_act(action);
+                }
+            }
+            return;
+        }
+        if let Some(run) = &self.gauntlet {
+            match run.stage {
+                0 => {
+                    if run.munch.graded.is_some() {
+                        return;
+                    }
+                    if let Some(cell) = game_draw::MunchLayout::new(width, height).hit(mx, my) {
+                        if let Some(run) = self.gauntlet.as_mut() {
+                            run.munch.cursor = cell;
+                            controls::toggle_munch_bite(&mut run.munch.bites, cell);
+                        }
+                    }
+                }
+                1 => {
+                    if run.quiz.flash.is_some() {
+                        return;
+                    }
+                    let choices = run.quiz.round.choices.len();
+                    let layout = game_draw::QuizChoiceLayout::new(width, height, choices);
+                    if let Some(index) = layout.hit(my, choices)
+                        && let Some(letter) = self
+                            .gauntlet
+                            .as_ref()
+                            .and_then(|g| g.quiz.round.choices.get(index).map(|c| c.letter))
+                    {
+                        self.gauntlet_key(&Key::Character(letter.to_string().into()));
+                    }
+                }
+                _ => {}
             }
         }
     }

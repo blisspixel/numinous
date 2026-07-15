@@ -6,6 +6,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Mouse support for every window game: Nim heaps and stone takes, Arcade step
+  and eat, and Gauntlet munch/quiz stages all answer left-click. Quiz and Munch
+  already clicked; pointer routing now treats all five live games as click
+  targets instead of ignoring Nim, Arcade, and Gauntlet. Focused hit-test and
+  input-mode regressions cover the layouts.
 - Roadmap progress note: machine-completable 0.2 catalog and Share contracts
   (first-contact invite, measured action status, footer budgets, App/CLI short
   loops, security gates) are closed with engineering evidence while product

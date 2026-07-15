@@ -66,6 +66,50 @@ impl MunchLayout {
     }
 }
 
+/// Hit-test for Nim heaps: click a stone to aim that heap and take that many.
+pub(crate) struct NimLayout {
+    top: i32,
+    row_h: i32,
+    stone: i32,
+}
+
+impl NimLayout {
+    pub(crate) fn new(width: usize, height: usize) -> Self {
+        let scale = game_scale(width);
+        let top = 20 * scale + 10;
+        let row_h = (height as i32 - top - 42 * scale) / 3;
+        let stone = (row_h / 2).clamp(4, 10 * scale);
+        Self { top, row_h, stone }
+    }
+
+    /// Returns `(heap_index, take_count)` when the pointer is over stones.
+    pub(crate) fn hit(&self, x: f64, y: f64, heaps: &[u32]) -> Option<(usize, u32)> {
+        if self.row_h <= 0 || heaps.is_empty() {
+            return None;
+        }
+        let heap = ((y - f64::from(self.top)) / f64::from(self.row_h)) as usize;
+        if heap >= heaps.len().min(3) {
+            return None;
+        }
+        let count = heaps[heap];
+        if count == 0 {
+            return None;
+        }
+        let stone_span = self.stone + 6;
+        if stone_span <= 0 || x < 40.0 {
+            // Click on the heap label: aim take 1.
+            return (10.0..40.0).contains(&x).then_some((heap, 1));
+        }
+        let index = ((x - 40.0) / f64::from(stone_span)) as u32;
+        if index >= count {
+            return None;
+        }
+        // Stone i from the left is the (count - index)th from the right aim set.
+        let take = count.saturating_sub(index).max(1);
+        Some((heap, take))
+    }
+}
+
 fn munch_columns(width: usize, scale: i32, left: i32) -> usize {
     ((width as i32 - left - 10) / (6 * scale.max(1))).max(8) as usize
 }
@@ -867,6 +911,28 @@ mod tests {
             cleared: vec![false, true],
             message: "SKY GATE".to_string(),
         }
+    }
+
+    #[test]
+    fn nim_layout_hits_heap_and_take() {
+        let layout = NimLayout::new(800, 480);
+        let heaps = [3, 5, 7];
+        // Left label of the first heap: take one.
+        assert_eq!(
+            layout.hit(15.0, f64::from(layout.top + 2), &heaps),
+            Some((0, 1))
+        );
+        // First stone of heap 0: take all remaining from that stone rightward.
+        let first_stone_x = 40.0 + f64::from(layout.stone) / 2.0;
+        let hit = layout
+            .hit(
+                first_stone_x,
+                f64::from(layout.top + layout.row_h / 2),
+                &heaps,
+            )
+            .expect("stone hit");
+        assert_eq!(hit.0, 0);
+        assert!(hit.1 >= 1 && hit.1 <= 3, "take {hit:?}");
     }
 
     #[test]
