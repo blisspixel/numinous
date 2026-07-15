@@ -208,6 +208,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::phoenix::Phoenix::new_with(variation)),
         Box::new(rooms::lyapunov::Lyapunov::new_with(variation)),
         Box::new(rooms::collatz_tree::CollatzTree::new_with(variation)),
+        Box::new(rooms::nova::Nova::new_with(variation)),
+        Box::new(rooms::magnet::MagnetFractal::new_with(variation)),
+        Box::new(rooms::lambda_map::LambdaMap::new_with(variation)),
+        Box::new(rooms::feigenbaum::Feigenbaum::new_with(variation)),
+        Box::new(rooms::menger::Menger::new_with(variation)),
+        Box::new(rooms::vicsek::Vicsek::new_with(variation)),
     ]
 }
 

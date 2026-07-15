@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six fractal and cascade inventions (catalog 178): Nova, Magnet Fractal,
+  Lambda Map, Feigenbaum Ladder, Menger Carpet, Vicsek Fractal.
 - Six fractal escape inventions (catalog 172): Burning Ship, Tricorn, Multibrot,
   Phoenix, Lyapunov Weather, Collatz Tree.
 - Six map and gasket inventions (catalog 166): Bogdanov, Kaplan-Yorke, Ricker,

@@ -848,7 +848,7 @@ edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
 
 ### What we already have (feel, not curriculum)
 
-**Built now (172 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+**Built now (178 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
 Julia, Cult of Pi, Life and Cellular Automata and Langton and Rule 30, The
 Sandpile, The First Rain, The Magnet, Phantom Jam, Chaos Game, Golden Angle,
 Galton and Buffon, Lissajous, Chladni Figures, Ripple Tank, The Coffee Cup,
@@ -858,7 +858,8 @@ and Henon and Double Pendulum and Logistic Map, Collatz, Prime Spirals and Ulam
 Spiral, Goldbach, Voronoi, Random Walk, Arecibo, Mobius, Zeno, The Pour, Slope
 Rider, Quine, Strange Loop, Penrose, Continued Fractions, Logistic Cobweb,
 Sierpinski Carpet, Pythagoras Tree, Dragon Curve, Fibonacci Word, Cubic Newton,
-Mandelbulb Slice, plus Awe Engine / Next Wave / universal wonder catalog rooms
+Mandelbulb Slice, Nova, Magnet Fractal, Lambda Map, Feigenbaum Ladder, Menger
+Carpet, Vicsek, plus Awe Engine / Next Wave / universal wonder catalog rooms
 and games (Quiz, Munch, Arcade, Nim, Gauntlet, SETI, Aliens, Codebreaker, and
 kin), Studio, radio, Journey, Cairn, predict.
 
