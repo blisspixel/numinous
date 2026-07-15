@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six continuous chaos inventions (catalog 142): Pickover, Aizawa, Thomas,
+  Halvorsen, Rabinovich-Fabrikant, Three-Scroll.
 - Six classical inventions (catalog 136): Clifford, Peter de Jong, Svensson,
   Bedhead, Hopalong, Gumowski-Mira attractors.
 - Six classical inventions (catalog 130): Bifurcation Weather, Stern-Brocot Tree,
