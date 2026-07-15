@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six classical curve inventions (catalog 214): Dual Cobweb, Beverton-Holt,
+  Witch of Agnesi, Tractrix, Catenary, Clothoid.
 - Six classical inventions (catalog 208): Hyperbolic Tiling, Mackey-Glass,
   Fermat Spiral, Euclid Algorithm, Oregonator, Hofstadter Q.
 - Six classical inventions (catalog 202): Cardioid, Deltoid, Coupled Logistic,

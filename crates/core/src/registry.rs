@@ -252,6 +252,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         )),
         Box::new(rooms::oregonator::Oregonator::new_with(variation)),
         Box::new(rooms::hofstadter_q::HofstadterQ::new_with(variation)),
+        Box::new(rooms::dual_cobweb::DualCobweb::new_with(variation)),
+        Box::new(rooms::beverton_holt::BevertonHolt::new_with(variation)),
+        Box::new(rooms::witch_of_agnesi::WitchOfAgnesi::new_with(variation)),
+        Box::new(rooms::tractrix::Tractrix::new_with(variation)),
+        Box::new(rooms::catenary::Catenary::new_with(variation)),
+        Box::new(rooms::clothoid::Clothoid::new_with(variation)),
     ]
 }
 
