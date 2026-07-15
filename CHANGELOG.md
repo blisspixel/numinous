@@ -6,10 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The Coffee Cup room (`coffee-cup`, Shape & Space): one-bounce circular
+  reflections condense into a cardioid caustic; `t` walks the rim sun; DRAG:
+  SWING THE SUN aims the cusp. Reveal links the same cardioid to Times Tables
+  and Mandelbrot. Catalog is 35 rooms.
 - The Ripple Tank room (`ripple`, Waves & Sound): monochromatic point sources
   superpose into bright fans and dead-calm lanes; ambient double source opens
-  the double slit; CLICK: DROP A PEBBLE replaces sources under the hand. Catalog
-  is 34 rooms.
+  the double slit; CLICK: DROP A PEBBLE replaces sources under the hand.
 - Chladni Figures room (`chladni`, Waves & Sound): free-plate formula draws
   nodal sand for mode pairs (n, m); `t` walks a mode gallery; DRAG: TUNE THE
   PLATE sets integer modes under the hand; drive tone chord is the same two
