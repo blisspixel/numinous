@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six special-function inventions (catalog 274): Bessel J0, Hermite Wave,
+  Legendre P_n, Heat Kernel, Cauchy Lorentz, Mexican Hat wavelet.
 - Six classical inventions (catalog 268): Kampyle of Eudoxus, Hippopede,
   Cartesian Oval, Berry Phase, Runge Phenomenon, Chebyshev Nodes.
 - Six classical inventions (catalog 262): Maclaurin Trisectrix, Watt Curve,

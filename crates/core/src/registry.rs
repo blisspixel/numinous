@@ -314,6 +314,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::berry::Berry::new_with(variation)),
         Box::new(rooms::runge::Runge::new_with(variation)),
         Box::new(rooms::chebyshev::Chebyshev::new_with(variation)),
+        Box::new(rooms::bessel::Bessel::new_with(variation)),
+        Box::new(rooms::hermite::Hermite::new_with(variation)),
+        Box::new(rooms::legendre::Legendre::new_with(variation)),
+        Box::new(rooms::heat_kernel::HeatKernel::new_with(variation)),
+        Box::new(rooms::cauchy_lorentz::CauchyLorentz::new_with(variation)),
+        Box::new(rooms::mexican_hat::MexicanHat::new_with(variation)),
     ]
 }
 
