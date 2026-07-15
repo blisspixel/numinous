@@ -34,6 +34,8 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::starbow::Starbow::new_with(variation)),
         Box::new(rooms::slingshot::Slingshot::new_with(variation)),
         Box::new(rooms::first_rain::FirstRain::new_with(variation)),
+        Box::new(rooms::the_magnet::TheMagnet::new_with(variation)),
+        Box::new(rooms::kepler_loom::KeplerLoom::new_with(variation)),
         Box::new(rooms::prime_spirals::PrimeSpirals::new_with(variation)),
         Box::new(rooms::cult_of_pi::CultOfPi::new_with(variation)),
         Box::new(rooms::collatz::Collatz::new_with(variation)),

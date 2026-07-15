@@ -6,9 +6,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Kepler's Loom room (`kepler-loom`, Motion & Dynamics): inverse-square orbit
+  integration; ambient elliptical moon; DRAG: FLING A MOON reports eccentricity
+  and peri/apo. Catalog is 42 rooms.
+- The Magnet room (`the-magnet`, Emergence): Metropolis Ising lattice; ambient
+  and DRAG heat through Onsager Tc; magnetization grades ORDER/CRIT/NOISE.
 - The First Rain room (`first-rain`, Emergence): site percolation on a square
   lattice; `t` and DRAG: MAKE IT RAIN dial occupancy p; status reports SPAN/DRY
-  against p_c about 0.5927. Catalog is 40 rooms.
+  against p_c about 0.5927.
 - Slingshot room (`slingshot`, Motion & Dynamics): pull-and-release probe
   under multi-sun Newtonian gravity; assists counted on speed-gain flybys;
   HOLD plants a sun; misses become comets. Completes the Next Wave first eight.
