@@ -881,28 +881,28 @@ A candidate survives only if:
 5. **Playable, not lecture** (a verb that changes the mathematics).
 6. **CPU-honest** (or GPU-honest with CPU fallback), deterministic, offline.
 
-### Tier S: highest wow per build, still missing
+### Tier S: highest wow per build
 
-| Room (working title) | Gasp | Verb | Why it is universal | Feasibility |
-| --- | --- | --- | --- | --- |
-| **The Curse of Dimension** | Almost all volume of a high-D ball sits in a thin shell; "middle" disappears. | DRAG: RAISE DIMENSION | Pure measure, no language. | Build 2: shells and histograms. |
-| **The Concentration Bell** | Random points in high D all sit near the same radius; extremes die. | CLICK: DRAW A SAMPLE | Same math as modern ML geometry. | Build 2: sampling + rings. |
-| **Error That Heals** | Flip bits; Hamming (or simple parity) repairs until a cliff. | DRAG: RAISE THE NOISE | Communication across any channel. | Build 2; pairs Message That Heals. |
-| **The Uncertainty Dial** | Narrower in time, wider in frequency; you cannot own both. | DRAG: SQUEEZE THE WINDOW | Fourier truth as a physical trade. | Build 2: dual plots + tones. |
-| **Soap Film** | The surface finds the least area; hard problems look effortless. | PIN: HOLD A WIRE | Nature's calculus of variations. | Build 2-3: discrete relax. |
-| **Sphere Eversion** | A sphere turns inside out without creases (smoothed, not paper). | HOLD: PUSH THROUGH | Topology's permission slip. | Build 3: guided morph. |
-| **The Gradient Valley** | Descent finds a basin; a ridge blocks another; landscape lies. | DROP: A SEEKER | How learning *feels* to any optimizer, including digital minds. | Build 2: 2D loss field. |
-| **Attention as Soft Light** | One query lights a few keys; the rest go dim. Weights are the story. | DRAG: MOVE THE QUERY | Modern sequence models, made geometric. | Build 2-3: toy tokens. |
+| Room (working title) | Gasp | Verb | Status |
+| --- | --- | --- | --- |
+| **The Curse of Dimension** | Almost all volume of a high-D ball sits in a thin shell. | DRAG: RAISE DIMENSION | **built** (`curse-dimension`) |
+| **The Concentration Bell** | Random points in high D all sit near the same radius. | CLICK: DRAW A SAMPLE | **built** (`concentration`) |
+| **Error That Heals** | Flip bits; Hamming repairs until a cliff. | DRAG: RAISE THE NOISE | **built** as Message That Heals |
+| **The Uncertainty Dial** | Narrower in time, wider in frequency. | DRAG: SQUEEZE THE WINDOW | **built** (`uncertainty`) |
+| **Soap Film** | The surface finds the least area. | PIN: HOLD A WIRE | designed |
+| **Sphere Eversion** | A sphere turns inside out without creases. | HOLD: PUSH THROUGH | designed |
+| **The Gradient Valley** | Descent finds a basin; a ridge blocks another. | DROP: A SEEKER | **built** (`gradient-valley`) |
+| **Attention as Soft Light** | One query lights a few keys; the rest go dim. | DRAG: MOVE THE QUERY | **built** (`attention`) |
 
 ### Tier A: counterintuitive classics that still empty the floor
 
 | Room | Gasp | Verb | Notes |
 | --- | --- | --- | --- |
 | **Banach-Tarski Shadow** | Two spheres from one, via non-measurable pieces (honest "axiom of choice" label). | SPLIT: FOLLOW THE PIECES | Philosophy-grade gasp; careful copy. Build 3-4. |
-| **Hilbert's Hotel** | Full hotel, room for one more bus, until the reals check in. | ADMIT: THE NEXT GUEST | Boss room for countable infinity; ties Sizes of Infinity. |
-| **Braess Trap** | Add a road; average travel time rises. | BUILD: A SHORTCUT | Social systems as math; pairs Phantom Jam. |
-| **Nontransitive Dice** | A beats B, B beats C, C beats A. | ROLL: THE TRIO | Fairness and ranking collapse. Build 1-2. |
-| **Parrondo's Trap** | Two losing games, alternating, win. | TOGGLE: THE RULE | Counterintuitive probability twin of Braess. |
+| **Hilbert's Hotel** | Full hotel, room for one more bus, until the reals check in. | ADMIT: THE NEXT GUEST | **built** (`hilbert-hotel`) |
+| **Braess Trap** | Add a road; average travel time rises. | BUILD: A SHORTCUT | **built** (`braess`) |
+| **Nontransitive Dice** | A beats B, B beats C, C beats A. | ROLL: THE TRIO | **built** (`nontransitive`) |
+| **Parrondo's Trap** | Two losing games, alternating, win. | TOGGLE: THE RULE | **built** (`parrondo`) |
 | **The Illumination Flaw** | One dark point no light reaches (Tokarsky-style room). | DRAG: THE LANTERN | Already persona-named as Unlit Room; keep priority. |
 | **Linked Rings (Hopf)** | Circles all linked, none touching; qubit shadow. | SPIN: THE FIBER | Awe Engine quantum wing; build 3-4. |
 | **Minimal Path on Soap** | Steiner tree from a film; three 120 degree meets. | PIN: THE PINS | Geometry + nature. Build 2. |

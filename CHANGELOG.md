@@ -6,6 +6,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Universal wonder Tier S/A wave (catalog 91): Curse of Dimension,
+  Concentration Bell, Uncertainty Dial, Gradient Valley, Attention as Soft
+  Light, Braess Trap, Nontransitive Dice, Parrondo's Trap, Hilbert's Hotel.
 - Gray-Scott Chemical Garden and Eratosthenes Sieve (catalog 82).
 - Three classical fractal rooms (catalog 80): Newton's Basins (`newton`), Koch
   Infinite Coast (`koch`), Hilbert Space-Filling Path (`hilbert`).
