@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Fourier Epicycles mini-chain status names plant count, origin, pen phase, and
+  that each miniature reuses the same arm set as the main chain.
 - Lissajous tune status names the reduced interval class (UNISON, OCTAVE, FIFTH,
   and kin) for the hand-chosen integer ratio.
 - Quine place status names copy count, newest print origin, and nest depth so a
