@@ -284,6 +284,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::am_modulation::AmModulation::new_with(variation)),
         Box::new(rooms::fm_modulation::FmModulation::new_with(variation)),
         Box::new(rooms::standing_wave::StandingWave::new_with(variation)),
+        Box::new(rooms::doppler::Doppler::new_with(variation)),
+        Box::new(rooms::interference::Interference::new_with(variation)),
+        Box::new(rooms::diffraction::Diffraction::new_with(variation)),
+        Box::new(rooms::snell::Snell::new_with(variation)),
+        Box::new(rooms::polarization::Polarization::new_with(variation)),
+        Box::new(rooms::brewster::Brewster::new_with(variation)),
     ]
 }
 

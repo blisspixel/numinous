@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six optics inventions (catalog 244): Doppler, Interference, Diffraction,
+  Snell's Law, Polarization, Brewster Angle.
 - Six wave inventions (catalog 238): Gibbs Square, Sawtooth, Triangle Wave, AM
   Modulation, FM Modulation, Standing Wave.
 - Six classical inventions (catalog 232): Involute, Ellipse Evolute, Pedal
