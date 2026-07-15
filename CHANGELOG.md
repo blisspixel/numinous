@@ -6,6 +6,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Logistic Map seed status reports Lyapunov exponent and ORDER/CHAOS regime for
+  the hand-chosen r alongside the orbit seed, so a population seed is graded by
+  the same chaos measure as the ambient readout.
 - Registry invariant `action_status_reports_a_measured_quantity`: after a
   center poke every catalog room status must include a digit (a count,
   coordinate, rule, or ratio), not only prose.

@@ -185,10 +185,14 @@ impl Room for LogisticMap {
         };
         let (r_min, r_max) = self.r_window_for(t);
         let r = r_min + (r_max - r_min) * hand_x;
+        let x0 = 1.0 - hand_y;
+        let exponent = lyapunov(r);
+        let regime = if exponent > 0.0 { "CHAOS" } else { "ORDER" };
+        // The hand seeds one orbit at (r, x0); the Lyapunov of that r is the
+        // same number the ambient status uses to mark order versus chaos.
         Some(format!(
-            "{} ORBIT(S)   LATEST X0 {:.2} AT R {r:.3}   BRIGHT TRACE",
-            points.len(),
-            1.0 - hand_y
+            "{} ORB  X0 {x0:.2} R {r:.3}  LYAP {exponent:+.2} {regime}",
+            points.len()
         ))
     }
 
@@ -277,9 +281,16 @@ mod tests {
         let status = room
             .status_input(0.25, &inputs)
             .expect("finite orbit seeds");
-        assert!(status.starts_with(&format!("{MAX_ROOM_POKES} ORBIT(S)")));
-        assert!(status.contains("LATEST X0 1.00"));
-        assert!(status.contains("BRIGHT TRACE"));
+        assert!(
+            status.starts_with(&format!("{MAX_ROOM_POKES} ORB")),
+            "{status}"
+        );
+        assert!(status.contains("X0 1.00"), "{status}");
+        assert!(status.contains("LYAP "), "{status}");
+        assert!(
+            status.contains("ORDER") || status.contains("CHAOS"),
+            "{status}"
+        );
     }
 
     /// The attractor value after the transient, for testing.
