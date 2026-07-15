@@ -6,6 +6,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Gray-Scott Chemical Garden and Eratosthenes Sieve (catalog 82).
 - Three classical fractal rooms (catalog 80): Newton's Basins (`newton`), Koch
   Infinite Coast (`koch`), Hilbert Space-Filling Path (`hilbert`).
 - Function Painter (`function-painter`, catalog 77): domain coloring of a rack
