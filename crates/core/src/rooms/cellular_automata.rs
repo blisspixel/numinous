@@ -6,7 +6,7 @@
 //! triangle; Rule 30 pours out chaos; Rule 110 is Turing-complete. See
 //! `docs/ROOMS.md` and `docs/INSIGHTS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
 /// A curated tour of notable elementary rules, indexed by phase `t`.
@@ -144,6 +144,22 @@ impl Room for CellularAutomata {
         ))
     }
 
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = crate::pokes_from_inputs(inputs);
+        let flips = pokes
+            .iter()
+            .filter(|(x, y)| x.is_finite() && y.is_finite())
+            .count();
+        if flips == 0 {
+            return self.status(t);
+        }
+        let rule = Self::rule_for(t, self.seed);
+        Some(format!(
+            "RULE {rule}   {flips} SEED FLIP{}   HISTORY REPLAYED FROM THE TOP",
+            if flips == 1 { "" } else { "S" }
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
             self.render(canvas, t);
@@ -206,6 +222,22 @@ mod tests {
             .nth(y)
             .and_then(|line| line.chars().nth(x))
             .unwrap_or(' ')
+    }
+
+    #[test]
+    fn action_status_names_seed_flips() {
+        use crate::room::RoomInput;
+        let room = CellularAutomata::new();
+        let open = room.status(0.0).expect("open");
+        assert!(open.contains("RULE 90"), "{open}");
+        let inputs = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.0,
+            t: 0.0,
+        }];
+        let status = room.status_input(0.0, &inputs).expect("flip");
+        assert!(status.contains("1 SEED FLIP"), "{status}");
+        assert!(status.contains("HISTORY REPLAYED"), "{status}");
     }
 
     #[test]

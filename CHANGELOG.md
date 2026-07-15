@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Collatz and Cellular Automata action status now name the mathematical
+  consequence of a touch: perturbed orbit start and steps-to-1 for Collatz,
+  seed-flip count and history replay for elementary CA, while empty input keeps
+  the invitation line.
 - Catalog-wide first-contact status is now an invariant: every catalog room
   opens with a non-empty status line. Remaining silent rooms (Cellular Automata,
   Collatz, Golden Angle, Galton Board, Prime Spirals, Mandelbrot, Julia,
