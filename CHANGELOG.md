@@ -6,12 +6,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Chladni Figures room (`chladni`, Waves & Sound): free-plate formula draws
+  nodal sand for mode pairs (n, m); `t` walks a mode gallery; DRAG: TUNE THE
+  PLATE sets integer modes under the hand; drive tone chord is the same two
+  numbers. Reveal cites Gordon-Webb-Wolpert (1992). Catalog is 33 rooms.
 - The Sandpile room (`sandpile`, Emergence): Bak-Tang-Wiesenfeld topple on an
   open grid; height four or more sends one grain to each neighbor; `t` pours
   the center; HOLD: POUR SAND drops under the hand. Status reports mass,
   critical cells, last avalanche topples, and peak height. Focused tests cover
   single topple, edge loss, abelian pour order, variation, and footer budgets.
-  First of the Next Wave designs to ship; catalog is 32 rooms.
+  First of the Next Wave designs to ship.
 - Frontier and universal wonder catalog pass: `ROOMS.md` gains a research-backed
   designed-not-built wave (high-dimension concentration, uncertainty dials,
   learning landscapes, topology eversions, channel repair, labeled frontier
