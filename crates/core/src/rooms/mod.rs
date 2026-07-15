@@ -42,6 +42,7 @@ pub mod the_pour;
 pub mod times_tables;
 pub mod voronoi;
 pub mod zeno;
+pub mod zeta_walk;
 
 pub(super) fn variation_unit(seed: u64, salt: u64) -> f64 {
     if seed == 0 {

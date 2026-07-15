@@ -421,10 +421,10 @@ Physarum Tokyo result).
    fraction owns a circle at height 1/(2q^2); none ever overlap; kisses are
    Farey neighbors; the deepest crevice belongs to the golden ratio. CLICK:
    BIRTH THE MEDIANT.
-6. **The Zeta Walk** (Number & Pattern): the eta-walk on the critical line;
-   DRAG: CLIMB THE LINE; the thousand-arm spiral folds home to zero exactly
-   at Riemann zeros, hunted by ear as cadences. The Prime Spirals 0.5 egg,
-   made playable.
+6. **The Zeta Walk** (Number & Pattern) **built** (`zeta-walk`): the eta-walk
+   on the critical line; DRAG: CLIMB THE LINE; the spiral folds home near
+   Riemann zeros, hunted by ear as cadences. The Prime Spirals 0.5 egg, made
+   playable.
 7. **The Starbow** (Shape & Space / Cosmos): HOLD: BURN toward lightspeed;
    relativistic aberration pours the whole sky into a burning ring ahead.
    One closed-form transform per star (McKinley 1979).
@@ -869,20 +869,19 @@ edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
 
 ### What we already have (feel, not curriculum)
 
-**Built now (36 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+**Built now (37 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
 Julia, Cult of Pi, Life and Cellular Automata and Langton, The Sandpile, Chaos
 Game, Golden Angle, Galton and Buffon, Lissajous, Chladni Figures, Ripple Tank,
-The Coffee Cup, Ford Circles, Harmonograph, Epicycles, L-System and Barnsley,
-Lorenz and Double Pendulum and Logistic Map, Collatz, Prime Spirals, Goldbach,
-Voronoi, Random Walk, Arecibo, Mobius, Zeno, The Pour, Slope Rider, Quine,
-Strange Loop, plus games (Quiz, Munch, Arcade, Nim, Gauntlet, SETI, Aliens,
-Codebreaker, and kin), Studio, radio, Journey, Cairn, predict.
+The Coffee Cup, Ford Circles, The Zeta Walk, Harmonograph, Epicycles, L-System
+and Barnsley, Lorenz and Double Pendulum and Logistic Map, Collatz, Prime
+Spirals, Goldbach, Voronoi, Random Walk, Arecibo, Mobius, Zeno, The Pour, Slope
+Rider, Quine, Strange Loop, plus games (Quiz, Munch, Arcade, Nim, Gauntlet,
+SETI, Aliens, Codebreaker, and kin), Studio, radio, Journey, Cairn, predict.
 
 **Designed in earlier waves (do not redesign, do build):** Next Wave remainder
-(Zeta Walk, Starbow, Slingshot, and the rest of that wave); Awe Engine tier
-S/A/B; Long Shot, Only Move, Dimension Dial; First Contact handshake room;
-Function Painter scope flagship; classical geometry and sonification-first
-batches.
+(Starbow, Slingshot, and the rest of that wave); Awe Engine tier S/A/B; Long
+Shot, Only Move, Dimension Dial; First Contact handshake room; Function Painter
+scope flagship; classical geometry and sonification-first batches.
 
 **Honest gaps this pass targets:** high-dimension intuition, information and
 noise as felt structure, quantum and measurement without mysticism, learning

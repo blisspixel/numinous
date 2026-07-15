@@ -6,11 +6,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The Zeta Walk room (`zeta-walk`, Number & Pattern): alternating eta partial
+  sums on Re(s)=1/2 draw a spiral that tightens near tabulated Riemann zeros;
+  `t` climbs imag height; DRAG: CLIMB THE LINE; sound resolves at cadences.
+  Catalog is 37 rooms.
 - Ford Circles room (`ford-circles`, Number & Pattern): reduced fractions p/q
   own radius-1/(2q^2) circles that never overlap; `t` deepens the denominator
   ceiling; CLICK: BIRTH THE MEDIANT inserts (a+c)/(b+d) into the Farey gap under
   the hand. Focused tests cover non-overlap, neighbor kisses, and golden gap
-  readout. Catalog is 36 rooms.
+  readout.
 - The Coffee Cup room (`coffee-cup`, Shape & Space): one-bounce circular
   reflections condense into a cardioid caustic; `t` walks the rim sun; DRAG:
   SWING THE SUN aims the cusp. Reveal links the same cardioid to Times Tables
