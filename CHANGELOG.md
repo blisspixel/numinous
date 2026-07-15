@@ -6,6 +6,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Buffon's Needle first contact now invites a throw instead of reporting a
+  finished ambient Monte Carlo estimate. Untouched status names the live L/D
+  ratio, the classical crossing chance 2L/(pi D), and the click verb; only the
+  player's own throws produce a pi estimate. A focused first-contact regression
+  locks the claim.
 - Cycle 105 security hardening: MCP tool schemas now declare and enforce
   `maxLength` on catalog ids, Studio expressions, and Cairn leave/author
   strings; the schema validator rejects oversize strings before dispatch;

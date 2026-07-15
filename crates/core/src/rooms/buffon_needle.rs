@@ -231,11 +231,15 @@ impl Room for BuffonNeedle {
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        let phase = Self::phase_for(t);
-        let throws = 100 + (phase * 1_400.0).round() as usize;
-        let estimate =
-            Self::estimate_pi_with_variation(throws, Self::length_ratio_for(t), self.seed);
-        Some(format!("{throws} THROWS   PI ABOUT {estimate:.3}"))
+        // First contact is an invitation, not a finished Monte Carlo report.
+        // The rain of ambient needles is Watch mode; the estimate belongs to
+        // the player's own throws (see status_input). Scrubbing phase only
+        // changes the needle length ratio L/D that the throws will use.
+        let ratio = Self::length_ratio_for(t);
+        let theory = 2.0 * ratio / PI;
+        Some(format!(
+            "L/D {ratio:.2}   CROSS CHANCE {theory:.3}   CLICK: THROW"
+        ))
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -439,6 +443,33 @@ mod tests {
         assert!(
             reveal.contains("AI. You"),
             "continued prose keeps its word boundary"
+        );
+    }
+
+    #[test]
+    fn first_contact_status_invites_a_throw_instead_of_a_finished_estimate() {
+        let room = BuffonNeedle::new();
+        let open = room.status(0.0).expect("open status");
+        assert!(open.contains("L/D 1.00"), "{open}");
+        assert!(open.contains("CROSS CHANCE"), "{open}");
+        assert!(open.contains("CLICK: THROW"), "{open}");
+        assert!(
+            !open.contains("PI ABOUT"),
+            "untouched status must not claim a pi estimate: {open}"
+        );
+        assert!(
+            !open.contains("THROWS"),
+            "untouched status must not invent throw counts: {open}"
+        );
+
+        let short = room.status(1.0).expect("short needles");
+        assert!(short.contains("L/D 0.40"), "{short}");
+        // 2 * 0.40 / pi ~ 0.255: the classical crossing probability.
+        assert!(short.contains("CROSS CHANCE 0.255"), "{short}");
+
+        assert_eq!(
+            room.status_input(0.0, &[]).as_deref(),
+            room.status(0.0).as_deref()
         );
     }
 
