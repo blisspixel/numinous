@@ -170,14 +170,20 @@ impl Room for ChaosGame {
         // Match the default render_input poke bridge so gesture and poke paths
         // report the same corner count.
         let pokes = crate::pokes_from_inputs(inputs);
-        let added = player_corners(&pokes).count();
-        if added == 0 {
+        let corners: Vec<(f64, f64)> = player_corners(&pokes).collect();
+        if corners.is_empty() {
             return self.status(t);
         }
+        let added = corners.len();
         let total = 3 + added;
         let ratio = Self::ratio_for(t);
+        let (nx, ny) = *corners.last().expect("nonempty corners");
+        // Jump ratio names the chaos-game contraction; newest corner is where
+        // the hand attached another vertex of the attractor.
         Some(format!(
-            "{added} ADDED   {total} CORNERS   JUMP {ratio:.2}   ATTRACTOR REBUILT"
+            "{added} ADD  {total}COR  JUMP {ratio:.2}  NEW@{:.0}%{:.0}%",
+            nx * 100.0,
+            ny * 100.0
         ))
     }
 
@@ -249,8 +255,10 @@ mod tests {
             t: 0.0,
         }];
         let added = room.status_input(0.0, &inputs).expect("added");
-        assert!(added.contains("1 ADDED"), "{added}");
-        assert!(added.contains("4 CORNERS"), "{added}");
+        assert!(added.starts_with("1 ADD"), "{added}");
+        assert!(added.contains("4COR"), "{added}");
+        assert!(added.contains("JUMP 0.50"), "{added}");
+        assert!(added.contains("NEW@50%25%"), "{added}");
     }
 
     #[test]

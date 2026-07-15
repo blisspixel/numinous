@@ -236,17 +236,24 @@ impl Room for LangtonsAnt {
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let Some((x, y)) = inputs.iter().rev().find_map(|input| match *input {
-            RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite() => {
-                Some((normalized_grid_cell(x), normalized_grid_cell(y)))
-            }
-            _ => None,
-        }) else {
+        let pokes = crate::pokes_from_inputs(inputs);
+        let finite: Vec<(f64, f64)> = pokes
+            .into_iter()
+            .filter(|(x, y)| x.is_finite() && y.is_finite())
+            .collect();
+        let Some(&(lx, ly)) = finite.last() else {
             return self.status(t);
         };
+        let x = normalized_grid_cell(lx);
+        let y = normalized_grid_cell(ly);
+        let steps = Self::steps_for(t);
+        let mut grid = init_grid(self.seed);
+        apply_poked_flips(&mut grid, &finite);
+        let grid = run_ant(grid, steps, self.seed);
+        let black = grid.iter().filter(|&&c| c).count();
+        let flips = finite.len();
         Some(format!(
-            "CELL {x},{y} FLIPPED   ANT REPLAYED {} STEPS",
-            Self::steps_for(t)
+            "FLIP {x},{y}  {flips}F  {steps} STEPS  BLACK {black}"
         ))
     }
 
@@ -365,10 +372,11 @@ mod tests {
         }];
 
         assert!(poked.ink_count() >= base.ink_count() + 20);
-        assert_eq!(
-            room.status_input(0.0, &input).as_deref(),
-            Some("CELL 50,50 FLIPPED   ANT REPLAYED 2500 STEPS")
-        );
+        let status = room.status_input(0.0, &input).expect("flip status");
+        assert!(status.contains("FLIP 50,50"), "{status}");
+        assert!(status.contains("1F"), "{status}");
+        assert!(status.contains("2500 STEPS"), "{status}");
+        assert!(status.contains("BLACK "), "{status}");
     }
 
     #[test]

@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Langton's Ant flip status reports flip site, flip count, replayed steps, and
+  black-cell count after the full ant run so a seed flip is graded by its trail.
+- Chaos Game corner status names the newest vertex position and the rebuilt
+  corner count with the jump ratio that builds the attractor.
 - Voronoi action status names the newest well position and estimates its
   territory share on a fixed sample grid after borders renegotiate, so a drop
   is graded by how much desert the new well claims.
