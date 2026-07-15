@@ -2417,10 +2417,17 @@ impl ApplicationHandler for App {
                         Key::Named(NamedKey::Escape) | Key::Named(NamedKey::Tab) => {
                             self.exit_studio();
                         }
+                        Key::Named(NamedKey::F1) => {
+                            self.studio_panel.toggle_help();
+                        }
                         Key::Named(NamedKey::F2) => {
                             // Formula Jam Random: draw a curated, tested recipe.
                             let spec = self.studio_panel.load_random_recipe();
                             self.set_studio_sound(spec);
+                        }
+                        Key::Named(NamedKey::F3) => {
+                            // Formula Jam Auto: calm recipe set; F3 resumes after edit.
+                            self.studio_panel.toggle_auto();
                         }
                         Key::Named(NamedKey::Backspace) => {
                             let spec = self.studio_panel.backspace();
@@ -2783,6 +2790,12 @@ impl ApplicationHandler for App {
             }
             if let Some(run) = &mut self.gauntlet {
                 let _ = run.munch.tick_bite_flash();
+            }
+            if self.studio {
+                // Auto advances only after dwell and a phrase-edge of gallery phase.
+                if let Some(spec) = self.studio_panel.tick_auto(elapsed, self.t) {
+                    self.set_studio_sound(Some(spec));
+                }
             }
             if self.banner.as_mut().is_some_and(|banner| !banner.tick()) {
                 self.banner = None;

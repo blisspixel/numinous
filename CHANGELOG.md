@@ -6,10 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
-- Studio Formula Jam Random (0.3 partial): F2 loads the next expression from a
-  curated 12-recipe bank that must parse and sonify. Recipes stay editable.
-  Auto set and Help overlay remain open. Focused regressions cover every recipe
-  and bank cycling.
+- Studio Formula Jam discovery (0.3): F2 Random cycles a curated 12-recipe bank;
+  F3 Auto holds each recipe about 21s then advances only near an 1/8-phase
+  edge; F1 toggles a dismissible help overlay that opens on first Studio
+  contact. Typing, backspace, and space pause Auto; F3 resumes. Footer legend
+  names the controls. Focused regressions cover recipes, dwell, phrase edges,
+  edit-pause, and help toggle.
 - Munch bite juice: each toggle (keyboard or mouse) flashes the cell for a
   short fill pulse so bites are felt before final grading. Gauntlet munch
   stage shares the same juice. Focused tick-down regression covers the flash.
