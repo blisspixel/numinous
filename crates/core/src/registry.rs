@@ -296,6 +296,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::cassini::Cassini::new_with(variation)),
         Box::new(rooms::foucault::Foucault::new_with(variation)),
         Box::new(rooms::coriolis::Coriolis::new_with(variation)),
+        Box::new(rooms::tautochrone::Tautochrone::new_with(variation)),
+        Box::new(rooms::catenoid::Catenoid::new_with(variation)),
+        Box::new(rooms::helicoid::Helicoid::new_with(variation)),
+        Box::new(rooms::pseudosphere::Pseudosphere::new_with(variation)),
+        Box::new(rooms::airy::Airy::new_with(variation)),
+        Box::new(rooms::bragg::Bragg::new_with(variation)),
     ]
 }
 

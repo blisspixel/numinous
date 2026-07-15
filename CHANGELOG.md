@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six classical inventions (catalog 256): Tautochrone, Catenoid, Helicoid,
+  Pseudosphere, Airy Disk, Bragg Diffraction.
 - Six classical inventions (catalog 250): Reuleaux Triangle, Logarithmic Spiral,
   Archimedean Spiral, Cassini Ovals, Foucault Pendulum, Coriolis Path.
 - Six optics inventions (catalog 244): Doppler, Interference, Diffraction,
