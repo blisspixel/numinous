@@ -975,8 +975,9 @@ All three acceptance rechecks close their reproduced in-scope findings. The
 complete local release gate passes with 1,307 all-target test cases, 93.49
 percent region coverage, 93.28 percent line coverage, the exact 341-screen App
 matrix, Clippy with warnings denied, locked build, house style, and supply-chain
-policy. A deeper placement decision loop and Pi-specific no-instructions fun
-evidence remain open. The room is now causal and legible in captured evidence;
+policy. A deeper placement decision loop now grades each newest hold by restored
+faults and names the exact digit under the finger. Pi-specific no-instructions
+fun evidence remains open. The room is causal and legible in captured evidence;
 that is not a claim that real participants will choose to keep playing it.
 
 ---

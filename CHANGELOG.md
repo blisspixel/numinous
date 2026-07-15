@@ -6,6 +6,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Cult of Pi placement decision loop: hold status grades the newest patch by
+  how many display faults it restores (FIX) and names the exact digit under the
+  finger (D), so placement is a choice between faulted and clean regions rather
+  than only a hold count. Compact footer bound retained. Focused regressions
+  cover phase-zero FIX0, hit grading, and site-dependent status.
 - Galton Board one-ball prediction beat: a pointer-move commits a landing-bin
   wager without dropping balls; the next 64-ball wave still builds the
   empirical run, and status grades the highlighted last ball as B{n}H or B{n}M

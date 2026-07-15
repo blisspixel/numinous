@@ -6212,14 +6212,14 @@ plays 2
         let status = poked["result"]["structuredContent"]["status"]
             .as_str()
             .unwrap_or_default();
-        assert_eq!(status, "1 HELD  CH01  EXP FAULT 0%");
+        assert!(
+            status.starts_with("1 HELD FIX0 D") && status.contains(" CH01"),
+            "placement-graded hold status, got {status}"
+        );
         let text = poked["result"]["content"][0]["text"]
             .as_str()
             .unwrap_or_default();
-        assert!(
-            text.contains("Status: 1 HELD  CH01  EXP FAULT 0%"),
-            "got: {text}"
-        );
+        assert!(text.contains(&format!("Status: {status}")), "got: {text}");
         assert!(
             poked["result"]["structuredContent"]["delta"]["cells_changed"]
                 .as_u64()

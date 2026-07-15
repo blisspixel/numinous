@@ -4637,7 +4637,7 @@ mod tests {
         )
         .expect("cult render");
         assert!(
-            report.contains("Status: 1 HELD  CH01  EXP FAULT 0%"),
+            report.contains("Status: 1 HELD FIX0 D") && report.contains(" CH01"),
             "interaction status must reach the CLI: {report}"
         );
         assert!(
