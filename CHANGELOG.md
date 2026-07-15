@@ -6,6 +6,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Prime Spirals trace status counts primes that land on the selected diagonals
+  and names the spiral center, so a click reports the Ulam line's prime haul
+  rather than only a trace count.
 - Mandelbrot dive status names the complex target (C real/imag) and zoom power
   of two; Golden Angle plant status grades local packing (PACKED/NEAR/GAPS)
   against the golden step in degrees so placement detune is readable.
