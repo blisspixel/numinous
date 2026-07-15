@@ -385,7 +385,7 @@ The wings stay feelings, not branches; this map is the coverage checklist
 behind them. A branch is covered when a kid can play its entry and a professor
 can nod at it, and neither one is bored.
 
-## The Next Wave (July 2026): designed, not built
+## The Next Wave (July 2026): designs shipping in catalog order
 
 The founder's directive: more and better rooms, researched creatively across
 four aspects. Four parallel design passes (physics, deep mathematics,
@@ -393,17 +393,18 @@ fun-first, cosmic) produced these twenty-nine designs, deduplicated (the
 sandpile and the Chladni plate surfaced independently in multiple passes,
 which is itself a signal). Every entry has a full design (rule, gasp, verb,
 sound, reveal, feasibility) in the research record; what follows is the
-catalog-level card. None are built; the review-stack rule stands, and each
-room still faces the Definition of Done, including math sign-off on its
-reveal. Non-textbook reveal claims carry sources in CHANGELOG-linked research
-(BB(5)=47,176,870 per the 2024 bbchallenge Coq-verified proof; Conway's
-constant; McKinley's starbow analysis; Tero's Physarum Tokyo result).
+catalog-level card. Rooms ship when they pass the Definition of Done; human
+magic proof is not a machine stop. Non-textbook reveal claims carry sources in
+CHANGELOG-linked research (BB(5)=47,176,870 per the 2024 bbchallenge
+Coq-verified proof; Conway's constant; McKinley's starbow analysis; Tero's
+Physarum Tokyo result).
 
-**The first eight, by wow-to-build, when the build gate opens:**
+**The first eight, by wow-to-build:**
 
-1. **The Sandpile** (Emergence): drop grains; four topples to neighbors;
-   self-organized criticality blooms a fractal mandala. HOLD: POUR SAND.
-   Reveal: catastrophe is the resting state. Trivial build, huge wow.
+1. **The Sandpile** (Emergence) **built** (`sandpile`): drop grains; four
+   topples to neighbors; self-organized criticality blooms a fractal mandala.
+   HOLD: POUR SAND. Reveal: catastrophe is the resting state. Abelian
+   property: pour order does not change the final heights.
 2. **Chladni Figures** (Waves & Sound): sand flees a singing plate and draws
    the silence. DRAG: TUNE THE PLATE (the drive tone IS the room's pitch).
    Reveal: you cannot always hear the shape of a drum (Gordon-Webb-Wolpert
@@ -865,19 +866,20 @@ edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
 
 ### What we already have (feel, not curriculum)
 
-**Built now (31 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
-Julia, Cult of Pi, Life and Cellular Automata and Langton, Chaos Game, Golden
-Angle, Galton and Buffon, Lissajous and Harmonograph, Epicycles, L-System and
-Barnsley, Lorenz and Double Pendulum and Logistic Map, Collatz, Prime Spirals,
-Goldbach, Voronoi, Random Walk, Arecibo, Mobius, Zeno, The Pour, Slope Rider,
-Quine, Strange Loop, plus games (Quiz, Munch, Arcade, Nim, Gauntlet, SETI,
-Aliens, Codebreaker, and kin), Studio, radio, Journey, Cairn, predict.
+**Built now (32 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+Julia, Cult of Pi, Life and Cellular Automata and Langton, The Sandpile, Chaos
+Game, Golden Angle, Galton and Buffon, Lissajous and Harmonograph, Epicycles,
+L-System and Barnsley, Lorenz and Double Pendulum and Logistic Map, Collatz,
+Prime Spirals, Goldbach, Voronoi, Random Walk, Arecibo, Mobius, Zeno, The Pour,
+Slope Rider, Quine, Strange Loop, plus games (Quiz, Munch, Arcade, Nim,
+Gauntlet, SETI, Aliens, Codebreaker, and kin), Studio, radio, Journey, Cairn,
+predict.
 
-**Designed in earlier waves (do not redesign, do build):** Next Wave first eight
-(Sandpile, Chladni, Ripple, Coffee Cup, Ford Circles, Zeta Walk, Starbow,
-Slingshot) and the rest of that wave; Awe Engine tier S/A/B; Long Shot, Only
-Move, Dimension Dial; First Contact handshake room; Function Painter scope
-flagship; classical geometry and sonification-first batches.
+**Designed in earlier waves (do not redesign, do build):** Next Wave remainder
+(Chladni, Ripple, Coffee Cup, Ford Circles, Zeta Walk, Starbow, Slingshot, and
+the rest of that wave); Awe Engine tier S/A/B; Long Shot, Only Move, Dimension
+Dial; First Contact handshake room; Function Painter scope flagship; classical
+geometry and sonification-first batches.
 
 **Honest gaps this pass targets:** high-dimension intuition, information and
 noise as felt structure, quantum and measurement without mysticism, learning

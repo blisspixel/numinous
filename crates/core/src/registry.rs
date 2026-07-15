@@ -31,6 +31,7 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::collatz::Collatz::new_with(variation)),
         Box::new(rooms::buffon_needle::BuffonNeedle::new_with(variation)),
         Box::new(rooms::game_of_life::GameOfLife::new_with(variation)),
+        Box::new(rooms::sandpile::Sandpile::new_with(variation)),
         Box::new(rooms::mandelbrot::Mandelbrot::new_with(variation)),
         Box::new(rooms::julia::Julia::new_with(variation)),
         Box::new(rooms::barnsley_fern::BarnsleyFern::new_with(variation)),
@@ -445,7 +446,8 @@ mod tests {
     fn all_rooms_with_variation_affects_poke_rooms() {
         use crate::rooms::{
             chaos_game::ChaosGame, game_of_life::GameOfLife, golden_angle::GoldenAngle,
-            langtons_ant::LangtonsAnt, strange_loop::StrangeLoop, voronoi::Voronoi,
+            langtons_ant::LangtonsAnt, sandpile::Sandpile, strange_loop::StrangeLoop,
+            voronoi::Voronoi,
         };
         let c0 = ChaosGame::new_with(0);
         let c1 = ChaosGame::new_with(1);
@@ -492,5 +494,13 @@ mod tests {
         la0.render(&mut laa0, 0.5);
         la1.render(&mut laa1, 0.5);
         assert_ne!(laa0.to_text(), laa1.to_text());
+        // Sandpile: variation drifts the ambient pour site so the mandala offsets.
+        let sp0 = Sandpile::new_with(0);
+        let sp1 = Sandpile::new_with(1);
+        let mut spa0 = crate::canvas::Canvas::new(32, 16);
+        let mut spa1 = crate::canvas::Canvas::new(32, 16);
+        sp0.render(&mut spa0, 0.55);
+        sp1.render(&mut spa1, 0.55);
+        assert_ne!(spa0.to_text(), spa1.to_text());
     }
 }

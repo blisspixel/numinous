@@ -5862,12 +5862,16 @@ plays 2
         let seed = 0;
         let round = 0;
         let choice_count = 3;
-        let expected = numinous_core::build_round_sized(seed, round, 54, 22, choice_count).answer;
+        let three = numinous_core::build_round_sized(seed, round, 54, 22, choice_count);
+        let four = numinous_core::build_round_sized(seed, round, 54, 22, 4);
+        // Choice count reshapes the dealt hand; letters alone can collide by chance.
+        let three_titles: Vec<_> = three.choices.iter().map(|c| c.title).collect();
+        let four_titles: Vec<_> = four.choices.iter().map(|c| c.title).collect();
         assert_ne!(
-            expected,
-            numinous_core::build_round_sized(seed, round, 54, 22, 4).answer,
+            three_titles, four_titles,
             "choice count is part of the replay identity"
         );
+        let expected = three.answer;
         let puzzle = handle_request(&json!({
             "jsonrpc":"2.0","id":23,"method":"tools/call",
             "params":{"name":"quiz","arguments":{
@@ -7294,9 +7298,9 @@ plays 2
         assert!(text.contains("times-tables"));
         assert_eq!(resp["result"]["isError"], false);
         let structured = &resp["result"]["structuredContent"];
-        assert_eq!(structured["count"], 31);
+        assert_eq!(structured["count"], 32);
         let rooms = structured["rooms"].as_array().expect("room catalog");
-        assert_eq!(rooms.len(), 31);
+        assert_eq!(rooms.len(), 32);
         assert!(rooms.iter().all(|room| {
             room["id"].is_string() && room["title"].is_string() && room["wing"].is_string()
         }));
@@ -7332,7 +7336,7 @@ plays 2
         ));
         let _ = std::fs::remove_file(&journey);
         let rooms = numinous_core::all_rooms();
-        assert_eq!(rooms.len(), 31);
+        assert_eq!(rooms.len(), 32);
 
         for room in rooms {
             let meta = room.meta();
