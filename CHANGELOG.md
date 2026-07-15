@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Strange Loop hand status names nest depth (1/4 through 4/4) from the anchor
+  and restates that each level is the same shape.
 - Barnsley mini-fern status names the shared four-map IFS (stem/leaf/left/right
   probabilities) and the phase-scaled point budget of each planted chaos game.
 - Mobius brush status names which lap of the double-covered single edge the

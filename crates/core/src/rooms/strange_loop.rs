@@ -189,8 +189,11 @@ impl Room for StrangeLoop {
         let Some(&(x, y)) = points.last() else {
             return self.status(t);
         };
+        // Hand x/y shift the nested U; y maps to how deep the self-similar
+        // copy sits in the outer figure (a stranger loop reads as more nest).
+        let nest = ((1.0 - y) * 4.0).floor() as u32 + 1;
         Some(format!(
-            "INNER LOOP ANCHORED AT {:.0}% {:.0}%   BRIGHT CROSS MARKS YOUR HAND",
+            "INNER @ {:.0}% {:.0}%  NEST {nest}/4  SAME SHAPE EACH LEVEL",
             x * 100.0,
             y * 100.0
         ))
@@ -524,10 +527,17 @@ mod tests {
             },
         ];
 
-        assert_eq!(
-            room.status_input(0.5, &inputs).as_deref(),
-            Some("INNER LOOP ANCHORED AT 75% 25%   BRIGHT CROSS MARKS YOUR HAND")
-        );
+        let status = room.status_input(0.5, &inputs).expect("anchor status");
+        assert!(status.contains("INNER @ 75% 25%"));
+        assert!(status.contains("NEST 4/4"));
+        assert!(status.contains("SAME SHAPE EACH LEVEL"));
+        let shallow = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.9,
+            t: 0.0,
+        }];
+        let shallow_status = room.status_input(0.5, &shallow).expect("shallow");
+        assert!(shallow_status.contains("NEST 1/4"));
         assert_eq!(
             room.status_input(0.5, &[]).as_deref(),
             room.status(0.5).as_deref()
