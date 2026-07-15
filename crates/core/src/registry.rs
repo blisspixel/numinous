@@ -220,6 +220,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::rose::Rose::new_with(variation)),
         Box::new(rooms::kuramoto::Kuramoto::new_with(variation)),
         Box::new(rooms::h_tree::HTree::new_with(variation)),
+        Box::new(rooms::percolation::Percolation::new_with(variation)),
+        Box::new(rooms::ising::Ising::new_with(variation)),
+        Box::new(rooms::lotka_volterra::LotkaVolterra::new_with(variation)),
+        Box::new(rooms::poincare_disc::PoincareDisc::new_with(variation)),
+        Box::new(rooms::cycloid::Cycloid::new_with(variation)),
+        Box::new(rooms::brusselator::Brusselator::new_with(variation)),
     ]
 }
 

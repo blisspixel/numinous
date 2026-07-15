@@ -175,19 +175,43 @@ struct QuizResultLayout {
     line_height: i32,
 }
 
+fn fit_quiz_verdict(text: &str, pixel_budget: i32, scale: i32) -> String {
+    if numinous_core::text_width(text, scale) <= pixel_budget {
+        return text.to_string();
+    }
+    let mut chars: Vec<char> = text.chars().collect();
+    while chars.len() > 4 {
+        chars.pop();
+        while chars.last().is_some_and(|c| c.is_whitespace() || *c == ':') {
+            chars.pop();
+        }
+        let mut fitted: String = chars.iter().collect();
+        fitted.push_str("...");
+        if numinous_core::text_width(&fitted, scale) <= pixel_budget {
+            return fitted;
+        }
+    }
+    "...".to_string()
+}
+
 impl QuizResultLayout {
     fn new(quiz: &QuizPlay, correct: bool, mode: InputMode, width: usize, height: usize) -> Self {
         let margin = 10;
         let body_scale = game_scale(width);
         let verdict_scale = body_scale + 1;
         let line_height = 10 * body_scale;
+        let verdict_budget = width as i32 - 2 * margin;
         let verdict = if correct {
             "CORRECT".to_string()
         } else {
-            format!(
-                "IT WAS {}: {}",
-                quiz.round.answer,
-                quiz.round.answer_title.to_uppercase()
+            fit_quiz_verdict(
+                &format!(
+                    "IT WAS {}: {}",
+                    quiz.round.answer,
+                    quiz.round.answer_title.to_uppercase()
+                ),
+                verdict_budget,
+                verdict_scale,
             )
         };
         let controls = input_legend::quiz_result(mode);
