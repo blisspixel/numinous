@@ -182,13 +182,46 @@ impl Room for Voronoi {
         // Same point extraction as the default render_input bridge so gesture
         // and poke status agree on how many wells the player has planted.
         let pokes = crate::pokes_from_inputs(inputs);
-        let dropped = player_wells(&pokes).count();
-        if dropped == 0 {
+        let player: Vec<(f64, f64)> = player_wells(&pokes).collect();
+        if player.is_empty() {
             return self.status(t);
         }
-        let total = SITES + dropped;
+        let dropped = player.len();
+        let mut wells = sites(t, self.seed);
+        for well in &player {
+            if !wells.contains(well) {
+                wells.push(*well);
+            }
+        }
+        let total = wells.len();
+        let newest = *player.last().expect("nonempty player wells");
+        // Fixed sample grid: estimate how much of the desert the newest well
+        // claims after every border renegotiates.
+        const GRID: usize = 32;
+        let mut owned = 0u32;
+        for iy in 0..GRID {
+            for ix in 0..GRID {
+                let x = (ix as f64 + 0.5) / GRID as f64;
+                let y = (iy as f64 + 0.5) / GRID as f64;
+                let mut best_i = 0usize;
+                let mut best_d = f64::INFINITY;
+                for (i, &(wx, wy)) in wells.iter().enumerate() {
+                    let d = (x - wx).hypot(y - wy);
+                    if d < best_d {
+                        best_d = d;
+                        best_i = i;
+                    }
+                }
+                if wells[best_i] == newest {
+                    owned = owned.saturating_add(1);
+                }
+            }
+        }
+        let pct = (owned as f64 * 100.0) / (GRID * GRID) as f64;
         Some(format!(
-            "{dropped} DROPPED   {total} WELLS TOTAL   EVERY BORDER RENEGOTIATES"
+            "{dropped} DROP  NEW@{:.0}%{:.0}%  CELL {pct:.0}%  {total} WELLS",
+            newest.0 * 100.0,
+            newest.1 * 100.0
         ))
     }
 
@@ -264,9 +297,20 @@ mod tests {
             },
         ];
         let dropped = room.status_input(0.0, &inputs).expect("dropped");
-        assert!(dropped.contains("2 DROPPED"), "{dropped}");
-        assert!(dropped.contains("16 WELLS TOTAL"), "{dropped}");
-        assert!(dropped.contains("RENEGOTIATES"), "{dropped}");
+        assert!(dropped.starts_with("2 DROP"), "{dropped}");
+        assert!(dropped.contains("NEW@50%50%"), "{dropped}");
+        assert!(dropped.contains("CELL "), "{dropped}");
+        assert!(dropped.contains("WELLS"), "{dropped}");
+        // A second newest site changes the newest cell claim.
+        let other = [crate::room::RoomInput::PointerDown {
+            x: 0.1,
+            y: 0.1,
+            t: 0.0,
+        }];
+        let alone = room.status_input(0.0, &other).expect("one well");
+        assert!(alone.starts_with("1 DROP"), "{alone}");
+        assert!(alone.contains("NEW@10%10%"), "{alone}");
+        assert_ne!(dropped, alone);
     }
 
     #[test]

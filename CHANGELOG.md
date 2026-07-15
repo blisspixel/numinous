@@ -6,6 +6,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Voronoi action status names the newest well position and estimates its
+  territory share on a fixed sample grid after borders renegotiate, so a drop
+  is graded by how much desert the new well claims.
 - Cellular Automata action status names the notable rule identity (for example
   SIERPINSKI for Rule 90), the flip count, the newest seed column, and the
   post-flip seed density on a fixed analysis width so a click is a measured
