@@ -855,6 +855,33 @@ impl App {
         )
     }
 
+    /// Write a short looping APNG of the current visit: one phase cycle, or
+    /// advancing Life generations for the persistent Game of Life session.
+    fn save_short_loop(&self) -> Option<std::path::PathBuf> {
+        self.save_short_loop_to(&postcard::default_postcard_dir())
+            .ok()
+    }
+
+    fn save_short_loop_to(&self, dir: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
+        if self.current_room_is_life() {
+            let room = self.rooms[self.current].as_ref();
+            return postcard::write_life_loop(
+                room.meta().id,
+                room.meta().accent,
+                &self.life_session,
+                self.era,
+                dir,
+            );
+        }
+        postcard::write_room_loop(
+            self.rooms[self.current].as_ref(),
+            self.t,
+            &self.inputs,
+            self.era,
+            dir,
+        )
+    }
+
     fn save_playtest_note(&self) -> std::io::Result<std::path::PathBuf> {
         self.save_playtest_note_to(&playtest::default_log_dir(), SystemTime::now())
     }
@@ -2455,6 +2482,21 @@ impl ApplicationHandler for App {
                             {
                                 window.set_title(&format!(
                                     "Numinous  |  postcard saved: {}",
+                                    path.display()
+                                ));
+                            }
+                        }
+                        // L keeps the motion: a short looping APNG of this visit.
+                        Key::Character(c) if c.as_str() == "l" => {
+                            if self.save_gate.admit(
+                                save_gate::SaveKind::ShortLoop,
+                                Instant::now(),
+                                repeat,
+                            ) && let Some(path) = self.save_short_loop()
+                                && let Some(window) = &self.window
+                            {
+                                window.set_title(&format!(
+                                    "Numinous  |  loop saved: {}",
                                     path.display()
                                 ));
                             }

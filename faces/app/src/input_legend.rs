@@ -273,7 +273,7 @@ pub(crate) fn help_lines(
             "E          INSPECT    Q  ERA    R  RESET",
             "B          THE SHOW   TAB  THE STUDIO",
             "J          JOURNEY    F  FULLSCREEN",
-            "Y          RADIO    P  POSTCARD",
+            "Y          RADIO    P  POSTCARD   L  LOOP",
             "F9         PLAYTEST NOTE",
             "M          MUTE    [/] VOLUME   SPACE PAUSE",
             "",

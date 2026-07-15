@@ -6,6 +6,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Share short-loop export (0.2 Share v1 motion path): App key L writes a
+  24-frame looping APNG of the current visit at 480px, 12 fps, preserving
+  gesture history and Visual Era. Game of Life loops advance generations from
+  a cloned session so the live visit is not mutated. Still postcards remain on
+  P. Independent SaveGate budget (2 s) prevents loop floods. Filenames use
+  `numinous-{room}-loop-{state}.png` with collision suffixes. Focused
+  regressions cover multi-frame headers, poke preservation, phase motion, and
+  Life non-mutation.
 - Registry invariant `action_status_fits_compact_footer`: center-poke status is
   at most 56 characters so compact App footers stay legible beside controls.
 - Buffon and Zeno action status compacted for footer budgets while keeping

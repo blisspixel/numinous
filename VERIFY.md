@@ -109,7 +109,7 @@ sonification riding on top), and a menu explaining itself (Esc brings it
 back). Game-native controls: A/D or arrows change rooms, 1-9 jump straight to
 one, W/S run time faster or slower, drag or mouse-wheel scrubs, E inspects the
 math, Q swaps the visual era (phosphor, 8-bit, vector, modern), R restarts the
-sweep, P saves the current room frame as a PNG postcard, F goes fullscreen, M mutes, [ and ] change global volume, B starts The Show (lean back), G deals the
+sweep, P saves the current room frame as a PNG postcard, L saves a short looping APNG of the visit, F goes fullscreen, M mutes, [ and ] change global volume, B starts The Show (lean back), G deals the
 quiz (name the math, right in the window), C plays today's Munch board with a
 cursor (WASD moves, Space eats, Enter grades), N plays Nim against the Order
 (aim with W/S and A/D, Enter takes; win and the xor secret shows), T runs the

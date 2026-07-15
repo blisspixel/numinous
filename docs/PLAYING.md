@@ -57,6 +57,7 @@ your hands already know it:
 | V (in the menu) | the Arcade: eat while the Vexations hunt |
 | J | your journey: level, rank, trophies, resonances |
 | P | keep the picture: saves the room as a PNG postcard |
+| L | keep the motion: saves a short looping APNG of this visit |
 | F9 | save a local hallway-test note in repo-root `logs/` |
 | Y | the radio dial: off, trance, chill, arcade (42 built-in tracks) |
 | [ / ] | global volume down / up; - / = are aliases outside Studio |
