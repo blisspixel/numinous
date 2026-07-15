@@ -266,6 +266,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::conchoid::Conchoid::new_with(variation)),
         Box::new(rooms::limacon::Limacon::new_with(variation)),
         Box::new(rooms::folium::Folium::new_with(variation)),
+        Box::new(rooms::semicubical::Semicubical::new_with(variation)),
+        Box::new(rooms::kappa::Kappa::new_with(variation)),
+        Box::new(rooms::witch_caustic::CircularCaustic::new_with(variation)),
+        Box::new(rooms::trochoid::Trochoid::new_with(variation)),
+        Box::new(rooms::hypotrochoid::Hypotrochoid::new_with(variation)),
+        Box::new(rooms::epitrochoid::Epitrochoid::new_with(variation)),
     ]
 }
 

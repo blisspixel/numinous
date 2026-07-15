@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six classical curve inventions (catalog 226): Semicubical, Kappa, Circular
+  Caustic, Trochoid, Hypotrochoid, Epitrochoid.
 - Six classical curve inventions (catalog 220): Gerono Eight, Cissoid, Strophoid,
   Conchoid, Limacon, Folium of Descartes.
 - Six classical curve inventions (catalog 214): Dual Cobweb, Beverton-Holt,
