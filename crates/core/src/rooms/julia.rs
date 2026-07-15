@@ -231,9 +231,17 @@ impl Room for Julia {
             return self.status(t);
         }
         let (cx, cy) = selected_c(t, self.seed, &pokes);
-        Some(format!(
-            "C MORPHED TO {cx:+.3} {cy:+.3}I   WHOLE FRACTAL UPDATED"
-        ))
+        let mag = cx.hypot(cy);
+        // |c| grades how far the morph sits from the main cardioid's center
+        // region: small |c| stays connected and fat, larger |c| dusts away.
+        let body = if mag < 0.25 {
+            "NEAR0"
+        } else if mag < 0.75 {
+            "MAIN"
+        } else {
+            "OUTER"
+        };
+        Some(format!("C {cx:+.3}{cy:+.3}i  |C| {mag:.2} {body}"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -301,8 +309,13 @@ mod tests {
             },
         ];
         let status = room.status_input(0.3, &selected).expect("finite selection");
-        assert!(status.starts_with("C MORPHED TO "));
-        assert!(status.ends_with("I   WHOLE FRACTAL UPDATED"));
+        assert!(status.starts_with("C "), "{status}");
+        assert!(status.contains("|C| "), "{status}");
+        assert!(
+            status.contains("NEAR0") || status.contains("MAIN") || status.contains("OUTER"),
+            "{status}"
+        );
+        assert!(status.contains('i'), "{status}");
     }
 
     #[test]
