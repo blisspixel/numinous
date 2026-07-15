@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Arecibo first-contact honesty: open status names the unsolved width and
+  CLICK:TRY WIDTH; a hand try reports TRIED W{n}, the rectangle, and LOCK:PI,
+  PAIR TRY W11, or REM remainder grades. Focused regressions cover open, miss,
+  lock, and pair paths under the compact footer budget.
 - Share short-loop export (0.2 Share v1 motion path): App key L writes a
   24-frame looping APNG of the current visit at 480px, 12 fps, preserving
   gesture history and Visual Era. Game of Life loops advance generations from
