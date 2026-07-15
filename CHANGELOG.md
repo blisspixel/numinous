@@ -6,6 +6,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Registry invariant `action_status_reports_a_measured_quantity`: after a
+  center poke every catalog room status must include a digit (a count,
+  coordinate, rule, or ratio), not only prose.
 - Fourier Epicycles mini-chain status names plant count, origin, pen phase, and
   that each miniature reuses the same arm set as the main chain.
 - Lissajous tune status names the reduced interval class (UNISON, OCTAVE, FIFTH,

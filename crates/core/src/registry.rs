@@ -162,6 +162,26 @@ mod tests {
     }
 
     #[test]
+    fn action_status_reports_a_measured_quantity() {
+        // After a center poke, status must carry at least one digit: a measured
+        // consequence (count, coordinate, rule number, ratio), not only words.
+        use crate::room::RoomInput;
+        let poke = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.0,
+        }];
+        for room in all_rooms() {
+            let id = room.meta().id;
+            let after = room.status_input(0.0, &poke).unwrap_or_default();
+            assert!(
+                after.chars().any(|c| c.is_ascii_digit()),
+                "{id} action status has no measured quantity: {after:?}"
+            );
+        }
+    }
+
+    #[test]
     fn lookup_by_id_works_and_misses_are_none() {
         assert!(room_by_id("times-tables").is_some());
         assert!(room_by_id("no-such-room").is_none());
