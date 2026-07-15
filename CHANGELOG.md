@@ -6,6 +6,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Lorenz action status names seeded shadow storms; Double Pendulum status
+  labels PINNED, FLUNG, RE-DROP, or CANCELLED beside the twin gap so gesture
+  and poke paths both speak after a hand act.
 - Galton Board experiment status now reports empirical mean rights versus the
   binomial expectation np, so a run is graded against its coin, not only the
   last ball path.

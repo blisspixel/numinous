@@ -290,25 +290,40 @@ impl Room for DoublePendulum {
 
     fn status_input(&self, t: f64, inputs: &[crate::room::RoomInput]) -> Option<String> {
         let seed_offset = self.seed_offset();
-        let (first, second, w1, w2, steps) = match crate::room::latest_gesture(inputs) {
-            None => return self.status(t),
+        // Prefer a completed or held gesture. A bare poke list (CLI/MCP) still
+        // re-drops from the newest finite hand point so all faces agree.
+        let (first, second, w1, w2, steps, hand_label) = match crate::room::latest_gesture(inputs) {
+            None => {
+                let pokes = crate::pokes_from_inputs(inputs);
+                let Some(&(x, y)) = pokes
+                    .iter()
+                    .rev()
+                    .find(|(x, y)| x.is_finite() && y.is_finite())
+                else {
+                    return self.status(t);
+                };
+                let (first, second) = hand_drop_angles(x, y, seed_offset);
+                let steps = Self::steps_for(t);
+                (first, second, 0.0, 0.0, steps, "RE-DROP")
+            }
             Some(crate::room::Gesture::Held { at, .. }) => {
                 let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
-                (first, second, 0.0, 0.0, 0)
+                (first, second, 0.0, 0.0, 0, "PINNED")
             }
             Some(crate::room::Gesture::Released { before, at }) => {
                 let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
                 let (w1, w2) = fling_velocities(before, at, seed_offset);
                 let steps = (elapsed_phase(t, at.2) * MAX_STEPS as f64) as usize;
-                (first, second, w1, w2, steps)
+                (first, second, w1, w2, steps, "FLUNG")
             }
             Some(crate::room::Gesture::Cancelled { at }) => {
                 let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
                 let steps = (elapsed_phase(t, at.2) * MAX_STEPS as f64) as usize;
-                (first, second, 0.0, 0.0, steps)
+                (first, second, 0.0, 0.0, steps, "CANCELLED")
             }
         };
-        Some(divergence_status(first, second, w1, w2, steps))
+        let gap = divergence_status(first, second, w1, w2, steps);
+        Some(format!("{hand_label}   {gap}"))
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {

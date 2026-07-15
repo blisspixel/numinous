@@ -124,6 +124,7 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
 - **Done (Cycle 109 action-consequence status):** Collatz reports perturbed orbit starts and steps-to-1; Cellular Automata reports seed flips and history replay. Focused action-status regressions cover both.
 - **Done (Cycle 110 L-System plant status):** planting reports rooted copy count and species continuity.
 - **Done (Cycle 111 Galton mean vs expectation):** experiment status reports empirical mean rights and binomial expectation `np` for the selected coin.
+- **Done (Cycle 112 chaos-room action labels):** Lorenz reports shadow-storm count after a seed; Double Pendulum labels PINNED/FLUNG/RE-DROP/CANCELLED beside the twin divergence.
 - **Done (hands-on room correction, July 13, 2026):** Galton now uses
   one physical 16-row peg lattice and mathematically legal ball paths. Cult of
   Pi keeps its finite prefix readable and distinguishes wrong digits from old
