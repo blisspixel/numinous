@@ -6,10 +6,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six Next Wave rooms (catalog 51): Busy Beaver, The 720 Degree Room,
+  Upside-Down Ruler, Murmuration, Whispering Table, Wet Oracle.
 - Phantom Jam (`phantom-jam`), The Fastest Fall (`fastest-fall`), and
   Audioactive Decay (`audioactive`): Sugiyama upstream traffic jam; cycloid
   brachistochrone race; look-and-say generations toward Conway's constant.
-  Catalog is 45 rooms.
 - Kepler's Loom room (`kepler-loom`, Motion & Dynamics): inverse-square orbit
   integration; ambient elliptical moon; DRAG: FLING A MOON reports eccentricity
   and peri/apo.
