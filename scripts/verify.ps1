@@ -50,9 +50,10 @@ Step "regenerate gallery into renders\" { cargo run -q --bin numinous -- gallery
 Step "regenerate contact sheet" { cargo run -q --bin numinous -- contact-sheet --out renders\contact.png --cols 3 --tile 360 }
 Step "regenerate lissajous audio" { cargo run -q --bin numinous -- sonify lissajous --out renders\lissajous.wav }
 Step "regenerate collatz audio" { cargo run -q --bin numinous -- sonify collatz --out renders\collatz.wav }
+Step "regenerate lissajous room bed" { cargo run -q --bin numinous -- sonify lissajous --layer room-bed --out renders\lissajous-bed.wav }
 
 Write-Host "`nAll checks passed." -ForegroundColor Green
-Write-Host "Open renders\contact.png for the whole collection; renders\*.wav are the room sounds."
+Write-Host "Open renders\contact.png for the whole collection; lissajous-bed.wav is the room-bed PCM16 projection."
 } finally {
     foreach ($name in $savedEnvironment.Keys) {
         $saved = $savedEnvironment[$name]

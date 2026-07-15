@@ -66,7 +66,10 @@ pub use challenge::{
     Challenge, ChallengeGrade, ParameterGoal, ParameterGrade, grade_challenge, grade_parameter,
     pose_challenge, pose_parameter_goal,
 };
-pub use chiptune::{Arrangement, ChipNote, Pattern, Voice, compose, pitch};
+pub use chiptune::{
+    Arrangement, ChipNote, Pattern, StereoSignalMetrics, Voice, compose, pitch, quantize_pcm16,
+    stereo_signal_metrics,
+};
 pub use codebreaker::{Feedback, grade, hint, secret_code};
 pub use concepts::concept;
 pub use era::Era;
@@ -75,7 +78,7 @@ pub use humor::{Joke, explain_joke, jokes};
 pub use journey::{
     Boon, CUT_LEVELS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options, constellation, level_lore,
 };
-pub use motifs::Motif;
+pub use motifs::{MAX_ROOM_BED_EVENTS, Motif, ROOM_BED_SOURCE_RATE};
 pub use munchers::{
     Board, FULL_DECK_ROUND, Munched, board_text, build_board, grade as grade_munch,
 };

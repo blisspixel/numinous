@@ -27,6 +27,19 @@ pub enum Voice {
     Noise,
 }
 
+impl Voice {
+    /// Stable lowercase identifier for structured arrangement projections.
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::Sine => "sine",
+            Self::Square => "square",
+            Self::Triangle => "triangle",
+            Self::Noise => "noise",
+        }
+    }
+}
+
 /// One step of a pattern: a note (frequency, voice, level) or a rest.
 pub type Step = Option<(f32, Voice, f32)>;
 
@@ -65,6 +78,172 @@ pub struct Arrangement {
     pub steps: usize,
     /// Duration of one step in seconds.
     pub step_seconds: f32,
+}
+
+/// Bounded engineering features for one interleaved stereo buffer.
+///
+/// These measurements detect signal and stereo regressions. They do not
+/// measure comfort, beauty, fatigue, or musical quality.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct StereoSignalMetrics {
+    /// Complete stereo frames measured. An odd trailing sample is excluded.
+    pub frame_count: usize,
+    /// Samples that were not part of a complete stereo frame.
+    pub trailing_samples: usize,
+    /// Non-finite samples, treated as silence for the remaining measurements.
+    pub non_finite_samples: usize,
+    /// Finite subnormal samples.
+    pub subnormal_samples: usize,
+    /// Samples at or beyond full scale.
+    pub clipped_samples: usize,
+    /// Largest absolute sample.
+    pub peak: f64,
+    /// RMS across both channels.
+    pub rms: f64,
+    /// Crest factor in decibels.
+    pub crest_db: f64,
+    /// Left channel RMS.
+    pub left_rms: f64,
+    /// Right channel RMS.
+    pub right_rms: f64,
+    /// Right-to-left RMS balance in decibels.
+    pub channel_balance_db: f64,
+    /// Left channel arithmetic mean.
+    pub left_dc: f64,
+    /// Right channel arithmetic mean.
+    pub right_dc: f64,
+    /// Uncentered left-right correlation in `[-1, 1]`.
+    pub correlation: f64,
+    /// Side-to-mid RMS ratio in decibels, bounded to `[-120, 120]`.
+    pub side_to_mid_db: f64,
+    /// Largest adjacent step within either channel.
+    pub max_step: f64,
+    /// Fraction of complete-frame samples that are exactly zero.
+    pub zero_sample_fraction: f64,
+}
+
+/// Convert one normalized sample to the PCM16 representation used by exports.
+#[must_use]
+pub fn quantize_pcm16(sample: f32) -> i16 {
+    if sample.is_finite() {
+        (sample.clamp(-1.0, 1.0) * f32::from(i16::MAX)) as i16
+    } else {
+        0
+    }
+}
+
+/// Measure one interleaved stereo buffer with fixed accumulation order.
+#[must_use]
+pub fn stereo_signal_metrics(samples: &[f32]) -> StereoSignalMetrics {
+    let frame_count = samples.len() / 2;
+    let mut non_finite_samples = 0usize;
+    let mut subnormal_samples = 0usize;
+    let mut clipped_samples = 0usize;
+    let mut zero_samples = 0usize;
+    let mut peak = 0.0f64;
+    let mut left_sum = 0.0f64;
+    let mut right_sum = 0.0f64;
+    let mut left_square = 0.0f64;
+    let mut right_square = 0.0f64;
+    let mut cross = 0.0f64;
+    let mut mid_square = 0.0f64;
+    let mut side_square = 0.0f64;
+    let mut previous: Option<[f64; 2]> = None;
+    let mut max_step = 0.0f64;
+
+    for frame in samples[..frame_count * 2].chunks_exact(2) {
+        let mut channel = [0.0f64; 2];
+        for (index, sample) in frame.iter().copied().enumerate() {
+            if !sample.is_finite() {
+                non_finite_samples += 1;
+                continue;
+            }
+            subnormal_samples += usize::from(sample.is_subnormal());
+            clipped_samples += usize::from(sample.abs() >= 1.0);
+            zero_samples += usize::from(sample == 0.0);
+            let value = f64::from(sample);
+            peak = peak.max(value.abs());
+            channel[index] = value;
+        }
+        let [left, right] = channel;
+        left_sum += left;
+        right_sum += right;
+        left_square += left * left;
+        right_square += right * right;
+        cross += left * right;
+        let mid = (left + right) * 0.5;
+        let side = (left - right) * 0.5;
+        mid_square += mid * mid;
+        side_square += side * side;
+        if let Some([previous_left, previous_right]) = previous {
+            max_step = max_step
+                .max((left - previous_left).abs())
+                .max((right - previous_right).abs());
+        }
+        previous = Some([left, right]);
+    }
+
+    let frames = frame_count as f64;
+    let left_rms = root_mean_square(left_square, frames);
+    let right_rms = root_mean_square(right_square, frames);
+    let rms = root_mean_square(left_square + right_square, frames * 2.0);
+    let correlation_denominator = (left_square * right_square).sqrt();
+    let correlation = if correlation_denominator > 0.0 {
+        (cross / correlation_denominator).clamp(-1.0, 1.0)
+    } else {
+        0.0
+    };
+    StereoSignalMetrics {
+        frame_count,
+        trailing_samples: samples.len() % 2,
+        non_finite_samples,
+        subnormal_samples,
+        clipped_samples,
+        peak,
+        rms,
+        crest_db: amplitude_ratio_db(peak, rms),
+        left_rms,
+        right_rms,
+        channel_balance_db: amplitude_ratio_db(right_rms, left_rms),
+        left_dc: if frame_count == 0 {
+            0.0
+        } else {
+            left_sum / frames
+        },
+        right_dc: if frame_count == 0 {
+            0.0
+        } else {
+            right_sum / frames
+        },
+        correlation,
+        side_to_mid_db: amplitude_ratio_db(
+            root_mean_square(side_square, frames),
+            root_mean_square(mid_square, frames),
+        ),
+        max_step,
+        zero_sample_fraction: if frame_count == 0 {
+            0.0
+        } else {
+            zero_samples as f64 / (frames * 2.0)
+        },
+    }
+}
+
+fn root_mean_square(sum_of_squares: f64, count: f64) -> f64 {
+    if count > 0.0 {
+        (sum_of_squares / count).sqrt()
+    } else {
+        0.0
+    }
+}
+
+fn amplitude_ratio_db(numerator: f64, denominator: f64) -> f64 {
+    match (numerator > 0.0, denominator > 0.0) {
+        (false, false) => 0.0,
+        (false, true) => -120.0,
+        (true, false) => 120.0,
+        (true, true) => (20.0 * (numerator / denominator).log10()).clamp(-120.0, 120.0),
+    }
 }
 
 /// One waveform sample in [-1, 1] at `phase` cycles (fractional part matters).
@@ -265,7 +444,10 @@ pub fn compose(seed: u64, bars: usize) -> Pattern {
 
 #[cfg(test)]
 mod tests {
-    use super::{Arrangement, ChipNote, Pattern, Voice, compose, pitch, wave};
+    use super::{
+        Arrangement, ChipNote, Pattern, Voice, compose, pitch, quantize_pcm16,
+        stereo_signal_metrics, wave,
+    };
     use crate::rng::SplitMix64;
 
     #[test]
@@ -368,5 +550,124 @@ mod tests {
                 "panning must create a real stereo field"
             );
         }
+    }
+
+    #[test]
+    fn hostile_arrangement_events_fail_closed_without_breaking_frame_shape() {
+        let arrangement = Arrangement {
+            notes: vec![
+                ChipNote {
+                    frequency: f32::NAN,
+                    start_step: 0,
+                    step_count: 1,
+                    voice: Voice::Sine,
+                    level: 0.1,
+                    pan: 0.0,
+                },
+                ChipNote {
+                    frequency: -1.0,
+                    start_step: 0,
+                    step_count: 1,
+                    voice: Voice::Square,
+                    level: 0.1,
+                    pan: 0.0,
+                },
+                ChipNote {
+                    frequency: 220.0,
+                    start_step: 0,
+                    step_count: 1,
+                    voice: Voice::Triangle,
+                    level: f32::NAN,
+                    pan: 0.0,
+                },
+                ChipNote {
+                    frequency: 220.0,
+                    start_step: 0,
+                    step_count: 0,
+                    voice: Voice::Noise,
+                    level: 0.1,
+                    pan: 0.0,
+                },
+                ChipNote {
+                    frequency: 220.0,
+                    start_step: 2,
+                    step_count: 1,
+                    voice: Voice::Sine,
+                    level: 0.1,
+                    pan: 0.0,
+                },
+                ChipNote {
+                    frequency: 220.0,
+                    start_step: 0,
+                    step_count: 1,
+                    voice: Voice::Sine,
+                    level: 0.1,
+                    pan: f32::NAN,
+                },
+            ],
+            steps: 1,
+            step_seconds: 1.0,
+        };
+
+        assert_eq!(arrangement.render_stereo(1), vec![0.0, 0.0]);
+        assert_eq!(arrangement.render(1), vec![0.0]);
+    }
+
+    #[test]
+    fn stereo_metrics_are_channel_aware_finite_and_total() {
+        let samples = [0.0, 0.0, 0.5, -0.5, 0.0, 0.0, f32::NAN];
+        let metrics = stereo_signal_metrics(&samples);
+
+        assert_eq!(metrics.frame_count, 3);
+        assert_eq!(metrics.trailing_samples, 1);
+        assert_eq!(
+            metrics.non_finite_samples, 0,
+            "the trailing sample is excluded"
+        );
+        assert_eq!(metrics.subnormal_samples, 0);
+        assert_eq!(metrics.clipped_samples, 0);
+        assert!((metrics.peak - 0.5).abs() < 1e-12);
+        assert!((metrics.rms - (1.0f64 / 12.0).sqrt()).abs() < 1e-12);
+        assert!((metrics.left_rms - metrics.right_rms).abs() < 1e-12);
+        assert!(metrics.channel_balance_db.abs() < 1e-12);
+        assert!((metrics.left_dc - 1.0 / 6.0).abs() < 1e-12);
+        assert!((metrics.right_dc + 1.0 / 6.0).abs() < 1e-12);
+        assert!((metrics.correlation + 1.0).abs() < 1e-12);
+        assert_eq!(metrics.side_to_mid_db, 120.0);
+        assert!((metrics.max_step - 0.5).abs() < 1e-12);
+        assert!((metrics.zero_sample_fraction - 2.0 / 3.0).abs() < 1e-12);
+
+        let hostile = stereo_signal_metrics(&[f32::NAN, f32::INFINITY]);
+        assert_eq!(hostile.non_finite_samples, 2);
+        assert_eq!(hostile.rms, 0.0);
+        assert_eq!(hostile.correlation, 0.0);
+        assert_eq!(hostile.side_to_mid_db, 0.0);
+
+        let quiet_imbalance = stereo_signal_metrics(&[1e-20, 1e-30]);
+        assert_eq!(quiet_imbalance.channel_balance_db, -120.0);
+        let one_sided = stereo_signal_metrics(&[0.0, 1e-20]);
+        assert_eq!(one_sided.channel_balance_db, 120.0);
+        let other_side = stereo_signal_metrics(&[1e-20, 0.0]);
+        assert_eq!(other_side.channel_balance_db, -120.0);
+
+        let empty = stereo_signal_metrics(&[]);
+        assert_eq!(empty.frame_count, 0);
+        assert_eq!(empty.left_dc, 0.0);
+        assert_eq!(empty.right_dc, 0.0);
+        assert_eq!(empty.zero_sample_fraction, 0.0);
+        assert_eq!(empty.rms, 0.0);
+
+        assert_eq!(Voice::Sine.id(), "sine");
+        assert_eq!(Voice::Square.id(), "square");
+        assert_eq!(Voice::Triangle.id(), "triangle");
+        assert_eq!(Voice::Noise.id(), "noise");
+    }
+
+    #[test]
+    fn pcm16_quantization_is_bounded_and_fails_nonfinite_to_silence() {
+        assert_eq!(quantize_pcm16(1.5), i16::MAX);
+        assert_eq!(quantize_pcm16(-1.5), -i16::MAX);
+        assert_eq!(quantize_pcm16(f32::NAN), 0);
+        assert_eq!(quantize_pcm16(0.5), 16_383);
     }
 }

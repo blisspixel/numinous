@@ -9,6 +9,11 @@
 
 use crate::chiptune::{Arrangement, ChipNote, Pattern, Step, Voice, pitch};
 
+/// Fixed source rate for the stable stereo room bed used by every face.
+pub const ROOM_BED_SOURCE_RATE: u32 = 16_000;
+/// Maximum arranged events a bounded protocol projection may expose.
+pub const MAX_ROOM_BED_EVENTS: usize = 96;
+
 const CYCLE_STEPS: usize = 32;
 const CYCLE_COUNT: usize = 4;
 const PHRASE_STEPS: usize = CYCLE_STEPS * CYCLE_COUNT;
@@ -254,7 +259,11 @@ fn fold_frequency(mut frequency: f32, low: f32, high: f32) -> f32 {
 mod tests {
     use std::collections::HashSet;
 
-    use super::{CYCLE_COUNT, CYCLE_STEPS, Motif, PHRASE_STEPS, pitch};
+    use super::{
+        CYCLE_COUNT, CYCLE_STEPS, MAX_ROOM_BED_EVENTS, Motif, PHRASE_STEPS, ROOM_BED_SOURCE_RATE,
+        pitch,
+    };
+    use crate::stereo_signal_metrics;
 
     const TEST_MOTIF: Motif = Motif {
         key: "A minor",
@@ -352,6 +361,26 @@ mod tests {
                 .all(|sample| sample.is_finite())
         );
         assert_eq!(hostile.notation().len(), hostile.line.len());
+
+        let empty = Motif {
+            key: "empty",
+            root: 220.0,
+            tempo: 120,
+            line: &[],
+            encodes: "an absent authored line",
+        };
+        assert!(
+            empty
+                .pattern()
+                .steps
+                .iter()
+                .flatten()
+                .all(|(frequency, _, _)| {
+                    frequency.is_finite() && (110.0..=660.0).contains(frequency)
+                })
+        );
+        assert_eq!(super::fold_frequency(1.0, 110.0, 660.0), 128.0);
+        assert_eq!(super::fold_frequency(1_000.0, 110.0, 660.0), 500.0);
     }
 
     #[test]
@@ -396,6 +425,7 @@ mod tests {
 
     #[test]
     fn every_room_bed_is_sparse_low_level_centered_and_seam_safe() {
+        let mut event_signatures = HashSet::new();
         for room in crate::all_rooms() {
             let meta = room.meta();
             let motif = room.motif().expect("catalog motif");
@@ -407,8 +437,35 @@ mod tests {
                 meta.id
             );
 
-            let samples = motif.arrangement().render_stereo(8_000);
+            let arrangement = motif.arrangement();
+            assert!(
+                arrangement.notes.len() <= MAX_ROOM_BED_EVENTS,
+                "{} exceeds the structured event limit",
+                meta.id
+            );
+            let signature = arrangement
+                .notes
+                .iter()
+                .map(|note| {
+                    (
+                        note.frequency.to_bits(),
+                        note.start_step,
+                        note.step_count,
+                        note.voice.id(),
+                        note.level.to_bits(),
+                        note.pan.to_bits(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert!(
+                event_signatures.insert(signature),
+                "{} duplicates another room's complete event signature",
+                meta.id
+            );
+
+            let samples = arrangement.render_stereo(ROOM_BED_SOURCE_RATE);
             assert!(!samples.is_empty(), "{} must make sound", meta.id);
+            assert!(samples.len() <= 2_000_000, "{} source allocation", meta.id);
             assert_eq!(&samples[..2], &[0.0, 0.0], "{} attack seam", meta.id);
             assert_eq!(
                 &samples[samples.len() - 2..],
@@ -416,45 +473,38 @@ mod tests {
                 "{} release seam",
                 meta.id
             );
+            let metrics = stereo_signal_metrics(&samples);
+            assert_eq!(metrics.trailing_samples, 0, "{} stereo frames", meta.id);
+            assert_eq!(metrics.non_finite_samples, 0, "{} finite signal", meta.id);
+            assert_eq!(metrics.subnormal_samples, 0, "{} subnormal signal", meta.id);
+            assert_eq!(metrics.clipped_samples, 0, "{} clipped signal", meta.id);
+            assert!(metrics.peak < 0.45, "{} mix headroom", meta.id);
             assert!(
-                samples
-                    .iter()
-                    .all(|sample| sample.is_finite() && sample.abs() < 0.45),
-                "{} must retain quiet mix headroom",
+                (0.005..0.12).contains(&metrics.rms),
+                "{} room-bed RMS was {}",
+                meta.id,
+                metrics.rms
+            );
+            assert!(
+                metrics.left_rms > 0.0 && metrics.right_rms > 0.0,
+                "{} needs energy in both channels",
                 meta.id
             );
-            let rms = (samples.iter().map(|sample| sample * sample).sum::<f32>()
-                / samples.len() as f32)
-                .sqrt();
+            assert!(metrics.left_dc.abs() < 0.003, "{} left DC", meta.id);
+            assert!(metrics.right_dc.abs() < 0.003, "{} right DC", meta.id);
+            assert!(metrics.max_step < 0.09, "{} sample step", meta.id);
             assert!(
-                (0.005..0.12).contains(&rms),
-                "{} room-bed RMS was {rms}",
+                metrics.channel_balance_db.abs() < 3.0,
+                "{} channel balance",
                 meta.id
             );
-            for channel in 0..2 {
-                let mean = samples
-                    .iter()
-                    .skip(channel)
-                    .step_by(2)
-                    .copied()
-                    .sum::<f32>()
-                    / (samples.len() / 2) as f32;
-                assert!(mean.abs() < 0.003, "{} channel {channel} DC", meta.id);
-                let mut previous: Option<f32> = None;
-                let mut max_step = 0.0_f32;
-                for sample in samples.iter().skip(channel).step_by(2).copied() {
-                    if let Some(prior) = previous {
-                        max_step = max_step.max((sample - prior).abs());
-                    }
-                    previous = Some(sample);
-                }
-                assert!(
-                    max_step < 0.09,
-                    "{} channel {channel} sample step was {max_step}",
-                    meta.id
-                );
-            }
+            assert!(
+                samples.chunks_exact(2).any(|frame| frame[0] != frame[1]),
+                "{} must retain a stereo field",
+                meta.id
+            );
         }
+        assert_eq!(event_signatures.len(), crate::all_rooms().len());
     }
 
     #[test]

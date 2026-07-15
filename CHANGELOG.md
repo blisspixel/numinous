@@ -6,6 +6,23 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The stable App room bed is now a first-class cross-face contract. CLI
+  `sonify --layer room-bed` exports a deterministic PCM16 projection of the
+  shared 16 kHz stereo floating-point source,
+  accepts deterministic room variation, rejects phase and hand controls that
+  cannot affect the bed, and reports objective pre-master signal features plus
+  the stages outside that measurement boundary. MCP `listen_room` returns a
+  bounded bed summary by default; `ambient_detail: "events"` adds every arranged
+  event and the same fixed-order signal evidence without PCM, binary encoding,
+  or a local path. The core owns source rate, event cap, PCM16 quantization, and
+  finite integrity, clipping, peak, RMS, crest, channel balance, DC,
+  correlation, stereo-width, adjacent-step, and silence measurements. Exact
+  core-to-CLI quantization parity is verified through an independent RIFF parser;
+  all 31 MCP beds have complete event parity under 96 events and 64 KiB.
+  These checks detect signal and interface regressions, not pleasantness. The
+  complete local release gate passes 1,350 all-target test cases at 93.64
+  percent region and 93.49 percent line coverage while regenerating the exact
+  349-screen matrix and one room-bed PCM16 projection.
 - Programmatic room music now preserves the score it claims to play and varies
   over a substantially longer form. A full-roster audit reproduced one shared
   15-onset scaffold, omitted degrees in 25 of 31 declared motifs, per-note
@@ -29,7 +46,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   cloned and rehashed on wheel and drag input. Three independent post-change
   reviews accept the musical structure, audio path, and face and documentation
   truth with no remaining actionable finding. The complete local release gate
-  passes 1,341 all-target test cases at 93.63 percent region and 93.43 percent
+  passes 1,350 all-target test cases at 93.64 percent region and 93.49 percent
   line coverage while regenerating the exact 349-screen matrix.
 - Times Tables now completes its technical Flagship Proof across App, CLI, and
   MCP. Ordinary App visits hold the K=2 cardioid until input, while The Show

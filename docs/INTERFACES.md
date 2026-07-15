@@ -94,9 +94,12 @@ For automation, pipelines, CI, power users, and agents through a shell:
   arguments, for example `render double-pendulum --poke 0.2,0.8`, and full
   gestures are too: `render double-pendulum --gesture down:0.3,0.4,0.1
   --gesture up:0.6,0.5,0.15` pins, pulls, and flings with the same phase-stamped
-  physics as the App and MCP faces. `sonify` accepts the same mutually exclusive
-  forms, so an input-driven visual and WAV describe one state. Terminal output
-  stays replayable and scriptable instead of tied to an interactive session.
+  physics as the App and MCP faces. The compatible `sonify` default accepts the
+  same mutually exclusive forms, so an input-driven visual and mathematical
+  WAV describe one state. `sonify --layer room-bed` instead writes the PCM16
+  projection of the stable 16 kHz stereo App source and rejects phase or hand
+  controls that cannot affect it. Both layers accept replayable room variation. Terminal output stays
+  scriptable instead of tied to an interactive session.
 - **Current command families:** `rooms`, `describe`, `render`, `gallery`, and
   `contact-sheet` cover the catalog and images; `tour`, `watch`, `play`, games,
   sims, and Journey commands cover live play; `plot`, `open-studio`, `sing`,
@@ -166,7 +169,10 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   points. Both also accept a `gesture` array of phase-stamped pointer events,
   down, move, up, or cancel, bounded to 96 and exclusive with `pokes`. The
   advertised schema requires x, y, and t on positioned events and forbids those
-  fields on cancel, matching runtime acceptance exactly.
+  fields on cancel, matching runtime acceptance exactly. `listen_room` also
+  accepts `ambient_detail: "summary" | "events"`. Summary is the default;
+  events requests the complete bounded ambient arrangement and objective
+  pre-master signal features.
   `play_room` echoes the input with the render; `listen_room` echoes it with the
   mathematical sound. This keeps MCP play stateless and replayable. The default
   bridge paints down-and-move trails; click-specific rooms may intentionally
@@ -178,18 +184,23 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   types, enums, numeric and array bounds, nested object shape, and unexpected
   fields. `play_room` additionally rejects non-finite or out-of-range phase and
   dimensions plus gesture timestamps that move backward. `listen_room` enforces
-  the same phase and input contract. `run_sim` validates nested lever values as finite
+  the same phase and input contract, plus the declared ambient-detail enum.
+  `run_sim` validates nested lever values as finite
   numbers, rejects names not owned by the selected simulation, and rejects
   values outside that lever's advertised range. Invalid calls return a guiding
   tool error and do not record progress.
 - **Structured discovery (built):** `list_rooms`, `describe_room`,
   `reveal_room`, and `listen_room` return typed catalog, action, optional goal, revelation,
-  deep-cut availability, ambient motif, and bounded mathematical-sonification
-  note data for all 31 rooms. `listen_room` names those two sound roles
+  deep-cut availability, ambient motif, stable ambient-bed summary, and bounded
+  mathematical-sonification note data for all 31 rooms. `listen_room` names
+  all three sound roles
   separately because a specialized room sound can intentionally differ from
-  the ambient score. The `motif` field is the authored theme, not the App's
-  expanded stereo arrangement event graph; direct headless export of that
-  macro-arrangement remains a parity follow-up. Locked
+  the ambient score. The `motif` field is the authored theme; `ambient_bed` is
+  the App's expanded stereo arrangement contract; `notes` is the mathematical
+  sonification. `ambient_detail: "events"` adds every arrangement event and
+  fixed-order signal metrics while staying below 64 KiB for every catalog
+  room. It returns no PCM, binary encoding, URL, or local path. CLI room-bed
+  exports are tested byte-for-byte against the same core source. Locked
   deep cuts expose their unlock level without leaking their text. Scores and
   forget previews are similarly structured, and confirmed erasure reports only
   successful filesystem outcomes.

@@ -100,6 +100,7 @@ numinous render double-pendulum --poke 0.2,0.8
 numinous render double-pendulum --gesture down:0.3,0.4,0.1 --gesture up:0.6,0.5,0.15
 numinous render game-of-life --variation 7 --t 0.5 --gesture down:0.5,0.5,0.1 --gesture up:0.5,0.5,0.12
 numinous sonify times-tables --poke 0.375,0.5 --out four-lobes.wav
+numinous sonify times-tables --layer room-bed --variation 42 --out times-bed.wav
 numinous plot "sin(a*x)" --animate
 numinous sing "sin(x) + x/3" --out song.wav
 numinous tune --seed 7 --out chip.wav   a seeded chiptune (Music Engine A)
@@ -198,7 +199,7 @@ input without hidden session state:
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
 | `predict` | predict a room's readout at a hidden moment; graded as a gap and a band, a self-owned mirror, never a score. Pass the same `seed` and `variation` to the pose and the guess so you are graded against the room you played |
 | `cairn` | read a message a mind before you left (factor its semiprime to read it), or at level 42 leave one true thing for a stranger not yet born |
-| `listen_room` | the ambient motif and input-aware mathematical sonification, with the same optional `pokes` or `gesture` as `play_room` |
+| `listen_room` | the ambient motif, stable App room-bed summary, and input-aware mathematical sonification, with the same optional `pokes` or `gesture` as `play_room`; use `ambient_detail: "events"` for every bounded bed event and objective signal feature, never PCM or a local path |
 | `list_sims` | the simulations and their levers |
 | `run_sim` | run a sim with your lever values; picture plus plain readout |
 | `quiz` | guess the shape: call to see, then repeat `seed`, `round`, and `choices` with `guess` |

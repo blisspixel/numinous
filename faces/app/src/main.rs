@@ -13,7 +13,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
-use numinous_core::{Journey, Raster, Room, Surface, all_rooms_with};
+use numinous_core::{Journey, ROOM_BED_SOURCE_RATE, Raster, Room, Surface, all_rooms_with};
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
@@ -43,11 +43,6 @@ use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_tota
 
 /// Near-black background (matches the `Raster` stage), packed `0x00RRGGBB`.
 const BACKGROUND: u32 = 0x000A_0B0F;
-/// Fixed source rate for the low-register room score. Playback resamples this
-/// immutable buffer to the device rate, bounding room-switch work on 192 kHz
-/// devices without changing the arrangement clock.
-const ROOM_SCORE_SOURCE_RATE: u32 = 16_000;
-
 #[cfg(test)]
 fn mandelbrot_gpu_view(
     t: f64,
@@ -1740,16 +1735,16 @@ impl App {
         let rendered_room_score = self.tune.is_empty();
         if rendered_room_score {
             self.tune = Arc::new(match self.rooms[self.current].motif() {
-                Some(motif) => motif.arrangement().render_stereo(ROOM_SCORE_SOURCE_RATE),
+                Some(motif) => motif.arrangement().render_stereo(ROOM_BED_SOURCE_RATE),
                 None => numinous_core::compose(self.current as u64 + 1, 8)
-                    .render(ROOM_SCORE_SOURCE_RATE)
+                    .render(ROOM_BED_SOURCE_RATE)
                     .into_iter()
                     .flat_map(|sample| [sample, sample])
                     .collect(),
             });
         }
         if rendered_room_score || switching_to_room_score {
-            player.set_shared_stereo_at_rate(self.tune.clone(), ROOM_SCORE_SOURCE_RATE);
+            player.set_shared_stereo_at_rate(self.tune.clone(), ROOM_BED_SOURCE_RATE);
         }
         self.sync_room_parameter_voice();
     }
@@ -2824,11 +2819,12 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{
-        App, AudioProgram, ROOM_SCORE_SOURCE_RATE, TestStateRoot, advance_gallery_phase, app_icon,
-        bounded_tick_seconds, effective_room_phase, julia_gpu_c, julia_gpu_vertical_span,
-        live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache, selected_parameter_sound,
+        App, AudioProgram, TestStateRoot, advance_gallery_phase, app_icon, bounded_tick_seconds,
+        effective_room_phase, julia_gpu_c, julia_gpu_vertical_span, live_mandelbrot_gpu_view,
+        mandelbrot_gpu_view, radio_cache, selected_parameter_sound,
     };
     use crate::input_legend::{InputMode, MenuChoice};
+    use numinous_core::ROOM_BED_SOURCE_RATE;
     use std::sync::Arc;
     use std::time::{Duration, Instant, UNIX_EPOCH};
     use winit::keyboard::{Key, NamedKey};
@@ -2851,10 +2847,10 @@ mod tests {
         let mut largest = 0;
         for room in numinous_core::all_rooms() {
             let motif = room.motif().expect("catalog motif");
-            let samples = motif.arrangement().render_stereo(ROOM_SCORE_SOURCE_RATE);
+            let samples = motif.arrangement().render_stereo(ROOM_BED_SOURCE_RATE);
             assert_eq!(
                 samples.len(),
-                (motif.arrangement().seconds() * ROOM_SCORE_SOURCE_RATE as f32) as usize * 2,
+                (motif.arrangement().seconds() * ROOM_BED_SOURCE_RATE as f32) as usize * 2,
                 "{} source length",
                 room.meta().id
             );

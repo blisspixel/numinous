@@ -36,6 +36,14 @@ fade closed, and source playhead continuity is tested. At integer K, the upper
 voice uses the exact ratio `k:(k-1)`, so the visual closure and audible
 consonance are one state. CLI `sonify` and MCP `listen_room` accept the same
 bounded pokes or gestures and render a deterministic snapshot of that state.
+CLI `sonify --layer room-bed` separately exports a deterministic PCM16
+projection of the stable 16 kHz stereo App source, while MCP
+`listen_room.ambient_bed` exposes its arrangement summary
+or complete bounded events and signal metrics. The shared analyzer measures
+finite integrity, clipping, peak, RMS, crest, channel balance, DC, correlation,
+stereo side-to-mid ratio, adjacent steps, and silence fraction in fixed order.
+Those metrics describe the pre-master source only and do not measure comfort,
+fatigue, beauty, or musical quality. MCP never returns PCM or local paths.
 The Show supplies the same moving phase to picture and voice on every frame and
 ignores retained hand input. Entering any modal game fades the parameter voice
 instead of leaking room audio across ownership boundaries.

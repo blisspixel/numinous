@@ -918,13 +918,14 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "listen_room",
-                "description": "Hear a room: its sound at phase t returned as readable notation (each note's pitch, timing, and loudness), so you can perceive the audio as structure. Pitch is written as Hz and as a note name.",
+                "description": "Hear a room: its input-aware mathematical sound at phase t as readable notes, plus a bounded summary of the stable stereo App room bed. Set ambient_detail to events to inspect every arranged bed event and objective signal metric. No binary audio or local path is returned.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "id": { "type": "string", "description": "Room id, for example lissajous." },
                         "t": { "type": "number", "minimum": 0, "exclusiveMaximum": 1, "description": "Phase in [0,1)." },
                         "variation": { "type": "integer", "minimum": 0, "description": "Per-visit variation seed (default 0), matching play_room." },
+                        "ambient_detail": { "type": "string", "enum": ["summary", "events"], "default": "summary", "description": "Stable room-bed detail (default summary). Events returns the complete bounded arrangement event projection and signal metrics, never PCM or a file path." },
                         "pokes": room_pokes_schema(),
                         "gesture": room_gesture_schema()
                     },
@@ -1551,7 +1552,7 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
             Some(summary)
         }
         "listen_room" => Some(format!(
-            "{} ({}) at t={:.3}: {} of {} notes returned over {:.2}s. Read structuredContent.pokes, gesture, motif, notes, and sound_roles for the complete input-aware sound.",
+            "{} ({}) at t={:.3}: {} of {} mathematical notes returned over {:.2}s. Read structuredContent.pokes, gesture, motif, ambient_bed, notes, and sound_roles for the complete typed layers.",
             structured.get("title")?.as_str()?,
             structured.get("room")?.as_str()?,
             structured.get("t")?.as_f64()?,
@@ -1703,6 +1704,83 @@ fn note_name(freq: f32) -> String {
     format!("{}{}", NAMES[index], octave)
 }
 
+/// Project one stable stereo room bed into bounded, typed protocol evidence.
+///
+/// The projection exposes arrangement intent and objective signal features,
+/// never PCM samples or a machine-local file reference. Signal features catch
+/// engineering regressions but do not claim that a bed sounds pleasant.
+fn ambient_bed_value(motif: numinous_core::Motif, include_events: bool) -> Result<Value, String> {
+    let arrangement = motif.arrangement();
+    if arrangement.notes.len() > numinous_core::MAX_ROOM_BED_EVENTS {
+        return Err(format!(
+            "Room bed contains {} events; the protocol limit is {}.",
+            arrangement.notes.len(),
+            numinous_core::MAX_ROOM_BED_EVENTS
+        ));
+    }
+
+    let duration_seconds = arrangement.steps as f64 * f64::from(arrangement.step_seconds);
+    let mut value = json!({
+        "schema": "numinous.room-bed.events",
+        "schema_version": 1,
+        "renderer": "numinous.chiptune.stereo.v1",
+        "source_sample_rate_hz": numinous_core::ROOM_BED_SOURCE_RATE,
+        "channels": 2,
+        "steps": arrangement.steps,
+        "step_seconds": arrangement.step_seconds,
+        "duration_seconds": duration_seconds,
+        "event_count": arrangement.notes.len(),
+        "events_included": include_events,
+    });
+
+    if include_events {
+        let events = arrangement
+            .notes
+            .iter()
+            .enumerate()
+            .map(|(index, note)| {
+                json!({
+                    "index": index + 1,
+                    "frequency_hz": note.frequency,
+                    "start_step": note.start_step,
+                    "step_count": note.step_count,
+                    "start_seconds": note.start_step as f64 * f64::from(arrangement.step_seconds),
+                    "duration_seconds": note.step_count as f64 * f64::from(arrangement.step_seconds),
+                    "voice": note.voice.id(),
+                    "level": note.level,
+                    "pan": note.pan,
+                })
+            })
+            .collect::<Vec<_>>();
+        let samples = arrangement.render_stereo(numinous_core::ROOM_BED_SOURCE_RATE);
+        let metrics = numinous_core::stereo_signal_metrics(&samples);
+        value["events"] = json!(events);
+        value["signal_metrics"] = json!({
+            "scope": "pre_master_room_bed",
+            "interpretation": "Engineering regression evidence only; not a pleasantness score.",
+            "frame_count": metrics.frame_count,
+            "trailing_samples": metrics.trailing_samples,
+            "non_finite_samples": metrics.non_finite_samples,
+            "subnormal_samples": metrics.subnormal_samples,
+            "clipped_samples": metrics.clipped_samples,
+            "peak": metrics.peak,
+            "rms": metrics.rms,
+            "crest_db": metrics.crest_db,
+            "left_rms": metrics.left_rms,
+            "right_rms": metrics.right_rms,
+            "channel_balance_db": metrics.channel_balance_db,
+            "left_dc": metrics.left_dc,
+            "right_dc": metrics.right_dc,
+            "correlation": metrics.correlation,
+            "side_to_mid_db": metrics.side_to_mid_db,
+            "max_step": metrics.max_step,
+            "zero_sample_fraction": metrics.zero_sample_fraction,
+        });
+    }
+
+    Ok(value)
+}
+
 /// The `listen_room` tool: the room's sound as notation a mind can read.
 fn listen_room_tool(args: &Value) -> Value {
     let Some(id) = args.get("id").and_then(Value::as_str) else {
@@ -1712,6 +1790,11 @@ fn listen_room_tool(args: &Value) -> Value {
     if !(0.0..1.0).contains(&t) {
         return tool_error("Argument 't' must be a phase in [0,1).");
     }
+    let include_ambient_events = match args.get("ambient_detail").and_then(Value::as_str) {
+        None | Some("summary") => false,
+        Some("events") => true,
+        Some(_) => return tool_error("Argument 'ambient_detail' must be 'summary' or 'events'."),
+    };
     let inputs = match parse_room_inputs(args) {
         Ok(inputs) => inputs,
         Err(message) => return tool_error(&message),
@@ -1757,6 +1840,26 @@ fn listen_room_tool(args: &Value) -> Value {
             "encodes": motif.encodes,
         })
     });
+    let ambient_bed = match room.motif() {
+        Some(motif) => match ambient_bed_value(motif, include_ambient_events) {
+            Ok(value) => Some(value),
+            Err(message) => return tool_error(&message),
+        },
+        None => None,
+    };
+    if let Some(bed) = ambient_bed.as_ref() {
+        lines.push(format!(
+            "Stable stereo room bed: {:.2}s, {} arranged events at {} Hz.{}",
+            bed["duration_seconds"].as_f64().unwrap_or_default(),
+            bed["event_count"].as_u64().unwrap_or_default(),
+            numinous_core::ROOM_BED_SOURCE_RATE,
+            if include_ambient_events {
+                " Complete events and pre-master signal metrics follow in structuredContent."
+            } else {
+                " Request ambient_detail=events for the complete bounded event projection."
+            }
+        ));
+    }
     let mut structured_notes = Vec::new();
     if note_count > 0 {
         lines.push("Mathematical sonification:".to_string());
@@ -1798,9 +1901,11 @@ fn listen_room_tool(args: &Value) -> Value {
             "returned_note_count": structured_notes.len(),
             "truncated": note_count > 64,
             "motif": ambient_motif,
+            "ambient_bed": ambient_bed,
             "notes": structured_notes,
             "sound_roles": {
                 "ambient_motif": { "field": "motif" },
+                "ambient_arrangement": { "field": "ambient_bed" },
                 "mathematical_sonification": { "field": "notes" },
             },
         }),
@@ -4299,6 +4404,11 @@ mod tests {
         assert_eq!(listen_properties["pokes"], play_properties["pokes"]);
         assert_eq!(listen_properties["gesture"], play_properties["gesture"]);
         assert_eq!(listen_properties["variation"]["minimum"], 0);
+        assert_eq!(
+            listen_properties["ambient_detail"]["enum"],
+            json!(["summary", "events"])
+        );
+        assert_eq!(listen_properties["ambient_detail"]["default"], "summary");
         let gesture_variants = play_properties["gesture"]["items"]["oneOf"]
             .as_array()
             .expect("gesture event variants");
@@ -5214,6 +5324,16 @@ plays 2
         );
         let sound = &tuned["result"]["structuredContent"];
         assert_eq!(sound["motif"]["key"], "G visible fifth");
+        assert_eq!(sound["ambient_bed"]["schema"], "numinous.room-bed.events");
+        assert_eq!(sound["ambient_bed"]["schema_version"], 1);
+        assert_eq!(
+            sound["ambient_bed"]["source_sample_rate_hz"],
+            numinous_core::ROOM_BED_SOURCE_RATE
+        );
+        assert_eq!(sound["ambient_bed"]["channels"], 2);
+        assert_eq!(sound["ambient_bed"]["events_included"], false);
+        assert!(sound["ambient_bed"].get("events").is_none());
+        assert!(sound["ambient_bed"].get("signal_metrics").is_none());
         assert!(
             sound["notes"]
                 .as_array()
@@ -5221,6 +5341,10 @@ plays 2
             "the specialized sonification is separately named"
         );
         assert_eq!(sound["sound_roles"]["ambient_motif"]["field"], "motif");
+        assert_eq!(
+            sound["sound_roles"]["ambient_arrangement"]["field"],
+            "ambient_bed"
+        );
         assert_eq!(
             sound["sound_roles"]["mathematical_sonification"]["field"],
             "notes"
@@ -5246,6 +5370,185 @@ plays 2
             unvaried_text, varied_text,
             "listen_room must honor variation away from the shared opening"
         );
+    }
+
+    #[test]
+    fn listen_room_projects_every_bed_event_without_binary_transport() {
+        fn assert_no_binary_transport_fields(value: &Value) {
+            match value {
+                Value::Object(object) => {
+                    for (key, child) in object {
+                        assert!(
+                            !matches!(
+                                key.as_str(),
+                                "base64" | "bytes" | "file" | "path" | "pcm" | "samples" | "url"
+                            ),
+                            "structured room-bed evidence must not transport binary data or local references: {key}"
+                        );
+                        assert_no_binary_transport_fields(child);
+                    }
+                }
+                Value::Array(items) => {
+                    for item in items {
+                        assert_no_binary_transport_fields(item);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        assert_eq!(
+            super::listen_room_tool(&json!({"id":"times-tables","ambient_detail":"raw"}))["isError"],
+            true,
+            "the domain boundary rejects unknown detail even when called without schema dispatch"
+        );
+        for invalid in [
+            json!({}),
+            json!({"id":"times-tables","t":1.0}),
+            json!({"id":"no-such-room"}),
+        ] {
+            assert_eq!(
+                super::listen_room_tool(&invalid)["isError"],
+                true,
+                "the domain boundary remains total without schema dispatch"
+            );
+        }
+        let direct_gesture = super::listen_room_tool(&json!({
+            "id":"times-tables",
+            "gesture":[
+                {"kind":"down","x":0.375,"y":0.5,"t":0.1},
+                {"kind":"up","x":0.375,"y":0.5,"t":0.2}
+            ]
+        }));
+        assert_eq!(direct_gesture["isError"], false);
+        assert!(direct_gesture["structuredContent"]["gesture"].is_array());
+
+        for room in numinous_core::all_rooms() {
+            let response = call(
+                "listen_room",
+                json!({"id":room.meta().id,"ambient_detail":"events"}),
+            );
+            assert_eq!(response["result"]["isError"], false, "{}", room.meta().id);
+            let structured = &response["result"]["structuredContent"];
+            let bed = &structured["ambient_bed"];
+            let motif = room.motif().expect("catalog rooms have ambient motifs");
+            let arrangement = motif.arrangement();
+            let events = bed["events"].as_array().expect("complete bed events");
+
+            assert_eq!(bed["events_included"], true, "{}", room.meta().id);
+            assert_eq!(bed["steps"], arrangement.steps, "{}", room.meta().id);
+            assert_eq!(
+                bed["step_seconds"],
+                arrangement.step_seconds,
+                "{}",
+                room.meta().id
+            );
+            assert_eq!(
+                bed["duration_seconds"],
+                arrangement.steps as f64 * f64::from(arrangement.step_seconds),
+                "{}",
+                room.meta().id
+            );
+            assert_eq!(
+                bed["event_count"],
+                arrangement.notes.len(),
+                "{}",
+                room.meta().id
+            );
+            assert_eq!(events.len(), arrangement.notes.len(), "{}", room.meta().id);
+            assert!(
+                events.len() <= numinous_core::MAX_ROOM_BED_EVENTS,
+                "{}",
+                room.meta().id
+            );
+            for (index, (event, note)) in events.iter().zip(&arrangement.notes).enumerate() {
+                assert_eq!(event["index"], index + 1, "{}", room.meta().id);
+                assert_eq!(event["frequency_hz"], note.frequency, "{}", room.meta().id);
+                assert_eq!(event["start_step"], note.start_step, "{}", room.meta().id);
+                assert_eq!(event["step_count"], note.step_count, "{}", room.meta().id);
+                assert_eq!(
+                    event["start_seconds"],
+                    note.start_step as f64 * f64::from(arrangement.step_seconds),
+                    "{}",
+                    room.meta().id
+                );
+                assert_eq!(
+                    event["duration_seconds"],
+                    note.step_count as f64 * f64::from(arrangement.step_seconds),
+                    "{}",
+                    room.meta().id
+                );
+                assert_eq!(event["voice"], note.voice.id(), "{}", room.meta().id);
+                assert_eq!(event["level"], note.level, "{}", room.meta().id);
+                assert_eq!(event["pan"], note.pan, "{}", room.meta().id);
+            }
+            let expected_frames =
+                (arrangement.seconds() * numinous_core::ROOM_BED_SOURCE_RATE as f32) as usize;
+            assert_eq!(
+                bed["signal_metrics"]["frame_count"],
+                expected_frames,
+                "{}",
+                room.meta().id
+            );
+            assert_eq!(bed["signal_metrics"]["non_finite_samples"], 0);
+            assert_eq!(bed["signal_metrics"]["clipped_samples"], 0);
+            assert!(
+                bed["signal_metrics"]["interpretation"]
+                    .as_str()
+                    .is_some_and(|text| text.contains("not a pleasantness score"))
+            );
+            assert_no_binary_transport_fields(structured);
+            assert!(
+                serde_json::to_vec(structured)
+                    .expect("serialize structured room-bed evidence")
+                    .len()
+                    < 64 * 1024,
+                "{} room-bed evidence exceeds the protocol budget",
+                room.meta().id
+            );
+        }
+
+        let full = call(
+            "listen_room",
+            json!({"id":"times-tables","ambient_detail":"events"}),
+        );
+        let compact = call(
+            "listen_room",
+            json!({"id":"times-tables","ambient_detail":"events","response_mode":"compact"}),
+        );
+        assert_eq!(
+            full["result"]["structuredContent"], compact["result"]["structuredContent"],
+            "compact presentation must preserve complete room-bed evidence"
+        );
+
+        let varied = call(
+            "listen_room",
+            json!({"id":"times-tables","variation":42,"ambient_detail":"events"}),
+        );
+        let varied_room = numinous_core::all_rooms_with(42)
+            .into_iter()
+            .find(|room| room.meta().id == "times-tables")
+            .expect("varied Times Tables room");
+        let varied_arrangement = varied_room
+            .motif()
+            .expect("varied room motif")
+            .arrangement();
+        let varied_bed = &varied["result"]["structuredContent"]["ambient_bed"];
+        assert_eq!(varied["result"]["structuredContent"]["variation"], 42);
+        assert_eq!(varied_bed["event_count"], varied_arrangement.notes.len());
+        for (event, note) in varied_bed["events"]
+            .as_array()
+            .expect("varied bed events")
+            .iter()
+            .zip(&varied_arrangement.notes)
+        {
+            assert_eq!(event["frequency_hz"], note.frequency);
+            assert_eq!(event["start_step"], note.start_step);
+            assert_eq!(event["step_count"], note.step_count);
+            assert_eq!(event["voice"], note.voice.id());
+            assert_eq!(event["level"], note.level);
+            assert_eq!(event["pan"], note.pan);
+        }
     }
 
     #[test]
@@ -6983,11 +7286,32 @@ plays 2
             assert_eq!(sound["variation"], 0, "listen {}", meta.id);
             assert!(sound["duration_seconds"].is_number(), "listen {}", meta.id);
             assert!(sound["motif"].is_object(), "ambient motif {}", meta.id);
+            assert!(sound["ambient_bed"].is_object(), "ambient bed {}", meta.id);
+            assert_eq!(
+                sound["ambient_bed"]["event_count"],
+                room.motif()
+                    .expect("catalog rooms have motifs")
+                    .arrangement()
+                    .notes
+                    .len(),
+                "ambient bed {}",
+                meta.id
+            );
+            assert_eq!(
+                sound["ambient_bed"]["events_included"], false,
+                "ambient bed {}",
+                meta.id
+            );
             let notes = sound["notes"]
                 .as_array()
                 .expect("bounded sonification notes");
             assert_eq!(
                 sound["sound_roles"]["ambient_motif"]["field"], "motif",
+                "listen {}",
+                meta.id
+            );
+            assert_eq!(
+                sound["sound_roles"]["ambient_arrangement"]["field"], "ambient_bed",
                 "listen {}",
                 meta.id
             );

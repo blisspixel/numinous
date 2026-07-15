@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Duration;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use numinous_core::{
     CUT_LEVELS, Canvas, Journey, Rank, Raster, Room, RoomMeta, Surface, all_rooms, all_rooms_with,
     draw_text, hidden_room_by_id, room_by_id,
@@ -141,13 +141,19 @@ enum Command {
         #[arg(long)]
         vary: bool,
     },
-    /// Render a room's sound to a WAV file (everything is an instrument).
+    /// Render a mathematical sonification or the stable App room bed to WAV.
     Sonify {
         /// Room id, e.g. "lissajous".
         id: String,
         /// Phase in [0, 1).
         #[arg(long, default_value_t = 0.0)]
         t: f64,
+        /// Audio layer: input-aware mathematical sound or the stable App room bed.
+        #[arg(long, value_enum, default_value = "mathematical")]
+        layer: SonifyLayer,
+        /// Replay this exact room variation seed (default 0).
+        #[arg(long, default_value_t = 0)]
+        variation: u64,
         /// Write a WAV audio file to this path.
         #[arg(long)]
         out: PathBuf,
@@ -445,7 +451,44 @@ enum Command {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum SonifyLayer {
+    /// Phase and hand controlled mathematical snapshot, mono at 44.1 kHz.
+    Mathematical,
+    /// Stable pre-master App room bed, stereo at the shared 16 kHz source rate.
+    RoomBed,
+}
+
 fn main() -> ExitCode {
+    run_on_command_stack(cli_main)
+}
+
+fn run_on_command_stack(task: impl FnOnce() -> ExitCode + Send + 'static) -> ExitCode {
+    match std::thread::Builder::new()
+        .name("numinous-cli".to_string())
+        .stack_size(8 * 1024 * 1024)
+        .spawn(task)
+    {
+        Ok(worker) => match worker.join() {
+            Ok(code) => code,
+            Err(_) => {
+                eprintln!("The command stopped unexpectedly.");
+                ExitCode::FAILURE
+            }
+        },
+        Err(error) => {
+            eprintln!("Could not start the command worker: {error}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// Parse and execute the complete command surface on a bounded explicit stack.
+///
+/// The derived parser contains the full game and creation command catalog.
+/// Windows' small process-entry stack is not a stable budget for that parser,
+/// so the public entry point gives it one explicit fixed allocation.
+fn cli_main() -> ExitCode {
     let mut journey = load_journey();
     let before = journey.clone();
     let earned_before = earned_names(&before, &load_scores());
@@ -1135,6 +1178,8 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
         Command::Sonify {
             id,
             t,
+            layer,
+            variation,
             out,
             pokes,
             gestures,
@@ -1150,15 +1195,24 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                     return ExitCode::FAILURE;
                 }
             };
+            if layer == SonifyLayer::RoomBed
+                && (t != 0.0 || !pokes.is_empty() || !gesture.is_empty())
+            {
+                eprintln!(
+                    "The stable room bed does not use --t, --poke, or --gesture. Omit those controls, or use --layer mathematical for the input-aware sound."
+                );
+                return ExitCode::FAILURE;
+            }
             let input = if gesture.is_empty() {
-                RoomRenderInput::new(0, &pokes)
+                RoomRenderInput::new(variation, &pokes)
             } else {
-                RoomRenderInput::with_gesture(0, &gesture)
+                RoomRenderInput::with_gesture(variation, &gesture)
             };
-            if find_room(&id, allow_hidden).is_some() {
+            let result = sonify_wav_layer(&id, t, &out, allow_hidden, input, layer);
+            if result.is_ok() && find_room_with_variation(&id, allow_hidden, variation).is_some() {
                 journey.visit(&id);
             }
-            emit(sonify_wav(&id, t, &out, allow_hidden, input))
+            emit(result)
         }
         Command::Gallery { dir, width, height } => emit(gallery(&dir, width, height)),
         Command::ContactSheet { out, cols, tile } => emit(contact_sheet(&out, cols, tile)),
@@ -1728,7 +1782,7 @@ fn validate_pcm_body(pcm: &[u8]) -> Result<(), &'static str> {
 fn tune_wav(seed: u64, bars: usize, path: &Path) -> Result<String, String> {
     let pattern = numinous_core::compose(seed, bars);
     let sample_rate = 44_100u32;
-    write_wav(path, &pattern.render(sample_rate), sample_rate)?;
+    write_wav(path, &pattern.render(sample_rate), sample_rate, 1)?;
     Ok(format!(
         "wrote {} ({:.1}s, seed {seed}): the chip speaks\n",
         path.display(),
@@ -1750,7 +1804,7 @@ fn sing_wav(
     }
     let sample_rate = 44_100u32;
     let spec = numinous_core::to_melody(&expr, xmin, xmax, notes, 0.0);
-    write_wav(path, &spec.render(sample_rate), sample_rate)?;
+    write_wav(path, &spec.render(sample_rate), sample_rate, 1)?;
     Ok(format!(
         "wrote {} ({:.1}s, {} notes) from y = {source}\n",
         path.display(),
@@ -2517,6 +2571,7 @@ fn contact_sheet(path: &Path, cols: usize, tile: usize) -> Result<String, String
 }
 
 /// Render a room's sound to a 16-bit mono WAV at `path`, returning a status message.
+#[cfg(test)]
 fn sonify_wav(
     id: &str,
     t: f64,
@@ -2524,36 +2579,88 @@ fn sonify_wav(
     allow_hidden: bool,
     input: RoomRenderInput<'_>,
 ) -> Result<String, String> {
-    let room = find_room(id, allow_hidden).ok_or_else(|| not_found_message(id))?;
-    let inputs = accepted_inputs(t, input);
-    let spec = room.sound_input(t, &inputs);
-    let sample_rate = 44_100u32;
-    write_wav(path, &spec.render(sample_rate), sample_rate)?;
-    let mut report = format!(
-        "wrote {} ({:.1}s, {} notes)\n",
-        path.display(),
-        spec.duration,
-        spec.notes.len()
-    );
-    if let Some(status) = visible_status(room.as_ref(), t, input) {
-        report.push_str(&format!("Status: {status}\n"));
-    }
-    Ok(report)
+    sonify_wav_layer(id, t, path, allow_hidden, input, SonifyLayer::Mathematical)
 }
 
-/// Write mono 16-bit samples to a WAV file at `path`.
-fn write_wav(path: &Path, samples: &[f32], sample_rate: u32) -> Result<(), String> {
+fn sonify_wav_layer(
+    id: &str,
+    t: f64,
+    path: &Path,
+    allow_hidden: bool,
+    input: RoomRenderInput<'_>,
+    layer: SonifyLayer,
+) -> Result<String, String> {
+    let room = find_room_with_variation(id, allow_hidden, input.variation)
+        .ok_or_else(|| not_found_message(id))?;
+    match layer {
+        SonifyLayer::Mathematical => {
+            let inputs = accepted_inputs(t, input);
+            let spec = room.sound_input(t, &inputs);
+            let sample_rate = 44_100u32;
+            write_wav(path, &spec.render(sample_rate), sample_rate, 1)?;
+            let mut report = format!(
+                "wrote {} ({:.1}s, {} notes)\n",
+                path.display(),
+                spec.duration,
+                spec.notes.len()
+            );
+            if let Some(status) = visible_status(room.as_ref(), t, input) {
+                report.push_str(&format!("Status: {status}\n"));
+            }
+            Ok(report)
+        }
+        SonifyLayer::RoomBed => {
+            let motif = room
+                .motif()
+                .ok_or_else(|| format!("Room '{id}' has no stable room bed to export.\n"))?;
+            let arrangement = motif.arrangement();
+            if arrangement.notes.len() > numinous_core::MAX_ROOM_BED_EVENTS {
+                return Err(format!(
+                    "Room '{id}' has {} arranged events, above the export limit of {}.\n",
+                    arrangement.notes.len(),
+                    numinous_core::MAX_ROOM_BED_EVENTS
+                ));
+            }
+            let samples = arrangement.render_stereo(numinous_core::ROOM_BED_SOURCE_RATE);
+            let metrics = numinous_core::stereo_signal_metrics(&samples);
+            write_wav(path, &samples, numinous_core::ROOM_BED_SOURCE_RATE, 2)?;
+            Ok(format!(
+                "wrote {} (room bed, {:.2}s, {} events, stereo {} Hz, variation {})\nSignal: peak {:.5}, RMS {:.5}, crest {:.2} dB, balance {:+.2} dB, width {:.2} dB, max step {:.5}\nBoundary: stable pre-master bed only; no parameter voice, device resampling, crossfade, radio, or Studio mix.\n",
+                path.display(),
+                arrangement.seconds(),
+                arrangement.notes.len(),
+                numinous_core::ROOM_BED_SOURCE_RATE,
+                input.variation,
+                metrics.peak,
+                metrics.rms,
+                metrics.crest_db,
+                metrics.channel_balance_db,
+                metrics.side_to_mid_db,
+                metrics.max_step,
+            ))
+        }
+    }
+}
+
+/// Write one or two channels of 16-bit PCM samples to a WAV file at `path`.
+fn write_wav(path: &Path, samples: &[f32], sample_rate: u32, channels: u16) -> Result<(), String> {
+    if !(1..=2).contains(&channels) || samples.len() % usize::from(channels) != 0 {
+        return Err(format!(
+            "cannot write {} samples as {channels}-channel PCM.\n",
+            samples.len()
+        ));
+    }
     let wav_spec = hound::WavSpec {
-        channels: 1,
+        channels,
         sample_rate,
         bits_per_sample: 16,
         sample_format: hound::SampleFormat::Int,
     };
     let mut writer = hound::WavWriter::create(path, wav_spec)
         .map_err(|e| format!("could not create {}: {e}", path.display()))?;
-    for sample in samples {
+    for &sample in samples {
         writer
-            .write_sample((sample * f32::from(i16::MAX)) as i16)
+            .write_sample(numinous_core::quantize_pcm16(sample))
             .map_err(|e| format!("wav write failed: {e}"))?;
     }
     writer
@@ -3887,11 +3994,23 @@ fn to_pretty(value: &serde_json::Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        Cli, Command, RoomRenderInput, bounded_response_detail, describe_report,
+        Cli, Command, RoomRenderInput, SonifyLayer, bounded_response_detail, describe_report,
         load_studio_creation, max_track_bytes, meta_json, not_found_message, open_studio_report,
         parse_poke_arg, parse_pokes, read_bounded, render_report, rooms_report, run,
         save_studio_creation, validate_pcm_body,
     };
+
+    #[test]
+    fn explicit_command_stack_returns_success_and_contains_panics() {
+        assert_eq!(
+            super::run_on_command_stack(|| std::process::ExitCode::SUCCESS),
+            std::process::ExitCode::SUCCESS
+        );
+        assert_eq!(
+            super::run_on_command_stack(|| panic!("command stack probe")),
+            std::process::ExitCode::FAILURE
+        );
+    }
 
     #[test]
     fn test_persistence_paths_never_resolve_to_the_player_profile() {
@@ -4808,6 +4927,87 @@ mod tests {
     }
 
     #[test]
+    fn room_bed_export_exactly_quantizes_the_shared_stereo_source() {
+        let first = std::env::temp_dir().join("numinous_cli_room_bed.wav");
+        let second = std::env::temp_dir().join("numinous_cli_room_bed_repeat.wav");
+        let _ = std::fs::remove_file(&first);
+        let _ = std::fs::remove_file(&second);
+        let input = RoomRenderInput::new(42, &[]);
+
+        let report = super::sonify_wav_layer(
+            "times-tables",
+            0.0,
+            &first,
+            false,
+            input,
+            SonifyLayer::RoomBed,
+        )
+        .expect("room bed");
+        super::sonify_wav_layer(
+            "times-tables",
+            0.0,
+            &second,
+            false,
+            input,
+            SonifyLayer::RoomBed,
+        )
+        .expect("repeat room bed");
+        assert!(report.contains("room bed, 40.00s, 79 events, stereo 16000 Hz"));
+        assert!(report.contains("stable pre-master bed only"));
+
+        let bytes = std::fs::read(&first).expect("WAV bytes");
+        assert_eq!(bytes, std::fs::read(&second).expect("repeat WAV"));
+        assert_eq!(&bytes[0..4], b"RIFF");
+        assert_eq!(&bytes[8..12], b"WAVE");
+        let mut offset = 12usize;
+        let mut format = None;
+        let mut data = None;
+        while offset + 8 <= bytes.len() {
+            let id = &bytes[offset..offset + 4];
+            let size =
+                u32::from_le_bytes(bytes[offset + 4..offset + 8].try_into().unwrap()) as usize;
+            let start = offset + 8;
+            let end = start.checked_add(size).expect("bounded RIFF chunk");
+            assert!(end <= bytes.len(), "RIFF chunk must fit the file");
+            if id == b"fmt " {
+                format = Some(&bytes[start..end]);
+            } else if id == b"data" {
+                data = Some(&bytes[start..end]);
+            }
+            offset = end + size % 2;
+        }
+        let format = format.expect("format chunk");
+        assert!(format.len() >= 16);
+        assert_eq!(u16::from_le_bytes(format[0..2].try_into().unwrap()), 1);
+        assert_eq!(u16::from_le_bytes(format[2..4].try_into().unwrap()), 2);
+        assert_eq!(
+            u32::from_le_bytes(format[4..8].try_into().unwrap()),
+            numinous_core::ROOM_BED_SOURCE_RATE
+        );
+        assert_eq!(
+            u32::from_le_bytes(format[8..12].try_into().unwrap()),
+            64_000
+        );
+        assert_eq!(u16::from_le_bytes(format[12..14].try_into().unwrap()), 4);
+        assert_eq!(u16::from_le_bytes(format[14..16].try_into().unwrap()), 16);
+
+        let room = numinous_core::all_rooms_with(42)
+            .into_iter()
+            .find(|room| room.meta().id == "times-tables")
+            .expect("varied room");
+        let arrangement = room.motif().expect("motif").arrangement();
+        let expected = arrangement
+            .render_stereo(numinous_core::ROOM_BED_SOURCE_RATE)
+            .into_iter()
+            .flat_map(|sample| numinous_core::quantize_pcm16(sample).to_le_bytes())
+            .collect::<Vec<_>>();
+        assert_eq!(data.expect("data chunk"), expected);
+
+        let _ = std::fs::remove_file(first);
+        let _ = std::fs::remove_file(second);
+    }
+
+    #[test]
     fn sonify_replays_times_tables_hand_input_into_the_sound() {
         let dir = std::env::temp_dir();
         let target = dir.join("numinous_cli_times_target.wav");
@@ -4897,6 +5097,8 @@ mod tests {
                 Command::Sonify {
                     id: "times-tables".to_string(),
                     t: 0.0,
+                    layer: SonifyLayer::Mathematical,
+                    variation: 0,
                     out: path.clone(),
                     pokes,
                     gestures,
@@ -4907,6 +5109,49 @@ mod tests {
             assert_eq!(journey, before, "invalid input must not record progress");
             assert!(!path.exists(), "invalid input must not write output");
         }
+    }
+
+    #[test]
+    fn room_bed_rejects_controls_that_cannot_affect_it_before_progress_or_output() {
+        for (name, t, pokes, gestures) in [
+            ("phase", 0.5, Vec::new(), Vec::new()),
+            ("poke", 0.0, vec!["0.5,0.5".to_string()], Vec::new()),
+            (
+                "gesture",
+                0.0,
+                Vec::new(),
+                vec!["down:0.5,0.5,0".to_string()],
+            ),
+        ] {
+            let path = std::env::temp_dir().join(format!("numinous_cli_bed_{name}.wav"));
+            let _ = std::fs::remove_file(&path);
+            let mut journey = numinous_core::Journey::default();
+            let before = journey.clone();
+            let code = run(
+                Command::Sonify {
+                    id: "times-tables".to_string(),
+                    t,
+                    layer: SonifyLayer::RoomBed,
+                    variation: 7,
+                    out: path.clone(),
+                    pokes,
+                    gestures,
+                },
+                &mut journey,
+            );
+            assert_eq!(code, std::process::ExitCode::FAILURE);
+            assert_eq!(journey, before);
+            assert!(!path.exists());
+        }
+    }
+
+    #[test]
+    fn wav_writer_rejects_invalid_channel_framing_before_creating_a_file() {
+        let path = std::env::temp_dir().join("numinous_cli_invalid_channels.wav");
+        let _ = std::fs::remove_file(&path);
+        assert!(super::write_wav(&path, &[], 16_000, 0).is_err());
+        assert!(super::write_wav(&path, &[0.0], 16_000, 2).is_err());
+        assert!(!path.exists());
     }
 
     #[test]
