@@ -173,20 +173,6 @@ impl Room for Quine {
         }
     }
 
-    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let (x, y) = inputs.iter().rev().find_map(|input| match *input {
-            RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite() => {
-                Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
-            }
-            _ => None,
-        })?;
-        Some(format!(
-            "SELF-COPY PLACED AT {:.0}% {:.0}%   CROSS MARKS ITS CENTER",
-            x * 100.0,
-            y * 100.0
-        ))
-    }
-
     fn reveal(&self) -> &'static str {
         "A quine is a program that prints its own source. The miracle is that it does this at FINITE size: not by containing itself (that would never end) but by describing itself and then following the description, the trick Kleene's recursion theorem says every language must allow. The endless nesting you see is a picture of the idea, not the mechanism. This is how a mind can refer to itself without being infinite."
     }
@@ -203,6 +189,27 @@ impl Room for Quine {
 
     fn verb(&self) -> Option<&'static str> {
         Some("CLICK: PLACE A COPY")
+    }
+
+    fn status(&self, t: f64) -> Option<String> {
+        let depth = Self::depth_for(t);
+        Some(format!("DEPTH {depth} SELF-COPY   CLICK: PLACE ANOTHER"))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let Some((x, y)) = inputs.iter().rev().find_map(|input| match *input {
+            RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite() => {
+                Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
+            }
+            _ => None,
+        }) else {
+            return self.status(t);
+        };
+        Some(format!(
+            "SELF-COPY PLACED AT {:.0}% {:.0}%   CROSS MARKS ITS CENTER",
+            x * 100.0,
+            y * 100.0
+        ))
     }
 
     fn postcard_t(&self) -> f64 {
@@ -264,6 +271,18 @@ mod tests {
         let mut canvas = Canvas::new(48, 32);
         room.render_poked(&mut canvas, t, pokes);
         canvas.to_text()
+    }
+
+    #[test]
+    fn first_contact_status_invites_a_self_copy() {
+        let room = Quine::new();
+        let open = room.status(0.5).expect("open");
+        assert!(open.contains("DEPTH"), "{open}");
+        assert!(open.contains("CLICK: PLACE"), "{open}");
+        assert_eq!(
+            room.status_input(0.5, &[]).as_deref(),
+            room.status(0.5).as_deref()
+        );
     }
 
     #[test]

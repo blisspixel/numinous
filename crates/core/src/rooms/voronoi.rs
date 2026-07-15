@@ -8,7 +8,7 @@
 use std::f64::consts::TAU;
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
 /// Fixed seed so the desert is the same desert every time.
@@ -172,6 +172,26 @@ impl Room for Voronoi {
         Some("CLICK: DROP A WELL")
     }
 
+    fn status(&self, _t: f64) -> Option<String> {
+        Some(format!(
+            "{SITES} WELLS DRIFT   BORDERS TIE   CLICK: DROP A WELL"
+        ))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        // Same point extraction as the default render_input bridge so gesture
+        // and poke status agree on how many wells the player has planted.
+        let pokes = crate::pokes_from_inputs(inputs);
+        let dropped = player_wells(&pokes).count();
+        if dropped == 0 {
+            return self.status(t);
+        }
+        let total = SITES + dropped;
+        Some(format!(
+            "{dropped} DROPPED   {total} WELLS TOTAL   EVERY BORDER RENEGOTIATES"
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let (width, height) = canvas.draw_bounds();
         if width == 0 || height == 0 {
@@ -223,6 +243,30 @@ mod tests {
             .chars()
             .map(|ch| if ch == '#' { ' ' } else { ch })
             .collect()
+    }
+
+    #[test]
+    fn first_contact_status_invites_a_dropped_well() {
+        let room = Voronoi::new();
+        let open = room.status(0.0).expect("open");
+        assert!(open.contains("WELLS"), "{open}");
+        assert!(open.contains("CLICK: DROP A WELL"), "{open}");
+        let inputs = [
+            crate::room::RoomInput::PointerDown {
+                x: 0.3,
+                y: 0.7,
+                t: 0.0,
+            },
+            crate::room::RoomInput::PointerMove {
+                x: 0.5,
+                y: 0.5,
+                t: 0.01,
+            },
+        ];
+        let dropped = room.status_input(0.0, &inputs).expect("dropped");
+        assert!(dropped.contains("2 DROPPED"), "{dropped}");
+        assert!(dropped.contains("16 WELLS TOTAL"), "{dropped}");
+        assert!(dropped.contains("RENEGOTIATES"), "{dropped}");
     }
 
     #[test]

@@ -209,6 +209,13 @@ impl Room for LangtonsAnt {
         Some("CLICK: FLIP A CELL")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        let steps = Self::steps_for(t);
+        Some(format!(
+            "ANT AT {steps} STEPS   FLIP A STARTING CELL TO REPLAY"
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
             self.render(canvas, t);
@@ -229,12 +236,14 @@ impl Room for LangtonsAnt {
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let (x, y) = inputs.iter().rev().find_map(|input| match *input {
+        let Some((x, y)) = inputs.iter().rev().find_map(|input| match *input {
             RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite() => {
                 Some((normalized_grid_cell(x), normalized_grid_cell(y)))
             }
             _ => None,
-        })?;
+        }) else {
+            return self.status(t);
+        };
         Some(format!(
             "CELL {x},{y} FLIPPED   ANT REPLAYED {} STEPS",
             Self::steps_for(t)
@@ -256,6 +265,18 @@ mod tests {
     };
     use crate::canvas::Canvas;
     use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
+
+    #[test]
+    fn first_contact_status_invites_a_flip() {
+        let room = LangtonsAnt::new();
+        let open = room.status(0.0).expect("open");
+        assert!(open.contains("STEPS"), "{open}");
+        assert!(open.contains("FLIP"), "{open}");
+        assert_eq!(
+            room.status_input(0.0, &[]).as_deref(),
+            room.status(0.0).as_deref()
+        );
+    }
 
     #[test]
     fn one_step_paints_exactly_one_cell() {

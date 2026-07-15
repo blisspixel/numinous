@@ -181,6 +181,16 @@ impl Room for RandomWalk {
         Some("CLICK: PLANT A WALKER")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        // First contact names the square-root law the ambient crowd already
+        // obeys, and invites the player to plant a walker of their own.
+        let steps = Self::steps_for(t);
+        let expected = (steps as f64).sqrt();
+        Some(format!(
+            "{steps} STEPS   LAW RADIUS {expected:.1}   CLICK: PLANT"
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         self.render(canvas, t);
         let width = canvas.width();
@@ -220,22 +230,35 @@ impl Room for RandomWalk {
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let count = inputs
+        let points: Vec<_> = inputs
             .iter()
-            .filter(|input| {
-                matches!(
-                    input,
-                    RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite()
-                )
+            .filter_map(|input| match *input {
+                RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite() => {
+                    Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
+                }
+                _ => None,
             })
-            .count()
-            .min(MAX_ROOM_POKES);
-        (count > 0).then(|| {
-            format!(
-                "{count} PLANTED WALKER(S)   {} STEPS SHOWN",
-                Self::steps_for(t)
-            )
-        })
+            .collect();
+        let start = points.len().saturating_sub(MAX_ROOM_POKES);
+        let points = &points[start..];
+        if points.is_empty() {
+            return self.status(t);
+        }
+        let steps = Self::steps_for(t);
+        let expected = (steps as f64).sqrt();
+        // Mean end distance of planted walkers in step units (same units as the law).
+        let mut sum = 0.0;
+        for (which, _) in points.iter().enumerate() {
+            let path = walk(1000 + which as u64, steps, self.seed);
+            if let Some(&(x, y)) = path.last() {
+                sum += x.hypot(y);
+            }
+        }
+        let mean = sum / points.len() as f64;
+        Some(format!(
+            "{} PLANTED   MEAN DIST {mean:.1}   LAW {expected:.1}   {steps} STEPS",
+            points.len()
+        ))
     }
 
     fn postcard_t(&self) -> f64 {
@@ -256,6 +279,24 @@ mod tests {
             .nth(y)
             .and_then(|line| line.chars().nth(x))
             .unwrap_or(' ')
+    }
+
+    #[test]
+    fn first_contact_status_names_the_square_root_law() {
+        let room = RandomWalk::new();
+        let open = room.status(0.0).expect("open");
+        assert!(open.contains("STEPS"), "{open}");
+        assert!(open.contains("LAW RADIUS"), "{open}");
+        assert!(open.contains("CLICK: PLANT"), "{open}");
+        let inputs = [RoomInput::PointerDown {
+            x: 0.4,
+            y: 0.6,
+            t: 0.0,
+        }];
+        let planted = room.status_input(0.0, &inputs).expect("planted");
+        assert!(planted.contains("1 PLANTED"), "{planted}");
+        assert!(planted.contains("MEAN DIST"), "{planted}");
+        assert!(planted.contains("LAW"), "{planted}");
     }
 
     #[test]
@@ -331,10 +372,11 @@ mod tests {
         }];
 
         assert!(poked.ink_count() > base.ink_count());
-        assert_eq!(
-            room.status_input(0.0, &input).as_deref(),
-            Some("1 PLANTED WALKER(S)   225 STEPS SHOWN")
-        );
+        let status = room.status_input(0.0, &input).expect("planted status");
+        assert!(status.contains("1 PLANTED"), "{status}");
+        assert!(status.contains("MEAN DIST"), "{status}");
+        assert!(status.contains("LAW 15.0"), "{status}");
+        assert!(status.contains("225 STEPS"), "{status}");
     }
 
     #[test]

@@ -6,8 +6,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
-- Buffon's Needle first contact now invites a throw instead of reporting a
-  finished ambient Monte Carlo estimate. Untouched status names the live L/D
+- Catalog first-contact honesty pass for seven more rooms. Random Walk names
+  steps and the square-root law radius, then reports planted mean distance
+  against that law. Voronoi, Chaos Game, Langton's Ant, Quine, Zeno's Square,
+  and Goldbach's Comet each open with an invitation status and fall empty-input
+  status_input back to that invitation; player action status names the
+  consequence (dropped wells, added corners, flipped cells, placed copies,
+  runners, prime witnesses). Focused first-contact regressions cover the
+  batch. Buffon's Needle first contact now invites a throw instead of reporting
+  a finished ambient Monte Carlo estimate. Untouched status names the live L/D
   ratio, the classical crossing chance 2L/(pi D), and the click verb; only the
   player's own throws produce a pi estimate. A focused first-contact regression
   locks the claim.
