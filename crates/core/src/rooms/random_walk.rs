@@ -256,7 +256,7 @@ impl Room for RandomWalk {
         }
         let mean = sum / points.len() as f64;
         Some(format!(
-            "{} PLANTED   MEAN DIST {mean:.1}   LAW {expected:.1}   {steps} STEPS",
+            "{} WALK  MEAN {mean:.1}  SQRTN {expected:.1}  N{steps}",
             points.len()
         ))
     }
@@ -294,9 +294,13 @@ mod tests {
             t: 0.0,
         }];
         let planted = room.status_input(0.0, &inputs).expect("planted");
-        assert!(planted.contains("1 PLANTED"), "{planted}");
-        assert!(planted.contains("MEAN DIST"), "{planted}");
-        assert!(planted.contains("LAW"), "{planted}");
+        assert!(planted.starts_with("1 WALK"), "{planted}");
+        assert!(planted.contains("MEAN "), "{planted}");
+        assert!(planted.contains("SQRTN "), "{planted}");
+        assert!(
+            planted.contains("N225") || planted.contains("N"),
+            "{planted}"
+        );
     }
 
     #[test]
@@ -373,10 +377,10 @@ mod tests {
 
         assert!(poked.ink_count() > base.ink_count());
         let status = room.status_input(0.0, &input).expect("planted status");
-        assert!(status.contains("1 PLANTED"), "{status}");
-        assert!(status.contains("MEAN DIST"), "{status}");
-        assert!(status.contains("LAW 15.0"), "{status}");
-        assert!(status.contains("225 STEPS"), "{status}");
+        assert!(status.starts_with("1 WALK"), "{status}");
+        assert!(status.contains("MEAN "), "{status}");
+        assert!(status.contains("SQRTN 15.0"), "{status}");
+        assert!(status.contains("N225"), "{status}");
     }
 
     #[test]

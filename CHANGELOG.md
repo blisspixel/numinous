@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Random Walk plant status compacted to MEAN versus SQRTN law with step count,
+  keeping the square-root distance grade inside a short footer line.
 - Logistic Map seed status reports Lyapunov exponent and ORDER/CHAOS regime for
   the hand-chosen r alongside the orbit seed, so a population seed is graded by
   the same chaos measure as the ambient readout.
