@@ -302,6 +302,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::pseudosphere::Pseudosphere::new_with(variation)),
         Box::new(rooms::airy::Airy::new_with(variation)),
         Box::new(rooms::bragg::Bragg::new_with(variation)),
+        Box::new(rooms::trisectrix::Trisectrix::new_with(variation)),
+        Box::new(rooms::watt_curve::WattCurve::new_with(variation)),
+        Box::new(rooms::devil_curve::DevilCurve::new_with(variation)),
+        Box::new(rooms::capillary::Capillary::new_with(variation)),
+        Box::new(rooms::rabi::Rabi::new_with(variation)),
+        Box::new(rooms::geodesic::Geodesic::new_with(variation)),
     ]
 }
 
