@@ -6,6 +6,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Soap Film, Landauer's Price, and Prime Gap Weather (catalog 94).
 - Universal wonder Tier S/A wave (catalog 91): Curse of Dimension,
   Concentration Bell, Uncertainty Dial, Gradient Valley, Attention as Soft
   Light, Braess Trap, Nontransitive Dice, Parrondo's Trap, Hilbert's Hotel.
