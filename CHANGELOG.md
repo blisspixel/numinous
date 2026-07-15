@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six classical inventions (catalog 202): Cardioid, Deltoid, Coupled Logistic,
+  Menger Sponge, Spiral of Theodorus, Rule 110.
 - Six curve and system inventions (catalog 196): Sprott Attractor, Delaunay Mesh,
   Astroid, SIR Epidemic, Nephroid, Lemniscate.
 - Six physics and geometry inventions (catalog 190): Percolation, Ising Lattice,

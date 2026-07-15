@@ -232,6 +232,16 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::sir::Sir::new_with(variation)),
         Box::new(rooms::nephroid::Nephroid::new_with(variation)),
         Box::new(rooms::lemniscate::Lemniscate::new_with(variation)),
+        Box::new(rooms::cardioid::Cardioid::new_with(variation)),
+        Box::new(rooms::deltoid::Deltoid::new_with(variation)),
+        Box::new(rooms::coupled_logistic::CoupledLogistic::new_with(
+            variation,
+        )),
+        Box::new(rooms::menger_sponge::MengerSponge::new_with(variation)),
+        Box::new(rooms::pythagoras_spiral::PythagorasSpiral::new_with(
+            variation,
+        )),
+        Box::new(rooms::wolfram_110::Wolfram110::new_with(variation)),
     ]
 }
 
