@@ -226,6 +226,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::poincare_disc::PoincareDisc::new_with(variation)),
         Box::new(rooms::cycloid::Cycloid::new_with(variation)),
         Box::new(rooms::brusselator::Brusselator::new_with(variation)),
+        Box::new(rooms::sprott::Sprott::new_with(variation)),
+        Box::new(rooms::delaunay::Delaunay::new_with(variation)),
+        Box::new(rooms::astroid::Astroid::new_with(variation)),
+        Box::new(rooms::sir::Sir::new_with(variation)),
+        Box::new(rooms::nephroid::Nephroid::new_with(variation)),
+        Box::new(rooms::lemniscate::Lemniscate::new_with(variation)),
     ]
 }
 

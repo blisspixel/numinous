@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six curve and system inventions (catalog 196): Sprott Attractor, Delaunay Mesh,
+  Astroid, SIR Epidemic, Nephroid, Lemniscate.
 - Six physics and geometry inventions (catalog 190): Percolation, Ising Lattice,
   Lotka-Volterra, Poincare Disc, Cycloid, Brusselator.
 - Six chaos and geometry inventions (catalog 184): Chua Circuit, Arnold Cat
