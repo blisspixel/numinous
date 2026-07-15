@@ -5,9 +5,11 @@
 /// merely because a machine has a compatible GPU.
 pub const FRACTAL_MAX_ITER: u32 = 160;
 
+pub mod apollonian;
 pub mod arecibo;
 pub mod audioactive;
 pub mod barnsley_fern;
+pub mod buddhabrot;
 pub mod buffon_needle;
 pub mod busy_beaver;
 pub mod cellular_automata;
@@ -18,6 +20,7 @@ pub mod coffee_cup;
 pub mod collatz;
 pub mod cult_of_pi;
 pub mod degree720;
+pub mod dla_frost;
 pub mod double_pendulum;
 pub mod epicycles;
 pub mod fastest_fall;
@@ -28,8 +31,12 @@ pub mod galton_board;
 pub mod game_of_life;
 pub mod goldbach;
 pub mod golden_angle;
+pub mod harmonics;
 pub mod harmonograph;
+pub mod hopf;
+pub mod inversion;
 pub mod julia;
+pub mod kaprekar;
 pub mod kepler_loom;
 pub mod langtons_ant;
 pub mod laplace_clock;
@@ -56,6 +63,7 @@ pub mod sandpile;
 pub mod slingshot;
 pub mod slope_rider;
 pub mod starbow;
+pub mod steiner;
 pub mod strange_loop;
 pub mod tetractys;
 pub mod the_lens;
@@ -71,6 +79,7 @@ pub mod upside_ruler;
 pub mod voronoi;
 pub mod wet_oracle;
 pub mod whispering_table;
+pub mod wireworld;
 pub mod zeno;
 pub mod zeta_walk;
 

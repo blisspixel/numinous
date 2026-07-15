@@ -650,35 +650,31 @@ easy-first, since these are the batch to open the post-substrate content wave.
   any triangle's angles and the inner crossings form equilateral. DRAG A VERTEX.
 
 **Tier A, postcard-grade, medium build:**
-- **Apollonian Gasket, "The Kissing Circles"** (Number/Fractals): infinite
-  nested kissing circles with integer curvatures (Descartes), plus a live open
-  door (the local-global conjecture was proved false in 2023). CLICK A GAP.
-- **Circle Inversion and the Riemann Sphere, "The Mirror That Bends"** (Shape):
-  lines become circles, the whole plane wraps onto a ball where infinity is one
-  ordinary point. The hub that unifies Apollonian, Steiner, and Ford circles.
+- **Apollonian Gasket, "The Kissing Circles"** **built** (`apollonian`): infinite
+  nested kissing circles with integer curvatures (Descartes). CLICK A GAP.
+- **Circle Inversion, "The Mirror That Bends"** **built** (`inversion`): lines
+  become circles; the hub that unifies Apollonian, Steiner, and Ford circles.
 - **Domain Coloring, "The Color of a Function"** (Fractals): every complex
   function painted (hue is phase, brightness is size); zeros are pinwheels you
   can count. Ties directly to the Studio engine; see the flagship note below.
-- **Diffusion-Limited Aggregation, "The Frost"** (Emergence): random walkers
-  freeze on contact and build lightning, frost, and coral. The sibling Random
-  Walk is begging for. CLICK: PLANT A SEED.
-- **Buddhabrot, "The Ghost in the Set"** (Fractals): trace the escaping paths of
-  the Mandelbrot and a meditating figure rises out of the fog. The famous shape's
-  hidden second face; a deep-cut unlock off Mandelbrot.
-- **Wireworld, "The Visible Computer"** (Computation): a four-state automaton
-  where you build gates and watch the electrons flow. Game of Life claims it can
-  compute; this shows the circuit.
+- **Diffusion-Limited Aggregation, "The Frost"** **built** (`dla-frost`): random
+  walkers freeze on contact and build lightning, frost, and coral. CLICK: PLANT
+  A SEED.
+- **Buddhabrot, "The Ghost in the Set"** **built** (`buddhabrot`): density of
+  escaping Mandelbrot orbits paints a ghostly figure. DRAG: AIM THE GHOST.
+- **Wireworld, "The Visible Computer"** **built** (`wireworld`): four-state
+  automaton where you fire electrons on copper. CLICK: FIRE AN ELECTRON.
 
 **Tier B, the missing categories (sphere, quantum, number magic):**
-- **Spherical Harmonics, "The Singing Sphere"** and **Hydrogen, "The Shape of the
-  Atom"**: the same lobed shapes are atomic orbitals, bell overtones, and the
-  cosmic microwave background. One math kernel, a whole missing quantum wing.
-- **Hopf Fibration, "The Linked Rings"**: space filled with circles all linked
-  and none touching, the shadow of a 4D sphere and the picture of a qubit.
-- **Kaprekar 6174, "The Number That Eats Numbers"**: every 4-digit number falls
-  to 6174 in at most seven steps. The solved, satisfying twin of Collatz.
-- **Steiner Chains, "The Ring That Always Closes"**: a ring of circles that, once
-  it closes, closes from every angle. Obvious once inverted (the room next door).
+- **Spherical Harmonics, "The Singing Sphere"** **built** (`harmonics`): real
+  Y_lm lobes; the atom's and the bell's shared shape. DRAG: RAISE l AND m.
+- **Hopf Fibration, "The Linked Rings"** **built** (`hopf`): space filled with
+  circles all linked and none touching, the shadow of a 4D sphere and the picture
+  of a qubit.
+- **Kaprekar 6174, "The Number That Eats Numbers"** **built** (`kaprekar`): every
+  4-digit number falls to 6174 in at most seven steps. The solved twin of Collatz.
+- **Steiner Chains, "The Ring That Always Closes"** **built** (`steiner`): a ring
+  of circles that, once it closes, closes from every angle.
 
 **The scope flagship: the Studio Function Painter (domain coloring).** Times
 Tables is the onboarding flagship (one dial, a floor-tilting reveal, hits a

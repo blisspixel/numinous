@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Awe Engine Tier A/B completion (catalog 76): Apollonian gasket, Circle
+  Inversion, DLA Frost, Kaprekar 6174, Steiner chain, Hopf linked rings,
+  Wireworld, Buddhabrot, Spherical Harmonics.
+
 - Chord Game plus Awe Engine Tier S (catalog 67): elliptic chord-and-tangent
   group law; Recaman Jumper; Truchet Weave; Pursuit Chase; Pascal mod n;
   Three-Gap Spinner; Morley triangle; Clifford Menagerie.
