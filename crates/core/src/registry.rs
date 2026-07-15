@@ -258,6 +258,14 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::tractrix::Tractrix::new_with(variation)),
         Box::new(rooms::catenary::Catenary::new_with(variation)),
         Box::new(rooms::clothoid::Clothoid::new_with(variation)),
+        Box::new(rooms::lemniscate_gerono::LemniscateGerono::new_with(
+            variation,
+        )),
+        Box::new(rooms::cissoid::Cissoid::new_with(variation)),
+        Box::new(rooms::strophoid::Strophoid::new_with(variation)),
+        Box::new(rooms::conchoid::Conchoid::new_with(variation)),
+        Box::new(rooms::limacon::Limacon::new_with(variation)),
+        Box::new(rooms::folium::Folium::new_with(variation)),
     ]
 }
 
