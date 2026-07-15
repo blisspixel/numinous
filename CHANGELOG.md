@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Lissajous tune status names the reduced interval class (UNISON, OCTAVE, FIFTH,
+  and kin) for the hand-chosen integer ratio.
+- Quine place status names copy count, newest print origin, and nest depth so a
+  self-print is graded as depth plus placement, not only a marker.
 - Harmonograph tune status grades figure state (CLOSED/OPEN/BLOOM) and damping
   life (LONG/MED/SHORT) beside the detune and damp knobs.
 - L-System plant status names the newest origin and that every copy is the same

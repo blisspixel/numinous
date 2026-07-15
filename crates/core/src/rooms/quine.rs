@@ -197,16 +197,20 @@ impl Room for Quine {
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let Some((x, y)) = inputs.iter().rev().find_map(|input| match *input {
-            RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite() => {
-                Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
-            }
-            _ => None,
-        }) else {
+        let pokes = crate::pokes_from_inputs(inputs);
+        let copies: Vec<(f64, f64)> = pokes
+            .into_iter()
+            .filter(|(x, y)| x.is_finite() && y.is_finite())
+            .collect();
+        let Some(&(x, y)) = copies.last() else {
             return self.status(t);
         };
+        let depth = Self::depth_for(t);
+        let n = copies.len();
+        // The program places a copy of itself: depth is the nested self, and
+        // the hand only chooses where the newest print lands.
         Some(format!(
-            "SELF-COPY PLACED AT {:.0}% {:.0}%   CROSS MARKS ITS CENTER",
+            "{n} COPY  @ {:.0}%{:.0}%  DEPTH {depth}  SELF-PRINTS",
             x * 100.0,
             y * 100.0
         ))
@@ -348,10 +352,11 @@ mod tests {
         }];
 
         assert!(poked.ink_count() > base.ink_count());
-        assert_eq!(
-            room.status_input(0.0, &input).as_deref(),
-            Some("SELF-COPY PLACED AT 53% 47%   CROSS MARKS ITS CENTER")
-        );
+        let status = room.status_input(0.0, &input).expect("copy status");
+        assert!(status.starts_with("1 COPY"), "{status}");
+        assert!(status.contains("@ 53%47%"), "{status}");
+        assert!(status.contains("DEPTH "), "{status}");
+        assert!(status.contains("SELF-PRINTS"), "{status}");
     }
 
     #[test]
