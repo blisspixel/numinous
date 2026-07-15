@@ -290,6 +290,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::snell::Snell::new_with(variation)),
         Box::new(rooms::polarization::Polarization::new_with(variation)),
         Box::new(rooms::brewster::Brewster::new_with(variation)),
+        Box::new(rooms::reuleaux::Reuleaux::new_with(variation)),
+        Box::new(rooms::log_spiral::LogSpiral::new_with(variation)),
+        Box::new(rooms::archimedean::Archimedean::new_with(variation)),
+        Box::new(rooms::cassini::Cassini::new_with(variation)),
+        Box::new(rooms::foucault::Foucault::new_with(variation)),
+        Box::new(rooms::coriolis::Coriolis::new_with(variation)),
     ]
 }
 

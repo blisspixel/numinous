@@ -1,0 +1,214 @@
+//! Coriolis deflection: free path curves in a rotating frame.
+//!
+//! DRAG: TUNE SPIN. See `docs/ROOMS.md`.
+
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::surface::Surface;
+
+fn phase_unit(t: f64) -> f64 {
+    if t.is_finite() {
+        t.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
+    let start = pokes.len().saturating_sub(MAX_ROOM_POKES);
+    pokes[start..]
+        .iter()
+        .copied()
+        .filter(|&(x, y)| x.is_finite() && y.is_finite())
+        .map(|(x, y)| (x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
+        .collect()
+}
+
+fn spin(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+    let s = if seed == 0 {
+        0.0
+    } else {
+        (seed % 5) as f64 * 0.05
+    };
+    if let Some((x, _)) = hand {
+        0.2 + x * 2.2 + s
+    } else {
+        0.4 + phase_unit(t) * 1.8 + s
+    }
+}
+
+fn draw(canvas: &mut dyn Surface, omega: f64, seed: u64) {
+    let (width, height) = canvas.draw_bounds();
+    if width == 0 || height == 0 {
+        return;
+    }
+    let cx = (width.saturating_sub(1) / 2) as f64;
+    let cy = (height.saturating_sub(1) / 2) as f64;
+    let scale = (width.min(height) as f64) * 0.42;
+    let omega = omega.clamp(0.1, 3.0);
+    // Inertial straight shot from left, viewed in a frame rotating at omega.
+    // Path: r_rot = R(-omega t) * (x0 + v t, 0).
+    let v = 1.2;
+    let x0 = -1.0;
+    let steps = 200;
+    let mut prev: Option<(i32, i32)> = None;
+    for i in 0..=steps {
+        let u = i as f64 / steps as f64;
+        let tt = u * 1.7;
+        let xi = x0 + v * tt;
+        let yi = 0.05
+            * if seed == 0 {
+                0.0
+            } else {
+                ((seed % 5) as f64 - 2.0) * 0.02
+            };
+        let ang = -omega * tt;
+        let xr = xi * ang.cos() - yi * ang.sin();
+        let yr = xi * ang.sin() + yi * ang.cos();
+        let px = (cx + xr * scale).round() as i32;
+        let py = (cy - yr * scale).round() as i32;
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, px, py, '#');
+        }
+        prev = Some((px, py));
+    }
+    // Reference: inertial chord (dashed by sparse marks) along horizontal.
+    for i in 0..12 {
+        let u = i as f64 / 11.0;
+        let x = -1.0 + 2.0 * u;
+        let px = (cx + x * scale).round() as i32;
+        let py = cy.round() as i32;
+        canvas.line(px, py, px, py, '.');
+    }
+    // Frame spin indicator.
+    let tip_ang = omega * 0.4;
+    let tx = (cx + 0.15 * scale * tip_ang.cos()).round() as i32;
+    let ty = (cy - 0.15 * scale * tip_ang.sin()).round() as i32;
+    canvas.line(cx as i32, cy as i32, tx, ty, '+');
+}
+
+/// Coriolis room.
+#[derive(Debug, Default)]
+pub struct Coriolis {
+    seed: u64,
+}
+
+impl Coriolis {
+    /// Create the room with default seed (0).
+    #[must_use]
+    pub fn new() -> Self {
+        Self { seed: 0 }
+    }
+    /// Create with variation seed.
+    #[must_use]
+    pub fn new_with(seed: u64) -> Self {
+        Self { seed }
+    }
+}
+
+impl Room for Coriolis {
+    fn meta(&self) -> RoomMeta {
+        RoomMeta {
+            id: "coriolis",
+            title: "Coriolis Path",
+            wing: "Motion & Dynamics",
+            blurb: "Inertial straight line curves under frame spin. t and DRAG: TUNE SPIN.",
+            accent: [30, 130, 100],
+        }
+    }
+
+    fn render(&self, canvas: &mut dyn Surface, t: f64) {
+        draw(canvas, spin(t, None, self.seed), self.seed);
+    }
+
+    fn postcard_t(&self) -> f64 {
+        0.55
+    }
+
+    fn motif(&self) -> Option<crate::motifs::Motif> {
+        Some(crate::motifs::Motif {
+            key: "coriolis",
+            root: 440.0,
+            tempo: 90,
+            line: &[0, 2, 7, 9, 12, 9, 7, 2],
+            encodes: "rotating frame turns free straight flight into a curve",
+        })
+    }
+
+    fn verb(&self) -> Option<&'static str> {
+        Some("DRAG: TUNE SPIN")
+    }
+
+    fn status(&self, t: f64) -> Option<String> {
+        let w = spin(t, None, self.seed);
+        Some(format!("w={w:.2}  deflect  DRAG:SPIN"))
+    }
+
+    fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
+        let hands = finite_pokes(pokes);
+        let w = spin(t, hands.last().copied(), self.seed);
+        draw(canvas, w, self.seed ^ hands.len() as u64);
+        if let Some(&(x, y)) = hands.last() {
+            let (bw, bh) = canvas.draw_bounds();
+            if bw > 0 && bh > 0 {
+                let px = (x * bw.saturating_sub(1) as f64).round() as i32;
+                let py = (y * bh.saturating_sub(1) as f64).round() as i32;
+                canvas.line(px - 2, py, px + 2, py, 'o');
+                canvas.line(px, py - 2, px, py + 2, 'o');
+            }
+        }
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = crate::pokes_from_inputs(inputs);
+        let hands = finite_pokes(&pokes);
+        if hands.is_empty() {
+            return self.status(t);
+        }
+        let w = spin(t, hands.last().copied(), self.seed);
+        Some(format!("W={w:.3}  coriolis"))
+    }
+
+    fn reveal(&self) -> &'static str {
+        "In a rotating frame, free motion that is straight inertially appears to \
+         curve. The fictitious Coriolis force is -2 m omega x v. Storms, \
+         artillery, and long-range shells all feel this geometric bias."
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Coriolis;
+    use crate::canvas::Canvas;
+    use crate::room::{Room, RoomInput};
+
+    #[test]
+    fn status_invites() {
+        let s = Coriolis::new().status(0.3).unwrap();
+        assert!(s.contains("DRAG") || s.contains("deflect"));
+        assert!(s.chars().count() <= 56);
+    }
+
+    #[test]
+    fn spin_changes() {
+        let r = Coriolis::new();
+        let o = r.status(0.3).unwrap();
+        let a = r
+            .status_input(
+                0.3,
+                &[RoomInput::PointerDown {
+                    x: 0.9,
+                    y: 0.5,
+                    t: 0.0,
+                }],
+            )
+            .unwrap();
+        assert_ne!(o, a);
+    }
+
+    #[test]
+    fn postcard_has_ink() {
+        let mut c = Canvas::new(48, 24);
+        Coriolis::new().render(&mut c, 0.55);
+        assert!(c.ink_count() > 0);
+    }
+}
