@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six classical curve inventions (catalog 316): Superellipse, Cochleoid,
+  Serpentine, Bifolium, Butterfly Curve, Piriform.
 - Six analysis inventions (catalog 310): Harmonic Series, Basel Problem,
   Stirling Approx, Benford Law, Central Limit, Wallis Product.
 - Six stochastic inventions (catalog 304): Poisson Process, Brownian Motion,

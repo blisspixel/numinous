@@ -362,6 +362,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::benford::Benford::new_with(variation)),
         Box::new(rooms::central_limit::CentralLimit::new_with(variation)),
         Box::new(rooms::wallis::Wallis::new_with(variation)),
+        Box::new(rooms::superellipse::Superellipse::new_with(variation)),
+        Box::new(rooms::cochleoid::Cochleoid::new_with(variation)),
+        Box::new(rooms::serpentine::Serpentine::new_with(variation)),
+        Box::new(rooms::bifolium::Bifolium::new_with(variation)),
+        Box::new(rooms::butterfly_curve::ButterflyCurve::new_with(variation)),
+        Box::new(rooms::piriform::Piriform::new_with(variation)),
     ]
 }
 
