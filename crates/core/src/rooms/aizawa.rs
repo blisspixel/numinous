@@ -186,22 +186,48 @@ impl Room for Aizawa {
             return self.status(t);
         }
         let e = epsilon(t, hands.last().copied(), self.seed);
-        let pts = integrate(e);
-        let mut min_x = f64::MAX;
-        let mut max_x = f64::MIN;
-        let mut min_z = f64::MAX;
-        let mut max_z = f64::MIN;
-        for &(x, _y, z) in &pts {
+        // Lightweight span sample (not the full render integration).
+        let a = 0.95;
+        let b = 0.7;
+        let c = 0.6;
+        let d = 3.5;
+        let ee = 0.25;
+        let f = 0.1;
+        let mut x = 0.1_f64;
+        let mut y = 0.0_f64;
+        let mut z = 0.0_f64;
+        for _ in 0..200 {
+            let dx = (z - b) * x - d * y;
+            let dy = d * x + (z - b) * y;
+            let dz = c + a * z - z * z * z / 3.0 - (x * x + y * y) * (1.0 + ee * z)
+                + f * z * x * x * x
+                + e * x;
+            x += DT * dx;
+            y += DT * dy;
+            z += DT * dz;
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_z = z;
+        let mut max_z = z;
+        for _ in 0..800 {
+            let dx = (z - b) * x - d * y;
+            let dy = d * x + (z - b) * y;
+            let dz = c + a * z - z * z * z / 3.0 - (x * x + y * y) * (1.0 + ee * z)
+                + f * z * x * x * x
+                + e * x;
+            x += DT * dx;
+            y += DT * dy;
+            z += DT * dz;
+            if !x.is_finite() || !z.is_finite() {
+                break;
+            }
             min_x = min_x.min(x);
             max_x = max_x.max(x);
             min_z = min_z.min(z);
             max_z = max_z.max(z);
         }
-        let span = if pts.is_empty() {
-            0.0
-        } else {
-            ((max_x - min_x) * (max_z - min_z)).max(0.0).sqrt()
-        };
+        let span = ((max_x - min_x) * (max_z - min_z)).max(0.0).sqrt();
         Some(format!("eps={e:.2}  span={span:.2}  Aizawa"))
     }
 

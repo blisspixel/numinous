@@ -181,10 +181,24 @@ impl Room for Duffing {
             return self.status(t);
         }
         let g = gamma(t, hands.last().copied(), self.seed);
-        let pts = integrate(g);
+        // Lightweight extrema sample (not the full render integration).
+        let delta = 0.3;
+        let alpha = -1.0;
+        let beta = 1.0;
+        let omega = 1.2;
+        let mut x = 0.1_f64;
+        let mut v = 0.0_f64;
+        let mut time = 0.0_f64;
         let mut max_x = 0.0_f64;
         let mut max_v = 0.0_f64;
-        for &(x, v) in &pts {
+        for _ in 0..900 {
+            let acc = -delta * v - alpha * x - beta * x * x * x + g * (omega * time).cos();
+            v += DT * acc;
+            x += DT * v;
+            time += DT;
+            if !x.is_finite() || !v.is_finite() {
+                break;
+            }
             max_x = max_x.max(x.abs());
             max_v = max_v.max(v.abs());
         }

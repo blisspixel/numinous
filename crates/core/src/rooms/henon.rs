@@ -168,16 +168,17 @@ impl Room for Henon {
         let area_contract = b.abs();
         let mut x = 0.1_f64;
         let mut y = 0.1_f64;
-        let mut min_x = x;
-        let mut max_x = x;
-        let mut min_y = y;
-        let mut max_y = y;
         for _ in 0..40 {
             let nx = 1.0 - a * x * x + y;
             let ny = b * x;
             x = nx;
             y = ny;
         }
+        // Bounds after burn-in only, so span is the settled attractor window.
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
         for _ in 0..400 {
             let nx = 1.0 - a * x * x + y;
             let ny = b * x;

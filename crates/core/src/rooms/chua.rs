@@ -183,8 +183,6 @@ impl Room for Chua {
         let mut x = 0.1_f64;
         let mut y = 0.0_f64;
         let mut z = 0.0_f64;
-        let mut min_x = x;
-        let mut max_x = x;
         for _ in 0..200 {
             let dx = a * (y - x - f_diode(x));
             let dy = x - y + z;
@@ -193,8 +191,11 @@ impl Room for Chua {
             y += dy * DT;
             z += dz * DT;
         }
+        // Measure the settled trajectory only.
+        let mut min_x = x;
+        let mut max_x = x;
         let mut flips = 0u32;
-        let mut sign = x.signum();
+        let mut sign = if x >= 0.0 { 1.0 } else { -1.0 };
         for _ in 0..800 {
             let dx = a * (y - x - f_diode(x));
             let dy = x - y + z;
@@ -213,8 +214,8 @@ impl Room for Chua {
                 sign = s;
             }
         }
-        let width = max_x - min_x;
-        Some(format!("a={a:.1}  |x|={width:.2}  flips={flips}"))
+        let span = max_x - min_x;
+        Some(format!("a={a:.1}  span={span:.2}  flips={flips}"))
     }
 
     fn reveal(&self) -> &'static str {
