@@ -64,6 +64,18 @@ fn perfect_from_p(p: u32) -> Option<u64> {
     Some((1u64 << (p - 1)) * m)
 }
 
+/// Compact label: exact n for small perfects, log10 scale for large ones.
+fn perfect_label(p: u32) -> String {
+    match perfect_from_p(p) {
+        Some(n) if n < 1_000_000 => format!("p={p}  n={n}"),
+        Some(n) => {
+            let digs = (n as f64).log10().floor() as i32 + 1;
+            format!("p={p}  ~{digs} digits")
+        }
+        None => format!("p={p}  not Mersenne"),
+    }
+}
+
 fn draw(canvas: &mut dyn Surface, k: usize, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
@@ -144,7 +156,7 @@ impl Room for PerfectNum {
     fn status(&self, t: f64) -> Option<String> {
         let k = count(t, None, self.seed);
         let p = MERSENNE_P.get(k - 1).copied().unwrap_or(2);
-        Some(format!("k={k}  p={p}  DRAG:K"))
+        Some(format!("k={k}  {}  DRAG:K", perfect_label(p)))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -169,7 +181,8 @@ impl Room for PerfectNum {
             return self.status(t);
         }
         let k = count(t, hands.last().copied(), self.seed);
-        Some(format!("K={k}  perfect"))
+        let p = MERSENNE_P.get(k - 1).copied().unwrap_or(2);
+        Some(perfect_label(p))
     }
 
     fn reveal(&self) -> &'static str {

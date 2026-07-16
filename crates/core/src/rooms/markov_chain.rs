@@ -54,6 +54,31 @@ fn hash_u(i: u64, salt: u64) -> f64 {
     (x as f64) / (u64::MAX as f64)
 }
 
+fn visit_peak(p_stay: f64, seed: u64) -> (usize, f64) {
+    let n = 5usize;
+    let mut state = if seed == 0 { 0 } else { (seed as usize) % n };
+    let mut hist = [0u32; 5];
+    let steps = 240usize;
+    for i in 0..steps {
+        let u = hash_u(i as u64, seed.wrapping_mul(31) + 7);
+        state = step(state, p_stay, u, n);
+        hist[state] += 1;
+    }
+    let total: u32 = hist.iter().sum();
+    let (peak, c) = hist
+        .iter()
+        .copied()
+        .enumerate()
+        .max_by_key(|(_, v)| *v)
+        .unwrap_or((0, 0));
+    let frac = if total == 0 {
+        0.0
+    } else {
+        100.0 * c as f64 / total as f64
+    };
+    (peak, frac)
+}
+
 fn draw(canvas: &mut dyn Surface, p_stay: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
@@ -152,7 +177,8 @@ impl Room for MarkovChain {
 
     fn status(&self, t: f64) -> Option<String> {
         let p = stay(t, None, self.seed);
-        Some(format!("stay={p:.2}  markov  DRAG:P"))
+        let (peak, peak_frac) = visit_peak(p, self.seed);
+        Some(format!("stay={p:.2}  peak s{peak}={peak_frac:.0}%  DRAG:P"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -177,7 +203,8 @@ impl Room for MarkovChain {
             return self.status(t);
         }
         let p = stay(t, hands.last().copied(), self.seed);
-        Some(format!("P={p:.3}  chain"))
+        let (peak, peak_frac) = visit_peak(p, self.seed ^ hands.len() as u64);
+        Some(format!("stay={p:.2}  peak s{peak}={peak_frac:.0}%"))
     }
 
     fn reveal(&self) -> &'static str {

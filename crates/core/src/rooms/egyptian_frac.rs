@@ -174,8 +174,11 @@ impl Room for EgyptianFrac {
             return self.status(t);
         }
         let (n, d) = fraction(t, hands.last().copied(), self.seed);
-        let k = egyptian(n, d).len();
-        Some(format!("{n}/{d}  {k} egypt"))
+        let parts = egyptian(n, d);
+        let k = parts.len();
+        let first = parts.first().copied().unwrap_or(0);
+        let last = parts.last().copied().unwrap_or(0);
+        Some(format!("{n}/{d}  {k} units  1/{first}..1/{last}"))
     }
 
     fn reveal(&self) -> &'static str {
