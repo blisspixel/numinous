@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- Consequence-depth pass (cycle 110 attractors/curves batch): Aizawa span,
+  Astroid P=6a and area, Bedhead span, Bifolium leaf area, Blancmange roughness,
+  Bogdanov soft radius band, Cardioid P=8a and area, Catenary sag and span,
+  Chua scroll flips, Henon |det| and span, Duffing amplitude band, Deltoid
+  perimeter and area, Cassini loop shape at b/a, Lemniscate area and half-width.
+  Compact footer and digit contracts hold.
 - Consequence-depth pass (cycle 109 waves/dynamics/shape batch): Bessel nodal
   ring count, Airy dark-ring count, Arnold winding drift and lock band,
   coupled-logistic mean |dx| and SYNC, damped half-life and end amp,

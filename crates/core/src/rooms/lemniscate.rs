@@ -181,7 +181,10 @@ impl Room for Lemniscate {
             return self.status(t);
         }
         let a = scale(t, hands.last().copied(), self.seed);
-        Some(format!("SCALE a={a:.3}  8-curve"))
+        // Bernoulli lemniscate r^2 = 2 a^2 cos(2theta): area a^2, half-width a sqrt(2).
+        let area = a * a;
+        let half_w = a * std::f64::consts::SQRT_2;
+        Some(format!("a={a:.2}  area={area:.2}  half={half_w:.2}"))
     }
 
     fn reveal(&self) -> &'static str {
