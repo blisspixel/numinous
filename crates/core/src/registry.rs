@@ -338,6 +338,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
             variation,
         )),
         Box::new(rooms::lissajous_3d::Lissajous3d::new_with(variation)),
+        Box::new(rooms::kolakoski::Kolakoski::new_with(variation)),
+        Box::new(rooms::beatty::Beatty::new_with(variation)),
+        Box::new(rooms::wythoff::Wythoff::new_with(variation)),
+        Box::new(rooms::minkowski_qm::MinkowskiQm::new_with(variation)),
+        Box::new(rooms::ruler_function::RulerFunction::new_with(variation)),
+        Box::new(rooms::moser_debruijn::MoserDebruijn::new_with(variation)),
     ]
 }
 

@@ -848,7 +848,7 @@ edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
 
 ### What we already have (feel, not curriculum)
 
-**Built now (286 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+**Built now (292 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
 Julia, Cult of Pi, Life and Cellular Automata and Langton and Rule 30, The
 Sandpile, The First Rain, The Magnet, Phantom Jam, Chaos Game, Golden Angle,
 Galton and Buffon, Lissajous, Chladni Figures, Ripple Tank, The Coffee Cup,
@@ -876,7 +876,9 @@ Cartesian Oval, Berry Phase, Runge Phenomenon, Chebyshev Nodes, Bessel J0,
 Hermite Wave, Legendre P_n, Heat Kernel, Cauchy Lorentz, Mexican Hat, Seifert
 Film, Trefoil, Hopf Fibration, Filled Julia, Figure-Eight Knot, Borromean Rings,
 Viviani, Torus Knot, Whitney Umbrella, Roman Surface, Spherical Harmonic,
-Lissajous 3D, plus Awe Engine / Next Wave / universal wonder catalog rooms
+Lissajous 3D, Kolakoski, Beatty, Wythoff, Minkowski Question Mark, Ruler
+Function, Moser-de Bruijn, plus Awe Engine / Next Wave / universal wonder
+catalog rooms
 and games (Quiz, Munch, Arcade, Nim, Gauntlet, SETI, Aliens, Codebreaker, and
 kin), Studio, radio, Journey, Cairn, predict.
 

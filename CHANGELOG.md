@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six sequence inventions (catalog 292): Kolakoski Sequence, Beatty Sequence,
+  Wythoff Array, Minkowski Question Mark, Ruler Function, Moser-de Bruijn.
 - Six topology inventions (catalog 286): Viviani Curve, Torus Knot, Whitney
   Umbrella, Roman Surface, Spherical Harmonic, Lissajous 3D.
 - Six topology inventions (catalog 280): Seifert Film, Trefoil Knot, Hopf
