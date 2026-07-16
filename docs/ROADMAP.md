@@ -154,8 +154,13 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   solution, unit range, residual H, Stirling error, gap to fair).
   **Cycle 108 classical/prob batch:** Basel, Birthday, Blackbody, Central Limit,
   Coupon, Brownian, Brewster, Wallis, Benford, Beats, Simple Pendulum, Escape
-  Velocity, Kepler Areas, Stirling. Subjective participant evidence and the
-  stranger hallway remain open.
+  Velocity, Kepler Areas, Stirling.
+  **Cycle 109 waves/dynamics/shape batch:** Bessel, Airy, Circle Map, Coupled
+  Logistic, Damped Sine, Cauchy-Lorentz, AM Modulation, Bifurcation, Beatty,
+  Chebyshev, Clifford, Clothoid, Cycloid, Archimedean (nodal rings, winding
+  lock, sync |dx|, half-life, FWHM, AM carrier share, Feigenbaum band, |r-phi|,
+  max interpolant error, attractor span, dkappa/ds, path L/r, gap/turn).
+  Subjective participant evidence and the stranger hallway remain open.
 - **Done (Share short-loop export, machine path):** App key L exports a
   24-frame looping APNG of the current visit (phase sweep, or Life generation
   advance) with the same poke trail and Visual Era as P-key still postcards.

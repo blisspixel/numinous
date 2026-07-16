@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- Consequence-depth pass (cycle 109 waves/dynamics/shape batch): Bessel nodal
+  ring count, Airy dark-ring count, Arnold winding drift and lock band,
+  coupled-logistic mean |dx| and SYNC, damped half-life and end amp,
+  Cauchy FWHM and peak, AM depth and carrier share, bifurcation mid/span band,
+  Beatty |r-phi| and unique hits, Chebyshev max Runge error, Clifford span,
+  clothoid dkappa/ds, cycloid path in r units, Archimedean gap per turn.
+  Compact footer and digit contracts hold.
 - Consequence-depth pass (cycle 108 classical/prob batch): Basel err vs pi^2/6,
   Birthday pair count and half-threshold, Blackbody Wien peak, CLT SE shrink,
   Coupon H_n and last-wait, Brownian rms scale, Brewster d-to-iB and p-pol zero,
