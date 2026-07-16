@@ -180,7 +180,14 @@ impl Room for SimplePendulum {
             return self.status(t);
         }
         let e = energy(t, hands.last().copied(), self.seed);
-        Some(format!("E={e:.3}  pend"))
+        let kind = if e < 1.0 {
+            "libration"
+        } else if (e - 1.0).abs() < 0.05 {
+            "separatrix"
+        } else {
+            "rotation"
+        };
+        Some(format!("E={e:.3}  {kind}"))
     }
 
     fn reveal(&self) -> &'static str {

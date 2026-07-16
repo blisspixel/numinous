@@ -136,7 +136,8 @@ impl Room for Coupon {
     fn status(&self, t: f64) -> Option<String> {
         let n = n_param(t, None, self.seed).round() as u32;
         let e = expected_t(n.max(1));
-        Some(format!("n={n}  E={e:.1}  DRAG:N"))
+        let last = n as f64; // expected waits for last coupon is n
+        Some(format!("n={n}  E={e:.1}  last~{last:.0}  DRAG:N"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -160,9 +161,13 @@ impl Room for Coupon {
         if hands.is_empty() {
             return self.status(t);
         }
-        let n = n_param(t, hands.last().copied(), self.seed).round() as u32;
-        let e = expected_t(n.max(1));
-        Some(format!("N={n}  E={e:.2}"))
+        let n = n_param(t, hands.last().copied(), self.seed)
+            .round()
+            .max(1.0) as u32;
+        let e = expected_t(n);
+        let hn = e / n as f64;
+        let last = n as f64;
+        Some(format!("E={e:.1}  ~n Hn  Hn={hn:.2}  last~{last:.0}"))
     }
 
     fn reveal(&self) -> &'static str {

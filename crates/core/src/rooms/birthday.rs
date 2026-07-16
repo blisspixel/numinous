@@ -131,7 +131,8 @@ impl Room for Birthday {
     fn status(&self, t: f64) -> Option<String> {
         let n = n_param(t, None, self.seed).round() as u32;
         let p = p_collision(n, 365);
-        Some(format!("n={n}  p={p:.2}  DRAG:N"))
+        let vs = if n >= 23 { ">=50%" } else { "<50%" };
+        Some(format!("n={n}  p={p:.2}  {vs}  DRAG:N"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -157,7 +158,9 @@ impl Room for Birthday {
         }
         let n = n_param(t, hands.last().copied(), self.seed).round() as u32;
         let p = p_collision(n, 365);
-        Some(format!("N={n}  P={p:.3}"))
+        let pairs = n.saturating_sub(1) as u64 * n as u64 / 2;
+        let flag = if p >= 0.5 { "over half" } else { "under half" };
+        Some(format!("n={n}  p={p:.3}  {pairs} pairs  {flag}"))
     }
 
     fn reveal(&self) -> &'static str {
@@ -177,6 +180,22 @@ mod tests {
     fn twenty_three_near_half() {
         let p = p_collision(23, 365);
         assert!(p > 0.5 && p < 0.55);
+    }
+
+    #[test]
+    fn action_names_pairs_and_threshold() {
+        let s = Birthday::new()
+            .status_input(
+                0.4,
+                &[RoomInput::PointerDown {
+                    x: 0.3,
+                    y: 0.5,
+                    t: 0.0,
+                }],
+            )
+            .unwrap();
+        assert!(s.contains("pairs") || s.contains("half"));
+        assert!(s.chars().count() <= 56);
     }
 
     #[test]

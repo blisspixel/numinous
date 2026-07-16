@@ -165,7 +165,8 @@ impl Room for Stirling {
         let n = n_param(t, hands.last().copied(), self.seed).round() as u32;
         let n = n.max(1);
         let ratio = (log_fact(n) - log_stirling(n as f64)).exp();
-        Some(format!("N={n}  ratio={ratio:.3}"))
+        let rel = (ratio - 1.0).abs();
+        Some(format!("n!/S={ratio:.4}  rel err={rel:.1e}"))
     }
 
     fn reveal(&self) -> &'static str {
