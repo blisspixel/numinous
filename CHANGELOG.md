@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six number-theory inventions (catalog 328): Lucky Numbers, Gaussian Primes,
+  Quadratic Residues, Zeckendorf, Egyptian Fractions, Pell Path.
 - Six dynamics inventions (catalog 322): Simple Pendulum, Blackbody Spectrum,
   Kepler Areas, Escape Velocity, Coupled Oscillators, Prism Dispersion.
 - Six classical curve inventions (catalog 316): Superellipse, Cochleoid,

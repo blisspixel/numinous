@@ -374,6 +374,14 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::escape_velocity::EscapeVelocity::new_with(variation)),
         Box::new(rooms::coupled_osc::CoupledOsc::new_with(variation)),
         Box::new(rooms::snell_prism::SnellPrism::new_with(variation)),
+        Box::new(rooms::lucky_numbers::LuckyNumbers::new_with(variation)),
+        Box::new(rooms::gaussian_primes::GaussianPrimes::new_with(variation)),
+        Box::new(rooms::quadratic_residues::QuadraticResidues::new_with(
+            variation,
+        )),
+        Box::new(rooms::zeckendorf::Zeckendorf::new_with(variation)),
+        Box::new(rooms::egyptian_frac::EgyptianFrac::new_with(variation)),
+        Box::new(rooms::pell_path::PellPath::new_with(variation)),
     ]
 }
 
