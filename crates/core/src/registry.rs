@@ -388,6 +388,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::markov_chain::MarkovChain::new_with(variation)),
         Box::new(rooms::huffman_tree::HuffmanTree::new_with(variation)),
         Box::new(rooms::mutual_info::MutualInfo::new_with(variation)),
+        Box::new(rooms::klein_bottle::KleinBottle::new_with(variation)),
+        Box::new(rooms::cross_cap::CrossCap::new_with(variation)),
+        Box::new(rooms::boy_surface::BoySurface::new_with(variation)),
+        Box::new(rooms::solid_torus::SolidTorus::new_with(variation)),
+        Box::new(rooms::hopf_link::HopfLink::new_with(variation)),
+        Box::new(rooms::unknot::Unknot::new_with(variation)),
     ]
 }
 
