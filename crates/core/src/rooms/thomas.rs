@@ -176,7 +176,39 @@ impl Room for Thomas {
             return self.status(t);
         }
         let b = b_param(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE b={b:.3}"))
+        // Lightweight span after short burn (not full render integration).
+        let mut x = 0.1_f64;
+        let mut y = 0.0_f64;
+        let mut z = 0.0_f64;
+        for _ in 0..200 {
+            let dx = y.sin() - b * x;
+            let dy = z.sin() - b * y;
+            let dz = x.sin() - b * z;
+            x += DT * dx;
+            y += DT * dy;
+            z += DT * dz;
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        for _ in 0..800 {
+            let dx = y.sin() - b * x;
+            let dy = z.sin() - b * y;
+            let dz = x.sin() - b * z;
+            x += DT * dx;
+            y += DT * dy;
+            z += DT * dz;
+            if !x.is_finite() || !y.is_finite() {
+                break;
+            }
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("b={b:.2}  span={span:.2}  damp"))
     }
 
     fn reveal(&self) -> &'static str {

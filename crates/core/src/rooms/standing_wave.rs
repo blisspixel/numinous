@@ -145,7 +145,10 @@ impl Room for StandingWave {
             return self.status(t);
         }
         let n = mode(t, hands.last().copied());
-        Some(format!("MODE n={n}  nodes={}", n + 1))
+        // Fixed ends: n+1 nodes (incl ends), n antinodes, node spacing L/n.
+        let nodes = n + 1;
+        let dx = 1.0 / n as f64;
+        Some(format!("n={n}  nodes={nodes}  anti={n}  dx={dx:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

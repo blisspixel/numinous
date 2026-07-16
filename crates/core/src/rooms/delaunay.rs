@@ -189,7 +189,10 @@ impl Room for Delaunay {
             return self.status(t);
         }
         let n = count(t, hands.last().copied());
-        Some(format!("COUNT n={n}  mesh"))
+        // Planar triangulation (hull edges ignored): ~2n triangles, ~3n edges.
+        let tri = 2usize.saturating_mul(n).saturating_sub(4);
+        let edges = 3usize.saturating_mul(n).saturating_sub(6);
+        Some(format!("n={n}  ~tri={tri}  ~E={edges}"))
     }
 
     fn reveal(&self) -> &'static str {

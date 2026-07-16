@@ -159,7 +159,20 @@ impl Room for FresnelInt {
             return self.status(t);
         }
         let tm = tmax(t, hands.last().copied(), self.seed);
-        Some(format!("T={tm:.3}  cloth"))
+        // Integrate Fresnel C,S to tmax; asymptote is (1/2, 1/2).
+        let steps = 120usize;
+        let dt = tm / steps as f64;
+        let mut c = 0.0_f64;
+        let mut s = 0.0_f64;
+        for i in 1..=steps {
+            let u = i as f64 * dt;
+            let mid = u - 0.5 * dt;
+            let ang = std::f64::consts::FRAC_PI_2 * mid * mid;
+            c += ang.cos() * dt;
+            s += ang.sin() * dt;
+        }
+        let err = (c - 0.5).hypot(s - 0.5);
+        Some(format!("T={tm:.2}  C={c:.2} S={s:.2}  d={err:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

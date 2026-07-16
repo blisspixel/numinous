@@ -181,7 +181,15 @@ impl Room for GaussianPrimes {
             return self.status(t);
         }
         let r = radius(t, hands.last().copied(), self.seed);
-        Some(format!("R={r}  lattice"))
+        let mut cnt = 0u32;
+        for a in -r..=r {
+            for b in -r..=r {
+                if is_gaussian_prime(a, b) {
+                    cnt += 1;
+                }
+            }
+        }
+        Some(format!("R={r}  G-primes={cnt}"))
     }
 
     fn reveal(&self) -> &'static str {

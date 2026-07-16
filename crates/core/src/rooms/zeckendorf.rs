@@ -181,7 +181,10 @@ impl Room for Zeckendorf {
             return self.status(t);
         }
         let n = max_n(t, hands.last().copied(), self.seed);
-        Some(format!("N={n}  zeck"))
+        let fibs = fibs_upto(n.max(2));
+        let bits = zeck_bits(n, &fibs);
+        let ones = bits.iter().filter(|&&b| b).count();
+        Some(format!("n={n}  fibs={}  ones={ones}", fibs.len()))
     }
 
     fn reveal(&self) -> &'static str {
