@@ -350,6 +350,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::partition::Partition::new_with(variation)),
         Box::new(rooms::paperfold::Paperfold::new_with(variation)),
         Box::new(rooms::sylvester::Sylvester::new_with(variation)),
+        Box::new(rooms::poisson::Poisson::new_with(variation)),
+        Box::new(rooms::brownian::Brownian::new_with(variation)),
+        Box::new(rooms::birthday::Birthday::new_with(variation)),
+        Box::new(rooms::coupon::Coupon::new_with(variation)),
+        Box::new(rooms::zipf::Zipf::new_with(variation)),
+        Box::new(rooms::gamblers_ruin::GamblersRuin::new_with(variation)),
     ]
 }
 

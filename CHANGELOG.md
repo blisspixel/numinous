@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six stochastic inventions (catalog 304): Poisson Process, Brownian Motion,
+  Birthday Paradox, Coupon Collector, Zipf Law, Gambler's Ruin.
 - Six arithmetic inventions (catalog 298): Mertens Function, Liouville Function,
   Euler Totient, Partition Function, Paperfold Sequence, Sylvester Sequence.
 - Six sequence inventions (catalog 292): Kolakoski Sequence, Beatty Sequence,

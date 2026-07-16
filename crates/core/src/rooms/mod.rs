@@ -23,12 +23,14 @@ pub mod berry;
 pub mod bessel;
 pub mod beverton_holt;
 pub mod bifurcation;
+pub mod birthday;
 pub mod blancmange;
 pub mod bogdanov;
 pub mod borromean;
 pub mod braess;
 pub mod bragg;
 pub mod brewster;
+pub mod brownian;
 pub mod brusselator;
 pub mod buddhabrot;
 pub mod buffon_needle;
@@ -65,6 +67,7 @@ pub mod continued_frac;
 pub mod coriolis;
 pub mod coupled_logistic;
 pub mod coupled_tent;
+pub mod coupon;
 pub mod cult_of_pi;
 pub mod curse_dimension;
 pub mod cycloid;
@@ -104,6 +107,7 @@ pub mod fourier_square;
 pub mod fourteen_beacons;
 pub mod function_painter;
 pub mod galton_board;
+pub mod gamblers_ruin;
 pub mod game_of_life;
 pub mod gauss_map;
 pub mod geodesic;
@@ -212,6 +216,7 @@ pub mod phantom_jam;
 pub mod phoenix;
 pub mod pickover;
 pub mod poincare_disc;
+pub mod poisson;
 pub mod polarization;
 pub mod prime_gaps;
 pub mod prime_spirals;
@@ -305,6 +310,7 @@ pub mod wythoff;
 pub mod zeno;
 pub mod zeta_walk;
 
+pub mod zipf;
 pub(super) fn variation_unit(seed: u64, salt: u64) -> f64 {
     if seed == 0 {
         0.0
