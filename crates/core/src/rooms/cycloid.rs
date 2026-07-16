@@ -164,7 +164,9 @@ impl Room for Cycloid {
             return self.status(t);
         }
         let n = cups(t, hands.last().copied(), self.seed);
-        Some(format!("CUPS={n:.2}  roll path"))
+        // One arch has arc length 8r; total path scales with cup count.
+        let path_r = 8.0 * n;
+        Some(format!("cups={n:.1}  L={path_r:.1}r  tautochrone"))
     }
 
     fn reveal(&self) -> &'static str {

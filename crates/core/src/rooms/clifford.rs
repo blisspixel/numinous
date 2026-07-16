@@ -158,8 +158,28 @@ impl Room for Clifford {
         if hands.is_empty() {
             return self.status(t);
         }
-        let (a, b, _c, _d) = params(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE a={a:.3}  b={b:.3}"))
+        let (a, b, c, d) = params(t, hands.last().copied(), self.seed);
+        let mut x = 0.1_f64;
+        let mut y = 0.1_f64;
+        let mut min_x = f64::MAX;
+        let mut max_x = f64::MIN;
+        let mut min_y = f64::MAX;
+        let mut max_y = f64::MIN;
+        for _ in 0..800 {
+            let nx = (a * y).sin() + c * (a * x).cos();
+            let ny = (b * x).sin() + d * (b * y).cos();
+            x = nx;
+            y = ny;
+            if !x.is_finite() || !y.is_finite() {
+                break;
+            }
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("a={a:.2} b={b:.2}  span={span:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

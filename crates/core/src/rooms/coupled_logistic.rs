@@ -158,7 +158,32 @@ impl Room for CoupledLogistic {
             return self.status(t);
         }
         let e = coupling(t, hands.last().copied(), self.seed);
-        Some(format!("COUPLE e={e:.3}"))
+        let r = 3.7
+            + if self.seed == 0 {
+                0.0
+            } else {
+                (self.seed % 4) as f64 * 0.02
+            };
+        let mut x = 0.2;
+        let mut y = 0.7;
+        for _ in 0..80 {
+            let nx = (1.0 - e) * r * x * (1.0 - x) + e * r * y * (1.0 - y);
+            let ny = (1.0 - e) * r * y * (1.0 - y) + e * r * x * (1.0 - x);
+            x = nx.clamp(0.0, 1.0);
+            y = ny.clamp(0.0, 1.0);
+        }
+        let mut sum = 0.0;
+        let n = 120usize;
+        for _ in 0..n {
+            let nx = (1.0 - e) * r * x * (1.0 - x) + e * r * y * (1.0 - y);
+            let ny = (1.0 - e) * r * y * (1.0 - y) + e * r * x * (1.0 - x);
+            x = nx.clamp(0.0, 1.0);
+            y = ny.clamp(0.0, 1.0);
+            sum += (x - y).abs();
+        }
+        let md = sum / n as f64;
+        let tag = if md < 0.04 { "SYNC" } else { "split" };
+        Some(format!("e={e:.3}  mean|dx|={md:.3}  {tag}"))
     }
 
     fn reveal(&self) -> &'static str {

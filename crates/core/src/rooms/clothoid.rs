@@ -194,8 +194,10 @@ impl Room for Clothoid {
         if hands.is_empty() {
             return self.status(t);
         }
-        let a = scale(t, hands.last().copied(), self.seed);
-        Some(format!("SCALE a={a:.3}  Fresnel"))
+        let a = scale(t, hands.last().copied(), self.seed).clamp(0.3, 2.5);
+        // Clothoid: curvature kappa = s / a^2, so dkappa/ds = 1/a^2.
+        let dks = 1.0 / (a * a);
+        Some(format!("a={a:.2}  dkappa/ds={dks:.2}  Fresnel"))
     }
 
     fn reveal(&self) -> &'static str {

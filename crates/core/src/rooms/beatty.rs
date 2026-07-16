@@ -146,9 +146,26 @@ impl Room for Beatty {
         if hands.is_empty() {
             return self.status(t);
         }
-        let r = r_param(t, hands.last().copied(), self.seed);
+        let r = r_param(t, hands.last().copied(), self.seed).clamp(1.15, 3.5);
         let s = r / (r - 1.0);
-        Some(format!("R={r:.3}  S={s:.2}"))
+        let phi = (1.0 + 5.0_f64.sqrt()) / 2.0;
+        let dphi = (r - phi).abs();
+        // Sample partition: count unique floor values among first 40 of each seq.
+        let mut seen = [false; 200];
+        let mut hits = 0u32;
+        for n in 1..=40 {
+            let a = (n as f64 * r).floor() as usize;
+            let b = (n as f64 * s).floor() as usize;
+            if a < seen.len() && !seen[a] {
+                seen[a] = true;
+                hits += 1;
+            }
+            if b < seen.len() && !seen[b] {
+                seen[b] = true;
+                hits += 1;
+            }
+        }
+        Some(format!("r={r:.2}  s={s:.2}  |r-phi|={dphi:.3}  u={hits}"))
     }
 
     fn reveal(&self) -> &'static str {

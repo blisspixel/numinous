@@ -173,8 +173,11 @@ impl Room for Airy {
         if hands.is_empty() {
             return self.status(t);
         }
-        let s = scale_param(t, hands.last().copied(), self.seed);
-        Some(format!("S={s:.3}  airy"))
+        let s = scale_param(t, hands.last().copied(), self.seed).clamp(0.5, 3.0);
+        // Toy jinc dark rings near multiples of pi in the radial arg up to 12/s.
+        let x_max = 12.0 / s;
+        let dark = (x_max / std::f64::consts::PI).floor() as i32;
+        Some(format!("s={s:.2}  ~{dark} dark rings  core"))
     }
 
     fn reveal(&self) -> &'static str {

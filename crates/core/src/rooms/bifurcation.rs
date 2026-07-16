@@ -150,7 +150,18 @@ impl Room for Bifurcation {
             return self.status(t);
         }
         let (r0, r1) = r_window(t, hands.last().copied());
-        Some(format!("WIN r=[{r0:.3},{r1:.3}]"))
+        let mid = 0.5 * (r0 + r1);
+        let span = (r1 - r0).max(0.0);
+        let band = if mid < 3.0 {
+            "fixed"
+        } else if mid < 3.45 {
+            "period"
+        } else if mid < 3.57 {
+            "double"
+        } else {
+            "chaos"
+        };
+        Some(format!("mid={mid:.2}  span={span:.2}  {band}"))
     }
 
     fn reveal(&self) -> &'static str {
