@@ -328,6 +328,16 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
             variation,
         )),
         Box::new(rooms::borromean::Borromean::new_with(variation)),
+        Box::new(rooms::viviani::Viviani::new_with(variation)),
+        Box::new(rooms::torus_knot::TorusKnot::new_with(variation)),
+        Box::new(rooms::whitney_umbrella::WhitneyUmbrella::new_with(
+            variation,
+        )),
+        Box::new(rooms::roman_surface::RomanSurface::new_with(variation)),
+        Box::new(rooms::spherical_harmonic::SphericalHarmonic::new_with(
+            variation,
+        )),
+        Box::new(rooms::lissajous_3d::Lissajous3d::new_with(variation)),
     ]
 }
 

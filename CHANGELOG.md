@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six topology inventions (catalog 286): Viviani Curve, Torus Knot, Whitney
+  Umbrella, Roman Surface, Spherical Harmonic, Lissajous 3D.
 - Six topology inventions (catalog 280): Seifert Film, Trefoil Knot, Hopf
   Fibration, Filled Julia, Figure-Eight Knot, Borromean Rings.
 - Six special-function inventions (catalog 274): Bessel J0, Hermite Wave,
