@@ -177,6 +177,68 @@ fn near_repair(column: usize, row: usize, field: FieldLayout, pokes: &[(f64, f64
     hand_points(pokes).any(|(px, py)| (x - px).hypot(y - py) < 0.16)
 }
 
+/// Fixed analysis grid so status can grade placement without a canvas. The
+/// geometry matches the normalized hand radius used by [`near_repair`].
+fn analysis_field() -> FieldLayout {
+    FieldLayout {
+        columns: 32,
+        rows: 16,
+        step_x: 1,
+        step_y: 1,
+        glyph_scale: 1,
+        pixel_font: false,
+        origin_y: 0,
+        surface_width: 32,
+        surface_height: 16,
+    }
+}
+
+fn newest_hand(inputs: &[RoomInput]) -> Option<(f64, f64)> {
+    inputs.iter().rev().find_map(|input| match *input {
+        RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. }
+            if x.is_finite() && y.is_finite() =>
+        {
+            Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
+        }
+        _ => None,
+    })
+}
+
+/// Count display faults inside the newest hold radius, and name the exact
+/// digit under the finger. Placement is a decision: hold a faulted patch to
+/// save digits, or hold a clean patch and see FIX 0.
+fn newest_patch_decision(seed: u64, t: f64, hand: (f64, f64)) -> (usize, u8) {
+    let field = analysis_field();
+    let phase = finite_phase(t);
+    let tick = (phase * (PHASE_TICKS - 1) as f64).floor() as usize;
+    let pokes = [hand];
+    let mut saved = 0usize;
+    let mut nearest_digit = digits()[0];
+    let mut nearest_dist = f64::INFINITY;
+    for index in 0..field.cells() {
+        let column = index % field.columns;
+        let row = index / field.columns;
+        let cx = ((column as f64 + 0.5) * field.step_x as f64) / field.surface_width as f64;
+        let cy = (field.origin_y as f64 + (row as f64 + 0.5) * field.step_y as f64)
+            / field.surface_height as f64;
+        let dist = (cx - hand.0).hypot(cy - hand.1);
+        if dist < nearest_dist {
+            nearest_dist = dist;
+            nearest_digit = digits()[index % digits().len()];
+        }
+        if !near_repair(column, row, field, &pokes) {
+            continue;
+        }
+        let hash = cell_hash(seed, tick, index);
+        let threshold = phase * 0.42;
+        let faulted = (hash % 10_000) as f64 / 10_000.0 < threshold;
+        if faulted {
+            saved = saved.saturating_add(1);
+        }
+    }
+    (saved, nearest_digit)
+}
+
 fn glyph_for(
     exact: u8,
     _index: usize,
@@ -333,7 +395,7 @@ impl Room for CultOfPi {
         let phase = finite_phase(t);
         let tick = (phase * (PHASE_TICKS - 1) as f64).floor() as usize + 1;
         Some(format!(
-            "CH{tick:02}/{PHASE_TICKS}  EXP FAULT {:.0}%",
+            "CH{tick:02}/{PHASE_TICKS}  FAULT {:.0}%  HOLD:FIX",
             phase * 42.0
         ))
     }
@@ -355,17 +417,13 @@ impl Room for CultOfPi {
             })
             .count()
             > MAX_ROOM_POKES;
-        if retained {
-            Some(format!(
-                "{repairs} RECENT  CH{tick:02}  EXP FAULT {:.0}%",
-                phase * 42.0
-            ))
-        } else {
-            Some(format!(
-                "{repairs} HELD  CH{tick:02}  EXP FAULT {:.0}%",
-                phase * 42.0
-            ))
-        }
+        let (saved, digit) = newest_hand(inputs)
+            .map(|hand| newest_patch_decision(self.seed, t, hand))
+            .unwrap_or((0, 0));
+        // Placement decision: FIX names faults restored under the newest hold,
+        // D names the exact digit at the finger. Compact enough for the footer.
+        let kind = if retained { "RECENT" } else { "HELD" };
+        Some(format!("{repairs} {kind} FIX{saved} D{digit} CH{tick:02}"))
     }
 
     fn verb(&self) -> Option<&'static str> {
@@ -399,7 +457,7 @@ impl Room for CultOfPi {
 mod tests {
     use super::{
         CultOfPi, MAX_FIELD_CELLS, PI_HEADER, digits, generate_pi_digits, glyph_for, layout,
-        near_repair,
+        near_repair, newest_patch_decision,
     };
     use crate::MAX_ROOM_POKES;
     use crate::canvas::Canvas;
@@ -473,10 +531,12 @@ mod tests {
         room.render(&mut base, 0.0);
         room.render_input(&mut held, 0.0, &inputs);
 
-        assert_eq!(
-            room.status_input(0.0, &inputs).as_deref(),
-            Some("1 HELD  CH01  EXP FAULT 0%")
-        );
+        let status = room.status_input(0.0, &inputs).expect("held status");
+        assert!(status.starts_with("1 HELD FIX"));
+        assert!(status.contains(" D"));
+        assert!(status.contains(" CH01"));
+        // Phase zero has no display faults: placement still reports FIX0.
+        assert!(status.contains("FIX0"), "{status}");
         assert_ne!(base.to_text(), held.to_text());
         assert!(
             base.delta(&held)
@@ -496,22 +556,31 @@ mod tests {
             })
             .collect();
 
-        assert_eq!(
-            room.status_input(0.5, &inputs).as_deref(),
-            Some("24 RECENT  CH32  EXP FAULT 21%")
-        );
-        assert!(room.status_input(0.5, &inputs).unwrap().chars().count() <= 30);
+        let status = room.status_input(0.5, &inputs).expect("recent status");
+        assert!(status.starts_with("24 RECENT FIX"));
+        assert!(status.contains(" CH32"));
+        assert!(status.chars().count() <= 30, "{status}");
     }
 
     #[test]
-    fn delayed_hold_status_keeps_the_expected_rate_qualifier() {
+    fn delayed_hold_status_grades_placement_against_faults() {
         let room = CultOfPi::new();
-        let inputs = crate::inputs_from_pokes(&[(0.26, 0.34), (0.54, 0.48), (0.76, 0.66)], 0.4);
+        let hands = [(0.26, 0.34), (0.54, 0.48), (0.76, 0.66)];
+        let inputs = crate::inputs_from_pokes(&hands, 0.4);
 
-        assert_eq!(
-            room.status_input(0.4, &inputs).as_deref(),
-            Some("3 HELD  CH26  EXP FAULT 17%")
-        );
+        let status = room.status_input(0.4, &inputs).expect("hold status");
+        assert!(status.starts_with("3 HELD FIX"));
+        assert!(status.contains(" D"));
+        assert!(status.contains(" CH26"));
+        let (saved, digit) = newest_patch_decision(0, 0.4, *hands.last().expect("newest hand"));
+        assert!(status.contains(&format!("FIX{saved}")));
+        assert!(status.contains(&format!("D{digit}")));
+        // A second placement at a different site can change the grade: the
+        // status is about the newest decision, not a cumulative bag.
+        let other = crate::inputs_from_pokes(&[(0.1, 0.1)], 0.4);
+        let other_status = room.status_input(0.4, &other).expect("other");
+        assert!(other_status.starts_with("1 HELD FIX"));
+        assert_ne!(status, other_status);
     }
 
     #[test]

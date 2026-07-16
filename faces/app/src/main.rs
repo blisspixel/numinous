@@ -459,6 +459,7 @@ impl App {
             cursor: 0,
             bites: std::collections::BTreeSet::new(),
             graded: None,
+            bite_flash: None,
         });
         self.sync_room_parameter_voice();
     }
@@ -610,6 +611,7 @@ impl App {
                 cursor: 0,
                 bites: std::collections::BTreeSet::new(),
                 graded: None,
+                bite_flash: None,
             },
             quiz: QuizPlay {
                 round: numinous_core::build_round(seed, 1, 44, 18),
@@ -682,12 +684,14 @@ impl App {
                         let (points, what) = (outcome.score, format!("MUNCH +{}.", outcome.score));
                         self.gauntlet_bank(points, clean, &what);
                     }
-                    key if controls::apply_munch_control(
-                        &mut play.cursor,
-                        &mut play.bites,
-                        key,
-                    ) => {}
-                    _ => {}
+                    key => {
+                        if let Some(cell) =
+                            controls::apply_munch_control(&mut play.cursor, &mut play.bites, key)
+                        {
+                            play.flash_bite(cell);
+                            self.play_munch_crunch(cell as u64 ^ 0x6A17);
+                        }
+                    }
                 }
             }
             1 => {
@@ -788,11 +792,27 @@ impl App {
             }
             Key::Named(NamedKey::Enter) => self.munch_grade(),
             key => {
-                if let Some(play) = &mut self.munch {
-                    let _ = controls::apply_munch_control(&mut play.cursor, &mut play.bites, key);
+                if let Some(play) = &mut self.munch
+                    && let Some(cell) =
+                        controls::apply_munch_control(&mut play.cursor, &mut play.bites, key)
+                {
+                    play.flash_bite(cell);
+                    self.play_munch_crunch(cell as u64);
                 }
             }
         }
+    }
+
+    /// Soft one-shot noise tick over the room score (Munch bite juice).
+    fn play_munch_crunch(&self, seed: u64) {
+        let Some(player) = &self.player else {
+            return;
+        };
+        if self.muted {
+            return;
+        }
+        let samples = numinous_core::munch_crunch(player.sample_rate(), seed);
+        player.play_oneshot(samples, 0.55 * self.volume);
     }
 
     /// One key into standalone Nim, including an explicit retry after either
@@ -847,6 +867,33 @@ impl App {
             );
         }
         postcard::write_room_postcard(
+            self.rooms[self.current].as_ref(),
+            self.t,
+            &self.inputs,
+            self.era,
+            dir,
+        )
+    }
+
+    /// Write a short looping APNG of the current visit: one phase cycle, or
+    /// advancing Life generations for the persistent Game of Life session.
+    fn save_short_loop(&self) -> Option<std::path::PathBuf> {
+        self.save_short_loop_to(&postcard::default_postcard_dir())
+            .ok()
+    }
+
+    fn save_short_loop_to(&self, dir: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
+        if self.current_room_is_life() {
+            let room = self.rooms[self.current].as_ref();
+            return postcard::write_life_loop(
+                room.meta().id,
+                room.meta().accent,
+                &self.life_session,
+                self.era,
+                dir,
+            );
+        }
+        postcard::write_room_loop(
             self.rooms[self.current].as_ref(),
             self.t,
             &self.inputs,
@@ -978,13 +1025,14 @@ impl App {
 
     fn left_press_context(&self) -> mouse_input::LeftPressContext {
         mouse_input::LeftPressContext {
-            game_click_mode: self.munch.is_some() || self.quiz.is_some(),
+            game_click_mode: self.munch.is_some()
+                || self.quiz.is_some()
+                || self.nim.is_some()
+                || self.arcade.is_some()
+                || self.gauntlet.is_some(),
             studio: self.studio,
             show_help: self.show_help,
             show_journey: self.show_journey,
-            arcade: self.arcade.is_some(),
-            nim: self.nim.is_some(),
-            gauntlet: self.gauntlet.is_some(),
             room_has_verb: self.rooms[self.current].verb().is_some(),
         }
     }
@@ -1102,14 +1150,32 @@ impl App {
         false
     }
 
-    /// A click lands in the games: munch toggles the cell, the quiz answers.
+    /// One step from the Muncher toward a clicked board cell.
+    fn arcade_step_toward(from: usize, to: usize) -> Option<numinous_core::munch_arcade::Action> {
+        let cols = numinous_core::munchers::COLS;
+        let (fr, fc) = (from / cols, from % cols);
+        let (tr, tc) = (to / cols, to % cols);
+        if tr < fr {
+            Some(numinous_core::munch_arcade::Action::Up)
+        } else if tr > fr {
+            Some(numinous_core::munch_arcade::Action::Down)
+        } else if tc < fc {
+            Some(numinous_core::munch_arcade::Action::Left)
+        } else if tc > fc {
+            Some(numinous_core::munch_arcade::Action::Right)
+        } else {
+            None
+        }
+    }
+
+    /// A click lands in the games: cells, heaps, choices, and stages all answer.
     fn click(&mut self) {
         let Some(window) = &self.window else {
             return;
         };
         let size = window.inner_size();
-        let (width, height) = (size.width as f64, size.height as f64);
-        if width < 1.0 || height < 1.0 {
+        let (width, height) = (size.width as usize, size.height as usize);
+        if width == 0 || height == 0 {
             return;
         }
         let (mx, my) = self.mouse;
@@ -1117,11 +1183,11 @@ impl App {
             if play.graded.is_some() {
                 return;
             }
-            if let Some(cell) =
-                game_draw::MunchLayout::new(size.width as usize, size.height as usize).hit(mx, my)
-            {
+            if let Some(cell) = game_draw::MunchLayout::new(width, height).hit(mx, my) {
                 play.cursor = cell;
                 controls::toggle_munch_bite(&mut play.bites, cell);
+                play.flash_bite(cell);
+                self.play_munch_crunch(cell as u64);
             }
             return;
         }
@@ -1130,16 +1196,78 @@ impl App {
                 self.quiz_next();
                 return;
             }
-            let layout = game_draw::QuizChoiceLayout::new(
-                size.width as usize,
-                size.height as usize,
-                quiz.round.choices.len(),
-            );
+            let layout = game_draw::QuizChoiceLayout::new(width, height, quiz.round.choices.len());
             if let Some(index) = layout.hit(my, quiz.round.choices.len())
                 && let Some(choice) = quiz.round.choices.get(index)
             {
                 let letter = choice.letter;
                 self.quiz_answer(letter);
+            }
+            return;
+        }
+        if self.nim.as_ref().is_some_and(|play| play.over.is_none()) {
+            let heaps = self
+                .nim
+                .as_ref()
+                .map(|play| play.heaps.clone())
+                .unwrap_or_default();
+            if let Some((heap, take)) = game_draw::NimLayout::new(width, height).hit(mx, my, &heaps)
+            {
+                if let Some(play) = self.nim.as_mut() {
+                    play.selected = heap;
+                    let max_take = play.heaps.get(heap).copied().unwrap_or(1).max(1);
+                    play.take = take.max(1).min(max_take);
+                }
+                // A click that names both heap and stones commits the move.
+                self.nim_move();
+            }
+            return;
+        }
+        if let Some(play) = &mut self.arcade {
+            if play.over {
+                return;
+            }
+            if let Some(cell) = game_draw::MunchLayout::new(width, height).hit(mx, my) {
+                let muncher = play.run.muncher;
+                if cell == muncher {
+                    self.arcade_act(numinous_core::munch_arcade::Action::Eat);
+                } else if let Some(action) = Self::arcade_step_toward(muncher, cell) {
+                    self.arcade_act(action);
+                }
+            }
+            return;
+        }
+        if let Some(run) = &self.gauntlet {
+            match run.stage {
+                0 => {
+                    if run.munch.graded.is_some() {
+                        return;
+                    }
+                    if let Some(cell) = game_draw::MunchLayout::new(width, height).hit(mx, my) {
+                        if let Some(run) = self.gauntlet.as_mut() {
+                            run.munch.cursor = cell;
+                            controls::toggle_munch_bite(&mut run.munch.bites, cell);
+                            run.munch.flash_bite(cell);
+                        }
+                        self.play_munch_crunch(cell as u64 ^ 0x6A17);
+                    }
+                }
+                1 => {
+                    if run.quiz.flash.is_some() {
+                        return;
+                    }
+                    let choices = run.quiz.round.choices.len();
+                    let layout = game_draw::QuizChoiceLayout::new(width, height, choices);
+                    if let Some(index) = layout.hit(my, choices)
+                        && let Some(letter) = self
+                            .gauntlet
+                            .as_ref()
+                            .and_then(|g| g.quiz.round.choices.get(index).map(|c| c.letter))
+                    {
+                        self.gauntlet_key(&Key::Character(letter.to_string().into()));
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -2305,6 +2433,18 @@ impl ApplicationHandler for App {
                         Key::Named(NamedKey::Escape) | Key::Named(NamedKey::Tab) => {
                             self.exit_studio();
                         }
+                        Key::Named(NamedKey::F1) => {
+                            self.studio_panel.toggle_help();
+                        }
+                        Key::Named(NamedKey::F2) => {
+                            // Formula Jam Random: draw a curated, tested recipe.
+                            let spec = self.studio_panel.load_random_recipe();
+                            self.set_studio_sound(spec);
+                        }
+                        Key::Named(NamedKey::F3) => {
+                            // Formula Jam Auto: calm recipe set; F3 resumes after edit.
+                            self.studio_panel.toggle_auto();
+                        }
                         Key::Named(NamedKey::Backspace) => {
                             let spec = self.studio_panel.backspace();
                             self.set_studio_sound(spec);
@@ -2455,6 +2595,21 @@ impl ApplicationHandler for App {
                             {
                                 window.set_title(&format!(
                                     "Numinous  |  postcard saved: {}",
+                                    path.display()
+                                ));
+                            }
+                        }
+                        // L keeps the motion: a short looping APNG of this visit.
+                        Key::Character(c) if c.as_str() == "l" => {
+                            if self.save_gate.admit(
+                                save_gate::SaveKind::ShortLoop,
+                                Instant::now(),
+                                repeat,
+                            ) && let Some(path) = self.save_short_loop()
+                                && let Some(window) = &self.window
+                            {
+                                window.set_title(&format!(
+                                    "Numinous  |  loop saved: {}",
                                     path.display()
                                 ));
                             }
@@ -2644,6 +2799,18 @@ impl ApplicationHandler for App {
                 let interval = 48u64.saturating_sub(play.run.level * 4).max(16);
                 if !play.over && self.frame % interval == 0 {
                     self.arcade_beat();
+                }
+            }
+            if let Some(play) = &mut self.munch {
+                let _ = play.tick_bite_flash();
+            }
+            if let Some(run) = &mut self.gauntlet {
+                let _ = run.munch.tick_bite_flash();
+            }
+            if self.studio {
+                // Auto advances only after dwell and a phrase-edge of gallery phase.
+                if let Some(spec) = self.studio_panel.tick_auto(elapsed, self.t) {
+                    self.set_studio_sound(Some(spec));
                 }
             }
             if self.banner.as_mut().is_some_and(|banner| !banner.tick()) {

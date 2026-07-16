@@ -209,6 +209,13 @@ impl Room for LangtonsAnt {
         Some("CLICK: FLIP A CELL")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        let steps = Self::steps_for(t);
+        Some(format!(
+            "ANT AT {steps} STEPS   FLIP A STARTING CELL TO REPLAY"
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
             self.render(canvas, t);
@@ -229,15 +236,24 @@ impl Room for LangtonsAnt {
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let (x, y) = inputs.iter().rev().find_map(|input| match *input {
-            RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite() => {
-                Some((normalized_grid_cell(x), normalized_grid_cell(y)))
-            }
-            _ => None,
-        })?;
+        let pokes = crate::pokes_from_inputs(inputs);
+        let finite: Vec<(f64, f64)> = pokes
+            .into_iter()
+            .filter(|(x, y)| x.is_finite() && y.is_finite())
+            .collect();
+        let Some(&(lx, ly)) = finite.last() else {
+            return self.status(t);
+        };
+        let x = normalized_grid_cell(lx);
+        let y = normalized_grid_cell(ly);
+        let steps = Self::steps_for(t);
+        let mut grid = init_grid(self.seed);
+        apply_poked_flips(&mut grid, &finite);
+        let grid = run_ant(grid, steps, self.seed);
+        let black = grid.iter().filter(|&&c| c).count();
+        let flips = finite.len();
         Some(format!(
-            "CELL {x},{y} FLIPPED   ANT REPLAYED {} STEPS",
-            Self::steps_for(t)
+            "FLIP {x},{y}  {flips}F  {steps} STEPS  BLACK {black}"
         ))
     }
 
@@ -256,6 +272,18 @@ mod tests {
     };
     use crate::canvas::Canvas;
     use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
+
+    #[test]
+    fn first_contact_status_invites_a_flip() {
+        let room = LangtonsAnt::new();
+        let open = room.status(0.0).expect("open");
+        assert!(open.contains("STEPS"), "{open}");
+        assert!(open.contains("FLIP"), "{open}");
+        assert_eq!(
+            room.status_input(0.0, &[]).as_deref(),
+            room.status(0.0).as_deref()
+        );
+    }
 
     #[test]
     fn one_step_paints_exactly_one_cell() {
@@ -344,10 +372,11 @@ mod tests {
         }];
 
         assert!(poked.ink_count() >= base.ink_count() + 20);
-        assert_eq!(
-            room.status_input(0.0, &input).as_deref(),
-            Some("CELL 50,50 FLIPPED   ANT REPLAYED 2500 STEPS")
-        );
+        let status = room.status_input(0.0, &input).expect("flip status");
+        assert!(status.contains("FLIP 50,50"), "{status}");
+        assert!(status.contains("1F"), "{status}");
+        assert!(status.contains("2500 STEPS"), "{status}");
+        assert!(status.contains("BLACK "), "{status}");
     }
 
     #[test]

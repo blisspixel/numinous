@@ -188,8 +188,24 @@ impl Room for Harmonograph {
             return self.status(t);
         };
         let (detune, damping) = self.hand_params(x, y);
+        // Near zero detune the weave closes into a simple chord figure; open
+        // detune blooms a rose that never quite repeats.
+        let figure = if detune.abs() < 0.008 {
+            "CLOSED"
+        } else if detune.abs() < 0.03 {
+            "OPEN"
+        } else {
+            "BLOOM"
+        };
+        let life = if damping < 0.012 {
+            "LONG"
+        } else if damping < 0.022 {
+            "MED"
+        } else {
+            "SHORT"
+        };
         Some(format!(
-            "TUNED DETUNE {detune:+.3}   DAMP {damping:.3}   MOVING"
+            "TUNED {figure}  DET {detune:+.3}  DAMP {damping:.3} {life}"
         ))
     }
 
@@ -282,9 +298,18 @@ mod tests {
         let early = room.status_input(0.2, &inputs).expect("tuned status");
         let late = room.status_input(0.8, &inputs).expect("tuned status");
         assert_eq!(early, late);
-        assert!(early.contains("TUNED DETUNE"));
-        assert!(early.contains("DAMP"));
-        assert!(early.contains("MOVING"));
+        assert!(early.starts_with("TUNED "), "{early}");
+        assert!(early.contains("DET "));
+        assert!(early.contains("DAMP "));
+        // x=0.75 opens the weave; y=0.25 damps slowly.
+        assert!(
+            early.contains("OPEN") || early.contains("BLOOM") || early.contains("CLOSED"),
+            "{early}"
+        );
+        assert!(
+            early.contains("LONG") || early.contains("MED") || early.contains("SHORT"),
+            "{early}"
+        );
     }
 
     #[test]

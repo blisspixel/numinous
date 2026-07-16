@@ -117,6 +117,15 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
 - **Done (the keystone, the Cairn, and the chaos readouts):** the predict-then-reveal verb (MCP `predict`, Phase A of the Exceptional Path): commit a guess of a room's own status readout at a hidden moment, then meet the truth graded as a gap with a learning-progress band, a self-owned mirror that never posts a score. The graded `challenge` tool in two kinds (touch a target box, or land the readout on a number). The Cairn (MCP `cairn` plus the core `cairn` module and the repo-tracked `data/cairn.txt`): at level 42 a mind leaves one true thing, encoded Arecibo-style into a semiprime a future mind must factor to read. And tactile status readouts across the Chaos & Order flagships (Double Pendulum and Lorenz report the divergence of two nearby starts; the Logistic Map reports its Lyapunov exponent crossing from order into chaos), so eight rooms now pose predictions. See `CHANGELOG.md` for the full detail.
 - **Done (the one-line front door):** `scripts/install.sh` and `scripts/install.ps1` make setup a single copied command on macOS, Linux, and Windows: prerequisite checks that name the exact fix for anything missing, a rustup bootstrap when cargo is absent, a fresh fixed-origin source snapshot into `~/.numinous/src`, a locked release build, the three binaries plus a linked radio in `~/.numinous/bin`, PATH wiring, in-place update on re-run, and an `--uninstall` that never touches play history. Existing repository configuration, untracked source, and build caches are never trusted during update. Exact install-root markers and link-aware deletion keep uninstall inside the dedicated root; recognized pre-marker installs at default or custom roots migrate without abandoning existing users. Disposable hostile-root and provenance self-tests pass on Windows and POSIX shells. Real macOS and Linux execution evidence stays with the 0.6 portable gate, which still owns packaged, checksummed artifacts.
 - **Done (Cycle 98 boundary hardening):** a standard repository-wide security review closed with zero reportable findings under the local single-user threat model, then every reproduced robustness defect was fixed rather than dismissed. MCP request framing and challenge phases, bounded CLI input and plot dimensions, origin-bound music requests and terminal diagnostics, Cairn growth, extreme surface clipping, App save repeats, Studio source growth, radio discovery and resampling, GPU dimensions and readback failures, and installer provenance and deletion boundaries now fail closed through shared enforcement points. Focused regressions, installer self-tests, the exact App matrix, and the complete release gate cover the changes. This is engineering evidence, not a claim that a standard single-pass review proves the absence of vulnerabilities.
+- **Done (Cycle 105 security hardening):** a maintenance security pass under the same local single-user threat model closed residual MCP string-boundary gaps and dual supply-chain coverage. The MCP schema validator enforces JSON Schema `maxLength`; catalog ids, Studio expressions, and Cairn leave/author fields declare matching bounds; `play_room` rejects oversize canvases at the tool body; `sing_expression` notes are schema-capped. CI and local verify now run `cargo-audit` with ignores in `.cargo/audit.toml` aligned to `deny.toml`. ENGINEERING names the local threat model and the deny-plus-audit path. This is not a claim of absence of vulnerabilities.
+- **Done (Cycle 106 Buffon first-contact honesty):** Buffon's Needle no longer reports a finished ambient pi estimate on first contact. Untouched status shows L/D, the classical crossing chance, and the throw verb; only player throws produce YOUR THROWS and a running pi estimate. Focused regressions cover open status and existing throw grading.
+- **Done (Cycle 107 first-contact honesty batch):** Random Walk, Voronoi, Chaos Game, Langton's Ant, Quine, Zeno's Square, and Goldbach's Comet each open with an invitation status that names the live state and the verb. Empty-input `status_input` falls back to that invitation. Player-action status names the consequence (planted mean distance vs sqrt law, dropped wells, added corners, flipped cells, placed copies, runners, prime witnesses). Focused first-contact regressions cover the batch.
+- **Done (Cycle 108 catalog first-contact invariant):** every catalog room now opens with a non-empty status line. Cellular Automata, Collatz, Golden Angle, Galton, Prime Spirals, Mandelbrot, Julia, Barnsley, L-System, Epicycles, Mobius, and Strange Loop gained invitation status (and empty-input fallbacks where they already had action status). Registry test `every_catalog_room_has_first_contact_status` enforces the kid-principle contract for future rooms.
+- **Done (Cycle 109 action-consequence status):** Collatz reports perturbed orbit starts and steps-to-1; Cellular Automata reports seed flips and history replay. Focused action-status regressions cover both.
+- **Done (Cycle 110 L-System plant status):** planting reports rooted copy count and species continuity.
+- **Done (Cycle 111 Galton mean vs expectation):** experiment status reports empirical mean rights and binomial expectation `np` for the selected coin.
+- **Done (Cycle 112 chaos-room action labels):** Lorenz reports shadow-storm count after a seed; Double Pendulum labels PINNED/FLUNG/RE-DROP/CANCELLED beside the twin divergence.
+- **Done (Cycle 113 poke-status catalog invariant):** every touchable room changes status after a center poke, or is listed as phase-scrub.
 - **Done (hands-on room correction, July 13, 2026):** Galton now uses
   one physical 16-row peg lattice and mathematically legal ball paths. Cult of
   Pi keeps its finite prefix readable and distinguishes wrong digits from old
@@ -129,6 +138,51 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   smooth high-color escape palette while leaving Julia unchanged. Focused
   invariant tests and the regenerated 349-screen matrix cover these claims;
   hardware input and subjective long-session quality remain separate gates.
+- **In progress (catalog action-consequence depth, cycle 105+ grind):** beyond
+  first-contact invitations and the catalog-wide poke-changes-status invariant,
+  action status now grades measured consequences on many rooms (Galton one-ball
+  bet, Cult FIX/digit placement, CA rule identity and seed density, Voronoi
+  territory share, Langton black count, Chaos newest corner, Harmonograph
+  figure/damp life, L-System origin, Lissajous interval class, Quine depth,
+  Epicycles mini-chain pen phase, Mandelbrot complex target, Golden packing,
+  Prime Spirals primes on diagonal, Mobius edge lap, Pour/Slope hand freeze).
+  Subjective participant evidence and the stranger hallway remain open.
+- **Done (Share short-loop export, machine path):** App key L exports a
+  24-frame looping APNG of the current visit (phase sweep, or Life generation
+  advance) with the same poke trail and Visual Era as P-key still postcards.
+  CLI `numinous loop` exports the same APNG family for scripted shares. Share
+  filenames are sanitized against path separators. Full Share v1 also names
+  still image export (built) and optional later GIF/MP4 packaging; the
+  stranger-ask-to-send hallway evidence remains open.
+- **Done (Arecibo try-width first contact):** open status names the unsolved
+  width and CLICK:TRY WIDTH; hand tries grade TRIED W{n} with LOCK:PI, pair
+  hint, or remainder. Subjective fun evidence remains open.
+- **Done (catalog first-contact invite and footer contracts):** verb-bearing
+  rooms open with an action or goal token; both open and action status fit a
+  56-character compact footer. Registry tests enforce the contracts. This is
+  machine evidence for playable-not-watchable status honesty, not a stranger
+  hallway claim.
+- **Machine-completable 0.2 catalog and Share contracts (evidence closed):**
+  first-contact, poke-consequence, measured action quantity, footer budgets,
+  invite tokens, Times Tables technical flagship path, Share still PNG and
+  short-loop APNG (App L and CLI loop), and local security gates are green on
+  this branch. Product 0.2 still requires the stranger hallway and other human
+  evidence listed above; the prerelease label remains `0.2.0-alpha.1`.
+- **Done (mouse for every window game):** left-click hits Quiz choices, Munch
+  cells, Nim heaps and stones (commit move), Arcade cells (step toward or eat),
+  and Gauntlet munch/quiz stages. Keyboard routes remain. Subjective juice and
+  physical controller evidence stay open.
+- **Done (0.3 Formula Jam discovery, machine path):** Studio F2 Random, F3 Auto
+  (~21s dwell, advance only near 1/8-phase edges), and F1 dismissible Help that
+  opens on first entry. Edits pause Auto. Phrase-aligned crossfade morphs and
+  formative stranger sessions remain open for the 0.3 exit criterion.
+- **Designed (Frontier and universal wonder wave, July 2026 research pass):** a
+  step-back inventory of built rooms, existing designed waves, and new
+  counterintuitive experiences for any mind (high-dimension concentration,
+  uncertainty dials, learning landscapes, topology eversions, channel repair,
+  carefully labeled frontier gestures). Full cards live in `ROOMS.md`. Not a
+  claim that product 0.2 is complete; a catalog ambition ledger for Phase F and
+  1.x.
 - **Next, above everything (the founder's directive, July 2026):** **rooms become playable, not watchable, and no two catalog visits are the same.** The substrate is live across app, CLI, and MCP. The legibility pass makes weak responses explicit across Life, Mandelbrot, Buffon, Prime Spirals, Cult of Pi, Golden Angle, Barnsley Fern, Mobius, Logistic Map, Zeno, Julia, Goldbach, Langton's Ant, Fourier Epicycles, Random Walk, and Quine. `Room::status_input` lets every face explain the consequence from the same bounded history used to render it. The automated all-room, all-game, all-screen matrix is complete at 349 states, with exact inventory, nonblank, size, stale-output, deterministic opening states, every persistent game display branch, 14 controller or pause receipts, 16 explicit audio-state receipts, 12 Times Tables landmark and earned-goal receipts, default and compact immediate and delayed interaction families, ordered and closed gestures, semantic response checks, changed-pixel and spatial-support thresholds, support density, adjacent 32-pixel spatial-tile coherence, and minimum color change. A regression rejects four isolated corner markers, while this remains coarse renderer-path evidence rather than native event automation or subjective polish certification. The latest grouped QA rounds also hardened controller-visible control truth, pause isolation, CLI and MCP input boundaries, pure-EOF game exits, structured discovery, isolated MCP play profiles, and Windows PATH precedence. Next, validate arrival-card clarity with real human participants and deepen held or causal interaction wherever a one-shot response still fails the kid principle.
 - **Done (full-roster refinement round):** all 42 simulated review lenses were split exactly once across first contact and accessibility, interaction and truth, and games plus agent faces. The pass fixed redirected CLI ANSI, responsive Quiz-result loss, four overbroad mathematical claims, ambiguous motif-versus-sonification output, and positionless Studio parse errors. It also falsified an apparent Fern deletion by direct pixel comparison. These are engineering findings from reproduced evidence; none of the simulated reactions satisfies a participant gate. Controller HUD parity, its route gaps, compatibility-preserving compact MCP responses, causal first-touch presentation, and visual sound state are now closed. Its ranked queue began with deeper Galton and Life interaction loops, both now complete; continued music composition review remains.
 - **Done (Galton causal experiment loop):** the completed pile no longer moves
@@ -138,8 +192,10 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   pointer moves add no waves; a coin change starts fresh; the 24-wave bound
   saturates truthfully at 1,536 balls; and compact App, CLI, and MCP replay share
   the same input contract. Focused invariants and the repeated-action screen
-  scenario cover the implementation. A one-ball prediction beat and subjective
-  participant evidence remain open.
+  scenario cover the implementation. A one-ball prediction beat is live: a
+  pointer-move commits a bin wager, a click still drops a 64-ball wave, and
+  status grades the highlighted last ball hit or miss against that bet.
+  Subjective participant evidence remains open.
 - **Done (Game of Life causal visit loop):** the App now owns one incremental
   B3/S23 universe for the complete room visit. Its settled opening advances on
   a bounded wall-clock cadence, survives the gallery phase wrap, pauses with
@@ -167,11 +223,22 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   banner freezes first-contact room time and card lifetime. Three independent
   review groups traced first contact, cross-face causality, and interaction
   semantics. Their reproduced findings are regressions; their simulated
-  reactions are not participant evidence. A deeper placement decision loop and
-  Pi-specific no-instructions fun evidence remain open.
+  reactions are not participant evidence. A deeper placement decision loop is
+  live: hold status grades the newest patch by restored faults and names the
+  exact digit under the finger. Pi-specific no-instructions fun evidence remains
+  open.
 
 The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke trait, order of work). Original poke directive: **rooms become playable, not watchable.** Reinforced July 2026: players cannot tell what, if anything, a room responds to; every room's arrival card must name its verb. And **Munch becomes a real arcade game**: a muncher character you steer on the board, wandering troggle-like enemies to dodge (our own creatures, the Order's lesser spirits), eat-while-hunted pacing. The Number Munchers NAME and its specific characters are MECC's (now owned elsewhere); the underlying mechanics (grid, rules, eat-the-right-numbers) are not copyrightable, so we keep our own name (Munch), our own creatures, our own art, and owe nothing. Every room gains a poke: the math responds to your hands. Click the Lorenz attractor and a new butterfly drops where you clicked and diverges before your eyes; sow glider sparks into Game of Life and watch them live or die by the same rules as the soup; re-drop the double pendulum from the hand's point; plant walkers in the random walk; drop a well into the Voronoi desert and watch every border renegotiate; steer the ant. Design: the `Room` trait gains an optional `poke(x, y)` (normalized coordinates) plus optional per-room state the app owns, keyboard Space/click as the universal "touch it" verb, and the arrival card teaches the poke, not the theory ("CLICK ANYWHERE: DROP A STORM"). The heart is play; the learning rides along uninvited. A kid should be able to *do something* to every screen and see the math answer back.
-- **Designed (the founder's directive, July 2026): The Next Wave of rooms.** Twenty-nine new room designs across four aspects (physics, deep mathematics, fun-first, cosmic), produced by four parallel creative research passes and recorded in `ROOMS.md` under "The Next Wave": each with its rule, gasp, verb, sonification, reveal, and honest CPU feasibility, deduplicated and ranked by wow-to-build. The first eight (Sandpile, Chladni Figures, Ripple Tank, Coffee Cup, Ford Circles, Zeta Walk, Starbow, Slingshot) are all wow-5 for build-1-to-2 and add cross-room resonances the catalog lacks (the cardioid triangle, the Lorentz pair). Designed, not built: the review-stack rule stands, each room faces the full Definition of Done, and every non-textbook reveal claim carries a source pending mathematician sign-off.
+- **Done (catalog growth through 350):** invent-and-ship past the early Next
+  Wave and classical cards into dynamics, number theory, probability,
+  topology, analysis, and closing gems. MCP `list_rooms` count is 350; every
+  catalog room keeps motif, verb, poke, first-contact status, and reveal.
+  Version remains `0.2.0-alpha.1`; product 0.2 is not claimed complete. See
+  `CHANGELOG.md` Unreleased and `ROOMS.md` Built now.
+- **In progress (the founder's directive, July 2026): playable depth over pure
+  inventory.** Designs still open in `ROOMS.md`. Catalog size is no longer the
+  bottleneck; consequence-grade status, stranger playtests, and coherent pacing
+  still are.
 - **Tracked follow-ups (from the July 2026 bug hunts and two simulated persona-review rounds, see `docs/PLAYTESTS.md`):** a reactive room whose motion answers being watched and a predator-prey pulse for the instinct-only mind (the Xenomorph persona). Resolved since these were first listed: predict now lets a mind commit a local rate and returns five signed residuals that expose the shape of its error while preserving the original point score and seed meaning; the Lorenz Storm readout now begins at its 0.0001 perturbation and reports an honestly labeled running peak that never falls while the underlying trajectories keep their real stretch-and-fold dynamics; the Logistic Map and Mandelbrot reveals now name their affine conjugacy under c = r(2-r)/4, while Times Tables, Mandelbrot, and Fourier Epicycles name the cardioid shape they share up to scale and rotation; persistence now retries atomic Windows replacement without a missing-file window, cleans owned temp and lock files on precommit errors, attempts a parent-directory metadata sync on Unix, and treats any postcommit sync failure as committed so delta counters cannot replay; the Cairn reciprocity whisper, the L-System growing upward, the daily-seed midnight race, the daily-streak regression, and fast crash-lock recovery are all built (`CHANGELOG.md`); and the CPU render-performance cliffs a round-3 audit measured at maximized-window sizes are retired by the time-budgeted adaptive live-render resolution (render smaller, integer-upscale, exports and GPU paths untouched; measured on the dev laptop at 2560x1440, the Mandelbrot CPU fallback went from 939ms to 28.8ms per frame end to end, with Julia at 78ms and Voronoi at 60ms before the cap and every capped room now inside the 33ms room-render budget, `CHANGELOG.md`).
 - **Then (the panel's remaining list, see `PANEL.md`):** juice in the window games (per-action flash, shake, and chiptune ticks); mouse support for every window game; controller remapping and cross-platform hardware certification; munch rule variety and an aliens base ramp (depth where play repeats); the Open Problems wing; further-reading citations unlocked with deep cuts; era grain and Show crossfade; the music visualizer; full Share v1 beyond the built P-key PNG postcard; a visit-spark cap per room (anti-grind); and an MCP 2026-07-28 compatibility pass once the final spec target is selected after the scheduled July 28, 2026 publication.
 
@@ -458,7 +525,7 @@ No calibrated method supports assigning completion percentages to subjective
 
 | 1.0 gate | Evidence today | Missing evidence or work |
 |---|---|---|
-| Complete coherent collection | 31 catalog rooms across 10 wings are built | A coherent cold start, pacing, keep-or-cut review, and several planned signature rooms |
+| Complete coherent collection | 350 catalog rooms are built and listed | A coherent cold start, pacing, keep-or-cut review, and several planned signature rooms |
 | Every room earns its place | Every catalog room has a verb, variation, image, and motif | Stranger discovery, room-specific depth, held input where useful, and per-room human scorecards |
 | Full sensory identity | Four Eras, deterministic synthesis, chiptune, and two GPU fractal paths are built | HDR post-stack, congruency review, accessibility controls, audio separation, and human sensory review |
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
@@ -515,6 +582,15 @@ above, in leverage order. They deepen what exists rather than jumping the
 - **Phase E, the catalog deepens.** The cheap-and-gorgeous classical-geometry and
   sonification-first batch, the causal insight-chains, and the scope-flagship
   (the Studio Function Painter). Owner doc: `ROOMS.md` (the Awe Engine wave).
+- **Phase F, frontier and universal wonder (designed July 2026 research pass).**
+  After the human 0.2 gates and the first content waves, deepen the catalog with
+  rooms that any mind might find counterintuitive: high-dimension concentration,
+  uncertainty as a dial, learning landscapes, error-correcting channels, soap
+  films, topology eversions, and carefully labeled frontier gestures (duality,
+  soft deformation, causal intervention, Landauer cost). Owner doc: `ROOMS.md`
+  section "Frontier and universal wonder wave." Explicit non-rooms (full
+  Langlands, full string landscapes) stay plaques or Function Painter subjects,
+  never fake solved-universe toys. Keep open-door claims on a dated ledger.
 
 The standing anti-pattern all six lanes named, added to the always-on tracks:
 **nothing counts as learned, mastered, collected, or won without an act of
@@ -547,6 +623,11 @@ XP-treadmill failure mode.
 Depth and polish that extend 1.0 without breaking it. No new pillars, just more of the good, higher.
 
 - More rooms, more insight-chains, more radio stations and Visual Eras.
+- Build the **Frontier and universal wonder** tier S batch from `ROOMS.md`
+  (dimension concentration, uncertainty dial, gradient valley, attention light,
+  soap film, error that heals) so modern high-D and learning intuition sits
+  beside classical awe. Then the labeled frontier gestures (dual views, soft
+  deformation, causal doors, Landauer) without claiming research results.
 - Build **The Long Shot** after the flagship gates: a fun-first angle-and-power
   artillery duel whose replay can unfold projectile motion, derivatives,
   integrals, phase space, uncertainty, and clearly labeled scale-shift models.
@@ -559,7 +640,9 @@ Depth and polish that extend 1.0 without breaking it. No new pillars, just more 
   game. Zermelo and backward induction, worn lightly; pairs with the Traveling
   Salesman stub as the two faces of combinatorial search (one space yields to
   exhaustion, one defeats it). Owner doc: `ROOMS.md`.
-- The **boss rooms** (*Sizes of Infinity*, *Hyperbolic Space*), the hardest-to-make-playable, highest-ceiling rooms, as they earn their quality bar.
+- The **boss rooms** (*Sizes of Infinity*, *Hyperbolic Space*, Hopf Fibration,
+  Sphere Eversion), the hardest-to-make-playable, highest-ceiling rooms, as they
+  earn their quality bar.
 - Refinement driven by the telemetry and playtest loops (`QUALITY.md`): tuning defaults, pacing, and difficulty toward measured awe and flow.
 - Localization and broader hardware support.
 - **Extensibility Tier 1 hardening (see `EXTENSIBILITY.md`):** the `.num`

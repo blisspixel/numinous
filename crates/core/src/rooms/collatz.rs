@@ -5,7 +5,7 @@
 //! do. This room plots the (log-scaled) trajectory of a starting number as it
 //! falls. `t` picks the number. See `docs/ROOMS.md` and `docs/INSIGHTS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::sound::{Note, SoundSpec};
 use crate::surface::{MAX_DIM, Surface};
 
@@ -99,6 +99,32 @@ impl Room for Collatz {
 
     fn verb(&self) -> Option<&'static str> {
         Some("CLICK: PERTURB THE START")
+    }
+
+    fn status(&self, t: f64) -> Option<String> {
+        let start = Self::start_for(t, self.seed);
+        Some(format!(
+            "START {start}   3N+1 ORBIT   CLICK: PERTURB THE START"
+        ))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = crate::pokes_from_inputs(inputs);
+        let finite: Vec<_> = pokes
+            .into_iter()
+            .filter(|(x, y)| x.is_finite() && y.is_finite())
+            .collect();
+        if finite.is_empty() {
+            return self.status(t);
+        }
+        let base_start = Self::start_for(t, self.seed);
+        let starts = poked_starts(&finite, base_start);
+        let latest = *starts.last().unwrap_or(&base_start);
+        let steps = collatz_orbit(latest).len().saturating_sub(1);
+        Some(format!(
+            "{} ORBIT(S)   LATEST START {latest}   {steps} STEPS TO 1",
+            starts.len()
+        ))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -225,6 +251,22 @@ mod tests {
     use crate::canvas::Canvas;
     use crate::room::{MAX_ROOM_POKES, Room};
     use crate::surface::Surface;
+
+    #[test]
+    fn action_status_names_the_perturbed_orbit() {
+        use crate::room::RoomInput;
+        let room = Collatz::new();
+        let open = room.status(0.0).expect("open");
+        assert!(open.contains("START 27"), "{open}");
+        let inputs = [RoomInput::PointerDown {
+            x: 0.8,
+            y: 0.5,
+            t: 0.0,
+        }];
+        let status = room.status_input(0.0, &inputs).expect("action");
+        assert!(status.contains("ORBIT"), "{status}");
+        assert!(status.contains("STEPS TO 1"), "{status}");
+    }
 
     #[test]
     fn small_orbit_is_correct() {

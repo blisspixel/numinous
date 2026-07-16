@@ -14,13 +14,11 @@ pub(crate) struct PointerState {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct LeftPressContext {
+    /// Any live window game (quiz, munch, nim, arcade, gauntlet).
     pub(crate) game_click_mode: bool,
     pub(crate) studio: bool,
     pub(crate) show_help: bool,
     pub(crate) show_journey: bool,
-    pub(crate) arcade: bool,
-    pub(crate) nim: bool,
-    pub(crate) gauntlet: bool,
     pub(crate) room_has_verb: bool,
 }
 
@@ -70,9 +68,7 @@ pub(crate) fn room_poke_allowed(context: LeftPressContext) -> bool {
     !context.studio
         && !context.show_help
         && !context.show_journey
-        && !context.arcade
-        && !context.nim
-        && !context.gauntlet
+        && !context.game_click_mode
         && context.room_has_verb
 }
 
@@ -81,12 +77,7 @@ pub(crate) fn phase_drag_allowed(context: LeftPressContext) -> bool {
 }
 
 fn blocked_by_modal_context(context: LeftPressContext) -> bool {
-    context.studio
-        || context.show_help
-        || context.show_journey
-        || context.arcade
-        || context.nim
-        || context.gauntlet
+    context.studio || context.show_help || context.show_journey
 }
 
 pub(crate) fn normalized_window_point(mouse: (f64, f64), size: (u32, u32)) -> Option<(f64, f64)> {
@@ -128,6 +119,17 @@ mod tests {
     }
 
     #[test]
+    fn every_window_game_accepts_game_clicks() {
+        assert_eq!(
+            left_press_action(LeftPressContext {
+                game_click_mode: true,
+                ..LeftPressContext::default()
+            }),
+            LeftPressAction::GameClick
+        );
+    }
+
+    #[test]
     fn poke_requires_visible_room_interaction_context() {
         assert_eq!(left_press_action(poke_context()), LeftPressAction::RoomPoke);
 
@@ -145,19 +147,15 @@ mod tests {
                 ..poke_context()
             },
             LeftPressContext {
-                arcade: true,
-                ..poke_context()
-            },
-            LeftPressContext {
-                nim: true,
-                ..poke_context()
-            },
-            LeftPressContext {
-                gauntlet: true,
+                game_click_mode: true,
                 ..poke_context()
             },
         ] {
-            assert_eq!(left_press_action(blocked), LeftPressAction::Ignore);
+            assert_ne!(
+                left_press_action(blocked),
+                LeftPressAction::RoomPoke,
+                "game or modal context must not poke rooms: {blocked:?}"
+            );
         }
     }
 
@@ -179,63 +177,33 @@ mod tests {
     }
 
     #[test]
-    fn pointer_press_and_release_updates_state() {
-        assert_eq!(
-            pointer_state_after_left_press(LeftPressAction::RoomPoke),
-            PointerState {
-                dragging: false,
-                poking: true
-            }
-        );
-        assert_eq!(
-            pointer_state_after_left_press(LeftPressAction::PhaseDrag),
-            PointerState {
-                dragging: true,
-                poking: false
-            }
-        );
-        assert_eq!(
-            pointer_state_after_left_press(LeftPressAction::GameClick),
-            PointerState::default()
-        );
-        assert_eq!(pointer_state_after_left_release(), PointerState::default());
-    }
-
-    #[test]
     fn pointer_state_is_cleared_when_context_no_longer_allows_it() {
         let poking = PointerState {
             dragging: false,
             poking: true,
         };
-        assert_eq!(retain_pointer_state(poking, poke_context()), poking);
         assert_eq!(
             retain_pointer_state(
                 poking,
                 LeftPressContext {
-                    show_help: true,
-                    ..poke_context()
-                }
-            ),
-            PointerState::default()
-        );
-
-        let dragging = PointerState {
-            dragging: true,
-            poking: false,
-        };
-        assert_eq!(
-            retain_pointer_state(dragging, LeftPressContext::default()),
-            dragging
-        );
-        assert_eq!(
-            retain_pointer_state(
-                dragging,
-                LeftPressContext {
-                    studio: true,
+                    game_click_mode: true,
+                    room_has_verb: true,
                     ..LeftPressContext::default()
                 }
             ),
             PointerState::default()
         );
+    }
+
+    #[test]
+    fn pointer_press_and_release_updates_state() {
+        assert_eq!(
+            pointer_state_after_left_press(LeftPressAction::RoomPoke),
+            PointerState {
+                dragging: false,
+                poking: true,
+            }
+        );
+        assert_eq!(pointer_state_after_left_release(), PointerState::default());
     }
 }

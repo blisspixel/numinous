@@ -212,6 +212,11 @@ impl Room for Julia {
         Some("CLICK: MORPH C")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        let (cx, cy) = selected_c(t, self.seed, &[]);
+        Some(format!("C = {cx:+.3} {cy:+.3}I   CLICK: MORPH C"))
+    }
+
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let pokes: Vec<_> = inputs
             .iter()
@@ -223,12 +228,20 @@ impl Room for Julia {
             })
             .collect();
         if !pokes.iter().any(|(x, y)| x.is_finite() && y.is_finite()) {
-            return None;
+            return self.status(t);
         }
         let (cx, cy) = selected_c(t, self.seed, &pokes);
-        Some(format!(
-            "C MORPHED TO {cx:+.3} {cy:+.3}I   WHOLE FRACTAL UPDATED"
-        ))
+        let mag = cx.hypot(cy);
+        // |c| grades how far the morph sits from the main cardioid's center
+        // region: small |c| stays connected and fat, larger |c| dusts away.
+        let body = if mag < 0.25 {
+            "NEAR0"
+        } else if mag < 0.75 {
+            "MAIN"
+        } else {
+            "OUTER"
+        };
+        Some(format!("C {cx:+.3}{cy:+.3}i  |C| {mag:.2} {body}"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -265,7 +278,12 @@ mod tests {
     #[test]
     fn status_reports_only_a_finite_selected_constant() {
         let room = Julia::new();
-        assert_eq!(room.status_input(0.3, &[]), None);
+        let open = room.status(0.3).expect("open status");
+        assert!(open.contains("C ="), "{open}");
+        assert_eq!(
+            room.status_input(0.3, &[]).as_deref(),
+            room.status(0.3).as_deref()
+        );
         let ignored = [
             RoomInput::PointerUp {
                 x: 0.2,
@@ -278,7 +296,10 @@ mod tests {
                 t: 0.1,
             },
         ];
-        assert_eq!(room.status_input(0.3, &ignored), None);
+        assert_eq!(
+            room.status_input(0.3, &ignored).as_deref(),
+            room.status(0.3).as_deref()
+        );
         let selected = [
             ignored[1],
             RoomInput::PointerDown {
@@ -288,8 +309,13 @@ mod tests {
             },
         ];
         let status = room.status_input(0.3, &selected).expect("finite selection");
-        assert!(status.starts_with("C MORPHED TO "));
-        assert!(status.ends_with("I   WHOLE FRACTAL UPDATED"));
+        assert!(status.starts_with("C "), "{status}");
+        assert!(status.contains("|C| "), "{status}");
+        assert!(
+            status.contains("NEAR0") || status.contains("MAIN") || status.contains("OUTER"),
+            "{status}"
+        );
+        assert!(status.contains('i'), "{status}");
     }
 
     #[test]

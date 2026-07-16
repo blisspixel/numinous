@@ -396,19 +396,35 @@ pub fn constellation(journey: &Journey, width: usize, height: usize) -> String {
     let mut grid = vec![vec![' '; width]; height];
     for room in all_rooms() {
         let id = room.meta().id;
-        // Hash the id into a stable position.
+        // Hash the id into a stable position; probe on collision so catalog growth
+        // does not silently overwrite stars.
         let mut seed = 0xC057_E11A_7101_u64;
         for byte in id.bytes() {
             seed = seed.wrapping_mul(31).wrapping_add(u64::from(byte));
         }
         let mut rng = SplitMix64::new(seed);
-        let x = (rng.below(width as u64)) as usize;
-        let y = (rng.below(height as u64)) as usize;
-        grid[y][x] = if journey.visited.contains(id) {
+        let mark = if journey.visited.contains(id) {
             '#'
         } else {
             '.'
         };
+        let cells = width.saturating_mul(height).max(1);
+        let mut placed = false;
+        for _ in 0..cells {
+            let x = (rng.below(width as u64)) as usize;
+            let y = (rng.below(height as u64)) as usize;
+            if grid[y][x] == ' ' {
+                grid[y][x] = mark;
+                placed = true;
+                break;
+            }
+        }
+        if !placed {
+            // Sky full: last resort overwrite a stable hash cell.
+            let x = (SplitMix64::new(seed).below(width as u64)) as usize;
+            let y = (SplitMix64::new(seed.wrapping_add(1)).below(height as u64)) as usize;
+            grid[y][x] = mark;
+        }
     }
     grid.into_iter()
         .map(|row| row.into_iter().collect::<String>())

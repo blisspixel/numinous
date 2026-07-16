@@ -1,33 +1,39 @@
 use std::time::{Duration, Instant};
 
 const MIN_SAVE_INTERVAL: Duration = Duration::from_millis(500);
+/// Short loops encode many frames; keep a longer cooldown so one hold cannot
+/// flood the home directory with multi-megabyte APNGs.
+const MIN_LOOP_INTERVAL: Duration = Duration::from_secs(2);
 
 #[derive(Clone, Copy)]
 pub(crate) enum SaveKind {
     PlaytestNote,
     Postcard,
+    ShortLoop,
 }
 
 #[derive(Default)]
 pub(crate) struct SaveGate {
     playtest_note: Option<Instant>,
     postcard: Option<Instant>,
+    short_loop: Option<Instant>,
 }
 
 impl SaveGate {
     /// Admit one physical press per save action and bound rapid synthetic
-    /// presses. The two actions remain independent so saving a diagnostic note
-    /// never prevents the player from keeping a postcard.
+    /// presses. Actions remain independent so a diagnostic note, a still
+    /// postcard, and a short loop never block each other.
     pub(crate) fn admit(&mut self, kind: SaveKind, now: Instant, repeated: bool) -> bool {
         if repeated {
             return false;
         }
-        let previous = match kind {
-            SaveKind::PlaytestNote => &mut self.playtest_note,
-            SaveKind::Postcard => &mut self.postcard,
+        let (previous, min_interval) = match kind {
+            SaveKind::PlaytestNote => (&mut self.playtest_note, MIN_SAVE_INTERVAL),
+            SaveKind::Postcard => (&mut self.postcard, MIN_SAVE_INTERVAL),
+            SaveKind::ShortLoop => (&mut self.short_loop, MIN_LOOP_INTERVAL),
         };
         if let Some(elapsed) = previous.and_then(|last| now.checked_duration_since(last)) {
-            if elapsed < MIN_SAVE_INTERVAL {
+            if elapsed < min_interval {
                 return false;
             }
         } else if previous.is_some() {
@@ -64,8 +70,20 @@ mod tests {
 
         assert!(gate.admit(SaveKind::PlaytestNote, start, false));
         assert!(gate.admit(SaveKind::Postcard, start, false));
+        assert!(gate.admit(SaveKind::ShortLoop, start, false));
         assert!(!gate.admit(SaveKind::PlaytestNote, start, true));
         assert!(!gate.admit(SaveKind::Postcard, start, true));
+        assert!(!gate.admit(SaveKind::ShortLoop, start, true));
+    }
+
+    #[test]
+    fn short_loop_uses_a_longer_cooldown() {
+        let start = Instant::now();
+        let mut gate = SaveGate::default();
+
+        assert!(gate.admit(SaveKind::ShortLoop, start, false));
+        assert!(!gate.admit(SaveKind::ShortLoop, start + MIN_SAVE_INTERVAL, false));
+        assert!(gate.admit(SaveKind::ShortLoop, start + MIN_LOOP_INTERVAL, false));
     }
 
     #[test]

@@ -19,6 +19,53 @@ pub(crate) struct MunchPlay {
     pub(crate) bites: BTreeSet<usize>,
     /// After Enter: the graded outcome, shown until a key.
     pub(crate) graded: Option<numinous_core::Munched>,
+    /// Bite juice: cell index and remaining presentation frames.
+    pub(crate) bite_flash: Option<(usize, u64)>,
+}
+
+/// Frames a bite flash holds so a toggle is felt before the board settles.
+pub(crate) const MUNCH_BITE_FLASH_FRAMES: u64 = 12;
+
+impl MunchPlay {
+    /// Count down bite juice; returns true while a flash still shows.
+    pub(crate) fn tick_bite_flash(&mut self) -> bool {
+        if let Some((_, frames)) = &mut self.bite_flash {
+            *frames = frames.saturating_sub(1);
+            if *frames == 0 {
+                self.bite_flash = None;
+            }
+        }
+        self.bite_flash.is_some()
+    }
+
+    /// Mark a cell as just toggled for a short bright flash.
+    pub(crate) fn flash_bite(&mut self, cell: usize) {
+        self.bite_flash = Some((cell, MUNCH_BITE_FLASH_FRAMES));
+    }
+}
+
+#[cfg(test)]
+mod juice_tests {
+    use super::*;
+
+    #[test]
+    fn bite_flash_counts_down_and_clears() {
+        let mut play = MunchPlay {
+            board: numinous_core::build_board(1, 0),
+            seed: 1,
+            round: 0,
+            cursor: 0,
+            bites: BTreeSet::new(),
+            graded: None,
+            bite_flash: None,
+        };
+        play.flash_bite(4);
+        assert_eq!(play.bite_flash, Some((4, MUNCH_BITE_FLASH_FRAMES)));
+        for _ in 0..MUNCH_BITE_FLASH_FRAMES {
+            let _ = play.tick_bite_flash();
+        }
+        assert!(play.bite_flash.is_none());
+    }
 }
 
 const MUNCH_RULE_LOOKAHEAD: u64 = 16;

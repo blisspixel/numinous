@@ -48,9 +48,10 @@ Why this specific combination wins for *math + games + visualization + fun + tru
 - **The bespoke shell is now a measured decision.** The shipped app uses `winit`
   and `softbuffer`, with raw `wgpu` only where a room benefits. Bevy remains an
   evaluated alternative, not part of the current architecture.
-- **Sharing is native, not a browser build.** PNG postcards, `.num` expression
-  files, matching links, and WAV export exist today. App-side reopening, loop
-  export, and operating-system URL registration remain roadmap work.
+- **Sharing is native, not a browser build.** PNG postcards, short looping APNG
+  export (App key L), `.num` expression files, matching links, and WAV export
+  exist today. App-side deep-link reopening, optional GIF/MP4 packaging, and
+  operating-system URL registration remain roadmap work.
 - **Audio is first-class in Rust:** `cpal` supplies cross-platform output while
   the workspace owns deterministic synthesis and bounded file rendering. More
   advanced DSP can be added only when the musical design and measured budget

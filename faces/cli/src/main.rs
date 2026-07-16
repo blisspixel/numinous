@@ -95,6 +95,33 @@ enum Command {
         #[arg(long = "gesture")]
         gestures: Vec<String>,
     },
+    /// Export a short looping APNG of one phase cycle (Share v1 motion path).
+    Loop {
+        /// Room id, e.g. "times-tables".
+        id: String,
+        /// Where to write the looping APNG.
+        #[arg(long)]
+        out: PathBuf,
+        /// Frame edge in pixels (square). Default matches the App short loop.
+        #[arg(long, default_value_t = 480)]
+        size: usize,
+        /// Starting phase in [0, 1); the loop sweeps one full unit from here.
+        #[arg(long, default_value_t = 0.0)]
+        t: f64,
+        /// Visual era: phosphor, 8bit, vector, or modern.
+        #[arg(long, default_value = "modern")]
+        era: String,
+        /// Use this exact room variation seed (default 0).
+        #[arg(long, default_value_t = 0)]
+        variation: u64,
+        /// Add a normalized hand point, as x,y in [0,1]. Repeat for multiple points.
+        #[arg(long = "poke")]
+        pokes: Vec<String>,
+        /// Add a gesture event: down:x,y,t, move:x,y,t, up:x,y,t, or cancel.
+        /// Repeat, oldest first. Not combinable with --poke.
+        #[arg(long = "gesture")]
+        gestures: Vec<String>,
+    },
     /// The Show for the terminal: every room in turn, full color, sound.
     Tour {
         /// Frames per second.
@@ -1133,6 +1160,42 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 }
                 None => render_report(&id, width, height, t, allow_hidden, input),
             };
+            if report.is_ok() && find_room(&id, allow_hidden).is_some() {
+                journey.visit(&id);
+            }
+            emit(report)
+        }
+        Command::Loop {
+            id,
+            out,
+            size,
+            t,
+            era,
+            variation,
+            pokes,
+            gestures,
+        } => {
+            if let Err(message) = validate_render_request(size, size, t) {
+                eprint!("{message}");
+                return ExitCode::FAILURE;
+            }
+            let Some(era) = numinous_core::Era::parse(&era) else {
+                eprintln!("Unknown era '{era}'. Eras: phosphor, 8bit, vector, modern.");
+                return ExitCode::FAILURE;
+            };
+            let (pokes, gesture) = match parse_room_inputs(&pokes, &gestures) {
+                Ok(input) => input,
+                Err(message) => {
+                    eprint!("{message}");
+                    return ExitCode::FAILURE;
+                }
+            };
+            let input = if gesture.is_empty() {
+                RoomRenderInput::new(variation, &pokes)
+            } else {
+                RoomRenderInput::with_gesture(variation, &gesture)
+            };
+            let report = render_loop_apng(&id, size, t, &out, allow_hidden, era, input);
             if report.is_ok() && find_room(&id, allow_hidden).is_some() {
                 journey.visit(&id);
             }
@@ -2530,6 +2593,84 @@ fn write_png(path: &Path, raster: &Raster) -> Result<(), String> {
     writer
         .write_image_data(&raster.to_rgba())
         .map_err(|e| format!("png write failed: {e}"))?;
+    Ok(())
+}
+
+/// Short loop frame count and timing match the App Share path (2 s at 12 fps).
+const LOOP_FRAMES: u32 = 24;
+const LOOP_DELAY_NUM: u16 = 1;
+const LOOP_DELAY_DEN: u16 = 12;
+
+/// Export one phase cycle as a looping APNG, sharing poke/gesture history.
+#[allow(clippy::too_many_arguments)]
+fn render_loop_apng(
+    id: &str,
+    size: usize,
+    start_t: f64,
+    path: &Path,
+    allow_hidden: bool,
+    era: numinous_core::Era,
+    input: RoomRenderInput<'_>,
+) -> Result<String, String> {
+    let room = find_room_with_variation(id, allow_hidden, input.variation)
+        .ok_or_else(|| not_found_message(id))?;
+    let mut frames = Vec::with_capacity(LOOP_FRAMES as usize);
+    for index in 0..LOOP_FRAMES {
+        let t = start_t + f64::from(index) / f64::from(LOOP_FRAMES);
+        let mut raster = Raster::with_accent(size, size, room.meta().accent);
+        if !input.gesture.is_empty() {
+            room.render_input(&mut raster, t, input.gesture);
+        } else if input.pokes.is_empty() {
+            room.render(&mut raster, t);
+        } else {
+            let events = numinous_core::inputs_from_pokes(input.pokes, t);
+            room.render_input(&mut raster, t, &events);
+        }
+        let mut rgba = raster.to_rgba();
+        if era != numinous_core::Era::Modern {
+            era.apply(&mut rgba, raster.width(), raster.height());
+        }
+        frames.push(rgba);
+    }
+    write_apng(path, size as u32, size as u32, &frames)?;
+    let mut report = format!(
+        "wrote {} ({}x{}, {LOOP_FRAMES} frames, loop)\n",
+        path.display(),
+        size,
+        size
+    );
+    report.push_str(&render_guidance(room.as_ref(), start_t, input));
+    Ok(report)
+}
+
+/// Encode a square looping APNG (Share v1 short loop).
+fn write_apng(path: &Path, width: u32, height: u32, frames: &[Vec<u8>]) -> Result<(), String> {
+    let file =
+        File::create(path).map_err(|e| format!("could not create {}: {e}", path.display()))?;
+    let mut encoder = png::Encoder::new(BufWriter::new(file), width, height);
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    encoder.set_compression(png::Compression::Fast);
+    encoder
+        .set_animated(frames.len() as u32, 0)
+        .map_err(|e| format!("apng animation header failed: {e}"))?;
+    encoder
+        .set_frame_delay(LOOP_DELAY_NUM, LOOP_DELAY_DEN)
+        .map_err(|e| format!("apng frame delay failed: {e}"))?;
+    encoder
+        .set_dispose_op(png::DisposeOp::Background)
+        .map_err(|e| format!("apng dispose failed: {e}"))?;
+    let mut writer = encoder
+        .write_header()
+        .map_err(|e| format!("apng header failed: {e}"))?;
+    for frame in frames {
+        writer
+            .write_image_data(frame)
+            .map_err(|e| format!("apng frame write failed: {e}"))?;
+    }
+    writer
+        .finish()
+        .map_err(|e| format!("apng finish failed: {e}"))?;
     Ok(())
 }
 
@@ -4637,7 +4778,7 @@ mod tests {
         )
         .expect("cult render");
         assert!(
-            report.contains("Status: 1 HELD  CH01  EXP FAULT 0%"),
+            report.contains("Status: 1 HELD FIX0 D") && report.contains(" CH01"),
             "interaction status must reach the CLI: {report}"
         );
         assert!(
@@ -4912,6 +5053,57 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn loop_subcommand_parses_share_defaults() {
+        let cli = Cli::try_parse_from([
+            "numinous",
+            "loop",
+            "times-tables",
+            "--out",
+            "loop.png",
+            "--poke",
+            "0.4,0.5",
+        ])
+        .expect("loop parses");
+        assert!(matches!(
+            cli.command,
+            Some(Command::Loop {
+                size: 480,
+                t: 0.0,
+                variation: 0,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn render_loop_apng_writes_a_multi_frame_file() {
+        let path = std::env::temp_dir().join("numinous_cli_loop_test.png");
+        let _ = std::fs::remove_file(&path);
+        let message = super::render_loop_apng(
+            "times-tables",
+            64,
+            0.0,
+            &path,
+            false,
+            numinous_core::Era::Modern,
+            RoomRenderInput::plain(),
+        )
+        .expect("render loop");
+        assert!(message.contains("wrote"));
+        assert!(message.contains("24 frames"));
+        let file = std::fs::File::open(&path).expect("open loop");
+        let decoder = png::Decoder::new(std::io::BufReader::new(file));
+        let reader = decoder.read_info().expect("read loop header");
+        let animation = reader
+            .info()
+            .animation_control
+            .expect("CLI short loop is animated");
+        assert_eq!(animation.num_frames, super::LOOP_FRAMES);
+        assert_eq!(animation.num_plays, 0);
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]

@@ -287,6 +287,14 @@ impl Room for Epicycles {
         Some("CLICK: PERTURB THE CHAIN")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        let phase = (phase_for(t) + phase_offset(self.seed)).rem_euclid(1.0);
+        Some(format!(
+            "FOURIER CHAIN   PEN PHASE {:.0}%   CLICK: PERTURB",
+            phase * 100.0
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
             self.render(canvas, t);
@@ -326,15 +334,20 @@ impl Room for Epicycles {
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let (x, y) = inputs.iter().rev().find_map(|input| match *input {
-            RoomInput::PointerDown { x, y, .. } if x.is_finite() && y.is_finite() => {
-                Some((x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
-            }
-            _ => None,
-        })?;
+        let pokes = crate::pokes_from_inputs(inputs);
+        let points: Vec<(f64, f64)> = pokes
+            .into_iter()
+            .filter(|(x, y)| x.is_finite() && y.is_finite())
+            .collect();
+        let Some(&(x, y)) = points.last() else {
+            return self.status(t);
+        };
         let local_phase = (phase_for(t) + phase_offset(self.seed) + (x + y) * 0.1).rem_euclid(1.0);
+        let n = points.len();
+        // Each poke plants a miniature Fourier chain; arm count of the main
+        // chain is fixed, and the pen phase names the local copy's phase.
         Some(format!(
-            "MINIATURE CHAIN AT {:.0}% {:.0}%   PEN PHASE {:.0}%",
+            "{n} MINI  @ {:.0}%{:.0}%  PEN {:.0}%  SAME ARMS",
             x * 100.0,
             y * 100.0,
             local_phase * 100.0
@@ -485,10 +498,11 @@ mod tests {
         }];
 
         assert!(poked.ink_count() > base.ink_count());
-        assert_eq!(
-            room.status_input(0.0, &input).as_deref(),
-            Some("MINIATURE CHAIN AT 53% 47%   PEN PHASE 10%")
-        );
+        let status = room.status_input(0.0, &input).expect("mini status");
+        assert!(status.starts_with("1 MINI"), "{status}");
+        assert!(status.contains("@ 53%47%"), "{status}");
+        assert!(status.contains("PEN "), "{status}");
+        assert!(status.contains("SAME ARMS"), "{status}");
     }
 
     #[test]

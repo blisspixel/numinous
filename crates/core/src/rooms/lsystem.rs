@@ -10,7 +10,7 @@
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::{MAX_DIM, Surface};
 
 /// Max iterations for render (keeps it fast and bounded).
@@ -449,6 +449,30 @@ impl Room for LSystemGarden {
         Some("CLICK: PLANT A TREE")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        let _ = t;
+        Some("ONE SPECIES FITS THE VIEW   CLICK: PLANT A ROOTED COPY".into())
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = crate::pokes_from_inputs(inputs);
+        let plants: Vec<(f64, f64)> = pokes
+            .into_iter()
+            .filter(|(x, y)| x.is_finite() && y.is_finite())
+            .collect();
+        if plants.is_empty() {
+            return self.status(t);
+        }
+        let count = plants.len();
+        let (ox, oy) = *plants.last().expect("nonempty plants");
+        // Every plant is the same rewrite species; the hand only chooses origin.
+        Some(format!(
+            "{count} COPY  ORIGIN {:.0}%{:.0}%  SAME SPECIES",
+            ox * 100.0,
+            oy * 100.0
+        ))
+    }
+
     fn postcard_t(&self) -> f64 {
         0.6
     }
@@ -775,6 +799,22 @@ mod tests {
         assert!(r.verb().is_some());
         assert_eq!(r.meta().id, "lsystem-garden");
         assert!(r.meta().wing.contains("Emergence"));
+    }
+
+    #[test]
+    fn action_status_names_planted_copies() {
+        use crate::room::RoomInput;
+        let room = LSystemGarden::new();
+        assert!(room.status(0.0).unwrap().contains("CLICK"));
+        let inputs = [RoomInput::PointerDown {
+            x: 0.25,
+            y: 0.5,
+            t: 0.0,
+        }];
+        let status = room.status_input(0.0, &inputs).expect("planted");
+        assert!(status.starts_with("1 COPY"), "{status}");
+        assert!(status.contains("ORIGIN 25%50%"), "{status}");
+        assert!(status.contains("SAME SPECIES"), "{status}");
     }
 
     #[test]

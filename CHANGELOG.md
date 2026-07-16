@@ -5,7 +5,324 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- Current-state docs name the live catalog size (350 rooms): root README,
+  `docs/README.md`, `docs/ROOMS.md`, `docs/MUSIC.md`, `docs/ROADMAP.md` progress
+  notes, and `VERIFY.md`. Historical 0.1 foundation notes that recorded the
+  original 31-room baseline stay as history.
+
 ### Added
+- Four closing inventions (catalog 350): AGM Mean, Twin Primes, Perfect Numbers,
+  Napoleon Theorem.
+- Six analysis inventions (catalog 346): Gamma Function, Error Function,
+  Fresnel Integrals, Lambert W, Sinc Interpolation, Dirichlet Eta.
+- Six topology inventions (catalog 340): Klein Bottle, Cross-Cap, Boy Surface,
+  Solid Torus, Hopf Link, Unknot.
+- Six probability and information inventions (catalog 334): Shannon Entropy,
+  Bayes Update, Erdos-Renyi Graph, Markov Chain, Huffman Tree, Mutual Info.
+- Six number-theory inventions (catalog 328): Lucky Numbers, Gaussian Primes,
+  Quadratic Residues, Zeckendorf, Egyptian Fractions, Pell Path.
+- Six dynamics inventions (catalog 322): Simple Pendulum, Blackbody Spectrum,
+  Kepler Areas, Escape Velocity, Coupled Oscillators, Prism Dispersion.
+- Six classical curve inventions (catalog 316): Superellipse, Cochleoid,
+  Serpentine, Bifolium, Butterfly Curve, Piriform.
+- Six analysis inventions (catalog 310): Harmonic Series, Basel Problem,
+  Stirling Approx, Benford Law, Central Limit, Wallis Product.
+- Six stochastic inventions (catalog 304): Poisson Process, Brownian Motion,
+  Birthday Paradox, Coupon Collector, Zipf Law, Gambler's Ruin.
+- Six arithmetic inventions (catalog 298): Mertens Function, Liouville Function,
+  Euler Totient, Partition Function, Paperfold Sequence, Sylvester Sequence.
+- Six sequence inventions (catalog 292): Kolakoski Sequence, Beatty Sequence,
+  Wythoff Array, Minkowski Question Mark, Ruler Function, Moser-de Bruijn.
+- Six topology inventions (catalog 286): Viviani Curve, Torus Knot, Whitney
+  Umbrella, Roman Surface, Spherical Harmonic, Lissajous 3D.
+- Six topology inventions (catalog 280): Seifert Film, Trefoil Knot, Hopf
+  Fibration, Filled Julia, Figure-Eight Knot, Borromean Rings.
+- Six special-function inventions (catalog 274): Bessel J0, Hermite Wave,
+  Legendre P_n, Heat Kernel, Cauchy Lorentz, Mexican Hat wavelet.
+- Six classical inventions (catalog 268): Kampyle of Eudoxus, Hippopede,
+  Cartesian Oval, Berry Phase, Runge Phenomenon, Chebyshev Nodes.
+- Six classical inventions (catalog 262): Maclaurin Trisectrix, Watt Curve,
+  Devil Curve, Capillary Meniscus, Rabi Flopping, Sphere Geodesics.
+- Six classical inventions (catalog 256): Tautochrone, Catenoid, Helicoid,
+  Pseudosphere, Airy Disk, Bragg Diffraction.
+- Six classical inventions (catalog 250): Reuleaux Triangle, Logarithmic Spiral,
+  Archimedean Spiral, Cassini Ovals, Foucault Pendulum, Coriolis Path.
+- Six optics inventions (catalog 244): Doppler, Interference, Diffraction,
+  Snell's Law, Polarization, Brewster Angle.
+- Six wave inventions (catalog 238): Gibbs Square, Sawtooth, Triangle Wave, AM
+  Modulation, FM Modulation, Standing Wave.
+- Six classical inventions (catalog 232): Involute, Ellipse Evolute, Pedal
+  Curve, Roulette Gallery, Damped Sine, Beats.
+- Six classical curve inventions (catalog 226): Semicubical, Kappa, Circular
+  Caustic, Trochoid, Hypotrochoid, Epitrochoid.
+- Six classical curve inventions (catalog 220): Gerono Eight, Cissoid, Strophoid,
+  Conchoid, Limacon, Folium of Descartes.
+- Six classical curve inventions (catalog 214): Dual Cobweb, Beverton-Holt,
+  Witch of Agnesi, Tractrix, Catenary, Clothoid.
+- Six classical inventions (catalog 208): Hyperbolic Tiling, Mackey-Glass,
+  Fermat Spiral, Euclid Algorithm, Oregonator, Hofstadter Q.
+- Six classical inventions (catalog 202): Cardioid, Deltoid, Coupled Logistic,
+  Menger Sponge, Spiral of Theodorus, Rule 110.
+- Six curve and system inventions (catalog 196): Sprott Attractor, Delaunay Mesh,
+  Astroid, SIR Epidemic, Nephroid, Lemniscate.
+- Six physics and geometry inventions (catalog 190): Percolation, Ising Lattice,
+  Lotka-Volterra, Poincare Disc, Cycloid, Brusselator.
+- Six chaos and geometry inventions (catalog 184): Chua Circuit, Arnold Cat
+  Map, Blancmange Curve, Rose Curve, Kuramoto Sync, H-Tree.
+- Six fractal and cascade inventions (catalog 178): Nova, Magnet Fractal,
+  Lambda Map, Feigenbaum Ladder, Menger Carpet, Vicsek Fractal.
+- Six fractal escape inventions (catalog 172): Burning Ship, Tricorn, Multibrot,
+  Phoenix, Lyapunov Weather, Collatz Tree.
+- Six map and gasket inventions (catalog 166): Bogdanov, Kaplan-Yorke, Ricker,
+  Farey Sequence, Gosper Curve, Sierpinski Triangle.
+- Six fractal and intermittency inventions (catalog 160): Gauss Map, Manneville,
+  Coupled Tents, Koch Snowflake, Cesaro Fractal, Minkowski Sausage.
+- Six chaos-geometry inventions (catalog 154): Smale Horseshoe, Logistic Orbit,
+  Sinai Billiard, Henon-Heiles, Quadratic Map, Angle Doubling.
+- Six classical map inventions (catalog 148): Lozi, Baker's Map, Tent Map,
+  Arnold Circle Map, Chirikov Standard Map, Elliptical Billiard.
+- Six continuous chaos inventions (catalog 142): Pickover, Aizawa, Thomas,
+  Halvorsen, Rabinovich-Fabrikant, Three-Scroll.
+- Six classical inventions (catalog 136): Clifford, Peter de Jong, Svensson,
+  Bedhead, Hopalong, Gumowski-Mira attractors.
+- Six classical inventions (catalog 130): Bifurcation Weather, Stern-Brocot Tree,
+  Josephus Circle, Calkin-Wilf Tree, Gibbs Overshoot, Sierpinski Arrowhead.
+- Six classical inventions (catalog 124): Ikeda Map, Duffing Well, Levy C Curve,
+  Tinkerbell Map, Gingerbreadman Map, Menger Face.
+- Six classical inventions (catalog 118): Thue-Morse, Rossler Scroll, Cantor /
+  Devil's Staircase, Weierstrass, Peano Curve, Van der Pol Cycle.
+- Six classical inventions (catalog 112): Dragon Curve, Fibonacci Word, Cubic
+  Newton, Henon Map, Rule 30, Mandelbulb Slice.
+- Six classical inventions (catalog 106): Penrose floor, Continued Fractions,
+  Logistic Cobweb, Sierpinski Carpet, Pythagoras Tree, Ulam Spiral.
+- Catalog 100: The Mirror of Forms (category-lite composition).
+- Frontier and topology batch (catalog 99): Sphere Eversion, Causal Doors,
+  Soft Proof (homotopy), Learning Clock, Duality.
+- Soap Film, Landauer's Price, and Prime Gap Weather (catalog 94).
+- Universal wonder Tier S/A wave (catalog 91): Curse of Dimension,
+  Concentration Bell, Uncertainty Dial, Gradient Valley, Attention as Soft
+  Light, Braess Trap, Nontransitive Dice, Parrondo's Trap, Hilbert's Hotel.
+- Gray-Scott Chemical Garden and Eratosthenes Sieve (catalog 82).
+- Three classical fractal rooms (catalog 80): Newton's Basins (`newton`), Koch
+  Infinite Coast (`koch`), Hilbert Space-Filling Path (`hilbert`).
+- Function Painter (`function-painter`, catalog 77): domain coloring of a rack
+  of complex maps (z^2, z^2+c, 1/z, sin z, e^z, z^3-1); phase as symbol,
+  magnitude as density; DRAG picks map and tunes c.
+- Awe Engine Tier A/B completion (catalog 76): Apollonian gasket, Circle
+  Inversion, DLA Frost, Kaprekar 6174, Steiner chain, Hopf linked rings,
+  Wireworld, Buddhabrot, Spherical Harmonics.
+
+- Chord Game plus Awe Engine Tier S (catalog 67): elliptic chord-and-tangent
+  group law; Recaman Jumper; Truchet Weave; Pursuit Chase; Pascal mod n;
+  Three-Gap Spinner; Morley triangle; Clifford Menagerie.
+- Four more Next Wave rooms (catalog 59): Unlit Room, The Lens, Fourteen
+  Beacons, The Loneliness Equation.
+- Four more Next Wave rooms (catalog 55): Tilt the Cone, The Stretch, Laplace's
+  Clockwork, The Message That Heals.
+- Six Next Wave rooms (catalog 51): Busy Beaver, The 720 Degree Room,
+  Upside-Down Ruler, Murmuration, Whispering Table, Wet Oracle.
+- Phantom Jam (`phantom-jam`), The Fastest Fall (`fastest-fall`), and
+  Audioactive Decay (`audioactive`): Sugiyama upstream traffic jam; cycloid
+  brachistochrone race; look-and-say generations toward Conway's constant.
+- Kepler's Loom room (`kepler-loom`, Motion & Dynamics): inverse-square orbit
+  integration; ambient elliptical moon; DRAG: FLING A MOON reports eccentricity
+  and peri/apo.
+- The Magnet room (`the-magnet`, Emergence): Metropolis Ising lattice; ambient
+  and DRAG heat through Onsager Tc; magnetization grades ORDER/CRIT/NOISE.
+- The First Rain room (`first-rain`, Emergence): site percolation on a square
+  lattice; `t` and DRAG: MAKE IT RAIN dial occupancy p; status reports SPAN/DRY
+  against p_c about 0.5927.
+- Slingshot room (`slingshot`, Motion & Dynamics): pull-and-release probe
+  under multi-sun Newtonian gravity; assists counted on speed-gain flybys;
+  HOLD plants a sun; misses become comets. Completes the Next Wave first eight.
+- The Starbow room (`starbow`, Shape & Space): McKinley relativistic aberration
+  maps each rest-frame star into a forward cone as beta climbs; `t` burns
+  ambient speed; HOLD: BURN under the hand; status reports v/c, gamma, and
+  forward fraction.
+- The Zeta Walk room (`zeta-walk`, Number & Pattern): alternating eta partial
+  sums on Re(s)=1/2 draw a spiral that tightens near tabulated Riemann zeros;
+  `t` climbs imag height; DRAG: CLIMB THE LINE; sound resolves at cadences.
+- Ford Circles room (`ford-circles`, Number & Pattern): reduced fractions p/q
+  own radius-1/(2q^2) circles that never overlap; `t` deepens the denominator
+  ceiling; CLICK: BIRTH THE MEDIANT inserts (a+c)/(b+d) into the Farey gap under
+  the hand. Focused tests cover non-overlap, neighbor kisses, and golden gap
+  readout.
+- The Coffee Cup room (`coffee-cup`, Shape & Space): one-bounce circular
+  reflections condense into a cardioid caustic; `t` walks the rim sun; DRAG:
+  SWING THE SUN aims the cusp. Reveal links the same cardioid to Times Tables
+  and Mandelbrot.
+- The Ripple Tank room (`ripple`, Waves & Sound): monochromatic point sources
+  superpose into bright fans and dead-calm lanes; ambient double source opens
+  the double slit; CLICK: DROP A PEBBLE replaces sources under the hand.
+- Chladni Figures room (`chladni`, Waves & Sound): free-plate formula draws
+  nodal sand for mode pairs (n, m); `t` walks a mode gallery; DRAG: TUNE THE
+  PLATE sets integer modes under the hand; drive tone chord is the same two
+  numbers. Reveal cites Gordon-Webb-Wolpert (1992).
+- The Sandpile room (`sandpile`, Emergence): Bak-Tang-Wiesenfeld topple on an
+  open grid; height four or more sends one grain to each neighbor; `t` pours
+  the center; HOLD: POUR SAND drops under the hand. Status reports mass,
+  critical cells, last avalanche topples, and peak height. Focused tests cover
+  single topple, edge loss, abelian pour order, variation, and footer budgets.
+  First of the Next Wave designs to ship.
+- Frontier and universal wonder catalog pass: `ROOMS.md` gains a research-backed
+  designed-not-built wave (high-dimension concentration, uncertainty dials,
+  learning landscapes, topology eversions, channel repair, labeled frontier
+  gestures) with cross-mind filters and sequencing; `ROADMAP.md` adds Exceptional
+  Path Phase F and 1.x hooks. No product 0.2 claim; planning only.
+- Munch crunch one-shot: each bite toggle plays a short deterministic noise
+  tick over the room score without restarting the bed. Core `munch_crunch`
+  renders the sample; audio mixer `play_oneshot` consumes it once. Focused
+  regressions cover sample bounds and oneshot mix isolation.
+- Studio Formula Jam discovery (0.3): F2 Random cycles a curated 12-recipe bank;
+  F3 Auto holds each recipe about 21s then advances only near an 1/8-phase
+  edge; F1 toggles a dismissible help overlay that opens on first Studio
+  contact. Typing, backspace, and space pause Auto; F3 resumes. Footer legend
+  names the controls. Focused regressions cover recipes, dwell, phrase edges,
+  edit-pause, and help toggle.
+- Munch bite juice: each toggle (keyboard or mouse) flashes the cell for a
+  short fill pulse so bites are felt before final grading. Gauntlet munch
+  stage shares the same juice. Focused tick-down regression covers the flash.
+- Mouse support for every window game: Nim heaps and stone takes, Arcade step
+  and eat, and Gauntlet munch/quiz stages all answer left-click. Quiz and Munch
+  already clicked; pointer routing now treats all five live games as click
+  targets instead of ignoring Nim, Arcade, and Gauntlet. Focused hit-test and
+  input-mode regressions cover the layouts.
+- Roadmap progress note: machine-completable 0.2 catalog and Share contracts
+  (first-contact invite, measured action status, footer budgets, App/CLI short
+  loops, security gates) are closed with engineering evidence while product
+  0.2 human gates remain open under `0.2.0-alpha.1`.
+- Registry invariant `first_contact_status_fits_compact_footer`: open status is
+  at most 56 characters, matching action status. Cellular Automata open line
+  compacted to keep rule identity, rewrite idea, and flip invite inside budget.
+- Registry invariant `first_contact_status_names_an_action_or_goal_when_the_room_has_a_verb`:
+  every verb-bearing catalog room must open with an invite or goal token
+  (CLICK/DRAG/TARGET/...), not ambient-only prose. Lissajous, Cult of Pi,
+  Logistic Map, The Pour, Slope Rider, and Double Pendulum first-contact lines
+  now name the act while keeping measured live state and the footer budget.
+- Arecibo first-contact honesty: open status names the unsolved width and
+  CLICK:TRY WIDTH; a hand try reports TRIED W{n}, the rectangle, and LOCK:PI,
+  PAIR TRY W11, or REM remainder grades. Focused regressions cover open, miss,
+  lock, and pair paths under the compact footer budget.
+- Share short-loop export (0.2 Share v1 motion path): App key L writes a
+  24-frame looping APNG of the current visit at 480px, 12 fps, preserving
+  gesture history and Visual Era. Game of Life loops advance generations from
+  a cloned session so the live visit is not mutated. Still postcards remain on
+  P. Independent SaveGate budget (2 s) prevents loop floods. Filenames use
+  `numinous-{room}-loop-{state}.png` with collision suffixes. Focused
+  regressions cover multi-frame headers, poke preservation, phase motion, and
+  Life non-mutation.
+- CLI `numinous loop <room> --out file.png` exports the same short looping APNG
+  path with phase start, era, variation, poke, and gesture flags. Maintenance
+  cycle 133 also sanitizes App postcard and loop filenames so room ids cannot
+  inject path separators or hidden-dot components into the home directory.
+- Registry invariant `action_status_fits_compact_footer`: center-poke status is
+  at most 56 characters so compact App footers stay legible beside controls.
+- Buffon and Zeno action status compacted for footer budgets while keeping
+  throw/cross/pi estimate and hop/progress grades.
+- Julia morph status reports |c| and a NEAR0/MAIN/OUTER band for the selected
+  constant so a hand morph is graded by how far c sits from the origin region.
+- Random Walk plant status compacted to MEAN versus SQRTN law with step count,
+  keeping the square-root distance grade inside a short footer line.
+- Logistic Map seed status reports Lyapunov exponent and ORDER/CHAOS regime for
+  the hand-chosen r alongside the orbit seed, so a population seed is graded by
+  the same chaos measure as the ambient readout.
+- Registry invariant `action_status_reports_a_measured_quantity`: after a
+  center poke every catalog room status must include a digit (a count,
+  coordinate, rule, or ratio), not only prose.
+- Fourier Epicycles mini-chain status names plant count, origin, pen phase, and
+  that each miniature reuses the same arm set as the main chain.
+- Lissajous tune status names the reduced interval class (UNISON, OCTAVE, FIFTH,
+  and kin) for the hand-chosen integer ratio.
+- Quine place status names copy count, newest print origin, and nest depth so a
+  self-print is graded as depth plus placement, not only a marker.
+- Harmonograph tune status grades figure state (CLOSED/OPEN/BLOOM) and damping
+  life (LONG/MED/SHORT) beside the detune and damp knobs.
+- L-System plant status names the newest origin and that every copy is the same
+  rewrite species.
+- Langton's Ant flip status reports flip site, flip count, replayed steps, and
+  black-cell count after the full ant run so a seed flip is graded by its trail.
+- Chaos Game corner status names the newest vertex position and the rebuilt
+  corner count with the jump ratio that builds the attractor.
+- Voronoi action status names the newest well position and estimates its
+  territory share on a fixed sample grid after borders renegotiate, so a drop
+  is graded by how much desert the new well claims.
+- Cellular Automata action status names the notable rule identity (for example
+  SIERPINSKI for Rule 90), the flip count, the newest seed column, and the
+  post-flip seed density on a fixed analysis width so a click is a measured
+  rewrite of the top row, not only a flip counter.
+- Strange Loop hand status names nest depth (1/4 through 4/4) from the anchor
+  and restates that each level is the same shape.
+- Barnsley mini-fern status names the shared four-map IFS (stem/leaf/left/right
+  probabilities) and the phase-scaled point budget of each planted chaos game.
+- Mobius brush status names which lap of the double-covered single edge the
+  newest paint sits on, reports paint reach, and restates that it is still one
+  edge.
+- Prime Spirals trace status counts primes that land on the selected diagonals
+  and names the spiral center, so a click reports the Ulam line's prime haul
+  rather than only a trace count.
+- Mandelbrot dive status names the complex target (C real/imag) and zoom power
+  of two; Golden Angle plant status grades local packing (PACKED/NEAR/GAPS)
+  against the golden step in degrees so placement detune is readable.
+- Cult of Pi placement decision loop: hold status grades the newest patch by
+  how many display faults it restores (FIX) and names the exact digit under the
+  finger (D), so placement is a choice between faulted and clean regions rather
+  than only a hold count. Compact footer bound retained. Focused regressions
+  cover phase-zero FIX0, hit grading, and site-dependent status.
+- Galton Board one-ball prediction beat: a pointer-move commits a landing-bin
+  wager without dropping balls; the next 64-ball wave still builds the
+  empirical run, and status grades the highlighted last ball as B{n}H or B{n}M
+  against that bet. First contact names the move-to-bet verb; pure clicks keep
+  the prior mean-versus-expectation readout. Focused regressions cover bet
+  pending, hit/miss grading, and move-only render silence.
+- The Pour and Slope Rider action status now freeze the theorem at the hand:
+  a probe reports fill rate equals height plus the poured total, and a dropped
+  rider reports board tilt plus hill height. The catalog invariant
+  `poke_changes_status_for_every_catalog_room` requires every room to change
+  status after a center poke (no phase-scrub allowlist). Focused regressions
+  lock both rooms.
+- Registry invariant that every touchable catalog room changes status after a
+  center poke (evolved from the earlier allowlisted phase-scrub form).
+- Lorenz action status names seeded shadow storms; Double Pendulum status
+  labels PINNED, FLUNG, RE-DROP, or CANCELLED beside the twin gap so gesture
+  and poke paths both speak after a hand act.
+- Galton Board experiment status now reports empirical mean rights versus the
+  binomial expectation np, so a run is graded against its coin, not only the
+  last ball path.
+- L-System Garden action status names how many rooted copies were planted and
+  that they keep the same species.
+- Collatz and Cellular Automata action status now name the mathematical
+  consequence of a touch: perturbed orbit start and steps-to-1 for Collatz,
+  seed-flip count and history replay for elementary CA, while empty input keeps
+  the invitation line.
+- Catalog-wide first-contact status is now an invariant: every catalog room
+  opens with a non-empty status line. Remaining silent rooms (Cellular Automata,
+  Collatz, Golden Angle, Galton Board, Prime Spirals, Mandelbrot, Julia,
+  Barnsley Fern, L-System Garden, Fourier Epicycles, Mobius, Strange Loop)
+  gained invitation readouts; empty-input status_input falls back where needed.
+  A registry regression rejects silent first contact.
+- Catalog first-contact honesty pass for seven more rooms. Random Walk names
+  steps and the square-root law radius, then reports planted mean distance
+  against that law. Voronoi, Chaos Game, Langton's Ant, Quine, Zeno's Square,
+  and Goldbach's Comet each open with an invitation status and fall empty-input
+  status_input back to that invitation; player action status names the
+  consequence (dropped wells, added corners, flipped cells, placed copies,
+  runners, prime witnesses). Focused first-contact regressions cover the
+  batch. Buffon's Needle first contact now invites a throw instead of reporting
+  a finished ambient Monte Carlo estimate. Untouched status names the live L/D
+  ratio, the classical crossing chance 2L/(pi D), and the click verb; only the
+  player's own throws produce a pi estimate. A focused first-contact regression
+  locks the claim.
+- Cycle 105 security hardening: MCP tool schemas now declare and enforce
+  `maxLength` on catalog ids, Studio expressions, and Cairn leave/author
+  strings; the schema validator rejects oversize strings before dispatch;
+  `play_room` rejects hostile canvas sizes at the tool body as defense in
+  depth; `sing_expression` notes are schema-bounded to 1 through 64.
+  `cargo-audit` is a CI gate with project ignores in `.cargo/audit.toml`
+  aligned to `deny.toml` (build-time quick-xml via wayland-scanner), and
+  both verify scripts run it when installed. ENGINEERING documents the local
+  single-user threat model and dual supply-chain path. Focused schema
+  regressions cover oversize ids, expressions, bequests, and note counts.
 - The stable App room bed is now a first-class cross-face contract. CLI
   `sonify --layer room-bed` exports a deterministic PCM16 projection of the
   shared 16 kHz stereo floating-point source,

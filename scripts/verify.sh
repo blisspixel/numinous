@@ -26,10 +26,17 @@ else
 fi
 
 if command -v cargo-deny >/dev/null 2>&1; then
-    echo "== supply-chain =="
+    echo "== supply-chain (cargo-deny) =="
     cargo deny check
 else
-    echo "== supply-chain == (skipped: run 'cargo install cargo-deny' to enable; CI enforces it)"
+    echo "== supply-chain (cargo-deny) == (skipped: run 'cargo install cargo-deny' to enable; CI enforces it)"
+fi
+
+if command -v cargo-audit >/dev/null 2>&1; then
+    echo "== supply-chain (cargo-audit) =="
+    cargo audit
+else
+    echo "== supply-chain (cargo-audit) == (skipped: run 'cargo install cargo-audit' to enable; CI enforces it)"
 fi
 
 echo "== house-style =="

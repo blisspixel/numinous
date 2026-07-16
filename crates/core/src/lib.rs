@@ -67,8 +67,8 @@ pub use challenge::{
     pose_challenge, pose_parameter_goal,
 };
 pub use chiptune::{
-    Arrangement, ChipNote, Pattern, StereoSignalMetrics, Voice, compose, pitch, quantize_pcm16,
-    stereo_signal_metrics,
+    Arrangement, ChipNote, Pattern, StereoSignalMetrics, Voice, compose, munch_crunch, pitch,
+    quantize_pcm16, stereo_signal_metrics,
 };
 pub use codebreaker::{Feedback, grade, hint, secret_code};
 pub use concepts::concept;

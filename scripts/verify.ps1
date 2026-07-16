@@ -38,9 +38,15 @@ if ($null -ne (Get-Command cargo-llvm-cov -ErrorAction SilentlyContinue)) {
 }
 
 if ($null -ne (Get-Command cargo-deny -ErrorAction SilentlyContinue)) {
-    Step "supply-chain" { cargo deny check }
+    Step "supply-chain (cargo-deny)" { cargo deny check }
 } else {
-    Write-Host "`n== supply-chain == (skipped: run 'cargo install cargo-deny' to enable; CI enforces it)" -ForegroundColor Yellow
+    Write-Host "`n== supply-chain (cargo-deny) == (skipped: run 'cargo install cargo-deny' to enable; CI enforces it)" -ForegroundColor Yellow
+}
+
+if ($null -ne (Get-Command cargo-audit -ErrorAction SilentlyContinue)) {
+    Step "supply-chain (cargo-audit)" { cargo audit }
+} else {
+    Write-Host "`n== supply-chain (cargo-audit) == (skipped: run 'cargo install cargo-audit' to enable; CI enforces it)" -ForegroundColor Yellow
 }
 
 Step "house-style" { powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1 }

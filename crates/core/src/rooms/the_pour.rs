@@ -7,7 +7,7 @@
 //! Full Map in `docs/ROOMS.md`.
 
 use super::variation_unit;
-use crate::room::{Room, RoomMeta};
+use crate::room::{Room, RoomInput, RoomMeta, pokes_from_inputs};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
@@ -220,7 +220,26 @@ impl Room for ThePour {
         // poured right now: the fundamental theorem of calculus, stated for an
         // arbitrary curve. Say "fill rate" rather than "height = slope", which a
         // calculus-fluent mind misreads as the e^x fixed point (f = f').
-        Some(format!("FILL RATE = HEIGHT = {:.2}", f(x)))
+        Some(format!("FILL=HEIGHT {:.2}  CLICK:PROBE", f(x)))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = pokes_from_inputs(inputs);
+        let Some(&(hand_x, _)) = pokes
+            .iter()
+            .rev()
+            .find(|(x, y)| x.is_finite() && y.is_finite())
+        else {
+            return self.status(t);
+        };
+        let x = hand_x.clamp(0.0, 1.0) * X_MAX;
+        // The probe freezes the theorem at the hand: fill rate equals vessel
+        // height, and the total names how much has poured so far at that x.
+        Some(format!(
+            "PROBE FILL=HEIGHT {:.2}  TOTAL {:.2}",
+            f(x),
+            area(x)
+        ))
     }
 
     fn reveal(&self) -> &'static str {
@@ -358,6 +377,27 @@ mod tests {
     }
 
     #[test]
+    fn probe_status_freezes_fill_rate_and_total_at_the_hand() {
+        use crate::room::inputs_from_pokes;
+
+        let room = ThePour::new();
+        let open = room.status(0.0).expect("open status");
+        assert!(open.starts_with("FILL=HEIGHT"));
+        assert!(open.contains("CLICK:PROBE"), "{open}");
+        let empty = room.status_input(0.0, &[]).expect("empty input falls back");
+        assert_eq!(empty, open);
+
+        let hand = inputs_from_pokes(&[(0.4, 0.5)], 0.0);
+        let probed = room.status_input(0.0, &hand).expect("probe status");
+        assert_ne!(probed, open);
+        assert!(probed.starts_with("PROBE FILL=HEIGHT"));
+        assert!(probed.contains("TOTAL"));
+        let x = 0.4 * super::X_MAX;
+        assert!(probed.contains(&format!("{:.2}", f(x))));
+        assert!(probed.contains(&format!("{:.2}", area(x))));
+    }
+
+    #[test]
     fn pokes_use_the_newest_raw_tail_before_filtering() {
         let room = ThePour::new();
         let mut flood: Vec<(f64, f64)> = (0..200).map(|i| (i as f64 / 200.0, 0.4)).collect();
@@ -426,6 +466,6 @@ mod tests {
         room.render(&mut zero_phase, 0.0);
         assert_eq!(nan_phase.to_text(), zero_phase.to_text());
         let status = room.status(f64::NAN).expect("status");
-        assert!(status.starts_with("FILL RATE = HEIGHT"));
+        assert!(status.starts_with("FILL=HEIGHT"));
     }
 }

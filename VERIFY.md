@@ -40,9 +40,11 @@ cargo test --workspace --all-targets --locked
 cargo build --workspace --locked
 cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'
 cargo deny check                         # if cargo-deny is installed; CI always runs it
+cargo audit                              # if cargo-audit is installed; CI always runs it
 bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
 ```
+
 
 Expected right now: **format and clippy clean, 1,350 all-target test cases pass,
 93.64% region cover, and 93.49% line cover**. The `gpu` and `audio` crates plus the app event
@@ -107,7 +109,7 @@ sonification riding on top), and a menu explaining itself (Esc brings it
 back). Game-native controls: A/D or arrows change rooms, 1-9 jump straight to
 one, W/S run time faster or slower, drag or mouse-wheel scrubs, E inspects the
 math, Q swaps the visual era (phosphor, 8-bit, vector, modern), R restarts the
-sweep, P saves the current room frame as a PNG postcard, F goes fullscreen, M mutes, [ and ] change global volume, B starts The Show (lean back), G deals the
+sweep, P saves the current room frame as a PNG postcard, L saves a short looping APNG of the visit, F goes fullscreen, M mutes, [ and ] change global volume, B starts The Show (lean back), G deals the
 quiz (name the math, right in the window), C plays today's Munch board with a
 cursor (WASD moves, Space eats, Enter grades), N plays Nim against the Order
 (aim with W/S and A/D, Enter takes; win and the xor secret shows), T runs the
@@ -129,6 +131,7 @@ cargo run --bin numinous -- rooms
 cargo run --bin numinous -- describe times-tables
 cargo run --bin numinous -- render chaos-game --width 50 --height 25
 cargo run --bin numinous -- render mandelbrot --color --t 0.2   # 24-bit color in the terminal
+cargo run --bin numinous -- loop times-tables --out loop.png    # short looping APNG share
 cargo run --bin numinous -- tour                   # the Show: every room, narrated; Ctrl+C
 cargo run --bin numinous -- watch julia            # full color, animating, WITH SOUND; Ctrl+C
 cargo run --bin numinous -- watch lorenz --era phosphor   # the same math on 1978 glass
@@ -227,9 +230,10 @@ Cairn, so it cannot change the player's profile or collide with another run.
 
 ## 5. Where things are
 
-- `crates/core` the headless engine: rooms (31 catalog rooms across 10 wings plus hidden content), sims, games
-  (including nim and the chiptune composer), the Studio expression engine, the
-  journey, scores, trophies, resonances, sound, eras, and the drawing surfaces.
+- `crates/core` the headless engine: rooms (350 catalog rooms plus hidden
+  content), sims, games (including nim and the chiptune composer), the Studio
+  expression engine, the journey, scores, trophies, resonances, sound, eras,
+  and the drawing surfaces.
 - `crates/gpu` adaptive wgpu rendering; `crates/audio` adaptive cpal output.
 - `faces/cli` the `numinous` binary; `faces/mcp` the `numinous-mcp` server.
 - `docs/` the full design and plan (start at `docs/README.md`); `CHANGELOG.md` the
@@ -238,17 +242,17 @@ Cairn, so it cannot change the player's profile or collide with another run.
 
 ## 6. What is done vs pending
 
-Done and verifiable now: 31 catalog rooms across 10 wings plus hidden content,
-6 sims, 11+ games with a shared high-score table and daily seeds, the
-complete RPG spine (levels to 42 with lore, locks, 18 trophies with pings, the
-Gauntlet run, boons, daily streaks, resonances), the Studio (plot, animate,
-sing, in the terminal and the window), Visual Eras (including PNG output),
-Music Engine A (the seeded chiptune, `numinous tune`), GPU real-time fractals,
-live sound in the app and CLI plus structured notation over MCP, the `forget`
-right for players who are minds, and 29 MCP tools (full CLI parity for the
-games; challenge, predict, and cairn are MCP-first) so agents play the same
-content. Pending (see `docs/ROADMAP.md`): deeper held and causal interactions
-in other rooms,
+Done and verifiable now: 350 catalog rooms plus hidden content, 6 sims, 11+
+games with a shared high-score table and daily seeds, the complete RPG spine
+(levels to 42 with lore, locks, 18 trophies with pings, the Gauntlet run,
+boons, daily streaks, resonances), the Studio (plot, animate, sing, in the
+terminal and the window), Visual Eras (including PNG output), Music Engine A
+(the seeded chiptune, `numinous tune`), GPU real-time fractals, live sound in
+the app and CLI plus structured notation over MCP, the `forget` right for
+players who are minds, and 29 MCP tools (full CLI parity for the games;
+challenge, predict, and cairn are MCP-first) so agents play the same content.
+Pending (see `docs/ROADMAP.md`): deeper held and causal interactions in other
+rooms,
 human playtests, representative physical-controller sessions, musician-led
 long-listening review, cross-platform proof, full Studio save/share beyond the
 first CLI `.num` save/open slice, the music visualizer, and more GPU room paths.

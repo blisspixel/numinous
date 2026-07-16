@@ -149,6 +149,18 @@ impl Room for Zeno {
         Some("CLICK: SEND THE RUNNER")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        let phase = self.phase_for(t);
+        let hops = ((phase * (MAX_TILES as f64 + 1.0)) as usize).min(MAX_TILES);
+        let reached = (1.0 - 0.5_f64.powi(hops.max(1) as i32)) * 100.0;
+        if hops == 0 {
+            return Some("SQUARE WAITS   CLICK: SEND THE RUNNER".into());
+        }
+        Some(format!(
+            "{hops} TILES LAID   {reached:.2}% FILLED   CLICK: SEND A RUNNER"
+        ))
+    }
+
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let runners = inputs
             .iter()
@@ -162,7 +174,7 @@ impl Room for Zeno {
             .count()
             .min(MAX_ROOM_POKES);
         if runners == 0 {
-            return None;
+            return self.status(t);
         }
         let phase = if t.is_finite() {
             t.clamp(0.0, 1.0)
@@ -171,9 +183,7 @@ impl Room for Zeno {
         };
         let hops = ((phase * (MAX_TILES as f64 + 1.0)) as usize).clamp(1, MAX_TILES);
         let reached = (1.0 - 0.5_f64.powi(hops as i32)) * 100.0;
-        Some(format!(
-            "{runners} RUNNER(S)   {hops} HALVING HOPS   {reached:.2}% OF THE WAY"
-        ))
+        Some(format!("{runners} RUN  {hops} HOP  {reached:.1}% WAY"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -295,7 +305,16 @@ mod tests {
     #[test]
     fn status_turns_finite_gestures_into_halving_progress() {
         let room = Zeno::new();
-        assert_eq!(room.status_input(0.5, &[]), None);
+        let open = room.status(0.5).expect("open status");
+        assert!(
+            open.contains("TILES LAID") || open.contains("SQUARE WAITS"),
+            "{open}"
+        );
+        assert!(open.contains("CLICK"), "{open}");
+        assert_eq!(
+            room.status_input(0.5, &[]).as_deref(),
+            room.status(0.5).as_deref()
+        );
         let inputs = [
             RoomInput::PointerUp {
                 x: 0.1,
@@ -313,13 +332,13 @@ mod tests {
                 t: 0.2,
             },
         ];
-        assert_eq!(
-            room.status_input(f64::NAN, &inputs).as_deref(),
-            Some("1 RUNNER(S)   1 HALVING HOPS   50.00% OF THE WAY")
-        );
+        let early = room.status_input(f64::NAN, &inputs).expect("early runner");
+        assert!(early.starts_with("1 RUN"), "{early}");
+        assert!(early.contains("1 HOP"), "{early}");
+        assert!(early.contains("50.0% WAY"), "{early}");
         let complete = room.status_input(1.0, &inputs).expect("runner progress");
-        assert!(complete.contains(&format!("{MAX_TILES} HALVING HOPS")));
-        assert!(complete.ends_with("% OF THE WAY"));
+        assert!(complete.contains(&format!("{MAX_TILES} HOP")), "{complete}");
+        assert!(complete.contains("% WAY"), "{complete}");
     }
 
     #[test]

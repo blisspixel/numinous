@@ -6,7 +6,7 @@
 //! triangle; Rule 30 pours out chaos; Rule 110 is Turing-complete. See
 //! `docs/ROOMS.md` and `docs/INSIGHTS.md`.
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
 /// A curated tour of notable elementary rules, indexed by phase `t`.
@@ -50,6 +50,21 @@ impl CellularAutomata {
             // Nonzero seeds must visibly re-deal while seed 0 keeps exact postcards.
             let offset = (seed as usize % (span - 1)) + 1;
             NOTABLE_RULES[(index + offset) % span]
+        }
+    }
+
+    /// Short identity for the notable rules the room tours.
+    fn rule_label(rule: u8) -> &'static str {
+        match rule {
+            90 => "SIERPINSKI",
+            30 => "CHAOS",
+            110 => "TURING",
+            54 => "COMPLEX",
+            150 => "ADDITIVE",
+            18 => "SPARSE",
+            60 => "XOR",
+            105 => "TOTALISTIC",
+            _ => "RULE",
         }
     }
 }
@@ -137,6 +152,42 @@ impl Room for CellularAutomata {
         Some("CLICK: FLIP A CELL")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        let rule = Self::rule_for(t, self.seed);
+        Some(format!("RULE {rule}  ROW REWRITES  CLICK:FLIP SEED"))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = crate::pokes_from_inputs(inputs);
+        let finite: Vec<(f64, f64)> = pokes
+            .into_iter()
+            .filter(|(x, y)| x.is_finite() && y.is_finite())
+            .collect();
+        if finite.is_empty() {
+            return self.status(t);
+        }
+        let flips = finite.len();
+        let rule = Self::rule_for(t, self.seed);
+        let label = Self::rule_label(rule);
+        // Canonical analysis width: same seed-flip math as the picture, fixed
+        // size so status can name the column and seed density without a canvas.
+        const ANALYZE_W: usize = 64;
+        let events: Vec<(usize, usize)> = finite
+            .iter()
+            .map(|&(x, y)| (normalized_index(x, ANALYZE_W), normalized_index(y, 1)))
+            .collect();
+        let mut cells = [false; ANALYZE_W];
+        cells[ANALYZE_W / 2] = true;
+        for &(x, _) in &events {
+            cells[x] = !cells[x];
+        }
+        let live = cells.iter().filter(|&&c| c).count();
+        let newest_col = events.last().map(|(x, _)| *x).unwrap_or(ANALYZE_W / 2);
+        Some(format!(
+            "R{rule} {label}  {flips}FLIP  COL{newest_col}  SEED{live}/{ANALYZE_W}"
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
             self.render(canvas, t);
@@ -199,6 +250,33 @@ mod tests {
             .nth(y)
             .and_then(|line| line.chars().nth(x))
             .unwrap_or(' ')
+    }
+
+    #[test]
+    fn action_status_names_seed_flips() {
+        use crate::room::RoomInput;
+        let room = CellularAutomata::new();
+        let open = room.status(0.0).expect("open");
+        assert!(open.contains("RULE 90"), "{open}");
+        let inputs = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.0,
+            t: 0.0,
+        }];
+        let status = room.status_input(0.0, &inputs).expect("flip");
+        assert!(status.contains("R90 SIERPINSKI"), "{status}");
+        assert!(status.contains("1FLIP"), "{status}");
+        assert!(status.contains("COL32"), "{status}");
+        assert!(status.contains("SEED"), "{status}");
+        // Center flip of the default middle-1 seed cancels or doubles density.
+        let off_center = [RoomInput::PointerDown {
+            x: 0.1,
+            y: 0.0,
+            t: 0.0,
+        }];
+        let other = room.status_input(0.0, &off_center).expect("off-center");
+        assert!(other.contains("COL6"), "{other}");
+        assert_ne!(status, other);
     }
 
     #[test]

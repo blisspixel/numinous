@@ -47,7 +47,7 @@ enum LifeEvent {
 /// The App advances this state over elapsed time, so the universe does not jump
 /// back when the gallery's normalized phase wraps. Stateless faces replay the
 /// same state machine from their bounded input histories.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct LifeSession {
     generation: u64,
     launches: u64,
