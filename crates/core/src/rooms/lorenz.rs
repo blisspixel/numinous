@@ -262,6 +262,19 @@ impl Room for Lorenz {
         Some("CLICK: SEED A SHADOW STORM")
     }
 
+    fn status_input(&self, t: f64, inputs: &[crate::room::RoomInput]) -> Option<String> {
+        let pokes = crate::pokes_from_inputs(inputs);
+        let storms = bounded_shadow_starts(&pokes).len();
+        if storms == 0 {
+            return self.status(t);
+        }
+        let peak = divergence_peak(t, self.seed);
+        Some(format!(
+            "{storms} SHADOW STORM{}   MAIN PEAK {peak:.4}   RHO {CLASSIC_RHO:.0}",
+            if storms == 1 { "" } else { "S" }
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let width = canvas.width();
         let height = canvas.height();
@@ -309,8 +322,23 @@ mod tests {
         run_twins, shadow_start, trajectory,
     };
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::room::{Room, RoomInput};
     use crate::surface::Surface;
+
+    #[test]
+    fn action_status_names_seeded_shadow_storms() {
+        let room = Lorenz::new();
+        let open = room.status(0.5).expect("open");
+        assert!(open.contains("STORM PEAK"), "{open}");
+        let inputs = [RoomInput::PointerDown {
+            x: 0.4,
+            y: 0.6,
+            t: 0.0,
+        }];
+        let status = room.status_input(0.5, &inputs).expect("storm");
+        assert!(status.contains("1 SHADOW STORM"), "{status}");
+        assert_ne!(status, open);
+    }
 
     #[derive(Debug)]
     struct ProbeSurface {

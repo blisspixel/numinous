@@ -694,9 +694,10 @@ semantically. Full and compact controller wording use the same action source.
 The evidence boundary remains explicit. The exact matrix and focused tests show
 causal rendering, deterministic replay, compact legibility, and mathematical
 invariants. They do not prove delight, physical-controller familiarity, or the
-clarity of the five compact probability labels to a new participant. The explicit
-one-ball prediction wager and a one-shot falling animation remain possible
-Puzzle and motion refinements rather than claims about this completed Toy loop.
+clarity of the five compact probability labels to a new participant. The
+one-ball prediction wager is now a move-committed bin bet graded against the
+highlighted last ball of the next 64-ball wave; a one-shot falling animation
+remains a possible motion refinement rather than a claim about this Toy loop.
 
 The complete local release gate passes with 1,230 all-target test cases, 93.34
 percent region coverage, 93.10 percent line coverage, the exact 253-screen
@@ -974,8 +975,9 @@ All three acceptance rechecks close their reproduced in-scope findings. The
 complete local release gate passes with 1,307 all-target test cases, 93.49
 percent region coverage, 93.28 percent line coverage, the exact 341-screen App
 matrix, Clippy with warnings denied, locked build, house style, and supply-chain
-policy. A deeper placement decision loop and Pi-specific no-instructions fun
-evidence remain open. The room is now causal and legible in captured evidence;
+policy. A deeper placement decision loop now grades each newest hold by restored
+faults and names the exact digit under the finger. Pi-specific no-instructions
+fun evidence remains open. The room is causal and legible in captured evidence;
 that is not a claim that real participants will choose to keep playing it.
 
 ---

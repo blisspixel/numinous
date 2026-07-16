@@ -275,13 +275,43 @@ impl Room for PrimeSpirals {
         Some("CLICK: TRACE PRIME DIAGONALS")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        Some(format!(
+            "CENTER {}   PRIMES GLOW   CLICK: TRACE DIAGONALS",
+            self.varied_start_for(t)
+        ))
+    }
+
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = crate::pokes_from_inputs(inputs);
         let traces = renderable_poke_count(inputs);
         if traces == 0 {
-            return Some(format!("CENTER {}   PRIMES GLOW", self.varied_start_for(t)));
+            return self.status(t);
         }
+        // Canonical analysis grid so status can count primes on the traced
+        // diagonals without a canvas (same walk rule as the picture).
+        const ANALYZE: usize = 64;
+        let Some(layout) = SpiralLayout::new(ANALYZE, ANALYZE) else {
+            return self.status(t);
+        };
+        let highlights = poked_diagonals(&pokes, layout, ANALYZE, ANALYZE);
+        if highlights.is_empty() {
+            return self.status(t);
+        }
+        let start = self.varied_start_for(t);
+        let mut primes_on_trace = 0u32;
+        walk_spiral(
+            layout.logical_side,
+            layout.logical_side,
+            start,
+            |x, y, n| {
+                if is_prime(n) && highlights.iter().any(|h| h.contains(x, y)) {
+                    primes_on_trace = primes_on_trace.saturating_add(1);
+                }
+            },
+        );
         Some(format!(
-            "{traces} TRACE{}   BRIGHT POINTS ARE PRIMES",
+            "{traces} TRACE{}  {primes_on_trace} PRIMES ON LINE  C{start}",
             if traces == 1 { "" } else { "S" }
         ))
     }
@@ -336,7 +366,7 @@ mod tests {
     use crate::canvas::Canvas;
     use crate::raster::Raster;
     use crate::room::MAX_ROOM_POKES;
-    use crate::room::Room;
+    use crate::room::{Room, RoomInput};
 
     fn char_at(canvas: &Canvas, x: usize, y: usize) -> char {
         canvas
@@ -425,6 +455,28 @@ mod tests {
         room.render(&mut a, 0.0);
         room.render(&mut b, 0.0);
         assert_eq!(a.to_text(), b.to_text());
+    }
+
+    #[test]
+    fn trace_status_counts_primes_on_the_selected_diagonals() {
+        let room = PrimeSpirals::new();
+        let open = room.status(0.0).expect("open");
+        assert!(open.contains("CLICK: TRACE"));
+        let inputs = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.0,
+        }];
+        let status = room.status_input(0.0, &inputs).expect("trace status");
+        assert_ne!(status, open);
+        assert!(status.starts_with("1 TRACE"));
+        assert!(status.contains("PRIMES ON LINE"));
+        assert!(status.contains(" C1"));
+        // Euler's diagonal start is famous for long prime runs; shifting the
+        // center changes the count and must appear in the status center token.
+        let shifted = room.status_input(1.0, &inputs).expect("shifted");
+        assert!(shifted.contains(" C41") || shifted.contains(" C"));
+        assert_ne!(shifted, status);
     }
 
     #[test]

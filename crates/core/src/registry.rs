@@ -26,11 +26,94 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::golden_angle::GoldenAngle::new_with(variation)),
         Box::new(rooms::galton_board::GaltonBoard::new_with(variation)),
         Box::new(rooms::lissajous::Lissajous::new_with(variation)),
+        Box::new(rooms::chladni::Chladni::new_with(variation)),
+        Box::new(rooms::ripple::Ripple::new_with(variation)),
+        Box::new(rooms::coffee_cup::CoffeeCup::new_with(variation)),
+        Box::new(rooms::ford_circles::FordCircles::new_with(variation)),
+        Box::new(rooms::zeta_walk::ZetaWalk::new_with(variation)),
+        Box::new(rooms::starbow::Starbow::new_with(variation)),
+        Box::new(rooms::slingshot::Slingshot::new_with(variation)),
+        Box::new(rooms::first_rain::FirstRain::new_with(variation)),
+        Box::new(rooms::the_magnet::TheMagnet::new_with(variation)),
+        Box::new(rooms::kepler_loom::KeplerLoom::new_with(variation)),
+        Box::new(rooms::phantom_jam::PhantomJam::new_with(variation)),
+        Box::new(rooms::fastest_fall::FastestFall::new_with(variation)),
+        Box::new(rooms::audioactive::Audioactive::new_with(variation)),
+        Box::new(rooms::busy_beaver::BusyBeaver::new_with(variation)),
+        Box::new(rooms::degree720::Degree720::new_with(variation)),
+        Box::new(rooms::upside_ruler::UpsideRuler::new_with(variation)),
+        Box::new(rooms::murmuration::Murmuration::new_with(variation)),
+        Box::new(rooms::whispering_table::WhisperingTable::new_with(
+            variation,
+        )),
+        Box::new(rooms::wet_oracle::WetOracle::new_with(variation)),
+        Box::new(rooms::tilt_cone::TiltCone::new_with(variation)),
+        Box::new(rooms::the_stretch::TheStretch::new_with(variation)),
+        Box::new(rooms::laplace_clock::LaplaceClock::new_with(variation)),
+        Box::new(rooms::message_heals::MessageHeals::new_with(variation)),
+        Box::new(rooms::unlit_room::UnlitRoom::new_with(variation)),
+        Box::new(rooms::the_lens::TheLens::new_with(variation)),
+        Box::new(rooms::fourteen_beacons::FourteenBeacons::new_with(
+            variation,
+        )),
+        Box::new(rooms::loneliness::Loneliness::new_with(variation)),
+        Box::new(rooms::chord_game::ChordGame::new_with(variation)),
+        Box::new(rooms::recaman::Recaman::new_with(variation)),
+        Box::new(rooms::truchet::Truchet::new_with(variation)),
+        Box::new(rooms::pursuit::Pursuit::new_with(variation)),
+        Box::new(rooms::pascal_mod::PascalMod::new_with(variation)),
+        Box::new(rooms::three_gap::ThreeGap::new_with(variation)),
+        Box::new(rooms::morley::Morley::new_with(variation)),
+        Box::new(rooms::menagerie::Menagerie::new_with(variation)),
+        Box::new(rooms::apollonian::Apollonian::new_with(variation)),
+        Box::new(rooms::inversion::Inversion::new_with(variation)),
+        Box::new(rooms::dla_frost::DlaFrost::new_with(variation)),
+        Box::new(rooms::kaprekar::Kaprekar::new_with(variation)),
+        Box::new(rooms::steiner::Steiner::new_with(variation)),
+        Box::new(rooms::hopf::Hopf::new_with(variation)),
+        Box::new(rooms::wireworld::Wireworld::new_with(variation)),
+        Box::new(rooms::buddhabrot::Buddhabrot::new_with(variation)),
+        Box::new(rooms::harmonics::Harmonics::new_with(variation)),
+        Box::new(rooms::function_painter::FunctionPainter::new_with(
+            variation,
+        )),
+        Box::new(rooms::newton::Newton::new_with(variation)),
+        Box::new(rooms::koch::Koch::new_with(variation)),
+        Box::new(rooms::hilbert::Hilbert::new_with(variation)),
+        Box::new(rooms::gray_scott::GrayScott::new_with(variation)),
+        Box::new(rooms::sieve::Sieve::new_with(variation)),
+        Box::new(rooms::curse_dimension::CurseDimension::new_with(variation)),
+        Box::new(rooms::concentration::Concentration::new_with(variation)),
+        Box::new(rooms::uncertainty::Uncertainty::new_with(variation)),
+        Box::new(rooms::gradient_valley::GradientValley::new_with(variation)),
+        Box::new(rooms::attention::Attention::new_with(variation)),
+        Box::new(rooms::braess::Braess::new_with(variation)),
+        Box::new(rooms::nontransitive::Nontransitive::new_with(variation)),
+        Box::new(rooms::parrondo::Parrondo::new_with(variation)),
+        Box::new(rooms::hilbert_hotel::HilbertHotel::new_with(variation)),
+        Box::new(rooms::soap_film::SoapFilm::new_with(variation)),
+        Box::new(rooms::landauer::Landauer::new_with(variation)),
+        Box::new(rooms::prime_gaps::PrimeGaps::new_with(variation)),
+        Box::new(rooms::sphere_eversion::SphereEversion::new_with(variation)),
+        Box::new(rooms::causal_doors::CausalDoors::new_with(variation)),
+        Box::new(rooms::soft_proof::SoftProof::new_with(variation)),
+        Box::new(rooms::learning_clock::LearningClock::new_with(variation)),
+        Box::new(rooms::duality::Duality::new_with(variation)),
+        Box::new(rooms::mirror_forms::MirrorForms::new_with(variation)),
+        Box::new(rooms::penrose::Penrose::new_with(variation)),
+        Box::new(rooms::continued_frac::ContinuedFrac::new_with(variation)),
+        Box::new(rooms::logistic_cobweb::LogisticCobweb::new_with(variation)),
+        Box::new(rooms::sierpinski_carpet::SierpinskiCarpet::new_with(
+            variation,
+        )),
+        Box::new(rooms::pythagoras_tree::PythagorasTree::new_with(variation)),
+        Box::new(rooms::ulam_spiral::UlamSpiral::new_with(variation)),
         Box::new(rooms::prime_spirals::PrimeSpirals::new_with(variation)),
         Box::new(rooms::cult_of_pi::CultOfPi::new_with(variation)),
         Box::new(rooms::collatz::Collatz::new_with(variation)),
         Box::new(rooms::buffon_needle::BuffonNeedle::new_with(variation)),
         Box::new(rooms::game_of_life::GameOfLife::new_with(variation)),
+        Box::new(rooms::sandpile::Sandpile::new_with(variation)),
         Box::new(rooms::mandelbrot::Mandelbrot::new_with(variation)),
         Box::new(rooms::julia::Julia::new_with(variation)),
         Box::new(rooms::barnsley_fern::BarnsleyFern::new_with(variation)),
@@ -51,6 +134,276 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::goldbach::Goldbach::new_with(variation)),
         Box::new(rooms::quine::Quine::new_with(variation)),
         Box::new(rooms::strange_loop::StrangeLoop::new_with(variation)),
+        Box::new(rooms::dragon_curve::DragonCurve::new_with(variation)),
+        Box::new(rooms::fibonacci_word::FibonacciWord::new_with(variation)),
+        Box::new(rooms::newton_basins_cubic::NewtonCubic::new_with(variation)),
+        Box::new(rooms::henon::Henon::new_with(variation)),
+        Box::new(rooms::rules30::Rules30::new_with(variation)),
+        Box::new(rooms::mandelbulb_slice::MandelbulbSlice::new_with(
+            variation,
+        )),
+        Box::new(rooms::thue_morse::ThueMorse::new_with(variation)),
+        Box::new(rooms::rossler::Rossler::new_with(variation)),
+        Box::new(rooms::cantor_set::CantorSet::new_with(variation)),
+        Box::new(rooms::weierstrass::Weierstrass::new_with(variation)),
+        Box::new(rooms::peano_curve::PeanoCurve::new_with(variation)),
+        Box::new(rooms::van_der_pol::VanDerPol::new_with(variation)),
+        Box::new(rooms::ikeda::Ikeda::new_with(variation)),
+        Box::new(rooms::duffing::Duffing::new_with(variation)),
+        Box::new(rooms::levy_c::LevyC::new_with(variation)),
+        Box::new(rooms::tinkerbell::Tinkerbell::new_with(variation)),
+        Box::new(rooms::gingerbread::Gingerbread::new_with(variation)),
+        Box::new(rooms::menger_slice::MengerSlice::new_with(variation)),
+        Box::new(rooms::bifurcation::Bifurcation::new_with(variation)),
+        Box::new(rooms::stern_brocot::SternBrocot::new_with(variation)),
+        Box::new(rooms::josephus::Josephus::new_with(variation)),
+        Box::new(rooms::calkin_wilf::CalkinWilf::new_with(variation)),
+        Box::new(rooms::fourier_square::FourierSquare::new_with(variation)),
+        Box::new(rooms::sierpinski_arrowhead::SierpinskiArrowhead::new_with(
+            variation,
+        )),
+        Box::new(rooms::clifford::Clifford::new_with(variation)),
+        Box::new(rooms::dejong::DeJong::new_with(variation)),
+        Box::new(rooms::svensson::Svensson::new_with(variation)),
+        Box::new(rooms::bedhead::Bedhead::new_with(variation)),
+        Box::new(rooms::hopalong::Hopalong::new_with(variation)),
+        Box::new(rooms::gumowski_mira::GumowskiMira::new_with(variation)),
+        Box::new(rooms::pickover::Pickover::new_with(variation)),
+        Box::new(rooms::aizawa::Aizawa::new_with(variation)),
+        Box::new(rooms::thomas::Thomas::new_with(variation)),
+        Box::new(rooms::halvorsen::Halvorsen::new_with(variation)),
+        Box::new(rooms::rabinovich_fabrikant::RabinovichFabrikant::new_with(
+            variation,
+        )),
+        Box::new(rooms::three_scroll::ThreeScroll::new_with(variation)),
+        Box::new(rooms::lozi::Lozi::new_with(variation)),
+        Box::new(rooms::baker::Baker::new_with(variation)),
+        Box::new(rooms::tent_map::TentMap::new_with(variation)),
+        Box::new(rooms::circle_map::CircleMap::new_with(variation)),
+        Box::new(rooms::standard_map::StandardMap::new_with(variation)),
+        Box::new(rooms::elliptical_billiard::EllipticalBilliard::new_with(
+            variation,
+        )),
+        Box::new(rooms::horseshoe::Horseshoe::new_with(variation)),
+        Box::new(rooms::logistic_orbit::LogisticOrbit::new_with(variation)),
+        Box::new(rooms::sinai_billiard::SinaiBilliard::new_with(variation)),
+        Box::new(rooms::henon_heiles::HenonHeiles::new_with(variation)),
+        Box::new(rooms::quadratic_map::QuadraticMap::new_with(variation)),
+        Box::new(rooms::doubling_map::DoublingMap::new_with(variation)),
+        Box::new(rooms::gauss_map::GaussMap::new_with(variation)),
+        Box::new(rooms::manneville::Manneville::new_with(variation)),
+        Box::new(rooms::coupled_tent::CoupledTent::new_with(variation)),
+        Box::new(rooms::koch_snowflake::KochSnowflake::new_with(variation)),
+        Box::new(rooms::cesaro::Cesaro::new_with(variation)),
+        Box::new(rooms::minkowski::Minkowski::new_with(variation)),
+        Box::new(rooms::bogdanov::Bogdanov::new_with(variation)),
+        Box::new(rooms::kaplan_yorke::KaplanYorke::new_with(variation)),
+        Box::new(rooms::ricker::Ricker::new_with(variation)),
+        Box::new(rooms::farey::Farey::new_with(variation)),
+        Box::new(rooms::gosper::Gosper::new_with(variation)),
+        Box::new(rooms::sierpinski_tri::SierpinskiTri::new_with(variation)),
+        Box::new(rooms::burning_ship::BurningShip::new_with(variation)),
+        Box::new(rooms::tricorn::Tricorn::new_with(variation)),
+        Box::new(rooms::multibrot::Multibrot::new_with(variation)),
+        Box::new(rooms::phoenix::Phoenix::new_with(variation)),
+        Box::new(rooms::lyapunov::Lyapunov::new_with(variation)),
+        Box::new(rooms::collatz_tree::CollatzTree::new_with(variation)),
+        Box::new(rooms::nova::Nova::new_with(variation)),
+        Box::new(rooms::magnet::MagnetFractal::new_with(variation)),
+        Box::new(rooms::lambda_map::LambdaMap::new_with(variation)),
+        Box::new(rooms::feigenbaum::Feigenbaum::new_with(variation)),
+        Box::new(rooms::menger::Menger::new_with(variation)),
+        Box::new(rooms::vicsek::Vicsek::new_with(variation)),
+        Box::new(rooms::chua::Chua::new_with(variation)),
+        Box::new(rooms::cat_map::CatMap::new_with(variation)),
+        Box::new(rooms::blancmange::Blancmange::new_with(variation)),
+        Box::new(rooms::rose::Rose::new_with(variation)),
+        Box::new(rooms::kuramoto::Kuramoto::new_with(variation)),
+        Box::new(rooms::h_tree::HTree::new_with(variation)),
+        Box::new(rooms::percolation::Percolation::new_with(variation)),
+        Box::new(rooms::ising::Ising::new_with(variation)),
+        Box::new(rooms::lotka_volterra::LotkaVolterra::new_with(variation)),
+        Box::new(rooms::poincare_disc::PoincareDisc::new_with(variation)),
+        Box::new(rooms::cycloid::Cycloid::new_with(variation)),
+        Box::new(rooms::brusselator::Brusselator::new_with(variation)),
+        Box::new(rooms::sprott::Sprott::new_with(variation)),
+        Box::new(rooms::delaunay::Delaunay::new_with(variation)),
+        Box::new(rooms::astroid::Astroid::new_with(variation)),
+        Box::new(rooms::sir::Sir::new_with(variation)),
+        Box::new(rooms::nephroid::Nephroid::new_with(variation)),
+        Box::new(rooms::lemniscate::Lemniscate::new_with(variation)),
+        Box::new(rooms::cardioid::Cardioid::new_with(variation)),
+        Box::new(rooms::deltoid::Deltoid::new_with(variation)),
+        Box::new(rooms::coupled_logistic::CoupledLogistic::new_with(
+            variation,
+        )),
+        Box::new(rooms::menger_sponge::MengerSponge::new_with(variation)),
+        Box::new(rooms::pythagoras_spiral::PythagorasSpiral::new_with(
+            variation,
+        )),
+        Box::new(rooms::wolfram_110::Wolfram110::new_with(variation)),
+        Box::new(rooms::hyperbolic_tiling::HyperbolicTiling::new_with(
+            variation,
+        )),
+        Box::new(rooms::mackey_glass::MackeyGlass::new_with(variation)),
+        Box::new(rooms::fermat_spiral::FermatSpiral::new_with(variation)),
+        Box::new(rooms::euclid_algorithm::EuclidAlgorithm::new_with(
+            variation,
+        )),
+        Box::new(rooms::oregonator::Oregonator::new_with(variation)),
+        Box::new(rooms::hofstadter_q::HofstadterQ::new_with(variation)),
+        Box::new(rooms::dual_cobweb::DualCobweb::new_with(variation)),
+        Box::new(rooms::beverton_holt::BevertonHolt::new_with(variation)),
+        Box::new(rooms::witch_of_agnesi::WitchOfAgnesi::new_with(variation)),
+        Box::new(rooms::tractrix::Tractrix::new_with(variation)),
+        Box::new(rooms::catenary::Catenary::new_with(variation)),
+        Box::new(rooms::clothoid::Clothoid::new_with(variation)),
+        Box::new(rooms::lemniscate_gerono::LemniscateGerono::new_with(
+            variation,
+        )),
+        Box::new(rooms::cissoid::Cissoid::new_with(variation)),
+        Box::new(rooms::strophoid::Strophoid::new_with(variation)),
+        Box::new(rooms::conchoid::Conchoid::new_with(variation)),
+        Box::new(rooms::limacon::Limacon::new_with(variation)),
+        Box::new(rooms::folium::Folium::new_with(variation)),
+        Box::new(rooms::semicubical::Semicubical::new_with(variation)),
+        Box::new(rooms::kappa::Kappa::new_with(variation)),
+        Box::new(rooms::witch_caustic::CircularCaustic::new_with(variation)),
+        Box::new(rooms::trochoid::Trochoid::new_with(variation)),
+        Box::new(rooms::hypotrochoid::Hypotrochoid::new_with(variation)),
+        Box::new(rooms::epitrochoid::Epitrochoid::new_with(variation)),
+        Box::new(rooms::involute::Involute::new_with(variation)),
+        Box::new(rooms::evolute::Evolute::new_with(variation)),
+        Box::new(rooms::pedal::Pedal::new_with(variation)),
+        Box::new(rooms::roulette::Roulette::new_with(variation)),
+        Box::new(rooms::damped_sine::DampedSine::new_with(variation)),
+        Box::new(rooms::beats::Beats::new_with(variation)),
+        Box::new(rooms::gibbs_square::GibbsSquare::new_with(variation)),
+        Box::new(rooms::sawtooth::Sawtooth::new_with(variation)),
+        Box::new(rooms::triangle_wave::TriangleWave::new_with(variation)),
+        Box::new(rooms::am_modulation::AmModulation::new_with(variation)),
+        Box::new(rooms::fm_modulation::FmModulation::new_with(variation)),
+        Box::new(rooms::standing_wave::StandingWave::new_with(variation)),
+        Box::new(rooms::doppler::Doppler::new_with(variation)),
+        Box::new(rooms::interference::Interference::new_with(variation)),
+        Box::new(rooms::diffraction::Diffraction::new_with(variation)),
+        Box::new(rooms::snell::Snell::new_with(variation)),
+        Box::new(rooms::polarization::Polarization::new_with(variation)),
+        Box::new(rooms::brewster::Brewster::new_with(variation)),
+        Box::new(rooms::reuleaux::Reuleaux::new_with(variation)),
+        Box::new(rooms::log_spiral::LogSpiral::new_with(variation)),
+        Box::new(rooms::archimedean::Archimedean::new_with(variation)),
+        Box::new(rooms::cassini::Cassini::new_with(variation)),
+        Box::new(rooms::foucault::Foucault::new_with(variation)),
+        Box::new(rooms::coriolis::Coriolis::new_with(variation)),
+        Box::new(rooms::tautochrone::Tautochrone::new_with(variation)),
+        Box::new(rooms::catenoid::Catenoid::new_with(variation)),
+        Box::new(rooms::helicoid::Helicoid::new_with(variation)),
+        Box::new(rooms::pseudosphere::Pseudosphere::new_with(variation)),
+        Box::new(rooms::airy::Airy::new_with(variation)),
+        Box::new(rooms::bragg::Bragg::new_with(variation)),
+        Box::new(rooms::trisectrix::Trisectrix::new_with(variation)),
+        Box::new(rooms::watt_curve::WattCurve::new_with(variation)),
+        Box::new(rooms::devil_curve::DevilCurve::new_with(variation)),
+        Box::new(rooms::capillary::Capillary::new_with(variation)),
+        Box::new(rooms::rabi::Rabi::new_with(variation)),
+        Box::new(rooms::geodesic::Geodesic::new_with(variation)),
+        Box::new(rooms::kampyle::Kampyle::new_with(variation)),
+        Box::new(rooms::hippopede::Hippopede::new_with(variation)),
+        Box::new(rooms::cartesian_oval::CartesianOval::new_with(variation)),
+        Box::new(rooms::berry::Berry::new_with(variation)),
+        Box::new(rooms::runge::Runge::new_with(variation)),
+        Box::new(rooms::chebyshev::Chebyshev::new_with(variation)),
+        Box::new(rooms::bessel::Bessel::new_with(variation)),
+        Box::new(rooms::hermite::Hermite::new_with(variation)),
+        Box::new(rooms::legendre::Legendre::new_with(variation)),
+        Box::new(rooms::heat_kernel::HeatKernel::new_with(variation)),
+        Box::new(rooms::cauchy_lorentz::CauchyLorentz::new_with(variation)),
+        Box::new(rooms::mexican_hat::MexicanHat::new_with(variation)),
+        Box::new(rooms::seifert::Seifert::new_with(variation)),
+        Box::new(rooms::trefoil::Trefoil::new_with(variation)),
+        Box::new(rooms::hopf_fibration::HopfFibration::new_with(variation)),
+        Box::new(rooms::julia_set::JuliaFilled::new_with(variation)),
+        Box::new(rooms::figure_eight_knot::FigureEightKnot::new_with(
+            variation,
+        )),
+        Box::new(rooms::borromean::Borromean::new_with(variation)),
+        Box::new(rooms::viviani::Viviani::new_with(variation)),
+        Box::new(rooms::torus_knot::TorusKnot::new_with(variation)),
+        Box::new(rooms::whitney_umbrella::WhitneyUmbrella::new_with(
+            variation,
+        )),
+        Box::new(rooms::roman_surface::RomanSurface::new_with(variation)),
+        Box::new(rooms::spherical_harmonic::SphericalHarmonic::new_with(
+            variation,
+        )),
+        Box::new(rooms::lissajous_3d::Lissajous3d::new_with(variation)),
+        Box::new(rooms::kolakoski::Kolakoski::new_with(variation)),
+        Box::new(rooms::beatty::Beatty::new_with(variation)),
+        Box::new(rooms::wythoff::Wythoff::new_with(variation)),
+        Box::new(rooms::minkowski_qm::MinkowskiQm::new_with(variation)),
+        Box::new(rooms::ruler_function::RulerFunction::new_with(variation)),
+        Box::new(rooms::moser_debruijn::MoserDebruijn::new_with(variation)),
+        Box::new(rooms::mertens::Mertens::new_with(variation)),
+        Box::new(rooms::liouville::Liouville::new_with(variation)),
+        Box::new(rooms::euler_totient::EulerTotient::new_with(variation)),
+        Box::new(rooms::partition::Partition::new_with(variation)),
+        Box::new(rooms::paperfold::Paperfold::new_with(variation)),
+        Box::new(rooms::sylvester::Sylvester::new_with(variation)),
+        Box::new(rooms::poisson::Poisson::new_with(variation)),
+        Box::new(rooms::brownian::Brownian::new_with(variation)),
+        Box::new(rooms::birthday::Birthday::new_with(variation)),
+        Box::new(rooms::coupon::Coupon::new_with(variation)),
+        Box::new(rooms::zipf::Zipf::new_with(variation)),
+        Box::new(rooms::gamblers_ruin::GamblersRuin::new_with(variation)),
+        Box::new(rooms::harmonic_series::HarmonicSeries::new_with(variation)),
+        Box::new(rooms::basel::Basel::new_with(variation)),
+        Box::new(rooms::stirling::Stirling::new_with(variation)),
+        Box::new(rooms::benford::Benford::new_with(variation)),
+        Box::new(rooms::central_limit::CentralLimit::new_with(variation)),
+        Box::new(rooms::wallis::Wallis::new_with(variation)),
+        Box::new(rooms::superellipse::Superellipse::new_with(variation)),
+        Box::new(rooms::cochleoid::Cochleoid::new_with(variation)),
+        Box::new(rooms::serpentine::Serpentine::new_with(variation)),
+        Box::new(rooms::bifolium::Bifolium::new_with(variation)),
+        Box::new(rooms::butterfly_curve::ButterflyCurve::new_with(variation)),
+        Box::new(rooms::piriform::Piriform::new_with(variation)),
+        Box::new(rooms::simple_pendulum::SimplePendulum::new_with(variation)),
+        Box::new(rooms::blackbody::Blackbody::new_with(variation)),
+        Box::new(rooms::kepler_laws::KeplerLaws::new_with(variation)),
+        Box::new(rooms::escape_velocity::EscapeVelocity::new_with(variation)),
+        Box::new(rooms::coupled_osc::CoupledOsc::new_with(variation)),
+        Box::new(rooms::snell_prism::SnellPrism::new_with(variation)),
+        Box::new(rooms::lucky_numbers::LuckyNumbers::new_with(variation)),
+        Box::new(rooms::gaussian_primes::GaussianPrimes::new_with(variation)),
+        Box::new(rooms::quadratic_residues::QuadraticResidues::new_with(
+            variation,
+        )),
+        Box::new(rooms::zeckendorf::Zeckendorf::new_with(variation)),
+        Box::new(rooms::egyptian_frac::EgyptianFrac::new_with(variation)),
+        Box::new(rooms::pell_path::PellPath::new_with(variation)),
+        Box::new(rooms::shannon_entropy::ShannonEntropy::new_with(variation)),
+        Box::new(rooms::bayes_update::BayesUpdate::new_with(variation)),
+        Box::new(rooms::erdos_renyi::ErdosRenyi::new_with(variation)),
+        Box::new(rooms::markov_chain::MarkovChain::new_with(variation)),
+        Box::new(rooms::huffman_tree::HuffmanTree::new_with(variation)),
+        Box::new(rooms::mutual_info::MutualInfo::new_with(variation)),
+        Box::new(rooms::klein_bottle::KleinBottle::new_with(variation)),
+        Box::new(rooms::cross_cap::CrossCap::new_with(variation)),
+        Box::new(rooms::boy_surface::BoySurface::new_with(variation)),
+        Box::new(rooms::solid_torus::SolidTorus::new_with(variation)),
+        Box::new(rooms::hopf_link::HopfLink::new_with(variation)),
+        Box::new(rooms::unknot::Unknot::new_with(variation)),
+        Box::new(rooms::gamma_func::GammaFunc::new_with(variation)),
+        Box::new(rooms::error_function::ErrorFunction::new_with(variation)),
+        Box::new(rooms::fresnel_int::FresnelInt::new_with(variation)),
+        Box::new(rooms::lambert_w::LambertW::new_with(variation)),
+        Box::new(rooms::sinc_interp::SincInterp::new_with(variation)),
+        Box::new(rooms::dirichlet_eta::DirichletEta::new_with(variation)),
+        Box::new(rooms::agm_mean::AgmMean::new_with(variation)),
+        Box::new(rooms::twin_primes::TwinPrimes::new_with(variation)),
+        Box::new(rooms::perfect_num::PerfectNum::new_with(variation)),
+        Box::new(rooms::napoleon::Napoleon::new_with(variation)),
     ]
 }
 
@@ -124,6 +477,136 @@ mod tests {
                 room.meta().id
             );
         }
+    }
+
+    #[test]
+    fn every_catalog_room_has_first_contact_status() {
+        // The kid-principle invariant: first contact always names something
+        // readable before the player acts. Empty status is not an invitation.
+        for room in all_rooms() {
+            let status = room.status(0.0);
+            assert!(
+                status.as_ref().is_some_and(|s| !s.trim().is_empty()),
+                "{} opens silent; first contact needs a status line",
+                room.meta().id
+            );
+        }
+    }
+
+    #[test]
+    fn first_contact_status_names_an_action_or_goal_when_the_room_has_a_verb() {
+        // Rooms that publish a touch verb should invite play on first contact:
+        // either a direct action token (CLICK/DRAG/...) or a clear measured
+        // goal (TARGET/FOUND/GOAL) so the status is not ambient-only prose.
+        const INVITE_TOKENS: &[&str] = &[
+            "CLICK", "DRAG", "HOLD", "DROP", "PLANT", "FLIP", "TRY", "SEED", "THROW", "TEST",
+            "DIVE", "TOUCH", "PIN", "TURN", "MOVE", "PAINT", "TRACE", "BRUSH", "TUNE", "POUR",
+            "RIDE", "SOW", "SCRUB", "PICK", "PUSH", "PULL", "PERTURB", "MORPH", "DIAL", "HAND",
+            "COIN", "WAVE", "BET", "FIX", "PLACE", "PRINT", "NEST", "WELL", "STORM", "GLIDER",
+            "WIDTH", "ORBIT", "TAP", "SWEEP", "STEER", "AIM", "REPLAY", "LAUNCH", "STRIKE", "CUT",
+            "DRAW", "SPIN", "ZOOM", "FOCUS", "POINT", "TARGET", "GOAL", "OPEN", "INVITE", "CHOOSE",
+        ];
+        let mut shallow = Vec::new();
+        for room in all_rooms() {
+            let Some(verb) = room.verb() else {
+                continue;
+            };
+            let id = room.meta().id;
+            let open = room.status(0.0).unwrap_or_default();
+            let upper = open.to_ascii_uppercase();
+            let hit = INVITE_TOKENS.iter().any(|token| upper.contains(token));
+            if !hit {
+                shallow.push(format!("{id}: verb={verb:?} status={open:?}"));
+            }
+        }
+        assert!(
+            shallow.is_empty(),
+            "first-contact invite missing for:\n{}",
+            shallow.join("\n")
+        );
+    }
+
+    #[test]
+    fn poke_changes_status_for_every_catalog_room() {
+        // Every catalog room must speak after a center poke: first contact and
+        // action consequence stay distinct on the status line.
+        use crate::room::RoomInput;
+        let poke = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.0,
+        }];
+        for room in all_rooms() {
+            let id = room.meta().id;
+            let open = room.status(0.0).unwrap_or_default();
+            let after = room.status_input(0.0, &poke).unwrap_or_default();
+            assert_ne!(
+                after, open,
+                "{id} is touchable but status does not change after a poke"
+            );
+        }
+    }
+
+    #[test]
+    fn action_status_reports_a_measured_quantity() {
+        // After a center poke, status must carry at least one digit: a measured
+        // consequence (count, coordinate, rule number, ratio), not only words.
+        use crate::room::RoomInput;
+        let poke = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.0,
+        }];
+        for room in all_rooms() {
+            let id = room.meta().id;
+            let after = room.status_input(0.0, &poke).unwrap_or_default();
+            assert!(
+                after.chars().any(|c| c.is_ascii_digit()),
+                "{id} action status has no measured quantity: {after:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn action_status_fits_compact_footer() {
+        // Compact App footers have a tight character budget beside fixed
+        // controls. Center-poke status should stay within a short line.
+        use crate::room::RoomInput;
+        const MAX_CHARS: usize = 56;
+        let poke = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.0,
+        }];
+        for room in all_rooms() {
+            let id = room.meta().id;
+            let after = room.status_input(0.0, &poke).unwrap_or_default();
+            assert!(
+                after.chars().count() <= MAX_CHARS,
+                "{id} action status is too long for compact footer ({}): {after:?}",
+                after.chars().count()
+            );
+        }
+    }
+
+    #[test]
+    fn first_contact_status_fits_compact_footer() {
+        // Open status shares the same footer budget as action status.
+        const MAX_CHARS: usize = 56;
+        let mut long = Vec::new();
+        for room in all_rooms() {
+            let id = room.meta().id;
+            let open = room.status(0.0).unwrap_or_default();
+            let len = open.chars().count();
+            if len > MAX_CHARS {
+                long.push(format!("{id} ({len}): {open:?}"));
+            }
+        }
+        assert!(
+            long.is_empty(),
+            "first-contact status too long for compact footer:\n{}",
+            long.join("\n")
+        );
     }
 
     #[test]
@@ -315,7 +798,8 @@ mod tests {
     fn all_rooms_with_variation_affects_poke_rooms() {
         use crate::rooms::{
             chaos_game::ChaosGame, game_of_life::GameOfLife, golden_angle::GoldenAngle,
-            langtons_ant::LangtonsAnt, strange_loop::StrangeLoop, voronoi::Voronoi,
+            langtons_ant::LangtonsAnt, sandpile::Sandpile, strange_loop::StrangeLoop,
+            voronoi::Voronoi,
         };
         let c0 = ChaosGame::new_with(0);
         let c1 = ChaosGame::new_with(1);
@@ -362,5 +846,13 @@ mod tests {
         la0.render(&mut laa0, 0.5);
         la1.render(&mut laa1, 0.5);
         assert_ne!(laa0.to_text(), laa1.to_text());
+        // Sandpile: variation drifts the ambient pour site so the mandala offsets.
+        let sp0 = Sandpile::new_with(0);
+        let sp1 = Sandpile::new_with(1);
+        let mut spa0 = crate::canvas::Canvas::new(32, 16);
+        let mut spa1 = crate::canvas::Canvas::new(32, 16);
+        sp0.render(&mut spa0, 0.55);
+        sp1.render(&mut spa1, 0.55);
+        assert_ne!(spa0.to_text(), spa1.to_text());
     }
 }

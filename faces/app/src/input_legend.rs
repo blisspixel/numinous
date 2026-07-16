@@ -133,7 +133,7 @@ pub(crate) fn show_controls(mode: InputMode) -> String {
 
 pub(crate) fn studio_controls(mode: InputMode) -> String {
     match mode {
-        InputMode::KeyboardMouse => "TYPE A FORMULA   TAB / ESC CLOSE".to_string(),
+        InputMode::KeyboardMouse => "TYPE  F1 HELP  F2 RANDOM  F3 AUTO  TAB/ESC CLOSE".to_string(),
         InputMode::Controller => "KEYBOARD TYPES   EAST CLOSES   START HELP".to_string(),
     }
 }
@@ -273,7 +273,7 @@ pub(crate) fn help_lines(
             "E          INSPECT    Q  ERA    R  RESET",
             "B          THE SHOW   TAB  THE STUDIO",
             "J          JOURNEY    F  FULLSCREEN",
-            "Y          RADIO    P  POSTCARD",
+            "Y          RADIO    P  POSTCARD   L  LOOP",
             "F9         PLAYTEST NOTE",
             "M          MUTE    [/] VOLUME   SPACE PAUSE",
             "",

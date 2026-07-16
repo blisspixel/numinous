@@ -7,7 +7,7 @@
 //! the Full Map in `docs/ROOMS.md`.
 
 use super::variation_unit;
-use crate::room::{Room, RoomMeta};
+use crate::room::{Room, RoomInput, RoomMeta, pokes_from_inputs};
 use crate::sound::SoundSpec;
 use crate::surface::Surface;
 
@@ -204,7 +204,22 @@ impl Room for SlopeRider {
 
     fn status(&self, t: f64) -> Option<String> {
         let x = (self.phase_for(t) - 0.5) * X_SPAN;
-        Some(format!("TILT = {:+.2}", slope(x)))
+        Some(format!("TILT {:+.2}  CLICK:DROP", slope(x)))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let pokes = pokes_from_inputs(inputs);
+        let Some(&(hand_x, _)) = pokes
+            .iter()
+            .rev()
+            .find(|(x, y)| x.is_finite() && y.is_finite())
+        else {
+            return self.status(t);
+        };
+        let x = X_MIN + hand_x.clamp(0.0, 1.0) * X_SPAN;
+        // The dropped rider freezes the board's tilt at the hand, and reports
+        // hill height so rate and position stay one pair on the status line.
+        Some(format!("RIDER TILT {:+.2}  HILL {:.2}", slope(x), f(x)))
     }
 
     fn reveal(&self) -> &'static str {
@@ -262,6 +277,27 @@ mod tests {
             let numeric = (f(x + h) - f(x - h)) / (2.0 * h);
             assert!((numeric - slope(x)).abs() < 1e-4, "at {x}");
         }
+    }
+
+    #[test]
+    fn rider_status_freezes_tilt_and_hill_at_the_hand() {
+        use crate::room::inputs_from_pokes;
+
+        let room = SlopeRider::new();
+        let open = room.status(0.0).expect("open status");
+        assert!(open.starts_with("TILT "));
+        assert!(open.contains("CLICK:DROP"), "{open}");
+        let empty = room.status_input(0.0, &[]).expect("empty input falls back");
+        assert_eq!(empty, open);
+
+        let hand = inputs_from_pokes(&[(0.75, 0.5)], 0.0);
+        let ridden = room.status_input(0.0, &hand).expect("rider status");
+        assert_ne!(ridden, open);
+        assert!(ridden.starts_with("RIDER TILT"));
+        assert!(ridden.contains("HILL"));
+        let x = super::X_MIN + 0.75 * super::X_SPAN;
+        assert!(ridden.contains(&format!("{:+.2}", slope(x))));
+        assert!(ridden.contains(&format!("{:.2}", f(x))));
     }
 
     #[test]
@@ -392,6 +428,6 @@ mod tests {
         room.render(&mut zero_phase, 0.0);
         assert_eq!(nan_phase.to_text(), zero_phase.to_text());
         let status = room.status(f64::NAN).expect("status");
-        assert!(status.starts_with("TILT ="));
+        assert!(status.starts_with("TILT "));
     }
 }

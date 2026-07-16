@@ -168,7 +168,11 @@ impl Room for StrangeLoop {
         }
     }
 
-    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
+    fn status(&self, _t: f64) -> Option<String> {
+        Some("INNER LOOP NESTED   CLICK: SHIFT THE INNER LOOP".into())
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let points: Vec<_> = inputs
             .iter()
             .filter_map(|input| match *input {
@@ -182,9 +186,14 @@ impl Room for StrangeLoop {
             .collect();
         let start = points.len().saturating_sub(MAX_ROOM_POKES);
         let points = &points[start..];
-        let &(x, y) = points.last()?;
+        let Some(&(x, y)) = points.last() else {
+            return self.status(t);
+        };
+        // Hand x/y shift the nested U; y maps to how deep the self-similar
+        // copy sits in the outer figure (a stranger loop reads as more nest).
+        let nest = ((1.0 - y) * 4.0).floor() as u32 + 1;
         Some(format!(
-            "INNER LOOP ANCHORED AT {:.0}% {:.0}%   BRIGHT CROSS MARKS YOUR HAND",
+            "INNER @ {:.0}% {:.0}%  NEST {nest}/4  SAME SHAPE EACH LEVEL",
             x * 100.0,
             y * 100.0
         ))
@@ -518,11 +527,21 @@ mod tests {
             },
         ];
 
+        let status = room.status_input(0.5, &inputs).expect("anchor status");
+        assert!(status.contains("INNER @ 75% 25%"));
+        assert!(status.contains("NEST 4/4"));
+        assert!(status.contains("SAME SHAPE EACH LEVEL"));
+        let shallow = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.9,
+            t: 0.0,
+        }];
+        let shallow_status = room.status_input(0.5, &shallow).expect("shallow");
+        assert!(shallow_status.contains("NEST 1/4"));
         assert_eq!(
-            room.status_input(0.5, &inputs).as_deref(),
-            Some("INNER LOOP ANCHORED AT 75% 25%   BRIGHT CROSS MARKS YOUR HAND")
+            room.status_input(0.5, &[]).as_deref(),
+            room.status(0.5).as_deref()
         );
-        assert_eq!(room.status_input(0.5, &[]), None);
     }
 
     #[test]

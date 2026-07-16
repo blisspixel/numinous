@@ -6,7 +6,7 @@
 //! jump fraction (0.5 is the iconic value). See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
-use crate::room::{MAX_ROOM_POKES, Room, RoomMeta};
+use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
 /// Fixed seed so the render reproduces exactly (determinism, see `docs/QUALITY.md`).
@@ -161,6 +161,32 @@ impl Room for ChaosGame {
         Some("CLICK: ADD A CORNER")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        let ratio = Self::ratio_for(t);
+        Some(format!("3 CORNERS   JUMP {ratio:.2}   CLICK: ADD A CORNER"))
+    }
+
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        // Match the default render_input poke bridge so gesture and poke paths
+        // report the same corner count.
+        let pokes = crate::pokes_from_inputs(inputs);
+        let corners: Vec<(f64, f64)> = player_corners(&pokes).collect();
+        if corners.is_empty() {
+            return self.status(t);
+        }
+        let added = corners.len();
+        let total = 3 + added;
+        let ratio = Self::ratio_for(t);
+        let (nx, ny) = *corners.last().expect("nonempty corners");
+        // Jump ratio names the chaos-game contraction; newest corner is where
+        // the hand attached another vertex of the attractor.
+        Some(format!(
+            "{added} ADD  {total}COR  JUMP {ratio:.2}  NEW@{:.0}%{:.0}%",
+            nx * 100.0,
+            ny * 100.0
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
             self.render(canvas, t);
@@ -214,6 +240,25 @@ mod tests {
         let mut canvas = Canvas::new(48, 24);
         render_vertices(&mut canvas, 0.0, 0, vertices);
         canvas.to_text()
+    }
+
+    #[test]
+    fn first_contact_status_invites_an_extra_corner() {
+        let room = ChaosGame::new();
+        let open = room.status(0.0).expect("open");
+        assert!(open.contains("3 CORNERS"), "{open}");
+        assert!(open.contains("JUMP 0.50"), "{open}");
+        assert!(open.contains("CLICK: ADD A CORNER"), "{open}");
+        let inputs = [crate::room::RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.25,
+            t: 0.0,
+        }];
+        let added = room.status_input(0.0, &inputs).expect("added");
+        assert!(added.starts_with("1 ADD"), "{added}");
+        assert!(added.contains("4COR"), "{added}");
+        assert!(added.contains("JUMP 0.50"), "{added}");
+        assert!(added.contains("NEW@50%25%"), "{added}");
     }
 
     #[test]

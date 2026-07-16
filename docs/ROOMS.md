@@ -2,7 +2,12 @@
 
 The content catalog: the phenomena Numinous is built from. Each **room** is one playable mathematical object. Rooms are grouped into **Wings** by feeling, not by curriculum.
 
-**Current status (as of 2026-07):** 31 catalog rooms across 10 wings plus hidden content. Per-visit variation seed is threaded through registry/app/CLI/MCP; all 31 catalog rooms use it for replay novelty, while hidden content stays outside the catalog replay contract. All 31 catalog rooms have `verb()` + `render_poked()` touch actions (usually CLICK or DRAG on arrival cards), and all 31 catalog rooms expose Engine A2 motifs. See `ARCADE.md` for design.
+**Current status (as of 2026-07):** 350 catalog rooms across the wings plus
+hidden content. Per-visit variation seed is threaded through registry/app/CLI/
+MCP; every catalog room uses it for replay novelty, while hidden content stays
+outside the catalog replay contract. Every catalog room has `verb()` +
+`render_poked()` touch actions (usually CLICK or DRAG on arrival cards) and an
+Engine A2 motif. See `ARCADE.md` for design.
 
 Every room is scored on two axes to help sequencing:
 
@@ -263,7 +268,7 @@ you are not told it), and **the kid principle** (the play carries itself even
 if the concept never consciously lands). If an idea cannot pass both, it does
 not ship, however important the syllabus thinks it is.
 
-**Current interaction inventory (2026-07):** 31 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, RESTORE AND HOLD A PATCH in Cult of Pi, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
+**Current interaction inventory (2026-07):** 350 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, RESTORE AND HOLD A PATCH in Cult of Pi, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
 
 **Interaction update, 2026-07-13:** the verb inventory above records the first
 complete poke substrate. The current contract also includes `render_input` and
@@ -385,7 +390,7 @@ The wings stay feelings, not branches; this map is the coverage checklist
 behind them. A branch is covered when a kid can play its entry and a professor
 can nod at it, and neither one is bored.
 
-## The Next Wave (July 2026): designed, not built
+## The Next Wave (July 2026): designs shipping in catalog order
 
 The founder's directive: more and better rooms, researched creatively across
 four aspects. Four parallel design passes (physics, deep mathematics,
@@ -393,75 +398,71 @@ fun-first, cosmic) produced these twenty-nine designs, deduplicated (the
 sandpile and the Chladni plate surfaced independently in multiple passes,
 which is itself a signal). Every entry has a full design (rule, gasp, verb,
 sound, reveal, feasibility) in the research record; what follows is the
-catalog-level card. None are built; the review-stack rule stands, and each
-room still faces the Definition of Done, including math sign-off on its
-reveal. Non-textbook reveal claims carry sources in CHANGELOG-linked research
-(BB(5)=47,176,870 per the 2024 bbchallenge Coq-verified proof; Conway's
-constant; McKinley's starbow analysis; Tero's Physarum Tokyo result).
+catalog-level card. Rooms ship when they pass the Definition of Done; human
+magic proof is not a machine stop. Non-textbook reveal claims carry sources in
+CHANGELOG-linked research (BB(5)=47,176,870 per the 2024 bbchallenge
+Coq-verified proof; Conway's constant; McKinley's starbow analysis; Tero's
+Physarum Tokyo result).
 
-**The first eight, by wow-to-build, when the build gate opens:**
+**The first eight, by wow-to-build:**
 
-1. **The Sandpile** (Emergence): drop grains; four topples to neighbors;
-   self-organized criticality blooms a fractal mandala. HOLD: POUR SAND.
-   Reveal: catastrophe is the resting state. Trivial build, huge wow.
-2. **Chladni Figures** (Waves & Sound): sand flees a singing plate and draws
-   the silence. DRAG: TUNE THE PLATE (the drive tone IS the room's pitch).
-   Reveal: you cannot always hear the shape of a drum (Gordon-Webb-Wolpert
-   1992). Sight and sound as the same number: the thesis, twice.
-3. **The Ripple Tank** (Waves & Sound): CLICK: DROP A PEBBLE; interference
-   fans, dead-calm lanes, the double slit built by hand. Reveal: the only
-   mystery of quantum mechanics.
-4. **The Coffee Cup** (Shape & Space): rays bounce once in a circle and
-   condense into the cardioid. DRAG: SWING THE SUN. Closes the cardioid
-   triangle with Times Tables and Mandelbrot: one curve, three rooms.
-5. **Ford Circles** (Number & Pattern): every fraction owns a circle at
-   height 1/(2q^2); none ever overlap; kisses are Farey neighbors; the
-   deepest crevice belongs to the golden ratio. CLICK: BIRTH THE MEDIANT.
-6. **The Zeta Walk** (Number & Pattern): the eta-walk on the critical line;
-   DRAG: CLIMB THE LINE; the thousand-arm spiral folds home to zero exactly
-   at Riemann zeros, hunted by ear as cadences. The Prime Spirals 0.5 egg,
-   made playable.
-7. **The Starbow** (Shape & Space / Cosmos): HOLD: BURN toward lightspeed;
-   relativistic aberration pours the whole sky into a burning ring ahead.
-   One closed-form transform per star (McKinley 1979).
-8. **Slingshot** (Motion & Dynamics): PULL AND RELEASE: LAUNCH A PROBE on
-   the gesture substrate; HOLD grows suns; gravity assists discovered, not
-   taught. Daily seeded courses; missed probes become comets, never failures.
+1. **The Sandpile** (Emergence) **built** (`sandpile`): drop grains; four
+   topples to neighbors; self-organized criticality blooms a fractal mandala.
+   HOLD: POUR SAND. Reveal: catastrophe is the resting state. Abelian
+   property: pour order does not change the final heights.
+2. **Chladni Figures** (Waves & Sound) **built** (`chladni`): sand flees a
+   singing plate and draws the silence. DRAG: TUNE THE PLATE (the drive tone
+   IS the room's pitch). Reveal: you cannot always hear the shape of a drum
+   (Gordon-Webb-Wolpert 1992). Sight and sound as the same number: the thesis,
+   twice.
+3. **The Ripple Tank** (Waves & Sound) **built** (`ripple`): CLICK: DROP A
+   PEBBLE; interference fans, dead-calm lanes, the double slit built by hand.
+   Reveal: the only mystery of quantum mechanics, drawn in water.
+4. **The Coffee Cup** (Shape & Space) **built** (`coffee-cup`): rays bounce
+   once in a circle and condense into the cardioid. DRAG: SWING THE SUN.
+   Closes the cardioid triangle with Times Tables and Mandelbrot: one curve,
+   three rooms.
+5. **Ford Circles** (Number & Pattern) **built** (`ford-circles`): every
+   fraction owns a circle at height 1/(2q^2); none ever overlap; kisses are
+   Farey neighbors; the deepest crevice belongs to the golden ratio. CLICK:
+   BIRTH THE MEDIANT.
+6. **The Zeta Walk** (Number & Pattern) **built** (`zeta-walk`): the eta-walk
+   on the critical line; DRAG: CLIMB THE LINE; the spiral folds home near
+   Riemann zeros, hunted by ear as cadences. The Prime Spirals 0.5 egg, made
+   playable.
+7. **The Starbow** (Shape & Space / Cosmos) **built** (`starbow`): HOLD: BURN
+   toward lightspeed; relativistic aberration pours the whole sky into a
+   burning ring ahead. One closed-form transform per star (McKinley 1979).
+8. **Slingshot** (Motion & Dynamics) **built** (`slingshot`): PULL AND
+   RELEASE: LAUNCH A PROBE on the gesture substrate; HOLD grows suns; gravity
+   assists discovered, not taught. Seeded courses; missed probes become
+   comets, never failures.
 
 **The rest of the wave, by aspect:**
 
-- Physics: **The Magnet** (DRAG: TURN THE HEAT; Ising criticality,
-  universality, honest 1/f crackle), **The First Rain** (DRAG: MAKE IT RAIN;
-  percolation's cliff at p=0.5927), **Kepler's Loom** (DRAG: FLING A MOON;
-  every throw an ellipse, equal areas as metronome), **The Fastest Fall**
-  (DRAG: DRAW YOUR TRACK; race the cycloid and lose; the calculus of
-  variations door).
-- Deep math: **Audioactive Decay** (CLICK: SPEAK THE NEXT LINE; look-and-say
-  shatters into 92 elements, Conway's constant), **The Busy Beaver** (CLICK:
-  FLIP ONE RULE; five rules run 47,176,870 steps then stop on purpose;
-  undecidability worn lightly), **The Chord Game** (elliptic-curve addition
-  as bank shots; the group law that locks your credit card), **The
-  Upside-Down Ruler** (p-adic tower; ...999999 + 1 = 0, so ...999999 = -1),
-  **The 720 Degree Room** (Dirac's belt; DRAG rotates a tethered stone; 360
-  is not enough, 720 is; the quaternion double cover felt in the wrist).
-- Fun-first: **Phantom Jam** (HOLD: BRAKE; one tap births a jam that rolls
-  backward forever; Sugiyama 2008), **The Whispering Table** (PULL AND
-  RELEASE: SHOOT; elliptic billiards weave caustics; chaos is impossible
-  here), **Murmuration** (HOLD: BE THE FALCON; boids with seven neighbors;
-  the shape exists in no bird's head), **The Wet Oracle** (DRAG: SMEAR THE
-  FOOD; race a slime mold to the shortest path and lose; Tero 2010), **The
-  Unlit Room** (DRAG: CRANK THE LANTERN; the illumination problem; one point
-  no light can reach, Tokarsky 1995).
-- Cosmic: **Tilt the Cone** (DRAG: BOOST THE FRAME; simultaneity trades
-  places, causality refuses), **The Stretch** (CLICK any galaxy: everyone is
-  the center; redshift played an octave down), **Laplace's Clockwork**
-  (DRAG: DETUNE A MOON; Io-Europa-Ganymede's 1:2:4 lock; the forbidden
-  triple conjunction), **The Message That Heals** (DRAG: RAISE THE NOISE;
-  Hamming codes healing wounds mid-flight, until the cliff), **The Lens**
-  (DRAG: MOVE THE DARK MASS; Einstein rings from a mass you never see),
-  **Fourteen Beacons** (DRAG: GUESS WHERE HOME IS; the Pioneer pulsar map as
-  polyrhythm), **The Loneliness Equation** (seven dials; the last one, L, is
-  drawn longer; the silence is scheduling, not scarcity).
+- Physics: **The Magnet** **built** (`the-magnet`; DRAG: TURN THE HEAT; Ising
+  criticality near Onsager Tc), **The First Rain** **built** (`first-rain`),
+  **Kepler's Loom** **built** (`kepler-loom`), **The Fastest Fall** **built**
+  (`fastest-fall`; DRAG: DRAW YOUR TRACK; cycloid brachistochrone).
+- Deep math: **Audioactive Decay** **built** (`audioactive`), **The Busy
+  Beaver** **built** (`busy-beaver`), **The Chord Game** **built**
+  (`chord-game`; elliptic addition as bank shots), **The Upside-Down Ruler**
+  **built** (`upside-ruler`), **The 720 Degree Room** **built** (`degree720`).
+- Fun-first: **Phantom Jam** **built** (`phantom-jam`), **The Whispering
+  Table** **built** (`whispering-table`), **Murmuration** **built**
+  (`murmuration`), **The Wet Oracle** **built** (`wet-oracle`), **The Unlit
+  Room** **built** (`unlit-room`).
+- Cosmic: **Tilt the Cone** **built** (`tilt-cone`), **The Stretch** **built**
+  (`the-stretch`), **Laplace's Clockwork** **built** (`laplace-clock`), **The
+  Message That Heals** **built** (`message-heals`), **The Lens** **built**
+  (`the-lens`), **Fourteen Beacons** **built** (`fourteen-beacons`), **The
+  Loneliness Equation** **built** (`loneliness`).
+
+**Awe Engine Tier S (catalog 67):** **The Jumper** **built** (`recaman`),
+**The Weave** **built** (`truchet`), **The Chase** **built** (`pursuit`),
+**The Divisor Fractal** **built** (`pascal-mod`), **The Spinner** **built**
+(`three-gap`), **The Triangle That Cheats** **built** (`morley`), **The
+Menagerie** **built** (`menagerie`; Clifford attractor).
 
 Cross-room resonances the wave adds for free: the cardioid triangle (Coffee
 Cup, Times Tables, Mandelbrot), the Lorentz pair (Starbow, Tilt the Cone),
@@ -629,78 +630,65 @@ first rooms (only pi-as-music), and one-line generative art at scale. Designed,
 not built; each still faces the Definition of Done and math sign-off. Ranked
 easy-first, since these are the batch to open the post-substrate content wave.
 
-**Tier S, buildable now, highest awe per build:**
-- **Recaman's Sequence, "The Jumper"** (Number, sonification-first): jump back by
+**Tier S, buildable now, highest awe per build (all built, catalog 67):**
+- **Recaman's Sequence, "The Jumper"** **built** (`recaman`): jump back by
   n if you can, forward if you cannot, drawing each jump as an arc. A hypnotic
   harp of nested arcs that is also the most beautiful sonification in mathematics,
   hiding an open problem (852655 has never appeared in 10^230 terms; Sloane now
   doubts it does). DRAG: SET THE STRIDE. Chains to Collatz.
-- **Truchet Tiles / 10 PRINT, "The Weave"** (Emergence): one tile, two rotations,
-  a coin flip per cell, endless mazes or interlocking loops from nothing. Retro-
-  perfect for the Teletype and 8-bit Eras. DRAG: PAINT THE BIAS.
-- **Pursuit Curves, "The Chase"** (Motion): four bugs each walk at the next; they
-  spiral into a logarithmic whirlpool and each walks exactly one side length.
-  DRAG a bug; CLICK to add more.
-- **Strange Attractor Zoo, "The Menagerie"** (Fractals): a rack of 2D maps
-  (Clifford, de Jong, Thomas) driven by four numbers; a million iterations
-  condense a luminous alien creature. An infinite gallery where Lorenz is one
-  instance. DRAG THE FOUR CONSTANTS. Reuses the Barnsley IFS density machinery.
-- **Pascal mod n, "The Divisor Fractal"** (Number): color Pascal's triangle by
-  divisibility; mod 2 is exact Sierpinski, and the coloring rule is Kummer's
-  theorem, so the counting and the fractal are one fact. DRAG: TURN THE MODULUS.
-- **The Three-Gap Theorem, "The Spinner"** (Number): points at angles n*theta on
-  a circle have at most three distinct gap sizes, ever, and the largest is the
-  sum of the other two. The hidden law behind Golden Angle. DRAG: TURN THE ANGLE.
-- **Morley's Miracle, "The Triangle That Cheats"** (Shape): trisect any
-  triangle's angles and the inner crossings always form a perfect equilateral
-  triangle. DRAG A VERTEX and watch it refuse to break. Ties to Straightedge and
-  Compass (the impossibility it flirts with).
+- **Truchet Tiles / 10 PRINT, "The Weave"** **built** (`truchet`): one tile, two
+  rotations, a coin flip per cell, endless mazes or interlocking loops from
+  nothing. Retro-perfect for the Teletype and 8-bit Eras. DRAG: PAINT THE BIAS.
+- **Pursuit Curves, "The Chase"** **built** (`pursuit`): four bugs each walk at
+  the next; they spiral into a logarithmic whirlpool and each walks exactly one
+  side length. DRAG a bug.
+- **Strange Attractor Zoo, "The Menagerie"** **built** (`menagerie`; Clifford
+  first): four numbers and a long orbit condense a luminous alien creature.
+  DRAG: TUNE THE FOUR.
+- **Pascal mod n, "The Divisor Fractal"** **built** (`pascal-mod`): color
+  Pascal's triangle by residue; mod 2 is exact Sierpinski. DRAG: TURN THE
+  MODULUS.
+- **The Three-Gap Theorem, "The Spinner"** **built** (`three-gap`): points at
+  angles n*theta on a circle have at most three distinct gap sizes. DRAG: TURN
+  THE ANGLE.
+- **Morley's Miracle, "The Triangle That Cheats"** **built** (`morley`): trisect
+  any triangle's angles and the inner crossings form equilateral. DRAG A VERTEX.
 
 **Tier A, postcard-grade, medium build:**
-- **Apollonian Gasket, "The Kissing Circles"** (Number/Fractals): infinite
-  nested kissing circles with integer curvatures (Descartes), plus a live open
-  door (the local-global conjecture was proved false in 2023). CLICK A GAP.
-- **Circle Inversion and the Riemann Sphere, "The Mirror That Bends"** (Shape):
-  lines become circles, the whole plane wraps onto a ball where infinity is one
-  ordinary point. The hub that unifies Apollonian, Steiner, and Ford circles.
-- **Domain Coloring, "The Color of a Function"** (Fractals): every complex
-  function painted (hue is phase, brightness is size); zeros are pinwheels you
-  can count. Ties directly to the Studio engine; see the flagship note below.
-- **Diffusion-Limited Aggregation, "The Frost"** (Emergence): random walkers
-  freeze on contact and build lightning, frost, and coral. The sibling Random
-  Walk is begging for. CLICK: PLANT A SEED.
-- **Buddhabrot, "The Ghost in the Set"** (Fractals): trace the escaping paths of
-  the Mandelbrot and a meditating figure rises out of the fog. The famous shape's
-  hidden second face; a deep-cut unlock off Mandelbrot.
-- **Wireworld, "The Visible Computer"** (Computation): a four-state automaton
-  where you build gates and watch the electrons flow. Game of Life claims it can
-  compute; this shows the circuit.
+- **Apollonian Gasket, "The Kissing Circles"** **built** (`apollonian`): infinite
+  nested kissing circles with integer curvatures (Descartes). CLICK A GAP.
+- **Circle Inversion, "The Mirror That Bends"** **built** (`inversion`): lines
+  become circles; the hub that unifies Apollonian, Steiner, and Ford circles.
+- **Domain Coloring / Function Painter** **built** (`function-painter`): every
+  complex map painted (phase as symbol, magnitude as density); zeros are
+  pinwheels you can count. Curated rack of maps; free Studio expression path
+  remains open for later.
+- **Diffusion-Limited Aggregation, "The Frost"** **built** (`dla-frost`): random
+  walkers freeze on contact and build lightning, frost, and coral. CLICK: PLANT
+  A SEED.
+- **Buddhabrot, "The Ghost in the Set"** **built** (`buddhabrot`): density of
+  escaping Mandelbrot orbits paints a ghostly figure. DRAG: AIM THE GHOST.
+- **Wireworld, "The Visible Computer"** **built** (`wireworld`): four-state
+  automaton where you fire electrons on copper. CLICK: FIRE AN ELECTRON.
 
 **Tier B, the missing categories (sphere, quantum, number magic):**
-- **Spherical Harmonics, "The Singing Sphere"** and **Hydrogen, "The Shape of the
-  Atom"**: the same lobed shapes are atomic orbitals, bell overtones, and the
-  cosmic microwave background. One math kernel, a whole missing quantum wing.
-- **Hopf Fibration, "The Linked Rings"**: space filled with circles all linked
-  and none touching, the shadow of a 4D sphere and the picture of a qubit.
-- **Kaprekar 6174, "The Number That Eats Numbers"**: every 4-digit number falls
-  to 6174 in at most seven steps. The solved, satisfying twin of Collatz.
-- **Steiner Chains, "The Ring That Always Closes"**: a ring of circles that, once
-  it closes, closes from every angle. Obvious once inverted (the room next door).
+- **Spherical Harmonics, "The Singing Sphere"** **built** (`harmonics`): real
+  Y_lm lobes; the atom's and the bell's shared shape. DRAG: RAISE l AND m.
+- **Hopf Fibration, "The Linked Rings"** **built** (`hopf`): space filled with
+  circles all linked and none touching, the shadow of a 4D sphere and the picture
+  of a qubit.
+- **Kaprekar 6174, "The Number That Eats Numbers"** **built** (`kaprekar`): every
+  4-digit number falls to 6174 in at most seven steps. The solved twin of Collatz.
+- **Steiner Chains, "The Ring That Always Closes"** **built** (`steiner`): a ring
+  of circles that, once it closes, closes from every angle.
 
-**The scope flagship: the Studio Function Painter (domain coloring).** Times
-Tables is the onboarding flagship (one dial, a floor-tilting reveal, hits a
-seven-year-old). The product-defining flagship should express the ceiling: domain
-coloring wired to the Studio expression engine is the one room that is
-simultaneously a Toy, a Studio, and a museum of the whole catalog. Type `z^2` for
-two pinwheels; type `z^2 + c` and drag c to sit inside the Mandelbrot's engine;
-type the zeta function and stare at the million-dollar zeros. Newton fractals,
-the whole Fractals wing, and the Zeta Walk are all special cases of this one
-surface, so it reframes everything else as instances of itself, which is the
-definition of a flagship. It would prove that Studio programs can become rooms
-with a single screenshot-perfect artifact, and it can build on parts that exist (the
-expression engine, the raster, phase-to-pitch sonification, the complex-iteration
-path). Ship Times Tables to prove the feel; build the Function Painter to prove
-the scope.
+**The scope flagship: the Studio Function Painter (domain coloring).** **Built**
+as catalog room `function-painter`: a curated rack of complex maps with domain
+coloring (phase as symbol, magnitude as density), DRAG to pick map and tune c.
+Times Tables remains the onboarding flagship; Function Painter is the ceiling
+toy. Free-text Studio expression wiring into this surface is still a later path
+(the real expression engine already plots reals; complex field programs are the
+next Studio step).
 
 **New causal insight-chains** (each room's reveal hands you the next room's tool
 or question, deeper than thematic grouping; fold into `CONSTELLATION.md`):
@@ -852,3 +840,161 @@ been running the translator the whole time. This is the strongest possible
 statement of the "same wonder, two kinds of mind" thesis (`VISION.md`), the
 digital-mind peerhood in `DIGITAL_MINDS.md`, and the contribution ethos in
 `ROADMAP.md`: math is how anyone leaves a light for anyone else, across any gap.
+
+## Frontier and universal wonder wave (July 2026 research pass)
+
+A step-back pass after the 0.2 machine grind: inventory what is built, what is
+already designed, and which gaps still block "absolutely exceptional" for any
+mind that can touch structure. Owner roadmap hooks: Exceptional Path Phase E,
+1.x depth, and the 2.0 frontier. **Designed, not built.** Every entry still faces
+the Definition of Done, honest feasibility, and mathematician sign-off. Cutting-
+edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
+*full model* (the math is the room). Never claim a research proof from a demo.
+
+### What we already have (feel, not curriculum)
+
+**Built now (350 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+Julia, Cult of Pi, Life and Cellular Automata and Langton and Rule 30, The
+Sandpile, The First Rain, The Magnet, Phantom Jam, Chaos Game, Golden Angle,
+Galton and Buffon, Lissajous, Chladni Figures, Ripple Tank, The Coffee Cup,
+Ford Circles, The Zeta Walk, The Starbow, Slingshot, Kepler's Loom, The Fastest
+Fall, Audioactive Decay, Harmonograph, Epicycles, L-System and Barnsley, Lorenz
+and Henon and Double Pendulum and Logistic Map, Collatz, Prime Spirals and Ulam
+Spiral, Goldbach, Voronoi, Random Walk, Arecibo, Mobius, Zeno, The Pour, Slope
+Rider, Quine, Strange Loop, Penrose, Continued Fractions, Logistic Cobweb,
+Sierpinski Carpet, Pythagoras Tree, Dragon Curve, Fibonacci Word, Cubic Newton,
+Mandelbulb Slice, Nova, Magnet Fractal, Lambda Map, Feigenbaum Ladder, Menger
+Carpet, Vicsek, Chua, Cat Map, Blancmange, Rose, Kuramoto, H-Tree, Percolation,
+Ising, Lotka-Volterra, Poincare Disc, Cycloid, Brusselator, Sprott, Delaunay,
+Astroid, SIR, Nephroid, Lemniscate, Cardioid, Deltoid, Coupled Logistic, Menger
+Sponge, Theodorus, Rule 110, Hyperbolic Tiling, Mackey-Glass, Fermat Spiral,
+Euclid, Oregonator, Hofstadter Q, Dual Cobweb, Beverton-Holt, Witch of Agnesi,
+Tractrix, Catenary, Clothoid, Gerono, Cissoid, Strophoid, Conchoid, Limacon,
+Folium, Semicubical, Kappa, Circular Caustic, Trochoid, Hypotrochoid,
+Epitrochoid, Involute, Evolute, Pedal, Roulette, Damped Sine, Beats, Gibbs
+Square, Sawtooth, Triangle Wave, AM, FM, Standing Wave, Doppler, Interference,
+Diffraction, Snell, Polarization, Brewster, Reuleaux, Log Spiral, Archimedean,
+Cassini, Foucault, Coriolis, Tautochrone, Catenoid, Helicoid, Pseudosphere,
+Airy Disk, Bragg Diffraction, Maclaurin Trisectrix, Watt Curve, Devil Curve,
+Capillary Meniscus, Rabi Flopping, Sphere Geodesics, Kampyle, Hippopede,
+Cartesian Oval, Berry Phase, Runge Phenomenon, Chebyshev Nodes, Bessel J0,
+Hermite Wave, Legendre P_n, Heat Kernel, Cauchy Lorentz, Mexican Hat, Seifert
+Film, Trefoil, Hopf Fibration, Filled Julia, Figure-Eight Knot, Borromean Rings,
+Viviani, Torus Knot, Whitney Umbrella, Roman Surface, Spherical Harmonic,
+Lissajous 3D, Kolakoski, Beatty, Wythoff, Minkowski Question Mark, Ruler
+Function, Moser-de Bruijn, Mertens, Liouville, Euler Totient, Partition,
+Paperfold, Sylvester, Poisson, Brownian, Birthday Paradox, Coupon Collector,
+Zipf, Gamblers Ruin, Harmonic Series, Basel, Stirling, Benford, Central Limit,
+Wallis Product, Superellipse, Cochleoid, Serpentine, Bifolium, Butterfly Curve,
+Piriform, Simple Pendulum, Blackbody, Kepler Areas, Escape Velocity, Coupled
+Oscillators, Prism Dispersion, Lucky Numbers, Gaussian Primes, Quadratic
+Residues, Zeckendorf, Egyptian Fractions, Pell Path, Shannon Entropy, Bayes
+Update, Erdos-Renyi, Markov Chain, Huffman Tree, Mutual Info, Klein Bottle, Cross-Cap, Boy Surface, Solid Torus, Hopf Link, Unknot, Gamma Function, Error Function, Fresnel Integrals, Lambert W, Sinc Interpolation, Dirichlet Eta, AGM Mean, Twin Primes, Perfect Numbers, Napoleon Theorem, plus Awe Engine /
+Next Wave / universal wonder catalog rooms
+and games (Quiz, Munch, Arcade, Nim, Gauntlet, SETI, Aliens, Codebreaker, and
+kin), Studio, radio, Journey, Cairn, predict.
+
+**Designed in earlier waves (do not redesign, do build):** Next Wave remainder
+(physics/math/fun/cosmic cards still listed under The Next Wave); Awe Engine
+tier S/A/B; Long Shot, Only Move, Dimension Dial; First Contact handshake room;
+Function Painter scope flagship; classical geometry and sonification-first
+batches.
+
+**Honest gaps this pass targets:** high-dimension intuition, information and
+noise as felt structure, quantum and measurement without mysticism, learning
+and optimization (especially for digital minds), topology that bends intuition,
+duality as a play verb, and open-door frontiers that stay current.
+
+### Design filters (any race, world, or time)
+
+A candidate survives only if:
+
+1. **Awe in ten seconds without words** (sight, sound, or both can carry it).
+2. **A counterintuitive gasp** (the hand discovers a law that words spoil).
+3. **Cross-mind portability** (structure first; culture-specific metaphor second).
+4. **Truthful depth** (Toy / Aha / Reveal; open doors dated and sourced).
+5. **Playable, not lecture** (a verb that changes the mathematics).
+6. **CPU-honest** (or GPU-honest with CPU fallback), deterministic, offline.
+
+### Tier S: highest wow per build
+
+| Room (working title) | Gasp | Verb | Status |
+| --- | --- | --- | --- |
+| **The Curse of Dimension** | Almost all volume of a high-D ball sits in a thin shell. | DRAG: RAISE DIMENSION | **built** (`curse-dimension`) |
+| **The Concentration Bell** | Random points in high D all sit near the same radius. | CLICK: DRAW A SAMPLE | **built** (`concentration`) |
+| **Error That Heals** | Flip bits; Hamming repairs until a cliff. | DRAG: RAISE THE NOISE | **built** as Message That Heals |
+| **The Uncertainty Dial** | Narrower in time, wider in frequency. | DRAG: SQUEEZE THE WINDOW | **built** (`uncertainty`) |
+| **Soap Film** | The surface finds the least area. | PIN: HOLD A WIRE | designed |
+| **Sphere Eversion** | A sphere turns inside out without creases. | HOLD: PUSH THROUGH | designed |
+| **The Gradient Valley** | Descent finds a basin; a ridge blocks another. | DROP: A SEEKER | **built** (`gradient-valley`) |
+| **Attention as Soft Light** | One query lights a few keys; the rest go dim. | DRAG: MOVE THE QUERY | **built** (`attention`) |
+
+### Tier A: counterintuitive classics that still empty the floor
+
+| Room | Gasp | Verb | Notes |
+| --- | --- | --- | --- |
+| **Banach-Tarski Shadow** | Two spheres from one, via non-measurable pieces (honest "axiom of choice" label). | SPLIT: FOLLOW THE PIECES | Philosophy-grade gasp; careful copy. Build 3-4. |
+| **Hilbert's Hotel** | Full hotel, room for one more bus, until the reals check in. | ADMIT: THE NEXT GUEST | **built** (`hilbert-hotel`) |
+| **Braess Trap** | Add a road; average travel time rises. | BUILD: A SHORTCUT | **built** (`braess`) |
+| **Nontransitive Dice** | A beats B, B beats C, C beats A. | ROLL: THE TRIO | **built** (`nontransitive`) |
+| **Parrondo's Trap** | Two losing games, alternating, win. | TOGGLE: THE RULE | **built** (`parrondo`) |
+| **The Illumination Flaw** | One dark point no light reaches (Tokarsky-style room). | DRAG: THE LANTERN | Already persona-named as Unlit Room; keep priority. |
+| **Linked Rings (Hopf)** | Circles all linked, none touching; qubit shadow. | SPIN: THE FIBER | Awe Engine quantum wing; build 3-4. |
+| **Minimal Path on Soap** | Steiner tree from a film; three 120 degree meets. | PIN: THE PINS | Geometry + nature. Build 2. |
+
+### Tier F: frontier gestures (cutting-edge ideas, honest toys)
+
+These are *not* research simulators. Each is a truthful toy of one idea that
+frontier math and physics currently care about, labeled so a PhD is not misled
+and a newcomer is not sold a lie.
+
+| Room | Frontier idea (gesture) | Playable core | Open door to name honestly |
+| --- | --- | --- | --- |
+| **The Critical Line** | Zeta zeros as cadences (Zeta Walk already designed). | Climb Im(s); hear returns. | RH unsolved; keep OPEN_DOORS ledger. |
+| **The Code That Survives Fire** | Quantum / classical error correction intuition. | Flip, measure, repair until cliff. | Surface-code full model is later GPU. |
+| **Two Descriptions, One Truth** | Duality: one system, two languages (mirror symmetry lite). | Toggle dual views of same object. | Langlands is a deep cut plaque, not a room. |
+| **The Soft Proof** | Homotopy: continuous deform of a path or shape. | DRAG: DEFORM WITHOUT TEAR | Full HoTT is out of scope; morph is in. |
+| **The Learning Clock** | Continual learning: new task, old skill fades or holds. | TRAIN: TASK A, THEN B | Digital-mind relevant; pairs DIGITAL_DEVELOPMENT. |
+| **Causal Doors** | Intervention vs observation (toy do-calculus). | OPEN: A VALVE, WATCH THE REST | Agency without metaphysics. |
+| **Landauer's Price** | Erase a bit, pay heat (toy meter). | FORGET: ONE BIT | Computation has a physical cost. |
+| **The Busy Shore** | Busy Beaver already designed; keep as undecidability worn lightly. | FLIP: ONE RULE | BB(5) known; larger n open. |
+| **Prime Gap Weather** | Twin primes / gaps as a landscape, not a lecture. | DRAG: ALONG N | Open doors stay open. |
+| **The Mirror of Forms** | Category-lite: objects and arrows; compose two maps. | SNAP: ARROW TO ARROW | Composition as the verb; no jargon wall. |
+
+**Explicit non-rooms (depth, not toys):** full geometric Langlands, full string
+landscapes, full AGI alignment proofs, full quantum chemistry. These may appear
+as codex plaques, deep cuts, or Function Painter expressions, never as fake
+"solved the universe" toys.
+
+### New insight-chains (fold into CONSTELLATION.md when built)
+
+- **The Dimension Thread:** Curse of Dimension → Concentration Bell → Gradient
+  Valley → Attention as Soft Light. High-D modern math as one journey from volume
+  to learning.
+- **The Channel Thread:** Arecibo → Error That Heals → Message That Heals →
+  Landauer's Price. Communication, noise, and physical cost.
+- **The Dual Thread:** Uncertainty Dial → Fourier Epicycles → Domain Coloring →
+  Two Descriptions. One object, many faces.
+- **The Fairness Thread:** Nontransitive Dice → Braess Trap → Parrondo → voting
+  / Arrow deep cut. Preference and traffic break naive ranking.
+- **The Open Door Thread:** Kaprekar (solved) → Collatz → Recaman → Prime Gap
+  Weather → Zeta Walk. Childish rules, adult cliffs.
+
+### Sequencing recommendation (after 0.2 human gates)
+
+1. Ship **Function Painter** scope flagship (already designed) so Studio becomes
+   a museum of the catalog.
+2. Open **Tier S** dimension + uncertainty + gradient rooms (cheap, modern, cross-
+   mind).
+3. Build Next Wave first eight and Awe Engine tier S (already ranked).
+4. Add **First Contact handshake** as the meta room that reframes the collection.
+5. Boss rooms (Sizes of Infinity, Hyperbolic, Hopf, Sphere Eversion) when quality
+   bar and GPU glow allow.
+6. Keep **OPEN_DOORS.md** (proposed earlier) current so open problems never rot.
+
+### Bar for "exceptional"
+
+The catalog is not a checklist of theorems. It is a set of *experiences* where
+a seven-year-old, a working mathematician, and a digital mind can each meet the
+same structure and leave with a different private wonder. If a candidate cannot
+survive that test, it stays a deep cut or a plaque, not a room.

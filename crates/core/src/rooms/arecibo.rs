@@ -75,17 +75,24 @@ impl Arecibo {
             .take(1)
     }
 
-    fn width_status(width: usize) -> String {
+    /// Compact hand grade: the tried width, its rectangle, and the lock state.
+    fn tried_status(width: usize) -> String {
         let total = bits().len();
         let rows = total / width;
         let remainder = total % width;
         if remainder == 0 && width == 11 {
-            format!("{total} BITS   WIDTH {width} x {rows}   SIGNAL LOCKED: PI")
+            format!("TRIED W{width}  {width}x{rows}  LOCK:PI")
         } else if remainder == 0 && width == 13 {
-            format!("{total} BITS   WIDTH {width} x {rows}   FACTOR PAIR FOUND   TRY WIDTH 11")
+            format!("TRIED W{width}  {width}x{rows}  PAIR TRY W11")
         } else {
-            format!("{total} BITS   WIDTH {width} x {rows}   {remainder} BITS LEFT OVER")
+            format!("TRIED W{width}  {width}x{rows}  REM{remainder}/{total}")
         }
+    }
+
+    /// First contact: name the unsolved open width and the try-a-width verb.
+    fn open_status(width: usize) -> String {
+        let total = bits().len();
+        format!("{total} BITS  W{width} OPEN  CLICK:TRY WIDTH")
     }
 }
 
@@ -191,15 +198,15 @@ impl Room for Arecibo {
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        Some(Self::width_status(Self::width_for(t, self.seed)))
+        Some(Self::open_status(Self::width_for(t, self.seed)))
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let pokes = pokes_from_inputs(inputs);
-        let width = Self::poked_attempts(&pokes)
-            .next()
-            .unwrap_or_else(|| Self::width_for(t, self.seed));
-        Some(Self::width_status(width))
+        match Self::poked_attempts(&pokes).next() {
+            Some(width) => Some(Self::tried_status(width)),
+            None => self.status(t),
+        }
     }
 
     fn reveal(&self) -> &'static str {
@@ -247,7 +254,7 @@ mod tests {
     use super::{ART, Arecibo, MAX_WIDTH, MIN_WIDTH, bits, grid_cell_pixels};
     use crate::MAX_ROOM_POKES;
     use crate::canvas::Canvas;
-    use crate::room::Room;
+    use crate::room::{Room, RoomInput};
 
     /// The secret width: the smaller factor of 143 (11 x 13).
     const TRUE_WIDTH: usize = 11;
@@ -427,16 +434,67 @@ mod tests {
 
     #[test]
     fn status_distinguishes_the_readable_orientation_from_its_factor_pair() {
-        let wrong = Arecibo::width_status(10);
-        assert!(wrong.contains("3 BITS LEFT OVER"));
-        let readable = Arecibo::width_status(11);
-        assert!(readable.contains("11 x 13"));
-        assert!(readable.contains("SIGNAL LOCKED: PI"));
-        let rotated_shape = Arecibo::width_status(13);
-        assert!(rotated_shape.contains("13 x 11"));
-        assert!(rotated_shape.contains("FACTOR PAIR FOUND"));
-        assert!(rotated_shape.contains("TRY WIDTH 11"));
-        assert!(!rotated_shape.contains("SIGNAL LOCKED"));
+        let wrong = Arecibo::tried_status(10);
+        assert!(wrong.contains("REM3/143"), "{wrong}");
+        let readable = Arecibo::tried_status(11);
+        assert!(readable.contains("11x13"), "{readable}");
+        assert!(readable.contains("LOCK:PI"), "{readable}");
+        let rotated_shape = Arecibo::tried_status(13);
+        assert!(rotated_shape.contains("13x11"), "{rotated_shape}");
+        assert!(rotated_shape.contains("PAIR TRY W11"), "{rotated_shape}");
+        assert!(!rotated_shape.contains("LOCK:PI"));
+    }
+
+    #[test]
+    fn first_contact_invites_a_width_try_and_action_grades_the_lock() {
+        let room = Arecibo::new();
+        let open = room.status(0.0).expect("open");
+        assert!(open.contains("OPEN"), "{open}");
+        assert!(open.contains("CLICK:TRY WIDTH"), "{open}");
+        assert!(open.contains("143 BITS"), "{open}");
+        assert!(open.chars().count() <= 56, "{open}");
+
+        // Left side of the width dial maps near MIN_WIDTH; true width 11 is mid-right.
+        let miss = room
+            .status_input(
+                0.0,
+                &[RoomInput::PointerDown {
+                    x: 0.0,
+                    y: 0.5,
+                    t: 0.0,
+                }],
+            )
+            .expect("miss");
+        assert!(miss.starts_with("TRIED W"), "{miss}");
+        assert!(miss.contains("REM"), "{miss}");
+        assert_ne!(miss, open);
+
+        let lock = room
+            .status_input(
+                0.0,
+                &[RoomInput::PointerDown {
+                    x: (11.0 - MIN_WIDTH as f64) / (MAX_WIDTH - MIN_WIDTH) as f64,
+                    y: 0.5,
+                    t: 0.0,
+                }],
+            )
+            .expect("lock");
+        assert!(lock.contains("TRIED W11"), "{lock}");
+        assert!(lock.contains("LOCK:PI"), "{lock}");
+        assert!(lock.chars().count() <= 56, "{lock}");
+
+        let pair = room
+            .status_input(
+                0.0,
+                &[RoomInput::PointerDown {
+                    x: (13.0 - MIN_WIDTH as f64) / (MAX_WIDTH - MIN_WIDTH) as f64,
+                    y: 0.5,
+                    t: 0.0,
+                }],
+            )
+            .expect("pair");
+        assert!(pair.contains("TRIED W13"), "{pair}");
+        assert!(pair.contains("PAIR TRY W11"), "{pair}");
     }
 
     #[test]

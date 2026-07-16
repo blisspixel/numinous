@@ -66,6 +66,50 @@ impl MunchLayout {
     }
 }
 
+/// Hit-test for Nim heaps: click a stone to aim that heap and take that many.
+pub(crate) struct NimLayout {
+    top: i32,
+    row_h: i32,
+    stone: i32,
+}
+
+impl NimLayout {
+    pub(crate) fn new(width: usize, height: usize) -> Self {
+        let scale = game_scale(width);
+        let top = 20 * scale + 10;
+        let row_h = (height as i32 - top - 42 * scale) / 3;
+        let stone = (row_h / 2).clamp(4, 10 * scale);
+        Self { top, row_h, stone }
+    }
+
+    /// Returns `(heap_index, take_count)` when the pointer is over stones.
+    pub(crate) fn hit(&self, x: f64, y: f64, heaps: &[u32]) -> Option<(usize, u32)> {
+        if self.row_h <= 0 || heaps.is_empty() {
+            return None;
+        }
+        let heap = ((y - f64::from(self.top)) / f64::from(self.row_h)) as usize;
+        if heap >= heaps.len().min(3) {
+            return None;
+        }
+        let count = heaps[heap];
+        if count == 0 {
+            return None;
+        }
+        let stone_span = self.stone + 6;
+        if stone_span <= 0 || x < 40.0 {
+            // Click on the heap label: aim take 1.
+            return (10.0..40.0).contains(&x).then_some((heap, 1));
+        }
+        let index = ((x - 40.0) / f64::from(stone_span)) as u32;
+        if index >= count {
+            return None;
+        }
+        // Stone i from the left is the (count - index)th from the right aim set.
+        let take = count.saturating_sub(index).max(1);
+        Some((heap, take))
+    }
+}
+
 fn munch_columns(width: usize, scale: i32, left: i32) -> usize {
     ((width as i32 - left - 10) / (6 * scale.max(1))).max(8) as usize
 }
@@ -131,19 +175,43 @@ struct QuizResultLayout {
     line_height: i32,
 }
 
+fn fit_quiz_verdict(text: &str, pixel_budget: i32, scale: i32) -> String {
+    if numinous_core::text_width(text, scale) <= pixel_budget {
+        return text.to_string();
+    }
+    let mut chars: Vec<char> = text.chars().collect();
+    while chars.len() > 4 {
+        chars.pop();
+        while chars.last().is_some_and(|c| c.is_whitespace() || *c == ':') {
+            chars.pop();
+        }
+        let mut fitted: String = chars.iter().collect();
+        fitted.push_str("...");
+        if numinous_core::text_width(&fitted, scale) <= pixel_budget {
+            return fitted;
+        }
+    }
+    "...".to_string()
+}
+
 impl QuizResultLayout {
     fn new(quiz: &QuizPlay, correct: bool, mode: InputMode, width: usize, height: usize) -> Self {
         let margin = 10;
         let body_scale = game_scale(width);
         let verdict_scale = body_scale + 1;
         let line_height = 10 * body_scale;
+        let verdict_budget = width as i32 - 2 * margin;
         let verdict = if correct {
             "CORRECT".to_string()
         } else {
-            format!(
-                "IT WAS {}: {}",
-                quiz.round.answer,
-                quiz.round.answer_title.to_uppercase()
+            fit_quiz_verdict(
+                &format!(
+                    "IT WAS {}: {}",
+                    quiz.round.answer,
+                    quiz.round.answer_title.to_uppercase()
+                ),
+                verdict_budget,
+                verdict_scale,
             )
         };
         let controls = input_legend::quiz_result(mode);
@@ -353,14 +421,25 @@ pub(crate) fn draw_munch(
         '#',
     );
     let layout = MunchLayout::new(width, height);
+    let flash_cell = play
+        .bite_flash
+        .filter(|(_, frames)| *frames > 0)
+        .map(|(cell, _)| cell);
     for (i, &value) in play.board.numbers.iter().enumerate() {
         let (x0, y0, x1, y1) = layout.rect(i);
         let bitten = play.bites.contains(&i);
-        let mark = if bitten { '#' } else { '-' };
+        let flashing = flash_cell == Some(i);
+        let mark = if flashing || bitten { '#' } else { '-' };
         raster.line(x0, y0, x1, y0, mark);
         raster.line(x0, y1, x1, y1, mark);
         raster.line(x0, y0, x0, y1, mark);
         raster.line(x1, y0, x1, y1, mark);
+        if flashing {
+            // Bite juice: fill the cell for a few frames so the toggle is felt.
+            for y in (y0 + 1)..y1 {
+                raster.line(x0 + 1, y, x1 - 1, y, '#');
+            }
+        }
         if i == play.cursor && play.graded.is_none() {
             let inset = if (frame / 20) % 2 == 0 { 1 } else { 2 };
             raster.line(x0 + inset, y0 + inset, x1 - inset, y0 + inset, '#');
@@ -377,7 +456,7 @@ pub(crate) fn draw_munch(
             tx,
             ty,
             scale,
-            if bitten { '#' } else { '*' },
+            if flashing || bitten { '#' } else { '*' },
         );
     }
     match &play.graded {
@@ -843,6 +922,7 @@ mod tests {
             cursor: 0,
             bites: BTreeSet::new(),
             graded: None,
+            bite_flash: None,
         }
     }
 
@@ -867,6 +947,28 @@ mod tests {
             cleared: vec![false, true],
             message: "SKY GATE".to_string(),
         }
+    }
+
+    #[test]
+    fn nim_layout_hits_heap_and_take() {
+        let layout = NimLayout::new(800, 480);
+        let heaps = [3, 5, 7];
+        // Left label of the first heap: take one.
+        assert_eq!(
+            layout.hit(15.0, f64::from(layout.top + 2), &heaps),
+            Some((0, 1))
+        );
+        // First stone of heap 0: take all remaining from that stone rightward.
+        let first_stone_x = 40.0 + f64::from(layout.stone) / 2.0;
+        let hit = layout
+            .hit(
+                first_stone_x,
+                f64::from(layout.top + layout.row_h / 2),
+                &heaps,
+            )
+            .expect("stone hit");
+        assert_eq!(hit.0, 0);
+        assert!(hit.1 >= 1 && hit.1 <= 3, "take {hit:?}");
     }
 
     #[test]

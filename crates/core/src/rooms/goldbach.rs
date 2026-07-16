@@ -198,6 +198,11 @@ impl Room for Goldbach {
         Some("CLICK: TEST THIS EVEN")
     }
 
+    fn status(&self, t: f64) -> Option<String> {
+        let reach = self.reach_for(t);
+        Some(format!("COMET TO {reach}   CLICK: TEST AN EVEN NUMBER"))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         if pokes.is_empty() {
             self.render(canvas, t);
@@ -241,14 +246,20 @@ impl Room for Goldbach {
         }
     }
 
-    fn status_input(&self, _t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let (x, y) = inputs.iter().rev().find_map(|input| match *input {
+    fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
+        let Some((x, y)) = inputs.iter().rev().find_map(|input| match *input {
             RoomInput::PointerDown { x, y, .. } if x.is_finite() => Some((x, y)),
             _ => None,
-        })?;
+        }) else {
+            return self.status(t);
+        };
         let n = even_at_hand(x);
         let count = ways(n);
-        let (p, q) = witness_for(n, y)?;
+        let Some((p, q)) = witness_for(n, y) else {
+            return Some(format!(
+                "{n}   NO WITNESS AT THIS Y   {count} PAIR(S) KNOWN"
+            ));
+        };
         Some(format!("{n} = {p} + {q}   {count} PRIME PAIR(S)"))
     }
 
@@ -421,7 +432,13 @@ mod tests {
 
         assert!(status.starts_with("302 = "));
         assert!(status.ends_with("PRIME PAIR(S)"));
-        assert_eq!(room.status_input(0.0, &[]), None);
+        let open = room.status(0.0).expect("open");
+        assert!(open.contains("COMET TO"), "{open}");
+        assert!(open.contains("CLICK: TEST"), "{open}");
+        assert_eq!(
+            room.status_input(0.0, &[]).as_deref(),
+            room.status(0.0).as_deref()
+        );
     }
 
     #[test]

@@ -18,11 +18,11 @@ doors' design goals. The point is what we are missing, not what we have.
 
 ### Maya (the kid door)
 - "The menu says PLAY first, good. But I tried to CLICK the munch board and
-  nothing happened." **Games are keyboard-only; a kid's first instinct is
-  the mouse.** Miss.
-- "When I eat a number nothing happens until the end." **The window games
-  grade at the end; there is no bite-by-bite juice**, no flash, no crunch
-  sound, no shake on a wrong bite. Munch in 1990 crunched.
+  nothing happened." **Resolved for machine path:** every window game now
+  accepts left-click (Munch, Quiz, Nim, Arcade, Gauntlet stages).
+- "When I eat a number nothing happens until the end." **Machine juice path:**
+  Munch flashes the toggled cell and plays a soft crunch one-shot on each
+  bite. Wrong-bite shake after grading remains open.
 - "Can I keep the picture?" **P now saves a PNG postcard in the app.** The
   remaining share gap is polish: loops, links, and a discoverable share flow.
 

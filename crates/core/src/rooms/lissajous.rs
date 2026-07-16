@@ -197,7 +197,7 @@ impl Room for Lissajous {
 
     fn status(&self, t: f64) -> Option<String> {
         let freq_y = Self::freq_y_for(if t.is_finite() { t } else { 0.0 });
-        Some(format!("X:Y = {FREQ_X:.0}:{freq_y:.2}"))
+        Some(format!("X:Y = {FREQ_X:.0}:{freq_y:.2}  CLICK:TUNE"))
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -211,7 +211,30 @@ impl Room for Lissajous {
             return self.status(t);
         };
         let (fx, fy) = Self::tuned_freqs(x, y);
-        Some(format!("TUNED X:Y = {fx:.0}:{fy:.0}   MOVING PHASE"))
+        let a = fx.round() as i32;
+        let b = fy.round() as i32;
+        let g = {
+            let mut xg = a.unsigned_abs();
+            let mut yg = b.unsigned_abs();
+            while yg != 0 {
+                let t = yg;
+                yg = xg % yg;
+                xg = t;
+            }
+            xg.max(1)
+        };
+        let ra = a / g as i32;
+        let rb = b / g as i32;
+        let interval = match (ra.unsigned_abs(), rb.unsigned_abs()) {
+            (u, v) if u == v => "UNISON",
+            (1, 2) | (2, 1) => "OCTAVE",
+            (2, 3) | (3, 2) => "FIFTH",
+            (3, 4) | (4, 3) => "FOURTH",
+            (3, 5) | (5, 3) => "SIXTH",
+            (4, 5) | (5, 4) => "THIRD",
+            _ => "RATIO",
+        };
+        Some(format!("TUNED {fx:.0}:{fy:.0}  {interval}  MOVING"))
     }
 
     fn reveal(&self) -> &'static str {
@@ -324,8 +347,12 @@ mod tests {
         let early = room.status_input(0.2, &inputs).expect("tuned status");
         let late = room.status_input(0.8, &inputs).expect("tuned status");
         assert_eq!(early, late);
-        assert!(early.contains("TUNED X:Y = 3:6"));
-        assert!(early.contains("MOVING PHASE"));
+        assert!(early.contains("TUNED 3:6"), "{early}");
+        assert!(
+            early.contains("OCTAVE") || early.contains("RATIO"),
+            "{early}"
+        );
+        assert!(early.contains("MOVING"), "{early}");
     }
 
     #[test]

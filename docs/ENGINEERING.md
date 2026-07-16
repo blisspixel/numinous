@@ -21,7 +21,7 @@ current through Dependabot and must pass the full gate.
 | `cpal` | **0.16.x** | Current native audio I/O. DSP and chiptune synthesis are implemented in the workspace without `fundsp`. |
 | `gilrs` | **0.11.2** | Current cross-platform gamepad input. This release requires Rust 1.84, fits the declared MSRV, and Linux CI installs `libudev-dev`. |
 | Test runner | **cargo test** | Enforced today. `cargo-nextest` is a possible speed improvement, not a current dependency. |
-| Supply chain | **cargo-deny** | Enforced in CI for advisories, licenses, bans, and sources. `cargo-audit` and `cargo-auditable` remain release-hardening candidates. |
+| Supply chain | **cargo-deny** and **cargo-audit** | Both enforced in CI. Deny covers advisories, licenses, bans, and sources; audit is the independent RustSec path with ignores in `.cargo/audit.toml`. `cargo-auditable` release binaries remain planned hardening. |
 | Coverage | **cargo-llvm-cov** | Tracked, not fetishized (see Testing). |
 
 **Version hygiene:** commit `Cargo.lock`, build with `--locked` in CI,
@@ -96,9 +96,23 @@ beta and is not a release baseline.
 
 - **`cargo-deny`** enforces advisory, license, ban, and source policy on every
   push. The local release gate runs it when installed; CI never skips it.
-- **`cargo-audit`** as a separate defense and **`cargo-auditable`** release
-  binaries are planned hardening. They are not current gates.
+- **`cargo-audit`** is a second, independent RustSec advisory check. CI runs it
+  on every PR. Local `scripts/verify` runs it when `cargo-audit` is installed.
+  Project ignores live in `.cargo/audit.toml` and must stay aligned with the
+  advisory ignores in `deny.toml` (today: build-time `quick-xml` via
+  wayland-scanner only). **`cargo-auditable`** release binaries remain planned
+  hardening, not a current gate.
 - **Dependencies are minimal and vetted.** Each new dependency is justified in review; prefer well-maintained, widely-used crates; give extra scrutiny to unsafe-heavy deps (a CVE in an unsafe-heavy crate is more urgent than the same score in pure-safe code).
+
+## Local threat model (security review baseline)
+
+Numinous 0.2 targets a **local single-user desktop** deployment: the App, CLI,
+and stdio MCP server run as ordinary user processes on the machine that owns
+the play history. Hostile JSON on the MCP stdio boundary, oversized CLI input,
+path and install provenance, and untrusted media decode are in scope. Remote
+unauthenticated network MCP, multi-tenant OAuth, and cloud multi-player are
+out of scope for this version unless productized later; claims about security
+must name that boundary.
 
 ## CI gates (the merge bar)
 
@@ -109,13 +123,15 @@ Nothing merges red. On every PR, blocking:
 3. `cargo test --workspace --all-targets --locked`
 4. `bash scripts/check-style.sh`
 5. `cargo deny check`
-6. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
-7. `cargo test --workspace --all-targets --locked` and
+6. `cargo audit` (RustSec advisories; ignores in `.cargo/audit.toml`)
+7. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
+8. `cargo test --workspace --all-targets --locked` and
    `cargo build --workspace --locked` on macOS, Linux, and Windows
 
 Hardening targets not yet enforced in CI: MSRV, `cargo doc --workspace --no-deps`
-under `-D warnings`, `cargo audit`, release artifact provenance, the visual and
-audio regression loops, and real-hardware soak and performance jobs.
+under `-D warnings`, `cargo-auditable` release binaries, release artifact
+provenance, the visual and audio regression loops, and real-hardware soak and
+performance jobs.
 
 The nightly loop adds soak/perf and cross-GPU differential tests (`QUALITY.md`).
 

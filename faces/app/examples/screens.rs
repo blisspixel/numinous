@@ -1117,6 +1117,7 @@ fn gauntlet(seed: u64) -> play::GauntletPlay {
             cursor: 0,
             bites: BTreeSet::new(),
             graded: None,
+            bite_flash: None,
         },
         quiz: play::QuizPlay {
             round: numinous_core::build_round(seed, 1, 44, 18),
@@ -1709,6 +1710,7 @@ fn main() {
         cursor: 17,
         bites: BTreeSet::new(),
         graded: None,
+        bite_flash: None,
     };
     save_sizes("munch-play", &mut manifest, |width, height| {
         game_draw::draw_munch(
