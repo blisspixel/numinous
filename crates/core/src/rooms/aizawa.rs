@@ -186,7 +186,23 @@ impl Room for Aizawa {
             return self.status(t);
         }
         let e = epsilon(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE eps={e:.3}"))
+        let pts = integrate(e);
+        let mut min_x = f64::MAX;
+        let mut max_x = f64::MIN;
+        let mut min_z = f64::MAX;
+        let mut max_z = f64::MIN;
+        for &(x, _y, z) in &pts {
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_z = min_z.min(z);
+            max_z = max_z.max(z);
+        }
+        let span = if pts.is_empty() {
+            0.0
+        } else {
+            ((max_x - min_x) * (max_z - min_z)).max(0.0).sqrt()
+        };
+        Some(format!("eps={e:.2}  span={span:.2}  Aizawa"))
     }
 
     fn reveal(&self) -> &'static str {

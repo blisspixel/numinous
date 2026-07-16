@@ -148,7 +148,9 @@ impl Room for Bifolium {
             return self.status(t);
         }
         let a = param_a(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  bifol"))
+        // Classical bifolium: total area of both leaves is a^2 / 4.
+        let area = a * a / 4.0;
+        Some(format!("a={a:.2}  area={area:.3}  leaves"))
     }
 
     fn reveal(&self) -> &'static str {

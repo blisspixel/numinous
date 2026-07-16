@@ -164,7 +164,35 @@ impl Room for Henon {
             return self.status(t);
         }
         let (a, b) = params(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE a={a:.3}  b={b:.3}"))
+        // Jacobian det is -b for every step: area contraction |b| each map.
+        let area_contract = b.abs();
+        let mut x = 0.1_f64;
+        let mut y = 0.1_f64;
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        for _ in 0..40 {
+            let nx = 1.0 - a * x * x + y;
+            let ny = b * x;
+            x = nx;
+            y = ny;
+        }
+        for _ in 0..400 {
+            let nx = 1.0 - a * x * x + y;
+            let ny = b * x;
+            if !nx.is_finite() || !ny.is_finite() {
+                break;
+            }
+            x = nx;
+            y = ny;
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("a={a:.2} |det|={area_contract:.2} span={span:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

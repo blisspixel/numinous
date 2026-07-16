@@ -181,7 +181,21 @@ impl Room for Duffing {
             return self.status(t);
         }
         let g = gamma(t, hands.last().copied(), self.seed);
-        Some(format!("DRIVE gamma={g:.3}"))
+        let pts = integrate(g);
+        let mut max_x = 0.0_f64;
+        let mut max_v = 0.0_f64;
+        for &(x, v) in &pts {
+            max_x = max_x.max(x.abs());
+            max_v = max_v.max(v.abs());
+        }
+        let band = if max_x > 1.5 {
+            "chaos?"
+        } else if max_x > 0.8 {
+            "large"
+        } else {
+            "mild"
+        };
+        Some(format!("g={g:.2}  |x|={max_x:.2}  |v|={max_v:.2}  {band}"))
     }
 
     fn reveal(&self) -> &'static str {

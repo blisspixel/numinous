@@ -156,7 +156,26 @@ impl Room for Bogdanov {
             return self.status(t);
         }
         let k = k_param(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE k={k:.3}"))
+        // Match soft-bounded Bogdanov iteration used in draw.
+        let e = 0.08;
+        let mut x = 0.1_f64;
+        let mut y = 0.0_f64;
+        let mut max_r = 0.0_f64;
+        for _ in 0..400 {
+            let nx = (y + e * x + k * x * (1.0 - x.abs()) * 0.25).tanh();
+            let ny = (-x + 0.15 * y).tanh();
+            x = nx;
+            y = ny;
+            max_r = max_r.max((x * x + y * y).sqrt());
+        }
+        let band = if max_r > 0.9 {
+            "edge"
+        } else if max_r > 0.5 {
+            "wide"
+        } else {
+            "core"
+        };
+        Some(format!("k={k:.2}  r={max_r:.2}  {band}"))
     }
 
     fn reveal(&self) -> &'static str {
