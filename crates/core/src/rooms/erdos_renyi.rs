@@ -69,13 +69,11 @@ fn draw(canvas: &mut dyn Surface, p: f64, seed: u64) {
         canvas.line(x - 1, y, x + 1, y, 'o');
         canvas.line(x, y - 1, x, y + 1, 'o');
     }
-    let mut edges = 0usize;
     for i in 0..n {
         for j in (i + 1)..n {
             let u = hash_u(i as u64, j as u64, seed.wrapping_mul(17) + 3);
             if u < p {
                 canvas.line(pts[i].0, pts[i].1, pts[j].0, pts[j].1, '#');
-                edges += 1;
             }
         }
     }
@@ -83,7 +81,19 @@ fn draw(canvas: &mut dyn Surface, p: f64, seed: u64) {
     let crit = (n as f64).ln() / n as f64;
     let mx = (crit.clamp(0.0, 1.0) * width.saturating_sub(1) as f64).round() as i32;
     canvas.line(mx, height as i32 - 1, mx, height as i32 - 1, '+');
-    let _ = edges;
+}
+
+fn edge_count(n: usize, p: f64, seed: u64) -> usize {
+    let mut edges = 0usize;
+    for i in 0..n {
+        for j in (i + 1)..n {
+            let u = hash_u(i as u64, j as u64, seed.wrapping_mul(17) + 3);
+            if u < p {
+                edges += 1;
+            }
+        }
+    }
+    edges
 }
 
 /// Erdos-Renyi room.
@@ -141,7 +151,9 @@ impl Room for ErdosRenyi {
     fn status(&self, t: f64) -> Option<String> {
         let p = edge_p(t, None, self.seed);
         let n = node_count(self.seed);
-        Some(format!("n={n}  p={p:.2}  DRAG:P"))
+        let e = edge_count(n, p, self.seed);
+        let crit = (n as f64).ln() / n as f64;
+        Some(format!("n={n}  e={e}  p={p:.2}  crit={crit:.2}  DRAG:P"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -166,7 +178,10 @@ impl Room for ErdosRenyi {
             return self.status(t);
         }
         let p = edge_p(t, hands.last().copied(), self.seed);
-        Some(format!("P={p:.3}  ER"))
+        let n = node_count(self.seed);
+        let e = edge_count(n, p, self.seed ^ hands.len() as u64);
+        let max_e = n * n.saturating_sub(1) / 2;
+        Some(format!("e={e}/{max_e}  p={p:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

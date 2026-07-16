@@ -146,7 +146,13 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   figure/damp life, L-System origin, Lissajous interval class, Quine depth,
   Epicycles mini-chain pen phase, Mandelbrot complex target, Golden packing,
   Prime Spirals primes on diagonal, Mobius edge lap, Pour/Slope hand freeze).
-  Subjective participant evidence and the stranger hallway remain open.
+  **Cycle 107 tail batch (machine path):** Twin Primes, Perfect Numbers, AGM,
+  Bayes, Huffman, Napoleon, Error Function, Erdos-Renyi, Markov, Dirichlet Eta,
+  Pell Path, Egyptian Fractions, Mutual Info, Gamma, Shannon Entropy now report
+  domain consequences after a poke (pairs, digit scale, iters, prior/post delta,
+  H-gap, equilateral spread, Phi, edge counts, visit peak, series drift, fund
+  solution, unit range, residual H, Stirling error, gap to fair). Subjective
+  participant evidence and the stranger hallway remain open.
 - **Done (Share short-loop export, machine path):** App key L exports a
   24-frame looping APNG of the current visit (phase sweep, or Life generation
   advance) with the same poke trail and Visual Era as P-key still postcards.

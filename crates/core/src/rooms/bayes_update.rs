@@ -136,7 +136,7 @@ impl Room for BayesUpdate {
         let pr = prior(self.seed);
         let lr = likelihood(t, None, self.seed);
         let po = posterior(pr, lr);
-        Some(format!("L={lr:.1}  post={po:.2}  DRAG:L"))
+        Some(format!("pri={pr:.2}  L={lr:.1}  post={po:.2}  DRAG:L"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -164,7 +164,8 @@ impl Room for BayesUpdate {
         let pr = prior(self.seed);
         let lr = likelihood(t, hands.last().copied(), self.seed);
         let po = posterior(pr, lr);
-        Some(format!("L={lr:.2}  post={po:.3}"))
+        let delta = po - pr;
+        Some(format!("pri={pr:.2}  post={po:.2}  d={delta:+.2}"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -138,7 +138,8 @@ impl Room for ErrorFunction {
     fn status(&self, t: f64) -> Option<String> {
         let x = mark(t, None, self.seed);
         let e = erf(x);
-        Some(format!("x={x:.2}  erf={e:.2}  DRAG:X"))
+        let phi = 0.5 * (1.0 + erf(x / std::f64::consts::SQRT_2));
+        Some(format!("x={x:.2}  erf={e:.2}  Phi={phi:.2}  DRAG:X"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -164,7 +165,8 @@ impl Room for ErrorFunction {
         }
         let x = mark(t, hands.last().copied(), self.seed);
         let e = erf(x);
-        Some(format!("X={x:.3}  erf={e:.3}"))
+        let phi = 0.5 * (1.0 + erf(x / std::f64::consts::SQRT_2));
+        Some(format!("erf={e:.3}  Phi={phi:.3}"))
     }
 
     fn reveal(&self) -> &'static str {

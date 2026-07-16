@@ -193,7 +193,9 @@ impl Room for MutualInfo {
         }
         let r = corr(t, hands.last().copied(), self.seed);
         let mi = mutual_bits(r);
-        Some(format!("R={r:.3}  I={mi:.3}"))
+        // residual surprise after learning X: H(Y|X) = H(Y) - I = 1 - I for fair Y
+        let cond = (1.0 - mi).max(0.0);
+        Some(format!("I={mi:.3}b  H(Y|X)={cond:.3}"))
     }
 
     fn reveal(&self) -> &'static str {

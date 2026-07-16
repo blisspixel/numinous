@@ -136,8 +136,10 @@ impl Room for AgmMean {
     fn status(&self, t: f64) -> Option<String> {
         let r = ratio(t, None, self.seed);
         let steps = agm_steps(1.0, r, 16);
+        let iters = steps.len().saturating_sub(1);
         let (a, g) = *steps.last().unwrap_or(&(1.0, r));
-        Some(format!("r={r:.2}  agm={:.3}  DRAG:R", 0.5 * (a + g)))
+        let lim = 0.5 * (a + g);
+        Some(format!("r={r:.2}  {iters} iters  agm={lim:.3}  DRAG:R"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -163,8 +165,11 @@ impl Room for AgmMean {
         }
         let r = ratio(t, hands.last().copied(), self.seed);
         let steps = agm_steps(1.0, r, 16);
+        let iters = steps.len().saturating_sub(1);
         let (a, g) = *steps.last().unwrap_or(&(1.0, r));
-        Some(format!("R={r:.3}  agm={:.3}", 0.5 * (a + g)))
+        let lim = 0.5 * (a + g);
+        let gap = (a - g).abs();
+        Some(format!("{iters} iters  agm={lim:.4}  |a-g|={gap:.1e}"))
     }
 
     fn reveal(&self) -> &'static str {

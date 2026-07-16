@@ -50,6 +50,26 @@ fn freqs(skew: f64, n: usize) -> Vec<f64> {
 }
 
 /// Build Huffman depths by repeatedly merging two lightest.
+fn shannon_h(weights: &[f64]) -> f64 {
+    weights
+        .iter()
+        .filter(|&&p| p > 1e-15)
+        .map(|&p| -p * p.log2())
+        .sum()
+}
+
+fn code_stats(skew_v: f64) -> (f64, f64, f64) {
+    let w = freqs(skew_v, 8);
+    let d = depths(&w);
+    let avg: f64 = w
+        .iter()
+        .zip(d.iter())
+        .map(|(&wi, &di)| wi * di as f64)
+        .sum();
+    let h = shannon_h(&w);
+    (avg, h, (avg - h).max(0.0))
+}
+
 fn depths(weights: &[f64]) -> Vec<usize> {
     let n = weights.len();
     if n == 0 {
@@ -169,14 +189,8 @@ impl Room for HuffmanTree {
 
     fn status(&self, t: f64) -> Option<String> {
         let s = skew(t, None, self.seed);
-        let w = freqs(s, 8);
-        let d = depths(&w);
-        let avg: f64 = w
-            .iter()
-            .zip(d.iter())
-            .map(|(&wi, &di)| wi * di as f64)
-            .sum();
-        Some(format!("avg={avg:.2}b  DRAG:S"))
+        let (avg, h, gap) = code_stats(s);
+        Some(format!("avg={avg:.2}  H={h:.2}  gap={gap:.2}  DRAG:S"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -201,14 +215,8 @@ impl Room for HuffmanTree {
             return self.status(t);
         }
         let s = skew(t, hands.last().copied(), self.seed);
-        let w = freqs(s, 8);
-        let d = depths(&w);
-        let avg: f64 = w
-            .iter()
-            .zip(d.iter())
-            .map(|(&wi, &di)| wi * di as f64)
-            .sum();
-        Some(format!("avg={avg:.3}  huff"))
+        let (avg, h, gap) = code_stats(s);
+        Some(format!("avg={avg:.2}b  H={h:.2}  gap={gap:.2}"))
     }
 
     fn reveal(&self) -> &'static str {
@@ -253,5 +261,21 @@ mod tests {
         let mut c = Canvas::new(48, 24);
         HuffmanTree::new().render(&mut c, 0.55);
         assert!(c.ink_count() > 0);
+    }
+
+    #[test]
+    fn action_reports_gap_to_entropy() {
+        let s = HuffmanTree::new()
+            .status_input(
+                0.5,
+                &[RoomInput::PointerDown {
+                    x: 0.6,
+                    y: 0.5,
+                    t: 0.0,
+                }],
+            )
+            .unwrap();
+        assert!(s.contains("gap") || s.contains('H'));
+        assert!(s.chars().count() <= 56);
     }
 }

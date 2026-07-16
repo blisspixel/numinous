@@ -72,6 +72,24 @@ fn cf_sqrt(d: u64, max_terms: usize) -> Vec<u64> {
     out
 }
 
+/// CF length and first fundamental Pell solution (x,y) if found in window.
+fn pell_stats(d: u64) -> (usize, Option<(u64, u64)>) {
+    let a = cf_sqrt(d, 24);
+    let conv = convergents(&a);
+    let mut fund = None;
+    for &(p, q) in &conv {
+        if q == 0 {
+            continue;
+        }
+        let check = p.saturating_mul(p) as i128 - (d as i128) * (q as i128) * (q as i128);
+        if check == 1 {
+            fund = Some((p, q));
+            break;
+        }
+    }
+    (a.len(), fund)
+}
+
 /// Convergents (p_k, q_k) from partial quotients.
 fn convergents(a: &[u64]) -> Vec<(u64, u64)> {
     let mut out = Vec::new();
@@ -205,8 +223,14 @@ impl Room for PellPath {
 
     fn status(&self, t: f64) -> Option<String> {
         let d = disc(t, None, self.seed);
-        let n = cf_sqrt(d, 24).len();
-        Some(format!("d={d}  cf={n}  DRAG:D"))
+        let (cf_n, fund) = pell_stats(d);
+        match fund {
+            Some((x, y)) if x < 10_000 && y < 10_000 => {
+                Some(format!("d={d}  {x}^2-{d}y^2=1 y={y}  DRAG:D"))
+            }
+            Some((x, _)) => Some(format!("d={d}  fund x~10^{}  DRAG:D", x.ilog10() + 1)),
+            None => Some(format!("d={d}  cf={cf_n}  seeking  DRAG:D")),
+        }
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -231,7 +255,14 @@ impl Room for PellPath {
             return self.status(t);
         }
         let d = disc(t, hands.last().copied(), self.seed);
-        Some(format!("D={d}  pell"))
+        let (cf_n, fund) = pell_stats(d);
+        match fund {
+            Some((x, y)) if x < 10_000 && y < 10_000 => {
+                Some(format!("fund ({x},{y})  x^2-{d}y^2=1"))
+            }
+            Some((x, _)) => Some(format!("fund x~10^{}  d={d}", x.ilog10() + 1)),
+            None => Some(format!("d={d}  cf={cf_n}  no fund yet")),
+        }
     }
 
     fn reveal(&self) -> &'static str {

@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- Consequence-depth pass on the catalog tail: action status now reports domain
+  measures after a poke (twin last pair, perfect n or digit scale, AGM iters and
+  |a-g|, Bayes prior/post delta, Huffman avg vs H gap, Napoleon side spread,
+  erf with Phi, Erdos-Renyi edge count, Markov visit peak, eta series drift,
+  Pell fundamental solution, Egyptian unit range, mutual-info residual,
+  Gamma Stirling error, Shannon gap to fair). Compact footer and digit
+  contracts still hold.
 - Current-state docs name the live catalog size (350 rooms): root README,
   `docs/README.md`, `docs/ROOMS.md`, `docs/MUSIC.md`, `docs/ROADMAP.md` progress
   and Where we stand, and `VERIFY.md`. Historical 0.1 foundation notes that

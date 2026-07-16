@@ -50,6 +50,19 @@ fn is_prime(n: u64) -> bool {
     true
 }
 
+/// Twin count and largest twin pair (p, p+2) with p <= n.
+fn twin_stats(n: u64) -> (u32, Option<(u64, u64)>) {
+    let mut c = 0u32;
+    let mut last = None;
+    for p in 3..=n {
+        if p % 2 == 1 && is_prime(p) && is_prime(p + 2) {
+            c += 1;
+            last = Some((p, p + 2));
+        }
+    }
+    (c, last)
+}
+
 fn draw(canvas: &mut dyn Surface, n: u64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 || n < 3 {
@@ -139,13 +152,11 @@ impl Room for TwinPrimes {
 
     fn status(&self, t: f64) -> Option<String> {
         let n = limit(t, None, self.seed);
-        let mut c = 0u32;
-        for p in 3..=n {
-            if p % 2 == 1 && is_prime(p) && is_prime(p + 2) {
-                c += 1;
-            }
+        let (c, last) = twin_stats(n);
+        match last {
+            Some((p, q)) => Some(format!("n={n}  {c} twins  last {p},{q}  DRAG:N")),
+            None => Some(format!("n={n}  0 twins  DRAG:N")),
         }
-        Some(format!("n={n}  {c} twins  DRAG:N"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -170,7 +181,11 @@ impl Room for TwinPrimes {
             return self.status(t);
         }
         let n = limit(t, hands.last().copied(), self.seed);
-        Some(format!("N={n}  twins"))
+        let (c, last) = twin_stats(n);
+        match last {
+            Some((p, q)) => Some(format!("{c} twins  last {p},{q}")),
+            None => Some(format!("N={n}  0 twins")),
+        }
     }
 
     fn reveal(&self) -> &'static str {
@@ -215,5 +230,22 @@ mod tests {
         let mut c = Canvas::new(48, 24);
         TwinPrimes::new().render(&mut c, 0.5);
         assert!(c.ink_count() > 0);
+    }
+
+    #[test]
+    fn action_names_last_twin_pair() {
+        let s = TwinPrimes::new()
+            .status_input(
+                0.5,
+                &[RoomInput::PointerDown {
+                    x: 0.8,
+                    y: 0.5,
+                    t: 0.0,
+                }],
+            )
+            .unwrap();
+        assert!(s.contains("twins") || s.contains(','));
+        assert!(s.chars().any(|c| c.is_ascii_digit()));
+        assert!(s.chars().count() <= 56);
     }
 }
