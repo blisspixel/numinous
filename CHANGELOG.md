@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six dynamics inventions (catalog 322): Simple Pendulum, Blackbody Spectrum,
+  Kepler Areas, Escape Velocity, Coupled Oscillators, Prism Dispersion.
 - Six classical curve inventions (catalog 316): Superellipse, Cochleoid,
   Serpentine, Bifolium, Butterfly Curve, Piriform.
 - Six analysis inventions (catalog 310): Harmonic Series, Basel Problem,

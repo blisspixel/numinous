@@ -368,6 +368,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::bifolium::Bifolium::new_with(variation)),
         Box::new(rooms::butterfly_curve::ButterflyCurve::new_with(variation)),
         Box::new(rooms::piriform::Piriform::new_with(variation)),
+        Box::new(rooms::simple_pendulum::SimplePendulum::new_with(variation)),
+        Box::new(rooms::blackbody::Blackbody::new_with(variation)),
+        Box::new(rooms::kepler_laws::KeplerLaws::new_with(variation)),
+        Box::new(rooms::escape_velocity::EscapeVelocity::new_with(variation)),
+        Box::new(rooms::coupled_osc::CoupledOsc::new_with(variation)),
+        Box::new(rooms::snell_prism::SnellPrism::new_with(variation)),
     ]
 }
 
