@@ -511,17 +511,18 @@ The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (reviewed 2026-07-14)
+## Where we stand (reviewed 2026-07-16)
 
 The package is **0.2.0-alpha.1**. The 0.1 Public Foundation exit criterion is
 complete, and work is now on 0.2 Flagship Proof. The 0.2 milestone itself remains
-open until the Times Tables stranger hallway test passes. Current breadth is 31
+open until the Times Tables stranger hallway test passes. Current breadth is 350
 catalog rooms, 11+ games, six sims, three faces, 29 MCP tools, deterministic
-creation and persistence, and 1,350 passing all-target test cases. Required public CI is
-configured to run locked tests and builds across all three operating systems;
-runtime evidence belongs to each commit's check results. Breadth is not release evidence.
-No calibrated method supports assigning completion percentages to subjective
-1.0 gates, so this scorecard records evidence instead.
+creation and persistence, and 2,100+ passing all-target test cases on the green
+pre-commit gate. Required public CI is configured to run locked tests and builds
+across all three operating systems; runtime evidence belongs to each commit's
+check results. Breadth is not release evidence. No calibrated method supports
+assigning completion percentages to subjective 1.0 gates, so this scorecard
+records evidence instead.
 
 | 1.0 gate | Evidence today | Missing evidence or work |
 |---|---|---|
