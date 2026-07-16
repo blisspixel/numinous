@@ -147,7 +147,10 @@ impl Room for Vicsek {
             return self.status(t);
         }
         let d = depth(t, hands.last().copied());
-        Some(format!("DEPTH={d}  arms=5^{d}"))
+        // Vicsek: 5 subcopies per step, scale 1/3 => dim = log5/log3.
+        let cells = 5u64.saturating_pow(d as u32);
+        let dim = 5.0_f64.ln() / 3.0_f64.ln();
+        Some(format!("d={d}  cells={cells}  dim={dim:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

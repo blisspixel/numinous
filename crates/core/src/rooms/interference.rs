@@ -163,7 +163,15 @@ impl Room for Interference {
             return self.status(t);
         }
         let d = spacing(t, hands.last().copied(), self.seed);
-        Some(format!("SPACE d={d:.3}"))
+        let wavelength = 0.08
+            + if self.seed == 0 {
+                0.0
+            } else {
+                (self.seed % 4) as f64 * 0.005
+            };
+        // Far-field fringe scale ~ lambda / d (source separation).
+        let fringe = wavelength / d.max(1e-6);
+        Some(format!("d={d:.2}  lam={wavelength:.3}  fr~{fringe:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -202,7 +202,15 @@ impl Room for QuadraticResidues {
             return self.status(t);
         }
         let p = modulus(t, hands.last().copied(), self.seed);
-        Some(format!("P={p}  residue"))
+        let mut res = 0u32;
+        for a in 1..p {
+            if legendre(a as i64, p) == 1 {
+                res += 1;
+            }
+        }
+        // Exactly (p-1)/2 nonzero quadratic residues mod p.
+        let half = (p - 1) / 2;
+        Some(format!("p={p}  residues={res}  (p-1)/2={half}"))
     }
 
     fn reveal(&self) -> &'static str {

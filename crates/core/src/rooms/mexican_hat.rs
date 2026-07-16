@@ -154,8 +154,10 @@ impl Room for MexicanHat {
         if hands.is_empty() {
             return self.status(t);
         }
-        let s = scale_p(t, hands.last().copied(), self.seed);
-        Some(format!("S={s:.3}  hat"))
+        let s = scale_p(t, hands.last().copied(), self.seed).clamp(0.25, 2.0);
+        // Ricker wavelet: zeros at +/- sigma, peak 1 at 0.
+        let width = 2.0 * s;
+        Some(format!("s={s:.2}  zeros=+-s  w={width:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

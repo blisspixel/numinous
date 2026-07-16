@@ -164,8 +164,13 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   Blancmange, Bogdanov, Cardioid, Catenary, Chua, Henon, Duffing, Deltoid,
   Cassini, Lemniscate (attractor span, classical curve area/perimeter, Takagi
   roughness, soft Bogdanov radius, catenary sag, Chua flips, Henon |det|,
-  Duffing amplitude band, Cassini b/a shape). Subjective participant evidence
-  and the stranger hallway remain open.
+  Duffing amplitude band, Cassini b/a shape).
+  **Cycle 111 waves/number/fractal batch:** Triangle Wave, Sawtooth, Standing
+  Wave, Interference, Zeckendorf, Gaussian Primes, Quadratic Residues, Vicsek,
+  Delaunay, Ricker, Thomas, Mexican Hat, Gumowski-Mira, Fresnel Integrals
+  (harmonic energy, nodes/dx, fringe scale, fib ones, G-prime count, residue
+  half, fractal dim, Euler mesh, orbit band, attractor span, Fresnel asymptote).
+  Subjective participant evidence and the stranger hallway remain open.
 - **Done (Share short-loop export, machine path):** App key L exports a
   24-frame looping APNG of the current visit (phase sweep, or Life generation
   advance) with the same poke trail and Visual Era as P-key still postcards.
