@@ -356,6 +356,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::coupon::Coupon::new_with(variation)),
         Box::new(rooms::zipf::Zipf::new_with(variation)),
         Box::new(rooms::gamblers_ruin::GamblersRuin::new_with(variation)),
+        Box::new(rooms::harmonic_series::HarmonicSeries::new_with(variation)),
+        Box::new(rooms::basel::Basel::new_with(variation)),
+        Box::new(rooms::stirling::Stirling::new_with(variation)),
+        Box::new(rooms::benford::Benford::new_with(variation)),
+        Box::new(rooms::central_limit::CentralLimit::new_with(variation)),
+        Box::new(rooms::wallis::Wallis::new_with(variation)),
     ]
 }
 

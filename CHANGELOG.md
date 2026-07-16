@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six analysis inventions (catalog 310): Harmonic Series, Basel Problem,
+  Stirling Approx, Benford Law, Central Limit, Wallis Product.
 - Six stochastic inventions (catalog 304): Poisson Process, Brownian Motion,
   Birthday Paradox, Coupon Collector, Zipf Law, Gambler's Ruin.
 - Six arithmetic inventions (catalog 298): Mertens Function, Liouville Function,
