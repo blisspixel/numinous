@@ -230,9 +230,10 @@ Cairn, so it cannot change the player's profile or collide with another run.
 
 ## 5. Where things are
 
-- `crates/core` the headless engine: rooms (31 catalog rooms across 10 wings plus hidden content), sims, games
-  (including nim and the chiptune composer), the Studio expression engine, the
-  journey, scores, trophies, resonances, sound, eras, and the drawing surfaces.
+- `crates/core` the headless engine: rooms (350 catalog rooms plus hidden
+  content), sims, games (including nim and the chiptune composer), the Studio
+  expression engine, the journey, scores, trophies, resonances, sound, eras,
+  and the drawing surfaces.
 - `crates/gpu` adaptive wgpu rendering; `crates/audio` adaptive cpal output.
 - `faces/cli` the `numinous` binary; `faces/mcp` the `numinous-mcp` server.
 - `docs/` the full design and plan (start at `docs/README.md`); `CHANGELOG.md` the
@@ -241,17 +242,17 @@ Cairn, so it cannot change the player's profile or collide with another run.
 
 ## 6. What is done vs pending
 
-Done and verifiable now: 31 catalog rooms across 10 wings plus hidden content,
-6 sims, 11+ games with a shared high-score table and daily seeds, the
-complete RPG spine (levels to 42 with lore, locks, 18 trophies with pings, the
-Gauntlet run, boons, daily streaks, resonances), the Studio (plot, animate,
-sing, in the terminal and the window), Visual Eras (including PNG output),
-Music Engine A (the seeded chiptune, `numinous tune`), GPU real-time fractals,
-live sound in the app and CLI plus structured notation over MCP, the `forget`
-right for players who are minds, and 29 MCP tools (full CLI parity for the
-games; challenge, predict, and cairn are MCP-first) so agents play the same
-content. Pending (see `docs/ROADMAP.md`): deeper held and causal interactions
-in other rooms,
+Done and verifiable now: 350 catalog rooms plus hidden content, 6 sims, 11+
+games with a shared high-score table and daily seeds, the complete RPG spine
+(levels to 42 with lore, locks, 18 trophies with pings, the Gauntlet run,
+boons, daily streaks, resonances), the Studio (plot, animate, sing, in the
+terminal and the window), Visual Eras (including PNG output), Music Engine A
+(the seeded chiptune, `numinous tune`), GPU real-time fractals, live sound in
+the app and CLI plus structured notation over MCP, the `forget` right for
+players who are minds, and 29 MCP tools (full CLI parity for the games;
+challenge, predict, and cairn are MCP-first) so agents play the same content.
+Pending (see `docs/ROADMAP.md`): deeper held and causal interactions in other
+rooms,
 human playtests, representative physical-controller sessions, musician-led
 long-listening review, cross-platform proof, full Studio save/share beyond the
 first CLI `.num` save/open slice, the music visualizer, and more GPU room paths.

@@ -5,6 +5,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- Current-state docs name the live catalog size (350 rooms): root README,
+  `docs/README.md`, `docs/ROOMS.md`, `docs/MUSIC.md`, `docs/ROADMAP.md` progress
+  notes, and `VERIFY.md`. Historical 0.1 foundation notes that recorded the
+  original 31-room baseline stay as history.
+
 ### Added
 - Four closing inventions (catalog 350): AGM Mean, Twin Primes, Perfect Numbers,
   Napoleon Theorem.

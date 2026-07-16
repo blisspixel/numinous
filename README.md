@@ -112,7 +112,7 @@ is in [`docs/MUSIC.md`](docs/MUSIC.md) and [`docs/STUDIO.md`](docs/STUDIO.md).
 Numinous is **version 0.2.0-alpha.1**, actively earning the 0.2 Flagship Proof
 gate. It is not on the old 0.1 line: the 0.1 Public Foundation is complete.
 Numinous already has a headless core, a
-windowed app, a full CLI, an MCP server, GPU and audio adapters, 31 catalog
+windowed app, a full CLI, an MCP server, GPU and audio adapters, 350 catalog
 rooms plus hidden content, games, progression, a Studio foundation, and the
 built-in soundtrack. Mouse, keyboard, and hotplugged controllers share the
 native App, including a controller-driven virtual hand for every room. The

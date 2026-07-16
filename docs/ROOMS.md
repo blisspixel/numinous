@@ -2,7 +2,12 @@
 
 The content catalog: the phenomena Numinous is built from. Each **room** is one playable mathematical object. Rooms are grouped into **Wings** by feeling, not by curriculum.
 
-**Current status (as of 2026-07):** 31 catalog rooms across 10 wings plus hidden content. Per-visit variation seed is threaded through registry/app/CLI/MCP; all 31 catalog rooms use it for replay novelty, while hidden content stays outside the catalog replay contract. All 31 catalog rooms have `verb()` + `render_poked()` touch actions (usually CLICK or DRAG on arrival cards), and all 31 catalog rooms expose Engine A2 motifs. See `ARCADE.md` for design.
+**Current status (as of 2026-07):** 350 catalog rooms across the wings plus
+hidden content. Per-visit variation seed is threaded through registry/app/CLI/
+MCP; every catalog room uses it for replay novelty, while hidden content stays
+outside the catalog replay contract. Every catalog room has `verb()` +
+`render_poked()` touch actions (usually CLICK or DRAG on arrival cards) and an
+Engine A2 motif. See `ARCADE.md` for design.
 
 Every room is scored on two axes to help sequencing:
 
@@ -263,7 +268,7 @@ you are not told it), and **the kid principle** (the play carries itself even
 if the concept never consciously lands). If an idea cannot pass both, it does
 not ship, however important the syllabus thinks it is.
 
-**Current interaction inventory (2026-07):** 31 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, RESTORE AND HOLD A PATCH in Cult of Pi, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
+**Current interaction inventory (2026-07):** 350 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, RESTORE AND HOLD A PATCH in Cult of Pi, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
 
 **Interaction update, 2026-07-13:** the verb inventory above records the first
 complete poke substrate. The current contract also includes `render_input` and

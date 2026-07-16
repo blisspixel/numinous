@@ -7,14 +7,14 @@ you find yourself duplicating a concept, stop and link instead.
 
 Status: **0.2.0-alpha.1, Flagship Proof in progress.** The 0.1 Public
 Foundation is complete. The headless core, CLI, MCP server, windowed app,
-GPU and audio adapters, 31 catalog rooms plus hidden content, 6 sims, 11+ games,
-the RPG spine, standard-controller input, and a built-in 42-track radio are
-built. Public CI passes on Windows, macOS, and Ubuntu, but
-capability breadth remains ahead of release evidence: stranger playtests,
-accessibility work, and real macOS and Linux execution remain open. See
-`../CHANGELOG.md` and the Progress section of
-`ROADMAP.md`. These docs remain the plan of record; Built, Measured, Observed,
-Designed, and Hypothesis have the meanings defined in `RESEARCH.md`.
+GPU and audio adapters, 350 catalog rooms plus hidden content, 6 sims, 11+
+games, the RPG spine, standard-controller input, and a built-in 42-track radio
+are built. Public CI passes on Windows, macOS, and Ubuntu, but capability
+breadth remains ahead of release evidence: stranger playtests, accessibility
+work, and real macOS and Linux execution remain open. See `../CHANGELOG.md`
+and the Progress section of `ROADMAP.md`. These docs remain the plan of
+record; Built, Measured, Observed, Designed, and Hypothesis have the meanings
+defined in `RESEARCH.md`.
 
 ## Reading paths (start by who you are)
 

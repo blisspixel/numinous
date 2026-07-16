@@ -8,7 +8,8 @@ There are two engines, and they are designed to coexist and even harmonize.
 
 ## Engine A: Programmatic music (the math makes the sound)
 
-> A2 engineering pass (July 14, 2026): motifs ship for all 31 catalog rooms. A motif is
+> A2 engineering pass (July 14, 2026, catalog later expanded to 350): motifs
+> ship for every catalog room. A motif is
 > a room's musical identity (key, tempo, a line of semitone degrees, and
 > what it encodes): Times Tables circles and returns in D minor pentatonic;
 > Lorenz wanders ten notes and never resolves; the Random Walk stumbles
