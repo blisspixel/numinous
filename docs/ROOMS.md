@@ -848,7 +848,7 @@ edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
 
 ### What we already have (feel, not curriculum)
 
-**Built now (340 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+**Built now (350 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
 Julia, Cult of Pi, Life and Cellular Automata and Langton and Rule 30, The
 Sandpile, The First Rain, The Magnet, Phantom Jam, Chaos Game, Golden Angle,
 Galton and Buffon, Lissajous, Chladni Figures, Ripple Tank, The Coffee Cup,
@@ -884,7 +884,7 @@ Wallis Product, Superellipse, Cochleoid, Serpentine, Bifolium, Butterfly Curve,
 Piriform, Simple Pendulum, Blackbody, Kepler Areas, Escape Velocity, Coupled
 Oscillators, Prism Dispersion, Lucky Numbers, Gaussian Primes, Quadratic
 Residues, Zeckendorf, Egyptian Fractions, Pell Path, Shannon Entropy, Bayes
-Update, Erdos-Renyi, Markov Chain, Huffman Tree, Mutual Info, Klein Bottle, Cross-Cap, Boy Surface, Solid Torus, Hopf Link, Unknot, plus Awe Engine /
+Update, Erdos-Renyi, Markov Chain, Huffman Tree, Mutual Info, Klein Bottle, Cross-Cap, Boy Surface, Solid Torus, Hopf Link, Unknot, Gamma Function, Error Function, Fresnel Integrals, Lambert W, Sinc Interpolation, Dirichlet Eta, AGM Mean, Twin Primes, Perfect Numbers, Napoleon Theorem, plus Awe Engine /
 Next Wave / universal wonder catalog rooms
 and games (Quiz, Munch, Arcade, Nim, Gauntlet, SETI, Aliens, Codebreaker, and
 kin), Studio, radio, Journey, Cairn, predict.

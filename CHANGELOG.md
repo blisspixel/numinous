@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Four closing inventions (catalog 350): AGM Mean, Twin Primes, Perfect Numbers,
+  Napoleon Theorem.
+- Six analysis inventions (catalog 346): Gamma Function, Error Function,
+  Fresnel Integrals, Lambert W, Sinc Interpolation, Dirichlet Eta.
 - Six topology inventions (catalog 340): Klein Bottle, Cross-Cap, Boy Surface,
   Solid Torus, Hopf Link, Unknot.
 - Six probability and information inventions (catalog 334): Shannon Entropy,

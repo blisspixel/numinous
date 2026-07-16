@@ -394,6 +394,16 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::solid_torus::SolidTorus::new_with(variation)),
         Box::new(rooms::hopf_link::HopfLink::new_with(variation)),
         Box::new(rooms::unknot::Unknot::new_with(variation)),
+        Box::new(rooms::gamma_func::GammaFunc::new_with(variation)),
+        Box::new(rooms::error_function::ErrorFunction::new_with(variation)),
+        Box::new(rooms::fresnel_int::FresnelInt::new_with(variation)),
+        Box::new(rooms::lambert_w::LambertW::new_with(variation)),
+        Box::new(rooms::sinc_interp::SincInterp::new_with(variation)),
+        Box::new(rooms::dirichlet_eta::DirichletEta::new_with(variation)),
+        Box::new(rooms::agm_mean::AgmMean::new_with(variation)),
+        Box::new(rooms::twin_primes::TwinPrimes::new_with(variation)),
+        Box::new(rooms::perfect_num::PerfectNum::new_with(variation)),
+        Box::new(rooms::napoleon::Napoleon::new_with(variation)),
     ]
 }
 
