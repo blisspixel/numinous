@@ -151,7 +151,10 @@ impl Room for Astroid {
             return self.status(t);
         }
         let a = scale(t, hands.last().copied(), self.seed);
-        Some(format!("SCALE a={a:.3}  4 cusps"))
+        // Hypocycloid astroid: perimeter 6a, area (3/8) pi a^2.
+        let perim = 6.0 * a;
+        let area = 0.375 * std::f64::consts::PI * a * a;
+        Some(format!("a={a:.2}  P=6a={perim:.2}  A={area:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

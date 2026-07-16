@@ -155,7 +155,17 @@ impl Room for Blancmange {
         }
         let d = depth(t, hands.last().copied());
         let mid = takagi(0.5, d);
-        Some(format!("DEPTH={d}  T(1/2)={mid:.3}"))
+        // Roughness: mean |T(x+h)-T(x)| / h at small h across samples.
+        let h = 1.0 / (1usize << d.min(12)) as f64;
+        let mut rough = 0.0;
+        let n = 24usize;
+        for i in 0..n {
+            let x = (i as f64 + 0.5) / n as f64;
+            let x2 = (x + h).min(1.0);
+            rough += (takagi(x2, d) - takagi(x, d)).abs() / h.max(1e-12);
+        }
+        rough /= n as f64;
+        Some(format!("d={d}  T1/2={mid:.2}  rough={rough:.1}"))
     }
 
     fn reveal(&self) -> &'static str {

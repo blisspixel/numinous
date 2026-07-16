@@ -160,7 +160,28 @@ impl Room for Bedhead {
             return self.status(t);
         }
         let (a, b) = params(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE a={a:.3}  b={b:.3}"))
+        let mut x = 1.0_f64;
+        let mut y = 1.0_f64;
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        let bb = b.max(0.05);
+        for _ in 0..600 {
+            let nx = (x * y / bb).sin() * y + (a * x - y).cos();
+            let ny = x + y.sin() / bb;
+            if !nx.is_finite() || !ny.is_finite() {
+                break;
+            }
+            x = nx;
+            y = ny;
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("a={a:.2} b={b:.2}  span={span:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

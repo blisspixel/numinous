@@ -154,8 +154,12 @@ impl Room for Catenary {
         if hands.is_empty() {
             return self.status(t);
         }
-        let a = a_param(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  cosh"))
+        let a = a_param(t, hands.last().copied(), self.seed).clamp(0.2, 2.5);
+        // Hang span x in [-2.5a, 2.5a]; sag = y(edge) - a.
+        let x_edge = 2.5 * a;
+        let y_edge = a * (x_edge / a).cosh();
+        let sag = y_edge - a;
+        Some(format!("a={a:.2}  sag={sag:.2}  span={:.1}", 2.0 * x_edge))
     }
 
     fn reveal(&self) -> &'static str {

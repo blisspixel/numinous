@@ -144,7 +144,10 @@ impl Room for Deltoid {
             return self.status(t);
         }
         let a = scale(t, hands.last().copied(), self.seed);
-        Some(format!("SCALE a={a:.3}  3 cusps"))
+        // Deltoid (3-cusped hypocycloid): perimeter 16a/3, area 2 pi a^2.
+        let perim = 16.0 * a / 3.0;
+        let area = 2.0 * std::f64::consts::PI * a * a;
+        Some(format!("a={a:.2}  P={perim:.2}  A={area:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

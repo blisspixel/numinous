@@ -191,8 +191,17 @@ impl Room for Cassini {
         if hands.is_empty() {
             return self.status(t);
         }
-        let ba = ratio(t, hands.last().copied(), self.seed);
-        Some(format!("B/A={ba:.3}  cassini"))
+        let ba = ratio(t, hands.last().copied(), self.seed).clamp(0.5, 1.6);
+        // b/a < 1 two loops, =1 lemniscate, >1 single oval.
+        let shape = if (ba - 1.0).abs() < 0.03 {
+            "lemniscate"
+        } else if ba < 1.0 {
+            "two loops"
+        } else {
+            "one oval"
+        };
+        let dphi = (ba - 1.0).abs();
+        Some(format!("b/a={ba:.2}  |b/a-1|={dphi:.2}  {shape}"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -160,7 +160,12 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   Chebyshev, Clifford, Clothoid, Cycloid, Archimedean (nodal rings, winding
   lock, sync |dx|, half-life, FWHM, AM carrier share, Feigenbaum band, |r-phi|,
   max interpolant error, attractor span, dkappa/ds, path L/r, gap/turn).
-  Subjective participant evidence and the stranger hallway remain open.
+  **Cycle 110 attractors/curves batch:** Aizawa, Astroid, Bedhead, Bifolium,
+  Blancmange, Bogdanov, Cardioid, Catenary, Chua, Henon, Duffing, Deltoid,
+  Cassini, Lemniscate (attractor span, classical curve area/perimeter, Takagi
+  roughness, soft Bogdanov radius, catenary sag, Chua flips, Henon |det|,
+  Duffing amplitude band, Cassini b/a shape). Subjective participant evidence
+  and the stranger hallway remain open.
 - **Done (Share short-loop export, machine path):** App key L exports a
   24-frame looping APNG of the current visit (phase sweep, or Life generation
   advance) with the same poke trail and Visual Era as P-key still postcards.

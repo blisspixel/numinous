@@ -145,7 +145,10 @@ impl Room for Cardioid {
             return self.status(t);
         }
         let a = scale(t, hands.last().copied(), self.seed);
-        Some(format!("SCALE a={a:.3}  1 cusp"))
+        // Cardioid r=2a(1-cos theta): perimeter 8a, area 6 pi a^2.
+        let perim = 8.0 * a;
+        let area = 6.0 * std::f64::consts::PI * a * a;
+        Some(format!("a={a:.2}  P=8a={perim:.2}  A={area:.1}"))
     }
 
     fn reveal(&self) -> &'static str {
