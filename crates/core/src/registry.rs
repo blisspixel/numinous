@@ -320,6 +320,14 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::heat_kernel::HeatKernel::new_with(variation)),
         Box::new(rooms::cauchy_lorentz::CauchyLorentz::new_with(variation)),
         Box::new(rooms::mexican_hat::MexicanHat::new_with(variation)),
+        Box::new(rooms::seifert::Seifert::new_with(variation)),
+        Box::new(rooms::trefoil::Trefoil::new_with(variation)),
+        Box::new(rooms::hopf_fibration::HopfFibration::new_with(variation)),
+        Box::new(rooms::julia_set::JuliaFilled::new_with(variation)),
+        Box::new(rooms::figure_eight_knot::FigureEightKnot::new_with(
+            variation,
+        )),
+        Box::new(rooms::borromean::Borromean::new_with(variation)),
     ]
 }
 
