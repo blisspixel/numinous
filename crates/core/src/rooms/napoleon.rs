@@ -46,15 +46,20 @@ fn rot60(px: f64, py: f64, ox: f64, oy: f64, sign: f64) -> (f64, f64) {
     (rx, ry)
 }
 
-fn draw(canvas: &mut dyn Surface, th: f64, seed: u64) {
-    let (width, height) = canvas.draw_bounds();
-    if width == 0 || height == 0 {
-        return;
-    }
+type Pt = (f64, f64);
+type Triangle = [Pt; 3];
+
+fn dist(p: Pt, q: Pt) -> f64 {
+    let dx = p.0 - q.0;
+    let dy = p.1 - q.1;
+    (dx * dx + dy * dy).sqrt()
+}
+
+/// Base triangle vertices and Napoleon triangle centers (screen space).
+fn geometry(th: f64, seed: u64, width: usize, height: usize) -> (Triangle, Triangle) {
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
     let sc = (width.min(height) as f64) * 0.28;
-    // irregular triangle
     let jitter = if seed == 0 {
         0.0
     } else {
@@ -72,6 +77,41 @@ fn draw(canvas: &mut dyn Surface, th: f64, seed: u64) {
         cx + sc * ((th + 4.0).cos() * 0.85 - jitter),
         cy - sc * ((th + 4.0).sin() * 0.9),
     );
+    let p_ab = rot60(a.0, a.1, b.0, b.1, 1.0);
+    let p_bc = rot60(b.0, b.1, c.0, c.1, 1.0);
+    let p_ca = rot60(c.0, c.1, a.0, a.1, 1.0);
+    let m_ab = ((a.0 + b.0 + p_ab.0) / 3.0, (a.1 + b.1 + p_ab.1) / 3.0);
+    let m_bc = ((b.0 + c.0 + p_bc.0) / 3.0, (b.1 + c.1 + p_bc.1) / 3.0);
+    let m_ca = ((c.0 + a.0 + p_ca.0) / 3.0, (c.1 + a.1 + p_ca.1) / 3.0);
+    ([a, b, c], [m_ab, m_bc, m_ca])
+}
+
+/// Mean Napoleon side and relative max-min spread (0 means equilateral).
+fn napoleon_stats(th: f64, seed: u64) -> (f64, f64) {
+    let (_, m) = geometry(th, seed, 48, 24);
+    let s0 = dist(m[0], m[1]);
+    let s1 = dist(m[1], m[2]);
+    let s2 = dist(m[2], m[0]);
+    let mean = (s0 + s1 + s2) / 3.0;
+    let max_s = s0.max(s1).max(s2);
+    let min_s = s0.min(s1).min(s2);
+    let spread = if mean > 1e-9 {
+        (max_s - min_s) / mean
+    } else {
+        0.0
+    };
+    (mean, spread)
+}
+
+fn draw(canvas: &mut dyn Surface, th: f64, seed: u64) {
+    let (width, height) = canvas.draw_bounds();
+    if width == 0 || height == 0 {
+        return;
+    }
+    let (base, m) = geometry(th, seed, width, height);
+    let a = base[0];
+    let b = base[1];
+    let c = base[2];
     // base triangle
     canvas.line(
         a.0.round() as i32,
@@ -115,9 +155,9 @@ fn draw(canvas: &mut dyn Surface, th: f64, seed: u64) {
         );
     }
     // centers of equilateral triangles form Napoleon triangle
-    let m_ab = ((a.0 + b.0 + p_ab.0) / 3.0, (a.1 + b.1 + p_ab.1) / 3.0);
-    let m_bc = ((b.0 + c.0 + p_bc.0) / 3.0, (b.1 + c.1 + p_bc.1) / 3.0);
-    let m_ca = ((c.0 + a.0 + p_ca.0) / 3.0, (c.1 + a.1 + p_ca.1) / 3.0);
+    let m_ab = m[0];
+    let m_bc = m[1];
+    let m_ca = m[2];
     canvas.line(
         m_ab.0.round() as i32,
         m_ab.1.round() as i32,
@@ -195,7 +235,8 @@ impl Room for Napoleon {
 
     fn status(&self, t: f64) -> Option<String> {
         let th = twist(t, None, self.seed);
-        Some(format!("t={th:.2}  napoleon  DRAG:T"))
+        let (side, spread) = napoleon_stats(th, self.seed);
+        Some(format!("side={side:.1}  spread={spread:.1e}  DRAG:T"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -220,7 +261,8 @@ impl Room for Napoleon {
             return self.status(t);
         }
         let th = twist(t, hands.last().copied(), self.seed);
-        Some(format!("T={th:.3}  equi"))
+        let (side, spread) = napoleon_stats(th, self.seed);
+        Some(format!("side={side:.2}  max-min={spread:.1e}  equi"))
     }
 
     fn reveal(&self) -> &'static str {
@@ -265,5 +307,22 @@ mod tests {
         let mut c = Canvas::new(48, 24);
         Napoleon::new().render(&mut c, 0.35);
         assert!(c.ink_count() > 0);
+    }
+
+    #[test]
+    fn action_reports_equilateral_spread() {
+        let s = Napoleon::new()
+            .status_input(
+                0.4,
+                &[RoomInput::PointerDown {
+                    x: 0.7,
+                    y: 0.5,
+                    t: 0.0,
+                }],
+            )
+            .unwrap();
+        assert!(s.contains("side") || s.contains("equi"));
+        assert!(s.chars().any(|c| c.is_ascii_digit()));
+        assert!(s.chars().count() <= 56);
     }
 }

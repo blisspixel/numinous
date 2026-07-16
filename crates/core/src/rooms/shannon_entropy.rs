@@ -154,7 +154,8 @@ impl Room for ShannonEntropy {
         }
         let p = bias(t, hands.last().copied(), self.seed);
         let h = entropy_bits(p);
-        Some(format!("P={p:.3}  H={h:.3}"))
+        let fair = 1.0 - h;
+        Some(format!("p={p:.2}  H={h:.3}b  to fair={fair:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

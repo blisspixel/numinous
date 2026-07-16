@@ -173,7 +173,15 @@ impl Room for GammaFunc {
             return self.status(t);
         }
         let x = center(t, hands.last().copied(), self.seed);
-        Some(format!("X={x:.3}  gamma"))
+        let g = log_abs_gamma(x);
+        if x > 0.5 && x < 12.0 {
+            // Stirling compares log Gamma to (x-0.5)ln x - x
+            let stir = (x - 0.5) * x.ln() - x + 0.5 * (2.0 * std::f64::consts::PI).ln();
+            let err = (g - stir).abs();
+            Some(format!("x={x:.2}  lng={g:.2}  stir err={err:.1e}"))
+        } else {
+            Some(format!("x={x:.2}  lng={g:.2}"))
+        }
     }
 
     fn reveal(&self) -> &'static str {

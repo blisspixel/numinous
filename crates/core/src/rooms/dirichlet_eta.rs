@@ -175,8 +175,10 @@ impl Room for DirichletEta {
             return self.status(t);
         }
         let s = s_param(t, hands.last().copied(), self.seed);
-        let e = eta_partial(s, 40);
-        Some(format!("S={s:.3}  eta={e:.3}"))
+        let e40 = eta_partial(s, 40);
+        let e80 = eta_partial(s, 80);
+        let drift = (e80 - e40).abs();
+        Some(format!("eta={e80:.3}  drift40={drift:.1e}"))
     }
 
     fn reveal(&self) -> &'static str {
