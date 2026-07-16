@@ -148,8 +148,17 @@ impl Room for AmModulation {
             return self.status(t);
         }
         let m = mod_index(t, hands.last().copied(), self.seed);
-        let over = if m > 1.0 { "overmod" } else { "ok" };
-        Some(format!("M={m:.3}  {over}"))
+        let depth = (m * 100.0).round() as i32;
+        // Carrier power share for tone AM: 2/(2+m^2) of total sideband+carrier.
+        let carrier_pct = ((2.0 / (2.0 + m * m)) * 100.0).round() as i32;
+        let mode = if m > 1.0 {
+            "OVER"
+        } else if m > 0.5 {
+            "deep"
+        } else {
+            "light"
+        };
+        Some(format!("m={m:.2}  {depth}%  car={carrier_pct}%  {mode}"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -176,8 +176,20 @@ impl Room for Bessel {
         if hands.is_empty() {
             return self.status(t);
         }
-        let s = scale_p(t, hands.last().copied(), self.seed);
-        Some(format!("S={s:.3}  bessel"))
+        let s = scale_p(t, hands.last().copied(), self.seed).clamp(0.4, 3.0);
+        // Radial argument spans [0, 15/s]; count J0 sign changes (nodal rings).
+        let x_max = 15.0 / s;
+        let mut zeros = 0u32;
+        let mut prev = j0(1e-6);
+        for i in 1..=240 {
+            let x = x_max * (i as f64) / 240.0;
+            let v = j0(x);
+            if prev * v <= 0.0 {
+                zeros += 1;
+            }
+            prev = v;
+        }
+        Some(format!("s={s:.2}  ~{zeros} rings  j0_1~2.40"))
     }
 
     fn reveal(&self) -> &'static str {

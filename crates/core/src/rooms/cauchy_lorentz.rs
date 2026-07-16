@@ -157,8 +157,10 @@ impl Room for CauchyLorentz {
         if hands.is_empty() {
             return self.status(t);
         }
-        let g = gamma(t, hands.last().copied(), self.seed);
-        Some(format!("G={g:.3}  cauchy"))
+        let g = gamma(t, hands.last().copied(), self.seed).clamp(0.12, 2.2);
+        let fwhm = 2.0 * g;
+        let peak = 1.0 / (std::f64::consts::PI * g);
+        Some(format!("g={g:.2}  FWHM={fwhm:.2}  peak={peak:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

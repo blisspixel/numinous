@@ -162,8 +162,10 @@ impl Room for DampedSine {
         if hands.is_empty() {
             return self.status(t);
         }
-        let a = decay(t, hands.last().copied(), self.seed);
-        Some(format!("DECAY a={a:.3}"))
+        let a = decay(t, hands.last().copied(), self.seed).max(1e-6);
+        let half = std::f64::consts::LN_2 / a;
+        let end = (-a).exp();
+        Some(format!("a={a:.2}  half={half:.2}  end={end:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

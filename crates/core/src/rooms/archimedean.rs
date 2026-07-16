@@ -149,8 +149,10 @@ impl Room for Archimedean {
         if hands.is_empty() {
             return self.status(t);
         }
-        let b = pitch(t, hands.last().copied(), self.seed);
-        Some(format!("B={b:.3}  arch spiral"))
+        let b = pitch(t, hands.last().copied(), self.seed).clamp(0.03, 0.22);
+        // Constant radial gap per full turn: Delta r = 2 pi b.
+        let gap = std::f64::consts::TAU * b;
+        Some(format!("b={b:.3}  gap/turn={gap:.3}"))
     }
 
     fn reveal(&self) -> &'static str {

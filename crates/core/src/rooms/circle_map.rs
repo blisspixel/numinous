@@ -200,7 +200,15 @@ impl Room for CircleMap {
         }
         let (k, omega) = params(t, hands.last().copied(), self.seed);
         let w = winding(omega, k);
-        Some(format!("K={k:.2} om={omega:.2} w={w:.3}"))
+        let drift = (w - omega).abs();
+        let band = if k >= 1.0 && drift < 0.02 {
+            "LOCK"
+        } else if drift < 0.05 {
+            "near"
+        } else {
+            "free"
+        };
+        Some(format!("w={w:.3}  dOm={drift:.3}  K={k:.2}  {band}"))
     }
 
     fn reveal(&self) -> &'static str {
