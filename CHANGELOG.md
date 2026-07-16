@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six probability and information inventions (catalog 334): Shannon Entropy,
+  Bayes Update, Erdos-Renyi Graph, Markov Chain, Huffman Tree, Mutual Info.
 - Six number-theory inventions (catalog 328): Lucky Numbers, Gaussian Primes,
   Quadratic Residues, Zeckendorf, Egyptian Fractions, Pell Path.
 - Six dynamics inventions (catalog 322): Simple Pendulum, Blackbody Spectrum,

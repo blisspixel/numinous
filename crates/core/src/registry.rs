@@ -382,6 +382,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::zeckendorf::Zeckendorf::new_with(variation)),
         Box::new(rooms::egyptian_frac::EgyptianFrac::new_with(variation)),
         Box::new(rooms::pell_path::PellPath::new_with(variation)),
+        Box::new(rooms::shannon_entropy::ShannonEntropy::new_with(variation)),
+        Box::new(rooms::bayes_update::BayesUpdate::new_with(variation)),
+        Box::new(rooms::erdos_renyi::ErdosRenyi::new_with(variation)),
+        Box::new(rooms::markov_chain::MarkovChain::new_with(variation)),
+        Box::new(rooms::huffman_tree::HuffmanTree::new_with(variation)),
+        Box::new(rooms::mutual_info::MutualInfo::new_with(variation)),
     ]
 }
 
