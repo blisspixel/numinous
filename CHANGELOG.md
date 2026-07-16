@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- Consequence-depth pass (cycle 108 classical/prob batch): Basel err vs pi^2/6,
+  Birthday pair count and half-threshold, Blackbody Wien peak, CLT SE shrink,
+  Coupon H_n and last-wait, Brownian rms scale, Brewster d-to-iB and p-pol zero,
+  Wallis pi error, Benford P1/P9 ratio, beat period, pendulum libration vs
+  rotation, escape ve/vc ratio, Kepler ra/rp, Stirling relative error. Builds
+  on the cycle 107 catalog-tail pass. Compact footer and digit contracts hold.
 - Consequence-depth pass on the catalog tail: action status now reports domain
   measures after a poke (twin last pair, perfect n or digit scale, AGM iters and
   |a-g|, Bayes prior/post delta, Huffman avg vs H gap, Napoleon side spread,

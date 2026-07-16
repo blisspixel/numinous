@@ -154,7 +154,8 @@ impl Room for Wallis {
         let n = n_param(t, hands.last().copied(), self.seed).round() as u32;
         let w = wallis_partial(n.max(1));
         let pi_est = 2.0 * w;
-        Some(format!("N={n}  pi~{pi_est:.4}"))
+        let err = (pi_est - std::f64::consts::PI).abs();
+        Some(format!("pi~{pi_est:.5}  err={err:.1e}  n={n}"))
     }
 
     fn reveal(&self) -> &'static str {

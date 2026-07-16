@@ -167,7 +167,17 @@ impl Room for KeplerLaws {
             return self.status(t);
         }
         let e = ecc(t, hands.last().copied(), self.seed);
-        Some(format!("E={e:.3}  kepler"))
+        // peri/aphelion distance ratio (1-e)/(1+e) for a=1
+        let ra_rp = if e < 0.99 {
+            (1.0 + e) / (1.0 - e)
+        } else {
+            f64::INFINITY
+        };
+        if ra_rp.is_finite() {
+            Some(format!("e={e:.3}  ra/rp={ra_rp:.2}  areas"))
+        } else {
+            Some(format!("e={e:.3}  parabolic"))
+        }
     }
 
     fn reveal(&self) -> &'static str {

@@ -126,8 +126,10 @@ impl Room for Brownian {
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        let n = steps(t, None, self.seed).round();
-        Some(format!("n={n:.0}  W(t)  DRAG:N"))
+        let n = steps(t, None, self.seed).round().max(1.0);
+        // E[|W(t)|] scale ~ sqrt(t) for unit diffusion
+        let rms = n.sqrt();
+        Some(format!("n={n:.0}  rms~{rms:.1}  DRAG:N"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -158,8 +160,9 @@ impl Room for Brownian {
         if hands.is_empty() {
             return self.status(t);
         }
-        let n = steps(t, hands.last().copied(), self.seed).round();
-        Some(format!("N={n:.0}  brown"))
+        let n = steps(t, hands.last().copied(), self.seed).round().max(1.0);
+        let rms = n.sqrt();
+        Some(format!("steps={n:.0}  rms~sqrt(n)={rms:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

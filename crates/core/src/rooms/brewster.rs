@@ -151,7 +151,9 @@ impl Room for Brewster {
 
     fn status(&self, t: f64) -> Option<String> {
         let i = angle(t, None, self.seed);
-        Some(format!("i={i:.2}  brew  DRAG:ANG"))
+        let ib = 1.5_f64.atan();
+        let d = (i - ib).abs();
+        Some(format!("i={i:.2}  iB={ib:.2}  d={d:.2}  DRAG:ANG"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -177,7 +179,9 @@ impl Room for Brewster {
         }
         let i = angle(t, hands.last().copied(), self.seed);
         let ib = 1.5_f64.atan();
-        Some(format!("I={i:.3}  iB~{ib:.2}"))
+        let d = (i - ib).abs();
+        let pol = if d < 0.05 { "p-pol zero" } else { "Rp>0" };
+        Some(format!("i={i:.2}  iB={ib:.2}  {pol}"))
     }
 
     fn reveal(&self) -> &'static str {

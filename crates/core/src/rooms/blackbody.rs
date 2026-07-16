@@ -145,7 +145,9 @@ impl Room for Blackbody {
 
     fn status(&self, t: f64) -> Option<String> {
         let tk = temp(t, None, self.seed);
-        Some(format!("T={tk:.0}K  planck  DRAG:T"))
+        // Wien peak in toy units ~ 1/T (scaled display nm-like)
+        let peak = 2.9e6 / tk.max(1.0);
+        Some(format!("T={tk:.0}K  peak~{peak:.0}  DRAG:T"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -170,7 +172,8 @@ impl Room for Blackbody {
             return self.status(t);
         }
         let tk = temp(t, hands.last().copied(), self.seed);
-        Some(format!("T={tk:.0}K  wien"))
+        let peak = 2.9e6 / tk.max(1.0);
+        Some(format!("T={tk:.0}K  Wien peak~{peak:.0}  bluer"))
     }
 
     fn reveal(&self) -> &'static str {

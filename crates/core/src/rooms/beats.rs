@@ -150,7 +150,17 @@ impl Room for Beats {
             return self.status(t);
         }
         let d = detune(t, hands.last().copied(), self.seed);
-        Some(format!("DETUNE df={d:.2}"))
+        // Beat period T = 1/|df| for unit-Hz scale display
+        let period = if d.abs() > 1e-6 {
+            1.0 / d.abs()
+        } else {
+            f64::INFINITY
+        };
+        if period.is_finite() {
+            Some(format!("df={d:.2}  beat T={period:.2}"))
+        } else {
+            Some(format!("df={d:.2}  no beats"))
+        }
     }
 
     fn reveal(&self) -> &'static str {

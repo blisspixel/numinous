@@ -123,7 +123,9 @@ impl Room for Basel {
     fn status(&self, t: f64) -> Option<String> {
         let n = n_param(t, None, self.seed).round() as u32;
         let s = partial_basel(n.max(1));
-        Some(format!("n={n}  s={s:.3}  DRAG:N"))
+        let target = std::f64::consts::PI * std::f64::consts::PI / 6.0;
+        let err = (target - s).max(0.0);
+        Some(format!("n={n}  s={s:.3}  err={err:.3}  DRAG:N"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -149,7 +151,10 @@ impl Room for Basel {
         }
         let n = n_param(t, hands.last().copied(), self.seed).round() as u32;
         let s = partial_basel(n.max(1));
-        Some(format!("N={n}  S={s:.4}"))
+        let target = std::f64::consts::PI * std::f64::consts::PI / 6.0;
+        let pct = ((s / target).clamp(0.0, 1.0) * 100.0).round() as i32;
+        let err = (target - s).max(0.0);
+        Some(format!("s={s:.4}  {pct}% of pi2/6  err={err:.3}"))
     }
 
     fn reveal(&self) -> &'static str {
@@ -176,6 +181,22 @@ mod tests {
     fn status_invites() {
         let s = Basel::new().status(0.3).unwrap();
         assert!(s.contains("DRAG") || s.contains("s=") || s.contains("pi2"));
+        assert!(s.chars().count() <= 56);
+    }
+
+    #[test]
+    fn action_reports_fraction_of_target() {
+        let s = Basel::new()
+            .status_input(
+                0.5,
+                &[RoomInput::PointerDown {
+                    x: 0.7,
+                    y: 0.5,
+                    t: 0.0,
+                }],
+            )
+            .unwrap();
+        assert!(s.contains("pi2/6") || s.contains("err"));
         assert!(s.chars().count() <= 56);
     }
 

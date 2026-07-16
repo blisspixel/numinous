@@ -151,8 +151,11 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   Pell Path, Egyptian Fractions, Mutual Info, Gamma, Shannon Entropy now report
   domain consequences after a poke (pairs, digit scale, iters, prior/post delta,
   H-gap, equilateral spread, Phi, edge counts, visit peak, series drift, fund
-  solution, unit range, residual H, Stirling error, gap to fair). Subjective
-  participant evidence and the stranger hallway remain open.
+  solution, unit range, residual H, Stirling error, gap to fair).
+  **Cycle 108 classical/prob batch:** Basel, Birthday, Blackbody, Central Limit,
+  Coupon, Brownian, Brewster, Wallis, Benford, Beats, Simple Pendulum, Escape
+  Velocity, Kepler Areas, Stirling. Subjective participant evidence and the
+  stranger hallway remain open.
 - **Done (Share short-loop export, machine path):** App key L exports a
   24-frame looping APNG of the current visit (phase sweep, or Life generation
   advance) with the same poke trail and Visual Era as P-key still postcards.
