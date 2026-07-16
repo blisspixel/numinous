@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Six arithmetic inventions (catalog 298): Mertens Function, Liouville Function,
+  Euler Totient, Partition Function, Paperfold Sequence, Sylvester Sequence.
 - Six sequence inventions (catalog 292): Kolakoski Sequence, Beatty Sequence,
   Wythoff Array, Minkowski Question Mark, Ruler Function, Moser-de Bruijn.
 - Six topology inventions (catalog 286): Viviani Curve, Torus Knot, Whitney

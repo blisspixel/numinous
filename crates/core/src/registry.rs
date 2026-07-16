@@ -344,6 +344,12 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::minkowski_qm::MinkowskiQm::new_with(variation)),
         Box::new(rooms::ruler_function::RulerFunction::new_with(variation)),
         Box::new(rooms::moser_debruijn::MoserDebruijn::new_with(variation)),
+        Box::new(rooms::mertens::Mertens::new_with(variation)),
+        Box::new(rooms::liouville::Liouville::new_with(variation)),
+        Box::new(rooms::euler_totient::EulerTotient::new_with(variation)),
+        Box::new(rooms::partition::Partition::new_with(variation)),
+        Box::new(rooms::paperfold::Paperfold::new_with(variation)),
+        Box::new(rooms::sylvester::Sylvester::new_with(variation)),
     ]
 }
 
