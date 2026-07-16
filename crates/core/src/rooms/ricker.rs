@@ -172,7 +172,36 @@ impl Room for Ricker {
             return self.status(t);
         }
         let r = r_param(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE r={r:.3}"))
+        // Fixed point at x=1; period-doubling cascade for larger r.
+        let mut x = if self.seed == 0 {
+            0.3
+        } else {
+            0.1 + (self.seed % 20) as f64 * 0.02
+        };
+        for _ in 0..40 {
+            x = ricker(x, r);
+            if !x.is_finite() {
+                break;
+            }
+        }
+        let mut mn = x;
+        let mut mx = x;
+        for _ in 0..80 {
+            x = ricker(x, r);
+            if !x.is_finite() {
+                break;
+            }
+            mn = mn.min(x);
+            mx = mx.max(x);
+        }
+        let band = if r < 2.0 {
+            "stable"
+        } else if r < 2.7 {
+            "period"
+        } else {
+            "chaos"
+        };
+        Some(format!("r={r:.2}  x=[{mn:.2},{mx:.2}]  {band}"))
     }
 
     fn reveal(&self) -> &'static str {

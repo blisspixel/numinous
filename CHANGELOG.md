@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- Consequence-depth pass (cycle 111 waves/number/fractal batch): triangle and
+  sawtooth harmonic energy, standing-wave nodes and spacing, Young fringe scale,
+  Zeckendorf ones-count, Gaussian prime count, quadratic residue half, Vicsek
+  dim and cells, Delaunay Euler estimates, Ricker orbit band, Thomas span,
+  Mexican-hat zero width, Gumowski-Mira span, Fresnel distance to asymptote.
+  Compact footer and digit contracts hold.
 - Consequence-depth pass (cycle 110 attractors/curves batch): Aizawa span,
   Astroid P=6a and area, Bedhead span, Bifolium leaf area, Blancmange roughness,
   Bogdanov soft radius band, Cardioid P=8a and area, Catenary sag and span,

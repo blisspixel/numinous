@@ -163,7 +163,35 @@ impl Room for GumowskiMira {
             return self.status(t);
         }
         let m = mu(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE mu={m:.3}"))
+        let a = 0.008;
+        let b = 0.05;
+        let mut x = 0.1_f64;
+        let mut y = 0.1_f64;
+        for _ in 0..80 {
+            let nx = y + a * (1.0 - b * y * y) * y + f(x, m);
+            let ny = -x + f(nx, m);
+            x = nx;
+            y = ny;
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        for _ in 0..500 {
+            let nx = y + a * (1.0 - b * y * y) * y + f(x, m);
+            let ny = -x + f(nx, m);
+            if !nx.is_finite() || !ny.is_finite() {
+                break;
+            }
+            x = nx;
+            y = ny;
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("mu={m:.2}  span={span:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -145,7 +145,16 @@ impl Room for TriangleWave {
             return self.status(t);
         }
         let n = harmonics(t, hands.last().copied());
-        Some(format!("N={n}  1/k^2 odds"))
+        // Odd harmonic energy vs Basel odd sum pi^2/8.
+        let mut energy = 0.0_f64;
+        for m in 0..n {
+            let k = (2 * m + 1) as f64;
+            energy += 1.0 / (k * k);
+        }
+        let total = std::f64::consts::PI * std::f64::consts::PI / 8.0;
+        let pct = ((energy / total) * 100.0).round() as i32;
+        let k_max = 2 * n - 1;
+        Some(format!("n={n}  k={k_max}  E={pct}% odds"))
     }
 
     fn reveal(&self) -> &'static str {

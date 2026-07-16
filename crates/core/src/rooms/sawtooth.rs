@@ -145,7 +145,15 @@ impl Room for Sawtooth {
             return self.status(t);
         }
         let n = harmonics(t, hands.last().copied());
-        Some(format!("N={n}  all harmonics"))
+        // Harmonic energy of 1/k amplitudes is sum 1/k^2, total pi^2/6.
+        let mut energy = 0.0_f64;
+        for k in 1..=n {
+            let kk = k as f64;
+            energy += 1.0 / (kk * kk);
+        }
+        let total = std::f64::consts::PI * std::f64::consts::PI / 6.0;
+        let pct = ((energy / total) * 100.0).round() as i32;
+        Some(format!("n={n}  E={pct}%  Gibbs~9%"))
     }
 
     fn reveal(&self) -> &'static str {
