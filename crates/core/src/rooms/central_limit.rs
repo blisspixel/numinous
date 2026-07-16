@@ -141,8 +141,10 @@ impl Room for CentralLimit {
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        let n = n_param(t, None, self.seed).round();
-        Some(format!("n={n:.0}  mean  DRAG:N"))
+        let n = n_param(t, None, self.seed).round().max(1.0);
+        // Uniform[0,1] mean 0.5, var 1/12; SE of mean = 1/sqrt(12 n)
+        let se = (1.0 / (12.0 * n)).sqrt();
+        Some(format!("n={n:.0}  SE~{se:.3}  DRAG:N"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
@@ -172,8 +174,13 @@ impl Room for CentralLimit {
         if hands.is_empty() {
             return self.status(t);
         }
-        let n = n_param(t, hands.last().copied(), self.seed).round();
-        Some(format!("N={n:.0}  clt"))
+        let n = n_param(t, hands.last().copied(), self.seed)
+            .round()
+            .max(1.0);
+        let se = (1.0 / (12.0 * n)).sqrt();
+        let se1 = (1.0_f64 / 12.0).sqrt();
+        let shrink = se1 / se;
+        Some(format!("n={n:.0}  SE={se:.3}  ~{shrink:.1}x tighter"))
     }
 
     fn reveal(&self) -> &'static str {

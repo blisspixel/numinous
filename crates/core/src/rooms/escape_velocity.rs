@@ -151,7 +151,9 @@ impl Room for EscapeVelocity {
         }
         let r = radius(t, hands.last().copied(), self.seed);
         let ve = (2.0 / r).sqrt();
-        Some(format!("R={r:.3}  ve={ve:.2}"))
+        let circ = (1.0 / r).sqrt(); // circular orbit speed scale
+        let ratio = ve / circ.max(1e-9);
+        Some(format!("ve={ve:.2}  vcirc={circ:.2}  ve/vc={ratio:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

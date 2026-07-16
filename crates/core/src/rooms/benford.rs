@@ -144,7 +144,9 @@ impl Room for Benford {
         }
         let b = base_param(t, hands.last().copied(), self.seed);
         let p1 = benford_p(1, b);
-        Some(format!("B={b:.2}  P1={p1:.3}"))
+        let p9 = benford_p(9, b);
+        let ratio = if p9 > 1e-9 { p1 / p9 } else { 0.0 };
+        Some(format!("P(1)={p1:.3}  P(9)={p9:.3}  1/9={ratio:.1}x"))
     }
 
     fn reveal(&self) -> &'static str {
