@@ -150,8 +150,9 @@ impl Room for Beatty {
         let s = r / (r - 1.0);
         let phi = (1.0 + 5.0_f64.sqrt()) / 2.0;
         let dphi = (r - phi).abs();
-        // Sample partition: count unique floor values among first 40 of each seq.
-        let mut seen = [false; 200];
+        // Sample partition: unique floor values among first 40 of each seq.
+        // Cap at 320 so floor(40 * s) for s up to ~8 still fits.
+        let mut seen = [false; 320];
         let mut hits = 0u32;
         for n in 1..=40 {
             let a = (n as f64 * r).floor() as usize;

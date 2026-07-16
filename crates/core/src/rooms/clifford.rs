@@ -161,18 +161,18 @@ impl Room for Clifford {
         let (a, b, c, d) = params(t, hands.last().copied(), self.seed);
         let mut x = 0.1_f64;
         let mut y = 0.1_f64;
-        let mut min_x = f64::MAX;
-        let mut max_x = f64::MIN;
-        let mut min_y = f64::MAX;
-        let mut max_y = f64::MIN;
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
         for _ in 0..800 {
             let nx = (a * y).sin() + c * (a * x).cos();
             let ny = (b * x).sin() + d * (b * y).cos();
-            x = nx;
-            y = ny;
-            if !x.is_finite() || !y.is_finite() {
+            if !nx.is_finite() || !ny.is_finite() {
                 break;
             }
+            x = nx;
+            y = ny;
             min_x = min_x.min(x);
             max_x = max_x.max(x);
             min_y = min_y.min(y);

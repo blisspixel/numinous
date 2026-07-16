@@ -158,11 +158,13 @@ impl Room for CoupledLogistic {
             return self.status(t);
         }
         let e = coupling(t, hands.last().copied(), self.seed);
+        // Match render_poked: draw XORs the seed with poke count for r variation.
+        let seed = self.seed ^ hands.len() as u64;
         let r = 3.7
-            + if self.seed == 0 {
+            + if seed == 0 {
                 0.0
             } else {
-                (self.seed % 4) as f64 * 0.02
+                (seed % 4) as f64 * 0.02
             };
         let mut x = 0.2;
         let mut y = 0.7;
