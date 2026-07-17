@@ -164,8 +164,17 @@ impl Room for DevilCurve {
         if hands.is_empty() {
             return self.status(t);
         }
-        let ab = ratio(t, hands.last().copied(), self.seed);
-        Some(format!("B={ab:.3}  devil"))
+        let ab = ratio(t, hands.last().copied(), self.seed).clamp(0.4, 2.2);
+        // a=1 fixed, b=ab; cross when b near a (square-ish diamond).
+        let d = (ab - 1.0).abs();
+        let shape = if d < 0.08 {
+            "cross"
+        } else if ab < 1.0 {
+            "tall"
+        } else {
+            "wide"
+        };
+        Some(format!("b={ab:.2}  |b-a|={d:.2}  {shape}"))
     }
 
     fn reveal(&self) -> &'static str {

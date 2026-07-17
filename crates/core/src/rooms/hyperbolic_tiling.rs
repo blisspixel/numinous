@@ -156,7 +156,9 @@ impl Room for HyperbolicTiling {
             return self.status(t);
         }
         let d = depth(t, hands.last().copied());
-        Some(format!("DEPTH={d}  {{7,3}}"))
+        // Layer k draws 7k vertices in this sketch; total verts ~ 7 d(d+1)/2.
+        let verts = 7 * d * (d + 1) / 2;
+        Some(format!("d={d}  verts~{verts}  {{7,3}}"))
     }
 
     fn reveal(&self) -> &'static str {

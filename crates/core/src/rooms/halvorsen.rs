@@ -175,7 +175,42 @@ impl Room for Halvorsen {
             return self.status(t);
         }
         let a = a_param(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE a={a:.3}"))
+        // Lightweight span after burn (not full render integration).
+        let mut x = -1.48_f64;
+        let mut y = -1.51_f64;
+        let mut z = 2.04_f64;
+        for _ in 0..200 {
+            let dx = -a * x - 4.0 * y - 4.0 * z - y * y;
+            let dy = -a * y - 4.0 * z - 4.0 * x - z * z;
+            let dz = -a * z - 4.0 * x - 4.0 * y - x * x;
+            x += DT * dx;
+            y += DT * dy;
+            z += DT * dz;
+            if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+                return Some(format!("a={a:.2}  span=div"));
+            }
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        for _ in 0..800 {
+            let dx = -a * x - 4.0 * y - 4.0 * z - y * y;
+            let dy = -a * y - 4.0 * z - 4.0 * x - z * z;
+            let dz = -a * z - 4.0 * x - 4.0 * y - x * x;
+            x += DT * dx;
+            y += DT * dy;
+            z += DT * dz;
+            if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+                break;
+            }
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("a={a:.2}  span={span:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

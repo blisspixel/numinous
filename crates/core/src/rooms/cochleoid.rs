@@ -143,7 +143,9 @@ impl Room for Cochleoid {
             return self.status(t);
         }
         let a = scale_a(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  coch"))
+        // r = a sin(th)/th; at th=pi/2, r = a * 2/pi.
+        let r_half = a * 2.0 / std::f64::consts::PI;
+        Some(format!("a={a:.2}  r(pi/2)={r_half:.2}  snail"))
     }
 
     fn reveal(&self) -> &'static str {

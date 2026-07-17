@@ -158,8 +158,20 @@ impl Room for SnellPrism {
         if hands.is_empty() {
             return self.status(t);
         }
-        let a = apex(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  prism"))
+        let a = apex(t, hands.last().copied(), self.seed).clamp(0.25, 1.4);
+        let i_ang = 0.5 + a * 0.2;
+        let mut outs = [0.0_f64; 5];
+        for (k, lam) in [0.4, 0.5, 0.6, 0.7, 0.8].iter().enumerate() {
+            let n = n_of_lambda(*lam);
+            let sin_r = (i_ang.sin() / n).clamp(-1.0, 1.0);
+            let r = sin_r.asin();
+            outs[k] = a - r;
+        }
+        let spread = (outs[4] - outs[0]).abs();
+        Some(format!(
+            "a={a:.2}  spread={spread:.2}  nV={:.2}",
+            n_of_lambda(0.4)
+        ))
     }
 
     fn reveal(&self) -> &'static str {

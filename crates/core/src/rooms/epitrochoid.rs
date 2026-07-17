@@ -151,7 +151,10 @@ impl Room for Epitrochoid {
             return self.status(t);
         }
         let k = ratio(t, hands.last().copied(), self.seed);
-        Some(format!("R/r={k:.2}  outer"))
+        // Outer rolling: fixed R = k r; petal count tracks round(R/r) = round(k).
+        let petals = k.round() as i32;
+        let r_sum = k + 1.0;
+        Some(format!("R/r={k:.1}  petals~{petals}  R+r={r_sum:.1}"))
     }
 
     fn reveal(&self) -> &'static str {
