@@ -5664,6 +5664,41 @@ plays 2
     }
 
     #[test]
+    fn listen_room_uses_the_same_selected_galton_probability_as_the_board() {
+        let listen = |x| {
+            call(
+                "listen_room",
+                json!({"id":"galton-board","t":0.4,"pokes":[[x,0.5]]}),
+            )
+        };
+        let left = listen(0.1);
+        let fair = listen(0.5);
+        let right = listen(0.9);
+        fn notes(response: &Value) -> &[Value] {
+            response["result"]["structuredContent"]["notes"]
+                .as_array()
+                .expect("mathematical notes")
+        }
+        let ratio = |notes: &[Value]| {
+            notes[1]["frequency_hz"].as_f64().expect("upper voice")
+                / notes[0]["frequency_hz"].as_f64().expect("root voice")
+        };
+        let left_notes = notes(&left);
+        let fair_notes = notes(&fair);
+        let right_notes = notes(&right);
+
+        assert!(left_notes[0]["frequency_hz"].as_f64() < fair_notes[0]["frequency_hz"].as_f64());
+        assert!(fair_notes[0]["frequency_hz"].as_f64() < right_notes[0]["frequency_hz"].as_f64());
+        assert!((ratio(left_notes) - 7.0 / 3.0).abs() < 1e-6);
+        assert!((ratio(fair_notes) - 1.0).abs() < 1e-6);
+        assert!((ratio(right_notes) - 7.0 / 3.0).abs() < 1e-6);
+        assert_eq!(
+            fair["result"]["structuredContent"]["pokes"],
+            json!([[0.5, 0.5]])
+        );
+    }
+
+    #[test]
     fn listen_room_rejects_unsafe_or_ambiguous_input() {
         for (arguments, expected) in [
             (

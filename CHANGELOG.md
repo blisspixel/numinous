@@ -6,6 +6,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Galton Board now makes the selected fixed coin audible through the same
+  continuous parameter-voice seam as its visible experiment. The five coin
+  regions climb through C major-pentatonic roots, while bias strength uses the
+  exact larger-to-smaller Bernoulli odds ratio: 7:3, 3:2, 1:1, 3:2, or 7:3.
+  The App glides that quiet voice over the stable room bed; CLI `sonify` and MCP
+  `listen_room` render the same accepted poke or gesture as a deterministic
+  two-note snapshot. Focused tests cover all five coins, no parameter voice
+  before a drop, ownership routing, exact ratios, ordered roots, and three-face
+  replay parity.
+  Planned peg ticks, pile texture, spatialization, and human listening evidence
+  remain explicitly unclaimed.
 - A release-profile App performance harness now measures the five 0.3
   flagships across geometry, chaos, emergence, chance, and creation. It reports
   ambient-raster and accepted-input-to-room-raster p50, p95, and maximum time
