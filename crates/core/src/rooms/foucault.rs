@@ -155,8 +155,10 @@ impl Room for Foucault {
         }
         let lat = latitude(t, hands.last().copied(), self.seed);
         let deg = lat.to_degrees();
-        let rate = lat.sin();
-        Some(format!("LAT={deg:.1}  sin={rate:.2}"))
+        // Precession period: T_earth / sin(lat); sidereal day ~ 0.997 d.
+        let sin_l = lat.sin().abs().max(1e-6);
+        let hours = 23.934 / sin_l;
+        Some(format!("lat={deg:.0}  T~{hours:.1}h  precess"))
     }
 
     fn reveal(&self) -> &'static str {

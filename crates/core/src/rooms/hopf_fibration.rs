@@ -149,7 +149,7 @@ impl Room for HopfFibration {
             return self.status(t);
         }
         let b = fiber(t, hands.last().copied(), self.seed);
-        Some(format!("B={b:.3}  hopf"))
+        Some(format!("b={b:.2}  fiber S1  S3->S2"))
     }
 
     fn reveal(&self) -> &'static str {

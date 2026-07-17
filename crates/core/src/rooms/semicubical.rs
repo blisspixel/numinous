@@ -152,7 +152,9 @@ impl Room for Semicubical {
             return self.status(t);
         }
         let a = scale(t, hands.last().copied(), self.seed);
-        Some(format!("SCALE a={a:.3}  y^2=x^3"))
+        // Semicubical parabola y^2 = a x^3; cusp at 0.
+        let y1 = a.max(0.0).sqrt();
+        Some(format!("a={a:.2}  cusp  y(1)~{y1:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -185,8 +185,19 @@ impl Room for Josephus {
             return self.status(t);
         }
         let (n, k) = nk(t, hands.last().copied());
-        let survivor = josephus_order(n, k).last().copied().unwrap_or(0) + 1;
-        Some(format!("n={n} k={k}  survivor={survivor}"))
+        let order = josephus_order(n, k);
+        let survivor = order.last().copied().unwrap_or(0) + 1;
+        // For k=2, f(n)=2l+1 where n=2^m+l.
+        let closed = if k == 2 && n > 0 {
+            let mut pow = 1usize;
+            while pow * 2 <= n {
+                pow *= 2;
+            }
+            2 * (n - pow) + 1
+        } else {
+            survivor
+        };
+        Some(format!("n={n} k={k}  f={survivor}  k2={closed}"))
     }
 
     fn reveal(&self) -> &'static str {

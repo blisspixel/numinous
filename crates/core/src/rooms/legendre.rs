@@ -168,8 +168,11 @@ impl Room for Legendre {
         if hands.is_empty() {
             return self.status(t);
         }
-        let n = level(t, hands.last().copied(), self.seed).round();
-        Some(format!("N={n:.0}  legendre"))
+        let n = level(t, hands.last().copied(), self.seed)
+            .round()
+            .clamp(0.0, 12.0) as usize;
+        // P_n has n zeros on (-1,1).
+        Some(format!("n={n}  zeros={n}  P_n"))
     }
 
     fn reveal(&self) -> &'static str {

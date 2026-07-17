@@ -178,7 +178,10 @@ impl Room for LambdaMap {
             return self.status(t);
         }
         let (lr, li) = lambda(t, hands.last().copied(), self.seed);
-        Some(format!("L=({lr:.2},{li:.2})"))
+        // Critical point z=0.5 escape as a stability probe for lambda.
+        let esc = escape(0.5, 0.0, lr, li);
+        let mod_l = (lr * lr + li * li).sqrt();
+        Some(format!("L=({lr:.2},{li:.2})  |L|={mod_l:.2}  esc={esc}"))
     }
 
     fn reveal(&self) -> &'static str {

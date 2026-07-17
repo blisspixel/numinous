@@ -170,8 +170,11 @@ impl Room for LuckyNumbers {
             return self.status(t);
         }
         let n = limit(t, hands.last().copied(), self.seed);
-        let c = lucky_upto(n).len();
-        Some(format!("N={n}  {c} live"))
+        let live = lucky_upto(n);
+        let c = live.len();
+        // Density among 1..n.
+        let dens = if n > 0 { c as f64 / n as f64 } else { 0.0 };
+        Some(format!("n={n}  live={c}  dens={dens:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

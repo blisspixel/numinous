@@ -159,8 +159,11 @@ impl Room for Viviani {
         if hands.is_empty() {
             return self.status(t);
         }
-        let p = phase(t, hands.last().copied(), self.seed);
-        Some(format!("P={p:.3}  viviani"))
+        let th = phase(t, hands.last().copied(), self.seed);
+        let deg =
+            (th.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU * 360.0).floor() as i32;
+        // Viviani: sphere and cylinder intersection; unit sphere curve.
+        Some(format!("th={deg}deg  sph+cyl  viv"))
     }
 
     fn reveal(&self) -> &'static str {

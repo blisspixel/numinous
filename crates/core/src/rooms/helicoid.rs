@@ -167,7 +167,9 @@ impl Room for Helicoid {
             return self.status(t);
         }
         let c = pitch(t, hands.last().copied(), self.seed);
-        Some(format!("C={c:.3}  helicoid"))
+        // Helicoid pitch: z advances 2 pi c per full turn (here scaled by pi).
+        let rise = 2.0 * c;
+        Some(format!("c={c:.2}  rise/turn~{rise:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

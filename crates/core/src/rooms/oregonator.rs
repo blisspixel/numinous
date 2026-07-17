@@ -173,7 +173,48 @@ impl Room for Oregonator {
             return self.status(t);
         }
         let f = f_param(t, hands.last().copied(), self.seed);
-        Some(format!("F={f:.3}  oregonator"))
+        let eps = 0.04;
+        let q = 0.0008;
+        let mut x = 0.5
+            + if self.seed == 0 {
+                0.0
+            } else {
+                (self.seed % 5) as f64 * 0.02
+            };
+        let mut y = 0.5_f64;
+        let mut z = 0.5_f64;
+        for _ in 0..200 {
+            let dx = (x * (1.0 - x) + f * (q - x) * z / (q + x)) / eps;
+            let dy = x - y;
+            let dz = y - z;
+            x = (x + dx * DT).max(1e-6);
+            y = (y + dy * DT).max(1e-6);
+            z = (z + dz * DT).max(1e-6);
+            if !x.is_finite() || !z.is_finite() {
+                return Some(format!("f={f:.2}  span=0  div"));
+            }
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_z = z;
+        let mut max_z = z;
+        for _ in 0..800 {
+            let dx = (x * (1.0 - x) + f * (q - x) * z / (q + x)) / eps;
+            let dy = x - y;
+            let dz = y - z;
+            x = (x + dx * DT).max(1e-6);
+            y = (y + dy * DT).max(1e-6);
+            z = (z + dz * DT).max(1e-6);
+            if !x.is_finite() || !z.is_finite() {
+                break;
+            }
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_z = min_z.min(z);
+            max_z = max_z.max(z);
+        }
+        let span = ((max_x - min_x) * (max_z - min_z)).max(0.0).sqrt();
+        Some(format!("f={f:.2}  span={span:.2}  BZ"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -160,7 +160,10 @@ impl Room for Involute {
             return self.status(t);
         }
         let n = turns(t, hands.last().copied(), self.seed);
-        Some(format!("TURNS={n:.2}  gear"))
+        // Circle involute arc length from cusp is (1/2) a theta^2; a~1 here.
+        let theta = n * std::f64::consts::TAU;
+        let arc = 0.5 * theta * theta;
+        Some(format!("turns={n:.2}  s~{arc:.1}  gear"))
     }
 
     fn reveal(&self) -> &'static str {

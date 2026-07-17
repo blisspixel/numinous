@@ -147,7 +147,8 @@ impl Room for ButterflyCurve {
             return self.status(t);
         }
         let p = phase(t, hands.last().copied(), self.seed);
-        Some(format!("PH={p:.2}  butter"))
+        let wing = ((p.rem_euclid(1.0) * 12.0).floor() as i32) + 1;
+        Some(format!("ph={p:.2}  wing={wing}/12"))
     }
 
     fn reveal(&self) -> &'static str {

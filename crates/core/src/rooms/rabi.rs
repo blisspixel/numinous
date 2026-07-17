@@ -148,8 +148,11 @@ impl Room for Rabi {
             return self.status(t);
         }
         let d = detune(t, hands.last().copied(), self.seed);
-        let om = (2.5_f64.powi(2) + d * d).sqrt();
-        Some(format!("D={d:.3}  Or={om:.2}"))
+        let om0 = 2.5_f64;
+        let om = (om0 * om0 + d * d).sqrt();
+        // Max excited population (Om0/Om)^2; Rabi period 2 pi / Om.
+        let pop = (om0 / om).powi(2);
+        Some(format!("D={d:.2}  Om={om:.2}  Pmax={pop:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

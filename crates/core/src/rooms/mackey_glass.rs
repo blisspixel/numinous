@@ -169,7 +169,15 @@ impl Room for MackeyGlass {
             return self.status(t);
         }
         let tau = delay_steps(t, hands.last().copied(), self.seed);
-        Some(format!("DELAY tau={tau}  embed"))
+        // Delay embedding: history length tau; chaos often for large tau.
+        let regime = if tau >= 17 {
+            "chaos?"
+        } else if tau >= 10 {
+            "osc"
+        } else {
+            "calm"
+        };
+        Some(format!("tau={tau}  emb={tau}  {regime}"))
     }
 
     fn reveal(&self) -> &'static str {

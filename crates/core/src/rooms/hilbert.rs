@@ -183,7 +183,9 @@ impl Room for Hilbert {
         }
         let o = order(t, hands.last().copied());
         let cells = 1u32 << (2 * o);
-        Some(format!("FOLD order={o}  cells={cells}"))
+        // Hilbert: space-filling; grid is 2^o by 2^o.
+        let side = 1u32 << o;
+        Some(format!("o={o}  {side}x{side}  cells={cells}"))
     }
 
     fn reveal(&self) -> &'static str {

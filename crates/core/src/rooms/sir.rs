@@ -162,8 +162,19 @@ impl Room for Sir {
             return self.status(t);
         }
         let r = r0(t, hands.last().copied(), self.seed);
+        // Final size equation 1-s_inf = exp(-R0(1-s_inf)); Newton few steps.
+        let mut s = if r > 1.0 { 1.0 / r } else { 1.0 };
+        for _ in 0..12 {
+            let f = 1.0 - s - (-r * (1.0 - s)).exp();
+            let df = -1.0 - r * (-r * (1.0 - s)).exp();
+            if df.abs() < 1e-12 {
+                break;
+            }
+            s = (s - f / df).clamp(1e-9, 1.0);
+        }
+        let attack = ((1.0 - s) * 100.0).round() as i32;
         let thr = if r > 1.0 { "epidemic" } else { "fade" };
-        Some(format!("R0={r:.3}  {thr}"))
+        Some(format!("R0={r:.2}  attack~{attack}%  {thr}"))
     }
 
     fn reveal(&self) -> &'static str {

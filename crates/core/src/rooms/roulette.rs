@@ -166,7 +166,9 @@ impl Room for Roulette {
             return self.status(t);
         }
         let k = k_param(t, hands.last().copied(), self.seed);
-        Some(format!("K={k:.2}  epi+hypo"))
+        // k = R/r; petals ~ |k-1| or k+1 depending epi/hypo family in room.
+        let petals = (k - 1.0).abs().round().max(1.0) as i32;
+        Some(format!("k={k:.2}  petals~{petals}  roulettes"))
     }
 
     fn reveal(&self) -> &'static str {

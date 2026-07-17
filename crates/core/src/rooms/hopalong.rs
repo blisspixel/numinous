@@ -159,8 +159,39 @@ impl Room for Hopalong {
         if hands.is_empty() {
             return self.status(t);
         }
-        let (a, b, _c) = params(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE a={a:.3}  b={b:.3}"))
+        let (a, b, c) = params(t, hands.last().copied(), self.seed);
+        let mut x = 0.0_f64;
+        let mut y = 0.0_f64;
+        for _ in 0..80 {
+            let sign = if x >= 0.0 { 1.0 } else { -1.0 };
+            let nx = y - sign * (b * x - c).abs().sqrt();
+            let ny = a - x;
+            x = nx;
+            y = ny;
+            if !x.is_finite() || !y.is_finite() || x.abs() > 100.0 || y.abs() > 100.0 {
+                return Some(format!("a={a:.2} b={b:.2}  span=0  div"));
+            }
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        for _ in 0..600 {
+            let sign = if x >= 0.0 { 1.0 } else { -1.0 };
+            let nx = y - sign * (b * x - c).abs().sqrt();
+            let ny = a - x;
+            if !nx.is_finite() || !ny.is_finite() || nx.abs() > 100.0 || ny.abs() > 100.0 {
+                break;
+            }
+            x = nx;
+            y = ny;
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("a={a:.2} b={b:.2}  span={span:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -158,7 +158,9 @@ impl Room for Evolute {
             return self.status(t);
         }
         let e = ecc(t, hands.last().copied(), self.seed);
-        Some(format!("E={e:.3}  normals"))
+        // Ellipse evolute is a stretched astroid; cusp half-width ~ a e^2.
+        let cusp = e * e;
+        Some(format!("e={e:.2}  cusp~{cusp:.3}  normals"))
     }
 
     fn reveal(&self) -> &'static str {

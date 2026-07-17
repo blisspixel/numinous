@@ -165,8 +165,11 @@ impl Room for Kolakoski {
         if hands.is_empty() {
             return self.status(t);
         }
-        let n = length(t, hands.last().copied(), self.seed).round();
-        Some(format!("N={n:.0}  kolakoski"))
+        let n = length(t, hands.last().copied(), self.seed).round() as usize;
+        let seq = kolakoski(n);
+        let ones = seq.iter().filter(|&&v| v == 1).count();
+        let dens = ones as f64 / n.max(1) as f64;
+        Some(format!("n={n}  dens1={dens:.2}  kol"))
     }
 
     fn reveal(&self) -> &'static str {

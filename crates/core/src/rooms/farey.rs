@@ -174,7 +174,9 @@ impl Room for Farey {
         }
         let q = max_q(t, hands.last().copied());
         let n = farey(q).len();
-        Some(format!("Q={q}  fracs={n}"))
+        // |F_q| = 1 + sum_{k=1}^q phi(k); density ~ 3 q^2 / pi^2.
+        let dens = 3.0 * (q as f64).powi(2) / (std::f64::consts::PI * std::f64::consts::PI);
+        Some(format!("Q={q}  |F|={n}  ~{dens:.0}"))
     }
 
     fn reveal(&self) -> &'static str {

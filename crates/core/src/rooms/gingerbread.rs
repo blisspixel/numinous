@@ -183,8 +183,37 @@ impl Room for Gingerbread {
         if hands.is_empty() {
             return self.status(t);
         }
-        let (x, y) = start(t, hands.last().copied(), self.seed);
-        Some(format!("START ({x:.2},{y:.2})"))
+        let (x0, y0) = start(t, hands.last().copied(), self.seed);
+        let mut x = x0;
+        let mut y = y0;
+        for _ in 0..40 {
+            let nx = 1.0 - y + x.abs();
+            let ny = x;
+            x = nx;
+            y = ny;
+            if !x.is_finite() || !y.is_finite() || x.abs() > 30.0 || y.abs() > 30.0 {
+                return Some(format!("start=({x0:.1},{y0:.1})  span=0"));
+            }
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        for _ in 0..500 {
+            let nx = 1.0 - y + x.abs();
+            let ny = x;
+            if !nx.is_finite() || !ny.is_finite() || nx.abs() > 30.0 || ny.abs() > 30.0 {
+                break;
+            }
+            x = nx;
+            y = ny;
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("({x0:.1},{y0:.1})  span={span:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

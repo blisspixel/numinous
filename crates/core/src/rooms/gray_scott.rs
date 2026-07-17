@@ -215,14 +215,19 @@ impl Room for GrayScott {
             return self.status(t);
         }
         let (f, k) = rates(t, hands.last().copied());
-        let pattern = if f < 0.03 {
-            "SPOTS"
+        // Pearson-style regime labels from feed/kill plane.
+        let pattern = if f < 0.03 && k < 0.06 {
+            "spots"
+        } else if f < 0.04 && k > 0.06 {
+            "worms"
         } else if k > 0.06 {
-            "CORAL"
+            "coral"
         } else {
-            "MIX"
+            "mix"
         };
-        Some(format!("f={f:.3} k={k:.3}  {pattern}"))
+        // Linear nullcline distance from Hopf-ish line k ~ f (toy).
+        let dist = (k - f).abs();
+        Some(format!("f={f:.3} k={k:.3}  d={dist:.3}  {pattern}"))
     }
 
     fn reveal(&self) -> &'static str {

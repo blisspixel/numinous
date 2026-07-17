@@ -171,7 +171,8 @@ impl Room for CartesianOval {
             return self.status(t);
         }
         let m = weight(t, hands.last().copied(), self.seed);
-        Some(format!("M={m:.3}  cart oval"))
+        // m = n1/n2 refractive ratio for Cartesian oval.
+        Some(format!("m={m:.2}  n1/n2  oval"))
     }
 
     fn reveal(&self) -> &'static str {

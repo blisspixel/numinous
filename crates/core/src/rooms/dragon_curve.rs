@@ -196,8 +196,10 @@ impl Room for DragonCurve {
             return self.status(t);
         }
         let g = gens(t, hands.last().copied());
-        let n = dragon_turns(g).len();
-        Some(format!("FOLD n={g}  turns={n}"))
+        let turns = dragon_turns(g).len();
+        // Dragon Hausdorff dim is 2; segment count 2^g.
+        let segs = 1u64 << g.min(20);
+        Some(format!("g={g}  turns={turns}  segs={segs}"))
     }
 
     fn reveal(&self) -> &'static str {

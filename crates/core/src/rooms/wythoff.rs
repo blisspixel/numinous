@@ -144,8 +144,10 @@ impl Room for Wythoff {
         if hands.is_empty() {
             return self.status(t);
         }
-        let n = rows(t, hands.last().copied(), self.seed).round();
-        Some(format!("N={n:.0}  wythoff"))
+        let n = rows(t, hands.last().copied(), self.seed).round() as i32;
+        // Beatty pair floor(k phi), floor(k phi^2) partition.
+        let phi = (1.0 + 5.0_f64.sqrt()) / 2.0;
+        Some(format!("n={n}  phi={phi:.3}  Beatty"))
     }
 
     fn reveal(&self) -> &'static str {

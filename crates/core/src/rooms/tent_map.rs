@@ -196,8 +196,11 @@ impl Room for TentMap {
             return self.status(t);
         }
         let m = mu(t, hands.last().copied(), self.seed);
-        let chaos = if m > 1.0 { "CHAOS" } else { "ORDER" };
-        Some(format!("mu={m:.3}  {chaos}"))
+        // Lyapunov of tent: ln(mu) for mu in (1,2]; density support [0, mu/2].
+        let lyap = if m > 0.0 { m.ln() } else { 0.0 };
+        let peak = (m * 0.5).clamp(0.0, 1.0);
+        let chaos = if m > 1.0 { "chaos" } else { "order" };
+        Some(format!("mu={m:.2}  L={lyap:.2}  peak={peak:.2}  {chaos}"))
     }
 
     fn reveal(&self) -> &'static str {

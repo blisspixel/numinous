@@ -183,7 +183,10 @@ impl Room for SolidTorus {
             return self.status(t);
         }
         let p = phi(t, hands.last().copied(), self.seed);
-        Some(format!("PHI={p:.3}  solid"))
+        let deg =
+            (p.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU * 360.0).floor() as i32;
+        // Solid torus D2 x S1; longitude slice angle.
+        Some(format!("phi={deg}deg  D2xS1  solid"))
     }
 
     fn reveal(&self) -> &'static str {

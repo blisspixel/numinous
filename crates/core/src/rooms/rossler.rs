@@ -187,8 +187,48 @@ impl Room for Rossler {
         if hands.is_empty() {
             return self.status(t);
         }
-        let (a, _b, c) = params(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE a={a:.3}  c={c:.2}"))
+        let (a, b, c) = params(t, hands.last().copied(), self.seed);
+        let mut x = 0.1_f64;
+        let mut y = 0.0_f64;
+        let mut z = 0.0_f64;
+        for _ in 0..80 {
+            let dx = -y - z;
+            let dy = x + a * y;
+            let dz = b + z * (x - c);
+            x += DT * dx;
+            y += DT * dy;
+            z += DT * dz;
+            if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+                return Some(format!("a={a:.2} c={c:.1}  span=0  div"));
+            }
+            if x.abs() > 100.0 || y.abs() > 100.0 || z.abs() > 100.0 {
+                return Some(format!("a={a:.2} c={c:.1}  span=0  div"));
+            }
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        for _ in 0..800 {
+            let dx = -y - z;
+            let dy = x + a * y;
+            let dz = b + z * (x - c);
+            x += DT * dx;
+            y += DT * dy;
+            z += DT * dz;
+            if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+                break;
+            }
+            if x.abs() > 100.0 || y.abs() > 100.0 || z.abs() > 100.0 {
+                break;
+            }
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("a={a:.2} c={c:.1}  span={span:.1}"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -158,8 +158,14 @@ impl Room for Paperfold {
             return self.status(t);
         }
         let n = length(t, hands.last().copied(), self.seed).round() as u32;
-        let b = paperfold_bit(n.max(1));
-        Some(format!("N={n}  bit={b}"))
+        let n = n.max(1);
+        let b = paperfold_bit(n);
+        // Dragon/paperfold: fold bit is the ruler-like sequence; count 1s up to n.
+        let mut ones = 0u32;
+        for i in 1..=n.min(256) {
+            ones += u32::from(paperfold_bit(i));
+        }
+        Some(format!("n={n}  bit={b}  ones<={ones}"))
     }
 
     fn reveal(&self) -> &'static str {

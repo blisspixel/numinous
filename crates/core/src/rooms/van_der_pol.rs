@@ -194,7 +194,33 @@ impl Room for VanDerPol {
             .last()
             .map(|&(x, y)| ((x - 0.5) * 4.0, (0.5 - y) * 4.0))
             .unwrap_or((0.1, 0.0));
-        Some(format!("mu={m:.2}  start=({x0:.1},{y0:.1})"))
+        let mut x = x0;
+        let mut y = y0;
+        // Burn toward limit cycle, then measure x amplitude band.
+        for _ in 0..400 {
+            let dy = m * (1.0 - x * x) * y - x;
+            let dx = y;
+            x += DT * dx;
+            y += DT * dy;
+            if !x.is_finite() || !y.is_finite() || x.abs() > 50.0 || y.abs() > 50.0 {
+                return Some(format!("mu={m:.2}  amp=0  div"));
+            }
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        for _ in 0..800 {
+            let dy = m * (1.0 - x * x) * y - x;
+            let dx = y;
+            x += DT * dx;
+            y += DT * dy;
+            if !x.is_finite() || !y.is_finite() || x.abs() > 50.0 {
+                break;
+            }
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+        }
+        let amp = ((max_x - min_x) * 0.5).max(0.0);
+        Some(format!("mu={m:.2}  amp={amp:.2}  cycle"))
     }
 
     fn reveal(&self) -> &'static str {

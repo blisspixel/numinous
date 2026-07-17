@@ -153,7 +153,14 @@ impl Room for Hippopede {
             return self.status(t);
         }
         let k = ecc(t, hands.last().copied(), self.seed);
-        Some(format!("B={k:.3}  hippopede"))
+        let shape = if k < 0.85 {
+            "oval"
+        } else if k < 1.15 {
+            "eight"
+        } else {
+            "wide"
+        };
+        Some(format!("k={k:.2}  {shape}"))
     }
 
     fn reveal(&self) -> &'static str {

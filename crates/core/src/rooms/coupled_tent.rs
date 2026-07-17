@@ -156,8 +156,38 @@ impl Room for CoupledTent {
             return self.status(t);
         }
         let e = coupling(t, hands.last().copied(), self.seed);
-        let label = if e > 0.25 { "SYNC?" } else { "FREE?" };
-        Some(format!("eps={e:.3}  {label}"))
+        let mut x = if self.seed == 0 {
+            0.2
+        } else {
+            0.1 + (self.seed % 30) as f64 * 0.01
+        };
+        let mut y = 0.7_f64;
+        // Burn-in then mean |x-y| as a sync residual.
+        for _ in 0..80 {
+            let nx = (1.0 - e) * tent(x) + e * tent(y);
+            let ny = (1.0 - e) * tent(y) + e * tent(x);
+            x = nx.clamp(0.0, 1.0);
+            y = ny.clamp(0.0, 1.0);
+        }
+        let mut sum = 0.0_f64;
+        let mut n = 0usize;
+        for _ in 0..200 {
+            let nx = (1.0 - e) * tent(x) + e * tent(y);
+            let ny = (1.0 - e) * tent(y) + e * tent(x);
+            x = nx.clamp(0.0, 1.0);
+            y = ny.clamp(0.0, 1.0);
+            sum += (x - y).abs();
+            n += 1;
+        }
+        let mean_d = if n > 0 { sum / n as f64 } else { 0.0 };
+        let label = if mean_d < 0.05 {
+            "sync"
+        } else if mean_d < 0.2 {
+            "near"
+        } else {
+            "free"
+        };
+        Some(format!("eps={e:.2}  |x-y|={mean_d:.3}  {label}"))
     }
 
     fn reveal(&self) -> &'static str {

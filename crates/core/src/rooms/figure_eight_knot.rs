@@ -156,8 +156,11 @@ impl Room for FigureEightKnot {
         if hands.is_empty() {
             return self.status(t);
         }
-        let p = phase(t, hands.last().copied(), self.seed);
-        Some(format!("P={p:.3}  fig8"))
+        let th = phase(t, hands.last().copied(), self.seed);
+        let deg =
+            (th.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU * 360.0).floor() as i32;
+        // Figure-eight: 4 crossings, hyperbolic volume ~ 2.029.
+        Some(format!("th={deg}deg  cr=4  vol~2.03"))
     }
 
     fn reveal(&self) -> &'static str {

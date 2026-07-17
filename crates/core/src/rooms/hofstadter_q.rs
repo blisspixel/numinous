@@ -154,7 +154,13 @@ impl Room for HofstadterQ {
         let n = length(t, hands.last().copied());
         let q = q_seq(n);
         let last = q[n];
-        Some(format!("LEN={n}  Q(n)={last}"))
+        // Mean of first n terms vs n/2 (meta-Fibonacci chaos).
+        let mean = if n > 0 {
+            q[1..=n].iter().map(|&v| v as f64).sum::<f64>() / n as f64
+        } else {
+            0.0
+        };
+        Some(format!("n={n}  Q={last}  mean={mean:.1}"))
     }
 
     fn reveal(&self) -> &'static str {

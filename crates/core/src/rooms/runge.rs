@@ -178,7 +178,13 @@ impl Room for Runge {
             return self.status(t);
         }
         let d = degree(t, hands.last().copied(), self.seed);
-        Some(format!("N={:.0}  runge", d.round()))
+        let n = d.round().clamp(2.0, 14.0) as usize;
+        let mut err = 0.0_f64;
+        for i in 0..48 {
+            let x = -1.0 + 2.0 * (i as f64) / 47.0;
+            err = err.max((lagrange(x, n) - runge_f(x)).abs());
+        }
+        Some(format!("n={n}  max|e|={err:.2}  Runge"))
     }
 
     fn reveal(&self) -> &'static str {

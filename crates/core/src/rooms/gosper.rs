@@ -226,7 +226,9 @@ impl Room for Gosper {
         }
         let o = order(t, hands.last().copied());
         let n = path(o, self.seed).len();
-        Some(format!("ORDER={o}  pts={n}"))
+        // Flowsnake: 7-fold replacement, dim = log7/log(sqrt7) = 2.
+        let tiles = 7u64.saturating_pow(o as u32);
+        Some(format!("o={o}  pts={n}  tiles={tiles}"))
     }
 
     fn reveal(&self) -> &'static str {

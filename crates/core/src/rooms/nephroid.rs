@@ -144,7 +144,10 @@ impl Room for Nephroid {
             return self.status(t);
         }
         let a = scale(t, hands.last().copied(), self.seed);
-        Some(format!("SCALE a={a:.3}  2 cusps"))
+        // Nephroid: 2-cusped epicycloid; perimeter 24a, area 12 pi a^2.
+        let perim = 24.0 * a;
+        let area = 12.0 * std::f64::consts::PI * a * a;
+        Some(format!("a={a:.2}  P={perim:.1}  A={area:.1}"))
     }
 
     fn reveal(&self) -> &'static str {

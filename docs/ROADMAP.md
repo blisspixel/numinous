@@ -179,8 +179,15 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   Reuleaux, Log Spiral, Hypotrochoid, Poisson, Diffraction, Dual Cobweb, Folium,
   Tautochrone, Catenoid, Conchoid, Piriform, Kappa, Three Scroll,
   Rabinovich-Fabrikant (shape class, areas, pitch, cusps, E[N], sinc zeros,
-  logistic band, loop area, bead gap, neck, spans). Subjective participant
-  evidence and the stranger hallway remain open.
+  logistic band, loop area, bead gap, neck, spans).
+  **Cycles 114-115 bulk consequence depth:** 51 further rooms (curves, knots,
+  surfaces, maps, fractals, special functions, escape portraits) report measured
+  domain status after poke.
+  **Cycles 116-117 exceptional consequence depth:** 49 rooms with domain-true
+  measures (attractor spans after burn-in, tent Lyapunov, sync residual, limit
+  cycle amp, KAM flip rate, Julia fill fraction, classical areas and pitch,
+  knot crossings and volume, Onsager M, SIR attack size, Foucault period).
+  Subjective participant evidence and the stranger hallway remain open.
 - **Done (Share short-loop export, machine path):** App key L exports a
   24-frame looping APNG of the current visit (phase sweep, or Life generation
   advance) with the same poke trail and Visual Era as P-key still postcards.

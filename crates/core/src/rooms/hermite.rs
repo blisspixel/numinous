@@ -169,8 +169,13 @@ impl Room for Hermite {
         if hands.is_empty() {
             return self.status(t);
         }
-        let n = level(t, hands.last().copied(), self.seed).round();
-        Some(format!("N={n:.0}  hermite"))
+        let n = level(t, hands.last().copied(), self.seed)
+            .round()
+            .clamp(0.0, 10.0) as usize;
+        // Quantum HO: E_n = n + 1/2 (hbar omega units).
+        let e = n as f64 + 0.5;
+        let nodes = n;
+        Some(format!("n={n}  E={e:.1}  nodes={nodes}"))
     }
 
     fn reveal(&self) -> &'static str {

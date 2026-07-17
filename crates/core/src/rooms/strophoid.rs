@@ -155,7 +155,9 @@ impl Room for Strophoid {
             return self.status(t);
         }
         let a = scale(t, hands.last().copied(), self.seed);
-        Some(format!("SCALE a={a:.3}  loop"))
+        // Right strophoid loop area 2a^2 - pi a^2 / 2.
+        let loop_a = 2.0 * a * a - 0.5 * std::f64::consts::PI * a * a;
+        Some(format!("a={a:.2}  loopA={loop_a:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -158,7 +158,8 @@ impl Room for HopfLink {
             return self.status(t);
         }
         let p = angle(t, hands.last().copied(), self.seed);
-        Some(format!("PHI={p:.3}  hopf"))
+        let deg = (p.rem_euclid(1.0) * 360.0).floor() as i32;
+        Some(format!("ph={deg}deg  Lk=1  hopf"))
     }
 
     fn reveal(&self) -> &'static str {

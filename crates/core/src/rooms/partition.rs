@@ -149,7 +149,18 @@ impl Room for Partition {
         let n = n_param(t, hands.last().copied(), self.seed).round() as usize;
         let p = partitions_up_to(n);
         let v = p.last().copied().unwrap_or(0);
-        Some(format!("N={n}  p={v}"))
+        // Growth ratio p(n)/p(n-1) when available.
+        let growth = if p.len() >= 2 {
+            let prev = p[p.len() - 2];
+            if prev > 0 {
+                v as f64 / prev as f64
+            } else {
+                0.0
+            }
+        } else {
+            1.0
+        };
+        Some(format!("n={n}  p={v}  grow={growth:.2}"))
     }
 
     fn reveal(&self) -> &'static str {
