@@ -186,6 +186,9 @@ impl Room for Halvorsen {
             x += DT * dx;
             y += DT * dy;
             z += DT * dz;
+            if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+                return Some(format!("a={a:.2}  span=div"));
+            }
         }
         let mut min_x = x;
         let mut max_x = x;
@@ -198,7 +201,7 @@ impl Room for Halvorsen {
             x += DT * dx;
             y += DT * dy;
             z += DT * dz;
-            if !x.is_finite() || !y.is_finite() {
+            if !x.is_finite() || !y.is_finite() || !z.is_finite() {
                 break;
             }
             min_x = min_x.min(x);

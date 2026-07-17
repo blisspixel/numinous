@@ -150,12 +150,12 @@ impl Room for Zipf {
             } else {
                 (self.seed % 10) as i32
             };
+        // Zipf over 1..n: rank-1 mass is 1 / Z because 1^{-s} = 1.
         let mut z = 0.0_f64;
         for k in 1..=n {
             z += (k as f64).powf(-s);
         }
-        let p1 = (1.0_f64).powf(-s) / z;
-        let p1_pct = (p1 * 100.0).round() as i32;
+        let p1_pct = ((1.0 / z.max(1e-12)) * 100.0).round() as i32;
         Some(format!("s={s:.2}  P1={p1_pct}%  n={n}"))
     }
 

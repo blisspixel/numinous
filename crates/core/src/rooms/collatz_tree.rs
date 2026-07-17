@@ -178,7 +178,7 @@ impl Room for CollatzTree {
             return self.status(t);
         }
         let (r, d) = params(t, hands.last().copied());
-        // Inverse-Collatz BFS size (same bounds as draw: cap next at 200).
+        // Inverse-Collatz BFS size (match draw: stop filling next past 200).
         let mut layer = vec![r];
         let mut nodes = 1u32;
         for _ in 0..d {
@@ -188,13 +188,13 @@ impl Room for CollatzTree {
                     if a > 10_000 {
                         continue;
                     }
-                    next.push(a);
-                    nodes += 1;
-                    if next.len() > 200 {
+                    if next.len() >= 200 {
                         break;
                     }
+                    next.push(a);
+                    nodes += 1;
                 }
-                if next.len() > 200 {
+                if next.len() >= 200 {
                     break;
                 }
             }

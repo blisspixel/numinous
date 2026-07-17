@@ -191,9 +191,10 @@ impl Room for CircularCaustic {
             return self.status(t);
         }
         let a = angle(t, hands.last().copied(), self.seed);
-        let deg = a.to_degrees().rem_euclid(180.0);
+        // Floor into [0, 180) so rounding never prints 180 after mod 180.
+        let deg = a.to_degrees().rem_euclid(180.0).floor() as i32;
         // Circle reflection caustic is a nephroid (2-cusped epicycloid).
-        Some(format!("ang={deg:.0}deg  nephroid  36rays"))
+        Some(format!("ang={deg}deg  nephroid  36rays"))
     }
 
     fn reveal(&self) -> &'static str {
