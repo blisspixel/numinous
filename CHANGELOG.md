@@ -6,6 +6,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- A release-profile App performance harness now measures the five 0.3
+  flagships across geometry, chaos, emergence, chance, and creation. It reports
+  ambient-raster and accepted-input-to-room-raster p50, p95, and maximum time
+  at a declared viewport and sample count. The explicit reference-machine gate
+  fails above a 33 ms p95 budget, rejects hostile arguments, and checks that
+  every measured path produces visible output. Wrapper scripts provide the
+  same locked command on Windows, macOS, and Linux. The report explicitly
+  excludes native event translation and history storage, window presentation,
+  display scan-out, audio submission and callbacks, and human perception rather
+  than mislabeling a headless duration as end-to-end latency.
 - The Conjecture Mill joins the Number & Pattern wing as room 351. Its finite
   typed grammar enumerates primitive rational quadratic formulas against six
   observed integer sequences. Every wrong candidate exposes an exact

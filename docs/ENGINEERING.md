@@ -76,9 +76,10 @@ beta and is not a release baseline.
   matrix's structural-oracle regressions. Consider `cargo-nextest` only when
   measured CI time justifies another tool.
 - **Layers enforced now:** unit and integration tests, deterministic fixtures,
-  direct invariants, hostile-input tests, and end-to-end stdio coverage.
-  Property-test, snapshot, GPU-golden, and benchmark harnesses are roadmap work
-  until their dependencies and workflows exist in the repository.
+  direct invariants, hostile-input tests, end-to-end stdio coverage, and one
+  release-profile performance harness for the five 0.3 flagships. Broader
+  property-test, snapshot, GPU-golden, and nightly benchmark systems remain
+  roadmap work until their dependencies and workflows exist in the repository.
 - **Determinism is mandatory:** seeded RNG only, never ambient randomness or wall-clock time in logic; same seed, same result (so shares and tests reproduce exactly).
 - **Coverage** is tracked with `cargo-llvm-cov` and read as a *smell detector*, not a target. The real metric is meaningful assertions on real behavior, not a percentage. We do not write tests to move a number.
 
@@ -86,9 +87,11 @@ beta and is not a release baseline.
 
 - **Measure before optimizing.** Use focused timings or `criterion` benchmarks
   on hot paths. The app currently enforces an adaptive 33 ms room-render target
-  on the measured Windows machine; broader CI performance and soak budgets are
-  planned in `QUALITY.md`. No optimization lands without evidence that it
-  helped.
+  on the measured Windows machine. `scripts/flagship-perf.ps1` and
+  `scripts/flagship-perf.sh` enforce that p95 target for five category flagships
+  when run on declared reference hardware; broader CI performance and soak
+  budgets are planned in `QUALITY.md`. No optimization lands without evidence
+  that it helped.
 - **Documented release profile** (LTO, `codegen-units`, panic strategy, opt-level) with the reasoning; a `bench`/`profiling` profile for flamegraphs.
 - Prefer clear code that the compiler optimizes well over hand-rolled cleverness; reach for `unsafe`/SIMD only with a benchmark that justifies it, behind the unsafe policy above.
 
