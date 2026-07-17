@@ -5256,6 +5256,62 @@ mod tests {
     }
 
     #[test]
+    fn sonify_replays_the_selected_galton_coin_across_input_forms() {
+        let dir = std::env::temp_dir();
+        let left = dir.join("numinous_cli_galton_left.wav");
+        let fair = dir.join("numinous_cli_galton_fair.wav");
+        let gesture_path = dir.join("numinous_cli_galton_gesture.wav");
+        let left_points = [(0.1, 0.5)];
+        let fair_points = [(0.5, 0.5)];
+        let gesture = [numinous_core::RoomInput::PointerDown {
+            x: 0.1,
+            y: 0.5,
+            t: 0.4,
+        }];
+
+        let report = super::sonify_wav(
+            "galton-board",
+            0.4,
+            &left,
+            false,
+            RoomRenderInput::new(0, &left_points),
+        )
+        .expect("left coin sound");
+        super::sonify_wav(
+            "galton-board",
+            0.4,
+            &fair,
+            false,
+            RoomRenderInput::new(0, &fair_points),
+        )
+        .expect("fair coin sound");
+        super::sonify_wav(
+            "galton-board",
+            0.4,
+            &gesture_path,
+            false,
+            RoomRenderInput::with_gesture(0, &gesture),
+        )
+        .expect("gesture coin sound");
+
+        assert!(report.contains("Status: P.30 1x64=64"));
+        let left_audio = std::fs::read(&left).expect("left WAV");
+        assert_ne!(
+            left_audio,
+            std::fs::read(&fair).expect("fair WAV"),
+            "different selected probabilities must produce different audio"
+        );
+        assert_eq!(
+            left_audio,
+            std::fs::read(&gesture_path).expect("gesture WAV"),
+            "a compact poke and equivalent gesture must sonify identically"
+        );
+        let _ = std::fs::remove_file(left);
+        let _ = std::fs::remove_file(fair);
+        let _ = std::fs::remove_file(gesture_path);
+    }
+
+    #[test]
     fn sonify_parses_replay_input_and_rejects_invalid_or_mixed_forms() {
         let cli = Cli::try_parse_from([
             "numinous",

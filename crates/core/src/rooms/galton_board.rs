@@ -7,6 +7,7 @@
 
 use crate::rng::SplitMix64;
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::sound::ParametricSound;
 use crate::surface::{MAX_DIM, Surface};
 
 /// Fixed seed so the pile reproduces exactly (determinism, see `docs/QUALITY.md`).
@@ -40,6 +41,10 @@ fn drawing_dims(canvas: &dyn Surface) -> Option<(usize, usize)> {
 /// probability within a run is part of the binomial model, not presentation.
 const COIN_PROBABILITIES: [f64; 5] = [0.30, 0.40, 0.50, 0.60, 0.70];
 const COIN_LABELS: [&str; 5] = [".3", ".4", ".5", ".6", ".7"];
+/// C, D, E, G, A: one ordered major-pentatonic root for each fixed coin.
+const COIN_ROOT_STEPS: [i32; 5] = [0, 2, 4, 7, 9];
+const VOICE_ROOT_HZ: f32 = 130.81;
+const VOICE_GAIN: f32 = 0.04;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct DropWave {
@@ -103,6 +108,16 @@ fn selected_run(waves: &[DropWave]) -> Option<(usize, usize)> {
         .take_while(|wave| wave.coin == selected)
         .count();
     Some((selected, wave_count))
+}
+
+fn probability_voice(coin: usize) -> ParametricSound {
+    let coin = coin.min(COIN_PROBABILITIES.len() - 1);
+    let p = COIN_PROBABILITIES[coin];
+    let q = 1.0 - p;
+    let root_hz = crate::chiptune::pitch(VOICE_ROOT_HZ, COIN_ROOT_STEPS[coin]);
+    let odds = (p.max(q) / p.min(q)) as f32;
+    ParametricSound::new(root_hz, odds, VOICE_GAIN)
+        .expect("fixed Galton probabilities make a valid voice")
 }
 
 /// The Galton Board room.
@@ -431,6 +446,12 @@ impl Room for GaltonBoard {
                 "P{probability} {wave_count}x64={balls} M{mean:.1}~{expected:.1} L{rights}R{grade}"
             ))
         }
+    }
+
+    fn parameter_sound(&self, _t: f64, inputs: &[RoomInput]) -> Option<ParametricSound> {
+        let waves = drop_waves_from_inputs(inputs);
+        let (coin, _) = selected_run(&waves)?;
+        Some(probability_voice(coin))
     }
 
     fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
@@ -1060,5 +1081,57 @@ mod tests {
         assert!(spec.notes.len() > 1, "a phrase, not a blip");
         // The notes are staggered in time, a phrase and not a chord.
         assert!(spec.notes[1].start > spec.notes[0].start);
+    }
+
+    #[test]
+    fn selected_coin_sonifies_ordered_roots_and_exact_bias_odds() {
+        let room = GaltonBoard::new();
+        let mut roots = Vec::new();
+        let expected_ratios = [7.0 / 3.0, 3.0 / 2.0, 1.0, 3.0 / 2.0, 7.0 / 3.0];
+
+        for (x, expected_ratio) in [0.1, 0.3, 0.5, 0.7, 0.9].into_iter().zip(expected_ratios) {
+            let inputs = crate::room::inputs_from_pokes(&[(x, 0.5)], 0.4);
+            let voice = room
+                .parameter_sound(0.4, &inputs)
+                .expect("a dropped wave has a probability voice");
+            roots.push(voice.root_hz());
+            assert_eq!(voice.ratio(), expected_ratio);
+            assert_eq!(voice.gain(), 0.04);
+
+            let snapshot = room.sound_input(0.4, &inputs);
+            assert_eq!(snapshot.notes.len(), 2);
+            assert_eq!(snapshot.notes[0].freq, voice.root_hz());
+            assert_eq!(snapshot.notes[1].freq, voice.root_hz() * voice.ratio());
+        }
+
+        assert!(roots.windows(2).all(|pair| pair[0] < pair[1]));
+    }
+
+    #[test]
+    fn no_accepted_drop_has_no_parameter_voice() {
+        let room = GaltonBoard::new();
+        assert!(room.parameter_sound(0.4, &[]).is_none());
+        assert!(
+            room.parameter_sound(
+                0.4,
+                &[crate::room::RoomInput::PointerMove {
+                    x: 0.8,
+                    y: 0.5,
+                    t: 0.4,
+                }],
+            )
+            .is_none()
+        );
+        assert!(
+            room.parameter_sound(
+                0.4,
+                &[crate::room::RoomInput::PointerDown {
+                    x: f64::NAN,
+                    y: 0.5,
+                    t: 0.4,
+                }],
+            )
+            .is_none()
+        );
     }
 }

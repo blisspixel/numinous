@@ -3119,6 +3119,41 @@ mod tests {
     }
 
     #[test]
+    fn galton_coin_selection_reaches_the_room_score_voice() {
+        let app = headless("numinous_app_test_galton_voice.txt");
+        let room = app
+            .rooms
+            .iter()
+            .find(|room| room.meta().id == "galton-board")
+            .expect("Galton Board room");
+        let input = |x| [numinous_core::RoomInput::PointerDown { x, y: 0.5, t: 0.4 }];
+        let left = input(0.1);
+        let fair = input(0.5);
+        let right = input(0.9);
+
+        let select = |inputs: &[numinous_core::RoomInput]| {
+            selected_parameter_sound(
+                AudioProgram::RoomScore,
+                false,
+                room.as_ref(),
+                0.4,
+                inputs,
+                false,
+            )
+            .expect("selected coin voice")
+        };
+        let left = select(&left);
+        let fair = select(&fair);
+        let right = select(&right);
+
+        assert!(left.root_hz() < fair.root_hz());
+        assert!(fair.root_hz() < right.root_hz());
+        assert_eq!(left.ratio(), 7.0 / 3.0);
+        assert_eq!(fair.ratio(), 1.0);
+        assert_eq!(right.ratio(), 7.0 / 3.0);
+    }
+
+    #[test]
     fn the_show_sweeps_the_times_tables_voice_without_retained_hand_input() {
         let app = headless("numinous_app_test_times_show_voice.txt");
         let room = app

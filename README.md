@@ -177,8 +177,8 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 2,768 passing all-target test cases plus one ignored
-screenshot diagnostic, 95.24% region coverage and 95.29% line coverage with an
+The current local gate has 2,773 passing all-target test cases plus one ignored
+screenshot diagnostic, 95.26% region coverage and 95.30% line coverage with an
 enforced 80% line floor, Clippy with warnings denied, and dependency policy
 checks. Release QA also regenerates an exact
 2,909-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact

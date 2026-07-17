@@ -28,14 +28,17 @@ audio source is no longer rebuilt from render-loop cadence. Native device rates 
 are covered by pitch and duration tests. Built-in radio remains the sole source
 while tuned.
 
-Times Tables is the first shipped continuous input-sonification seam. Its
-stable room arrangement remains the bed while a quiet two-oscillator voice
-follows the accepted multiplier. Frequency and ratio targets smooth over 40
-milliseconds inside the callback, oscillator phases persist, invalid targets
-fade closed, and source playhead continuity is tested. At integer K, the upper
-voice uses the exact ratio `k:(k-1)`, so the visual closure and audible
-consonance are one state. CLI `sonify` and MCP `listen_room` accept the same
-bounded pokes or gestures and render a deterministic snapshot of that state.
+Times Tables and Galton Board ship continuous input-sonification through one
+bounded seam. Their stable room arrangements remain the bed while a quiet
+two-oscillator voice follows accepted mathematical input. Frequency and ratio
+targets smooth over 40 milliseconds inside the callback, oscillator phases
+persist, invalid targets fade closed, and source playhead continuity is tested.
+At integer K, Times Tables uses the exact ratio `k:(k-1)`, so visual closure and
+audible consonance are one state. Galton maps the five fixed coins to ordered C
+major-pentatonic roots and maps bias strength to the exact larger-to-smaller
+Bernoulli odds ratio: 7:3, 3:2, 1:1, 3:2, or 7:3. CLI `sonify` and MCP
+`listen_room` accept the same bounded pokes or gestures and render a
+deterministic snapshot of either state.
 CLI `sonify --layer room-bed` separately exports a deterministic PCM16
 projection of the stable 16 kHz stereo App source, while MCP
 `listen_room.ambient_bed` exposes its arrangement summary
@@ -110,7 +113,11 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 - **Prime Spirals:** scanning the spiral, each prime is an onset, an irregular-but-clearly-not-random rhythm you can *hear* has structure. Euclidean-rhythm relatives (see `MUSIC.md`) tie it to danceable time.
 - **Collatz:** up-steps (3n+1) raise pitch, down-steps (n/2) lower it, so each starting number plays its own unpredictable little melody that always resolves home to 1.
 - **Golden Angle:** each seed plinks; the golden angle yields an evenly-spaced, satisfying rhythm, and detuning the angle makes the rhythm stumble and the tones beat.
-- **Galton Board:** balls tick on pegs like a rain-stick or bucket-drum; the growing pile swells a soft pad; the bell curve has a *sound* as well as a shape.
+- **Galton Board:** the shipped first layer maps the selected five coins to
+  ordered C major-pentatonic roots and exact symmetric bias-odds intervals.
+  Planned layers let balls tick on pegs like a rain-stick or bucket drum and
+  let the growing pile swell a soft pad, so the distribution gains a texture
+  as well as a shape.
 - **Buffon's Needle:** each needle ticks, every line-crossing rings a bell, and the ensemble's pitch bends toward "in tune" as the running estimate converges on pi.
 - **4D Objects:** the fourth-axis rotation drives a Shepard tone, a pitch that seems to rise forever, an *audible* impossible direction to match the visual one.
 - **Sizes of Infinity:** countable sets play as a steady, listable pulse; the uncountable diagonal is a tone that slips endlessly between the notes and never lands.
@@ -122,9 +129,9 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 
 ## Interaction & UI sound
 
-- **Touch has a voice, partially built.** Times Tables ships the first
-  persistent input-audio path. Tuned ticks and equivalent continuous voices in
-  other rooms remain planned.
+- **Touch has a voice, partially built.** Times Tables and Galton Board ship
+  persistent input-audio paths through the smoothed parameter voice. Tuned
+  event ticks and equivalent mathematical voices in other rooms remain planned.
 - **Transitions are washes.** Room-to-room dissolves carry a reverb wash through black, matching the visual cross-dissolve (see `VISUALS.md`).
 - **Reveal has a resolution.** Summoning a Revelation card lands on a small, satisfying harmonic resolution, the sonic version of the floor tilting.
 
