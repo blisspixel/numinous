@@ -112,7 +112,7 @@ is in [`docs/MUSIC.md`](docs/MUSIC.md) and [`docs/STUDIO.md`](docs/STUDIO.md).
 Numinous is **version 0.2.0-alpha.1**, actively earning the 0.2 Flagship Proof
 gate. It is not on the old 0.1 line: the 0.1 Public Foundation is complete.
 Numinous already has a headless core, a
-windowed app, a full CLI, an MCP server, GPU and audio adapters, 350 catalog
+windowed app, a full CLI, an MCP server, GPU and audio adapters, 351 catalog
 rooms plus hidden content, games, progression, a Studio foundation, and the
 built-in soundtrack. Mouse, keyboard, and hotplugged controllers share the
 native App, including a controller-driven virtual hand for every room. The
@@ -152,6 +152,11 @@ The separate `JOURNEY LV` label is accumulated local-profile progress, never a
 room difficulty rating. Cult of Pi now opens on the canonical `3.14159...`
 prefix and explains its finite-channel premise through visible faults and
 bounded exact patches that the player can restore and hold.
+The Conjecture Mill turns a blackboard into a deterministic search laboratory:
+typed formulas are tested against observed integer sequences, bad guesses are
+erased by exact counterexamples, and `PROVED` appears only when rational
+coefficients establish the identity for every integer. Dragging steers the
+sequence and complete search order without changing the truth predicate.
 Times Tables now opens on its K=2 cardioid and waits for a hand instead of
 sweeping the discovery away. Its resolution-aware chords keep terminal
 negative space, a spectral five-ink field and visible dial make the state
@@ -172,14 +177,14 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 2,730 passing all-target test cases, 95.25% region
-coverage and 95.29% line coverage with an enforced 80% line floor, Clippy with warnings
+The current local gate has 2,743 passing all-target test cases, 95.25% region
+coverage and 95.30% line coverage with an enforced 80% line floor, Clippy with warnings
 denied, and dependency policy checks. Release QA also regenerates an exact
-2,901-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
+2,909-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
 room receipts, per-room interaction scenarios, semantic checks, and coarse
 perceptual response thresholds, including a regression that rejects
 four isolated corner markers as a meaningful interaction. The inventory is
-derived from all 350 registered rooms, and scenarios follow each room's declared
+derived from all 351 registered rooms, and scenarios follow each room's declared
 interaction verb. QA evaluates the room's mathematical consequence separately
 from the App's latest-gesture trail and reticle. An optional aggregate diagnostic
 reports all catalog failures in one run. Fourteen compact

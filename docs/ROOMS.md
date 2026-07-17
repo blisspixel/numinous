@@ -2,7 +2,7 @@
 
 The content catalog: the phenomena Numinous is built from. Each **room** is one playable mathematical object. Rooms are grouped into **Wings** by feeling, not by curriculum.
 
-**Current status (as of 2026-07):** 350 catalog rooms across the wings plus
+**Current status (as of 2026-07):** 351 catalog rooms across the wings plus
 hidden content. Per-visit variation seed is threaded through registry/app/CLI/
 MCP; every catalog room uses it for replay novelty, while hidden content stays
 outside the catalog replay contract. Every catalog room has `verb()` +
@@ -191,6 +191,33 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 - **Sound:** 3, 1, 4, 1, 5, 9, 2, 6, 5, 3 becomes a slow decimal procession. As the field changes, its tuning drifts without losing finite, playable notes.
 - **Implementation:** `crates/core/src/rooms/cult_of_pi.rs`. Exact-prefix, replay, interaction, hostile-surface, sound, and history-boundary tests ship with the room.
 
+### 17.5. The Conjecture Mill  Wow 4 / Build 2  [x]
+
+- **Rule:** Enumerate a finite typed language of primitive rational quadratic
+  formulas. Test each candidate against an observed integer sequence. One exact
+  counterexample refutes a guess; only coefficient equality proves an identity.
+- **Toy:** A blackboard keeps writing formulas, testing values, crossing out
+  failures, and preserving the best survivor. Time advances a complete search.
+  Dragging across the board chooses one of six sequence laboratories and changes
+  the full search permutation, so the hand supplies replayable instinct without
+  changing the data or verifier.
+- **Aha:** Stay until the chalk stamp changes from a long survivor to `PROVED`.
+  The visible reason is not "many tests passed". The normalized rational
+  coefficients match, so the two quadratic polynomials agree for every integer.
+- **Reveal:** *"Infinite random typing can eventually contain any finite
+  sentence, but mathematics needs a language and a judge. Counterexamples erase
+  bad guesses. Proof is a different act. Your hand changes where the search
+  looks first, never what is true."*
+- **Sound:** each proposal climbs; each counterexample cuts the phrase down; a
+  coefficient proof reaches the octave the guesses kept missing.
+- **Honesty boundary:** this is a finite theory-formation toy, not a research
+  system and not a claim of novelty. A frontier version would need a formal proof
+  checker, literature and novelty review, exportable artifacts, and expert human
+  scrutiny before calling any output new mathematics.
+- **Implementation:** `crates/core/src/rooms/conjecture_mill.rs`. Complete-grammar
+  permutation, proof separation, exact-witness, hostile-input, replay, variation,
+  compact-layout, registry, and catalog visual-oracle tests ship with the room.
+
 ---
 
 ## Wing V: Shape & Space
@@ -268,7 +295,7 @@ you are not told it), and **the kid principle** (the play carries itself even
 if the concept never consciously lands). If an idea cannot pass both, it does
 not ship, however important the syllabus thinks it is.
 
-**Current interaction inventory (2026-07):** 350 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, RESTORE AND HOLD A PATCH in Cult of Pi, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
+**Current interaction inventory (2026-07):** 351 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, RESTORE AND HOLD A PATCH in Cult of Pi, STEER THE SEARCH in the Conjecture Mill, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
 
 **Interaction update, 2026-07-13:** the verb inventory above records the first
 complete poke substrate. The current contract also includes `render_input` and
@@ -853,7 +880,7 @@ edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
 
 ### What we already have (feel, not curriculum)
 
-**Built now (350 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+**Built now (351 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
 Julia, Cult of Pi, Life and Cellular Automata and Langton and Rule 30, The
 Sandpile, The First Rain, The Magnet, Phantom Jam, Chaos Game, Golden Angle,
 Galton and Buffon, Lissajous, Chladni Figures, Ripple Tank, The Coffee Cup,
@@ -862,7 +889,8 @@ Fall, Audioactive Decay, Harmonograph, Epicycles, L-System and Barnsley, Lorenz
 and Henon and Double Pendulum and Logistic Map, Collatz, Prime Spirals and Ulam
 Spiral, Goldbach, Voronoi, Random Walk, Arecibo, Mobius, Zeno, The Pour, Slope
 Rider, Quine, Strange Loop, Penrose, Continued Fractions, Logistic Cobweb,
-Sierpinski Carpet, Pythagoras Tree, Dragon Curve, Fibonacci Word, Cubic Newton,
+Sierpinski Carpet, Pythagoras Tree, Dragon Curve, Fibonacci Word, the Conjecture
+Mill, Cubic Newton,
 Mandelbulb Slice, Nova, Magnet Fractal, Lambda Map, Feigenbaum Ladder, Menger
 Carpet, Vicsek, Chua, Cat Map, Blancmange, Rose, Kuramoto, H-Tree, Percolation,
 Ising, Lotka-Volterra, Poincare Disc, Cycloid, Brusselator, Sprott, Delaunay,

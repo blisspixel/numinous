@@ -46,13 +46,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # W
 ```
 
 
-Expected right now: **format and clippy clean, 2,730 all-target test cases pass,
-95.25% region cover, and 95.29% line cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 2,743 all-target test cases pass,
+95.25% region cover, and 95.30% line cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
 
-The release scripts also regenerate `renders/qa-app/`, a 2,901-screen app matrix.
+The release scripts also regenerate `renders/qa-app/`, a 2,909-screen app matrix.
 Every catalog room has deterministic default and compact opening frames,
 arrival cards, immediate pointer responses, and same-phase delayed-gesture
 responses that follow its declared interaction verb. The generator checks pure
@@ -236,7 +236,7 @@ Cairn, so it cannot change the player's profile or collide with another run.
 
 ## 5. Where things are
 
-- `crates/core` the headless engine: rooms (350 catalog rooms plus hidden
+- `crates/core` the headless engine: rooms (351 catalog rooms plus hidden
   content), sims, games (including nim and the chiptune composer), the Studio
   expression engine, the journey, scores, trophies, resonances, sound, eras,
   and the drawing surfaces.
@@ -248,7 +248,7 @@ Cairn, so it cannot change the player's profile or collide with another run.
 
 ## 6. What is done vs pending
 
-Done and verifiable now: 350 catalog rooms plus hidden content, 6 sims, 11+
+Done and verifiable now: 351 catalog rooms plus hidden content, 6 sims, 11+
 games with a shared high-score table and daily seeds, the complete RPG spine
 (levels to 42 with lore, locks, 18 trophies with pings, the Gauntlet run,
 boons, daily streaks, resonances), the Studio (plot, animate, sing, in the

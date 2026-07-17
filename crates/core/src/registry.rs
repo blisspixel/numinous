@@ -47,6 +47,7 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
             variation,
         )),
         Box::new(rooms::wet_oracle::WetOracle::new_with(variation)),
+        Box::new(rooms::conjecture_mill::ConjectureMill::new_with(variation)),
         Box::new(rooms::tilt_cone::TiltCone::new_with(variation)),
         Box::new(rooms::the_stretch::TheStretch::new_with(variation)),
         Box::new(rooms::laplace_clock::LaplaceClock::new_with(variation)),
