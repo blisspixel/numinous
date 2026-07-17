@@ -167,7 +167,7 @@ impl Room for WhitneyUmbrella {
             return self.status(t);
         }
         let u = slice(t, hands.last().copied(), self.seed);
-        Some(format!("U={u:.3}  umbrella"))
+        Some(format!("u={u:.2}  x^2=y^2 z"))
     }
 
     fn reveal(&self) -> &'static str {

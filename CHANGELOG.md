@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- Consequence-depth pass (cycles 114-115 bulk depth): 51 rooms across classical
+  curves, knots and surfaces, maps and attractors, fractals, special functions,
+  and escape-time portraits. Action status reports domain measures (areas,
+  dimensions, crossing numbers, Lyapunov-ready spans, escape iters, Farey
+  counts, Hermite energies, Koch perimeter growth) instead of knob echoes.
+  Lightweight span samples use burn-in plus finite/magnitude guards. Compact
+  footer and digit contracts hold.
 - Consequence-depth pass (cycle 113 classical curves and flows batch):
   Superellipse shape class, Agnesi peak and area, Reuleaux constant-width area,
   log spiral pitch and growth per turn, hypotrochoid cusp class, Poisson E[N]

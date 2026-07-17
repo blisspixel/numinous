@@ -157,7 +157,8 @@ impl Room for FigureEightKnot {
             return self.status(t);
         }
         let p = phase(t, hands.last().copied(), self.seed);
-        Some(format!("P={p:.3}  fig8"))
+        let deg = (p.rem_euclid(1.0) * 360.0).floor() as i32;
+        Some(format!("ph={deg}deg  cr=4  fig8"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -160,7 +160,7 @@ impl Room for Pedal {
             return self.status(t);
         }
         let d = focus(t, hands.last().copied(), self.seed);
-        Some(format!("FOCUS d={d:.3}"))
+        Some(format!("d={d:.2}  pedal focus"))
     }
 
     fn reveal(&self) -> &'static str {

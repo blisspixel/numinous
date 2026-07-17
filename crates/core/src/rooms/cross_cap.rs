@@ -150,7 +150,7 @@ impl Room for CrossCap {
             return self.status(t);
         }
         let a = amp(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  cap"))
+        Some(format!("a={a:.2}  crosscap  RP2"))
     }
 
     fn reveal(&self) -> &'static str {

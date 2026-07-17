@@ -160,7 +160,8 @@ impl Room for Viviani {
             return self.status(t);
         }
         let p = phase(t, hands.last().copied(), self.seed);
-        Some(format!("P={p:.3}  viviani"))
+        let deg = (p.rem_euclid(1.0) * 360.0).floor() as i32;
+        Some(format!("ph={deg}deg  sphere+cyl"))
     }
 
     fn reveal(&self) -> &'static str {

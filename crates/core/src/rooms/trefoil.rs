@@ -156,7 +156,8 @@ impl Room for Trefoil {
             return self.status(t);
         }
         let p = phase(t, hands.last().copied(), self.seed);
-        Some(format!("P={p:.3}  trefoil"))
+        let deg = (p.rem_euclid(1.0) * 360.0).floor() as i32;
+        Some(format!("ph={deg}deg  cr=3  T(2,3)"))
     }
 
     fn reveal(&self) -> &'static str {

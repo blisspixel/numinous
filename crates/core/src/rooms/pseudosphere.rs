@@ -174,7 +174,7 @@ impl Room for Pseudosphere {
             return self.status(t);
         }
         let a = flare(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  K=-1"))
+        Some(format!("a={a:.2}  K=-1  tractrix"))
     }
 
     fn reveal(&self) -> &'static str {

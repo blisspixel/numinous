@@ -183,7 +183,8 @@ impl Room for SolidTorus {
             return self.status(t);
         }
         let p = phi(t, hands.last().copied(), self.seed);
-        Some(format!("PHI={p:.3}  solid"))
+        let deg = (p.rem_euclid(1.0) * 360.0).floor() as i32;
+        Some(format!("phi={deg}deg  D2xS1"))
     }
 
     fn reveal(&self) -> &'static str {

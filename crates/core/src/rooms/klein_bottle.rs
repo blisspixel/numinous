@@ -154,7 +154,8 @@ impl Room for KleinBottle {
             return self.status(t);
         }
         let u = twist(t, hands.last().copied(), self.seed);
-        Some(format!("U={u:.3}  bottle"))
+        let deg = (u.rem_euclid(1.0) * 360.0).floor() as i32;
+        Some(format!("u={deg}deg  nonorient"))
     }
 
     fn reveal(&self) -> &'static str {

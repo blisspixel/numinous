@@ -167,7 +167,8 @@ impl Room for BoySurface {
             return self.status(t);
         }
         let th = phase(t, hands.last().copied(), self.seed);
-        Some(format!("T={th:.3}  boy"))
+        let deg = (th.rem_euclid(1.0) * 360.0).floor() as i32;
+        Some(format!("th={deg}deg  RP2  boy"))
     }
 
     fn reveal(&self) -> &'static str {

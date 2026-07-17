@@ -152,7 +152,7 @@ impl Room for RomanSurface {
             return self.status(t);
         }
         let a = view(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  roman"))
+        Some(format!("a={a:.2}  Steiner  RP2"))
     }
 
     fn reveal(&self) -> &'static str {

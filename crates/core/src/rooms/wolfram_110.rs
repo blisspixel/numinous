@@ -164,7 +164,9 @@ impl Room for Wolfram110 {
             return self.status(t);
         }
         let b = seed_bias(t, hands.last().copied(), self.seed);
-        Some(format!("SEED p={b:.3}  class IV"))
+        // Rule 110 is Turing-complete class IV.
+        let p = (b * 100.0).round() as i32;
+        Some(format!("seed={p}%  rule110  classIV"))
     }
 
     fn reveal(&self) -> &'static str {

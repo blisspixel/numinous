@@ -179,7 +179,9 @@ impl Room for Minkowski {
         }
         let o = order(t, hands.last().copied());
         let n = curve(o).len();
-        Some(format!("ORDER={o}  pts={n}"))
+        // Minkowski sausage dim = ln8/ln4 = 1.5.
+        let dim = 8.0_f64.ln() / 4.0_f64.ln();
+        Some(format!("o={o}  pts={n}  dim={dim:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

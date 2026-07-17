@@ -167,7 +167,9 @@ impl Room for Tricorn {
             return self.status(t);
         }
         let (cx, cy, s) = window(t, hands.last().copied());
-        Some(format!("AIM ({cx:.2},{cy:.2}) sc={s:.2}"))
+        let _ = s;
+        let iter = escape(cx, cy);
+        Some(format!("c=({cx:.2},{cy:.2}) esc={iter}"))
     }
 
     fn reveal(&self) -> &'static str {

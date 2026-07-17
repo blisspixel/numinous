@@ -165,7 +165,36 @@ impl Room for Lozi {
             return self.status(t);
         }
         let (a, b) = params(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE a={a:.3}  b={b:.3}"))
+        let mut x = 0.1_f64;
+        let mut y = 0.1_f64;
+        for _ in 0..30 {
+            let nx = 1.0 - a * x.abs() + y;
+            let ny = b * x;
+            x = nx;
+            y = ny;
+            if !x.is_finite() || !y.is_finite() || x.abs() > 50.0 || y.abs() > 50.0 {
+                return Some(format!("a={a:.2} |det|={:.2} span=0", b.abs()));
+            }
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        for _ in 0..400 {
+            let nx = 1.0 - a * x.abs() + y;
+            let ny = b * x;
+            if !nx.is_finite() || !ny.is_finite() || nx.abs() > 50.0 || ny.abs() > 50.0 {
+                break;
+            }
+            x = nx;
+            y = ny;
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("a={a:.2} |det|={:.2} span={span:.2}", b.abs()))
     }
 
     fn reveal(&self) -> &'static str {
