@@ -164,8 +164,11 @@ impl Room for EulerTotient {
             return self.status(t);
         }
         let n = n_param(t, hands.last().copied(), self.seed).round() as u32;
-        let p = phi(n.max(1));
-        Some(format!("N={n}  phi={p}"))
+        let n = n.max(1);
+        let p = phi(n);
+        // Density phi(n)/n of units mod n.
+        let dens = p as f64 / n as f64;
+        Some(format!("n={n}  phi={p}  dens={dens:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

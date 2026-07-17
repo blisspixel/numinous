@@ -154,8 +154,11 @@ impl Room for KleinBottle {
             return self.status(t);
         }
         let u = twist(t, hands.last().copied(), self.seed);
-        let deg = (u.rem_euclid(1.0) * 360.0).floor() as i32;
-        Some(format!("u={deg}deg  nonorient"))
+        let deg =
+            (u.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU * 360.0).floor() as i32;
+        // Klein: non-orientable; immersion self-intersects once per full u.
+        let crosses = if deg > 180 { 1 } else { 0 };
+        Some(format!("u={deg}deg  xing={crosses}  nonor"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -153,7 +153,9 @@ impl Room for Tractrix {
             return self.status(t);
         }
         let a = length(t, hands.last().copied(), self.seed);
-        Some(format!("LEN a={a:.3}  pull"))
+        // Tractrix tangent length is constant a; area under one branch is a^2/2.
+        let area = 0.5 * a * a;
+        Some(format!("a={a:.2}  A~{area:.2}  pull"))
     }
 
     fn reveal(&self) -> &'static str {

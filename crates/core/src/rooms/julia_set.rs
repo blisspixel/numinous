@@ -148,7 +148,35 @@ impl Room for JuliaFilled {
             return self.status(t);
         }
         let (cr, ci) = c_param(t, hands.last().copied(), self.seed);
-        Some(format!("C={cr:.3}{ci:+.3}i"))
+        // Probe grid: fraction of points that stay bounded (filled measure).
+        let max_iter = 40u32;
+        let mut filled = 0u32;
+        let mut total = 0u32;
+        for row in 0..12 {
+            for col in 0..16 {
+                let x0 = -1.6 + 3.2 * (col as f64) / 15.0;
+                let y0 = -1.2 + 2.4 * (row as f64) / 11.0;
+                let mut zx = x0;
+                let mut zy = y0;
+                let mut i = 0u32;
+                while i < max_iter && zx * zx + zy * zy < 4.0 {
+                    let zx2 = zx * zx - zy * zy + cr;
+                    zy = 2.0 * zx * zy + ci;
+                    zx = zx2;
+                    i += 1;
+                }
+                if i >= max_iter {
+                    filled += 1;
+                }
+                total += 1;
+            }
+        }
+        let pct = if total > 0 {
+            (100.0 * filled as f64 / total as f64).round() as i32
+        } else {
+            0
+        };
+        Some(format!("c=({cr:.2},{ci:.2})  fill~{pct}%"))
     }
 
     fn reveal(&self) -> &'static str {

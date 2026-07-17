@@ -174,7 +174,9 @@ impl Room for Pseudosphere {
             return self.status(t);
         }
         let a = flare(t, hands.last().copied(), self.seed);
-        Some(format!("a={a:.2}  K=-1  tractrix"))
+        // Pseudosphere: Gaussian K = -1/a^2; tractrix generator length a.
+        let k = -1.0 / (a * a).max(1e-9);
+        Some(format!("a={a:.2}  K={k:.2}  tractrix"))
     }
 
     fn reveal(&self) -> &'static str {

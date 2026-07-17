@@ -157,8 +157,14 @@ impl Room for HeatKernel {
             return self.status(t);
         }
         let tau = time_p(t, hands.last().copied(), self.seed);
+        // Heat kernel peak density (4 pi t)^-1/2 in 1D; width sqrt(2t).
         let sig = (2.0 * tau).sqrt();
-        Some(format!("T={tau:.3}  s={sig:.2}"))
+        let peak = if tau > 1e-9 {
+            (4.0 * std::f64::consts::PI * tau).sqrt().recip()
+        } else {
+            0.0
+        };
+        Some(format!("t={tau:.2}  s={sig:.2}  peak={peak:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

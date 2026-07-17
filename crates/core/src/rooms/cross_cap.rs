@@ -150,7 +150,8 @@ impl Room for CrossCap {
             return self.status(t);
         }
         let a = amp(t, hands.last().copied(), self.seed);
-        Some(format!("a={a:.2}  crosscap  RP2"))
+        // Cross-cap immersion scale; self-intersection segment length ~ a.
+        Some(format!("a={a:.2}  seam~{a:.2}  RP2"))
     }
 
     fn reveal(&self) -> &'static str {

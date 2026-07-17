@@ -170,7 +170,13 @@ impl Room for BurningShip {
         }
         let (cx, cy, _s) = window(t, hands.last().copied());
         let iter = escape(cx, cy);
-        Some(format!("c=({cx:.2},{cy:.2}) esc={iter}"))
+        // Neighbor probe: local roughness of escape time.
+        let n1 = escape(cx + 0.002, cy);
+        let n2 = escape(cx, cy + 0.002);
+        let rough = (iter as i32 - n1 as i32)
+            .unsigned_abs()
+            .max((iter as i32 - n2 as i32).unsigned_abs());
+        Some(format!("c=({cx:.2},{cy:.2}) esc={iter} r={rough}"))
     }
 
     fn reveal(&self) -> &'static str {

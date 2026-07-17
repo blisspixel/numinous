@@ -167,8 +167,21 @@ impl Room for Ising {
             return self.status(t);
         }
         let te = temp(t, hands.last().copied(), self.seed);
-        let tc = 2.0 * (1.0_f64 + 2.0_f64.sqrt()).ln(); // Onsager Tc ~ 2.269
-        Some(format!("T={te:.3}  Tc~{tc:.2}"))
+        let tc = 2.0 * (1.0_f64 + 2.0_f64.sqrt()).ln();
+        // Onsager magnetization: M = [1 - (sinh 2b)^-4]^{1/8} for T < Tc.
+        let m = if te < tc && te > 0.0 {
+            let b = 1.0 / te;
+            let s = (2.0 * b).sinh();
+            let inside = 1.0 - s.powi(-4);
+            if inside > 0.0 {
+                inside.powf(0.125)
+            } else {
+                0.0
+            }
+        } else {
+            0.0
+        };
+        Some(format!("T={te:.2}  Tc={tc:.2}  M~{m:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

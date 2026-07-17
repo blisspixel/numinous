@@ -151,8 +151,11 @@ impl Room for RomanSurface {
         if hands.is_empty() {
             return self.status(t);
         }
-        let a = view(t, hands.last().copied(), self.seed);
-        Some(format!("a={a:.2}  Steiner  RP2"))
+        let v = view(t, hands.last().copied(), self.seed);
+        let deg =
+            (v.rem_euclid(std::f64::consts::PI) / std::f64::consts::PI * 180.0).floor() as i32;
+        // Steiner Roman surface: six pinch points; immersion of RP2.
+        Some(format!("view={deg}deg  pinches=6  RP2"))
     }
 
     fn reveal(&self) -> &'static str {

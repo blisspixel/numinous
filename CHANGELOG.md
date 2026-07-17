@@ -6,6 +6,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- Consequence-depth pass (cycles 116-117 exceptional depth): 49 rooms deepened
+  with domain-true action status. Maps and attractors (Hopalong, Tinkerbell,
+  Svensson, Pickover, Sprott, Gingerbread, tent, coupled tent, van der Pol,
+  standard map, lambda, filled Julia) report orbit spans, Lyapunov, sync
+  residual, limit-cycle amplitude, KAM flip rate, escape, and fill fraction.
+  Classical and surfaces (tractrix, helicoid, involute, Fermat, evolute,
+  Boy, cross-cap, Roman, Whitney, pseudosphere, Klein, trefoil, figure-eight,
+  Viviani) report areas, pitch, cusp scale, triple-point phase, curvature K,
+  crossings, and volume. Number, epidemic, and spin rooms report density,
+  growth, attack size, Onsager M, Foucault period, heat peak, Rabi Pmax, and
+  class-IV bias. Burn-in plus finite guards on spans. Footer and digit
+  contracts hold.
 - Consequence-depth pass (cycles 114-115 bulk depth): 51 rooms across classical
   curves, knots and surfaces, maps and attractors, fractals, special functions,
   and escape-time portraits. Action status reports domain measures (areas,

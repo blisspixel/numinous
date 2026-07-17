@@ -159,8 +159,8 @@ impl Room for Kampyle {
             return self.status(t);
         }
         let a = param_a(t, hands.last().copied(), self.seed);
-        // Kampyle of Eudoxus: x^4 = a^2 (x^2+y^2).
-        Some(format!("a={a:.2}  x^4=a^2 r^2"))
+        // Kampyle of Eudoxus: at y=0, x=+-a; asymptotic opening ~ a.
+        Some(format!("a={a:.2}  waist={a:.2}  x^4=a^2 r^2"))
     }
 
     fn reveal(&self) -> &'static str {

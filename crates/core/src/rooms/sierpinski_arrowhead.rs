@@ -203,7 +203,10 @@ impl Room for SierpinskiArrowhead {
         }
         let o = order(t, hands.last().copied());
         let n = path(o, self.seed).len();
-        Some(format!("ORDER={o}  pts={n}"))
+        // Arrowhead / Sierpinski: dim log2(3) ~ 1.585; 3^o segments.
+        let segs = 3u64.saturating_pow(o as u32);
+        let dim = 3.0_f64.ln() / 2.0_f64.ln();
+        Some(format!("o={o}  pts={n}  3^{o}={segs}  d={dim:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

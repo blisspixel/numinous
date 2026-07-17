@@ -155,9 +155,11 @@ impl Room for Trefoil {
         if hands.is_empty() {
             return self.status(t);
         }
-        let p = phase(t, hands.last().copied(), self.seed);
-        let deg = (p.rem_euclid(1.0) * 360.0).floor() as i32;
-        Some(format!("ph={deg}deg  cr=3  T(2,3)"))
+        let th = phase(t, hands.last().copied(), self.seed);
+        let deg =
+            (th.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU * 360.0).floor() as i32;
+        // Trefoil is T(2,3): 3 crossings, bridge number 2.
+        Some(format!("th={deg}deg  cr=3  T(2,3)"))
     }
 
     fn reveal(&self) -> &'static str {

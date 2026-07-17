@@ -175,7 +175,10 @@ impl Room for Mertens {
         }
         let n = n_param(t, hands.last().copied(), self.seed).round() as usize;
         let m = mertens_prefix(n).last().copied().unwrap_or(0);
-        Some(format!("N={n}  M={m}"))
+        // Mertens conjecture (false) bound |M| < sqrt(n); report ratio.
+        let bound = (n as f64).sqrt().max(1.0);
+        let ratio = m as f64 / bound;
+        Some(format!("n={n}  M={m}  M/sqrt={ratio:.2}"))
     }
 
     fn reveal(&self) -> &'static str {
