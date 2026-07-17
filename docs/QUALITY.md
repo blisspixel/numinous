@@ -8,11 +8,11 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-17
 
-- **Enforced now:** formatting, Clippy with warnings denied, 2,773 passing
+- **Enforced now:** formatting, Clippy with warnings denied, 2,779 passing
   all-target test cases plus one ignored screenshot diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 95.26%
-  regions and 95.30% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 95.28%
+  regions and 95.32% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
   three faces, and a release-generated 2,909-screen visual QA matrix. Every room

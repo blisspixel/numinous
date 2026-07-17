@@ -411,7 +411,9 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 
 ## Motion and dynamics
 - [x] **Deterministic chaos** - the logistic cascade; Lorenz; Langton's Ant.
-- [x] **Double pendulum** - grab it, drop it, and watch two of them disagree from a pixel of difference.
+- [x] **Double pendulum** - grab it, drop it, and watch two of them disagree
+  from a pixel of difference. The shipped voice maps first-arm drop, second-arm
+  bend, and release speed from the same state that starts the visible physics.
 - [ ] **Three-body problem** - place three suns and try to make them dance forever; grief teaches what "no closed-form solution" means.
 - [x] **Resonance and harmony** - Lissajous, the harmonograph, every room's sound; the kanon whisper.
 - [ ] **The Long Shot** - aim, choose power, and fire across a changing landscape; the replay opens the mathematics inside the flight.

@@ -121,17 +121,21 @@ pub(crate) fn record_pointer_up(inputs: &mut Vec<RoomInput>, point: (f64, f64), 
 
 /// Close a gesture that ended without a lift (focus loss, a modal opening).
 /// A cancel is appended only while a gesture is actually open, so releases
-/// recorded normally are never followed by a stray cancel.
-pub(crate) fn cancel_open_gesture(inputs: &mut Vec<RoomInput>) -> bool {
-    let open = matches!(
-        inputs.last(),
-        Some(RoomInput::PointerDown { .. }) | Some(RoomInput::PointerMove { .. })
-    );
-    if open {
+/// recorded normally are never followed by a stray cancel. A final stationary
+/// move stamps the cancellation phase without inventing release velocity.
+pub(crate) fn cancel_open_gesture(inputs: &mut Vec<RoomInput>, t: f64) -> bool {
+    let point = match inputs.last() {
+        Some(RoomInput::PointerDown { x, y, .. }) | Some(RoomInput::PointerMove { x, y, .. }) => {
+            Some((*x, *y))
+        }
+        _ => None,
+    };
+    if let Some((x, y)) = point {
+        inputs.push(RoomInput::PointerMove { x, y, t });
         inputs.push(RoomInput::PointerCancel);
         keep_newest_inputs(inputs);
     }
-    open
+    point.is_some()
 }
 
 #[cfg(test)]
@@ -257,21 +261,30 @@ mod tests {
     #[test]
     fn a_cancel_closes_only_an_open_gesture() {
         let mut inputs = Vec::new();
-        assert!(!cancel_open_gesture(&mut inputs), "nothing to cancel");
+        assert!(!cancel_open_gesture(&mut inputs, 0.1), "nothing to cancel");
         record_pointer_down(&mut inputs, (0.5, 0.5), 0.1);
-        assert!(cancel_open_gesture(&mut inputs));
+        assert!(cancel_open_gesture(&mut inputs, 0.8));
         assert_eq!(
             inputs.last(),
             Some(&numinous_core::RoomInput::PointerCancel)
         );
+        assert_eq!(
+            inputs[inputs.len() - 2],
+            numinous_core::RoomInput::PointerMove {
+                x: 0.5,
+                y: 0.5,
+                t: 0.8,
+            },
+            "cancellation records when the stationary hold actually ended"
+        );
         assert!(
-            !cancel_open_gesture(&mut inputs),
+            !cancel_open_gesture(&mut inputs, 0.9),
             "a closed gesture is not re-cancelled"
         );
         record_pointer_down(&mut inputs, (0.6, 0.5), 0.2);
         record_pointer_up(&mut inputs, (0.6, 0.5), 0.3);
         assert!(
-            !cancel_open_gesture(&mut inputs),
+            !cancel_open_gesture(&mut inputs, 0.4),
             "a released gesture is not cancelled"
         );
     }

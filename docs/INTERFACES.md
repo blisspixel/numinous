@@ -183,8 +183,10 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   the same bounded schema advertised by `tools/list`, including required fields,
   types, enums, numeric and array bounds, nested object shape, and unexpected
   fields. `play_room` additionally rejects non-finite or out-of-range phase and
-  dimensions plus gesture timestamps that move backward. `listen_room` enforces
-  the same phase and input contract, plus the declared ambient-detail enum.
+  dimensions. Gesture array order is chronological while each finite timestamp
+  follows the App's circular phase clock, including the wrap from 1 back to 0.
+  `listen_room` enforces the same phase and input contract, plus the declared
+  ambient-detail enum.
   `run_sim` validates nested lever values as finite
   numbers, rejects names not owned by the selected simulation, and rejects
   values outside that lever's advertised range. Invalid calls return a guiding

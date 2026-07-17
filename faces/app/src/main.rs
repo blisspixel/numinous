@@ -1030,7 +1030,7 @@ impl App {
         // opening) closes its gesture gently; releases record their lift
         // first, which makes this cancel a no-op.
         if self.poking && !state.poking {
-            room_input::cancel_open_gesture(&mut self.inputs);
+            room_input::cancel_open_gesture(&mut self.inputs, self.t);
         }
         self.dragging = state.dragging;
         self.poking = state.poking;
@@ -2708,7 +2708,7 @@ impl ApplicationHandler for App {
                     } else {
                         // The window lost its size mid-drag: the gesture
                         // ends without a lift, so close it gently.
-                        room_input::cancel_open_gesture(&mut self.inputs);
+                        room_input::cancel_open_gesture(&mut self.inputs, self.t);
                         self.poking = false;
                     }
                 } else if self.dragging
@@ -3154,6 +3154,85 @@ mod tests {
     }
 
     #[test]
+    fn double_pendulum_gesture_reaches_the_room_score_voice() {
+        let app = headless("numinous_app_test_pendulum_voice.txt");
+        let room = app
+            .rooms
+            .iter()
+            .find(|room| room.meta().id == "double-pendulum")
+            .expect("Double Pendulum room");
+        let select = |inputs: &[numinous_core::RoomInput]| {
+            selected_parameter_sound(
+                AudioProgram::RoomScore,
+                false,
+                room.as_ref(),
+                0.35,
+                inputs,
+                false,
+            )
+            .expect("accepted pendulum voice")
+        };
+        let left = [numinous_core::RoomInput::PointerDown {
+            x: 0.1,
+            y: 0.5,
+            t: 0.2,
+        }];
+        let right = [numinous_core::RoomInput::PointerDown {
+            x: 0.9,
+            y: 0.5,
+            t: 0.2,
+        }];
+        assert!(select(&left).root_hz() < select(&right).root_hz());
+
+        let gentle = [
+            numinous_core::RoomInput::PointerDown {
+                x: 0.58,
+                y: 0.5,
+                t: 0.05,
+            },
+            numinous_core::RoomInput::PointerMove {
+                x: 0.58,
+                y: 0.5,
+                t: 0.10,
+            },
+            numinous_core::RoomInput::PointerUp {
+                x: 0.6,
+                y: 0.5,
+                t: 0.15,
+            },
+        ];
+        let fast = [
+            numinous_core::RoomInput::PointerDown {
+                x: 0.3,
+                y: 0.5,
+                t: 0.10,
+            },
+            numinous_core::RoomInput::PointerMove {
+                x: 0.3,
+                y: 0.5,
+                t: 0.147,
+            },
+            numinous_core::RoomInput::PointerUp {
+                x: 0.6,
+                y: 0.5,
+                t: 0.15,
+            },
+        ];
+        assert!(select(&gentle).gain() < select(&fast).gain());
+        assert!(
+            selected_parameter_sound(
+                AudioProgram::Radio,
+                false,
+                room.as_ref(),
+                0.35,
+                &fast,
+                false,
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
     fn the_show_sweeps_the_times_tables_voice_without_retained_hand_input() {
         let app = headless("numinous_app_test_times_show_voice.txt");
         let room = app
@@ -3309,6 +3388,7 @@ mod tests {
         let mut app = headless("numinous_app_test_gesture_cancel.txt");
         app.poking = true;
         crate::room_input::record_pointer_down(&mut app.inputs, (0.4, 0.4), 0.1);
+        app.t = 0.8;
         // Focus loss and modal opens route through set_pointer_state, which
         // must close the open gesture gently.
         app.clear_pointer_state();
@@ -3318,6 +3398,10 @@ mod tests {
             Some(&numinous_core::RoomInput::PointerCancel),
             "an interrupted gesture ends in a cancel, not a phantom hold"
         );
+        assert!(matches!(
+            app.inputs.get(app.inputs.len() - 2),
+            Some(numinous_core::RoomInput::PointerMove { t, .. }) if *t == 0.8
+        ));
         // A release recorded normally is not followed by a stray cancel.
         app.poking = true;
         crate::room_input::record_pointer_down(&mut app.inputs, (0.5, 0.5), 0.2);

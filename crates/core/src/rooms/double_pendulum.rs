@@ -7,6 +7,7 @@
 //! Map in `docs/ROOMS.md`.
 
 use crate::room::{Room, RoomMeta};
+use crate::sound::ParametricSound;
 use crate::surface::Surface;
 
 /// Gravity.
@@ -25,6 +26,20 @@ struct State {
     t2: f64,
     w1: f64,
     w2: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct InteractionState {
+    first: f64,
+    second: f64,
+    w1: f64,
+    w2: f64,
+    steps: usize,
+    label: &'static str,
+}
+
+fn finite_gesture_point(point: (f64, f64, f64)) -> bool {
+    point.0.is_finite() && point.1.is_finite() && point.2.is_finite()
 }
 
 /// One Euler step of the standard equal-mass, equal-length double pendulum.
@@ -141,6 +156,92 @@ impl DoublePendulum {
         ENTRY_STEPS + (t.clamp(0.0, 1.0) * (MAX_STEPS - ENTRY_STEPS) as f64) as usize
     }
 
+    fn interaction_state(
+        &self,
+        t: f64,
+        inputs: &[crate::room::RoomInput],
+    ) -> Option<InteractionState> {
+        let seed_offset = self.seed_offset();
+        let state = match crate::room::latest_gesture(inputs) {
+            None => {
+                let pokes = crate::pokes_from_inputs(inputs);
+                let &(x, y) = pokes
+                    .iter()
+                    .rev()
+                    .find(|(x, y)| x.is_finite() && y.is_finite())?;
+                let (first, second) = hand_drop_angles(x, y, seed_offset);
+                InteractionState {
+                    first,
+                    second,
+                    w1: 0.0,
+                    w2: 0.0,
+                    steps: Self::steps_for(t),
+                    label: "RE-DROP",
+                }
+            }
+            Some(crate::room::Gesture::Held { at, .. }) => {
+                if !finite_gesture_point(at) {
+                    return None;
+                }
+                let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
+                InteractionState {
+                    first,
+                    second,
+                    w1: 0.0,
+                    w2: 0.0,
+                    steps: 0,
+                    label: "PINNED",
+                }
+            }
+            Some(crate::room::Gesture::Released { before, at }) => {
+                if !finite_gesture_point(before) || !finite_gesture_point(at) {
+                    return None;
+                }
+                let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
+                let (w1, w2) = fling_velocities(before, at, seed_offset);
+                InteractionState {
+                    first,
+                    second,
+                    w1,
+                    w2,
+                    steps: (elapsed_phase(t, at.2) * MAX_STEPS as f64) as usize,
+                    label: "FLUNG",
+                }
+            }
+            Some(crate::room::Gesture::Cancelled { at }) => {
+                if !finite_gesture_point(at) {
+                    return None;
+                }
+                let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
+                InteractionState {
+                    first,
+                    second,
+                    w1: 0.0,
+                    w2: 0.0,
+                    steps: (elapsed_phase(t, at.2) * MAX_STEPS as f64) as usize,
+                    label: "CANCELLED",
+                }
+            }
+        };
+        [state.first, state.second, state.w1, state.w2]
+            .into_iter()
+            .all(f64::is_finite)
+            .then_some(state)
+    }
+
+    fn interaction_voice(&self, state: InteractionState) -> ParametricSound {
+        let horizontal = ((state.first - 0.6 - self.seed_offset()) / 2.4).clamp(0.0, 1.0);
+        let root_index = ((horizontal * VOICE_ROOT_STEPS.len() as f64).floor() as usize)
+            .min(VOICE_ROOT_STEPS.len() - 1);
+        let root_hz = crate::chiptune::pitch(VOICE_ROOT_HZ, VOICE_ROOT_STEPS[root_index]);
+        let bend = ((state.second - state.first).abs() / 0.6).clamp(0.0, 1.0);
+        let ratio = (1.0 + bend * 0.5) as f32;
+        let speed = state.w1.hypot(state.w2) / (MAX_FLING * std::f64::consts::SQRT_2);
+        let gain = VOICE_REST_GAIN + VOICE_FLING_GAIN * speed.clamp(0.0, 1.0) as f32;
+        ParametricSound::new(root_hz, ratio, gain)
+            .expect("bounded pendulum gesture makes a valid voice")
+    }
+
     /// Draw the pendulum from a hand-chosen state: the shadow twin's path
     /// dim, the pendulum's path bright, and the arms at the final instant.
     /// Zero steps draws the held pose alone: pinned arms, no history.
@@ -209,6 +310,12 @@ fn hand_drop_angles(x: f64, y: f64, seed_offset: f64) -> (f64, f64) {
 
 /// The strongest fling either arm can be given, in radians per unit time.
 const MAX_FLING: f64 = 6.0;
+
+/// Five ordered drop roots in a minor pentatonic scale.
+const VOICE_ROOT_STEPS: [i32; 5] = [0, 3, 5, 7, 10];
+const VOICE_ROOT_HZ: f32 = 123.47;
+const VOICE_REST_GAIN: f32 = 0.03;
+const VOICE_FLING_GAIN: f32 = 0.02;
 
 /// The smallest phase step a fling is measured over, so a release recorded
 /// within one frame cannot divide by a near-zero time and explode.
@@ -288,41 +395,11 @@ impl Room for DoublePendulum {
     }
 
     fn status_input(&self, t: f64, inputs: &[crate::room::RoomInput]) -> Option<String> {
-        let seed_offset = self.seed_offset();
-        // Prefer a completed or held gesture. A bare poke list (CLI/MCP) still
-        // re-drops from the newest finite hand point so all faces agree.
-        let (first, second, w1, w2, steps, hand_label) = match crate::room::latest_gesture(inputs) {
-            None => {
-                let pokes = crate::pokes_from_inputs(inputs);
-                let Some(&(x, y)) = pokes
-                    .iter()
-                    .rev()
-                    .find(|(x, y)| x.is_finite() && y.is_finite())
-                else {
-                    return self.status(t);
-                };
-                let (first, second) = hand_drop_angles(x, y, seed_offset);
-                let steps = Self::steps_for(t);
-                (first, second, 0.0, 0.0, steps, "RE-DROP")
-            }
-            Some(crate::room::Gesture::Held { at, .. }) => {
-                let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
-                (first, second, 0.0, 0.0, 0, "PINNED")
-            }
-            Some(crate::room::Gesture::Released { before, at }) => {
-                let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
-                let (w1, w2) = fling_velocities(before, at, seed_offset);
-                let steps = (elapsed_phase(t, at.2) * MAX_STEPS as f64) as usize;
-                (first, second, w1, w2, steps, "FLUNG")
-            }
-            Some(crate::room::Gesture::Cancelled { at }) => {
-                let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
-                let steps = (elapsed_phase(t, at.2) * MAX_STEPS as f64) as usize;
-                (first, second, 0.0, 0.0, steps, "CANCELLED")
-            }
+        let Some(state) = self.interaction_state(t, inputs) else {
+            return self.status(t);
         };
-        let gap = divergence_status(first, second, w1, w2, steps);
-        Some(format!("{hand_label}   {gap}"))
+        let gap = divergence_status(state.first, state.second, state.w1, state.w2, state.steps);
+        Some(format!("{}   {gap}", state.label))
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -339,43 +416,33 @@ impl Room for DoublePendulum {
         Some("CLICK: RE-DROP")
     }
 
+    fn parameter_sound(
+        &self,
+        t: f64,
+        inputs: &[crate::room::RoomInput],
+    ) -> Option<ParametricSound> {
+        self.interaction_state(t, inputs)
+            .map(|state| self.interaction_voice(state))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
-        let Some(&(x, y)) = pokes.last() else {
-            self.render(canvas, t);
-            return;
-        };
-        // The hand chooses both starting angles: x raises the first arm from
-        // gentle swing to over-the-top drop, y bends the second arm above or
-        // below it. Same equations, a storm placed by hand.
-        let (first, second) = hand_drop_angles(x, y, self.seed_offset());
-        let steps = (t.clamp(0.0, 1.0) * MAX_STEPS as f64) as usize;
-        self.draw_hand_state(canvas, first, second, 0.0, 0.0, steps);
+        let inputs = crate::room::inputs_from_pokes(pokes, t);
+        self.render_input(canvas, t, &inputs);
     }
 
     fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[crate::room::RoomInput]) {
-        let seed_offset = self.seed_offset();
-        match crate::room::latest_gesture(inputs) {
-            None => self.render(canvas, t),
-            // Held: the hand pins the bob. No motion until you let go.
-            Some(crate::room::Gesture::Held { at, .. }) => {
-                let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
-                self.draw_hand_state(canvas, first, second, 0.0, 0.0, 0);
-            }
-            // Released: the lift point sets the angles, the flick sets the
-            // momentum, and the equations take it from there.
-            Some(crate::room::Gesture::Released { before, at }) => {
-                let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
-                let (w1, w2) = fling_velocities(before, at, seed_offset);
-                let steps = (elapsed_phase(t, at.2) * MAX_STEPS as f64) as usize;
-                self.draw_hand_state(canvas, first, second, w1, w2, steps);
-            }
-            // Cancelled: let go where you were, gently. No fling.
-            Some(crate::room::Gesture::Cancelled { at }) => {
-                let (first, second) = hand_drop_angles(at.0, at.1, seed_offset);
-                let steps = (elapsed_phase(t, at.2) * MAX_STEPS as f64) as usize;
-                self.draw_hand_state(canvas, first, second, 0.0, 0.0, steps);
-            }
-        }
+        let Some(state) = self.interaction_state(t, inputs) else {
+            self.render(canvas, t);
+            return;
+        };
+        self.draw_hand_state(
+            canvas,
+            state.first,
+            state.second,
+            state.w1,
+            state.w2,
+            state.steps,
+        );
     }
 
     fn reveal(&self) -> &'static str {
@@ -560,15 +627,10 @@ mod tests {
     fn variation_participates_in_poked_motion() {
         let r0 = DoublePendulum::new_with(0);
         let r42 = DoublePendulum::new_with(42);
-        let mut a = Canvas::new(50, 30);
-        let mut b = Canvas::new(50, 30);
-        r0.render_poked(&mut a, 0.5, &[(0.4, 0.6)]);
-        r42.render_poked(&mut b, 0.5, &[(0.4, 0.6)]);
-        assert_ne!(
-            a.to_text(),
-            b.to_text(),
-            "per-visit variation should reach poked re-drops"
-        );
+        let inputs = crate::room::inputs_from_pokes(&[(0.4, 0.6)], 0.5);
+        let a = r0.interaction_state(0.5, &inputs).unwrap();
+        let b = r42.interaction_state(0.5, &inputs).unwrap();
+        assert_ne!(a.first, b.first, "variation reaches the shared drop state");
     }
 
     #[test]
@@ -656,6 +718,161 @@ mod tests {
         let mut fast_frame = crate::canvas::Canvas::new(60, 30);
         room.render_input(&mut fast_frame, 0.35, &fast);
         assert_ne!(slow_frame.to_text(), fast_frame.to_text());
+    }
+
+    #[test]
+    fn the_two_drop_angles_and_fling_strength_shape_the_voice() {
+        let room = DoublePendulum::new();
+        let voice_at = |x, y| {
+            room.parameter_sound(0.4, &[RoomInput::PointerDown { x, y, t: 0.2 }])
+                .expect("accepted drop voice")
+        };
+        let roots = [0.1, 0.3, 0.5, 0.7, 0.9].map(|x| voice_at(x, 0.5).root_hz());
+        assert!(roots.windows(2).all(|pair| pair[0] < pair[1]));
+
+        let upper = voice_at(0.5, 0.0);
+        let aligned = voice_at(0.5, 0.5);
+        let lower = voice_at(0.5, 1.0);
+        assert_eq!(upper.ratio(), 1.5);
+        assert_eq!(aligned.ratio(), 1.0);
+        assert_eq!(lower.ratio(), 1.5);
+
+        let gentle = [
+            RoomInput::PointerMove {
+                x: 0.58,
+                y: 0.5,
+                t: 0.05,
+            },
+            RoomInput::PointerUp {
+                x: 0.6,
+                y: 0.5,
+                t: 0.15,
+            },
+        ];
+        let fast = [
+            RoomInput::PointerMove {
+                x: 0.30,
+                y: 0.5,
+                t: 0.147,
+            },
+            RoomInput::PointerUp {
+                x: 0.6,
+                y: 0.5,
+                t: 0.15,
+            },
+        ];
+        let gentle = room
+            .parameter_sound(0.35, &gentle)
+            .expect("gentle release voice");
+        let fast = room
+            .parameter_sound(0.35, &fast)
+            .expect("fast release voice");
+        assert!(gentle.gain() < fast.gain());
+        assert!(fast.gain() <= 0.05);
+    }
+
+    #[test]
+    fn compact_and_full_drop_input_share_one_sound_snapshot() {
+        let room = DoublePendulum::new();
+        let compact = crate::room::inputs_from_pokes(&[(0.7, 0.25)], 0.4);
+        let full = [RoomInput::PointerDown {
+            x: 0.7,
+            y: 0.25,
+            t: 0.4,
+        }];
+        let compact_voice = room
+            .parameter_sound(0.4, &compact)
+            .expect("compact drop voice");
+        assert_eq!(compact_voice, room.parameter_sound(0.4, &full).unwrap());
+
+        let mut compact_frame = Canvas::new(50, 30);
+        let mut gesture_frame = Canvas::new(50, 30);
+        room.render_poked(&mut compact_frame, 0.4, &[(0.7, 0.25)]);
+        room.render_input(&mut gesture_frame, 0.4, &full);
+        assert_eq!(compact_frame.to_text(), gesture_frame.to_text());
+
+        let snapshot = room.sound_input(0.4, &compact);
+        assert_eq!(snapshot.notes.len(), 2);
+        assert_eq!(snapshot.notes[0].freq, compact_voice.root_hz());
+        assert_eq!(
+            snapshot.notes[1].freq,
+            compact_voice.root_hz() * compact_voice.ratio()
+        );
+    }
+
+    #[test]
+    fn terminal_gestures_and_invalid_tails_have_consistent_voices() {
+        let room = DoublePendulum::new();
+        assert!(room.parameter_sound(0.4, &[]).is_none());
+        assert!(
+            room.parameter_sound(
+                0.4,
+                &[RoomInput::PointerDown {
+                    x: f64::NAN,
+                    y: f64::INFINITY,
+                    t: 0.2,
+                }],
+            )
+            .is_none()
+        );
+
+        let bare_release = [RoomInput::PointerUp {
+            x: 0.6,
+            y: 0.5,
+            t: 0.3,
+        }];
+        let released = room
+            .parameter_sound(0.4, &bare_release)
+            .expect("a finite bare release has the same voice as its rendered state");
+        assert_eq!(released.gain(), super::VOICE_REST_GAIN);
+
+        let cancelled = [
+            RoomInput::PointerDown {
+                x: 0.4,
+                y: 0.6,
+                t: 0.2,
+            },
+            RoomInput::PointerCancel,
+        ];
+        assert_eq!(
+            room.parameter_sound(0.4, &cancelled)
+                .expect("a finite cancelled pose keeps its quiet voice")
+                .gain(),
+            super::VOICE_REST_GAIN
+        );
+
+        let wrapped_release = [
+            RoomInput::PointerMove {
+                x: 0.3,
+                y: 0.5,
+                t: 0.99,
+            },
+            RoomInput::PointerUp {
+                x: 0.6,
+                y: 0.5,
+                t: 0.01,
+            },
+        ];
+        assert!(
+            room.parameter_sound(0.4, &wrapped_release)
+                .expect("phase-wrapped release voice")
+                .gain()
+                > super::VOICE_REST_GAIN
+        );
+
+        let invalid_tail = [
+            RoomInput::PointerDown {
+                x: 0.4,
+                y: 0.5,
+                t: 0.2,
+            },
+            RoomInput::PointerUp {
+                x: f64::NAN,
+                y: 0.5,
+                t: 0.3,
+            },
+        ];
+        assert!(room.parameter_sound(0.4, &invalid_tail).is_none());
     }
 
     #[test]
@@ -758,6 +975,11 @@ mod tests {
                 y: 0.45,
                 t: 0.10,
             },
+            RoomInput::PointerMove {
+                x: 0.35,
+                y: 0.45,
+                t: 0.25,
+            },
             RoomInput::PointerCancel,
         ];
         let mut via_cancel = crate::canvas::Canvas::new(60, 30);
@@ -772,7 +994,7 @@ mod tests {
             second,
             0.0,
             0.0,
-            (super::elapsed_phase(0.30, 0.10) * MAX_STEPS as f64) as usize,
+            (super::elapsed_phase(0.30, 0.25) * MAX_STEPS as f64) as usize,
         );
         assert_eq!(via_cancel.to_text(), via_click.to_text());
     }
