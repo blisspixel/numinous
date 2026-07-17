@@ -334,11 +334,11 @@ digital-mind evidence gate.
   operating-system event dispatch, a boundary that its evidence language had to
   state explicitly.
 - CLI room renders silently omitted the mathematical readout in untouched
-  states. Invalid dimensions, phases, and backward gesture time were accepted,
+  states. Invalid dimensions, phases, and malformed gesture time were accepted,
   redirected celebration animation could flood output, and pure EOF counted as
   play in all 11 games.
 - MCP accepted wrong types, unknown fields, invalid dimensions and phase, and
-  backward gesture time through silent defaults. Catalog description, reveal,
+  malformed gesture time through silent defaults. Catalog description, reveal,
   listening, scores, and forget results lacked complete structured output.
 - The MCP play helper reused persistence paths and returned weak errors. On
   Windows, a stale Cargo install earlier in PATH could remain the command that

@@ -28,8 +28,9 @@ audio source is no longer rebuilt from render-loop cadence. Native device rates 
 are covered by pitch and duration tests. Built-in radio remains the sole source
 while tuned.
 
-Times Tables and Galton Board ship continuous input-sonification through one
-bounded seam. Their stable room arrangements remain the bed while a quiet
+Times Tables, Galton Board, and Double Pendulum ship continuous
+input-sonification through one bounded seam. Their stable room arrangements
+remain the bed while a quiet
 two-oscillator voice follows accepted mathematical input. Frequency and ratio
 targets smooth over 40 milliseconds inside the callback, oscillator phases
 persist, invalid targets fade closed, and source playhead continuity is tested.
@@ -38,7 +39,10 @@ audible consonance are one state. Galton maps the five fixed coins to ordered C
 major-pentatonic roots and maps bias strength to the exact larger-to-smaller
 Bernoulli odds ratio: 7:3, 3:2, 1:1, 3:2, or 7:3. CLI `sonify` and MCP
 `listen_room` accept the same bounded pokes or gestures and render a
-deterministic snapshot of either state.
+deterministic snapshot of each state. Double Pendulum uses one interaction
+state for pixels, status, and sound: first-arm drop selects an ordered
+minor-pentatonic root, second-arm bend opens a symmetric interval from 1:1 to
+3:2, and bounded release speed raises quiet gain from 0.03 toward 0.05.
 CLI `sonify --layer room-bed` separately exports a deterministic PCM16
 projection of the stable 16 kHz stereo App source, while MCP
 `listen_room.ambient_bed` exposes its arrangement summary
@@ -103,6 +107,12 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 - **Times Tables:** a constant D3 root and the ratio `k:(k-1)` turn the dial
   into just intervals. K=2 is 2:1, K=3 is 3:2, K=4 is 4:3, and the earned K=5
   target is 5:4. The App glides this low-level voice over the stable room bed.
+- **Double Pendulum:** the shipped input voice follows the exact initial state
+  consumed by the integrator. Horizontal hand position selects one of five
+  minor-pentatonic drop roots, vertical bend opens a symmetric 1:1 through 3:2
+  interval, and release velocity raises quiet gain without restarting the bed.
+  It sonifies the cause of the storm rather than duplicating the long trace in
+  the control path.
 - **Chaos Game:** each corner is a note of a chord; the accumulating dot-density becomes a shimmering granular pad, a cloud of tiny grains thickening as the fractal fills.
 - **Game of Life:** a living polyphonic sequencer, each cell-birth triggers a note pitched by its grid position; dense colonies swell the pad, gliders play little arpeggios as they travel.
 - **Cellular Automata:** each generation's row is read left-to-right as a rhythm; complex rules (30, 110) produce complex, evolving beats, simple rules produce steady pulses.
@@ -129,9 +139,10 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 
 ## Interaction & UI sound
 
-- **Touch has a voice, partially built.** Times Tables and Galton Board ship
-  persistent input-audio paths through the smoothed parameter voice. Tuned
-  event ticks and equivalent mathematical voices in other rooms remain planned.
+- **Touch has a voice, partially built.** Times Tables, Galton Board, and Double
+  Pendulum ship persistent input-audio paths through the smoothed parameter
+  voice. Tuned event ticks and equivalent mathematical voices in other rooms
+  remain planned.
 - **Transitions are washes.** Room-to-room dissolves carry a reverb wash through black, matching the visual cross-dissolve (see `VISUALS.md`).
 - **Reveal has a resolution.** Summoning a Revelation card lands on a small, satisfying harmonic resolution, the sonic version of the floor tilting.
 

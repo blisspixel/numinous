@@ -6,6 +6,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Double Pendulum now makes its physical gesture state audible through the
+  existing continuous parameter voice. The same reduced state drives pixels,
+  the twin-divergence status, and sound: the first-arm drop selects one of five
+  minor-pentatonic roots, second-arm bend opens a symmetric interval from 1:1
+  through 3:2, and real release speed raises the quiet gain from 0.03 toward a
+  capped 0.05. A pin stays low, a flick becomes more present, and cancel drops
+  gently. Core tests cover compact rendering, bare release, cancellation,
+  phase-wrapped fling, invalid tails, ordered roots, bend, and gain. App tests
+  cover voice ownership and time-stamped focus-loss cancellation, CLI tests
+  cover compact and full deterministic replay plus wrapped phase parsing, and
+  MCP tests cover pin, fling, and wrapped replay through the protocol. Human
+  musical judgment remains open.
 - Galton Board now makes the selected fixed coin audible through the same
   continuous parameter-voice seam as its visible experiment. The five coin
   regions climb through C major-pentatonic roots, while bias strength uses the
@@ -809,8 +821,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   callback-retired storage from their ordinary control loops.
 - The grouped release QA round now exercises all three faces against current
   source. CLI static renders retain each room's live mathematical readout,
-  dimensions and phases are bounded before allocation, gesture timestamps
-  cannot move backward, redirected celebration output stays compact, and pure
+  dimensions and phases are bounded before allocation, gesture event order is
+  preserved, redirected celebration output stays compact, and pure
   stdin EOF exits all 11 games without recording a play or score. MCP calls
   reject unknown fields, wrong types, empty or oversized canvases, bad phases,
   and malformed gestures rather than silently defaulting. The Windows installer

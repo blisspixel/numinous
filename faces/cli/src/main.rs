@@ -89,9 +89,10 @@ enum Command {
         #[arg(long = "poke")]
         pokes: Vec<String>,
         /// Add a gesture event: down:x,y,t, move:x,y,t, up:x,y,t, or cancel.
-        /// Repeat, oldest first; held rooms pin, pull, and fling. In Life, a
-        /// down earlier than --t shows the glider's later evolution; its newest
-        /// 24 down events become launches. Not combinable with --poke.
+        /// Repeat, oldest first; phase time wraps from 1 to 0. Held rooms pin,
+        /// pull, and fling. In Life, a down earlier than --t shows the glider's
+        /// later evolution; its newest 24 down events become launches. Not
+        /// combinable with --poke.
         #[arg(long = "gesture")]
         gestures: Vec<String>,
     },
@@ -118,7 +119,8 @@ enum Command {
         #[arg(long = "poke")]
         pokes: Vec<String>,
         /// Add a gesture event: down:x,y,t, move:x,y,t, up:x,y,t, or cancel.
-        /// Repeat, oldest first. Not combinable with --poke.
+        /// Repeat, oldest first; phase time wraps from 1 to 0. Not combinable
+        /// with --poke.
         #[arg(long = "gesture")]
         gestures: Vec<String>,
     },
@@ -188,7 +190,8 @@ enum Command {
         #[arg(long = "poke")]
         pokes: Vec<String>,
         /// Add a gesture event: down:x,y,t, move:x,y,t, up:x,y,t, or cancel.
-        /// Repeat, oldest first. Not combinable with --poke.
+        /// Repeat, oldest first; phase time wraps from 1 to 0. Not combinable
+        /// with --poke.
         #[arg(long = "gesture")]
         gestures: Vec<String>,
     },
@@ -695,29 +698,7 @@ fn parse_gestures(raw: &[String]) -> Result<Vec<numinous_core::RoomInput>, Strin
             numinous_core::MAX_ROOM_INPUTS
         ));
     }
-    let events: Vec<numinous_core::RoomInput> = raw
-        .iter()
-        .map(|event| parse_gesture_arg(event))
-        .collect::<Result<_, _>>()?;
-    let mut last_t = None;
-    for event in &events {
-        let t = match event {
-            numinous_core::RoomInput::PointerDown { t, .. }
-            | numinous_core::RoomInput::PointerMove { t, .. }
-            | numinous_core::RoomInput::PointerUp { t, .. } => Some(*t),
-            _ => None,
-        };
-        if let Some(t) = t {
-            if last_t.is_some_and(|previous| t < previous) {
-                return Err(format!(
-                    "Gesture timestamps must be nondecreasing; {t} came after {}.\n",
-                    last_t.unwrap_or(t)
-                ));
-            }
-            last_t = Some(t);
-        }
-    }
-    Ok(events)
+    raw.iter().map(|event| parse_gesture_arg(event)).collect()
 }
 
 fn validate_render_dimensions(width: usize, height: usize) -> Result<(), String> {
@@ -4255,7 +4236,7 @@ mod tests {
     }
 
     #[test]
-    fn room_render_boundaries_reject_empty_nonfinite_and_backwards_input() {
+    fn room_render_boundaries_reject_unsafe_input_and_accept_phase_wrap() {
         for (width, height, phase) in [
             (0, 20, 0.0),
             (40, 0, 0.0),
@@ -4272,12 +4253,11 @@ mod tests {
         }
         assert!(super::validate_render_request(4096, 4096, 0.5).is_ok());
 
-        let backwards = vec![
+        let wrapped = vec![
             "down:0.2,0.3,0.8".to_string(),
             "move:0.4,0.5,0.2".to_string(),
         ];
-        let error = super::parse_gestures(&backwards).expect_err("backwards timestamp");
-        assert!(error.contains("nondecreasing"));
+        assert!(super::parse_gestures(&wrapped).is_ok());
         let ordered = vec![
             "down:0.2,0.3,0.2".to_string(),
             "move:0.4,0.5,0.8".to_string(),
@@ -5309,6 +5289,62 @@ mod tests {
         let _ = std::fs::remove_file(left);
         let _ = std::fs::remove_file(fair);
         let _ = std::fs::remove_file(gesture_path);
+    }
+
+    #[test]
+    fn sonify_replays_the_pendulum_drop_across_input_forms() {
+        let dir = std::env::temp_dir();
+        let compact = dir.join("numinous_cli_pendulum_compact.wav");
+        let gesture_path = dir.join("numinous_cli_pendulum_gesture.wav");
+        let other = dir.join("numinous_cli_pendulum_other.wav");
+        let point = [(0.7, 0.25)];
+        let other_point = [(0.2, 0.75)];
+        let gesture = [numinous_core::RoomInput::PointerDown {
+            x: 0.7,
+            y: 0.25,
+            t: 0.4,
+        }];
+
+        let report = super::sonify_wav(
+            "double-pendulum",
+            0.4,
+            &compact,
+            false,
+            RoomRenderInput::new(0, &point),
+        )
+        .expect("compact drop sound");
+        super::sonify_wav(
+            "double-pendulum",
+            0.4,
+            &gesture_path,
+            false,
+            RoomRenderInput::with_gesture(0, &gesture),
+        )
+        .expect("gesture drop sound");
+        super::sonify_wav(
+            "double-pendulum",
+            0.4,
+            &other,
+            false,
+            RoomRenderInput::new(0, &other_point),
+        )
+        .expect("other drop sound");
+
+        assert!(report.contains("Status: PINNED"));
+        let compact_audio = std::fs::read(&compact).expect("compact WAV");
+        assert_eq!(
+            compact_audio,
+            std::fs::read(&gesture_path).expect("gesture WAV"),
+            "a compact poke and equivalent held gesture must sonify identically"
+        );
+        assert_ne!(
+            compact_audio,
+            std::fs::read(&other).expect("other WAV"),
+            "different hand-chosen angles must produce different audio"
+        );
+        let _ = std::fs::remove_file(compact);
+        let _ = std::fs::remove_file(gesture_path);
+        let _ = std::fs::remove_file(other);
     }
 
     #[test]
