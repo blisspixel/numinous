@@ -175,7 +175,12 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   Curve, Hyperbolic Tiling, Poincare Disc, Witch Caustic, Collatz Tree,
   Halvorsen (P1 share, ln2 Lyapunov, spectral spread, frame rot, laminar/burst,
   escape probes, petal counts, H2 verts, nephroid angle, tree nodes, span).
-  Subjective participant evidence and the stranger hallway remain open.
+  **Cycle 113 classical curves and flows batch:** Superellipse, Witch of Agnesi,
+  Reuleaux, Log Spiral, Hypotrochoid, Poisson, Diffraction, Dual Cobweb, Folium,
+  Tautochrone, Catenoid, Conchoid, Piriform, Kappa, Three Scroll,
+  Rabinovich-Fabrikant (shape class, areas, pitch, cusps, E[N], sinc zeros,
+  logistic band, loop area, bead gap, neck, spans). Subjective participant
+  evidence and the stranger hallway remain open.
 - **Done (Share short-loop export, machine path):** App key L exports a
   24-frame looping APNG of the current visit (phase sweep, or Life generation
   advance) with the same poke trail and Visual Era as P-key still postcards.

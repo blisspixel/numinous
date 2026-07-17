@@ -176,7 +176,42 @@ impl Room for RabinovichFabrikant {
             return self.status(t);
         }
         let g = gamma(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE gamma={g:.3}"))
+        let alpha = 1.1;
+        let mut x = -1.0_f64;
+        let mut y = 0.0_f64;
+        let mut z = 0.5_f64;
+        for _ in 0..200 {
+            let dx = y * (z - 1.0 + x * x) + g * x;
+            let dy = x * (3.0 * z + 1.0 - x * x) + g * y;
+            let dz = -2.0 * z * (alpha + x * y);
+            x += DT * dx;
+            y += DT * dy;
+            z += DT * dz;
+            if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+                return Some(format!("g={g:.2}  span=0  div"));
+            }
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        for _ in 0..800 {
+            let dx = y * (z - 1.0 + x * x) + g * x;
+            let dy = x * (3.0 * z + 1.0 - x * x) + g * y;
+            let dz = -2.0 * z * (alpha + x * y);
+            x += DT * dx;
+            y += DT * dy;
+            z += DT * dz;
+            if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+                break;
+            }
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("g={g:.2}  span={span:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

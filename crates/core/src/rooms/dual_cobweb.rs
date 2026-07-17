@@ -166,7 +166,18 @@ impl Room for DualCobweb {
             return self.status(t);
         }
         let r = r_param(t, hands.last().copied(), self.seed);
-        Some(format!("R={r:.3}  twin map"))
+        let r2 = (r + 0.3).min(4.0);
+        // Logistic fixed-point stability for |r(1-2x*)| with x*=1-1/r when r>1.
+        let band = if r < 3.0 {
+            "period1"
+        } else if r < 3.45 {
+            "period2"
+        } else if r < 3.57 {
+            "cascade"
+        } else {
+            "chaos"
+        };
+        Some(format!("r={r:.2}/{r2:.2}  {band}"))
     }
 
     fn reveal(&self) -> &'static str {

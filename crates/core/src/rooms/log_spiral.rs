@@ -149,8 +149,11 @@ impl Room for LogSpiral {
         if hands.is_empty() {
             return self.status(t);
         }
-        let b = growth(t, hands.last().copied(), self.seed);
-        Some(format!("B={b:.3}  log spiral"))
+        let b = growth(t, hands.last().copied(), self.seed).clamp(0.06, 0.35);
+        // r = a0 e^{b theta}; pitch angle phi with cot phi = b (equiangular spiral).
+        let phi = b.atan().to_degrees();
+        let grow_turn = (b * std::f64::consts::TAU).exp();
+        Some(format!("b={b:.2}  phi={phi:.0}deg  x{grow_turn:.2}/turn"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -155,7 +155,11 @@ impl Room for Diffraction {
             return self.status(t);
         }
         let a = width(t, hands.last().copied(), self.seed);
-        Some(format!("WIDTH a={a:.3}  sinc"))
+        // First zeros of sinc(a pi theta) at theta = +/- 1/a (unit screen coords).
+        let zero = 1.0 / a.max(1e-6);
+        // Half-width of central lobe (half of first-zero spacing).
+        let half = zero;
+        Some(format!("a={a:.2}  zero={zero:.2}  half={half:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

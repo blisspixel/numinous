@@ -169,8 +169,10 @@ impl Room for Folium {
         if hands.is_empty() {
             return self.status(t);
         }
-        let a = a_param(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  folium"))
+        let a = a_param(t, hands.last().copied(), self.seed).clamp(0.2, 1.5);
+        // Descartes folium: loop area is 1.5 a^2; asymptote x+y+a=0.
+        let loop_a = 1.5 * a * a;
+        Some(format!("a={a:.2}  loopA={loop_a:.2}  leaf"))
     }
 
     fn reveal(&self) -> &'static str {

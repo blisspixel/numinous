@@ -153,8 +153,11 @@ impl Room for Piriform {
         if hands.is_empty() {
             return self.status(t);
         }
-        let a = param_a(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  pear"))
+        let a = param_a(t, hands.last().copied(), self.seed).clamp(0.4, 2.0);
+        // Pear curve y^2 = x^3 (a-x)/b^2; length along x is a; max height near x=0.75a.
+        let xmax = a;
+        let ymax = ((0.75_f64.powi(3) * 0.25).sqrt()) * a; // b~1 in draw
+        Some(format!("a={a:.2}  L={xmax:.2}  h~{ymax:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -163,8 +163,9 @@ impl Room for Kappa {
         if hands.is_empty() {
             return self.status(t);
         }
-        let a = scale(t, hands.last().copied(), self.seed);
-        Some(format!("SCALE a={a:.3}  cot"))
+        let a = scale(t, hands.last().copied(), self.seed).clamp(0.25, 1.0);
+        // Kappa: r = a cot theta; vertical asymptotes at th=0,pi.
+        Some(format!("a={a:.2}  r=a cot th  arms"))
     }
 
     fn reveal(&self) -> &'static str {

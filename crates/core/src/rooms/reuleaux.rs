@@ -193,8 +193,11 @@ impl Room for Reuleaux {
         if hands.is_empty() {
             return self.status(t);
         }
-        let w = width(t, hands.last().copied(), self.seed);
-        Some(format!("W={w:.3}  width const"))
+        let w = width(t, hands.last().copied(), self.seed).clamp(0.3, 1.0);
+        // Constant width equals side length of the generating equilateral triangle.
+        // Area = 0.5 (pi - sqrt(3)) w^2.
+        let area = 0.5 * (std::f64::consts::PI - 3.0_f64.sqrt()) * w * w;
+        Some(format!("w={w:.2}  const  A={area:.3}"))
     }
 
     fn reveal(&self) -> &'static str {

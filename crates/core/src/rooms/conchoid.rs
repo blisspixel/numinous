@@ -158,7 +158,10 @@ impl Room for Conchoid {
             return self.status(t);
         }
         let k = k_param(t, hands.last().copied(), self.seed);
-        Some(format!("K={k:.3}  shell"))
+        // Nicomedes conchoid: r = a/cos(th) +/- k with a=0.8 fixed in draw.
+        let a = 0.8_f64;
+        let gap = 2.0 * k;
+        Some(format!("k={k:.2}  a={a:.1}  gap={gap:.2}"))
     }
 
     fn reveal(&self) -> &'static str {
