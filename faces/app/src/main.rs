@@ -26,6 +26,7 @@ mod feedback;
 mod game_draw;
 mod gamepad;
 mod hud;
+mod input_feedback;
 mod input_legend;
 mod live_render;
 mod mouse_input;
@@ -2093,6 +2094,10 @@ impl App {
                 Raster::from_rgba(width, height, self.rooms[self.current].meta().accent, &rgba)
         {
             let room = &self.rooms[self.current];
+            input_feedback::draw(
+                &mut raster,
+                effective_room_inputs(&self.inputs, self.the_show),
+            );
             self.draw_room_interface(&mut raster, room.as_ref(), width, height);
             self.present_raster(raster, width, height);
             return;
@@ -2110,6 +2115,7 @@ impl App {
             let (rw, rh) = self.live_scale.render_size(width, height);
             let started = std::time::Instant::now();
             let mut raster = Raster::with_accent(rw, rh, room.meta().accent);
+            let room_inputs = effective_room_inputs(&self.inputs, self.the_show);
             if room.meta().id == "mandelbrot" {
                 self.mandelbrot_camera.render(&mut raster);
             } else if room.meta().id == "game-of-life" {
@@ -2117,12 +2123,9 @@ impl App {
             } else {
                 let phase =
                     effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
-                room.render_input(
-                    &mut raster,
-                    phase,
-                    effective_room_inputs(&self.inputs, self.the_show),
-                );
+                room.render_input(&mut raster, phase, room_inputs);
             }
+            input_feedback::draw(&mut raster, room_inputs);
             self.live_scale
                 .observe(started.elapsed().as_secs_f64() * 1000.0);
             if factor > 1 {

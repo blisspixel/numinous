@@ -396,6 +396,53 @@ pub fn latest_gesture(inputs: &[RoomInput]) -> Option<Gesture> {
     }
 }
 
+/// Paint points from the newest gesture only while the pointer remains held.
+///
+/// The raw input tail is bounded before interpretation. A drag whose original
+/// down event was evicted begins at its oldest retained move. Release and
+/// cancel both end the effect, so rooms that advertise a hold verb do not
+/// accidentally turn it into a persistent click. Consecutive pointer-down
+/// events with one timestamp are the compact static-hand bridge produced by
+/// [`inputs_from_pokes`], so that representation retains all bounded points.
+#[must_use]
+pub fn held_pokes_from_inputs(inputs: &[RoomInput]) -> Vec<(f64, f64)> {
+    let bounded_start = inputs.len().saturating_sub(MAX_ROOM_INPUTS);
+    let bounded = &inputs[bounded_start..];
+    let mut compact_time = None;
+    let mut compact_points = Vec::new();
+    let compact_static = bounded.iter().all(|input| match *input {
+        RoomInput::PointerDown { x, y, t } => {
+            let same_time = compact_time.is_none_or(|expected| expected == t);
+            compact_time = Some(t);
+            compact_points.push((x, y));
+            same_time
+        }
+        _ => false,
+    });
+    if compact_static && !compact_points.is_empty() {
+        let start = compact_points.len().saturating_sub(MAX_ROOM_POKES);
+        return compact_points[start..].to_vec();
+    }
+    if !matches!(latest_gesture(bounded), Some(Gesture::Held { .. })) {
+        return Vec::new();
+    }
+    let mut points = Vec::new();
+    for input in bounded.iter().rev() {
+        match *input {
+            RoomInput::PointerMove { x, y, .. } => points.push((x, y)),
+            RoomInput::PointerDown { x, y, .. } => {
+                points.push((x, y));
+                break;
+            }
+            RoomInput::Wheel { .. } | RoomInput::Key { .. } => {}
+            RoomInput::PointerUp { .. } | RoomInput::PointerCancel => break,
+        }
+    }
+    points.reverse();
+    let start = points.len().saturating_sub(MAX_ROOM_POKES);
+    points[start..].to_vec()
+}
+
 /// The newest down or move point before `inputs` ends, within one gesture:
 /// the scan stops at any lift or cancel.
 fn prior_paint_point(inputs: &[RoomInput]) -> Option<(f64, f64, f64)> {
@@ -433,8 +480,8 @@ pub fn room_touch_action(room: &dyn Room) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_ROOM_INPUTS, MAX_ROOM_POKES, Room, RoomInput, RoomMeta, inputs_from_pokes,
-        pokes_from_inputs, renderable_poke_count,
+        MAX_ROOM_INPUTS, MAX_ROOM_POKES, Room, RoomInput, RoomMeta, held_pokes_from_inputs,
+        inputs_from_pokes, pokes_from_inputs, renderable_poke_count,
     };
     use crate::surface::Surface;
 
@@ -873,6 +920,60 @@ mod tests {
                 from: (0.8, 0.8, 0.30),
                 at: (0.85, 0.8, 0.31),
             })
+        );
+    }
+
+    #[test]
+    fn held_pokes_end_on_release_or_cancel_and_keep_only_the_active_gesture() {
+        let active = [
+            RoomInput::PointerDown {
+                x: 0.2,
+                y: 0.3,
+                t: 0.1,
+            },
+            RoomInput::PointerMove {
+                x: 0.4,
+                y: 0.5,
+                t: 0.2,
+            },
+        ];
+        assert_eq!(
+            held_pokes_from_inputs(&active),
+            vec![(0.2, 0.3), (0.4, 0.5)]
+        );
+
+        let mut released = active.to_vec();
+        released.push(RoomInput::PointerUp {
+            x: 0.4,
+            y: 0.5,
+            t: 0.3,
+        });
+        assert!(held_pokes_from_inputs(&released).is_empty());
+
+        let mut cancelled = active.to_vec();
+        cancelled.push(RoomInput::PointerCancel);
+        assert!(held_pokes_from_inputs(&cancelled).is_empty());
+
+        let mut newer = released;
+        newer.extend([
+            RoomInput::PointerDown {
+                x: 0.7,
+                y: 0.8,
+                t: 0.4,
+            },
+            RoomInput::PointerMove {
+                x: 0.9,
+                y: 0.8,
+                t: 0.5,
+            },
+        ]);
+        assert_eq!(held_pokes_from_inputs(&newer), vec![(0.7, 0.8), (0.9, 0.8)]);
+
+        let compact = inputs_from_pokes(&[(0.1, 0.2), (0.5, 0.6), (0.9, 0.8)], 0.4);
+        assert_eq!(
+            held_pokes_from_inputs(&compact),
+            vec![(0.1, 0.2), (0.5, 0.6), (0.9, 0.8)],
+            "compact static hand arrays preserve every bounded point"
         );
     }
 

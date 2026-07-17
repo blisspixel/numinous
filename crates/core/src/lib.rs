@@ -103,8 +103,8 @@ pub use resonance::{Resonance, resonances};
 pub use rng::SplitMix64;
 pub use room::{
     DEFAULT_ROOM_ACTION, DEFAULT_TOUCH_ROOM_ACTION, Gesture, MAX_ROOM_INPUTS, MAX_ROOM_POKES, Room,
-    RoomInput, RoomMeta, inputs_from_pokes, latest_gesture, pokes_from_inputs,
-    renderable_poke_count, room_action, room_touch_action,
+    RoomInput, RoomMeta, held_pokes_from_inputs, inputs_from_pokes, latest_gesture,
+    pokes_from_inputs, renderable_poke_count, room_action, room_touch_action,
 };
 pub use scores::Scoreboard;
 pub use secret::{akousma, deep_akousma};

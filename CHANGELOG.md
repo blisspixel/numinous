@@ -6,6 +6,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- App release QA now derives eight room receipts from all 350 registry entries
+  and validates an exact 2,901-screen inventory instead of a fixed 31-room
+  table. Scenarios follow each room's declared interaction verb. The generator
+  checks mathematical consequences independently from the App's latest-gesture
+  trail and reticle, while a catalog-wide diagnostic aggregates every failure.
+  A one-pixel regression proves that raw room responses must clear the separate
+  perceptibility floor. Held actions now return to their ambient render and
+  status on release or cancel without collapsing compact CLI or MCP multi-point
+  input, and Laplace's Clockwork gains a visible detune gauge.
+  Audioactive Decay renders its spoken digits as a scalable signal, Busy Beaver
+  renders written tape cells as visible bands, and Phantom Jam marks the active
+  brake immediately at both supported viewport sizes.
 - Consequence-depth pass (cycle 120 physics and geometry): Berry Phase now
   keeps its loop on the Bloch sphere and reports phase magnitude without an
   invented sign; Bragg Diffraction shares seeded plane spacing between its

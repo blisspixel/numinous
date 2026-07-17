@@ -174,8 +174,12 @@ impl Room for SphereEversion {
         }
     }
 
+    fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
+        self.render_poked(canvas, t, &crate::held_pokes_from_inputs(inputs));
+    }
+
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let pokes = crate::pokes_from_inputs(inputs);
+        let pokes = crate::held_pokes_from_inputs(inputs);
         let hands = finite_pokes(&pokes);
         if hands.is_empty() {
             return self.status(t);
