@@ -37,6 +37,19 @@ fn contact(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     }
 }
 
+fn capillary_state(contact: f64) -> f64 {
+    let contact = if contact.is_finite() {
+        contact.clamp(0.0, 1.0)
+    } else {
+        0.5
+    };
+    (0.5 - contact) * 2.0
+}
+
+fn meniscus_offset(contact_cosine: f64, amplitude: f64, edge: f64) -> f64 {
+    -contact_cosine * amplitude * edge
+}
+
 fn draw(canvas: &mut dyn Surface, c: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
@@ -48,7 +61,7 @@ fn draw(canvas: &mut dyn Surface, c: f64, seed: u64) {
     canvas.line(left, 1, left, height.saturating_sub(2) as i32, '|');
     canvas.line(right, 1, right, height.saturating_sub(2) as i32, '|');
     // Capillary rise height ~ cos(theta); meniscus shape ~ cosh-ish.
-    let cos_th = (0.5 - c) * 2.0; // 1..-1
+    let cos_th = capillary_state(c);
     let rise = cos_th * (height as f64) * 0.25;
     let mid_y = height as f64 * 0.55 - rise;
     let amp = (height as f64)
@@ -66,7 +79,7 @@ fn draw(canvas: &mut dyn Surface, c: f64, seed: u64) {
         let u = i as f64 / steps.max(1) as f64;
         let edge = (2.0 * u - 1.0).powi(2);
         // Wetting (cos>0): edges higher; non-wetting: edges lower.
-        let y = mid_y - cos_th.signum() * amp * edge * cos_th.abs().max(0.15);
+        let y = mid_y + meniscus_offset(cos_th, amp, edge);
         let px = left + i;
         let py = y.round().clamp(1.0, height.saturating_sub(2) as f64) as i32;
         if let Some((ox, oy)) = prev {
@@ -78,7 +91,7 @@ fn draw(canvas: &mut dyn Surface, c: f64, seed: u64) {
     for i in (0..=steps).step_by(3) {
         let u = i as f64 / steps.max(1) as f64;
         let edge = (2.0 * u - 1.0).powi(2);
-        let y = mid_y - cos_th.signum() * amp * edge * cos_th.abs().max(0.15);
+        let y = mid_y + meniscus_offset(cos_th, amp, edge);
         let px = left + i;
         let py0 = y.round().clamp(1.0, height.saturating_sub(2) as f64) as i32;
         let py1 = height.saturating_sub(2) as i32;
@@ -142,14 +155,14 @@ impl Room for Capillary {
 
     fn status(&self, t: f64) -> Option<String> {
         let c = contact(t, None, self.seed);
-        let cos = (0.5 - c) * 2.0;
+        let cos = capillary_state(c);
         Some(format!("cos={cos:.2}  men  DRAG:CONT"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let c = contact(t, hands.last().copied(), self.seed);
-        draw(canvas, c, self.seed ^ hands.len() as u64);
+        draw(canvas, c, self.seed);
         if let Some(&(x, y)) = hands.last() {
             let (bw, bh) = canvas.draw_bounds();
             if bw > 0 && bh > 0 {
@@ -168,8 +181,18 @@ impl Room for Capillary {
             return self.status(t);
         }
         let c = contact(t, hands.last().copied(), self.seed);
-        let cos = (0.5 - c) * 2.0;
-        Some(format!("COS={cos:.3}  rise"))
+        let height = capillary_state(c);
+        let (wetting, direction) = if height > 0.025 {
+            ("WET", "RISE")
+        } else if height < -0.025 {
+            ("NONWET", "DEPRESS")
+        } else {
+            ("NEUTRAL", "LEVEL")
+        };
+        Some(format!(
+            "{wetting} {direction} {:.0}%",
+            height.abs() * 100.0
+        ))
     }
 
     fn reveal(&self) -> &'static str {
@@ -181,7 +204,7 @@ impl Room for Capillary {
 
 #[cfg(test)]
 mod tests {
-    use super::Capillary;
+    use super::{Capillary, capillary_state, meniscus_offset};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
 
@@ -207,6 +230,50 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn contact_side_determines_rise_or_depression() {
+        let wetting = capillary_state(0.1);
+        let level = capillary_state(0.5);
+        let non_wetting = capillary_state(0.9);
+        assert!(wetting > 0.0);
+        assert!(level.abs() < 1e-12);
+        assert!(non_wetting < 0.0);
+        assert!((wetting + non_wetting).abs() < 1e-12);
+    }
+
+    #[test]
+    fn meniscus_is_continuous_through_neutral_contact() {
+        let negative = meniscus_offset(-1e-6, 12.0, 1.0);
+        let neutral = meniscus_offset(0.0, 12.0, 1.0);
+        let positive = meniscus_offset(1e-6, 12.0, 1.0);
+        assert!(negative.abs() < 2e-5);
+        assert_eq!(neutral, 0.0);
+        assert!(positive.abs() < 2e-5);
+        assert!((negative + positive).abs() < 1e-12);
+    }
+
+    #[test]
+    fn status_distinguishes_rise_from_depression() {
+        let room = Capillary::new();
+        let status_at = |x| {
+            room.status_input(0.0, &[RoomInput::PointerDown { x, y: 0.5, t: 0.0 }])
+                .unwrap()
+        };
+        assert!(status_at(0.1).contains("RISE"));
+        assert!(status_at(0.9).contains("DEPRESS"));
+    }
+
+    #[test]
+    fn duplicate_hand_history_does_not_change_the_meniscus() {
+        let room = Capillary::new();
+        let hand = (0.2, 0.5);
+        let mut single = Canvas::new(48, 24);
+        let mut duplicate = Canvas::new(48, 24);
+        room.render_poked(&mut single, 0.3, &[hand]);
+        room.render_poked(&mut duplicate, 0.3, &[hand, hand]);
+        assert_eq!(single.to_text(), duplicate.to_text());
     }
 
     #[test]

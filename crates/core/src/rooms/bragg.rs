@@ -36,18 +36,32 @@ fn angle(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     }
 }
 
+fn plane_spacing(seed: u64) -> f64 {
+    1.0 + if seed == 0 {
+        0.0
+    } else {
+        (seed % 3) as f64 * 0.1
+    }
+}
+
+fn bragg_state(theta: f64, seed: u64) -> (f64, u32, f64) {
+    let theta = if theta.is_finite() {
+        theta.clamp(0.0, std::f64::consts::FRAC_PI_2)
+    } else {
+        0.0
+    };
+    let path = 2.0 * plane_spacing(seed) * theta.sin();
+    let order = path.round().max(1.0) as u32;
+    let detune = (path - order as f64).abs();
+    (path, order, detune)
+}
+
 fn draw(canvas: &mut dyn Surface, theta: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
     }
     let theta = theta.clamp(0.1, 1.45);
-    let d = 1.0
-        + if seed == 0 {
-            0.0
-        } else {
-            (seed % 3) as f64 * 0.1
-        };
     // Crystal planes as horizontal lines.
     let n_planes = 5;
     let gap = height as f64 / (n_planes as f64 + 1.0);
@@ -66,15 +80,12 @@ fn draw(canvas: &mut dyn Surface, theta: f64, seed: u64) {
     // Reflected to upper right.
     canvas.line(cx, mid, cx + dx, mid - dy, '#');
     // Path difference mark 2 d sin theta on a side scale.
-    let path = 2.0 * d * theta.sin();
+    let (path, _, detune) = bragg_state(theta, seed);
     let bar_h = ((path / 3.0).clamp(0.0, 1.0) * (height as f64 * 0.5)).round() as i32;
     let bx = width.saturating_sub(4) as i32;
     let by0 = height as i32 / 2;
     canvas.line(bx, by0 - bar_h, bx, by0 + bar_h, '|');
     // Lambda marks: bright when path ~ n lambda (lambda toy = 1).
-    let lambda = 1.0;
-    let n_ord = (path / lambda).round();
-    let detune = (path - n_ord * lambda).abs();
     let bright = detune < 0.12;
     let ch = if bright { '*' } else { '.' };
     // Detector arc.
@@ -146,14 +157,14 @@ impl Room for Bragg {
 
     fn status(&self, t: f64) -> Option<String> {
         let th = angle(t, None, self.seed);
-        let path = 2.0 * th.sin();
+        let (path, _, _) = bragg_state(th, self.seed);
         Some(format!("th={th:.2}  2dsin={path:.2}  DRAG:ANG"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let th = angle(t, hands.last().copied(), self.seed);
-        draw(canvas, th, self.seed ^ hands.len() as u64);
+        draw(canvas, th, self.seed);
         if let Some(&(x, y)) = hands.last() {
             let (bw, bh) = canvas.draw_bounds();
             if bw > 0 && bh > 0 {
@@ -172,8 +183,9 @@ impl Room for Bragg {
             return self.status(t);
         }
         let th = angle(t, hands.last().copied(), self.seed);
-        let path = 2.0 * th.sin();
-        Some(format!("TH={th:.3}  pd={path:.2}"))
+        let (path, order, detune) = bragg_state(th, self.seed);
+        let grade = if detune < 0.12 { "PEAK" } else { "OFF" };
+        Some(format!("{grade} n={order}  pd={path:.2}  err={detune:.2}"))
     }
 
     fn reveal(&self) -> &'static str {
@@ -185,7 +197,7 @@ impl Room for Bragg {
 
 #[cfg(test)]
 mod tests {
-    use super::Bragg;
+    use super::{Bragg, bragg_state, plane_spacing};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
 
@@ -211,6 +223,37 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn bragg_state_uses_the_rendered_plane_spacing() {
+        let theta = std::f64::consts::FRAC_PI_6;
+        let seed = 2;
+        let (path, order, detune) = bragg_state(theta, seed);
+        assert!((plane_spacing(seed) - 1.2).abs() < 1e-12);
+        assert!((path - 1.2).abs() < 1e-12);
+        assert_eq!(order, 1);
+        assert!((detune - 0.2).abs() < 1e-12);
+    }
+
+    #[test]
+    fn first_order_peak_has_zero_detune() {
+        let theta = (0.5_f64).asin();
+        let (path, order, detune) = bragg_state(theta, 0);
+        assert!((path - 1.0).abs() < 1e-12);
+        assert_eq!(order, 1);
+        assert!(detune < 1e-12);
+    }
+
+    #[test]
+    fn newest_angle_does_not_change_with_duplicate_history() {
+        let room = Bragg::new_with(2);
+        let hand = (0.5, 0.5);
+        let mut single = Canvas::new(48, 24);
+        let mut duplicate = Canvas::new(48, 24);
+        room.render_poked(&mut single, 0.3, &[hand]);
+        room.render_poked(&mut duplicate, 0.3, &[hand, hand]);
+        assert_eq!(single.to_text(), duplicate.to_text());
     }
 
     #[test]

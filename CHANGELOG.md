@@ -6,6 +6,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- Consequence-depth pass (cycle 120 physics and geometry): Berry Phase now
+  keeps its loop on the Bloch sphere and reports phase magnitude without an
+  invented sign; Bragg Diffraction shares seeded plane spacing between its
+  detector and order-detune readout; Capillary Meniscus crosses neutral contact
+  continuously and distinguishes rise from depression; Sphere Geodesics now
+  rotates the actual great-circle plane, bounds seeded tilt, and distinguishes
+  local geodesics from globally minimizing arcs; Polarization samples the full
+  unit interval and grades Malus-law transmission. Duplicate hand history no
+  longer changes any of the five rendered experiments.
 - Consequence-depth pass (cycles 118-119): 22 rooms with domain-true action
   status. Menagerie/Clifford span, Henon-Heiles span and escape energy regime,
   Brusselator Hopf margin, coupled-oscillator mode split, elliptical and Sinai
