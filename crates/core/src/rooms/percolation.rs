@@ -185,8 +185,8 @@ impl Room for Percolation {
             return self.status(t);
         }
         let p = open_p(t, hands.last().copied(), self.seed);
-        // Square site percolation threshold ~ 0.592746.
-        let pc = 0.5927_f64;
+        // Square site percolation threshold (accepted estimate).
+        let pc = 0.592_746_f64;
         let delta = p - pc;
         let side = if delta > 0.02 {
             "above"

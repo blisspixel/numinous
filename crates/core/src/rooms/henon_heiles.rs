@@ -184,15 +184,36 @@ impl Room for HenonHeiles {
             return self.status(t);
         }
         let e = energy(t, hands.last().copied(), self.seed);
-        let pts = integrate(e);
-        if pts.is_empty() {
-            return Some(format!("E={e:.3}  span=0  escape"));
+        // Lightweight sample (not the full render integrate): burn then span.
+        let mut x = 0.0_f64;
+        let mut y = 0.1_f64;
+        let mut px = (2.0 * e).sqrt() * 0.5;
+        let mut py = (2.0 * e).sqrt() * 0.5;
+        for _ in 0..80 {
+            let fx = -x - 2.0 * x * y;
+            let fy = -y - x * x + y * y;
+            px += DT * fx;
+            py += DT * fy;
+            x += DT * px;
+            y += DT * py;
+            if !x.is_finite() || !y.is_finite() || x.abs() > 3.0 || y.abs() > 3.0 {
+                return Some(format!("E={e:.3}  span=0  escape"));
+            }
         }
-        let mut min_x = pts[0].0;
-        let mut max_x = pts[0].0;
-        let mut min_y = pts[0].1;
-        let mut max_y = pts[0].1;
-        for &(x, y) in &pts {
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        for _ in 0..400 {
+            let fx = -x - 2.0 * x * y;
+            let fy = -y - x * x + y * y;
+            px += DT * fx;
+            py += DT * fy;
+            x += DT * px;
+            y += DT * py;
+            if !x.is_finite() || !y.is_finite() || x.abs() > 3.0 || y.abs() > 3.0 {
+                break;
+            }
             min_x = min_x.min(x);
             max_x = max_x.max(x);
             min_y = min_y.min(y);
