@@ -228,7 +228,14 @@ impl Room for EllipticalBilliard {
             return self.status(t);
         }
         let (phi, dir) = launch(t, hands.last().copied(), self.seed);
-        Some(format!("LAUNCH phi={phi:.2} dir={dir:.2}"))
+        let a = 1.5_f64;
+        let b = 1.0_f64;
+        // String construction caustic: confocal ellipse/hyperbola parameter.
+        // Eccentricity of table e = sqrt(1 - (b/a)^2).
+        let ecc = (1.0 - (b / a) * (b / a)).sqrt();
+        let deg =
+            (phi.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU * 360.0).floor() as i32;
+        Some(format!("phi={deg}deg  dir={dir:.2}  e={ecc:.2}"))
     }
 
     fn reveal(&self) -> &'static str {
