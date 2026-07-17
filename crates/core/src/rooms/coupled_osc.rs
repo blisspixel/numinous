@@ -161,8 +161,11 @@ impl Room for CoupledOsc {
             return self.status(t);
         }
         let kc = couple(t, hands.last().copied(), self.seed);
-        let wa = (1.0 + 2.0 * kc).sqrt();
-        Some(format!("KC={kc:.3}  wa={wa:.2}"))
+        // Two equal masses, spring kc: normal modes sqrt(1) and sqrt(1+2kc).
+        let w_s = 1.0_f64;
+        let w_a = (1.0 + 2.0 * kc).sqrt();
+        let split = w_a - w_s;
+        Some(format!("kc={kc:.2}  wa={w_a:.2}  dw={split:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

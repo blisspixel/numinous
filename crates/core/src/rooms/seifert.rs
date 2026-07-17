@@ -158,7 +158,8 @@ impl Room for Seifert {
         }
         let tw = twist(t, hands.last().copied(), self.seed);
         let half = (tw.abs() * 10.0).round() as i32;
-        Some(format!("tw={tw:.2}  ~{half} half-tw"))
+        // Seifert surface for a knot: half-twists set the framing.
+        Some(format!("tw={tw:.2}  half={half}  seifert"))
     }
 
     fn reveal(&self) -> &'static str {

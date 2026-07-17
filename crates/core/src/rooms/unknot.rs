@@ -161,7 +161,8 @@ impl Room for Unknot {
             return self.status(t);
         }
         let k = kink(t, hands.last().copied(), self.seed);
-        Some(format!("K={k:.3}  free"))
+        // Unknot: trivial knot type; kink is cosmetic, crossings stay 0.
+        Some(format!("kink={k:.2}  cr=0  unknot"))
     }
 
     fn reveal(&self) -> &'static str {

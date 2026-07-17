@@ -167,7 +167,9 @@ impl Room for Feigenbaum {
         }
         let g = generation(t, hands.last().copied());
         let r = bif_r(g.saturating_sub(1));
-        Some(format!("GEN={g}  r~{r:.5}"))
+        // Period at generation g is 2^g (period-doubling cascade).
+        let period = 1u64 << g.min(12);
+        Some(format!("gen={g}  r={r:.4}  per={period}"))
     }
 
     fn reveal(&self) -> &'static str {

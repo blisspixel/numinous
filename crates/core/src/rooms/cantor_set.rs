@@ -197,7 +197,9 @@ impl Room for CantorSet {
         let d = depth(t, hands.last().copied());
         let segs = cantor_intervals(d).len();
         let measure = (2.0f64 / 3.0).powi(d as i32);
-        Some(format!("DEPTH={d}  segs={segs}  len~{measure:.3}"))
+        // Hausdorff dim of middle-thirds Cantor is log2/log3.
+        let dim = 2.0_f64.ln() / 3.0_f64.ln();
+        Some(format!("d={d}  segs={segs}  len={measure:.3}  H={dim:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

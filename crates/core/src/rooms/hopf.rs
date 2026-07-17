@@ -174,11 +174,8 @@ impl Room for Hopf {
         }
         let n = 6 + (phase_unit(t) * 6.0) as usize;
         let (x, y) = *hands.last().unwrap();
-        Some(format!(
-            "SPIN yaw={:.0} pitch={:.0}  n={n}",
-            (x - 0.5) * 360.0,
-            (y - 0.5) * 180.0
-        ))
+        // Hopf map sample: hand selects a base point; n fibers drawn.
+        Some(format!("fibers={n}  base=({x:.2},{y:.2})"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -179,7 +179,10 @@ impl Room for Weierstrass {
         }
         let (a, b) = params(t, hands.last().copied(), self.seed);
         let prod = a * b;
-        Some(format!("TUNE a={a:.3}  b={b:.1}  ab={prod:.1}"))
+        // Weierstrass: continuous for 0<a<1; classic nowhere-diff when ab>1
+        // (Hardy). Status reports ab against that threshold.
+        let rough = if prod > 1.0 { "ab>1" } else { "ab<=1" };
+        Some(format!("a={a:.2} b={b:.1}  ab={prod:.2}  {rough}"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -158,8 +158,10 @@ impl Room for HopfLink {
             return self.status(t);
         }
         let p = angle(t, hands.last().copied(), self.seed);
-        let deg = (p.rem_euclid(1.0) * 360.0).floor() as i32;
-        Some(format!("ph={deg}deg  Lk=1  hopf"))
+        let deg =
+            (p.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU * 360.0).floor() as i32;
+        // Hopf link: two unknots, linking number +-1.
+        Some(format!("phi={deg}deg  lk=+-1  hopf"))
     }
 
     fn reveal(&self) -> &'static str {

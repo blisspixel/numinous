@@ -214,8 +214,21 @@ impl Room for Buddhabrot {
         let (x, y) = *hands.last().unwrap();
         let cx = -2.0 + x * 3.5;
         let cy = -1.5 + y * 3.0;
-        let max_iter = 50 + (phase_unit(t) * 50.0) as u32;
-        Some(format!("AIM c=({cx:.2},{cy:.2})  it={max_iter}"))
+        // Escape time of the aimed c for the Buddhabrot exposure.
+        let mut zx = 0.0_f64;
+        let mut zy = 0.0_f64;
+        let mut esc = 0u32;
+        for i in 0..80u32 {
+            if zx * zx + zy * zy > 4.0 {
+                esc = i;
+                break;
+            }
+            let nx = zx * zx - zy * zy + cx;
+            zy = 2.0 * zx * zy + cy;
+            zx = nx;
+            esc = i + 1;
+        }
+        Some(format!("c=({cx:.2},{cy:.2}) esc={esc}"))
     }
 
     fn reveal(&self) -> &'static str {

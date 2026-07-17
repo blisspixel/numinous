@@ -187,6 +187,10 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   measures (attractor spans after burn-in, tent Lyapunov, sync residual, limit
   cycle amp, KAM flip rate, Julia fill fraction, classical areas and pitch,
   knot crossings and volume, Onsager M, SIR attack size, Foucault period).
+  **Cycles 118-119 consequence depth:** 22 further rooms (Menagerie span,
+  Henon-Heiles regime, Brusselator Hopf margin, coupled modes, billiards,
+  Feigenbaum period, Weierstrass ab, baker/horseshoe, Hopf family, Cantor/Menger
+  dim, percolation vs pc, Kaplan-Yorke D, Manneville laminar, Buddhabrot esc).
   Subjective participant evidence and the stranger hallway remain open.
 - **Done (Share short-loop export, machine path):** App key L exports a
   24-frame looping APNG of the current visit (phase sweep, or Life generation

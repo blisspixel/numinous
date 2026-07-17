@@ -216,8 +216,12 @@ impl Room for SinaiBilliard {
         if hands.is_empty() {
             return self.status(t);
         }
-        let (x, y, a) = launch(t, hands.last().copied(), self.seed);
-        Some(format!("LAUNCH ({x:.2},{y:.2}) a={a:.2}"))
+        let (x, y, ang) = launch(t, hands.last().copied(), self.seed);
+        // Sinai: dispersing billiard; positive Lyapunov from curved scatterer.
+        let deg =
+            (ang.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU * 360.0).floor() as i32;
+        let r2 = x * x + y * y;
+        Some(format!("({x:.2},{y:.2}) a={deg}deg  r2={r2:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

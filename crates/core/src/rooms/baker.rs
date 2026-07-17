@@ -164,7 +164,11 @@ impl Room for Baker {
             return self.status(t);
         }
         let n = steps(t, hands.last().copied());
-        Some(format!("STEPS={n}  layers~{}", 1usize << n.min(12)))
+        // Each baker step doubles horizontal stretch; strips = 2^n.
+        let strips = 1usize << n.min(12);
+        // Lyapunov of baker map is ln 2 per iterate in expanding direction.
+        let lyap = std::f64::consts::LN_2 * n as f64;
+        Some(format!("n={n}  strips={strips}  L~{lyap:.2}"))
     }
 
     fn reveal(&self) -> &'static str {
