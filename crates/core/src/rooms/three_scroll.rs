@@ -184,7 +184,51 @@ impl Room for ThreeScroll {
             return self.status(t);
         }
         let c = c_param(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE c={c:.2}"))
+        // Lightweight span after burn; check all components for finiteness.
+        let aa = 40.0;
+        let b = 3.0;
+        let d = 1.0;
+        let mut x = 0.1_f64;
+        let mut y = 0.0_f64;
+        let mut z = 0.0_f64;
+        for _ in 0..200 {
+            let dx = aa * (y - x);
+            let dy = (c - aa) * x + c * y + x * z;
+            let dz = -b * z + x * y * d;
+            x += DT * dx;
+            y += DT * dy;
+            z += DT * dz;
+            if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+                return Some(format!("c={c:.1}  span=0  div"));
+            }
+            if x.abs() > 100.0 || y.abs() > 100.0 || z.abs() > 100.0 {
+                return Some(format!("c={c:.1}  span=0  div"));
+            }
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        for _ in 0..800 {
+            let dx = aa * (y - x);
+            let dy = (c - aa) * x + c * y + x * z;
+            let dz = -b * z + x * y * d;
+            x += DT * dx;
+            y += DT * dy;
+            z += DT * dz;
+            if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+                break;
+            }
+            if x.abs() > 100.0 || y.abs() > 100.0 || z.abs() > 100.0 {
+                break;
+            }
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("c={c:.1}  span={span:.1}"))
     }
 
     fn reveal(&self) -> &'static str {

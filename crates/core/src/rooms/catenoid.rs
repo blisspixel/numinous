@@ -170,8 +170,10 @@ impl Room for Catenoid {
         if hands.is_empty() {
             return self.status(t);
         }
-        let a = neck(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  catenoid"))
+        let a = neck(t, hands.last().copied(), self.seed).clamp(0.12, 0.8);
+        // Minimal surface of revolution: r(z) = a cosh(z/a); neck radius is a.
+        let r_at_1 = a * (1.0 / a).cosh();
+        Some(format!("a={a:.2}  neck  r(1)={r_at_1:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

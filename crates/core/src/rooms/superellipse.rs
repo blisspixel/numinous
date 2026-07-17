@@ -148,8 +148,18 @@ impl Room for Superellipse {
         if hands.is_empty() {
             return self.status(t);
         }
-        let n = exponent(t, hands.last().copied(), self.seed);
-        Some(format!("N={n:.3}  super"))
+        let n = exponent(t, hands.last().copied(), self.seed).clamp(0.4, 8.0);
+        // Lamé superellipse |x/a|^n + |y/b|^n = 1 (a,b may differ, so n=2 is ellipse not circle).
+        let shape = if (n - 2.0).abs() < 0.12 {
+            "ellipse"
+        } else if n < 1.0 {
+            "astro"
+        } else if n > 4.0 {
+            "boxy"
+        } else {
+            "super"
+        };
+        Some(format!("n={n:.2}  {shape}"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -162,7 +162,16 @@ impl Room for Tautochrone {
             return self.status(t);
         }
         let p = race(t, hands.last().copied(), self.seed);
-        Some(format!("P={p:.3}  isochrone"))
+        // Three beads at starts 0.15, 0.4, 0.7; each at s0+(1-s0)*p; all meet at p=1.
+        let starts = [0.15_f64, 0.4, 0.7];
+        let mut gaps = 0.0_f64;
+        for i in 0..2 {
+            let u0 = starts[i] + (1.0 - starts[i]) * p;
+            let u1 = starts[i + 1] + (1.0 - starts[i + 1]) * p;
+            gaps += (u1 - u0).abs();
+        }
+        let meet = ((1.0 - p) * 100.0).round() as i32;
+        Some(format!("p={p:.2}  gap={gaps:.2}  left={meet}%"))
     }
 
     fn reveal(&self) -> &'static str {

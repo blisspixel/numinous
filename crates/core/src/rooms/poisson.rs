@@ -159,8 +159,29 @@ impl Room for Poisson {
         if hands.is_empty() {
             return self.status(t);
         }
-        let lam = rate(t, hands.last().copied(), self.seed);
-        Some(format!("LAM={lam:.3}  pois"))
+        let lam = rate(t, hands.last().copied(), self.seed).clamp(0.3, 12.0);
+        // Poisson process: E[N(1)] = lam, mean interarrival 1/lam.
+        let mean_wait = 1.0 / lam;
+        // Match render_poked seed variation so realized n agrees with the draw.
+        let seed = self.seed ^ hands.len() as u64;
+        let mut state = if seed == 0 {
+            0x9e37_79b9_7f4a_7c15
+        } else {
+            seed ^ 0xdead_beef_cafe_babe
+        };
+        let mut t_acc = 0.0_f64;
+        let mut n = 0u32;
+        while t_acc < 1.0 {
+            let u = next_u01(&mut state).clamp(1e-12, 1.0 - 1e-12);
+            t_acc += -u.ln() / lam;
+            if t_acc > 1.0 {
+                break;
+            }
+            n += 1;
+        }
+        Some(format!(
+            "lam={lam:.1}  E[N]={lam:.1}  n={n}  wait={mean_wait:.2}"
+        ))
     }
 
     fn reveal(&self) -> &'static str {

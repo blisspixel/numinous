@@ -166,7 +166,20 @@ impl Room for DualCobweb {
             return self.status(t);
         }
         let r = r_param(t, hands.last().copied(), self.seed);
-        Some(format!("R={r:.3}  twin map"))
+        let r2 = (r + 0.3).min(4.0);
+        // Label each panel from its own r (regime boundaries of the logistic cascade).
+        let band = |rr: f64| -> &'static str {
+            if rr < 3.0 {
+                "p1"
+            } else if rr < 3.45 {
+                "p2"
+            } else if rr < 3.57 {
+                "casc"
+            } else {
+                "chaos"
+            }
+        };
+        Some(format!("r={r:.2}({})/{r2:.2}({})", band(r), band(r2)))
     }
 
     fn reveal(&self) -> &'static str {
