@@ -73,6 +73,7 @@ pub mod collatz;
 pub mod collatz_tree;
 pub mod concentration;
 pub mod conchoid;
+pub mod conjecture_mill;
 pub mod continued_frac;
 pub mod coriolis;
 pub mod coupled_logistic;

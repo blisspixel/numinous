@@ -137,6 +137,40 @@ first principles and uses no Strudel code: nothing is copied, adapted, embedded,
 linked, or vendored. The built-in recorded soundtrack remains separate from the
 independently implemented programmatic language.
 
+## 6. Automated conjecture and proof search, July 17, 2026
+
+The Conjecture Mill uses a deliberately small and inspectable version of the
+proposal, test, refute, prove loop. The room does not imply that undirected
+random strings become useful mathematics merely because the run is long.
+Current evidence supports five design constraints:
+
+1. **Search a typed space.** HR forms concepts through explicit production
+   rules, while FunSearch evolves concise executable programs rather than
+   arbitrary prose. A finite grammar makes every candidate meaningful and the
+   full search auditable.
+2. **Keep an independent judge.** HR combines conjecture formation with theorem
+   provers and model generators. The Ramanujan Machine explicitly describes its
+   numerical formulas as conjectures without proofs. The room therefore gives
+   every rejected candidate a reproducible counterexample.
+3. **Testing is not proof.** Lean's architecture checks proof terms in a small
+   kernel. AlphaProof searches in Lean so generated proof steps remain formally
+   checkable. The room stamps `PROVED` only through exact rational-polynomial
+   coefficient equality, never through a sample threshold.
+4. **Favor inspectable artifacts.** FunSearch emphasizes concise programs that
+   researchers can understand. The room displays the candidate, observed data,
+   best survivor, trial count, and rejecting witness instead of a black-box
+   score.
+5. **Let human steering affect proposals, not truth.** A gesture changes the
+   sequence laboratory and deterministic search permutation. It cannot alter
+   observed values or the proof predicate. Any future frontier system also
+   needs novelty checking against the literature and expert review before an
+   output can be called new mathematics.
+
+The implemented room is a finite theory-formation toy. Genuine open-problem
+work remains a 2.0 frontier requiring exportable formal statements, proof
+certificates checked outside the proposer, literature search, provenance, and
+human mathematical scrutiny.
+
 ## Sources
 
 **Current implementation guidance checked 2026-07-14**
@@ -202,6 +236,13 @@ independently implemented programmatic language.
 - [Visually stunning math concepts which are easy to explain, Hacker News](https://news.ycombinator.com/item?id=28489582)
 - [The Quest to Decode the Mandelbrot Set, Quanta Magazine](https://www.quantamagazine.org/the-quest-to-decode-the-mandelbrot-set-maths-famed-fractal-20240126/)
 - [A Thing of Beauty: The Mandelbrot Set, Beshara Magazine](https://besharamagazine.org/a-thing-of-beauty/mandelbrot-set-fractal-geometry/)
+
+**Automated conjecture and proof search**
+- [Generating conjectures on fundamental constants with the Ramanujan Machine, Nature, February 3, 2021](https://www.nature.com/articles/s41586-021-03229-4)
+- [Automated theory formation in pure mathematics, Simon Colton, 2001](https://era.ed.ac.uk/items/907e65a9-0410-4e9f-9923-58e572aec62d)
+- [Lean language reference, current reference accessed July 17, 2026](https://lean-lang.org/doc/reference/latest)
+- [FunSearch, Google DeepMind, December 14, 2023](https://deepmind.google/blog/funsearch-making-new-discoveries-in-mathematical-sciences-using-large-language-models/)
+- [AlphaProof formal mathematics, Google DeepMind, July 25, 2024, updated with the 2025 methodology publication](https://deepmind.google/blog/ai-solves-imo-problems-at-silver-medal-level/)
 
 **Explorables / visualization / prior art**
 - [3Blue1Brown](https://www.3blue1brown.com/) · [About](https://www.3blue1brown.com/about/) · [Manim (GitHub)](https://github.com/3b1b/manim)

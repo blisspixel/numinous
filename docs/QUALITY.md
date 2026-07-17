@@ -8,14 +8,14 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-17
 
-- **Enforced now:** formatting, Clippy with warnings denied, 2,730 all-target
+- **Enforced now:** formatting, Clippy with warnings denied, 2,743 all-target
   test cases, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
   three-OS test-and-build matrix. The current measured coverage is 95.25%
-  regions and 95.29% lines under the documented exclusions.
+  regions and 95.30% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
-  three faces, and a release-generated 2,901-screen visual QA matrix. Every room
+  three faces, and a release-generated 2,909-screen visual QA matrix. Every room
   is captured at default and compact sizes in deterministic opening, arrival,
   immediate-interaction, and same-phase delayed-interaction states. Default
   room receipts are 900 by 700 and compact room receipts are 360 by 240. Games,
@@ -54,7 +54,7 @@ built, so an aspiration is never mistaken for a result.
   reports finite-sample integrity, clipping, RMS, crest, channel balance, DC,
   correlation, side-to-mid ratio, adjacent steps, and exact-zero fraction.
   CLI tests parse RIFF independently and compare every exported PCM16 sample to
-  the shared quantizer's projection of the App source; MCP tests compare every event for all 350 rooms, enforce a
+  the shared quantizer's projection of the App source; MCP tests compare every event for all 351 rooms, enforce a
   96-event and 64 KiB result budget, and reject binary or local-path transport.
   The App's fixed 16 kHz room-score source is
   capped below two million interleaved samples and shared with the mixer, so
@@ -202,7 +202,7 @@ review, never as a claim that fictional participants had an experience.
    cards and compact states. Record clipping, low contrast, unclear controls,
    hidden consequences, unstable layout, and screens that fail to invite a
    first action.
-2. **Interaction and game-flow group:** traverse all 350 rooms through immediate
+2. **Interaction and game-flow group:** traverse all 351 rooms through immediate
    click, delayed gesture, release, and reset. Traverse every game from initial
    state through each stage and result. Compare the rendered consequence with
    its status copy and with the underlying mathematical rule. A changed image

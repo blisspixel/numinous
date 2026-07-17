@@ -5,9 +5,21 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- The Conjecture Mill joins the Number & Pattern wing as room 351. Its finite
+  typed grammar enumerates primitive rational quadratic formulas against six
+  observed integer sequences. Every wrong candidate exposes an exact
+  counterexample, while `PROVED` requires cross-multiplied coefficient equality
+  rather than a sample threshold. Phase advances the complete search; bounded
+  drag paths select the laboratory and replayable search permutation without
+  changing data or truth. The shared blackboard renders the observed sequence,
+  current chalk, best survivor, rejected ledger, trial counts, and proof stamp
+  at raster and ASCII sizes. Complete-permutation, proof-separation, witness,
+  hostile-input, variation, registry, and catalog visual-oracle tests cover it.
+
 ### Changed
-- App release QA now derives eight room receipts from all 350 registry entries
-  and validates an exact 2,901-screen inventory instead of a fixed 31-room
+- App release QA now derives eight room receipts from all 351 registry entries
+  and validates an exact 2,909-screen inventory instead of a fixed 31-room
   table. Scenarios follow each room's declared interaction verb. The generator
   checks mathematical consequences independently from the App's latest-gesture
   trail and reticle, while a catalog-wide diagnostic aggregates every failure.

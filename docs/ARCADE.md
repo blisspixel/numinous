@@ -51,7 +51,7 @@ theirs; nothing is borrowed.
   action line) and `poke(x, y, variation)` where meaningful; the registry
   threads a per-visit `variation` seed (default 0 pins all current tests
   and postcards exactly).
-- Expanded pokes and drags (touch verbs on arrival cards for playable rooms): first wave (Lorenz: DROP A STORM, Life: PLACE A 5-CELL GLIDER, Voronoi: DROP A WELL, Double: RE-DROP from the hand's point, Chaos: MOVE A CORNER, Random: PLANT A WALKER) plus many more including Golden (PLANT A SEED), Langton (FLIP A CELL), Barnsley (PLANT A NEW POINT), Buffon (THROW A NEEDLE), Galton (PICK 1 OF 5 COINS, DROP 64 BALLS: x chooses a fixed probability, y is intentionally irrelevant for drops, repeated pointer-down events build one contiguous run, and a pointer-move commits a one-ball landing bet graded against the highlighted last ball), Mandelbrot (DIVE), Julia (MORPH C), Times Tables (TURN THE DIAL), Epicycles (PERTURB), Goldbach (TEST THIS EVEN: x chooses an even target, y chooses a prime-pair witness), L-System (PLANT), Quine (PLACE A COPY), StrangeLoop (SHIFT), and Cult of Pi (RESTORE AND HOLD A PATCH). All 350 current catalog rooms declare an action.
+- Expanded pokes and drags (touch verbs on arrival cards for playable rooms): first wave (Lorenz: DROP A STORM, Life: PLACE A 5-CELL GLIDER, Voronoi: DROP A WELL, Double: RE-DROP from the hand's point, Chaos: MOVE A CORNER, Random: PLANT A WALKER) plus many more including Golden (PLANT A SEED), Langton (FLIP A CELL), Barnsley (PLANT A NEW POINT), Buffon (THROW A NEEDLE), Galton (PICK 1 OF 5 COINS, DROP 64 BALLS: x chooses a fixed probability, y is intentionally irrelevant for drops, repeated pointer-down events build one contiguous run, and a pointer-move commits a one-ball landing bet graded against the highlighted last ball), Mandelbrot (DIVE), Julia (MORPH C), Times Tables (TURN THE DIAL), Epicycles (PERTURB), Goldbach (TEST THIS EVEN: x chooses an even target, y chooses a prime-pair witness), L-System (PLANT), Quine (PLACE A COPY), StrangeLoop (SHIFT), Cult of Pi (RESTORE AND HOLD A PATCH), and the Conjecture Mill (STEER THE SEARCH). All 351 current catalog rooms declare an action.
 - The app maps clicks to normalized coordinates; R resets the current visit,
   while moving to another room deals the next replayable variation.
   The CLI gets `watch --vary`; MCP `play_room` gains `variation`.
@@ -60,7 +60,7 @@ theirs; nothing is borrowed.
 ## Order of work (one session each, built to the bar)
 1. `munch_arcade` core + CLI twin + tests (the game exists end to end).
 2. App real-time Munch with juice (the fun lands).
-3. The poke trait + first six rooms + arrival verbs (expanded to all 350 rooms).
+3. The poke trait + first six rooms + arrival verbs (expanded to all 351 rooms).
 4. MCP `munch_arcade` + variation parity and docs. **DONE** (MCP tool + `play_room` variation + score posting).
 5. Run the documented human playtest, including a younger participant, before claiming the experience passes for either audience. **OPEN**.
 
