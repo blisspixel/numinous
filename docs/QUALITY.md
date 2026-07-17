@@ -6,16 +6,16 @@ comfort, and voluntary return play. Only part of that system is automated today.
 This document names both the enforced checks and the quality loops still to be
 built, so an aspiration is never mistaken for a result.
 
-## Evidence snapshot, 2026-07-14
+## Evidence snapshot, 2026-07-17
 
-- **Enforced now:** formatting, Clippy with warnings denied, 1,350 all-target
+- **Enforced now:** formatting, Clippy with warnings denied, 2,730 all-target
   test cases, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 93.64%
-  regions and 93.49% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 95.25%
+  regions and 95.29% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
-  three faces, and a release-generated 349-screen visual QA matrix. Every room
+  three faces, and a release-generated 2,901-screen visual QA matrix. Every room
   is captured at default and compact sizes in deterministic opening, arrival,
   immediate-interaction, and same-phase delayed-interaction states. Default
   room receipts are 900 by 700 and compact room receipts are 360 by 240. Games,
@@ -26,13 +26,17 @@ built, so an aspiration is never mistaken for a result.
   controller-first room, help, Show, Journey, Studio, game-result, and visible
   pause coverage. Sixteen audio-state receipts cover room score, radio,
   radio-off fallback, Studio, mute, zero volume, background silence, and a
-  missing output device at default and compact sizes. Each room has an explicit click,
-  drag-release, repeated-action, or boundary scenario. The generator validates
-  ordered finite input, release closure, interaction-aware status or action
-  semantics, at least 100 changed pixels at default size and 32 at compact
-  size, at least 1% changed-region support, minimum support density, a cluster
-  of at least two adjacent 32-pixel spatial tiles, and minimum mean color
-  change. A cross-process single-writer guard prevents competing generators
+  missing output device at default and compact sizes. Each room has a click,
+  active-hold, drag-release, repeated-action, or boundary scenario that follows
+  its declared verb. The generator validates ordered finite input, completed
+  gesture closure, active-hold release and cancel boundaries, interaction-aware
+  status or action semantics, and a pure-room consequence of at least eight
+  changed pixels at default size or four at compact size. Independently, the App's latest
+  gesture feedback must change at least 100 pixels at default size and 32 at
+  compact size, cover at least 1% changed-region support, meet the minimum
+  support density, form a cluster of at least two adjacent 32-pixel spatial
+  tiles, and meet the minimum mean color change. Life uses a dedicated
+  pure-render causal and locality oracle. A cross-process single-writer guard prevents competing generators
   from replacing the same evidence directory. A direct regression proves that four
   isolated 10 by 10 corner markers do not satisfy the spatial gate. These are
   coarse renderer-path checks, not certification of subjective visual quality.
@@ -50,7 +54,7 @@ built, so an aspiration is never mistaken for a result.
   reports finite-sample integrity, clipping, RMS, crest, channel balance, DC,
   correlation, side-to-mid ratio, adjacent steps, and exact-zero fraction.
   CLI tests parse RIFF independently and compare every exported PCM16 sample to
-  the shared quantizer's projection of the App source; MCP tests compare every event for all 31 rooms, enforce a
+  the shared quantizer's projection of the App source; MCP tests compare every event for all 350 rooms, enforce a
   96-event and 64 KiB result budget, and reject binary or local-path transport.
   The App's fixed 16 kHz room-score source is
   capped below two million interleaved samples and shared with the mixer, so
@@ -198,7 +202,7 @@ review, never as a claim that fictional participants had an experience.
    cards and compact states. Record clipping, low contrast, unclear controls,
    hidden consequences, unstable layout, and screens that fail to invite a
    first action.
-2. **Interaction and game-flow group:** traverse all 31 rooms through immediate
+2. **Interaction and game-flow group:** traverse all 350 rooms through immediate
    click, delayed gesture, release, and reset. Traverse every game from initial
    state through each stage and result. Compare the rendered consequence with
    its status copy and with the underlying mathematical rule. A changed image

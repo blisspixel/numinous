@@ -322,8 +322,12 @@ impl Room for Sandpile {
         mark_pour_sites(canvas, &hands);
     }
 
+    fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
+        self.render_poked(canvas, t, &crate::held_pokes_from_inputs(inputs));
+    }
+
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let pokes = crate::pokes_from_inputs(inputs);
+        let pokes = crate::held_pokes_from_inputs(inputs);
         let hands = finite_pokes(&pokes);
         if hands.is_empty() {
             return self.status(t);
@@ -356,7 +360,7 @@ mod tests {
         cell_from_norm, finite_pokes, pour_site, stabilize,
     };
     use crate::canvas::Canvas;
-    use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
+    use crate::room::{MAX_ROOM_POKES, Room, RoomInput, inputs_from_pokes};
 
     #[test]
     fn four_grains_at_center_topple_once_to_neighbors() {
@@ -483,6 +487,22 @@ mod tests {
         room.render(&mut base, 0.2);
         room.render_poked(&mut poked, 0.2, &[(0.2, 0.8)]);
         assert_ne!(base.to_text(), poked.to_text());
+    }
+
+    #[test]
+    fn compact_static_hands_preserve_multiple_pour_sites() {
+        let room = Sandpile::new();
+        let multi = inputs_from_pokes(&[(0.2, 0.2), (0.8, 0.8)], 0.72);
+        let single = inputs_from_pokes(&[(0.8, 0.8)], 0.72);
+        let mut multi_render = Canvas::new(40, 20);
+        let mut single_render = Canvas::new(40, 20);
+        room.render_input(&mut multi_render, 0.72, &multi);
+        room.render_input(&mut single_render, 0.72, &single);
+        assert_ne!(multi_render.to_text(), single_render.to_text());
+        assert_ne!(
+            room.status_input(0.72, &multi),
+            room.status_input(0.72, &single)
+        );
     }
 
     #[test]

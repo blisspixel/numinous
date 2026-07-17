@@ -16,7 +16,7 @@ no true HDR bloom, no phosphor persistence, no tonemap, and the `wgpu` path is
 wired only to the Mandelbrot and Julia escape-time fractals. "Lit from within" is
 a promise on paper, not a look on screen. This is not a flaw in the design; the
 design is right. It is the most important fact for the aesthetics roadmap,
-because the fix is systemic: one pipeline lifts all 31 rooms and every Era at
+because the fix is systemic: one pipeline lifts all 350 rooms and every Era at
 once.
 
 ## The signature identity, in one sentence

@@ -100,6 +100,35 @@ fn draw(canvas: &mut dyn Surface, moons: &[(f64, f64); 3]) {
     }
 }
 
+fn draw_detune_gauge(canvas: &mut dyn Surface, detune: f64) {
+    if detune.abs() <= f64::EPSILON {
+        return;
+    }
+    let (width, height) = canvas.draw_bounds();
+    if width == 0 || height == 0 {
+        return;
+    }
+    let center = width as f64 * 0.5;
+    let reach = width as f64 * 0.22;
+    let end = center + (detune / 0.2).clamp(-1.0, 1.0) * reach;
+    let y = height as f64 * 0.88;
+    let tick = (height as f64 * 0.035).clamp(2.0, 12.0);
+    canvas.line(
+        center.round() as i32,
+        y.round() as i32,
+        end.round() as i32,
+        y.round() as i32,
+        '!',
+    );
+    canvas.line(
+        end.round() as i32,
+        (y - tick).round() as i32,
+        end.round() as i32,
+        (y + tick).round() as i32,
+        '!',
+    );
+}
+
 /// Laplace's Clockwork room.
 #[derive(Debug, Default)]
 pub struct LaplaceClock {
@@ -164,6 +193,7 @@ impl Room for LaplaceClock {
         let detune = hands.last().map(|(x, _)| (*x - 0.5) * 0.4).unwrap_or(0.0);
         let moons = positions(t, detune, self.seed);
         draw(canvas, &moons);
+        draw_detune_gauge(canvas, detune);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -214,6 +244,20 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn detune_draws_a_visible_drift_gauge() {
+        let room = LaplaceClock::new();
+        let mut base = Canvas::new(80, 40);
+        let mut detuned = Canvas::new(80, 40);
+        room.render(&mut base, 0.4);
+        room.render_poked(&mut detuned, 0.4, &[(0.98, 0.5)]);
+        let changed = (0..40)
+            .flat_map(|y| (0..80).map(move |x| (x, y)))
+            .filter(|&(x, y)| base.cell(x, y) != detuned.cell(x, y))
+            .count();
+        assert!(changed >= 8, "detune gauge changed only {changed} cells");
     }
 
     #[test]

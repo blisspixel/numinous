@@ -46,16 +46,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # W
 ```
 
 
-Expected right now: **format and clippy clean, 1,350 all-target test cases pass,
-93.64% region cover, and 93.49% line cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 2,730 all-target test cases pass,
+95.25% region cover, and 95.29% line cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
 
-The release scripts also regenerate `renders/qa-app/`, a 349-screen app matrix.
+The release scripts also regenerate `renders/qa-app/`, a 2,901-screen app matrix.
 Every catalog room has deterministic default and compact opening frames,
 arrival cards, immediate pointer responses, and same-phase delayed-gesture
-responses. Default room receipts are 900 by 700; compact room receipts are 360
+responses that follow its declared interaction verb. The generator checks pure
+room consequences separately from the App's latest-gesture feedback. Default
+room receipts are 900 by 700; compact room receipts are 360
 by 240. Dedicated Cult of Pi receipts also cover a Journey threshold banner
 and the untouched first frame after it closes. The generator holds an exclusive
 single-writer guard before removing stale receipts.
@@ -70,12 +72,16 @@ radio, radio-off fallback, Studio, mute, zero volume, background silence, and a
 missing output device.
 Generation removes stale output,
 checks the exact unique scenario inventory, rejects blank or wrong-sized frames,
-and gives every room a declared click, drag-release, repeated-action, or boundary
-scenario. Inputs must be finite, ordered, and closed. Immediate and delayed
-responses must meet changed-pixel, spatial-support, support-density, adjacent
-32-pixel spatial-tile, and mean color-delta thresholds, while the room must
-expose either an interaction-aware status change or an explicit action
-contract. A regression proves four isolated 10 by 10 corner markers fail the
+and gives every room a click, active-hold, drag-release, repeated-action, or
+boundary scenario that follows its declared verb. Inputs must be finite,
+ordered, and closed when the captured gesture is complete. Active-hold rooms
+must return to their ambient render and status after release or cancel. The
+pure room renderer must change at least eight pixels at default size or four at
+compact size in an immediate or delayed consequence. Independently, App gesture feedback must
+meet changed-pixel, spatial-support, support-density, adjacent 32-pixel
+spatial-tile, and mean color-delta thresholds, while the room must expose either
+an interaction-aware status change or an explicit action contract. Life uses a
+dedicated pure-render causal and locality oracle. A regression proves four isolated 10 by 10 corner markers fail the
 spatial-tile gate. These are coarse renderer-path structural gates, not a claim
 of native operating-system event automation or subjective visual quality. `MANIFEST.txt`
 remains the review inventory, and a human or a clearly labeled simulated

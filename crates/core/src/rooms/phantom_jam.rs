@@ -125,6 +125,30 @@ fn draw_ring(canvas: &mut dyn Surface, pos: &[f64], jam_x: f64) {
     canvas.plot(jx, jy, '+');
 }
 
+fn draw_brake_marker(canvas: &mut dyn Surface, brake_x: f64) {
+    let (width, height) = canvas.draw_bounds();
+    if width == 0 || height == 0 {
+        return;
+    }
+    let cx = width as f64 / 2.0;
+    let cy = height as f64 / 2.0;
+    let radius = width.min(height) as f64 * 0.38;
+    let half_span = (width.min(height) as f64 * 0.065).clamp(5.0, 46.0);
+    let angle = brake_x.clamp(0.0, 1.0) * std::f64::consts::TAU;
+    let radial = (angle.cos(), angle.sin());
+    let tangent = (-radial.1, radial.0);
+    let marker = (cx + radius * radial.0, cy + radius * radial.1);
+    for axis in [radial, tangent] {
+        canvas.line(
+            (marker.0 - half_span * axis.0).round() as i32,
+            (marker.1 - half_span * axis.1).round() as i32,
+            (marker.0 + half_span * axis.0).round() as i32,
+            (marker.1 + half_span * axis.1).round() as i32,
+            '!',
+        );
+    }
+}
+
 /// Phantom Jam room.
 #[derive(Debug, Default)]
 pub struct PhantomJam {
@@ -201,10 +225,15 @@ impl Room for PhantomJam {
         let steps = ENTRY_STEPS + (phase_unit(t) * (MAX_STEPS - ENTRY_STEPS) as f64) as usize;
         let (pos, _, jam) = simulate(steps, x, self.seed);
         draw_ring(canvas, &pos, jam);
+        draw_brake_marker(canvas, x);
+    }
+
+    fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
+        self.render_poked(canvas, t, &crate::held_pokes_from_inputs(inputs));
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let pokes = crate::pokes_from_inputs(inputs);
+        let pokes = crate::held_pokes_from_inputs(inputs);
         let hands = finite_pokes(&pokes);
         if hands.is_empty() {
             return self.status(t);
@@ -283,6 +312,20 @@ mod tests {
         room.render_poked(&mut a, 0.5, &[(0.1, 0.5)]);
         room.render_poked(&mut b, 0.5, &[(0.8, 0.5)]);
         assert_ne!(a.to_text(), b.to_text());
+    }
+
+    #[test]
+    fn brake_has_an_immediate_visible_marker() {
+        let room = PhantomJam::new();
+        let mut open = Canvas::new(80, 50);
+        let mut braking = Canvas::new(80, 50);
+        room.render(&mut open, 0.0);
+        room.render_poked(&mut braking, 0.0, &[(0.82, 0.5)]);
+        let changed = (0..50)
+            .flat_map(|y| (0..80).map(move |x| (x, y)))
+            .filter(|&(x, y)| open.cell(x, y) != braking.cell(x, y))
+            .count();
+        assert!(changed >= 20, "brake marker changed only {changed} cells");
     }
 
     #[test]
