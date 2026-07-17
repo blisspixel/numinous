@@ -42,7 +42,7 @@ fi
 echo "== house-style =="
 bash scripts/check-style.sh
 
-echo "== regenerate 2,901-screen app QA matrix =="
+echo "== regenerate 2,909-screen app QA matrix =="
 cargo run -q -p numinous-app --example screens
 echo "== regenerate remaining artifacts into renders/ =="
 cargo run -q --bin numinous -- gallery --dir renders --width 600 --height 600

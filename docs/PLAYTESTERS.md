@@ -20,7 +20,7 @@ left are in `ROOMS.md`.
 
 For release-candidate QA, split the draw into three independent groups instead
 of asking one troupe to notice everything. The first-contact group reviews all
-2,901 app captures from the perspective of newcomers, children, math-wounded
+2,909 app captures from the perspective of newcomers, children, math-wounded
 players, and sensory-access needs. The interaction group starts each room at
 its deterministic opening state and traverses its click, delayed gesture,
 release, and reset
