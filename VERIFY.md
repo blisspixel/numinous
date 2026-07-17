@@ -46,8 +46,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # W
 ```
 
 
-Expected right now: **format and clippy clean, 2,768 all-target test cases pass,
-one screenshot diagnostic is ignored, 95.24% region cover, and 95.29% line
+Expected right now: **format and clippy clean, 2,773 all-target test cases pass,
+one screenshot diagnostic is ignored, 95.26% region cover, and 95.30% line
 cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions

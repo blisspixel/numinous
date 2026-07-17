@@ -255,7 +255,10 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 - **Toy:** Pick one of five fixed coins, from `p = 0.30` through `p = 0.70`, then drop a deterministic 64-ball wave through one physical 16-row lattice. Repeated touches at the same coin extend one empirical run; selecting another coin starts a new run so probabilities are never mixed silently. The 17-bin pile grows from the player's waves while a thin exact binomial outline stays distinct from finite evidence. The highlighted last ball follows 16 legal edges and lands in the pile it helped build. Pointer moves add no hidden waves, phase never redeals a run, and the bounded 24-wave experiment reports `FULL=1536` before reset or another coin.
 - **Aha:** "Make the pile match the outline, then make it lean." The finite pile stays noisy while its shape becomes easier to recognize.
 - **Reveal:** *"The coin probability alone does not determine the next landing. With one probability fixed, the number of right turns in a 16-flip landing follows exactly Binomial(16, p), and repeated waves make the empirical pile estimate that discrete distribution. With many rows and a coin away from either extreme, a normal curve can approximate the binomial, the direction formalized by the Central Limit Theorem. This board displays the finite binomial itself."*
-- **Sound:** balls tick on pegs (rain-stick / bucket-drum texture); the pile's growth swells a soft pad.
+- **Sound:** built now, the five selected coins climb through ordered C
+  major-pentatonic roots while the exact larger-to-smaller Bernoulli odds set
+  the two-voice interval. Planned, balls tick on pegs as a rain-stick or bucket
+  drum texture and the pile's growth swells a soft pad.
 
 ### 22. Buffon's Needle → π  Wow 4 / Build 1
 - **Rule:** Drop needles on a lined floor. Count how many cross a line.
