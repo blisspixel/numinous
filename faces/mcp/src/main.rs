@@ -809,7 +809,7 @@ fn room_gesture_schema() -> Value {
     };
     json!({
         "type": "array",
-        "description": "A replayable pointer trail. Events run oldest to newest with nondecreasing phase timestamps. In held rooms (double-pendulum) a down pins the bob, an up releases it with the velocity of the approach, and a cancel lets go gently. In Life, a down earlier than the final t plants a glider early enough to show its later evolution; the newest 24 down events become launches. Everywhere else the trail's down and move points paint like pokes. Not combinable with 'pokes'.",
+        "description": "A replayable pointer trail. Events run oldest to newest; phase timestamps wrap from 1 back to 0 like the App clock. In held rooms (double-pendulum) a down pins the bob, an up releases it with the velocity of the approach, and a cancel lets go gently. In Life, a down earlier than the final t plants a glider early enough to show its later evolution; the newest 24 down events become launches. Everywhere else the trail's down and move points paint like pokes. Not combinable with 'pokes'.",
         "maxItems": numinous_core::MAX_ROOM_INPUTS,
         "items": {
             "oneOf": [
@@ -2056,7 +2056,6 @@ fn parse_room_gesture(args: &Value) -> Result<Vec<numinous_core::RoomInput>, Str
             numinous_core::MAX_ROOM_INPUTS
         ));
     }
-    let mut previous_t = None;
     events
         .iter()
         .enumerate()
@@ -2097,12 +2096,6 @@ fn parse_room_gesture(args: &Value) -> Result<Vec<numinous_core::RoomInput>, Str
                 Ok(value)
             };
             let (x, y, t) = (coord("x")?, coord("y")?, coord("t")?);
-            if previous_t.is_some_and(|previous| t < previous) {
-                return Err(format!(
-                    "Argument 'gesture[{i}].t' must not move backward; timestamps must be nondecreasing."
-                ));
-            }
-            previous_t = Some(t);
             match kind {
                 "down" => Ok(numinous_core::RoomInput::PointerDown { x, y, t }),
                 "move" => Ok(numinous_core::RoomInput::PointerMove { x, y, t }),
@@ -5699,18 +5692,61 @@ plays 2
     }
 
     #[test]
+    fn listen_room_replays_the_pendulum_pin_and_fling() {
+        let compact = call(
+            "listen_room",
+            json!({"id":"double-pendulum","t":0.4,"pokes":[[0.7,0.25]]}),
+        );
+        let held = call(
+            "listen_room",
+            json!({"id":"double-pendulum","t":0.4,"gesture":[
+                {"kind":"down","x":0.7,"y":0.25,"t":0.4}
+            ]}),
+        );
+        let flung = call(
+            "listen_room",
+            json!({"id":"double-pendulum","t":0.35,"gesture":[
+                {"kind":"down","x":0.3,"y":0.5,"t":0.10},
+                {"kind":"move","x":0.3,"y":0.5,"t":0.147},
+                {"kind":"up","x":0.6,"y":0.5,"t":0.15}
+            ]}),
+        );
+        let wrapped = call(
+            "listen_room",
+            json!({"id":"double-pendulum","t":0.05,"gesture":[
+                {"kind":"move","x":0.3,"y":0.5,"t":0.99},
+                {"kind":"up","x":0.6,"y":0.5,"t":0.01}
+            ]}),
+        );
+        fn notes(response: &Value) -> &[Value] {
+            response["result"]["structuredContent"]["notes"]
+                .as_array()
+                .expect("mathematical notes")
+        }
+
+        assert_eq!(notes(&compact), notes(&held));
+        assert!(
+            notes(&flung)[0]["amplitude"].as_f64().expect("fling gain")
+                > notes(&held)[0]["amplitude"].as_f64().expect("held gain")
+        );
+        assert!(
+            notes(&wrapped)[0]["amplitude"]
+                .as_f64()
+                .expect("phase-wrapped fling gain")
+                > notes(&held)[0]["amplitude"].as_f64().expect("held gain")
+        );
+        assert_eq!(
+            held["result"]["structuredContent"]["gesture"][0]["kind"],
+            "down"
+        );
+    }
+
+    #[test]
     fn listen_room_rejects_unsafe_or_ambiguous_input() {
         for (arguments, expected) in [
             (
                 json!({"id":"times-tables","pokes":[[1.2,0.5]]}),
                 "at most 1",
-            ),
-            (
-                json!({"id":"times-tables","gesture":[
-                    {"kind":"down","x":0.5,"y":0.5,"t":0.7},
-                    {"kind":"move","x":0.4,"y":0.5,"t":0.2}
-                ]}),
-                "nondecreasing",
             ),
             (
                 json!({"id":"times-tables","pokes":[[0.5,0.5]],"gesture":[
@@ -7218,7 +7254,7 @@ plays 2
             stowaway["result"]["isError"], true,
             "unknown event fields are rejected, matching the schema"
         );
-        let backward = handle_request(&json!({
+        let wrapped = handle_request(&json!({
             "jsonrpc":"2.0","id":79,"method":"tools/call",
             "params":{"name":"play_room","arguments":{"id":"voronoi",
                 "gesture":[
@@ -7227,10 +7263,9 @@ plays 2
                 ]}}
         }))
         .expect("tools/call must respond");
-        let text = tool_error_text(&backward);
-        assert!(
-            text.contains("nondecreasing"),
-            "backward gesture time gets a guiding error: {text}"
+        assert_eq!(
+            wrapped["result"]["isError"], false,
+            "phase-wrapped App gestures remain replayable",
         );
         let both = handle_request(&json!({
             "jsonrpc":"2.0","id":77,"method":"tools/call",
