@@ -162,8 +162,24 @@ impl Room for Manneville {
         if hands.is_empty() {
             return self.status(t);
         }
-        let e = epsilon(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE eps={e:.4}"))
+        let e = epsilon(t, hands.last().copied(), self.seed).max(1e-6);
+        // Type-I intermittency: mean laminar length scales like eps^{-1/2}.
+        let laminar = e.sqrt().recip();
+        let mut x = if self.seed == 0 {
+            0.1
+        } else {
+            0.05 + (self.seed % 40) as f64 * 0.01
+        };
+        let mut burst = 0u32;
+        let n = 200usize;
+        for _ in 0..n {
+            x = step(x, e);
+            if x >= 0.2 {
+                burst += 1;
+            }
+        }
+        let b_pct = ((burst as f64 / n as f64) * 100.0).round() as i32;
+        Some(format!("e={e:.3}  Lam~{laminar:.0}  burst={b_pct}%"))
     }
 
     fn reveal(&self) -> &'static str {
