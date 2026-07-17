@@ -6,6 +6,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- Consequence-depth pass (cycles 118-119): 22 rooms with domain-true action
+  status. Menagerie/Clifford span, Henon-Heiles span and escape energy regime,
+  Brusselator Hopf margin, coupled-oscillator mode split, elliptical and Sinai
+  billiard launch geometry, Feigenbaum period 2^g, Weierstrass ab roughness,
+  baker Lyapunov, horseshoe strips, Hopf link/fibration/base, unknot cr=0,
+  Seifert half-twists, Cantor and Menger Hausdorff dims, percolation vs pc,
+  rule-30 class labels, Kaplan-Yorke dimension, Manneville laminar scale,
+  Buddhabrot escape probe. Footer and digit contracts hold.
 - Consequence-depth pass (cycles 116-117 exceptional depth): 49 rooms deepened
   with domain-true action status. Maps and attractors (Hopalong, Tinkerbell,
   Svensson, Pickover, Sprott, Gingerbread, tent, coupled tent, van der Pol,

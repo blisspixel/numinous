@@ -179,7 +179,14 @@ impl Room for Weierstrass {
         }
         let (a, b) = params(t, hands.last().copied(), self.seed);
         let prod = a * b;
-        Some(format!("TUNE a={a:.3}  b={b:.1}  ab={prod:.1}"))
+        // Continuous nowhere-differentiable when 0<a<1, b odd integer, ab>1+3pi/2...
+        // Report ab product against classic threshold 1.
+        let rough = if prod > 1.0 {
+            "nowhere-diff?"
+        } else {
+            "milder"
+        };
+        Some(format!("a={a:.2} b={b:.1}  ab={prod:.2}  {rough}"))
     }
 
     fn reveal(&self) -> &'static str {

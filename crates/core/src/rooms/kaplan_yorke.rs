@@ -141,13 +141,14 @@ impl Room for KaplanYorke {
             return self.status(t);
         }
         let l = lambda(t, hands.last().copied(), self.seed);
-        // Kaplan-Yorke dimension estimate D = 1 + ln2 / |ln lambda| for 0<lam<1
-        let d = if l > 0.0 && l < 1.0 {
-            1.0 + std::f64::consts::LN_2 / (-l.ln())
+        // Kaplan-Yorke map: x' = 2x mod 1, y' = lambda y + cos(4 pi x).
+        // Lyapunovs: ln2 and ln|lambda|; dim = 1 + ln2/|ln lambda| for |l|<1.
+        let dim = if l.abs() > 1e-9 && l.abs() < 1.0 {
+            1.0 + std::f64::consts::LN_2 / (-l.abs().ln())
         } else {
-            0.0
+            1.0
         };
-        Some(format!("lam={l:.3}  D~{d:.2}"))
+        Some(format!("lam={l:.2}  Dky={dim:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

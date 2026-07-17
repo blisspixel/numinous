@@ -181,13 +181,16 @@ impl Room for Rules30 {
         }
         let rule = rule_byte(t, hands.last().copied(), self.seed);
         let name = if rule == 30 {
-            "CLASSIC"
-        } else if rule == 90 || rule == 150 {
-            "ADDITIVE"
+            "classic"
+        } else if rule == 90 {
+            "sierp"
+        } else if rule == 110 {
+            "univ"
         } else {
-            "BYTE"
+            "ECA"
         };
-        Some(format!("RULE={rule}  {name}"))
+        // Elementary CA rule number in 0..255; class hint for famous ones.
+        Some(format!("rule={rule}  {name}"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -185,9 +185,17 @@ impl Room for Percolation {
             return self.status(t);
         }
         let p = open_p(t, hands.last().copied(), self.seed);
-        // Square site pc ~ 0.5927
-        let near = (p - 0.5927).abs();
-        Some(format!("OPEN p={p:.3}  |p-pc|={near:.2}"))
+        // Square site percolation threshold ~ 0.592746.
+        let pc = 0.5927_f64;
+        let delta = p - pc;
+        let side = if delta > 0.02 {
+            "above"
+        } else if delta < -0.02 {
+            "below"
+        } else {
+            "near"
+        };
+        Some(format!("p={p:.3}  pc={pc:.3}  {side}"))
     }
 
     fn reveal(&self) -> &'static str {

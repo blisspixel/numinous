@@ -184,9 +184,18 @@ impl Room for Brusselator {
             return self.status(t);
         }
         let a = a_param(t, hands.last().copied(), self.seed);
-        // Hopf when b > 1 + a^2 for the well-mixed system
+        // Well-mixed Hopf: b > 1 + a^2. Room holds b near classic 3.
         let hopf = 1.0 + a * a;
-        Some(format!("A={a:.3}  Hopf b>{hopf:.2}"))
+        let b = 3.0;
+        let margin = b - hopf;
+        let phase = if margin > 0.2 {
+            "osc"
+        } else if margin > 0.0 {
+            "hopf+"
+        } else {
+            "steady"
+        };
+        Some(format!("a={a:.2}  b-H={margin:.2}  {phase}"))
     }
 
     fn reveal(&self) -> &'static str {

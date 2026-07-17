@@ -173,7 +173,9 @@ impl Room for Horseshoe {
             return self.status(t);
         }
         let n = iters(t, hands.last().copied());
-        Some(format!("ITERS={n}  strips~{}", 1usize << n.min(8)))
+        let strips = 1usize << n.min(8);
+        // Smale horseshoe: 2^n vertical strips after n folds.
+        Some(format!("n={n}  strips={strips}  smale"))
     }
 
     fn reveal(&self) -> &'static str {

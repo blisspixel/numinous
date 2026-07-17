@@ -162,9 +162,10 @@ impl Room for MengerSponge {
             return self.status(t);
         }
         let d = depth(t, hands.last().copied());
-        // volume fraction (20/27)^d
         let vol = (20.0_f64 / 27.0).powi(d as i32);
-        Some(format!("DEPTH={d}  vol~{vol:.3}"))
+        // Menger sponge Hausdorff dim log20/log3.
+        let dim = 20.0_f64.ln() / 3.0_f64.ln();
+        Some(format!("d={d}  vol={vol:.3}  H={dim:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

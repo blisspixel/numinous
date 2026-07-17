@@ -184,8 +184,30 @@ impl Room for HenonHeiles {
             return self.status(t);
         }
         let e = energy(t, hands.last().copied(), self.seed);
-        let regime = if e < 0.1 { "ORDER?" } else { "CHAOS?" };
-        Some(format!("E={e:.3}  {regime}"))
+        let pts = integrate(e);
+        if pts.is_empty() {
+            return Some(format!("E={e:.3}  span=0  escape"));
+        }
+        let mut min_x = pts[0].0;
+        let mut max_x = pts[0].0;
+        let mut min_y = pts[0].1;
+        let mut max_y = pts[0].1;
+        for &(x, y) in &pts {
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        // Escape energy for the classic potential is about 1/6.
+        let regime = if e < 1.0 / 12.0 {
+            "bound"
+        } else if e < 1.0 / 6.0 {
+            "mixed"
+        } else {
+            "escape?"
+        };
+        Some(format!("E={e:.3}  span={span:.2}  {regime}"))
     }
 
     fn reveal(&self) -> &'static str {
