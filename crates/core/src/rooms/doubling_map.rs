@@ -159,7 +159,22 @@ impl Room for DoublingMap {
             return self.status(t);
         }
         let (th, n) = params(t, hands.last().copied());
-        Some(format!("SEED th={th:.3}  n={n}"))
+        // Bernoulli map: Lyapunov is ln 2; bits are the itinerary.
+        let lyap = std::f64::consts::LN_2;
+        let mut x = if self.seed == 0 {
+            th
+        } else {
+            (th + (self.seed % 20) as f64 * 0.01).fract()
+        };
+        let mut ones = 0u32;
+        for _ in 0..n {
+            if x >= 0.5 {
+                ones += 1;
+            }
+            x = (2.0 * x).fract();
+        }
+        let dens = ones as f64 / n.max(1) as f64;
+        Some(format!("n={n}  lyap={lyap:.2}  1s={dens:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

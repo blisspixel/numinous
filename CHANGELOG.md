@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- Consequence-depth pass (cycle 112 dynamics/geometry/fractal batch): Zipf P1
+  share, doubling-map Lyapunov and bit density, prism spectral spread, Coriolis
+  frame rotation, Manneville laminar scale and burst %, Multibrot/Nova/Phoenix
+  escape probes, cochleoid r(pi/2), epitrochoid petals, devil b-a shape,
+  hyperbolic verts, Poincare step angle, witch nephroid light angle, Collatz
+  tree node count, Halvorsen span. Compact footer and digit contracts hold.
 - Consequence-depth pass (cycle 111 waves/number/fractal batch): triangle and
   sawtooth harmonic energy, standing-wave nodes and spacing, Young fringe scale,
   Zeckendorf ones-count, Gaussian prime count, quadratic residue half, Vicsek

@@ -191,7 +191,10 @@ impl Room for Nova {
             return self.status(t);
         }
         let p = power(t, hands.last().copied());
-        Some(format!("TUNE p={p:.2}"))
+        // Newton-style nova for z^p - 1; sample escape near a p-th root of unity.
+        let th = std::f64::consts::TAU / p.max(1.0);
+        let iter = escape(0.7 * th.cos(), 0.7 * th.sin(), p);
+        Some(format!("p={p:.1}  esc={iter}  Newton"))
     }
 
     fn reveal(&self) -> &'static str {

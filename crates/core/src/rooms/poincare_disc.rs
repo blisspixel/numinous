@@ -172,7 +172,9 @@ impl Room for PoincareDisc {
             return self.status(t);
         }
         let n = order(t, hands.last().copied());
-        Some(format!("ORDER n={n}  H2 in D"))
+        // n geodesic diameters; interior angle of ideal n-gon is 0 in H2.
+        let step_deg = 360.0 / n as f64;
+        Some(format!("n={n}  step={step_deg:.0}deg  H2"))
     }
 
     fn reveal(&self) -> &'static str {

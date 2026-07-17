@@ -169,7 +169,17 @@ impl Room for Multibrot {
             return self.status(t);
         }
         let (p, z) = params(t, hands.last().copied());
-        Some(format!("d={p:.2}  zoom={z:.2}"))
+        let z = z.clamp(0.3, 3.0);
+        let kind = if (p - 2.0).abs() < 0.08 {
+            "Mandel"
+        } else if p > 4.0 {
+            "star"
+        } else {
+            "multi"
+        };
+        // Sample escape at a probe near the main cardioid-ish region.
+        let iter = escape(-0.75 / z, 0.0, p);
+        Some(format!("d={p:.1}  z={z:.1}  esc={iter}  {kind}"))
     }
 
     fn reveal(&self) -> &'static str {

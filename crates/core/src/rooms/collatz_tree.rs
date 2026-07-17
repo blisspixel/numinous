@@ -178,7 +178,32 @@ impl Room for CollatzTree {
             return self.status(t);
         }
         let (r, d) = params(t, hands.last().copied());
-        Some(format!("ROOT={r}  depth={d}"))
+        // Inverse-Collatz BFS size (match draw: stop filling next past 200).
+        let mut layer = vec![r];
+        let mut nodes = 1u32;
+        for _ in 0..d {
+            let mut next = Vec::new();
+            for &n in &layer {
+                for a in ancestors(n) {
+                    if a > 10_000 {
+                        continue;
+                    }
+                    if next.len() >= 200 {
+                        break;
+                    }
+                    next.push(a);
+                    nodes += 1;
+                }
+                if next.len() >= 200 {
+                    break;
+                }
+            }
+            layer = next;
+            if layer.is_empty() {
+                break;
+            }
+        }
+        Some(format!("root={r}  d={d}  nodes={nodes}"))
     }
 
     fn reveal(&self) -> &'static str {

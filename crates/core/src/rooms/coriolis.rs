@@ -164,8 +164,12 @@ impl Room for Coriolis {
         if hands.is_empty() {
             return self.status(t);
         }
-        let w = spin(t, hands.last().copied(), self.seed);
-        Some(format!("W={w:.3}  coriolis"))
+        let w = spin(t, hands.last().copied(), self.seed).clamp(0.1, 3.0);
+        // Path time ~1.7; total rotation of the frame is omega * t.
+        let t_path = 1.7;
+        let rot = w * t_path;
+        let deg = rot.to_degrees();
+        Some(format!("w={w:.2}  rot={rot:.2}  {deg:.0}deg"))
     }
 
     fn reveal(&self) -> &'static str {

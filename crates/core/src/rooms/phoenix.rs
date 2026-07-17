@@ -172,7 +172,16 @@ impl Room for Phoenix {
             return self.status(t);
         }
         let p = p_param(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE p={p:.3}"))
+        // Phoenix memory term p; sample escape on the negative real probe.
+        let iter = escape(-0.5, 0.0, p);
+        let band = if p.abs() < 0.2 {
+            "weak"
+        } else if p > 0.0 {
+            "push"
+        } else {
+            "pull"
+        };
+        Some(format!("p={p:.2}  esc={iter}  {band}"))
     }
 
     fn reveal(&self) -> &'static str {

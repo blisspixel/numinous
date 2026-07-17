@@ -170,6 +170,11 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   Delaunay, Ricker, Thomas, Mexican Hat, Gumowski-Mira, Fresnel Integrals
   (harmonic energy, nodes/dx, fringe scale, fib ones, G-prime count, residue
   half, fractal dim, Euler mesh, orbit band, attractor span, Fresnel asymptote).
+  **Cycle 112 dynamics/geometry/fractal batch:** Zipf, Doubling Map, Snell Prism,
+  Coriolis, Manneville, Multibrot, Nova, Phoenix, Cochleoid, Epitrochoid, Devil
+  Curve, Hyperbolic Tiling, Poincare Disc, Witch Caustic, Collatz Tree,
+  Halvorsen (P1 share, ln2 Lyapunov, spectral spread, frame rot, laminar/burst,
+  escape probes, petal counts, H2 verts, nephroid angle, tree nodes, span).
   Subjective participant evidence and the stranger hallway remain open.
 - **Done (Share short-loop export, machine path):** App key L exports a
   24-frame looping APNG of the current visit (phase sweep, or Life generation

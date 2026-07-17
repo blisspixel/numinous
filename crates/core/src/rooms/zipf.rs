@@ -143,8 +143,20 @@ impl Room for Zipf {
         if hands.is_empty() {
             return self.status(t);
         }
-        let s = exponent(t, hands.last().copied(), self.seed);
-        Some(format!("S={s:.3}  zipf"))
+        let s = exponent(t, hands.last().copied(), self.seed).clamp(0.4, 2.5);
+        let n = 40
+            + if self.seed == 0 {
+                0
+            } else {
+                (self.seed % 10) as i32
+            };
+        // Zipf over 1..n: rank-1 mass is 1 / Z because 1^{-s} = 1.
+        let mut z = 0.0_f64;
+        for k in 1..=n {
+            z += (k as f64).powf(-s);
+        }
+        let p1_pct = ((1.0 / z.max(1e-12)) * 100.0).round() as i32;
+        Some(format!("s={s:.2}  P1={p1_pct}%  n={n}"))
     }
 
     fn reveal(&self) -> &'static str {
