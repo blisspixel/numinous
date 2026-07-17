@@ -151,12 +151,19 @@ impl Room for TorusKnot {
             };
         let pi = p as i32;
         let qi = q as i32;
-        let kind = if pi > 1 && qi > 1 && pi % qi != 0 && qi % pi != 0 {
-            "knot"
-        } else {
-            "link?"
+        // T(p,q) is a single knot iff gcd(p,q)=1; otherwise a link of gcd components.
+        let g = {
+            let mut a = pi.unsigned_abs();
+            let mut b = qi.unsigned_abs();
+            while b != 0 {
+                let t = b;
+                b = a % b;
+                a = t;
+            }
+            a
         };
-        Some(format!("T({pi},{qi})  {kind}"))
+        let kind = if g == 1 { "knot" } else { "link" };
+        Some(format!("T({pi},{qi})  gcd={g}  {kind}"))
     }
 
     fn reveal(&self) -> &'static str {
