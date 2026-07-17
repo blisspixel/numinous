@@ -151,8 +151,11 @@ impl Room for WitchOfAgnesi {
         if hands.is_empty() {
             return self.status(t);
         }
-        let a = a_param(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  peak=2a"))
+        let a = a_param(t, hands.last().copied(), self.seed).clamp(0.2, 2.0);
+        // y = 8 a^3 / (x^2 + 4 a^2); peak 2a; total area under the witch is 4 pi a^2.
+        let peak = 2.0 * a;
+        let area = 4.0 * std::f64::consts::PI * a * a;
+        Some(format!("a={a:.2}  peak={peak:.2}  A={area:.1}"))
     }
 
     fn reveal(&self) -> &'static str {

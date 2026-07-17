@@ -152,7 +152,14 @@ impl Room for Hypotrochoid {
             return self.status(t);
         }
         let k = ratio(t, hands.last().copied(), self.seed);
-        Some(format!("R/r={k:.2}  roulette"))
+        // Inner rolling: cusp count tracks round(R/r) for d near r (deltoid k=3, astroid k=4).
+        let cusps = k.round() as i32;
+        let kind = match cusps {
+            3 => "deltoid",
+            4 => "astroid",
+            _ => "hypo",
+        };
+        Some(format!("R/r={k:.1}  cusps~{cusps}  {kind}"))
     }
 
     fn reveal(&self) -> &'static str {

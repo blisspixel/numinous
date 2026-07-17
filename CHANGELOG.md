@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- Consequence-depth pass (cycle 113 classical curves and flows batch):
+  Superellipse shape class, Agnesi peak and area, Reuleaux constant-width area,
+  log spiral pitch and growth per turn, hypotrochoid cusp class, Poisson E[N]
+  and realized n, diffraction first zero, dual-cobweb logistic band, folium
+  loop area, tautochrone bead gap, catenoid neck radius, conchoid gap, piriform
+  height, kappa cot arms, three-scroll and Rabinovich-Fabrikant spans.
+  Compact footer and digit contracts hold.
 - Consequence-depth pass (cycle 112 dynamics/geometry/fractal batch): Zipf P1
   share, doubling-map Lyapunov and bit density, prism spectral spread, Coriolis
   frame rotation, Manneville laminar scale and burst %, Multibrot/Nova/Phoenix

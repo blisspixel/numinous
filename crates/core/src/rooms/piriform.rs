@@ -153,8 +153,18 @@ impl Room for Piriform {
         if hands.is_empty() {
             return self.status(t);
         }
-        let a = param_a(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  pear"))
+        let a = param_a(t, hands.last().copied(), self.seed).clamp(0.4, 2.0);
+        // Match draw: b varies with seed; y^2 = x^3(a-x)/b^2 peaks near x=0.75a.
+        let b = 1.0
+            + if self.seed == 0 {
+                0.0
+            } else {
+                (self.seed % 3) as f64 * 0.1
+            };
+        let xmax = a;
+        // f(x)=x^3(a-x) max at x=3a/4: f= (27/256) a^4; y_max = a^2 * sqrt(27/256) / b.
+        let ymax = a * a * (27.0_f64 / 256.0).sqrt() / b.max(0.5);
+        Some(format!("a={a:.2}  L={xmax:.2}  h~{ymax:.2}"))
     }
 
     fn reveal(&self) -> &'static str {
