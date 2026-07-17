@@ -140,8 +140,30 @@ impl Room for TorusKnot {
         if hands.is_empty() {
             return self.status(t);
         }
-        let p = p_winds(t, hands.last().copied(), self.seed).round();
-        Some(format!("P={p:.0}  torus knot"))
+        let p = p_winds(t, hands.last().copied(), self.seed)
+            .round()
+            .clamp(2.0, 7.0);
+        let q = 3.0
+            + if self.seed == 0 {
+                0.0
+            } else {
+                (self.seed % 2) as f64
+            };
+        let pi = p as i32;
+        let qi = q as i32;
+        // T(p,q) is a single knot iff gcd(p,q)=1; otherwise a link of gcd components.
+        let g = {
+            let mut a = pi.unsigned_abs();
+            let mut b = qi.unsigned_abs();
+            while b != 0 {
+                let t = b;
+                b = a % b;
+                a = t;
+            }
+            a
+        };
+        let kind = if g == 1 { "knot" } else { "link" };
+        Some(format!("T({pi},{qi})  gcd={g}  {kind}"))
     }
 
     fn reveal(&self) -> &'static str {

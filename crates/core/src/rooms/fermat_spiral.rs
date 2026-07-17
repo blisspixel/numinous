@@ -157,7 +157,10 @@ impl Room for FermatSpiral {
             return self.status(t);
         }
         let n = turns(t, hands.last().copied(), self.seed);
-        Some(format!("TURNS={n:.2}  r^2~theta"))
+        // Fermat: r^2 = a^2 theta; outer r grows as sqrt(turns).
+        let theta = n * std::f64::consts::TAU;
+        let r_out = theta.max(0.0).sqrt();
+        Some(format!("turns={n:.2}  r~{r_out:.2}  r^2~th"))
     }
 
     fn reveal(&self) -> &'static str {

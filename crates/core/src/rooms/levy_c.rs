@@ -211,7 +211,9 @@ impl Room for LevyC {
         }
         let o = order(t, hands.last().copied());
         let n = levy_path(o, self.seed).len();
-        Some(format!("ORDER={o}  pts={n}"))
+        // Levy C: Hausdorff dim = 2; segment count 2^o.
+        let segs = 1u64 << o.min(20);
+        Some(format!("o={o}  pts={n}  segs={segs}  d=2"))
     }
 
     fn reveal(&self) -> &'static str {

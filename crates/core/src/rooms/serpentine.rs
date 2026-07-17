@@ -149,7 +149,9 @@ impl Room for Serpentine {
             return self.status(t);
         }
         let a = param_a(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  serp"))
+        // Serpentine peak height a/2 at x = a (Newton form).
+        let peak = 0.5 * a;
+        Some(format!("a={a:.2}  peak~{peak:.2}  serp"))
     }
 
     fn reveal(&self) -> &'static str {

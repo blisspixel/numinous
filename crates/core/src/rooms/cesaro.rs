@@ -166,7 +166,8 @@ impl Room for Cesaro {
         }
         let o = order(t, hands.last().copied());
         let n = torn_square(o).len();
-        Some(format!("ORDER={o}  pts={n}"))
+        let dim = 4.0_f64.ln() / 3.0_f64.ln();
+        Some(format!("o={o}  pts={n}  dim={dim:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

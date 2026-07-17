@@ -169,7 +169,9 @@ impl Room for Trisectrix {
             return self.status(t);
         }
         let a = param_a(t, hands.last().copied(), self.seed);
-        Some(format!("A={a:.3}  trisect"))
+        // Maclaurin trisectrix loop area ~ 0.5 (pi - 3sqrt3/2) a^2.
+        let loop_a = 0.5 * (std::f64::consts::PI - 1.5 * 3.0_f64.sqrt()) * a * a;
+        Some(format!("a={a:.2}  loopA={loop_a:.2}  1/3"))
     }
 
     fn reveal(&self) -> &'static str {

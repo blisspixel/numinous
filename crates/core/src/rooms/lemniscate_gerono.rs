@@ -144,7 +144,9 @@ impl Room for LemniscateGerono {
             return self.status(t);
         }
         let a = scale(t, hands.last().copied(), self.seed);
-        Some(format!("SCALE a={a:.3}  8-curve"))
+        // Gerono eight-curve total area a^2.
+        let area = a * a;
+        Some(format!("a={a:.2}  area={area:.2}  8-curve"))
     }
 
     fn reveal(&self) -> &'static str {

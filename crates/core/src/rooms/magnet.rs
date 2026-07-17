@@ -178,7 +178,8 @@ impl Room for MagnetFractal {
             return self.status(t);
         }
         let (cx, cy) = center(t, hands.last().copied());
-        Some(format!("AIM c=({cx:.2},{cy:.2})"))
+        let iter = escape(cx, cy);
+        Some(format!("c=({cx:.2},{cy:.2}) esc={iter}"))
     }
 
     fn reveal(&self) -> &'static str {

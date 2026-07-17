@@ -179,7 +179,15 @@ impl Room for WattCurve {
             return self.status(t);
         }
         let c = rod(t, hands.last().copied(), self.seed);
-        Some(format!("C={c:.3}  watt"))
+        // Watt: linkage rod length c; flattened figure-eight when c small.
+        let shape = if c < 1.2 {
+            "flat"
+        } else if c < 1.8 {
+            "eight"
+        } else {
+            "round"
+        };
+        Some(format!("c={c:.2}  {shape}  linkage"))
     }
 
     fn reveal(&self) -> &'static str {

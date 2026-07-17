@@ -164,7 +164,9 @@ impl Room for Wolfram110 {
             return self.status(t);
         }
         let b = seed_bias(t, hands.last().copied(), self.seed);
-        Some(format!("SEED p={b:.3}  class IV"))
+        let p = (b * 100.0).round() as i32;
+        // Bernoulli: expected live density at t=0 is bias; rule 110 is class IV.
+        Some(format!("seed={p}%  E[live]={b:.2}  classIV"))
     }
 
     fn reveal(&self) -> &'static str {

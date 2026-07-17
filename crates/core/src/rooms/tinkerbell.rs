@@ -165,8 +165,37 @@ impl Room for Tinkerbell {
         if hands.is_empty() {
             return self.status(t);
         }
-        let (a, _b, c, _d) = params(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE a={a:.3}  c={c:.2}"))
+        let (a, b, c, d) = params(t, hands.last().copied(), self.seed);
+        let mut x = -0.72_f64;
+        let mut y = -0.64_f64;
+        for _ in 0..50 {
+            let nx = x * x - y * y + a * x + b * y;
+            let ny = 2.0 * x * y + c * x + d * y;
+            x = nx;
+            y = ny;
+            if !x.is_finite() || !y.is_finite() || x.abs() > 50.0 || y.abs() > 50.0 {
+                return Some(format!("a={a:.2} c={c:.2}  span=0  div"));
+            }
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        for _ in 0..500 {
+            let nx = x * x - y * y + a * x + b * y;
+            let ny = 2.0 * x * y + c * x + d * y;
+            if !nx.is_finite() || !ny.is_finite() || nx.abs() > 50.0 || ny.abs() > 50.0 {
+                break;
+            }
+            x = nx;
+            y = ny;
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("a={a:.2} c={c:.2}  span={span:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

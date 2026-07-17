@@ -144,7 +144,9 @@ impl Room for SierpinskiTri {
             return self.status(t);
         }
         let d = depth(t, hands.last().copied());
-        Some(format!("DEPTH={d}  cells~{}", 3usize.pow(d as u32)))
+        let cells = 3u64.saturating_pow(d as u32);
+        let dim = 3.0_f64.ln() / 2.0_f64.ln();
+        Some(format!("d={d}  cells={cells}  dim={dim:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

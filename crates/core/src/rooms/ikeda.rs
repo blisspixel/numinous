@@ -174,7 +174,44 @@ impl Room for Ikeda {
             return self.status(t);
         }
         let (a, b) = params(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE a={a:.3}  b={b:.3}"))
+        let c = 0.4;
+        let d = 6.0;
+        let mut x = 0.1_f64;
+        let mut y = 0.1_f64;
+        for _ in 0..40 {
+            let r2 = x * x + y * y;
+            let phase = c - d / (1.0 + r2);
+            let (st, ct) = phase.sin_cos();
+            let nx = a + b * (x * ct - y * st);
+            let ny = b * (x * st + y * ct);
+            x = nx;
+            y = ny;
+            if !x.is_finite() || !y.is_finite() || x.abs() > 50.0 || y.abs() > 50.0 {
+                return Some(format!("a={a:.2} b={b:.2}  span=0  div"));
+            }
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_y = y;
+        let mut max_y = y;
+        for _ in 0..400 {
+            let r2 = x * x + y * y;
+            let phase = c - d / (1.0 + r2);
+            let (st, ct) = phase.sin_cos();
+            let nx = a + b * (x * ct - y * st);
+            let ny = b * (x * st + y * ct);
+            if !nx.is_finite() || !ny.is_finite() || nx.abs() > 50.0 || ny.abs() > 50.0 {
+                break;
+            }
+            x = nx;
+            y = ny;
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+        }
+        let span = ((max_x - min_x) * (max_y - min_y)).max(0.0).sqrt();
+        Some(format!("a={a:.2} b={b:.2}  span={span:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

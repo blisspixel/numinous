@@ -188,7 +188,9 @@ impl Room for PeanoCurve {
         }
         let o = order(t, hands.last().copied());
         let n = peano(o).len();
-        Some(format!("ORDER={o}  pts={n}"))
+        // Space-filling: 9-fold at each step.
+        let cells = 9u64.saturating_pow(o as u32);
+        Some(format!("o={o}  pts={n}  9^{o}={cells}"))
     }
 
     fn reveal(&self) -> &'static str {

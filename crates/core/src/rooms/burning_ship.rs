@@ -168,8 +168,15 @@ impl Room for BurningShip {
         if hands.is_empty() {
             return self.status(t);
         }
-        let (cx, cy, s) = window(t, hands.last().copied());
-        Some(format!("AIM ({cx:.2},{cy:.2}) sc={s:.2}"))
+        let (cx, cy, _s) = window(t, hands.last().copied());
+        let iter = escape(cx, cy);
+        // Neighbor probe: local roughness of escape time.
+        let n1 = escape(cx + 0.002, cy);
+        let n2 = escape(cx, cy + 0.002);
+        let rough = (iter as i32 - n1 as i32)
+            .unsigned_abs()
+            .max((iter as i32 - n2 as i32).unsigned_abs());
+        Some(format!("c=({cx:.2},{cy:.2}) esc={iter} r={rough}"))
     }
 
     fn reveal(&self) -> &'static str {

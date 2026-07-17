@@ -167,7 +167,11 @@ impl Room for BoySurface {
             return self.status(t);
         }
         let th = phase(t, hands.last().copied(), self.seed);
-        Some(format!("T={th:.3}  boy"))
+        let deg =
+            (th.rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU * 360.0).floor() as i32;
+        // Boy immersion of RP2: one triple point; phase samples the immersion.
+        let trip = (deg.rem_euclid(120) - 60).unsigned_abs();
+        Some(format!("th={deg}deg  trip~{trip}  RP2"))
     }
 
     fn reveal(&self) -> &'static str {

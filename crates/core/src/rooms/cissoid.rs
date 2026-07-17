@@ -160,7 +160,9 @@ impl Room for Cissoid {
             return self.status(t);
         }
         let a = scale(t, hands.last().copied(), self.seed);
-        Some(format!("SCALE a={a:.3}  ivy"))
+        // Cissoid of Diocles: vertical asymptote x = 2a.
+        let asym = 2.0 * a;
+        Some(format!("a={a:.2}  asym x={asym:.2}  ivy"))
     }
 
     fn reveal(&self) -> &'static str {

@@ -180,7 +180,9 @@ impl Room for SincInterp {
             return self.status(t);
         }
         let b = bandwidth(t, hands.last().copied(), self.seed);
-        Some(format!("B={b:.3}  recon"))
+        // Nyquist spacing ~ 1/(2B) for bandlimit B.
+        let nyq = 1.0 / (2.0 * b.max(1e-6));
+        Some(format!("B={b:.2}  Nyq={nyq:.2}  recon"))
     }
 
     fn reveal(&self) -> &'static str {

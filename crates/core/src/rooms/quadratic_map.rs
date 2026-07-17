@@ -167,7 +167,29 @@ impl Room for QuadraticMap {
             return self.status(t);
         }
         let (c, x0) = params(t, hands.last().copied(), self.seed);
-        Some(format!("c={c:.3}  x0={x0:.2}"))
+        // Real quadratic x -> x^2 + c; escape |x|>2.
+        let mut x = x0;
+        let mut esc = 0u32;
+        for i in 0..64u32 {
+            if x.abs() > 2.0 {
+                esc = i;
+                break;
+            }
+            x = x * x + c;
+            if !x.is_finite() {
+                esc = i;
+                break;
+            }
+            esc = i + 1;
+        }
+        let band = if c > 0.25 {
+            "escape"
+        } else if c > -0.75 {
+            "period"
+        } else {
+            "chaos?"
+        };
+        Some(format!("c={c:.2}  esc={esc}  {band}"))
     }
 
     fn reveal(&self) -> &'static str {

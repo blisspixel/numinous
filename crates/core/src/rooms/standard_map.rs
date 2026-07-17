@@ -154,14 +154,40 @@ impl Room for StandardMap {
             return self.status(t);
         }
         let k = k_param(t, hands.last().copied(), self.seed);
+        let two_pi = std::f64::consts::TAU;
+        // Sample one orbit: fraction of steps that cross |p| band (chaos proxy).
+        let mut theta = 0.3_f64;
+        let mut p = 0.1_f64;
+        let mut crossings = 0u32;
+        let mut steps = 0u32;
+        let mut prev_p = p;
+        for _ in 0..400 {
+            p = (p + (k / two_pi) * (two_pi * theta).sin()).rem_euclid(1.0);
+            theta = (theta + p).rem_euclid(1.0);
+            if !theta.is_finite() || !p.is_finite() {
+                break;
+            }
+            let p_disp = if p > 0.5 { p - 1.0 } else { p };
+            let prev_disp = if prev_p > 0.5 { prev_p - 1.0 } else { prev_p };
+            if prev_disp.signum() != p_disp.signum() && prev_disp.abs() > 1e-6 {
+                crossings += 1;
+            }
+            prev_p = p;
+            steps += 1;
+        }
+        let rate = if steps > 0 {
+            crossings as f64 / steps as f64
+        } else {
+            0.0
+        };
         let regime = if k < 0.97 {
             "KAM"
         } else if k < 1.5 {
-            "MIXED"
+            "mixed"
         } else {
-            "CHAOS"
+            "chaos"
         };
-        Some(format!("K={k:.3}  {regime}"))
+        Some(format!("K={k:.2}  flip={rate:.2}  {regime}"))
     }
 
     fn reveal(&self) -> &'static str {

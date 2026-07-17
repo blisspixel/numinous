@@ -157,7 +157,8 @@ impl Room for Seifert {
             return self.status(t);
         }
         let tw = twist(t, hands.last().copied(), self.seed);
-        Some(format!("TW={tw:.3}  seifert"))
+        let half = (tw.abs() * 10.0).round() as i32;
+        Some(format!("tw={tw:.2}  ~{half} half-tw"))
     }
 
     fn reveal(&self) -> &'static str {

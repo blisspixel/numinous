@@ -172,7 +172,46 @@ impl Room for Sprott {
             return self.status(t);
         }
         let a = a_param(t, hands.last().copied(), self.seed);
-        Some(format!("TUNE a={a:.3}  flow"))
+        let j = if self.seed == 0 {
+            0.0
+        } else {
+            (self.seed % 4) as f64 * 0.01
+        };
+        let mut x = 0.1 + j;
+        let mut y = 0.0_f64;
+        let mut z = 0.0_f64;
+        for _ in 0..200 {
+            let dx = y * z;
+            let dy = x - y;
+            let dz = a - x * y;
+            x += dx * DT;
+            y += dy * DT;
+            z += dz * DT;
+            if !x.is_finite() || !z.is_finite() || x.abs() > 50.0 || z.abs() > 50.0 {
+                return Some(format!("a={a:.2}  span=0  div"));
+            }
+        }
+        let mut min_x = x;
+        let mut max_x = x;
+        let mut min_z = z;
+        let mut max_z = z;
+        for _ in 0..800 {
+            let dx = y * z;
+            let dy = x - y;
+            let dz = a - x * y;
+            x += dx * DT;
+            y += dy * DT;
+            z += dz * DT;
+            if !x.is_finite() || !z.is_finite() || x.abs() > 50.0 || z.abs() > 50.0 {
+                break;
+            }
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_z = min_z.min(z);
+            max_z = max_z.max(z);
+        }
+        let span = ((max_x - min_x) * (max_z - min_z)).max(0.0).sqrt();
+        Some(format!("a={a:.2}  span={span:.2}  flow"))
     }
 
     fn reveal(&self) -> &'static str {

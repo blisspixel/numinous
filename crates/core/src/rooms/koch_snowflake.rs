@@ -168,7 +168,10 @@ impl Room for KochSnowflake {
         }
         let o = order(t, hands.last().copied());
         let n = snowflake(o).len();
-        Some(format!("ORDER={o}  pts={n}"))
+        // Perimeter grows as (4/3)^o relative to order 0.
+        let perim_mult = (4.0_f64 / 3.0).powi(o as i32);
+        let dim = 4.0_f64.ln() / 3.0_f64.ln();
+        Some(format!("o={o}  pts={n}  P*={perim_mult:.1}  d={dim:.2}"))
     }
 
     fn reveal(&self) -> &'static str {
