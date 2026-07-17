@@ -36,6 +36,34 @@ fn loop_r(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     }
 }
 
+fn berry_phase_magnitude(radius: f64) -> (f64, f64) {
+    let radius = if radius.is_finite() {
+        radius.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let solid_angle = std::f64::consts::TAU * (1.0 - (1.0 - radius * radius).sqrt());
+    (solid_angle, 0.5 * solid_angle)
+}
+
+fn bloch_loop_point(radius: f64, tilt: f64, azimuth: f64) -> (f64, f64, f64) {
+    let radius = if radius.is_finite() {
+        radius.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let tilt = if tilt.is_finite() { tilt } else { 0.0 };
+    let azimuth = if azimuth.is_finite() { azimuth } else { 0.0 };
+    let z = (1.0 - radius * radius).sqrt();
+    let x = radius * azimuth.cos();
+    let y = radius * azimuth.sin();
+    (
+        x,
+        y * tilt.cos() - z * tilt.sin(),
+        y * tilt.sin() + z * tilt.cos(),
+    )
+}
+
 fn draw(canvas: &mut dyn Surface, rho: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
@@ -66,9 +94,7 @@ fn draw(canvas: &mut dyn Surface, rho: f64, seed: u64) {
     prev = None;
     for i in 0..=64 {
         let th = 2.0 * std::f64::consts::PI * (i as f64 / 64.0);
-        let x = rho * th.cos();
-        let y = rho * th.sin() * tilt.cos();
-        let z = tilt.sin() + 0.15 * rho * th.sin() * tilt.sin();
+        let (x, y, z) = bloch_loop_point(rho, tilt, th);
         let px = (cx + r_sphere * x).round() as i32;
         let py = (cy - r_sphere * (y * 0.55 + 0.15 * z)).round() as i32;
         if let Some((ox, oy)) = prev {
@@ -77,8 +103,7 @@ fn draw(canvas: &mut dyn Surface, rho: f64, seed: u64) {
         prev = Some((px, py));
     }
     // Solid angle ~ 2pi (1 - cos alpha) toy; mark as chord of state vector.
-    let solid = 2.0 * std::f64::consts::PI * (1.0 - (1.0 - rho * rho).max(0.0).sqrt());
-    let phase = 0.5 * solid; // Berry phase for spin-1/2
+    let (_, phase) = berry_phase_magnitude(rho);
     let tip_x = (cx + r_sphere * 0.7 * phase.cos()).round() as i32;
     let tip_y = (cy - r_sphere * 0.4 * phase.sin()).round() as i32;
     canvas.line(cx as i32, cy as i32, tip_x, tip_y, '+');
@@ -138,15 +163,14 @@ impl Room for Berry {
 
     fn status(&self, t: f64) -> Option<String> {
         let r = loop_r(t, None, self.seed);
-        let solid = 2.0 * std::f64::consts::PI * (1.0 - (1.0 - r * r).max(0.0).sqrt());
-        let ph = 0.5 * solid;
-        Some(format!("r={r:.2}  g={ph:.2}  DRAG:LOOP"))
+        let (_, ph) = berry_phase_magnitude(r);
+        Some(format!("r={r:.2}  |g|={ph:.2}  DRAG:LOOP"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let r = loop_r(t, hands.last().copied(), self.seed);
-        draw(canvas, r, self.seed ^ hands.len() as u64);
+        draw(canvas, r, self.seed);
         if let Some(&(x, y)) = hands.last() {
             let (bw, bh) = canvas.draw_bounds();
             if bw > 0 && bh > 0 {
@@ -165,21 +189,21 @@ impl Room for Berry {
             return self.status(t);
         }
         let r = loop_r(t, hands.last().copied(), self.seed);
-        let solid = 2.0 * std::f64::consts::PI * (1.0 - (1.0 - r * r).max(0.0).sqrt());
-        let ph = 0.5 * solid;
-        Some(format!("R={r:.3}  g={ph:.2}"))
+        let (solid, phase) = berry_phase_magnitude(r);
+        Some(format!("LOOP Om={solid:.2}  |gamma|={phase:.2}rad"))
     }
 
     fn reveal(&self) -> &'static str {
         "When a quantum state is steered slowly around a closed loop in parameter \
-         space, it returns with a geometric Berry phase equal to half the solid \
-         angle enclosed on the Bloch sphere. Holonomy, not dynamics."
+         space, its geometric Berry phase has magnitude equal to half the solid \
+         angle enclosed on the Bloch sphere. The sign depends on the state and \
+         loop orientation. Holonomy, not dynamics."
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Berry;
+    use super::{Berry, berry_phase_magnitude, bloch_loop_point};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
 
@@ -205,6 +229,54 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn phase_is_half_the_enclosed_solid_angle() {
+        let (small_solid, small_phase) = berry_phase_magnitude(0.25);
+        let (large_solid, large_phase) = berry_phase_magnitude(0.9);
+        assert!((small_phase * 2.0 - small_solid).abs() < 1e-12);
+        assert!((large_phase * 2.0 - large_solid).abs() < 1e-12);
+        assert!(large_phase > small_phase);
+    }
+
+    #[test]
+    fn copy_names_phase_magnitude_without_inventing_a_sign() {
+        let room = Berry::new();
+        assert!(room.status(0.0).unwrap().contains("|g|"));
+        let status = room
+            .status_input(
+                0.0,
+                &[RoomInput::PointerDown {
+                    x: 0.7,
+                    y: 0.5,
+                    t: 0.0,
+                }],
+            )
+            .unwrap();
+        assert!(status.contains("|gamma|"));
+        assert!(room.reveal().contains("magnitude"));
+    }
+
+    #[test]
+    fn parameter_loop_stays_on_the_bloch_sphere() {
+        for radius in [0.0, 0.25, 0.9, 1.0] {
+            for theta in [0.0, 0.7, std::f64::consts::PI, std::f64::consts::TAU] {
+                let (x, y, z) = bloch_loop_point(radius, 0.6, theta);
+                assert!((x * x + y * y + z * z - 1.0).abs() < 1e-12);
+            }
+        }
+    }
+
+    #[test]
+    fn duplicate_hand_history_does_not_reorient_the_loop() {
+        let room = Berry::new_with(2);
+        let hand = (0.6, 0.4);
+        let mut single = Canvas::new(48, 24);
+        let mut duplicate = Canvas::new(48, 24);
+        room.render_poked(&mut single, 0.3, &[hand]);
+        room.render_poked(&mut duplicate, 0.3, &[hand, hand]);
+        assert_eq!(single.to_text(), duplicate.to_text());
     }
 
     #[test]
