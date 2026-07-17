@@ -280,6 +280,13 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   catalog room keeps motif, verb, poke, first-contact status, and reveal.
   Version remains `0.2.0-alpha.1`; product 0.2 is not claimed complete. See
   `CHANGELOG.md` Unreleased and `ROOMS.md` Built now.
+- **Done (physics and geometry consequence depth, cycle 120):** Berry Phase,
+  Bragg Diffraction, Capillary Meniscus, Sphere Geodesics, and Polarization now
+  derive their action status from the same bounded mathematical state used to
+  render. Direct regressions cover Bloch-sphere norm and phase magnitude,
+  Bragg order and seeded spacing, neutral-contact continuity, great-circle
+  geometry and shortest-arc wording, Malus limits and full-range density, and
+  duplicate-history stability. Product 0.2 human evidence remains open.
 - **In progress (the founder's directive, July 2026): playable depth over pure
   inventory.** Designs still open in `ROOMS.md`. Catalog size is no longer the
   bottleneck; consequence-grade status, stranger playtests, and coherent pacing

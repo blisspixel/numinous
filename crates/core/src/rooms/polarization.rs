@@ -36,21 +36,40 @@ fn angle(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     }
 }
 
+fn malus_intensity(theta: f64) -> f64 {
+    if theta.is_finite() {
+        theta.cos().powi(2).clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+fn polarization_grade(intensity: f64) -> &'static str {
+    if intensity >= 0.9 {
+        "OPEN"
+    } else if intensity <= 0.01 {
+        "DARK"
+    } else {
+        "DIM"
+    }
+}
+
+fn next_unit(state: &mut u64) -> f64 {
+    *state = state.wrapping_mul(0x5851_f42d_4c95_7f2d).wrapping_add(1);
+    ((*state >> 32) as u32) as f64 / (u32::MAX as f64 + 1.0)
+}
+
 fn draw(canvas: &mut dyn Surface, theta: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
     }
-    let intensity = theta.cos().powi(2);
+    let intensity = malus_intensity(theta);
     // field of dots with density ~ intensity
     let mut state = seed ^ 0xc01a_b15e_c0de;
-    let mut next_u = || {
-        state = state.wrapping_mul(0x5851_f42d_4c95_7f2d).wrapping_add(1);
-        (state >> 33) as f64 / (u32::MAX as f64)
-    };
     for y in 0..height {
         for x in 0..width {
-            if next_u() < intensity * 0.85 {
+            if next_unit(&mut state) < intensity * 0.85 {
                 canvas.plot(x as i32, y as i32, if intensity > 0.5 { '#' } else { '*' });
             }
         }
@@ -133,13 +152,14 @@ impl Room for Polarization {
 
     fn status(&self, t: f64) -> Option<String> {
         let th = angle(t, None, self.seed);
-        Some(format!("th={th:.2}  pol  DRAG:ANG"))
+        let intensity = malus_intensity(th);
+        Some(format!("I={:.0}%  pol  DRAG:ANG", intensity * 100.0))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let th = angle(t, hands.last().copied(), self.seed);
-        draw(canvas, th, self.seed ^ hands.len() as u64);
+        draw(canvas, th, self.seed);
         if let Some(&(x, y)) = hands.last() {
             let (width, height) = canvas.draw_bounds();
             if width > 0 && height > 0 {
@@ -158,8 +178,13 @@ impl Room for Polarization {
             return self.status(t);
         }
         let th = angle(t, hands.last().copied(), self.seed);
-        let i = th.cos().powi(2);
-        Some(format!("TH={th:.3}  I={i:.2}"))
+        let intensity = malus_intensity(th);
+        let grade = polarization_grade(intensity);
+        Some(format!(
+            "{grade} I={:.1}%  angle={:.1}deg",
+            intensity * 100.0,
+            th.to_degrees()
+        ))
     }
 
     fn reveal(&self) -> &'static str {
@@ -171,7 +196,7 @@ impl Room for Polarization {
 
 #[cfg(test)]
 mod tests {
-    use super::Polarization;
+    use super::{Polarization, malus_intensity, next_unit, polarization_grade};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
 
@@ -197,6 +222,42 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn malus_law_hits_aligned_and_crossed_limits() {
+        let aligned = malus_intensity(0.0);
+        let crossed = malus_intensity(std::f64::consts::FRAC_PI_2);
+        let half = malus_intensity(std::f64::consts::FRAC_PI_4);
+        assert!((aligned - 1.0).abs() < 1e-12);
+        assert!(crossed < 1e-12);
+        assert!((half - 0.5).abs() < 1e-12);
+        assert_eq!(polarization_grade(aligned), "OPEN");
+        assert_eq!(polarization_grade(crossed), "DARK");
+        assert_eq!(polarization_grade(half), "DIM");
+    }
+
+    #[test]
+    fn density_sampler_covers_the_unit_interval() {
+        let mut state = 0xc01a_b15e_c0de;
+        let samples: Vec<_> = (0..4096).map(|_| next_unit(&mut state)).collect();
+        let min = samples.iter().copied().fold(f64::INFINITY, f64::min);
+        let max = samples.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let mean = samples.iter().sum::<f64>() / samples.len() as f64;
+        assert!(min < 0.05, "min={min}");
+        assert!(max > 0.95, "max={max}");
+        assert!((mean - 0.5).abs() < 0.03, "mean={mean}");
+    }
+
+    #[test]
+    fn duplicate_hand_history_does_not_resample_the_field() {
+        let room = Polarization::new();
+        let hand = (0.4, 0.5);
+        let mut single = Canvas::new(48, 24);
+        let mut duplicate = Canvas::new(48, 24);
+        room.render_poked(&mut single, 0.3, &[hand]);
+        room.render_poked(&mut duplicate, 0.3, &[hand, hand]);
+        assert_eq!(single.to_text(), duplicate.to_text());
     }
 
     #[test]

@@ -1,4 +1,4 @@
-//! Sphere geodesics: great circles are the shortest paths.
+//! Sphere geodesics: great-circle arcs are locally straight paths.
 //!
 //! DRAG: TUNE TILT. See `docs/ROOMS.md`.
 
@@ -29,11 +29,39 @@ fn tilt(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     } else {
         (seed % 5) as f64 * 0.05
     };
-    if let Some((x, _)) = hand {
+    let tilt = if let Some((x, _)) = hand {
         x * std::f64::consts::FRAC_PI_2 + s
     } else {
         phase_unit(t) * std::f64::consts::FRAC_PI_2 + s
-    }
+    };
+    tilt.clamp(0.0, std::f64::consts::FRAC_PI_2)
+}
+
+fn great_circle_metrics(radius: f64) -> (f64, f64) {
+    let radius = if radius.is_finite() {
+        radius.max(0.0)
+    } else {
+        0.0
+    };
+    (std::f64::consts::TAU * radius, 0.0)
+}
+
+fn great_circle_point(theta: f64, tilt: f64, yaw: f64) -> (f64, f64, f64) {
+    let theta = if theta.is_finite() { theta } else { 0.0 };
+    let tilt = if tilt.is_finite() {
+        tilt.clamp(0.0, std::f64::consts::FRAC_PI_2)
+    } else {
+        0.0
+    };
+    let yaw = if yaw.is_finite() { yaw } else { 0.0 };
+    let x = tilt.cos() * theta.cos();
+    let y = theta.sin();
+    let z = -tilt.sin() * theta.cos();
+    (
+        x * yaw.cos() - y * yaw.sin(),
+        x * yaw.sin() + y * yaw.cos(),
+        z,
+    )
 }
 
 fn draw(canvas: &mut dyn Surface, alpha: f64, seed: u64) {
@@ -66,7 +94,7 @@ fn draw(canvas: &mut dyn Surface, alpha: f64, seed: u64) {
         }
         prev = Some((px, py));
     }
-    // Great circle tilted by alpha about x-axis, orthographic.
+    // Great circle tilted by alpha about the y-axis, then yawed about z.
     let alpha = alpha.clamp(0.0, std::f64::consts::FRAC_PI_2);
     let n_gc = 3 + if seed == 0 { 0 } else { (seed % 2) as usize };
     for g in 0..n_gc {
@@ -74,17 +102,7 @@ fn draw(canvas: &mut dyn Surface, alpha: f64, seed: u64) {
         prev = None;
         for i in 0..=80 {
             let th = 2.0 * std::f64::consts::PI * (i as f64 / 80.0);
-            // Point on unit circle in yz after tilt, then rotate by yaw.
-            let y0 = th.cos();
-            let z0 = th.sin();
-            // Tilt about x: y' = y cos a - z sin a, z' = y sin a + z cos a
-            let y1 = y0 * alpha.cos() - z0 * alpha.sin();
-            let z1 = y0 * alpha.sin() + z0 * alpha.cos();
-            let x1 = 0.0;
-            // Yaw about z.
-            let x = x1 * yaw.cos() - y1 * yaw.sin();
-            let y = x1 * yaw.sin() + y1 * yaw.cos();
-            let z = z1;
+            let (x, y, z) = great_circle_point(th, alpha, yaw);
             // Backface cull lightly: only z >= -0.05
             if z < -0.15 {
                 prev = None;
@@ -126,7 +144,7 @@ impl Room for Geodesic {
             id: "geodesic",
             title: "Sphere Geodesics",
             wing: "Shape & Space",
-            blurb: "Great circles are shortest paths. t and DRAG: TUNE TILT.",
+            blurb: "Great-circle arcs follow sphere geodesics. t and DRAG: TUNE TILT.",
             accent: [30, 100, 140],
         }
     }
@@ -162,7 +180,7 @@ impl Room for Geodesic {
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let a = tilt(t, hands.last().copied(), self.seed);
-        draw(canvas, a, self.seed ^ hands.len() as u64);
+        draw(canvas, a, self.seed);
         if let Some(&(x, y)) = hands.last() {
             let (bw, bh) = canvas.draw_bounds();
             if bw > 0 && bh > 0 {
@@ -182,19 +200,23 @@ impl Room for Geodesic {
         }
         let a = tilt(t, hands.last().copied(), self.seed);
         let deg = a.to_degrees();
-        Some(format!("TILT={deg:.1}  great circ"))
+        let (length, geodesic_curvature) = great_circle_metrics(1.0);
+        Some(format!(
+            "GREAT C/R={length:.2}  kgR={geodesic_curvature:.0}  T={deg:.1}"
+        ))
     }
 
     fn reveal(&self) -> &'static str {
-        "On a sphere the geodesics are great circles: planes through the center \
-         cut the shortest paths. Airlines and ships follow them; parallel transport \
-         around a triangle of geodesics shows the sphere's curvature as a turn."
+        "Great circles are the sphere's geodesics: locally straight paths. An arc \
+         shorter than a semicircle is the unique shortest path between its endpoints; \
+         antipodes have many minimizing semicircles. Parallel transport around a \
+         geodesic triangle shows the sphere's curvature as a turn."
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Geodesic;
+    use super::{Geodesic, great_circle_metrics, great_circle_point, tilt};
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
 
@@ -220,6 +242,63 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn great_circle_has_zero_geodesic_curvature() {
+        let (unit_length, unit_curvature) = great_circle_metrics(1.0);
+        let (double_length, double_curvature) = great_circle_metrics(2.0);
+        assert!((unit_length - std::f64::consts::TAU).abs() < 1e-12);
+        assert!((double_length - 2.0 * std::f64::consts::TAU).abs() < 1e-12);
+        assert_eq!(unit_curvature, 0.0);
+        assert_eq!(double_curvature, 0.0);
+    }
+
+    #[test]
+    fn tilt_rotates_a_unit_great_circle() {
+        let equator = great_circle_point(0.0, 0.0, 0.0);
+        let meridian = great_circle_point(0.0, std::f64::consts::FRAC_PI_2, 0.0);
+        assert_ne!(equator, meridian);
+        for point in [equator, meridian, great_circle_point(0.7, 0.4, 1.2)] {
+            let norm = point.0 * point.0 + point.1 * point.1 + point.2 * point.2;
+            assert!((norm - 1.0).abs() < 1e-12);
+        }
+    }
+
+    #[test]
+    fn seeded_tilt_stays_inside_the_rendered_range() {
+        let boundary = tilt(1.0, Some((1.0, 0.5)), 4);
+        assert!(boundary <= std::f64::consts::FRAC_PI_2);
+        let room = Geodesic::new_with(4);
+        let status = room
+            .status_input(
+                1.0,
+                &[RoomInput::PointerDown {
+                    x: 1.0,
+                    y: 0.5,
+                    t: 0.0,
+                }],
+            )
+            .unwrap();
+        assert!(status.contains("T=90.0"), "{status}");
+    }
+
+    #[test]
+    fn copy_distinguishes_geodesics_from_global_minimizers() {
+        let reveal = Geodesic::new().reveal();
+        assert!(reveal.contains("shorter than a semicircle"));
+        assert!(reveal.contains("antipodes"));
+    }
+
+    #[test]
+    fn duplicate_hand_history_does_not_add_a_great_circle() {
+        let room = Geodesic::new();
+        let hand = (0.6, 0.4);
+        let mut single = Canvas::new(48, 24);
+        let mut duplicate = Canvas::new(48, 24);
+        room.render_poked(&mut single, 0.3, &[hand]);
+        room.render_poked(&mut duplicate, 0.3, &[hand, hand]);
+        assert_eq!(single.to_text(), duplicate.to_text());
     }
 
     #[test]
