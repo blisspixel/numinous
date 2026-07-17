@@ -36,11 +36,13 @@ mod playtest;
 mod postcard;
 mod radio_cache;
 mod room_input;
+mod room_phase;
 mod save_gate;
 mod studio_panel;
 
 use crate::audio_state::Program as AudioProgram;
 use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_total};
+use room_phase::{effective_room_phase, has_finite_parameter_input};
 
 /// Near-black background (matches the `Raster` stage), packed `0x00RRGGBB`.
 const BACKGROUND: u32 = 0x000A_0B0F;
@@ -152,28 +154,6 @@ fn advance_gallery_phase(
     } else {
         (next, false)
     }
-}
-
-fn effective_room_phase(
-    room_id: &str,
-    phase: f64,
-    inputs: &[numinous_core::RoomInput],
-    the_show: bool,
-) -> f64 {
-    let has_finite_pointer = has_finite_parameter_input(inputs);
-    if room_id == "times-tables" && !the_show && !has_finite_pointer {
-        0.0
-    } else {
-        phase
-    }
-}
-
-fn has_finite_parameter_input(inputs: &[numinous_core::RoomInput]) -> bool {
-    inputs.iter().any(|input| match *input {
-        numinous_core::RoomInput::PointerDown { x, y, .. }
-        | numinous_core::RoomInput::PointerMove { x, y, .. } => x.is_finite() && y.is_finite(),
-        _ => false,
-    })
 }
 
 fn effective_room_inputs(

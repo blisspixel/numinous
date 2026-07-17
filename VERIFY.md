@@ -46,8 +46,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # W
 ```
 
 
-Expected right now: **format and clippy clean, 2,743 all-target test cases pass,
-95.25% region cover, and 95.30% line cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 2,768 all-target test cases pass,
+one screenshot diagnostic is ignored, 95.24% region cover, and 95.29% line
+cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
@@ -86,6 +87,30 @@ spatial-tile gate. These are coarse renderer-path structural gates, not a claim
 of native operating-system event automation or subjective visual quality. `MANIFEST.txt`
 remains the review inventory, and a human or a clearly labeled simulated
 player-profile review still judges clarity and fun.
+
+## 2a. Run the five-flagship reference performance gate
+
+Use a release build on declared reference hardware. The wrappers run the same
+locked command and fail if any ambient or accepted-input-to-room-raster p95
+exceeds 33 ms:
+
+- Windows: `scripts\flagship-perf.ps1`
+- macOS / Linux: `bash scripts/flagship-perf.sh`
+
+The direct command accepts `--samples`, `--warmup`, `--width`, `--height`, and
+`--budget-ms` for a declared measurement:
+
+```
+cargo run --release --locked -p numinous-app --example flagship_perf -- --check
+```
+
+The report covers Times Tables, Double Pendulum, Game of Life, Galton Board,
+and Formula Jam. It starts the input interval when an accepted action enters its
+room or Studio domain handler and stops when that raster is complete. It does
+not include native event translation and history storage, window presentation,
+display scan-out, audio submission and callback latency, or human perception,
+so it is not end-to-end input-latency evidence. See
+`docs/QUALITY.md` for the dated reference-machine result.
 
 ## 2b. Put `numinous` on your PATH (once)
 

@@ -35,7 +35,7 @@ Public Foundation exit criterion is complete on the public `main` branch. The
 accessibility work are still open. Later systems already present in source do
 not waive those gates, and this prerelease label does not claim 0.2 is complete.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **351 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 2,743 all-target test cases, locked build, Windows release gate, 95.25% region coverage, and 95.30% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **351 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 2,768 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.24% region coverage, and 95.29% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -290,6 +290,17 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   all-face registry discovery, declared-verb scenarios, and the aggregate
   catalog visual oracle are covered. This is an honest finite theory-formation
   toy, not a claim of frontier mathematical discovery.
+- **Done (five-flagship performance baseline, cycle 123):** the 0.3 cohort is
+  Times Tables for geometry, Double Pendulum for chaos, Game of Life for
+  emergence, Galton Board for chance, and Formula Jam for creation. One locked
+  release-profile harness measures ambient raster and accepted-input-to-room-
+  raster p50, p95, and maximum durations at a declared viewport. Its explicit
+  reference-machine gate enforces the existing 33 ms p95 room-render budget.
+  All ten paths pass on the measured Ryzen 7 7840U Windows laptop at 900 by 700
+  over 40 samples after five warmups; exact results and exclusions live in
+  `QUALITY.md`. Native event translation and history storage, presentation,
+  display scan-out, audio submission and callbacks, perception, cross-platform
+  hardware, and participant discovery remain open evidence.
 - **Done (physics and geometry consequence depth, cycle 120):** Berry Phase,
   Bragg Diffraction, Capillary Meniscus, Sphere Geodesics, and Polarization now
   derive their action status from the same bounded mathematical state used to
@@ -354,12 +365,16 @@ without relying on the founder's machine or undocumented context?"
 
 **Goal:** prove depth before expanding breadth.
 
-- Select five flagships spanning geometry, chaos, emergence, chance, and creation.
+- Use the selected five flagships: Times Tables for geometry, Double Pendulum
+  for chaos, Game of Life for emergence, Galton Board for chance, and Formula
+  Jam for creation.
 - Give each a room-specific click, drag, or held gesture whose visual and sonic
   consequence follows the mathematics, not a decorative overlay.
 - Run a short formative session after each interaction change and record where
   the action or consequence is unclear.
-- Establish frame-time and input-latency baselines for those rooms.
+- Keep the release-profile ambient and accepted-input-to-room-raster baselines
+  under the declared 33 ms p95 reference-machine budget. Native end-to-end
+  input latency remains a separate real-hardware measurement.
 - Give Formula Jam three legible ways to begin: manual expression entry,
   curated Random, and an Auto set that changes about every 21 seconds at phrase
   boundaries. Add a dismissible, recallable help overlay and pause Auto on edit.
@@ -594,7 +609,7 @@ records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 2,743 all-target test cases, 95.30% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 2,768 passing all-target test cases plus one ignored screenshot diagnostic, 95.29% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,909-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 

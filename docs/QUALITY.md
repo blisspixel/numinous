@@ -8,11 +8,11 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-17
 
-- **Enforced now:** formatting, Clippy with warnings denied, 2,743 all-target
-  test cases, locked
+- **Enforced now:** formatting, Clippy with warnings denied, 2,768 passing
+  all-target test cases plus one ignored screenshot diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 95.25%
-  regions and 95.30% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 95.24%
+  regions and 95.29% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
   three faces, and a release-generated 2,909-screen visual QA matrix. Every room
@@ -59,6 +59,30 @@ built, so an aspiration is never mistaken for a result.
   The App's fixed 16 kHz room-score source is
   capped below two million interleaved samples and shared with the mixer, so
   device rate and repeated hand input cannot multiply that source allocation.
+- **Measured locally:** the 0.3 flagship cohort is Times Tables for geometry,
+  Double Pendulum for chaos, Game of Life for emergence, Galton Board for
+  chance, and Formula Jam for creation. The release-profile harness measures
+  each ambient raster and accepted-input-to-room-raster path at 900 by 700. On
+  2026-07-17, an AMD Ryzen 7 7840U Framework Laptop 13 with 64 GB memory,
+  Windows 11 Pro build 26200, and rustc 1.96.0 ran 40 samples after five
+  warmups. Every p95 cleared the declared 33 ms reference budget:
+
+  | Flagship | Ambient p50 / p95 / max ms | Input p50 / p95 / max ms |
+  | --- | ---: | ---: |
+  | Times Tables | 0.746 / 0.971 / 1.170 | 0.693 / 0.970 / 0.982 |
+  | Double Pendulum | 0.611 / 0.722 / 0.894 | 0.494 / 0.718 / 1.825 |
+  | Game of Life | 1.482 / 1.642 / 2.889 | 2.406 / 2.637 / 3.807 |
+  | Galton Board | 0.349 / 0.461 / 0.477 | 0.429 / 0.525 / 0.532 |
+  | Formula Jam | 0.533 / 0.659 / 0.811 | 0.541 / 0.649 / 1.318 |
+
+  This is one local baseline, not a cross-platform performance claim. The input
+  interval starts when an accepted action enters its room or Studio domain
+  handler and ends when that raster is complete. It includes raster allocation,
+  domain work, persistent Life mutation, Studio parsing, and the visible input
+  affordance where applicable. It excludes native event translation and history
+  storage, window presentation, display scan-out, audio submission and callback
+  latency, and human perception. Those native and sensory intervals remain open
+  hardware evidence.
 - **Not yet evidenced:** a completed stranger hallway test, accessibility review
   with disabled players, representative physical-controller sessions,
   musician-led long-listening review, real execution on macOS and Linux,
@@ -115,8 +139,9 @@ targets until their harnesses and fixtures exist in the repository.
 
 No nightly workflow or real-hardware runner fleet exists yet. The intended scope is:
 - **Performance regression:** track frame time per room, Era, and GPU tier
-  against a declared budget. The current adaptive live-render measurement is a
-  starting point, not a regression harness.
+  against a declared budget. The current adaptive live-render measurement and
+  focused five-flagship reference gate are starting points, not the planned
+  cross-platform nightly regression system.
 - **Soak and endurance:** build a dedicated mode that runs for hours on each OS
   and watches for memory leaks, crashes, audio drift, glitches, and gradual
   frame degradation. The current Show is presentation, not soak evidence.
