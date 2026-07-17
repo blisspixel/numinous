@@ -172,13 +172,17 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 1,350 passing all-target test cases, 93.64% region
-coverage and 93.49% line coverage with an enforced 80% line floor, Clippy with warnings
+The current local gate has 2,730 passing all-target test cases, 95.25% region
+coverage and 95.29% line coverage with an enforced 80% line floor, Clippy with warnings
 denied, and dependency policy checks. Release QA also regenerates an exact
-349-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
+2,901-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
 room receipts, per-room interaction scenarios, semantic checks, and coarse
 perceptual response thresholds, including a regression that rejects
-four isolated corner markers as a meaningful interaction. Fourteen compact
+four isolated corner markers as a meaningful interaction. The inventory is
+derived from all 350 registered rooms, and scenarios follow each room's declared
+interaction verb. QA evaluates the room's mathematical consequence separately
+from the App's latest-gesture trail and reticle. An optional aggregate diagnostic
+reports all catalog failures in one run. Fourteen compact
 receipts cover controller legends and visible pause states through production
 render paths, including a Life controller receipt. Sixteen additional receipts
 cover the global audio sources, levels, and effective-silence states at default

@@ -22,6 +22,8 @@ mod feedback;
 mod game_draw;
 #[path = "../src/hud.rs"]
 mod hud;
+#[path = "../src/input_feedback.rs"]
+mod input_feedback;
 #[allow(dead_code)]
 #[path = "../src/input_legend.rs"]
 mod input_legend;
@@ -41,17 +43,21 @@ const ROOM_SIZE: (usize, usize) = DEFAULT_SIZE;
 const SMALL_SIZE: (usize, usize) = (360, 240);
 const DEFAULT_MIN_CHANGED_PIXELS: usize = 100;
 const ABSOLUTE_MIN_CHANGED_PIXELS: usize = 32;
+const DEFAULT_MIN_DOMAIN_CHANGED_PIXELS: usize = 8;
+const ABSOLUTE_MIN_DOMAIN_CHANGED_PIXELS: usize = 4;
 const MIN_CHANGED_SUPPORT_PERMILLE: usize = 10;
 const MIN_SUPPORT_DENSITY_PERMILLE: usize = 1;
 const SPATIAL_TILE_SIZE: usize = 32;
 const MIN_COHERENT_TILES: usize = 2;
 const MIN_MEAN_CHANNEL_DELTA: usize = 4;
+const SHARED_SCREEN_COUNT: usize = 101;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum InteractionKind {
     Boundary,
     Click,
     DragRelease,
+    Held,
     Repeated,
 }
 
@@ -177,7 +183,7 @@ fn expected_dimensions(relative: &str) -> (usize, usize) {
 }
 
 fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
-    assert_eq!(rooms.len(), 31, "current catalog size");
+    assert_eq!(rooms.len(), 350, "current catalog size");
     let mut expected = BTreeSet::new();
     for room in rooms {
         let id = room.meta().id;
@@ -316,7 +322,11 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
         .into_iter()
         .map(str::to_string),
     );
-    assert_eq!(expected.len(), 349, "documented QA scenario count");
+    assert_eq!(
+        expected.len(),
+        rooms.len() * 8 + SHARED_SCREEN_COUNT,
+        "eight states per room plus the shared QA inventory"
+    );
     expected
 }
 
@@ -446,7 +456,7 @@ fn largest_tile_cluster(changed: &[bool], width: usize, height: usize) -> usize 
     largest
 }
 
-fn assert_legible(id: &str, state: &str, before: &Raster, after: &Raster) {
+fn legibility_error(id: &str, state: &str, before: &Raster, after: &Raster) -> Option<String> {
     let diff = difference(before, after);
     let area = before.width() * before.height();
     let default_area = ROOM_SIZE.0 * ROOM_SIZE.1;
@@ -454,60 +464,134 @@ fn assert_legible(id: &str, state: &str, before: &Raster, after: &Raster) {
         .saturating_mul(area)
         .div_ceil(default_area)
         .max(ABSOLUTE_MIN_CHANGED_PIXELS);
-    assert!(
-        diff.changed >= minimum_changed,
-        "{id} {state} response changes only {} pixels, below the {minimum_changed}-pixel floor",
-        diff.changed,
-    );
-    assert!(
-        diff.support * 1_000 >= area * MIN_CHANGED_SUPPORT_PERMILLE,
-        "{id} {state} response is confined to {} of {area} pixels",
-        diff.support
-    );
-    assert!(
-        diff.changed * 1_000 >= diff.support * MIN_SUPPORT_DENSITY_PERMILLE,
-        "{id} {state} response scatters only {} changed pixels across {} supported pixels",
-        diff.changed,
-        diff.support
-    );
-    assert!(
-        diff.largest_tile_cluster >= MIN_COHERENT_TILES,
-        "{id} {state} response has no coherent cluster larger than {} spatial tile(s)",
-        diff.largest_tile_cluster
-    );
-    assert!(
-        diff.mean_channel_delta >= MIN_MEAN_CHANNEL_DELTA,
-        "{id} {state} response mean channel delta {} is too faint",
-        diff.mean_channel_delta
-    );
+    if diff.changed < minimum_changed {
+        return Some(format!(
+            "{id} {state} response changes only {} pixels, below the {minimum_changed}-pixel floor",
+            diff.changed
+        ));
+    }
+    if diff.support * 1_000 < area * MIN_CHANGED_SUPPORT_PERMILLE {
+        return Some(format!(
+            "{id} {state} response is confined to {} of {area} pixels",
+            diff.support
+        ));
+    }
+    if diff.changed * 1_000 < diff.support * MIN_SUPPORT_DENSITY_PERMILLE {
+        return Some(format!(
+            "{id} {state} response scatters only {} changed pixels across {} supported pixels",
+            diff.changed, diff.support
+        ));
+    }
+    if diff.largest_tile_cluster < MIN_COHERENT_TILES {
+        return Some(format!(
+            "{id} {state} response has no coherent cluster larger than {} spatial tile(s)",
+            diff.largest_tile_cluster
+        ));
+    }
+    if diff.mean_channel_delta < MIN_MEAN_CHANNEL_DELTA {
+        return Some(format!(
+            "{id} {state} response mean channel delta {} is too faint",
+            diff.mean_channel_delta
+        ));
+    }
+    None
+}
+
+fn assert_legible(id: &str, state: &str, before: &Raster, after: &Raster) {
+    if let Some(message) = legibility_error(id, state, before, after) {
+        panic!("{message}");
+    }
+}
+
+fn domain_response_error(
+    id: &str,
+    viewport: &str,
+    immediate_base: &Raster,
+    immediate: &Raster,
+    delayed_base: &Raster,
+    delayed: &Raster,
+) -> Option<String> {
+    let immediate = difference(immediate_base, immediate);
+    let delayed = difference(delayed_base, delayed);
+    let strongest = if immediate.changed >= delayed.changed {
+        &immediate
+    } else {
+        &delayed
+    };
+    let area = immediate_base.width() * immediate_base.height();
+    let default_area = ROOM_SIZE.0 * ROOM_SIZE.1;
+    let minimum_changed = DEFAULT_MIN_DOMAIN_CHANGED_PIXELS
+        .saturating_mul(area)
+        .div_ceil(default_area)
+        .max(ABSOLUTE_MIN_DOMAIN_CHANGED_PIXELS);
+    if strongest.changed < minimum_changed {
+        return Some(format!(
+            "{id} {viewport} room renderer changes only {} pixels, below the {minimum_changed}-pixel domain floor",
+            strongest.changed
+        ));
+    }
+    if strongest.mean_channel_delta < MIN_MEAN_CHANNEL_DELTA {
+        return Some(format!(
+            "{id} {viewport} room renderer mean channel delta {} is too faint",
+            strongest.mean_channel_delta
+        ));
+    }
+    None
+}
+
+fn assert_domain_response(
+    id: &str,
+    viewport: &str,
+    immediate_base: &Raster,
+    immediate: &Raster,
+    delayed_base: &Raster,
+    delayed: &Raster,
+) {
+    if let Some(message) = domain_response_error(
+        id,
+        viewport,
+        immediate_base,
+        immediate,
+        delayed_base,
+        delayed,
+    ) {
+        panic!("{message}");
+    }
+}
+
+fn life_cause_error(state: &str, before: &Raster, after: &Raster) -> Option<String> {
+    let diff = difference(before, after);
+    let area = before.width() * before.height();
+    let default_area = ROOM_SIZE.0 * ROOM_SIZE.1;
+    let minimum_changed = DEFAULT_MIN_CHANGED_PIXELS
+        .saturating_mul(area)
+        .div_ceil(default_area)
+        .max(ABSOLUTE_MIN_CHANGED_PIXELS);
+    if diff.changed < minimum_changed {
+        return Some(format!(
+            "Life {state} changes only {} pixels, below the {minimum_changed}-pixel floor",
+            diff.changed
+        ));
+    }
+    if diff.support * 100 > area * 8 {
+        return Some(format!(
+            "Life {state} spreads across {} of {area} pixels before one glider can be followed",
+            diff.support
+        ));
+    }
+    if diff.largest_tile_cluster == 0 {
+        return Some(format!("Life {state} has no coherent changed tile"));
+    }
+    if diff.mean_channel_delta < MIN_MEAN_CHANNEL_DELTA {
+        return Some(format!("Life {state} is too faint"));
+    }
+    None
 }
 
 fn assert_life_cause_is_local_and_visible(state: &str, before: &Raster, after: &Raster) {
-    let diff = difference(before, after);
-    let area = before.width() * before.height();
-    let default_area = ROOM_SIZE.0 * ROOM_SIZE.1;
-    let minimum_changed = DEFAULT_MIN_CHANGED_PIXELS
-        .saturating_mul(area)
-        .div_ceil(default_area)
-        .max(ABSOLUTE_MIN_CHANGED_PIXELS);
-    assert!(
-        diff.changed >= minimum_changed,
-        "Life {state} changes only {} pixels, below the {minimum_changed}-pixel floor",
-        diff.changed,
-    );
-    assert!(
-        diff.support * 100 <= area * 8,
-        "Life {state} spreads across {} of {area} pixels before one glider can be followed",
-        diff.support
-    );
-    assert!(
-        diff.largest_tile_cluster >= 1,
-        "Life {state} has no coherent changed tile"
-    );
-    assert!(
-        diff.mean_channel_delta >= MIN_MEAN_CHANNEL_DELTA,
-        "Life {state} is too faint"
-    );
+    if let Some(message) = life_cause_error(state, before, after) {
+        panic!("{message}");
+    }
 }
 
 fn down(x: f64, y: f64, t: f64) -> RoomInput {
@@ -561,20 +645,60 @@ fn scenario(
     }
 }
 
-fn with_immediate(mut scenario: RoomScenario, immediate: Vec<RoomInput>) -> RoomScenario {
-    scenario.immediate = immediate;
-    scenario
+fn scenario_for_verb(room: &dyn Room) -> RoomScenario {
+    use InteractionKind::{Click, DragRelease, Held};
+    let action = room.verb().unwrap_or("DRAG: SCRUB TIME");
+    if action.starts_with("CLICK") {
+        scenario(
+            Click,
+            (0.82, 0.80),
+            0.06,
+            click(0.82, 0.80),
+            SemanticOracle::StatusChanges,
+        )
+    } else if action.starts_with("HOLD") {
+        scenario(
+            Held,
+            (0.82, 0.80),
+            0.40,
+            vec![down(0.82, 0.80, 0.0)],
+            SemanticOracle::StatusChanges,
+        )
+    } else if action.starts_with("DRAG") || action.starts_with("PULL") || action.starts_with("AIM")
+    {
+        scenario(
+            DragRelease,
+            (0.18, 0.20),
+            0.55,
+            drag((0.18, 0.20), (0.50, 0.50), (0.82, 0.80)),
+            SemanticOracle::StatusChanges,
+        )
+    } else {
+        panic!(
+            "{} has unsupported interaction prefix {prefix:?}",
+            room.meta().id,
+            prefix = action.split(':').next().unwrap_or_default()
+        )
+    }
 }
 
-fn room_scenario(id: &str) -> RoomScenario {
+fn room_scenario(room: &dyn Room) -> RoomScenario {
     use InteractionKind::{Boundary, Click, DragRelease, Repeated};
     use SemanticOracle::{ActionContains, StatusChanges};
+    let id = room.meta().id;
     match id {
         "times-tables" => scenario(
             DragRelease,
             (0.18, 0.50),
             0.35,
             drag((0.18, 0.50), (0.52, 0.50), (0.88, 0.50)),
+            StatusChanges,
+        ),
+        "laplace-clock" => scenario(
+            DragRelease,
+            (0.02, 0.50),
+            0.85,
+            drag((0.02, 0.50), (0.50, 0.50), (0.98, 0.50)),
             StatusChanges,
         ),
         "cellular-automata" => scenario(
@@ -586,9 +710,9 @@ fn room_scenario(id: &str) -> RoomScenario {
         ),
         "chaos-game" => scenario(
             Boundary,
-            (0.04, 0.88),
+            (0.50, 0.50),
             0.40,
-            repeated(&[(0.04, 0.88), (0.50, 0.04), (0.96, 0.88)]),
+            repeated(&[(0.04, 0.88), (0.96, 0.88), (0.50, 0.50)]),
             ActionContains("CORNER"),
         ),
         "golden-angle" => scenario(
@@ -606,19 +730,13 @@ fn room_scenario(id: &str) -> RoomScenario {
             StatusChanges,
         ),
         "lissajous" => scenario(
-            DragRelease,
-            (0.20, 0.50),
+            Click,
+            (0.82, 0.50),
             0.40,
-            drag((0.20, 0.50), (0.50, 0.50), (0.82, 0.50)),
+            click(0.82, 0.50),
             ActionContains("INTERVAL"),
         ),
-        "prime-spirals" => scenario(
-            DragRelease,
-            (0.18, 0.24),
-            0.50,
-            drag((0.18, 0.24), (0.50, 0.50), (0.82, 0.76)),
-            StatusChanges,
-        ),
+        "prime-spirals" => scenario(Click, (0.82, 0.76), 0.50, click(0.82, 0.76), StatusChanges),
         "cult-of-pi" => scenario(
             Repeated,
             (0.26, 0.34),
@@ -654,13 +772,7 @@ fn room_scenario(id: &str) -> RoomScenario {
             click(0.96, 0.18),
             StatusChanges,
         ),
-        "julia" => scenario(
-            DragRelease,
-            (0.20, 0.24),
-            0.45,
-            drag((0.20, 0.24), (0.48, 0.46), (0.78, 0.70)),
-            StatusChanges,
-        ),
+        "julia" => scenario(Click, (0.78, 0.70), 0.45, click(0.78, 0.70), StatusChanges),
         "barnsley-fern" => scenario(
             Repeated,
             (0.28, 0.72),
@@ -676,28 +788,19 @@ fn room_scenario(id: &str) -> RoomScenario {
             ActionContains("PLANT"),
         ),
         "harmonograph" => scenario(
-            DragRelease,
-            (0.20, 0.42),
+            Click,
+            (0.82, 0.68),
             0.45,
-            drag((0.20, 0.42), (0.52, 0.54), (0.82, 0.68)),
+            click(0.82, 0.68),
             ActionContains("RETUNE"),
         ),
-        "logistic-map" => scenario(
-            DragRelease,
-            (0.20, 0.60),
+        "logistic-map" => scenario(Click, (0.84, 0.36), 0.45, click(0.84, 0.36), StatusChanges),
+        "langtons-ant" => scenario(
+            Repeated,
+            (0.32, 0.36),
             0.45,
-            drag((0.20, 0.60), (0.52, 0.48), (0.84, 0.36)),
+            repeated(&[(0.32, 0.36), (0.52, 0.50), (0.70, 0.64)]),
             StatusChanges,
-        ),
-        "langtons-ant" => with_immediate(
-            scenario(
-                Repeated,
-                (0.32, 0.36),
-                0.45,
-                repeated(&[(0.32, 0.36), (0.52, 0.50), (0.70, 0.64)]),
-                StatusChanges,
-            ),
-            repeated(&[(0.28, 0.30), (0.52, 0.50), (0.74, 0.70)]),
         ),
         "lorenz" => scenario(
             Repeated,
@@ -710,14 +813,14 @@ fn room_scenario(id: &str) -> RoomScenario {
             Boundary,
             (0.04, 0.50),
             0.40,
-            drag((0.04, 0.50), (0.50, 0.50), (0.96, 0.50)),
+            click(0.96, 0.50),
             ActionContains("WIDTH"),
         ),
         "the-pour" => scenario(
-            DragRelease,
-            (0.18, 0.62),
+            Click,
+            (0.82, 0.28),
             0.45,
-            drag((0.18, 0.62), (0.50, 0.44), (0.82, 0.28)),
+            click(0.82, 0.28),
             ActionContains("SLOPE"),
         ),
         "slope-rider" => scenario(
@@ -728,53 +831,29 @@ fn room_scenario(id: &str) -> RoomScenario {
             ActionContains("RIDER"),
         ),
         "double-pendulum" => scenario(
-            DragRelease,
-            (0.22, 0.28),
+            Click,
+            (0.80, 0.72),
             0.50,
-            drag((0.22, 0.28), (0.52, 0.46), (0.80, 0.72)),
+            click(0.80, 0.72),
             ActionContains("RE-DROP"),
         ),
-        "epicycles" => scenario(
-            DragRelease,
-            (0.22, 0.30),
+        "epicycles" => scenario(Click, (0.78, 0.68), 0.45, click(0.78, 0.68), StatusChanges),
+        "random-walk" => scenario(
+            Repeated,
+            (0.28, 0.32),
             0.45,
-            drag((0.22, 0.30), (0.50, 0.48), (0.78, 0.68)),
+            repeated(&[(0.28, 0.32), (0.50, 0.50), (0.72, 0.68)]),
             StatusChanges,
-        ),
-        "random-walk" => with_immediate(
-            scenario(
-                Repeated,
-                (0.28, 0.32),
-                0.45,
-                repeated(&[(0.28, 0.32), (0.50, 0.50), (0.72, 0.68)]),
-                StatusChanges,
-            ),
-            repeated(&[(0.24, 0.28), (0.50, 0.50), (0.76, 0.72)]),
         ),
         "voronoi" => scenario(
             Boundary,
-            (0.04, 0.08),
+            (0.50, 0.50),
             0.45,
-            repeated(&[(0.04, 0.08), (0.50, 0.50), (0.96, 0.92)]),
+            repeated(&[(0.04, 0.08), (0.96, 0.92), (0.50, 0.50)]),
             ActionContains("WELL"),
         ),
-        "mobius" => scenario(
-            DragRelease,
-            (0.20, 0.36),
-            0.45,
-            drag((0.20, 0.36), (0.50, 0.50), (0.80, 0.64)),
-            StatusChanges,
-        ),
-        "zeno" => with_immediate(
-            scenario(
-                DragRelease,
-                (0.53, 0.47),
-                0.45,
-                drag((0.20, 0.34), (0.50, 0.50), (0.80, 0.66)),
-                StatusChanges,
-            ),
-            repeated(&[(0.24, 0.28), (0.52, 0.50), (0.76, 0.72)]),
-        ),
+        "mobius" => scenario(Click, (0.80, 0.64), 0.45, click(0.80, 0.64), StatusChanges),
+        "zeno" => scenario(Click, (0.80, 0.66), 0.45, click(0.80, 0.66), StatusChanges),
         "goldbach" => scenario(
             Boundary,
             (0.53, 0.47),
@@ -789,14 +868,8 @@ fn room_scenario(id: &str) -> RoomScenario {
             repeated(&[(0.30, 0.32), (0.52, 0.50), (0.72, 0.68)]),
             StatusChanges,
         ),
-        "strange-loop" => scenario(
-            DragRelease,
-            (0.22, 0.30),
-            0.45,
-            drag((0.22, 0.30), (0.50, 0.50), (0.78, 0.70)),
-            StatusChanges,
-        ),
-        other => panic!("missing interaction scenario for {other}"),
+        "strange-loop" => scenario(Click, (0.78, 0.70), 0.45, click(0.78, 0.70), StatusChanges),
+        _ => scenario_for_verb(room),
     }
 }
 
@@ -805,12 +878,17 @@ fn assert_scenario_shape(id: &str, scenario: &RoomScenario) {
         (0.0..=1.0).contains(&scenario.delayed_phase),
         "{id} delayed phase is normalized"
     );
+    let [RoomInput::PointerDown { x, y, t }] = scenario.immediate.as_slice() else {
+        panic!("{id} immediate scenario must be exactly one pointer down");
+    };
     assert!(
-        scenario
-            .immediate
-            .iter()
-            .any(|input| matches!(input, RoomInput::PointerDown { .. })),
-        "{id} immediate scenario touches the room"
+        x.is_finite()
+            && y.is_finite()
+            && t.is_finite()
+            && (0.0..=1.0).contains(x)
+            && (0.0..=1.0).contains(y)
+            && *t == 0.0,
+        "{id} immediate pointer down is normalized at capture phase zero"
     );
     let downs = scenario
         .delayed
@@ -859,7 +937,10 @@ fn assert_scenario_shape(id: &str, scenario: &RoomScenario) {
         };
         x <= 0.05 || x >= 0.95 || y <= 0.05 || y >= 0.95
     });
-    assert!(downs > 0 && releases > 0, "{id} scenario closes its input");
+    assert!(downs > 0, "{id} scenario starts its input");
+    if scenario.kind != InteractionKind::Held {
+        assert!(releases > 0, "{id} completed scenario closes its input");
+    }
     match scenario.kind {
         InteractionKind::Boundary => assert!(touches_boundary, "{id} reaches a boundary"),
         InteractionKind::Click => {
@@ -869,8 +950,40 @@ fn assert_scenario_shape(id: &str, scenario: &RoomScenario) {
             assert!(moves >= 2, "{id} drag samples its path");
             assert_eq!(releases, 1, "{id} drag has one release");
         }
+        InteractionKind::Held => assert_eq!(
+            (downs, moves, releases),
+            (1, 0, 0),
+            "{id} held capture has one active press"
+        ),
         InteractionKind::Repeated => assert!(downs >= 3, "{id} repeats its action"),
     }
+}
+
+fn assert_scenario_matches_verb(room: &dyn Room, scenario: &RoomScenario) {
+    use InteractionKind::{Boundary, Click, DragRelease, Held, Repeated};
+    let id = room.meta().id;
+    let action = room.verb().unwrap_or("DRAG: SCRUB TIME");
+    let matches_click =
+        action.contains("CLICK") && matches!(scenario.kind, Click | Repeated | Boundary);
+    if matches_click {
+        assert!(
+            !scenario
+                .delayed
+                .iter()
+                .any(|input| matches!(input, RoomInput::PointerMove { .. })),
+            "{id} declared click scenario cannot synthesize a drag"
+        );
+    }
+    let matches = matches_click
+        || (action.starts_with("DRAG") && matches!(scenario.kind, DragRelease | Boundary))
+        || (action.starts_with("HOLD") && scenario.kind == Held)
+        || ((action.starts_with("PULL") || action.starts_with("AIM"))
+            && scenario.kind == DragRelease);
+    assert!(
+        matches,
+        "{id} scenario {:?} must exercise declared action {action}",
+        scenario.kind
+    );
 }
 
 fn assert_semantics(room: &dyn Room, scenario: &RoomScenario) {
@@ -887,6 +1000,67 @@ fn assert_semantics(room: &dyn Room, scenario: &RoomScenario) {
             "{id} action must explain its {term} interaction"
         ),
     }
+}
+
+fn assert_hold_release_contract(room: &dyn Room, scenario: &RoomScenario) {
+    if scenario.kind != InteractionKind::Held {
+        return;
+    }
+    let [RoomInput::PointerDown { x, y, .. }] = scenario.immediate.as_slice() else {
+        unreachable!("scenario shape already proves one pointer down");
+    };
+    let held = [down(*x, *y, 0.0)];
+    let released = [down(*x, *y, 0.0), up(*x, *y, 0.1)];
+    let cancelled = [down(*x, *y, 0.0), RoomInput::PointerCancel];
+    let phase = scenario.delayed_phase;
+    let base = room_content(room, phase, &[], SMALL_SIZE);
+    let active = room_content(room, phase, &held, SMALL_SIZE);
+    let after_release = room_content(room, phase, &released, SMALL_SIZE);
+    let after_cancel = room_content(room, phase, &cancelled, SMALL_SIZE);
+    assert!(
+        domain_response_error(
+            room.meta().id,
+            "held compact",
+            &base,
+            &active,
+            &base,
+            &active
+        )
+        .is_none(),
+        "{} active hold must have a perceptible domain consequence",
+        room.meta().id
+    );
+    assert_eq!(
+        after_release.to_rgba(),
+        base.to_rgba(),
+        "{} release must end its hold effect",
+        room.meta().id
+    );
+    assert_eq!(
+        after_cancel.to_rgba(),
+        base.to_rgba(),
+        "{} cancel must end its hold effect",
+        room.meta().id
+    );
+    let base_status = room.status(phase);
+    assert_ne!(
+        room.status_input(phase, &held),
+        base_status,
+        "{} active hold status must name its consequence",
+        room.meta().id
+    );
+    assert_eq!(
+        room.status_input(phase, &released),
+        base_status,
+        "{} released status must return to ambient",
+        room.meta().id
+    );
+    assert_eq!(
+        room.status_input(phase, &cancelled),
+        base_status,
+        "{} cancelled status must return to ambient",
+        room.meta().id
+    );
 }
 
 fn room_by_id<'a>(rooms: &'a [Box<dyn Room>], id: &str) -> &'a dyn Room {
@@ -930,7 +1104,7 @@ fn room_screen_with_mode(
     input_mode: input_legend::InputMode,
 ) -> Raster {
     let (width, height) = size;
-    let mut raster = room_content(room, t, inputs, size);
+    let mut raster = room_content_with_feedback(room, t, inputs, size);
     hud::draw_room_chrome(
         &mut raster,
         room,
@@ -991,6 +1165,20 @@ fn room_screen_with_banner(
 fn room_content(room: &dyn Room, t: f64, inputs: &[RoomInput], size: (usize, usize)) -> Raster {
     let mut raster = Raster::with_accent(size.0, size.1, room.meta().accent);
     room.render_input(&mut raster, t, inputs);
+    raster
+}
+
+fn room_content_with_feedback(
+    room: &dyn Room,
+    t: f64,
+    inputs: &[RoomInput],
+    size: (usize, usize),
+) -> Raster {
+    apply_input_feedback(room_content(room, t, inputs, size), inputs)
+}
+
+fn apply_input_feedback(mut raster: Raster, inputs: &[RoomInput]) -> Raster {
+    input_feedback::draw(&mut raster, inputs);
     raster
 }
 
@@ -1149,9 +1337,11 @@ fn main() {
     for room in &rooms {
         let id = room.meta().id;
         let phase = 0.0;
-        let scenario = room_scenario(id);
+        let scenario = room_scenario(room.as_ref());
         assert_scenario_shape(id, &scenario);
+        assert_scenario_matches_verb(room.as_ref(), &scenario);
         assert_semantics(room.as_ref(), &scenario);
+        assert_hold_release_contract(room.as_ref(), &scenario);
         interaction_kinds.insert(scenario.kind);
         match scenario.semantic {
             SemanticOracle::StatusChanges => changed_status_oracles += 1,
@@ -1177,6 +1367,12 @@ fn main() {
             &scenario.delayed,
             SMALL_SIZE,
         );
+        let feedback_interacted = apply_input_feedback(raw_interacted.clone(), &scenario.immediate);
+        let feedback_delayed = apply_input_feedback(raw_delayed.clone(), &scenario.delayed);
+        let feedback_small_interacted =
+            apply_input_feedback(raw_small_interacted.clone(), &scenario.immediate);
+        let feedback_small_delayed =
+            apply_input_feedback(raw_small_delayed.clone(), &scenario.delayed);
         let base = room_screen(room.as_ref(), phase, &[], ROOM_SIZE, 0, false, 7);
         let interacted = room_screen(
             room.as_ref(),
@@ -1196,6 +1392,22 @@ fn main() {
             false,
             7,
         );
+        assert_domain_response(
+            id,
+            "default",
+            &raw_base,
+            &raw_interacted,
+            &raw_delayed_base,
+            &raw_delayed,
+        );
+        assert_domain_response(
+            id,
+            "compact",
+            &raw_small_base,
+            &raw_small_interacted,
+            &raw_small_delayed_base,
+            &raw_small_delayed,
+        );
         if id == "game-of-life" {
             assert_life_cause_is_local_and_visible("immediate", &raw_base, &raw_interacted);
             assert_life_cause_is_local_and_visible("generation 4", &raw_delayed_base, &raw_delayed);
@@ -1210,19 +1422,24 @@ fn main() {
                 &raw_small_delayed,
             );
         } else {
-            assert_legible(id, "immediate", &raw_base, &raw_interacted);
-            assert_legible(id, "delayed", &raw_delayed_base, &raw_delayed);
             assert_legible(
                 id,
-                "compact immediate",
-                &raw_small_base,
+                "immediate feedback",
+                &raw_interacted,
+                &feedback_interacted,
+            );
+            assert_legible(id, "delayed feedback", &raw_delayed, &feedback_delayed);
+            assert_legible(
+                id,
+                "compact immediate feedback",
                 &raw_small_interacted,
+                &feedback_small_interacted,
             );
             assert_legible(
                 id,
-                "compact delayed",
-                &raw_small_delayed_base,
+                "compact delayed feedback",
                 &raw_small_delayed,
+                &feedback_small_delayed,
             );
         }
         save(
@@ -1305,6 +1522,7 @@ fn main() {
             InteractionKind::Boundary,
             InteractionKind::Click,
             InteractionKind::DragRelease,
+            InteractionKind::Held,
             InteractionKind::Repeated,
         ]),
         "room scenarios cover every interaction family"
@@ -2008,9 +2226,123 @@ mod tests {
     use super::{
         DEFAULT_MIN_CHANGED_PIXELS, GenerationLock, MIN_CHANGED_SUPPORT_PERMILLE,
         MIN_COHERENT_TILES, MIN_MEAN_CHANNEL_DELTA, MIN_SUPPORT_DENSITY_PERMILLE, ROOM_SIZE,
-        difference,
+        SHARED_SCREEN_COUNT, SMALL_SIZE, apply_input_feedback, assert_hold_release_contract,
+        assert_scenario_matches_verb, assert_scenario_shape, assert_semantics, difference,
+        domain_response_error, expected_paths, legibility_error, life_cause_error, room_by_id,
+        room_content, room_scenario,
     };
-    use numinous_core::{Raster, Surface};
+    use numinous_core::{Raster, Surface, all_rooms};
+
+    #[test]
+    fn scenario_and_inventory_contracts_track_the_catalog() {
+        let rooms = all_rooms();
+        for room in &rooms {
+            let id = room.meta().id;
+            let scenario = room_scenario(room.as_ref());
+            assert_scenario_shape(id, &scenario);
+            assert_scenario_matches_verb(room.as_ref(), &scenario);
+            assert_semantics(room.as_ref(), &scenario);
+            assert_hold_release_contract(room.as_ref(), &scenario);
+        }
+        assert_eq!(
+            expected_paths(&rooms).len(),
+            rooms.len() * 8 + SHARED_SCREEN_COUNT,
+            "eight room states plus the exact shared evidence inventory"
+        );
+    }
+
+    #[test]
+    #[ignore = "release matrix diagnostic"]
+    fn catalog_visual_contract_report() {
+        let rooms = all_rooms();
+        let mut errors = Vec::new();
+        for room in &rooms {
+            let id = room.meta().id;
+            let scenario = room_scenario(room.as_ref());
+            let base = room_content(room.as_ref(), 0.0, &[], ROOM_SIZE);
+            let immediate = room_content(room.as_ref(), 0.0, &scenario.immediate, ROOM_SIZE);
+            let immediate_feedback = apply_input_feedback(immediate.clone(), &scenario.immediate);
+            let delayed_base = room_content(room.as_ref(), scenario.delayed_phase, &[], ROOM_SIZE);
+            let delayed = room_content(
+                room.as_ref(),
+                scenario.delayed_phase,
+                &scenario.delayed,
+                ROOM_SIZE,
+            );
+            let delayed_feedback = apply_input_feedback(delayed.clone(), &scenario.delayed);
+            let small_base = room_content(room.as_ref(), 0.0, &[], SMALL_SIZE);
+            let small_immediate = room_content(room.as_ref(), 0.0, &scenario.immediate, SMALL_SIZE);
+            let small_immediate_feedback =
+                apply_input_feedback(small_immediate.clone(), &scenario.immediate);
+            let small_delayed_base =
+                room_content(room.as_ref(), scenario.delayed_phase, &[], SMALL_SIZE);
+            let small_delayed = room_content(
+                room.as_ref(),
+                scenario.delayed_phase,
+                &scenario.delayed,
+                SMALL_SIZE,
+            );
+            let small_delayed_feedback =
+                apply_input_feedback(small_delayed.clone(), &scenario.delayed);
+            for error in [
+                domain_response_error(id, "default", &base, &immediate, &delayed_base, &delayed),
+                domain_response_error(
+                    id,
+                    "compact",
+                    &small_base,
+                    &small_immediate,
+                    &small_delayed_base,
+                    &small_delayed,
+                ),
+            ]
+            .into_iter()
+            .flatten()
+            {
+                errors.push(error);
+            }
+            if id == "game-of-life" {
+                for error in [
+                    life_cause_error("immediate", &base, &immediate),
+                    life_cause_error("generation 4", &delayed_base, &delayed),
+                    life_cause_error("compact immediate", &small_base, &small_immediate),
+                    life_cause_error("compact generation 4", &small_delayed_base, &small_delayed),
+                ]
+                .into_iter()
+                .flatten()
+                {
+                    errors.push(error);
+                }
+            } else {
+                for error in [
+                    legibility_error(id, "immediate feedback", &immediate, &immediate_feedback),
+                    legibility_error(id, "delayed feedback", &delayed, &delayed_feedback),
+                    legibility_error(
+                        id,
+                        "compact immediate feedback",
+                        &small_immediate,
+                        &small_immediate_feedback,
+                    ),
+                    legibility_error(
+                        id,
+                        "compact delayed feedback",
+                        &small_delayed,
+                        &small_delayed_feedback,
+                    ),
+                ]
+                .into_iter()
+                .flatten()
+                {
+                    errors.push(error);
+                }
+            }
+        }
+        assert!(
+            errors.is_empty(),
+            "{} visual contract failure(s):\n{}",
+            errors.len(),
+            errors.join("\n")
+        );
+    }
 
     #[test]
     fn screenshot_generation_has_one_cross_process_writer() {
@@ -2087,5 +2419,48 @@ mod tests {
         assert!(diff.mean_channel_delta >= MIN_MEAN_CHANNEL_DELTA);
         assert_eq!(diff.largest_tile_cluster, 1);
         assert!(diff.largest_tile_cluster < MIN_COHERENT_TILES);
+    }
+
+    #[test]
+    fn one_changed_pixel_does_not_satisfy_the_domain_oracle() {
+        let before = Raster::with_accent(ROOM_SIZE.0, ROOM_SIZE.1, [255, 255, 255]);
+        let mut after = before.clone();
+        after.plot((ROOM_SIZE.0 / 2) as i32, (ROOM_SIZE.1 / 2) as i32, '#');
+        assert_eq!(difference(&before, &after).changed, 1);
+        let error = domain_response_error(
+            "one-pixel-probe",
+            "default",
+            &before,
+            &after,
+            &before,
+            &after,
+        )
+        .expect("one changed pixel is below the domain floor");
+        assert!(error.contains("domain floor"), "{error}");
+    }
+
+    #[test]
+    fn formerly_sparse_domain_responses_clear_the_floor() {
+        let rooms = all_rooms();
+        for id in [
+            "laplace-clock",
+            "message-heals",
+            "recaman",
+            "wireworld",
+            "learning-clock",
+            "serpentine",
+        ] {
+            let room = room_by_id(&rooms, id);
+            let scenario = room_scenario(room);
+            let base = room_content(room, 0.0, &[], ROOM_SIZE);
+            let immediate = room_content(room, 0.0, &scenario.immediate, ROOM_SIZE);
+            let delayed_base = room_content(room, scenario.delayed_phase, &[], ROOM_SIZE);
+            let delayed = room_content(room, scenario.delayed_phase, &scenario.delayed, ROOM_SIZE);
+            assert!(
+                domain_response_error(id, "default", &base, &immediate, &delayed_base, &delayed,)
+                    .is_none(),
+                "{id} must retain a perceptible domain consequence"
+            );
+        }
     }
 }

@@ -192,7 +192,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Structured discovery (built):** `list_rooms`, `describe_room`,
   `reveal_room`, and `listen_room` return typed catalog, action, optional goal, revelation,
   deep-cut availability, ambient motif, stable ambient-bed summary, and bounded
-  mathematical-sonification note data for all 31 rooms. `listen_room` names
+  mathematical-sonification note data for all 350 rooms. `listen_room` names
   all three sound roles
   separately because a specialized room sound can intentionally differ from
   the ambient score. The `motif` field is the authored theme; `ambient_bed` is

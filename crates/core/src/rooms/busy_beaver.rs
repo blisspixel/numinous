@@ -142,12 +142,13 @@ fn draw_tape(canvas: &mut dyn Surface, tape: &[u8], head_frac: f64) {
         return;
     }
     let mid = height / 2;
+    let half_bar = ((height as f64 * 0.08).round() as i32).max(2);
     for (i, &cell) in tape.iter().enumerate() {
         let x = (i as f64 / TAPE as f64 * width.saturating_sub(1) as f64).round() as i32;
-        let ch = if cell == 1 { '#' } else { '.' };
-        canvas.plot(x, mid as i32, ch);
         if cell == 1 {
-            canvas.plot(x, mid as i32 - 1, ch);
+            canvas.line(x, mid as i32 - half_bar, x, mid as i32 + half_bar, '#');
+        } else {
+            canvas.plot(x, mid as i32, '.');
         }
     }
     let hx = (head_frac * width.saturating_sub(1) as f64).round() as i32;
@@ -300,6 +301,20 @@ mod tests {
         let mut c = Canvas::new(64, 20);
         room.render(&mut c, 0.8);
         assert!(c.ink_count() > 5);
+    }
+
+    #[test]
+    fn flipped_rule_changes_a_visible_tape_band() {
+        let room = BusyBeaver::new();
+        let mut base = Canvas::new(80, 40);
+        let mut flipped = Canvas::new(80, 40);
+        room.render(&mut base, 0.0);
+        room.render_poked(&mut flipped, 0.0, &[(0.82, 0.8)]);
+        let changed = (0..40)
+            .flat_map(|y| (0..80).map(move |x| (x, y)))
+            .filter(|&(x, y)| base.cell(x, y) != flipped.cell(x, y))
+            .count();
+        assert!(changed >= 30, "flipped tape changed only {changed} cells");
     }
 
     #[test]

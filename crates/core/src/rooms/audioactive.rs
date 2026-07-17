@@ -87,24 +87,31 @@ fn draw_digits(canvas: &mut dyn Surface, s: &str, step: usize) {
     if width == 0 || height == 0 {
         return;
     }
-    let slice: String = s.chars().take(MAX_DRAW).collect();
-    let cols = (width / 2).max(1);
-    let rows = (height / 2).max(1);
-    for (i, ch) in slice.chars().enumerate() {
-        if i >= cols * rows {
-            break;
-        }
-        let col = i % cols;
-        let row = i / cols;
-        let px = (col * 2 + 1).min(width.saturating_sub(1)) as i32;
-        let py = (row * 2 + 1).min(height.saturating_sub(1)) as i32;
+    let digits: Vec<char> = s.chars().take(MAX_DRAW).collect();
+    let top = height as f64 * 0.16;
+    let baseline = height as f64 * 0.82;
+    let band = (baseline - top).max(1.0);
+    let mut previous_peak = None;
+    for (index, ch) in digits.iter().copied().enumerate() {
+        let px = ((index + 1) as f64 * width as f64 / (digits.len() + 1) as f64).round() as i32;
+        let level = match ch {
+            '1' => 0.38,
+            '2' => 0.62,
+            '3' => 0.86,
+            _ => 1.0,
+        };
+        let py = (baseline - band * level).round() as i32;
         let mark = match ch {
             '1' => '.',
             '2' => ':',
             '3' => '+',
             _ => '#',
         };
-        canvas.plot(px, py, mark);
+        canvas.line(px, baseline.round() as i32, px, py, mark);
+        if let Some((last_x, last_y)) = previous_peak {
+            canvas.line(last_x, last_y, px, py, mark);
+        }
+        previous_peak = Some((px, py));
     }
     // Generation tick marks along the bottom.
     let gy = height.saturating_sub(1) as i32;
@@ -302,7 +309,11 @@ mod tests {
         let mut poked = Canvas::new(40, 20);
         room.render(&mut base, 0.0);
         room.render_poked(&mut poked, 0.0, &[(0.5, 0.5)]);
-        assert_ne!(base.to_text(), poked.to_text());
+        let changed = (0..20)
+            .flat_map(|y| (0..40).map(move |x| (x, y)))
+            .filter(|&(x, y)| base.cell(x, y) != poked.cell(x, y))
+            .count();
+        assert!(changed >= 15, "spoken line changed only {changed} cells");
     }
 
     #[test]
