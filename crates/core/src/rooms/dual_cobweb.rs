@@ -167,17 +167,19 @@ impl Room for DualCobweb {
         }
         let r = r_param(t, hands.last().copied(), self.seed);
         let r2 = (r + 0.3).min(4.0);
-        // Logistic fixed-point stability for |r(1-2x*)| with x*=1-1/r when r>1.
-        let band = if r < 3.0 {
-            "period1"
-        } else if r < 3.45 {
-            "period2"
-        } else if r < 3.57 {
-            "cascade"
-        } else {
-            "chaos"
+        // Label each panel from its own r (regime boundaries of the logistic cascade).
+        let band = |rr: f64| -> &'static str {
+            if rr < 3.0 {
+                "p1"
+            } else if rr < 3.45 {
+                "p2"
+            } else if rr < 3.57 {
+                "casc"
+            } else {
+                "chaos"
+            }
         };
-        Some(format!("r={r:.2}/{r2:.2}  {band}"))
+        Some(format!("r={r:.2}({})/{r2:.2}({})", band(r), band(r2)))
     }
 
     fn reveal(&self) -> &'static str {

@@ -190,6 +190,9 @@ impl Room for RabinovichFabrikant {
             if !x.is_finite() || !y.is_finite() || !z.is_finite() {
                 return Some(format!("g={g:.2}  span=0  div"));
             }
+            if x.abs() > 100.0 || y.abs() > 100.0 || z.abs() > 100.0 {
+                return Some(format!("g={g:.2}  span=0  div"));
+            }
         }
         let mut min_x = x;
         let mut max_x = x;
@@ -203,6 +206,9 @@ impl Room for RabinovichFabrikant {
             y += DT * dy;
             z += DT * dz;
             if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+                break;
+            }
+            if x.abs() > 100.0 || y.abs() > 100.0 || z.abs() > 100.0 {
                 break;
             }
             min_x = min_x.min(x);

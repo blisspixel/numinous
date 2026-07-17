@@ -162,11 +162,12 @@ impl Room for Poisson {
         let lam = rate(t, hands.last().copied(), self.seed).clamp(0.3, 12.0);
         // Poisson process: E[N(1)] = lam, mean interarrival 1/lam.
         let mean_wait = 1.0 / lam;
-        // Replay the same seeded staircase to report realized count on [0,1].
-        let mut state = if self.seed == 0 {
+        // Match render_poked seed variation so realized n agrees with the draw.
+        let seed = self.seed ^ hands.len() as u64;
+        let mut state = if seed == 0 {
             0x9e37_79b9_7f4a_7c15
         } else {
-            self.seed ^ 0xdead_beef_cafe_babe
+            seed ^ 0xdead_beef_cafe_babe
         };
         let mut t_acc = 0.0_f64;
         let mut n = 0u32;

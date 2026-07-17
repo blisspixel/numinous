@@ -154,9 +154,16 @@ impl Room for Piriform {
             return self.status(t);
         }
         let a = param_a(t, hands.last().copied(), self.seed).clamp(0.4, 2.0);
-        // Pear curve y^2 = x^3 (a-x)/b^2; length along x is a; max height near x=0.75a.
+        // Match draw: b varies with seed; y^2 = x^3(a-x)/b^2 peaks near x=0.75a.
+        let b = 1.0
+            + if self.seed == 0 {
+                0.0
+            } else {
+                (self.seed % 3) as f64 * 0.1
+            };
         let xmax = a;
-        let ymax = ((0.75_f64.powi(3) * 0.25).sqrt()) * a; // b~1 in draw
+        // f(x)=x^3(a-x) max at x=3a/4: f= (27/256) a^4; y_max = a^2 * sqrt(27/256) / b.
+        let ymax = a * a * (27.0_f64 / 256.0).sqrt() / b.max(0.5);
         Some(format!("a={a:.2}  L={xmax:.2}  h~{ymax:.2}"))
     }
 

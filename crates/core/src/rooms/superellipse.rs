@@ -149,7 +149,7 @@ impl Room for Superellipse {
             return self.status(t);
         }
         let n = exponent(t, hands.last().copied(), self.seed).clamp(0.4, 8.0);
-        // Lamé superellipse |x/a|^n + |y/b|^n = 1; special cases n=2 circle, n->inf square.
+        // Lamé superellipse |x/a|^n + |y/b|^n = 1 (a,b may differ, so n=2 is ellipse not circle).
         let shape = if (n - 2.0).abs() < 0.12 {
             "ellipse"
         } else if n < 1.0 {
