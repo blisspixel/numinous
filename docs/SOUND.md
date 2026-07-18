@@ -113,8 +113,8 @@ snapshot, not this App-only stereo event. Native callback timing, a growing-pile
 pad, and musician-led listening remain open.
 
 Double Pendulum adds one fixed event when a finite newest lift completes a
-fling. Seven paired pulses measure the exact tip gap between the main and shadow
-integrator at 0, 1,000, 2,000, 3,000, 4,000, 5,000, and 6,000 steps. Both states
+fling. Seven paired pulses measure the tip gap between the main and shadow RK4
+trajectories at 0, 1,000, 2,000, 3,000, 4,000, 5,000, and 6,000 steps. Both states
 advance once through those ordered horizons. Each pair starts from the continuous
 gesture voice's minor-pentatonic root and bounded momentum gain. The voices
 begin in unison at center; growth from the room's one ten-thousandth radian
@@ -186,8 +186,8 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
   consumed by the integrator. Horizontal hand position selects one of five
   minor-pentatonic drop roots, vertical bend opens a symmetric 1:1 through 3:2
   interval, and release velocity raises quiet gain without restarting the bed.
-  A completed fling adds seven paired pulses from exact future twin gaps, opening
-  unison toward one octave and center toward wide stereo as the simulated tips
+  A completed fling adds seven paired pulses from the RK4 model's future twin
+  gaps, opening unison toward one octave and center toward wide stereo as the simulated tips
   separate. The continuous layer sonifies the cause of the storm; the bounded
   event lets the same consequence unfold audibly without scheduling the long
   trace in the callback.

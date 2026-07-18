@@ -676,39 +676,39 @@ impl Parser {
         Ok(left)
     }
 
-    /// term := factor (('*' | '/') factor)*
+    /// term := unary (('*' | '/') unary)*
     fn term(&mut self, depth: usize) -> Result<Expr, String> {
-        let mut left = self.factor(depth)?;
+        let mut left = self.unary(depth)?;
         while let Some(op) = match self.peek() {
             Some(Tok::Star) => Some(Op::Mul),
             Some(Tok::Slash) => Some(Op::Div),
             _ => None,
         } {
             self.pos += 1;
-            let right = self.factor(depth)?;
+            let right = self.unary(depth)?;
             left = Expr::Bin(op, Box::new(left), Box::new(right));
         }
         Ok(left)
     }
 
-    /// factor := unary ('^' factor)?  (right associative)
-    fn factor(&mut self, depth: usize) -> Result<Expr, String> {
-        let base = self.unary(depth)?;
-        if matches!(self.peek(), Some(Tok::Caret)) {
-            self.pos += 1;
-            let exp = self.factor(Self::deeper(depth)?)?;
-            return Ok(Expr::Bin(Op::Pow, Box::new(base), Box::new(exp)));
-        }
-        Ok(base)
-    }
-
-    /// unary := '-' unary | atom
+    /// unary := '-' unary | power
     fn unary(&mut self, depth: usize) -> Result<Expr, String> {
         if matches!(self.peek(), Some(Tok::Minus)) {
             self.pos += 1;
             return Ok(Expr::Neg(Box::new(self.unary(Self::deeper(depth)?)?)));
         }
-        self.atom(depth)
+        self.power(depth)
+    }
+
+    /// power := atom ('^' unary)?  (right associative)
+    fn power(&mut self, depth: usize) -> Result<Expr, String> {
+        let base = self.atom(depth)?;
+        if matches!(self.peek(), Some(Tok::Caret)) {
+            self.pos += 1;
+            let exp = self.unary(Self::deeper(depth)?)?;
+            return Ok(Expr::Bin(Op::Pow, Box::new(base), Box::new(exp)));
+        }
+        Ok(base)
     }
 
     /// atom := number | name | name '(' expr ')' | '(' expr ')'
@@ -836,6 +836,14 @@ mod tests {
     fn variable_and_unary_minus() {
         assert!((at("x^2", 3.0) - 9.0).abs() < 1e-9);
         assert!((at("-x + 1", 4.0) - -3.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn exponentiation_binds_before_conventional_unary_minus() {
+        assert!((at("-x^2", 3.0) + 9.0).abs() < 1e-9);
+        assert!((at("(-x)^2", 3.0) - 9.0).abs() < 1e-9);
+        assert!((at("2^-2", 0.0) - 0.25).abs() < 1e-9);
+        assert!((at("-2^2^2", 0.0) + 16.0).abs() < 1e-9);
     }
 
     #[test]
