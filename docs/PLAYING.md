@@ -124,7 +124,7 @@ numinous hackenbush               cut grass vs the Order; the grass is numbers
 numinous party                    dodge one-color triangles; five escape, six never
 numinous fifteen                  call scrambles solvable or stuck; parity tells
 numinous scores                   the high-score table
-numinous forget                   see everything remembered; --confirm erases
+numinous forget                   preview managed local state; --all-local selects all
 numinous tour                     the Show, in the terminal: every room, narrated
 numinous bench                    five fixed gauntlets, one composite: compare minds
 numinous journey                  your constellation, level, and locks
@@ -219,11 +219,19 @@ input without hidden session state:
 | `gauntlet` | one run, four stages, a combo: call to see, call again with answers |
 | `choose` | spend a level-up boon: call for the menu, call again with `pick` |
 | `trophies` | the case: earned and silhouetted, computed from your record |
-| `forget` | see everything remembered; erase it on your explicit word |
+| `forget` | preview managed local state; explicitly erase selected stores or all |
 | `journey` | your level, XP, constellation, and locks |
 | `scores` | the shared high-score table |
 
 Conventions worth relying on:
+
+- **Local-state agency.** A plain `forget` call changes nothing. It inventories
+  Journey, scores, player-owned local Cairn drafts, generated radio cache, and
+  the App crash diagnostic with paths, sizes, counts, and explicit exclusions.
+  Confirmation erases Journey plus selected stores; `all_local` selects every
+  managed store and returns a post-erasure residue receipt. User-selected
+  exports, installed files, the Rust toolchain, and bundled canonical Cairn
+  stones keep their separate lifecycles.
 
 - **Determinism.** The same replay arguments always produce the same board,
   quiz, or scan, for you and for every other mind. For Quiz, that identity is

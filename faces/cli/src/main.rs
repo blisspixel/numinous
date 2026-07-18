@@ -271,7 +271,7 @@ enum Command {
     Scores,
     /// The trophy case: what you have earned, and the silhouettes you have not.
     Trophies,
-    /// See everything Numinous remembers about you; erase it with --confirm.
+    /// Inventory Numinous-managed local state; erase selected stores with --confirm.
     Forget {
         /// Actually erase the journey (without this, just show what is kept).
         #[arg(long)]
@@ -279,6 +279,18 @@ enum Command {
         /// Also erase the score table.
         #[arg(long)]
         scores: bool,
+        /// Also erase player-owned local Cairn drafts.
+        #[arg(long)]
+        cairn: bool,
+        /// Also erase generated radio tracks in the managed cache.
+        #[arg(long)]
+        radio_cache: bool,
+        /// Also erase the managed App crash diagnostic.
+        #[arg(long)]
+        crash_log: bool,
+        /// Erase every inventoried Numinous-managed local store.
+        #[arg(long)]
+        all_local: bool,
     },
     /// Crack the Code: defuse a math-clued bomb before your attempts run out.
     Crack {
@@ -947,6 +959,207 @@ fn scores_path() -> PathBuf {
     }
 }
 
+/// Where player-owned local Cairn drafts live.
+fn cairn_path() -> PathBuf {
+    #[cfg(test)]
+    {
+        test_state_path("cairn")
+    }
+    #[cfg(not(test))]
+    {
+        if let Ok(path) = std::env::var("NUMINOUS_CAIRN") {
+            return PathBuf::from(path);
+        }
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        PathBuf::from(home).join(".numinous-cairn")
+    }
+}
+
+fn crash_log_path() -> PathBuf {
+    #[cfg(test)]
+    {
+        test_state_path("crash")
+    }
+    #[cfg(not(test))]
+    {
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        PathBuf::from(home).join(".numinous-crash.log")
+    }
+}
+
+fn local_state_paths() -> numinous_core::LocalStatePaths {
+    numinous_core::LocalStatePaths {
+        journey: journey_path(),
+        scores: scores_path(),
+        cairn: cairn_path(),
+        radio_cache: radio_dir(),
+        crash_log: crash_log_path(),
+    }
+}
+
+fn managed_file_line(
+    label: &str,
+    file: &numinous_core::LocalFileInventory,
+    detail: &str,
+) -> String {
+    let path = terminal_safe(&file.path.to_string_lossy());
+    let state = if !file.exists && file.sidecar_files == 0 {
+        "absent".to_string()
+    } else if !file.exists {
+        format!(
+            "primary file absent, {} adjacent persistence files totaling {} bytes{}",
+            file.sidecar_files,
+            file.sidecar_bytes,
+            if file.sidecar_scan_capped {
+                ", sidecar scan capped"
+            } else {
+                ""
+            }
+        )
+    } else if file.managed_file {
+        format!(
+            "{} bytes, {} adjacent persistence files totaling {} bytes{}",
+            file.bytes,
+            file.sidecar_files,
+            file.sidecar_bytes,
+            if file.sidecar_scan_capped {
+                ", sidecar scan capped"
+            } else {
+                ""
+            }
+        )
+    } else {
+        "unexpected non-file object, erasure will fail closed".to_string()
+    };
+    format!("  {label:<12} {state}; {detail}; path {path}")
+}
+
+fn local_state_inventory_report(
+    inventory: &numinous_core::LocalStateInventory,
+    selection: numinous_core::LocalStateEraseSelection,
+) -> String {
+    let radio_path = terminal_safe(&inventory.radio_cache.path.to_string_lossy());
+    let radio_state = format!(
+        "{}; {} generated WAV files, {} bytes, {} unexpected entries{}, {} sidecar files, {} sidecar bytes{}",
+        if inventory.radio_cache.exists {
+            "directory present"
+        } else {
+            "directory absent"
+        },
+        inventory.radio_cache.files,
+        inventory.radio_cache.bytes,
+        inventory.radio_cache.unexpected_entries,
+        if inventory.radio_cache.truncated {
+            ", cache scan capped"
+        } else {
+            ""
+        },
+        inventory.radio_cache.sidecar_files,
+        inventory.radio_cache.sidecar_bytes,
+        if inventory.radio_cache.sidecar_scan_capped {
+            ", sidecar scan capped"
+        } else {
+            ""
+        }
+    );
+    let selected = [
+        selection.journey.then_some("journey"),
+        selection.scores.then_some("scores"),
+        selection.cairn.then_some("Cairn drafts"),
+        selection.radio_cache.then_some("radio cache"),
+        selection.crash_log.then_some("crash log"),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>()
+    .join(", ");
+    format!(
+        "Numinous-managed local state:\n\n{}\n{}\n{}\n  {:<12} {}; path {}\n{}\n\nSelected for confirmed erasure: {}.\nNo state was erased by this preview. Use `numinous forget --confirm` for the Journey, add individual flags for other stores, or use `numinous forget --confirm --all-local` for every store above.\n\nNot inventoried or erased: user-selected exports such as PNG, APNG, WAV, and `.num` files; installed application files; the Rust toolchain; and bundled canonical Cairn stones. Local Cairn drafts store author and message as bounded plaintext until erased or separately submitted.",
+        managed_file_line(
+            "journey",
+            &inventory.journey.file,
+            &format!(
+                "{} rooms, {} wins, {} plays, {} secrets",
+                inventory.journey.rooms_entered,
+                inventory.journey.wins,
+                inventory.journey.plays,
+                inventory.journey.secrets_heard
+            )
+        ),
+        managed_file_line(
+            "scores",
+            &inventory.scores.file,
+            &format!("{} entries", inventory.scores.entries)
+        ),
+        managed_file_line(
+            "Cairn",
+            &inventory.cairn.file,
+            &format!("{} local plaintext drafts", inventory.cairn.local_drafts)
+        ),
+        "radio cache",
+        radio_state,
+        radio_path,
+        managed_file_line("crash log", &inventory.crash_log, "App diagnostic"),
+        selected
+    )
+}
+
+fn forget_local_state(
+    paths: &numinous_core::LocalStatePaths,
+    confirm: bool,
+    scores: bool,
+    cairn: bool,
+    radio_cache: bool,
+    crash_log: bool,
+    all_local: bool,
+) -> Result<String, String> {
+    let selection = if all_local {
+        numinous_core::LocalStateEraseSelection::complete()
+    } else {
+        numinous_core::LocalStateEraseSelection {
+            journey: true,
+            scores,
+            cairn,
+            radio_cache,
+            crash_log,
+        }
+    };
+    let before = numinous_core::inspect_local_state(paths)
+        .map_err(|error| format!("Could not inventory local state: {error}."))?;
+    if !confirm {
+        return Ok(local_state_inventory_report(&before, selection));
+    }
+
+    let after = numinous_core::erase_local_state(paths, selection).map_err(|error| {
+        let residue = numinous_core::inspect_local_state(paths)
+            .map(|inventory| {
+                format!(
+                    " {} managed stores and {} known bytes remain.",
+                    inventory.managed_residue_count(),
+                    inventory.total_managed_bytes()
+                )
+            })
+            .unwrap_or_else(|_| " Residue could not be inventoried.".to_string());
+        format!("Erasure stopped at {}: {}.{residue}", error.target(), error)
+    })?;
+    if all_local && after.managed_residue_count() != 0 {
+        return Err(format!(
+            "Complete erasure could not be verified: {} managed stores and {} known bytes remain.",
+            after.managed_residue_count(),
+            after.total_managed_bytes()
+        ));
+    }
+    Ok(format!(
+        "Selected local state erased and verified. {} managed stores and {} known bytes remain. Bundled canonical Cairn stones and user-managed exports were not changed.",
+        after.managed_residue_count(),
+        after.total_managed_bytes()
+    ))
+}
+
 /// Load the high-score table, or start a fresh one.
 fn load_scores() -> numinous_core::Scoreboard {
     numinous_core::load_scoreboard_file(&scores_path())
@@ -1370,35 +1583,31 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             print!("{}", trophies_report(journey, &load_scores()));
             ExitCode::SUCCESS
         }
-        Command::Forget { confirm, scores } => {
-            if !confirm {
-                println!(
-                    "Everything Numinous remembers about you:
-
-  journey  {} rooms entered, {} wins, {} plays, {} secrets heard
-  scores   {} entries
-
-That is all of it. Nothing else is kept, sent, or shared.
-Erase the journey with: numinous forget --confirm  (add --scores for the table)",
-                    journey.visited.len(),
-                    journey.wins,
-                    journey.plays,
-                    journey.secrets,
-                    load_scores().entries.len()
-                );
-                return ExitCode::SUCCESS;
+        Command::Forget {
+            confirm,
+            scores,
+            cairn,
+            radio_cache,
+            crash_log,
+            all_local,
+        } => match forget_local_state(
+            &local_state_paths(),
+            confirm,
+            scores,
+            cairn,
+            radio_cache,
+            crash_log,
+            all_local,
+        ) {
+            Ok(report) => {
+                println!("{report}");
+                ExitCode::SUCCESS
             }
-            let _ = numinous_core::remove_persisted_file(&journey_path());
-            if scores {
-                let _ = numinous_core::remove_persisted_file(&scores_path());
+            Err(error) => {
+                eprintln!("{error}");
+                ExitCode::FAILURE
             }
-            // The in-memory copy stays untouched: finish_journey only writes
-            // on change, so the erased file genuinely stays erased.
-            println!(
-                "Forgotten. The constellation is dark again. The rooms are all still here, whenever you like."
-            );
-            ExitCode::SUCCESS
-        }
+        },
         Command::Crack {
             seed,
             daily,
@@ -1750,6 +1959,13 @@ fn fetch_track(
         return false;
     }
     let path = dir.join(format!("{}-{:03}.wav", station.id, track + 1));
+    let _cache_lock = match numinous_core::lock_local_state(dir) {
+        Ok(lock) => lock,
+        Err(error) => {
+            eprintln!("could not lock the radio cache: {error}");
+            return false;
+        }
+    };
     let spec = hound::WavSpec {
         channels: 2,
         sample_rate: 44_100,
@@ -5870,6 +6086,63 @@ mod tests {
         )
         .expect("a deeper whisper");
         assert!(deep.contains("veil"), "got: {deep}");
+    }
+
+    #[test]
+    fn forget_inventories_and_completely_erases_managed_local_state() {
+        let root = std::env::temp_dir().join(format!(
+            "numinous_cli_forget_complete_{}_{}",
+            std::process::id(),
+            super::pick_day()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let paths = numinous_core::LocalStatePaths {
+            journey: root.join("journey.txt"),
+            scores: root.join("scores.txt"),
+            cairn: root.join("cairn.txt"),
+            radio_cache: root.join("radio"),
+            crash_log: root.join("crash.log"),
+        };
+        std::fs::create_dir_all(&paths.radio_cache).expect("fixture directory");
+        std::fs::write(&paths.journey, b"visited lorenz\nwins 1\nplays 2\n")
+            .expect("journey fixture");
+        std::fs::write(&paths.scores, b"50\tmunch seed:1 board:0\n").expect("score fixture");
+        std::fs::write(&paths.cairn, b"Ada\tproof is a program\n").expect("Cairn fixture");
+        std::fs::write(paths.radio_cache.join("trance-001.wav"), b"RIFF").expect("radio fixture");
+        let crash_temp = root.join(".crash.log.999.1.tmp");
+        std::fs::write(&crash_temp, b"orphan diagnostic temp").expect("crash temp fixture");
+
+        let preview = super::forget_local_state(&paths, false, false, false, false, false, true)
+            .expect("preview");
+        for expected in [
+            "journey",
+            "scores",
+            "Cairn",
+            "radio cache",
+            "crash log",
+            "local plaintext drafts",
+            "user-selected exports",
+        ] {
+            assert!(preview.contains(expected), "missing {expected}: {preview}");
+        }
+        assert!(!preview.contains("Nothing else is kept"));
+        assert!(
+            preview.contains("primary file absent"),
+            "sidecar-only state must name the missing primary: {preview}"
+        );
+        assert!(paths.journey.exists(), "preview is non-destructive");
+
+        let erased = super::forget_local_state(&paths, true, false, false, false, false, true)
+            .expect("complete erasure");
+        assert!(erased.contains("0 managed stores and 0 known bytes remain"));
+        assert_eq!(
+            numinous_core::inspect_local_state(&paths)
+                .expect("post-erasure inventory")
+                .managed_residue_count(),
+            0
+        );
+        assert!(!crash_temp.exists(), "crash temp must be erased");
+        std::fs::remove_dir(&root).expect("fixture root cleanup");
     }
 
     #[test]

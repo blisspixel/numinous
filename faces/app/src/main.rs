@@ -2470,24 +2470,8 @@ impl ApplicationHandler for App {
                 // Silence must never be a mystery: say it on screen and in
                 // the crash log, then keep running visual-only.
                 self.banner = Some(feedback::sound_device_unavailable(&error));
-                let home = std::env::var("HOME")
-                    .or_else(|_| std::env::var("USERPROFILE"))
-                    .unwrap_or_else(|_| ".".to_string());
-                let path = std::path::PathBuf::from(home).join(".numinous-crash.log");
-                use std::io::Write as _;
-                if let Ok(mut file) = std::fs::OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(path)
-                {
-                    let _ = file.write_all(
-                        format!(
-                            "audio open failed: {error}
-"
-                        )
-                        .as_bytes(),
-                    );
-                }
+                let path = crash_log_path();
+                let _ = append_crash_log_at(&path, &format!("audio open failed: {error}\n"));
                 None
             }
         };
@@ -3056,6 +3040,31 @@ fn test_state_path(kind: &str) -> std::path::PathBuf {
     TEST_STATE_ROOT.with(|root| root.path.join(format!("{kind}.txt")))
 }
 
+fn crash_log_path() -> std::path::PathBuf {
+    #[cfg(test)]
+    {
+        test_state_path("crash")
+    }
+    #[cfg(not(test))]
+    {
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        std::path::PathBuf::from(home).join(".numinous-crash.log")
+    }
+}
+
+fn append_crash_log_at(path: &std::path::Path, entry: &str) -> std::io::Result<()> {
+    use std::io::Write as _;
+
+    let _lock = numinous_core::lock_local_state(path)?;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?;
+    file.write_all(entry.as_bytes())
+}
+
 /// The journey file: the same one the CLI and MCP level (env-overridable).
 fn journey_path() -> std::path::PathBuf {
     #[cfg(test)]
@@ -3116,10 +3125,7 @@ fn main() {
     // writes its message and location to a crash log next to the save files,
     // so any crash report can be triaged from one file.
     std::panic::set_hook(Box::new(|info| {
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
-        let path = std::path::PathBuf::from(home).join(".numinous-crash.log");
+        let path = crash_log_path();
         let location = info
             .location()
             .map(|l| format!("{}:{}", l.file(), l.line()))
@@ -3128,14 +3134,7 @@ fn main() {
             "panic at {location}: {info}
 "
         );
-        use std::io::Write as _;
-        if let Ok(mut file) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(path)
-        {
-            let _ = file.write_all(entry.as_bytes());
-        }
+        let _ = append_crash_log_at(&path, &entry);
     }));
     let event_loop = EventLoop::new().expect("create event loop");
     event_loop.set_control_flow(ControlFlow::Wait);
@@ -3156,10 +3155,11 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{
-        App, AudioProgram, TestStateRoot, advance_gallery_phase, app_icon, bounded_tick_seconds,
-        effective_room_phase, julia_gpu_c, julia_gpu_vertical_span, life_step_audio_owned,
-        live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache, room_transient_audio_owned,
-        selected_life_step_audio, selected_parameter_sound, selected_room_interaction_audio,
+        App, AudioProgram, TestStateRoot, advance_gallery_phase, app_icon, append_crash_log_at,
+        bounded_tick_seconds, effective_room_phase, julia_gpu_c, julia_gpu_vertical_span,
+        life_step_audio_owned, live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache,
+        room_transient_audio_owned, selected_life_step_audio, selected_parameter_sound,
+        selected_room_interaction_audio,
     };
     use crate::input_legend::{InputMode, MenuChoice};
     use numinous_core::ROOM_BED_SOURCE_RATE;
@@ -3178,6 +3178,36 @@ mod tests {
         let _ = std::fs::remove_file(&app.scores_file);
         app.level_seen = 1;
         app
+    }
+
+    #[test]
+    fn crash_writer_waits_for_the_shared_erasure_lock() {
+        let path = super::test_state_path("crash-lock");
+        let _ = std::fs::remove_file(&path);
+        let guard = numinous_core::lock_local_state(&path).expect("hold erasure lock");
+        let writer_path = path.clone();
+        let (sent, received) = std::sync::mpsc::channel();
+        let writer = std::thread::spawn(move || {
+            let result = append_crash_log_at(&writer_path, "diagnostic\n");
+            sent.send(result).expect("report writer result");
+        });
+        assert!(
+            received
+                .recv_timeout(std::time::Duration::from_millis(25))
+                .is_err(),
+            "writer must wait while erasure owns the path"
+        );
+        drop(guard);
+        received
+            .recv_timeout(std::time::Duration::from_secs(2))
+            .expect("writer resumes")
+            .expect("writer succeeds");
+        writer.join().expect("writer joined");
+        assert_eq!(
+            std::fs::read(&path).expect("crash receipt"),
+            b"diagnostic\n"
+        );
+        numinous_core::remove_persisted_file(&path).expect("fixture cleanup");
     }
 
     #[test]

@@ -88,7 +88,10 @@ pub use nim::{
     the_secret as nim_secret,
 };
 pub use persistence::{
-    load_journey_file, load_scoreboard_file, persist_journey_delta, record_score_file,
+    LocalCacheInventory, LocalCairnInventory, LocalFileInventory, LocalJourneyInventory,
+    LocalScoresInventory, LocalStateEraseError, LocalStateEraseSelection, LocalStateInventory,
+    LocalStateLock, LocalStatePaths, erase_local_state, inspect_local_state, load_journey_file,
+    load_scoreboard_file, lock_local_state, persist_journey_delta, record_score_file,
     remove_persisted_file,
 };
 pub use predict::{
