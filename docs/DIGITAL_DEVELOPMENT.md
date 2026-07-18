@@ -266,6 +266,18 @@ either, and it never treats session length as evidence of flourishing.
 - **No training on private experience by default:** player records do not become
   product training data without separate, informed consent.
 
+The current 0.2 implementation applies the deletion rule to its existing local
+stores. CLI and MCP `forget` preview Journey, scores, player-owned plaintext
+Cairn drafts, generated radio cache, and the App crash diagnostic, including
+paths, byte counts, semantic counts, and persistence sidecars. Explicit complete
+erasure deletes those managed stores under shared writer locks, verifies each
+owned lock sidecar was removed, and then verifies a zero-store,
+zero-known-byte receipt. User-selected exports, installed files, the Rust
+toolchain, and bundled
+canonical Cairn stones are disclosed exclusions with separate lifecycles. This
+local receipt does not prove forensic erasure from storage media, operating
+system backups, or state recreated later by another running process.
+
 ## Product validation plan
 
 These checks ask whether Numinous works as promised. They do not diagnose,

@@ -292,6 +292,20 @@ pub fn all_bequests(path: &std::path::Path) -> Vec<Bequest> {
     out
 }
 
+/// Count valid player-owned draft records in the local Cairn file.
+///
+/// Bundled founding stones are excluded. Missing, unreadable, invalid, or
+/// oversized files contribute no valid drafts, while their byte presence is
+/// still reported by the local-state inventory.
+#[must_use]
+pub fn local_bequest_count(path: &std::path::Path) -> usize {
+    std::fs::File::open(path)
+        .ok()
+        .and_then(read_bounded_text)
+        .map(|text| text.lines().filter_map(parse_bequest_line).count())
+        .unwrap_or(0)
+}
+
 /// The line to submit to the canonical, repository-tracked cairn
 /// (`data/cairn.txt`) so a bequest reaches every mind who comes after, on every
 /// machine and every release, not only the one it was left on. A local deposit

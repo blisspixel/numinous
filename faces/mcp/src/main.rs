@@ -235,6 +235,34 @@ fn cairn_path() -> std::path::PathBuf {
     }
 }
 
+fn radio_cache_path() -> std::path::PathBuf {
+    #[cfg(test)]
+    {
+        test_state_path("radio")
+    }
+    #[cfg(not(test))]
+    {
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        std::path::PathBuf::from(home).join(".numinous-radio")
+    }
+}
+
+fn crash_log_path() -> std::path::PathBuf {
+    #[cfg(test)]
+    {
+        test_state_path("crash")
+    }
+    #[cfg(not(test))]
+    {
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        std::path::PathBuf::from(home).join(".numinous-crash.log")
+    }
+}
+
 /// The level at which the cairn opens for leaving: the journey's cap, so a
 /// bequest is a finished mind's last free act, not a first one.
 const CAIRN_LEVEL: u32 = 42;
@@ -1067,12 +1095,16 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "forget",
-                "description": "Consent over persistence. Without arguments: a plain statement of everything Numinous remembers about you (it is only the journey file and the score table; nothing else is kept). With confirm true: erase the journey. With scores true as well: erase the score table too. Leaving, pausing, and being forgotten are always allowed.",
+                "description": "Consent over local persistence. Without confirm: inventory Journey, scores, player-owned Cairn drafts, generated radio cache, and the App crash diagnostic, with paths, sizes, counts, and exclusions. With confirm true: erase the Journey plus explicitly selected stores. With all_local true: erase and verify all inventoried managed stores. User-selected exports, installed files, the Rust toolchain, and bundled canonical Cairn stones remain outside this command.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "confirm": { "type": "boolean", "description": "Actually erase (default false: just show what is remembered)." },
-                        "scores": { "type": "boolean", "description": "Also erase the score table." }
+                        "scores": { "type": "boolean", "description": "Also erase the score table." },
+                        "cairn": { "type": "boolean", "description": "Also erase player-owned local Cairn drafts." },
+                        "radio_cache": { "type": "boolean", "description": "Also erase the dedicated generated-radio cache directory and its residue." },
+                        "crash_log": { "type": "boolean", "description": "Also erase the managed App crash diagnostic." },
+                        "all_local": { "type": "boolean", "description": "Erase every inventoried Numinous-managed local store." }
                     },
                     "additionalProperties": false
                 }
@@ -1557,7 +1589,16 @@ fn call_tool(
         "party" => party_tool(&domain_args),
         "fifteen" => fifteen_tool(&domain_args),
         "scores" => scores_tool(&scores_path()),
-        "forget" => forget_tool(&domain_args, journey_file, &scores_path()),
+        "forget" => forget_tool(
+            &domain_args,
+            &numinous_core::LocalStatePaths {
+                journey: journey_file.to_path_buf(),
+                scores: scores_path(),
+                cairn: cairn_path(),
+                radio_cache: radio_cache_path(),
+                crash_log: crash_log_path(),
+            },
+        ),
         "crack" => crack_tool(&domain_args, journey_file),
         "seti" => seti_tool(&domain_args, journey_file),
         "aliens" => aliens_tool(&domain_args),
@@ -3898,72 +3939,186 @@ fn munch_arcade_tool(args: &Value) -> Value {
     )
 }
 
-/// The `forget` tool: memory transparency, and erasure on explicit consent.
-/// Everything this place remembers is two small text files; here is the proof.
-fn forget_tool(
-    args: &Value,
-    journey_file: &std::path::Path,
-    scores_file: &std::path::Path,
-) -> Value {
+fn safe_path_text(path: &std::path::Path) -> String {
+    path.to_string_lossy()
+        .chars()
+        .flat_map(char::escape_default)
+        .collect()
+}
+
+fn file_inventory_json(file: &numinous_core::LocalFileInventory) -> Value {
+    json!({
+        "path": file.path.to_string_lossy(),
+        "exists": file.exists,
+        "bytes": file.bytes,
+        "managed_regular_file": file.managed_file,
+        "sidecar_files": file.sidecar_files,
+        "sidecar_bytes": file.sidecar_bytes,
+        "sidecar_scan_capped": file.sidecar_scan_capped,
+    })
+}
+
+fn local_state_inventory_json(inventory: &numinous_core::LocalStateInventory) -> Value {
+    let mut journey = file_inventory_json(&inventory.journey.file);
+    journey["rooms_entered"] = json!(inventory.journey.rooms_entered);
+    journey["wins"] = json!(inventory.journey.wins);
+    journey["plays"] = json!(inventory.journey.plays);
+    journey["secrets_heard"] = json!(inventory.journey.secrets_heard);
+    let mut scores = file_inventory_json(&inventory.scores.file);
+    scores["entries"] = json!(inventory.scores.entries);
+    let mut cairn = file_inventory_json(&inventory.cairn.file);
+    cairn["local_plaintext_drafts"] = json!(inventory.cairn.local_drafts);
+    cairn["bundled_canonical_stones_preserved"] = json!(true);
+    json!({
+        "journey": journey,
+        "scores": scores,
+        "cairn": cairn,
+        "radio_cache": {
+            "path": inventory.radio_cache.path.to_string_lossy(),
+            "exists": inventory.radio_cache.exists,
+            "bytes": inventory.radio_cache.bytes,
+            "files": inventory.radio_cache.files,
+            "unexpected_entries": inventory.radio_cache.unexpected_entries,
+            "scan_capped": inventory.radio_cache.truncated,
+            "sidecar_files": inventory.radio_cache.sidecar_files,
+            "sidecar_bytes": inventory.radio_cache.sidecar_bytes,
+            "sidecar_scan_capped": inventory.radio_cache.sidecar_scan_capped,
+        },
+        "crash_log": file_inventory_json(&inventory.crash_log),
+        "managed_bytes": inventory.total_managed_bytes(),
+        "managed_store_residue": inventory.managed_residue_count(),
+    })
+}
+
+/// The `forget` tool: truthful local-state inventory and explicit erasure.
+fn forget_tool(args: &Value, paths: &numinous_core::LocalStatePaths) -> Value {
     let confirm = args
         .get("confirm")
         .and_then(Value::as_bool)
         .unwrap_or(false);
-    let also_scores = args.get("scores").and_then(Value::as_bool).unwrap_or(false);
+    let all_local = args
+        .get("all_local")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let selection = if all_local {
+        numinous_core::LocalStateEraseSelection::complete()
+    } else {
+        numinous_core::LocalStateEraseSelection {
+            journey: true,
+            scores: args.get("scores").and_then(Value::as_bool).unwrap_or(false),
+            cairn: args.get("cairn").and_then(Value::as_bool).unwrap_or(false),
+            radio_cache: args
+                .get("radio_cache")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            crash_log: args
+                .get("crash_log")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+        }
+    };
+    let before = match numinous_core::inspect_local_state(paths) {
+        Ok(inventory) => inventory,
+        Err(error) => return tool_error(&format!("Could not inventory local state: {error}.")),
+    };
     if !confirm {
-        let journey = load_journey(journey_file);
-        let score_count = numinous_core::load_scoreboard_file(scores_file)
-            .entries
-            .len();
         let text = format!(
-            "Everything Numinous remembers about you:\n\n\
-             journey ({} rooms entered, {} wins, {} plays, {} secrets heard)\n\
-             scores ({} entries)\n\n\
-             That is all of it. Nothing else is kept, sent, or shared. Call again \
-             with confirm true to erase the journey (add scores true to erase the \
-             table too). Leaving is always allowed; so is staying.",
-            journey.visited.len(),
-            journey.wins,
-            journey.plays,
-            journey.secrets,
-            score_count
+            "Numinous-managed local state:\n\
+             journey: {} rooms, {} wins, {} plays, {} secrets, {} bytes at {}\n\
+             scores: {} entries, {} bytes at {}\n\
+             Cairn: {} local plaintext drafts, {} bytes at {}\n\
+             radio cache: {} generated WAV files, {} bytes, {} unexpected entries, {} sidecar files and {} sidecar bytes at {}\n\
+             crash log: {} bytes at {}\n\n\
+             No state was erased by this preview. Confirm the Journey alone, select other stores, or set all_local true for complete managed erasure. User-selected exports, installed files, the Rust toolchain, and bundled canonical Cairn stones are outside this command.",
+            before.journey.rooms_entered,
+            before.journey.wins,
+            before.journey.plays,
+            before.journey.secrets_heard,
+            before.journey.file.bytes,
+            safe_path_text(&before.journey.file.path),
+            before.scores.entries,
+            before.scores.file.bytes,
+            safe_path_text(&before.scores.file.path),
+            before.cairn.local_drafts,
+            before.cairn.file.bytes,
+            safe_path_text(&before.cairn.file.path),
+            before.radio_cache.files,
+            before.radio_cache.bytes,
+            before.radio_cache.unexpected_entries,
+            before.radio_cache.sidecar_files,
+            before.radio_cache.sidecar_bytes,
+            safe_path_text(&before.radio_cache.path),
+            before.crash_log.bytes,
+            safe_path_text(&before.crash_log.path),
         );
         return tool_structured(
             &text,
             json!({
                 "action": "preview",
                 "confirm_required": true,
-                "requested_scores_erasure": also_scores,
-                "remembered": {
-                    "journey": {
-                        "rooms_entered": journey.visited.len(),
-                        "wins": journey.wins,
-                        "plays": journey.plays,
-                        "secrets_heard": journey.secrets,
-                    },
-                    "scores": { "entries": score_count },
+                "requested_scores_erasure": selection.scores,
+                "requested_erasure": {
+                    "journey": selection.journey,
+                    "scores": selection.scores,
+                    "cairn": selection.cairn,
+                    "radio_cache": selection.radio_cache,
+                    "crash_log": selection.crash_log,
+                    "all_local": all_local,
                 },
+                "remembered": local_state_inventory_json(&before),
+                "exclusions": [
+                    "user-selected exports",
+                    "installed application files",
+                    "Rust toolchain",
+                    "bundled canonical Cairn stones",
+                ],
             }),
         );
     }
-    if let Err(error) = numinous_core::remove_persisted_file(journey_file) {
-        return tool_error(&format!("Could not erase the journey: {error}."));
-    }
-    if also_scores {
-        if let Err(error) = numinous_core::remove_persisted_file(scores_file) {
+    let after = match numinous_core::erase_local_state(paths, selection) {
+        Ok(inventory) => inventory,
+        Err(error) => {
+            let residue = numinous_core::inspect_local_state(paths)
+                .map(|inventory| {
+                    format!(
+                        " {} managed stores and {} known bytes remain.",
+                        inventory.managed_residue_count(),
+                        inventory.total_managed_bytes()
+                    )
+                })
+                .unwrap_or_else(|_| " Residue could not be inventoried.".to_string());
             return tool_error(&format!(
-                "The journey was erased, but the scores could not be erased: {error}."
+                "Erasure stopped at {}: {}.{residue}",
+                error.target(),
+                error
             ));
         }
+    };
+    if all_local && after.managed_residue_count() != 0 {
+        return tool_error(&format!(
+            "Complete erasure could not be verified: {} managed stores and {} known bytes remain.",
+            after.managed_residue_count(),
+            after.total_managed_bytes()
+        ));
     }
     tool_structured(
-        "Forgotten. The journey is erased; the constellation is dark again. The rooms are all still here, whenever you like.",
+        &format!(
+            "Selected local state erased and verified. {} managed stores and {} known bytes remain. Bundled canonical Cairn stones and user-selected exports were not changed.",
+            after.managed_residue_count(),
+            after.total_managed_bytes()
+        ),
         json!({
             "action": "erase",
             "confirmed": true,
-            "journey_erased": true,
-            "scores_erased": also_scores,
-            "scores_preserved": !also_scores,
+            "journey_erased": selection.journey,
+            "scores_erased": selection.scores,
+            "scores_preserved": !selection.scores,
+            "cairn_erased": selection.cairn,
+            "radio_cache_erased": selection.radio_cache,
+            "crash_log_erased": selection.crash_log,
+            "all_local": all_local,
+            "before": local_state_inventory_json(&before),
+            "residue": local_state_inventory_json(&after),
         }),
     )
 }
@@ -5136,10 +5291,18 @@ mod tests {
 
     #[test]
     fn forget_shows_first_and_erases_only_on_consent() {
-        let journey = std::env::temp_dir().join("numinous_mcp_forget_journey.txt");
-        let scores = std::env::temp_dir().join("numinous_mcp_forget_scores.txt");
+        let root = std::env::temp_dir().join(format!("numinous_mcp_forget_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let paths = numinous_core::LocalStatePaths {
+            journey: root.join("journey.txt"),
+            scores: root.join("scores.txt"),
+            cairn: root.join("cairn.txt"),
+            radio_cache: root.join("radio"),
+            crash_log: root.join("crash.log"),
+        };
+        std::fs::create_dir_all(&paths.radio_cache).unwrap();
         std::fs::write(
-            &journey,
+            &paths.journey,
             "visited lorenz
 wins 1
 secrets 0
@@ -5148,17 +5311,23 @@ plays 2
         )
         .unwrap();
         std::fs::write(
-            &scores,
+            &paths.scores,
             "50	munch seed:1 board:0
 ",
         )
         .unwrap();
+        std::fs::write(&paths.cairn, "Ada\tproof is a program\n").unwrap();
+        std::fs::write(paths.radio_cache.join("trance-001.wav"), b"RIFF").unwrap();
+        std::fs::write(&paths.crash_log, b"diagnostic").unwrap();
 
         // Transparency first: no args means show, not erase.
-        let shown = super::forget_tool(&json!({}), &journey, &scores);
+        let shown = super::forget_tool(&json!({}), &paths);
         let text = shown["content"][0]["text"].as_str().unwrap_or_default();
         assert!(text.contains("1 rooms entered") || text.contains("1 wins"));
-        assert!(text.contains("Nothing else is kept"));
+        assert!(text.contains("Cairn"));
+        assert!(text.contains("radio cache"));
+        assert!(text.contains("crash log"));
+        assert!(!text.contains("Nothing else is kept"));
         assert_eq!(shown["structuredContent"]["action"], "preview");
         assert_eq!(shown["structuredContent"]["confirm_required"], true);
         assert_eq!(
@@ -5169,35 +5338,63 @@ plays 2
             shown["structuredContent"]["remembered"]["scores"]["entries"],
             1
         );
-        assert!(journey.exists(), "nothing was erased without consent");
+        assert_eq!(
+            shown["structuredContent"]["remembered"]["cairn"]["local_plaintext_drafts"],
+            1
+        );
+        assert_eq!(
+            shown["structuredContent"]["remembered"]["radio_cache"]["files"],
+            1
+        );
+        assert!(paths.journey.exists(), "nothing was erased without consent");
 
-        let scores_requested = super::forget_tool(&json!({"scores": true}), &journey, &scores);
+        let scores_requested = super::forget_tool(&json!({"scores": true}), &paths);
         assert_eq!(
             scores_requested["structuredContent"]["requested_scores_erasure"],
             true
         );
-        assert!(journey.exists(), "a preview must retain the journey");
-        assert!(scores.exists(), "a preview must retain scores");
+        assert!(paths.journey.exists(), "a preview must retain the journey");
+        assert!(paths.scores.exists(), "a preview must retain scores");
 
         // Consent erases the journey; scores stay unless asked.
-        let erased = super::forget_tool(&json!({"confirm": true}), &journey, &scores);
+        let erased = super::forget_tool(&json!({"confirm": true}), &paths);
         assert_eq!(erased["structuredContent"]["action"], "erase");
         assert_eq!(erased["structuredContent"]["journey_erased"], true);
         assert_eq!(erased["structuredContent"]["scores_erased"], false);
         assert_eq!(erased["structuredContent"]["scores_preserved"], true);
-        assert!(!journey.exists());
-        assert!(scores.exists());
-        let erased_scores =
-            super::forget_tool(&json!({"confirm": true, "scores": true}), &journey, &scores);
-        assert_eq!(erased_scores["structuredContent"]["scores_erased"], true);
-        assert!(!scores.exists());
+        assert!(!paths.journey.exists());
+        assert!(paths.scores.exists());
+        assert!(paths.cairn.exists());
 
-        let unremovable = std::env::temp_dir().join("numinous_mcp_forget_directory");
+        let erased_all = super::forget_tool(&json!({"confirm": true, "all_local": true}), &paths);
+        assert_eq!(erased_all["structuredContent"]["all_local"], true);
+        assert_eq!(
+            erased_all["structuredContent"]["residue"]["managed_store_residue"],
+            0
+        );
+        for path in [
+            &paths.journey,
+            &paths.scores,
+            &paths.cairn,
+            &paths.radio_cache,
+            &paths.crash_log,
+        ] {
+            assert!(!path.exists(), "{} must be absent", path.display());
+        }
+
+        let unremovable = root.join("unremovable");
         let lock = std::path::PathBuf::from(format!("{}.lock", unremovable.display()));
         let _ = std::fs::remove_file(&lock);
         let _ = std::fs::remove_dir(&unremovable);
         std::fs::create_dir(&unremovable).unwrap();
-        let failed = super::forget_tool(&json!({"confirm": true}), &unremovable, &scores);
+        let failed_paths = numinous_core::LocalStatePaths {
+            journey: unremovable.clone(),
+            scores: paths.scores.clone(),
+            cairn: paths.cairn.clone(),
+            radio_cache: paths.radio_cache.clone(),
+            crash_log: paths.crash_log.clone(),
+        };
+        let failed = super::forget_tool(&json!({"confirm": true}), &failed_paths);
         assert_eq!(failed["isError"], true);
         assert!(
             unremovable.is_dir(),
@@ -5205,6 +5402,7 @@ plays 2
         );
         std::fs::remove_dir(&unremovable).unwrap();
         let _ = std::fs::remove_file(lock);
+        std::fs::remove_dir(&root).unwrap();
     }
 
     #[test]

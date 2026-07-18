@@ -8,11 +8,36 @@ adversarial questions and candidate defects; every defect still needs direct
 reproduction, and product claims still need the real sessions and qualified
 review defined in `QUALITY.md` and `RESEARCH.md`.
 
-The simulations used two initial troupes, followed by two further troupes. The
-first lenses were human archetypes. The others included invented minds designed
-to share as little assumed context as possible. Their voices are preserved as
-creative prompts. Fixed defects are recorded on their technical evidence in
-`CHANGELOG.md`; resulting design ideas are catalogued in `ROOMS.md`.
+The archive began with two initial troupes followed by two further troupes. On
+2026-07-18, a separate six-round technical cohort added 30 independent simulated
+perspectives. The first lenses were human archetypes. The others included
+invented minds designed to share as little assumed context as possible. Their
+voices are preserved as creative prompts. Fixed defects are recorded on their
+technical evidence in `CHANGELOG.md`; resulting design ideas are catalogued in
+`ROOMS.md`.
+
+## July 2026 six-round technical cohort
+
+Six rounds of five fresh simulated reviewers examined mathematical truth,
+player agency, install behavior, scriptability, native accessibility, sensory
+legibility, creator workflow, progression, return play, and documentation. This
+was structured adversarial review, not human research. No simulated judgment
+passes the hallway, accessibility, musician, or cross-platform evidence gates.
+
+Direct reproductions established the highest-risk findings. Formula Jam parsed
+unary minus against exponentiation unconventionally. Double Pendulum's explicit
+Euler path gained substantial artificial energy. Life copy transferred an
+unbounded-grid undecidability result to its finite torus. `forget` omitted a
+writable local Cairn draft while claiming a complete inventory. Public installer
+failure propagation, CLI progress purity, abandoned-score handling, Galton input
+independence, native semantics, keyboard reachability, reduced motion, Studio
+provenance, Journey persistence, and documentation boundaries produced the next
+validated work queue.
+
+Cycles 133 and 134 close the first four reproduced findings with executable
+oracles and release-gate evidence. The remaining findings stay open in roadmap
+dependency order. The cohort's role is to find questions and reproducible
+defects early. Only direct tests and real external evidence can close them.
 
 ---
 

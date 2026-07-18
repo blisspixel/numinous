@@ -49,8 +49,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 2,838 all-target test cases pass,
-one screenshot diagnostic is ignored, 95.37% region cover, and 95.41% line
+Expected right now: **format and clippy clean, 2,853 all-target test cases pass,
+one screenshot diagnostic is ignored, 95.29% region cover, and 95.30% line
 cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
@@ -223,10 +223,21 @@ cargo run --bin numinous -- journey             # your constellation, level, loc
 cargo run --bin numinous -- choose              # spend a level-up boon (knowledge, early)
 cargo run --bin numinous -- trophies            # the case: earned and silhouetted
 cargo run --bin numinous -- scores              # the shared table (humans and AIs alike)
-cargo run --bin numinous -- forget              # see everything remembered; --confirm erases
+cargo run --bin numinous -- forget              # non-destructive managed-state inventory
+cargo run --bin numinous -- forget --confirm    # erase Journey progress only
+cargo run --bin numinous -- forget --confirm --all-local  # erase and verify all managed local state
 ```
 Every game records plays and wins to the journey; level-ups cascade lore,
 unlocks, boon banners, and trophy pings; dailies chain into streaks.
+
+The inventory covers Journey, scores, player-owned local Cairn drafts,
+generated radio cache, and the App crash diagnostic. It reports paths, sizes,
+semantic counts, persistence sidecars, and exclusions before consent. Individual
+flags select scores, Cairn drafts, radio cache, or crash log; `--all-local`
+selects all five stores and verifies zero managed residue after deletion. Close
+other running Numinous processes first because an active process can create new
+state after the command returns. User-selected exports, installed files, the
+Rust toolchain, and bundled canonical Cairn stones have separate lifecycles.
 
 **GPU (adaptive, no window):** render the Mandelbrot set on whatever GPU this
 machine has, to a PNG:
