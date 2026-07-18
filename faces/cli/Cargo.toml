@@ -16,9 +16,9 @@ numinous-core = { workspace = true }
 numinous-audio = { workspace = true }
 clap = { workspace = true }
 serde_json = { workspace = true }
-png = "0.17"
+png = "0.18"
 hound = "3"
-ureq = "2"
+ureq = "3"
 
 [lints]
 workspace = true

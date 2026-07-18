@@ -1926,12 +1926,13 @@ fn fetch_track(
     let response = match response {
         Ok(r) => r,
         Err(error) => match *error {
-            ureq::Error::Status(code, r) => {
-                let detail = bounded_response_detail(r.into_reader());
+            MusicRequestError::HttpStatus(response) => {
+                let code = response.status();
+                let detail = bounded_response_detail(response.into_body().into_reader());
                 eprintln!("The station is off the air (HTTP {code}): {detail}");
                 return false;
             }
-            e => {
+            MusicRequestError::Request(e) => {
                 eprintln!("Could not reach the tower: {e}");
                 return false;
             }
@@ -1941,7 +1942,7 @@ fn fetch_track(
         eprintln!("The requested track duration is too large.");
         return false;
     };
-    let pcm = match read_bounded(response.into_reader(), max_pcm_bytes) {
+    let pcm = match read_bounded(response.into_body().into_reader(), max_pcm_bytes) {
         Ok(Some(bytes)) => bytes,
         Ok(None) => {
             eprintln!("The tower sent more audio than the requested duration permits.");
@@ -1994,25 +1995,34 @@ fn fetch_track(
     }
 }
 
+#[derive(Debug)]
+enum MusicRequestError {
+    HttpStatus(ureq::http::Response<ureq::Body>),
+    Request(ureq::Error),
+}
+
 fn send_music_request(
     url: &str,
     key: &str,
     body: &str,
     timeout: std::time::Duration,
-) -> Result<ureq::Response, Box<ureq::Error>> {
-    let response = ureq::builder()
-        .redirects(0)
+) -> Result<ureq::http::Response<ureq::Body>, Box<MusicRequestError>> {
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .max_redirects(0)
+        .http_status_as_error(false)
+        .timeout_global(Some(timeout))
         .build()
+        .into();
+    let response = agent
         .post(url)
-        .set("xi-api-key", key)
-        .set("content-type", "application/json")
-        .timeout(timeout)
-        .send_string(body)
-        .map_err(Box::new)?;
-    if (200..300).contains(&response.status()) {
+        .header("xi-api-key", key)
+        .content_type("application/json")
+        .send(body)
+        .map_err(|error| Box::new(MusicRequestError::Request(error)))?;
+    if response.status().is_success() {
         Ok(response)
     } else {
-        Err(Box::new(ureq::Error::Status(response.status(), response)))
+        Err(Box::new(MusicRequestError::HttpStatus(response)))
     }
 }
 
@@ -2059,7 +2069,7 @@ fn max_track_bytes(seconds: u64) -> Option<usize> {
 }
 
 fn validate_pcm_body(pcm: &[u8]) -> Result<(), &'static str> {
-    if pcm.len() % 4 != 0 {
+    if !pcm.len().is_multiple_of(4) {
         return Err("The tower sent an incomplete 16-bit stereo frame");
     }
     if pcm.len() < 8_820 * 2 {
@@ -2536,7 +2546,7 @@ fn watch(
             player.service();
         }
         // Refresh the room's voice a few times per sweep.
-        if frame % 24 == 0
+        if frame.is_multiple_of(24)
             && let Some(player) = &player
         {
             let spec = room.sound(t);
@@ -3069,7 +3079,7 @@ fn sonify_wav_layer(
 
 /// Write one or two channels of 16-bit PCM samples to a WAV file at `path`.
 fn write_wav(path: &Path, samples: &[f32], sample_rate: u32, channels: u16) -> Result<(), String> {
-    if !(1..=2).contains(&channels) || samples.len() % usize::from(channels) != 0 {
+    if !(1..=2).contains(&channels) || !samples.len().is_multiple_of(usize::from(channels)) {
         return Err(format!(
             "cannot write {} samples as {channels}-channel PCM.\n",
             samples.len()
@@ -4835,8 +4845,10 @@ mod tests {
                 }
                 request.extend_from_slice(&chunk[..read]);
             }
+            let response_body = "redirect body retained";
             let response = format!(
-                "HTTP/1.1 302 Found\r\nLocation: http://{destination_address}/capture\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                "HTTP/1.1 302 Found\r\nLocation: http://{destination_address}/capture\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response_body}",
+                response_body.len()
             );
             std::io::Write::write_all(&mut stream, response.as_bytes()).expect("redirect");
             request
@@ -4849,10 +4861,17 @@ mod tests {
             std::time::Duration::from_secs(2),
         );
         match result {
-            Err(error) => assert!(
-                matches!(&*error, ureq::Error::Status(302, _)),
-                "unexpected redirect error: {error:?}"
-            ),
+            Err(error) => match *error {
+                super::MusicRequestError::HttpStatus(response) => {
+                    assert_eq!(response.status(), 302);
+                    let detail = response
+                        .into_body()
+                        .read_to_string()
+                        .expect("read redirect response body");
+                    assert_eq!(detail, "redirect body retained");
+                }
+                other => panic!("unexpected redirect error: {other:?}"),
+            },
             Ok(response) => panic!("redirect returned HTTP {}", response.status()),
         }
         let request = server.join().expect("origin server");

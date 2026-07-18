@@ -59,10 +59,11 @@ fn draw(canvas: &mut dyn Surface, ph: f64, seed: u64) {
         let r = th.cos().exp() - 2.0 * (4.0 * th).cos() + (th / 12.0).sin().powi(5);
         let px = (cx + scale * r * th.sin()).round() as i32;
         let py = (cy - scale * r * th.cos() * 0.55).round() as i32;
-        if let Some((ox, oy)) = prev {
-            if (px - ox).abs() < width as i32 / 2 && (py - oy).abs() < height as i32 / 2 {
-                canvas.line(ox, oy, px, py, '#');
-            }
+        if let Some((ox, oy)) = prev
+            && (px - ox).abs() < width as i32 / 2
+            && (py - oy).abs() < height as i32 / 2
+        {
+            canvas.line(ox, oy, px, py, '#');
         }
         prev = Some((px, py));
     }

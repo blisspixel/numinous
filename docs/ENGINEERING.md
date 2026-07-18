@@ -6,7 +6,7 @@ perfection. This document separates gates enforced today from hardening work
 that still has to earn its place. The automated enforcement that exists lives
 in `QUALITY.md` and `.github/workflows/ci.yml`.
 
-## Toolchain and versions (verified 2026-07-13)
+## Toolchain and versions (verified 2026-07-18)
 
 The current baseline is deliberate and green. A newer major release is a review
 candidate, not an automatic upgrade. Patch updates within the lockfile are kept
@@ -15,20 +15,29 @@ current through Dependabot and must pass the full gate.
 | Component | Enforced baseline | Notes |
 | --- | --- | --- |
 | Rust edition | **2024** | The current edition; use it from the first commit. |
-| Rust toolchain | **1.96.0** | Exact developer and CI toolchain. The declared MSRV remains 1.85 and needs its own CI job before compatibility is claimed. |
-| `wgpu` | **29.x** | Current green GPU stack. Version 30 is an evaluated migration, not a blind launch-day bump. |
+| Rust toolchain | **1.97.1** | Exact developer and CI toolchain. CI separately checks the verified 1.88 MSRV. |
+| `wgpu` | **30.0.0** | Current GPU stack. The migration preserves unbucketed adapter limits and handles mapped-range failures as typed errors. |
 | `winit`, `softbuffer` | **0.30.x, 0.4.x** | Current native window and software presentation path. |
-| `cpal` | **0.16.x** | Current native audio I/O. DSP and chiptune synthesis are implemented in the workspace without `fundsp`. |
-| `gilrs` | **0.11.2** | Current cross-platform gamepad input. This release requires Rust 1.84, fits the declared MSRV, and Linux CI installs `libudev-dev`. |
+| `cpal` | **0.18.1** | Current native audio I/O. Every PCM format is converted from the shared float mix; DSD remains explicitly unsupported. |
+| `png`, `pollster`, `ureq` | **0.18.1, 1.0.1, 3.3.0** | Current image, blocking-future, and synchronous HTTP baselines. HTTP redirects remain disabled for the credentialed music request and error bodies remain bounded. |
+| `gilrs` | **0.11.2** | Current cross-platform gamepad input. Linux CI installs `libudev-dev`. |
 | Test runner | **cargo test** | Enforced today. `cargo-nextest` is a possible speed improvement, not a current dependency. |
 | Supply chain | **cargo-deny** and **cargo-audit** | Both enforced in CI. Deny covers advisories, licenses, bans, and sources; audit is the independent RustSec path with ignores in `.cargo/audit.toml`. `cargo-auditable` release binaries remain planned hardening. |
 | Coverage | **cargo-llvm-cov** | Tracked, not fetishized (see Testing). |
 
 **Version hygiene:** commit `Cargo.lock`, build with `--locked` in CI,
 centralize shared versions in `[workspace.dependencies]`, and update through
-reviewed pull requests. As of this review, stable major upgrades to evaluate
-separately include `wgpu` 30, `cpal` 0.18, and `ureq` 3. `winit` 0.31 is still a
-beta and is not a release baseline.
+reviewed changes. The 2026-07-18 audit migrated every direct dependency with a
+newer general-availability line and refreshed all compatible transitive
+packages. `cargo update --dry-run --verbose` reports no remaining update.
+Dependabot watches Cargo and action releases without migration-era ignores.
+The release evidence comes from the official
+[`wgpu` 30.0.0 release](https://github.com/gfx-rs/wgpu/releases/tag/v30.0.0),
+[`cpal` 0.18.1 release](https://github.com/RustAudio/cpal/releases/tag/v0.18.1),
+and the published crate records for
+[`png` 0.18.1](https://crates.io/crates/png/0.18.1),
+[`pollster` 1.0.1](https://crates.io/crates/pollster/1.0.1), and
+[`ureq` 3.3.0](https://crates.io/crates/ureq/3.3.0).
 
 ## Formatting and linting (zero-warning policy)
 
@@ -127,12 +136,13 @@ Nothing merges red. On every PR, blocking:
 4. `bash scripts/check-style.sh`
 5. `cargo deny check`
 6. `cargo audit` (RustSec advisories; ignores in `.cargo/audit.toml`)
-7. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
-8. `cargo test --workspace --all-targets --locked` and
+7. `cargo +1.88.0 check --workspace --all-targets --locked`
+8. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
+9. `cargo test --workspace --all-targets --locked` and
    `cargo build --workspace --locked` on macOS, Linux, and Windows
-9. The native installer safety self-test on macOS, Linux, and Windows
+10. The native installer safety self-test on macOS, Linux, and Windows
 
-Hardening targets not yet enforced in CI: MSRV, `cargo doc --workspace --no-deps`
+Hardening targets not yet enforced in CI: `cargo doc --workspace --no-deps`
 under `-D warnings`, `cargo-auditable` release binaries, release artifact
 provenance, the visual and audio regression loops, and real-hardware soak and
 performance jobs.

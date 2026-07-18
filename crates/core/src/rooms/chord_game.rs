@@ -210,10 +210,10 @@ impl Room for ChordGame {
         let (p0, q0) = ambient_points(t, self.seed);
         let mut p = p0;
         let mut q = q0;
-        if let Some(&(px, py)) = hands.first() {
-            if let Some(s) = snap_to_curve(px, py) {
-                p = s;
-            }
+        if let Some(&(px, py)) = hands.first()
+            && let Some(s) = snap_to_curve(px, py)
+        {
+            p = s;
         }
         if let Some(&(px, py)) = hands.get(1).or(hands.last()) {
             if hands.len() >= 2 {
@@ -239,22 +239,22 @@ impl Room for ChordGame {
         let (p0, q0) = ambient_points(t, self.seed);
         let mut p = p0;
         let mut q = q0;
-        if let Some(&(px, py)) = hands.first() {
-            if let Some(s) = snap_to_curve(px, py) {
-                p = s;
-            }
+        if let Some(&(px, py)) = hands.first()
+            && let Some(s) = snap_to_curve(px, py)
+        {
+            p = s;
         }
         if hands.len() >= 2 {
-            if let Some(&(px, py)) = hands.get(1) {
-                if let Some(s) = snap_to_curve(px, py) {
-                    q = s;
-                }
-            }
-        } else if let Some(&(px, py)) = hands.first() {
-            if let Some(s) = snap_to_curve(px, py) {
-                p = s;
+            if let Some(&(px, py)) = hands.get(1)
+                && let Some(s) = snap_to_curve(px, py)
+            {
                 q = s;
             }
+        } else if let Some(&(px, py)) = hands.first()
+            && let Some(s) = snap_to_curve(px, py)
+        {
+            p = s;
+            q = s;
         }
         match add_pts(p, q) {
             Some((x, y)) => Some(format!("SUM R=({x:.1},{y:.1})  pts={}", hands.len())),

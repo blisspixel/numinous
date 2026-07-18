@@ -111,7 +111,30 @@ change with play. Forty-two source-shipped MP3 tracks form the built-in radio.
 Both work locally without a subscription or streaming service. The full design
 is in [`docs/MUSIC.md`](docs/MUSIC.md) and [`docs/STUDIO.md`](docs/STUDIO.md).
 
-## Current state
+## Release status
+
+Numinous **0.2.0-alpha.1** is playable today. The native App, full-color CLI,
+and MCP server all use the same deterministic mathematical core. The current
+build includes 351 catalog rooms plus hidden content, 11+ games, six
+lever-driven simulations, Journey progression, Formula Jam, local music and
+radio, still and short-loop sharing, mouse and keyboard control, and
+hotplugged-controller support.
+
+The alpha label is meaningful. Automated correctness, security, coverage,
+cross-platform build, and installer gates are strong, but the 0.2 release still
+requires real hallway playtests, accessibility sessions, representative
+controller sessions, musician-led long listening, and broader native hardware
+evidence. Capability breadth is not being used as a substitute for that human
+evidence.
+
+The ordered release criteria and open evidence are in
+[`docs/ROADMAP.md`](docs/ROADMAP.md). Reproducible engineering checks are in
+[`VERIFY.md`](VERIFY.md), and completed changes are in
+[`CHANGELOG.md`](CHANGELOG.md).
+
+<details>
+<summary>Detailed engineering evidence for this alpha</summary>
+
 
 Numinous is **version 0.2.0-alpha.1**, actively earning the 0.2 Flagship Proof
 gate. It is not on the old 0.1 line: the 0.1 Public Foundation is complete.
@@ -196,7 +219,7 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 2,868 passing all-target test cases plus one ignored
+The current local gate has 2,869 passing all-target test cases plus one ignored
 screenshot diagnostic, 95.39% region coverage and 95.44% line coverage with an
 enforced 80% line floor, Clippy with warnings denied, and dependency policy
 checks. Release QA also regenerates an exact
@@ -238,6 +261,8 @@ select C major-pentatonic pitches, horizontal centroids pan them, and birth
 density changes their weight and harmonics. CLI and MCP calls remain explicit,
 deterministic, stateless replays rather than implying a hidden session.
 Versions are earned by evidence, not by feature count.
+
+</details>
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the ordered 0.2 through 2.0 plan and
 [`VERIFY.md`](VERIFY.md) for every local and CI gate.

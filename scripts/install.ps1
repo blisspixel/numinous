@@ -811,8 +811,8 @@ function Build-Numinous {
         # it only if it meets the workspace MSRV in Cargo.toml.
         $version = (cargo --version) -replace '^cargo (\d+\.\d+).*', '$1'
         $parsed = [version]'0.0'
-        if (-not [version]::TryParse($version, [ref]$parsed) -or $parsed -lt [version]'1.85') {
-            Fail ('this cargo is older than the minimum supported Rust (1.85) and rustup is ' +
+        if (-not [version]::TryParse($version, [ref]$parsed) -or $parsed -lt [version]'1.88') {
+            Fail ('this cargo is older than the minimum supported Rust (1.88) and rustup is ' +
                 'absent. Install rustup from https://rustup.rs and re-run this installer.')
         }
         Say 'note: using cargo without rustup; the pinned toolchain file is ignored.'

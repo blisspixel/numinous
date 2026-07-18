@@ -27,10 +27,37 @@ fn validate_output_dimensions(sample_rate: u32, channels: u16) -> Result<(), Str
 fn device_channel_sample(frame: (f32, f32), channels: usize, channel: usize) -> f32 {
     if channels == 1 {
         ((frame.0 + frame.1) * std::f32::consts::FRAC_1_SQRT_2).clamp(-1.0, 1.0)
-    } else if channel % 2 == 0 {
+    } else if channel.is_multiple_of(2) {
         frame.0
     } else {
         frame.1
+    }
+}
+
+fn build_tone_stream<T>(
+    device: &cpal::Device,
+    config: cpal::StreamConfig,
+    channels: usize,
+    mut next: impl FnMut() -> f32 + Send + 'static,
+) -> Result<cpal::Stream, cpal::Error>
+where
+    T: cpal::SizedSample + cpal::FromSample<f32>,
+{
+    device.build_output_stream(
+        config,
+        move |data: &mut [T], _| fill_tone_samples(data, channels, &mut next),
+        |error| eprintln!("audio stream error: {error}"),
+        None,
+    )
+}
+
+fn fill_tone_samples<T>(data: &mut [T], channels: usize, next: &mut impl FnMut() -> f32)
+where
+    T: cpal::Sample + cpal::FromSample<f32>,
+{
+    for frame in data.chunks_mut(channels) {
+        let value = T::from_sample(next());
+        frame.fill(value);
     }
 }
 
@@ -60,13 +87,16 @@ impl AudioContext {
     /// The output device name (for example "Speakers").
     #[must_use]
     pub fn device_name(&self) -> String {
-        self.device.name().unwrap_or_else(|_| "unknown".to_string())
+        self.device
+            .description()
+            .map(|description| description.name().to_owned())
+            .unwrap_or_else(|_| "unknown".to_string())
     }
 
     /// The device's default sample rate in Hz.
     #[must_use]
     pub fn sample_rate(&self) -> u32 {
-        self.config.sample_rate().0
+        self.config.sample_rate()
     }
 
     /// The device's default channel count.
@@ -77,8 +107,8 @@ impl AudioContext {
 
     /// Play a sine tone of `frequency` Hz for `seconds` on the default device.
     ///
-    /// Blocks for the duration, then stops. Adapts to the device's sample format
-    /// (f32 or i16).
+    /// Blocks for the duration, then stops. Adapts to every PCM sample format
+    /// exposed by the device.
     ///
     /// # Errors
     /// Returns an error string if the stream cannot be built or started, or if
@@ -87,43 +117,47 @@ impl AudioContext {
         validate_output_dimensions(self.sample_rate(), self.channels())?;
         let sample_rate = self.sample_rate() as f32;
         let channels = self.channels() as usize;
-        let config: cpal::StreamConfig = self.config.clone().into();
-        let err_fn = |e| eprintln!("audio stream error: {e}");
-
+        let config: cpal::StreamConfig = self.config.into();
         let mut phase = 0.0f32;
-        let mut next = move || {
+        let next = move || {
             let value = (TAU * frequency * phase / sample_rate).sin() * AMPLITUDE;
             phase += 1.0;
             value
         };
 
         let stream = match self.config.sample_format() {
-            cpal::SampleFormat::F32 => self.device.build_output_stream(
-                &config,
-                move |data: &mut [f32], _| {
-                    for frame in data.chunks_mut(channels) {
-                        let value = next();
-                        for sample in frame {
-                            *sample = value;
-                        }
-                    }
-                },
-                err_fn,
-                None,
-            ),
-            cpal::SampleFormat::I16 => self.device.build_output_stream(
-                &config,
-                move |data: &mut [i16], _| {
-                    for frame in data.chunks_mut(channels) {
-                        let value = (next() * f32::from(i16::MAX)) as i16;
-                        for sample in frame {
-                            *sample = value;
-                        }
-                    }
-                },
-                err_fn,
-                None,
-            ),
+            cpal::SampleFormat::I8 => build_tone_stream::<i8>(&self.device, config, channels, next),
+            cpal::SampleFormat::I16 => {
+                build_tone_stream::<i16>(&self.device, config, channels, next)
+            }
+            cpal::SampleFormat::I24 => {
+                build_tone_stream::<cpal::I24>(&self.device, config, channels, next)
+            }
+            cpal::SampleFormat::I32 => {
+                build_tone_stream::<i32>(&self.device, config, channels, next)
+            }
+            cpal::SampleFormat::I64 => {
+                build_tone_stream::<i64>(&self.device, config, channels, next)
+            }
+            cpal::SampleFormat::U8 => build_tone_stream::<u8>(&self.device, config, channels, next),
+            cpal::SampleFormat::U16 => {
+                build_tone_stream::<u16>(&self.device, config, channels, next)
+            }
+            cpal::SampleFormat::U24 => {
+                build_tone_stream::<cpal::U24>(&self.device, config, channels, next)
+            }
+            cpal::SampleFormat::U32 => {
+                build_tone_stream::<u32>(&self.device, config, channels, next)
+            }
+            cpal::SampleFormat::U64 => {
+                build_tone_stream::<u64>(&self.device, config, channels, next)
+            }
+            cpal::SampleFormat::F32 => {
+                build_tone_stream::<f32>(&self.device, config, channels, next)
+            }
+            cpal::SampleFormat::F64 => {
+                build_tone_stream::<f64>(&self.device, config, channels, next)
+            }
             other => return Err(format!("unsupported sample format: {other:?}")),
         }
         .map_err(|e| format!("could not build stream: {e}"))?;
@@ -806,6 +840,34 @@ impl MixerState {
     }
 }
 
+fn build_loop_stream<T>(
+    device: &cpal::Device,
+    config: cpal::StreamConfig,
+    channels: usize,
+    state: Arc<Mutex<MixerState>>,
+) -> Result<cpal::Stream, cpal::Error>
+where
+    T: cpal::SizedSample + cpal::FromSample<f32>,
+{
+    device.build_output_stream(
+        config,
+        move |data: &mut [T], _| {
+            if let Ok(mut state) = state.lock() {
+                for frame in data.chunks_mut(channels) {
+                    let mixed = state.next_frame();
+                    for (channel, output) in frame.iter_mut().enumerate() {
+                        *output = T::from_sample(device_channel_sample(mixed, channels, channel));
+                    }
+                }
+            } else {
+                data.fill(T::from_sample(0.0));
+            }
+        },
+        |error| eprintln!("audio stream error: {error}"),
+        None,
+    )
+}
+
 /// Plays a sample buffer on the default device, looping, in the background.
 ///
 /// Swap the buffer at any time with [`LoopPlayer::set_samples`] (for example
@@ -829,48 +891,46 @@ impl LoopPlayer {
         let channel_count = context.channels();
         validate_output_dimensions(sample_rate, channel_count)?;
         let channels = channel_count as usize;
-        let config: cpal::StreamConfig = context.config.clone().into();
+        let config: cpal::StreamConfig = context.config.into();
         let state = Arc::new(Mutex::new(MixerState::new(sample_rate)));
-        let callback_state = state.clone();
-        let err_fn = |e| eprintln!("audio stream error: {e}");
 
         let stream = match context.config.sample_format() {
-            cpal::SampleFormat::F32 => context.device.build_output_stream(
-                &config,
-                move |data: &mut [f32], _| {
-                    if let Ok(mut s) = callback_state.lock() {
-                        for frame in data.chunks_mut(channels) {
-                            let mixed = s.next_frame();
-                            for (i, out) in frame.iter_mut().enumerate() {
-                                *out = device_channel_sample(mixed, channels, i);
-                            }
-                        }
-                    } else {
-                        data.fill(0.0);
-                    }
-                },
-                err_fn,
-                None,
-            ),
-            cpal::SampleFormat::I16 => context.device.build_output_stream(
-                &config,
-                move |data: &mut [i16], _| {
-                    if let Ok(mut s) = callback_state.lock() {
-                        for frame in data.chunks_mut(channels) {
-                            let mixed = s.next_frame();
-                            for (i, out) in frame.iter_mut().enumerate() {
-                                *out = (device_channel_sample(mixed, channels, i)
-                                    * f32::from(i16::MAX))
-                                    as i16;
-                            }
-                        }
-                    } else {
-                        data.fill(0);
-                    }
-                },
-                err_fn,
-                None,
-            ),
+            cpal::SampleFormat::I8 => {
+                build_loop_stream::<i8>(&context.device, config, channels, state.clone())
+            }
+            cpal::SampleFormat::I16 => {
+                build_loop_stream::<i16>(&context.device, config, channels, state.clone())
+            }
+            cpal::SampleFormat::I24 => {
+                build_loop_stream::<cpal::I24>(&context.device, config, channels, state.clone())
+            }
+            cpal::SampleFormat::I32 => {
+                build_loop_stream::<i32>(&context.device, config, channels, state.clone())
+            }
+            cpal::SampleFormat::I64 => {
+                build_loop_stream::<i64>(&context.device, config, channels, state.clone())
+            }
+            cpal::SampleFormat::U8 => {
+                build_loop_stream::<u8>(&context.device, config, channels, state.clone())
+            }
+            cpal::SampleFormat::U16 => {
+                build_loop_stream::<u16>(&context.device, config, channels, state.clone())
+            }
+            cpal::SampleFormat::U24 => {
+                build_loop_stream::<cpal::U24>(&context.device, config, channels, state.clone())
+            }
+            cpal::SampleFormat::U32 => {
+                build_loop_stream::<u32>(&context.device, config, channels, state.clone())
+            }
+            cpal::SampleFormat::U64 => {
+                build_loop_stream::<u64>(&context.device, config, channels, state.clone())
+            }
+            cpal::SampleFormat::F32 => {
+                build_loop_stream::<f32>(&context.device, config, channels, state.clone())
+            }
+            cpal::SampleFormat::F64 => {
+                build_loop_stream::<f64>(&context.device, config, channels, state.clone())
+            }
             other => return Err(format!("unsupported sample format: {other:?}")),
         }
         .map_err(|e| format!("could not build stream: {e}"))?;
@@ -1065,7 +1125,7 @@ mod tests {
 
     use super::{
         AMPLITUDE, LoopBuffer, MixerState, OneshotPlay, PARAMETER_MAX_GAIN, crossfade_frame_count,
-        device_channel_sample, synthesize_sine, validate_output_dimensions,
+        device_channel_sample, fill_tone_samples, synthesize_sine, validate_output_dimensions,
     };
 
     #[test]
@@ -1093,6 +1153,23 @@ mod tests {
         assert_eq!(device_channel_sample(frame, 4, 2), 0.6);
         assert_eq!(device_channel_sample(frame, 4, 3), 0.2);
         assert_eq!(device_channel_sample((1.0, 1.0), 1, 0), 1.0);
+    }
+
+    #[test]
+    fn pcm_output_conversion_preserves_frames_and_unsigned_silence() {
+        let mut frame_index = 0_u8;
+        let mut next = || {
+            let value = if frame_index == 0 { 0.0 } else { 0.5 };
+            frame_index += 1;
+            value
+        };
+        let mut floating = [0.0_f32; 4];
+        fill_tone_samples(&mut floating, 2, &mut next);
+        assert_eq!(floating, [0.0, 0.0, 0.5, 0.5]);
+
+        let mut unsigned = [0_u16; 2];
+        fill_tone_samples(&mut unsigned, 2, &mut || 0.0);
+        assert_eq!(unsigned, [32_768, 32_768]);
     }
 
     #[test]

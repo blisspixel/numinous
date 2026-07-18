@@ -40,8 +40,8 @@ fn phi(n: u32) -> u32 {
     let mut x = n;
     let mut p = 2u32;
     while p * p <= x {
-        if x % p == 0 {
-            while x % p == 0 {
+        if x.is_multiple_of(p) {
+            while x.is_multiple_of(p) {
                 x /= p;
             }
             result -= result / p;

@@ -39,7 +39,7 @@ fn paperfold_bit(n: u32) -> u8 {
     }
     // OEIS A014577: for n>=1, write n = m*2^k with m odd; bit is 1 if m ≡ 1 mod 4.
     let mut m = n;
-    while m % 2 == 0 {
+    while m.is_multiple_of(2) {
         m /= 2;
     }
     if m % 4 == 1 { 1 } else { 0 }

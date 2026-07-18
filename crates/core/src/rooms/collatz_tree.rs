@@ -38,7 +38,7 @@ fn params(t: f64, hand: Option<(f64, f64)>) -> (u64, usize) {
 fn ancestors(n: u64) -> Vec<u64> {
     // Inverse Collatz: always 2n; and (n-1)/3 if integer and odd predecessor form
     let mut out = vec![n.saturating_mul(2)];
-    if n > 1 && (n.saturating_sub(1)) % 3 == 0 {
+    if n > 1 && (n.saturating_sub(1)).is_multiple_of(3) {
         let m = (n - 1) / 3;
         if m > 0 && m % 2 == 1 {
             out.push(m);

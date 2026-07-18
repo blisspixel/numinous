@@ -73,10 +73,10 @@ fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) {
         let y = r * 0.85 * th.sin() * 0.7;
         let px = (cx + x).round() as i32;
         let py = (cy - y).round() as i32;
-        if i % 2 == 0 {
-            if let Some((ox, oy)) = prev {
-                canvas.line(ox, oy, px, py, '.');
-            }
+        if i % 2 == 0
+            && let Some((ox, oy)) = prev
+        {
+            canvas.line(ox, oy, px, py, '.');
         }
         prev = Some((px, py));
     }

@@ -1,6 +1,6 @@
 # Pin the toolchain so every developer and CI runner builds identically.
 # Verified building on this exact version; bump deliberately (see docs/ENGINEERING.md).
 [toolchain]
-channel = "1.96.0"
+channel = "1.97.1"
 components = ["rustfmt", "clippy"]
 profile = "minimal"

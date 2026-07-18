@@ -40,9 +40,9 @@ fn mu(n: u32) -> i8 {
     let mut primes = 0u32;
     let mut p = 2u32;
     while p * p <= x {
-        if x % p == 0 {
+        if x.is_multiple_of(p) {
             x /= p;
-            if x % p == 0 {
+            if x.is_multiple_of(p) {
                 return 0; // square factor
             }
             primes += 1;
@@ -52,7 +52,7 @@ fn mu(n: u32) -> i8 {
     if x > 1 {
         primes += 1;
     }
-    if primes % 2 == 0 { 1 } else { -1 }
+    if primes.is_multiple_of(2) { 1 } else { -1 }
 }
 
 fn mertens_prefix(n: usize) -> Vec<i32> {

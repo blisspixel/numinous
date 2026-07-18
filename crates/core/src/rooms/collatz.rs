@@ -176,7 +176,7 @@ fn collatz_orbit(start: u64) -> Vec<u64> {
     let mut n = start.max(1);
     let mut sequence = vec![n];
     while n != 1 && sequence.len() <= MAX_STEPS {
-        n = if n % 2 == 0 {
+        n = if n.is_multiple_of(2) {
             n / 2
         } else {
             n.saturating_mul(3).saturating_add(1)

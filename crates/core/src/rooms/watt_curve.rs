@@ -77,10 +77,11 @@ fn draw(canvas: &mut dyn Surface, c: f64, seed: u64) {
                 let my = 0.5 * (ly + ry);
                 let px = (cx + mx * scale).round() as i32;
                 let py = (cy - my * scale).round() as i32;
-                if let Some((ox, oy)) = prev {
-                    if (px - ox).abs() < width as i32 / 3 && (py - oy).abs() < height as i32 / 3 {
-                        canvas.line(ox, oy, px, py, '#');
-                    }
+                if let Some((ox, oy)) = prev
+                    && (px - ox).abs() < width as i32 / 3
+                    && (py - oy).abs() < height as i32 / 3
+                {
+                    canvas.line(ox, oy, px, py, '#');
                 }
                 prev = Some((px, py));
                 found = true;

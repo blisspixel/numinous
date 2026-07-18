@@ -95,7 +95,7 @@ fn flip_rule(table: &mut [[Trans; 2]; MAX_STATES], x: f64, y: f64) {
         tr.next = 0;
     } else {
         tr.next = (tr.next + 1) % 3;
-        if tr.next == 0 && (state + sym) % 2 == 0 {
+        if tr.next == 0 && (state + sym).is_multiple_of(2) {
             tr.next = 255;
         }
     }

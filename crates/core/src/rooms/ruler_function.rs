@@ -37,7 +37,7 @@ fn v2(mut n: u32) -> u32 {
         return 0;
     }
     let mut c = 0u32;
-    while n % 2 == 0 {
+    while n.is_multiple_of(2) {
         n /= 2;
         c += 1;
     }

@@ -9,7 +9,8 @@ version = "0.2.0-alpha.1"
 edition = "2024"
 # Public repository license, matched by LICENSE and the README.
 license = "Apache-2.0"
-rust-version = "1.85" # MSRV floor: edition 2024 requires >= 1.85. Pin exact stable in rust-toolchain.toml.
+# Stable let chains in the core establish the workspace floor.
+rust-version = "1.88"
 repository = "https://github.com/blisspixel/numinous"
 
 [workspace.dependencies]

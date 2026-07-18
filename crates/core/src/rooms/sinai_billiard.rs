@@ -127,7 +127,7 @@ fn draw(canvas: &mut dyn Surface, x0: f64, y0: f64, ang: f64, seed: u64) {
             last.1,
             px,
             py,
-            if steps % 7 == 0 { '*' } else { '+' },
+            if steps.is_multiple_of(7) { '*' } else { '+' },
         );
         last = (px, py);
         if steps >= BOUNCES {
