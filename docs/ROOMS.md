@@ -265,8 +265,10 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
   major-pentatonic roots while the exact larger-to-smaller Bernoulli odds set
   the continuous two-voice interval. The highlighted newest ball also plays its
   exact sixteen peg decisions as a short panned tick sequence and resolves at
-  its displayed landing bin. A whole-wave percussion field for all 64 balls and
-  a soft pad that follows the growing pile remain planned.
+  its displayed landing bin. Beneath it, all 64 exact paths in the newest wave
+  become a quiet row-by-row C major-pentatonic texture. Total ball mass controls
+  energy and its horizontal centroid controls equal-power pan. A soft pad that
+  follows the accumulated growing pile remains planned.
 
 ### 22. Buffon's Needle → π  Wow 4 / Build 1
 - **Rule:** Drop needles on a lined floor. Count how many cross a line.

@@ -95,19 +95,22 @@ cancel the pending texture. Mono output devices receive both stereo channels
 through a bounded downmix. These are structural and signal checks, not evidence
 that the texture is pleasant on speakers or headphones.
 
-Galton Board adds one fixed event for the highlighted newest ball in each
-accepted 64-ball wave. The same deterministic 16-edge trace drives both the
-drawn path and 16 short C major-pentatonic peg tones. A right decision shifts
-that row's tick upward, equal-power pan follows the destination peg, and one
-longer tone resolves at the displayed landing bin. The fixed half-second
-renderer performs 17 bounded tone additions before audio submission, rejects
-device rates outside 8 kHz through 192 kHz, and never schedules per-ball work in
-the callback. Only a newest finite pointer-down creates the event. Bet motion
-and release preserve it while the room score owns audio; Show, modal, Studio,
-radio, reset, and room transitions retire it. CLI and MCP continue to expose
-the deterministic selected-coin snapshot, not this App-only stereo event.
-Native callback timing, all-64-ball percussion, a growing-pile pad, and
-musician-led listening remain open.
+Galton Board adds one fixed event for every accepted 64-ball wave. The same
+deterministic random stream that builds the empirical pile now fills a fixed 17
+by 17 newest-wave mass grid. Each destination row reduces its reachable cells
+into at most five C major-pentatonic pitch buckets. Square-root amplitude follows
+total bucket mass and mass-weighted equal-power pan follows its horizontal
+centroid. Above that quiet field, the exact highlighted 16-edge trace still
+drives 16 short peg tones and one longer tone at the displayed landing bin. The
+fixed half-second renderer performs 1,088 exact path visits, scans at most 152
+reachable cells, and adds at most 80 aggregate tones plus 17 highlighted tones
+before audio submission. It rejects device rates outside 8 kHz through 192 kHz
+and never schedules per-ball work in the callback. Only a newest finite
+pointer-down creates the event. Bet motion and release preserve it while the
+room score owns audio; Show, modal, Studio, radio, reset, and room transitions
+retire it. CLI and MCP continue to expose the deterministic selected-coin
+snapshot, not this App-only stereo event. Native callback timing, a growing-pile
+pad, and musician-led listening remain open.
 
 Double Pendulum adds one fixed event when a finite newest lift completes a
 fling. Seven paired pulses measure the exact tip gap between the main and shadow
@@ -208,8 +211,9 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
   ordered C major-pentatonic roots and exact symmetric bias-odds intervals.
   The shipped second layer follows the exact highlighted newest ball through
   all sixteen peg decisions as a panned half-second tick sequence and landing
-  tone. A whole-wave percussion field and a soft growing-pile pad remain
-  planned.
+  tone. The shipped third layer reduces every exact path in the newest 64-ball
+  wave into a quiet row-pitch mass texture with mass-weighted stereo position.
+  A soft growing-pile pad remains planned.
 - **Buffon's Needle:** each needle ticks, every line-crossing rings a bell, and the ensemble's pitch bends toward "in tune" as the running estimate converges on pi.
 - **4D Objects:** the fourth-axis rotation drives a Shepard tone, a pitch that seems to rise forever, an *audible* impossible direction to match the visual one.
 - **Sizes of Infinity:** countable sets play as a steady, listable pulse; the uncountable diagonal is a tone that slips endlessly between the notes and never lands.
@@ -219,18 +223,19 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 - **Stereo as default, spatial where it pays.** Position in the field maps to pan; depth (near/far) to level and filtering. Rooms with real depth (hyperbolic space, 4D) can use binaural/HRTF on headphones so the warp has audible space.
 - **The field is an ensemble.** Dense rooms need bounded spatial reductions so
   activity becomes texture instead of an unbounded pile of clicks. Life ships
-  twelve pitch-row centroids plus one optional tracked-glider voice, and Galton ships the exact highlighted path as
-  sixteen panned peg events plus its landing. Finer onset fields for primes,
-  Life, and Galton's full 64-ball wave remain planned.
+  twelve pitch-row centroids plus one optional tracked-glider voice. Galton
+  reduces the exact newest 64-ball wave into at most 80 mass-first row-pitch
+  tones, then layers its exact highlighted path as sixteen panned peg events
+  plus its landing. Finer onset fields for primes and Life remain planned.
 
 ## Interaction & UI sound
 
 - **Touch has a voice, partially built.** Times Tables, Galton Board, and Double
   Pendulum ship persistent input-audio paths through the smoothed parameter
   voice. Life ships one bounded generation-event texture with an exact
-  tracked-glider phase accent, and Galton ships one bounded newest-ball peg
-  sequence. Tuned event layers and equivalent
-  mathematical voices in other rooms remain planned.
+  tracked-glider phase accent, and Galton ships one bounded all-ball wave
+  texture with an exact newest-ball peg sequence. Tuned event layers and
+  equivalent mathematical voices in other rooms remain planned.
 - **Transitions are washes.** Room-to-room dissolves carry a reverb wash through black, matching the visual cross-dissolve (see `VISUALS.md`).
 - **Reveal has a resolution.** Summoning a Revelation card lands on a small, satisfying harmonic resolution, the sonic version of the floor tilting.
 

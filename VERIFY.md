@@ -49,8 +49,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 2,832 all-target test cases pass,
-one screenshot diagnostic is ignored, 95.37% region cover, and 95.40% line
+Expected right now: **format and clippy clean, 2,838 all-target test cases pass,
+one screenshot diagnostic is ignored, 95.37% region cover, and 95.41% line
 cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
@@ -117,6 +117,12 @@ not include native event translation and history storage, window presentation,
 display scan-out, audio submission and callback latency, or human perception,
 so it is not end-to-end input-latency evidence. See
 `docs/QUALITY.md` for the dated reference-machine result.
+
+Galton's focused core regressions additionally pin newest-wave random-stream
+identity, 64-ball conservation at all 17 levels, highlighted-ball inclusion,
+mass-first audio energy, stereo bias, supported-rate signal safety, and bounded
+event admission. These checks establish deterministic structure and signal
+safety, not listening quality or physical-device timing.
 
 ## 2b. Put `numinous` on your PATH (once)
 
