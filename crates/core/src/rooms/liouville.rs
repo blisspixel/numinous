@@ -40,7 +40,7 @@ fn lambda(n: u32) -> i8 {
     let mut omega = 0u32;
     let mut p = 2u32;
     while p * p <= x {
-        while x % p == 0 {
+        while x.is_multiple_of(p) {
             x /= p;
             omega += 1;
         }
@@ -49,7 +49,7 @@ fn lambda(n: u32) -> i8 {
     if x > 1 {
         omega += 1;
     }
-    if omega % 2 == 0 { 1 } else { -1 }
+    if omega.is_multiple_of(2) { 1 } else { -1 }
 }
 
 fn draw(canvas: &mut dyn Surface, n_f: f64, seed: u64) {

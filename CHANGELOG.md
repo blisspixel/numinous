@@ -192,6 +192,21 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   hostile-input, variation, registry, and catalog visual-oracle tests cover it.
 
 ### Changed
+- The supported toolchain and dependency baseline is current as of July 18,
+  2026. Stable Rust is pinned to 1.97.1 and CI now checks the source-declared
+  Rust 1.88 minimum. Wgpu 30.0.0, cpal 0.18.1, png 0.18.1, pollster 1.0.1, and
+  ureq 3.3.0 replace their older direct lines; all compatible transitive crates
+  and the pinned cargo-deny and installer actions are refreshed. The GPU path
+  preserves its prior adapter-limit behavior and turns mapped-range rejection
+  into a typed error. Audio now converts the shared float mix into every PCM
+  device format exposed by cpal 0.18, while DSD remains explicitly unsupported.
+  The credentialed music request preserves its no-redirect boundary and bounded
+  error-body diagnostics under ureq 3. Dependabot no longer suppresses the
+  completed major migrations, and Rust 1.97 Clippy idioms are applied across
+  the workspace without changing the underlying divisibility predicates. The
+  full Windows release gate passes with 2,869 all-target test cases plus one
+  ignored screenshot diagnostic, 95.39 percent region coverage, 95.44 percent
+  line coverage, and the exact 2,911-screen App matrix.
 - Cycle 126 security maintenance now rejects malformed Munch, Munch Arcade,
   Nim, and Hackenbush actions at the MCP schema boundary before Journey or
   score writes. CLI diagnostics encode terminal controls in untrusted room,

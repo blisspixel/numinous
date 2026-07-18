@@ -11,7 +11,8 @@ prerequisites, explain any missing platform package, install Rust when needed,
 and build Numinous. What follows is the from-source verification path for
 contributors and the curious.
 
-- **Rust** (edition 2024; pinned to 1.96.0 in `rust-toolchain.toml`). Install from
+- **Rust** (edition 2024; pinned to 1.97.1 in `rust-toolchain.toml`, with a
+  verified 1.88 MSRV). Install from
   <https://rustup.rs>. On Windows, cargo lands in `%USERPROFILE%\.cargo\bin`; if a
   fresh shell does not see `cargo`, add that to `PATH`.
 - Optional, for the local coverage gate: `cargo install cargo-llvm-cov`.
@@ -39,6 +40,7 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace --all-targets --locked
 cargo build --workspace --locked
+cargo +1.88.0 check --workspace --all-targets --locked
 cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'
 cargo deny check                         # if cargo-deny is installed; CI always runs it
 cargo audit                              # if cargo-audit is installed; CI always runs it
@@ -49,7 +51,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 2,868 all-target test cases pass,
+Expected right now: **format and clippy clean, 2,869 all-target test cases pass,
 one screenshot diagnostic is ignored, 95.39% region cover, and 95.44% line
 cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration

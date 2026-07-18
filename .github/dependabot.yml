@@ -5,18 +5,6 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    # These are breaking migrations with dedicated roadmap review, not routine bumps.
-    ignore:
-      - dependency-name: cpal
-        versions: [">= 0.17"]
-      - dependency-name: png
-        versions: [">= 0.18"]
-      - dependency-name: pollster
-        versions: [">= 1"]
-      - dependency-name: ureq
-        versions: [">= 3"]
-      - dependency-name: wgpu
-        versions: [">= 30"]
 
   - package-ecosystem: github-actions
     directory: "/"

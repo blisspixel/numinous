@@ -2459,10 +2459,10 @@ impl ApplicationHandler for App {
         self.window = Some(window);
         self.surface = Some(surface);
         // Apply initial fullscreen if requested (borderless for broad compat; exclusive available via F cycle).
-        if self.start_fullscreen {
-            if let Some(w) = &self.window {
-                w.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
-            }
+        if self.start_fullscreen
+            && let Some(w) = &self.window
+        {
+            w.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
         }
         self.player = match numinous_audio::LoopPlayer::new() {
             Ok(player) => Some(player),
@@ -2951,7 +2951,7 @@ impl ApplicationHandler for App {
                     }
                 }
                 let interval = 48u64.saturating_sub(play.run.level * 4).max(16);
-                if !play.over && self.frame % interval == 0 {
+                if !play.over && self.frame.is_multiple_of(interval) {
                     self.arcade_beat();
                 }
             }
@@ -2979,10 +2979,9 @@ impl ApplicationHandler for App {
             && Instant::now() >= until
             && !self.radio_paths.is_empty()
             && !self.sync_radio_to_wall_clock()
+            && let Some(window) = &self.window
         {
-            if let Some(window) = &self.window {
-                window.set_title(&self.title());
-            }
+            window.set_title(&self.title());
         }
         if let Some(window) = &self.window {
             window.request_redraw();
@@ -3088,7 +3087,7 @@ fn app_icon() -> Option<Icon> {
         "../../../assets/logo.png"
     )));
     let mut reader = decoder.read_info().ok()?;
-    let mut pixels = vec![0; reader.output_buffer_size()];
+    let mut pixels = vec![0; reader.output_buffer_size()?];
     let info = reader.next_frame(&mut pixels).ok()?;
     let bytes = &pixels[..info.buffer_size()];
     let rgba = match info.color_type {
@@ -4199,7 +4198,12 @@ mod tests {
         let file = std::fs::File::open(path).expect("open Life postcard");
         let decoder = png::Decoder::new(std::io::BufReader::new(file));
         let mut reader = decoder.read_info().expect("read Life postcard header");
-        let mut decoded = vec![0; reader.output_buffer_size()];
+        let mut decoded = vec![
+            0;
+            reader
+                .output_buffer_size()
+                .expect("decoded postcard dimensions fit address space")
+        ];
         let output = reader
             .next_frame(&mut decoded)
             .expect("decode Life postcard");

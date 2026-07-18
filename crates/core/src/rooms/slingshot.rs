@@ -223,10 +223,11 @@ fn combine_suns(seed: u64, inputs: &[RoomInput]) -> Vec<Body> {
 /// Recover the pointer-down that opened the newest gesture, if still in trail.
 fn newest_down(inputs: &[RoomInput]) -> Option<(f64, f64)> {
     for input in inputs.iter().rev() {
-        if let RoomInput::PointerDown { x, y, .. } = *input {
-            if x.is_finite() && y.is_finite() {
-                return Some((x, y));
-            }
+        if let RoomInput::PointerDown { x, y, .. } = *input
+            && x.is_finite()
+            && y.is_finite()
+        {
+            return Some((x, y));
         }
         if matches!(*input, RoomInput::PointerCancel) {
             break;

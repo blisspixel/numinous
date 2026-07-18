@@ -27,7 +27,7 @@ type Decomposition = ((f64, f64), Vec<Circle>);
 /// One of the star's 10 outline vertices (outer, inner, outer, ...).
 fn star_vertex(v: usize) -> (f64, f64) {
     let angle = TAU * v as f64 / 10.0 - TAU / 4.0;
-    let r = if v % 2 == 0 { 1.0 } else { 0.45 };
+    let r = if v.is_multiple_of(2) { 1.0 } else { 0.45 };
     (r * angle.cos(), r * angle.sin())
 }
 

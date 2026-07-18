@@ -661,8 +661,8 @@ if ! have rustup; then
     # A distro cargo without rustup cannot honor the pinned toolchain file, so
     # accept it only if it meets the workspace MSRV in Cargo.toml.
     cargo_minor="$(cargo --version 2>/dev/null | sed -n 's/^cargo 1\.\([0-9][0-9]*\).*/\1/p')"
-    if [ -z "$cargo_minor" ] || [ "$cargo_minor" -lt 85 ]; then
-        fail "this cargo is older than the minimum supported Rust (1.85) and rustup is absent.
+    if [ -z "$cargo_minor" ] || [ "$cargo_minor" -lt 88 ]; then
+        fail "this cargo is older than the minimum supported Rust (1.88) and rustup is absent.
 Install rustup from https://rustup.rs and re-run this installer"
     fi
     say "note: using the system cargo without rustup; the pinned toolchain file is ignored."

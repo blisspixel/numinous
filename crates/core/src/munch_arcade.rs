@@ -190,7 +190,7 @@ impl Arcade {
                 }
             }
             Action::Left => {
-                if self.muncher % COLS > 0 {
+                if !self.muncher.is_multiple_of(COLS) {
                     self.muncher -= 1;
                 }
             }

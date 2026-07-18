@@ -102,7 +102,11 @@ impl Motif {
                 let step = cycle_start + relative_step;
                 let (frequency, voice, level) = pattern.steps[step].expect("motif onset");
                 let next_onset = onsets.get(melody_event + 1).copied().unwrap_or(CYCLE_STEPS);
-                let desired_steps = if self.style_index() % 3 == 0 { 2 } else { 1 };
+                let desired_steps = if self.style_index().is_multiple_of(3) {
+                    2
+                } else {
+                    1
+                };
                 notes.push(ChipNote {
                     frequency,
                     start_step: step,

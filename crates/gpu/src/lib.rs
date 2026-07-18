@@ -33,6 +33,8 @@ pub enum RenderError {
     MapCallbackDropped,
     /// WGPU reported that the readback buffer could not be mapped.
     Map(wgpu::BufferAsyncError),
+    /// WGPU rejected access to a mapped readback range.
+    MapRange(wgpu::MapRangeError),
     /// Host memory for the returned frame could not be reserved.
     HostAllocation,
     /// WGPU rejected or could not complete a frame operation.
@@ -52,6 +54,7 @@ impl std::fmt::Display for RenderError {
             Self::Poll(error) => write!(formatter, "GPU device poll failed: {error}"),
             Self::MapCallbackDropped => formatter.write_str("GPU map callback was dropped"),
             Self::Map(error) => write!(formatter, "GPU readback mapping failed: {error}"),
+            Self::MapRange(error) => write!(formatter, "GPU readback range failed: {error}"),
             Self::HostAllocation => formatter.write_str("GPU frame host allocation failed"),
             Self::Device(error) => write!(formatter, "GPU frame operation failed: {error}"),
         }
@@ -225,12 +228,14 @@ impl GpuContext {
             power_preference: wgpu::PowerPreference::default(),
             compatible_surface: None,
             force_fallback_adapter: false,
+            apply_limit_buckets: false,
         }))
         .or_else(|_| {
             pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
                 compatible_surface: None,
                 force_fallback_adapter: true,
+                apply_limit_buckets: false,
             }))
         })
         .map_err(|e| format!("no GPU or CPU adapter available: {e:?}"))?;
@@ -448,7 +453,7 @@ impl FractalRenderer {
         }
 
         let bytes = {
-            let mapped = slice.get_mapped_range();
+            let mapped = slice.get_mapped_range().map_err(RenderError::MapRange)?;
             copy_mapped_bytes(&mapped, layout.byte_len_usize)
         };
         read_buf.unmap();
