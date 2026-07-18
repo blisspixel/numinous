@@ -3272,6 +3272,26 @@ mod tests {
             effective_room_phase("times-tables", 0.73, &input, false),
             0.73
         );
+
+        let released = [numinous_core::RoomInput::PointerUp {
+            x: 0.4,
+            y: 0.5,
+            t: 0.3,
+        }];
+        assert_eq!(
+            effective_room_phase("times-tables", 0.73, &released, false),
+            0.73
+        );
+
+        let invalid_release = [numinous_core::RoomInput::PointerUp {
+            x: f64::NAN,
+            y: 0.5,
+            t: 0.3,
+        }];
+        assert_eq!(
+            effective_room_phase("times-tables", 0.73, &invalid_release, false),
+            0.0
+        );
     }
 
     #[test]
