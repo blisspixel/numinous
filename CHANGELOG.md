@@ -27,7 +27,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   alter a real player profile. Bounded cache and adjacent-entry caps,
   replacement-owner lock release, absent-state idempotence, non-file temporary
   rejection, exact retry termination, and a production CLI process path have
-  direct regressions. The full Windows release gate passes with 2,868
+  direct regressions. The full Windows release gate passes with 2,869
   all-target test cases plus one ignored screenshot diagnostic, 95.39 percent
   region coverage, and 95.44 percent line coverage.
 - Mathematical truth checks now protect three flagship foundations. Formula
