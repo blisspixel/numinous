@@ -6,6 +6,26 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Double Pendulum now voices each completed fling as a deterministic 720 ms
+  twin-divergence event over its continuous gesture voice. Seven paired pulses
+  sample the same exact main and shadow integrator at fixed horizons from zero
+  through 6,000 steps. The voices begin in unison and at center; four orders of
+  measured tip separation open their interval toward one octave and their
+  equal-power stereo width toward 0.85. The release keeps the same
+  minor-pentatonic root and bounded momentum gain as the visible initial state.
+  Both twins advance once through the horizon sequence, then the control-thread
+  renderer performs 14 bounded tone additions. It admits native rates from 8
+  kHz through 192 kHz and rejects other rates instead of retiming pitch or
+  duration. Only a newest finite pointer-up creates the event, so held motion,
+  cancellation, unsupported rates, and retained history cannot replay a lift.
+  The App now offers every accepted down, move, and lift to the generic room
+  event seam, while each room owns its exact admission rule. Radio changes close
+  an open gesture before room-score ownership can return. Tests bind exact
+  integration horizons, signal integrity, headroom, DC, subnormals, adjacent
+  steps, stereo energy, deterministic momentum identity, rate limits,
+  room-score ownership, and pointer and radio lifecycle routing. Native callback
+  timing, physical-device behavior, participant discovery, and musician judgment
+  remain open evidence.
 - Galton Board now voices the exact highlighted newest ball as it crosses the
   board. Each accepted wave renders one deterministic half-second stereo event:
   16 short C major-pentatonic peg tones encode the same left and right decisions
