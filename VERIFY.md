@@ -49,14 +49,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 2,794 all-target test cases pass,
-one screenshot diagnostic is ignored, 95.33% region cover, and 95.36% line
+Expected right now: **format and clippy clean, 2,812 all-target test cases pass,
+one screenshot diagnostic is ignored, 95.34% region cover, and 95.37% line
 cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
 
-The release scripts also regenerate `renders/qa-app/`, a 2,909-screen app matrix.
+The release scripts also regenerate `renders/qa-app/`, a 2,911-screen app matrix.
 Every catalog room has deterministic default and compact opening frames,
 arrival cards, immediate pointer responses, and same-phase delayed-gesture
 responses that follow its declared interaction verb. The generator checks pure

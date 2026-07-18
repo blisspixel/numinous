@@ -50,7 +50,7 @@ const MIN_SUPPORT_DENSITY_PERMILLE: usize = 1;
 const SPATIAL_TILE_SIZE: usize = 32;
 const MIN_COHERENT_TILES: usize = 2;
 const MIN_MEAN_CHANNEL_DELTA: usize = 4;
-const SHARED_SCREEN_COUNT: usize = 101;
+const SHARED_SCREEN_COUNT: usize = 103;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum InteractionKind {
@@ -277,6 +277,7 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
     }
     for name in [
         "studio",
+        "studio-morph",
         "quiz-question",
         "quiz-correct",
         "quiz-wrong",
@@ -1294,6 +1295,22 @@ fn studio_screen_with_mode(
     raster
 }
 
+fn studio_morph_screen(width: usize, height: usize) -> Raster {
+    let mut panel = studio_panel::StudioPanel::default();
+    panel.toggle_help();
+    assert!(panel.load_random_recipe().is_some());
+    panel.advance_morph(studio_panel::RECIPE_MORPH_SECONDS / 2.0);
+    let mut raster = Raster::with_accent(width, height, [120, 220, 190]);
+    panel.draw(
+        &mut raster,
+        input_legend::InputMode::KeyboardMouse,
+        width,
+        height,
+        0.35,
+    );
+    raster
+}
+
 fn gauntlet(seed: u64) -> play::GauntletPlay {
     play::GauntletPlay {
         seed,
@@ -1878,6 +1895,7 @@ fn main() {
     }
 
     save_sizes("studio", &mut manifest, studio_screen);
+    save_sizes("studio-morph", &mut manifest, studio_morph_screen);
 
     let quiz_round = numinous_core::build_round(19, 1, 44, 18);
     let quiz_play = play::QuizPlay {
