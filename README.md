@@ -158,6 +158,12 @@ for that bounded transition. Manual edits and ownership changes immediately
 interrupt the long fade from its current audible mix into the fast default
 response. Presentation time keeps the visual morph synchronized through pause
 and temporary focus loss.
+Discrete room consequences use the same off-callback synthesis seam: Life voices
+the exact newest birth mask, Galton voices the highlighted ball path, and Double
+Pendulum turns one completed fling into seven paired pulses that spread from
+unison as its exact simulated twins diverge. These objective mappings are tested
+for signal integrity and deterministic identity; listening quality and native
+device timing remain human evidence gates.
 The separate `JOURNEY LV` label is accumulated local-profile progress, never a
 room difficulty rating. Cult of Pi now opens on the canonical `3.14159...`
 prefix and explains its finite-channel premise through visible faults and
@@ -187,8 +193,8 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 2,812 passing all-target test cases plus one ignored
-screenshot diagnostic, 95.34% region coverage and 95.37% line coverage with an
+The current local gate has 2,827 passing all-target test cases plus one ignored
+screenshot diagnostic, 95.36% region coverage and 95.39% line coverage with an
 enforced 80% line floor, Clippy with warnings denied, and dependency policy
 checks. Release QA also regenerates an exact
 2,911-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact

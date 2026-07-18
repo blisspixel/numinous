@@ -6,6 +6,8 @@
 //! rides along to show the divergence happen. `t` runs the clock. See the Full
 //! Map in `docs/ROOMS.md`.
 
+mod release_sound;
+
 use crate::room::{Room, RoomMeta};
 use crate::sound::ParametricSound;
 use crate::surface::Surface;
@@ -126,6 +128,44 @@ fn arm_points(state: State) -> ((f64, f64), (f64, f64)) {
     let joint = (state.t1.sin(), state.t1.cos());
     let tip = (joint.0 + state.t2.sin(), joint.1 + state.t2.cos());
     (joint, tip)
+}
+
+fn tip_gap(main: State, shadow: State) -> f64 {
+    let main_tip = arm_points(main).1;
+    let shadow_tip = arm_points(shadow).1;
+    (main_tip.0 - shadow_tip.0).hypot(main_tip.1 - shadow_tip.1)
+}
+
+fn divergence_gaps<const N: usize>(
+    first: f64,
+    second: f64,
+    w1: f64,
+    w2: f64,
+    horizons: [usize; N],
+) -> [f64; N] {
+    debug_assert!(horizons.is_sorted());
+    let mut main = State {
+        t1: first,
+        t2: second,
+        w1,
+        w2,
+    };
+    let mut shadow = State {
+        t1: first + SHADOW_OFFSET,
+        ..main
+    };
+    let mut completed_steps = 0;
+    let mut gaps = [0.0; N];
+    for (gap, horizon) in gaps.iter_mut().zip(horizons) {
+        let target = horizon.min(MAX_STEPS);
+        while completed_steps < target {
+            main = step(main);
+            shadow = step(shadow);
+            completed_steps += 1;
+        }
+        *gap = tip_gap(main, shadow);
+    }
+    gaps
 }
 
 /// The double pendulum room.
@@ -349,12 +389,7 @@ fn elapsed_phase(now: f64, since: f64) -> f64 {
 }
 
 fn divergence_gap(first: f64, second: f64, w1: f64, w2: f64, steps: usize) -> f64 {
-    let main = trace_from_state(first, second, w1, w2, 0.0, steps);
-    let shadow = trace_from_state(first, second, w1, w2, SHADOW_OFFSET, steps);
-    match (main.last(), shadow.last()) {
-        (Some(&(mx, my)), Some(&(sx, sy))) => ((mx - sx).powi(2) + (my - sy).powi(2)).sqrt(),
-        _ => 0.0,
-    }
+    divergence_gaps(first, second, w1, w2, [steps])[0]
 }
 
 fn divergence_status(first: f64, second: f64, w1: f64, w2: f64, steps: usize) -> String {
@@ -425,6 +460,35 @@ impl Room for DoublePendulum {
             .map(|state| self.interaction_voice(state))
     }
 
+    fn interaction_stereo(
+        &self,
+        inputs: &[crate::room::RoomInput],
+        sample_rate: u32,
+    ) -> Option<Vec<f32>> {
+        let release_t = match inputs.last() {
+            Some(crate::room::RoomInput::PointerUp { x, y, t })
+                if x.is_finite() && y.is_finite() && t.is_finite() =>
+            {
+                *t
+            }
+            _ => return None,
+        };
+        if !release_sound::supports_sample_rate(sample_rate) {
+            return None;
+        }
+        let state = self.interaction_state(release_t, inputs)?;
+        let voice = self.interaction_voice(state);
+        Some(release_sound::render(
+            state.first,
+            state.second,
+            state.w1,
+            state.w2,
+            voice.root_hz(),
+            voice.gain(),
+            sample_rate,
+        ))
+    }
+
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let inputs = crate::room::inputs_from_pokes(pokes, t);
         self.render_input(canvas, t, &inputs);
@@ -476,6 +540,7 @@ mod tests {
     };
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
+    use crate::stereo_signal_metrics;
 
     #[test]
     fn the_tip_stays_within_reach() {
@@ -506,6 +571,31 @@ mod tests {
         let (bx, by) = *b.last().unwrap();
         let gap = ((ax - bx).powi(2) + (ay - by).powi(2)).sqrt();
         assert!(gap > 0.1, "the twins should part company: gap {gap}");
+    }
+
+    #[test]
+    fn divergence_horizons_measure_the_exact_requested_integration_step() {
+        let first = 2.3;
+        let second = 1.8;
+        let w1 = 0.7;
+        let w2 = -0.4;
+        let horizons = [0, 1, 2, 3, 2_998, 3_000, 6_000];
+        let gaps = super::divergence_gaps(first, second, w1, w2, horizons);
+
+        for (horizon, measured) in horizons.into_iter().zip(gaps) {
+            let main = super::trace_and_state(first, second, w1, w2, 0.0, horizon).1;
+            let shadow =
+                super::trace_and_state(first, second, w1, w2, super::SHADOW_OFFSET, horizon).1;
+            let expected = super::tip_gap(main, shadow);
+            assert!(
+                (measured - expected).abs() < 1e-12,
+                "horizon {horizon}: measured {measured}, expected {expected}"
+            );
+        }
+        assert_ne!(
+            gaps[4], gaps[5],
+            "step 2,998 cannot stand in for step 3,000"
+        );
     }
 
     #[test]
@@ -718,6 +808,161 @@ mod tests {
         let mut fast_frame = crate::canvas::Canvas::new(60, 30);
         room.render_input(&mut fast_frame, 0.35, &fast);
         assert_ne!(slow_frame.to_text(), fast_frame.to_text());
+    }
+
+    #[test]
+    fn a_finite_newest_release_sounds_the_same_twin_experiment() {
+        let room = DoublePendulum::new();
+        let release = [
+            RoomInput::PointerMove {
+                x: 0.30,
+                y: 0.65,
+                t: 0.147,
+            },
+            RoomInput::PointerUp {
+                x: 0.72,
+                y: 0.35,
+                t: 0.15,
+            },
+        ];
+
+        let sound = room
+            .interaction_stereo(&release, 48_000)
+            .expect("a finite completed fling has a twin-divergence event");
+        assert_eq!(sound.len(), 69_120, "the release event is fixed at 720 ms");
+        assert!(sound.iter().any(|sample| *sample != 0.0));
+        assert!(
+            sound
+                .iter()
+                .all(|sample| sample.is_finite() && sample.abs() <= 1.0)
+        );
+        let metrics = stereo_signal_metrics(&sound);
+        assert_eq!(metrics.trailing_samples, 0);
+        assert_eq!(metrics.non_finite_samples, 0);
+        assert_eq!(metrics.clipped_samples, 0);
+        assert!((0.03..0.2).contains(&metrics.peak));
+        assert!((0.003..0.06).contains(&metrics.rms));
+        assert!(metrics.max_step < 0.04);
+        assert!(metrics.side_to_mid_db > -60.0);
+        assert!(
+            sound
+                .chunks_exact(2)
+                .any(|stereo| (stereo[0] - stereo[1]).abs() > 1e-5),
+            "the diverging twins must separate in stereo"
+        );
+        assert_eq!(
+            sound,
+            room.interaction_stereo(&release, 48_000).unwrap(),
+            "one release must reproduce exactly"
+        );
+
+        let gentler_release = [
+            RoomInput::PointerMove {
+                x: 0.70,
+                y: 0.35,
+                t: 0.10,
+            },
+            release[1],
+        ];
+        assert_ne!(
+            sound,
+            room.interaction_stereo(&gentler_release, 48_000).unwrap(),
+            "the event must retain the released trajectory's momentum"
+        );
+    }
+
+    #[test]
+    fn pendulum_release_audio_rejects_stale_invalid_and_unsupported_events() {
+        let room = DoublePendulum::new();
+        let down = RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.1,
+        };
+        let release = RoomInput::PointerUp {
+            x: 0.6,
+            y: 0.4,
+            t: 0.2,
+        };
+
+        assert!(room.interaction_stereo(&[down], 48_000).is_none());
+        assert!(
+            room.interaction_stereo(&[down, release, RoomInput::PointerCancel], 48_000)
+                .is_none(),
+            "a historical lift cannot replay after a newer terminal event"
+        );
+        assert!(
+            room.interaction_stereo(
+                &[
+                    down,
+                    release,
+                    RoomInput::PointerMove {
+                        x: 0.7,
+                        y: 0.4,
+                        t: 0.3,
+                    },
+                ],
+                48_000,
+            )
+            .is_none(),
+            "a historical lift cannot replay after newer motion"
+        );
+        assert!(
+            room.interaction_stereo(
+                &[RoomInput::PointerUp {
+                    x: f64::NAN,
+                    y: 0.4,
+                    t: 0.2,
+                }],
+                48_000,
+            )
+            .is_none()
+        );
+        assert!(
+            room.interaction_stereo(
+                &[RoomInput::PointerUp {
+                    x: 0.6,
+                    y: 0.4,
+                    t: f64::INFINITY,
+                }],
+                48_000,
+            )
+            .is_none()
+        );
+        assert!(room.interaction_stereo(&[release], 7_999).is_none());
+        assert!(room.interaction_stereo(&[release], 192_001).is_none());
+        assert_eq!(
+            room.interaction_stereo(&[release], 8_000).unwrap().len(),
+            11_520
+        );
+        assert_eq!(
+            room.interaction_stereo(&[release], 192_000).unwrap().len(),
+            276_480
+        );
+
+        let maximal_fling = [
+            RoomInput::PointerMove {
+                x: 0.0,
+                y: 1.0,
+                t: 0.199,
+            },
+            release,
+        ];
+        for gesture in [&[release][..], &maximal_fling[..]] {
+            for rate in [8_000, 192_000] {
+                let samples = room.interaction_stereo(gesture, rate).unwrap();
+                let metrics = stereo_signal_metrics(&samples);
+                assert_eq!(metrics.trailing_samples, 0);
+                assert_eq!(metrics.non_finite_samples, 0);
+                assert_eq!(metrics.subnormal_samples, 0);
+                assert_eq!(metrics.clipped_samples, 0);
+                assert!((0.03..0.2).contains(&metrics.peak));
+                assert!((0.003..0.06).contains(&metrics.rms));
+                assert!(metrics.left_dc.abs() < 0.001);
+                assert!(metrics.right_dc.abs() < 0.001);
+                assert!(metrics.max_step < 0.15);
+            }
+        }
     }
 
     #[test]
