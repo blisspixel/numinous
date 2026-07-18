@@ -24,9 +24,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   same locks. Orphan state temporaries are removed only under explicit
   consent. Isolated CLI, MCP, App, core, sidecar, cache-identity, path-alias,
   writer-race, non-destructive preview, and failure-path tests never inspect or
-  alter a real player profile. The full Windows release gate passes with 2,853
-  all-target test cases plus one ignored screenshot diagnostic, 95.29 percent
-  region coverage, and 95.30 percent line coverage.
+  alter a real player profile. Bounded cache and adjacent-entry caps,
+  replacement-owner lock release, absent-state idempotence, non-file temporary
+  rejection, exact retry termination, and a production CLI process path have
+  direct regressions. The full Windows release gate passes with 2,868
+  all-target test cases plus one ignored screenshot diagnostic, 95.39 percent
+  region coverage, and 95.44 percent line coverage.
 - Mathematical truth checks now protect three flagship foundations. Formula
   Jam follows conventional precedence, so exponentiation binds before unary
   minus while negative exponents and right-associative powers still work. The
