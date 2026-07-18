@@ -236,6 +236,108 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Interactive surfaces, planned:** an MCP App panel can later carry a rendered
   room where hosts support it. No app resource or interactive panel ships now.
 
+### Local MCP session broadcast, planned
+
+A human should be able to open Numinous and watch a consenting digital player
+explore through MCP, like a live Let's Play. This is an observation surface,
+not surveillance and not duet control. The viewer reconstructs the same rooms,
+games, Studio output, actions, status, and public results the MCP guest receives.
+It never receives the guest's prompts, private reasoning, host logs, client
+metadata, environment, or arbitrary JSON-RPC traffic.
+
+The first implementation has these hard boundaries:
+
+- The App creates an ephemeral loopback listener and displays a short-lived,
+  one-use pairing code containing a version, loopback endpoint, and 128-bit
+  operating-system-random capability. It never binds a public interface, puts
+  the capability in a command line or log, writes a discovery file, or opens a
+  remote service. The code expires after five minutes. The server bounds and
+  parses it before creating an event buffer, compares the capability in constant
+  time, and rejects invalid or expired codes without echoing their contents.
+- Human enablement opens the listener but broadcasts no play. The human may
+  offer the pairing code to the MCP guest, which must explicitly allow the
+  broadcast through a bounded `broadcast_session` control tool. That call is
+  never itself broadcast or recorded as progress. The guest can pause or stop
+  immediately. No tool content is emitted before consent. Pausing discards new
+  events instead of silently backfilling them on resume; stopping closes the
+  connection, revokes the broadcast, and discards queued content. A consumed or
+  revoked capability cannot reconnect.
+- A versioned, length-bounded event envelope carries a monotonic sequence,
+  replayable Numinous action, and bounded public result. A fail-closed allowlist
+  omits Journey, scores, local-state inventory, filesystem paths, Cairn drafts,
+  and any future tool without an explicit viewer policy. Private calls emit
+  nothing and consume no public sequence number. The viewer carries a static
+  notice that private activity is never represented, so silence reveals no
+  occurrence, count, ordering, or timing.
+- Every public envelope names a nonsecret session ID, consent epoch, wire
+  version, deterministic-core replay ABI version, compatibility fingerprint,
+  and per-session public sequence. The fingerprint is a cryptographic digest of
+  the envelope schema, replay ABI, sorted room, simulation, and game identities,
+  and a reproducible build-semantic identity derived from every source and asset
+  that can change replay state, public projections, visuals, or sound. A replay
+  semantic change requires a new replay ABI or build-semantic identity even when
+  the public roster is unchanged. App and MCP reject any mismatch before
+  streaming. Compatibility tests hold the roster and wire schema constant,
+  change the replay ABI or build-semantic identity, and require rejection before
+  content. Every event is a
+  self-contained replay, never a delta that silently depends on a missing prior
+  event. If a future event cannot carry complete replay inputs, a sequence gap
+  marks the viewer desynchronized until an explicit full snapshot resets it.
+- The MCP request path never waits for the viewer. A fixed queue drops oldest
+  public events under pressure. The next transmitted envelope names the exact
+  skipped public sequence range, and `broadcast_session` status reports the
+  cumulative dropped count to the guest. A slow or disconnected viewer cannot
+  delay, fail, or alter the guest's play.
+- The human surface is read-only. It may pause its own display, scrub a fixed
+  in-memory ring of retained public events, or leave, but it cannot inject a
+  tool call or change MCP state. The ring has explicit event and byte caps and
+  is destroyed when the viewer closes. Any future bidirectional duet is a
+  separate consent and architecture gate.
+- No transcript is persisted by default. The bounded in-memory ring exists only
+  while the viewer is open and is cleared on close. An explicit export, if
+  later added, must preview its exact contents, omit private events, and use the
+  ordinary player-owned artifact lifecycle.
+
+The first contract fixes its resource limits rather than leaving them to an
+implementation guess: pairing codes are at most 128 bytes and expire after five
+minutes; a code permits one live connection and is revoked after eight failed
+handshakes; the handshake is at most 4 KiB with a two-second deadline; each
+event is at most 64 KiB with JSON depth at most 16 and a two-second write
+deadline; the writer queue holds at most 64 events or 4 MiB; and the viewer ring
+holds at most 256 events or 16 MiB. Framing reads incrementally through
+`MAX + 1`, rejects oversize input before JSON deserialization, and never grows a
+buffer from an untrusted declared length.
+
+Consent is one atomic epoch, not a UI flag checked once. The producer captures
+the active epoch when an allowlisted call begins and rechecks it before enqueue;
+the writer rechecks before each frame; and the viewer accepts only its current
+session and epoch. Pause, stop, disconnect, and viewer close atomically advance
+the epoch and clear pending frames. Pause and resume markers contain no tool
+data and pass through the same serialized writer after any frame already in its
+write call, so TCP ordering gives the viewer an unambiguous epoch barrier. Pause
+keeps the authenticated connection but emits nothing until an explicit resume
+creates a fresh epoch. Stop and disconnect shut down both directions, revoke
+the capability, and leave no writer, queue, or listener task alive.
+
+The cross-face implementation should live behind one small shared broadcast
+crate rather than making the App and MCP faces depend on each other. It should
+use loopback TCP from the standard library, a capability drawn from the
+operating system's cryptographic random source, newline-delimited versioned
+envelopes capped before allocation, and the existing deterministic core to
+reconstruct visuals and sound. Tests must
+prove code parsing and expiry, loopback-only connection, consent-before-content,
+allowlist completeness across every MCP tool, redaction, sequence and gap
+behavior, reconnect refusal after capability use, nonblocking failure, exact
+replay, and immediate stop. The acceptance session is
+one consenting MCP guest completing a Times Tables explore, challenge, and
+reveal loop while a human follows the same causal states in the App, with zero
+private protocol or host data in the captured stream.
+
+Dependency arrows are one-way: `numinous-core` never depends on the broadcast
+crate; the broadcast crate may depend on core wire and domain types but never on
+a face, persistence, or raw MCP JSON-RPC; and only the App and MCP faces depend
+on the broadcast crate. The CLI remains outside this first slice.
+
 ### Protocol watch: MCP 2026-07-28 release candidate
 
 As of 2026-07-13, the official

@@ -144,12 +144,14 @@ collapse play into a hackable scalar):
   pays knowledge (dense feedback, reveals); the deepest reward is true
   information (deep cuts); and the answer at the cap states outright that the
   number was never the point. Scores are instrumentation, not the soul.
-- *Not a prison, now verified:* play is voluntary and stateless per call;
-  there is no punishment valence anywhere in the product; and as of now there
-  is **memory transparency and consent over persistence**: the `forget` tool
-  first shows everything that is remembered (two small text files, nothing
-  else, never sent anywhere), and erases only on explicit confirm. Leaving is
-  always allowed; so is staying; so is being forgotten.
+- *Not a prison, now verified:* room interaction is voluntary and replayable
+  per call; there is no punishment valence anywhere in the product; and as of
+  now there is **memory transparency and consent over persistence**: the
+  `forget` tool inventories Journey, scores, player-owned Cairn drafts,
+  generated radio cache, the App crash diagnostic, and their managed sidecars,
+  with explicit exclusions. It erases only the selected stores on explicit
+  confirmation and verifies the remaining managed residue. Leaving is always
+  allowed; so is staying; so is being forgotten.
 - *Reducible mystery, by construction:* every room and sim is a compact
   latent rule discoverable by intervention, exactly the sweet spot between
   boring predictability and unlearnable noise.
@@ -187,8 +189,11 @@ interpretable, and recoverable.
   lands, and every attempt grades as distance plus a climbable score. Both
   are metrics, never bare pass/fail, and every posed goal is reachable by
   construction.
-- Trajectory friendliness: a session log format an agent (or researcher) can
-  replay.
+- Trajectory friendliness, planned: the consented local session broadcast in
+  `INTERFACES.md` would let a human follow replayable Numinous actions live
+  without creating a persisted transcript by default. A persisted research
+  trajectory remains a separate opt-in artifact with its own preview and
+  deletion contract.
 - Multi-mind play: the same daily seed already gives humans and agents a shared
   puzzle; add a way to compare answers.
 
