@@ -35,7 +35,7 @@ Public Foundation exit criterion is complete on the public `main` branch. The
 accessibility work are still open. Later systems already present in source do
 not waive those gates, and this prerelease label does not claim 0.2 is complete.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **351 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 2,827 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.36% region coverage, and 95.39% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **351 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 2,832 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.37% region coverage, and 95.40% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -322,7 +322,8 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   pin, fling, and wrapped replay are each tested through their production
   paths. Cycle 130 subsequently adds the exact twin-divergence release event.
   Participant musical clarity remains open.
-- **Done (Game of Life birth sonification, cycle 127):** the exact B3/S23 step
+- **Done (Game of Life birth and glider-phase sonification, cycles 127 and
+  131):** the exact B3/S23 step
   loop now produces one birth mask shared by recent-cell highlighting and a
   bounded 105 ms stereo texture. Every birth contributes to one of twelve
   vertical C major-pentatonic rows, relative row weight, horizontal centroid,
@@ -331,8 +332,12 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   Catch-up voices only the newest generation actually presented. Room, modal,
   Studio, and radio boundaries cancel pending Life events, mono devices receive
   a checked downmix, and completed buffers are reclaimed outside the callback
-  lock. Native device timing, literal per-cell onset scheduling, glider phrase
-  tracking, and participant musical clarity remain open.
+  lock. The newest planted glider is tracked through its exact four-phase shape
+  only while its five cells and empty one-cell halo remain intact. Each valid
+  phase adds one horizontally panned C major-seventh accent; collision fails
+  closed and a new launch replaces the tracker. Native device timing, literal
+  per-cell onset scheduling, participant musical clarity, and a sustained colony
+  layer remain open.
 - **Done (Formula Jam synchronized recipe morph, cycle 128):** curated Random
   and phrase-edge Auto changes now smoothstep between the old and new
   mathematical curves for 600 ms while audio requests an equal-power crossfade
@@ -668,7 +673,7 @@ The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (reviewed 2026-07-17)
+## Where we stand (reviewed 2026-07-18)
 
 The package is **0.2.0-alpha.1**. The 0.1 Public Foundation exit criterion is
 complete, and work is now on 0.2 Flagship Proof. The 0.2 milestone itself remains
@@ -689,7 +694,7 @@ records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 2,827 passing all-target test cases plus one ignored screenshot diagnostic, 95.39% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 2,832 passing all-target test cases plus one ignored screenshot diagnostic, 95.40% measured line coverage, Clippy, style, and supply-chain CI | Independent math review, MSRV, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,911-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 

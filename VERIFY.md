@@ -49,8 +49,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 2,827 all-target test cases pass,
-one screenshot diagnostic is ignored, 95.36% region cover, and 95.39% line
+Expected right now: **format and clippy clean, 2,832 all-target test cases pass,
+one screenshot diagnostic is ignored, 95.37% region cover, and 95.40% line
 cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
@@ -69,7 +69,10 @@ The matrix also covers every app game state, default and compact overlays,
 production Studio rendering, both ends of The Show, Times Tables K=2, K=3,
 K=pi, K=4, K=5, and earned-goal flows at both sizes, the Mandelbrot reset flow,
 a persistent Life sequence from opening
-through launch, generation 4, generation 141, and exact reset, 14 compact
+through launch, generation 4, generation 141, and exact reset. Core and App
+regressions separately prove the newest glider's four exact isolated phases,
+collision retirement, phase-note identity, stereo position, and newest-step
+audio routing. Fourteen compact
 controller or pause receipts spanning rooms, overlays, and game results, and 16
 default or compact audio-state receipts. Those audio receipts cover room score,
 radio, radio-off fallback, Studio, mute, zero volume, background silence, and a

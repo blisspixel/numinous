@@ -3909,7 +3909,10 @@ mod tests {
     #[test]
     fn life_step_audio_obeys_program_ownership_and_uses_the_exact_step() {
         let mut session = numinous_core::rooms::game_of_life::LifeSession::new(4);
+        assert!(session.launch((0.5, 0.5)));
         session.advance();
+        assert_eq!(session.tracked_glider_phase(), Some(1));
+        assert_eq!(session.step_sound().glider_phase(), Some(1));
 
         let audio =
             selected_life_step_audio(AudioProgram::RoomScore, false, false, 1, &session, 48_000)

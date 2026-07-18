@@ -2,7 +2,7 @@
 
 How Numinous *sounds*, and specifically how math *becomes* sound. This is the design bible for the "everything is an instrument" pillar. It complements `MUSIC.md` (which covers the two music engines and the radio stations); this doc covers the grammar of sonification, the synthesis architecture, and the per-room sound design.
 
-**Implementation status, 2026-07-17:** every catalog room ships a structured
+**Implementation status, 2026-07-18:** every catalog room ships a structured
 motif and deterministic sonification. The App's default room bed is a 128-step
 stereo macro-arrangement with a soft sine or triangle lead, a literal authored
 theme, two developed forms, a return, breathing consonant anchors, and a silent
@@ -80,11 +80,17 @@ marks a fixed birth mask, and that mask drives both the visible `@` cells and a
 105 ms stereo texture over the stable bed. Every birth contributes to one of
 twelve vertical C major-pentatonic rows, its row's horizontal centroid, and the
 generation's density. A fixed row reduction bounds synthesis independently of
-population. CLI and MCP expose the same active pitch rows with amplitudes
-weighted by their relative birth counts. Their mono snapshot cannot represent
-the App's pan. If elapsed-time catch-up advances several generations before one
-frame, only the newest presented generation sounds, so audio does not replay a
-stale burst behind the picture. Modal, room, Studio, and radio transitions
+population. One newest-only tracker compares the planted glider with its exact
+four-phase B3/S23 shape and requires an empty one-cell halo. A valid phase adds
+one C major-seventh accent panned from the toroidal horizontal position;
+collision removes it, and a new launch replaces it. This adds five expected-cell
+reads, at most 45 halo reads, and one voice. CLI and MCP expose the same active
+pitch rows with birth-row amplitudes weighted by relative birth counts, plus the
+optional phase note. Their mono
+snapshot cannot represent the App's pan. If elapsed-time catch-up advances
+several generations before one frame, only the newest presented generation
+sounds, so audio does not replay a stale burst behind the picture. Modal, room,
+Studio, and radio transitions
 cancel the pending texture. Mono output devices receive both stereo channels
 through a bounded downmix. These are structural and signal checks, not evidence
 that the texture is pleasant on speakers or headphones.
@@ -186,9 +192,10 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 - **Game of Life:** the shipped first event layer reduces each exact generation
   into twelve fixed C major-pentatonic pitch rows. Every birth contributes to
   its row's weight and horizontal stereo centroid; total activity adds bounded
-  harmonic color. The same birth mask marks the visible new cells. Literal
-  independently timed onsets per cell, glider phrase tracking, and a sustained
-  colony pad remain later sensory-bus work.
+  harmonic color. The same birth mask marks the visible new cells. A second
+  fixed voice follows the newest glider's four exact isolated phases as
+  C major-seventh accents and stops on collision. Literal independently timed
+  onsets per cell and a sustained colony pad remain later sensory-bus work.
 - **Cellular Automata:** each generation's row is read left-to-right as a rhythm; complex rules (30, 110) produce complex, evolving beats, simple rules produce steady pulses.
 - **Fourier Epicycles:** each circle is a pure sine at its frequency; your drawing literally *is* the chord of its Fourier components. You hear the transform of your own doodle.
 - **Lissajous / Harmonograph:** the two frequencies are the two audible tones. A stable figure is a consonant interval you *see and hear at once*; an off-ratio figure tumbles visually and beats audibly.
@@ -212,7 +219,7 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 - **Stereo as default, spatial where it pays.** Position in the field maps to pan; depth (near/far) to level and filtering. Rooms with real depth (hyperbolic space, 4D) can use binaural/HRTF on headphones so the warp has audible space.
 - **The field is an ensemble.** Dense rooms need bounded spatial reductions so
   activity becomes texture instead of an unbounded pile of clicks. Life ships
-  twelve pitch-row centroids, and Galton ships the exact highlighted path as
+  twelve pitch-row centroids plus one optional tracked-glider voice, and Galton ships the exact highlighted path as
   sixteen panned peg events plus its landing. Finer onset fields for primes,
   Life, and Galton's full 64-ball wave remain planned.
 
@@ -220,8 +227,9 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 
 - **Touch has a voice, partially built.** Times Tables, Galton Board, and Double
   Pendulum ship persistent input-audio paths through the smoothed parameter
-  voice. Life ships one bounded generation-event texture, and Galton ships one
-  bounded newest-ball peg sequence. Tuned event layers and equivalent
+  voice. Life ships one bounded generation-event texture with an exact
+  tracked-glider phase accent, and Galton ships one bounded newest-ball peg
+  sequence. Tuned event layers and equivalent
   mathematical voices in other rooms remain planned.
 - **Transitions are washes.** Room-to-room dissolves carry a reverb wash through black, matching the visual cross-dissolve (see `VISUALS.md`).
 - **Reveal has a resolution.** Summoning a Revelation card lands on a small, satisfying harmonic resolution, the sonic version of the floor tilting.

@@ -80,7 +80,19 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   exact birth counts to the visual mask and sonic reduction, enforce fixed
   work, finite signal metrics, pan, mono projection, source continuity,
   ownership, cross-face replay, and the newest-presented-generation policy.
-  Native device timing and musician-led listening remain open evidence.
+  The newest planted glider is now tracked through its exact four-phase B3/S23
+  cycle. Tracking continues only while all five expected cells are present and
+  their one-cell halo is empty; a collision fails closed to `LOST`, and a
+  new launch replaces the bounded tracker. Each surviving phase adds one
+  C major-seventh accent above the birth texture, panned from the glider's
+  toroidal horizontal position. The control path performs at most 50 fixed
+  world reads, five for expected cells and 45 for their halo. Synthesis remains
+  fixed at twelve birth rows plus one optional voice over 105 ms. Tests prove
+  the four exact phases, newest-launch reset, collision
+  retirement, compact footer bounds, ascending phase identity, stereo position,
+  signal integrity, rate rejection, and App newest-step routing. Native device
+  timing, literal per-cell onset scheduling, participant musical clarity, and
+  musician-led listening remain open evidence.
 - Double Pendulum now makes its physical gesture state audible through the
   existing continuous parameter voice. The same reduced state drives pixels,
   the twin-divergence status, and sound: the first-arm drop selects one of five

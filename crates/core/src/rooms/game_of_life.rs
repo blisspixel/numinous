@@ -22,6 +22,12 @@ const DENSITY: f64 = 0.32;
 const SETTLE_GENERATIONS: usize = 12;
 /// The most generations `t` reaches.
 const MAX_GEN: usize = 140;
+const GLIDER_PHASE_OFFSETS: [[(i32, i32); 5]; 4] = [
+    [(0, 0), (1, 0), (2, 0), (2, -1), (1, -2)],
+    [(0, -1), (2, -1), (1, 0), (2, 0), (1, 1)],
+    [(2, -1), (0, 0), (2, 0), (1, 1), (2, 1)],
+    [(1, -1), (2, 0), (3, 0), (1, 1), (2, 1)],
+];
 /// The last meaningful change to a persistent Life session.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum LifeEvent {
@@ -43,6 +49,27 @@ enum LifeEvent {
     },
 }
 
+#[derive(Clone, Copy, Debug)]
+struct TrackedGlider {
+    origin: (usize, usize),
+    age: u64,
+}
+
+impl TrackedGlider {
+    fn phase(self) -> u8 {
+        (self.age % GLIDER_PHASE_OFFSETS.len() as u64) as u8
+    }
+
+    fn cells(self) -> [(usize, usize); 5] {
+        glider_cells(self.origin, self.age)
+    }
+
+    fn anchor_x(self) -> usize {
+        let travel = (self.age / GLIDER_PHASE_OFFSETS.len() as u64) % GRID_W as u64;
+        (self.origin.0 + travel as usize) % GRID_W
+    }
+}
+
 /// Bounded incremental state for one visit to Conway's Game of Life.
 ///
 /// The App advances this state over elapsed time, so the universe does not jump
@@ -57,6 +84,7 @@ pub struct LifeSession {
     recent_launches: Vec<bool>,
     recent_births: Vec<bool>,
     step_sound: crate::life_sound::LifeStepSound,
+    tracked_glider: Option<TrackedGlider>,
     baseline: Vec<bool>,
     world: Vec<bool>,
     next_baseline: Vec<bool>,
@@ -77,6 +105,7 @@ impl LifeSession {
             recent_launches: vec![false; GRID_W * GRID_H],
             recent_births: vec![false; GRID_W * GRID_H],
             step_sound: crate::life_sound::LifeStepSound::default(),
+            tracked_glider: None,
             baseline: world.clone(),
             world,
             next_baseline: vec![false; GRID_W * GRID_H],
@@ -97,10 +126,18 @@ impl LifeSession {
             births += usize::from(born);
             deaths += usize::from(self.world[index] && !self.next_world[index]);
         }
-        self.step_sound =
-            crate::life_sound::LifeStepSound::from_birth_mask(&self.recent_births, GRID_W, GRID_H);
         std::mem::swap(&mut self.world, &mut self.next_world);
         std::mem::swap(&mut self.baseline, &mut self.next_baseline);
+        self.tracked_glider = self.tracked_glider.and_then(|mut tracked| {
+            tracked.age = tracked.age.saturating_add(1);
+            is_isolated_glider(&self.world, &tracked.cells()).then_some(tracked)
+        });
+        self.step_sound =
+            crate::life_sound::LifeStepSound::from_birth_mask(&self.recent_births, GRID_W, GRID_H);
+        if let Some(tracked) = self.tracked_glider {
+            self.step_sound
+                .set_tracked_glider(tracked.phase(), tracked.anchor_x());
+        }
         self.live_cells = self.live_cells + births - deaths;
         self.generation = self.generation.saturating_add(1);
         self.event = LifeEvent::Step { births, deaths };
@@ -134,6 +171,10 @@ impl LifeSession {
         self.launches = self.launches.saturating_add(1);
         self.recent_births.fill(false);
         self.step_sound = crate::life_sound::LifeStepSound::default();
+        self.tracked_glider = Some(TrackedGlider {
+            origin: cells[0],
+            age: 0,
+        });
         for &(x, y) in &cells {
             self.recent_launches[y * GRID_W + x] = true;
         }
@@ -156,10 +197,16 @@ impl LifeSession {
         self.launches
     }
 
-    /// Fixed-size sonic reduction of births in the newest exact generation.
+    /// Fixed-size birth summary and optional exact glider phase for the newest generation.
     #[must_use]
     pub fn step_sound(&self) -> &crate::life_sound::LifeStepSound {
         &self.step_sound
+    }
+
+    /// Four-step phase of the newest glider while its isolated shape remains exact.
+    #[must_use]
+    pub fn tracked_glider_phase(&self) -> Option<u8> {
+        self.tracked_glider.map(TrackedGlider::phase)
     }
 
     /// A truthful readout for wide App layouts and agent faces.
@@ -170,18 +217,19 @@ impl LifeSession {
         } else {
             "GLIDERS"
         };
+        let tracking = self.tracking_status();
         match self.event {
             LifeEvent::Opening => format!(
-                "B3/S23  GEN {}  LIVE {}  {glider} {}",
-                self.generation, self.live_cells, self.launches
+                "B3/S23  GEN {}  LIVE {}  {glider} {}{tracking}",
+                self.generation, self.live_cells, self.launches,
             ),
             LifeEvent::Launch { planted, cleared } => format!(
-                "PLANTED {planted}  CLEARED {cleared}  GEN {}  LIVE {}  {glider} {}",
-                self.generation, self.live_cells, self.launches
+                "PLANTED {planted}  CLEARED {cleared}  GEN {}  LIVE {}  {glider} {}{tracking}",
+                self.generation, self.live_cells, self.launches,
             ),
             LifeEvent::Step { births, deaths } => format!(
-                "BORN {births}  DIED {deaths}  GEN {}  LIVE {}  {glider} {}",
-                self.generation, self.live_cells, self.launches
+                "BORN {births}  DIED {deaths}  GEN {}  LIVE {}  {glider} {}{tracking}",
+                self.generation, self.live_cells, self.launches,
             ),
         }
     }
@@ -202,6 +250,14 @@ impl LifeSession {
                 "BORN{births} DIED{deaths} G{} L{} GL{}",
                 self.generation, self.live_cells, self.launches
             ),
+        }
+    }
+
+    fn tracking_status(&self) -> String {
+        match self.tracked_glider_phase() {
+            Some(phase) => format!(" P{}", phase + 1),
+            None if self.launches > 0 => " LOST".to_owned(),
+            None => String::new(),
         }
     }
 
@@ -414,17 +470,35 @@ fn sown_glider_cells(point: (f64, f64)) -> Option<[(usize, usize); 5]> {
     }
     let cx = (x.clamp(0.0, 1.0) * (GRID_W - 1) as f64).round() as i32;
     let cy = (y.clamp(0.0, 1.0) * (GRID_H - 1) as f64).round() as i32;
+    Some(glider_cells((cx as usize, cy as usize), 0))
+}
+
+fn glider_cells(origin: (usize, usize), age: u64) -> [(usize, usize); 5] {
+    let phase = (age % GLIDER_PHASE_OFFSETS.len() as u64) as usize;
+    let travel = (age / GLIDER_PHASE_OFFSETS.len() as u64) % GRID_W as u64;
     let mut cells = [(0, 0); 5];
-    for (cell, (dx, dy)) in cells
-        .iter_mut()
-        .zip([(0, 0), (1, 0), (2, 0), (2, -1), (1, -2)])
-    {
+    for (cell, &(dx, dy)) in cells.iter_mut().zip(&GLIDER_PHASE_OFFSETS[phase]) {
         *cell = (
-            (cx + dx).rem_euclid(GRID_W as i32) as usize,
-            (cy + dy).rem_euclid(GRID_H as i32) as usize,
+            (origin.0 as i32 + travel as i32 + dx).rem_euclid(GRID_W as i32) as usize,
+            (origin.1 as i32 + travel as i32 + dy).rem_euclid(GRID_H as i32) as usize,
         );
     }
-    Some(cells)
+    cells
+}
+
+fn is_isolated_glider(world: &[bool], cells: &[(usize, usize); 5]) -> bool {
+    if world.len() != GRID_W * GRID_H || cells.iter().any(|&(x, y)| !world[y * GRID_W + x]) {
+        return false;
+    }
+    cells.iter().all(|&(x, y)| {
+        (-1_i32..=1).all(|dy| {
+            (-1_i32..=1).all(|dx| {
+                let nx = (x as i32 + dx).rem_euclid(GRID_W as i32) as usize;
+                let ny = (y as i32 + dy).rem_euclid(GRID_H as i32) as usize;
+                !world[ny * GRID_W + nx] || cells.contains(&(nx, ny))
+            })
+        })
+    })
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -609,6 +683,16 @@ mod tests {
             g[y * w + x] = true;
         }
         g
+    }
+
+    fn empty_life_session() -> LifeSession {
+        let mut session = LifeSession::new(0);
+        session.world.fill(false);
+        session.baseline.fill(false);
+        session.next_world.fill(false);
+        session.next_baseline.fill(false);
+        session.live_cells = 0;
+        session
     }
 
     #[test]
@@ -811,6 +895,42 @@ mod tests {
     }
 
     #[test]
+    fn life_session_tracks_the_newest_isolated_gliders_exact_four_phase_phrase() {
+        let mut session = empty_life_session();
+        assert!(session.launch((0.5, 0.5)));
+        assert_eq!(session.tracked_glider_phase(), Some(0));
+
+        for expected_phase in [1, 2, 3, 0] {
+            session.advance();
+            assert_eq!(session.tracked_glider_phase(), Some(expected_phase));
+            assert_eq!(session.step_sound().glider_phase(), Some(expected_phase));
+        }
+
+        assert!(session.launch((0.2, 0.7)));
+        assert_eq!(session.tracked_glider_phase(), Some(0));
+        assert_eq!(session.step_sound().glider_phase(), None);
+    }
+
+    #[test]
+    fn glider_phrase_stops_when_a_neighbor_breaks_the_isolated_pattern() {
+        let mut session = empty_life_session();
+        let point = (0.5, 0.5);
+        assert!(session.launch(point));
+        let (cx, cy) = sown_glider_cells(point).expect("finite glider")[0];
+        let intruder_x = (cx + GRID_W - 1) % GRID_W;
+        let intruder = cy * GRID_W + intruder_x;
+        assert!(!session.world[intruder]);
+        session.world[intruder] = true;
+        session.live_cells += 1;
+
+        session.advance();
+
+        assert_eq!(session.tracked_glider_phase(), None);
+        assert_eq!(session.step_sound().glider_phase(), None);
+        assert!(session.status().contains("GLIDER 1 LOST"));
+    }
+
+    #[test]
     fn life_session_reset_restores_the_selected_variation() {
         let opening = LifeSession::new(3).world;
         let mut session = LifeSession::new(3);
@@ -841,6 +961,7 @@ mod tests {
         assert!(advanced.contains("LIVE "), "got: {advanced}");
         assert!(advanced.contains("BORN "), "got: {advanced}");
         assert!(advanced.contains("DIED "), "got: {advanced}");
+        assert!(advanced.contains("GLIDER 1 P2"), "got: {advanced}");
         let compact = session.compact_status();
         assert!(compact.starts_with("BORN"), "got: {compact}");
         assert!(compact.contains("DIED"), "got: {compact}");

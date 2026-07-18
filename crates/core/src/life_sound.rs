@@ -13,11 +13,18 @@ const MIN_SAMPLE_RATE: u32 = 8_000;
 const MAX_SAMPLE_RATE: u32 = 384_000;
 const MAX_PEAK: f32 = 0.2;
 const SEMITONES: [i32; PITCH_ROWS] = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26];
+const GLIDER_SEMITONES: [i32; 4] = [0, 4, 7, 11];
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct PitchRow {
     births: u16,
     x_sum: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct GliderPhrase {
+    phase: u8,
+    x: u16,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -46,6 +53,7 @@ pub struct LifeStepSound {
     births: u16,
     width: u16,
     rows: [PitchRow; PITCH_ROWS],
+    glider: Option<GliderPhrase>,
 }
 
 impl Default for LifeStepSound {
@@ -54,6 +62,7 @@ impl Default for LifeStepSound {
             births: 0,
             width: 1,
             rows: [PitchRow::default(); PITCH_ROWS],
+            glider: None,
         }
     }
 }
@@ -77,6 +86,7 @@ impl LifeStepSound {
             births: 0,
             width: width as u16,
             rows: [PitchRow::default(); PITCH_ROWS],
+            glider: None,
         };
         for (index, &born) in mask.iter().enumerate() {
             if !born {
@@ -99,15 +109,26 @@ impl LifeStepSound {
         usize::from(self.births)
     }
 
+    /// Zero-based four-step phrase phase of the newest exact isolated glider.
+    #[must_use]
+    pub fn glider_phase(&self) -> Option<u8> {
+        self.glider.map(|glider| glider.phase)
+    }
+
+    pub(crate) fn set_tracked_glider(&mut self, phase: u8, x: usize) {
+        self.glider = (usize::from(phase) < GLIDER_SEMITONES.len() && x < usize::from(self.width))
+            .then_some(GliderPhrase { phase, x: x as u16 });
+    }
+
     /// Bounded simultaneous-note snapshot for CLI and protocol faces.
     #[must_use]
     pub fn snapshot(&self) -> Option<SoundSpec> {
-        if self.births == 0 {
+        if self.births == 0 && self.glider.is_none() {
             return None;
         }
-        let births = f32::from(self.births);
+        let births = f32::from(self.births).max(1.0);
         let activity = 0.45 + 0.55 * (births / 256.0).sqrt().min(1.0);
-        let notes = self
+        let mut notes = self
             .rows
             .iter()
             .enumerate()
@@ -119,6 +140,14 @@ impl LifeStepSound {
                 amp: 0.06 * activity * (f32::from(row.births) / births).sqrt(),
             })
             .collect::<Vec<_>>();
+        if let Some(glider) = self.glider {
+            notes.push(Note {
+                freq: glider_pitch_hz(glider.phase),
+                start: 0.0,
+                dur: DURATION_MILLIS as f32 / 1_000.0,
+                amp: 0.055,
+            });
+        }
         Some(SoundSpec {
             duration: DURATION_MILLIS as f32 / 1_000.0,
             notes,
@@ -128,10 +157,13 @@ impl LifeStepSound {
     /// Render the generation as a short interleaved-stereo birth texture.
     ///
     /// No output is returned for silence or unsupported rates. Work is bounded
-    /// by twelve pitch rows and 105 milliseconds, regardless of population.
+    /// by twelve birth rows, one optional glider voice, and 105 milliseconds,
+    /// regardless of population.
     #[must_use]
     pub fn render_stereo(&self, sample_rate: u32) -> Vec<f32> {
-        if self.births == 0 || !(MIN_SAMPLE_RATE..=MAX_SAMPLE_RATE).contains(&sample_rate) {
+        if (self.births == 0 && self.glider.is_none())
+            || !(MIN_SAMPLE_RATE..=MAX_SAMPLE_RATE).contains(&sample_rate)
+        {
             return Vec::new();
         }
         let Some(frames) = (sample_rate as usize).checked_mul(DURATION_MILLIS) else {
@@ -145,7 +177,7 @@ impl LifeStepSound {
             return Vec::new();
         }
 
-        let births = f32::from(self.births);
+        let births = f32::from(self.births).max(1.0);
         let activity = 0.45 + 0.55 * (births / 256.0).sqrt().min(1.0);
         let harmonic_mix = 0.08 + 0.22 * (births / 512.0).min(1.0);
         let mut voices: [Option<SonicVoice>; PITCH_ROWS] = std::array::from_fn(|index| {
@@ -172,6 +204,26 @@ impl LifeStepSound {
                 right: pan.sqrt(),
             })
         });
+        let mut glider_voice = self.glider.map(|glider| {
+            let pan = if self.width <= 1 {
+                0.5
+            } else {
+                f32::from(glider.x) / f32::from(self.width - 1)
+            }
+            .clamp(0.0, 1.0);
+            let (step_sine, step_cosine) = (std::f32::consts::TAU * glider_pitch_hz(glider.phase)
+                / sample_rate as f32)
+                .sin_cos();
+            SonicVoice {
+                sine: 0.0,
+                cosine: 1.0,
+                step_sine,
+                step_cosine,
+                weight: 0.9,
+                left: (1.0 - pan).sqrt(),
+                right: pan.sqrt(),
+            }
+        });
         let mut output = Vec::with_capacity(samples);
         for frame in 0..frames {
             let time = frame as f32 / sample_rate as f32;
@@ -190,6 +242,13 @@ impl LifeStepSound {
                 right += tone * voice.weight * voice.right;
                 voice.advance();
             }
+            if let Some(voice) = &mut glider_voice {
+                let phrase_envelope = (1.0 - progress).powi(3);
+                let tone = voice.sine + 0.12 * 2.0 * voice.sine * voice.cosine;
+                left += tone * voice.weight * voice.left * phrase_envelope;
+                right += tone * voice.weight * voice.right * phrase_envelope;
+                voice.advance();
+            }
             let gain = 0.045 * activity * envelope;
             output.push((left * gain).clamp(-MAX_PEAK, MAX_PEAK));
             output.push((right * gain).clamp(-MAX_PEAK, MAX_PEAK));
@@ -200,6 +259,10 @@ impl LifeStepSound {
 
 fn pitch_hz(row: usize) -> f32 {
     130.81 * 2.0_f32.powf(SEMITONES[row] as f32 / 12.0)
+}
+
+fn glider_pitch_hz(phase: u8) -> f32 {
+    261.63 * 2.0_f32.powf(GLIDER_SEMITONES[usize::from(phase)] as f32 / 12.0)
 }
 
 #[cfg(test)]
@@ -266,12 +329,68 @@ mod tests {
     }
 
     #[test]
+    fn tracked_glider_adds_one_distinct_note_for_each_exact_phase() {
+        let mut mask = vec![false; 96 * 96];
+        mask[48 * 96 + 48] = true;
+        let mut frequencies = Vec::new();
+        let mut renders = Vec::new();
+
+        for phase in 0..4 {
+            let mut sound = LifeStepSound::from_birth_mask(&mask, 96, 96);
+            sound.set_tracked_glider(phase, 48);
+            assert_eq!(sound.glider_phase(), Some(phase));
+            let snapshot = sound.snapshot().expect("birth and glider phrase");
+            frequencies.push(snapshot.notes.last().expect("glider note").freq);
+            renders.push(sound.render_stereo(48_000));
+        }
+
+        assert!(frequencies.windows(2).all(|pair| pair[1] > pair[0]));
+        assert!(renders.windows(2).all(|pair| pair[0] != pair[1]));
+    }
+
+    #[test]
+    fn malformed_glider_phase_or_position_is_rejected() {
+        let mut mask = vec![false; 96 * 96];
+        mask[0] = true;
+        let mut sound = LifeStepSound::from_birth_mask(&mask, 96, 96);
+
+        sound.set_tracked_glider(0, 0);
+        assert_eq!(sound.glider_phase(), Some(0));
+        sound.set_tracked_glider(4, 0);
+        assert_eq!(sound.glider_phase(), None);
+        sound.set_tracked_glider(0, 0);
+        sound.set_tracked_glider(0, 96);
+        assert_eq!(sound.glider_phase(), None);
+    }
+
+    #[test]
+    fn tracked_glider_horizontal_position_orders_phrase_energy() {
+        let mask = vec![false; 96 * 96];
+        let mut left = LifeStepSound::from_birth_mask(&mask, 96, 96);
+        let mut right = left.clone();
+        left.set_tracked_glider(0, 0);
+        right.set_tracked_glider(0, 95);
+        let left = left.render_stereo(48_000);
+        let right = right.render_stereo(48_000);
+        let energy = |samples: &[f32], channel: usize| {
+            samples
+                .chunks_exact(2)
+                .map(|frame| frame[channel].abs())
+                .sum::<f32>()
+        };
+
+        assert!(energy(&left, 0) > energy(&left, 1) * 4.0);
+        assert!(energy(&right, 1) > energy(&right, 0) * 4.0);
+    }
+
+    #[test]
     fn rendering_is_deterministic_finite_bounded_and_rate_limited() {
         let mut mask = vec![false; 96 * 96];
         for index in (0..mask.len()).step_by(17) {
             mask[index] = true;
         }
-        let sound = LifeStepSound::from_birth_mask(&mask, 96, 96);
+        let mut sound = LifeStepSound::from_birth_mask(&mask, 96, 96);
+        sound.set_tracked_glider(3, 95);
         let first = sound.render_stereo(48_000);
         let metrics = crate::chiptune::stereo_signal_metrics(&first);
         assert_eq!(first, sound.render_stereo(48_000));
