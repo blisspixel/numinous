@@ -1342,7 +1342,7 @@ fn write_and_commit(
 fn replace_temp_file(path: &Path, temp: &Path) -> io::Result<()> {
     #[cfg(windows)]
     {
-        retry_atomic_replace_with(path, || fs::rename(temp, path))
+        retry_atomic_replace_with(|| fs::rename(temp, path))
     }
     #[cfg(not(windows))]
     {
@@ -1368,29 +1368,21 @@ fn should_retry_atomic_replace(error: &io::Error) -> bool {
 }
 
 #[cfg(any(windows, test))]
-fn retry_atomic_replace_with(
-    path: &Path,
-    mut replace: impl FnMut() -> io::Result<()>,
-) -> io::Result<()> {
-    let mut last_error = None;
-    for attempt in 0..16 {
+fn retry_atomic_replace_with(mut replace: impl FnMut() -> io::Result<()>) -> io::Result<()> {
+    let mut attempt = 0_usize;
+    loop {
         match replace() {
             Ok(()) => return Ok(()),
             Err(error) if should_retry_atomic_replace(&error) => {
-                last_error = Some(error);
-                if attempt + 1 < 16 {
-                    thread::sleep(LOCK_SLEEP);
+                attempt += 1;
+                if attempt == 16 {
+                    return Err(error);
                 }
+                thread::sleep(LOCK_SLEEP);
             }
             Err(error) => return Err(error),
         }
     }
-    Err(last_error.unwrap_or_else(|| {
-        io::Error::new(
-            io::ErrorKind::TimedOut,
-            format!("could not replace {}", path.display()),
-        )
-    }))
 }
 
 #[cfg(test)]
@@ -1461,6 +1453,16 @@ mod tests {
             std::process::id(),
             TEST_COUNTER.fetch_add(1, Ordering::Relaxed)
         ))
+    }
+
+    fn local_state_paths(root: &std::path::Path) -> LocalStatePaths {
+        LocalStatePaths {
+            journey: root.join("journey.txt"),
+            scores: root.join("scores.txt"),
+            cairn: root.join("cairn.txt"),
+            radio_cache: root.join("radio"),
+            crash_log: root.join("crash.log"),
+        }
     }
 
     #[test]
@@ -1570,6 +1572,225 @@ mod tests {
         assert_eq!(released.radio_cache.sidecar_bytes, 0);
         assert_eq!(released.managed_residue_count(), 0);
         std::fs::remove_dir(&root).expect("fixture cleanup");
+    }
+
+    #[test]
+    fn local_inventory_discloses_unexpected_store_objects_and_cache_entries() {
+        let root = temp_file("unexpected_inventory_objects").with_extension("");
+        let paths = local_state_paths(&root);
+        std::fs::create_dir_all(&paths.journey).expect("Journey directory fixture");
+        std::fs::create_dir(&paths.scores).expect("score directory fixture");
+        std::fs::create_dir(&paths.cairn).expect("Cairn directory fixture");
+        std::fs::write(&paths.radio_cache, b"not a cache directory").expect("cache file fixture");
+
+        let file_cache = inspect_local_state(&paths).expect("inspect unexpected objects");
+        assert!(!file_cache.journey.file.managed_file);
+        assert_eq!(file_cache.journey.rooms_entered, 0);
+        assert!(!file_cache.scores.file.managed_file);
+        assert_eq!(file_cache.scores.entries, 0);
+        assert!(!file_cache.cairn.file.managed_file);
+        assert_eq!(file_cache.cairn.local_drafts, 0);
+        assert!(file_cache.radio_cache.exists);
+        assert_eq!(file_cache.radio_cache.files, 0);
+        assert_eq!(file_cache.radio_cache.unexpected_entries, 1);
+
+        std::fs::remove_file(&paths.radio_cache).expect("replace cache fixture");
+        std::fs::create_dir(&paths.radio_cache).expect("cache directory fixture");
+        std::fs::write(paths.radio_cache.join("trance-001.wav"), b"RIFF")
+            .expect("managed track fixture");
+        std::fs::write(paths.radio_cache.join("notes.txt"), b"not managed")
+            .expect("unmanaged cache fixture");
+        let mixed_cache = inspect_local_state(&paths).expect("inspect mixed cache");
+        assert_eq!(mixed_cache.radio_cache.files, 1);
+        assert_eq!(mixed_cache.radio_cache.bytes, 4);
+        assert_eq!(mixed_cache.radio_cache.unexpected_entries, 1);
+        std::fs::remove_dir_all(&root).expect("fixture cleanup");
+    }
+
+    #[test]
+    fn complete_erasure_is_idempotent_when_every_store_is_absent() {
+        let root = temp_file("absent_complete_erasure").with_extension("");
+        let paths = local_state_paths(&root);
+
+        let residue = erase_local_state(&paths, LocalStateEraseSelection::complete())
+            .expect("erase absent state");
+
+        assert_eq!(residue.managed_residue_count(), 0);
+        assert_eq!(residue.total_managed_bytes(), 0);
+        std::fs::remove_dir(&root).expect("lock parent cleanup");
+    }
+
+    #[test]
+    fn non_file_journey_temporary_blocks_every_selected_mutation() {
+        let root = temp_file("journey_temp_directory").with_extension("");
+        let paths = local_state_paths(&root);
+        std::fs::create_dir_all(root.join(".journey.txt.7.9.tmp"))
+            .expect("unexpected temp directory");
+        std::fs::write(&paths.scores, b"20\tfixture\n").expect("score fixture");
+
+        let error = erase_local_state(&paths, LocalStateEraseSelection::complete())
+            .expect_err("unexpected Journey temp must fail closed");
+
+        assert_eq!(error.target(), "journey");
+        assert!(std::error::Error::source(&error).is_some());
+        assert!(error.to_string().contains("temporary file"));
+        assert_eq!(
+            std::fs::read(&paths.scores).expect("score remains"),
+            b"20\tfixture\n"
+        );
+        std::fs::remove_dir_all(&root).expect("fixture cleanup");
+    }
+
+    #[test]
+    fn non_file_cache_temporary_blocks_every_selected_mutation() {
+        let root = temp_file("cache_temp_directory").with_extension("");
+        let paths = local_state_paths(&root);
+        std::fs::create_dir_all(root.join(".radio.7.9.tmp"))
+            .expect("unexpected cache temp directory");
+        std::fs::write(&paths.journey, b"plays 4\n").expect("Journey fixture");
+
+        let error = erase_local_state(
+            &paths,
+            LocalStateEraseSelection {
+                journey: true,
+                scores: false,
+                cairn: false,
+                radio_cache: true,
+                crash_log: false,
+            },
+        )
+        .expect_err("unexpected cache temp must fail closed");
+
+        assert_eq!(error.target(), "radio cache");
+        assert_eq!(
+            std::fs::read(&paths.journey).expect("Journey remains"),
+            b"plays 4\n"
+        );
+        std::fs::remove_dir_all(&root).expect("fixture cleanup");
+    }
+
+    #[test]
+    fn missing_parent_has_no_orphan_temporaries() {
+        let root = temp_file("missing_temp_parent").with_extension("");
+        let path = root.join("nested").join("journey.txt");
+
+        let temps = super::orphan_temp_files(&path).expect("missing parent is empty");
+
+        assert!(temps.is_empty());
+        assert!(!root.exists());
+    }
+
+    #[test]
+    fn directory_targets_fail_both_managed_file_removal_contracts() {
+        let root = temp_file("directory_removal_target").with_extension("");
+        let target = root.join("journey.txt");
+        std::fs::create_dir_all(&target).expect("directory target fixture");
+
+        let managed_error = super::remove_managed_file_locked(&target)
+            .expect_err("managed erasure must reject a directory");
+        let legacy_error = remove_persisted_file(&target)
+            .expect_err("legacy file removal must reject a directory");
+
+        assert_ne!(managed_error.kind(), io::ErrorKind::NotFound);
+        assert_ne!(legacy_error.kind(), io::ErrorKind::NotFound);
+        assert!(target.is_dir());
+        std::fs::remove_dir_all(root).expect("fixture cleanup");
+    }
+
+    #[test]
+    fn cache_entry_cap_is_disclosed_and_blocks_erasure() {
+        let root = temp_file("cache_entry_cap").with_extension("");
+        let paths = local_state_paths(&root);
+        std::fs::create_dir_all(&paths.radio_cache).expect("cache fixture");
+        for index in 0..=super::MAX_MANAGED_CACHE_ENTRIES {
+            std::fs::write(paths.radio_cache.join(format!("trance-{index}.wav")), b"R")
+                .expect("bounded cache fixture");
+        }
+
+        let inventory = inspect_local_state(&paths).expect("inspect capped cache");
+        assert!(inventory.radio_cache.truncated);
+        assert_eq!(
+            inventory.radio_cache.files,
+            super::MAX_MANAGED_CACHE_ENTRIES
+        );
+        let error = erase_local_state(
+            &paths,
+            LocalStateEraseSelection {
+                journey: false,
+                scores: false,
+                cairn: false,
+                radio_cache: true,
+                crash_log: false,
+            },
+        )
+        .expect_err("oversized cache must fail closed");
+        assert_eq!(error.target(), "radio cache");
+        assert!(error.to_string().contains("entry cap"));
+        assert!(paths.radio_cache.is_dir());
+        std::fs::remove_dir_all(&root).expect("fixture cleanup");
+    }
+
+    #[test]
+    fn adjacent_entry_cap_is_disclosed_and_blocks_cleanup() {
+        let root = temp_file("sidecar_entry_cap").with_extension("");
+        let paths = local_state_paths(&root);
+        std::fs::create_dir_all(&root).expect("fixture root");
+        for index in 0..=super::MAX_MANAGED_SIDECARS {
+            std::fs::write(root.join(format!("unrelated-{index}.txt")), b"x")
+                .expect("bounded adjacent fixture");
+        }
+
+        let inventory = inspect_local_state(&paths).expect("inspect capped parent");
+        assert!(inventory.journey.file.sidecar_scan_capped);
+        assert!(inventory.radio_cache.sidecar_scan_capped);
+        let error = erase_local_state(
+            &paths,
+            LocalStateEraseSelection {
+                journey: true,
+                scores: false,
+                cairn: false,
+                radio_cache: false,
+                crash_log: false,
+            },
+        )
+        .expect_err("unbounded adjacent cleanup must fail closed");
+        assert_eq!(error.target(), "journey");
+        assert!(error.to_string().contains("could not bound"));
+        std::fs::remove_dir_all(&root).expect("fixture cleanup");
+    }
+
+    #[test]
+    fn checked_lock_release_preserves_a_replacement_owner() {
+        let root = temp_file("checked_replacement_lock").with_extension("");
+        let paths = local_state_paths(&root);
+        let guard = super::lock_local_state(&paths.crash_log).expect("owned lock");
+        let lock_path = guard.inner.path.clone();
+        std::fs::write(&lock_path, b"token replacement-owner\n").expect("replace lock owner");
+
+        let error = guard
+            .release()
+            .expect_err("changed ownership must fail checked release");
+
+        assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+        assert_eq!(
+            std::fs::read(&lock_path).expect("replacement remains"),
+            b"token replacement-owner\n"
+        );
+        std::fs::remove_file(lock_path).expect("replacement cleanup");
+        std::fs::remove_dir(root).expect("fixture cleanup");
+    }
+
+    #[test]
+    fn checked_lock_release_accepts_an_already_absent_owned_file() {
+        let root = temp_file("checked_missing_lock").with_extension("");
+        let paths = local_state_paths(&root);
+        let guard = super::lock_local_state(&paths.crash_log).expect("owned lock");
+        let lock_path = guard.inner.path.clone();
+        std::fs::remove_file(lock_path).expect("simulate prior cleanup");
+
+        guard.release().expect("missing lock is already clean");
+
+        std::fs::remove_dir(root).expect("fixture cleanup");
     }
 
     #[test]
@@ -1945,6 +2166,20 @@ mod tests {
     }
 
     #[test]
+    fn a_new_daily_delta_advances_the_latest_streak() {
+        let mut latest = Journey::default();
+        let _ = latest.record_daily(100);
+        let before = Journey::default();
+        let mut after = Journey::default();
+        let _ = after.record_daily(101);
+
+        super::merge_journey_delta(&before, &after, &mut latest);
+
+        assert_eq!(latest.last_daily, 101);
+        assert_eq!(latest.streak, 2);
+    }
+
+    #[test]
     fn stale_recovery_marker_is_removed_before_acquire() {
         let path = temp_file("stale_recovery_marker");
         let lock = super::lock_path_for(&path);
@@ -2118,7 +2353,7 @@ mod tests {
         std::fs::write(&temp, b"new").expect("new temp");
         let mut attempts = 0;
 
-        super::retry_atomic_replace_with(&path, || {
+        super::retry_atomic_replace_with(|| {
             assert_eq!(
                 std::fs::read(&path).expect("destination remains readable"),
                 b"old"
@@ -2139,6 +2374,57 @@ mod tests {
         assert_eq!(std::fs::read(&path).expect("new destination"), b"new");
         assert!(!temp.exists());
         remove_persisted_file(&path).expect("cleanup");
+    }
+
+    #[test]
+    fn atomic_replace_stops_immediately_on_a_nonretryable_error() {
+        let mut attempts = 0;
+
+        let error = super::retry_atomic_replace_with(|| {
+            attempts += 1;
+            Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "permanent replacement failure",
+            ))
+        })
+        .expect_err("permanent errors must not retry");
+
+        assert_eq!(attempts, 1);
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn atomic_replace_returns_the_last_error_after_the_retry_budget() {
+        let mut attempts = 0;
+
+        let error = super::retry_atomic_replace_with(|| {
+            attempts += 1;
+            Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                format!("transient replacement failure {attempts}"),
+            ))
+        })
+        .expect_err("retry budget must be finite");
+
+        assert_eq!(attempts, 16);
+        assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+        assert!(error.to_string().ends_with("16"));
+    }
+
+    #[test]
+    fn atomic_replace_retry_admission_is_exact() {
+        assert!(super::should_retry_atomic_replace(&io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "existing destination",
+        )));
+        assert!(super::should_retry_atomic_replace(&io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "sharing violation",
+        )));
+        assert!(!super::should_retry_atomic_replace(&io::Error::new(
+            io::ErrorKind::InvalidData,
+            "permanent error",
+        )));
     }
 
     #[cfg(windows)]
@@ -2191,7 +2477,7 @@ mod tests {
         ready_rx.recv().expect("reader observes old destination");
         let mut attempts = 0;
 
-        super::retry_atomic_replace_with(&path, || {
+        super::retry_atomic_replace_with(|| {
             attempts += 1;
             let result = std::fs::rename(&temp, &path);
             if attempts == 1 {
