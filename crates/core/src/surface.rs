@@ -122,7 +122,7 @@ pub trait Surface {
         }
     }
 
-    /// The surface's width and height, each clamped to [`MAX_DIM`]. A room that
+    /// The surface's width and height, each clamped to `MAX_DIM`. A room that
     /// loops or allocates over the whole surface must use this, not the raw
     /// `width()`/`height()`: a hostile `Surface` reporting a huge size would
     /// otherwise drive unbounded work or overflow an allocation. Real surfaces

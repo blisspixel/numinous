@@ -73,8 +73,10 @@ and the published crate records for
 
 - `numinous-core` denies missing documentation. The other library crates inherit
   the workspace warning today. Promoting them to deny is unfinished hardening.
-- **Doctests are real tests** and run in CI; examples must compile and pass.
-- **`cargo doc` builds clean under `-D warnings`;** broken intra-doc links should fail CI once the doc gate is added.
+- **Doctests are real tests** and run in the local gates and CI; examples must
+  compile and pass.
+- **`cargo doc` builds clean under `-D warnings`;** the local gates and required
+  CI quality job reject broken intra-doc links and other rustdoc warnings.
 - **Architecture Decision Records (ADRs)** for consequential choices (the stack, Bevy-vs-bespoke, the Studio DSL, the sandbox model). A decision without a recorded rationale is a future argument waiting to happen.
 - Comments explain **why**, not what; the code says what.
 
@@ -132,20 +134,21 @@ Nothing merges red. On every PR, blocking:
 
 1. `cargo fmt --all --check`
 2. `cargo clippy --workspace --all-targets -- -D warnings`
-3. `cargo test --workspace --all-targets --locked`
-4. `bash scripts/check-style.sh`
-5. `cargo deny check`
-6. `cargo audit` (RustSec advisories; ignores in `.cargo/audit.toml`)
-7. `cargo +1.88.0 check --workspace --all-targets --locked`
-8. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
-9. `cargo test --workspace --all-targets --locked` and
+3. `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked`
+4. `RUSTDOCFLAGS="-D warnings" cargo test --workspace --doc --locked`
+5. `cargo test --workspace --all-targets --locked`
+6. `bash scripts/check-style.sh`
+7. `cargo deny check`
+8. `cargo audit` (RustSec advisories; ignores in `.cargo/audit.toml`)
+9. `cargo +1.88.0 check --workspace --all-targets --locked`
+10. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
+11. `cargo test --workspace --all-targets --locked` and
    `cargo build --workspace --locked` on macOS, Linux, and Windows
-10. The native installer safety self-test on macOS, Linux, and Windows
+12. The native installer safety self-test on macOS, Linux, and Windows
 
-Hardening targets not yet enforced in CI: `cargo doc --workspace --no-deps`
-under `-D warnings`, `cargo-auditable` release binaries, release artifact
-provenance, the visual and audio regression loops, and real-hardware soak and
-performance jobs.
+Hardening targets not yet enforced in CI: `cargo-auditable` release binaries,
+release artifact provenance, the visual and audio regression loops, and
+real-hardware soak and performance jobs.
 
 The nightly loop adds soak/perf and cross-GPU differential tests (`QUALITY.md`).
 
@@ -160,9 +163,10 @@ git config core.hooksPath scripts/hooks
 
 `scripts/hooks/pre-commit` then blocks any commit that would fail the fast gate.
 It runs the house-style guard on every commit (instant, and it applies to docs
-as much as code), and the cargo gate (fmt, clippy `-D warnings`, the full test
-suite) only when the commit touches Rust, `Cargo.*`, or a shader, so a docs-only
-commit stays fast. Coverage, the locked build, and artifact regeneration stay in
+as much as code), and the cargo gate (fmt, Clippy and rustdoc with warnings
+denied, plus doctests and the full test suite) only when the commit touches
+Rust, `Cargo.*`, or a shader, so a docs-only commit stays fast. Coverage, the
+locked build, and artifact regeneration stay in
 `scripts/verify.sh` (the release gate); they are too slow for every commit.
 Emergency bypass is `git commit --no-verify`, after which you must run
 `scripts/verify.sh` before pushing.

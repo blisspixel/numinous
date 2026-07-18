@@ -26,6 +26,22 @@ function Step($name, $block) {
 try {
 Step "format" { cargo fmt --all --check }
 Step "clippy" { cargo clippy --workspace --all-targets -- -D warnings }
+Step "documentation" {
+    $savedRustdocFlags = Get-Item Env:RUSTDOCFLAGS -ErrorAction SilentlyContinue
+    try {
+        $env:RUSTDOCFLAGS = "-D warnings"
+        cargo doc --workspace --no-deps --locked
+        if ($LASTEXITCODE -ne 0) { throw "documentation failed" }
+        cargo test --workspace --doc --locked
+        if ($LASTEXITCODE -ne 0) { throw "doctests failed" }
+    } finally {
+        if ($null -ne $savedRustdocFlags) {
+            $env:RUSTDOCFLAGS = $savedRustdocFlags.Value
+        } else {
+            Remove-Item Env:RUSTDOCFLAGS -ErrorAction SilentlyContinue
+        }
+    }
+}
 Step "tests"  { cargo test --workspace --all-targets --locked }
 Step "build"  { cargo build --workspace --locked }
 

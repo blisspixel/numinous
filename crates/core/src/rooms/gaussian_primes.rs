@@ -1,4 +1,4 @@
-//! Gaussian primes: primes in the Gaussian integers Z[i].
+//! Gaussian primes: primes in the Gaussian integers `Z[i]`.
 //!
 //! DRAG: TUNE R. See `docs/ROOMS.md`.
 

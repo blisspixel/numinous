@@ -7,6 +7,9 @@ echo "== fmt =="
 cargo fmt --all --check
 echo "== clippy =="
 cargo clippy --workspace --all-targets -- -D warnings
+echo "== docs =="
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked
+RUSTDOCFLAGS="-D warnings" cargo test --workspace --doc --locked
 echo "== test =="
 cargo test --workspace --all-targets --locked
 echo "== house style =="

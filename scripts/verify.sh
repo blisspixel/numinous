@@ -13,6 +13,9 @@ echo "== format =="
 cargo fmt --all --check
 echo "== clippy =="
 cargo clippy --workspace --all-targets -- -D warnings
+echo "== documentation =="
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked
+RUSTDOCFLAGS="-D warnings" cargo test --workspace --doc --locked
 echo "== tests =="
 cargo test --workspace --all-targets --locked
 echo "== build =="
