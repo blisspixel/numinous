@@ -6,6 +6,22 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Galton Board now makes every ball in an accepted 64-ball wave audible beneath
+  its exact highlighted path. The newest contiguous wave is replayed through
+  the same deterministic random stream into a fixed 17 by 17 row-position mass
+  grid. Each destination row reduces that mass into at most five quiet C
+  major-pentatonic pitch buckets. Square-root amplitude follows total bucket
+  mass, mass-weighted equal-power pan follows its horizontal centroid, and the
+  existing 16 peg tones plus landing tone keep the highlighted ball legible.
+  The control-thread renderer performs 1,088 exact path visits, scans at most
+  152 reachable cells, and adds at most 80 aggregate tones plus 17 highlighted
+  tones before submission. It keeps the fixed half-second event and existing 8
+  kHz through 192 kHz admission boundary, with no per-ball callback work.
+  Regressions pin the exact newest-wave stream range, all 64 contributions at
+  every row, highlighted-ball inclusion, landing histogram, stereo bias,
+  same-mass energy under different cell partitions, newest-event ownership,
+  hostile rates, and signal safety. A growing-pile pad, native callback timing,
+  participant discovery, and musician judgment remain open evidence.
 - Double Pendulum now voices each completed fling as a deterministic 720 ms
   twin-divergence event over its continuous gesture voice. Seven paired pulses
   sample the same exact main and shadow integrator at fixed horizons from zero
@@ -40,7 +56,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   transitions retire it. Core tests bind signal bounds, deterministic wave
   identity, stereo landing direction, newest-event admission, and rate limits.
   App tests cover program ownership, normal pointer lifecycle, and Show
-  retirement. Native callback timing, full-wave pile texture, musician
+  retirement. The newer all-ball wave texture extends this event beneath the
+  highlighted path. Native callback timing, a growing-pile pad, musician
   judgment, and participant discovery remain open evidence.
 - Formula Jam Random and Auto recipe changes now interpolate the old and new
   mathematical curves through one bounded 600 ms smoothstep while the same

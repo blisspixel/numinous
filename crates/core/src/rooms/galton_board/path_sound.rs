@@ -1,6 +1,8 @@
-//! Bounded stereo percussion for the highlighted Galton ball path.
+//! Bounded stereo percussion for one Galton wave and its highlighted ball.
 
 use std::f32::consts::{FRAC_PI_4, TAU};
+
+use super::{BALLS_PER_WAVE, WaveProfile};
 
 /// Fixed half-second event keeps repeated drops responsive and bounded.
 const SOUND_SECONDS: f32 = 0.5;
@@ -10,8 +12,11 @@ const PEG_STEP_SECONDS: f32 = 0.024;
 const PEG_SECONDS: f32 = 0.038;
 const LANDING_START_SECONDS: f32 = 0.4;
 const LANDING_SECONDS: f32 = 0.095;
+const WAVE_SECONDS: f32 = 0.032;
+const WAVE_AMPLITUDE: f32 = 0.035;
 const PEG_SCALE_STEPS: [i32; 8] = [12, 9, 7, 4, 2, 0, 2, 4];
 const LANDING_SCALE_STEPS: [i32; 5] = [0, 2, 4, 7, 9];
+const WAVE_SCALE_STEPS: [i32; 5] = [0, 2, 4, 7, 9];
 
 fn stereo_gains(pan: f32) -> (f32, f32) {
     let angle = (pan.clamp(-1.0, 1.0) + 1.0) * FRAC_PI_4;
@@ -54,11 +59,52 @@ pub(super) fn supports_sample_rate(sample_rate: u32) -> bool {
     (MIN_SAMPLE_RATE..=MAX_SAMPLE_RATE).contains(&sample_rate)
 }
 
-pub(super) fn render(root: f32, trace: &[usize], rows: usize, sample_rate: u32) -> Vec<f32> {
+pub(super) fn render(
+    root: f32,
+    trace: &[usize],
+    profile: &WaveProfile,
+    rows: usize,
+    sample_rate: u32,
+) -> Vec<f32> {
     debug_assert!(supports_sample_rate(sample_rate));
     let frames = (SOUND_SECONDS * sample_rate as f32) as usize;
     let mut samples = vec![0.0; frames.saturating_mul(2)];
     let rows = rows.max(1);
+
+    for destination_row in 1..=rows.min(profile.len() - 1) {
+        let mut pitch_mass = [0u16; WAVE_SCALE_STEPS.len()];
+        let mut pitch_pan_mass = [0.0f32; WAVE_SCALE_STEPS.len()];
+        for (rights, &count) in profile[destination_row][..=destination_row]
+            .iter()
+            .enumerate()
+        {
+            if count == 0 {
+                continue;
+            }
+            let pitch_index = rights * (WAVE_SCALE_STEPS.len() - 1) / destination_row;
+            let count = u16::from(count);
+            let pan = (2.0 * rights as f32 - destination_row as f32) / rows as f32;
+            pitch_mass[pitch_index] += count;
+            pitch_pan_mass[pitch_index] += f32::from(count) * pan;
+        }
+        for (pitch_index, &count) in pitch_mass.iter().enumerate() {
+            if count == 0 {
+                continue;
+            }
+            add_tone(
+                &mut samples,
+                sample_rate,
+                Tone {
+                    start: (destination_row - 1) as f32 * PEG_STEP_SECONDS,
+                    duration: WAVE_SECONDS,
+                    frequency: crate::chiptune::pitch(root, WAVE_SCALE_STEPS[pitch_index] - 12),
+                    amplitude: WAVE_AMPLITUDE * (f32::from(count) / BALLS_PER_WAVE as f32).sqrt(),
+                    pan: pitch_pan_mass[pitch_index] / f32::from(count),
+                    decay_power: 5,
+                },
+            );
+        }
+    }
 
     for (row, edge) in trace.windows(2).take(rows).enumerate() {
         let went_right = edge[1] > edge[0];
