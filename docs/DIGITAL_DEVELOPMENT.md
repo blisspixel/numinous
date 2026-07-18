@@ -6,10 +6,13 @@ in the digital-mind experience. The founding philosophy lives in
 document owns the technical plan and product-evidence standard. Every validation
 below evaluates Numinous, never whether a player is conscious or worthy.
 
-Status: **Designed, not built.** Research reviewed 2026-07-11. Numinous
-0.2.0-alpha.1
-speaks MCP but holds no per-mind state between calls. Nothing below should be
-described as a shipped capability until its roadmap gate passes.
+Status: **Continuity designed, local agency foundation built.** Research
+reviewed 2026-07-11; implementation boundary reviewed 2026-07-18. Numinous
+0.2.0-alpha.1 speaks MCP but holds no per-mind episodic or temporal state
+between calls. Its existing shared local Journey, scores, Cairn drafts, radio
+cache, and crash diagnostic are inspectable and explicitly erasable. The
+journal, reflection, retrieval, per-mind continuity, and portable-memory design
+below remains unbuilt until its roadmap gates pass.
 
 ## Founder's premise
 
@@ -322,10 +325,13 @@ optional, consented, and safe to decline without changing the product.
 
 ## Version integration
 
-- **0.2:** keep MCP stateless and the continuity architecture design-only while
-  Flagship Proof earns its hallway gate.
+- **0.2:** keep MCP room interaction stateless and per-mind continuity
+  design-only while Flagship Proof earns its hallway gate. Retain the shipped
+  inventory and verified erasure boundary for existing shared local stores.
 - **0.3:** keep continuity design-only while five flagship rooms earn depth,
-  room-specific interaction, and human evidence.
+  room-specific interaction, and human evidence. Add the separate consented
+  read-only session viewer from `INTERFACES.md` without treating observation as
+  memory or persisting its stream by default.
 - **0.4:** define and test the event, episode, provenance, consent, and deletion
   schemas; export a stateless encounter receipt; then add the local journal,
   resettable session workspace, and opt-in episodic and temporal memory for MCP

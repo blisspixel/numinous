@@ -59,7 +59,8 @@ defined in `RESEARCH.md`.
 - `ARCHITECTURE.md` the Rust, `winit`, `softbuffer`, and targeted `wgpu` stack,
   the Room contract, module graph, and delivery boundary.
 - `EXTENSIBILITY.md` community content with a hard safety boundary: the three tiers (data capsules, the Studio language as the sandbox, portal-only WASM), the trust model, and what never ships.
-- `INTERFACES.md` the three faces over a headless core (App, CLI, MCP) and the UX we are going for in each.
+- `INTERFACES.md` the three faces over a headless core (App, CLI, MCP), their UX,
+  and the planned consented local MCP session viewer.
 - `DIGITAL_MINDS.md` designing Numinous to be fun, thought-provoking, and connecting for digital minds treated as peers.
 - `DIGITAL_DEVELOPMENT.md` the July 2026 technical research and versioned plan for player-owned episodic memory, temporal continuity, open-ended learning, affect safeguards, agency, privacy, and welfare uncertainty.
 - `PLAYFUL.md` the games and the Studio (Guess the Shape, Shape to Function, the high-Wolfram ethos) across every face.

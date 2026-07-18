@@ -6,6 +6,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Public status and roadmap documentation now match the July 18 release
+  evidence: 2,869 passing tests plus one ignored screenshot diagnostic,
+  95.39 percent region coverage, 95.44 percent line coverage, and green native
+  installer checks on all three CI operating systems. Digital-mind docs now
+  distinguish the shipped managed-state inventory and erasure foundation from
+  the still-unbuilt per-mind episodic continuity design. Clean rustdoc and
+  doctests are now local, pre-commit, release, and required CI gates; eleven
+  malformed or private intra-doc links found by that gate are corrected. The
+  roadmap and interface design now specify a local, consented MCP session viewer
+  that broadcasts only allowlisted Numinous play, never prompts, private
+  reasoning, host logs, local-state paths, or arbitrary protocol traffic.
 - `forget` now provides a truthful, non-destructive inventory of every
   Numinous-managed local store across CLI and MCP: Journey, scores,
   player-owned Cairn drafts, generated radio cache, and the App crash
