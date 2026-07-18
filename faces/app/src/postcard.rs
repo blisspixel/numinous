@@ -415,7 +415,12 @@ mod tests {
         assert_eq!(info.color_type, png::ColorType::Rgba);
         assert_eq!(info.bit_depth, png::BitDepth::Eight);
 
-        let mut frame = vec![0; reader.output_buffer_size()];
+        let mut frame = vec![
+            0;
+            reader
+                .output_buffer_size()
+                .expect("postcard dimensions fit address space")
+        ];
         let output = reader.next_frame(&mut frame).expect("decode postcard");
         let pixels = &frame[..output.buffer_size()];
         assert_eq!(output.width, POSTCARD_SIZE);
@@ -483,7 +488,12 @@ mod tests {
         assert_eq!(animation.num_frames, LOOP_FRAMES);
         assert_eq!(animation.num_plays, 0, "loops play indefinitely");
 
-        let mut frame = vec![0; reader.output_buffer_size()];
+        let mut frame = vec![
+            0;
+            reader
+                .output_buffer_size()
+                .expect("loop dimensions fit address space")
+        ];
         let first = reader.next_frame(&mut frame).expect("decode first frame");
         assert_eq!(first.width, LOOP_SIZE);
         assert!(

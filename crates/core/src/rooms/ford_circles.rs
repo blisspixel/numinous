@@ -99,10 +99,10 @@ fn ford_by_denom(max_q: u32) -> Vec<Ford> {
     let mut out = Vec::new();
     for q in 1..=max_q.min(ABSOLUTE_Q) {
         for p in 0..=q {
-            if gcd(p, q) == 1 {
-                if let Some(f) = Ford::new(p, q) {
-                    out.push(f);
-                }
+            if gcd(p, q) == 1
+                && let Some(f) = Ford::new(p, q)
+            {
+                out.push(f);
             }
         }
     }
@@ -161,13 +161,13 @@ fn apply_mediants(base: &[Ford], pokes: &[(f64, f64)]) -> (Vec<Ford>, Option<For
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
         set.dedup();
-        if let Some((left, right)) = neighbors(&set, x) {
-            if let Some(m) = mediant(left, right) {
-                if !set.contains(&m) {
-                    set.push(m);
-                }
-                last_birth = Some(m);
+        if let Some((left, right)) = neighbors(&set, x)
+            && let Some(m) = mediant(left, right)
+        {
+            if !set.contains(&m) {
+                set.push(m);
             }
+            last_birth = Some(m);
         }
     }
     set.sort_by(|a, b| {

@@ -60,7 +60,7 @@ impl Rule {
     pub fn fits(self, value: u64) -> bool {
         match self {
             Rule::Primes => is_prime(value),
-            Rule::MultiplesOf(n) => value % n == 0,
+            Rule::MultiplesOf(n) => value.is_multiple_of(n),
             Rule::Squares => {
                 let root = value.isqrt();
                 root * root == value
@@ -117,7 +117,7 @@ fn is_prime(n: u64) -> bool {
     }
     let mut d = 2;
     while d * d <= n {
-        if n % d == 0 {
+        if n.is_multiple_of(d) {
             return false;
         }
         d += 1;

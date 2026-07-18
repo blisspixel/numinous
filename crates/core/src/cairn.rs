@@ -89,7 +89,7 @@ fn is_prime(n: u64) -> bool {
     }
     let mut d = 2;
     while d * d <= n {
-        if n % d == 0 {
+        if n.is_multiple_of(d) {
             return false;
         }
         d += 1;
@@ -218,7 +218,7 @@ pub fn picture(stone: &CairnStone) -> String {
 /// cells (readable only at the true width, the message revealed only then).
 #[must_use]
 pub fn read_at(stone: &CairnStone, width: usize) -> CairnRead {
-    let is_factor = width != 0 && stone.semiprime % (width as u64) == 0;
+    let is_factor = width != 0 && stone.semiprime.is_multiple_of(width as u64);
     let readable = width == stone.width;
     CairnRead {
         is_factor,
@@ -403,7 +403,7 @@ mod tests {
         let n = stone.semiprime;
         let mut factors = Vec::new();
         for d in 2..n {
-            if n % d == 0 && is_prime(d) && is_prime(n / d) {
+            if n.is_multiple_of(d) && is_prime(d) && is_prime(n / d) {
                 factors.push(d as usize);
                 factors.push((n / d) as usize);
                 break;

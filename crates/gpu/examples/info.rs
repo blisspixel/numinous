@@ -18,6 +18,7 @@ fn main() {
         power_preference: wgpu::PowerPreference::default(),
         compatible_surface: None,
         force_fallback_adapter: false,
+        apply_limit_buckets: false,
     }));
     match chosen {
         Ok(adapter) => {

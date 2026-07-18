@@ -441,7 +441,7 @@ pub(crate) fn draw_munch(
             }
         }
         if i == play.cursor && play.graded.is_none() {
-            let inset = if (frame / 20) % 2 == 0 { 1 } else { 2 };
+            let inset = if (frame / 20).is_multiple_of(2) { 1 } else { 2 };
             raster.line(x0 + inset, y0 + inset, x1 - inset, y0 + inset, '#');
             raster.line(x0 + inset, y1 - inset, x1 - inset, y1 - inset, '#');
             raster.line(x0 + inset, y0 + inset, x0 + inset, y1 - inset, '#');

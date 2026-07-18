@@ -82,10 +82,10 @@ fn draw(canvas: &mut dyn Surface, sc: f64, seed: u64) {
             let th = 2.0 * std::f64::consts::PI * (i as f64 / steps as f64) + rot;
             let px = (cx + rr * th.cos()).round() as i32;
             let py = (cy - rr * th.sin() * 0.55).round() as i32; // char aspect-ish
-            if let Some((ox, oy)) = prev {
-                if (px - ox).abs() + (py - oy).abs() > 0 {
-                    canvas.line(ox, oy, px, py, ch);
-                }
+            if let Some((ox, oy)) = prev
+                && (px - ox).abs() + (py - oy).abs() > 0
+            {
+                canvas.line(ox, oy, px, py, ch);
             }
             prev = Some((px, py));
         }

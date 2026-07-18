@@ -8,12 +8,12 @@ rust-version.workspace = true
 repository.workspace = true
 
 [dependencies]
-wgpu = "29"
-pollster = "0.4"
+wgpu = "30"
+pollster = "1"
 bytemuck = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
-png = "0.17"
+png = "0.18"
 
 [lints]
 workspace = true

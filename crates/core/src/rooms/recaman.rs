@@ -68,7 +68,7 @@ fn draw(canvas: &mut dyn Surface, seq: &[i64], seed: u64) {
         let x1 = x_of(a.max(b));
         let cx = (x0 + x1) * 0.5;
         let rad = ((x1 - x0) * 0.5).max(1.0);
-        let above = (i + seed as usize) % 2 == 0;
+        let above = (i + seed as usize).is_multiple_of(2);
         let steps = ((rad * 1.2) as usize).clamp(8, 48);
         let mut prev: Option<(i32, i32)> = None;
         for s in 0..=steps {

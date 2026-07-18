@@ -77,7 +77,7 @@ fn draw(canvas: &mut dyn Surface, n_f: f64, seed: u64) {
     }
     canvas.line(0, cy as i32, width.saturating_sub(1) as i32, cy as i32, '.');
     // Endpoints P( +/-1) = (+/-1)^n
-    let pe = if n % 2 == 0 { 1.0 } else { -1.0 };
+    let pe = if n.is_multiple_of(2) { 1.0 } else { -1.0 };
     let py0 = (cy - 1.0 * y_scale).round() as i32;
     let py1 = (cy - pe * y_scale).round() as i32;
     canvas.line(0, py0 - 1, 0, py0 + 1, 'o');

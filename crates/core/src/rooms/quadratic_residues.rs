@@ -27,12 +27,12 @@ fn is_prime_u(n: u64) -> bool {
     if n < 2 {
         return false;
     }
-    if n % 2 == 0 {
+    if n.is_multiple_of(2) {
         return n == 2;
     }
     let mut d = 3u64;
     while d * d <= n {
-        if n % d == 0 {
+        if n.is_multiple_of(d) {
             return false;
         }
         d += 2;
@@ -44,7 +44,7 @@ fn next_odd_prime(mut n: u64) -> u64 {
     if n < 3 {
         return 3;
     }
-    if n % 2 == 0 {
+    if n.is_multiple_of(2) {
         n += 1;
     }
     while !is_prime_u(n) {
