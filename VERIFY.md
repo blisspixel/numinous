@@ -28,7 +28,8 @@ Run the full gate and regenerate every artifact:
 
 It runs format, clippy (deny warnings), tests, locked build, coverage (if
 `cargo-llvm-cov` is present), supply-chain policy (if `cargo-deny` is present),
-and the house-style guard, then writes images and audio into `renders/`.
+the house-style guard, and the native installer safety self-test, then writes
+images and audio into `renders/`.
 If it prints "All checks passed" and exits 0, everything is green.
 
 ## 2. Or run the gates individually
@@ -43,11 +44,13 @@ cargo deny check                         # if cargo-deny is installed; CI always
 cargo audit                              # if cargo-audit is installed; CI always runs it
 bash scripts/check-style.sh                  # macOS / Linux
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1  # Windows
+bash scripts/install.sh --self-test          # macOS / Linux
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTest  # Windows
 ```
 
 
-Expected right now: **format and clippy clean, 2,779 all-target test cases pass,
-one screenshot diagnostic is ignored, 95.28% region cover, and 95.32% line
+Expected right now: **format and clippy clean, 2,782 all-target test cases pass,
+one screenshot diagnostic is ignored, 95.31% region cover, and 95.34% line
 cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions

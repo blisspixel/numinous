@@ -51,6 +51,19 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   hostile-input, variation, registry, and catalog visual-oracle tests cover it.
 
 ### Changed
+- Cycle 126 security maintenance now rejects malformed Munch, Munch Arcade,
+  Nim, and Hackenbush actions at the MCP schema boundary before Journey or
+  score writes. CLI diagnostics encode terminal controls in untrusted room,
+  interaction, era, station, simulation, and path values. APNG loop export
+  streams its 24 checked frames instead of retaining the full animation in
+  memory. Install roots now carry user-bound identity, Windows rejects every
+  reparse ancestor and publishes binaries without writing through existing
+  hardlinks, and POSIX refreshes its owned profile line and verifies the exact
+  installed command. Local release gates and the three-platform CI build run
+  their native installer safety self-test. Legacy migration remains limited to
+  an exact default-root install shape and requires explicit legacy-adoption
+  consent before migration or removal. Native Linux and macOS CI evidence is
+  still required before claiming those runtime paths green.
 - App release QA now derives eight room receipts from all 351 registry entries
   and validates an exact 2,909-screen inventory instead of a fixed 31-room
   table. Scenarios follow each room's declared interaction verb. The generator

@@ -622,22 +622,28 @@ fn fresh_variation_seed() -> u64 {
 fn parse_poke_arg(raw: &str) -> Result<(f64, f64), String> {
     let Some((x, y)) = raw.split_once(',') else {
         return Err(format!(
-            "Bad --poke '{raw}'. Use normalized coordinates like --poke 0.4,0.6.\n"
+            "Bad --poke '{}'. Use normalized coordinates like --poke 0.4,0.6.\n",
+            terminal_safe(raw)
         ));
     };
-    let x = x
-        .trim()
-        .parse::<f64>()
-        .map_err(|_| format!("Bad --poke '{raw}'. The x coordinate must be a number.\n"))?;
-    let y = y
-        .trim()
-        .parse::<f64>()
-        .map_err(|_| format!("Bad --poke '{raw}'. The y coordinate must be a number.\n"))?;
+    let x = x.trim().parse::<f64>().map_err(|_| {
+        format!(
+            "Bad --poke '{}'. The x coordinate must be a number.\n",
+            terminal_safe(raw)
+        )
+    })?;
+    let y = y.trim().parse::<f64>().map_err(|_| {
+        format!(
+            "Bad --poke '{}'. The y coordinate must be a number.\n",
+            terminal_safe(raw)
+        )
+    })?;
     if x.is_finite() && y.is_finite() && (0.0..=1.0).contains(&x) && (0.0..=1.0).contains(&y) {
         Ok((x, y))
     } else {
         Err(format!(
-            "Bad --poke '{raw}'. Coordinates must be finite numbers in [0,1].\n"
+            "Bad --poke '{}'. Coordinates must be finite numbers in [0,1].\n",
+            terminal_safe(raw)
         ))
     }
 }
@@ -650,29 +656,29 @@ fn parse_gesture_arg(raw: &str) -> Result<numinous_core::RoomInput, String> {
     }
     let Some((kind, coords)) = raw.split_once(':') else {
         return Err(format!(
-            "Bad --gesture '{raw}'. Use down:x,y,t, move:x,y,t, up:x,y,t, or cancel.
-"
+            "Bad --gesture '{}'. Use down:x,y,t, move:x,y,t, up:x,y,t, or cancel.\n",
+            terminal_safe(raw)
         ));
     };
     let parts: Vec<&str> = coords.split(',').collect();
     if parts.len() != 3 {
         return Err(format!(
-            "Bad --gesture '{raw}'. Pointer events need x,y,t like down:0.3,0.4,0.1.
-"
+            "Bad --gesture '{}'. Pointer events need x,y,t like down:0.3,0.4,0.1.\n",
+            terminal_safe(raw)
         ));
     }
     let mut values = [0.0_f64; 3];
     for (slot, part) in values.iter_mut().zip(&parts) {
         let value: f64 = part.trim().parse().map_err(|_| {
             format!(
-                "Bad --gesture '{raw}'. Coordinates must be numbers.
-"
+                "Bad --gesture '{}'. Coordinates must be numbers.\n",
+                terminal_safe(raw)
             )
         })?;
         if !value.is_finite() || !(0.0..=1.0).contains(&value) {
             return Err(format!(
-                "Bad --gesture '{raw}'. Coordinates must be finite numbers in [0,1].
-"
+                "Bad --gesture '{}'. Coordinates must be finite numbers in [0,1].\n",
+                terminal_safe(raw)
             ));
         }
         *slot = value;
@@ -683,8 +689,9 @@ fn parse_gesture_arg(raw: &str) -> Result<numinous_core::RoomInput, String> {
         "move" => Ok(numinous_core::RoomInput::PointerMove { x, y, t }),
         "up" => Ok(numinous_core::RoomInput::PointerUp { x, y, t }),
         other => Err(format!(
-            "Bad --gesture '{raw}'. Pointer kinds are down, move, and up; cancel takes no coordinates; got '{other}'.
-"
+            "Bad --gesture '{}'. Pointer kinds are down, move, and up; cancel takes no coordinates; got '{}'.\n",
+            terminal_safe(raw),
+            terminal_safe(other)
         )),
     }
 }
@@ -1110,7 +1117,10 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 return ExitCode::FAILURE;
             }
             let Some(era) = numinous_core::Era::parse(&era) else {
-                eprintln!("Unknown era '{era}'. Eras: phosphor, 8bit, vector, modern.");
+                eprintln!(
+                    "Unknown era '{}'. Eras: phosphor, 8bit, vector, modern.",
+                    terminal_safe(&era)
+                );
                 return ExitCode::FAILURE;
             };
             let (pokes, gesture) = match parse_room_inputs(&pokes, &gestures) {
@@ -1161,7 +1171,10 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 return ExitCode::FAILURE;
             }
             let Some(era) = numinous_core::Era::parse(&era) else {
-                eprintln!("Unknown era '{era}'. Eras: phosphor, 8bit, vector, modern.");
+                eprintln!(
+                    "Unknown era '{}'. Eras: phosphor, 8bit, vector, modern.",
+                    terminal_safe(&era)
+                );
                 return ExitCode::FAILURE;
             };
             let (pokes, gesture) = match parse_room_inputs(&pokes, &gestures) {
@@ -1191,7 +1204,10 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             seconds,
         } => {
             let Some(era) = numinous_core::Era::parse(&era) else {
-                eprintln!("Unknown era '{era}'. Eras: phosphor, 8bit, vector, modern.");
+                eprintln!(
+                    "Unknown era '{}'. Eras: phosphor, 8bit, vector, modern.",
+                    terminal_safe(&era)
+                );
                 return ExitCode::FAILURE;
             };
             tour(fps, width, height, mute, era, seconds, journey)
@@ -1213,7 +1229,10 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 let _ = numinous_core::persist_journey_delta(&journey_path(), &before, journey);
             }
             let Some(era) = numinous_core::Era::parse(&era) else {
-                eprintln!("Unknown era '{era}'. Eras: phosphor, 8bit, vector, modern.");
+                eprintln!(
+                    "Unknown era '{}'. Eras: phosphor, 8bit, vector, modern.",
+                    terminal_safe(&era)
+                );
                 return ExitCode::FAILURE;
             };
             let variation = if vary { fresh_variation_seed() } else { 0 };
@@ -1625,7 +1644,10 @@ fn radio_dir() -> PathBuf {
 /// raw PCM, and cache it as a WAV the app and CLI can loop.
 fn radio_tune(station_id: &str, seconds: Option<u64>, count: usize) -> ExitCode {
     let Some(station) = numinous_core::station(station_id) else {
-        eprintln!("No station '{station_id}' on the dial. See: numinous radio");
+        eprintln!(
+            "No station '{}' on the dial. See: numinous radio",
+            terminal_safe(station_id)
+        );
         return ExitCode::FAILURE;
     };
     let Ok(key) = std::env::var("ELEVENLABS_API_KEY").or_else(|_| env_file_key()) else {
@@ -1744,7 +1766,7 @@ fn fetch_track(
         Ok(()) => {
             println!(
                 "  ON AIR: {} ({:.0}s, stereo)",
-                path.display(),
+                terminal_safe_path(&path),
                 pcm.len() as f64 / 4.0 / 44_100.0
             );
             true
@@ -1785,21 +1807,29 @@ fn read_bounded(mut reader: impl std::io::Read, limit: usize) -> std::io::Result
     Ok((bytes.len() <= limit).then_some(bytes))
 }
 
+fn terminal_safe(text: &str) -> String {
+    let mut safe = String::with_capacity(text.len());
+    for character in text.chars() {
+        if character.is_control() {
+            safe.extend(character.escape_default());
+        } else {
+            safe.push(character);
+        }
+    }
+    safe
+}
+
+fn terminal_safe_path(path: &Path) -> String {
+    terminal_safe(&path.to_string_lossy())
+}
+
 fn bounded_response_detail(reader: impl std::io::Read) -> String {
     read_bounded(reader, 8 * 1024)
         .ok()
         .flatten()
         .map(|bytes| {
             let text = String::from_utf8_lossy(&bytes);
-            let mut safe = String::with_capacity(text.len());
-            for ch in text.chars() {
-                if ch.is_control() {
-                    safe.extend(ch.escape_default());
-                } else {
-                    safe.push(ch);
-                }
-            }
-            safe
+            terminal_safe(&text)
         })
         .unwrap_or_else(|| "response detail unavailable or oversized".to_string())
 }
@@ -1829,7 +1859,7 @@ fn tune_wav(seed: u64, bars: usize, path: &Path) -> Result<String, String> {
     write_wav(path, &pattern.render(sample_rate), sample_rate, 1)?;
     Ok(format!(
         "wrote {} ({:.1}s, seed {seed}): the chip speaks\n",
-        path.display(),
+        terminal_safe_path(path),
         pattern.seconds()
     ))
 }
@@ -1842,7 +1872,7 @@ fn sing_wav(
     notes: usize,
     path: &Path,
 ) -> Result<String, String> {
-    let expr = numinous_core::parse(source)?;
+    let expr = numinous_core::parse(source).map_err(|error| terminal_safe(&error))?;
     if xmax <= xmin {
         return Err("need xmax > xmin\n".to_string());
     }
@@ -1850,10 +1880,11 @@ fn sing_wav(
     let spec = numinous_core::to_melody(&expr, xmin, xmax, notes, 0.0);
     write_wav(path, &spec.render(sample_rate), sample_rate, 1)?;
     Ok(format!(
-        "wrote {} ({:.1}s, {} notes) from y = {source}\n",
-        path.display(),
+        "wrote {} ({:.1}s, {} notes) from y = {}\n",
+        terminal_safe_path(path),
         spec.duration,
-        spec.notes.len()
+        spec.notes.len(),
+        terminal_safe(source)
     ))
 }
 
@@ -1870,7 +1901,7 @@ fn plot_report(
     if width < 2 || height < 2 || xmax <= xmin {
         return Err("need width >= 2, height >= 2, and xmax > xmin\n".to_string());
     }
-    let expr = numinous_core::parse(source)?;
+    let expr = numinous_core::parse(source).map_err(|error| terminal_safe(&error))?;
     let samples: Vec<(f64, f64)> = (0..width)
         .map(|i| {
             let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
@@ -1903,7 +1934,8 @@ fn plot_report(
         previous = Some((sx, sy));
     }
     Ok(format!(
-        "y = {source}    x in [{xmin:.3}, {xmax:.3}]    y in [{ymin:.3}, {ymax:.3}]\n\n{}",
+        "y = {}    x in [{xmin:.3}, {xmax:.3}]    y in [{ymin:.3}, {ymax:.3}]\n\n{}",
+        terminal_safe(source),
         canvas.to_text()
     ))
 }
@@ -1920,7 +1952,7 @@ fn save_studio_creation(
     write_create_new(path, creation.to_num_file().as_bytes())?;
     Ok(format!(
         "saved Studio creation: {}\nlink: {}\n",
-        path.display(),
+        terminal_safe_path(path),
         creation.to_link()
     ))
 }
@@ -1934,7 +1966,7 @@ fn load_studio_creation(input: &str) -> Result<numinous_core::StudioCreation, St
     let file = File::open(path).map_err(|e| {
         format!(
             "could not read Studio .num file '{}': {e}\n",
-            path.display()
+            terminal_safe_path(path)
         )
     })?;
     if file
@@ -1952,7 +1984,7 @@ fn load_studio_creation(input: &str) -> Result<numinous_core::StudioCreation, St
         .map_err(|e| {
             format!(
                 "could not read Studio .num file '{}': {e}\n",
-                path.display()
+                terminal_safe_path(path)
             )
         })?;
     if text.len() as u64 > MAX_STUDIO_IMPORT_BYTES {
@@ -1976,7 +2008,7 @@ fn open_studio_report(input: &str, width: usize, height: usize) -> Result<String
     )?;
     Ok(format!(
         "Studio creation\nexpr={}\nxmin={}\nxmax={}\na={}\nlink={}\n\n{}",
-        creation.source(),
+        terminal_safe(creation.source()),
         creation.xmin(),
         creation.xmax(),
         creation.a(),
@@ -1999,12 +2031,14 @@ fn write_create_new(path: &Path, bytes: &[u8]) -> Result<(), String> {
                 .write(true)
                 .create_new(true)
                 .open(&temp)
-                .map_err(|err| format!("could not create {}: {err}\n", temp.display()))?;
+                .map_err(|err| {
+                    format!("could not create {}: {err}\n", terminal_safe_path(&temp))
+                })?;
             created_temp = true;
             file.write_all(bytes)
-                .map_err(|err| format!("could not write {}: {err}\n", temp.display()))?;
+                .map_err(|err| format!("could not write {}: {err}\n", terminal_safe_path(&temp)))?;
             file.flush()
-                .map_err(|err| format!("could not flush {}: {err}\n", temp.display()))
+                .map_err(|err| format!("could not flush {}: {err}\n", terminal_safe_path(&temp)))
         })();
         if let Err(message) = write_result {
             if created_temp {
@@ -2023,14 +2057,17 @@ fn write_create_new(path: &Path, bytes: &[u8]) -> Result<(), String> {
                 if path.exists() {
                     return Err(format!(
                         "could not create {}: already exists\n",
-                        path.display()
+                        terminal_safe_path(path)
                     ));
                 }
-                last_error = Some(format!("could not create {}: {err}\n", path.display()));
+                last_error = Some(format!(
+                    "could not create {}: {err}\n",
+                    terminal_safe_path(path)
+                ));
             }
         }
     }
-    Err(last_error.unwrap_or_else(|| format!("could not create {}\n", path.display())))
+    Err(last_error.unwrap_or_else(|| format!("could not create {}\n", terminal_safe_path(path))))
 }
 
 /// The list of sims and their levers.
@@ -2058,21 +2095,30 @@ fn sims_report() -> String {
 /// Render a sim with the given lever settings and return its picture and readout.
 fn sim_run(id: &str, sets: &[String], width: usize, height: usize) -> Result<String, String> {
     let sim = numinous_core::sim_by_id(id)
-        .ok_or_else(|| format!("no sim named '{id}'. Try: numinous sims\n"))?;
+        .ok_or_else(|| format!("no sim named '{}'. Try: numinous sims\n", terminal_safe(id)))?;
     let meta = sim.meta();
     let mut params = numinous_core::default_params(&meta);
     for entry in sets {
-        let (name, value) = entry
-            .split_once('=')
-            .ok_or_else(|| format!("--set expects name=value, got '{entry}'\n"))?;
+        let (name, value) = entry.split_once('=').ok_or_else(|| {
+            format!(
+                "--set expects name=value, got '{}'.\n",
+                terminal_safe(entry)
+            )
+        })?;
         let index = meta
             .levers
             .iter()
             .position(|l| l.name == name)
-            .ok_or_else(|| format!("'{id}' has no lever '{name}'. Try: numinous sims\n"))?;
+            .ok_or_else(|| {
+                format!(
+                    "'{}' has no lever '{}'. Try: numinous sims\n",
+                    terminal_safe(id),
+                    terminal_safe(name)
+                )
+            })?;
         params[index] = value
             .parse()
-            .map_err(|_| format!("'{value}' is not a number\n"))?;
+            .map_err(|_| format!("'{}' is not a number\n", terminal_safe(value)))?;
     }
     let mut canvas = Canvas::new(width, height);
     sim.render(&mut canvas, &params);
@@ -2552,7 +2598,7 @@ fn render_png(
     write_png(path, &raster)?;
     let mut report = format!(
         "wrote {} ({}x{})\n",
-        path.display(),
+        terminal_safe_path(path),
         raster.width(),
         raster.height()
     );
@@ -2563,8 +2609,8 @@ fn render_png(
 /// Encode a raster as an RGBA PNG at `path`.
 fn write_png(path: &Path, raster: &Raster) -> Result<(), String> {
     let (w, h) = (raster.width(), raster.height());
-    let file =
-        File::create(path).map_err(|e| format!("could not create {}: {e}", path.display()))?;
+    let file = File::create(path)
+        .map_err(|e| format!("could not create {}: {e}", terminal_safe_path(path)))?;
     let mut encoder = png::Encoder::new(BufWriter::new(file), w as u32, h as u32);
     encoder.set_color(png::ColorType::Rgba);
     encoder.set_depth(png::BitDepth::Eight);
@@ -2581,6 +2627,20 @@ fn write_png(path: &Path, raster: &Raster) -> Result<(), String> {
 const LOOP_FRAMES: u32 = 24;
 const LOOP_DELAY_NUM: u16 = 1;
 const LOOP_DELAY_DEN: u16 = 12;
+const MAX_APNG_FRAME_BYTES: usize = 64 * 1024 * 1024;
+
+fn apng_frame_bytes(width: usize, height: usize) -> Result<usize, String> {
+    let bytes = width
+        .checked_mul(height)
+        .and_then(|pixels| pixels.checked_mul(4))
+        .ok_or_else(|| "APNG frame dimensions overflow the allocation size.".to_string())?;
+    if bytes > MAX_APNG_FRAME_BYTES {
+        return Err(format!(
+            "APNG frame needs {bytes} bytes; the limit is {MAX_APNG_FRAME_BYTES}."
+        ));
+    }
+    Ok(bytes)
+}
 
 /// Export one phase cycle as a looping APNG, sharing poke/gesture history.
 #[allow(clippy::too_many_arguments)]
@@ -2595,8 +2655,8 @@ fn render_loop_apng(
 ) -> Result<String, String> {
     let room = find_room_with_variation(id, allow_hidden, input.variation)
         .ok_or_else(|| not_found_message(id))?;
-    let mut frames = Vec::with_capacity(LOOP_FRAMES as usize);
-    for index in 0..LOOP_FRAMES {
+    let expected_frame_bytes = apng_frame_bytes(size, size)?;
+    let frames = (0..LOOP_FRAMES).map(|index| {
         let t = start_t + f64::from(index) / f64::from(LOOP_FRAMES);
         let mut raster = Raster::with_accent(size, size, room.meta().accent);
         if !input.gesture.is_empty() {
@@ -2611,12 +2671,18 @@ fn render_loop_apng(
         if era != numinous_core::Era::Modern {
             era.apply(&mut rgba, raster.width(), raster.height());
         }
-        frames.push(rgba);
-    }
-    write_apng(path, size as u32, size as u32, &frames)?;
+        if rgba.len() != expected_frame_bytes {
+            return Err(format!(
+                "APNG frame has {} bytes; expected {expected_frame_bytes}.",
+                rgba.len()
+            ));
+        }
+        Ok(rgba)
+    });
+    write_apng(path, size as u32, size as u32, LOOP_FRAMES, frames)?;
     let mut report = format!(
         "wrote {} ({}x{}, {LOOP_FRAMES} frames, loop)\n",
-        path.display(),
+        terminal_safe_path(path),
         size,
         size
     );
@@ -2625,15 +2691,22 @@ fn render_loop_apng(
 }
 
 /// Encode a square looping APNG (Share v1 short loop).
-fn write_apng(path: &Path, width: u32, height: u32, frames: &[Vec<u8>]) -> Result<(), String> {
-    let file =
-        File::create(path).map_err(|e| format!("could not create {}: {e}", path.display()))?;
+fn write_apng(
+    path: &Path,
+    width: u32,
+    height: u32,
+    frame_count: u32,
+    frames: impl IntoIterator<Item = Result<Vec<u8>, String>>,
+) -> Result<(), String> {
+    let expected_frame_bytes = apng_frame_bytes(width as usize, height as usize)?;
+    let file = File::create(path)
+        .map_err(|e| format!("could not create {}: {e}", terminal_safe_path(path)))?;
     let mut encoder = png::Encoder::new(BufWriter::new(file), width, height);
     encoder.set_color(png::ColorType::Rgba);
     encoder.set_depth(png::BitDepth::Eight);
     encoder.set_compression(png::Compression::Fast);
     encoder
-        .set_animated(frames.len() as u32, 0)
+        .set_animated(frame_count, 0)
         .map_err(|e| format!("apng animation header failed: {e}"))?;
     encoder
         .set_frame_delay(LOOP_DELAY_NUM, LOOP_DELAY_DEN)
@@ -2644,10 +2717,24 @@ fn write_apng(path: &Path, width: u32, height: u32, frames: &[Vec<u8>]) -> Resul
     let mut writer = encoder
         .write_header()
         .map_err(|e| format!("apng header failed: {e}"))?;
+    let mut written = 0_u32;
     for frame in frames {
+        let frame = frame?;
+        if frame.len() != expected_frame_bytes {
+            return Err(format!(
+                "APNG frame has {} bytes; expected {expected_frame_bytes}.",
+                frame.len()
+            ));
+        }
         writer
-            .write_image_data(frame)
+            .write_image_data(&frame)
             .map_err(|e| format!("apng frame write failed: {e}"))?;
+        written += 1;
+    }
+    if written != frame_count {
+        return Err(format!(
+            "APNG frame source produced {written} frames; expected {frame_count}."
+        ));
     }
     writer
         .finish()
@@ -2685,7 +2772,7 @@ fn contact_sheet(path: &Path, cols: usize, tile: usize) -> Result<String, String
     write_png(path, &sheet)?;
     Ok(format!(
         "wrote contact sheet {} ({} rooms, {}x{})\n",
-        path.display(),
+        terminal_safe_path(path),
         rooms.len(),
         cols * tile,
         rows * tile
@@ -2722,7 +2809,7 @@ fn sonify_wav_layer(
             write_wav(path, &spec.render(sample_rate), sample_rate, 1)?;
             let mut report = format!(
                 "wrote {} ({:.1}s, {} notes)\n",
-                path.display(),
+                terminal_safe_path(path),
                 spec.duration,
                 spec.notes.len()
             );
@@ -2748,7 +2835,7 @@ fn sonify_wav_layer(
             write_wav(path, &samples, numinous_core::ROOM_BED_SOURCE_RATE, 2)?;
             Ok(format!(
                 "wrote {} (room bed, {:.2}s, {} events, stereo {} Hz, variation {})\nSignal: peak {:.5}, RMS {:.5}, crest {:.2} dB, balance {:+.2} dB, width {:.2} dB, max step {:.5}\nBoundary: stable pre-master bed only; no parameter voice, device resampling, crossfade, radio, or Studio mix.\n",
-                path.display(),
+                terminal_safe_path(path),
                 arrangement.seconds(),
                 arrangement.notes.len(),
                 numinous_core::ROOM_BED_SOURCE_RATE,
@@ -2779,7 +2866,7 @@ fn write_wav(path: &Path, samples: &[f32], sample_rate: u32, channels: u16) -> R
         sample_format: hound::SampleFormat::Int,
     };
     let mut writer = hound::WavWriter::create(path, wav_spec)
-        .map_err(|e| format!("could not create {}: {e}", path.display()))?;
+        .map_err(|e| format!("could not create {}: {e}", terminal_safe_path(path)))?;
     for &sample in samples {
         writer
             .write_sample(numinous_core::quantize_pcm16(sample))
@@ -2792,7 +2879,8 @@ fn write_wav(path: &Path, samples: &[f32], sample_rate: u32, channels: u16) -> R
 
 /// Render every room to `<dir>/<id>.png`, returning a status message.
 fn gallery(dir: &Path, width: usize, height: usize) -> Result<String, String> {
-    std::fs::create_dir_all(dir).map_err(|e| format!("could not create {}: {e}", dir.display()))?;
+    std::fs::create_dir_all(dir)
+        .map_err(|e| format!("could not create {}: {e}", terminal_safe_path(dir)))?;
     let mut count = 0usize;
     for room in all_rooms() {
         let id = room.meta().id;
@@ -2809,7 +2897,10 @@ fn gallery(dir: &Path, width: usize, height: usize) -> Result<String, String> {
         )?;
         count += 1;
     }
-    Ok(format!("wrote {count} room images to {}\n", dir.display()))
+    Ok(format!(
+        "wrote {count} room images to {}\n",
+        terminal_safe_path(dir)
+    ))
 }
 
 /// Play Crack the Code: defuse a math-clued bomb from stdin guesses.
@@ -4092,7 +4183,8 @@ fn play(
 fn not_found_message(id: &str) -> String {
     let known: Vec<&str> = all_rooms().iter().map(|r| r.meta().id).collect();
     format!(
-        "No room with id '{id}'. Known rooms: {}\n",
+        "No room with id '{}'. Known rooms: {}\n",
+        terminal_safe(id),
         known.join(", ")
     )
 }
@@ -4118,8 +4210,8 @@ mod tests {
     use super::{
         Cli, Command, RoomRenderInput, SonifyLayer, bounded_response_detail, describe_report,
         load_studio_creation, max_track_bytes, meta_json, not_found_message, open_studio_report,
-        parse_poke_arg, parse_pokes, read_bounded, render_report, rooms_report, run,
-        save_studio_creation, validate_pcm_body,
+        parse_gesture_arg, parse_poke_arg, parse_pokes, read_bounded, render_report, rooms_report,
+        run, save_studio_creation, validate_pcm_body,
     };
 
     #[test]
@@ -4438,6 +4530,52 @@ mod tests {
         assert_eq!(exact.len(), 8 * 1024);
         let oversized = bounded_response_detail(std::io::Cursor::new(vec![b'x'; 8 * 1024 + 1]));
         assert_eq!(oversized, "response detail unavailable or oversized");
+    }
+
+    #[test]
+    fn untrusted_diagnostic_values_never_emit_terminal_controls() {
+        let hostile = "probe\u{1b}[31m\u{7}\rname";
+        let unused_wav = std::env::temp_dir().join("numinous_hostile_expression.wav");
+        let diagnostics = [
+            parse_poke_arg(hostile).expect_err("invalid poke"),
+            parse_gesture_arg(hostile).expect_err("invalid gesture"),
+            not_found_message(hostile),
+            super::sim_run(hostile, &[], 40, 20).expect_err("unknown simulation"),
+            load_studio_creation(hostile).expect_err("missing Studio path"),
+            super::plot_report(hostile, -1.0, 1.0, 0.0, 40, 20)
+                .expect_err("invalid plot expression"),
+            super::sing_wav(hostile, -1.0, 1.0, 8, &unused_wav)
+                .expect_err("invalid song expression"),
+        ];
+        for diagnostic in diagnostics {
+            assert!(diagnostic.contains("\\u{1b}"), "{diagnostic:?}");
+            assert!(
+                diagnostic
+                    .chars()
+                    .all(|character| !character.is_control() || character == '\n'),
+                "diagnostic retained a terminal control: {diagnostic:?}"
+            );
+        }
+        assert!(!unused_wav.exists());
+    }
+
+    #[test]
+    fn valid_expression_reports_escape_control_whitespace() {
+        let report = super::plot_report("x\t", -1.0, 1.0, 0.0, 40, 20)
+            .expect("expression with trailing whitespace");
+        assert!(report.contains("y = x\\t"));
+        assert!(
+            report
+                .chars()
+                .all(|character| !character.is_control() || character == '\n')
+        );
+    }
+
+    #[test]
+    fn apng_frame_budget_uses_checked_constant_space() {
+        assert_eq!(super::apng_frame_bytes(4096, 4096), Ok(64 * 1024 * 1024));
+        assert!(super::apng_frame_bytes(4097, 4096).is_err());
+        assert!(super::apng_frame_bytes(usize::MAX, 2).is_err());
     }
 
     #[test]

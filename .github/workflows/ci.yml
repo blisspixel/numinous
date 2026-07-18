@@ -93,9 +93,13 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
       - name: Workspace tests
         run: cargo test --workspace --all-targets --locked
-      - name: Windows installer PATH promotion
+      - name: Windows installer safety
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./scripts/install.ps1 -SelfTest
+      - name: POSIX installer safety
+        if: runner.os != 'Windows'
+        shell: bash
+        run: ./scripts/install.sh --self-test
       - name: Locked build
         run: cargo build --workspace --locked

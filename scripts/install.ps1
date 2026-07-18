@@ -18,12 +18,13 @@
 # Uninstalling never touches play history: ~\.numinous-journey,
 # ~\.numinous-scores, and ~\.numinous-cairn stay yours.
 #
-# Options: -Uninstall, -NoModifyPath, -SelfTest.
+# Options: -Uninstall, -NoModifyPath, -AdoptLegacy, -SelfTest.
 # Set NUMINOUS_HOME to install somewhere other than ~\.numinous.
 [CmdletBinding()]
 param(
     [switch]$Uninstall,
     [switch]$NoModifyPath,
+    [switch]$AdoptLegacy,
     [switch]$SelfTest
 )
 
@@ -44,12 +45,28 @@ $RequestedNuminousHome = if ($SelfTest) {
 }
 $Binaries = @('numinous.exe', 'numinous-app.exe', 'numinous-mcp.exe')
 $InstallMarkerName = '.numinous-install-root'
-$InstallMarkerText = 'Numinous install root'
+$InstallMarkerText = 'Numinous install root v2'
+$LegacyInstallMarkerText = 'Numinous install root'
 
 function Say([string]$Message) { Write-Host $Message }
 function Fail([string]$Message) { throw $Message }
 function Have([string]$Name) {
     return [bool](Get-Command $Name -CommandType Application -ErrorAction SilentlyContinue)
+}
+
+function Assert-NoReparseAncestor([string]$Path) {
+    $current = $Path
+    while (-not [string]::IsNullOrEmpty($current)) {
+        if (Test-Path -LiteralPath $current) {
+            $item = Get-Item -LiteralPath $current -Force
+            if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                Fail "NUMINOUS_HOME must not pass through a reparse point: $current"
+            }
+        }
+        $parent = Split-Path -Parent $current
+        if ([string]::IsNullOrEmpty($parent) -or $parent -eq $current) { break }
+        $current = $parent
+    }
 }
 
 function Resolve-InstallRoot([string]$Path, [string]$HomePath) {
@@ -79,10 +96,7 @@ function Resolve-InstallRoot([string]$Path, [string]$HomePath) {
     if (-not (Test-Path -LiteralPath $parent -PathType Container)) {
         Fail 'the parent directory of NUMINOUS_HOME must already exist.'
     }
-    $parentItem = Get-Item -LiteralPath $parent -Force
-    if ($parentItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
-        Fail 'the parent directory of NUMINOUS_HOME must not be a reparse point.'
-    }
+    Assert-NoReparseAncestor $full
     if (Test-Path -LiteralPath $full) {
         $item = Get-Item -LiteralPath $full -Force
         if (-not $item.PSIsContainer) {
@@ -131,16 +145,163 @@ function Test-DirectoryEmpty([string]$Path) {
     return @(Get-ChildItem -LiteralPath $Path -Force).Count -eq 0
 }
 
+function Protect-InstallDirectory([string]$Path) {
+    $acl = New-Object Security.AccessControl.DirectorySecurity
+    $acl.SetAccessRuleProtection($true, $false)
+    $inheritance = [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor `
+        [Security.AccessControl.InheritanceFlags]::ObjectInherit
+    $propagation = [Security.AccessControl.PropagationFlags]::None
+    $allow = [Security.AccessControl.AccessControlType]::Allow
+    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent().User
+    $system = New-Object Security.Principal.SecurityIdentifier('S-1-5-18')
+    foreach ($identity in @($currentUser, $system)) {
+        $rule = New-Object Security.AccessControl.FileSystemAccessRule(
+            $identity,
+            [Security.AccessControl.FileSystemRights]::FullControl,
+            $inheritance,
+            $propagation,
+            $allow)
+        [void]$acl.AddAccessRule($rule)
+    }
+    $acl.SetOwner($currentUser)
+    Set-Acl -LiteralPath $Path -AclObject $acl
+}
+
+function Complete-StagedFile([string]$Stage, [string]$Destination) {
+    $backup = Join-Path (Split-Path -Parent $Destination) `
+        ('.numinous-' + [Guid]::NewGuid().ToString('N') + '.old')
+    try {
+        $item = Get-Item -LiteralPath $Destination -Force -ErrorAction SilentlyContinue
+        if ($null -eq $item) {
+            [IO.File]::Move($Stage, $Destination)
+            return
+        }
+        if ($item.PSIsContainer -or
+            ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            Fail "refusing an unsafe file destination: $Destination"
+        }
+        [IO.File]::Replace($Stage, $Destination, $backup, $true)
+        Remove-Item -LiteralPath $backup -Force
+    } finally {
+        Remove-Item -LiteralPath $Stage -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $backup -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Publish-Bytes([byte[]]$Bytes, [string]$Destination) {
+    $directory = Split-Path -Parent $Destination
+    $stage = Join-Path $directory ('.numinous-' + [Guid]::NewGuid().ToString('N') + '.tmp')
+    try {
+        $stream = [IO.File]::Open(
+            $stage,
+            [IO.FileMode]::CreateNew,
+            [IO.FileAccess]::Write,
+            [IO.FileShare]::None)
+        try {
+            $stream.Write($Bytes, 0, $Bytes.Length)
+            $stream.Flush($true)
+        } finally {
+            $stream.Dispose()
+        }
+        Complete-StagedFile $stage $Destination
+    } finally {
+        Remove-Item -LiteralPath $stage -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Publish-File([string]$Source, [string]$Destination) {
+    $directory = Split-Path -Parent $Destination
+    $stage = Join-Path $directory ('.numinous-' + [Guid]::NewGuid().ToString('N') + '.tmp')
+    try {
+        $sourceStream = [IO.File]::Open(
+            $Source,
+            [IO.FileMode]::Open,
+            [IO.FileAccess]::Read,
+            [IO.FileShare]::Read)
+        try {
+            $destinationStream = [IO.File]::Open(
+                $stage,
+                [IO.FileMode]::CreateNew,
+                [IO.FileAccess]::Write,
+                [IO.FileShare]::None)
+            try {
+                $sourceStream.CopyTo($destinationStream)
+                $destinationStream.Flush($true)
+            } finally {
+                $destinationStream.Dispose()
+            }
+        } finally {
+            $sourceStream.Dispose()
+        }
+        Complete-StagedFile $stage $Destination
+    } finally {
+        Remove-Item -LiteralPath $stage -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Test-FailedPublicationCleanup([string]$Directory) {
+    $source = Join-Path $Directory 'cleanup-source.bin'
+    $destination = Join-Path $Directory 'failed-publication.bin'
+    [IO.File]::WriteAllText($source, 'source')
+    New-Item -ItemType Directory -Path $destination | Out-Null
+    $rejected = $false
+    try { Publish-File $source $destination } catch { $rejected = $true }
+    if (-not $rejected) {
+        Fail 'publication self-test: an unsafe destination was unexpectedly published.'
+    }
+    if (-not (Test-Path -LiteralPath $destination -PathType Container) -or
+        @(Get-ChildItem -LiteralPath $Directory -Filter '.numinous-*.tmp' -Force).Count -ne 0) {
+        Fail 'publication self-test: failed publication left staged state.'
+    }
+}
+
+function Protect-InstallMarkerPayload([string]$Root) {
+    Add-Type -AssemblyName System.Security
+    $encoding = New-Object Text.UTF8Encoding($false)
+    $rootBytes = $encoding.GetBytes([IO.Path]::GetFullPath($Root))
+    $entropy = $encoding.GetBytes($InstallMarkerText)
+    $protected = [Security.Cryptography.ProtectedData]::Protect(
+        $rootBytes,
+        $entropy,
+        [Security.Cryptography.DataProtectionScope]::CurrentUser)
+    return [Convert]::ToBase64String($protected)
+}
+
+function Test-LegacyInstallMarker([string]$Root) {
+    $marker = Join-Path $Root $InstallMarkerName
+    if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) { return $false }
+    $item = Get-Item -LiteralPath $marker -Force
+    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.Length -gt 64) {
+        return $false
+    }
+    $content = [IO.File]::ReadAllText($marker)
+    return $content -ceq $LegacyInstallMarkerText -or
+        $content -ceq "$LegacyInstallMarkerText`n" -or
+        $content -ceq "$LegacyInstallMarkerText`r`n"
+}
+
 function Test-InstallMarker([string]$Root) {
     $marker = Join-Path $Root $InstallMarkerName
     if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) { return $false }
     $item = Get-Item -LiteralPath $marker -Force
     if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { return $false }
-    if ($item.Length -gt 64) { return $false }
-    $content = [IO.File]::ReadAllText($marker)
-    return $content -ceq $InstallMarkerText -or
-        $content -ceq "$InstallMarkerText`n" -or
-        $content -ceq "$InstallMarkerText`r`n"
+    if ($item.Length -gt 4096) { return $false }
+    $lines = @([IO.File]::ReadAllLines($marker))
+    if ($lines.Count -ne 2 -or $lines[0] -cne $InstallMarkerText) { return $false }
+    try {
+        Add-Type -AssemblyName System.Security
+        $encoding = New-Object Text.UTF8Encoding($false)
+        $protected = [Convert]::FromBase64String($lines[1])
+        $entropy = $encoding.GetBytes($InstallMarkerText)
+        $rootBytes = [Security.Cryptography.ProtectedData]::Unprotect(
+            $protected,
+            $entropy,
+            [Security.Cryptography.DataProtectionScope]::CurrentUser)
+        $claimedRoot = $encoding.GetString($rootBytes)
+        return $claimedRoot -ieq [IO.Path]::GetFullPath($Root)
+    } catch {
+        return $false
+    }
 }
 
 function Write-InstallMarker([string]$Root) {
@@ -152,7 +313,8 @@ function Write-InstallMarker([string]$Root) {
         }
     }
     $encoding = New-Object Text.UTF8Encoding($false)
-    [IO.File]::WriteAllText($marker, "$InstallMarkerText`r`n", $encoding)
+    $payload = Protect-InstallMarkerPayload $Root
+    Publish-Bytes ($encoding.GetBytes("$InstallMarkerText`r`n$payload`r`n")) $marker
 }
 
 function Test-LegacyInstallRoot([string]$Root) {
@@ -160,11 +322,16 @@ function Test-LegacyInstallRoot([string]$Root) {
         return $false
     }
     $children = @(Get-ChildItem -LiteralPath $Root -Force)
-    if ($children.Count -ne 2 -or
-        @($children | Where-Object { $_.Name -notin @('src', 'bin') }).Count -ne 0 -or
+    if ($children.Count -lt 2 -or $children.Count -gt 3 -or
+        @($children | Where-Object { $_.Name -notin @('src', 'bin', $InstallMarkerName) }).Count -ne 0 -or
         @($children | Where-Object {
-            -not $_.PSIsContainer -or ($_.Attributes -band [IO.FileAttributes]::ReparsePoint)
+            $_.Name -in @('src', 'bin') -and
+                (-not $_.PSIsContainer -or ($_.Attributes -band [IO.FileAttributes]::ReparsePoint))
         }).Count -ne 0) {
+        return $false
+    }
+    if ((Test-Path -LiteralPath (Join-Path $Root $InstallMarkerName)) -and
+        -not (Test-LegacyInstallMarker $Root)) {
         return $false
     }
     $manifest = Get-Item -LiteralPath (Join-Path $Root 'src\Cargo.toml') -Force -ErrorAction SilentlyContinue
@@ -182,16 +349,31 @@ function Test-LegacyInstallRoot([string]$Root) {
     return $true
 }
 
-function Test-InstallRootClaimable([string]$Root) {
+function Test-InstallRootClaimable(
+    [string]$Root,
+    [string]$DefaultRoot = (Join-Path $HOME '.numinous'),
+    [bool]$AllowLegacy = $false
+) {
     return (Test-InstallMarker $Root) -or
         (Test-DirectoryEmpty $Root) -or
-        (Test-LegacyInstallRoot $Root)
+        ($AllowLegacy -and
+            [IO.Path]::GetFullPath($Root) -ieq [IO.Path]::GetFullPath($DefaultRoot) -and
+            (Test-LegacyInstallRoot $Root))
 }
 
-function Initialize-InstallRoot([string]$Root = $NuminousHome) {
+function Initialize-InstallRoot(
+    [string]$Root = $NuminousHome,
+    [string]$DefaultRoot = (Join-Path $HOME '.numinous'),
+    [bool]$AllowLegacy = [bool]$AdoptLegacy
+) {
     $Root = Resolve-InstallRoot $Root $HOME
     if (Test-Path -LiteralPath $Root) {
-        if (-not (Test-InstallRootClaimable $Root)) {
+        $isLegacy = [IO.Path]::GetFullPath($Root) -ieq [IO.Path]::GetFullPath($DefaultRoot) -and
+            (Test-LegacyInstallRoot $Root)
+        if ($isLegacy -and -not $AllowLegacy) {
+            Fail 'a legacy default install needs explicit -AdoptLegacy consent before migration.'
+        }
+        if (-not (Test-InstallRootClaimable $Root $DefaultRoot $AllowLegacy)) {
             Fail 'NUMINOUS_HOME exists but is not a marked Numinous install root.'
         }
     } else {
@@ -201,18 +383,27 @@ function Initialize-InstallRoot([string]$Root = $NuminousHome) {
     if ($rechecked -ine $Root) {
         Fail 'NUMINOUS_HOME changed while the installer was starting.'
     }
-    if (-not (Test-InstallRootClaimable $Root)) {
+    if (-not (Test-InstallRootClaimable $Root $DefaultRoot $AllowLegacy)) {
         Fail 'NUMINOUS_HOME contents changed while the installer was starting.'
     }
+    Protect-InstallDirectory $Root
     Write-InstallMarker $Root
 }
 
-function Remove-ValidatedInstallRoot([string]$Root) {
+function Remove-ValidatedInstallRoot(
+    [string]$Root,
+    [string]$DefaultRoot = (Join-Path $HOME '.numinous'),
+    [bool]$AllowLegacy = [bool]$AdoptLegacy
+) {
     $resolved = Resolve-InstallRoot $Root $HOME
     if (-not (Test-Path -LiteralPath $resolved)) { return }
     $marked = Test-InstallMarker $resolved
-    $legacy = Test-LegacyInstallRoot $resolved
-    if (-not $marked -and -not $legacy) {
+    $isDefault = $resolved -ieq [IO.Path]::GetFullPath($DefaultRoot)
+    $legacy = $isDefault -and (Test-LegacyInstallRoot $resolved)
+    if ($legacy -and -not $AllowLegacy) {
+        Fail 'a legacy default install needs explicit -AdoptLegacy consent before removal.'
+    }
+    if (-not $marked -and -not ($legacy -and $AllowLegacy)) {
         Fail "refusing to remove an unmarked install root: $resolved"
     }
     $rechecked = Resolve-InstallRoot $resolved $HOME
@@ -227,6 +418,8 @@ function Remove-ValidatedInstallRoot([string]$Root) {
     }
     Remove-DirectoryOrJunction (Join-Path $resolved 'src')
     Remove-DirectoryOrJunction (Join-Path $resolved 'bin')
+    Remove-Item -LiteralPath (Join-Path $resolved $InstallMarkerName) `
+        -Force -ErrorAction SilentlyContinue
     if (-not (Test-DirectoryEmpty $resolved)) {
         Fail 'the legacy install root gained unexpected contents during uninstall.'
     }
@@ -329,11 +522,20 @@ function Test-InstallerSafety {
         foreach ($binary in $Binaries) {
             Set-Content -LiteralPath (Join-Path $legacy "bin\$binary") -Value 'binary'
         }
-        if (-not (Test-InstallRootClaimable $legacy)) {
-            Fail 'root self-test: the exact legacy install shape could not migrate.'
+        [IO.File]::WriteAllText(
+            (Join-Path $legacy $InstallMarkerName),
+            "$LegacyInstallMarkerText`r`n")
+        if (Test-InstallRootClaimable $legacy) {
+            Fail 'root self-test: a custom legacy install was accepted without user-bound identity.'
+        }
+        if (Test-InstallRootClaimable $legacy $legacy) {
+            Fail 'root self-test: a legacy default install migrated without explicit consent.'
+        }
+        if (-not (Test-InstallRootClaimable $legacy $legacy $true)) {
+            Fail 'root self-test: the exact default legacy install shape could not migrate.'
         }
         Set-Content -LiteralPath (Join-Path $legacy 'unexpected.txt') -Value 'keep'
-        if (Test-InstallRootClaimable $legacy) {
+        if (Test-InstallRootClaimable $legacy $legacy $true) {
             Fail 'root self-test: a legacy root with unexpected contents was accepted.'
         }
         Remove-Item -LiteralPath (Join-Path $legacy 'unexpected.txt') -Force
@@ -342,7 +544,7 @@ function Test-InstallerSafety {
         if (-not $rejectedArbitrary) {
             Fail 'root self-test: arbitrary nonempty contents were accepted.'
         }
-        Initialize-InstallRoot $legacy
+        Initialize-InstallRoot $legacy $legacy $true
         if (-not (Test-InstallMarker $legacy)) {
             Fail 'root self-test: the legacy install was not marked during migration.'
         }
@@ -354,10 +556,63 @@ function Test-InstallerSafety {
         foreach ($binary in $Binaries) {
             Set-Content -LiteralPath (Join-Path $legacyUninstall "bin\$binary") -Value 'binary'
         }
-        Remove-ValidatedInstallRoot $legacyUninstall
+        [IO.File]::WriteAllText(
+            (Join-Path $legacyUninstall $InstallMarkerName),
+            "$LegacyInstallMarkerText`r`n")
+        $rejectedLegacyWithoutConsent = $false
+        try {
+            Remove-ValidatedInstallRoot $legacyUninstall $legacyUninstall
+        } catch {
+            $rejectedLegacyWithoutConsent = $true
+        }
+        if (-not $rejectedLegacyWithoutConsent -or -not (Test-Path -LiteralPath $legacyUninstall)) {
+            Fail 'uninstall self-test: a legacy default install was removed without explicit consent.'
+        }
+        Remove-ValidatedInstallRoot $legacyUninstall $legacyUninstall $true
         if (Test-Path -LiteralPath $legacyUninstall) {
             Fail 'uninstall self-test: the exact legacy install was retained.'
         }
+
+        $forged = Join-Path $testBase 'forged-marker'
+        New-Item -ItemType Directory -Path $forged | Out-Null
+        [IO.File]::WriteAllText(
+            (Join-Path $forged $InstallMarkerName),
+            "$LegacyInstallMarkerText`r`n")
+        Set-Content -LiteralPath (Join-Path $forged 'keep.txt') -Value 'keep'
+        $rejectedForged = $false
+        try { Remove-ValidatedInstallRoot $forged $forged } catch { $rejectedForged = $true }
+        if (-not $rejectedForged -or -not (Test-Path -LiteralPath $forged)) {
+            Fail 'uninstall self-test: a forged public marker authorized default-root removal.'
+        }
+
+        $ancestorTarget = Join-Path $testBase 'ancestor-target'
+        New-Item -ItemType Directory -Path (Join-Path $ancestorTarget 'parent') -Force | Out-Null
+        $ancestorLink = Join-Path $testBase 'ancestor-link'
+        New-Item -ItemType Junction -Path $ancestorLink -Target $ancestorTarget | Out-Null
+        $rejectedAncestor = $false
+        try {
+            [void](Resolve-InstallRoot (Join-Path $ancestorLink 'parent\root') $HOME)
+        } catch {
+            $rejectedAncestor = $true
+        }
+        if (-not $rejectedAncestor) {
+            Fail 'root self-test: an older ancestor junction was accepted.'
+        }
+
+        $publication = Join-Path $testBase 'publication'
+        New-Item -ItemType Directory -Path $publication | Out-Null
+        $victim = Join-Path $publication 'victim.bin'
+        $destination = Join-Path $publication 'numinous.exe'
+        $replacement = Join-Path $publication 'replacement.bin'
+        [IO.File]::WriteAllText($victim, 'victim-before')
+        New-Item -ItemType HardLink -Path $destination -Target $victim | Out-Null
+        [IO.File]::WriteAllText($replacement, 'replacement-binary')
+        Publish-File $replacement $destination
+        if ([IO.File]::ReadAllText($victim) -cne 'victim-before' -or
+            [IO.File]::ReadAllText($destination) -cne 'replacement-binary') {
+            Fail 'publication self-test: binary replacement wrote through an existing hardlink.'
+        }
+        Test-FailedPublicationCleanup $publication
 
         $marked = Join-Path $testBase 'marked'
         New-Item -ItemType Directory -Path $marked | Out-Null
@@ -575,10 +830,11 @@ function Build-Numinous {
 
 function Install-Binaries {
     New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
+    Protect-InstallDirectory $BinDir
     foreach ($binary in $Binaries) {
         $from = Join-Path $SrcDir "target\release\$binary"
         try {
-            Copy-Item $from (Join-Path $BinDir $binary) -Force
+            Publish-File $from (Join-Path $BinDir $binary)
         } catch {
             Fail "could not replace $binary; close any running Numinous windows and re-run."
         }

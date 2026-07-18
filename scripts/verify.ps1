@@ -50,6 +50,7 @@ if ($null -ne (Get-Command cargo-audit -ErrorAction SilentlyContinue)) {
 }
 
 Step "house-style" { powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1 }
+Step "Windows installer safety" { powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTest }
 
 Step "regenerate 2,909-screen app QA matrix" { cargo run -q -p numinous-app --example screens }
 Step "regenerate gallery into renders\" { cargo run -q --bin numinous -- gallery --dir renders --width 600 --height 600 }
