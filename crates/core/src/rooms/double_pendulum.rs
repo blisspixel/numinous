@@ -1,10 +1,10 @@
 //! The double pendulum: two hinges, and physics gives up on prediction.
 //!
-//! One pendulum hanging from another. The equations are exact, the motion is
-//! deterministic, and it still cannot be forecast, because any error in the
-//! starting angle grows exponentially. A shadow pendulum started a breath away
-//! rides along to show the divergence happen. `t` runs the clock. See the Full
-//! Map in `docs/ROOMS.md`.
+//! One pendulum hanging from another. The motion follows a deterministic
+//! numerical integration of the standard equations, yet nearby starts can
+//! separate rapidly. A shadow pendulum started a breath away rides along to
+//! show that sensitive dependence. `t` runs the clock. See the Full Map in
+//! `docs/ROOMS.md`.
 
 mod release_sound;
 
@@ -44,8 +44,8 @@ fn finite_gesture_point(point: (f64, f64, f64)) -> bool {
     point.0.is_finite() && point.1.is_finite() && point.2.is_finite()
 }
 
-/// One Euler step of the standard equal-mass, equal-length double pendulum.
-fn step(s: State) -> State {
+/// Time derivative for the standard equal-mass, equal-length double pendulum.
+fn derivative(s: State) -> State {
     let delta = s.t1 - s.t2;
     let den = 3.0 - (2.0 * delta).cos();
     let a1 = (-3.0 * G * s.t1.sin()
@@ -57,11 +57,38 @@ fn step(s: State) -> State {
         * (2.0 * s.w1 * s.w1 + 2.0 * G * s.t1.cos() + s.w2 * s.w2 * delta.cos()))
         / den;
     State {
-        t1: s.t1 + s.w1 * DT,
-        t2: s.t2 + s.w2 * DT,
-        w1: s.w1 + a1 * DT,
-        w2: s.w2 + a2 * DT,
+        t1: s.w1,
+        t2: s.w2,
+        w1: a1,
+        w2: a2,
     }
+}
+
+fn add_scaled(state: State, delta: State, scale: f64) -> State {
+    State {
+        t1: state.t1 + delta.t1 * scale,
+        t2: state.t2 + delta.t2 * scale,
+        w1: state.w1 + delta.w1 * scale,
+        w2: state.w2 + delta.w2 * scale,
+    }
+}
+
+/// One classical fourth-order Runge-Kutta step.
+fn step_with_dt(state: State, dt: f64) -> State {
+    let k1 = derivative(state);
+    let k2 = derivative(add_scaled(state, k1, dt * 0.5));
+    let k3 = derivative(add_scaled(state, k2, dt * 0.5));
+    let k4 = derivative(add_scaled(state, k3, dt));
+    State {
+        t1: state.t1 + dt * (k1.t1 + 2.0 * k2.t1 + 2.0 * k3.t1 + k4.t1) / 6.0,
+        t2: state.t2 + dt * (k1.t2 + 2.0 * k2.t2 + 2.0 * k3.t2 + k4.t2) / 6.0,
+        w1: state.w1 + dt * (k1.w1 + 2.0 * k2.w1 + 2.0 * k3.w1 + k4.w1) / 6.0,
+        w2: state.w2 + dt * (k1.w2 + 2.0 * k2.w2 + 2.0 * k3.w2 + k4.w2) / 6.0,
+    }
+}
+
+fn step(state: State) -> State {
+    step_with_dt(state, DT)
 }
 
 /// Integrate from the standard drop for `steps`, recording the tip path.
@@ -403,8 +430,8 @@ impl Room for DoublePendulum {
             id: "double-pendulum",
             title: "Double Pendulum",
             wing: "Chaos & Order",
-            blurb: "One pendulum hanging from another. Exact equations, deterministic motion, and \
-                    still unforecastable: a shadow twin a breath away peels off before your eyes.",
+            blurb: "One pendulum hanging from another. A deterministic integration shows how a \
+                    shadow twin a breath away can peel off before your eyes.",
             accent: [255, 110, 110],
         }
     }
@@ -443,7 +470,7 @@ impl Room for DoublePendulum {
             root: 123.47,
             tempo: 88,
             line: &[0, 7, 1, 8, 2, 9, 3, 10],
-            encodes: "two coupled swings sliding out of phase: deterministic, unforecastable",
+            encodes: "two coupled swings sliding out of phase: nearby deterministic starts separate",
         })
     }
 
@@ -510,21 +537,23 @@ impl Room for DoublePendulum {
     }
 
     fn reveal(&self) -> &'static str {
-        "Both pendulums obey the same exact equations; nothing here is random. \
+        "Both pendulums follow the same deterministic numerical model; nothing \
+         here is random. \
          The shadow started one ten-thousandth of a radian away and ended \
          somewhere else entirely. Determinism and predictability are different \
-         things, and this is the cheapest machine that proves it."
+         things, and this machine lets you watch that distinction unfold."
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {
         &[
-            "The error between the twins grows exponentially, and the growth rate \
-             has a name, the Lyapunov exponent. Its inverse tells you how far \
-             ahead any forecast can possibly see. For weather, that horizon is \
-             about two weeks, and no computer will ever move it much.",
-            "There is no closed-form solution to this system and there never will \
-             be: it was proven nonintegrable. Every double pendulum you have ever \
-             seen simulated was computed step by tiny step, like this one.",
+            "Nearby trajectories can separate at an approximately exponential \
+             rate over a finite interval. Lyapunov exponents quantify that local \
+             sensitivity, while a useful forecast horizon also depends on the \
+             starting uncertainty and the model.",
+            "The standard double pendulum is nonintegrable in the usual analytic \
+             sense, so general motion is studied with numerical integration. This \
+             room uses bounded fourth-order Runge-Kutta steps and checks their \
+             energy and refinement error.",
         ]
     }
 
@@ -561,6 +590,64 @@ mod tests {
         let (joint, tip) = arm_points(state);
         assert!((joint.0.hypot(joint.1) - 1.0).abs() < 1e-12);
         assert!(((tip.0 - joint.0).hypot(tip.1 - joint.1) - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn rk4_energy_and_refinement_hold_across_declared_starts() {
+        fn energy(state: State) -> f64 {
+            state.w1 * state.w1
+                + 0.5 * state.w2 * state.w2
+                + state.w1 * state.w2 * (state.t1 - state.t2).cos()
+                - 2.0 * super::G * state.t1.cos()
+                - super::G * state.t2.cos()
+        }
+
+        fn integrate(mut state: State, dt: f64, steps: usize) -> State {
+            for _ in 0..steps {
+                state = super::step_with_dt(state, dt);
+            }
+            state
+        }
+
+        let starts = [
+            State {
+                t1: 2.0,
+                t2: 2.0,
+                w1: 0.0,
+                w2: 0.0,
+            },
+            State {
+                t1: 2.3,
+                t2: 1.8,
+                w1: 0.7,
+                w2: -0.4,
+            },
+            State {
+                t1: -1.7,
+                t2: 2.2,
+                w1: -0.5,
+                w2: 0.9,
+            },
+        ];
+
+        for initial in starts {
+            let coarse = integrate(initial, super::DT, 6_000);
+            let scale = energy(initial).abs().max(1.0);
+            let relative_drift = (energy(coarse) - energy(initial)).abs() / scale;
+            assert!(
+                relative_drift < 1e-6,
+                "relative energy drift {relative_drift} exceeds the physical oracle"
+            );
+            let coarse_early = integrate(initial, super::DT, 1_000);
+            let refined_early = integrate(initial, super::DT * 0.5, 2_000);
+            let coarse_tip = super::arm_points(coarse_early).1;
+            let refined_tip = super::arm_points(refined_early).1;
+            let refinement_gap = (coarse_tip.0 - refined_tip.0).hypot(coarse_tip.1 - refined_tip.1);
+            assert!(
+                refinement_gap < 1e-4,
+                "dt refinement changed the tip by {refinement_gap}"
+            );
+        }
     }
 
     #[test]
@@ -738,6 +825,27 @@ mod tests {
     #[test]
     fn reveal_separates_determinism_from_prediction() {
         assert!(DoublePendulum::new().reveal().contains("predictability"));
+    }
+
+    #[test]
+    fn player_copy_names_the_numerical_model_without_absolute_forecast_claims() {
+        let room = DoublePendulum::new();
+        let copy = format!(
+            "{} {} {} {}",
+            room.meta().blurb,
+            room.motif().expect("motif").encodes,
+            room.reveal(),
+            room.deep_cuts().join(" ")
+        );
+        assert!(copy.contains("numerical"), "got: {copy}");
+        for unsupported in [
+            "exact equations",
+            "unforecastable",
+            "no computer",
+            "proves it",
+        ] {
+            assert!(!copy.contains(unsupported), "found {unsupported:?}: {copy}");
+        }
     }
 
     #[test]

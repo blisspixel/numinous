@@ -425,10 +425,10 @@ impl Room for GameOfLife {
             "Conway bet fifty dollars that no pattern could grow forever. Bill \
              Gosper's glider gun, found in 1970, fires a glider every thirty \
              generations, forever. Conway paid.",
-            "Whether a Life pattern eventually dies is undecidable: no algorithm can \
-             answer it for every pattern, for the same reason no program can decide \
-             whether every other program halts. The toy grid inherits the deepest \
-             limit in computer science.",
+            "On an unbounded Life grid, no algorithm can decide whether every \
+             finite pattern eventually disappears. This room is a finite torus: \
+             it must eventually repeat, so exhaustive state tracking can decide \
+             its fate in principle.",
         ]
     }
 }
@@ -1344,5 +1344,14 @@ mod tests {
     #[test]
     fn reveal_calls_it_a_universe() {
         assert!(GameOfLife::new().reveal().contains("universe"));
+    }
+
+    #[test]
+    fn deep_cut_distinguishes_the_finite_torus_from_unbounded_life() {
+        let text = GameOfLife::new().deep_cuts().join(" ");
+        assert!(text.contains("unbounded"), "got: {text}");
+        assert!(text.contains("finite torus"), "got: {text}");
+        assert!(text.contains("eventually repeat"), "got: {text}");
+        assert!(!text.contains("toy grid inherits"), "got: {text}");
     }
 }
