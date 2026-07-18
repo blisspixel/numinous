@@ -139,6 +139,11 @@ trait Room {
     fn render_poked(&self, surface: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]);
     fn render_input(&self, surface: &mut dyn Surface, t: f64, inputs: &[RoomInput]);
     fn deep_cuts(&self) -> &'static [&'static str];
+    fn goal(&self) -> Option<&'static str>;
+    fn goal_met(&self, t: f64, inputs: &[RoomInput]) -> bool;
+    fn parameter_sound(&self, t: f64, inputs: &[RoomInput]) -> Option<ParametricSound>;
+    fn interaction_stereo(&self, inputs: &[RoomInput], sample_rate: u32) -> Option<Vec<f32>>;
+    fn sound_input(&self, t: f64, inputs: &[RoomInput]) -> SoundSpec;
     fn sound(&self, t: f64) -> SoundSpec;
 }
 ```
@@ -148,8 +153,11 @@ defaults that rooms override as their interaction or voice requires. `Surface`
 is the rendering seam for ASCII and RGBA output. `RoomInput` is bounded,
 normalized, replayable gesture data. `Motif` and `SoundSpec` keep notation and
 audio face-neutral. Seeded registry constructors provide variation without
-ambient randomness. Face-owned Journey, export, window, and protocol concerns
-do not enter the room trait.
+ambient randomness. `parameter_sound` describes a continuous input-controlled
+voice, while `interaction_stereo` optionally renders one bounded discrete
+consequence after a face accepts its newest event. Real-time faces prepare that
+buffer off the callback and own its playback lifetime. Face-owned Journey,
+export, window, and protocol concerns do not enter the room trait.
 
 ### Why this shape
 - Rooms are cheap and isolated: a new phenomenon is one module, no engine changes.
