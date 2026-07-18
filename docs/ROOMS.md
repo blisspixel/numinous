@@ -261,8 +261,10 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 - **Reveal:** *"The coin probability alone does not determine the next landing. With one probability fixed, the number of right turns in a 16-flip landing follows exactly Binomial(16, p), and repeated waves make the empirical pile estimate that discrete distribution. With many rows and a coin away from either extreme, a normal curve can approximate the binomial, the direction formalized by the Central Limit Theorem. This board displays the finite binomial itself."*
 - **Sound:** built now, the five selected coins climb through ordered C
   major-pentatonic roots while the exact larger-to-smaller Bernoulli odds set
-  the two-voice interval. Planned, balls tick on pegs as a rain-stick or bucket
-  drum texture and the pile's growth swells a soft pad.
+  the continuous two-voice interval. The highlighted newest ball also plays its
+  exact sixteen peg decisions as a short panned tick sequence and resolves at
+  its displayed landing bin. A whole-wave percussion field for all 64 balls and
+  a soft pad that follows the growing pile remain planned.
 
 ### 22. Buffon's Needle → π  Wow 4 / Build 1
 - **Rule:** Drop needles on a lined floor. Count how many cross a line.

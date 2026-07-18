@@ -6,6 +6,22 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Galton Board now voices the exact highlighted newest ball as it crosses the
+  board. Each accepted wave renders one deterministic half-second stereo event:
+  16 short C major-pentatonic peg tones encode the same left and right decisions
+  used by the visible trace, equal-power pan follows its board position, and a
+  final tone lands in the displayed bin. The fixed 17-event reduction runs
+  before audio submission, admits native rates from 8 kHz through 192 kHz, and
+  rejects unsupported rates instead of changing duration or pitch. Only a
+  newest finite pointer-down can create the event, so moves, releases, and
+  retained history cannot replay an old drop. Active room-score ownership
+  preserves the event through the normal down, bet-move, and release path
+  without a room ID whitelist; Show, modal, Studio, radio, reset, and room
+  transitions retire it. Core tests bind signal bounds, deterministic wave
+  identity, stereo landing direction, newest-event admission, and rate limits.
+  App tests cover program ownership, normal pointer lifecycle, and Show
+  retirement. Native callback timing, full-wave pile texture, musician
+  judgment, and participant discovery remain open evidence.
 - Formula Jam Random and Auto recipe changes now interpolate the old and new
   mathematical curves through one bounded 600 ms smoothstep while the same
   change requests a 600 ms equal-power audio crossfade. Auto still waits for
@@ -66,8 +82,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   two-note snapshot. Focused tests cover all five coins, no parameter voice
   before a drop, ownership routing, exact ratios, ordered roots, and three-face
   replay parity.
-  Planned peg ticks, pile texture, spatialization, and human listening evidence
-  remain explicitly unclaimed.
+  This continuous layer is distinct from the subsequently shipped newest-ball
+  peg event. Full-wave pile texture and human listening evidence remain
+  explicitly unclaimed.
 - A release-profile App performance harness now measures the five 0.3
   flagships across geometry, chaos, emergence, chance, and creation. It reports
   ambient-raster and accepted-input-to-room-raster p50, p95, and maximum time

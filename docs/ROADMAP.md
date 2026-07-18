@@ -308,8 +308,9 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   accepted input as the empirical pile. Five ordered C major-pentatonic roots
   preserve left-to-right probability, while exact larger-to-smaller odds ratios
   encode bias strength as 7:3, 3:2, 1:1, 3:2, or 7:3. App, CLI, and MCP replay
-  parity is tested through production paths. Peg ticks, pile texture,
-  spatialization, musical judgment, and participant discovery remain open.
+  parity is tested through production paths. Cycle 129 subsequently ships the
+  highlighted newest-ball peg sequence and its stereo path. Full-wave pile
+  texture, musical judgment, and participant discovery remain open.
 - **Done (Double Pendulum gesture sonification, cycle 125):** one shared
   interaction state now drives render, twin-divergence status, and the input
   voice for held, released, cancelled, and compact replay. Five ordered
@@ -348,6 +349,20 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   reference-performance checks pass. Native
   callback timing, reduced-motion preference, participant discovery, and
   musician judgment remain open.
+- **Done (Galton highlighted-path sonification, cycle 129):** each accepted
+  64-ball wave now voices the same deterministic newest-ball trace that the
+  board highlights. Sixteen short C major-pentatonic peg tones encode its exact
+  left and right decisions, equal-power pan follows each destination peg, and
+  one longer tone resolves at the displayed landing bin. The fixed half-second
+  control-thread renderer performs 17 bounded tone additions and accepts 8 kHz
+  through 192 kHz without device-rate retiming. A newest finite pointer-down is
+  required, so later bet motion, release, and retained history cannot retrigger
+  an old wave. Generic room-score ownership preserves the event through the
+  normal pointer lifecycle without a room ID whitelist; Show, modal, Studio,
+  radio, reset, and room transitions retire it. Signal, deterministic identity,
+  pan, rate, ownership, pointer-lifecycle, formatting, Clippy, and flagship
+  performance checks pass. Native callback timing, all-64-ball percussion, a
+  growing-pile pad, participant discovery, and musician judgment remain open.
 - **Done (physics and geometry consequence depth, cycle 120):** Berry Phase,
   Bragg Diffraction, Capillary Meniscus, Sphere Geodesics, and Polarization now
   derive their action status from the same bounded mathematical state used to

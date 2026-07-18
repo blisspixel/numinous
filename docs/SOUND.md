@@ -87,6 +87,20 @@ cancel the pending texture. Mono output devices receive both stereo channels
 through a bounded downmix. These are structural and signal checks, not evidence
 that the texture is pleasant on speakers or headphones.
 
+Galton Board adds one fixed event for the highlighted newest ball in each
+accepted 64-ball wave. The same deterministic 16-edge trace drives both the
+drawn path and 16 short C major-pentatonic peg tones. A right decision shifts
+that row's tick upward, equal-power pan follows the destination peg, and one
+longer tone resolves at the displayed landing bin. The fixed half-second
+renderer performs 17 bounded tone additions before audio submission, rejects
+device rates outside 8 kHz through 192 kHz, and never schedules per-ball work in
+the callback. Only a newest finite pointer-down creates the event. Bet motion
+and release preserve it while the room score owns audio; Show, modal, Studio,
+radio, reset, and room transitions retire it. CLI and MCP continue to expose
+the deterministic selected-coin snapshot, not this App-only stereo event.
+Native callback timing, all-64-ball percussion, a growing-pile pad, and
+musician-led listening remain open.
+
 DSP is implemented locally without `fundsp`. A first shared gain and source
 bus is shipped. Sample-accurate event scheduling, per-Era voices, global
 tuning, richer spatialization, a soft limiter, and independent room, radio,
@@ -162,9 +176,10 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 - **Golden Angle:** each seed plinks; the golden angle yields an evenly-spaced, satisfying rhythm, and detuning the angle makes the rhythm stumble and the tones beat.
 - **Galton Board:** the shipped first layer maps the selected five coins to
   ordered C major-pentatonic roots and exact symmetric bias-odds intervals.
-  Planned layers let balls tick on pegs like a rain-stick or bucket drum and
-  let the growing pile swell a soft pad, so the distribution gains a texture
-  as well as a shape.
+  The shipped second layer follows the exact highlighted newest ball through
+  all sixteen peg decisions as a panned half-second tick sequence and landing
+  tone. A whole-wave percussion field and a soft growing-pile pad remain
+  planned.
 - **Buffon's Needle:** each needle ticks, every line-crossing rings a bell, and the ensemble's pitch bends toward "in tune" as the running estimate converges on pi.
 - **4D Objects:** the fourth-axis rotation drives a Shepard tone, a pitch that seems to rise forever, an *audible* impossible direction to match the visual one.
 - **Sizes of Infinity:** countable sets play as a steady, listable pulse; the uncountable diagonal is a tone that slips endlessly between the notes and never lands.
@@ -174,15 +189,17 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 - **Stereo as default, spatial where it pays.** Position in the field maps to pan; depth (near/far) to level and filtering. Rooms with real depth (hyperbolic space, 4D) can use binaural/HRTF on headphones so the warp has audible space.
 - **The field is an ensemble.** Dense rooms need bounded spatial reductions so
   activity becomes texture instead of an unbounded pile of clicks. Life ships
-  twelve pitch-row centroids; finer onset fields for primes, Life, and Galton
-  remain planned.
+  twelve pitch-row centroids, and Galton ships the exact highlighted path as
+  sixteen panned peg events plus its landing. Finer onset fields for primes,
+  Life, and Galton's full 64-ball wave remain planned.
 
 ## Interaction & UI sound
 
 - **Touch has a voice, partially built.** Times Tables, Galton Board, and Double
   Pendulum ship persistent input-audio paths through the smoothed parameter
-  voice. Life ships one bounded generation-event texture. Tuned event layers
-  and equivalent mathematical voices in other rooms remain planned.
+  voice. Life ships one bounded generation-event texture, and Galton ships one
+  bounded newest-ball peg sequence. Tuned event layers and equivalent
+  mathematical voices in other rooms remain planned.
 - **Transitions are washes.** Room-to-room dissolves carry a reverb wash through black, matching the visual cross-dissolve (see `VISUALS.md`).
 - **Reveal has a resolution.** Summoning a Revelation card lands on a small, satisfying harmonic resolution, the sonic version of the floor tilting.
 

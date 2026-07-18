@@ -215,7 +215,9 @@ real-controller-model sessions, musician-led long-listening review, deeper
 causal interaction in other rooms, and substantial visual and Studio work remain
 ahead. Galton Board now ships the first deeper causal experiment loop: choose a
 fixed coin, add replayable 64-ball waves, compare the empirical pile with its
-exact binomial reference, and reset without phase-driven drift.
+exact binomial reference, and reset without phase-driven drift. Its highlighted
+newest ball also plays the same sixteen peg decisions as a short panned sequence
+that resolves in the displayed landing bin.
 Game of Life now ships the second: one click clears a local patch and plants
 exactly five cells, the App universe advances continuously for the whole visit,
 birth and death consequences remain visible after the old phase boundary, and
