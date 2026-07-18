@@ -438,9 +438,10 @@ fn studio_measurements(config: Config) -> Result<[Measurement; 2], String> {
         raster
     };
     let mut input_probe = baseline.clone();
-    if input_probe.push_text(" + sin(2*x)/2").is_none() {
-        return Err("the fixed Formula Jam edit did not parse".to_string());
+    if input_probe.load_random_recipe().is_none() {
+        return Err("the fixed Formula Jam recipe did not load".to_string());
     }
+    input_probe.advance_morph(studio_panel::RECIPE_MORPH_SECONDS / 2.0);
     ensure_changed(
         "Formula Jam",
         &studio_raster(&baseline),
@@ -452,9 +453,10 @@ fn studio_measurements(config: Config) -> Result<[Measurement; 2], String> {
         || baseline.clone(),
         |mut panel| {
             assert!(
-                panel.push_text(" + sin(2*x)/2").is_some(),
-                "the fixed flagship edit must parse"
+                panel.load_random_recipe().is_some(),
+                "the fixed flagship recipe must load"
             );
+            panel.advance_morph(studio_panel::RECIPE_MORPH_SECONDS / 2.0);
             studio_raster(&panel)
         },
     )?;

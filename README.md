@@ -151,7 +151,13 @@ retaining stale loops. One
 persistent badge names the effective source, master level, and why output is
 silent. Mute and volume are global across rooms, games, pause, radio, and
 Studio, with keyboard and controller routes. Studio owns its formula sound
-until exit, then rejoins a selected station at the live position.
+until exit, then rejoins a selected station at the live position. Formula Jam
+Random and Auto changes now pair one 600 ms mathematical curve morph with an
+equal-power audio crossfade of the same duration. Repeated recipe requests wait
+for that bounded transition. Manual edits and ownership changes immediately
+interrupt the long fade from its current audible mix into the fast default
+response. Presentation time keeps the visual morph synchronized through pause
+and temporary focus loss.
 The separate `JOURNEY LV` label is accumulated local-profile progress, never a
 room difficulty rating. Cult of Pi now opens on the canonical `3.14159...`
 prefix and explains its finite-channel premise through visible faults and
@@ -181,11 +187,11 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 2,794 passing all-target test cases plus one ignored
-screenshot diagnostic, 95.33% region coverage and 95.36% line coverage with an
+The current local gate has 2,812 passing all-target test cases plus one ignored
+screenshot diagnostic, 95.34% region coverage and 95.37% line coverage with an
 enforced 80% line floor, Clippy with warnings denied, and dependency policy
 checks. Release QA also regenerates an exact
-2,909-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
+2,911-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
 room receipts, per-room interaction scenarios, semantic checks, and coarse
 perceptual response thresholds, including a regression that rejects
 four isolated corner markers as a meaningful interaction. The inventory is

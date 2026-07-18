@@ -6,6 +6,30 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Formula Jam Random and Auto recipe changes now interpolate the old and new
+  mathematical curves through one bounded 600 ms smoothstep while the same
+  change requests a 600 ms equal-power audio crossfade. Auto still waits for
+  its established one-eighth phrase edge. Repeated recipe requests wait for
+  the active morph to finish instead of jumping between hidden targets, while
+  typing cancels the visual morph and immediately interrupts the long audio
+  fade through the exact audible mix into the fast default response. Ownership
+  changes use the same bounded interruption. Presentation time continues the
+  visual morph through pause and reconciles elapsed focus-loss time on return.
+  Deferred mixer sources retain their own bounded fade duration without
+  allocation or destruction in the callback. Duplicate prepared sources and
+  superseded pending sources are also retired only after the mixer mutex is
+  released. Temporary parse errors and literal spaces reuse the last-good
+  target, while sound-equivalent edits ramp the existing coefficients to the
+  target without restarting its playhead or duplicating its level.
+  Tests cover exact endpoints,
+  midpoint, completion, hostile elapsed time, manual cancellation, request
+  debounce, equal-power midpoint, duration bounds, pending-source identity,
+  interruption continuity, swell-free same-target rebasing, post-lock
+  retirement, focus
+  reconciliation, and restoration of the default fade. The reference
+  performance path now measures the half-morph
+  curve. Native glitch timing, reduced-motion behavior, musician judgment, and
+  participant discovery remain open evidence.
 - Game of Life now voices each presented B3/S23 generation from the same exact
   birth mask that highlights new cells. Every birth contributes to one of
   twelve fixed C major-pentatonic pitch rows, to that row's horizontal stereo
@@ -80,7 +104,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   consent before migration or removal. Native Linux and macOS CI evidence is
   still required before claiming those runtime paths green.
 - App release QA now derives eight room receipts from all 351 registry entries
-  and validates an exact 2,909-screen inventory instead of a fixed 31-room
+  and validates an exact 2,911-screen inventory instead of a fixed 31-room
   table. Scenarios follow each room's declared interaction verb. The generator
   checks mathematical consequences independently from the App's latest-gesture
   trail and reticle, while a catalog-wide diagnostic aggregates every failure.

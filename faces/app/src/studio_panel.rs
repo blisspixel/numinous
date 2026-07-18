@@ -14,10 +14,16 @@ const DEFAULT_SOURCE: &str = "sin(a*x) + x/3";
 
 /// Target seconds a recipe holds before Auto looks for a phrase boundary.
 pub(crate) const AUTO_DWELL_SECONDS: f64 = 21.0;
+/// Shared visual and audio duration for a curated recipe transition.
+pub(crate) const RECIPE_MORPH_SECONDS: f64 = 0.6;
 /// Phrase grid in gallery phase units: Auto advances only near these edges
 /// after the dwell, so recipe changes land on musical-ish boundaries.
 const AUTO_PHRASE_SLICES: f64 = 8.0;
 const AUTO_PHRASE_EDGE: f64 = 0.06;
+
+fn sound_for_expression(expr: &Expr) -> SoundSpec {
+    numinous_core::to_melody(expr, -TAU, TAU, 32, 1.0)
+}
 
 /// Curated Formula Jam recipes: each must parse and make a melody.
 /// Random discovery draws only from this bank, never free assembly.
@@ -48,6 +54,19 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "EDITING PAUSES AUTO",
 ];
 
+#[derive(Debug, Clone)]
+struct CurveMorph {
+    from: Expr,
+    elapsed: f64,
+}
+
+impl CurveMorph {
+    fn progress(&self) -> f64 {
+        let linear = (self.elapsed / RECIPE_MORPH_SECONDS).clamp(0.0, 1.0);
+        linear * linear * (3.0 - 2.0 * linear)
+    }
+}
+
 /// The app-local Studio panel state.
 #[derive(Debug, Clone)]
 pub struct StudioPanel {
@@ -60,6 +79,8 @@ pub struct StudioPanel {
     auto_active: bool,
     /// Seconds on the current recipe under Auto.
     auto_elapsed: f64,
+    /// Previous valid recipe while a curated transition is visible.
+    morph: Option<CurveMorph>,
     /// Dismissible help overlay; open by default on first Studio entry.
     show_help: bool,
 }
@@ -86,6 +107,7 @@ impl StudioPanel {
             recipe_cursor: 1,
             auto_active: false,
             auto_elapsed: 0.0,
+            morph: None,
             // First contact shows Help once; F1 recalls it after dismiss.
             show_help: true,
         };
@@ -129,12 +151,23 @@ impl StudioPanel {
     /// Load the next curated recipe. Returns a melody when the recipe parses.
     /// Does not pause Auto (bank rotation is the Auto path too).
     pub fn load_random_recipe(&mut self) -> Option<SoundSpec> {
+        if self.morph.is_some() {
+            return None;
+        }
+        let previous = self.expr.clone();
         let len = STUDIO_RECIPES.len() as u64;
         let index = (self.recipe_cursor % len) as usize;
         self.recipe_cursor = self.recipe_cursor.saturating_add(1);
         self.source = STUDIO_RECIPES[index].to_string();
         self.auto_elapsed = 0.0;
-        self.reparse()
+        let spec = self.reparse();
+        if spec.is_some()
+            && let Some(from) = previous
+            && self.expr.as_ref().is_some_and(|current| current != &from)
+        {
+            self.morph = Some(CurveMorph { from, elapsed: 0.0 });
+        }
+        spec
     }
 
     /// Advance Auto when dwell and phrase edge are both ready.
@@ -143,14 +176,14 @@ impl StudioPanel {
     /// the next recipe loads only near an 1/8-phase edge so changes do not cut
     /// mid-gesture. Returns a new melody when a recipe advances.
     pub fn tick_auto(&mut self, dt: f64, phase: f64) -> Option<SoundSpec> {
-        if !self.auto_active {
-            return None;
-        }
         if !(dt.is_finite() && dt > 0.0) {
             return None;
         }
         // App already bounds frame dt; cap runaway values without starving tests.
         let dt = dt.min(AUTO_DWELL_SECONDS);
+        if !self.auto_active {
+            return None;
+        }
         self.auto_elapsed = (self.auto_elapsed + dt).min(AUTO_DWELL_SECONDS * 4.0);
         if self.auto_elapsed < AUTO_DWELL_SECONDS {
             return None;
@@ -169,9 +202,10 @@ impl StudioPanel {
 
     /// Re-parse the Studio text, keeping the last good curve alive on errors.
     pub fn reparse(&mut self) -> Option<SoundSpec> {
+        self.morph = None;
         match numinous_core::parse(&self.source) {
             Ok(expr) => {
-                let spec = numinous_core::to_melody(&expr, -TAU, TAU, 32, 1.0);
+                let spec = sound_for_expression(&expr);
                 self.expr = Some(expr);
                 self.error = None;
                 Some(spec)
@@ -201,11 +235,56 @@ impl StudioPanel {
     }
 
     /// Append a literal space. This preserves the current parse state, matching
-    /// the old event-loop behavior. Editing pauses Auto.
-    pub fn push_space(&mut self) {
+    /// the old event-loop behavior. Editing pauses Auto. Returns whether the
+    /// portable source bound admitted the space.
+    pub fn push_space(&mut self) -> bool {
         if self.can_append(" ") {
             self.pause_auto();
+            self.morph = None;
             self.source.push(' ');
+            return true;
+        }
+        false
+    }
+
+    /// Render the last-good expression into the same deterministic Studio voice.
+    pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
+        self.expr.as_ref().map(sound_for_expression)
+    }
+
+    /// Current UTF-8 byte length, used only to detect an admitted native edit.
+    pub(crate) fn source_len(&self) -> usize {
+        self.source.len()
+    }
+
+    pub(crate) fn advance_morph(&mut self, dt: f64) {
+        if !(dt.is_finite() && dt > 0.0) {
+            return;
+        }
+        let Some(morph) = self.morph.as_mut() else {
+            return;
+        };
+        morph.elapsed = (morph.elapsed + dt).min(RECIPE_MORPH_SECONDS);
+        if morph.elapsed >= RECIPE_MORPH_SECONDS {
+            self.morph = None;
+        }
+    }
+
+    fn curve_value(&self, x: f64, a: f64) -> Option<f64> {
+        let current = self
+            .expr
+            .as_ref()
+            .map(|expr| numinous_core::eval(expr, x, a))
+            .filter(|value| value.is_finite());
+        let Some(morph) = &self.morph else {
+            return current;
+        };
+        let previous =
+            Some(numinous_core::eval(&morph.from, x, a)).filter(|value| value.is_finite());
+        match (previous, current) {
+            (Some(from), Some(to)) => Some(from + (to - from) * morph.progress()),
+            (Some(from), None) => Some(from),
+            (None, current) => current,
         }
     }
 
@@ -270,9 +349,9 @@ impl StudioPanel {
             numinous_core::draw_text(raster, &footer, 10, height as i32 - 11 * scale, scale, '#');
         }
 
-        let Some(expr) = &self.expr else {
+        if self.expr.is_none() {
             return;
-        };
+        }
         if width < 2 {
             return;
         }
@@ -281,7 +360,7 @@ impl StudioPanel {
         let samples: Vec<(usize, f64)> = (0..width)
             .map(|i| {
                 let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
-                (i, numinous_core::eval(expr, x, a))
+                (i, self.curve_value(x, a).unwrap_or(f64::NAN))
             })
             .filter(|(_, y)| y.is_finite())
             .collect();
@@ -319,7 +398,8 @@ impl StudioPanel {
 #[cfg(test)]
 mod tests {
     use super::{
-        AUTO_DWELL_SECONDS, MAX_STUDIO_SOURCE_CHARS, STUDIO_RECIPES, StudioPanel, studio_scale,
+        AUTO_DWELL_SECONDS, MAX_STUDIO_SOURCE_CHARS, RECIPE_MORPH_SECONDS, STUDIO_RECIPES,
+        StudioPanel, studio_scale,
     };
     use crate::input_legend::{self, InputMode};
     use numinous_core::Raster;
@@ -347,7 +427,7 @@ mod tests {
 
     #[test]
     fn draw_handles_tiny_and_mismatched_sizes() {
-        let panel = StudioPanel::new("sin(x)").expect("panel");
+        let mut panel = StudioPanel::new("sin(x)").expect("panel");
         let mut zero = Raster::new(0, 0);
         panel.draw(&mut zero, InputMode::KeyboardMouse, 0, 0, 0.0);
         assert_eq!(zero.lit_count(), 0);
@@ -362,18 +442,36 @@ mod tests {
         let mut mismatched = Raster::new(24, 90);
         panel.draw(&mut mismatched, InputMode::KeyboardMouse, 200, 90, 0.5);
         assert!(mismatched.lit_count() > 0);
+
+        panel.toggle_auto();
+        let mut auto = Raster::new(120, 90);
+        panel.draw(&mut auto, InputMode::KeyboardMouse, 120, 90, 0.5);
+        assert!(auto.lit_count() > 0);
+
+        panel.expr = None;
+        let mut no_expression = Raster::new(120, 90);
+        panel.draw(&mut no_expression, InputMode::KeyboardMouse, 120, 90, 0.5);
+
+        let non_finite = StudioPanel::new("1/0").expect("parseable non-finite expression");
+        let mut no_samples = Raster::new(120, 90);
+        non_finite.draw(&mut no_samples, InputMode::KeyboardMouse, 120, 90, 0.5);
     }
 
     #[test]
     fn editing_operations_update_source_predictably() {
         let mut panel = StudioPanel::new("x").expect("panel");
-        panel.push_space();
+        assert_eq!(panel.source_len(), 1);
+        assert!(panel.push_space());
         assert_eq!(panel.source, "x ");
         assert!(panel.push_text("+ 1").is_some());
         assert_eq!(panel.source, "x + 1");
         assert!(panel.backspace().is_none());
         assert_eq!(panel.source, "x + ");
         assert!(panel.error.is_some());
+        assert!(
+            panel.current_sound().is_some(),
+            "an invalid edit must retain a playable last-good expression"
+        );
     }
 
     #[test]
@@ -390,9 +488,11 @@ mod tests {
         let first = panel.source.clone();
         assert!(panel.load_random_recipe().is_some());
         assert_ne!(panel.source, first);
+        panel.advance_morph(RECIPE_MORPH_SECONDS);
         // Cursor starts at 1 (second recipe); after remaining bank draws, wrap.
         for _ in 1..STUDIO_RECIPES.len() {
             assert!(panel.load_random_recipe().is_some());
+            panel.advance_morph(RECIPE_MORPH_SECONDS);
         }
         assert_eq!(panel.source, STUDIO_RECIPES[0]);
     }
@@ -401,8 +501,13 @@ mod tests {
     fn auto_waits_for_dwell_and_phrase_edge_then_advances() {
         let mut panel = StudioPanel::default();
         let start = panel.source.clone();
+        assert!(panel.tick_auto(1.0, 0.3).is_none(), "Auto is inactive");
         panel.toggle_auto();
         assert!(panel.auto_active());
+        assert!(
+            panel.tick_auto(f64::NAN, 0.3).is_none(),
+            "bad time is inert"
+        );
         // Phase 0.3 sits between 1/8 edges (0.3 * 8 = 2.4).
         assert!(panel.tick_auto(1.0, 0.3).is_none(), "dwell not met");
         assert_eq!(panel.source, start);
@@ -413,9 +518,86 @@ mod tests {
         );
         assert_eq!(panel.source, start);
         // Near a phrase edge after dwell: advance.
-        let advanced = panel.tick_auto(0.1, 0.0);
+        let advanced = panel.tick_auto(0.1, f64::NAN);
         assert!(advanced.is_some(), "phrase edge after dwell advances");
         assert_ne!(panel.source, start);
+        assert!(panel.morph.is_some(), "Auto begins one recipe morph");
+    }
+
+    #[test]
+    fn recipe_morph_interpolates_exact_endpoints_and_finishes_on_time() {
+        let mut panel = StudioPanel::default();
+        let (x, a) = (0.73, 0.41);
+        let old = numinous_core::eval(panel.expr.as_ref().expect("opening expression"), x, a);
+
+        assert!(panel.load_random_recipe().is_some());
+        let new = numinous_core::eval(panel.expr.as_ref().expect("new expression"), x, a);
+        assert!((old - new).abs() > 1.0e-3, "fixture must expose the morph");
+        assert!((panel.curve_value(x, a).expect("morph start") - old).abs() < 1.0e-12);
+
+        panel.advance_morph(RECIPE_MORPH_SECONDS / 2.0);
+        let halfway = panel.curve_value(x, a).expect("halfway morph");
+        assert!((halfway - (old + new) / 2.0).abs() < 1.0e-12);
+
+        panel.advance_morph(RECIPE_MORPH_SECONDS / 2.0);
+        assert!(panel.morph.is_none());
+        assert!((panel.curve_value(x, a).expect("morph end") - new).abs() < 1.0e-12);
+
+        let invalid = numinous_core::parse("1/0").expect("parseable non-finite expression");
+        let valid = panel.expr.clone().expect("valid target expression");
+        panel.morph = Some(super::CurveMorph {
+            from: valid.clone(),
+            elapsed: RECIPE_MORPH_SECONDS / 2.0,
+        });
+        panel.expr = Some(invalid.clone());
+        assert!((panel.curve_value(x, a).expect("finite previous") - new).abs() < 1.0e-12);
+        panel.morph = Some(super::CurveMorph {
+            from: invalid,
+            elapsed: RECIPE_MORPH_SECONDS / 2.0,
+        });
+        panel.expr = Some(valid);
+        assert!((panel.curve_value(x, a).expect("finite current") - new).abs() < 1.0e-12);
+    }
+
+    #[test]
+    fn manual_edit_cancels_recipe_morph_and_invalid_time_cannot_advance_it() {
+        let mut panel = StudioPanel::default();
+        assert!(panel.load_random_recipe().is_some());
+        assert!(panel.morph.is_some());
+
+        panel.advance_morph(f64::NAN);
+        assert_eq!(panel.morph.as_ref().expect("morph remains").elapsed, 0.0);
+
+        assert!(panel.push_text("(").is_none());
+        assert!(panel.morph.is_none());
+        assert!(panel.current_sound().is_some());
+    }
+
+    #[test]
+    fn presentation_time_advances_a_morph_without_advancing_auto() {
+        let mut panel = StudioPanel::default();
+        assert!(panel.load_random_recipe().is_some());
+        let cursor = panel.recipe_cursor;
+
+        panel.advance_morph(RECIPE_MORPH_SECONDS);
+
+        assert!(panel.morph.is_none());
+        panel.advance_morph(0.1);
+        assert_eq!(panel.recipe_cursor, cursor);
+        assert_eq!(panel.auto_elapsed, 0.0);
+    }
+
+    #[test]
+    fn repeated_recipe_request_cannot_jump_an_active_morph() {
+        let mut panel = StudioPanel::default();
+        assert!(panel.load_random_recipe().is_some());
+        let source = panel.source.clone();
+        let cursor = panel.recipe_cursor;
+
+        assert!(panel.load_random_recipe().is_none());
+        assert_eq!(panel.source, source);
+        assert_eq!(panel.recipe_cursor, cursor);
+        assert_eq!(panel.morph.as_ref().expect("morph remains").elapsed, 0.0);
     }
 
     #[test]
@@ -427,6 +609,10 @@ mod tests {
         panel.toggle_help();
         assert!(panel.help_visible());
 
+        panel.toggle_auto();
+        assert!(panel.auto_active());
+        panel.toggle_auto();
+        assert!(!panel.auto_active());
         panel.toggle_auto();
         assert!(panel.auto_active());
         let _ = panel.push_text("+0");
@@ -456,6 +642,8 @@ mod tests {
             panel.source.chars().count(),
             numinous_core::MAX_STUDIO_SOURCE_CHARS
         );
+        panel.source = "x".repeat(numinous_core::MAX_STUDIO_SOURCE_CHARS + 1);
+        assert!(!panel.push_space());
     }
 
     #[test]

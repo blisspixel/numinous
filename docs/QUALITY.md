@@ -8,14 +8,14 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-17
 
-- **Enforced now:** formatting, Clippy with warnings denied, 2,794 passing
+- **Enforced now:** formatting, Clippy with warnings denied, 2,812 passing
   all-target test cases plus one ignored screenshot diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 95.33%
-  regions and 95.36% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 95.34%
+  regions and 95.37% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
-  three faces, and a release-generated 2,909-screen visual QA matrix. Every room
+  three faces, and a release-generated 2,911-screen visual QA matrix. Every room
   is captured at default and compact sizes in deterministic opening, arrival,
   immediate-interaction, and same-phase delayed-interaction states. Default
   room receipts are 900 by 700 and compact room receipts are 360 by 240. Games,
@@ -66,6 +66,17 @@ built, so an aspiration is never mistaken for a result.
   and side-to-mid bounds. Mixer tests cover pan, mono downmix, source continuity,
   control-thread retirement, and explicit ownership cancellation. These checks
   do not establish native callback timing or musical quality.
+  Formula Jam recipe transitions use one 600 ms duration for smoothstep curve
+  interpolation and the requested equal-power source crossfade. Tests prove
+  exact visual endpoints and midpoint, completion, edit cancellation, request
+  debounce, finite fade admission from 5 ms through 2 seconds, pending-source
+  duration identity, equal-power midpoint, interruption from the exact audible
+  mix, bounded repeated interruption, swell-free same-target coefficient and
+  playhead continuity,
+  duplicate-source post-lock retirement, focus reconciliation, bounded output,
+  and restoration of the 30 ms default.
+  This is synchronization and safety evidence, not a glitch-free hardware or
+  perceptual-quality claim.
 - **Measured locally:** the 0.3 flagship cohort is Times Tables for geometry,
   Double Pendulum for chaos, Game of Life for emergence, Galton Board for
   chance, and Formula Jam for creation. The release-profile harness measures
@@ -76,17 +87,18 @@ built, so an aspiration is never mistaken for a result.
 
   | Flagship | Ambient p50 / p95 / max ms | Input p50 / p95 / max ms |
   | --- | ---: | ---: |
-  | Times Tables | 0.685 / 0.787 / 0.827 | 0.672 / 0.787 / 1.805 |
-  | Double Pendulum | 0.603 / 0.733 / 1.973 | 0.503 / 0.623 / 1.840 |
-  | Game of Life | 1.614 / 1.874 / 1.896 | 1.589 / 1.708 / 2.962 |
-  | Galton Board | 0.356 / 0.482 / 0.503 | 0.431 / 0.541 / 0.551 |
-  | Formula Jam | 0.515 / 0.620 / 0.676 | 0.554 / 0.659 / 0.708 |
+  | Times Tables | 0.670 / 0.773 / 0.821 | 0.676 / 0.786 / 1.306 |
+  | Double Pendulum | 0.612 / 0.726 / 1.972 | 0.508 / 0.621 / 1.873 |
+  | Game of Life | 1.603 / 1.757 / 2.937 | 1.667 / 1.790 / 3.117 |
+  | Galton Board | 0.354 / 0.460 / 0.466 | 0.429 / 0.547 / 1.490 |
+  | Formula Jam | 0.524 / 0.825 / 0.864 | 0.553 / 0.654 / 0.660 |
 
   This is one local baseline, not a cross-platform performance claim. The input
   interval starts when an accepted action enters its room or Studio domain
   handler and ends when that raster is complete. It includes raster allocation,
-  domain work, persistent Life mutation, Studio parsing, and the visible input
-  affordance where applicable. It excludes native event translation and history
+  domain work, persistent Life mutation, Studio parsing, the Formula Jam
+  half-morph curve, and the visible input affordance where applicable. It
+  excludes native event translation and history
   storage, window presentation, display scan-out, audio submission and callback
   latency, and human perception. Those native and sensory intervals remain open
   hardware evidence.
