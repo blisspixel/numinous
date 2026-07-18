@@ -10,6 +10,8 @@ use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::sound::ParametricSound;
 use crate::surface::{MAX_DIM, Surface};
 
+mod path_sound;
+
 /// Fixed seed so the pile reproduces exactly (determinism, see `docs/QUALITY.md`).
 const SEED: u64 = 0x6A17_0B04_5EED_ABCD;
 /// One touch drops enough balls to make progress visible without hiding the
@@ -183,6 +185,18 @@ impl GaltonBoard {
             trace.push(rights);
         }
         trace
+    }
+
+    fn newest_ball_trace(&self, waves: &[DropWave]) -> Option<(usize, usize, Vec<usize>)> {
+        let (coin, wave_count) = selected_run(waves)?;
+        let which = wave_count.saturating_mul(BALLS_PER_WAVE).saturating_sub(1);
+        let trace = Self::ball_trace(
+            BOARD_ROWS,
+            COIN_PROBABILITIES[coin],
+            Self::experiment_variation(self.seed, coin),
+            which,
+        );
+        Some((coin, wave_count, trace))
     }
 
     fn board_point(
@@ -395,20 +409,13 @@ impl Room for GaltonBoard {
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
         let waves = drop_waves_from_inputs(inputs);
         let bet = bet_bin_from_inputs(inputs);
-        let Some((coin, wave_count)) = selected_run(&waves) else {
+        let Some((coin, wave_count, trace)) = self.newest_ball_trace(&waves) else {
             return match bet {
                 Some(bin) => Some(format!("BET {bin}/{BOARD_ROWS}  CLICK DROP 64")),
                 None => self.status(t),
             };
         };
         let p_right = COIN_PROBABILITIES[coin];
-        let which = wave_count.saturating_mul(BALLS_PER_WAVE).saturating_sub(1);
-        let trace = Self::ball_trace(
-            BOARD_ROWS,
-            p_right,
-            Self::experiment_variation(self.seed, coin),
-            which,
-        );
         let rights = trace.last().copied().unwrap_or(0);
         let balls = wave_count.saturating_mul(BALLS_PER_WAVE);
         let counts = Self::experiment_histogram(coin, wave_count, self.seed);
@@ -454,6 +461,20 @@ impl Room for GaltonBoard {
         Some(probability_voice(coin))
     }
 
+    fn interaction_stereo(&self, inputs: &[RoomInput], sample_rate: u32) -> Option<Vec<f32>> {
+        if !matches!(
+            inputs.last(),
+            Some(RoomInput::PointerDown { x, y, .. }) if x.is_finite() && y.is_finite()
+        ) || !path_sound::supports_sample_rate(sample_rate)
+        {
+            return None;
+        }
+        let waves = drop_waves_from_inputs(inputs);
+        let (coin, _, trace) = self.newest_ball_trace(&waves)?;
+        let root = crate::chiptune::pitch(VOICE_ROOT_HZ * 2.0, COIN_ROOT_STEPS[coin]);
+        Some(path_sound::render(root, &trace, BOARD_ROWS, sample_rate))
+    }
+
     fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
         let waves = drop_waves_from_inputs(inputs);
         self.render_waves(canvas, t, &waves);
@@ -471,19 +492,12 @@ impl Room for GaltonBoard {
 
 impl GaltonBoard {
     fn render_waves(&self, canvas: &mut dyn Surface, t: f64, waves: &[DropWave]) {
-        let Some((coin, wave_count)) = selected_run(waves) else {
+        let Some((coin, wave_count, trace)) = self.newest_ball_trace(waves) else {
             self.render(canvas, t);
             return;
         };
         let counts = Self::experiment_histogram(coin, wave_count, self.seed);
         Self::draw_board(canvas, BOARD_ROWS, &counts, coin);
-        let which = wave_count.saturating_mul(BALLS_PER_WAVE).saturating_sub(1);
-        let trace = Self::ball_trace(
-            BOARD_ROWS,
-            COIN_PROBABILITIES[coin],
-            Self::experiment_variation(self.seed, coin),
-            which,
-        );
         Self::draw_ball_trace(canvas, &trace, BOARD_ROWS);
     }
 }
@@ -492,11 +506,134 @@ impl GaltonBoard {
 mod tests {
     use super::{
         BALLS_PER_WAVE, BOARD_ROWS, BOARD_TOP, COIN_PROBABILITIES, DropWave, GaltonBoard,
-        bet_bin_at, coin_at, drop_waves, selected_run,
+        bet_bin_at, coin_at, drop_waves, drop_waves_from_inputs, selected_run,
     };
     use crate::canvas::Canvas;
-    use crate::room::{MAX_ROOM_POKES, Room};
+    use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
+    use crate::stereo_signal_metrics;
     use crate::surface::{MAX_DIM, Surface};
+
+    #[test]
+    fn newest_visible_ball_path_has_one_bounded_stereo_peg_sequence() {
+        let room = GaltonBoard::new_with(7);
+        let first = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.2,
+        }];
+        let samples = room
+            .interaction_stereo(&first, 48_000)
+            .expect("accepted wave has a peg sequence");
+
+        assert_eq!(samples.len(), 48_000);
+        assert!(samples.iter().all(|sample| sample.is_finite()));
+        assert!(samples.iter().all(|sample| sample.abs() <= 1.0));
+        let metrics = stereo_signal_metrics(&samples);
+        assert_eq!(metrics.trailing_samples, 0);
+        assert_eq!(metrics.non_finite_samples, 0);
+        assert_eq!(metrics.clipped_samples, 0);
+        assert!((0.03..0.2).contains(&metrics.peak));
+        assert!((0.003..0.06).contains(&metrics.rms));
+        assert!(metrics.max_step < 0.04);
+        assert!(metrics.side_to_mid_db > -60.0);
+        assert_eq!(
+            samples,
+            room.interaction_stereo(&first, 48_000)
+                .expect("same wave remains deterministic")
+        );
+        assert!(
+            samples
+                .chunks_exact(2)
+                .any(|frame| (frame[0] - frame[1]).abs() > 1e-5),
+            "the visible horizontal path must move across stereo"
+        );
+
+        let waves = drop_waves_from_inputs(&first);
+        let (_, _, trace) = room.newest_ball_trace(&waves).expect("the rendered path");
+        let rights = *trace.last().expect("landing");
+        let landing = &samples[(0.4 * 48_000.0) as usize * 2..];
+        let (left, right) = landing.chunks_exact(2).fold((0.0, 0.0), |energy, frame| {
+            (
+                energy.0 + frame[0] * frame[0],
+                energy.1 + frame[1] * frame[1],
+            )
+        });
+        match rights.cmp(&(BOARD_ROWS / 2)) {
+            std::cmp::Ordering::Less => assert!(left > right),
+            std::cmp::Ordering::Equal => assert!((left - right).abs() < 1e-5),
+            std::cmp::Ordering::Greater => assert!(right > left),
+        }
+    }
+
+    #[test]
+    fn peg_sequence_tracks_only_an_accepted_newest_wave() {
+        let room = GaltonBoard::new_with(11);
+        let moved = [RoomInput::PointerMove {
+            x: 0.8,
+            y: 0.5,
+            t: 0.2,
+        }];
+        assert!(room.interaction_stereo(&[], 48_000).is_none());
+        assert!(room.interaction_stereo(&moved, 48_000).is_none());
+
+        let first = RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.2,
+        };
+        let second = RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.4,
+        };
+        let one = room
+            .interaction_stereo(&[first], 48_000)
+            .expect("first newest path");
+        let two = room
+            .interaction_stereo(&[first, second], 48_000)
+            .expect("second newest path");
+        assert_ne!(one, two, "the next visible ball has its own path");
+        assert!(
+            room.interaction_stereo(&[first, moved[0]], 48_000)
+                .is_none(),
+            "a later bet move cannot replay the previous drop"
+        );
+        assert!(
+            room.interaction_stereo(
+                &[
+                    first,
+                    RoomInput::PointerUp {
+                        x: 0.5,
+                        y: 0.5,
+                        t: 0.5,
+                    },
+                ],
+                48_000,
+            )
+            .is_none(),
+            "release cannot replay the previous drop"
+        );
+    }
+
+    #[test]
+    fn peg_sequence_preserves_supported_rates_and_rejects_hostile_rates() {
+        let room = GaltonBoard::new();
+        let input = [RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.2,
+        }];
+        for sample_rate in [8_000, 44_100, 48_000, 96_000, 192_000] {
+            let samples = room
+                .interaction_stereo(&input, sample_rate)
+                .expect("supported native-rate sequence");
+            assert_eq!(samples.len(), sample_rate as usize);
+        }
+        assert!(room.interaction_stereo(&input, 0).is_none());
+        assert!(room.interaction_stereo(&input, 7_999).is_none());
+        assert!(room.interaction_stereo(&input, 192_001).is_none());
+        assert!(room.interaction_stereo(&input, u32::MAX).is_none());
+    }
 
     fn argmax(counts: &[u64]) -> usize {
         counts

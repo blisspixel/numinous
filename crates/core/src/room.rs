@@ -143,6 +143,18 @@ pub trait Room {
         None
     }
 
+    /// A short stereo consequence of the newest accepted interaction.
+    ///
+    /// Real-time faces call this once after accepting an event, outside the
+    /// audio callback. The returned samples are interleaved left and right.
+    /// Rooms without a discrete sonic consequence keep the default silence.
+    /// An implementation may also reject a device rate it cannot render
+    /// without violating its work or duration bounds.
+    fn interaction_stereo(&self, inputs: &[RoomInput], sample_rate: u32) -> Option<Vec<f32>> {
+        let _ = (inputs, sample_rate);
+        None
+    }
+
     /// The room sound after applying replayable input.
     ///
     /// CLI and protocol faces use this snapshot so sound and rendered state
@@ -557,6 +569,7 @@ mod tests {
         assert_eq!(room.goal(), None);
         assert!(!room.goal_met(0.2, &input));
         assert_eq!(room.parameter_sound(0.2, &input), None);
+        assert_eq!(room.interaction_stereo(&input, 48_000), None);
         assert_eq!(room.sound_input(0.2, &input), room.sound(0.2));
     }
 

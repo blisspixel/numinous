@@ -182,7 +182,11 @@ fn selected_parameter_sound(
 }
 
 fn life_step_audio_owned(program: AudioProgram, modal_active: bool, room_id: &str) -> bool {
-    program == AudioProgram::RoomScore && !modal_active && room_id == "game-of-life"
+    room_transient_audio_owned(program, modal_active) && room_id == "game-of-life"
+}
+
+fn room_transient_audio_owned(program: AudioProgram, modal_active: bool) -> bool {
+    program == AudioProgram::RoomScore && !modal_active
 }
 
 fn selected_life_step_audio(
@@ -201,6 +205,22 @@ fn selected_life_step_audio(
     }
     let samples = session.step_sound().render_stereo(sample_rate);
     (!samples.is_empty()).then_some(samples)
+}
+
+fn selected_room_interaction_audio(
+    program: AudioProgram,
+    modal_active: bool,
+    muted: bool,
+    accepted: bool,
+    room: &dyn Room,
+    inputs: &[numinous_core::RoomInput],
+    sample_rate: u32,
+) -> Option<Vec<f32>> {
+    if program != AudioProgram::RoomScore || modal_active || muted || !accepted {
+        return None;
+    }
+    room.interaction_stereo(inputs, sample_rate)
+        .filter(|samples| !samples.is_empty())
 }
 
 /// The application state driven by the winit event loop.
@@ -994,6 +1014,7 @@ impl App {
         if self.the_show {
             self.show_help = false;
             self.show_journey = false;
+            self.clear_transient_audio();
         }
         self.paused = false;
         if let Some(window) = &self.window {
@@ -1962,16 +1983,12 @@ impl App {
     }
 
     fn sync_room_parameter_voice(&self) {
+        if !room_transient_audio_owned(self.audio_program, self.modal_mode_active()) {
+            self.clear_transient_audio();
+        }
         let Some(player) = &self.player else {
             return;
         };
-        if !life_step_audio_owned(
-            self.audio_program,
-            self.modal_mode_active(),
-            self.rooms[self.current].meta().id,
-        ) {
-            player.clear_oneshot();
-        }
         let voice = self.desired_room_parameter_sound();
         if let Some(voice) = voice {
             let _ = player.set_parameter_voice(voice.root_hz(), voice.ratio(), voice.gain());
@@ -2073,8 +2090,27 @@ impl App {
         if accepted {
             self.maybe_announce_room_goal();
             self.sync_room_parameter_voice();
+            self.play_room_interaction_audio();
         }
         accepted
+    }
+
+    fn play_room_interaction_audio(&self) {
+        let Some(player) = &self.player else {
+            return;
+        };
+        let Some(samples) = selected_room_interaction_audio(
+            self.audio_program,
+            self.modal_mode_active(),
+            self.muted,
+            true,
+            self.rooms[self.current].as_ref(),
+            &self.inputs,
+            player.sample_rate(),
+        ) else {
+            return;
+        };
+        player.play_stereo_oneshot(samples, 0.65);
     }
 
     fn maybe_announce_room_goal(&mut self) {
@@ -3098,8 +3134,8 @@ mod tests {
     use super::{
         App, AudioProgram, TestStateRoot, advance_gallery_phase, app_icon, bounded_tick_seconds,
         effective_room_phase, julia_gpu_c, julia_gpu_vertical_span, life_step_audio_owned,
-        live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache, selected_life_step_audio,
-        selected_parameter_sound,
+        live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache, room_transient_audio_owned,
+        selected_life_step_audio, selected_parameter_sound, selected_room_interaction_audio,
     };
     use crate::input_legend::{InputMode, MenuChoice};
     use numinous_core::ROOM_BED_SOURCE_RATE;
@@ -3156,6 +3192,15 @@ mod tests {
             .iter()
             .position(|room| room.meta().id == "times-tables")
             .expect("Times Tables room");
+        app.show_help = false;
+    }
+
+    fn select_galton(app: &mut App) {
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "galton-board")
+            .expect("Galton Board room");
         app.show_help = false;
     }
 
@@ -3279,6 +3324,77 @@ mod tests {
         assert_eq!(left.ratio(), 7.0 / 3.0);
         assert_eq!(fair.ratio(), 1.0);
         assert_eq!(right.ratio(), 7.0 / 3.0);
+    }
+
+    #[test]
+    fn galton_peg_sequence_obeys_room_score_ownership() {
+        let app = headless("numinous_app_test_galton_pegs.txt");
+        let room = app
+            .rooms
+            .iter()
+            .find(|room| room.meta().id == "galton-board")
+            .expect("Galton Board room");
+        let input = [numinous_core::RoomInput::PointerDown {
+            x: 0.5,
+            y: 0.5,
+            t: 0.4,
+        }];
+        let select = |program, modal, muted, accepted| {
+            selected_room_interaction_audio(
+                program,
+                modal,
+                muted,
+                accepted,
+                room.as_ref(),
+                &input,
+                48_000,
+            )
+        };
+
+        assert!(select(AudioProgram::RoomScore, false, false, true).is_some());
+        assert!(select(AudioProgram::Studio, false, false, true).is_none());
+        assert!(select(AudioProgram::Radio, false, false, true).is_none());
+        assert!(select(AudioProgram::RoomScore, true, false, true).is_none());
+        assert!(select(AudioProgram::RoomScore, false, true, true).is_none());
+        assert!(select(AudioProgram::RoomScore, false, false, false).is_none());
+    }
+
+    #[test]
+    fn galton_release_and_bet_motion_preserve_the_active_peg_sequence() {
+        let mut app = headless("numinous_app_test_galton_peg_lifecycle.txt");
+        select_galton(&mut app);
+        let clears_before = app.transient_audio_clears.get();
+
+        assert!(app.record_room_touch((0.5, 0.5)));
+        app.poking = true;
+        app.move_pointer_to((0.6, 0.5), true);
+        app.end_pointer_at((0.6, 0.5));
+
+        assert_eq!(app.transient_audio_clears.get(), clears_before);
+        assert!(matches!(
+            app.inputs.as_slice(),
+            [
+                numinous_core::RoomInput::PointerDown { .. },
+                numinous_core::RoomInput::PointerMove { .. },
+                numinous_core::RoomInput::PointerUp { .. }
+            ]
+        ));
+        assert!(room_transient_audio_owned(AudioProgram::RoomScore, false));
+        assert!(!room_transient_audio_owned(AudioProgram::RoomScore, true));
+        assert!(!room_transient_audio_owned(AudioProgram::Radio, false));
+    }
+
+    #[test]
+    fn show_entry_retires_a_room_interaction_sequence() {
+        let mut app = headless("numinous_app_test_show_retires_galton_pegs.txt");
+        select_galton(&mut app);
+        assert!(app.record_room_touch((0.5, 0.5)));
+        let clears_before = app.transient_audio_clears.get();
+
+        app.toggle_show();
+
+        assert!(app.the_show);
+        assert_eq!(app.transient_audio_clears.get(), clears_before + 1);
     }
 
     #[test]
