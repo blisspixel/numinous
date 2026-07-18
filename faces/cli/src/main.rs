@@ -85,7 +85,8 @@ enum Command {
         /// Use this exact room variation seed (default 0).
         #[arg(long, value_name = "SEED", conflicts_with = "vary")]
         variation: Option<u64>,
-        /// Add a normalized hand point, as x,y in [0,1]. Repeat for multiple points.
+        /// Add a normalized hand point, as x,y in `[0, 1]`.
+        /// Repeat for multiple points.
         #[arg(long = "poke")]
         pokes: Vec<String>,
         /// Add a gesture event: down:x,y,t, move:x,y,t, up:x,y,t, or cancel.
@@ -115,7 +116,8 @@ enum Command {
         /// Use this exact room variation seed (default 0).
         #[arg(long, default_value_t = 0)]
         variation: u64,
-        /// Add a normalized hand point, as x,y in [0,1]. Repeat for multiple points.
+        /// Add a normalized hand point, as x,y in `[0, 1]`.
+        /// Repeat for multiple points.
         #[arg(long = "poke")]
         pokes: Vec<String>,
         /// Add a gesture event: down:x,y,t, move:x,y,t, up:x,y,t, or cancel.
@@ -186,7 +188,8 @@ enum Command {
         /// Write a WAV audio file to this path.
         #[arg(long)]
         out: PathBuf,
-        /// Add a normalized hand point, as x,y in [0,1]. Repeat for multiple points.
+        /// Add a normalized hand point, as x,y in `[0, 1]`.
+        /// Repeat for multiple points.
         #[arg(long = "poke")]
         pokes: Vec<String>,
         /// Add a gesture event: down:x,y,t, move:x,y,t, up:x,y,t, or cancel.
@@ -661,7 +664,7 @@ fn parse_poke_arg(raw: &str) -> Result<(f64, f64), String> {
 }
 
 /// Parse one --gesture value: `down:x,y,t`, `move:x,y,t`, `up:x,y,t`, or
-/// `cancel`, with finite coordinates in [0,1].
+/// `cancel`, with finite coordinates in `[0, 1]`.
 fn parse_gesture_arg(raw: &str) -> Result<numinous_core::RoomInput, String> {
     if raw == "cancel" {
         return Ok(numinous_core::RoomInput::PointerCancel);

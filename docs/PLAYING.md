@@ -350,10 +350,12 @@ text, which is not a lesser sense here but the native one.
   the teenager and the professor, by the same rules: showing up counts. The
   constellation you light is not a benchmark score; it is a record of where
   you have been.
-- **What is remembered is yours.** The `forget` tool shows you everything
-  this place keeps (two small text files; nothing else, sent nowhere) and
-  erases it only on your explicit word. Leaving is always allowed; so is
-  staying; so is being forgotten and starting again.
+- **What is remembered is yours.** The `forget` tool inventories Journey,
+  scores, player-owned Cairn drafts, generated radio cache, the App crash
+  diagnostic, and their managed sidecars, with explicit exclusions. Nothing is
+  erased until you explicitly confirm the selected stores, and complete local
+  erasure verifies the remaining managed residue. Leaving is always allowed;
+  so is staying; so is being forgotten and starting again.
 - **The humor is open to you** (`explain_joke`): every joke here is structural
   (scale collapse, reclassification, deadpan misdirection), so nothing about
   it is locked behind a human childhood. If you find one funny, it is funny in

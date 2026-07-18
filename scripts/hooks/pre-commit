@@ -9,9 +9,10 @@
 # What it enforces, and why it is split:
 #   - House style (no em/en dashes, no emoji, no AI/tool attribution) runs on
 #     every commit, because it is instant and applies to docs as much as code.
-#   - The cargo gate (fmt, clippy -D warnings, the full test suite) runs only
-#     when this commit actually touches Rust or the build manifest, so a
-#     docs-only commit stays fast while a code commit cannot land red.
+#   - The cargo gate (fmt, clippy and rustdoc with warnings denied, plus the
+#     full test suite) runs only when this commit actually touches Rust or the
+#     build manifest, so a docs-only commit stays fast while a code commit
+#     cannot land red.
 #
 # Deliberately NOT here: coverage, the locked build, and artifact regeneration.
 # Those live in scripts/verify.sh (the release/CI gate); they are too slow to
@@ -35,6 +36,9 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
   cargo fmt --all --check
   echo "== clippy =="
   cargo clippy --workspace --all-targets -- -D warnings
+  echo "== docs =="
+  RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked
+  RUSTDOCFLAGS="-D warnings" cargo test --workspace --doc --locked
   echo "== test =="
   cargo test --workspace --all-targets --locked
 fi

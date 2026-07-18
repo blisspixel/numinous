@@ -219,10 +219,10 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 2,869 passing all-target test cases plus one ignored
-screenshot diagnostic, 95.39% region coverage and 95.44% line coverage with an
-enforced 80% line floor, Clippy with warnings denied, and dependency policy
-checks. Release QA also regenerates an exact
+The verified July 18, 2026 gate has 2,869 passing all-target test cases plus one
+ignored screenshot diagnostic, 95.39% region coverage and 95.44% line coverage
+with an enforced 80% line floor, Clippy with warnings denied, and dependency
+policy checks. Release QA also regenerates an exact
 2,911-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
 room receipts, per-room interaction scenarios, semantic checks, and coarse
 perceptual response thresholds, including a regression that rejects
@@ -241,11 +241,12 @@ review lenses once across listening and first contact, signal engineering, and
 App, CLI, and MCP parity. It made the actual stable App bed exportable,
 inspectable, bounded, and objectively comparable across faces. The simulated
 reactions and signal features are not participant or pleasantness evidence.
-CI is configured for locked tests and builds on Windows, macOS, and Ubuntu.
-Stranger playtests, accessibility work, cross-platform execution evidence,
+Public CI passes locked tests, builds, and installer safety checks on Windows,
+macOS, and Ubuntu.
+Stranger playtests, accessibility work, physical clean-machine execution,
 real-controller-model sessions, musician-led long-listening review, deeper
-causal interaction in other rooms, and substantial visual and Studio work remain
-ahead. Galton Board now ships the first deeper causal experiment loop: choose a
+causal interaction in other rooms, and substantial visual and Studio work
+remain ahead. Galton Board now ships the first deeper causal experiment loop: choose a
 fixed coin, add replayable 64-ball waves, compare the empirical pile with its
 exact binomial reference, and reset without phase-driven drift. Its highlighted
 newest ball also plays the same sixteen peg decisions as a short panned sequence

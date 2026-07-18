@@ -2122,8 +2122,9 @@ fn parse_room_pokes(args: &Value) -> Result<Vec<(f64, f64)>, String> {
 
 /// Parse the optional `gesture` argument: a replayable pointer trail for
 /// held rooms. Each event is an object with a `kind` of `down`, `move`,
-/// `up` (all needing finite `x`, `y`, `t` in [0,1]), or `cancel` (no
-/// other fields; unknown fields are rejected per the schema). Bounded to [`numinous_core::MAX_ROOM_INPUTS`].
+/// `up` (all needing finite `x`, `y`, `t` in `[0, 1]`), or `cancel` (no
+/// other fields; unknown fields are rejected per the schema). Bounded to
+/// [`numinous_core::MAX_ROOM_INPUTS`].
 fn parse_room_gesture(args: &Value) -> Result<Vec<numinous_core::RoomInput>, String> {
     let Some(raw) = args.get("gesture") else {
         return Ok(Vec::new());

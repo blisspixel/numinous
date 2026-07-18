@@ -27,10 +27,10 @@ Run the full gate and regenerate every artifact:
 - Windows: `scripts\verify.ps1`
 - macOS / Linux: `bash scripts/verify.sh`
 
-It runs format, clippy (deny warnings), tests, locked build, coverage (if
-`cargo-llvm-cov` is present), supply-chain policy (if `cargo-deny` is present),
-the house-style guard, and the native installer safety self-test, then writes
-images and audio into `renders/`.
+It runs format, clippy and rustdoc with warnings denied, tests, locked build,
+coverage (if `cargo-llvm-cov` is present), supply-chain policy (if `cargo-deny`
+is present), the house-style guard, and the native installer safety self-test,
+then writes images and audio into `renders/`.
 If it prints "All checks passed" and exits 0, everything is green.
 
 ## 2. Or run the gates individually
@@ -38,6 +38,9 @@ If it prints "All checks passed" and exits 0, everything is green.
 ```
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked  # macOS / Linux
+RUSTDOCFLAGS="-D warnings" cargo test --workspace --doc --locked     # macOS / Linux
+cmd /d /c "set RUSTDOCFLAGS=-D warnings&& cargo doc --workspace --no-deps --locked && cargo test --workspace --doc --locked"  # Windows
 cargo test --workspace --all-targets --locked
 cargo build --workspace --locked
 cargo +1.88.0 check --workspace --all-targets --locked
@@ -308,7 +311,7 @@ the app and CLI plus structured notation over MCP, the `forget` right for
 players who are minds, and 29 MCP tools (full CLI parity for the games;
 challenge, predict, and cairn are MCP-first) so agents play the same content.
 Pending (see `docs/ROADMAP.md`): deeper held and causal interactions in other
-rooms,
-human playtests, representative physical-controller sessions, musician-led
-long-listening review, cross-platform proof, full Studio save/share beyond the
-first CLI `.num` save/open slice, the music visualizer, and more GPU room paths.
+rooms, human playtests, representative physical-controller sessions,
+musician-led long-listening review, physical clean-machine cross-platform
+proof, full Studio save/share beyond the first CLI `.num` save/open slice, the
+music visualizer, and more GPU room paths.
