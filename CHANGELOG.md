@@ -206,7 +206,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   the workspace without changing the underlying divisibility predicates. The
   full Windows release gate passes with 2,869 all-target test cases plus one
   ignored screenshot diagnostic, 95.39 percent region coverage, 95.44 percent
-  line coverage, and the exact 2,911-screen App matrix.
+  line coverage, and the exact 2,911-screen App matrix. Native Linux and macOS
+  CI invoke the deliberately nonexecutable POSIX installer through Bash, so its
+  safety self-test does not depend on a checkout file-mode convention.
 - Cycle 126 security maintenance now rejects malformed Munch, Munch Arcade,
   Nim, and Hackenbush actions at the MCP schema boundary before Journey or
   score writes. CLI diagnostics encode terminal controls in untrusted room,
