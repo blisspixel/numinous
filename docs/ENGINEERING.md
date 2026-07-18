@@ -130,6 +130,7 @@ Nothing merges red. On every PR, blocking:
 7. `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'`
 8. `cargo test --workspace --all-targets --locked` and
    `cargo build --workspace --locked` on macOS, Linux, and Windows
+9. The native installer safety self-test on macOS, Linux, and Windows
 
 Hardening targets not yet enforced in CI: MSRV, `cargo doc --workspace --no-deps`
 under `-D warnings`, `cargo-auditable` release binaries, release artifact

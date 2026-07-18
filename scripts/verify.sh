@@ -41,6 +41,8 @@ fi
 
 echo "== house-style =="
 bash scripts/check-style.sh
+echo "== POSIX installer safety =="
+bash scripts/install.sh --self-test
 
 echo "== regenerate 2,909-screen app QA matrix =="
 cargo run -q -p numinous-app --example screens

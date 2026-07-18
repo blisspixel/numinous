@@ -17,7 +17,7 @@
 # Uninstalling never touches play history: ~/.numinous-journey,
 # ~/.numinous-scores, and ~/.numinous-cairn stay yours.
 #
-# Options: --uninstall, --no-modify-path, --self-test, --help.
+# Options: --uninstall, --no-modify-path, --adopt-legacy, --self-test, --help.
 # Set NUMINOUS_HOME to install somewhere other than ~/.numinous.
 set -eu
 
@@ -27,6 +27,9 @@ SNAPSHOT_URL="https://codeload.github.com/${REPO}/tar.gz/refs/heads/main"
 INSTALL_SH_URL="https://raw.githubusercontent.com/${REPO}/main/scripts/install.sh"
 INSTALL_PS1_URL="https://raw.githubusercontent.com/${REPO}/main/scripts/install.ps1"
 NUMINOUS_HOME="${NUMINOUS_HOME:-$HOME/.numinous}"
+INSTALL_MARKER_TEXT='Numinous install root v2'
+LEGACY_INSTALL_MARKER_TEXT='Numinous install root'
+INSTALLER_NOTE='added by the Numinous installer'
 
 say() { printf '%s\n' "$1"; }
 fail() {
@@ -56,13 +59,141 @@ directory_is_empty() {
     return 0
 }
 
-install_marker_is_valid() {
+legacy_install_marker_is_valid() {
     [ -f "$1/.numinous-install-root" ] || return 1
     [ ! -L "$1/.numinous-install-root" ] || return 1
     marker_size="$(wc -c <"$1/.numinous-install-root" | tr -d '[:space:]')"
     [ "$marker_size" = 22 ] || return 1
-    [ "$(cat "$1/.numinous-install-root")" = 'Numinous install root' ]
+    [ "$(cat "$1/.numinous-install-root")" = "$LEGACY_INSTALL_MARKER_TEXT" ]
 }
+
+stat_owner_mode_identity() {
+    case "$(uname -s)" in
+        Darwin) stat -f '%u %Lp %d:%i' "$1" ;;
+        *) stat -c '%u %a %d:%i' "$1" ;;
+    esac
+}
+
+self_test_without_posix_modes() {
+    [ "${SELF_TEST:-0}" -eq 1 ] || return 1
+    case "$(uname -s)" in
+        MINGW* | MSYS* | CYGWIN*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+mode_is() {
+    [ "$1" = "$2" ] || self_test_without_posix_modes
+}
+
+install_receipt_dir() {
+    printf '%s' "$HOME/.config/numinous/install-roots"
+}
+
+install_marker_token() {
+    marker="$1/.numinous-install-root"
+    [ -f "$marker" ] && [ ! -L "$marker" ] || return 1
+    [ "$(wc -l <"$marker" | tr -d '[:space:]')" = 2 ] || return 1
+    [ "$(sed -n '1p' "$marker")" = "$INSTALL_MARKER_TEXT" ] || return 1
+    token="$(sed -n '2p' "$marker")"
+    case "$token" in
+        root.[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9])
+            printf '%s' "$token"
+            ;;
+        *) return 1 ;;
+    esac
+}
+
+install_root_identity() {
+    root="$1"
+    root_physical="$(CDPATH= cd -P "$root" 2>/dev/null && pwd)" || return 1
+    set -- $(stat_owner_mode_identity "$root_physical")
+    [ "$#" = 3 ] || return 1
+    owner="$1"
+    mode="$2"
+    identity="$3"
+    if self_test_without_posix_modes; then
+        mode=700
+    fi
+    printf '%s\n%s\n%s\n' "$owner" "$mode" "$identity" "$root_physical"
+}
+
+install_marker_is_valid() {
+    root="$1"
+    token="$(install_marker_token "$root")" || return 1
+    set -- $(stat_owner_mode_identity "$root/.numinous-install-root")
+    [ "$#" = 3 ] && [ "$1" = "$(id -u)" ] && mode_is "$2" 600 || return 1
+    receipt_dir="$(install_receipt_dir)"
+    receipt="$receipt_dir/$token"
+    [ -d "$receipt_dir" ] && [ ! -L "$receipt_dir" ] \
+        && [ -f "$receipt" ] && [ ! -L "$receipt" ] || return 1
+    set -- $(stat_owner_mode_identity "$receipt_dir")
+    [ "$#" = 3 ] && [ "$1" = "$(id -u)" ] && mode_is "$2" 700 || return 1
+    set -- $(stat_owner_mode_identity "$receipt")
+    [ "$#" = 3 ] && [ "$1" = "$(id -u)" ] && mode_is "$2" 600 || return 1
+    expected="$(install_root_identity "$root")" || return 1
+    [ "$(cat "$receipt")" = "$expected" ]
+}
+
+claim_install_root() (
+    root="$1"
+    [ -d "$root" ] && [ ! -L "$root" ] || fail "cannot claim a non-directory install root"
+    marker_path="$root/.numinous-install-root"
+    if [ -e "$marker_path" ] || [ -L "$marker_path" ]; then
+        [ -f "$marker_path" ] && [ ! -L "$marker_path" ] \
+            || fail "the install marker destination is not a regular file"
+    fi
+    owner="$(stat_owner_mode_identity "$root")" || fail "cannot inspect the install root"
+    set -- $owner
+    [ "$#" = 3 ] && [ "$1" = "$(id -u)" ] \
+        || fail "NUMINOUS_HOME must be owned by the current user"
+    chmod 700 "$root" 2>/dev/null \
+        || self_test_without_posix_modes \
+        || fail "could not make NUMINOUS_HOME private"
+
+    receipt_dir="$(install_receipt_dir)"
+    old_umask="$(umask)"
+    receipt=''
+    marker_stage=''
+    published_marker=0
+    trap '
+        [ -z "$receipt" ] || rm -f -- "$receipt" || true
+        [ -z "$marker_stage" ] || rm -f -- "$marker_stage" || true
+        [ "$published_marker" -eq 0 ] \
+            || rm -f -- "$marker_path" \
+            || true
+        umask "$old_umask"
+    ' EXIT HUP INT TERM
+    umask 077
+    mkdir -p "$receipt_dir" || fail "could not create the private install receipt directory"
+    [ ! -L "$receipt_dir" ] || fail "the install receipt directory must not be a symbolic link"
+    chmod 700 "$receipt_dir" 2>/dev/null \
+        || self_test_without_posix_modes \
+        || fail "could not protect the install receipt directory"
+    receipt="$(mktemp "$receipt_dir/root.XXXXXX")" \
+        || fail "could not create a private install receipt"
+    token="${receipt##*/}"
+    install_root_identity "$root" >"$receipt" \
+        || fail "could not record the physical install root identity"
+    chmod 600 "$receipt" 2>/dev/null \
+        || self_test_without_posix_modes \
+        || fail "could not protect the install receipt"
+
+    marker_stage="$(mktemp "$root/.numinous-marker.XXXXXX")" \
+        || fail "could not create the install marker"
+    printf '%s\n%s\n' "$INSTALL_MARKER_TEXT" "$token" >"$marker_stage"
+    chmod 600 "$marker_stage" 2>/dev/null \
+        || self_test_without_posix_modes \
+        || fail "could not protect the install marker"
+    mv -f -- "$marker_stage" "$marker_path"
+    marker_stage=''
+    published_marker=1
+    install_marker_is_valid "$root" || fail "the install-root identity could not be verified"
+    receipt=''
+    published_marker=0
+    umask "$old_umask"
+    trap - EXIT HUP INT TERM
+)
 
 legacy_install_is_valid() (
     root="$1"
@@ -79,6 +210,9 @@ legacy_install_is_valid() (
         fi
         case "$entry" in
             "$root/src" | "$root/bin") ;;
+            "$root/.numinous-install-root")
+                legacy_install_marker_is_valid "$root" || return 1
+                ;;
             *) return 1 ;;
         esac
     done
@@ -129,9 +263,14 @@ validate_install_root() {
     fi
     if [ -d "$NUMINOUS_HOME" ] \
         && ! install_marker_is_valid "$NUMINOUS_HOME" \
-        && ! legacy_install_is_valid "$NUMINOUS_HOME" \
         && ! directory_is_empty "$NUMINOUS_HOME"; then
-        fail "NUMINOUS_HOME exists but is not a marked Numinous install root"
+        if [ "$NUMINOUS_HOME" = "$DEFAULT_HOME" ] \
+            && legacy_install_is_valid "$NUMINOUS_HOME"; then
+            [ "${ADOPT_LEGACY:-0}" -eq 1 ] \
+                || fail "a legacy default install needs explicit --adopt-legacy consent"
+        else
+            fail "NUMINOUS_HOME exists but is not a marked Numinous install root"
+        fi
     fi
 }
 
@@ -141,7 +280,10 @@ remove_install_root() (
     [ -e "$NUMINOUS_HOME" ] || exit 0
     if install_marker_is_valid "$NUMINOUS_HOME"; then
         root_kind=marked
-    elif legacy_install_is_valid "$NUMINOUS_HOME"; then
+        receipt_token="$(install_marker_token "$NUMINOUS_HOME")"
+    elif [ "$NUMINOUS_HOME" = "$DEFAULT_HOME" ] \
+        && [ "${ADOPT_LEGACY:-0}" -eq 1 ] \
+        && legacy_install_is_valid "$NUMINOUS_HOME"; then
         root_kind=legacy
     else
         fail "refusing to remove an unmarked install root: $NUMINOUS_HOME"
@@ -153,10 +295,14 @@ remove_install_root() (
         install_marker_is_valid "$install_name" \
             || fail "the install root changed during uninstall"
         rm -rf -- "$install_name"
+        receipt_dir="$(install_receipt_dir)"
+        rm -f -- "$receipt_dir/$receipt_token"
+        rmdir -- "$receipt_dir" 2>/dev/null || true
     else
         legacy_install_is_valid "$install_name" \
             || fail "the install root changed during uninstall"
         rm -rf -- "$install_name/src" "$install_name/bin"
+        rm -f -- "$install_name/.numinous-install-root"
         rmdir -- "$install_name" \
             || fail "the legacy install root gained unexpected contents during uninstall"
     fi
@@ -184,11 +330,59 @@ install_source_archive() (
     mv "$new_tree" "$source_dir"
 )
 
+verify_installed_cli() (
+    binary_dir="$1"
+    previous_path="$2"
+    PATH="$binary_dir:$previous_path"
+    export PATH
+    resolved_cli="$(command -v numinous 2>/dev/null || true)"
+    installed_cli="$binary_dir/numinous"
+    [ "$resolved_cli" = "$installed_cli" ] \
+        || fail "PATH verification resolved numinous to $resolved_cli instead of $installed_cli"
+    "$installed_cli" --version \
+        || fail "the installed CLI did not pass its absolute-path version check"
+)
+
+strip_path_line() (
+    profile="$1"
+    [ -f "$profile" ] || return 0
+    if grep -Fq "$INSTALLER_NOTE" "$profile"; then
+        :
+    else
+        status="$?"
+        [ "$status" -eq 1 ] && return 0
+        fail "could not read the shell profile"
+    fi
+    tmp="$(mktemp "${TMPDIR:-/tmp}/numinous-profile.XXXXXX")" \
+        || fail "could not stage the shell profile update"
+    trap 'rm -f -- "$tmp"' EXIT HUP INT TERM
+    if grep -Fv "$INSTALLER_NOTE" "$profile" >"$tmp"; then
+        :
+    else
+        status="$?"
+        [ "$status" -eq 1 ] || fail "could not read the shell profile"
+    fi
+    cat "$tmp" >"$profile" || fail "could not update the shell profile"
+    rm -f -- "$tmp"
+    trap - EXIT HUP INT TERM
+)
+
+add_path_line() {
+    profile="$1"
+    line="$2"
+    strip_path_line "$profile"
+    printf '\n%s\n' "$line" >>"$profile"
+}
+
 run_self_test() {
     have tar || fail "installer self-test requires tar"
     test_base="$(mktemp -d "${TMPDIR:-/tmp}/numinous-installer-test.XXXXXX")" \
         || fail "could not create the installer self-test directory"
     trap 'rm -rf -- "$test_base"' EXIT HUP INT TERM
+    HOME="$test_base/home"
+    export HOME
+    mkdir "$HOME"
+    chmod 700 "$HOME" 2>/dev/null || self_test_without_posix_modes
 
     if (NUMINOUS_HOME="$HOME"; validate_install_root) >/dev/null 2>&1; then
         fail "root self-test: HOME was accepted as an install root"
@@ -203,33 +397,55 @@ run_self_test() {
     fi
     [ -d "$unmarked" ] || fail "uninstall self-test: an unmarked root was removed"
 
-    legacy_update="$test_base/legacy-update"
+    legacy_update="$HOME/.numinous"
     mkdir -p "$legacy_update/src" "$legacy_update/bin"
     printf '%s\n' '[workspace]' >"$legacy_update/src/Cargo.toml"
     for binary in numinous numinous-app numinous-mcp; do
         printf '%s\n' binary >"$legacy_update/bin/$binary"
     done
-    (NUMINOUS_HOME="$legacy_update"; validate_install_root) \
+    if (NUMINOUS_HOME="$legacy_update"; validate_install_root) >/dev/null 2>&1; then
+        fail "root self-test: a legacy default install migrated without explicit consent"
+    fi
+    (ADOPT_LEGACY=1; NUMINOUS_HOME="$legacy_update"; validate_install_root) \
         || fail "root self-test: the exact legacy install shape could not migrate"
     printf '%s\n' keep >"$legacy_update/unexpected.txt"
-    if (NUMINOUS_HOME="$legacy_update"; validate_install_root) >/dev/null 2>&1; then
+    if (ADOPT_LEGACY=1; NUMINOUS_HOME="$legacy_update"; validate_install_root) \
+        >/dev/null 2>&1; then
         fail "root self-test: a legacy root with unexpected contents was accepted"
     fi
     rm -f -- "$legacy_update/unexpected.txt"
+    rm -rf -- "$legacy_update"
 
-    legacy_uninstall="$test_base/legacy-uninstall"
+    legacy_uninstall="$HOME/.numinous"
     mkdir -p "$legacy_uninstall/src" "$legacy_uninstall/bin"
     printf '%s\n' '[workspace]' >"$legacy_uninstall/src/Cargo.toml"
     for binary in numinous numinous-app numinous-mcp; do
         printf '%s\n' binary >"$legacy_uninstall/bin/$binary"
     done
-    remove_install_root "$legacy_uninstall"
+    printf '%s\n' "$LEGACY_INSTALL_MARKER_TEXT" \
+        >"$legacy_uninstall/.numinous-install-root"
+    if remove_install_root "$legacy_uninstall" >/dev/null 2>&1; then
+        fail "uninstall self-test: a legacy default install was removed without explicit consent"
+    fi
+    [ -d "$legacy_uninstall" ] \
+        || fail "uninstall self-test: rejected legacy removal changed the root"
+    (ADOPT_LEGACY=1; remove_install_root "$legacy_uninstall")
     [ ! -e "$legacy_uninstall" ] \
         || fail "uninstall self-test: the exact legacy install was retained"
 
+    forged="$HOME/.numinous"
+    mkdir "$forged"
+    printf '%s\n' "$LEGACY_INSTALL_MARKER_TEXT" >"$forged/.numinous-install-root"
+    printf '%s\n' keep >"$forged/keep.txt"
+    if remove_install_root "$forged" >/dev/null 2>&1; then
+        fail "uninstall self-test: a forged public marker was accepted"
+    fi
+    [ -f "$forged/keep.txt" ] \
+        || fail "uninstall self-test: a forged public marker removed unrelated data"
+
     marked="$test_base/marked"
     mkdir "$marked"
-    printf '%s\n' 'Numinous install root' >"$marked/.numinous-install-root"
+    claim_install_root "$marked"
     printf '%s\n' keep >"$test_base/adjacent.txt"
     remove_install_root "$marked"
     [ ! -e "$marked" ] && [ -f "$test_base/adjacent.txt" ] \
@@ -238,8 +454,9 @@ run_self_test() {
     source_root="$test_base/source-root"
     source_dir="$source_root/src"
     binary_dir="$source_root/bin"
+    mkdir "$source_root"
+    claim_install_root "$source_root"
     mkdir -p "$source_dir/.git" "$source_dir/target"
-    printf '%s\n' 'Numinous install root' >"$source_root/.numinous-install-root"
     printf '%s\n' 'alternate origin' >"$source_dir/.git/config"
     printf '%s\n' untrusted >"$source_dir/untrusted.txt"
     printf '%s\n' 'untrusted cache' >"$source_dir/target/cached.txt"
@@ -257,6 +474,42 @@ run_self_test() {
         && [ -f "$test_base/source-outside/radio/keep.txt" ] \
         || fail "provenance self-test: old source or build cache influenced the update"
 
+    mkdir "$test_base/installed-bin" "$test_base/stale-bin"
+    printf '%s\n' '#!/bin/sh' 'exit 0' >"$test_base/installed-bin/numinous"
+    printf '%s\n' '#!/bin/sh' 'exit 99' >"$test_base/stale-bin/numinous"
+    chmod +x "$test_base/installed-bin/numinous" "$test_base/stale-bin/numinous"
+    profile="$HOME/.profile"
+    printf '%s\n' \
+        "export PATH=\"$test_base/stale-bin:\$PATH\" # $INSTALLER_NOTE" \
+        "export PATH=\"$test_base/stale-bin:\$PATH\"" >"$profile"
+    chmod 600 "$profile" 2>/dev/null || self_test_without_posix_modes
+    quoted_test_bin="$(posix_quote "$test_base/installed-bin")"
+    test_path_line="export PATH=$quoted_test_bin:\$PATH # $INSTALLER_NOTE"
+    add_path_line "$profile" "$test_path_line"
+    [ "$(grep -Fc "$INSTALLER_NOTE" "$profile")" = 1 ] \
+        || fail "PATH self-test: the installer-owned line was duplicated"
+    set -- $(stat_owner_mode_identity "$profile")
+    [ "$#" = 3 ] && mode_is "$2" 600 \
+        || fail "PATH self-test: profile refresh changed its access mode"
+    resolved_from_profile="$(. "$profile"; command -v numinous)"
+    [ "$resolved_from_profile" = "$test_base/installed-bin/numinous" ] \
+        || fail "PATH self-test: the refreshed profile retained stale precedence"
+    linked_profile="$HOME/.bashrc"
+    linked_target="$HOME/managed-profile"
+    cp "$profile" "$linked_target"
+    if ln -s "$linked_target" "$linked_profile" 2>/dev/null \
+        && [ -L "$linked_profile" ]; then
+        add_path_line "$linked_profile" "$test_path_line"
+        [ -L "$linked_profile" ] \
+            || fail "PATH self-test: profile refresh replaced a symbolic link"
+        [ "$(grep -Fc "$INSTALLER_NOTE" "$linked_target")" = 1 ] \
+            || fail "PATH self-test: profile refresh missed the symbolic-link target"
+    else
+        rm -f -- "$linked_profile"
+    fi
+    verify_installed_cli "$test_base/installed-bin" "$test_base/stale-bin:$PATH" \
+        || fail "PATH self-test: a stale earlier command defeated verified precedence"
+
     rm -rf -- "$test_base"
     trap - EXIT HUP INT TERM
     say "POSIX installer root, uninstall, and provenance checks: pass."
@@ -268,6 +521,7 @@ usage() {
     say "  install.sh                  install or update Numinous"
     say "  install.sh --uninstall      remove ~/.numinous and the PATH lines it added"
     say "  install.sh --no-modify-path install without editing any shell profile"
+    say "  install.sh --adopt-legacy   explicitly migrate an older default-root install"
     say ""
     say "NUMINOUS_HOME overrides the install root (default ~/.numinous)."
     say "Play history in ~/.numinous-journey and friends is never touched."
@@ -275,11 +529,13 @@ usage() {
 
 UNINSTALL=0
 MODIFY_PATH=1
+ADOPT_LEGACY=0
 SELF_TEST=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --uninstall) UNINSTALL=1 ;;
         --no-modify-path) MODIFY_PATH=0 ;;
+        --adopt-legacy) ADOPT_LEGACY=1 ;;
         --self-test) SELF_TEST=1 ;;
         -h | --help)
             usage
@@ -309,26 +565,14 @@ esac
 
 # The line this installer appends to shell profiles. The note at its end is
 # the removal key: --uninstall deletes exactly the lines carrying the note,
-# never a user's own PATH edits. The path marker only keeps re-runs from
-# appending a duplicate when any line already provides the directory.
-installer_note='added by the Numinous installer'
+# never a user's own PATH edits. Re-runs replace that owned line so changing
+# NUMINOUS_HOME cannot leave a stale Numinous binary ahead of this install.
 if [ "$NUMINOUS_HOME" = "$DEFAULT_HOME" ]; then
-    path_line="export PATH=\"\$HOME/.numinous/bin:\$PATH\" # $installer_note"
-    path_marker='.numinous/bin'
+    path_line="export PATH=\"\$HOME/.numinous/bin:\$PATH\" # $INSTALLER_NOTE"
 else
     quoted_bin_dir="$(posix_quote "$BINARY_PATH")"
-    path_line="export PATH=$quoted_bin_dir:\$PATH # $installer_note"
-    path_marker="$BINARY_PATH"
+    path_line="export PATH=$quoted_bin_dir:\$PATH # $INSTALLER_NOTE"
 fi
-
-strip_path_line() {
-    profile="$1"
-    [ -f "$profile" ] || return 0
-    grep -Fq "$installer_note" "$profile" || return 0
-    tmp="$profile.numinous-uninstall"
-    grep -Fv "$installer_note" "$profile" >"$tmp" || true
-    mv "$tmp" "$profile"
-}
 
 if [ "$UNINSTALL" -eq 1 ]; then
     remove_install_root "$NUMINOUS_HOME"
@@ -353,7 +597,9 @@ cd -P "$install_name"
 if [ "$(pwd -P)" != "$NUMINOUS_HOME" ]; then
     fail "NUMINOUS_HOME changed while the installer was starting"
 fi
-printf '%s\n' 'Numinous install root' >.numinous-install-root
+if ! install_marker_is_valid "$NUMINOUS_HOME"; then
+    claim_install_root "$NUMINOUS_HOME"
+fi
 SRC_DIR=src
 BIN_DIR=bin
 
@@ -447,28 +693,29 @@ say "Building the release binaries (the first build takes several minutes)."
 
 mkdir -p "$BIN_DIR"
 for binary in numinous numinous-app numinous-mcp; do
-    install -m 755 "$SRC_DIR/target/release/$binary" "$BIN_DIR/$binary"
+    binary_stage="$(mktemp "$BIN_DIR/.numinous-$binary.XXXXXX")" \
+        || fail "could not create a binary staging file"
+    if install -m 755 "$SRC_DIR/target/release/$binary" "$binary_stage" \
+        && mv -f -- "$binary_stage" "$BIN_DIR/$binary"; then
+        :
+    else
+        rm -f -- "$binary_stage"
+        fail "could not publish $binary"
+    fi
 done
 # The app finds the built-in radio next to its executable.
 ln -sfn "$SOURCE_PATH/assets/radio" "$BIN_DIR/radio"
 
 if [ "$MODIFY_PATH" -eq 1 ]; then
-    add_path_line() {
-        profile="$1"
-        if [ -f "$profile" ] && grep -Fq "$path_marker" "$profile"; then
-            return 0
-        fi
-        printf '\n%s\n' "$path_line" >>"$profile"
-    }
-    add_path_line "$HOME/.profile"
+    add_path_line "$HOME/.profile" "$path_line"
     # A login bash reads .bash_profile instead of .profile when it exists.
     for profile in "$HOME/.bash_profile" "$HOME/.bashrc"; do
         if [ -f "$profile" ]; then
-            add_path_line "$profile"
+            add_path_line "$profile" "$path_line"
         fi
     done
     if [ -f "$HOME/.zshrc" ] || [ "${SHELL##*/}" = "zsh" ]; then
-        add_path_line "$HOME/.zshrc"
+        add_path_line "$HOME/.zshrc" "$path_line"
     fi
     if [ -d "$HOME/.config/fish" ]; then
         mkdir -p "$HOME/.config/fish/conf.d"
@@ -481,6 +728,10 @@ if [ "$MODIFY_PATH" -eq 1 ]; then
     fi
 fi
 
+verify_installed_cli "$BINARY_PATH" "$PATH"
+PATH="$BINARY_PATH:$PATH"
+export PATH
+
 say ""
 say "Numinous is installed."
 say ""
@@ -491,7 +742,8 @@ say "Digital minds connect over MCP:"
 say "  claude mcp add numinous -- $BINARY_PATH/numinous-mcp"
 say ""
 if [ "$MODIFY_PATH" -eq 1 ]; then
-    say "Open a new terminal so PATH picks up $BINARY_PATH, then type: numinous-app"
+    say "PATH was updated. Open a new terminal, then launch the verified app path:"
+    say "  $BINARY_PATH/numinous-app"
 else
     say "PATH was not modified. Add this yourself, or run the binaries by full path:"
     say "  $path_line"
