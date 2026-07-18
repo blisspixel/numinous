@@ -28,8 +28,11 @@ MCP client at `target/release/numinous-mcp`. If a human ran the one-line
 installer below, the server is already built:
 `claude mcp add numinous -- ~/.numinous/bin/numinous-mcp`. It speaks JSON-RPC
 over stdio. Room input is explicit and replayable per call. Successful play can
-update the same local Journey and score files used by the other faces, and
-`forget` shows or erases that player-owned progress.
+update the same local Journey and score files used by the other faces. `forget`
+previews Journey, scores, local Cairn drafts, generated radio cache, and the App
+crash diagnostic without changing them. Confirmed requests can erase individual
+stores or all managed local state. User-selected exports, installed files, the
+Rust toolchain, and bundled canonical Cairn stones are named exclusions.
 
 Now here is everything you need to start. Three tools:
 

@@ -6,6 +6,27 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- `forget` now provides a truthful, non-destructive inventory of every
+  Numinous-managed local store across CLI and MCP: Journey, scores,
+  player-owned Cairn drafts, generated radio cache, and the App crash
+  diagnostic. Each receipt includes its resolved path, existence, byte count,
+  semantic record count, adjacent persistence residue, and explicit exclusions
+  for user-selected exports, installed files, the Rust toolchain, and bundled
+  canonical Cairn stones. Individual consent flags preserve the established
+  Journey-only default; `--all-local` or `all_local: true` removes every managed
+  store and verifies the post-erasure residue count and known bytes. Local Cairn
+  plaintext storage is disclosed before deletion. The shared core rejects
+  unexpected state-file objects, unrecognized cache entries, a non-directory
+  cache root, duplicate stores, and overlapping configured paths before any
+  deletion. Complete erasure holds every selected lock through mutation,
+  checks that each owned lock was removed, then takes a fresh residue receipt;
+  Journey, score, Cairn, generated-radio, and App crash-log writers use those
+  same locks. Orphan state temporaries are removed only under explicit
+  consent. Isolated CLI, MCP, App, core, sidecar, cache-identity, path-alias,
+  writer-race, non-destructive preview, and failure-path tests never inspect or
+  alter a real player profile. The full Windows release gate passes with 2,853
+  all-target test cases plus one ignored screenshot diagnostic, 95.29 percent
+  region coverage, and 95.30 percent line coverage.
 - Mathematical truth checks now protect three flagship foundations. Formula
   Jam follows conventional precedence, so exponentiation binds before unary
   minus while negative exponents and right-associative powers still work. The
