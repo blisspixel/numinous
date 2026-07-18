@@ -8,11 +8,11 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-17
 
-- **Enforced now:** formatting, Clippy with warnings denied, 2,782 passing
+- **Enforced now:** formatting, Clippy with warnings denied, 2,794 passing
   all-target test cases plus one ignored screenshot diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 95.31%
-  regions and 95.34% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 95.33%
+  regions and 95.36% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
   three faces, and a release-generated 2,909-screen visual QA matrix. Every room
@@ -59,6 +59,13 @@ built, so an aspiration is never mistaken for a result.
   The App's fixed 16 kHz room-score source is
   capped below two million interleaved samples and shared with the mixer, so
   device rate and repeated hand input cannot multiply that source allocation.
+  Life's generation voice reduces every exact birth mask to twelve fixed pitch
+  rows and 105 ms. Tests bind the same mask to visible recent births, exact
+  sonic counts, vertical pitch, horizontal energy, density weight, deterministic
+  CLI and MCP snapshots, finite stereo output, peak, RMS, DC, adjacent-step,
+  and side-to-mid bounds. Mixer tests cover pan, mono downmix, source continuity,
+  control-thread retirement, and explicit ownership cancellation. These checks
+  do not establish native callback timing or musical quality.
 - **Measured locally:** the 0.3 flagship cohort is Times Tables for geometry,
   Double Pendulum for chaos, Game of Life for emergence, Galton Board for
   chance, and Formula Jam for creation. The release-profile harness measures
@@ -69,11 +76,11 @@ built, so an aspiration is never mistaken for a result.
 
   | Flagship | Ambient p50 / p95 / max ms | Input p50 / p95 / max ms |
   | --- | ---: | ---: |
-  | Times Tables | 0.746 / 0.971 / 1.170 | 0.693 / 0.970 / 0.982 |
-  | Double Pendulum | 0.611 / 0.722 / 0.894 | 0.494 / 0.718 / 1.825 |
-  | Game of Life | 1.482 / 1.642 / 2.889 | 2.406 / 2.637 / 3.807 |
-  | Galton Board | 0.349 / 0.461 / 0.477 | 0.429 / 0.525 / 0.532 |
-  | Formula Jam | 0.533 / 0.659 / 0.811 | 0.541 / 0.649 / 1.318 |
+  | Times Tables | 0.685 / 0.787 / 0.827 | 0.672 / 0.787 / 1.805 |
+  | Double Pendulum | 0.603 / 0.733 / 1.973 | 0.503 / 0.623 / 1.840 |
+  | Game of Life | 1.614 / 1.874 / 1.896 | 1.589 / 1.708 / 2.962 |
+  | Galton Board | 0.356 / 0.482 / 0.503 | 0.431 / 0.541 / 0.551 |
+  | Formula Jam | 0.515 / 0.620 / 0.676 | 0.554 / 0.659 / 0.708 |
 
   This is one local baseline, not a cross-platform performance claim. The input
   interval starts when an accepted action enters its room or Studio domain

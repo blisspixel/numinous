@@ -2,7 +2,7 @@
 
 How Numinous *sounds*, and specifically how math *becomes* sound. This is the design bible for the "everything is an instrument" pillar. It complements `MUSIC.md` (which covers the two music engines and the radio stations); this doc covers the grammar of sonification, the synthesis architecture, and the per-room sound design.
 
-**Implementation status, 2026-07-14:** every catalog room ships a structured
+**Implementation status, 2026-07-17:** every catalog room ships a structured
 motif and deterministic sonification. The App's default room bed is a 128-step
 stereo macro-arrangement with a soft sine or triangle lead, a literal authored
 theme, two developed forms, a return, breathing consonant anchors, and a silent
@@ -18,7 +18,9 @@ normalized crossfade. Master volume and window-focus state use smoothed gain,
 so neither restarts the source; minimizing or switching away fades the App.
 Completed crossfade storage is retired by the callback and destroyed by the
 control thread, keeping large radio buffers out of real-time destruction and
-preventing indefinite retention. Restoring the App first rejoins the radio's
+preventing indefinite retention. Short one-shot storage is also prepared before
+the callback mutex, retained when playback finishes, and reclaimed by the
+ordinary App update loop. Restoring the App first rejoins the radio's
 wall-clock track and offset, then fades audio in. Studio owns formula audio
 until it closes, at which point a selected station rejoins live. A shared
 master level and mute work in every App mode through keyboard and controller
@@ -54,6 +56,20 @@ fatigue, beauty, or musical quality. MCP never returns PCM or local paths.
 The Show supplies the same moving phase to picture and voice on every frame and
 ignores retained hand input. Entering any modal game fades the parameter voice
 instead of leaking room audio across ownership boundaries.
+
+Game of Life adds the first generation event voice. The exact B3/S23 step loop
+marks a fixed birth mask, and that mask drives both the visible `@` cells and a
+105 ms stereo texture over the stable bed. Every birth contributes to one of
+twelve vertical C major-pentatonic rows, its row's horizontal centroid, and the
+generation's density. A fixed row reduction bounds synthesis independently of
+population. CLI and MCP expose the same active pitch rows with amplitudes
+weighted by their relative birth counts. Their mono snapshot cannot represent
+the App's pan. If elapsed-time catch-up advances several generations before one
+frame, only the newest presented generation sounds, so audio does not replay a
+stale burst behind the picture. Modal, room, Studio, and radio transitions
+cancel the pending texture. Mono output devices receive both stereo channels
+through a bounded downmix. These are structural and signal checks, not evidence
+that the texture is pleasant on speakers or headphones.
 
 DSP is implemented locally without `fundsp`. A first shared gain and source
 bus is shipped. Sample-accurate event scheduling, per-Era voices, global
@@ -114,7 +130,12 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
   It sonifies the cause of the storm rather than duplicating the long trace in
   the control path.
 - **Chaos Game:** each corner is a note of a chord; the accumulating dot-density becomes a shimmering granular pad, a cloud of tiny grains thickening as the fractal fills.
-- **Game of Life:** a living polyphonic sequencer, each cell-birth triggers a note pitched by its grid position; dense colonies swell the pad, gliders play little arpeggios as they travel.
+- **Game of Life:** the shipped first event layer reduces each exact generation
+  into twelve fixed C major-pentatonic pitch rows. Every birth contributes to
+  its row's weight and horizontal stereo centroid; total activity adds bounded
+  harmonic color. The same birth mask marks the visible new cells. Literal
+  independently timed onsets per cell, glider phrase tracking, and a sustained
+  colony pad remain later sensory-bus work.
 - **Cellular Automata:** each generation's row is read left-to-right as a rhythm; complex rules (30, 110) produce complex, evolving beats, simple rules produce steady pulses.
 - **Fourier Epicycles:** each circle is a pure sine at its frequency; your drawing literally *is* the chord of its Fourier components. You hear the transform of your own doodle.
 - **Lissajous / Harmonograph:** the two frequencies are the two audible tones. A stable figure is a consonant interval you *see and hear at once*; an off-ratio figure tumbles visually and beats audibly.
@@ -135,14 +156,17 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
 ## Spatialization
 
 - **Stereo as default, spatial where it pays.** Position in the field maps to pan; depth (near/far) to level and filtering. Rooms with real depth (hyperbolic space, 4D) can use binaural/HRTF on headphones so the warp has audible space.
-- **The field is an ensemble.** In dense rooms (primes, Life, Galton), spatializing hundreds of small onsets across the stereo image is what turns "a lot of clicks" into "a texture."
+- **The field is an ensemble.** Dense rooms need bounded spatial reductions so
+  activity becomes texture instead of an unbounded pile of clicks. Life ships
+  twelve pitch-row centroids; finer onset fields for primes, Life, and Galton
+  remain planned.
 
 ## Interaction & UI sound
 
 - **Touch has a voice, partially built.** Times Tables, Galton Board, and Double
   Pendulum ship persistent input-audio paths through the smoothed parameter
-  voice. Tuned event ticks and equivalent mathematical voices in other rooms
-  remain planned.
+  voice. Life ships one bounded generation-event texture. Tuned event layers
+  and equivalent mathematical voices in other rooms remain planned.
 - **Transitions are washes.** Room-to-room dissolves carry a reverb wash through black, matching the visual cross-dissolve (see `VISUALS.md`).
 - **Reveal has a resolution.** Summoning a Revelation card lands on a small, satisfying harmonic resolution, the sonic version of the floor tilting.
 

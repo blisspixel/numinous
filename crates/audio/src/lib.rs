@@ -24,6 +24,16 @@ fn validate_output_dimensions(sample_rate: u32, channels: u16) -> Result<(), Str
     Ok(())
 }
 
+fn device_channel_sample(frame: (f32, f32), channels: usize, channel: usize) -> f32 {
+    if channels == 1 {
+        ((frame.0 + frame.1) * std::f32::consts::FRAC_1_SQRT_2).clamp(-1.0, 1.0)
+    } else if channel % 2 == 0 {
+        frame.0
+    } else {
+        frame.1
+    }
+}
+
 /// The system default output device and its default configuration.
 pub struct AudioContext {
     device: cpal::Device,
@@ -402,6 +412,30 @@ struct OneshotPlay {
     samples: Arc<Vec<f32>>,
     pos: usize,
     gain: f32,
+    channels: usize,
+}
+
+impl OneshotPlay {
+    fn new(samples: Vec<f32>, gain: f32, channels: usize) -> Option<Self> {
+        if samples.len() < channels {
+            return None;
+        }
+        let gain = if gain.is_finite() {
+            gain.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        (gain > 0.0).then(|| Self {
+            samples: Arc::new(samples),
+            pos: 0,
+            gain,
+            channels,
+        })
+    }
+
+    fn exhausted(&self) -> bool {
+        self.samples.len().saturating_sub(self.pos) < self.channels
+    }
 }
 
 /// Callback-owned state. All storage is prepared by the control thread, so
@@ -440,40 +474,41 @@ impl MixerState {
         }
     }
 
-    /// Queue a mono one-shot. Replaces any unfinished oneshot.
-    fn play_oneshot(&mut self, samples: Vec<f32>, gain: f32) {
-        if samples.is_empty() {
-            return;
-        }
-        let gain = if gain.is_finite() {
-            gain.clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
-        if gain <= 0.0 {
-            return;
-        }
-        self.oneshot = Some(OneshotPlay {
-            samples: Arc::new(samples),
-            pos: 0,
-            gain,
-        });
+    /// Install prepared storage and return the superseded one-shot for
+    /// destruction after the caller releases the callback mutex.
+    fn replace_oneshot(&mut self, next: OneshotPlay) -> Option<OneshotPlay> {
+        self.oneshot.replace(next)
     }
 
-    fn next_oneshot_sample(&mut self) -> f32 {
+    fn service_oneshot(&mut self) -> Option<OneshotPlay> {
+        self.oneshot
+            .as_ref()
+            .is_some_and(OneshotPlay::exhausted)
+            .then(|| self.oneshot.take())
+            .flatten()
+    }
+
+    fn clear_oneshot(&mut self) -> Option<OneshotPlay> {
+        self.oneshot.take()
+    }
+
+    fn next_oneshot_frame(&mut self) -> (f32, f32) {
         let Some(play) = self.oneshot.as_mut() else {
-            return 0.0;
+            return (0.0, 0.0);
         };
-        if play.pos >= play.samples.len() {
-            self.oneshot = None;
-            return 0.0;
+        if play.exhausted() {
+            // Keep exhausted storage in the slot. The next control-thread
+            // enqueue replaces and destroys it without freeing memory here.
+            return (0.0, 0.0);
         }
-        let sample = play.samples[play.pos] * play.gain;
-        play.pos += 1;
-        if play.pos >= play.samples.len() {
-            self.oneshot = None;
-        }
-        sample
+        let left = play.samples[play.pos] * play.gain;
+        let right = if play.channels == 1 {
+            left
+        } else {
+            play.samples[play.pos + 1] * play.gain
+        };
+        play.pos += play.channels;
+        (left, right)
     }
 
     fn replace(&mut self, next: LoopBuffer) -> (bool, Option<LoopBuffer>) {
@@ -560,8 +595,11 @@ impl MixerState {
         };
 
         let parameter = self.parameter_voice.next_sample();
-        let oneshot = self.next_oneshot_sample();
-        let mixed = (mixed.0 + parameter + oneshot, mixed.1 + parameter + oneshot);
+        let oneshot = self.next_oneshot_frame();
+        let mixed = (
+            mixed.0 + parameter + oneshot.0,
+            mixed.1 + parameter + oneshot.1,
+        );
         let target = if self.active { self.master_gain } else { 0.0 };
         if self.current_gain < target {
             self.current_gain = (self.current_gain + self.gain_step).min(target);
@@ -609,9 +647,9 @@ impl LoopPlayer {
                 move |data: &mut [f32], _| {
                     if let Ok(mut s) = callback_state.lock() {
                         for frame in data.chunks_mut(channels) {
-                            let (left, right) = s.next_frame();
+                            let mixed = s.next_frame();
                             for (i, out) in frame.iter_mut().enumerate() {
-                                *out = if i % 2 == 0 { left } else { right };
+                                *out = device_channel_sample(mixed, channels, i);
                             }
                         }
                     } else {
@@ -626,13 +664,11 @@ impl LoopPlayer {
                 move |data: &mut [i16], _| {
                     if let Ok(mut s) = callback_state.lock() {
                         for frame in data.chunks_mut(channels) {
-                            let (left, right) = s.next_frame();
-                            let (l, r) = (
-                                (left * f32::from(i16::MAX)) as i16,
-                                (right * f32::from(i16::MAX)) as i16,
-                            );
+                            let mixed = s.next_frame();
                             for (i, out) in frame.iter_mut().enumerate() {
-                                *out = if i % 2 == 0 { l } else { r };
+                                *out = (device_channel_sample(mixed, channels, i)
+                                    * f32::from(i16::MAX))
+                                    as i16;
                             }
                         }
                     } else {
@@ -719,12 +755,12 @@ impl LoopPlayer {
     /// Interactive faces should call this from their ordinary update loop.
     /// Destruction then happens on the control thread, never in audio time.
     pub fn service(&self) {
-        let retired = self
-            .state
-            .lock()
-            .ok()
-            .and_then(|mut state| state.service_transitions());
-        drop(retired);
+        let (retired_source, retired_oneshot) = self.state.lock().map_or_else(
+            |_| (None, None),
+            |mut state| (state.service_transitions(), state.service_oneshot()),
+        );
+        drop(retired_source);
+        drop(retired_oneshot);
     }
 
     /// Set the master linear gain without replacing or restarting the source.
@@ -759,9 +795,41 @@ impl LoopPlayer {
     /// Samples are consumed once at the device rate. A new oneshot replaces any
     /// unfinished previous oneshot. Empty or non-finite gain is ignored.
     pub fn play_oneshot(&self, samples: Vec<f32>, gain: f32) {
-        if let Ok(mut state) = self.state.lock() {
-            state.play_oneshot(samples, gain);
-        }
+        let Some(next) = OneshotPlay::new(samples, gain, 1) else {
+            return;
+        };
+        let retired = self
+            .state
+            .lock()
+            .ok()
+            .and_then(|mut state| state.replace_oneshot(next));
+        drop(retired);
+    }
+
+    /// Play interleaved-stereo samples once without restarting the loop.
+    ///
+    /// Samples are consumed once at the device rate. An incomplete final frame
+    /// is ignored. A new one-shot replaces any unfinished previous one-shot.
+    pub fn play_stereo_oneshot(&self, samples: Vec<f32>, gain: f32) {
+        let Some(next) = OneshotPlay::new(samples, gain, 2) else {
+            return;
+        };
+        let retired = self
+            .state
+            .lock()
+            .ok()
+            .and_then(|mut state| state.replace_oneshot(next));
+        drop(retired);
+    }
+
+    /// Stop and retire the current one-shot without changing the loop.
+    pub fn clear_oneshot(&self) {
+        let retired = self
+            .state
+            .lock()
+            .ok()
+            .and_then(|mut state| state.clear_oneshot());
+        drop(retired);
     }
 
     /// Fade output in or out without replacing the source or its playhead.
@@ -780,8 +848,8 @@ mod tests {
     use std::sync::Arc;
 
     use super::{
-        AMPLITUDE, LoopBuffer, MixerState, PARAMETER_MAX_GAIN, synthesize_sine,
-        validate_output_dimensions,
+        AMPLITUDE, LoopBuffer, MixerState, OneshotPlay, PARAMETER_MAX_GAIN, device_channel_sample,
+        synthesize_sine, validate_output_dimensions,
     };
 
     #[test]
@@ -795,6 +863,20 @@ mod tests {
             validate_output_dimensions(44_100, 0).expect_err("zero channels must fail"),
             "output device reported zero channels"
         );
+    }
+
+    #[test]
+    fn device_channel_projection_downmixes_mono_and_preserves_stereo() {
+        let frame = (0.6, 0.2);
+        assert!(
+            (device_channel_sample(frame, 1, 0) - 0.8 * std::f32::consts::FRAC_1_SQRT_2).abs()
+                < 1.0e-6
+        );
+        assert_eq!(device_channel_sample(frame, 2, 0), 0.6);
+        assert_eq!(device_channel_sample(frame, 2, 1), 0.2);
+        assert_eq!(device_channel_sample(frame, 4, 2), 0.6);
+        assert_eq!(device_channel_sample(frame, 4, 3), 0.2);
+        assert_eq!(device_channel_sample((1.0, 1.0), 1, 0), 1.0);
     }
 
     #[test]
@@ -1096,7 +1178,11 @@ mod tests {
         let mut mixer = MixerState::new(8_000);
         mixer.current = LoopBuffer::new(vec![0.25, 0.25, 0.25, 0.25], 1);
         let identity = mixer.current.identity;
-        mixer.play_oneshot(vec![0.5, 0.0], 1.0);
+        assert!(
+            mixer
+                .replace_oneshot(OneshotPlay::new(vec![0.5, 0.0], 1.0, 1).expect("one-shot"))
+                .is_none()
+        );
         let first = mixer.next_frame();
         assert!(first.0 > 0.25, "oneshot adds energy: {first:?}");
         let _ = mixer.next_frame();
@@ -1106,6 +1192,57 @@ mod tests {
             "oneshot ends; loop continues: {after:?}"
         );
         assert_eq!(mixer.current.identity, identity);
+        assert!(mixer.service_oneshot().is_some());
+        assert!(mixer.oneshot.is_none());
+    }
+
+    #[test]
+    fn stereo_oneshot_preserves_pan_and_does_not_replace_the_loop() {
+        let mut mixer = MixerState::new(8_000);
+        mixer.current = LoopBuffer::new(vec![0.1; 8], 1);
+        let identity = mixer.current.identity;
+
+        assert!(
+            mixer
+                .replace_oneshot(
+                    OneshotPlay::new(vec![0.6, 0.0, 0.0, 0.6], 1.0, 2).expect("stereo one-shot"),
+                )
+                .is_none()
+        );
+
+        let left = mixer.next_frame();
+        let right = mixer.next_frame();
+        let after = mixer.next_frame();
+        assert!(left.0 > left.1 + 0.5, "left event preserves pan: {left:?}");
+        assert!(
+            right.1 > right.0 + 0.5,
+            "right event preserves pan: {right:?}"
+        );
+        assert!((after.0 - 0.1).abs() < 1e-4);
+        assert!((after.1 - 0.1).abs() < 1e-4);
+        assert_eq!(mixer.current.identity, identity);
+        assert!(
+            mixer.oneshot.is_some(),
+            "the callback retains finished storage for control-thread replacement"
+        );
+        assert!(mixer.service_oneshot().is_some());
+        assert!(mixer.oneshot.is_none());
+    }
+
+    #[test]
+    fn clearing_a_oneshot_stops_it_without_touching_the_loop() {
+        let mut mixer = MixerState::new(8_000);
+        mixer.current = LoopBuffer::new(vec![0.1; 8], 1);
+        let identity = mixer.current.identity;
+        let next = OneshotPlay::new(vec![0.8; 16], 1.0, 1).expect("one-shot");
+        assert!(mixer.replace_oneshot(next).is_none());
+
+        let retired = mixer.clear_oneshot().expect("retired one-shot");
+        let frame = mixer.next_frame();
+        assert!((frame.0 - 0.1).abs() < 1.0e-4);
+        assert!((frame.1 - 0.1).abs() < 1.0e-4);
+        assert_eq!(mixer.current.identity, identity);
+        drop(retired);
     }
 
     #[test]
