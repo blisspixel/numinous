@@ -55,10 +55,10 @@ pub struct Prediction {
 /// How close a prediction landed, and what that says about the guesser's model.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Band {
-    /// Within [`NAILED_FRACTION`] of the span: the model has this phenomenon
+    /// Within `NAILED_FRACTION` of the span: the model has this phenomenon
     /// compressed. Mastery, and a signal the room has little left to teach.
     Nailed,
-    /// Within [`CLOSE_FRACTION`] of the span: the fertile band, where a model
+    /// Within `CLOSE_FRACTION` of the span: the fertile band, where a model
     /// is close enough to be improving. This is where learning progress lives.
     Close,
     /// Further than that: the prediction was noise against this phenomenon.

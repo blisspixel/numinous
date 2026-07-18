@@ -27,6 +27,12 @@ jobs:
         run: cargo fmt --all --check
       - name: Clippy (deny warnings)
         run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Documentation (deny warnings)
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: |
+          cargo doc --workspace --no-deps --locked
+          cargo test --workspace --doc --locked
       - name: Tests
         run: cargo test --workspace --all-targets --locked
 

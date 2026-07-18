@@ -1,4 +1,4 @@
-//! Tent map: the simplest piecewise-linear chaos map on [0,1].
+//! Tent map: the simplest piecewise-linear chaos map on `[0, 1]`.
 //!
 //! T_mu(x) = mu min(x, 1-x). Orbit cobweb and density. DRAG: TUNE MU.
 //! See `docs/ROOMS.md`.
