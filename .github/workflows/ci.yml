@@ -111,6 +111,6 @@ jobs:
       - name: POSIX installer safety
         if: runner.os != 'Windows'
         shell: bash
-        run: ./scripts/install.sh --self-test
+        run: bash scripts/install.sh --self-test
       - name: Locked build
         run: cargo build --workspace --locked
