@@ -19,6 +19,9 @@ const SEED: u64 = 0x6A17_0B04_5EED_ABCD;
 const BALLS_PER_WAVE: usize = 64;
 /// A physical board has one stable geometry at every viewport size.
 const BOARD_ROWS: usize = 16;
+/// Exact newest-wave mass at every reachable row and right-turn count.
+/// Each cell fits in `u8` because one wave contains exactly 64 balls.
+type WaveProfile = [[u8; BOARD_ROWS + 1]; BOARD_ROWS + 1];
 /// Cap ad hoc trace requests in tests and future callers independently of the
 /// viewport. Production experiments always use [`BOARD_ROWS`].
 const MAX_TRACE_ROWS: usize = 255;
@@ -165,25 +168,34 @@ impl GaltonBoard {
     }
 
     fn landing_bin(rows: usize, p_right: f64, variation: u64, which: usize) -> usize {
+        Self::walk_ball(rows, p_right, variation, which, |_, _| {})
+    }
+
+    fn walk_ball(
+        rows: usize,
+        p_right: f64,
+        variation: u64,
+        which: usize,
+        mut visit: impl FnMut(usize, usize),
+    ) -> usize {
         let rows = rows.clamp(1, MAX_TRACE_ROWS);
         let p_right = unit(p_right, 0.5);
         let mut rng = SplitMix64::new(Self::trace_seed(variation, which));
-        (0..rows).filter(|_| rng.next_f64() < p_right).count()
+        let mut rights = 0;
+        visit(0, rights);
+        for row in 1..=rows {
+            rights += usize::from(rng.next_f64() < p_right);
+            visit(row, rights);
+        }
+        rights
     }
 
     fn ball_trace(rows: usize, p_right: f64, variation: u64, which: usize) -> Vec<usize> {
         let rows = rows.clamp(1, MAX_TRACE_ROWS);
-        let p_right = unit(p_right, 0.5);
-        let mut rng = SplitMix64::new(Self::trace_seed(variation, which));
         let mut trace = Vec::with_capacity(rows + 1);
-        let mut rights = 0usize;
-        trace.push(rights);
-        for _ in 0..rows {
-            if rng.next_f64() < p_right {
-                rights += 1;
-            }
+        Self::walk_ball(rows, p_right, variation, which, |_, rights| {
             trace.push(rights);
-        }
+        });
         trace
     }
 
@@ -197,6 +209,29 @@ impl GaltonBoard {
             which,
         );
         Some((coin, wave_count, trace))
+    }
+
+    fn newest_wave_profile(&self, coin: usize, wave_count: usize) -> WaveProfile {
+        let mut profile = [[0u8; BOARD_ROWS + 1]; BOARD_ROWS + 1];
+        if wave_count == 0 {
+            return profile;
+        }
+        let coin = coin.min(COIN_PROBABILITIES.len() - 1);
+        let wave_count = wave_count.min(MAX_ROOM_POKES);
+        let first_ball = (wave_count - 1) * BALLS_PER_WAVE;
+        let variation = Self::experiment_variation(self.seed, coin);
+        for ball in first_ball..first_ball + BALLS_PER_WAVE {
+            Self::walk_ball(
+                BOARD_ROWS,
+                COIN_PROBABILITIES[coin],
+                variation,
+                ball,
+                |row, rights| {
+                    profile[row][rights] = profile[row][rights].saturating_add(1);
+                },
+            );
+        }
+        profile
     }
 
     fn board_point(
@@ -470,9 +505,16 @@ impl Room for GaltonBoard {
             return None;
         }
         let waves = drop_waves_from_inputs(inputs);
-        let (coin, _, trace) = self.newest_ball_trace(&waves)?;
+        let (coin, wave_count, trace) = self.newest_ball_trace(&waves)?;
+        let profile = self.newest_wave_profile(coin, wave_count);
         let root = crate::chiptune::pitch(VOICE_ROOT_HZ * 2.0, COIN_ROOT_STEPS[coin]);
-        Some(path_sound::render(root, &trace, BOARD_ROWS, sample_rate))
+        Some(path_sound::render(
+            root,
+            &trace,
+            &profile,
+            BOARD_ROWS,
+            sample_rate,
+        ))
     }
 
     fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
@@ -505,8 +547,9 @@ impl GaltonBoard {
 #[cfg(test)]
 mod tests {
     use super::{
-        BALLS_PER_WAVE, BOARD_ROWS, BOARD_TOP, COIN_PROBABILITIES, DropWave, GaltonBoard,
-        bet_bin_at, coin_at, drop_waves, drop_waves_from_inputs, selected_run,
+        BALLS_PER_WAVE, BOARD_ROWS, BOARD_TOP, COIN_PROBABILITIES, COIN_ROOT_STEPS, DropWave,
+        GaltonBoard, VOICE_ROOT_HZ, bet_bin_at, coin_at, drop_waves, drop_waves_from_inputs,
+        path_sound, selected_run,
     };
     use crate::canvas::Canvas;
     use crate::room::{MAX_ROOM_POKES, Room, RoomInput};
@@ -514,7 +557,7 @@ mod tests {
     use crate::surface::{MAX_DIM, Surface};
 
     #[test]
-    fn newest_visible_ball_path_has_one_bounded_stereo_peg_sequence() {
+    fn newest_wave_has_one_bounded_stereo_event_with_a_highlighted_path() {
         let room = GaltonBoard::new_with(7);
         let first = [RoomInput::PointerDown {
             x: 0.5,
@@ -566,7 +609,125 @@ mod tests {
     }
 
     #[test]
-    fn peg_sequence_tracks_only_an_accepted_newest_wave() {
+    fn newest_wave_profile_conserves_all_64_balls_at_every_row() {
+        let room = GaltonBoard::new_with(7);
+        let coin = 3;
+        let wave_count = 4;
+        let profile = room.newest_wave_profile(coin, wave_count);
+
+        for (row, counts) in profile.iter().enumerate() {
+            assert_eq!(
+                counts
+                    .iter()
+                    .map(|&count| usize::from(count))
+                    .sum::<usize>(),
+                BALLS_PER_WAVE,
+                "row {row} must account for every ball"
+            );
+            assert!(counts[row + 1..].iter().all(|&count| count == 0));
+        }
+
+        assert_eq!(
+            profile[BOARD_ROWS],
+            [0, 0, 0, 0, 0, 2, 2, 6, 16, 11, 10, 7, 7, 2, 0, 1, 0]
+        );
+    }
+
+    #[test]
+    fn newest_wave_profile_pins_stream_range_and_highlight_identity() {
+        let room = GaltonBoard::new_with(7);
+        let coin = 3;
+        let wave_count = 4;
+        let profile = room.newest_wave_profile(coin, wave_count);
+        let (_, _, highlighted) = room
+            .newest_ball_trace(&[DropWave { coin }; 4])
+            .expect("newest highlighted ball");
+
+        assert_eq!(
+            highlighted,
+            [0, 1, 2, 3, 4, 4, 4, 5, 6, 6, 7, 7, 8, 9, 10, 11, 12]
+        );
+
+        let fingerprint =
+            profile
+                .iter()
+                .flatten()
+                .fold(0xcbf2_9ce4_8422_2325u64, |fingerprint, &count| {
+                    (fingerprint ^ u64::from(count)).wrapping_mul(0x0000_0100_0000_01B3)
+                });
+        assert_eq!(fingerprint, 0xAEE6_F8D9_2E20_13EF);
+
+        let mut without_highlight = profile;
+        for (row, &rights) in highlighted.iter().enumerate() {
+            without_highlight[row][rights] -= 1;
+        }
+        assert!(without_highlight.iter().all(|row| {
+            row.iter().map(|&count| usize::from(count)).sum::<usize>() == BALLS_PER_WAVE - 1
+        }));
+    }
+
+    #[test]
+    fn all_ball_mass_changes_the_event_beyond_the_highlighted_path() {
+        let room = GaltonBoard::new_with(7);
+        let waves = drop_waves(&[(0.7, 0.5)]);
+        let (coin, wave_count, trace) = room.newest_ball_trace(&waves).expect("newest path");
+        let profile = room.newest_wave_profile(coin, wave_count);
+        let empty = [[0u8; BOARD_ROWS + 1]; BOARD_ROWS + 1];
+        let root = crate::chiptune::pitch(VOICE_ROOT_HZ * 2.0, COIN_ROOT_STEPS[coin]);
+
+        let full = path_sound::render(root, &trace, &profile, BOARD_ROWS, 48_000);
+        let highlighted_only = path_sound::render(root, &trace, &empty, BOARD_ROWS, 48_000);
+
+        assert_ne!(full, highlighted_only);
+        let difference = full
+            .iter()
+            .zip(highlighted_only)
+            .map(|(full, highlighted)| (full - highlighted).abs())
+            .sum::<f32>();
+        assert!(difference > 1.0, "wave texture must carry audible energy");
+    }
+
+    #[test]
+    fn full_wave_texture_stereo_centroid_follows_coin_bias() {
+        let room = GaltonBoard::new_with(7);
+        let left_profile = room.newest_wave_profile(0, 1);
+        let right_profile = room.newest_wave_profile(4, 1);
+        let left = path_sound::render(261.63, &[], &left_profile, BOARD_ROWS, 48_000);
+        let right = path_sound::render(261.63, &[], &right_profile, BOARD_ROWS, 48_000);
+        let energy = |samples: &[f32], channel: usize| {
+            samples
+                .chunks_exact(2)
+                .map(|frame| frame[channel] * frame[channel])
+                .sum::<f32>()
+        };
+
+        assert!(energy(&left, 0) > energy(&left, 1));
+        assert!(energy(&right, 1) > energy(&right, 0));
+    }
+
+    #[test]
+    fn same_pitch_energy_depends_on_mass_not_cell_partition() {
+        let mut concentrated = [[0u8; BOARD_ROWS + 1]; BOARD_ROWS + 1];
+        concentrated[8][0] = 64;
+        let mut split = [[0u8; BOARD_ROWS + 1]; BOARD_ROWS + 1];
+        split[8][0] = 32;
+        split[8][1] = 32;
+
+        let concentrated = path_sound::render(261.63, &[], &concentrated, BOARD_ROWS, 48_000);
+        let split = path_sound::render(261.63, &[], &split, BOARD_ROWS, 48_000);
+        let energy = |samples: &[f32]| samples.iter().map(|sample| sample * sample).sum::<f32>();
+        let concentrated_energy = energy(&concentrated);
+        let split_energy = energy(&split);
+
+        assert!(concentrated_energy > 0.0);
+        assert!(
+            (concentrated_energy - split_energy).abs() / concentrated_energy < 0.001,
+            "equal mass in one pitch bucket must have equal total energy"
+        );
+    }
+
+    #[test]
+    fn wave_event_tracks_only_an_accepted_newest_wave() {
         let room = GaltonBoard::new_with(11);
         let moved = [RoomInput::PointerMove {
             x: 0.8,
@@ -616,7 +777,7 @@ mod tests {
     }
 
     #[test]
-    fn peg_sequence_preserves_supported_rates_and_rejects_hostile_rates() {
+    fn wave_event_preserves_supported_rates_and_rejects_hostile_rates() {
         let room = GaltonBoard::new();
         let input = [RoomInput::PointerDown {
             x: 0.5,
@@ -633,6 +794,29 @@ mod tests {
         assert!(room.interaction_stereo(&input, 7_999).is_none());
         assert!(room.interaction_stereo(&input, 192_001).is_none());
         assert!(room.interaction_stereo(&input, u32::MAX).is_none());
+    }
+
+    #[test]
+    fn full_wave_texture_is_safe_at_coin_and_rate_extremes() {
+        let room = GaltonBoard::new_with(19);
+        for x in [0.0, 0.5, 1.0] {
+            let input = [RoomInput::PointerDown { x, y: 0.5, t: 0.2 }];
+            for sample_rate in [8_000, 192_000] {
+                let samples = room
+                    .interaction_stereo(&input, sample_rate)
+                    .expect("supported full-wave texture");
+                let metrics = stereo_signal_metrics(&samples);
+                assert_eq!(metrics.trailing_samples, 0);
+                assert_eq!(metrics.non_finite_samples, 0);
+                assert_eq!(metrics.subnormal_samples, 0);
+                assert_eq!(metrics.clipped_samples, 0);
+                assert!((0.03..0.25).contains(&metrics.peak));
+                assert!((0.003..0.06).contains(&metrics.rms));
+                assert!(metrics.left_dc.abs() < 0.002);
+                assert!(metrics.right_dc.abs() < 0.002);
+                assert!(metrics.max_step < 0.15);
+            }
+        }
     }
 
     fn argmax(counts: &[u64]) -> usize {

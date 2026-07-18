@@ -8,11 +8,11 @@ built, so an aspiration is never mistaken for a result.
 
 ## Evidence snapshot, 2026-07-18
 
-- **Enforced now:** formatting, Clippy with warnings denied, 2,832 passing
+- **Enforced now:** formatting, Clippy with warnings denied, 2,838 passing
   all-target test cases plus one ignored screenshot diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
   three-OS test-and-build matrix. The current measured coverage is 95.37%
-  regions and 95.40% lines under the documented exclusions.
+  regions and 95.41% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
   three faces, and a release-generated 2,911-screen visual QA matrix. Every room
@@ -69,6 +69,14 @@ built, so an aspiration is never mistaken for a result.
   pan, mono downmix, source continuity,
   control-thread retirement, and explicit ownership cancellation. These checks
   do not establish native callback timing or musical quality.
+  Galton's newest-wave voice replays 64 exact 16-edge paths into one fixed 17 by
+  17 mass grid on the control thread. It performs 1,088 path visits, scans at
+  most 152 reachable cells, and adds at most 80 mass-first row-pitch tones plus
+  17 highlighted-path tones. Tests pin the random-stream range, conservation at
+  every row, highlighted-ball inclusion, exact landing distribution,
+  same-mass energy under different cell partitions, stereo bias, finite output,
+  peak, RMS, DC, adjacent-step, and rate bounds. This is deterministic mapping
+  and signal evidence, not native callback timing or musical quality.
   Formula Jam recipe transitions use one 600 ms duration for smoothstep curve
   interpolation and the requested equal-power source crossfade. Tests prove
   exact visual endpoints and midpoint, completion, edit cancellation, request
@@ -84,17 +92,17 @@ built, so an aspiration is never mistaken for a result.
   Double Pendulum for chaos, Game of Life for emergence, Galton Board for
   chance, and Formula Jam for creation. The release-profile harness measures
   each ambient raster and accepted-input-to-room-raster path at 900 by 700. On
-  2026-07-17, an AMD Ryzen 7 7840U Framework Laptop 13 with 64 GB memory,
+  2026-07-18, an AMD Ryzen 7 7840U Framework Laptop 13 with 64 GB memory,
   Windows 11 Pro build 26200, and rustc 1.96.0 ran 40 samples after five
   warmups. Every p95 cleared the declared 33 ms reference budget:
 
   | Flagship | Ambient p50 / p95 / max ms | Input p50 / p95 / max ms |
   | --- | ---: | ---: |
-  | Times Tables | 0.670 / 0.773 / 0.821 | 0.676 / 0.786 / 1.306 |
-  | Double Pendulum | 0.612 / 0.726 / 1.972 | 0.508 / 0.621 / 1.873 |
-  | Game of Life | 1.603 / 1.757 / 2.937 | 1.667 / 1.790 / 3.117 |
-  | Galton Board | 0.354 / 0.460 / 0.466 | 0.429 / 0.547 / 1.490 |
-  | Formula Jam | 0.524 / 0.825 / 0.864 | 0.553 / 0.654 / 0.660 |
+  | Times Tables | 0.669 / 0.775 / 1.739 | 0.673 / 0.796 / 2.054 |
+  | Double Pendulum | 0.598 / 0.724 / 1.356 | 0.503 / 0.615 / 0.703 |
+  | Game of Life | 1.596 / 1.720 / 3.019 | 1.629 / 1.840 / 3.143 |
+  | Galton Board | 0.347 / 0.458 / 0.460 | 0.426 / 0.542 / 1.759 |
+  | Formula Jam | 0.512 / 0.630 / 1.891 | 0.542 / 0.650 / 1.542 |
 
   This is one local baseline, not a cross-platform performance claim. The input
   interval starts when an accepted action enters its room or Studio domain

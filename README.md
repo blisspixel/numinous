@@ -160,12 +160,13 @@ response. Presentation time keeps the visual morph synchronized through pause
 and temporary focus loss.
 Discrete room consequences use the same off-callback synthesis seam: Life voices
 the exact newest birth mask and adds one four-note phase accent while the newest
-planted glider remains an exact isolated pattern, Galton voices the highlighted
-ball path, and Double Pendulum turns one completed fling into seven paired pulses
-that spread from unison as its exact simulated twins diverge. A Life collision
-stops that glider phrase instead of pretending the pattern survived. These
-objective mappings are tested for signal integrity and deterministic identity;
-listening quality and native device timing remain human evidence gates.
+planted glider remains an exact isolated pattern, Galton voices all 64 paths in
+the newest wave as a bounded mass texture beneath its highlighted ball, and
+Double Pendulum turns one completed fling into seven paired pulses that spread
+from unison as its exact simulated twins diverge. A Life collision stops that
+glider phrase instead of pretending the pattern survived. These objective
+mappings are tested for signal integrity and deterministic identity; listening
+quality and native device timing remain human evidence gates.
 The separate `JOURNEY LV` label is accumulated local-profile progress, never a
 room difficulty rating. Cult of Pi now opens on the canonical `3.14159...`
 prefix and explains its finite-channel premise through visible faults and
@@ -195,8 +196,8 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 2,832 passing all-target test cases plus one ignored
-screenshot diagnostic, 95.37% region coverage and 95.40% line coverage with an
+The current local gate has 2,838 passing all-target test cases plus one ignored
+screenshot diagnostic, 95.37% region coverage and 95.41% line coverage with an
 enforced 80% line floor, Clippy with warnings denied, and dependency policy
 checks. Release QA also regenerates an exact
 2,911-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
@@ -225,7 +226,9 @@ ahead. Galton Board now ships the first deeper causal experiment loop: choose a
 fixed coin, add replayable 64-ball waves, compare the empirical pile with its
 exact binomial reference, and reset without phase-driven drift. Its highlighted
 newest ball also plays the same sixteen peg decisions as a short panned sequence
-that resolves in the displayed landing bin.
+that resolves in the displayed landing bin. Beneath it, the other exact paths in
+that newest wave become a quiet row-by-row C major-pentatonic mass texture whose
+energy and stereo position follow the number and location of balls.
 Game of Life now ships the second: one click clears a local patch and plants
 exactly five cells, the App universe advances continuously for the whole visit,
 birth and death consequences remain visible after the old phase boundary, and
