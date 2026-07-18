@@ -118,6 +118,20 @@ Random and Auto are not a substitute for authoring. They are an invitation into
 it: watch something compelling, inspect the expression that caused it, change
 one number, and make it yours.
 
+The current App implementation gives each curated Random or Auto recipe change
+one 600 ms transition. Curve values interpolate with smoothstep between the two
+exact expression trees while audio applies an equal-power crossfade for the
+same duration. Another recipe request waits until the morph finishes, preventing
+a rapid sequence from jumping to a target the player never saw. Typing cancels
+the visual morph and interrupts the long audio fade from its current audible
+mix into the default fast response. Invalid intermediate text and literal spaces
+reuse the last-good sound, and equivalent edits preserve its playhead without
+duplicating its level.
+Presentation time advances the visual morph through pause and reconciles
+temporary focus loss on return. Reduced-motion
+preference wiring, native glitch measurements, participant discovery, and
+musician-led transition review remain open.
+
 ### Pattern Studio
 
 Pattern Studio is the music-making surface. It takes inspiration from tracker

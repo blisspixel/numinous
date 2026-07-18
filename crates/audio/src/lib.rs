@@ -152,10 +152,22 @@ pub fn synthesize_sine(frequency: f32, sample_rate: u32, count: usize) -> Vec<f3
 }
 
 const SOURCE_CROSSFADE_SECONDS: f32 = 0.03;
+const MIN_REQUESTED_CROSSFADE_SECONDS: f32 = 0.005;
+const MAX_REQUESTED_CROSSFADE_SECONDS: f32 = 2.0;
 const GAIN_RAMP_SECONDS: f32 = 0.025;
 const PARAMETER_RAMP_SECONDS: f32 = 0.04;
 const PARAMETER_MAX_GAIN: f32 = 0.08;
 const PARAMETER_MIN_FREQUENCY: f32 = 20.0;
+
+fn crossfade_frame_count(sample_rate: u32, seconds: f32) -> Option<usize> {
+    if sample_rate == 0
+        || !seconds.is_finite()
+        || !(MIN_REQUESTED_CROSSFADE_SECONDS..=MAX_REQUESTED_CROSSFADE_SECONDS).contains(&seconds)
+    {
+        return None;
+    }
+    Some((seconds * sample_rate as f32).max(1.0) as usize)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct ParameterTarget {
@@ -440,13 +452,112 @@ impl OneshotPlay {
 
 /// Callback-owned state. All storage is prepared by the control thread, so
 /// producing a frame performs no allocation.
+struct PendingSource {
+    buffer: LoopBuffer,
+    crossfade_frames: usize,
+}
+
+/// At most two prepared buffers can be displaced by one control request: the
+/// rejected input and the prior pending source. The fixed bundle is returned
+/// through the mutex boundary so their storage is never destroyed under lock.
+#[derive(Default)]
+struct RetiredBuffers {
+    first: Option<LoopBuffer>,
+    second: Option<LoopBuffer>,
+}
+
+impl RetiredBuffers {
+    fn one(first: LoopBuffer) -> Self {
+        Self {
+            first: Some(first),
+            second: None,
+        }
+    }
+
+    fn two(first: LoopBuffer, second: Option<LoopBuffer>) -> Self {
+        Self {
+            first: Some(first),
+            second,
+        }
+    }
+
+    fn retire(self) {
+        let Self { first, second } = self;
+        drop(first);
+        drop(second);
+    }
+
+    #[cfg(test)]
+    fn is_empty(&self) -> bool {
+        self.first.is_none() && self.second.is_none()
+    }
+}
+
+/// One callback-owned outgoing voice. An interrupted transition can preserve
+/// its exact audible mix with two advancing sources, while repeated interrupts
+/// wait behind the short default fade so callback work stays strictly bounded.
+struct SourceMix {
+    primary: LoopBuffer,
+    secondary: Option<LoopBuffer>,
+    primary_gain: f32,
+    secondary_gain: f32,
+}
+
+impl SourceMix {
+    fn single(primary: LoopBuffer) -> Self {
+        Self {
+            primary,
+            secondary: None,
+            primary_gain: 1.0,
+            secondary_gain: 0.0,
+        }
+    }
+
+    fn is_single(&self) -> bool {
+        self.secondary.is_none()
+    }
+
+    fn from_interrupted_transition(
+        mut previous: Self,
+        current: LoopBuffer,
+        old_gain: f32,
+        new_gain: f32,
+    ) -> Self {
+        debug_assert!(previous.is_single());
+        previous.primary_gain *= old_gain;
+        previous.secondary = Some(current);
+        previous.secondary_gain = new_gain;
+        previous
+    }
+
+    fn next_frame(&mut self) -> (f32, f32) {
+        let primary = self.primary.next_frame();
+        let secondary = self
+            .secondary
+            .as_mut()
+            .map_or((0.0, 0.0), LoopBuffer::next_frame);
+        (
+            primary
+                .0
+                .mul_add(self.primary_gain, secondary.0 * self.secondary_gain),
+            primary
+                .1
+                .mul_add(self.primary_gain, secondary.1 * self.secondary_gain),
+        )
+    }
+}
+
 struct MixerState {
     current: LoopBuffer,
-    previous: Option<LoopBuffer>,
-    pending: Option<LoopBuffer>,
-    retired: Option<LoopBuffer>,
+    previous: Option<SourceMix>,
+    pending: Option<PendingSource>,
+    retired: Option<SourceMix>,
+    default_crossfade_frames: usize,
     crossfade_frames: usize,
     crossfade_remaining: usize,
+    /// Same-target interruption ramps existing coefficients to `(0, 1)`.
+    /// Other transitions use the ordinary equal-power law.
+    coefficient_ramp_start: Option<(f32, f32)>,
     master_gain: f32,
     current_gain: f32,
     active: bool,
@@ -458,13 +569,16 @@ struct MixerState {
 impl MixerState {
     fn new(sample_rate: u32) -> Self {
         let rate = sample_rate.max(1) as f32;
+        let default_crossfade_frames = (SOURCE_CROSSFADE_SECONDS * rate).max(1.0) as usize;
         Self {
             current: LoopBuffer::silent(),
             previous: None,
             pending: None,
             retired: None,
-            crossfade_frames: (SOURCE_CROSSFADE_SECONDS * rate).max(1.0) as usize,
+            default_crossfade_frames,
+            crossfade_frames: default_crossfade_frames,
             crossfade_remaining: 0,
+            coefficient_ramp_start: None,
             master_gain: 1.0,
             current_gain: 1.0,
             active: true,
@@ -511,42 +625,127 @@ impl MixerState {
         (left, right)
     }
 
-    fn replace(&mut self, next: LoopBuffer) -> (bool, Option<LoopBuffer>) {
+    fn replace(&mut self, next: LoopBuffer) -> (bool, RetiredBuffers) {
         if self.current.identity == next.identity {
-            return (false, self.pending.take());
+            if self.crossfade_remaining > 0
+                && self.retired.is_none()
+                && self.previous.as_ref().is_some_and(SourceMix::is_single)
+            {
+                let (old_gain, new_gain) = self.crossfade_gains();
+                self.crossfade_frames = self.default_crossfade_frames;
+                self.crossfade_remaining = self.crossfade_frames;
+                self.coefficient_ramp_start = Some((old_gain, new_gain));
+                return (
+                    true,
+                    RetiredBuffers::two(next, self.pending.take().map(|pending| pending.buffer)),
+                );
+            }
+            return (
+                false,
+                RetiredBuffers::two(next, self.pending.take().map(|pending| pending.buffer)),
+            );
         }
         if self
             .pending
             .as_ref()
-            .is_some_and(|pending| pending.identity == next.identity)
+            .is_some_and(|pending| pending.buffer.identity == next.identity)
         {
-            return (false, None);
+            return (false, RetiredBuffers::one(next));
         }
-        if self.crossfade_remaining > 0 || self.retired.is_some() {
-            let superseded = self.pending.replace(next);
+
+        if self.crossfade_remaining > 0
+            && self.retired.is_none()
+            && self.previous.as_ref().is_some_and(SourceMix::is_single)
+        {
+            let (old_gain, new_gain) = self.crossfade_gains();
+            let previous = self.previous.take().expect("active transition source");
+            let current = std::mem::replace(&mut self.current, next);
+            self.previous = Some(SourceMix::from_interrupted_transition(
+                previous, current, old_gain, new_gain,
+            ));
+            self.crossfade_frames = self.default_crossfade_frames;
+            self.crossfade_remaining = self.crossfade_frames;
+            self.coefficient_ramp_start = None;
+            let superseded = self.pending.take().map(|pending| pending.buffer);
+            let superseded = superseded.map_or_else(RetiredBuffers::default, RetiredBuffers::one);
             return (true, superseded);
         }
+
+        self.replace_with_crossfade(next, self.default_crossfade_frames)
+    }
+
+    fn replace_with_crossfade(
+        &mut self,
+        next: LoopBuffer,
+        crossfade_frames: usize,
+    ) -> (bool, RetiredBuffers) {
+        if self.current.identity == next.identity {
+            return (
+                false,
+                RetiredBuffers::two(next, self.pending.take().map(|pending| pending.buffer)),
+            );
+        }
+        if self
+            .pending
+            .as_ref()
+            .is_some_and(|pending| pending.buffer.identity == next.identity)
+        {
+            return (false, RetiredBuffers::one(next));
+        }
+        let crossfade_frames = crossfade_frames.max(1);
+        if self.crossfade_remaining > 0 || self.retired.is_some() {
+            let superseded = self.pending.replace(PendingSource {
+                buffer: next,
+                crossfade_frames,
+            });
+            let superseded = superseded.map(|pending| pending.buffer);
+            return (
+                true,
+                superseded.map_or_else(RetiredBuffers::default, RetiredBuffers::one),
+            );
+        }
         let previous = std::mem::replace(&mut self.current, next);
-        self.previous = Some(previous);
+        self.previous = Some(SourceMix::single(previous));
+        self.crossfade_frames = crossfade_frames;
         self.crossfade_remaining = self.crossfade_frames;
-        (true, None)
+        self.coefficient_ramp_start = None;
+        (true, RetiredBuffers::default())
     }
 
     /// Reclaim callback-retired storage and begin the newest deferred switch.
     ///
     /// This runs on the control thread. The audio callback only moves the old
     /// buffer into `retired`, so it never frees a potentially large recording.
-    fn service_transitions(&mut self) -> Option<LoopBuffer> {
+    fn service_transitions(&mut self) -> Option<SourceMix> {
         let retired = self.retired.take();
         if self.crossfade_remaining == 0
             && self.previous.is_none()
-            && let Some(next) = self.pending.take()
+            && let Some(pending) = self.pending.take()
         {
-            let previous = std::mem::replace(&mut self.current, next);
-            self.previous = Some(previous);
+            let previous = std::mem::replace(&mut self.current, pending.buffer);
+            self.previous = Some(SourceMix::single(previous));
+            self.crossfade_frames = pending.crossfade_frames;
             self.crossfade_remaining = self.crossfade_frames;
+            self.coefficient_ramp_start = None;
         }
         retired
+    }
+
+    fn crossfade_gains(&self) -> (f32, f32) {
+        let progress = if self.crossfade_frames <= 1 {
+            1.0
+        } else {
+            1.0 - (self.crossfade_remaining - 1) as f32 / (self.crossfade_frames - 1) as f32
+        };
+        self.coefficient_ramp_start.map_or_else(
+            || ((1.0 - progress).sqrt(), progress.sqrt()),
+            |(old_start, new_start)| {
+                (
+                    old_start * (1.0 - progress),
+                    new_start + (1.0 - new_start) * progress,
+                )
+            },
+        )
     }
 
     fn set_master_gain(&mut self, gain: f32) {
@@ -573,21 +772,15 @@ impl MixerState {
             let previous = self
                 .previous
                 .as_mut()
-                .map_or((0.0, 0.0), LoopBuffer::next_frame);
-            let progress = if self.crossfade_frames <= 1 {
-                1.0
-            } else {
-                1.0 - (self.crossfade_remaining - 1) as f32 / (self.crossfade_frames - 1) as f32
-            };
-            let old_gain = (1.0 - progress).sqrt();
-            let new_gain = progress.sqrt();
-            let gain_sum = old_gain + new_gain;
+                .map_or((0.0, 0.0), SourceMix::next_frame);
+            let (old_gain, new_gain) = self.crossfade_gains();
             self.crossfade_remaining -= 1;
             let mixed = (
-                (previous.0 * old_gain + current.0 * new_gain) / gain_sum,
-                (previous.1 * old_gain + current.1 * new_gain) / gain_sum,
+                previous.0.mul_add(old_gain, current.0 * new_gain),
+                previous.1.mul_add(old_gain, current.1 * new_gain),
             );
             if self.crossfade_remaining == 0 {
+                self.coefficient_ramp_start = None;
                 debug_assert!(self.retired.is_none());
                 self.retired = self.previous.take();
             }
@@ -703,14 +896,25 @@ impl LoopPlayer {
     ///
     /// Supplying the same sample content again is a no-op and preserves the
     /// playhead. New content starts at its beginning under a short crossfade.
+    /// A default replacement interrupts a longer requested transition from its
+    /// exact current audible mix, with repeated interruption bounded by one
+    /// additional default fade.
     pub fn set_samples(&self, samples: Vec<f32>) {
         let next = LoopBuffer::new(samples, 1);
-        let retired = self
-            .state
-            .lock()
-            .ok()
-            .and_then(|mut state| state.replace(next).1);
-        drop(retired);
+        self.replace_source(next);
+    }
+
+    /// Crossfade to a mono looping buffer over a caller-selected duration.
+    ///
+    /// Accepted durations are finite and between 5 milliseconds and 2 seconds.
+    /// Invalid durations leave current and pending sources unchanged and return
+    /// `false`. Each deferred source retains its own requested duration.
+    pub fn set_samples_with_crossfade(&self, samples: Vec<f32>, seconds: f32) -> bool {
+        let Some(frames) = crossfade_frame_count(self.sample_rate, seconds) else {
+            return false;
+        };
+        let next = LoopBuffer::new(samples, 1);
+        self.replace_source_with_crossfade(next, frames)
     }
 
     /// Crossfade to an interleaved-stereo looping buffer.
@@ -746,8 +950,20 @@ impl LoopPlayer {
             .state
             .lock()
             .ok()
-            .and_then(|mut state| state.replace(next).1);
-        drop(retired);
+            .map(|mut state| state.replace(next).1);
+        if let Some(retired) = retired {
+            retired.retire();
+        }
+    }
+
+    fn replace_source_with_crossfade(&self, next: LoopBuffer, frames: usize) -> bool {
+        let Ok(mut state) = self.state.lock() else {
+            return false;
+        };
+        let (changed, retired) = state.replace_with_crossfade(next, frames);
+        drop(state);
+        retired.retire();
+        changed
     }
 
     /// Reclaim source storage retired by the real-time callback.
@@ -848,8 +1064,8 @@ mod tests {
     use std::sync::Arc;
 
     use super::{
-        AMPLITUDE, LoopBuffer, MixerState, OneshotPlay, PARAMETER_MAX_GAIN, device_channel_sample,
-        synthesize_sine, validate_output_dimensions,
+        AMPLITUDE, LoopBuffer, MixerState, OneshotPlay, PARAMETER_MAX_GAIN, crossfade_frame_count,
+        device_channel_sample, synthesize_sine, validate_output_dimensions,
     };
 
     #[test]
@@ -985,7 +1201,7 @@ mod tests {
         let before = mixer.current.pos;
         let (changed, superseded) = mixer.replace(LoopBuffer::new(samples, 1));
         assert!(!changed);
-        assert!(superseded.is_none());
+        assert!(!superseded.is_empty());
         assert_eq!(mixer.current.pos, before);
 
         mixer.set_master_gain(0.25);
@@ -1030,9 +1246,15 @@ mod tests {
         let retired_silence = mixer.service_transitions();
         assert!(retired_silence.is_some());
 
-        let _ = mixer.replace(LoopBuffer::new(vec![0.6; 64], 1));
+        let _ = mixer.replace_with_crossfade(
+            LoopBuffer::new(vec![0.6; 64], 1),
+            mixer.default_crossfade_frames,
+        );
         let _ = mixer.next_frame();
-        let _ = mixer.replace(LoopBuffer::new(vec![0.8; 64], 1));
+        let _ = mixer.replace_with_crossfade(
+            LoopBuffer::new(vec![0.8; 64], 1),
+            mixer.default_crossfade_frames,
+        );
         assert!(mixer.pending.is_some());
         while mixer.crossfade_remaining > 0 {
             let _ = mixer.next_frame();
@@ -1050,7 +1272,204 @@ mod tests {
     }
 
     #[test]
-    fn normalized_crossfade_does_not_clip_correlated_full_scale_sources() {
+    fn requested_crossfade_duration_is_bounded_and_stays_with_its_pending_source() {
+        assert_eq!(crossfade_frame_count(1_000, 0.5), Some(500));
+        assert_eq!(crossfade_frame_count(1_000, 0.005), Some(5));
+        assert_eq!(crossfade_frame_count(1_000, 2.0), Some(2_000));
+        assert_eq!(crossfade_frame_count(0, 0.5), None);
+        assert_eq!(crossfade_frame_count(1_000, 0.0), None);
+        assert_eq!(crossfade_frame_count(1_000, f32::NAN), None);
+        assert_eq!(crossfade_frame_count(1_000, 2.001), None);
+
+        let mut mixer = MixerState::new(1_000);
+        let _ = mixer.replace(LoopBuffer::new(vec![0.2; 64], 1));
+        for _ in 0..mixer.crossfade_frames {
+            let _ = mixer.next_frame();
+        }
+        let _ = mixer.service_transitions();
+
+        assert!(
+            mixer
+                .replace_with_crossfade(LoopBuffer::new(vec![0.6; 64], 1), 500)
+                .0
+        );
+        assert_eq!(mixer.crossfade_frames, 500);
+        let _ = mixer.next_frame();
+        assert!(
+            mixer
+                .replace_with_crossfade(LoopBuffer::new(vec![0.8; 64], 1), 250)
+                .0
+        );
+        assert_eq!(
+            mixer
+                .pending
+                .as_ref()
+                .expect("pending source")
+                .crossfade_frames,
+            250
+        );
+
+        while mixer.crossfade_remaining > 0 {
+            let _ = mixer.next_frame();
+        }
+        let retired = mixer.service_transitions();
+        assert!(retired.is_some());
+        assert_eq!(mixer.crossfade_frames, 250);
+        assert_eq!(mixer.crossfade_remaining, 250);
+        assert!((mixer.current.samples[0] - 0.8).abs() < 1.0e-6);
+
+        while mixer.crossfade_remaining > 0 {
+            let _ = mixer.next_frame();
+        }
+        let _ = mixer.service_transitions();
+        assert!(mixer.replace(LoopBuffer::new(vec![0.4; 64], 1)).0);
+        assert_eq!(mixer.crossfade_frames, mixer.default_crossfade_frames);
+        assert_eq!(mixer.crossfade_frames, 30);
+    }
+
+    #[test]
+    fn default_replacement_interrupts_a_long_fade_from_the_audible_mix() {
+        fn long_fade_after(frames: usize) -> MixerState {
+            let mut mixer = MixerState::new(1_000);
+            let _ = mixer.replace(LoopBuffer::new(vec![0.2; 67], 1));
+            for _ in 0..mixer.crossfade_frames {
+                let _ = mixer.next_frame();
+            }
+            let _ = mixer.service_transitions();
+            let _ = mixer.replace_with_crossfade(LoopBuffer::new(vec![0.6; 71], 1), 500);
+            for _ in 0..frames {
+                let _ = mixer.next_frame();
+            }
+            mixer
+        }
+
+        let mut reference = long_fade_after(200);
+        let expected_next = reference.next_frame();
+        let mut interrupted = long_fade_after(200);
+        assert!(interrupted.replace(LoopBuffer::new(vec![-0.4; 73], 1)).0);
+        assert!(interrupted.pending.is_none());
+        assert_eq!(interrupted.crossfade_frames, 30);
+        assert_eq!(interrupted.crossfade_remaining, 30);
+
+        let first = interrupted.next_frame();
+        assert!((first.0 - expected_next.0).abs() < 1.0e-6);
+        assert!((first.1 - expected_next.1).abs() < 1.0e-6);
+        assert!(interrupted.replace(LoopBuffer::new(vec![0.9; 79], 1)).0);
+        assert_eq!(
+            interrupted
+                .pending
+                .as_ref()
+                .expect("bounded repeated interrupt")
+                .crossfade_frames,
+            30
+        );
+        while interrupted.crossfade_remaining > 0 {
+            let _ = interrupted.next_frame();
+        }
+        let _ = interrupted.service_transitions();
+        assert_eq!(interrupted.crossfade_remaining, 30);
+        assert!((interrupted.next_frame().0 + 0.4).abs() < 1.0e-6);
+        while interrupted.crossfade_remaining > 0 {
+            let _ = interrupted.next_frame();
+        }
+        let _ = interrupted.service_transitions();
+        assert!((interrupted.next_frame().0 - 0.9).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn same_target_replacement_rebases_a_long_fade_without_restarting_playback() {
+        fn long_fade_after(frames: usize) -> MixerState {
+            let mut mixer = MixerState::new(1_000);
+            let _ = mixer.replace(LoopBuffer::new(vec![0.2; 67], 1));
+            for _ in 0..mixer.crossfade_frames {
+                let _ = mixer.next_frame();
+            }
+            let _ = mixer.service_transitions();
+            let _ = mixer.replace_with_crossfade(LoopBuffer::new(vec![0.6; 71], 1), 500);
+            for _ in 0..frames {
+                let _ = mixer.next_frame();
+            }
+            mixer
+        }
+
+        let mut reference = long_fade_after(200);
+        let expected_next = reference.next_frame();
+        let mut interrupted = long_fade_after(200);
+        let playhead = interrupted.current.pos;
+
+        let (changed, retired) = interrupted.replace(LoopBuffer::new(vec![0.6; 71], 1));
+
+        assert!(changed);
+        assert!(!retired.is_empty());
+        assert_eq!(interrupted.current.pos, playhead);
+        assert_eq!(interrupted.crossfade_remaining, 30);
+        let first = interrupted.next_frame();
+        assert!((first.0 - expected_next.0).abs() < 1.0e-6);
+        assert!((first.1 - expected_next.1).abs() < 1.0e-6);
+        let mut rebased = vec![first.0];
+        while interrupted.crossfade_remaining > 0 {
+            rebased.push(interrupted.next_frame().0);
+        }
+        assert!(
+            rebased.windows(2).all(|pair| pair[1] >= pair[0]),
+            "same-target coefficients must approach the target without a swell"
+        );
+        assert!(rebased.iter().all(|sample| *sample <= 0.6 + 1.0e-6));
+        assert!((rebased.last().expect("rebase endpoint") - 0.6).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn duplicate_requests_return_all_storage_for_post_lock_retirement() {
+        let current_samples = Arc::new(vec![0.2; 257]);
+        let pending_samples = Arc::new(vec![0.6; 263]);
+        let mut mixer = MixerState::new(1_000);
+        mixer.current = LoopBuffer::new_shared_at_rate(current_samples.clone(), 1, 1, 1);
+        mixer.pending = Some(super::PendingSource {
+            buffer: LoopBuffer::new_shared_at_rate(pending_samples.clone(), 1, 1, 1),
+            crossfade_frames: 30,
+        });
+
+        let duplicate = LoopBuffer::new_shared_at_rate(current_samples.clone(), 1, 1, 1);
+        let (changed, retired) = mixer.replace(duplicate);
+
+        assert!(!changed);
+        assert!(retired.first.is_some());
+        assert!(retired.second.is_some());
+        assert_eq!(Arc::strong_count(&current_samples), 3);
+        assert_eq!(Arc::strong_count(&pending_samples), 2);
+        drop(retired);
+        assert_eq!(Arc::strong_count(&current_samples), 2);
+        assert_eq!(Arc::strong_count(&pending_samples), 1);
+
+        let pending = LoopBuffer::new_shared_at_rate(pending_samples.clone(), 1, 1, 1);
+        mixer.pending = Some(super::PendingSource {
+            buffer: pending,
+            crossfade_frames: 30,
+        });
+        let duplicate_pending = LoopBuffer::new_shared_at_rate(pending_samples.clone(), 1, 1, 1);
+        let (changed, retired) = mixer.replace_with_crossfade(duplicate_pending, 600);
+        assert!(!changed);
+        assert!(retired.first.is_some());
+        assert!(retired.second.is_none());
+        assert_eq!(Arc::strong_count(&pending_samples), 3);
+        drop(retired);
+        assert_eq!(Arc::strong_count(&pending_samples), 2);
+    }
+
+    #[test]
+    fn crossfade_preserves_orthogonal_stereo_power_at_midpoint() {
+        let mut mixer = MixerState::new(1_000);
+        mixer.current = LoopBuffer::new(vec![1.0, 0.0, 1.0, 0.0], 2);
+        let _ =
+            mixer.replace_with_crossfade(LoopBuffer::new(vec![0.0, 1.0, 0.0, 1.0, 0.0, 1.0], 2), 3);
+        let _ = mixer.next_frame();
+        let midpoint = mixer.next_frame();
+        let power = midpoint.0.mul_add(midpoint.0, midpoint.1 * midpoint.1);
+        assert!((power - 1.0).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn crossfade_clamps_correlated_full_scale_sources() {
         let mut mixer = MixerState::new(1_000);
         let _ = mixer.replace(LoopBuffer::new(vec![1.0; 64], 1));
         for _ in 0..mixer.crossfade_frames {

@@ -30,6 +30,22 @@ audio source is no longer rebuilt from render-loop cadence. Native device rates 
 are covered by pitch and duration tests. Built-in radio remains the sole source
 while tuned.
 
+Formula Jam curated recipe changes use a request-scoped 600 ms equal-power
+source crossfade paired with the Studio's 600 ms curve morph. A deferred source
+retains its own requested duration instead of mutating an active fade. Requested
+durations must be finite and between 5 ms and 2 seconds. Manual edits continue
+to use the default 30 ms source response. Temporary invalid text and literal
+spaces reuse the last-good sound target, and an equivalent target preserves its
+active playhead while ramping the existing coefficients without a level swell.
+These edits interrupt a long recipe fade from its exact current audible mix
+instead of waiting behind it. Ownership
+changes follow the same bounded path, and a repeated interruption waits behind
+at most that short default fade so callback work cannot grow without bound.
+Rejected duplicate buffers and superseded pending buffers are destroyed only
+after the mixer mutex is released.
+These bounds and synchronization checks do not establish native callback timing
+or perceptual smoothness.
+
 Times Tables, Galton Board, and Double Pendulum ship continuous
 input-sonification through one bounded seam. Their stable room arrangements
 remain the bed while a quiet

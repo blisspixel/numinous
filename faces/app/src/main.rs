@@ -250,6 +250,8 @@ struct App {
     last_tick: Instant,
     /// Focused windows animate and speak; background windows hold their state.
     window_active: bool,
+    /// Wall-clock anchor used to reconcile presentation-only transitions.
+    inactive_since: Option<Instant>,
     /// Time speed multiplier (W faster, S slower), like sprint and sneak.
     time_scale: f64,
     /// The player's journey: the same file the CLI levels (visits, plays, wins).
@@ -355,6 +357,7 @@ impl App {
             frame: 0,
             last_tick: Instant::now(),
             window_active: true,
+            inactive_since: None,
             time_scale: 1.0,
             journey: journey.clone(),
             journey_saved: journey,
@@ -1835,10 +1838,48 @@ impl App {
 
     fn studio_reparse(&mut self) {
         let spec = self.studio_panel.reparse();
+        self.set_studio_edit_sound(spec);
+    }
+
+    fn set_studio_edit_sound(&mut self, parsed: Option<numinous_core::SoundSpec>) {
+        let spec = parsed.or_else(|| self.studio_panel.current_sound());
         self.set_studio_sound(spec);
     }
 
     fn set_studio_sound(&mut self, spec: Option<numinous_core::SoundSpec>) {
+        self.set_studio_sound_with_crossfade(spec, None);
+    }
+
+    fn suspend_presentation_clock(&mut self, now: Instant) {
+        self.window_active = false;
+        self.inactive_since.get_or_insert(now);
+    }
+
+    fn advance_presentation_time(&mut self, seconds: f64) {
+        if self.studio {
+            self.studio_panel.advance_morph(seconds);
+        }
+    }
+
+    fn resume_presentation_clock(&mut self, now: Instant) {
+        if let Some(inactive_since) = self.inactive_since.take() {
+            self.advance_presentation_time(
+                now.saturating_duration_since(inactive_since).as_secs_f64(),
+            );
+        }
+        self.window_active = true;
+        self.last_tick = now;
+    }
+
+    fn set_studio_recipe_sound(&mut self, spec: Option<numinous_core::SoundSpec>) {
+        self.set_studio_sound_with_crossfade(spec, Some(studio_panel::RECIPE_MORPH_SECONDS as f32));
+    }
+
+    fn set_studio_sound_with_crossfade(
+        &mut self,
+        spec: Option<numinous_core::SoundSpec>,
+        crossfade_seconds: Option<f32>,
+    ) {
         self.audio_program = AudioProgram::Studio;
         let Some(player) = &self.player else {
             return;
@@ -1847,7 +1888,12 @@ impl App {
         player.clear_oneshot();
         player.set_master_gain(if self.muted { 0.0 } else { self.volume });
         if let Some(spec) = spec {
-            player.set_samples(spec.render(player.sample_rate()));
+            let samples = spec.render(player.sample_rate());
+            if let Some(seconds) = crossfade_seconds {
+                let _ = player.set_samples_with_crossfade(samples, seconds);
+            } else {
+                player.set_samples(samples);
+            }
         }
     }
 
@@ -2320,9 +2366,9 @@ impl App {
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        let now = Instant::now();
+        self.resume_presentation_clock(now);
         if self.window.is_some() {
-            self.window_active = true;
-            self.last_tick = Instant::now();
             self.gamepad.activate();
             if self.radio.is_some() && !self.studio {
                 let _ = self.sync_radio_to_wall_clock();
@@ -2395,7 +2441,7 @@ impl ApplicationHandler for App {
     }
 
     fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
-        self.window_active = false;
+        self.suspend_presentation_clock(Instant::now());
         self.clear_pointer_state();
         if let Some(command) = self.gamepad.deactivate() {
             self.handle_gamepad_command(command);
@@ -2497,7 +2543,7 @@ impl ApplicationHandler for App {
                         Key::Named(NamedKey::F2) => {
                             // Formula Jam Random: draw a curated, tested recipe.
                             let spec = self.studio_panel.load_random_recipe();
-                            self.set_studio_sound(spec);
+                            self.set_studio_recipe_sound(spec);
                         }
                         Key::Named(NamedKey::F3) => {
                             // Formula Jam Auto: calm recipe set; F3 resumes after edit.
@@ -2505,14 +2551,19 @@ impl ApplicationHandler for App {
                         }
                         Key::Named(NamedKey::Backspace) => {
                             let spec = self.studio_panel.backspace();
-                            self.set_studio_sound(spec);
+                            self.set_studio_edit_sound(spec);
                         }
                         Key::Named(NamedKey::Space) => {
-                            self.studio_panel.push_space();
+                            if self.studio_panel.push_space() {
+                                self.set_studio_edit_sound(None);
+                            }
                         }
                         Key::Character(s) => {
+                            let before = self.studio_panel.source_len();
                             let spec = self.studio_panel.push_text(&s);
-                            self.set_studio_sound(spec);
+                            if self.studio_panel.source_len() != before {
+                                self.set_studio_edit_sound(spec);
+                            }
                         }
                         _ => {}
                     }
@@ -2733,7 +2784,7 @@ impl ApplicationHandler for App {
                 }
             }
             WindowEvent::Focused(false) => {
-                self.window_active = false;
+                self.suspend_presentation_clock(Instant::now());
                 self.clear_pointer_state();
                 if let Some(command) = self.gamepad.deactivate() {
                     self.handle_gamepad_command(command);
@@ -2746,8 +2797,7 @@ impl ApplicationHandler for App {
                 }
             }
             WindowEvent::Focused(true) => {
-                self.window_active = true;
-                self.last_tick = Instant::now();
+                self.resume_presentation_clock(Instant::now());
                 self.gamepad.activate();
                 if self.radio.is_some() && !self.studio {
                     let _ = self.sync_radio_to_wall_clock();
@@ -2801,7 +2851,8 @@ impl ApplicationHandler for App {
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         let now = Instant::now();
         event_loop.set_control_flow(ControlFlow::WaitUntil(now + FRAME_INTERVAL));
-        let elapsed = bounded_tick_seconds(now.saturating_duration_since(self.last_tick));
+        let since_last_tick = now.saturating_duration_since(self.last_tick);
+        let elapsed = bounded_tick_seconds(since_last_tick);
         self.last_tick = now;
         if let Some(player) = &self.player {
             player.service();
@@ -2809,6 +2860,7 @@ impl ApplicationHandler for App {
         if !self.window_active {
             return;
         }
+        self.advance_presentation_time(since_last_tick.as_secs_f64());
         let commands = self.gamepad.poll(now);
         for command in commands {
             self.handle_gamepad_command(command);
@@ -2868,7 +2920,7 @@ impl ApplicationHandler for App {
             if self.studio {
                 // Auto advances only after dwell and a phrase-edge of gallery phase.
                 if let Some(spec) = self.studio_panel.tick_auto(elapsed, self.t) {
-                    self.set_studio_sound(Some(spec));
+                    self.set_studio_recipe_sound(Some(spec));
                 }
             }
             if self.banner.as_mut().is_some_and(|banner| !banner.tick()) {
@@ -3736,6 +3788,29 @@ mod tests {
         app.handle_gamepad_command(crate::gamepad::Command::PhaseDelta(-0.1));
         assert_eq!(app.t, phase);
         assert!(app.time_scale < after_wheel);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn presentation_clock_advances_a_studio_morph_through_pause_and_focus_loss() {
+        let mut app = headless("numinous_app_test_studio_focus_clock.txt");
+        app.studio = true;
+        assert!(app.studio_panel.load_random_recipe().is_some());
+        let start = Instant::now();
+
+        app.paused = true;
+        app.advance_presentation_time(0.3);
+        assert!(
+            app.studio_panel.load_random_recipe().is_none(),
+            "pause must not finish a half-complete morph early"
+        );
+
+        app.suspend_presentation_clock(start);
+        app.resume_presentation_clock(start + Duration::from_millis(300));
+        assert!(
+            app.studio_panel.load_random_recipe().is_some(),
+            "the remaining focus-loss time must finish the original morph"
+        );
         let _ = std::fs::remove_file(&app.journey_file);
     }
 
