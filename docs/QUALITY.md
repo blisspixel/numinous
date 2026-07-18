@@ -6,13 +6,13 @@ comfort, and voluntary return play. Only part of that system is automated today.
 This document names both the enforced checks and the quality loops still to be
 built, so an aspiration is never mistaken for a result.
 
-## Evidence snapshot, 2026-07-17
+## Evidence snapshot, 2026-07-18
 
-- **Enforced now:** formatting, Clippy with warnings denied, 2,827 passing
+- **Enforced now:** formatting, Clippy with warnings denied, 2,832 passing
   all-target test cases plus one ignored screenshot diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 95.36%
-  regions and 95.39% lines under the documented exclusions.
+  three-OS test-and-build matrix. The current measured coverage is 95.37%
+  regions and 95.40% lines under the documented exclusions.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
   three faces, and a release-generated 2,911-screen visual QA matrix. Every room
@@ -60,10 +60,13 @@ built, so an aspiration is never mistaken for a result.
   capped below two million interleaved samples and shared with the mixer, so
   device rate and repeated hand input cannot multiply that source allocation.
   Life's generation voice reduces every exact birth mask to twelve fixed pitch
-  rows and 105 ms. Tests bind the same mask to visible recent births, exact
-  sonic counts, vertical pitch, horizontal energy, density weight, deterministic
-  CLI and MCP snapshots, finite stereo output, peak, RMS, DC, adjacent-step,
-  and side-to-mid bounds. Mixer tests cover pan, mono downmix, source continuity,
+  rows and 105 ms. One optional voice tracks the newest planted glider only
+  while its exact four-phase shape and empty one-cell halo remain intact. Tests
+  bind the same mask to visible recent births, exact sonic counts, vertical
+  pitch, horizontal energy, density weight, four-phase B3/S23 survival,
+  collision retirement, deterministic CLI and MCP snapshots, finite stereo
+  output, peak, RMS, DC, adjacent-step, and side-to-mid bounds. Mixer tests cover
+  pan, mono downmix, source continuity,
   control-thread retirement, and explicit ownership cancellation. These checks
   do not establish native callback timing or musical quality.
   Formula Jam recipe transitions use one 600 ms duration for smoothstep curve
