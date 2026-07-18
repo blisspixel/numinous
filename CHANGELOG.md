@@ -6,6 +6,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Mathematical truth checks now protect three flagship foundations. Formula
+  Jam follows conventional precedence, so exponentiation binds before unary
+  minus while negative exponents and right-associative powers still work. The
+  Double Pendulum replaces explicit Euler with bounded fourth-order
+  Runge-Kutta integration; three declared starts enforce relative energy drift
+  below one part per million over the shipped horizon and tip agreement under
+  an early dt-halving oracle. Its player copy now distinguishes a deterministic
+  numerical model, sensitive dependence, and finite forecast horizons without
+  categorical proof claims. Game of Life now assigns mortality undecidability
+  to the unbounded grid and says plainly that the shipped finite torus must
+  eventually repeat and is decidable by exhaustive state tracking in
+  principle. The full 2,264-test core suite and all workspace targets pass.
 - Galton Board now makes every ball in an accepted 64-ball wave audible beneath
   its exact highlighted path. The newest contiguous wave is replayed through
   the same deterministic random stream into a fixed 17 by 17 row-position mass

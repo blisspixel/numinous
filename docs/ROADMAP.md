@@ -399,6 +399,16 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   landing, energy, stereo, ownership, rate, signal, formatting, Clippy, broad
   test, coverage, and flagship performance checks pass. Native callback timing,
   a growing-pile pad, participant discovery, and musician judgment remain open.
+- **Done (flagship mathematical truth pass, cycle 133):** Formula Jam now gives
+  exponentiation conventional precedence over unary minus while preserving
+  right-associative powers and negative exponents. Double Pendulum now uses
+  bounded fourth-order Runge-Kutta integration instead of explicit Euler, with
+  energy and dt-refinement oracles across three declared starts and qualified
+  player copy that separates the numerical model from claims about continuous
+  physics and forecast horizons. Game of Life now assigns mortality
+  undecidability to the unbounded grid and distinguishes the shipped finite
+  torus, which must eventually repeat and is decidable by exhaustive tracking
+  in principle. Product 0.2 human evidence remains open.
 - **Done (physics and geometry consequence depth, cycle 120):** Berry Phase,
   Bragg Diffraction, Capillary Meniscus, Sphere Geodesics, and Polarization now
   derive their action status from the same bounded mathematical state used to
