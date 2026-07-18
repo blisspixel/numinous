@@ -1040,7 +1040,7 @@ fn build_tools_catalog() -> Value {
                         "seed": { "type": "integer", "description": "Seed; the same seed and round give the same board." },
                         "daily": { "type": "boolean", "description": "Use today\'s shared seed instead; dailies chain into streaks." },
                         "round": { "type": "integer", "description": "Round number (default 4 for the complete rule deck; 0 through 3 are the gentle ramp)." },
-                        "bites": { "type": "array", "items": { "type": "integer" }, "description": "The 1-based cell numbers you eat. Omit to see the board." }
+                        "bites": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "description": "The 1-based cell numbers you eat. Omit to see the board." }
                     },
                     "additionalProperties": false
                 }
@@ -1053,7 +1053,14 @@ fn build_tools_catalog() -> Value {
                     "properties": {
                         "seed": { "type": "integer", "description": "Seed for the run." },
                         "daily": { "type": "boolean", "description": "Use today's shared seed." },
-                        "actions": { "type": "array", "items": { "type": "string" }, "description": "Action list to replay: up/down/left/right/eat (or w/a/s/d/e). Omit to see initial state." }
+                        "actions": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "pattern": "^(?:[Uu][Pp]|[Dd][Oo][Ww][Nn]|[Ll][Ee][Ff][Tt]|[Rr][Ii][Gg][Hh][Tt]|[Ee][Aa][Tt]|[WwAaSsDdEe])$"
+                            },
+                            "description": "Action list to replay: up/down/left/right/eat (or w/a/s/d/e), case-insensitive. Omit to see initial state."
+                        }
                     },
                     "additionalProperties": false
                 }
@@ -1083,7 +1090,16 @@ fn build_tools_catalog() -> Value {
                     "properties": {
                         "seed": { "type": "integer", "description": "Seed; the same seed gives the same starting heaps." },
                         "daily": { "type": "boolean", "description": "Use today\'s shared seed instead; dailies chain into streaks." },
-                        "moves": { "type": "array", "items": { "type": "array", "items": { "type": "integer" } }, "description": "Your moves so far, in order: [[heap, take], ...]. Omit to see the opening board." }
+                        "moves": {
+                            "type": "array",
+                            "items": {
+                                "type": "array",
+                                "items": { "type": "integer", "minimum": 1 },
+                                "minItems": 2,
+                                "maxItems": 2
+                            },
+                            "description": "Your moves so far, in order: [[heap, take], ...]. Omit to see the opening board."
+                        }
                     },
                     "additionalProperties": false
                 }
@@ -1182,7 +1198,16 @@ fn build_tools_catalog() -> Value {
                     "properties": {
                         "seed": { "type": "integer", "description": "Seed; the same seed grows the same garden." },
                         "daily": { "type": "boolean", "description": "Use today's shared seed instead." },
-                        "moves": { "type": "array", "items": { "type": "array", "items": { "type": "integer" } }, "description": "Your red cuts so far, in order: [[stalk, height], ...] (1-based). Omit to see the garden." }
+                        "moves": {
+                            "type": "array",
+                            "items": {
+                                "type": "array",
+                                "items": { "type": "integer", "minimum": 1 },
+                                "minItems": 2,
+                                "maxItems": 2
+                            },
+                            "description": "Your red cuts so far, in order: [[stalk, height], ...] (1-based). Omit to see the garden."
+                        }
                     },
                     "additionalProperties": false
                 }
@@ -1257,10 +1282,25 @@ fn validate_declared_tool_arguments(params: Option<&Value>) -> Result<(), String
         // Unknown tools remain JSON-RPC invalid-params errors at dispatch.
         return Ok(());
     };
-    match params.get("arguments") {
-        Some(arguments) => validate_schema_value(arguments, schema, "", 0),
-        None => validate_schema_value(&json!({}), schema, "", 0),
+    let default_arguments = json!({});
+    let arguments = params.get("arguments").unwrap_or(&default_arguments);
+    validate_schema_value(arguments, schema, "", 0)?;
+    validate_domain_tool_arguments(name, arguments)
+}
+
+fn validate_domain_tool_arguments(name: &str, arguments: &Value) -> Result<(), String> {
+    if name == "munch_arcade"
+        && let Some(actions) = arguments.get("actions").and_then(Value::as_array)
+        && let Some((index, _)) = actions
+            .iter()
+            .enumerate()
+            .find(|(_, action)| arcade_action(action).is_none())
+    {
+        return Err(format!(
+            "Argument 'actions[{index}]' must be up, down, left, right, eat, w, a, s, d, or e."
+        ));
     }
+    Ok(())
 }
 
 fn argument_subject(path: &str) -> String {
@@ -4484,6 +4524,32 @@ mod tests {
         let challenge_phase = &challenge["inputSchema"]["properties"]["t"];
         assert_eq!(challenge_phase["minimum"], 0);
         assert_eq!(challenge_phase["exclusiveMaximum"], 1);
+        let munch = tools
+            .iter()
+            .find(|tool| tool["name"] == "munch")
+            .expect("munch tool");
+        assert_eq!(
+            munch["inputSchema"]["properties"]["bites"]["items"]["minimum"],
+            1
+        );
+        let arcade = tools
+            .iter()
+            .find(|tool| tool["name"] == "munch_arcade")
+            .expect("munch_arcade tool");
+        assert_eq!(
+            arcade["inputSchema"]["properties"]["actions"]["items"]["pattern"],
+            "^(?:[Uu][Pp]|[Dd][Oo][Ww][Nn]|[Ll][Ee][Ff][Tt]|[Rr][Ii][Gg][Hh][Tt]|[Ee][Aa][Tt]|[WwAaSsDdEe])$"
+        );
+        for tool_name in ["nim", "hackenbush"] {
+            let game = tools
+                .iter()
+                .find(|tool| tool["name"] == tool_name)
+                .expect("tuple-move game");
+            let tuple = &game["inputSchema"]["properties"]["moves"]["items"];
+            assert_eq!(tuple["minItems"], 2, "{tool_name}");
+            assert_eq!(tuple["maxItems"], 2, "{tool_name}");
+            assert_eq!(tuple["items"]["minimum"], 1, "{tool_name}");
+        }
         let run_sim = tools
             .iter()
             .find(|tool| tool["name"] == "run_sim")
@@ -5767,6 +5833,9 @@ plays 2
     #[test]
     fn invalid_tools_do_not_record_progress() {
         let file = super::test_state_path("invalid-progress");
+        let scores = super::scores_path();
+        let _ = std::fs::remove_file(&file);
+        let _ = std::fs::remove_file(&scores);
         for (id, name, arguments) in [
             (401, "run_sim", json!({"id": "no-such-sim"})),
             (402, "plot_expression", json!({"expr": "sin("})),
@@ -5787,6 +5856,11 @@ plays 2
                 json!({"id":"tribbles","params":{"breeding-rate":100.0}}),
             ),
             (407, "listen_room", json!({"id":"goldbach","t":9.0})),
+            (408, "munch_arcade", json!({"actions":["not-an-action"]})),
+            (409, "nim", json!({"moves":[[]]})),
+            (410, "hackenbush", json!({"moves":[[]]})),
+            (411, "munch", json!({"bites":[0]})),
+            (412, "munch", json!({"bites":[-1]})),
         ] {
             let resp = handle_request_with(
                 &json!({
@@ -5803,6 +5877,27 @@ plays 2
             .unwrap_or_default();
         assert_eq!(journey.plays, 0);
         assert!(journey.visited.is_empty());
+        assert!(!scores.exists(), "invalid actions must not post scores");
+        let _ = std::fs::remove_file(&file);
+
+        let control_file = super::test_state_path("valid-arcade-progress");
+        let control = handle_request_with(
+            &json!({
+                "jsonrpc":"2.0","id":413,"method":"tools/call",
+                "params":{"name":"munch_arcade","arguments":{"actions":["RiGhT","E"]}}
+            }),
+            &control_file,
+        )
+        .expect("valid mixed-case aliases must respond");
+        assert_ne!(control["result"]["isError"], true);
+        assert_eq!(
+            std::fs::read_to_string(&control_file)
+                .map(|text| numinous_core::Journey::from_text(&text).plays)
+                .unwrap_or_default(),
+            1
+        );
+        let _ = std::fs::remove_file(control_file);
+        let _ = std::fs::remove_file(scores);
     }
 
     #[test]
