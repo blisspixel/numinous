@@ -6,6 +6,21 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Game of Life now voices each presented B3/S23 generation from the same exact
+  birth mask that highlights new cells. Every birth contributes to one of
+  twelve fixed C major-pentatonic pitch rows, to that row's horizontal stereo
+  centroid, and to density-driven harmonic energy. The fixed reduction renders
+  a 105 ms stereo texture without per-cell callback work, and CLI `sonify` plus
+  MCP `listen_room` expose a deterministic simultaneous-note snapshot whose
+  row amplitudes preserve relative birth counts. Catch-up ticks voice only the
+  newest generation that the App presents, avoiding a stale burst after the
+  picture. Mono devices receive a bounded stereo downmix. One-shot storage is
+  prepared and retired outside the audio callback lock. Room, modal, Studio,
+  radio, reset, and successful launch boundaries cancel stale textures. Tests bind
+  exact birth counts to the visual mask and sonic reduction, enforce fixed
+  work, finite signal metrics, pan, mono projection, source continuity,
+  ownership, cross-face replay, and the newest-presented-generation policy.
+  Native device timing and musician-led listening remain open evidence.
 - Double Pendulum now makes its physical gesture state audible through the
   existing continuous parameter voice. The same reduced state drives pixels,
   the twin-divergence status, and sound: the first-arm drop selects one of five

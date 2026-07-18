@@ -181,8 +181,8 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The current local gate has 2,782 passing all-target test cases plus one ignored
-screenshot diagnostic, 95.31% region coverage and 95.34% line coverage with an
+The current local gate has 2,794 passing all-target test cases plus one ignored
+screenshot diagnostic, 95.33% region coverage and 95.36% line coverage with an
 enforced 80% line floor, Clippy with warnings denied, and dependency policy
 checks. Release QA also regenerates an exact
 2,909-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
@@ -213,8 +213,11 @@ exact binomial reference, and reset without phase-driven drift.
 Game of Life now ships the second: one click clears a local patch and plants
 exactly five cells, the App universe advances continuously for the whole visit,
 birth and death consequences remain visible after the old phase boundary, and
-R restores the exact opening. CLI and MCP calls remain explicit, deterministic,
-stateless replays rather than implying a hidden session.
+R restores the exact opening. Each presented generation highlights its newest
+births and renders those same births as one short stereo texture: vertical rows
+select C major-pentatonic pitches, horizontal centroids pan them, and birth
+density changes their weight and harmonics. CLI and MCP calls remain explicit,
+deterministic, stateless replays rather than implying a hidden session.
 Versions are earned by evidence, not by feature count.
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the ordered 0.2 through 2.0 plan and

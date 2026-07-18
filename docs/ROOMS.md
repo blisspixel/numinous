@@ -40,7 +40,11 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
   reset returns to the same opening.
 - **Aha:** "Build something that never dies" / "make a pattern that moves."
 - **Reveal:** *"Those four rules are enough to build a working computer. People have built Tetris, and Conway's Game of Life itself, inside this. It's not a toy. It's a universe."*
-- **Sound:** each birth triggers a note pitched by its position; dense colonies swell the pad. A living generative sequencer.
+- **Sound:** the shipped first layer marks each presented generation's exact
+  births and reduces all of them into twelve vertical C major-pentatonic pitch
+  rows. Row counts set note weight, horizontal centroids set stereo position,
+  and total activity adds bounded harmonic color. Independent per-cell onset
+  timing, glider phrases, and the sustained colony pad remain later layers.
 
 ### 3. Cellular Automata (Wolfram's Rules)  Wow 4 / Build 1
 - **Rule:** A row of cells. Each cell's next state depends only on it and its two neighbors. Turn the "rule number" from 0 to 255.

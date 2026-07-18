@@ -100,6 +100,13 @@ same stream.
   (already a rule), persistence-decay maps to reverb-tail, brightness maps to
   filter cutoff. Sight and sound share not just events but parameters.
 
+Game of Life now ships a narrow room-local precursor, not the general Sensory
+Bus. Its exact transition loop writes one birth mask consumed by recent-cell
+highlighting and a fixed twelve-row stereo reduction. This closes visual and
+sonic source agreement for the presented generation while leaving the shared
+event vocabulary, sample-accurate scheduling, independent per-cell onsets, and
+cross-room modulation lattice unbuilt.
+
 The rule for every room: find its structural duality and give it to both
 channels. Lissajous's ratio is one interval you see and hear (shipped). The
 worked example to build first is the Lorenz attractor: the two wings become two

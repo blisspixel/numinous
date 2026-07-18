@@ -30,6 +30,7 @@ pub mod humor;
 pub mod insights;
 pub use insights::{INSIGHTS, insight};
 pub mod journey;
+pub mod life_sound;
 pub mod motifs;
 pub mod munch_arcade;
 pub mod munchers;

@@ -8,6 +8,7 @@
 
 use crate::rng::SplitMix64;
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::sound::SoundSpec;
 use crate::surface::{MAX_DIM, Surface};
 
 /// Simulation grid width and height (fixed, independent of the surface).
@@ -54,6 +55,8 @@ pub struct LifeSession {
     live_cells: usize,
     event: LifeEvent,
     recent_launches: Vec<bool>,
+    recent_births: Vec<bool>,
+    step_sound: crate::life_sound::LifeStepSound,
     baseline: Vec<bool>,
     world: Vec<bool>,
     next_baseline: Vec<bool>,
@@ -72,6 +75,8 @@ impl LifeSession {
             live_cells,
             event: LifeEvent::Opening,
             recent_launches: vec![false; GRID_W * GRID_H],
+            recent_births: vec![false; GRID_W * GRID_H],
+            step_sound: crate::life_sound::LifeStepSound::default(),
             baseline: world.clone(),
             world,
             next_baseline: vec![false; GRID_W * GRID_H],
@@ -85,10 +90,15 @@ impl LifeSession {
         step_into(&self.baseline, GRID_W, GRID_H, &mut self.next_baseline);
         let mut births = 0;
         let mut deaths = 0;
+        self.recent_births.fill(false);
         for index in 0..self.world.len() {
-            births += usize::from(!self.world[index] && self.next_world[index]);
+            let born = !self.world[index] && self.next_world[index];
+            self.recent_births[index] = born;
+            births += usize::from(born);
             deaths += usize::from(self.world[index] && !self.next_world[index]);
         }
+        self.step_sound =
+            crate::life_sound::LifeStepSound::from_birth_mask(&self.recent_births, GRID_W, GRID_H);
         std::mem::swap(&mut self.world, &mut self.next_world);
         std::mem::swap(&mut self.baseline, &mut self.next_baseline);
         self.live_cells = self.live_cells + births - deaths;
@@ -122,6 +132,8 @@ impl LifeSession {
         }
         self.live_cells = self.live_cells + newly_living - cleared;
         self.launches = self.launches.saturating_add(1);
+        self.recent_births.fill(false);
+        self.step_sound = crate::life_sound::LifeStepSound::default();
         for &(x, y) in &cells {
             self.recent_launches[y * GRID_W + x] = true;
         }
@@ -142,6 +154,12 @@ impl LifeSession {
     #[must_use]
     pub fn launches(&self) -> u64 {
         self.launches
+    }
+
+    /// Fixed-size sonic reduction of births in the newest exact generation.
+    #[must_use]
+    pub fn step_sound(&self) -> &crate::life_sound::LifeStepSound {
+        &self.step_sound
     }
 
     /// A truthful readout for wide App layouts and agent faces.
@@ -189,12 +207,13 @@ impl LifeSession {
 
     /// Draw the untouched universe normally and causal deviations brightly.
     pub fn render(&self, canvas: &mut dyn Surface) {
-        if self.launches == 0 {
-            draw_grid(canvas, &self.world);
-            return;
-        }
-        draw_grid_comparison(canvas, &self.baseline, &self.world);
-        draw_grid_mask(canvas, &self.world, &self.recent_launches, '#');
+        draw_grid_state(
+            canvas,
+            (self.launches > 0).then_some(self.baseline.as_slice()),
+            &self.world,
+            &self.recent_launches,
+            &self.recent_births,
+        );
     }
 }
 
@@ -231,6 +250,13 @@ impl GameOfLife {
     fn generation_for(t: f64) -> usize {
         let phase = if t.is_nan() { 0.0 } else { t.clamp(0.0, 1.0) };
         (phase * MAX_GEN as f64).round() as usize
+    }
+
+    fn ambient_sound(&self) -> SoundSpec {
+        self.motif().map_or_else(
+            || SoundSpec::tone(130.81, 0.5, 0.1),
+            |motif| SoundSpec::from_motif(&motif),
+        )
     }
 }
 
@@ -273,6 +299,22 @@ impl Room for GameOfLife {
             session_with_launches(Self::generation_for(t), self.seed, &launch_events(inputs))
                 .status(),
         )
+    }
+
+    fn sound(&self, t: f64) -> SoundSpec {
+        let mut session = LifeSession::new(self.seed);
+        advance_session(&mut session, Self::generation_for(t));
+        session
+            .step_sound()
+            .snapshot()
+            .unwrap_or_else(|| self.ambient_sound())
+    }
+
+    fn sound_input(&self, t: f64, inputs: &[RoomInput]) -> SoundSpec {
+        session_with_launches(Self::generation_for(t), self.seed, &launch_events(inputs))
+            .step_sound()
+            .snapshot()
+            .unwrap_or_else(|| self.ambient_sound())
     }
 
     fn verb(&self) -> Option<&'static str> {
@@ -335,26 +377,13 @@ impl Room for GameOfLife {
     }
 }
 
-fn draw_grid(canvas: &mut dyn Surface, grid: &[bool]) {
-    draw_grid_mark(canvas, grid, '*');
-}
-
-fn draw_grid_mark(canvas: &mut dyn Surface, grid: &[bool], mark: char) {
-    let Some((width, height)) = drawing_dims(canvas) else {
-        return;
-    };
-    for py in 0..height {
-        for px in 0..width {
-            let gx = px * GRID_W / width;
-            let gy = py * GRID_H / height;
-            if grid[gy * GRID_W + gx] {
-                canvas.plot(px as i32, py as i32, mark);
-            }
-        }
-    }
-}
-
-fn draw_grid_comparison(canvas: &mut dyn Surface, baseline: &[bool], world: &[bool]) {
+fn draw_grid_state(
+    canvas: &mut dyn Surface,
+    baseline: Option<&[bool]>,
+    world: &[bool],
+    recent_launches: &[bool],
+    recent_births: &[bool],
+) {
     let Some((width, height)) = drawing_dims(canvas) else {
         return;
     };
@@ -364,26 +393,14 @@ fn draw_grid_comparison(canvas: &mut dyn Surface, baseline: &[bool], world: &[bo
             let gy = py * GRID_H / height;
             let index = gy * GRID_W + gx;
             if world[index] {
-                canvas.plot(
-                    px as i32,
-                    py as i32,
-                    if baseline[index] { '*' } else { '#' },
-                );
-            }
-        }
-    }
-}
-
-fn draw_grid_mask(canvas: &mut dyn Surface, world: &[bool], mask: &[bool], mark: char) {
-    let Some((width, height)) = drawing_dims(canvas) else {
-        return;
-    };
-    for py in 0..height {
-        for px in 0..width {
-            let gx = px * GRID_W / width;
-            let gy = py * GRID_H / height;
-            let index = gy * GRID_W + gx;
-            if world[index] && mask[index] {
+                let mark = if recent_births[index] {
+                    '@'
+                } else if recent_launches[index] || baseline.is_some_and(|opening| !opening[index])
+                {
+                    '#'
+                } else {
+                    '*'
+                };
                 canvas.plot(px as i32, py as i32, mark);
             }
         }
@@ -665,6 +682,68 @@ mod tests {
             session.live_cells + deaths,
             "population change equals births minus deaths"
         );
+        assert_eq!(session.step_sound().birth_count(), births);
+        assert_eq!(
+            session.recent_births.iter().filter(|&&born| born).count(),
+            births
+        );
+        for (index, (&before, &after)) in opening.iter().zip(&expected).enumerate() {
+            assert_eq!(session.recent_births[index], !before && after);
+        }
+
+        let audio = session.step_sound().render_stereo(48_000);
+        assert!(!audio.is_empty());
+        assert_eq!(audio.len() % 2, 0);
+        assert!(audio.iter().all(|sample| sample.is_finite()));
+        assert!(audio.iter().all(|sample| sample.abs() <= 0.2));
+
+        let mut canvas = Canvas::new(GRID_W, super::GRID_H);
+        session.render(&mut canvas);
+        for (index, &born) in session.recent_births.iter().enumerate() {
+            if born {
+                assert_eq!(canvas.cell(index % GRID_W, index / GRID_W), Some('@'));
+            }
+        }
+    }
+
+    #[test]
+    fn life_snapshot_sound_is_the_last_exact_generation_event() {
+        let room = GameOfLife::new_with(9);
+        let t = 0.37;
+        let inputs = [crate::room::RoomInput::PointerDown {
+            x: 0.24,
+            y: 0.71,
+            t: 0.08,
+        }];
+        let session = super::session_with_launches(
+            GameOfLife::generation_for(t),
+            9,
+            &super::launch_events(&inputs),
+        );
+        let expected = session
+            .step_sound()
+            .snapshot()
+            .expect("evolving Life has births");
+        let actual = room.sound_input(t, &inputs);
+
+        assert_eq!(actual.notes, expected.notes);
+        assert_eq!(actual.duration, expected.duration);
+    }
+
+    #[test]
+    fn a_launch_at_the_snapshot_boundary_does_not_invent_unseen_births() {
+        let room = GameOfLife::new_with(9);
+        let t = 0.37;
+        let inputs = [crate::room::RoomInput::PointerDown {
+            x: 0.24,
+            y: 0.71,
+            t,
+        }];
+        let actual = room.sound_input(t, &inputs);
+        let ambient = room.ambient_sound();
+
+        assert_eq!(actual.notes, ambient.notes);
+        assert_eq!(actual.duration, ambient.duration);
     }
 
     #[test]
