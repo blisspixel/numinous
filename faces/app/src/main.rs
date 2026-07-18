@@ -181,11 +181,35 @@ fn selected_parameter_sound(
     room.parameter_sound(effective_phase, effective_room_inputs(inputs, the_show))
 }
 
+fn life_step_audio_owned(program: AudioProgram, modal_active: bool, room_id: &str) -> bool {
+    program == AudioProgram::RoomScore && !modal_active && room_id == "game-of-life"
+}
+
+fn selected_life_step_audio(
+    program: AudioProgram,
+    modal_active: bool,
+    muted: bool,
+    completed_steps: usize,
+    session: &numinous_core::rooms::game_of_life::LifeSession,
+    sample_rate: u32,
+) -> Option<Vec<f32>> {
+    if !life_step_audio_owned(program, modal_active, "game-of-life")
+        || muted
+        || completed_steps == 0
+    {
+        return None;
+    }
+    let samples = session.step_sound().render_stereo(sample_rate);
+    (!samples.is_empty()).then_some(samples)
+}
+
 /// The application state driven by the winit event loop.
 struct App {
     window: Option<Rc<Window>>,
     surface: Option<softbuffer::Surface<Rc<Window>, Rc<Window>>>,
     player: Option<numinous_audio::LoopPlayer>,
+    #[cfg(test)]
+    transient_audio_clears: std::cell::Cell<usize>,
     gamepad: gamepad::GamepadInput,
     /// The last input family that performed a meaningful action.
     input_mode: input_legend::InputMode,
@@ -304,6 +328,8 @@ impl App {
             window: None,
             surface: None,
             player: None,
+            #[cfg(test)]
+            transient_audio_clears: std::cell::Cell::new(0),
             gamepad: gamepad::GamepadInput::new(),
             input_mode: input_legend::InputMode::default(),
             mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera::new(0),
@@ -647,6 +673,7 @@ impl App {
     fn gauntlet_key(&mut self, key: &Key) {
         if matches!(key, Key::Named(NamedKey::Escape)) {
             self.gauntlet = None;
+            self.clear_transient_audio();
             self.update_audio();
             return;
         }
@@ -744,6 +771,7 @@ impl App {
             },
             _ => {
                 self.gauntlet = None;
+                self.clear_transient_audio();
                 self.update_audio();
             }
         }
@@ -759,6 +787,7 @@ impl App {
             match key {
                 Key::Named(NamedKey::Escape) => {
                     self.munch = None;
+                    self.clear_transient_audio();
                     self.update_audio();
                 }
                 Key::Named(NamedKey::Enter | NamedKey::Space) => self.munch_start(),
@@ -769,6 +798,7 @@ impl App {
         match key {
             Key::Named(NamedKey::Escape) => {
                 self.munch = None;
+                self.clear_transient_audio();
                 self.update_audio();
             }
             Key::Named(NamedKey::Enter) => self.munch_grade(),
@@ -794,6 +824,15 @@ impl App {
         }
         let samples = numinous_core::munch_crunch(player.sample_rate(), seed);
         player.play_oneshot(samples, 0.55 * self.volume);
+    }
+
+    fn clear_transient_audio(&self) {
+        #[cfg(test)]
+        self.transient_audio_clears
+            .set(self.transient_audio_clears.get().saturating_add(1));
+        if let Some(player) = &self.player {
+            player.clear_oneshot();
+        }
     }
 
     /// One key into standalone Nim, including an explicit retry after either
@@ -938,6 +977,9 @@ impl App {
         self.show_journey = false;
         self.studio = true;
         self.audio_program = AudioProgram::Studio;
+        if let Some(player) = &self.player {
+            player.clear_oneshot();
+        }
         self.studio_reparse();
         if let Some(window) = &self.window {
             window.set_title(&self.title());
@@ -1734,6 +1776,7 @@ impl App {
         self.audio_program = AudioProgram::Radio;
         if let Some(player) = &self.player {
             player.clear_parameter_voice();
+            player.clear_oneshot();
             player.set_shared_stereo_at_rate(self.radio_track.clone(), self.radio_track_rate);
             player.set_master_gain(if self.muted { 0.0 } else { self.volume });
         }
@@ -1801,6 +1844,7 @@ impl App {
             return;
         };
         player.clear_parameter_voice();
+        player.clear_oneshot();
         player.set_master_gain(if self.muted { 0.0 } else { self.volume });
         if let Some(spec) = spec {
             player.set_samples(spec.render(player.sample_rate()));
@@ -1823,6 +1867,7 @@ impl App {
             self.audio_program = AudioProgram::Studio;
             if let Some(player) = &self.player {
                 player.clear_parameter_voice();
+                player.clear_oneshot();
             }
             self.apply_master_gain();
             return;
@@ -1831,6 +1876,7 @@ impl App {
             self.audio_program = AudioProgram::Radio;
             if let Some(player) = &self.player {
                 player.clear_parameter_voice();
+                player.clear_oneshot();
             }
             self.apply_master_gain();
             return;
@@ -1873,6 +1919,13 @@ impl App {
         let Some(player) = &self.player else {
             return;
         };
+        if !life_step_audio_owned(
+            self.audio_program,
+            self.modal_mode_active(),
+            self.rooms[self.current].meta().id,
+        ) {
+            player.clear_oneshot();
+        }
         let voice = self.desired_room_parameter_sound();
         if let Some(voice) = voice {
             let _ = player.set_parameter_voice(voice.root_hz(), voice.ratio(), voice.gain());
@@ -1956,6 +2009,7 @@ impl App {
     fn reset_life_session(&mut self) {
         self.life_session = numinous_core::rooms::game_of_life::LifeSession::new(self.variation);
         self.life_accumulator = 0.0;
+        self.clear_transient_audio();
     }
 
     fn record_room_touch(&mut self, point: (f64, f64)) -> bool {
@@ -1965,6 +2019,7 @@ impl App {
             let launched = self.life_session.launch(point);
             if launched {
                 self.life_accumulator = 0.0;
+                self.clear_transient_audio();
             }
             return launched;
         }
@@ -2000,7 +2055,27 @@ impl App {
             self.life_session.advance();
         }
         self.life_accumulator -= steps as f64 * LIFE_STEP_SECONDS;
+        // A catch-up tick presents only the newest generation. Voice that same
+        // state once instead of replaying a stale burst after the picture.
+        self.play_life_step_audio(steps);
         steps
+    }
+
+    fn play_life_step_audio(&self, completed_steps: usize) {
+        let Some(player) = &self.player else {
+            return;
+        };
+        let Some(samples) = selected_life_step_audio(
+            self.audio_program,
+            self.modal_mode_active(),
+            self.muted,
+            completed_steps,
+            &self.life_session,
+            player.sample_rate(),
+        ) else {
+            return;
+        };
+        player.play_stereo_oneshot(samples, 0.65);
     }
 
     fn advance_life_if_active(&mut self, elapsed: f64) -> usize {
@@ -2970,8 +3045,9 @@ fn main() {
 mod tests {
     use super::{
         App, AudioProgram, TestStateRoot, advance_gallery_phase, app_icon, bounded_tick_seconds,
-        effective_room_phase, julia_gpu_c, julia_gpu_vertical_span, live_mandelbrot_gpu_view,
-        mandelbrot_gpu_view, radio_cache, selected_parameter_sound,
+        effective_room_phase, julia_gpu_c, julia_gpu_vertical_span, life_step_audio_owned,
+        live_mandelbrot_gpu_view, mandelbrot_gpu_view, radio_cache, selected_life_step_audio,
+        selected_parameter_sound,
     };
     use crate::input_legend::{InputMode, MenuChoice};
     use numinous_core::ROOM_BED_SOURCE_RATE;
@@ -3509,9 +3585,66 @@ mod tests {
     }
 
     #[test]
+    fn life_step_audio_obeys_program_ownership_and_uses_the_exact_step() {
+        let mut session = numinous_core::rooms::game_of_life::LifeSession::new(4);
+        session.advance();
+
+        let audio =
+            selected_life_step_audio(AudioProgram::RoomScore, false, false, 1, &session, 48_000)
+                .expect("room-score Life step");
+        assert_eq!(audio.len() % 2, 0);
+        assert!(audio.iter().any(|sample| sample.abs() > 0.0));
+        assert!(life_step_audio_owned(
+            AudioProgram::RoomScore,
+            false,
+            "game-of-life"
+        ));
+
+        for (program, modal, muted, steps) in [
+            (AudioProgram::Studio, false, false, 1),
+            (AudioProgram::Radio, false, false, 1),
+            (AudioProgram::RoomScore, true, false, 1),
+            (AudioProgram::RoomScore, false, true, 1),
+            (AudioProgram::RoomScore, false, false, 0),
+        ] {
+            assert!(
+                selected_life_step_audio(program, modal, muted, steps, &session, 48_000,).is_none()
+            );
+        }
+        assert!(!life_step_audio_owned(
+            AudioProgram::Studio,
+            false,
+            "game-of-life"
+        ));
+        assert!(!life_step_audio_owned(
+            AudioProgram::Radio,
+            false,
+            "game-of-life"
+        ));
+        assert!(!life_step_audio_owned(
+            AudioProgram::RoomScore,
+            true,
+            "game-of-life"
+        ));
+        assert!(!life_step_audio_owned(
+            AudioProgram::RoomScore,
+            false,
+            "times-tables"
+        ));
+
+        session.advance();
+        session.advance();
+        let newest =
+            selected_life_step_audio(AudioProgram::RoomScore, false, false, 3, &session, 48_000)
+                .expect("newest presented generation");
+        assert_eq!(newest, session.step_sound().render_stereo(48_000));
+    }
+
+    #[test]
     fn life_touch_uses_the_shared_room_input_and_session_route() {
         let mut app = headless("numinous_app_test_life_touch.txt");
         select_life(&mut app);
+        let clears_before_launch = app.transient_audio_clears.get();
 
         assert!(app.record_room_touch((0.3, 0.7)));
         assert_eq!(app.pokes, vec![(0.3, 0.7)]);
@@ -3521,6 +3654,11 @@ mod tests {
         ));
         assert_eq!(app.life_session.launches(), 1);
         assert_eq!(app.life_accumulator, 0.0);
+        assert_eq!(
+            app.transient_audio_clears.get(),
+            clears_before_launch + 1,
+            "a successful launch retires the previously presented birth texture"
+        );
         let _ = std::fs::remove_file(&app.journey_file);
     }
 
@@ -3531,6 +3669,7 @@ mod tests {
         app.record_room_touch((0.4, 0.6));
         app.poking = true;
         app.advance_life(super::LIFE_STEP_SECONDS * 9.0);
+        let clears_before_reset = app.transient_audio_clears.get();
 
         app.reset_current_room();
 
@@ -3540,6 +3679,11 @@ mod tests {
         assert_eq!(app.life_session.generation(), 0);
         assert_eq!(app.life_session.launches(), 0);
         assert_eq!(app.life_accumulator, 0.0);
+        assert_eq!(
+            app.transient_audio_clears.get(),
+            clears_before_reset + 1,
+            "reset retires audio from the discarded Life generation"
+        );
         let _ = std::fs::remove_file(&app.journey_file);
     }
 
@@ -4573,6 +4717,43 @@ mod tests {
         app.munch_key(&Key::Named(NamedKey::Space));
         assert!(!app.munch.as_ref().unwrap().bites.contains(&1));
         let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn leaving_munch_or_gauntlet_retires_queued_transient_audio() {
+        let mut app = headless("numinous_app_test_transient_audio_exit.txt");
+
+        app.munch_start();
+        let before_ungraded_exit = app.transient_audio_clears.get();
+        app.munch_key(&Key::Named(NamedKey::Escape));
+        assert!(app.munch.is_none());
+        assert_eq!(app.transient_audio_clears.get(), before_ungraded_exit + 1);
+
+        app.munch_start();
+        app.munch_grade();
+        let before_graded_exit = app.transient_audio_clears.get();
+        app.munch_key(&Key::Named(NamedKey::Escape));
+        assert!(app.munch.is_none());
+        assert_eq!(app.transient_audio_clears.get(), before_graded_exit + 1);
+
+        app.gauntlet_start();
+        let before_gauntlet_exit = app.transient_audio_clears.get();
+        app.gauntlet_key(&Key::Named(NamedKey::Escape));
+        assert!(app.gauntlet.is_none());
+        assert_eq!(app.transient_audio_clears.get(), before_gauntlet_exit + 1);
+
+        app.gauntlet_start();
+        app.gauntlet.as_mut().expect("active Gauntlet").stage = 4;
+        let before_completed_gauntlet_exit = app.transient_audio_clears.get();
+        app.gauntlet_key(&Key::Named(NamedKey::Enter));
+        assert!(app.gauntlet.is_none());
+        assert_eq!(
+            app.transient_audio_clears.get(),
+            before_completed_gauntlet_exit + 1
+        );
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
     }
 
     #[test]
