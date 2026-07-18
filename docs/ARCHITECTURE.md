@@ -242,8 +242,13 @@ a window. The CLI, MCP server, exporters, and automated suite all use that seam.
   audio export. Loop or video export and operating-system URL associations are
   future work.
 - **Current CI:** house style, dependency policy, coverage, format plus clippy
-  plus tests, and macOS, Ubuntu, and Windows builds. There is no automated
-  beauty screenshot job.
+  plus rustdoc, doctests, all-target tests, and macOS, Ubuntu, and Windows
+  builds. There is no automated beauty screenshot job.
+- **Planned local session broadcast:** the App and MCP faces remain independent.
+  A small shared broadcast crate will own an authenticated, bounded loopback
+  event protocol so the App can reconstruct a consenting MCP guest's public
+  Numinous play without receiving prompts, reasoning, host logs, or arbitrary
+  protocol traffic. `INTERFACES.md` owns the complete contract.
 - **Release path:** packaged artifacts belong to 0.6. The public launch gate is
   0.9.
 
