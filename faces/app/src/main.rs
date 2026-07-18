@@ -230,6 +230,8 @@ struct App {
     player: Option<numinous_audio::LoopPlayer>,
     #[cfg(test)]
     transient_audio_clears: std::cell::Cell<usize>,
+    #[cfg(test)]
+    interaction_audio_events: std::cell::Cell<usize>,
     gamepad: gamepad::GamepadInput,
     /// The last input family that performed a meaningful action.
     input_mode: input_legend::InputMode,
@@ -352,6 +354,8 @@ impl App {
             player: None,
             #[cfg(test)]
             transient_audio_clears: std::cell::Cell::new(0),
+            #[cfg(test)]
+            interaction_audio_events: std::cell::Cell::new(0),
             gamepad: gamepad::GamepadInput::new(),
             input_mode: input_legend::InputMode::default(),
             mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera::new(0),
@@ -1364,20 +1368,21 @@ impl App {
         }
         self.set_mouse_from_normalized(point);
         if held && self.poking && room_input::extend_poke_trail(&mut self.pokes, point) {
-            room_input::record_pointer_move(&mut self.inputs, point, self.t);
+            let accepted = room_input::record_pointer_move(&mut self.inputs, point, self.t);
             self.maybe_announce_room_goal();
             self.sync_room_parameter_voice();
+            self.play_room_interaction_audio(accepted);
         }
     }
 
     fn end_pointer_at(&mut self, point: (f64, f64)) {
         self.set_mouse_from_normalized(point);
-        if self.poking {
-            room_input::record_pointer_up(&mut self.inputs, point, self.t);
-        }
+        let accepted =
+            self.poking && room_input::record_pointer_up(&mut self.inputs, point, self.t);
         self.set_pointer_state(mouse_input::pointer_state_after_left_release());
         self.maybe_announce_room_goal();
         self.sync_room_parameter_voice();
+        self.play_room_interaction_audio(accepted);
     }
 
     fn apply_wheel_delta(&mut self, lines: f64) -> bool {
@@ -1698,6 +1703,7 @@ impl App {
     /// Tune in to the current dial position: build the playlist, join the
     /// broadcast mid-stream (the station was always on the air), and play.
     fn tune_in(&mut self) {
+        self.clear_pointer_state();
         self.radio_track = Arc::new(Vec::new());
         self.radio_track_rate = 44_100;
         self.radio_paths.clear();
@@ -1949,6 +1955,9 @@ impl App {
             return;
         }
         let switching_to_room_score = self.audio_program != AudioProgram::RoomScore;
+        if switching_to_room_score {
+            self.clear_pointer_state();
+        }
         self.audio_program = AudioProgram::RoomScore;
         let Some(player) = &self.player else {
             return;
@@ -2090,12 +2099,27 @@ impl App {
         if accepted {
             self.maybe_announce_room_goal();
             self.sync_room_parameter_voice();
-            self.play_room_interaction_audio();
+            self.play_room_interaction_audio(true);
         }
         accepted
     }
 
-    fn play_room_interaction_audio(&self) {
+    fn play_room_interaction_audio(&self, accepted: bool) {
+        #[cfg(test)]
+        if selected_room_interaction_audio(
+            self.audio_program,
+            self.modal_mode_active(),
+            self.muted,
+            accepted,
+            self.rooms[self.current].as_ref(),
+            &self.inputs,
+            48_000,
+        )
+        .is_some()
+        {
+            self.interaction_audio_events
+                .set(self.interaction_audio_events.get().saturating_add(1));
+        }
         let Some(player) = &self.player else {
             return;
         };
@@ -2103,7 +2127,7 @@ impl App {
             self.audio_program,
             self.modal_mode_active(),
             self.muted,
-            true,
+            accepted,
             self.rooms[self.current].as_ref(),
             &self.inputs,
             player.sample_rate(),
@@ -3357,6 +3381,136 @@ mod tests {
         assert!(select(AudioProgram::RoomScore, true, false, true).is_none());
         assert!(select(AudioProgram::RoomScore, false, true, true).is_none());
         assert!(select(AudioProgram::RoomScore, false, false, false).is_none());
+    }
+
+    #[test]
+    fn double_pendulum_release_sequence_obeys_room_score_ownership() {
+        let app = headless("numinous_app_test_pendulum_release.txt");
+        let room = app
+            .rooms
+            .iter()
+            .find(|room| room.meta().id == "double-pendulum")
+            .expect("Double Pendulum room");
+        let input = [
+            numinous_core::RoomInput::PointerMove {
+                x: 0.3,
+                y: 0.6,
+                t: 0.147,
+            },
+            numinous_core::RoomInput::PointerUp {
+                x: 0.7,
+                y: 0.4,
+                t: 0.15,
+            },
+        ];
+        let select = |program, modal, muted, accepted| {
+            selected_room_interaction_audio(
+                program,
+                modal,
+                muted,
+                accepted,
+                room.as_ref(),
+                &input,
+                48_000,
+            )
+        };
+
+        assert!(select(AudioProgram::RoomScore, false, false, true).is_some());
+        assert!(select(AudioProgram::Studio, false, false, true).is_none());
+        assert!(select(AudioProgram::Radio, false, false, true).is_none());
+        assert!(select(AudioProgram::RoomScore, true, false, true).is_none());
+        assert!(select(AudioProgram::RoomScore, false, true, true).is_none());
+        assert!(select(AudioProgram::RoomScore, false, false, false).is_none());
+    }
+
+    #[test]
+    fn double_pendulum_release_dispatches_once_from_the_pointer_lifecycle() {
+        let mut app = headless("numinous_app_test_pendulum_release_route.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "double-pendulum")
+            .expect("Double Pendulum room");
+        let events_before = app.interaction_audio_events.get();
+
+        app.t = 0.1;
+        assert!(app.record_room_touch((0.3, 0.6)));
+        app.poking = true;
+        app.t = 0.147;
+        app.move_pointer_to((0.35, 0.55), true);
+        assert_eq!(app.interaction_audio_events.get(), events_before);
+
+        app.t = 0.15;
+        app.end_pointer_at((0.7, 0.4));
+        assert_eq!(app.interaction_audio_events.get(), events_before + 1);
+        app.end_pointer_at((0.7, 0.4));
+        assert_eq!(
+            app.interaction_audio_events.get(),
+            events_before + 1,
+            "a second lift without an open gesture cannot replay the event"
+        );
+    }
+
+    #[test]
+    fn a_radio_transition_cancels_an_open_pendulum_before_room_score_returns() {
+        let mut app = headless("numinous_app_test_pendulum_radio_boundary.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "double-pendulum")
+            .expect("Double Pendulum room");
+        app.radio = Some(numinous_core::STATIONS.len() - 1);
+        app.audio_program = AudioProgram::Radio;
+        app.t = 0.1;
+        assert!(app.record_room_touch((0.3, 0.6)));
+        app.poking = true;
+        app.t = 0.147;
+        app.move_pointer_to((0.35, 0.55), true);
+        let events_before = app.interaction_audio_events.get();
+
+        app.handle_gamepad_command(crate::gamepad::Command::CycleRadio);
+
+        assert!(app.radio.is_none());
+        assert_eq!(app.audio_program, AudioProgram::RoomScore);
+        assert!(!app.poking);
+        assert!(matches!(
+            app.inputs.last(),
+            Some(numinous_core::RoomInput::PointerCancel)
+        ));
+        app.t = 0.15;
+        app.end_pointer_at((0.7, 0.4));
+        assert_eq!(app.interaction_audio_events.get(), events_before);
+    }
+
+    #[test]
+    fn failed_radio_resync_cancels_an_open_pendulum_before_room_score_returns() {
+        let mut app = headless("numinous_app_test_pendulum_radio_resync_boundary.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "double-pendulum")
+            .expect("Double Pendulum room");
+        app.radio = Some(0);
+        app.audio_program = AudioProgram::Radio;
+        app.radio_paths.clear();
+        app.t = 0.1;
+        assert!(app.record_room_touch((0.3, 0.6)));
+        app.poking = true;
+        app.t = 0.147;
+        app.move_pointer_to((0.35, 0.55), true);
+        let events_before = app.interaction_audio_events.get();
+
+        assert!(!app.sync_radio_at(0.0));
+
+        assert_eq!(app.audio_program, AudioProgram::RoomScore);
+        assert!(!app.poking);
+        assert!(matches!(
+            app.inputs.last(),
+            Some(numinous_core::RoomInput::PointerCancel)
+        ));
+        app.t = 0.15;
+        app.end_pointer_at((0.7, 0.4));
+        assert_eq!(app.interaction_audio_events.get(), events_before);
     }
 
     #[test]

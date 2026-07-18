@@ -420,6 +420,9 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [x] **Double pendulum** - grab it, drop it, and watch two of them disagree
   from a pixel of difference. The shipped voice maps first-arm drop, second-arm
   bend, and release speed from the same state that starts the visible physics.
+  On lift, seven paired pulses sample that exact twin experiment through 6,000
+  integration steps, opening from unison into an octave and widening stereo as
+  the measured tip gap grows.
 - [ ] **Three-body problem** - place three suns and try to make them dance forever; grief teaches what "no closed-form solution" means.
 - [x] **Resonance and harmony** - Lissajous, the harmonograph, every room's sound; the kanon whisper.
 - [ ] **The Long Shot** - aim, choose power, and fire across a changing landscape; the replay opens the mathematics inside the flight.

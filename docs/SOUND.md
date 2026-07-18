@@ -60,7 +60,9 @@ Bernoulli odds ratio: 7:3, 3:2, 1:1, 3:2, or 7:3. CLI `sonify` and MCP
 deterministic snapshot of each state. Double Pendulum uses one interaction
 state for pixels, status, and sound: first-arm drop selects an ordered
 minor-pentatonic root, second-arm bend opens a symmetric interval from 1:1 to
-3:2, and bounded release speed raises quiet gain from 0.03 toward 0.05.
+3:2, and bounded release speed raises quiet gain from 0.03 toward 0.05. A
+completed fling also voices the future separation of the same two integrated
+states as one bounded stereo event, described below.
 CLI `sonify --layer room-bed` separately exports a deterministic PCM16
 projection of the stable 16 kHz stereo App source, while MCP
 `listen_room.ambient_bed` exposes its arrangement summary
@@ -100,6 +102,24 @@ radio, reset, and room transitions retire it. CLI and MCP continue to expose
 the deterministic selected-coin snapshot, not this App-only stereo event.
 Native callback timing, all-64-ball percussion, a growing-pile pad, and
 musician-led listening remain open.
+
+Double Pendulum adds one fixed event when a finite newest lift completes a
+fling. Seven paired pulses measure the exact tip gap between the main and shadow
+integrator at 0, 1,000, 2,000, 3,000, 4,000, 5,000, and 6,000 steps. Both states
+advance once through those ordered horizons. Each pair starts from the continuous
+gesture voice's minor-pentatonic root and bounded momentum gain. The voices
+begin in unison at center; growth from the room's one ten-thousandth radian
+offset through four orders of tip separation opens the shadow voice toward one
+octave and the pair toward 0.85 equal-power stereo width. This logarithmic
+mapping makes exponential separation audible without claiming to estimate a
+Lyapunov exponent. The fixed 720 ms renderer performs 14 bounded tone additions
+before submission, rejects device rates outside 8 kHz through 192 kHz, and
+requires a newest finite pointer-up so stale history cannot replay. The App
+offers accepted down, move, and lift events through one room-neutral seam:
+Galton admits down, Double Pendulum admits lift, and rooms without a discrete
+consequence remain silent. Radio changes close an open gesture before room-score
+ownership can return. Native callback timing, physical-device behavior,
+participant discovery, and musician-led listening remain open.
 
 DSP is implemented locally without `fundsp`. A first shared gain and source
 bus is shipped. Sample-accurate event scheduling, per-Era voices, global
@@ -157,8 +177,11 @@ Extending the one-line sound notes in `ROOMS.md` with technique. The principle i
   consumed by the integrator. Horizontal hand position selects one of five
   minor-pentatonic drop roots, vertical bend opens a symmetric 1:1 through 3:2
   interval, and release velocity raises quiet gain without restarting the bed.
-  It sonifies the cause of the storm rather than duplicating the long trace in
-  the control path.
+  A completed fling adds seven paired pulses from exact future twin gaps, opening
+  unison toward one octave and center toward wide stereo as the simulated tips
+  separate. The continuous layer sonifies the cause of the storm; the bounded
+  event lets the same consequence unfold audibly without scheduling the long
+  trace in the callback.
 - **Chaos Game:** each corner is a note of a chord; the accumulating dot-density becomes a shimmering granular pad, a cloud of tiny grains thickening as the fractal fills.
 - **Game of Life:** the shipped first event layer reduces each exact generation
   into twelve fixed C major-pentatonic pitch rows. Every birth contributes to

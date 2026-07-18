@@ -155,8 +155,10 @@ normalized, replayable gesture data. `Motif` and `SoundSpec` keep notation and
 audio face-neutral. Seeded registry constructors provide variation without
 ambient randomness. `parameter_sound` describes a continuous input-controlled
 voice, while `interaction_stereo` optionally renders one bounded discrete
-consequence after a face accepts its newest event. Real-time faces prepare that
-buffer off the callback and own its playback lifetime. Face-owned Journey,
+consequence after a face accepts its newest down, move, or lift. The App offers
+each accepted event through this room-neutral seam; each room admits only the
+event kind whose consequence it owns. Real-time faces prepare that buffer off
+the callback and own its playback lifetime. Face-owned Journey,
 export, window, and protocol concerns do not enter the room trait.
 
 ### Why this shape
