@@ -6,9 +6,9 @@ use numinous_core::RoomInput;
 /// a room parameter.
 pub(crate) fn has_finite_parameter_input(inputs: &[RoomInput]) -> bool {
     inputs.iter().any(|input| match *input {
-        RoomInput::PointerDown { x, y, .. } | RoomInput::PointerMove { x, y, .. } => {
-            x.is_finite() && y.is_finite()
-        }
+        RoomInput::PointerDown { x, y, .. }
+        | RoomInput::PointerMove { x, y, .. }
+        | RoomInput::PointerUp { x, y, .. } => x.is_finite() && y.is_finite(),
         _ => false,
     })
 }
