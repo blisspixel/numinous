@@ -9,17 +9,18 @@ built, so an aspiration is never mistaken for a result.
 ## Evidence snapshot, 2026-07-18
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
-  doctests, 2,945 passing all-target test cases plus one ignored screenshot
+  doctests, 2,962 passing all-target test cases plus one ignored screenshot
   diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 95.40%
-  regions and 95.50% lines under the documented exclusions. The consented MCP
-  broadcast path has 61 focused shared-crate tests, 107 MCP unit tests, and
+  three-OS test-and-build matrix. The current measured coverage is 95.42%
+  regions and 95.51% lines under the documented exclusions. The consented MCP
+  broadcast path has 65 focused shared-crate tests, 107 MCP unit tests, and
   three real stdio tests. Real loopback cases cover pairing, compatibility,
   ordered controls, redaction, disconnect cleanup, private-call silence, exact
   parity for state-independent public results, and Journey noninterference for
   the four state-sensitive tools. Shared coordinator and queue tests separately
-  cover bounded backpressure and exact sequence gaps. The native App viewer and
+  cover bounded backpressure and exact sequence gaps. The native App listener
+  and bounded text timeline are built. Native visual and sound replay plus the
   complete cross-process viewer acceptance session remain future evidence.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all

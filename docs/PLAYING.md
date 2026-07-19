@@ -56,6 +56,7 @@ your hands already know it:
 | T (in the menu) | the Gauntlet: four stages, a combo, one number |
 | V (in the menu) | the Arcade: eat while the Vexations hunt |
 | J | your journey: level, rank, trophies, resonances |
+| X | Watch Agent: open a consented read-only local MCP session viewer |
 | P | keep the picture: saves the room as a PNG postcard |
 | L | keep the motion: saves a short looping APNG of this visit |
 | F9 | save a local hallway-test note in repo-root `logs/` |
@@ -222,8 +223,21 @@ input without hidden session state:
 | `forget` | preview managed local state; explicitly erase selected stores or all |
 | `journey` | your level, XP, constellation, and locks |
 | `scores` | the shared high-score table |
+| `broadcast_session` | explicitly start, inspect, pause, resume, or stop a public Watch Agent stream using a human-provided one-use code |
 
 Conventions worth relying on:
+
+- **Consented local viewing.** Opening Watch Agent in the App does not start a
+  broadcast. The human must choose to share its short-lived one-use code, and
+  the MCP player must separately call `broadcast_session` with action `start`.
+  The stream contains only explicitly public Numinous actions, inputs, and
+  results. The current viewer presents human-readable text from MCP `content`
+  result blocks. It excludes prompts, reasoning, private progression and
+  local-state tools, host logs, paths, client metadata, and JSON-RPC traffic.
+  The guest may pause, resume, or stop. The human may pause only the local
+  display, scrub its bounded in-memory ring, pan fixed-width result text with A
+  and D or LB and RB, or leave. Closing the viewer clears that ring and persists
+  no transcript.
 
 - **Local-state agency.** A plain `forget` call changes nothing. It inventories
   Journey, scores, player-owned local Cairn drafts, generated radio cache, and

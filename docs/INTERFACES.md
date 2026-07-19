@@ -10,7 +10,7 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
-**Implementation boundary, 2026-07-13:** all three faces are shipped from the
+**Implementation boundary, 2026-07-18:** all three faces are shipped from the
 same headless core in 0.2.0-alpha.1. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
@@ -67,7 +67,7 @@ The full interactive audiovisual experience. The UX is specified in depth across
   badge reports source, level, and effective silence without relying on a
   transient banner.
   Input-aware legends cover rooms, all games, The Show, the Journey, and the
-  Studio. The controller opens and closes all eight menu destinations; Studio
+  Studio. The controller opens and closes all nine menu destinations; Studio
   formula entry remains honestly keyboard-required.
   Focus loss or disconnect cancels a held gesture. Touch, pen, MIDI, remapping,
   and platform hardware certification remain planned rather than implied.
@@ -237,7 +237,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Interactive surfaces, planned:** an MCP App panel can later carry a rendered
   room where hosts support it. No app resource or interactive panel ships now.
 
-### Local MCP session broadcast, producer built, viewer planned
+### Local MCP session broadcast, producer and text timeline built
 
 The shared `numinous-broadcast` foundation implements the pairing,
 compatibility, framing, consent, sequence, control-marker, typed public-event,
@@ -246,19 +246,27 @@ through `broadcast_session`, a complete fail-closed policy for all 30 declared
 tools, replay-safe daily seed normalization, and separate nonblocking writer
 and disconnect-monitor workers. Twenty-three tools are explicitly public, six
 progression or local-state tools are private, and the consent control broadcasts
-neither itself nor progress. No human viewer surface ships in the current alpha.
-The remaining work is the App Watch Agent listener and replay surface, followed
-by the real subprocess acceptance proof.
+neither itself nor progress. The native App now ships the human Watch Agent
+surface. X or the ninth controller-menu destination opens the ephemeral
+listener. The surface shows pairing, consent state, typed public actions,
+input JSON, human-readable text from MCP `content` result blocks, exact producer
+gaps, and local retention loss. It retains each complete typed serialized
+envelope but does not yet reconstruct native room, game, or Studio visuals and
+sound. Arrow keys or the D-pad scrub retained actions and scroll a long result.
+A and D, or LB and RB, pan fixed-width result text without reflow. Space or R3
+pauses only the human display. Escape or East closes the viewer and clears its
+ring. Native public replay presentation and the real MCP subprocess acceptance
+proof remain.
 
 A human should be able to open Numinous and watch a consenting digital player
 explore through MCP, like a live Let's Play. This is an observation surface,
-not surveillance and not duet control. The viewer reconstructs public rooms,
-games, Studio output, actions, status, and state-independent results. Results
-match the MCP guest except where Describe Room, Crack, SETI, or Quiz would reveal
-private Journey level or boon choices; those four use a deterministic baseline
-projection instead. The viewer never receives the guest's prompts, private
-reasoning, host logs, client metadata, environment, or arbitrary JSON-RPC
-traffic.
+not surveillance and not duet control. The completed target viewer will
+reconstruct public rooms, games, Studio output, actions, status, and
+state-independent results. Results will match the MCP guest except where
+Describe Room, Crack, SETI, or Quiz would reveal private Journey level or boon
+choices; those four already use a deterministic baseline projection instead.
+The viewer never receives the guest's prompts, private reasoning, host logs,
+client metadata, environment, or arbitrary JSON-RPC traffic.
 
 The first implementation has these hard boundaries:
 
@@ -347,8 +355,9 @@ The cross-face foundation lives behind one small shared broadcast crate rather
 than making the App and MCP faces depend on each other. It uses loopback TCP
 contracts from the standard library, a capability drawn from the
 operating system's cryptographic random source, newline-delimited versioned
-envelopes capped before allocation, and the existing deterministic core to
-reconstruct visuals and sound. Tests must
+envelopes capped before allocation, and strict typed public events. The planned
+native replay layer will use the existing deterministic core to reconstruct
+visuals and sound. Tests must
 prove code parsing and expiry, loopback-only connection, consent-before-content,
 allowlist completeness across every MCP tool, redaction, sequence and gap
 behavior, reconnect refusal after capability use, nonblocking failure, exact
@@ -359,9 +368,9 @@ private protocol or host data in the captured stream.
 
 Dependency arrows are one-way: `numinous-core` never depends on the broadcast
 crate; the broadcast crate consumes only core catalog metadata and never a face,
-persistence, or raw MCP JSON-RPC; MCP now depends on the broadcast crate, and
-the App will depend on it for the listener. The faces never depend on one
-another. The CLI remains outside this first slice.
+persistence, or raw MCP JSON-RPC; MCP and the App now depend on the broadcast
+crate. The faces never depend on one another. The CLI remains outside this
+first slice.
 
 ### Protocol watch: MCP 2026-07-28 release candidate
 

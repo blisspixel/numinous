@@ -120,10 +120,16 @@ lever-driven simulations, Journey progression, Formula Jam, local music and
 radio, still and short-loop sharing, mouse and keyboard control, and
 hotplugged-controller support.
 
-The human-facing local MCP session viewer is not available in this alpha yet.
-Its shared transport, guest consent tool, exhaustive public/private projection
-policy, and nonblocking MCP sender are built and hardened. The native App Watch
-Agent listener and replay experience remain active 0.3 work.
+The native App now includes Watch Agent, a human-facing local MCP session
+viewer. Press X, or choose Watch Agent from the controller menu, to open a
+short-lived one-use loopback pairing offer. A separately consenting MCP player
+can then broadcast allowlisted public play while the human pauses the local
+display, scrubs a bounded in-memory timeline, and reads typed public actions,
+inputs, and human-readable MCP result text. The viewer receives no prompts,
+reasoning, private progression, local paths, logs, client metadata, or arbitrary
+protocol traffic, and it persists no transcript. Native room, game, and Studio
+replay presentation, followed by a real cross-process Times Tables acceptance
+session, remains active 0.3 work.
 
 The alpha label is meaningful. Automated correctness, security, coverage,
 cross-platform build, and installer gates are strong, but the 0.2 release still
@@ -151,7 +157,7 @@ built-in soundtrack. Mouse, keyboard, and hotplugged controllers share the
 native App, including a controller-driven virtual hand for every room. The
 visible legends follow the last meaningful keyboard, pointer, or controller
 action across rooms, games, Show, Journey, and Studio. Controller routes cover
-all eight menu destinations, while R3 provides a visible pause that blocks
+all nine menu destinations, while R3 provides a visible pause that blocks
 gameplay input until resumed. Studio formula entry still requires a keyboard
 and says so directly.
 
@@ -226,8 +232,8 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The verified July 18, 2026 gate has 2,945 passing all-target test cases plus one
-ignored screenshot diagnostic, 95.40% region coverage and 95.50% line coverage
+The verified July 18, 2026 gate has 2,962 passing all-target test cases plus one
+ignored screenshot diagnostic, 95.42% region coverage and 95.51% line coverage
 with an enforced 80% line floor, Clippy with warnings denied, and dependency
 policy checks. Release QA also regenerates an exact
 2,911-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact

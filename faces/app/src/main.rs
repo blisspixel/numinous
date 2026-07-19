@@ -38,6 +38,7 @@ mod radio_cache;
 mod room_input;
 mod room_phase;
 mod save_gate;
+mod session_viewer;
 mod studio_panel;
 
 use crate::audio_state::Program as AudioProgram;
@@ -250,6 +251,8 @@ struct App {
     studio: bool,
     /// The typed Studio expression and its last-good parse state.
     studio_panel: studio_panel::StudioPanel,
+    /// Human-owned, read-only view of one explicitly paired MCP session.
+    session_viewer: session_viewer::SessionViewer,
     /// GPU fractal renderer, when this machine has one (CPU raster otherwise).
     gpu: Option<numinous_gpu::FractalRenderer>,
     /// Adaptive live-render resolution for CPU room frames (see live_render).
@@ -370,6 +373,7 @@ impl App {
             the_show: false,
             studio: false,
             studio_panel: studio_panel::StudioPanel::default(),
+            session_viewer: session_viewer::SessionViewer::default(),
             gpu: None,
             live_scale: live_render::LiveScale::new(),
             era: numinous_core::Era::default(),
@@ -978,7 +982,9 @@ impl App {
     }
 
     fn playtest_mode(&self) -> &'static str {
-        if self.studio {
+        if self.session_viewer.is_open() {
+            "watch agent"
+        } else if self.studio {
             "studio"
         } else if self.arcade.is_some() {
             "munch arcade"
@@ -1008,6 +1014,31 @@ impl App {
             player.clear_oneshot();
         }
         self.studio_reparse();
+        if let Some(window) = &self.window {
+            window.set_title(&self.title());
+        }
+    }
+
+    fn open_session_viewer(&mut self) {
+        self.the_show = false;
+        self.paused = false;
+        self.show_help = false;
+        self.show_journey = false;
+        self.banner = None;
+        match self.session_viewer.open() {
+            Ok(()) => self.sync_room_parameter_voice(),
+            Err(_) => {
+                self.banner = Some(feedback::session_viewer_unavailable());
+            }
+        }
+        if let Some(window) = &self.window {
+            window.set_title(&self.title());
+        }
+    }
+
+    fn close_session_viewer(&mut self) {
+        self.session_viewer.close();
+        self.sync_room_parameter_voice();
         if let Some(window) = &self.window {
             window.set_title(&self.title());
         }
@@ -1046,7 +1077,8 @@ impl App {
     }
 
     fn modal_mode_active(&self) -> bool {
-        self.studio
+        self.session_viewer.is_open()
+            || self.studio
             || self.quiz.is_some()
             || self.munch.is_some()
             || self.nim.is_some()
@@ -1518,6 +1550,7 @@ impl App {
                 input_legend::MenuChoice::Show => self.toggle_show(),
                 input_legend::MenuChoice::Studio => self.enter_studio(),
                 input_legend::MenuChoice::Journey => self.toggle_journey(),
+                input_legend::MenuChoice::WatchAgent => self.open_session_viewer(),
             }
         } else if let Some(over) = self.arcade.as_ref().map(|play| play.over) {
             if over {
@@ -1625,6 +1658,27 @@ impl App {
                 return;
             }
             _ => {}
+        }
+        if self.session_viewer.is_open() {
+            if command != gamepad::Command::CancelPointer {
+                self.input_mode = input_legend::InputMode::Controller;
+            }
+            match command {
+                gamepad::Command::Back => self.close_session_viewer(),
+                gamepad::Command::Menu => {
+                    self.close_session_viewer();
+                    self.show_help = true;
+                }
+                gamepad::Command::Pause => self.session_viewer.toggle_display_pause(),
+                gamepad::Command::Left => self.session_viewer.scrub(-1),
+                gamepad::Command::Right => self.session_viewer.scrub(1),
+                gamepad::Command::Up => self.session_viewer.scroll_result(-1),
+                gamepad::Command::Down => self.session_viewer.scroll_result(1),
+                gamepad::Command::PreviousRoom => self.session_viewer.pan_result(-4),
+                gamepad::Command::NextRoom => self.session_viewer.pan_result(4),
+                _ => {}
+            }
+            return;
         }
         if self.paused
             && !matches!(
@@ -2007,7 +2061,9 @@ impl App {
     }
 
     fn title(&self) -> String {
-        if self.audio_program == AudioProgram::Radio
+        if self.session_viewer.is_open() {
+            "Numinous  |  Watch Agent".to_string()
+        } else if self.audio_program == AudioProgram::Radio
             && let Some(station) = self
                 .radio
                 .and_then(|index| numinous_core::STATIONS.get(index))
@@ -2245,6 +2301,11 @@ impl App {
         // Render the frame fully before borrowing the window surface. Fractal
         // rooms take the GPU path when one exists; their frames rejoin the same
         // interface path as CPU rooms before presentation.
+        if self.session_viewer.is_open() {
+            let raster = self.session_viewer.draw(width, height, self.input_mode);
+            self.present_raster(raster, width, height);
+            return;
+        }
         if let Some(raster) = self.modal_frame(width, height) {
             self.present_raster(raster, width, height);
             return;
@@ -2498,6 +2559,7 @@ impl ApplicationHandler for App {
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         match event {
             WindowEvent::CloseRequested => {
+                self.session_viewer.close();
                 let _ = numinous_core::persist_journey_delta(
                     &self.journey_file,
                     &self.journey_saved,
@@ -2518,6 +2580,31 @@ impl ApplicationHandler for App {
             } => {
                 self.clear_pointer_state();
                 if self.handle_global_audio_key(&logical_key, repeat) {
+                    return;
+                }
+                if self.session_viewer.is_open() {
+                    self.input_mode = input_legend::InputMode::KeyboardMouse;
+                    match logical_key {
+                        Key::Named(NamedKey::Escape) => self.close_session_viewer(),
+                        Key::Named(NamedKey::Space) => {
+                            self.session_viewer.toggle_display_pause();
+                        }
+                        Key::Named(NamedKey::ArrowLeft) => self.session_viewer.scrub(-1),
+                        Key::Named(NamedKey::ArrowRight) => self.session_viewer.scrub(1),
+                        Key::Named(NamedKey::ArrowUp) => {
+                            self.session_viewer.scroll_result(-1);
+                        }
+                        Key::Named(NamedKey::ArrowDown) => {
+                            self.session_viewer.scroll_result(1);
+                        }
+                        Key::Character(c) if c.as_str() == "a" => {
+                            self.session_viewer.pan_result(-4);
+                        }
+                        Key::Character(c) if c.as_str() == "d" => {
+                            self.session_viewer.pan_result(4);
+                        }
+                        _ => {}
+                    }
                     return;
                 }
                 if self.paused {
@@ -2726,6 +2813,10 @@ impl ApplicationHandler for App {
                         // J opens the journey: what the play has made of you.
                         Key::Character(c) if c.as_str() == "j" => {
                             self.toggle_journey();
+                        }
+                        // X opens the explicitly consented local MCP session viewer.
+                        Key::Character(c) if c.as_str() == "x" => {
+                            self.open_session_viewer();
                         }
                         // Y turns the radio dial: off, then station by station.
                         Key::Character(c) if c.as_str() == "y" && !repeat => {
@@ -4411,12 +4502,14 @@ mod tests {
                 MenuChoice::Show => assert!(app.the_show),
                 MenuChoice::Studio => assert!(app.studio),
                 MenuChoice::Journey => assert!(app.show_journey),
+                MenuChoice::WatchAgent => assert!(app.session_viewer.is_open()),
             }
 
             app.handle_gamepad_command(crate::gamepad::Command::Back);
             assert!(!app.the_show);
             assert!(!app.studio);
             assert!(!app.show_journey);
+            assert!(!app.session_viewer.is_open());
             assert!(
                 app.quiz.is_none()
                     && app.munch.is_none()
@@ -4717,7 +4810,7 @@ mod tests {
         use winit::keyboard::{Key, NamedKey};
         let mut app = headless("numinous_app_test_playtest_shortcut.txt");
         app.quiz_next();
-        let dir = std::env::temp_dir().join("numinous_app_playtest_shortcut");
+        let dir = super::test_state_path("playtest-shortcut");
         let _ = std::fs::remove_dir_all(&dir);
         let input_start = Instant::now();
 
@@ -4747,7 +4840,7 @@ mod tests {
             "a repeated key event must not produce another file"
         );
 
-        let blocker = std::env::temp_dir().join("numinous_app_playtest_blocker");
+        let blocker = super::test_state_path("playtest-blocker");
         let _ = std::fs::remove_file(&blocker);
         std::fs::write(&blocker, "not a directory").expect("blocker file");
         assert!(app.handle_playtest_shortcut_to(

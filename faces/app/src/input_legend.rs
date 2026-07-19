@@ -55,10 +55,11 @@ pub(crate) enum MenuChoice {
     Show,
     Studio,
     Journey,
+    WatchAgent,
 }
 
 impl MenuChoice {
-    pub(crate) const ALL: [Self; 8] = [
+    pub(crate) const ALL: [Self; 9] = [
         Self::Quiz,
         Self::Munch,
         Self::Nim,
@@ -67,6 +68,7 @@ impl MenuChoice {
         Self::Show,
         Self::Studio,
         Self::Journey,
+        Self::WatchAgent,
     ];
 
     pub(crate) const fn at(index: usize) -> Self {
@@ -83,6 +85,7 @@ impl MenuChoice {
             Self::Show => "THE SHOW: LET THE WORLD WANDER",
             Self::Studio => "THE STUDIO: TYPE A CURVE",
             Self::Journey => "THE JOURNEY: WHAT PLAY MADE",
+            Self::WatchAgent => "WATCH AGENT: LIVE MCP PLAY",
         }
     }
 }
@@ -272,7 +275,7 @@ pub(crate) fn help_lines(
             "W / S      TIME SPEED   MOUSE  SCRUB",
             "E          INSPECT    Q  ERA    R  RESET",
             "B          THE SHOW   TAB  THE STUDIO",
-            "J          JOURNEY    F  FULLSCREEN",
+            "J          JOURNEY    F  FULLSCREEN    X  WATCH AGENT",
             "Y          RADIO    P  POSTCARD   L  LOOP",
             "F9         PLAYTEST NOTE",
             "M          MUTE    [/] VOLUME   SPACE PAUSE",
@@ -327,7 +330,10 @@ pub(crate) fn compact_controller_help_lines(selected: usize) -> Vec<String> {
         "STICK+SOUTH TOUCH SEL INFO".to_string(),
         "HOLD NORTH: D-PAD VOL/S MUTE".to_string(),
         "L3 RESET R3 PAUSE START MENU".to_string(),
-        "EAST BACK    NORTH RADIO".to_string(),
+        format!(
+            "{} WATCH AGENT   EAST BACK",
+            if selected == 8 { ">" } else { " " }
+        ),
     ]
 }
 
@@ -370,12 +376,12 @@ mod tests {
 
     #[test]
     fn every_controller_menu_choice_has_one_stable_index() {
-        assert_eq!(MenuChoice::ALL.len(), 8);
+        assert_eq!(MenuChoice::ALL.len(), 9);
         for (index, expected) in MenuChoice::ALL.into_iter().enumerate() {
             assert_eq!(MenuChoice::at(index), expected);
             assert!(!expected.controller_label().is_empty());
         }
-        assert_eq!(MenuChoice::at(8), MenuChoice::Quiz);
+        assert_eq!(MenuChoice::at(9), MenuChoice::Quiz);
         assert_eq!(
             help_lines(InputMode::Controller, None, true),
             [

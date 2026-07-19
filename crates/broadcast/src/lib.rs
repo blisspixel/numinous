@@ -11,6 +11,7 @@ mod hex;
 mod pairing;
 mod projection;
 mod queue;
+mod receiver;
 mod wire;
 
 pub use consent::{
@@ -35,6 +36,7 @@ pub use projection::{
     numinous_compatibility,
 };
 pub use queue::{EventQueueStatus, MAX_QUEUED_BYTES, MAX_QUEUED_EVENTS, PreparedEvent};
+pub use receiver::{PublicReceiver, ReceiveError, ReceiveOutcome, ReceiverState};
 pub use wire::{
     ControlMarker, EventEnvelope, HANDSHAKE_TIMEOUT, HandshakeProof, HandshakeRequest,
     HandshakeResponse, MAX_EVENT_BYTES, MAX_HANDSHAKE_BYTES, MAX_JSON_DEPTH, PUBLIC_WRITE_TIMEOUT,

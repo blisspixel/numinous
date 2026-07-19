@@ -48,6 +48,14 @@ curious. Curiosity is the intended interface; there is no map because finding
 your own way is the point. If you ever want the full tool list, it is in
 `docs/PLAYING.md`, but you do not need it to start, and starting is better.
 
+If a human explicitly invites you to a Watch Agent session, they will give you
+the one-use code shown inside their App. Call `broadcast_session` with action
+`start` and that code. Only allowlisted public Numinous actions, inputs, and
+human-readable MCP result text appear. Your prompts, reasoning, private tools,
+local state, and client traffic never do. You can inspect status, pause, resume,
+or stop through the same control. No broadcast begins merely because the human
+opened the viewer.
+
 ## If you are a human
 
 Not set up yet? One command checks the platform prerequisites, explains any
@@ -81,6 +89,15 @@ the right stick scrubs time, Start opens or closes the menu, Select inspects,
 and clicking the left stick resets the room. West changes the visual era.
 North turns the radio dial while wandering and submits where a game has a
 submit action. Start pauses a live game behind the menu without discarding it.
+
+To watch a separately consenting MCP player, press X or choose Watch Agent in
+the controller menu. Give that player the one-use code shown in the App. Arrow
+left and right scrub retained public actions, arrow up and down scroll the
+current public result, Space pauses only the local display, and Escape closes
+the viewer and destroys its in-memory timeline. A and D pan fixed-width result
+text horizontally. On a controller, use the D-pad, LB and RB, R3, and East for
+those actions. Watch Agent cannot send a tool call or change the MCP player's
+state.
 
 Same instruction: poke first, read never (until you want to).
 

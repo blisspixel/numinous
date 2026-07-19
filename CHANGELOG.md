@@ -6,8 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
-- The local MCP session viewer now has a hardened shared transport foundation
-  and a connected MCP producer.
+- The local MCP session viewer now has a hardened shared transport foundation,
+  a connected MCP producer, and a native App Watch Agent surface.
   The new `numinous-broadcast` crate provides one-use 128-bit loopback pairing,
   wall-clock plus monotonic expiry, constant-time capability verification,
   strict bounded newline-delimited JSON, replay-semantic compatibility
@@ -35,13 +35,25 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   explicit bounded operations. One hundred seven MCP unit tests and three real
   stdio tests,
   real loopback handshake, ordering, redaction, private-silence, and result
-  parity paths pass. The complete 2,945-test workspace passes with one ignored
-  screenshot diagnostic, 95.40 percent region coverage, and 95.50 percent line
-  coverage. The native App Watch Agent experience and
-  full cross-process viewer acceptance session remain unshipped 0.3 work.
+  parity paths pass. The App opens its explicit human listener through X or the
+  ninth controller menu destination, sends the server-first proof before
+  reading guest data, and validates compatibility before content. One shared
+  receiver authority rejects a wrong session, replay identity, consent epoch,
+  transition, sequence, or gap. The read-only surface presents typed public
+  actions, input JSON, and human-readable MCP `content` result text, preserves
+  fixed-width text without reflow through horizontal pan, identifies transport
+  and retention gaps, and provides local pause, event scrub, and result scroll
+  controls. Its serialized ring is
+  capped at 256 events or 16 MiB, writes no transcript, and is destroyed on
+  close. Focused real-loopback tests cover pairing, one public event, stop,
+  timeline controls, privacy copy, count and byte caps, and cleanup. The full
+  native public replay presentation and cross-process Times Tables viewer
+  acceptance session remain 0.3 work. Process- and thread-isolated App test
+  roots now prevent concurrent release or checker processes from colliding in
+  playtest-note and radio-cache fixtures.
 - Public status and roadmap documentation now match the July 18 release
-  evidence: 2,945 passing tests plus one ignored screenshot diagnostic,
-  95.40 percent region coverage, 95.50 percent line coverage, and green native
+  evidence: 2,962 passing tests plus one ignored screenshot diagnostic,
+  95.42 percent region coverage, 95.51 percent line coverage, and green native
   installer checks on all three CI operating systems. Digital-mind docs now
   distinguish the shipped managed-state inventory and erasure foundation from
   the still-unbuilt per-mind episodic continuity design. Clean rustdoc and
