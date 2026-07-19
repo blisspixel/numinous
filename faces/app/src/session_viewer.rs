@@ -11,7 +11,7 @@ use numinous_broadcast::{
     configure_public_stream, numinous_compatibility, read_handshake_request, read_public_message,
     write_handshake_proof, write_handshake_response,
 };
-use numinous_core::{Raster, Room, RoomInput, Surface};
+use numinous_core::{Expr, Raster, Room, RoomInput, Surface};
 use serde_json::{Map, Value};
 #[cfg(test)]
 use std::cell::Cell;
@@ -214,14 +214,10 @@ struct RoomReplay {
     room: Box<dyn Room>,
     phase: f64,
     inputs: Vec<RoomInput>,
-    #[cfg(test)]
-    render_count: Cell<usize>,
 }
 
 impl RoomReplay {
     fn render(&self, width: usize, height: usize) -> Raster {
-        #[cfg(test)]
-        self.render_count.set(self.render_count.get() + 1);
         let mut raster = Raster::with_accent(width, height, self.room.meta().accent);
         if self.inputs.is_empty() {
             self.room.render(&mut raster, self.phase);
@@ -241,6 +237,100 @@ impl RoomReplay {
     }
 }
 
+struct StudioReplay {
+    source: String,
+    expression: Expr,
+    xmin: f64,
+    xmax: f64,
+    parameter: f64,
+    ymin: f64,
+    ymax: f64,
+}
+
+impl StudioReplay {
+    fn render(&self, width: usize, height: usize) -> Raster {
+        let mut raster = Raster::with_accent(width, height, [198, 132, 255]);
+        let _ = crate::studio_render::draw_curve(
+            &mut raster,
+            crate::studio_render::CurveLayout {
+                width,
+                height,
+                top: 35.0,
+                bottom_margin: 18.0,
+            },
+            self.xmin,
+            self.xmax,
+            |x| Some(numinous_core::eval(&self.expression, x, self.parameter)),
+        );
+        raster
+    }
+
+    fn detail(&self) -> String {
+        format!(
+            "PLOT EXPRESSION / Y = {} / X [{:.3}, {:.3}] / A {:.3} / Y [{:.3}, {:.3}]",
+            single_line(&self.source.to_uppercase(), 80),
+            self.xmin,
+            self.xmax,
+            self.parameter,
+            self.ymin,
+            self.ymax
+        )
+    }
+}
+
+enum NativeReplayKind {
+    Room(RoomReplay),
+    Studio(StudioReplay),
+}
+
+struct NativeReplay {
+    kind: NativeReplayKind,
+    #[cfg(test)]
+    render_count: Cell<usize>,
+}
+
+impl NativeReplay {
+    fn room(replay: RoomReplay) -> Self {
+        Self {
+            kind: NativeReplayKind::Room(replay),
+            #[cfg(test)]
+            render_count: Cell::new(0),
+        }
+    }
+
+    fn studio(replay: StudioReplay) -> Self {
+        Self {
+            kind: NativeReplayKind::Studio(replay),
+            #[cfg(test)]
+            render_count: Cell::new(0),
+        }
+    }
+
+    fn render(&self, width: usize, height: usize) -> Raster {
+        #[cfg(test)]
+        self.render_count.set(self.render_count.get() + 1);
+        match &self.kind {
+            NativeReplayKind::Room(replay) => replay.render(width, height),
+            NativeReplayKind::Studio(replay) => replay.render(width, height),
+        }
+    }
+
+    fn detail(&self) -> String {
+        match &self.kind {
+            NativeReplayKind::Room(replay) => {
+                let meta = replay.room.meta();
+                let mut detail = format!("PLAY ROOM / {} / T {:.3}", meta.title, replay.phase);
+                if let Some(status) = replay.status() {
+                    detail.push_str(" / ");
+                    detail.push_str(&single_line(&status, 160));
+                }
+                detail
+            }
+            NativeReplayKind::Studio(replay) => replay.detail(),
+        }
+    }
+}
+
 /// Human-owned, read-only local MCP session viewer.
 pub struct SessionViewer {
     shared: Arc<Mutex<SharedState>>,
@@ -251,7 +341,7 @@ pub struct SessionViewer {
     result_scroll: usize,
     result_column: usize,
     cached_event: Option<(u64, EventEnvelope<PublicToolEvent>)>,
-    cached_replay: Option<(u64, Option<RoomReplay>)>,
+    cached_replay: Option<(u64, Option<NativeReplay>)>,
     cached_replay_frame: Option<(u64, usize, usize, Raster)>,
 }
 
@@ -417,21 +507,15 @@ impl SessionViewer {
         self.result_column = self.result_column.saturating_add_signed(delta);
     }
 
-    /// Draws the selected public action as native room replay or bounded text.
+    /// Draws the selected public action as native replay or bounded text.
     #[must_use]
     pub fn draw(&mut self, width: usize, height: usize, input_mode: ViewerInputMode) -> Raster {
         let snapshot = self.snapshot();
-        let replay_event = snapshot
-            .event
-            .as_ref()
-            .filter(|event| event.event.tool == PublicTool::PlayRoom);
-        if let Some(event) = replay_event {
+        if let Some(event) = snapshot.event.as_ref() {
             if self.cached_replay.as_ref().map(|cached| cached.0) != Some(event.public_sequence) {
                 self.cached_replay_frame = None;
-                self.cached_replay = Some((
-                    event.public_sequence,
-                    parse_room_replay(&event.event.arguments),
-                ));
+                self.cached_replay =
+                    Some((event.public_sequence, parse_native_replay(&event.event)));
             }
             if self
                 .cached_replay
@@ -461,7 +545,7 @@ impl SessionViewer {
                         .and_then(|cached| cached.1.as_ref()),
                 ) {
                     let mut raster = cached_frame.3.clone();
-                    draw_room_replay_chrome(
+                    draw_native_replay_chrome(
                         &mut raster,
                         &snapshot,
                         replay,
@@ -609,9 +693,84 @@ fn parse_room_replay(arguments: &Map<String, Value>) -> Option<RoomReplay> {
         room,
         phase,
         inputs,
-        #[cfg(test)]
-        render_count: Cell::new(0),
     })
+}
+
+fn parse_native_replay(event: &PublicToolEvent) -> Option<NativeReplay> {
+    match event.tool {
+        PublicTool::PlayRoom => parse_room_replay(&event.arguments).map(NativeReplay::room),
+        PublicTool::PlotExpression => {
+            parse_studio_replay(&event.arguments, &event.result).map(NativeReplay::studio)
+        }
+        _ => None,
+    }
+}
+
+fn parse_studio_replay(
+    arguments: &Map<String, Value>,
+    result: &Map<String, Value>,
+) -> Option<StudioReplay> {
+    if arguments
+        .keys()
+        .any(|key| !matches!(key.as_str(), "expr" | "xmin" | "xmax" | "a"))
+    {
+        return None;
+    }
+    if result.len() != 2 || result.get("isError").and_then(Value::as_bool) != Some(false) {
+        return None;
+    }
+    let blocks = result.get("content")?.as_array()?;
+    if blocks.len() != 1 {
+        return None;
+    }
+    let block = blocks.first()?.as_object()?;
+    if block.len() != 2 || block.get("type").and_then(Value::as_str) != Some("text") {
+        return None;
+    }
+    let result_text = block.get("text")?.as_str()?;
+    let source = arguments.get("expr")?.as_str()?;
+    if source.chars().count() > numinous_core::MAX_STUDIO_SOURCE_CHARS {
+        return None;
+    }
+    let expression = numinous_core::parse(source).ok()?;
+    let xmin = optional_finite(arguments.get("xmin"), -std::f64::consts::TAU)?;
+    let xmax = optional_finite(arguments.get("xmax"), std::f64::consts::TAU)?;
+    let parameter = optional_finite(arguments.get("a"), 1.0)?;
+    let span = xmax - xmin;
+    if xmax <= xmin || !span.is_finite() {
+        return None;
+    }
+    let (plot, expected_ymin, expected_ymax) =
+        numinous_core::plot_text(source, xmin, xmax, parameter, 72, 26).ok()?;
+    let expected_result = format!(
+        "y = {source}    x in [{xmin:.3}, {xmax:.3}]    y in [{expected_ymin:.3}, {expected_ymax:.3}]\n\n{plot}"
+    );
+    if result_text != expected_result {
+        return None;
+    }
+    let (ymin, ymax) = crate::studio_render::curve_range(72, xmin, xmax, |x| {
+        Some(numinous_core::eval(&expression, x, parameter))
+    })?;
+    if (ymin, ymax) != (expected_ymin, expected_ymax) {
+        return None;
+    }
+    Some(StudioReplay {
+        source: source.to_string(),
+        expression,
+        xmin,
+        xmax,
+        parameter,
+        ymin,
+        ymax,
+    })
+}
+
+fn optional_finite(value: Option<&Value>, default: f64) -> Option<f64> {
+    let value = match value {
+        Some(value) => value.as_f64()?,
+        None => default,
+    };
+    value.is_finite().then_some(value)
 }
 
 fn valid_optional_dimension(value: Option<&Value>, maximum: u64) -> bool {
@@ -694,10 +853,10 @@ fn parse_room_gesture(value: Option<&Value>) -> Option<Vec<RoomInput>> {
         .collect()
 }
 
-fn draw_room_replay_chrome(
+fn draw_native_replay_chrome(
     raster: &mut Raster,
     snapshot: &ViewerSnapshot,
-    replay: &RoomReplay,
+    replay: &NativeReplay,
     input_mode: ViewerInputMode,
     width: usize,
     height: usize,
@@ -724,12 +883,7 @@ fn draw_room_replay_chrome(
         snapshot.event_count,
         sequence
     );
-    let meta = replay.room.meta();
-    let mut detail = format!("PLAY ROOM / {} / T {:.3}", meta.title, replay.phase);
-    if let Some(status) = replay.status() {
-        detail.push_str(" / ");
-        detail.push_str(&single_line(&status, 160));
-    }
+    let detail = replay.detail();
     numinous_core::draw_text(raster, &heading, 6, 3, 1, '#');
     numinous_core::draw_text(raster, &detail, 6, 12, 1, '#');
     numinous_core::draw_text(
@@ -1249,6 +1403,37 @@ mod tests {
         }
     }
 
+    fn studio_fixture(
+        sequence: u64,
+        arguments: Value,
+        result: Value,
+    ) -> EventEnvelope<PublicToolEvent> {
+        let event = PublicToolEvent::new(PublicTool::PlotExpression, &arguments, &result)
+            .expect("public Studio event");
+        EventEnvelope {
+            session_id: numinous_broadcast::SessionId::generate().expect("session"),
+            consent_epoch: 2,
+            public_sequence: sequence,
+            skipped: None,
+            compatibility: numinous_compatibility().expect("compatibility"),
+            event,
+        }
+    }
+
+    fn studio_result(source: &str, xmin: f64, xmax: f64, parameter: f64) -> Value {
+        let (plot, ymin, ymax) = numinous_core::plot_text(source, xmin, xmax, parameter, 72, 26)
+            .expect("valid Studio fixture");
+        serde_json::json!({
+            "content": [{
+                "type": "text",
+                "text": format!(
+                    "y = {source}    x in [{xmin:.3}, {xmax:.3}]    y in [{ymin:.3}, {ymax:.3}]\n\n{plot}"
+                )
+            }],
+            "isError": false
+        })
+    }
+
     fn cached_render_count(viewer: &SessionViewer) -> usize {
         viewer
             .cached_replay
@@ -1584,6 +1769,108 @@ mod tests {
             ]
         });
         assert!(parse_room_replay(gesture.as_object().expect("arguments")).is_some());
+    }
+
+    #[test]
+    fn native_studio_replay_requires_an_exact_successful_finite_plot() {
+        let source = "sin(3*x) + x/2";
+        let success = studio_result(source, -2.0, 3.0, 0.5);
+        let valid = PublicToolEvent::new(
+            PublicTool::PlotExpression,
+            &serde_json::json!({
+                "expr": source, "xmin": -2.0, "xmax": 3.0, "a": 0.5
+            }),
+            &success,
+        )
+        .expect("valid public event");
+        let replay = parse_native_replay(&valid).expect("valid native Studio replay");
+        assert!(matches!(replay.kind, NativeReplayKind::Studio(_)));
+        let frame = replay.render(320, 180);
+        assert!(frame.lit_count() > 100);
+        assert!(replay.detail().contains("SIN(3*X) + X/2"));
+
+        let too_long = "x".repeat(numinous_core::MAX_STUDIO_SOURCE_CHARS + 1);
+        for arguments in [
+            serde_json::json!({}),
+            serde_json::json!({"expr": 7}),
+            serde_json::json!({"expr": "x", "private": true}),
+            serde_json::json!({"expr": "x", "a": "2"}),
+            serde_json::json!({"expr": "x", "xmin": null}),
+            serde_json::json!({"expr": "sin("}),
+            serde_json::json!({"expr": "x", "xmin": 1.0, "xmax": 1.0}),
+            serde_json::json!({"expr": "x", "xmin": -1.0e308, "xmax": 1.0e308}),
+            serde_json::json!({"expr": "sqrt(-1)"}),
+            serde_json::json!({"expr": too_long}),
+        ] {
+            let event = PublicToolEvent::new(PublicTool::PlotExpression, &arguments, &success)
+                .expect("public event envelope");
+            assert!(
+                parse_native_replay(&event).is_none(),
+                "accepted malformed Studio replay: {arguments}"
+            );
+        }
+
+        for result in [
+            serde_json::json!({}),
+            serde_json::json!({"content": [{"text": "missing type"}]}),
+            serde_json::json!({"content": [{"type": "image", "text": "wrong type"}]}),
+            serde_json::json!({"isError": true, "content": [{"text": "bad"}]}),
+            serde_json::json!({"isError": "false", "content": [{"text": "bad"}]}),
+            serde_json::json!({
+                "isError": false,
+                "content": [{"type": "text", "text": "forged result"}]
+            }),
+        ] {
+            let event = PublicToolEvent::new(
+                PublicTool::PlotExpression,
+                &serde_json::json!({"expr": "x"}),
+                &result,
+            )
+            .expect("public event envelope");
+            assert!(parse_native_replay(&event).is_none());
+        }
+    }
+
+    #[test]
+    fn studio_native_body_uses_the_shared_cache_and_invalid_actions_fall_back() {
+        let mut viewer = SessionViewer::default();
+        let source = "sin(a*x) + x/3";
+        let success = studio_result(source, -std::f64::consts::TAU, std::f64::consts::TAU, 2.0);
+        {
+            let mut shared = lock(&viewer.shared);
+            shared.status = ViewerStatus::Live;
+            shared
+                .retain(&studio_fixture(
+                    0,
+                    serde_json::json!({"expr": source, "a": 2.0}),
+                    success.clone(),
+                ))
+                .expect("retain valid Studio event");
+        }
+        let first = viewer.draw(320, 180, ViewerInputMode::KeyboardMouse);
+        assert!(first.lit_count() > 100);
+        assert_eq!(cached_render_count(&viewer), 1);
+        let repeated = viewer.draw(320, 180, ViewerInputMode::Controller);
+        assert_eq!(cached_render_count(&viewer), 1);
+        assert_ne!(
+            first.to_rgba(),
+            repeated.to_rgba(),
+            "dynamic chrome updates"
+        );
+        let resized = viewer.draw(400, 200, ViewerInputMode::KeyboardMouse);
+        assert_eq!((resized.width(), resized.height()), (400, 200));
+        assert_eq!(cached_render_count(&viewer), 2);
+
+        lock(&viewer.shared)
+            .retain(&studio_fixture(
+                1,
+                serde_json::json!({"expr": "sqrt(-1)"}),
+                success,
+            ))
+            .expect("retain invalid Studio event");
+        let fallback = viewer.draw(320, 180, ViewerInputMode::KeyboardMouse);
+        assert!(fallback.lit_count() > 0);
+        assert!(matches!(viewer.cached_replay, Some((1, None))));
     }
 
     #[test]

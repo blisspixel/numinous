@@ -10,9 +10,9 @@ Foundation is complete. The headless core, CLI, MCP server, windowed app,
 GPU and audio adapters, 351 catalog rooms plus hidden content, 6 sims, 11+
 games, the RPG spine, standard-controller input, and a built-in 42-track radio
 are built. The hardened local-broadcast substrate, MCP producer, native App
-Watch Agent, bounded in-memory timeline, native `play_room` reconstruction, and
-real cross-process Times Tables acceptance session are built. Native game and
-Studio replay plus sound remain 0.3 work. Public CI passes on Windows, macOS,
+Watch Agent, bounded in-memory timeline, native `play_room` and Formula Jam
+plot reconstruction, and real cross-process Times Tables and Studio acceptance
+sessions are built. Native game replay plus sound remain 0.3 work. Public CI passes on Windows, macOS,
 and Ubuntu, but capability
 breadth remains ahead of release evidence: stranger playtests, accessibility
 work, and real macOS and Linux execution remain open. See `../CHANGELOG.md`

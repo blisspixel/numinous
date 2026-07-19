@@ -57,13 +57,21 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   runs Times Tables explore, challenge pose and grade, the K5 four-lobe goal,
   reveal, private Journey calls, and stop. It retains exactly the five public
   actions with sequences 0 through 4, reconstructs the K5 frame natively,
-  exposes no private or protocol metadata, and clears on close. Native game and
-  Studio visuals plus sound remain 0.3 work. Process- and thread-isolated App test
+  exposes no private or protocol metadata, and clears on close. Successful public
+  `plot_expression` actions now reconstruct native Formula Jam curves from an
+  exact source, finite ordered range, parameter, successful result, and the
+  bounded core parser. One deterministic sampler and autoscaler serves both the
+  live App Studio and viewer replay. Invalid, undefined, or error actions retain
+  the typed text fallback, while the existing semantic body cache avoids repeat
+  work beneath dynamic viewer chrome. A separate real MCP subprocess session
+  proves one paired public Studio creation at sequence 0, native local-viewport
+  drawing, metadata exclusion, and close-time erasure. Native game visuals and
+  sound remain 0.3 work. Process- and thread-isolated App test
   roots now prevent concurrent release or checker processes from colliding in
   playtest-note and radio-cache fixtures.
 - Public status and roadmap documentation now match the July 18 release
-  evidence: 2,967 passing tests plus one ignored screenshot diagnostic,
-  95.43 percent region coverage, 95.52 percent line coverage, and green native
+  evidence: 2,973 passing tests plus one ignored screenshot diagnostic,
+  95.43 percent region coverage, 95.53 percent line coverage, and green native
   installer checks on all three CI operating systems. Digital-mind docs now
   distinguish the shipped managed-state inventory and erasure foundation from
   the still-unbuilt per-mind episodic continuity design. Clean rustdoc and

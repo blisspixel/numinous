@@ -232,14 +232,16 @@ Conventions worth relying on:
   the MCP player must separately call `broadcast_session` with action `start`.
   The stream contains only explicitly public Numinous actions, inputs, and
   results. The viewer reconstructs valid public `play_room` actions as native
-  core room frames at the local viewport size and presents human-readable text
-  from MCP `content` result blocks for the complete timeline. It excludes
+  core room frames at the local viewport size and successful public
+  `plot_expression` actions as native Formula Jam curves through the live
+  Studio sampler. It presents human-readable text from MCP `content` result
+  blocks for the complete timeline. It excludes
   prompts, reasoning, private progression and
   local-state tools, host logs, paths, client metadata, and JSON-RPC traffic.
   The guest may pause, resume, or stop. The human may pause only the local
   display, scrub its bounded in-memory ring, pan fixed-width result text with A
   and D or LB and RB, or leave. Closing the viewer clears that ring and persists
-  no transcript. Native game and Studio visuals and sound replay are not built.
+  no transcript. Native game visuals and sound replay are not built.
 
 - **Local-state agency.** A plain `forget` call changes nothing. It inventories
   Journey, scores, player-owned local Cairn drafts, generated radio cache, and

@@ -9,7 +9,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use numinous_app::session_viewer::{SessionViewer, ViewerInputMode, ViewerStatus};
+use numinous_app::studio_render::{CurveLayout, draw_curve};
 use numinous_broadcast::PublicTool;
+use numinous_core::Raster;
 use serde_json::{Value, json};
 
 /// Run a full session: send each line, return the parsed response lines.
@@ -258,6 +260,111 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
 
     viewer.close();
     assert_eq!(viewer.status(), ViewerStatus::Closed);
+    assert!(viewer.retained_events().is_empty());
+}
+
+#[test]
+fn app_viewer_reconstructs_a_real_studio_agent_creation() {
+    let mut viewer = SessionViewer::default();
+    viewer.open().expect("open the App session viewer");
+    let pairing_code = viewer.pairing_code().expect("fresh pairing code");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments}
+        })
+    };
+    let replies = run_session(&[
+        json!({
+            "jsonrpc":"2.0","id":0,"method":"initialize","params":{
+                "protocolVersion":"2025-06-18",
+                "capabilities":{},
+                "clientInfo":{"name":"studio-viewer-acceptance","version":"1.0"}
+            }
+        }),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(
+            1,
+            "broadcast_session",
+            json!({"action":"start", "pairing_code": pairing_code}),
+        ),
+        call(
+            2,
+            "plot_expression",
+            json!({
+                "expr":"sin(a*x) + x/3", "xmin":-4.0, "xmax":5.0, "a":2.0
+            }),
+        ),
+        call(3, "broadcast_session", json!({"action":"stop"})),
+    ]);
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+    assert_eq!(by_id(1)["result"]["structuredContent"]["state"], "live");
+    assert!(text_of(by_id(2)).contains("sin(a*x) + x/3"));
+    assert_eq!(by_id(3)["result"]["structuredContent"]["state"], "stopped");
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while viewer.status() != ViewerStatus::GuestStopped {
+        assert!(Instant::now() < deadline, "viewer stop marker timed out");
+        thread::sleep(Duration::from_millis(5));
+    }
+    let events = viewer.retained_events();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].event.tool, PublicTool::PlotExpression);
+    assert_eq!(events[0].public_sequence, 0);
+    assert!(events[0].skipped.is_none());
+    let frame = viewer.draw(360, 220, ViewerInputMode::KeyboardMouse);
+    let expression = numinous_core::parse("sin(a*x) + x/3").expect("accepted expression");
+    let mut expected = Raster::with_accent(360, 220, [198, 132, 255]);
+    draw_curve(
+        &mut expected,
+        CurveLayout {
+            width: 360,
+            height: 220,
+            top: 35.0,
+            bottom_margin: 18.0,
+        },
+        -4.0,
+        5.0,
+        |x| Some(numinous_core::eval(&expression, x, 2.0)),
+    )
+    .expect("expected native Studio curve");
+    let actual_rgba = frame.to_rgba();
+    let expected_rgba = expected.to_rgba();
+    let body_start = 31 * 360 * 4;
+    let body_end = (220 - 13) * 360 * 4;
+    assert_eq!(
+        &actual_rgba[body_start..body_end],
+        &expected_rgba[body_start..body_end],
+        "the retained expression reconstructs the exact native Studio body outside viewer chrome"
+    );
+    let body_lit = expected_rgba[body_start..body_end]
+        .chunks_exact(4)
+        .filter(|pixel| *pixel != [10, 11, 15, 255])
+        .count();
+    assert!(body_lit > 100, "the native Studio body contains a curve");
+    let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
+    for forbidden in [
+        "studio-viewer-acceptance",
+        "clientInfo",
+        "jsonrpc",
+        "pairing_code",
+        "NUMINOUS_JOURNEY",
+        "NUMINOUS_SCORES",
+    ] {
+        assert!(
+            !public_bytes.contains(forbidden),
+            "public evidence contained private field {forbidden}"
+        );
+    }
+
+    viewer.close();
     assert!(viewer.retained_events().is_empty());
 }
 

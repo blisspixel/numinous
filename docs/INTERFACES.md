@@ -237,7 +237,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Interactive surfaces, planned:** an MCP App panel can later carry a rendered
   room where hosts support it. No app resource or interactive panel ships now.
 
-### Local MCP session broadcast, native room replay, and subprocess proof built
+### Local MCP session broadcast, native room and Studio replay, and subprocess proof built
 
 The shared `numinous-broadcast` foundation implements the pairing,
 compatibility, framing, consent, sequence, control-marker, typed public-event,
@@ -254,8 +254,12 @@ gaps, and local retention loss. For `play_room`, it strictly revalidates the
 public id, phase, variation, dimensions, pokes, and gesture, then reconstructs
 the native pixel frame through the same deterministic core `Room` at the local
 viewport size. Invalid replay values fall back to typed text. It retains each
-complete typed serialized envelope but does not yet reconstruct native game or
-Studio visuals or sound. Arrow keys or the D-pad scrub retained actions and scroll a long result.
+complete typed serialized envelope. A successful `plot_expression` action is
+also revalidated against its exact source, finite ordered range, parameter,
+core parser, and successful public result, then reconstructed as a native
+Formula Jam curve. Live Studio and viewer replay share one deterministic
+sampling and autoscaling implementation. Native game visuals and sound are not
+yet reconstructed. Arrow keys or the D-pad scrub retained actions and scroll a long result.
 A and D, or LB and RB, pan fixed-width result text without reflow. Space or R3
 pauses only the human display. Escape or East closes the viewer and clears its
 ring. One real integration test opens this exact App viewer and launches the
@@ -264,12 +268,20 @@ goal, reveal, private Journey calls, and stop produce exactly five public events
 numbered 0 through 4, no gaps, a native K5 frame, and no private or protocol
 metadata.
 
+A second real integration session pairs the same viewer with the actual MCP
+binary, calls `plot_expression`, retains exactly one public event at sequence
+0, and draws the Formula Jam curve at the local viewport. Source length,
+unknown fields, nonfinite or unordered geometry, parser failure, undefined
+curves, and error results all fail back to the bounded typed timeline. The
+native body uses the same public-sequence and viewport cache as room replay;
+local pause and control labels change only the cloned presentation chrome.
+
 A human should be able to open Numinous and watch a consenting digital player
 explore through MCP, like a live Let's Play. This is an observation surface,
 not surveillance and not duet control. The current viewer reconstructs public
-room actions and represents every other public action through the typed text
-timeline. The remaining native presentation layer will add games, Studio
-output, and sound. Typed actions, status, and state-independent results already
+room actions and successful Formula Jam plot actions, and represents every
+other public action through the typed text timeline. The remaining native
+presentation layer will add games and sound. Typed actions, status, and state-independent results already
 match the MCP guest except where
 Describe Room, Crack, SETI, or Quiz would reveal private Journey level or boon
 choices; those four already use a deterministic baseline projection instead.
@@ -365,14 +377,17 @@ contracts from the standard library, a capability drawn from the
 operating system's cryptographic random source, newline-delimited versioned
 envelopes capped before allocation, and strict typed public events. Native room
 replay now uses the existing deterministic core to reconstruct visuals. Native
-game and Studio presentation and sound remain planned. Tests
+Studio replay uses the same deterministic curve sampler as the live App panel.
+Native game presentation and sound remain planned. Tests
 prove code parsing and expiry, loopback-only connection, consent-before-content,
 allowlist completeness across every MCP tool, redaction, sequence and gap
 behavior, reconnect refusal after capability use, nonblocking failure, exact
 replay, and immediate stop. The automated acceptance session opens the actual
 App viewer and drives one real MCP subprocess through Times Tables explore,
 challenge, K5 goal, reveal, and stop. It proves exact public causal states and
-zero named private or protocol data in the retained stream. It does not claim
+zero named private or protocol data in the retained stream. A second real
+process session proves one native Formula Jam creation with the same privacy
+boundary. These tests do not claim
 that a human followed or understood those states; that remains participant
 evidence for the 0.3 exit criterion.
 

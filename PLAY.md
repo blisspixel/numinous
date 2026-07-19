@@ -98,8 +98,9 @@ the viewer and destroys its in-memory timeline. A and D pan fixed-width result
 text horizontally. On a controller, use the D-pad, LB and RB, R3, and East for
 those actions. Watch Agent cannot send a tool call or change the MCP player's
 state. When the selected action is `play_room`, Watch Agent reconstructs that
-exact public room state as a native frame. Challenge, reveal, game, Studio, and
-other public actions currently use the typed text timeline.
+exact public room state as a native frame. A successful `plot_expression`
+action reconstructs the agent's Formula Jam curve natively. Challenge, reveal,
+game, sound, and other public actions use the typed text timeline.
 
 Same instruction: poke first, read never (until you want to).
 
