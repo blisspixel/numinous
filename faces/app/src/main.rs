@@ -13,6 +13,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
+use numinous_app::session_viewer::{SessionViewer, ViewerInputMode};
 use numinous_core::{Journey, ROOM_BED_SOURCE_RATE, Raster, Room, Surface, all_rooms_with};
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
@@ -38,7 +39,6 @@ mod radio_cache;
 mod room_input;
 mod room_phase;
 mod save_gate;
-mod session_viewer;
 mod studio_panel;
 
 use crate::audio_state::Program as AudioProgram;
@@ -252,7 +252,7 @@ struct App {
     /// The typed Studio expression and its last-good parse state.
     studio_panel: studio_panel::StudioPanel,
     /// Human-owned, read-only view of one explicitly paired MCP session.
-    session_viewer: session_viewer::SessionViewer,
+    session_viewer: SessionViewer,
     /// GPU fractal renderer, when this machine has one (CPU raster otherwise).
     gpu: Option<numinous_gpu::FractalRenderer>,
     /// Adaptive live-render resolution for CPU room frames (see live_render).
@@ -373,7 +373,7 @@ impl App {
             the_show: false,
             studio: false,
             studio_panel: studio_panel::StudioPanel::default(),
-            session_viewer: session_viewer::SessionViewer::default(),
+            session_viewer: SessionViewer::default(),
             gpu: None,
             live_scale: live_render::LiveScale::new(),
             era: numinous_core::Era::default(),
@@ -2302,7 +2302,11 @@ impl App {
         // rooms take the GPU path when one exists; their frames rejoin the same
         // interface path as CPU rooms before presentation.
         if self.session_viewer.is_open() {
-            let raster = self.session_viewer.draw(width, height, self.input_mode);
+            let viewer_input_mode = match self.input_mode {
+                input_legend::InputMode::KeyboardMouse => ViewerInputMode::KeyboardMouse,
+                input_legend::InputMode::Controller => ViewerInputMode::Controller,
+            };
+            let raster = self.session_viewer.draw(width, height, viewer_input_mode);
             self.present_raster(raster, width, height);
             return;
         }

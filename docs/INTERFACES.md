@@ -237,7 +237,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Interactive surfaces, planned:** an MCP App panel can later carry a rendered
   room where hosts support it. No app resource or interactive panel ships now.
 
-### Local MCP session broadcast, producer and text timeline built
+### Local MCP session broadcast, native room replay, and subprocess proof built
 
 The shared `numinous-broadcast` foundation implements the pairing,
 compatibility, framing, consent, sequence, control-marker, typed public-event,
@@ -250,25 +250,33 @@ neither itself nor progress. The native App now ships the human Watch Agent
 surface. X or the ninth controller-menu destination opens the ephemeral
 listener. The surface shows pairing, consent state, typed public actions,
 input JSON, human-readable text from MCP `content` result blocks, exact producer
-gaps, and local retention loss. It retains each complete typed serialized
-envelope but does not yet reconstruct native room, game, or Studio visuals and
-sound. Arrow keys or the D-pad scrub retained actions and scroll a long result.
+gaps, and local retention loss. For `play_room`, it strictly revalidates the
+public id, phase, variation, dimensions, pokes, and gesture, then reconstructs
+the native pixel frame through the same deterministic core `Room` at the local
+viewport size. Invalid replay values fall back to typed text. It retains each
+complete typed serialized envelope but does not yet reconstruct native game or
+Studio visuals or sound. Arrow keys or the D-pad scrub retained actions and scroll a long result.
 A and D, or LB and RB, pan fixed-width result text without reflow. Space or R3
 pauses only the human display. Escape or East closes the viewer and clears its
-ring. Native public replay presentation and the real MCP subprocess acceptance
-proof remain.
+ring. One real integration test opens this exact App viewer and launches the
+actual MCP binary. Times Tables explore, challenge pose, challenge grade, K5
+goal, reveal, private Journey calls, and stop produce exactly five public events
+numbered 0 through 4, no gaps, a native K5 frame, and no private or protocol
+metadata.
 
 A human should be able to open Numinous and watch a consenting digital player
 explore through MCP, like a live Let's Play. This is an observation surface,
-not surveillance and not duet control. The completed target viewer will
-reconstruct public rooms, games, Studio output, actions, status, and
-state-independent results. Results will match the MCP guest except where
+not surveillance and not duet control. The current viewer reconstructs public
+room actions and represents every other public action through the typed text
+timeline. The remaining native presentation layer will add games, Studio
+output, and sound. Typed actions, status, and state-independent results already
+match the MCP guest except where
 Describe Room, Crack, SETI, or Quiz would reveal private Journey level or boon
 choices; those four already use a deterministic baseline projection instead.
 The viewer never receives the guest's prompts, private reasoning, host logs,
 client metadata, environment, or arbitrary JSON-RPC traffic.
 
-The first implementation has these hard boundaries:
+The implementation has these hard boundaries:
 
 - The App creates an ephemeral loopback listener and displays a short-lived,
   one-use pairing code containing a version, loopback endpoint, and 128-bit
@@ -355,22 +363,26 @@ The cross-face foundation lives behind one small shared broadcast crate rather
 than making the App and MCP faces depend on each other. It uses loopback TCP
 contracts from the standard library, a capability drawn from the
 operating system's cryptographic random source, newline-delimited versioned
-envelopes capped before allocation, and strict typed public events. The planned
-native replay layer will use the existing deterministic core to reconstruct
-visuals and sound. Tests must
+envelopes capped before allocation, and strict typed public events. Native room
+replay now uses the existing deterministic core to reconstruct visuals. Native
+game and Studio presentation and sound remain planned. Tests
 prove code parsing and expiry, loopback-only connection, consent-before-content,
 allowlist completeness across every MCP tool, redaction, sequence and gap
 behavior, reconnect refusal after capability use, nonblocking failure, exact
-replay, and immediate stop. The acceptance session is
-one consenting MCP guest completing a Times Tables explore, challenge, and
-reveal loop while a human follows the same causal states in the App, with zero
-private protocol or host data in the captured stream.
+replay, and immediate stop. The automated acceptance session opens the actual
+App viewer and drives one real MCP subprocess through Times Tables explore,
+challenge, K5 goal, reveal, and stop. It proves exact public causal states and
+zero named private or protocol data in the retained stream. It does not claim
+that a human followed or understood those states; that remains participant
+evidence for the 0.3 exit criterion.
 
 Dependency arrows are one-way: `numinous-core` never depends on the broadcast
 crate; the broadcast crate consumes only core catalog metadata and never a face,
 persistence, or raw MCP JSON-RPC; MCP and the App now depend on the broadcast
-crate. The faces never depend on one another. The CLI remains outside this
-first slice.
+crate. Production faces never depend on one another. The real subprocess
+acceptance uses the App library only as an MCP development dependency, so it
+exercises both shipped implementations without adding a production edge. The
+CLI remains outside this slice.
 
 ### Protocol watch: MCP 2026-07-28 release candidate
 

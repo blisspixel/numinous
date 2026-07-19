@@ -4,6 +4,12 @@ use serde_json::{Map, Value};
 use std::error::Error;
 use std::fmt;
 
+/// Maximum requested ASCII width retained in a public `play_room` action.
+pub const PLAY_ROOM_MAX_WIDTH: u64 = 512;
+
+/// Maximum requested ASCII height retained in a public `play_room` action.
+pub const PLAY_ROOM_MAX_HEIGHT: u64 = 256;
+
 /// Stable game identities whose replays may cross the local broadcast seam.
 pub const NUMINOUS_GAME_IDS: [&str; 11] = [
     "aliens",

@@ -2,10 +2,14 @@
 //! spawn the real binary, speak newline-delimited JSON-RPC over stdio, and
 //! walk every tool. Hermetic: journey and scores go to temp files.
 
-use std::io::Write;
+use std::io::{Read, Write};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::thread;
+use std::time::{Duration, Instant};
 
+use numinous_app::session_viewer::{SessionViewer, ViewerInputMode, ViewerStatus};
+use numinous_broadcast::PublicTool;
 use serde_json::{Value, json};
 
 /// Run a full session: send each line, return the parsed response lines.
@@ -28,18 +32,40 @@ fn run_session(requests: &[Value]) -> Vec<Value> {
         .expect("spawn the MCP server");
 
     {
-        let stdin = child.stdin.as_mut().expect("stdin");
+        let mut stdin = child.stdin.take().expect("stdin");
         for request in requests {
             writeln!(stdin, "{request}").expect("write request");
         }
-    } // closing stdin ends the session
+    }
+    let mut stdout = child.stdout.take().expect("stdout");
+    let output_reader = thread::spawn(move || {
+        let mut output = Vec::new();
+        stdout.read_to_end(&mut output).expect("read MCP output");
+        output
+    });
 
-    let output = child.wait_with_output().expect("server exits cleanly");
-    assert!(output.status.success(), "server exited with an error");
+    let deadline = Instant::now() + Duration::from_secs(30);
+    let status = loop {
+        if let Some(status) = child.try_wait().expect("inspect MCP process") {
+            break status;
+        }
+        if Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            let _ = output_reader.join();
+            let _ = std::fs::remove_file(&journey);
+            let _ = std::fs::remove_file(&scores);
+            panic!("MCP server did not exit within 30 seconds");
+        }
+        thread::sleep(Duration::from_millis(5));
+    };
+    let stdout = output_reader.join().expect("MCP output reader");
+
+    assert!(status.success(), "server exited with an error");
     let _ = std::fs::remove_file(&journey);
     let _ = std::fs::remove_file(&scores);
 
-    String::from_utf8(output.stdout)
+    String::from_utf8(stdout)
         .expect("utf8 output")
         .lines()
         .map(|line| serde_json::from_str(line).expect("every reply is valid JSON"))
@@ -114,6 +140,125 @@ fn text_of(response: &Value) -> &str {
     response["result"]["content"][0]["text"]
         .as_str()
         .unwrap_or_default()
+}
+
+#[test]
+fn app_viewer_follows_a_real_times_tables_agent_session() {
+    let mut viewer = SessionViewer::default();
+    viewer.open().expect("open the App session viewer");
+    let pairing_code = viewer.pairing_code().expect("fresh pairing code");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments}
+        })
+    };
+    let replies = run_session(&[
+        json!({
+            "jsonrpc":"2.0","id":0,"method":"initialize","params":{
+                "protocolVersion":"2025-06-18",
+                "capabilities":{},
+                "clientInfo":{"name":"viewer-acceptance","version":"1.0"}
+            }
+        }),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(
+            1,
+            "broadcast_session",
+            json!({"action":"start", "pairing_code": pairing_code}),
+        ),
+        call(2, "journey", json!({})),
+        call(
+            3,
+            "play_room",
+            json!({"id":"times-tables","t":0.2,"width":40,"height":20,"variation":42}),
+        ),
+        call(4, "challenge", json!({"id":"times-tables","seed":7})),
+        call(
+            5,
+            "challenge",
+            json!({"id":"times-tables","seed":7,"t":0.81,"pokes":[[0.375,0.5]]}),
+        ),
+        call(
+            6,
+            "play_room",
+            json!({
+                "id":"times-tables","t":0.81,"width":40,"height":20,
+                "variation":42,"pokes":[[0.375,0.5]]
+            }),
+        ),
+        call(7, "reveal_room", json!({"id":"times-tables"})),
+        call(8, "journey", json!({})),
+        call(9, "broadcast_session", json!({"action":"stop"})),
+    ]);
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+    assert_eq!(by_id(1)["result"]["structuredContent"]["state"], "live");
+    assert_eq!(
+        by_id(6)["result"]["structuredContent"]["status"],
+        "K 5.00  CLOSED  4 LOBES  FOUND"
+    );
+    assert_eq!(by_id(6)["result"]["structuredContent"]["goalMet"], true);
+    assert!(text_of(by_id(7)).contains("Mandelbrot"));
+    assert_eq!(by_id(9)["result"]["structuredContent"]["state"], "stopped");
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while viewer.status() != ViewerStatus::GuestStopped {
+        assert!(Instant::now() < deadline, "viewer stop marker timed out");
+        thread::sleep(Duration::from_millis(5));
+    }
+    let events = viewer.retained_events();
+    assert_eq!(
+        events
+            .iter()
+            .map(|event| event.event.tool)
+            .collect::<Vec<_>>(),
+        [
+            PublicTool::PlayRoom,
+            PublicTool::Challenge,
+            PublicTool::Challenge,
+            PublicTool::PlayRoom,
+            PublicTool::RevealRoom,
+        ]
+    );
+    assert_eq!(
+        events
+            .iter()
+            .map(|event| event.public_sequence)
+            .collect::<Vec<_>>(),
+        [0, 1, 2, 3, 4]
+    );
+    assert!(events.iter().all(|event| event.skipped.is_none()));
+    viewer.scrub(-1);
+    let k5_frame = viewer.draw(320, 180, ViewerInputMode::KeyboardMouse);
+    assert!(
+        k5_frame.lit_count() > 1_000,
+        "the retained K5 action reconstructs a native room frame"
+    );
+    let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
+    for forbidden in [
+        "viewer-acceptance",
+        "clientInfo",
+        "jsonrpc",
+        "pairing_code",
+        "NUMINOUS_JOURNEY",
+        "NUMINOUS_SCORES",
+    ] {
+        assert!(
+            !public_bytes.contains(forbidden),
+            "public evidence contained private field {forbidden}"
+        );
+    }
+
+    viewer.close();
+    assert_eq!(viewer.status(), ViewerStatus::Closed);
+    assert!(viewer.retained_events().is_empty());
 }
 
 #[test]

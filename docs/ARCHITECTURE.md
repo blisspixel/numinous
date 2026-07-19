@@ -215,7 +215,10 @@ numinous/
 ```
 
 **Dependency rule:** mathematical domain behavior lives in `numinous-core`.
-The three faces depend on core but never on one another. `numinous-gpu` and
+The three production faces depend on core but never on one another. The MCP
+integration suite uses the App library as a development-only dependency so one
+test can exercise the shipped viewer against the shipped MCP subprocess without
+duplicating either face. `numinous-gpu` and
 `numinous-audio` are adapters used by faces, not alternate owners of room logic.
 `numinous-broadcast` owns face-independent local session transport primitives,
 typed public replay values, and the compatibility identity derived from core
@@ -250,8 +253,8 @@ a window. The CLI, MCP server, exporters, and automated suite all use that seam.
 - **Current CI:** house style, dependency policy, coverage, format plus clippy
   plus rustdoc, doctests, all-target tests, and macOS, Ubuntu, and Windows
   builds. There is no automated beauty screenshot job.
-- **Local session broadcast and App text viewer built:** the App and MCP faces remain
-  independent. The shared broadcast
+- **Local session broadcast, native room viewer, and subprocess proof built:**
+  the App and MCP production faces remain independent. The shared broadcast
   crate owns one-use loopback pairing, server-first host proof, strict bounded
   framing, replay compatibility identity, typed public tool events, atomic
   consent epochs, ordered control barriers, and a fixed event queue. MCP adds
@@ -261,10 +264,14 @@ a window. The CLI, MCP server, exporters, and automated suite all use that seam.
   adds exact receive-side session, compatibility, epoch, transition, sequence,
   and gap validation, an ephemeral loopback listener, and a read-only Watch
   Agent surface for typed action identity, input JSON, and human-readable MCP
-  result text. Its ring retains at most 256 serialized public events or 16 MiB,
-  persists nothing, and clears on close. `INTERFACES.md` owns the complete
-  contract and privacy boundary. Native public replay presentation and one real
-  cross-process flagship session remain 0.3 work.
+  result text. Valid `play_room` actions are revalidated and reconstructed from
+  the same core `Room` implementation at the local viewport size; invalid replay
+  values fall back to typed text. Its ring retains at most 256 serialized public
+  events or 16 MiB, persists nothing, and clears on close. A development-only
+  MCP integration test opens that exact viewer and drives the actual MCP binary
+  through the Times Tables explore, challenge, K5 goal, reveal, and stop path.
+  `INTERFACES.md` owns the complete contract and privacy boundary. Native game
+  and Studio replay plus sound remain 0.3 work.
 - **Release path:** packaged artifacts belong to 0.6. The public launch gate is
   0.9.
 

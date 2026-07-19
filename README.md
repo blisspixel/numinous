@@ -125,11 +125,14 @@ viewer. Press X, or choose Watch Agent from the controller menu, to open a
 short-lived one-use loopback pairing offer. A separately consenting MCP player
 can then broadcast allowlisted public play while the human pauses the local
 display, scrubs a bounded in-memory timeline, and reads typed public actions,
-inputs, and human-readable MCP result text. The viewer receives no prompts,
+inputs, and human-readable MCP result text. Public `play_room` actions also
+reconstruct the same deterministic core room as a native frame at the human's
+local viewport size. The viewer receives no prompts,
 reasoning, private progression, local paths, logs, client metadata, or arbitrary
-protocol traffic, and it persists no transcript. Native room, game, and Studio
-replay presentation, followed by a real cross-process Times Tables acceptance
-session, remains active 0.3 work.
+protocol traffic, and it persists no transcript. A real MCP subprocess test now
+proves the complete Times Tables explore, challenge, K5 goal, reveal, and stop
+path through the actual App viewer. Native game and Studio visuals plus sound
+replay remain active 0.3 work.
 
 The alpha label is meaningful. Automated correctness, security, coverage,
 cross-platform build, and installer gates are strong, but the 0.2 release still
@@ -232,8 +235,8 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The verified July 18, 2026 gate has 2,962 passing all-target test cases plus one
-ignored screenshot diagnostic, 95.42% region coverage and 95.51% line coverage
+The verified July 18, 2026 gate has 2,967 passing all-target test cases plus one
+ignored screenshot diagnostic, 95.43% region coverage and 95.52% line coverage
 with an enforced 80% line floor, Clippy with warnings denied, and dependency
 policy checks. Release QA also regenerates an exact
 2,911-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact

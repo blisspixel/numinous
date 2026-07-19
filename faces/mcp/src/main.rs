@@ -21,7 +21,9 @@ mod broadcast;
 use std::io::{self, BufRead, Write};
 
 use broadcast::{SessionBroadcast, SessionSnapshot};
-use numinous_broadcast::PublicTool;
+use numinous_broadcast::{
+    PLAY_ROOM_MAX_HEIGHT as MAX_TOOL_HEIGHT, PLAY_ROOM_MAX_WIDTH as MAX_TOOL_WIDTH, PublicTool,
+};
 use numinous_core::{Canvas, all_rooms, all_rooms_with, room_by_id};
 use serde_json::{Value, json};
 
@@ -31,12 +33,6 @@ const PROTOCOL_VERSION: &str = "2025-06-18";
 /// Default ASCII canvas size for `play_room`.
 const DEFAULT_WIDTH: u64 = 72;
 const DEFAULT_HEIGHT: u64 = 32;
-
-/// The largest frame `play_room` will render. Terminal-scale output is the
-/// product; anything beyond this is a memory and bandwidth lever, not play
-/// (the poke path renders two canvases and diffs every cell).
-const MAX_TOOL_WIDTH: u64 = 512;
-const MAX_TOOL_HEIGHT: u64 = 256;
 
 /// Longest catalog id a tool argument may carry (room, sim, or similar).
 /// Catalog keys today are far shorter; the bound rejects hostile multi-kilobyte

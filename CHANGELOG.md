@@ -17,7 +17,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   partial destination failures terminate and clear the session instead of
   retrying a corrupt frame. The crate also owns a strict typed public-tool event
   and one shared compatibility identity over current room, simulation, game,
-  source, and asset semantics. Sixty-one focused tests cover hostile framing,
+  source, and asset semantics. Sixty-five focused tests cover hostile framing,
   schema strictness, concurrency, revocation, partial writes, capacity, gap
   ordering, semantic inputs, and monotonic expiry. Independent correctness and
   security reviews of the foundation pass. MCP now exposes one redacted
@@ -32,10 +32,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   prevents guest bytes from reaching an unproven loopback peer, eight failures
   close the process pairing budget, and one serialized lifecycle prevents
   concurrent starts from leaking workers. Pairing and consent controls remain
-  explicit bounded operations. One hundred seven MCP unit tests and three real
-  stdio tests,
-  real loopback handshake, ordering, redaction, private-silence, and result
-  parity paths pass. The App opens its explicit human listener through X or the
+  explicit bounded operations. One hundred seven MCP unit tests, four real
+  stdio tests, and real loopback handshake, ordering, redaction,
+  private-silence, and result parity paths pass. The App opens its explicit
+  human listener through X or the
   ninth controller menu destination, sends the server-first proof before
   reading guest data, and validates compatibility before content. One shared
   receiver authority rejects a wrong session, replay identity, consent epoch,
@@ -45,15 +45,25 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   and retention gaps, and provides local pause, event scrub, and result scroll
   controls. Its serialized ring is
   capped at 256 events or 16 MiB, writes no transcript, and is destroyed on
-  close. Focused real-loopback tests cover pairing, one public event, stop,
-  timeline controls, privacy copy, count and byte caps, and cleanup. The full
-  native public replay presentation and cross-process Times Tables viewer
-  acceptance session remain 0.3 work. Process- and thread-isolated App test
+  close. Valid retained `play_room` actions are independently revalidated and
+  reconstructed through the same core room at the local App viewport size,
+  with session state, event position, room status, privacy copy, and read-only
+  controls overlaid on the native frame. Malformed or unbounded replay values
+  fail to the existing typed text timeline without panicking. Focused
+  real-loopback tests cover pairing, one public event, stop, timeline controls,
+  privacy copy, count and byte caps, cleanup, native room parity, strict replay
+  input bounds, text fallback, and compact drawing. A real MCP subprocess
+  acceptance opens the actual App viewer, then
+  runs Times Tables explore, challenge pose and grade, the K5 four-lobe goal,
+  reveal, private Journey calls, and stop. It retains exactly the five public
+  actions with sequences 0 through 4, reconstructs the K5 frame natively,
+  exposes no private or protocol metadata, and clears on close. Native game and
+  Studio visuals plus sound remain 0.3 work. Process- and thread-isolated App test
   roots now prevent concurrent release or checker processes from colliding in
   playtest-note and radio-cache fixtures.
 - Public status and roadmap documentation now match the July 18 release
-  evidence: 2,962 passing tests plus one ignored screenshot diagnostic,
-  95.42 percent region coverage, 95.51 percent line coverage, and green native
+  evidence: 2,967 passing tests plus one ignored screenshot diagnostic,
+  95.43 percent region coverage, 95.52 percent line coverage, and green native
   installer checks on all three CI operating systems. Digital-mind docs now
   distinguish the shipped managed-state inventory and erasure foundation from
   the still-unbuilt per-mind episodic continuity design. Clean rustdoc and

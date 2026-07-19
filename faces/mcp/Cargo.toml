@@ -16,5 +16,8 @@ numinous-broadcast = { workspace = true }
 numinous-core = { workspace = true }
 serde_json = { workspace = true }
 
+[dev-dependencies]
+numinous-app = { version = "0.2.0-alpha.1", path = "../app" }
+
 [lints]
 workspace = true

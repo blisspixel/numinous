@@ -1,12 +1,20 @@
-use crate::input_legend::InputMode;
+//! Human-owned local viewing of an explicitly consented MCP public session.
+//!
+//! The listener accepts one authenticated loopback guest, retains a bounded
+//! in-memory public timeline, and reconstructs native room frames without
+//! exposing control of the guest or representing private activity.
+
 use numinous_broadcast::{
-    ConsentMachine, ControlMarker, EventEnvelope, FrameError, HandshakeResponse, PairingGate,
-    PairingOffer, PairingVerdict, PublicReceiver, PublicToolEvent, ReceiveOutcome,
-    configure_handshake_stream, configure_public_stream, numinous_compatibility,
-    read_handshake_request, read_public_message, write_handshake_proof, write_handshake_response,
+    ConsentMachine, ControlMarker, EventEnvelope, FrameError, HandshakeResponse,
+    PLAY_ROOM_MAX_HEIGHT, PLAY_ROOM_MAX_WIDTH, PairingGate, PairingOffer, PairingVerdict,
+    PublicReceiver, PublicTool, PublicToolEvent, ReceiveOutcome, configure_handshake_stream,
+    configure_public_stream, numinous_compatibility, read_handshake_request, read_public_message,
+    write_handshake_proof, write_handshake_response,
 };
-use numinous_core::{Raster, Surface};
+use numinous_core::{Raster, Room, RoomInput, Surface};
 use serde_json::{Map, Value};
+#[cfg(test)]
+use std::cell::Cell;
 use std::collections::VecDeque;
 use std::error::Error;
 use std::fmt;
@@ -18,20 +26,40 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant, SystemTime};
 
-pub(crate) const MAX_RETAINED_EVENTS: usize = 256;
-pub(crate) const MAX_RETAINED_BYTES: usize = 16 * 1_024 * 1_024;
+const MAX_RETAINED_EVENTS: usize = 256;
+const MAX_RETAINED_BYTES: usize = 16 * 1_024 * 1_024;
 const ACCEPT_POLL: Duration = Duration::from_millis(10);
 
+/// The control-label family shown by the local session viewer.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum ViewerInputMode {
+    /// Keyboard and mouse labels.
+    #[default]
+    KeyboardMouse,
+    /// Game-controller labels.
+    Controller,
+}
+
+/// The current local viewer connection state.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum ViewerStatus {
+pub enum ViewerStatus {
+    /// No listener or retained stream exists.
     Closed,
+    /// A one-use local pairing offer is waiting for a guest.
     AwaitingGuest,
+    /// The authenticated guest is broadcasting public actions.
     Live,
+    /// The guest paused public event emission.
     GuestPaused,
+    /// The guest ended the public broadcast normally.
     GuestStopped,
+    /// The one-use pairing offer expired before acceptance.
     PairingExpired,
+    /// The listener exhausted bounded invalid handshake attempts.
     PairingRejected,
+    /// The authenticated transport ended without a valid stop marker.
     Disconnected,
+    /// The authenticated public stream failed strict protocol validation.
     ProtocolRejected,
 }
 
@@ -182,8 +210,39 @@ struct ViewerSnapshot {
     display_paused: bool,
 }
 
+struct RoomReplay {
+    room: Box<dyn Room>,
+    phase: f64,
+    inputs: Vec<RoomInput>,
+    #[cfg(test)]
+    render_count: Cell<usize>,
+}
+
+impl RoomReplay {
+    fn render(&self, width: usize, height: usize) -> Raster {
+        #[cfg(test)]
+        self.render_count.set(self.render_count.get() + 1);
+        let mut raster = Raster::with_accent(width, height, self.room.meta().accent);
+        if self.inputs.is_empty() {
+            self.room.render(&mut raster, self.phase);
+        } else {
+            self.room
+                .render_input(&mut raster, self.phase, &self.inputs);
+        }
+        raster
+    }
+
+    fn status(&self) -> Option<String> {
+        if self.inputs.is_empty() {
+            self.room.status(self.phase)
+        } else {
+            self.room.status_input(self.phase, &self.inputs)
+        }
+    }
+}
+
 /// Human-owned, read-only local MCP session viewer.
-pub(crate) struct SessionViewer {
+pub struct SessionViewer {
     shared: Arc<Mutex<SharedState>>,
     control: Arc<WorkerControl>,
     worker: Option<JoinHandle<()>>,
@@ -192,6 +251,8 @@ pub(crate) struct SessionViewer {
     result_scroll: usize,
     result_column: usize,
     cached_event: Option<(u64, EventEnvelope<PublicToolEvent>)>,
+    cached_replay: Option<(u64, Option<RoomReplay>)>,
+    cached_replay_frame: Option<(u64, usize, usize, Raster)>,
 }
 
 impl Default for SessionViewer {
@@ -205,24 +266,28 @@ impl Default for SessionViewer {
             result_scroll: 0,
             result_column: 0,
             cached_event: None,
+            cached_replay: None,
+            cached_replay_frame: None,
         }
     }
 }
 
 impl SessionViewer {
-    pub(crate) fn open(&mut self) -> Result<(), ViewerOpenError> {
+    /// Opens a fresh loopback-only pairing offer and clears prior events.
+    pub fn open(&mut self) -> Result<(), ViewerOpenError> {
         self.close();
         let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0))?;
         listener.set_nonblocking(true)?;
         let port = NonZeroU16::new(listener.local_addr()?.port())
-            .ok_or(ViewerOpenError::InvalidLocalEndpoint)?;
-        let compatibility = numinous_compatibility().map_err(|_| ViewerOpenError::Compatibility)?;
+            .ok_or(ViewerOpenError(ViewerOpenErrorKind::InvalidLocalEndpoint))?;
+        let compatibility = numinous_compatibility()
+            .map_err(|_| ViewerOpenError(ViewerOpenErrorKind::Compatibility))?;
         let offer = PairingOffer::generate(port, SystemTime::now())?;
         let pairing_code = offer.display_code();
         let gate = offer.into_gate(compatibility.clone());
         let deadline = Instant::now()
             .checked_add(numinous_broadcast::PAIRING_TTL)
-            .ok_or(ViewerOpenError::Clock)?;
+            .ok_or(ViewerOpenError(ViewerOpenErrorKind::Clock))?;
         let shared = Arc::new(Mutex::new(SharedState::awaiting(pairing_code)));
         let control = Arc::new(WorkerControl::new());
         let worker_shared = Arc::clone(&shared);
@@ -247,10 +312,13 @@ impl SessionViewer {
         self.result_scroll = 0;
         self.result_column = 0;
         self.cached_event = None;
+        self.cached_replay = None;
+        self.cached_replay_frame = None;
         Ok(())
     }
 
-    pub(crate) fn close(&mut self) {
+    /// Closes the listener, joins its worker, and clears all retained events.
+    pub fn close(&mut self) {
         self.control.cancel();
         if let Some(worker) = self.worker.take() {
             let _ = worker.join();
@@ -261,18 +329,47 @@ impl SessionViewer {
         self.result_scroll = 0;
         self.result_column = 0;
         self.cached_event = None;
+        self.cached_replay = None;
+        self.cached_replay_frame = None;
     }
 
-    pub(crate) fn is_open(&self) -> bool {
+    /// Reports whether this viewer owns an active listener worker.
+    #[must_use]
+    pub fn is_open(&self) -> bool {
         self.worker.is_some()
     }
 
-    #[cfg(test)]
-    pub(crate) fn status(&self) -> ViewerStatus {
+    /// Returns the current connection state without exposing a capability.
+    #[must_use]
+    pub fn status(&self) -> ViewerStatus {
         lock(&self.shared).status
     }
 
-    pub(crate) fn toggle_display_pause(&mut self) {
+    /// Copies the transient one-use pairing code for a consenting local player.
+    ///
+    /// Callers must present this value only to the local human and must never
+    /// log, persist, or transmit it anywhere except the selected MCP process.
+    #[must_use]
+    pub fn pairing_code(&self) -> Option<String> {
+        lock(&self.shared).pairing_code.clone()
+    }
+
+    /// Copies the currently retained, already validated public event stream.
+    ///
+    /// The copy is bounded by the same event and serialized-byte limits as the
+    /// viewer ring. Invalid retained bytes are omitted, which can occur only if
+    /// in-process memory has been corrupted after receive validation.
+    #[must_use]
+    pub fn retained_events(&self) -> Vec<EventEnvelope<PublicToolEvent>> {
+        lock(&self.shared)
+            .frames
+            .iter()
+            .filter_map(|frame| serde_json::from_slice(&frame.encoded).ok())
+            .collect()
+    }
+
+    /// Toggles local display following without sending control to the guest.
+    pub fn toggle_display_pause(&mut self) {
         if self.follow_live {
             self.follow_live = false;
             self.selected_sequence = lock(&self.shared).frames.back().map(|frame| frame.sequence);
@@ -285,7 +382,8 @@ impl SessionViewer {
         self.cached_event = None;
     }
 
-    pub(crate) fn scrub(&mut self, delta: isize) {
+    /// Moves the local selection through retained public events.
+    pub fn scrub(&mut self, delta: isize) {
         let shared = lock(&self.shared);
         if shared.frames.is_empty() {
             return;
@@ -305,18 +403,79 @@ impl SessionViewer {
         self.result_scroll = 0;
         self.result_column = 0;
         self.cached_event = None;
+        self.cached_replay = None;
+        self.cached_replay_frame = None;
     }
 
-    pub(crate) fn scroll_result(&mut self, delta: isize) {
+    /// Scrolls the local text result by a signed line delta.
+    pub fn scroll_result(&mut self, delta: isize) {
         self.result_scroll = self.result_scroll.saturating_add_signed(delta);
     }
 
-    pub(crate) fn pan_result(&mut self, delta: isize) {
+    /// Pans the local text result by a signed column delta.
+    pub fn pan_result(&mut self, delta: isize) {
         self.result_column = self.result_column.saturating_add_signed(delta);
     }
 
-    pub(crate) fn draw(&mut self, width: usize, height: usize, input_mode: InputMode) -> Raster {
+    /// Draws the selected public action as native room replay or bounded text.
+    #[must_use]
+    pub fn draw(&mut self, width: usize, height: usize, input_mode: ViewerInputMode) -> Raster {
         let snapshot = self.snapshot();
+        let replay_event = snapshot
+            .event
+            .as_ref()
+            .filter(|event| event.event.tool == PublicTool::PlayRoom);
+        if let Some(event) = replay_event {
+            if self.cached_replay.as_ref().map(|cached| cached.0) != Some(event.public_sequence) {
+                self.cached_replay_frame = None;
+                self.cached_replay = Some((
+                    event.public_sequence,
+                    parse_room_replay(&event.event.arguments),
+                ));
+            }
+            if self
+                .cached_replay
+                .as_ref()
+                .and_then(|cached| cached.1.as_ref())
+                .is_some()
+            {
+                let frame_key = (event.public_sequence, width, height);
+                if self
+                    .cached_replay_frame
+                    .as_ref()
+                    .map(|cached| (cached.0, cached.1, cached.2))
+                    != Some(frame_key)
+                {
+                    let rendered = self
+                        .cached_replay
+                        .as_ref()
+                        .and_then(|cached| cached.1.as_ref())
+                        .map(|replay| replay.render(width, height));
+                    self.cached_replay_frame =
+                        rendered.map(|frame| (event.public_sequence, width, height, frame));
+                }
+                if let (Some(cached_frame), Some(replay)) = (
+                    self.cached_replay_frame.as_ref(),
+                    self.cached_replay
+                        .as_ref()
+                        .and_then(|cached| cached.1.as_ref()),
+                ) {
+                    let mut raster = cached_frame.3.clone();
+                    draw_room_replay_chrome(
+                        &mut raster,
+                        &snapshot,
+                        replay,
+                        input_mode,
+                        width,
+                        height,
+                    );
+                    return raster;
+                }
+            }
+        } else {
+            self.cached_replay = None;
+            self.cached_replay_frame = None;
+        }
         let mut raster = Raster::with_accent(width, height, [120, 220, 190]);
         raster.clear_rows(0, height as i32);
         raster.line(0, 0, width.saturating_sub(1) as i32, 0, '-');
@@ -409,15 +568,232 @@ impl SessionViewer {
     }
 }
 
+fn parse_room_replay(arguments: &Map<String, Value>) -> Option<RoomReplay> {
+    if arguments.keys().any(|key| {
+        !matches!(
+            key.as_str(),
+            "id" | "t" | "width" | "height" | "variation" | "pokes" | "gesture"
+        )
+    }) {
+        return None;
+    }
+    if !valid_optional_dimension(arguments.get("width"), PLAY_ROOM_MAX_WIDTH)
+        || !valid_optional_dimension(arguments.get("height"), PLAY_ROOM_MAX_HEIGHT)
+    {
+        return None;
+    }
+    let id = arguments.get("id")?.as_str()?;
+    let phase = optional_unit(arguments.get("t"), 0.0, false)?;
+    let variation = match arguments.get("variation") {
+        Some(value) => value.as_u64()?,
+        None => 0,
+    };
+    let pokes = parse_room_pokes(arguments.get("pokes"))?;
+    let gesture = parse_room_gesture(arguments.get("gesture"))?;
+    if !pokes.is_empty() && !gesture.is_empty() {
+        return None;
+    }
+    let inputs = if gesture.is_empty() {
+        numinous_core::inputs_from_pokes(&pokes, phase)
+    } else {
+        gesture
+    };
+    let room = if variation == 0 {
+        numinous_core::room_by_id(id)
+    } else {
+        numinous_core::all_rooms_with(variation)
+            .into_iter()
+            .find(|room| room.meta().id == id)
+    }?;
+    Some(RoomReplay {
+        room,
+        phase,
+        inputs,
+        #[cfg(test)]
+        render_count: Cell::new(0),
+    })
+}
+
+fn valid_optional_dimension(value: Option<&Value>, maximum: u64) -> bool {
+    value.is_none_or(|value| {
+        value
+            .as_u64()
+            .is_some_and(|size| (1..=maximum).contains(&size))
+    })
+}
+
+fn optional_unit(value: Option<&Value>, default: f64, inclusive_one: bool) -> Option<f64> {
+    let value = match value {
+        Some(value) => value.as_f64()?,
+        None => default,
+    };
+    let in_range = if inclusive_one {
+        (0.0..=1.0).contains(&value)
+    } else {
+        (0.0..1.0).contains(&value)
+    };
+    (value.is_finite() && in_range).then_some(value)
+}
+
+fn parse_room_pokes(value: Option<&Value>) -> Option<Vec<(f64, f64)>> {
+    let Some(value) = value else {
+        return Some(Vec::new());
+    };
+    let points = value.as_array()?;
+    if points.len() > numinous_core::MAX_ROOM_POKES {
+        return None;
+    }
+    points
+        .iter()
+        .map(|point| {
+            let pair = point.as_array()?;
+            if pair.len() != 2 {
+                return None;
+            }
+            let x = optional_unit(pair.first(), 0.0, true)?;
+            let y = optional_unit(pair.get(1), 0.0, true)?;
+            Some((x, y))
+        })
+        .collect()
+}
+
+fn parse_room_gesture(value: Option<&Value>) -> Option<Vec<RoomInput>> {
+    let Some(value) = value else {
+        return Some(Vec::new());
+    };
+    let events = value.as_array()?;
+    if events.len() > numinous_core::MAX_ROOM_INPUTS {
+        return None;
+    }
+    events
+        .iter()
+        .map(|event| {
+            let fields = event.as_object()?;
+            let kind = fields.get("kind")?.as_str()?;
+            if kind == "cancel" {
+                return (fields.len() == 1).then_some(RoomInput::PointerCancel);
+            }
+            if !matches!(kind, "down" | "move" | "up")
+                || fields.len() != 4
+                || fields
+                    .keys()
+                    .any(|key| !matches!(key.as_str(), "kind" | "x" | "y" | "t"))
+            {
+                return None;
+            }
+            let x = optional_unit(fields.get("x"), 0.0, true)?;
+            let y = optional_unit(fields.get("y"), 0.0, true)?;
+            let t = optional_unit(fields.get("t"), 0.0, true)?;
+            match kind {
+                "down" => Some(RoomInput::PointerDown { x, y, t }),
+                "move" => Some(RoomInput::PointerMove { x, y, t }),
+                "up" => Some(RoomInput::PointerUp { x, y, t }),
+                _ => None,
+            }
+        })
+        .collect()
+}
+
+fn draw_room_replay_chrome(
+    raster: &mut Raster,
+    snapshot: &ViewerSnapshot,
+    replay: &RoomReplay,
+    input_mode: ViewerInputMode,
+    width: usize,
+    height: usize,
+) {
+    let top_height = height.min(31);
+    let footer_top = height.saturating_sub(13);
+    raster.dim_rows(0, top_height as i32, 12);
+    raster.dim_rows(footer_top as i32, height as i32, 12);
+    let event_number = snapshot.selected_index.map_or(0, |index| index + 1);
+    let sequence = snapshot
+        .event
+        .as_ref()
+        .map_or(0, |event| event.public_sequence);
+    let display_state = if snapshot.display_paused {
+        "DISPLAY PAUSED / "
+    } else {
+        ""
+    };
+    let heading = format!(
+        "WATCH AGENT / {}{} / EVENT {} OF {} / PUBLIC SEQUENCE {}",
+        display_state,
+        snapshot.status.label(),
+        event_number,
+        snapshot.event_count,
+        sequence
+    );
+    let meta = replay.room.meta();
+    let mut detail = format!("PLAY ROOM / {} / T {:.3}", meta.title, replay.phase);
+    if let Some(status) = replay.status() {
+        detail.push_str(" / ");
+        detail.push_str(&single_line(&status, 160));
+    }
+    numinous_core::draw_text(raster, &heading, 6, 3, 1, '#');
+    numinous_core::draw_text(raster, &detail, 6, 12, 1, '#');
+    numinous_core::draw_text(
+        raster,
+        "PRIVATE ACTIVITY IS NEVER REPRESENTED",
+        6,
+        21,
+        1,
+        '#',
+    );
+    let controls = match input_mode {
+        ViewerInputMode::KeyboardMouse => {
+            "LEFT/RIGHT EVENT   SPACE PAUSE   ESC CLOSE   TEXT EVENTS USE UP/DOWN AND A/D"
+        }
+        ViewerInputMode::Controller => {
+            "D-PAD EVENT   R3 PAUSE DISPLAY   EAST CLOSE   TEXT EVENTS USE D-PAD AND LB/RB"
+        }
+    };
+    numinous_core::draw_text(
+        raster,
+        controls,
+        6,
+        footer_top.saturating_add(3) as i32,
+        1,
+        '#',
+    );
+    if width > 0 && height > 0 {
+        raster.line(0, 0, width.saturating_sub(1) as i32, 0, '-');
+        raster.line(
+            0,
+            height.saturating_sub(1) as i32,
+            width.saturating_sub(1) as i32,
+            height.saturating_sub(1) as i32,
+            '-',
+        );
+    }
+}
+
+fn single_line(text: &str, maximum_chars: usize) -> String {
+    text.chars()
+        .map(|character| {
+            if character.is_control() {
+                ' '
+            } else {
+                character
+            }
+        })
+        .take(maximum_chars)
+        .collect()
+}
+
 impl Drop for SessionViewer {
     fn drop(&mut self) {
         self.close();
     }
 }
 
+/// A sanitized failure to create the local session viewer listener.
 #[derive(Debug)]
-pub(crate) enum ViewerOpenError {
-    Io(io::Error),
+pub struct ViewerOpenError(ViewerOpenErrorKind);
+
+#[derive(Debug)]
+enum ViewerOpenErrorKind {
+    Io(io::ErrorKind),
     Pairing(numinous_broadcast::PairingError),
     InvalidLocalEndpoint,
     Compatibility,
@@ -426,37 +802,39 @@ pub(crate) enum ViewerOpenError {
 
 impl From<io::Error> for ViewerOpenError {
     fn from(error: io::Error) -> Self {
-        Self::Io(error)
+        Self(ViewerOpenErrorKind::Io(error.kind()))
     }
 }
 
 impl From<numinous_broadcast::PairingError> for ViewerOpenError {
     fn from(error: numinous_broadcast::PairingError) -> Self {
-        Self::Pairing(error)
+        Self(ViewerOpenErrorKind::Pairing(error))
     }
 }
 
 impl fmt::Display for ViewerOpenError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Io(error) => write!(formatter, "local viewer I/O failed: {:?}", error.kind()),
-            Self::Pairing(error) => write!(formatter, "local viewer pairing failed: {error}"),
-            Self::InvalidLocalEndpoint => formatter.write_str("invalid local viewer endpoint"),
-            Self::Compatibility => formatter.write_str("viewer compatibility is unavailable"),
-            Self::Clock => formatter.write_str("viewer pairing deadline is unavailable"),
+        match &self.0 {
+            ViewerOpenErrorKind::Io(kind) => {
+                write!(formatter, "local viewer I/O failed: {kind:?}")
+            }
+            ViewerOpenErrorKind::Pairing(error) => {
+                write!(formatter, "local viewer pairing failed: {error}")
+            }
+            ViewerOpenErrorKind::InvalidLocalEndpoint => {
+                formatter.write_str("invalid local viewer endpoint")
+            }
+            ViewerOpenErrorKind::Compatibility => {
+                formatter.write_str("viewer compatibility is unavailable")
+            }
+            ViewerOpenErrorKind::Clock => {
+                formatter.write_str("viewer pairing deadline is unavailable")
+            }
         }
     }
 }
 
-impl Error for ViewerOpenError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            Self::Io(error) => Some(error),
-            Self::Pairing(error) => Some(error),
-            _ => None,
-        }
-    }
-}
+impl Error for ViewerOpenError {}
 
 fn listener_worker(
     listener: TcpListener,
@@ -648,7 +1026,7 @@ fn status_for_frame_error(error: &FrameError) -> ViewerStatus {
 
 fn layout_lines(
     snapshot: &ViewerSnapshot,
-    input_mode: InputMode,
+    input_mode: ViewerInputMode,
     width: usize,
     height: usize,
     scroll: usize,
@@ -671,7 +1049,7 @@ fn layout_lines(
 
 fn semantic_lines(
     snapshot: &ViewerSnapshot,
-    input_mode: InputMode,
+    input_mode: ViewerInputMode,
     columns: usize,
     rows: usize,
     scroll: usize,
@@ -740,10 +1118,12 @@ fn semantic_lines(
     }
 
     let controls = match input_mode {
-        InputMode::KeyboardMouse => {
+        ViewerInputMode::KeyboardMouse => {
             "LEFT/RIGHT EVENT   UP/DOWN RESULT   A/D PAN   SPACE PAUSE   ESC CLOSE"
         }
-        InputMode::Controller => "D-PAD EVENT/RESULT   LB/RB PAN   R3 PAUSE DISPLAY   EAST CLOSE",
+        ViewerInputMode::Controller => {
+            "D-PAD EVENT/RESULT   LB/RB PAN   R3 PAUSE DISPLAY   EAST CLOSE"
+        }
     };
     let footer = vec![String::new(), controls.to_string()];
     let body_width = body
@@ -850,6 +1230,31 @@ mod tests {
             compatibility,
             event,
         }
+    }
+
+    fn replay_fixture(sequence: u64, arguments: Value) -> EventEnvelope<PublicToolEvent> {
+        let event = PublicToolEvent::new(
+            PublicTool::PlayRoom,
+            &arguments,
+            &serde_json::json!({"content": [{"type": "text", "text": "PUBLIC RESULT"}]}),
+        )
+        .expect("public replay event");
+        EventEnvelope {
+            session_id: numinous_broadcast::SessionId::generate().expect("session"),
+            consent_epoch: 2,
+            public_sequence: sequence,
+            skipped: None,
+            compatibility: numinous_compatibility().expect("compatibility"),
+            event,
+        }
+    }
+
+    fn cached_render_count(viewer: &SessionViewer) -> usize {
+        viewer
+            .cached_replay
+            .as_ref()
+            .and_then(|cached| cached.1.as_ref())
+            .map_or(0, |replay| replay.render_count.get())
     }
 
     fn wait_until(mut condition: impl FnMut() -> bool) {
@@ -1010,26 +1415,26 @@ mod tests {
             "private operating-system detail",
         ));
         assert_eq!(io_error.to_string(), "local viewer I/O failed: AddrInUse");
-        assert!(Error::source(&io_error).is_some());
+        assert!(Error::source(&io_error).is_none());
 
         let pairing_error = ViewerOpenError::from(PairingError::InvalidCode);
         assert_eq!(
             pairing_error.to_string(),
             "local viewer pairing failed: invalid pairing code"
         );
-        assert!(Error::source(&pairing_error).is_some());
+        assert!(Error::source(&pairing_error).is_none());
 
         for (error, expected) in [
             (
-                ViewerOpenError::InvalidLocalEndpoint,
+                ViewerOpenError(ViewerOpenErrorKind::InvalidLocalEndpoint),
                 "invalid local viewer endpoint",
             ),
             (
-                ViewerOpenError::Compatibility,
+                ViewerOpenError(ViewerOpenErrorKind::Compatibility),
                 "viewer compatibility is unavailable",
             ),
             (
-                ViewerOpenError::Clock,
+                ViewerOpenError(ViewerOpenErrorKind::Clock),
                 "viewer pairing deadline is unavailable",
             ),
         ] {
@@ -1041,7 +1446,7 @@ mod tests {
     #[test]
     fn drawing_covers_pairing_live_retained_and_compact_viewer_states() {
         let mut viewer = SessionViewer::default();
-        let closed = viewer.draw(900, 700, InputMode::KeyboardMouse);
+        let closed = viewer.draw(900, 700, ViewerInputMode::KeyboardMouse);
         assert_eq!((closed.width(), closed.height()), (900, 700));
         assert!(closed.lit_count() > 0);
 
@@ -1050,7 +1455,7 @@ mod tests {
             shared.status = ViewerStatus::AwaitingGuest;
             shared.pairing_code = Some("PAIRING-CODE-WITH-A-LONG-LOCAL-CAPABILITY".to_string());
         }
-        let pairing = viewer.draw(180, 90, InputMode::Controller);
+        let pairing = viewer.draw(180, 90, ViewerInputMode::Controller);
         assert_eq!((pairing.width(), pairing.height()), (180, 90));
         assert!(pairing.lit_count() > 0);
 
@@ -1074,10 +1479,10 @@ mod tests {
         viewer.scroll_result(4);
         viewer.pan_result(20);
         assert_eq!((viewer.result_scroll, viewer.result_column), (4, 20));
-        let retained = viewer.draw(240, 140, InputMode::Controller);
+        let retained = viewer.draw(240, 140, ViewerInputMode::Controller);
         assert_eq!((retained.width(), retained.height()), (240, 140));
         assert!(retained.lit_count() > 0);
-        let cached = viewer.draw(240, 140, InputMode::KeyboardMouse);
+        let cached = viewer.draw(240, 140, ViewerInputMode::KeyboardMouse);
         assert!(cached.lit_count() > 0);
 
         let live_waiting = ViewerSnapshot {
@@ -1089,18 +1494,172 @@ mod tests {
             retention_dropped: 0,
             display_paused: false,
         };
-        let (large, scale, _) =
-            layout_lines(&live_waiting, InputMode::KeyboardMouse, 900, 700, 0, 0);
+        let (large, scale, _) = layout_lines(
+            &live_waiting,
+            ViewerInputMode::KeyboardMouse,
+            900,
+            700,
+            0,
+            0,
+        );
         assert_eq!(scale, 2);
         assert!(
             large
                 .iter()
                 .any(|line| line.contains("WAITING FOR THE FIRST"))
         );
-        let (compact, scale, _) = layout_lines(&live_waiting, InputMode::Controller, 80, 30, 0, 0);
+        let (compact, scale, _) =
+            layout_lines(&live_waiting, ViewerInputMode::Controller, 80, 30, 0, 0);
         assert_eq!(scale, 1);
         assert!(!compact.is_empty());
         assert_eq!(public_result_lines(&Map::new()), ["{}".to_string()]);
+    }
+
+    #[test]
+    fn native_times_tables_replay_matches_the_core_room_frame() {
+        let arguments = serde_json::json!({
+            "id": "times-tables",
+            "t": 0.81,
+            "width": 40,
+            "height": 20,
+            "variation": 42,
+            "pokes": [[0.375, 0.5]]
+        });
+        let replay = parse_room_replay(arguments.as_object().expect("arguments"))
+            .expect("valid native replay");
+        let actual = replay.render(320, 180);
+
+        let room = numinous_core::all_rooms_with(42)
+            .into_iter()
+            .find(|room| room.meta().id == "times-tables")
+            .expect("times tables");
+        let inputs = numinous_core::inputs_from_pokes(&[(0.375, 0.5)], 0.81);
+        let mut expected = Raster::with_accent(320, 180, room.meta().accent);
+        room.render_input(&mut expected, 0.81, &inputs);
+
+        assert_eq!(actual.to_rgba(), expected.to_rgba());
+        assert_eq!(
+            replay.status().as_deref(),
+            Some("K 5.00  CLOSED  4 LOBES  FOUND")
+        );
+    }
+
+    #[test]
+    fn native_room_replay_revalidates_every_bounded_input() {
+        let too_many_pokes: Vec<_> = (0..=numinous_core::MAX_ROOM_POKES)
+            .map(|_| serde_json::json!([0.5, 0.5]))
+            .collect();
+        for invalid in [
+            serde_json::json!({"t": 0.25}),
+            serde_json::json!({"id": "times-tables", "t": 1.0}),
+            serde_json::json!({"id": "times-tables", "width": 0}),
+            serde_json::json!({"id": "times-tables", "height": 257}),
+            serde_json::json!({"id": "not-a-room"}),
+            serde_json::json!({"id": "times-tables", "private": "not declared"}),
+            serde_json::json!({"id": "times-tables", "pokes": too_many_pokes}),
+            serde_json::json!({
+                "id": "times-tables",
+                "pokes": [[0.5, 0.5]],
+                "gesture": [{"kind": "cancel"}]
+            }),
+            serde_json::json!({
+                "id": "times-tables",
+                "gesture": [{"kind": "move", "x": 0.5, "y": 0.5, "t": 0.2, "extra": 1}]
+            }),
+        ] {
+            assert!(
+                parse_room_replay(invalid.as_object().expect("arguments")).is_none(),
+                "accepted malformed replay: {invalid}"
+            );
+        }
+
+        let gesture = serde_json::json!({
+            "id": "times-tables",
+            "t": 0.5,
+            "gesture": [
+                {"kind": "down", "x": 0.25, "y": 0.5, "t": 0.4},
+                {"kind": "move", "x": 0.375, "y": 0.5, "t": 0.5},
+                {"kind": "up", "x": 0.375, "y": 0.5, "t": 0.5},
+                {"kind": "cancel"}
+            ]
+        });
+        assert!(parse_room_replay(gesture.as_object().expect("arguments")).is_some());
+    }
+
+    #[test]
+    fn draw_uses_native_replay_and_falls_back_to_text_on_invalid_actions() {
+        let mut viewer = SessionViewer::default();
+        let envelope = replay_fixture(
+            0,
+            serde_json::json!({"id": "times-tables", "t": 0.81, "pokes": [[0.375, 0.5]]}),
+        );
+        {
+            let mut shared = lock(&viewer.shared);
+            shared.status = ViewerStatus::Live;
+            shared.retain(&envelope).expect("retain native event");
+        }
+        let frame = viewer.draw(320, 180, ViewerInputMode::KeyboardMouse);
+        assert!(frame.lit_count() > 1_000);
+        assert!(matches!(viewer.cached_replay, Some((0, Some(_)))));
+
+        let envelope = replay_fixture(1, serde_json::json!({"id": "times-tables", "t": 2.0}));
+        lock(&viewer.shared)
+            .retain(&envelope)
+            .expect("retain invalid event");
+        let fallback = viewer.draw(320, 180, ViewerInputMode::KeyboardMouse);
+        assert!(fallback.lit_count() > 0);
+        assert!(matches!(viewer.cached_replay, Some((1, None))));
+    }
+
+    #[test]
+    fn native_body_cache_tracks_sequence_dimensions_and_dynamic_chrome() {
+        let mut viewer = SessionViewer::default();
+        {
+            let mut shared = lock(&viewer.shared);
+            shared.status = ViewerStatus::Live;
+            shared
+                .retain(&replay_fixture(
+                    0,
+                    serde_json::json!({"id": "times-tables", "t": 0.2}),
+                ))
+                .expect("retain first replay");
+            shared
+                .retain(&replay_fixture(
+                    1,
+                    serde_json::json!({
+                        "id": "times-tables", "t": 0.81, "pokes": [[0.375, 0.5]]
+                    }),
+                ))
+                .expect("retain second replay");
+        }
+
+        let live = viewer.draw(320, 180, ViewerInputMode::KeyboardMouse);
+        assert_eq!(cached_render_count(&viewer), 1);
+        let repeated = viewer.draw(320, 180, ViewerInputMode::Controller);
+        assert_eq!(cached_render_count(&viewer), 1);
+        assert_ne!(live.to_rgba(), repeated.to_rgba(), "control chrome updates");
+
+        viewer.toggle_display_pause();
+        let paused = viewer.draw(320, 180, ViewerInputMode::KeyboardMouse);
+        assert_eq!(cached_render_count(&viewer), 1);
+        assert_ne!(live.to_rgba(), paused.to_rgba(), "pause chrome updates");
+
+        let resized = viewer.draw(400, 200, ViewerInputMode::KeyboardMouse);
+        assert_eq!((resized.width(), resized.height()), (400, 200));
+        assert_eq!(cached_render_count(&viewer), 2);
+
+        let empty = viewer.draw(0, 0, ViewerInputMode::Controller);
+        assert_eq!((empty.width(), empty.height()), (0, 0));
+        assert_eq!(cached_render_count(&viewer), 3);
+
+        viewer.scrub(-1);
+        let earlier = viewer.draw(320, 180, ViewerInputMode::KeyboardMouse);
+        assert_eq!((earlier.width(), earlier.height()), (320, 180));
+        assert_eq!(
+            viewer.cached_replay.as_ref().map(|cached| cached.0),
+            Some(0)
+        );
+        assert_eq!(cached_render_count(&viewer), 1);
     }
 
     #[test]
@@ -1302,10 +1861,7 @@ mod tests {
     fn loopback_pairing_receives_one_public_event_and_clears_on_close() {
         let mut viewer = SessionViewer::default();
         viewer.open().expect("open viewer");
-        let code = lock(&viewer.shared)
-            .pairing_code
-            .clone()
-            .expect("pairing code");
+        let code = viewer.pairing_code().expect("pairing code");
         let guest = thread::spawn(move || {
             let pairing = PairingCode::parse(&code, SystemTime::now()).expect("parse code");
             let compatibility = numinous_compatibility().expect("compatibility");
@@ -1358,6 +1914,7 @@ mod tests {
             snapshot.event.map(|event| event.event.tool),
             Some(PublicTool::PlayRoom)
         );
+        assert_eq!(viewer.retained_events().len(), 1);
         assert!(lock(&viewer.shared).pairing_code.is_none());
         viewer.close();
         let shared = lock(&viewer.shared);
@@ -1377,7 +1934,8 @@ mod tests {
             retention_dropped: 0,
             display_paused: false,
         };
-        let copy = semantic_lines(&snapshot, InputMode::KeyboardMouse, 80, 40, 0, 0).join("\n");
+        let copy =
+            semantic_lines(&snapshot, ViewerInputMode::KeyboardMouse, 80, 40, 0, 0).join("\n");
         assert!(copy.contains("PRIVATE ACTIVITY IS NEVER REPRESENTED"));
         assert!(copy.contains("ACTION PLAY ROOM"));
         assert!(copy.contains("PUBLIC RESULT TEXT"));

@@ -32,8 +32,8 @@ pub use pairing::{
     PairingGate, PairingOffer, PairingVerdict,
 };
 pub use projection::{
-    ALL_PUBLIC_TOOLS, NUMINOUS_GAME_IDS, ProjectionError, PublicTool, PublicToolEvent,
-    numinous_compatibility,
+    ALL_PUBLIC_TOOLS, NUMINOUS_GAME_IDS, PLAY_ROOM_MAX_HEIGHT, PLAY_ROOM_MAX_WIDTH,
+    ProjectionError, PublicTool, PublicToolEvent, numinous_compatibility,
 };
 pub use queue::{EventQueueStatus, MAX_QUEUED_BYTES, MAX_QUEUED_EVENTS, PreparedEvent};
 pub use receiver::{PublicReceiver, ReceiveError, ReceiveOutcome, ReceiverState};
