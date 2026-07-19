@@ -6,7 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
-- The local MCP session viewer now has a hardened shared transport foundation.
+- The local MCP session viewer now has a hardened shared transport foundation
+  and a connected MCP producer.
   The new `numinous-broadcast` crate provides one-use 128-bit loopback pairing,
   wall-clock plus monotonic expiry, constant-time capability verification,
   strict bounded newline-delimited JSON, replay-semantic compatibility
@@ -14,14 +15,33 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   resume, and stop barriers, and a fixed drop-oldest event queue with exact gap
   reporting. Unwritten leases restore without exceeding count or byte limits;
   partial destination failures terminate and clear the session instead of
-  retrying a corrupt frame. Fifty-five focused tests cover hostile framing,
+  retrying a corrupt frame. The crate also owns a strict typed public-tool event
+  and one shared compatibility identity over current room, simulation, game,
+  source, and asset semantics. Sixty-one focused tests cover hostile framing,
   schema strictness, concurrency, revocation, partial writes, capacity, gap
   ordering, semantic inputs, and monotonic expiry. Independent correctness and
-  security reviews pass. The MCP projections and App Watch Agent experience
-  remain unshipped 0.3 work.
+  security reviews of the foundation pass. MCP now exposes one redacted
+  `broadcast_session` control for start, status, pause, resume, and stop. An
+  exhaustive policy classifies all 30 tools as 23 public, 6 private, and 1
+  control; valid public actions carry exact state-independent results, while
+  Describe Room, Crack, SETI, and Quiz use a deterministic baseline projection
+  that cannot reveal Journey level or boon choices. Daily play is pinned to a
+  replayable seed, and private or control calls consume no sequence. Separate
+  monitor and writer workers keep ordinary public play from waiting for socket
+  writes and close on stop or disconnect. A server-first capability proof
+  prevents guest bytes from reaching an unproven loopback peer, eight failures
+  close the process pairing budget, and one serialized lifecycle prevents
+  concurrent starts from leaking workers. Pairing and consent controls remain
+  explicit bounded operations. One hundred seven MCP unit tests and three real
+  stdio tests,
+  real loopback handshake, ordering, redaction, private-silence, and result
+  parity paths pass. The complete 2,945-test workspace passes with one ignored
+  screenshot diagnostic, 95.40 percent region coverage, and 95.50 percent line
+  coverage. The native App Watch Agent experience and
+  full cross-process viewer acceptance session remain unshipped 0.3 work.
 - Public status and roadmap documentation now match the July 18 release
-  evidence: 2,924 passing tests plus one ignored screenshot diagnostic,
-  95.39 percent region coverage, 95.48 percent line coverage, and green native
+  evidence: 2,945 passing tests plus one ignored screenshot diagnostic,
+  95.40 percent region coverage, 95.50 percent line coverage, and green native
   installer checks on all three CI operating systems. Digital-mind docs now
   distinguish the shipped managed-state inventory and erasure foundation from
   the still-unbuilt per-mind episodic continuity design. Clean rustdoc and

@@ -217,9 +217,11 @@ numinous/
 **Dependency rule:** mathematical domain behavior lives in `numinous-core`.
 The three faces depend on core but never on one another. `numinous-gpu` and
 `numinous-audio` are adapters used by faces, not alternate owners of room logic.
-`numinous-broadcast` owns face-independent local session transport primitives
-and never owns gameplay or persistence. Rooms are core modules registered
-through one registry.
+`numinous-broadcast` owns face-independent local session transport primitives,
+typed public replay values, and the compatibility identity derived from core
+catalog metadata. It never owns gameplay or persistence. MCP depends on that
+crate through a thin producer adapter; the App listener remains planned. Rooms
+are core modules registered through one registry.
 
 **Headless in production today.** Core rendering and audio synthesis work without
 a window. The CLI, MCP server, exporters, and automated suite all use that seam.
@@ -247,12 +249,16 @@ a window. The CLI, MCP server, exporters, and automated suite all use that seam.
 - **Current CI:** house style, dependency policy, coverage, format plus clippy
   plus rustdoc, doctests, all-target tests, and macOS, Ubuntu, and Windows
   builds. There is no automated beauty screenshot job.
-- **Local session broadcast foundation built, faces planned:** the App and MCP
-  faces remain independent. The shared broadcast crate now owns one-use
-  loopback pairing, strict bounded framing, replay compatibility identity,
-  atomic consent epochs, ordered control barriers, and a fixed event queue.
-  The MCP public projection seam and App Watch Agent surface are not built yet.
-  `INTERFACES.md` owns the complete contract and privacy boundary.
+- **Local session broadcast foundation and MCP producer built, App viewer
+  planned:** the App and MCP faces remain independent. The shared broadcast
+  crate owns one-use loopback pairing, server-first host proof, strict bounded
+  framing, replay compatibility identity, typed public tool events, atomic
+  consent epochs, ordered control barriers, and a fixed event queue. MCP adds
+  one consent control, an exhaustive 23-public, 6-private, 1-control policy,
+  daily-seed replay normalization, one serialized lifecycle, a bounded
+  failed-start budget, and separate socket monitor and writer workers. The App
+  Watch Agent surface is not built yet. `INTERFACES.md` owns the complete
+  contract and privacy boundary.
 - **Release path:** packaged artifacts belong to 0.6. The public launch gate is
   0.9.
 

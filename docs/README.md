@@ -9,8 +9,8 @@ Status: **0.2.0-alpha.1, Flagship Proof in progress.** The 0.1 Public
 Foundation is complete. The headless core, CLI, MCP server, windowed app,
 GPU and audio adapters, 351 catalog rooms plus hidden content, 6 sims, 11+
 games, the RPG spine, standard-controller input, and a built-in 42-track radio
-are built. The hardened local-broadcast substrate is built, while its MCP and
-App session-viewer surfaces remain 0.3 work. Public CI passes on Windows,
+are built. The hardened local-broadcast substrate and MCP producer are built,
+while the native App Watch Agent viewer remains 0.3 work. Public CI passes on Windows,
 macOS, and Ubuntu, but capability
 breadth remains ahead of release evidence: stranger playtests, accessibility
 work, and real macOS and Linux execution remain open. See `../CHANGELOG.md`

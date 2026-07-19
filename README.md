@@ -120,9 +120,10 @@ lever-driven simulations, Journey progression, Formula Jam, local music and
 radio, still and short-loop sharing, mouse and keyboard control, and
 hotplugged-controller support.
 
-The consented local MCP session viewer is not available in this alpha yet. Its
-shared transport foundation is built and hardened, while the MCP consent tool,
-public play projections, and App Watch Agent experience remain active 0.3 work.
+The human-facing local MCP session viewer is not available in this alpha yet.
+Its shared transport, guest consent tool, exhaustive public/private projection
+policy, and nonblocking MCP sender are built and hardened. The native App Watch
+Agent listener and replay experience remain active 0.3 work.
 
 The alpha label is meaningful. Automated correctness, security, coverage,
 cross-platform build, and installer gates are strong, but the 0.2 release still
@@ -217,15 +218,16 @@ This is an alpha-tagged prerelease. Capability breadth is ahead of release
 maturity because the 0.2 Flagship Proof gate, including the real hallway
 evidence, remains open.
 
-The MCP face exposes 29 mostly flat, replayable tools. Every tool advertises an
-optional `response_mode`: `full` remains the exact default, while `compact`
+The MCP face exposes 29 mostly flat play tools plus one local broadcast consent
+control. Every play tool advertises an optional `response_mode`: `full` remains
+the exact default, while `compact`
 removes duplicated prose only when the unchanged `structuredContent` already
 carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The verified July 18, 2026 gate has 2,924 passing all-target test cases plus one
-ignored screenshot diagnostic, 95.39% region coverage and 95.48% line coverage
+The verified July 18, 2026 gate has 2,945 passing all-target test cases plus one
+ignored screenshot diagnostic, 95.40% region coverage and 95.50% line coverage
 with an enforced 80% line floor, Clippy with warnings denied, and dependency
 policy checks. Release QA also regenerates an exact
 2,911-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact

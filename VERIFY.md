@@ -54,8 +54,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 2,924 all-target test cases pass,
-one screenshot diagnostic is ignored, 95.39% region cover, and 95.48% line
+Expected right now: **format and clippy clean, 2,945 all-target test cases pass,
+one screenshot diagnostic is ignored, 95.40% region cover, and 95.50% line
 cover**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
@@ -267,7 +267,8 @@ it newline-delimited requests on stdin, for example:
 Run `cargo run --bin numinous-mcp` and paste those lines; it replies with the
 tool list and an ASCII render of the room as text.
 
-Every tool schema advertises `response_mode: "full" | "compact"`. Omitted and
+Every play-tool schema advertises `response_mode: "full" | "compact"`; the
+`broadcast_session` consent control intentionally does not. Omitted and
 explicit `full` must produce equal tool-call results. On eligible structured
 results, `compact` must shorten only the text block while preserving
 `structuredContent`, `isError`, replay values, and progress effects exactly.
@@ -308,7 +309,8 @@ boons, daily streaks, resonances), the Studio (plot, animate, sing, in the
 terminal and the window), Visual Eras (including PNG output), Music Engine A
 (the seeded chiptune, `numinous tune`), GPU real-time fractals, live sound in
 the app and CLI plus structured notation over MCP, the `forget` right for
-players who are minds, and 29 MCP tools (full CLI parity for the games;
+players who are minds, and 30 MCP tools (29 play tools with full CLI parity for the games,
+plus one local broadcast consent control;
 challenge, predict, and cairn are MCP-first) so agents play the same content.
 Pending (see `docs/ROADMAP.md`): deeper held and causal interactions in other
 rooms, human playtests, representative physical-controller sessions,

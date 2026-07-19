@@ -30,6 +30,7 @@ const SEMANTIC_FILES: &[&str] = &[
     "crates/broadcast/src/hex.rs",
     "crates/broadcast/src/lib.rs",
     "crates/broadcast/src/pairing.rs",
+    "crates/broadcast/src/projection.rs",
     "crates/broadcast/src/queue.rs",
     "crates/broadcast/src/wire.rs",
     "crates/core/Cargo.toml",
@@ -38,6 +39,7 @@ const SEMANTIC_FILES: &[&str] = &[
     "faces/app/Cargo.toml",
     "faces/app/build.rs",
     "faces/mcp/Cargo.toml",
+    "faces/mcp/src/broadcast.rs",
 ];
 
 fn collect_tree(root: &Path, output: &mut Vec<PathBuf>) -> io::Result<()> {
@@ -166,10 +168,12 @@ mod tests {
             "crates/core/Cargo.toml",
             "faces/app/Cargo.toml",
             "faces/mcp/Cargo.toml",
+            "faces/mcp/src/broadcast.rs",
             "data/cairn.txt",
             "assets/logo.png",
             "crates/gpu/src/mandelbrot.wgsl",
             "crates/core/src/lib.rs",
+            "crates/broadcast/src/projection.rs",
         ] {
             assert!(relative.iter().any(|path| path == required), "{required}");
         }

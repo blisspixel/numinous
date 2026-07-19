@@ -1,6 +1,6 @@
 use crate::wire::{
-    HANDSHAKE_TIMEOUT, HandshakeRequest, HandshakeResponse, MAX_EVENT_BYTES, MAX_HANDSHAKE_BYTES,
-    MAX_JSON_DEPTH, PUBLIC_WRITE_TIMEOUT, WireMessage,
+    HANDSHAKE_TIMEOUT, HandshakeProof, HandshakeRequest, HandshakeResponse, MAX_EVENT_BYTES,
+    MAX_HANDSHAKE_BYTES, MAX_JSON_DEPTH, PUBLIC_WRITE_TIMEOUT, WireMessage,
 };
 use serde::{Serialize, de::DeserializeOwned};
 use std::error::Error;
@@ -18,6 +18,19 @@ pub fn configure_handshake_stream(stream: &TcpStream) -> io::Result<()> {
 pub fn configure_public_stream(stream: &TcpStream) -> io::Result<()> {
     stream.set_read_timeout(None)?;
     stream.set_write_timeout(Some(PUBLIC_WRITE_TIMEOUT))
+}
+
+/// Reads one bounded server-first handshake proof.
+pub fn read_handshake_proof<R: BufRead>(reader: &mut R) -> Result<HandshakeProof, FrameError> {
+    read_json(reader, MAX_HANDSHAKE_BYTES)
+}
+
+/// Writes one bounded server-first handshake proof.
+pub fn write_handshake_proof<W: Write>(
+    writer: &mut W,
+    proof: &HandshakeProof,
+) -> Result<(), FrameError> {
+    write_json(writer, proof, MAX_HANDSHAKE_BYTES)
 }
 
 /// Reads one bounded handshake request.
@@ -261,12 +274,14 @@ impl Error for FrameError {
 mod tests {
     use super::{
         FrameError, LimitedBuffer, configure_handshake_stream, configure_public_stream,
-        read_bounded_line, read_handshake_request, read_handshake_response, read_json,
-        read_public_message, serialize_bounded, validate_json_depth, write_handshake_request,
-        write_handshake_response, write_json, write_public_message,
+        read_bounded_line, read_handshake_proof, read_handshake_request, read_handshake_response,
+        read_json, read_public_message, serialize_bounded, validate_json_depth,
+        write_handshake_proof, write_handshake_request, write_handshake_response, write_json,
+        write_public_message,
     };
     use crate::{
-        Compatibility, ControlMarker, HandshakeRequest, HandshakeResponse, SessionId, WireMessage,
+        Compatibility, ControlMarker, HandshakeProof, HandshakeRequest, HandshakeResponse,
+        SessionId, WireMessage,
     };
     use serde::{Deserialize, Serialize, Serializer};
     use std::error::Error;
@@ -377,6 +392,16 @@ mod tests {
 
     #[test]
     fn public_framing_apis_round_trip_each_wire_class() {
+        let proof = HandshakeProof {
+            wire_version: 1,
+            proof: "11".repeat(32),
+        };
+        let mut proof_bytes = Vec::new();
+        write_handshake_proof(&mut proof_bytes, &proof).expect("write proof");
+        assert_eq!(
+            read_handshake_proof(&mut Cursor::new(proof_bytes)).expect("read proof"),
+            proof
+        );
         let request = HandshakeRequest {
             wire_version: 1,
             capability: "00".repeat(16),

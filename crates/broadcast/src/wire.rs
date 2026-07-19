@@ -237,7 +237,27 @@ pub enum WireMessage<T> {
     },
 }
 
-/// Initial guest authentication request.
+/// Server-first proof that the loopback peer knows the displayed capability.
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct HandshakeProof {
+    /// Wire schema version offered by the host.
+    pub wire_version: u16,
+    /// Lowercase hexadecimal proof derived from the one-use capability.
+    pub proof: String,
+}
+
+impl fmt::Debug for HandshakeProof {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("HandshakeProof")
+            .field("wire_version", &self.wire_version)
+            .field("proof", &"[REDACTED]")
+            .finish()
+    }
+}
+
+/// Initial guest authentication request sent only after host proof succeeds.
 #[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct HandshakeRequest {
@@ -285,7 +305,8 @@ pub enum HandshakeResponse {
 #[cfg(test)]
 mod tests {
     use super::{
-        ControlMarker, EventEnvelope, HandshakeResponse, SequenceRange, SessionId, WireMessage,
+        ControlMarker, EventEnvelope, HandshakeProof, HandshakeResponse, SequenceRange, SessionId,
+        WireMessage,
     };
     use crate::Compatibility;
     use std::error::Error;
@@ -387,6 +408,14 @@ mod tests {
         let accepted_json = serde_json::to_string(&accepted).expect("accepted JSON");
         assert!(accepted_json.contains("\"sessionId\""));
         assert!(accepted_json.contains("\"consentEpoch\""));
+        let proof = HandshakeProof {
+            wire_version: 1,
+            proof: "11".repeat(32),
+        };
+        let proof_json = serde_json::to_string(&proof).expect("proof JSON");
+        assert!(!format!("{proof:?}").contains(&proof.proof));
+        let hostile_proof = proof_json.replacen('{', "{\"extra\":1,", 1);
+        assert!(serde_json::from_str::<HandshakeProof>(&hostile_proof).is_err());
         let hostile = control_json.replacen("{\"sessionId\"", "{\"extra\":1,\"sessionId\"", 1);
         assert!(serde_json::from_str::<WireMessage<serde_json::Value>>(&hostile).is_err());
         let error = super::SessionIdError;

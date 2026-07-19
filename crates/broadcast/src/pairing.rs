@@ -1,7 +1,8 @@
 use crate::fingerprint::{Compatibility, WIRE_VERSION};
 use crate::hex;
-use crate::wire::{HandshakeRequest, SessionId};
+use crate::wire::{HandshakeProof, HandshakeRequest, SessionId};
 use getrandom::fill;
+use sha2::{Digest, Sha256};
 use std::error::Error;
 use std::fmt;
 use std::net::{Ipv4Addr, SocketAddrV4};
@@ -16,6 +17,7 @@ pub const PAIRING_TTL: Duration = Duration::from_secs(5 * 60);
 /// Failed handshakes allowed before an offer is revoked.
 pub const MAX_HANDSHAKE_ATTEMPTS: u8 = 8;
 const PREFIX: &str = "numinous1";
+const HOST_PROOF_DOMAIN: &[u8] = b"numinous local broadcast host proof v1\0";
 
 #[derive(Clone, Copy)]
 struct Capability([u8; 16]);
@@ -31,6 +33,20 @@ impl Capability {
         let decoded = hex::decode::<16>(candidate);
         let bytes = decoded.unwrap_or([0; 16]);
         bool::from(self.0.ct_eq(&bytes)) && decoded.is_some()
+    }
+
+    fn host_proof(&self) -> [u8; 32] {
+        let mut digest = Sha256::new();
+        digest.update(HOST_PROOF_DOMAIN);
+        digest.update(WIRE_VERSION.to_be_bytes());
+        digest.update(self.0);
+        digest.finalize().into()
+    }
+
+    fn matches_host_proof_hex(&self, candidate: &str) -> bool {
+        let decoded = hex::decode::<32>(candidate);
+        let bytes = decoded.unwrap_or([0; 32]);
+        bool::from(self.host_proof().ct_eq(&bytes)) && decoded.is_some()
     }
 }
 
@@ -93,6 +109,12 @@ impl PairingCode {
             capability: hex::encode(&self.capability.0),
             compatibility,
         }
+    }
+
+    /// Verifies the server-first proof before any guest bytes are written.
+    #[must_use]
+    pub fn verifies_host_proof(&self, proof: &HandshakeProof) -> bool {
+        proof.wire_version == WIRE_VERSION && self.capability.matches_host_proof_hex(&proof.proof)
     }
 
     fn encode(&self) -> String {
@@ -196,6 +218,15 @@ pub struct PairingGate {
 }
 
 impl PairingGate {
+    /// Builds the server-first proof sent before reading guest data.
+    #[must_use]
+    pub fn host_proof(&self) -> HandshakeProof {
+        HandshakeProof {
+            wire_version: WIRE_VERSION,
+            proof: hex::encode(&self.code.capability.host_proof()),
+        }
+    }
+
     /// Verifies one bounded handshake without reflecting secret material.
     pub fn verify(&mut self, request: &HandshakeRequest, now: SystemTime) -> PairingVerdict {
         self.verify_at(request, now, Instant::now())
@@ -393,11 +424,34 @@ mod tests {
             .handshake_request(compatibility());
         assert!(!format!("{request:?}").contains(&request.capability));
         let mut gate = offer.into_gate(compatibility());
+        let proof = gate.host_proof();
+        let code = PairingCode::parse(&code, UNIX_EPOCH).expect("valid code");
+        assert!(code.verifies_host_proof(&proof));
+        assert!(!format!("{proof:?}").contains(&proof.proof));
         assert!(matches!(
             gate.verify(&request, UNIX_EPOCH),
             PairingVerdict::Accepted { .. }
         ));
         assert_eq!(gate.verify(&request, UNIX_EPOCH), PairingVerdict::Revoked);
+    }
+
+    #[test]
+    fn host_proof_is_capability_bound_and_strictly_versioned() {
+        let first = offer();
+        let first_code = PairingCode::parse(&first.display_code(), UNIX_EPOCH).expect("first code");
+        let first_proof = first.into_gate(compatibility()).host_proof();
+        assert!(first_code.verifies_host_proof(&first_proof));
+
+        let second = offer();
+        let second_code =
+            PairingCode::parse(&second.display_code(), UNIX_EPOCH).expect("second code");
+        assert!(!second_code.verifies_host_proof(&first_proof));
+        let mut wrong_version = first_proof;
+        wrong_version.wire_version += 1;
+        assert!(!first_code.verifies_host_proof(&wrong_version));
+        wrong_version.wire_version -= 1;
+        wrong_version.proof = "not-hex".to_string();
+        assert!(!first_code.verifies_host_proof(&wrong_version));
     }
 
     #[test]

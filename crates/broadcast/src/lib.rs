@@ -9,6 +9,7 @@ mod fingerprint;
 mod framing;
 mod hex;
 mod pairing;
+mod projection;
 mod queue;
 mod wire;
 
@@ -21,17 +22,21 @@ pub use fingerprint::{
     REPLAY_ABI_VERSION, WIRE_VERSION,
 };
 pub use framing::{
-    FrameError, configure_handshake_stream, configure_public_stream, read_handshake_request,
-    read_handshake_response, read_public_message, write_handshake_request,
-    write_handshake_response, write_public_message,
+    FrameError, configure_handshake_stream, configure_public_stream, read_handshake_proof,
+    read_handshake_request, read_handshake_response, read_public_message, write_handshake_proof,
+    write_handshake_request, write_handshake_response, write_public_message,
 };
 pub use pairing::{
     MAX_HANDSHAKE_ATTEMPTS, MAX_PAIRING_CODE_BYTES, PAIRING_TTL, PairingCode, PairingError,
     PairingGate, PairingOffer, PairingVerdict,
 };
+pub use projection::{
+    ALL_PUBLIC_TOOLS, NUMINOUS_GAME_IDS, ProjectionError, PublicTool, PublicToolEvent,
+    numinous_compatibility,
+};
 pub use queue::{EventQueueStatus, MAX_QUEUED_BYTES, MAX_QUEUED_EVENTS, PreparedEvent};
 pub use wire::{
-    ControlMarker, EventEnvelope, HANDSHAKE_TIMEOUT, HandshakeRequest, HandshakeResponse,
-    MAX_EVENT_BYTES, MAX_HANDSHAKE_BYTES, MAX_JSON_DEPTH, PUBLIC_WRITE_TIMEOUT, SequenceRange,
-    SessionId, SessionIdError, WireMessage,
+    ControlMarker, EventEnvelope, HANDSHAKE_TIMEOUT, HandshakeProof, HandshakeRequest,
+    HandshakeResponse, MAX_EVENT_BYTES, MAX_HANDSHAKE_BYTES, MAX_JSON_DEPTH, PUBLIC_WRITE_TIMEOUT,
+    SequenceRange, SessionId, SessionIdError, WireMessage,
 };

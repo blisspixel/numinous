@@ -4,6 +4,7 @@ use crate::queue::{EventQueue, EventQueueStatus, PreparedEvent, StoredEvent, Tak
 use crate::wire::{
     ControlMarker, EventEnvelope, MAX_EVENT_BYTES, SequenceRange, SessionId, WireMessage,
 };
+use serde::Serialize;
 use std::collections::VecDeque;
 use std::error::Error;
 use std::fmt;
@@ -162,9 +163,6 @@ impl ConsentMachine {
             return Ok(CommitOutcome::Discarded);
         }
         let sequence = inner.next_public_sequence;
-        let next_sequence = sequence
-            .checked_add(1)
-            .ok_or(TransitionError::SequenceExhausted)?;
         let worst_gap = SequenceRange {
             first: u64::MAX,
             last: u64::MAX,
@@ -173,13 +171,13 @@ impl ConsentMachine {
         let reserved_bytes = match reserved {
             Ok(frame) => frame.len(),
             Err(FrameError::TooLarge { .. } | FrameError::TooDeep { .. }) => {
-                inner.next_public_sequence = next_sequence;
-                inner.queue.record_drop(sequence);
-                add_drops(&mut inner, 1)?;
-                return Ok(CommitOutcome::Dropped { sequence });
+                return consume_projection_drop(&mut inner);
             }
             Err(_) => return Err(TransitionError::InvalidProjection),
         };
+        let next_sequence = sequence
+            .checked_add(1)
+            .ok_or(TransitionError::SequenceExhausted)?;
         let outcome = inner.queue.push(StoredEvent {
             sequence,
             epoch: ticket.epoch,
@@ -195,6 +193,31 @@ impl ConsentMachine {
         drop(inner);
         self.available.notify_one();
         Ok(result)
+    }
+
+    /// Serializes one public projection once, then atomically commits or drops it.
+    ///
+    /// An oversized or over-deep public value still consumes one sequence so a
+    /// later viewer frame carries an exact gap instead of hiding pressure.
+    pub fn prepare_and_commit<T>(
+        &self,
+        ticket: ConsentTicket,
+        event: &T,
+    ) -> Result<CommitOutcome, TransitionError>
+    where
+        T: Serialize,
+    {
+        match PreparedEvent::new(event) {
+            Ok(prepared) => self.commit(ticket, prepared),
+            Err(FrameError::TooLarge { .. } | FrameError::TooDeep { .. }) => {
+                let mut inner = self.lock();
+                if inner.state != ConsentState::Live || inner.epoch != ticket.epoch {
+                    return Ok(CommitOutcome::Discarded);
+                }
+                consume_projection_drop(&mut inner)
+            }
+            Err(_) => Err(TransitionError::InvalidProjection),
+        }
     }
 
     /// Pauses emission after any frame already in its bounded write call.
@@ -502,6 +525,16 @@ impl ConsentMachine {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
+}
+
+fn consume_projection_drop(inner: &mut Inner) -> Result<CommitOutcome, TransitionError> {
+    let sequence = inner.next_public_sequence;
+    inner.next_public_sequence = sequence
+        .checked_add(1)
+        .ok_or(TransitionError::SequenceExhausted)?;
+    inner.queue.record_drop(sequence);
+    add_drops(inner, 1)?;
+    Ok(CommitOutcome::Dropped { sequence })
 }
 
 fn terminate_failed_write(inner: &mut Inner, item: LeaseItem) {
@@ -976,6 +1009,34 @@ mod tests {
         assert_eq!(status.next_public_sequence, 1);
         assert_eq!(status.dropped_public_events, 1);
         assert_eq!(status.queue.pending_skip_ranges, 1);
+    }
+
+    #[test]
+    fn oversized_prepared_projection_consumes_a_visible_drop_sequence() {
+        let machine = live();
+        let ticket = machine.capture().expect("ticket");
+        let oversized = "x".repeat(crate::MAX_EVENT_BYTES + 1);
+        assert_eq!(
+            machine.prepare_and_commit(ticket, &oversized),
+            Ok(CommitOutcome::Dropped { sequence: 0 })
+        );
+        let status = machine.status();
+        assert_eq!(status.next_public_sequence, 1);
+        assert_eq!(status.dropped_public_events, 1);
+        assert_eq!(status.queue.pending_skip_ranges, 1);
+    }
+
+    #[test]
+    fn revoked_projection_preparation_does_not_consume_a_sequence() {
+        let machine = live();
+        let ticket = machine.capture().expect("ticket");
+        machine.pause().expect("pause");
+        let oversized = "x".repeat(crate::MAX_EVENT_BYTES + 1);
+        assert_eq!(
+            machine.prepare_and_commit(ticket, &oversized),
+            Ok(CommitOutcome::Discarded)
+        );
+        assert_eq!(machine.status().next_public_sequence, 0);
     }
 
     #[test]

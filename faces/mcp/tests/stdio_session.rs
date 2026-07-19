@@ -166,11 +166,12 @@ fn a_full_agent_session_walks_every_tool() {
             "challenge",
             json!({"id":"voronoi","seed":7,"pokes":[[0.5,0.5]]}),
         ),
+        call(25, "broadcast_session", json!({"action":"status"})),
     ];
     let replies = run_session(&requests);
 
-    // 24 id-carrying requests, one notification with no reply.
-    assert_eq!(replies.len(), 24, "one reply per id-carrying request");
+    // 25 id-carrying requests, one notification with no reply.
+    assert_eq!(replies.len(), 25, "one reply per id-carrying request");
     let by_id = |id: u64| -> &Value {
         replies
             .iter()
@@ -181,7 +182,7 @@ fn a_full_agent_session_walks_every_tool() {
     assert_eq!(by_id(1)["result"]["serverInfo"]["name"], "numinous");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(29)
+        Some(30)
     );
     assert!(text_of(by_id(3)).contains("times-tables"));
     assert!(text_of(by_id(4)).contains("Fractals"));
@@ -217,6 +218,10 @@ fn a_full_agent_session_walks_every_tool() {
     assert!(
         graded["score"].as_u64().is_some(),
         "the attempt is graded with metrics: {graded}"
+    );
+    assert_eq!(
+        by_id(25)["result"]["structuredContent"]["state"],
+        "disabled"
     );
 }
 

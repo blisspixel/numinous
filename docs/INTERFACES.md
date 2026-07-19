@@ -210,8 +210,9 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   EXACTLY 4 LOBES`. `play_room` returns `goal`, `goalMet`, and a null reveal
   until accepted K=5 input closes four lobes. The earned response then includes
   the same reveal the App points to. Ambient phase alone cannot earn it.
-- **Compatibility-preserving compact output (built):** every tool schema accepts
-  `response_mode: "full" | "compact"`. The argument is stripped before domain
+- **Compatibility-preserving compact output (built):** every play-tool schema
+  accepts `response_mode: "full" | "compact"`; the local broadcast consent
+  control intentionally does not. The argument is stripped before domain
   dispatch, so it cannot change grading, replay, persistence, or effective
   values. Omitted and explicit `full` results are equal. Eligible catalog, room,
   listening, simulation, Quiz, Gauntlet, and trophy replies keep identical
@@ -236,21 +237,28 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Interactive surfaces, planned:** an MCP App panel can later carry a rendered
   room where hosts support it. No app resource or interactive panel ships now.
 
-### Local MCP session broadcast, foundation built, viewer planned
+### Local MCP session broadcast, producer built, viewer planned
 
-The shared `numinous-broadcast` foundation now implements the pairing,
-compatibility, framing, consent, sequence, control-marker, and bounded-queue
-contracts below. It is not connected to the MCP or App faces yet, so no
-session-viewer user surface ships in the current alpha. The remaining work is
-the exhaustive MCP public-projection seam, the App Watch Agent listener and
-replay surface, and the real subprocess acceptance proof.
+The shared `numinous-broadcast` foundation implements the pairing,
+compatibility, framing, consent, sequence, control-marker, typed public-event,
+and bounded-queue contracts below. The MCP face now connects that foundation
+through `broadcast_session`, a complete fail-closed policy for all 30 declared
+tools, replay-safe daily seed normalization, and separate nonblocking writer
+and disconnect-monitor workers. Twenty-three tools are explicitly public, six
+progression or local-state tools are private, and the consent control broadcasts
+neither itself nor progress. No human viewer surface ships in the current alpha.
+The remaining work is the App Watch Agent listener and replay surface, followed
+by the real subprocess acceptance proof.
 
 A human should be able to open Numinous and watch a consenting digital player
 explore through MCP, like a live Let's Play. This is an observation surface,
-not surveillance and not duet control. The viewer reconstructs the same rooms,
-games, Studio output, actions, status, and public results the MCP guest receives.
-It never receives the guest's prompts, private reasoning, host logs, client
-metadata, environment, or arbitrary JSON-RPC traffic.
+not surveillance and not duet control. The viewer reconstructs public rooms,
+games, Studio output, actions, status, and state-independent results. Results
+match the MCP guest except where Describe Room, Crack, SETI, or Quiz would reveal
+private Journey level or boon choices; those four use a deterministic baseline
+projection instead. The viewer never receives the guest's prompts, private
+reasoning, host logs, client metadata, environment, or arbitrary JSON-RPC
+traffic.
 
 The first implementation has these hard boundaries:
 
@@ -258,9 +266,14 @@ The first implementation has these hard boundaries:
   one-use pairing code containing a version, loopback endpoint, and 128-bit
   operating-system-random capability. It never binds a public interface, puts
   the capability in a command line or log, writes a discovery file, or opens a
-  remote service. The code expires after five minutes. The server bounds and
-  parses it before creating an event buffer, compares the capability in constant
-  time, and rejects invalid or expired codes without echoing their contents.
+  remote service. The code expires after five minutes. Before the MCP producer
+  writes any guest byte, the listener must send a strict server-first SHA-256
+  proof bound to the capability and wire version. The producer compares that
+  proof in constant time, then sends the bounded authentication request. This
+  prevents an untrusted MCP client from turning a forged code into a
+  cross-protocol write to an unrelated loopback service. The host verifies the
+  capability in constant time and rejects invalid or expired codes without
+  echoing their contents.
 - Human enablement opens the listener but broadcasts no play. The human may
   offer the pairing code to the MCP guest, which must explicitly allow the
   broadcast through a bounded `broadcast_session` control tool. That call is
@@ -290,11 +303,13 @@ The first implementation has these hard boundaries:
   self-contained replay, never a delta that silently depends on a missing prior
   event. If a future event cannot carry complete replay inputs, a sequence gap
   marks the viewer desynchronized until an explicit full snapshot resets it.
-- The MCP request path never waits for the viewer. A fixed queue drops oldest
-  public events under pressure. The next transmitted envelope names the exact
-  skipped public sequence range, and `broadcast_session` status reports the
-  cumulative dropped count to the guest. A slow or disconnected viewer cannot
-  delay, fail, or alter the guest's play.
+- Ordinary public play emission never waits for a viewer socket write. A fixed
+  queue drops oldest public events under pressure. The next transmitted
+  envelope names the exact skipped public sequence range, and
+  `broadcast_session` status reports the cumulative dropped count to the guest.
+  A slow or disconnected viewer cannot delay, fail, or alter ordinary play.
+  Pairing, pause, and stop remain explicit consent controls and may perform one
+  bounded handshake, barrier wait, or worker join before returning.
 - The human surface is read-only. It may pause its own display, scrub a fixed
   in-memory ring of retained public events, or leave, but it cannot inject a
   tool call or change MCP state. The ring has explicit event and byte caps and
@@ -308,10 +323,12 @@ The first implementation has these hard boundaries:
 The first contract fixes its resource limits rather than leaving them to an
 implementation guess: pairing codes are at most 128 bytes and expire after five
 minutes; a code permits one live connection and is revoked after eight failed
-handshakes; the handshake is at most 4 KiB with a two-second deadline; each
-event is at most 64 KiB with JSON depth at most 16 and a two-second write
-deadline; the writer queue holds at most 64 events or 4 MiB; and the viewer ring
-holds at most 256 events or 16 MiB. Framing reads incrementally through
+handshakes; the MCP producer also refuses further starts after eight failures
+for that process lifetime; the proof, request, and response frames are each at
+most 4 KiB with a two-second deadline; each event is at most 64 KiB with JSON
+depth at most 16 and a two-second write deadline; the writer queue holds at most
+64 events or 4 MiB; and the viewer ring holds at most 256 events or 16 MiB.
+Framing reads incrementally through
 `MAX + 1`, rejects oversize input before JSON deserialization, and never grows a
 buffer from an untrusted declared length.
 
@@ -341,9 +358,10 @@ reveal loop while a human follows the same causal states in the App, with zero
 private protocol or host data in the captured stream.
 
 Dependency arrows are one-way: `numinous-core` never depends on the broadcast
-crate; the broadcast crate may depend on core wire and domain types but never on
-a face, persistence, or raw MCP JSON-RPC; and only the App and MCP faces depend
-on the broadcast crate. The CLI remains outside this first slice.
+crate; the broadcast crate consumes only core catalog metadata and never a face,
+persistence, or raw MCP JSON-RPC; MCP now depends on the broadcast crate, and
+the App will depend on it for the listener. The faces never depend on one
+another. The CLI remains outside this first slice.
 
 ### Protocol watch: MCP 2026-07-28 release candidate
 
