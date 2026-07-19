@@ -6,9 +6,22 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The local MCP session viewer now has a hardened shared transport foundation.
+  The new `numinous-broadcast` crate provides one-use 128-bit loopback pairing,
+  wall-clock plus monotonic expiry, constant-time capability verification,
+  strict bounded newline-delimited JSON, replay-semantic compatibility
+  fingerprints, atomic consent epochs and public sequences, ordered pause,
+  resume, and stop barriers, and a fixed drop-oldest event queue with exact gap
+  reporting. Unwritten leases restore without exceeding count or byte limits;
+  partial destination failures terminate and clear the session instead of
+  retrying a corrupt frame. Fifty-five focused tests cover hostile framing,
+  schema strictness, concurrency, revocation, partial writes, capacity, gap
+  ordering, semantic inputs, and monotonic expiry. Independent correctness and
+  security reviews pass. The MCP projections and App Watch Agent experience
+  remain unshipped 0.3 work.
 - Public status and roadmap documentation now match the July 18 release
-  evidence: 2,869 passing tests plus one ignored screenshot diagnostic,
-  95.39 percent region coverage, 95.44 percent line coverage, and green native
+  evidence: 2,924 passing tests plus one ignored screenshot diagnostic,
+  95.39 percent region coverage, 95.48 percent line coverage, and green native
   installer checks on all three CI operating systems. Digital-mind docs now
   distinguish the shipped managed-state inventory and erasure foundation from
   the still-unbuilt per-mind episodic continuity design. Clean rustdoc and
@@ -38,9 +51,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   alter a real player profile. Bounded cache and adjacent-entry caps,
   replacement-owner lock release, absent-state idempotence, non-file temporary
   rejection, exact retry termination, and a production CLI process path have
-  direct regressions. The full Windows release gate passes with 2,869
+  direct regressions. The full Windows release gate passes with 2,924
   all-target test cases plus one ignored screenshot diagnostic, 95.39 percent
-  region coverage, and 95.44 percent line coverage.
+  region coverage, and 95.48 percent line coverage.
 - Mathematical truth checks now protect three flagship foundations. Formula
   Jam follows conventional precedence, so exponentiation binds before unary
   minus while negative exponents and right-associative powers still work. The
@@ -215,8 +228,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   error-body diagnostics under ureq 3. Dependabot no longer suppresses the
   completed major migrations, and Rust 1.97 Clippy idioms are applied across
   the workspace without changing the underlying divisibility predicates. The
-  full Windows release gate passes with 2,869 all-target test cases plus one
-  ignored screenshot diagnostic, 95.39 percent region coverage, 95.44 percent
+  full Windows release gate passes with 2,924 all-target test cases plus one
+  ignored screenshot diagnostic, 95.39 percent region coverage, 95.48 percent
   line coverage, and the exact 2,911-screen App matrix. Native Linux and macOS
   CI invoke the deliberately nonexecutable POSIX installer through Bash, so its
   safety self-test does not depend on a checkout file-mode convention.

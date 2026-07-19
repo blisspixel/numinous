@@ -202,7 +202,8 @@ numinous/
 ├── crates/
 │   ├── core/            # rooms, sims, games, Studio math, persistence, audio specs
 │   ├── gpu/             # optional wgpu fractal renderer with CPU fallback
-│   └── audio/           # cpal output and looping sample player
+│   ├── audio/           # cpal output and looping sample player
+│   └── broadcast/       # consent, pairing, framing, identity, bounded queue
 ├── faces/
 │   ├── app/             # winit window, softbuffer, mouse/controller input, radio
 │   ├── cli/             # terminal play, render, export, Studio, games
@@ -216,7 +217,9 @@ numinous/
 **Dependency rule:** mathematical domain behavior lives in `numinous-core`.
 The three faces depend on core but never on one another. `numinous-gpu` and
 `numinous-audio` are adapters used by faces, not alternate owners of room logic.
-Rooms are core modules registered through one registry.
+`numinous-broadcast` owns face-independent local session transport primitives
+and never owns gameplay or persistence. Rooms are core modules registered
+through one registry.
 
 **Headless in production today.** Core rendering and audio synthesis work without
 a window. The CLI, MCP server, exporters, and automated suite all use that seam.
@@ -244,11 +247,12 @@ a window. The CLI, MCP server, exporters, and automated suite all use that seam.
 - **Current CI:** house style, dependency policy, coverage, format plus clippy
   plus rustdoc, doctests, all-target tests, and macOS, Ubuntu, and Windows
   builds. There is no automated beauty screenshot job.
-- **Planned local session broadcast:** the App and MCP faces remain independent.
-  A small shared broadcast crate will own an authenticated, bounded loopback
-  event protocol so the App can reconstruct a consenting MCP guest's public
-  Numinous play without receiving prompts, reasoning, host logs, or arbitrary
-  protocol traffic. `INTERFACES.md` owns the complete contract.
+- **Local session broadcast foundation built, faces planned:** the App and MCP
+  faces remain independent. The shared broadcast crate now owns one-use
+  loopback pairing, strict bounded framing, replay compatibility identity,
+  atomic consent epochs, ordered control barriers, and a fixed event queue.
+  The MCP public projection seam and App Watch Agent surface are not built yet.
+  `INTERFACES.md` owns the complete contract and privacy boundary.
 - **Release path:** packaged artifacts belong to 0.6. The public launch gate is
   0.9.
 

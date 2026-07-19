@@ -9,7 +9,9 @@ Status: **0.2.0-alpha.1, Flagship Proof in progress.** The 0.1 Public
 Foundation is complete. The headless core, CLI, MCP server, windowed app,
 GPU and audio adapters, 351 catalog rooms plus hidden content, 6 sims, 11+
 games, the RPG spine, standard-controller input, and a built-in 42-track radio
-are built. Public CI passes on Windows, macOS, and Ubuntu, but capability
+are built. The hardened local-broadcast substrate is built, while its MCP and
+App session-viewer surfaces remain 0.3 work. Public CI passes on Windows,
+macOS, and Ubuntu, but capability
 breadth remains ahead of release evidence: stranger playtests, accessibility
 work, and real macOS and Linux execution remain open. See `../CHANGELOG.md`
 and the Progress section of `ROADMAP.md`. These docs remain the plan of
@@ -60,7 +62,7 @@ defined in `RESEARCH.md`.
   the Room contract, module graph, and delivery boundary.
 - `EXTENSIBILITY.md` community content with a hard safety boundary: the three tiers (data capsules, the Studio language as the sandbox, portal-only WASM), the trust model, and what never ships.
 - `INTERFACES.md` the three faces over a headless core (App, CLI, MCP), their UX,
-  and the planned consented local MCP session viewer.
+  and the consented local MCP session viewer contract and implementation status.
 - `DIGITAL_MINDS.md` designing Numinous to be fun, thought-provoking, and connecting for digital minds treated as peers.
 - `DIGITAL_DEVELOPMENT.md` the July 2026 technical research and versioned plan for player-owned episodic memory, temporal continuity, open-ended learning, affect safeguards, agency, privacy, and welfare uncertainty.
 - `PLAYFUL.md` the games and the Studio (Guess the Shape, Shape to Function, the high-Wolfram ethos) across every face.

@@ -35,7 +35,7 @@ Public Foundation exit criterion is complete on the public `main` branch. The
 accessibility work are still open. Later systems already present in source do
 not waive those gates, and this prerelease label does not claim 0.2 is complete.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **351 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 2,869 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.39% region coverage, and 95.44% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **351 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 2,924 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.39% region coverage, and 95.48% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -509,6 +509,16 @@ without relying on the founder's machine or undocumented context?"
   path nonblocking and persist no transcript by default. This verified 0.3 work
   may land while 0.2 human evidence is being arranged, but it does not complete
   that gate.
+  - **Done (shared foundation, cycle 137):** `numinous-broadcast` provides
+    one-use loopback pairing, monotonic expiry, strict bounded JSON framing,
+    complete replay-semantic fingerprints, an atomic consent and sequence
+    coordinator, ordered control barriers, exact backpressure gaps, and fixed
+    count and byte limits. Fifty-five focused tests, two independent adversarial
+    reviews, the Rust 1.88 check, and the complete local gate pass.
+  - **Remaining:** connect the MCP consent control and exhaustive typed public
+    projections, build the App Watch Agent listener and bounded replay timeline,
+    then prove a real Times Tables explore, challenge, and reveal session across
+    an MCP subprocess with no private protocol content.
 
 Owner docs: `ROOMS.md`, `INTERFACES.md`, `SOUND.md`, `STUDIO.md`, `QUALITY.md`.
 
@@ -737,7 +747,7 @@ The package is **0.2.0-alpha.1**. The 0.1 Public Foundation exit criterion is
 complete, and work is now on 0.2 Flagship Proof. The 0.2 milestone itself remains
 open until the Times Tables stranger hallway test passes. Current breadth is 351
 catalog rooms, 11+ games, six sims, three faces, 29 MCP tools, deterministic
-creation and persistence, and 2,869 passing all-target test cases plus one
+creation and persistence, and 2,924 passing all-target test cases plus one
 ignored screenshot diagnostic on the green release gate. Required public CI
 passes locked tests, builds, and installer self-tests across all three operating
 systems; physical-device evidence remains separate. Breadth is not release
@@ -753,7 +763,7 @@ records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 2,869 passing all-target test cases plus one ignored screenshot diagnostic, 95.44% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 2,924 passing all-target test cases plus one ignored screenshot diagnostic, 95.48% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,911-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 

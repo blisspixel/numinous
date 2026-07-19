@@ -120,6 +120,10 @@ lever-driven simulations, Journey progression, Formula Jam, local music and
 radio, still and short-loop sharing, mouse and keyboard control, and
 hotplugged-controller support.
 
+The consented local MCP session viewer is not available in this alpha yet. Its
+shared transport foundation is built and hardened, while the MCP consent tool,
+public play projections, and App Watch Agent experience remain active 0.3 work.
+
 The alpha label is meaningful. Automated correctness, security, coverage,
 cross-platform build, and installer gates are strong, but the 0.2 release still
 requires real hallway playtests, accessibility sessions, representative
@@ -139,7 +143,8 @@ The ordered release criteria and open evidence are in
 Numinous is **version 0.2.0-alpha.1**, actively earning the 0.2 Flagship Proof
 gate. It is not on the old 0.1 line: the 0.1 Public Foundation is complete.
 Numinous already has a headless core, a
-windowed app, a full CLI, an MCP server, GPU and audio adapters, 351 catalog
+windowed app, a full CLI, an MCP server, GPU, audio, and local-broadcast
+adapters, 351 catalog
 rooms plus hidden content, games, progression, a Studio foundation, and the
 built-in soundtrack. Mouse, keyboard, and hotplugged controllers share the
 native App, including a controller-driven virtual hand for every room. The
@@ -219,8 +224,8 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The verified July 18, 2026 gate has 2,869 passing all-target test cases plus one
-ignored screenshot diagnostic, 95.39% region coverage and 95.44% line coverage
+The verified July 18, 2026 gate has 2,924 passing all-target test cases plus one
+ignored screenshot diagnostic, 95.39% region coverage and 95.48% line coverage
 with an enforced 80% line floor, Clippy with warnings denied, and dependency
 policy checks. Release QA also regenerates an exact
 2,911-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact

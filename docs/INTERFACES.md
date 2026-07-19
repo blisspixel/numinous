@@ -236,7 +236,14 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Interactive surfaces, planned:** an MCP App panel can later carry a rendered
   room where hosts support it. No app resource or interactive panel ships now.
 
-### Local MCP session broadcast, planned
+### Local MCP session broadcast, foundation built, viewer planned
+
+The shared `numinous-broadcast` foundation now implements the pairing,
+compatibility, framing, consent, sequence, control-marker, and bounded-queue
+contracts below. It is not connected to the MCP or App faces yet, so no
+session-viewer user surface ships in the current alpha. The remaining work is
+the exhaustive MCP public-projection seam, the App Watch Agent listener and
+replay surface, and the real subprocess acceptance proof.
 
 A human should be able to open Numinous and watch a consenting digital player
 explore through MCP, like a live Let's Play. This is an observation surface,
@@ -319,9 +326,9 @@ keeps the authenticated connection but emits nothing until an explicit resume
 creates a fresh epoch. Stop and disconnect shut down both directions, revoke
 the capability, and leave no writer, queue, or listener task alive.
 
-The cross-face implementation should live behind one small shared broadcast
-crate rather than making the App and MCP faces depend on each other. It should
-use loopback TCP from the standard library, a capability drawn from the
+The cross-face foundation lives behind one small shared broadcast crate rather
+than making the App and MCP faces depend on each other. It uses loopback TCP
+contracts from the standard library, a capability drawn from the
 operating system's cryptographic random source, newline-delimited versioned
 envelopes capped before allocation, and the existing deterministic core to
 reconstruct visuals and sound. Tests must
