@@ -100,7 +100,8 @@ those actions. Watch Agent cannot send a tool call or change the MCP player's
 state. When the selected action is `play_room`, Watch Agent reconstructs that
 exact public room state as a native frame. A successful `plot_expression`
 action reconstructs the agent's Formula Jam curve natively. Challenge, reveal,
-game, sound, and other public actions use the typed text timeline.
+and `nim` actions reconstruct the shared native heap board. Other games, sound,
+and remaining public actions use the typed text timeline.
 
 Same instruction: poke first, read never (until you want to).
 

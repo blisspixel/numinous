@@ -278,9 +278,38 @@ impl StudioReplay {
     }
 }
 
+struct NimGameReplay {
+    seed: u64,
+    replay: numinous_core::nim::NimReplay,
+}
+
+impl NimGameReplay {
+    fn render(&self, width: usize, height: usize) -> Raster {
+        crate::nim_render::draw_nim_board(&self.replay.heaps, None, width, height)
+            .unwrap_or_else(|| Raster::with_accent(width, height, [230, 200, 120]))
+    }
+
+    fn detail(&self) -> String {
+        let state = match self.replay.winner {
+            Some(numinous_core::nim::NimWinner::Player) => "PLAYER WON",
+            Some(numinous_core::nim::NimWinner::Order) => "ORDER WON",
+            None => "IN PROGRESS",
+        };
+        let heaps = self
+            .replay
+            .heaps
+            .iter()
+            .map(u32::to_string)
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("NIM / SEED {} / {state} / HEAPS {heaps}", self.seed)
+    }
+}
+
 enum NativeReplayKind {
     Room(RoomReplay),
     Studio(StudioReplay),
+    Nim(NimGameReplay),
 }
 
 struct NativeReplay {
@@ -306,12 +335,21 @@ impl NativeReplay {
         }
     }
 
+    fn nim(replay: NimGameReplay) -> Self {
+        Self {
+            kind: NativeReplayKind::Nim(replay),
+            #[cfg(test)]
+            render_count: Cell::new(0),
+        }
+    }
+
     fn render(&self, width: usize, height: usize) -> Raster {
         #[cfg(test)]
         self.render_count.set(self.render_count.get() + 1);
         match &self.kind {
             NativeReplayKind::Room(replay) => replay.render(width, height),
             NativeReplayKind::Studio(replay) => replay.render(width, height),
+            NativeReplayKind::Nim(replay) => replay.render(width, height),
         }
     }
 
@@ -327,6 +365,7 @@ impl NativeReplay {
                 detail
             }
             NativeReplayKind::Studio(replay) => replay.detail(),
+            NativeReplayKind::Nim(replay) => replay.detail(),
         }
     }
 }
@@ -702,7 +741,109 @@ fn parse_native_replay(event: &PublicToolEvent) -> Option<NativeReplay> {
         PublicTool::PlotExpression => {
             parse_studio_replay(&event.arguments, &event.result).map(NativeReplay::studio)
         }
+        PublicTool::Nim => parse_nim_replay(&event.arguments, &event.result).map(NativeReplay::nim),
         _ => None,
+    }
+}
+
+fn parse_nim_replay(
+    arguments: &Map<String, Value>,
+    result: &Map<String, Value>,
+) -> Option<NimGameReplay> {
+    if arguments
+        .keys()
+        .any(|key| !matches!(key.as_str(), "seed" | "moves"))
+    {
+        return None;
+    }
+    let seed = match arguments.get("seed") {
+        Some(seed) => seed.as_u64()?,
+        None => 1,
+    };
+    let turns = match arguments.get("moves") {
+        Some(moves) => {
+            let moves = moves.as_array()?;
+            if moves.len() > numinous_core::nim::MAX_REPLAY_TURNS {
+                return None;
+            }
+            moves
+                .iter()
+                .map(|value| {
+                    let pair = value.as_array()?;
+                    if pair.len() != 2 {
+                        return None;
+                    }
+                    let heap = pair.first()?.as_u64()?.checked_sub(1)?;
+                    let heap = usize::try_from(heap).ok()?;
+                    if heap >= 3 {
+                        return None;
+                    }
+                    let take = u32::try_from(pair.get(1)?.as_u64()?).ok()?;
+                    (take > 0).then_some(numinous_core::nim::NimTurn { heap, take })
+                })
+                .collect::<Option<Vec<_>>>()?
+        }
+        None => Vec::new(),
+    };
+    let replay = numinous_core::nim::replay(seed, &turns).ok()?;
+    if Value::Object(result.clone()) != canonical_nim_result(seed, &replay) {
+        return None;
+    }
+    Some(NimGameReplay { seed, replay })
+}
+
+fn canonical_nim_result(seed: u64, replay: &numinous_core::nim::NimReplay) -> Value {
+    match replay.winner {
+        Some(numinous_core::nim::NimWinner::Player) => {
+            let secret = numinous_core::nim_secret();
+            serde_json::json!({
+                "content": [{
+                    "type": "text",
+                    "text": format!(
+                        "You took the last stone. The Order concedes, and keeps its word:\n\n{secret}"
+                    )
+                }],
+                "structuredContent": {
+                    "game": "nim", "seed": seed, "won": true, "secret": secret
+                },
+                "isError": false
+            })
+        }
+        Some(numinous_core::nim::NimWinner::Order) => serde_json::json!({
+            "content": [{
+                "type": "text",
+                "text": "The Order takes the last stone. Again. (It is not luck.)"
+            }],
+            "structuredContent": {"game": "nim", "seed": seed, "won": false},
+            "isError": false
+        }),
+        None => {
+            let narration = replay
+                .order
+                .iter()
+                .map(|turn| format!("The Order takes {} from heap {}.", turn.take, turn.heap + 1))
+                .collect::<Vec<_>>();
+            let board = replay
+                .heaps
+                .iter()
+                .enumerate()
+                .map(|(index, heap)| format!("  {}) {}", index + 1, "O ".repeat(*heap as usize)))
+                .collect::<Vec<_>>();
+            serde_json::json!({
+                "content": [{
+                    "type": "text",
+                    "text": format!(
+                        "NIM seed {seed}. Last stone wins.\n{}\n{}\nMove by calling again with your full move list.",
+                        narration.join("\n"),
+                        board.join("\n")
+                    )
+                }],
+                "structuredContent": {
+                    "game": "nim", "seed": seed, "heaps": replay.heaps, "order": narration
+                },
+                "isError": false
+            })
+        }
     }
 }
 
@@ -1420,6 +1561,23 @@ mod tests {
         }
     }
 
+    fn nim_fixture(
+        sequence: u64,
+        arguments: Value,
+        result: Value,
+    ) -> EventEnvelope<PublicToolEvent> {
+        let event =
+            PublicToolEvent::new(PublicTool::Nim, &arguments, &result).expect("public Nim event");
+        EventEnvelope {
+            session_id: numinous_broadcast::SessionId::generate().expect("session"),
+            consent_epoch: 2,
+            public_sequence: sequence,
+            skipped: None,
+            compatibility: numinous_compatibility().expect("compatibility"),
+            event,
+        }
+    }
+
     fn studio_result(source: &str, xmin: f64, xmax: f64, parameter: f64) -> Value {
         let (plot, ymin, ymax) = numinous_core::plot_text(source, xmin, xmax, parameter, 72, 26)
             .expect("valid Studio fixture");
@@ -1448,6 +1606,37 @@ mod tests {
             assert!(Instant::now() < deadline, "condition timed out");
             thread::sleep(Duration::from_millis(5));
         }
+    }
+
+    fn nim_history_for(
+        seed: u64,
+        winner: numinous_core::nim::NimWinner,
+    ) -> Vec<numinous_core::nim::NimTurn> {
+        fn search(
+            seed: u64,
+            turns: Vec<numinous_core::nim::NimTurn>,
+            winner: numinous_core::nim::NimWinner,
+        ) -> Option<Vec<numinous_core::nim::NimTurn>> {
+            let replay = numinous_core::nim::replay(seed, &turns).ok()?;
+            if replay.winner == Some(winner) {
+                return Some(turns);
+            }
+            if replay.winner.is_some() {
+                return None;
+            }
+            for (heap, count) in replay.heaps.iter().copied().enumerate() {
+                for take in 1..=count {
+                    let mut next = turns.clone();
+                    next.push(numinous_core::nim::NimTurn { heap, take });
+                    if let Some(found) = search(seed, next, winner) {
+                        return Some(found);
+                    }
+                }
+            }
+            None
+        }
+
+        search(seed, Vec::new(), winner).expect("requested Nim outcome is reachable")
     }
 
     fn connected_pair() -> (TcpStream, TcpStream) {
@@ -1869,6 +2058,138 @@ mod tests {
             ))
             .expect("retain invalid Studio event");
         let fallback = viewer.draw(320, 180, ViewerInputMode::KeyboardMouse);
+        assert!(fallback.lit_count() > 0);
+        assert!(matches!(viewer.cached_replay, Some((1, None))));
+    }
+
+    #[test]
+    fn native_nim_replay_requires_exact_rules_arguments_and_result() {
+        let seed = 23;
+        let replay = numinous_core::nim::replay(seed, &[]).expect("opening Nim replay");
+        let result = canonical_nim_result(seed, &replay);
+        let event =
+            PublicToolEvent::new(PublicTool::Nim, &serde_json::json!({"seed": seed}), &result)
+                .expect("valid public Nim event");
+        let native = parse_native_replay(&event).expect("valid native Nim replay");
+        assert!(matches!(native.kind, NativeReplayKind::Nim(_)));
+        assert_eq!(
+            native.render(360, 220).to_rgba(),
+            crate::nim_render::draw_nim_board(&replay.heaps, None, 360, 220)
+                .expect("shared Nim board")
+                .to_rgba()
+        );
+        assert!(native.detail().contains("NIM / SEED 23 / IN PROGRESS"));
+
+        let too_many_moves =
+            vec![serde_json::json!([1, 1]); numinous_core::nim::MAX_REPLAY_TURNS + 1];
+        for arguments in [
+            serde_json::json!({"seed": "23"}),
+            serde_json::json!({"seed": seed, "private": true}),
+            serde_json::json!({"seed": seed, "moves": "none"}),
+            serde_json::json!({"seed": seed, "moves": [[1]]}),
+            serde_json::json!({"seed": seed, "moves": [[0, 1]]}),
+            serde_json::json!({"seed": seed, "moves": [[4, 1]]}),
+            serde_json::json!({"seed": seed, "moves": [[1, 0]]}),
+            serde_json::json!({"seed": seed, "moves": [[1, 8]]}),
+            serde_json::json!({"seed": seed, "moves": too_many_moves}),
+        ] {
+            let event = PublicToolEvent::new(PublicTool::Nim, &arguments, &result)
+                .expect("public event envelope");
+            assert!(
+                parse_native_replay(&event).is_none(),
+                "accepted malformed Nim replay: {arguments}"
+            );
+        }
+
+        for forged in [
+            serde_json::json!({}),
+            serde_json::json!({
+                "content": [{"type": "text", "text": "forged"}],
+                "structuredContent": {
+                    "game": "nim", "seed": seed, "heaps": replay.heaps, "order": []
+                },
+                "isError": false
+            }),
+            serde_json::json!({
+                "content": result["content"],
+                "structuredContent": {
+                    "game": "nim", "seed": seed, "heaps": [7, 7, 7], "order": []
+                },
+                "isError": false
+            }),
+        ] {
+            let event =
+                PublicToolEvent::new(PublicTool::Nim, &serde_json::json!({"seed": seed}), &forged)
+                    .expect("public event envelope");
+            assert!(parse_native_replay(&event).is_none());
+        }
+    }
+
+    #[test]
+    fn native_nim_replay_attests_both_terminal_result_shapes() {
+        let seed = 23;
+        for winner in [
+            numinous_core::nim::NimWinner::Player,
+            numinous_core::nim::NimWinner::Order,
+        ] {
+            let turns = nim_history_for(seed, winner);
+            let replay = numinous_core::nim::replay(seed, &turns).expect("terminal replay");
+            assert_eq!(replay.winner, Some(winner));
+            let moves = turns
+                .iter()
+                .map(|turn| serde_json::json!([turn.heap + 1, turn.take]))
+                .collect::<Vec<_>>();
+            let arguments = serde_json::json!({"seed": seed, "moves": moves});
+            let result = canonical_nim_result(seed, &replay);
+            let event = PublicToolEvent::new(PublicTool::Nim, &arguments, &result)
+                .expect("terminal public event");
+            let native = parse_native_replay(&event).expect("attested terminal replay");
+            let expected_detail = match winner {
+                numinous_core::nim::NimWinner::Player => "PLAYER WON",
+                numinous_core::nim::NimWinner::Order => "ORDER WON",
+            };
+            assert!(native.detail().contains(expected_detail));
+
+            let mut forged = result;
+            forged["content"][0]["text"] = serde_json::json!("forged");
+            let event = PublicToolEvent::new(PublicTool::Nim, &arguments, &forged)
+                .expect("forged terminal event");
+            assert!(parse_native_replay(&event).is_none());
+        }
+    }
+
+    #[test]
+    fn nim_native_body_uses_the_shared_cache_and_invalid_actions_fall_back() {
+        let mut viewer = SessionViewer::default();
+        let seed = 23;
+        let replay = numinous_core::nim::replay(seed, &[]).expect("opening Nim replay");
+        let result = canonical_nim_result(seed, &replay);
+        {
+            let mut shared = lock(&viewer.shared);
+            shared.status = ViewerStatus::Live;
+            shared
+                .retain(&nim_fixture(
+                    0,
+                    serde_json::json!({"seed": seed}),
+                    result.clone(),
+                ))
+                .expect("retain valid Nim event");
+        }
+        let first = viewer.draw(360, 220, ViewerInputMode::KeyboardMouse);
+        assert!(first.lit_count() > 100);
+        assert_eq!(cached_render_count(&viewer), 1);
+        let repeated = viewer.draw(360, 220, ViewerInputMode::Controller);
+        assert_eq!(cached_render_count(&viewer), 1);
+        assert_ne!(first.to_rgba(), repeated.to_rgba());
+
+        lock(&viewer.shared)
+            .retain(&nim_fixture(
+                1,
+                serde_json::json!({"seed": seed, "moves": [[1, 8]]}),
+                result,
+            ))
+            .expect("retain invalid Nim event");
+        let fallback = viewer.draw(360, 220, ViewerInputMode::KeyboardMouse);
         assert!(fallback.lit_count() > 0);
         assert!(matches!(viewer.cached_replay, Some((1, None))));
     }

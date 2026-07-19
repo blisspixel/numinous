@@ -32,7 +32,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   prevents guest bytes from reaching an unproven loopback peer, eight failures
   close the process pairing budget, and one serialized lifecycle prevents
   concurrent starts from leaking workers. Pairing and consent controls remain
-  explicit bounded operations. One hundred seven MCP unit tests, four real
+  explicit bounded operations. One hundred seven MCP unit tests, six real
   stdio tests, and real loopback handshake, ordering, redaction,
   private-silence, and result parity paths pass. The App opens its explicit
   human listener through X or the
@@ -65,13 +65,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   the typed text fallback, while the existing semantic body cache avoids repeat
   work beneath dynamic viewer chrome. A separate real MCP subprocess session
   proves one paired public Studio creation at sequence 0, native local-viewport
-  drawing, metadata exclusion, and close-time erasure. Native game visuals and
-  sound remain 0.3 work. Process- and thread-isolated App test
+  drawing, metadata exclusion, and close-time erasure. Public Nim histories now
+  replay through one shared core reducer for legal moves, deterministic Order
+  replies, and winner state. One bounded heap renderer serves both live App play
+  and Watch Agent. The viewer requires exact normalized arguments and the
+  complete canonical MCP result before native reconstruction; malformed,
+  excessive, illegal, forged, or failed actions retain text. A third real MCP
+  subprocess session proves exactly one public Nim event, shared core state,
+  native body pixel parity, metadata exclusion, and close-time erasure. Other
+  game visuals and sound remain 0.3 work. Process- and thread-isolated App test
   roots now prevent concurrent release or checker processes from colliding in
   playtest-note and radio-cache fixtures.
 - Public status and roadmap documentation now match the July 18 release
-  evidence: 2,973 passing tests plus one ignored screenshot diagnostic,
-  95.43 percent region coverage, 95.53 percent line coverage, and green native
+  evidence: 2,981 passing tests plus one ignored screenshot diagnostic,
+  95.44 percent region coverage, 95.55 percent line coverage, and green native
   installer checks on all three CI operating systems. Digital-mind docs now
   distinguish the shipped managed-state inventory and erasure foundation from
   the still-unbuilt per-mind episodic continuity design. Clean rustdoc and

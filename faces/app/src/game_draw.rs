@@ -629,34 +629,17 @@ pub(crate) fn draw_arcade(
 
 /// Draw Nim: heaps as stones, your aim highlighted, and the Order's last word.
 pub(crate) fn draw_nim(play: &NimPlay, mode: InputMode, width: usize, height: usize) -> Raster {
-    let mut raster = Raster::with_accent(width, height, [230, 200, 120]);
-    let scale = game_scale(width);
-    raster.dim_rows(0, 12 + 7 * scale, 40);
-    raster.dim_rows(height as i32 - 38 * scale, height as i32, 40);
-    numinous_core::draw_text(&mut raster, "NIM: LAST STONE WINS", 10, 10, scale, '#');
-    let top = 20 * scale + 10;
-    let row_h = (height as i32 - top - 42 * scale) / 3;
-    let stone = (row_h / 2).clamp(4, 10 * scale);
-    for (heap, &count) in play.heaps.iter().enumerate() {
-        let y = top + heap as i32 * row_h + row_h / 2;
-        let selected = heap == play.selected && play.over.is_none();
-        numinous_core::draw_text(
-            &mut raster,
-            &format!("{}{}", if selected { ">" } else { " " }, heap + 1),
-            10,
-            y - 4 * scale,
-            scale,
-            if selected { '#' } else { '*' },
-        );
-        for i in 0..count {
-            let x0 = 40 + i as i32 * (stone + 6);
-            let aimed = selected && i >= count.saturating_sub(play.take);
-            let mark = if aimed { '#' } else { '*' };
-            for dy in 0..stone {
-                raster.line(x0, y + dy, x0 + stone, y + dy, mark);
-            }
-        }
-    }
+    let selection = play
+        .over
+        .is_none()
+        .then_some(numinous_app::nim_render::NimSelection {
+            heap: play.selected,
+            take: play.take,
+        });
+    let mut raster =
+        numinous_app::nim_render::draw_nim_board(&play.heaps, selection, width, height)
+            .unwrap_or_else(|| Raster::with_accent(width, height, [230, 200, 120]));
+    let scale = numinous_app::nim_render::nim_scale(width);
     if play.over.is_none() {
         numinous_core::draw_text(
             &mut raster,

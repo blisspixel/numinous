@@ -374,35 +374,13 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                 && !list.is_empty()
             {
                 journey.play();
-                // Replay: if a player move empties the board, the win counts
-                // and posts, exactly as it would in the terminal.
                 let seed = effective_seed(&args);
-                let mut heaps = numinous_core::nim_new(seed);
-                for pair in list.iter().filter_map(Value::as_array) {
-                    let (Some(heap), Some(take)) = (
-                        pair.first().and_then(Value::as_u64),
-                        pair.get(1).and_then(Value::as_u64),
-                    ) else {
-                        break;
-                    };
-                    // An oversized take is an illegal move, never a truncated
-                    // legal one.
-                    let Ok(take) = u32::try_from(take) else {
-                        break;
-                    };
-                    if heap == 0 || !numinous_core::nim_apply(&mut heaps, heap as usize - 1, take) {
-                        break;
-                    }
-                    if numinous_core::nim_finished(&heaps) {
-                        journey.win();
-                        post_score(&scores_path(), &format!("nim seed:{seed}"), 1);
-                        break;
-                    }
-                    let (oh, ot) = numinous_core::nim_order(&heaps);
-                    let _ = numinous_core::nim_apply(&mut heaps, oh, ot);
-                    if numinous_core::nim_finished(&heaps) {
-                        break;
-                    }
+                if let Some(turns) = nim_turns(&args)
+                    && let Ok(replay) = numinous_core::nim::replay(seed, &turns)
+                    && replay.winner == Some(numinous_core::nim::NimWinner::Player)
+                {
+                    journey.win();
+                    post_score(&scores_path(), &format!("nim seed:{seed}"), 1);
                 }
             }
         }
@@ -840,12 +818,16 @@ fn replay_arguments(mut arguments: Value) -> Value {
         return arguments;
     };
     object.remove("response_mode");
-    let daily_seed = (object.get("daily").and_then(Value::as_bool) == Some(true))
-        .then(|| object.get(DAILY_DAY_KEY).and_then(Value::as_u64))
-        .flatten();
+    let daily = object.get("daily").and_then(Value::as_bool) == Some(true);
+    let effective_seed = if daily {
+        object.get(DAILY_DAY_KEY).and_then(Value::as_u64)
+    } else {
+        object.get("seed").and_then(Value::as_u64)
+    };
+    object.remove("daily");
     object.remove(DAILY_DAY_KEY);
-    if let Some(seed) = daily_seed {
-        object.remove("daily");
+    object.remove("seed");
+    if let Some(seed) = effective_seed {
         object.insert("seed".to_string(), json!(seed));
     }
     arguments
@@ -1234,10 +1216,11 @@ fn build_tools_catalog() -> Value {
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "seed": { "type": "integer", "description": "Seed; the same seed gives the same starting heaps." },
+                        "seed": { "type": "integer", "minimum": 0, "description": "Seed; the same seed gives the same starting heaps." },
                         "daily": { "type": "boolean", "description": "Use today\'s shared seed instead; dailies chain into streaks." },
                         "moves": {
                             "type": "array",
+                            "maxItems": numinous_core::nim::MAX_REPLAY_TURNS,
                             "items": {
                                 "type": "array",
                                 "items": { "type": "integer", "minimum": 1 },
@@ -4350,66 +4333,90 @@ fn scores_tool(path: &std::path::Path) -> Value {
 /// The `nim` tool: replay the whole game from the move list, statelessly.
 fn nim_tool(args: &Value) -> Value {
     let seed = effective_seed(args);
-    let mut heaps = numinous_core::nim_new(seed);
-    let mut narration = Vec::new();
-    let moves: Vec<(usize, u32)> = args
-        .get("moves")
-        .and_then(Value::as_array)
-        .map(|list| {
-            list.iter()
-                .filter_map(|m| {
-                    let pair = m.as_array()?;
-                    let heap = usize::try_from(pair.first()?.as_u64()?).ok()?;
-                    // An oversized take saturates so the replay rejects it as
-                    // the illegal move it is, instead of truncating it legal.
-                    let take = u32::try_from(pair.get(1)?.as_u64()?).unwrap_or(u32::MAX);
-                    Some((heap, take))
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-    for (heap, take) in moves {
-        if heap == 0 || !numinous_core::nim_apply(&mut heaps, heap - 1, take) {
+    let Some(turns) = nim_turns(args) else {
+        return tool_error("Invalid Nim move history.");
+    };
+    let replay = match numinous_core::nim::replay(seed, &turns) {
+        Ok(replay) => replay,
+        Err(numinous_core::nim::NimReplayError::IllegalPlayerMove { turn, heaps }) => {
             return tool_error(&format!(
-                "Illegal move: take {take} from heap {heap}. Heaps now: {heaps:?}."
+                "Illegal move: take {} from heap {}. Heaps now: {heaps:?}.",
+                turn.take,
+                turn.heap + 1
             ));
         }
-        if numinous_core::nim_finished(&heaps) {
+        Err(numinous_core::nim::NimReplayError::InvalidOrderMove { .. }) => {
+            return tool_error("The Order could not produce a legal move from this position.");
+        }
+    };
+    match replay.winner {
+        Some(numinous_core::nim::NimWinner::Player) => {
             let secret = numinous_core::nim_secret();
-            return tool_structured(
+            tool_structured(
                 &format!(
                     "You took the last stone. The Order concedes, and keeps its word:\n\n{secret}"
                 ),
                 // The promised secret lives in the structured payload too, so a
                 // mind that reads only structuredContent still earns it.
                 json!({ "game": "nim", "seed": seed, "won": true, "secret": secret }),
-            );
+            )
         }
-        let (oh, ot) = numinous_core::nim_order(&heaps);
-        let _ = numinous_core::nim_apply(&mut heaps, oh, ot);
-        narration.push(format!("The Order takes {ot} from heap {}.", oh + 1));
-        if numinous_core::nim_finished(&heaps) {
-            return tool_structured(
-                "The Order takes the last stone. Again. (It is not luck.)",
-                json!({ "game": "nim", "seed": seed, "won": false }),
-            );
+        Some(numinous_core::nim::NimWinner::Order) => tool_structured(
+            "The Order takes the last stone. Again. (It is not luck.)",
+            json!({ "game": "nim", "seed": seed, "won": false }),
+        ),
+        None => {
+            let narration = nim_order_narration(&replay.order);
+            let board: Vec<String> = replay
+                .heaps
+                .iter()
+                .enumerate()
+                .map(|(i, &h)| format!("  {}) {}", i + 1, "O ".repeat(h as usize)))
+                .collect();
+            tool_structured(
+                &format!(
+                    "NIM seed {seed}. Last stone wins.\n{}\n{}\nMove by calling again with your full move list.",
+                    narration.join("\n"),
+                    board.join("\n")
+                ),
+                // The Order's replies ride in the structured payload, so a mind that
+                // reads only structuredContent can follow the game, not just the heaps.
+                json!({ "game": "nim", "seed": seed, "heaps": replay.heaps, "order": narration }),
+            )
         }
     }
-    let board: Vec<String> = heaps
+}
+
+fn nim_turns(args: &Value) -> Option<Vec<numinous_core::nim::NimTurn>> {
+    let Some(moves) = args.get("moves") else {
+        return Some(Vec::new());
+    };
+    let moves = moves.as_array()?;
+    if moves.len() > numinous_core::nim::MAX_REPLAY_TURNS {
+        return None;
+    }
+    moves
         .iter()
-        .enumerate()
-        .map(|(i, &h)| format!("  {}) {}", i + 1, "O ".repeat(h as usize)))
-        .collect();
-    tool_structured(
-        &format!(
-            "NIM seed {seed}. Last stone wins.\n{}\n{}\nMove by calling again with your full move list.",
-            narration.join("\n"),
-            board.join("\n")
-        ),
-        // The Order's replies ride in the structured payload, so a mind that
-        // reads only structuredContent can follow the game, not just the heaps.
-        json!({ "game": "nim", "seed": seed, "heaps": heaps, "order": narration }),
-    )
+        .map(|value| {
+            let pair = value.as_array()?;
+            if pair.len() != 2 {
+                return None;
+            }
+            let heap = pair.first()?.as_u64()?.checked_sub(1)?;
+            let heap = usize::try_from(heap).ok()?;
+            // An oversized take remains illegal instead of truncating to a
+            // smaller legal removal.
+            let take = u32::try_from(pair.get(1)?.as_u64()?).unwrap_or(u32::MAX);
+            Some(numinous_core::nim::NimTurn { heap, take })
+        })
+        .collect()
+}
+
+fn nim_order_narration(order: &[numinous_core::nim::NimTurn]) -> Vec<String> {
+    order
+        .iter()
+        .map(|turn| format!("The Order takes {} from heap {}.", turn.take, turn.heap + 1))
+        .collect()
 }
 
 /// The `journey` tool: an agent's own level, sky, and standing.
@@ -4896,6 +4903,15 @@ mod tests {
             arcade["inputSchema"]["properties"]["actions"]["items"]["pattern"],
             "^(?:[Uu][Pp]|[Dd][Oo][Ww][Nn]|[Ll][Ee][Ff][Tt]|[Rr][Ii][Gg][Hh][Tt]|[Ee][Aa][Tt]|[WwAaSsDdEe])$"
         );
+        let nim = tools
+            .iter()
+            .find(|tool| tool["name"] == "nim")
+            .expect("nim tool");
+        assert_eq!(nim["inputSchema"]["properties"]["seed"]["minimum"], 0);
+        assert_eq!(
+            nim["inputSchema"]["properties"]["moves"]["maxItems"],
+            numinous_core::nim::MAX_REPLAY_TURNS
+        );
         for tool_name in ["nim", "hackenbush"] {
             let game = tools
                 .iter()
@@ -5074,13 +5090,21 @@ mod tests {
     }
 
     #[test]
-    fn daily_public_replays_replace_the_clock_with_the_pinned_seed() {
-        let replay = super::replay_arguments(json!({
+    fn public_replays_normalize_daily_flags_and_effective_seeds() {
+        let daily = super::replay_arguments(json!({
             "daily": true,
             "dailyDay": 20_260_718_u64,
             "response_mode": "compact"
         }));
-        assert_eq!(replay, json!({"seed": 20_260_718_u64}));
+        assert_eq!(daily, json!({"seed": 20_260_718_u64}));
+        assert_eq!(
+            super::replay_arguments(json!({"daily": false, "seed": 23})),
+            json!({"seed": 23})
+        );
+        assert_eq!(
+            super::replay_arguments(json!({"daily": false, "seed": -1})),
+            json!({})
+        );
     }
 
     #[test]

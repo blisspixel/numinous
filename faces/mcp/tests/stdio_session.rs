@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use numinous_app::nim_render::draw_nim_board;
 use numinous_app::session_viewer::{SessionViewer, ViewerInputMode, ViewerStatus};
 use numinous_app::studio_render::{CurveLayout, draw_curve};
 use numinous_broadcast::PublicTool;
@@ -16,6 +17,15 @@ use serde_json::{Value, json};
 
 /// Run a full session: send each line, return the parsed response lines.
 fn run_session(requests: &[Value]) -> Vec<Value> {
+    run_session_with_barrier(requests, || true, &[])
+}
+
+/// Run requests on both sides of one externally observable session barrier.
+fn run_session_with_barrier(
+    before_barrier: &[Value],
+    mut barrier: impl FnMut() -> bool,
+    after_barrier: &[Value],
+) -> Vec<Value> {
     static NEXT_SESSION: AtomicU64 = AtomicU64::new(0);
     let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
     let suffix = format!("{}-{session}", std::process::id());
@@ -33,18 +43,35 @@ fn run_session(requests: &[Value]) -> Vec<Value> {
         .spawn()
         .expect("spawn the MCP server");
 
-    {
-        let mut stdin = child.stdin.take().expect("stdin");
-        for request in requests {
-            writeln!(stdin, "{request}").expect("write request");
-        }
-    }
     let mut stdout = child.stdout.take().expect("stdout");
     let output_reader = thread::spawn(move || {
         let mut output = Vec::new();
         stdout.read_to_end(&mut output).expect("read MCP output");
         output
     });
+    let mut stdin = child.stdin.take().expect("stdin");
+    for request in before_barrier {
+        writeln!(stdin, "{request}").expect("write request before barrier");
+    }
+    stdin.flush().expect("flush requests before barrier");
+
+    let barrier_deadline = Instant::now() + Duration::from_secs(2);
+    while !barrier() {
+        if Instant::now() >= barrier_deadline {
+            drop(stdin);
+            let _ = child.kill();
+            let _ = child.wait();
+            let _ = output_reader.join();
+            let _ = std::fs::remove_file(&journey);
+            let _ = std::fs::remove_file(&scores);
+            panic!("MCP session barrier did not resolve within 2 seconds");
+        }
+        thread::sleep(Duration::from_millis(5));
+    }
+    for request in after_barrier {
+        writeln!(stdin, "{request}").expect("write request after barrier");
+    }
+    drop(stdin);
 
     let deadline = Instant::now() + Duration::from_secs(30);
     let status = loop {
@@ -352,6 +379,116 @@ fn app_viewer_reconstructs_a_real_studio_agent_creation() {
     let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
     for forbidden in [
         "studio-viewer-acceptance",
+        "clientInfo",
+        "jsonrpc",
+        "pairing_code",
+        "NUMINOUS_JOURNEY",
+        "NUMINOUS_SCORES",
+    ] {
+        assert!(
+            !public_bytes.contains(forbidden),
+            "public evidence contained private field {forbidden}"
+        );
+    }
+
+    viewer.close();
+    assert!(viewer.retained_events().is_empty());
+}
+
+#[test]
+fn app_viewer_reconstructs_a_real_normalized_nim_agent_opening() {
+    let mut viewer = SessionViewer::default();
+    viewer.open().expect("open the App session viewer");
+    let pairing_code = viewer.pairing_code().expect("fresh pairing code");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments}
+        })
+    };
+    let before_stop = [
+        json!({
+            "jsonrpc":"2.0","id":0,"method":"initialize","params":{
+                "protocolVersion":"2025-06-18",
+                "capabilities":{},
+                "clientInfo":{"name":"nim-viewer-acceptance","version":"1.0"}
+            }
+        }),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(
+            1,
+            "broadcast_session",
+            json!({"action":"start", "pairing_code": pairing_code}),
+        ),
+        call(2, "nim", json!({"seed": 23, "daily": false})),
+        call(
+            3,
+            "nim",
+            json!({
+                "seed": 23,
+                "moves": vec![json!([1, 1]); numinous_core::nim::MAX_REPLAY_TURNS + 1]
+            }),
+        ),
+        call(4, "nim", json!({"seed": -1})),
+    ];
+    let after_stop = [call(5, "broadcast_session", json!({"action":"stop"}))];
+    let replies = run_session_with_barrier(
+        &before_stop,
+        || viewer.retained_events().len() == 1,
+        &after_stop,
+    );
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+    assert_eq!(by_id(1)["result"]["structuredContent"]["state"], "live");
+    assert_eq!(by_id(2)["result"]["structuredContent"]["game"], "nim");
+    assert_eq!(by_id(2)["result"]["structuredContent"]["seed"], 23);
+    assert_eq!(by_id(3)["result"]["isError"], true);
+    assert!(text_of(by_id(3)).contains("at most 64"));
+    assert_eq!(by_id(4)["result"]["isError"], true);
+    assert!(text_of(by_id(4)).contains("at least 0"));
+    assert_eq!(by_id(5)["result"]["structuredContent"]["state"], "stopped");
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while viewer.status() != ViewerStatus::GuestStopped {
+        assert!(Instant::now() < deadline, "viewer stop marker timed out");
+        thread::sleep(Duration::from_millis(5));
+    }
+    let events = viewer.retained_events();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].event.tool, PublicTool::Nim);
+    assert_eq!(events[0].public_sequence, 0);
+    assert_eq!(
+        Value::Object(events[0].event.arguments.clone()),
+        json!({"seed": 23})
+    );
+    assert!(events[0].skipped.is_none());
+
+    let frame = viewer.draw(360, 220, ViewerInputMode::KeyboardMouse);
+    let replay = numinous_core::nim::replay(23, &[]).expect("opening Nim replay");
+    let expected = draw_nim_board(&replay.heaps, None, 360, 220).expect("native Nim board");
+    let actual_rgba = frame.to_rgba();
+    let expected_rgba = expected.to_rgba();
+    let body_start = 31 * 360 * 4;
+    let body_end = (220 - 13) * 360 * 4;
+    assert_eq!(
+        &actual_rgba[body_start..body_end],
+        &expected_rgba[body_start..body_end],
+        "the retained Nim action reconstructs the exact native game body outside viewer chrome"
+    );
+    let body_lit = expected_rgba[body_start..body_end]
+        .chunks_exact(4)
+        .filter(|pixel| *pixel != [10, 11, 15, 255])
+        .count();
+    assert!(body_lit > 100, "the native Nim body contains heap geometry");
+    let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
+    for forbidden in [
+        "nim-viewer-acceptance",
         "clientInfo",
         "jsonrpc",
         "pairing_code",

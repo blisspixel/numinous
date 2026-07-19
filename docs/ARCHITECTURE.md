@@ -253,7 +253,7 @@ a window. The CLI, MCP server, exporters, and automated suite all use that seam.
 - **Current CI:** house style, dependency policy, coverage, format plus clippy
   plus rustdoc, doctests, all-target tests, and macOS, Ubuntu, and Windows
   builds. There is no automated beauty screenshot job.
-- **Local session broadcast, native room and Studio viewer, and subprocess proof built:**
+- **Local session broadcast, native room, Studio, and Nim viewer, and subprocess proof built:**
   the App and MCP production faces remain independent. The shared broadcast
   crate owns one-use loopback pairing, server-first host proof, strict bounded
   framing, replay compatibility identity, typed public tool events, atomic
@@ -268,13 +268,17 @@ a window. The CLI, MCP server, exporters, and automated suite all use that seam.
   the same core `Room` implementation at the local viewport size; invalid replay
   values fall back to typed text. Successful `plot_expression` actions are
   strictly parsed and rendered through one deterministic curve sampler shared
-  with the live App Studio. Its ring retains at most 256 serialized public
+  with the live App Studio. Successful public `nim` actions are reduced through
+  the shared core replay rules, attested against the complete MCP result, and
+  drawn through one bounded heap renderer shared with the live App. Its ring
+  retains at most 256 serialized public
   events or 16 MiB, persists nothing, and clears on close. A development-only
   MCP integration test opens that exact viewer and drives the actual MCP binary
   through the Times Tables explore, challenge, K5 goal, reveal, and stop path.
-  A separate real session proves Formula Jam expression delivery and native
-  local-viewport drawing. `INTERFACES.md` owns the complete contract and
-  privacy boundary. Native game replay plus sound remain 0.3 work.
+  Separate real sessions prove Formula Jam expression delivery, native Nim
+  delivery, and exact local-viewport body pixels. `INTERFACES.md` owns the
+  complete contract and privacy boundary. Other native game replay plus sound
+  remain 0.3 work.
 - **Release path:** packaged artifacts belong to 0.6. The public launch gate is
   0.9.
 

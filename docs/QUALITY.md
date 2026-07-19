@@ -9,13 +9,13 @@ built, so an aspiration is never mistaken for a result.
 ## Evidence snapshot, 2026-07-18
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
-  doctests, 2,973 passing all-target test cases plus one ignored screenshot
+  doctests, 2,981 passing all-target test cases plus one ignored screenshot
   diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 95.43%
-  regions and 95.53% lines under the documented exclusions. The consented MCP
+  three-OS test-and-build matrix. The current measured coverage is 95.44%
+  regions and 95.55% lines under the documented exclusions. The consented MCP
   broadcast path has 65 focused shared-crate tests, 107 MCP unit tests, and
-  five real stdio tests. Real loopback cases cover pairing, compatibility,
+  six real stdio tests. Real loopback cases cover pairing, compatibility,
   ordered controls, redaction, disconnect cleanup, private-call silence, exact
   parity for state-independent public results, and Journey noninterference for
   the four state-sensitive tools. Shared coordinator and queue tests separately
@@ -27,8 +27,11 @@ built, so an aspiration is never mistaken for a result.
   sequences 0 through 4, no gaps, no private or protocol metadata, native K5
   rendering, and close-time erasure. A separate real subprocess session proves
   that a successful Formula Jam creation arrives as one public action and draws
-  natively through the shared deterministic Studio sampler. Native game visuals
-  plus sound remain future evidence.
+  natively through the shared deterministic Studio sampler. A third real
+  subprocess session proves one public Nim opening, exact shared core replay,
+  complete-result attestation, native body pixel parity, metadata exclusion,
+  and close-time erasure. Other native game visuals plus sound remain future
+  evidence.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
   three faces, and a release-generated 2,911-screen visual QA matrix. Every room
