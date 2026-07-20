@@ -22,26 +22,22 @@ use winit::keyboard::{Key, NamedKey};
 use winit::window::{Icon, Window, WindowId};
 
 mod audio_state;
-mod controls;
 mod feedback;
-mod game_draw;
 mod gamepad;
 mod hud;
 mod input_feedback;
-mod input_legend;
 mod live_render;
 mod mouse_input;
 mod overlays;
-mod play;
 mod playtest;
 mod postcard;
 mod radio_cache;
 mod room_input;
-mod room_phase;
 mod save_gate;
 mod studio_panel;
 
 use crate::audio_state::Program as AudioProgram;
+use numinous_app::{controls, game_draw, input_legend, play, room_phase};
 use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_total};
 use room_phase::{effective_room_phase, has_finite_parameter_input};
 

@@ -28,6 +28,9 @@ mod input_feedback;
 #[path = "../src/input_legend.rs"]
 mod input_legend;
 #[allow(dead_code)]
+#[path = "../src/nim_render.rs"]
+mod nim_render;
+#[allow(dead_code)]
 #[path = "../src/overlays.rs"]
 mod overlays;
 #[allow(dead_code)]
@@ -50,7 +53,7 @@ const MIN_SUPPORT_DENSITY_PERMILLE: usize = 1;
 const SPATIAL_TILE_SIZE: usize = 32;
 const MIN_COHERENT_TILES: usize = 2;
 const MIN_MEAN_CHANNEL_DELTA: usize = 4;
-const SHARED_SCREEN_COUNT: usize = 103;
+const SHARED_SCREEN_COUNT: usize = 105;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum InteractionKind {
@@ -255,6 +258,7 @@ fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
         "muted",
         "volume-zero",
         "studio",
+        "watch-agent",
         "background-silent",
         "no-device",
     ] {
@@ -1823,6 +1827,16 @@ fn main() {
             true,
             true,
             "STUDIO: VOL 45%",
+        ),
+        (
+            "watch-agent",
+            audio_state::Program::WatchAgent,
+            None,
+            0.45,
+            false,
+            true,
+            true,
+            "WATCH AGENT: VOL 45%",
         ),
         (
             "background-silent",

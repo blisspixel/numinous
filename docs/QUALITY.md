@@ -9,7 +9,7 @@ built, so an aspiration is never mistaken for a result.
 ## Evidence snapshot, 2026-07-18
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
-  doctests, 2,981 passing all-target test cases plus one ignored screenshot
+  doctests, 2,985 passing all-target test cases plus one ignored screenshot
   diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
   three-OS test-and-build matrix. The current measured coverage is 95.44%
@@ -30,11 +30,14 @@ built, so an aspiration is never mistaken for a result.
   natively through the shared deterministic Studio sampler. A third real
   subprocess session proves one public Nim opening, exact shared core replay,
   complete-result attestation, native body pixel parity, metadata exclusion,
-  and close-time erasure. Other native game visuals plus sound remain future
-  evidence.
+  and close-time erasure. The Times Tables and Studio sessions also compare the
+  selected local sound samples with independent shared-core reconstruction.
+  Catalog-wide sound admission, fixed-rate allocation bounds, semantic source
+  replacement, App ownership, global controls, and radio restoration are
+  directly tested. Other native game visuals remain future evidence.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
-  three faces, and a release-generated 2,911-screen visual QA matrix. Every room
+  three faces, and a release-generated 2,913-screen visual QA matrix. Every room
   is captured at default and compact sizes in deterministic opening, arrival,
   immediate-interaction, and same-phase delayed-interaction states. Default
   room receipts are 900 by 700 and compact room receipts are 360 by 240. Games,
@@ -43,9 +46,9 @@ built, so an aspiration is never mistaken for a result.
   sequence through launch, generation 4, generation 141, and exact reset.
   Fourteen compact receipts add
   controller-first room, help, Show, Journey, Studio, game-result, and visible
-  pause coverage. Sixteen audio-state receipts cover room score, radio,
-  radio-off fallback, Studio, mute, zero volume, background silence, and a
-  missing output device at default and compact sizes. Each room has a click,
+  pause coverage. Eighteen audio-state receipts cover room score, radio,
+  radio-off fallback, Studio, Watch Agent, mute, zero volume, background
+  silence, and a missing output device at default and compact sizes. Each room has a click,
   active-hold, drag-release, repeated-action, or boundary scenario that follows
   its declared verb. The generator validates ordered finite input, completed
   gesture closure, active-hold release and cancel boundaries, interaction-aware

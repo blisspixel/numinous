@@ -54,14 +54,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 2,945 all-target test cases pass,
-one screenshot diagnostic is ignored, 95.40% region cover, and 95.50% line
-cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 2,985 all-target test cases pass,
+one screenshot diagnostic is ignored, 95.44% region coverage, and 95.55% line
+coverage**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
 
-The release scripts also regenerate `renders/qa-app/`, a 2,911-screen app matrix.
+The release scripts also regenerate `renders/qa-app/`, a 2,913-screen app matrix.
 Every catalog room has deterministic default and compact opening frames,
 arrival cards, immediate pointer responses, and same-phase delayed-gesture
 responses that follow its declared interaction verb. The generator checks pure
@@ -78,10 +78,10 @@ through launch, generation 4, generation 141, and exact reset. Core and App
 regressions separately prove the newest glider's four exact isolated phases,
 collision retirement, phase-note identity, stereo position, and newest-step
 audio routing. Fourteen compact
-controller or pause receipts spanning rooms, overlays, and game results, and 16
+controller or pause receipts spanning rooms, overlays, and game results, and 18
 default or compact audio-state receipts. Those audio receipts cover room score,
-radio, radio-off fallback, Studio, mute, zero volume, background silence, and a
-missing output device.
+radio, radio-off fallback, Studio, Watch Agent, mute, zero volume, background
+silence, and a missing output device.
 Generation removes stale output,
 checks the exact unique scenario inventory, rejects blank or wrong-sized frames,
 and gives every room a click, active-hold, drag-release, repeated-action, or

@@ -96,12 +96,15 @@ left and right scrub retained public actions, arrow up and down scroll the
 current public result, Space pauses only the local display, and Escape closes
 the viewer and destroys its in-memory timeline. A and D pan fixed-width result
 text horizontally. On a controller, use the D-pad, LB and RB, R3, and East for
-those actions. Watch Agent cannot send a tool call or change the MCP player's
-state. When the selected action is `play_room`, Watch Agent reconstructs that
+those actions. M, or North held with South, controls global sound. Watch Agent
+cannot send a tool call or change the MCP player's state. When the selected
+action is `play_room`, Watch Agent reconstructs that
 exact public room state as a native frame. A successful `plot_expression`
-action reconstructs the agent's Formula Jam curve natively. Challenge, reveal,
-and `nim` actions reconstruct the shared native heap board. Other games, sound,
-and remaining public actions use the typed text timeline.
+action reconstructs the agent's Formula Jam curve natively. Those native room
+and Formula Jam selections also play their deterministic local sound; scrubbed,
+unsupported, or invalid selections retire the older sound. Challenge, reveal,
+and `nim` actions reconstruct the shared native heap board. Other games and
+remaining public actions use the typed text timeline.
 
 Same instruction: poke first, read never (until you want to).
 

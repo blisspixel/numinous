@@ -29,6 +29,7 @@ pub mod hackenbush;
 pub mod humor;
 pub mod insights;
 pub use insights::{INSIGHTS, insight};
+pub mod journal;
 pub mod journey;
 pub mod life_sound;
 pub mod motifs;
@@ -76,6 +77,7 @@ pub use concepts::concept;
 pub use era::Era;
 pub use font::{draw_text, text_width, wrap_text};
 pub use humor::{Joke, explain_joke, jokes};
+pub use journal::{Journal, JournalEntry};
 pub use journey::{
     Boon, CUT_LEVELS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options, constellation, level_lore,
 };
@@ -90,9 +92,9 @@ pub use nim::{
 pub use persistence::{
     LocalCacheInventory, LocalCairnInventory, LocalFileInventory, LocalJourneyInventory,
     LocalScoresInventory, LocalStateEraseError, LocalStateEraseSelection, LocalStateInventory,
-    LocalStateLock, LocalStatePaths, erase_local_state, inspect_local_state, load_journey_file,
-    load_scoreboard_file, lock_local_state, persist_journey_delta, record_score_file,
-    remove_persisted_file,
+    LocalStateLock, LocalStatePaths, erase_journal_file, erase_local_state, inspect_local_state,
+    load_journal_file, load_journey_file, load_scoreboard_file, lock_local_state,
+    persist_journey_delta, record_journal_file, record_score_file, remove_persisted_file,
 };
 pub use predict::{
     Band, Prediction, PredictionCurveError, PredictionCurveGrade, PredictionCurveSample,

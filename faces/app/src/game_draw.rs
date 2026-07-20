@@ -9,19 +9,19 @@ fn game_scale(width: usize) -> i32 {
     (width as i32 / 400).clamp(1, 3)
 }
 
-pub(crate) struct QuizChoiceLayout {
+pub struct QuizChoiceLayout {
     base: i32,
     line_height: i32,
 }
 
 impl QuizChoiceLayout {
-    pub(crate) fn new(width: usize, height: usize, choice_count: usize) -> Self {
+    pub fn new(width: usize, height: usize, choice_count: usize) -> Self {
         let line_height = 10 * game_scale(width);
         let base = height as i32 - (choice_count as i32 + 1) * line_height - 8;
         Self { base, line_height }
     }
 
-    pub(crate) fn hit(&self, y: f64, choice_count: usize) -> Option<usize> {
+    pub fn hit(&self, y: f64, choice_count: usize) -> Option<usize> {
         if y < f64::from(self.base) || self.line_height <= 0 {
             return None;
         }
@@ -30,14 +30,14 @@ impl QuizChoiceLayout {
     }
 }
 
-pub(crate) struct MunchLayout {
+pub struct MunchLayout {
     top: i32,
     cell_w: i32,
     cell_h: i32,
 }
 
 impl MunchLayout {
-    pub(crate) fn new(width: usize, height: usize) -> Self {
+    pub fn new(width: usize, height: usize) -> Self {
         let scale = game_scale(width);
         let top = 14 * scale + 10;
         let cell_w = (width as i32 - 20) / 6;
@@ -56,7 +56,7 @@ impl MunchLayout {
         (x0, y0, x1, y1)
     }
 
-    pub(crate) fn hit(&self, x: f64, y: f64) -> Option<usize> {
+    pub fn hit(&self, x: f64, y: f64) -> Option<usize> {
         if self.cell_w <= 1 || self.cell_h <= 1 || x < 10.0 || y < f64::from(self.top) {
             return None;
         }
@@ -67,14 +67,14 @@ impl MunchLayout {
 }
 
 /// Hit-test for Nim heaps: click a stone to aim that heap and take that many.
-pub(crate) struct NimLayout {
+pub struct NimLayout {
     top: i32,
     row_h: i32,
     stone: i32,
 }
 
 impl NimLayout {
-    pub(crate) fn new(width: usize, height: usize) -> Self {
+    pub fn new(width: usize, height: usize) -> Self {
         let scale = game_scale(width);
         let top = 20 * scale + 10;
         let row_h = (height as i32 - top - 42 * scale) / 3;
@@ -83,7 +83,7 @@ impl NimLayout {
     }
 
     /// Returns `(heap_index, take_count)` when the pointer is over stones.
-    pub(crate) fn hit(&self, x: f64, y: f64, heaps: &[u32]) -> Option<(usize, u32)> {
+    pub fn hit(&self, x: f64, y: f64, heaps: &[u32]) -> Option<(usize, u32)> {
         if self.row_h <= 0 || heaps.is_empty() {
             return None;
         }
@@ -315,7 +315,7 @@ fn gauntlet_result_lines(
 
 /// Draw the quiz: the mystery room fullscreen, the choices at the bottom,
 /// and after an answer, the verdict and the reveal.
-pub(crate) fn draw_quiz(
+pub fn draw_quiz(
     rooms: &[Box<dyn Room>],
     quiz: &QuizPlay,
     mode: InputMode,
@@ -401,7 +401,7 @@ pub(crate) fn draw_quiz(
 }
 
 /// Draw Munch: the 5x6 board as a grid, the cursor, your bites, and the rule.
-pub(crate) fn draw_munch(
+pub fn draw_munch(
     play: &MunchPlay,
     frame: u64,
     mode: InputMode,
@@ -500,12 +500,7 @@ pub(crate) fn draw_munch(
 }
 
 /// Draw the live arcade: the board, the Muncher, the spirits, and the beat.
-pub(crate) fn draw_arcade(
-    play: &ArcadePlay,
-    mode: InputMode,
-    width: usize,
-    height: usize,
-) -> Raster {
+pub fn draw_arcade(play: &ArcadePlay, mode: InputMode, width: usize, height: usize) -> Raster {
     use numinous_core::munch_arcade::Mind;
     use numinous_core::munchers::{COLS, ROWS};
 
@@ -628,18 +623,17 @@ pub(crate) fn draw_arcade(
 }
 
 /// Draw Nim: heaps as stones, your aim highlighted, and the Order's last word.
-pub(crate) fn draw_nim(play: &NimPlay, mode: InputMode, width: usize, height: usize) -> Raster {
+pub fn draw_nim(play: &NimPlay, mode: InputMode, width: usize, height: usize) -> Raster {
     let selection = play
         .over
         .is_none()
-        .then_some(numinous_app::nim_render::NimSelection {
+        .then_some(crate::nim_render::NimSelection {
             heap: play.selected,
             take: play.take,
         });
-    let mut raster =
-        numinous_app::nim_render::draw_nim_board(&play.heaps, selection, width, height)
-            .unwrap_or_else(|| Raster::with_accent(width, height, [230, 200, 120]));
-    let scale = numinous_app::nim_render::nim_scale(width);
+    let mut raster = crate::nim_render::draw_nim_board(&play.heaps, selection, width, height)
+        .unwrap_or_else(|| Raster::with_accent(width, height, [230, 200, 120]));
+    let scale = crate::nim_render::nim_scale(width);
     if play.over.is_none() {
         numinous_core::draw_text(
             &mut raster,
@@ -690,7 +684,7 @@ pub(crate) fn draw_nim(play: &NimPlay, mode: InputMode, width: usize, height: us
 }
 
 /// Draw the Gauntlet: whichever stage is live, with the run's narration.
-pub(crate) fn draw_gauntlet(
+pub fn draw_gauntlet(
     rooms: &[Box<dyn Room>],
     run: &GauntletPlay,
     frame: u64,

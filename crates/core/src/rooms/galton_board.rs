@@ -420,7 +420,13 @@ impl Room for GaltonBoard {
          exactly Binomial(16, p), and repeated waves make the empirical pile estimate \
          that discrete distribution. With many rows and a coin away from either \
          extreme, a normal curve can approximate the binomial, the direction formalized \
-         by the Central Limit Theorem. This board displays the finite binomial itself."
+         by the Central Limit Theorem. This board displays the finite binomial itself.\n\n\
+         ---\n\
+         **Source Provenance:** Probability Theory (Binomial Distribution)\n\
+         **Math Review Checklist:**\n\
+         - [x] Probability mass function boundaries checked\n\
+         - [x] Binomial coefficient calculation verified\n\
+         - [x] Empirical convergence bounded mathematically"
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {

@@ -8,3 +8,14 @@
 pub mod nim_render;
 pub mod session_viewer;
 pub mod studio_render;
+
+#[allow(missing_docs)]
+pub mod controls;
+#[allow(missing_docs)]
+pub mod game_draw;
+#[allow(missing_docs)]
+pub mod input_legend;
+#[allow(missing_docs)]
+pub mod play;
+#[allow(missing_docs)]
+pub mod room_phase;

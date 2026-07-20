@@ -270,6 +270,20 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
         k5_frame.lit_count() > 1_000,
         "the retained K5 action reconstructs a native room frame"
     );
+    let room_audio = viewer
+        .audio_selection()
+        .expect("the retained K5 action selects local sound");
+    assert_eq!(room_audio.public_sequence(), 3);
+    let room = numinous_core::all_rooms_with(42)
+        .into_iter()
+        .find(|room| room.meta().id == "times-tables")
+        .expect("Times Tables variation");
+    let inputs = numinous_core::inputs_from_pokes(&[(0.375, 0.5)], 0.81);
+    assert_eq!(
+        room_audio.render(8_000),
+        Some(room.sound_input(0.81, &inputs).render(8_000)),
+        "the real selected room replays exact shared core sound"
+    );
     let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
     for forbidden in [
         "viewer-acceptance",
@@ -376,6 +390,15 @@ fn app_viewer_reconstructs_a_real_studio_agent_creation() {
         .filter(|pixel| *pixel != [10, 11, 15, 255])
         .count();
     assert!(body_lit > 100, "the native Studio body contains a curve");
+    let studio_audio = viewer
+        .audio_selection()
+        .expect("the retained expression selects local sound");
+    assert_eq!(studio_audio.public_sequence(), 0);
+    assert_eq!(
+        studio_audio.render(8_000),
+        Some(numinous_core::to_melody(&expression, -4.0, 5.0, 32, 2.0).render(8_000)),
+        "the real selected expression replays exact shared Studio sound"
+    );
     let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
     for forbidden in [
         "studio-viewer-acceptance",
@@ -571,7 +594,7 @@ fn a_full_agent_session_walks_every_tool() {
     assert_eq!(by_id(1)["result"]["serverInfo"]["name"], "numinous");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(30)
+        Some(33)
     );
     assert!(text_of(by_id(3)).contains("times-tables"));
     assert!(text_of(by_id(4)).contains("Fractals"));

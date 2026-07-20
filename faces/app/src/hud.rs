@@ -6,6 +6,7 @@ use crate::input_legend::{self, InputMode};
 pub(crate) enum AudioSource {
     RoomScore,
     Studio,
+    WatchAgent,
     Radio(&'static str),
     NoDevice,
 }
@@ -36,6 +37,7 @@ impl AudioState {
         let source = match self.source {
             AudioSource::RoomScore => "ROOM MUSIC".to_string(),
             AudioSource::Studio => "STUDIO".to_string(),
+            AudioSource::WatchAgent => "WATCH AGENT".to_string(),
             AudioSource::Radio(station) => format!("RADIO {}", station.to_uppercase()),
             AudioSource::NoDevice => return "NO SOUND DEVICE".to_string(),
         };
@@ -451,6 +453,10 @@ mod tests {
             (
                 AudioState::new(AudioSource::Studio, 70, false, true),
                 "STUDIO: VOL 70%",
+            ),
+            (
+                AudioState::new(AudioSource::WatchAgent, 60, false, true),
+                "WATCH AGENT: VOL 60%",
             ),
             (
                 AudioState::new(AudioSource::Radio("NUMINA FM"), 30, false, true),

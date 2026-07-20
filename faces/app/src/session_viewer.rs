@@ -306,10 +306,105 @@ impl NimGameReplay {
     }
 }
 
+struct MunchGameReplay {
+    seed: u64,
+    round: u64,
+    play: crate::play::MunchPlay,
+}
+
+impl MunchGameReplay {
+    fn render(&self, width: usize, height: usize) -> Raster {
+        crate::game_draw::draw_munch(
+            &self.play,
+            0,
+            crate::input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
+    }
+
+    fn detail(&self) -> String {
+        format!("MUNCH / SEED {} / ROUND {}", self.seed, self.round)
+    }
+}
+
+struct ArcadeGameReplay {
+    seed: u64,
+    play: crate::play::ArcadePlay,
+}
+
+impl ArcadeGameReplay {
+    fn render(&self, width: usize, height: usize) -> Raster {
+        crate::game_draw::draw_arcade(
+            &self.play,
+            crate::input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
+    }
+
+    fn detail(&self) -> String {
+        format!(
+            "ARCADE / SEED {} / LEVEL {}",
+            self.seed, self.play.run.level
+        )
+    }
+}
+
+struct QuizGameReplay {
+    seed: u64,
+    plays: u32,
+    play: crate::play::QuizPlay,
+    rooms: Vec<Box<dyn numinous_core::Room>>,
+}
+
+impl QuizGameReplay {
+    fn render(&self, width: usize, height: usize) -> Raster {
+        crate::game_draw::draw_quiz(
+            &self.rooms,
+            &self.play,
+            crate::input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
+    }
+
+    fn detail(&self) -> String {
+        format!("QUIZ / SEED {} / PLAYS {}", self.seed, self.plays)
+    }
+}
+
+struct GauntletGameReplay {
+    seed: u64,
+    play: crate::play::GauntletPlay,
+    rooms: Vec<Box<dyn numinous_core::Room>>,
+}
+
+impl GauntletGameReplay {
+    fn render(&self, width: usize, height: usize) -> Raster {
+        crate::game_draw::draw_gauntlet(
+            &self.rooms,
+            &self.play,
+            0,
+            crate::input_legend::InputMode::KeyboardMouse,
+            width,
+            height,
+        )
+    }
+
+    fn detail(&self) -> String {
+        format!("GAUNTLET / SEED {}", self.seed)
+    }
+}
+
 enum NativeReplayKind {
     Room(RoomReplay),
     Studio(StudioReplay),
     Nim(NimGameReplay),
+    Munch(MunchGameReplay),
+    Arcade(ArcadeGameReplay),
+    Quiz(QuizGameReplay),
+    Gauntlet(Box<GauntletGameReplay>),
 }
 
 struct NativeReplay {
@@ -343,6 +438,38 @@ impl NativeReplay {
         }
     }
 
+    fn munch(replay: MunchGameReplay) -> Self {
+        Self {
+            kind: NativeReplayKind::Munch(replay),
+            #[cfg(test)]
+            render_count: Cell::new(0),
+        }
+    }
+
+    fn arcade(replay: ArcadeGameReplay) -> Self {
+        Self {
+            kind: NativeReplayKind::Arcade(replay),
+            #[cfg(test)]
+            render_count: Cell::new(0),
+        }
+    }
+
+    fn quiz(replay: QuizGameReplay) -> Self {
+        Self {
+            kind: NativeReplayKind::Quiz(replay),
+            #[cfg(test)]
+            render_count: Cell::new(0),
+        }
+    }
+
+    fn gauntlet(replay: GauntletGameReplay) -> Self {
+        Self {
+            kind: NativeReplayKind::Gauntlet(Box::new(replay)),
+            #[cfg(test)]
+            render_count: Cell::new(0),
+        }
+    }
+
     fn render(&self, width: usize, height: usize) -> Raster {
         #[cfg(test)]
         self.render_count.set(self.render_count.get() + 1);
@@ -350,6 +477,10 @@ impl NativeReplay {
             NativeReplayKind::Room(replay) => replay.render(width, height),
             NativeReplayKind::Studio(replay) => replay.render(width, height),
             NativeReplayKind::Nim(replay) => replay.render(width, height),
+            NativeReplayKind::Munch(replay) => replay.render(width, height),
+            NativeReplayKind::Arcade(replay) => replay.render(width, height),
+            NativeReplayKind::Quiz(replay) => replay.render(width, height),
+            NativeReplayKind::Gauntlet(replay) => replay.render(width, height),
         }
     }
 
@@ -366,6 +497,33 @@ impl NativeReplay {
             }
             NativeReplayKind::Studio(replay) => replay.detail(),
             NativeReplayKind::Nim(replay) => replay.detail(),
+            NativeReplayKind::Munch(replay) => replay.detail(),
+            NativeReplayKind::Arcade(replay) => replay.detail(),
+            NativeReplayKind::Quiz(replay) => replay.detail(),
+            NativeReplayKind::Gauntlet(replay) => replay.detail(),
+        }
+    }
+
+    #[allow(dead_code)]
+    fn sound(&self) -> Option<numinous_core::SoundSpec> {
+        match &self.kind {
+            NativeReplayKind::Room(replay) => Some(
+                replay
+                    .room
+                    .sound_input(replay.phase, replay.inputs.as_slice()),
+            ),
+            NativeReplayKind::Studio(replay) => Some(numinous_core::to_melody(
+                &replay.expression,
+                replay.xmin,
+                replay.xmax,
+                32,
+                replay.parameter,
+            )),
+            NativeReplayKind::Nim(_) => None,
+            NativeReplayKind::Munch(_) => None,
+            NativeReplayKind::Arcade(_) => None,
+            NativeReplayKind::Quiz(_) => None,
+            NativeReplayKind::Gauntlet(_) => None,
         }
     }
 }
@@ -401,7 +559,37 @@ impl Default for SessionViewer {
     }
 }
 
+/// A snapshot of the audio state for a given event, used for native playback reconstruction.
+pub struct AudioSelection {
+    public_sequence: u64,
+    spec: numinous_core::SoundSpec,
+}
+
+impl AudioSelection {
+    /// Returns the public sequence number of the event that produced this audio.
+    pub fn public_sequence(&self) -> u64 {
+        self.public_sequence
+    }
+
+    /// Renders the sound specification into a PCM float vector at the given sample rate.
+    pub fn render(&self, sample_rate: u32) -> Option<Vec<f32>> {
+        Some(self.spec.render(sample_rate))
+    }
+}
+
 impl SessionViewer {
+    /// Retrieve the current cached event's audio, if available.
+    pub fn audio_selection(&mut self) -> Option<AudioSelection> {
+        let envelope = self.snapshot().event?;
+        let spec = self
+            .cached_replay
+            .as_ref()
+            .and_then(|(_, r)| r.as_ref().and_then(|r| r.sound()))?;
+        Some(AudioSelection {
+            public_sequence: envelope.public_sequence,
+            spec,
+        })
+    }
     /// Opens a fresh loopback-only pairing offer and clears prior events.
     pub fn open(&mut self) -> Result<(), ViewerOpenError> {
         self.close();
@@ -742,6 +930,10 @@ fn parse_native_replay(event: &PublicToolEvent) -> Option<NativeReplay> {
             parse_studio_replay(&event.arguments, &event.result).map(NativeReplay::studio)
         }
         PublicTool::Nim => parse_nim_replay(&event.arguments, &event.result).map(NativeReplay::nim),
+        PublicTool::Munch => parse_munch_replay(&event.arguments).map(NativeReplay::munch),
+        PublicTool::MunchArcade => parse_arcade_replay(&event.arguments).map(NativeReplay::arcade),
+        PublicTool::Quiz => parse_quiz_replay(&event.arguments).map(NativeReplay::quiz),
+        PublicTool::Gauntlet => parse_gauntlet_replay(&event.arguments).map(NativeReplay::gauntlet),
         _ => None,
     }
 }
@@ -845,6 +1037,199 @@ fn canonical_nim_result(seed: u64, replay: &numinous_core::nim::NimReplay) -> Va
             })
         }
     }
+}
+
+fn parse_munch_replay(arguments: &Map<String, Value>) -> Option<MunchGameReplay> {
+    let seed = arguments.get("seed").and_then(Value::as_u64).unwrap_or(1);
+    let round = arguments.get("round").and_then(Value::as_u64).unwrap_or(0);
+    let board = numinous_core::build_board(seed, round);
+
+    let bites: std::collections::BTreeSet<usize> = arguments
+        .get("bites")
+        .and_then(Value::as_array)
+        .map(|list| {
+            list.iter()
+                .filter_map(Value::as_u64)
+                .filter(|&n| n >= 1)
+                .map(|n| (n - 1) as usize)
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let graded = if arguments.contains_key("bites") {
+        let bites_vec: Vec<usize> = bites.iter().copied().collect();
+        Some(numinous_core::grade_munch(&board, &bites_vec))
+    } else {
+        None
+    };
+
+    let play = crate::play::MunchPlay {
+        board,
+        seed,
+        round,
+        cursor: 30,
+        bites,
+        graded,
+        bite_flash: None,
+    };
+    Some(MunchGameReplay { seed, round, play })
+}
+
+fn parse_arcade_replay(arguments: &Map<String, Value>) -> Option<ArcadeGameReplay> {
+    let seed = arguments.get("seed").and_then(Value::as_u64).unwrap_or(1);
+    let mut run = numinous_core::munch_arcade::Arcade::new(seed);
+
+    if let Some(actions) = arguments.get("actions").and_then(Value::as_array) {
+        for action_val in actions {
+            if let Some(action_str) = action_val.as_str() {
+                let action = match action_str.to_ascii_lowercase().as_str() {
+                    "up" | "w" => Some(numinous_core::munch_arcade::Action::Up),
+                    "down" | "s" => Some(numinous_core::munch_arcade::Action::Down),
+                    "left" | "a" => Some(numinous_core::munch_arcade::Action::Left),
+                    "right" | "d" => Some(numinous_core::munch_arcade::Action::Right),
+                    "eat" | "e" => Some(numinous_core::munch_arcade::Action::Eat),
+                    _ => None,
+                };
+                if let Some(a) = action {
+                    run.turn(a);
+                }
+            }
+        }
+    }
+
+    let over = run.lives == 0;
+    let play = crate::play::ArcadePlay {
+        run,
+        seed,
+        flash: None,
+        over,
+    };
+    Some(ArcadeGameReplay { seed, play })
+}
+
+fn parse_quiz_replay(arguments: &Map<String, Value>) -> Option<QuizGameReplay> {
+    let seed = arguments.get("seed").and_then(Value::as_u64).unwrap_or(1);
+    let round_idx = arguments.get("round").and_then(Value::as_u64).unwrap_or(0);
+    let choice_count = arguments
+        .get("choices")
+        .and_then(Value::as_u64)
+        .unwrap_or(4) as usize;
+    let round = numinous_core::build_round_sized(seed, round_idx, 54, 22, choice_count);
+
+    let flash = arguments.get("guess").and_then(Value::as_str).map(|g| {
+        let letter = g.trim().chars().next().map(|c| c.to_ascii_uppercase());
+        let correct = letter == Some(round.answer);
+        (correct, 60)
+    });
+
+    let play = crate::play::QuizPlay { round, flash };
+    Some(QuizGameReplay {
+        seed,
+        plays: round_idx as u32,
+        play,
+        rooms: numinous_core::all_rooms(),
+    })
+}
+
+fn parse_gauntlet_replay(arguments: &Map<String, Value>) -> Option<GauntletGameReplay> {
+    let seed = arguments.get("seed").and_then(Value::as_u64).unwrap_or(1);
+    let mut scores = Vec::new();
+    let mut cleared = Vec::new();
+
+    let stage = if let Some(answers) = arguments.get("answers") {
+        let board = numinous_core::build_board(seed, 0);
+        let bites: Vec<usize> = answers
+            .get("bites")
+            .and_then(Value::as_array)
+            .map(|l| {
+                l.iter()
+                    .filter_map(Value::as_u64)
+                    .filter(|&n| n >= 1)
+                    .map(|n| (n - 1) as usize)
+                    .collect()
+            })
+            .unwrap_or_default();
+        let outcome = numinous_core::grade_munch(&board, &bites);
+        let clean = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
+        scores.push(outcome.score);
+        cleared.push(clean);
+
+        let round = numinous_core::build_round(seed, 1, 44, 18);
+        let guess = answers
+            .get("shape")
+            .and_then(Value::as_str)
+            .and_then(|g| g.trim().chars().next())
+            .map(|c| c.to_ascii_uppercase());
+        let clean = guess == Some(round.answer);
+        scores.push(if clean { 25 } else { 0 });
+        cleared.push(clean);
+
+        let scan = numinous_core::build_scan(seed, 4);
+        let guess = answers
+            .get("sky")
+            .and_then(Value::as_str)
+            .and_then(|g| g.trim().chars().next())
+            .map(|c| c.to_ascii_uppercase());
+        let clean = guess == Some(scan.answer);
+        scores.push(if clean { 25 } else { 0 });
+        cleared.push(clean);
+
+        let secret = numinous_core::secret_code(seed ^ 0x0000_6A17_0000_0B0B, 4);
+        let wires: Vec<&str> = answers
+            .get("wires")
+            .and_then(Value::as_array)
+            .map(|l| l.iter().filter_map(Value::as_str).collect())
+            .unwrap_or_default();
+        let mut clean = false;
+        let mut bomb_points = 0i64;
+        for (i, raw) in wires.iter().take(5).enumerate() {
+            let guess: Vec<u8> = raw
+                .chars()
+                .filter(|c| c.is_ascii_digit())
+                .map(|c| c as u8 - b'0')
+                .collect();
+            if guess.len() == 4 && numinous_core::grade(&secret, &guess).locked == 4 {
+                clean = true;
+                bomb_points = 10 * (5 - i as i64 - 1).max(0);
+                break;
+            }
+        }
+        scores.push(bomb_points);
+        cleared.push(clean);
+        4
+    } else {
+        0
+    };
+
+    let play = crate::play::GauntletPlay {
+        seed,
+        stage,
+        munch: crate::play::MunchPlay {
+            board: numinous_core::build_board(seed, 0),
+            seed,
+            round: 0,
+            cursor: 30,
+            bites: std::collections::BTreeSet::new(),
+            graded: None,
+            bite_flash: None,
+        },
+        quiz: crate::play::QuizPlay {
+            round: numinous_core::build_round(seed, 1, 44, 18),
+            flash: None,
+        },
+        scan: numinous_core::build_scan(seed, 4),
+        secret: numinous_core::secret_code(seed ^ 0x0000_6A17_0000_0B0B, 4),
+        wire: String::new(),
+        wire_lines: Vec::new(),
+        scores,
+        cleared,
+        message: String::new(),
+    };
+    Some(GauntletGameReplay {
+        seed,
+        play,
+        rooms: numinous_core::all_rooms(),
+    })
 }
 
 fn parse_studio_replay(

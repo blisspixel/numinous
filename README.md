@@ -131,13 +131,18 @@ local viewport size. Successful public `plot_expression` actions reconstruct
 their validated Formula Jam curve through the same sampler as the live Studio.
 Public `nim` actions replay the shared core rules and reconstruct the same
 bounded three-heap board used by the live App.
+Selected native room and Formula Jam actions also replay their deterministic
+core sound locally. Scrubbing changes the owned sound once, unsupported or
+invalid actions are silent, M and the controller sound chord remain global,
+and closing Watch Agent restores the room score or rejoins a live radio station.
 The viewer receives no prompts,
 reasoning, private progression, local paths, logs, client metadata, or arbitrary
 protocol traffic, and it persists no transcript. A real MCP subprocess test now
 proves the complete Times Tables explore, challenge, K5 goal, reveal, and stop
 path through the actual App viewer, and a separate real session proves native
-Studio creation. A third real session proves native Nim delivery and exact game
-body pixels. Other public game tools plus sound replay remain active 0.3 work.
+Studio creation and exact Formula Jam sound samples. A third real session
+proves native Nim delivery and exact game body pixels. Other public game tools
+remain active 0.3 work.
 
 The alpha label is meaningful. Automated correctness, security, coverage,
 cross-platform build, and installer gates are strong, but the 0.2 release still
@@ -240,11 +245,11 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The verified July 18, 2026 gate has 2,981 passing all-target test cases plus one
+The verified July 18, 2026 gate has 2,985 passing all-target test cases plus one
 ignored screenshot diagnostic, 95.44% region coverage and 95.55% line coverage
 with an enforced 80% line floor, Clippy with warnings denied, and dependency
 policy checks. Release QA also regenerates an exact
-2,911-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
+2,913-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
 room receipts, per-room interaction scenarios, semantic checks, and coarse
 perceptual response thresholds, including a regression that rejects
 four isolated corner markers as a meaningful interaction. The inventory is

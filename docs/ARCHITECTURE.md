@@ -253,7 +253,7 @@ a window. The CLI, MCP server, exporters, and automated suite all use that seam.
 - **Current CI:** house style, dependency policy, coverage, format plus clippy
   plus rustdoc, doctests, all-target tests, and macOS, Ubuntu, and Windows
   builds. There is no automated beauty screenshot job.
-- **Local session broadcast, native room, Studio, and Nim viewer, and subprocess proof built:**
+- **Local session broadcast, native room, Studio, Nim, and sound viewer, and subprocess proof built:**
   the App and MCP production faces remain independent. The shared broadcast
   crate owns one-use loopback pairing, server-first host proof, strict bounded
   framing, replay compatibility identity, typed public tool events, atomic
@@ -277,8 +277,13 @@ a window. The CLI, MCP server, exporters, and automated suite all use that seam.
   through the Times Tables explore, challenge, K5 goal, reveal, and stop path.
   Separate real sessions prove Formula Jam expression delivery, native Nim
   delivery, and exact local-viewport body pixels. `INTERFACES.md` owns the
-  complete contract and privacy boundary. Other native game replay plus sound
-  remain 0.3 work.
+  complete contract and privacy boundary. Strictly accepted native room and
+  Studio selections derive bounded mono sound from their shared core state at a
+  fixed 16 kHz source rate, then the audio adapter resamples to the output
+  device. One public-sequence owner prevents render-loop restarts; unsupported
+  selections publish silence. Mute, volume, focus, scrub, close, room-score
+  restoration, and live-radio restoration remain App-local behavior with no
+  control edge to MCP. Other native game replay remains 0.3 work.
 - **Release path:** packaged artifacts belong to 0.6. The public launch gate is
   0.9.
 

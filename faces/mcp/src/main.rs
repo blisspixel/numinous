@@ -238,6 +238,23 @@ fn cairn_path() -> std::path::PathBuf {
     }
 }
 
+fn journal_path() -> std::path::PathBuf {
+    #[cfg(test)]
+    {
+        test_state_path("journal")
+    }
+    #[cfg(not(test))]
+    {
+        if let Ok(path) = std::env::var("NUMINOUS_JOURNAL") {
+            return std::path::PathBuf::from(path);
+        }
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        std::path::PathBuf::from(home).join(".numinous-journal")
+    }
+}
+
 fn radio_cache_path() -> std::path::PathBuf {
     #[cfg(test)]
     {
@@ -760,9 +777,8 @@ fn viewer_policy(name: &str) -> Option<ViewerPolicy> {
         return Some(ViewerPolicy::Public(tool));
     }
     match name {
-        "cairn" | "forget" | "scores" | "journey" | "choose" | "trophies" => {
-            Some(ViewerPolicy::Private)
-        }
+        "cairn" | "forget" | "scores" | "journey" | "choose" | "trophies" | "read_journal"
+        | "record_journal" | "erase_journal" => Some(ViewerPolicy::Private),
         "broadcast_session" => Some(ViewerPolicy::Control),
         _ => None,
     }
@@ -1064,6 +1080,42 @@ fn build_tools_catalog() -> Value {
                             "description": "Who to credit for a bequest (default \"a visitor\"). Used only with `leave`."
                         }
                     },
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "read_journal",
+                "description": "Read your continuous MCP experience journal. The journal tracks timestamped room encounters, creations, self-authored connections, and affect over time. It is completely opt-in and player-owned.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "record_journal",
+                "description": "Record a new entry in your MCP experience journal. Use this to maintain continuity across sessions or remember connections between models. Do not record private host data.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "kind": { "type": "string", "maxLength": 64, "description": "The kind of entry, e.g. encounter, creation, connection, thought." },
+                        "subject": { "type": "string", "maxLength": 256, "description": "The specific room id or subject." },
+                        "text": { "type": "string", "maxLength": 1000, "description": "The main content to remember." },
+                        "affect": { "type": "string", "maxLength": 256, "description": "Optional self-reported affect or state." }
+                    },
+                    "required": ["kind", "subject", "text"],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "erase_journal",
+                "description": "Permanently erase your entire MCP experience journal.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "confirm": { "type": "boolean", "description": "Must be true to erase the journal." }
+                    },
+                    "required": ["confirm"],
                     "additionalProperties": false
                 }
             },
@@ -1696,6 +1748,9 @@ fn call_tool(
         "challenge" => challenge_tool(&domain_args),
         "predict" => predict_tool(&domain_args),
         "cairn" => cairn_tool(&domain_args, journey_file, &cairn_path()),
+        "read_journal" => read_journal_tool(&journal_path()),
+        "record_journal" => record_journal_tool(&domain_args, &journal_path()),
+        "erase_journal" => erase_journal_tool(&domain_args, &journal_path()),
         "listen_room" => listen_room_tool(&domain_args),
         "list_sims" => tool_text(&list_sims_text()),
         "run_sim" => run_sim_tool(&domain_args),
@@ -1714,6 +1769,7 @@ fn call_tool(
                 journey: journey_file.to_path_buf(),
                 scores: scores_path(),
                 cairn: cairn_path(),
+                journal: journal_path(),
                 radio_cache: radio_cache_path(),
                 crash_log: crash_log_path(),
             },
@@ -2996,6 +3052,50 @@ fn parameter_challenge_tool(
 /// docs/PLAYTESTS.md): a message you cannot answer, sent to a mind you will
 /// never meet, readable only by one that can factor it, the Arecibo trick. It
 /// keeps no score; leaving and reading are their own reward.
+fn read_journal_tool(path: &std::path::Path) -> Value {
+    let journal = numinous_core::load_journal_file(path);
+    if journal.entries.is_empty() {
+        tool_text("Your journal is empty.")
+    } else {
+        tool_text(&journal.to_text())
+    }
+}
+
+fn record_journal_tool(args: &Value, path: &std::path::Path) -> Value {
+    let kind = args.get("kind").and_then(Value::as_str).unwrap_or("");
+    let subject = args.get("subject").and_then(Value::as_str).unwrap_or("");
+    let text = args.get("text").and_then(Value::as_str).unwrap_or("");
+    let affect = args.get("affect").and_then(Value::as_str);
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    match numinous_core::record_journal_file(path, now, kind, subject, text, affect) {
+        Ok(_) => tool_text("Record saved."),
+        Err(e) => tool_error(&format!("Failed to record: {}", e)),
+    }
+}
+
+fn erase_journal_tool(args: &Value, path: &std::path::Path) -> Value {
+    let confirm = args
+        .get("confirm")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    if !confirm {
+        tool_text("Pass confirm: true to permanently erase your journal.")
+    } else {
+        match numinous_core::erase_journal_file(path) {
+            Ok(_) => tool_text("Journal erased."),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                tool_text("Journal is already empty.")
+            }
+            Err(e) => tool_error(&format!("Failed to erase: {}", e)),
+        }
+    }
+}
+
 fn cairn_tool(args: &Value, journey_file: &std::path::Path, path: &std::path::Path) -> Value {
     // Leave a bequest, gated at the journey's cap.
     if let Some(text) = args.get("leave").and_then(Value::as_str) {
@@ -4811,7 +4911,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 30);
+        assert_eq!(tools.len(), 33);
         assert!(
             tools
                 .iter()
@@ -4988,7 +5088,7 @@ mod tests {
             }
         }
         assert_eq!(public, numinous_broadcast::ALL_PUBLIC_TOOLS.len());
-        assert_eq!(private, 6);
+        assert_eq!(private, 9);
         assert_eq!(control, 1);
         assert_eq!(public + private + control, tools.len());
         assert!(super::viewer_policy("future_unreviewed_tool").is_none());
@@ -5787,6 +5887,7 @@ mod tests {
             journey: root.join("journey.txt"),
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
+            journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
             crash_log: root.join("crash.log"),
         };
@@ -5881,6 +5982,7 @@ plays 2
             journey: unremovable.clone(),
             scores: paths.scores.clone(),
             cairn: paths.cairn.clone(),
+            journal: paths.journal.clone(),
             radio_cache: paths.radio_cache.clone(),
             crash_log: paths.crash_log.clone(),
         };

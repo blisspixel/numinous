@@ -159,10 +159,10 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 
 ### What it exposes (shaped by the above)
 - **Current protocol surface:** `initialize`, `tools/list`, `tools/call`, and
-  `ping` over stdio, advertising the tools capability. The 29 tools include
+  `ping` over stdio, advertising the tools capability. The 33 tools include
   `list_rooms`, `describe_room`, `play_room`, `listen_room`, `reveal_room`,
   `challenge`, `predict`, `list_sims`, `run_sim`, `plot_expression`,
-  `sing_expression`, Journey operations, and the shared games. `PLAYING.md`
+  `sing_expression`, Journey operations, experience journal operations (`read_journal`, `record_journal`, `erase_journal`), and the shared games. `PLAYING.md`
   carries the complete user-facing list.
 - **Current room input shape:** `play_room` and `listen_room` accept `variation`
   plus optional normalized `pokes: [[x, y], ...]`, newest last and bounded to 24
@@ -237,7 +237,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Interactive surfaces, planned:** an MCP App panel can later carry a rendered
   room where hosts support it. No app resource or interactive panel ships now.
 
-### Local MCP session broadcast, native room, Studio, and Nim replay, and subprocess proof built
+### Local MCP session broadcast, native room, Studio, Nim, and sound replay, and subprocess proof built
 
 The shared `numinous-broadcast` foundation implements the pairing,
 compatibility, framing, consent, sequence, control-marker, typed public-event,
@@ -261,19 +261,26 @@ Formula Jam curve. Live Studio and viewer replay share one deterministic
 sampling and autoscaling implementation. Public `nim` actions are replayed
 through one shared core reducer, accepted only when the complete MCP result
 matches that canonical replay, and drawn through the bounded three-heap
-renderer shared with the live App. Other game visuals and sound are not yet
+renderer shared with the live App. Strictly accepted native room and Studio
+selections also derive their deterministic core sound locally. The App renders
+a bounded fixed-rate source once per selected public sequence and resamples it
+at the device; an unsupported, invalid, forged, or non-sonic selection
+explicitly retires the older sound. Other game visuals are not yet
 reconstructed. Arrow keys or the D-pad scrub retained actions and scroll a long result.
 A and D, or LB and RB, pan fixed-width result text without reflow. Space or R3
-pauses only the human display. Escape or East closes the viewer and clears its
-ring. One real integration test opens this exact App viewer and launches the
+pauses only the human display. M or the controller sound chord uses the existing
+global mute path. Escape or East closes the viewer, clears its ring, and restores
+the room score or rejoins a valid live radio source. One real integration test
+opens this exact App viewer and launches the
 actual MCP binary. Times Tables explore, challenge pose, challenge grade, K5
 goal, reveal, private Journey calls, and stop produce exactly five public events
-numbered 0 through 4, no gaps, a native K5 frame, and no private or protocol
-metadata.
+numbered 0 through 4, no gaps, a native K5 frame, exact shared room sound
+samples, and no private or protocol metadata.
 
 A second real integration session pairs the same viewer with the actual MCP
 binary, calls `plot_expression`, retains exactly one public event at sequence
-0, and draws the Formula Jam curve at the local viewport. Source length,
+0, draws the Formula Jam curve at the local viewport, and reproduces exact
+shared Studio sound samples. Source length,
 unknown fields, nonfinite or unordered geometry, parser failure, undefined
 curves, and error results all fail back to the bounded typed timeline. The
 native body uses the same public-sequence and viewport cache as room replay;
@@ -291,8 +298,9 @@ A human should be able to open Numinous and watch a consenting digital player
 explore through MCP, like a live Let's Play. This is an observation surface,
 not surveillance and not duet control. The current viewer reconstructs public
 room actions, successful Formula Jam plot actions, and public Nim states, and
-represents every other public action through the typed text timeline. The
-remaining native presentation layer will add the other games and sound. Typed
+replays local sound for the first two while representing every other public
+action through the typed text timeline. The remaining native presentation
+layer will add the other games. Typed
 actions, status, and state-independent results already
 match the MCP guest except where
 Describe Room, Crack, SETI, or Quiz would reveal private Journey level or boon
@@ -391,7 +399,9 @@ envelopes capped before allocation, and strict typed public events. Native room
 replay now uses the existing deterministic core to reconstruct visuals. Native
 Studio replay uses the same deterministic curve sampler as the live App panel.
 Nim replay uses the same core reducer and bounded board renderer as live play.
-Other native game presentation and sound remain planned. Tests
+Native room and Studio sound use the same core state through a bounded local
+source and explicit App ownership. Other native game presentation remains
+planned. Tests
 prove code parsing and expiry, loopback-only connection, consent-before-content,
 allowlist completeness across every MCP tool, redaction, sequence and gap
 behavior, reconnect refusal after capability use, nonblocking failure, exact

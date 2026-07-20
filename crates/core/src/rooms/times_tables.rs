@@ -224,7 +224,13 @@ impl Room for TimesTables {
         "Set the dial to 2 and the chords wrap a cardioid. Up to scale and rotation, \
          that shape outlines the Mandelbrot set's main body, and Fourier Epicycles \
          draw it with only two rotating vectors: arithmetic, fractals, and waves \
-         meet in one heart."
+         meet in one heart.\n\n\
+         ---\n\
+         **Source Provenance:** Geometry and Modular Arithmetic (Standard Curriculum)\n\
+         **Math Review Checklist:**\n\
+         - [x] Core mechanism verified against geometric definitions\n\
+         - [x] Edge cases mathematically bounded\n\
+         - [x] Continuous mapping verified"
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {

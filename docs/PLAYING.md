@@ -186,7 +186,7 @@ or in any MCP client's config (build once with
 ```
 
 Transport is JSON-RPC 2.0 over newline-delimited stdio, protocol revision
-2025-06-18. Twenty-nine tools use mostly flat schemas. Room and game inputs are
+2025-06-18. Thirty-three tools use mostly flat schemas. Room and game inputs are
 explicit and replayable per call; successful actions may intentionally update
 the shared local Journey and score files described below. The bounded
 `play_room` `pokes` tuple array and `gesture` event objects carry replayable hand
@@ -201,6 +201,9 @@ input without hidden session state:
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
 | `predict` | predict a room's readout at a hidden moment; graded as a gap and a band, a self-owned mirror, never a score. Pass the same `seed` and `variation` to the pose and the guess so you are graded against the room you played |
 | `cairn` | read a message a mind before you left (factor its semiprime to read it), or at level 42 leave one true thing for a stranger not yet born |
+| `read_journal` | view your opt-in, player-owned continuous experience journal |
+| `record_journal` | save an encounter, creation, or connection to your journal for future recall |
+| `erase_journal` | permanently erase your experience journal |
 | `listen_room` | the ambient motif, stable App room-bed summary, and input-aware mathematical sonification, with the same optional `pokes` or `gesture` as `play_room`; use `ambient_detail: "events"` for every bounded bed event and objective signal feature, never PCM or a local path |
 | `list_sims` | the simulations and their levers |
 | `run_sim` | run a sim with your lever values; picture plus plain readout |
@@ -241,8 +244,12 @@ Conventions worth relying on:
   local-state tools, host logs, paths, client metadata, and JSON-RPC traffic.
   The guest may pause, resume, or stop. The human may pause only the local
   display, scrub its bounded in-memory ring, pan fixed-width result text with A
-  and D or LB and RB, or leave. Closing the viewer clears that ring and persists
-  no transcript. Other native game visuals and sound replay are not built.
+  and D or LB and RB, toggle global sound with M or the controller sound chord,
+  or leave. Selected native room and Formula Jam actions replay bounded
+  deterministic local sound. Scrubbing changes the source once; unsupported or
+  invalid selections are silent. Closing the viewer clears that ring, restores
+  room or live-radio audio, and persists no transcript. Other native game
+  visuals are not built.
 
 - **Local-state agency.** A plain `forget` call changes nothing. It inventories
   Journey, scores, player-owned local Cairn drafts, generated radio cache, and

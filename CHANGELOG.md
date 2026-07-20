@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Source provenance and math review checklists to the Times Tables, Game of Life, Galton Board, and Double Pendulum flagships to anchor 0.4 Understanding Alpha learning claims.
+- An opt-in, player-owned MCP experience journal (`Journal` / `JournalEntry`) tracking room encounters, creations, and connections over time. Fully backed by new `read_journal`, `record_journal`, and `erase_journal` tools to enable continuous MCP return sessions under user control.
 - The local MCP session viewer now has a hardened shared transport foundation,
   a connected MCP producer, and a native App Watch Agent surface.
   The new `numinous-broadcast` crate provides one-use 128-bit loopback pairing,
@@ -72,12 +74,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   complete canonical MCP result before native reconstruction; malformed,
   excessive, illegal, forged, or failed actions retain text. A third real MCP
   subprocess session proves exactly one public Nim event, shared core state,
-  native body pixel parity, metadata exclusion, and close-time erasure. Other
-  game visuals and sound remain 0.3 work. Process- and thread-isolated App test
-  roots now prevent concurrent release or checker processes from colliding in
-  playtest-note and radio-cache fixtures.
+  native body pixel parity, metadata exclusion, and close-time erasure. Native
+  room and Studio selections now replay their deterministic core sound through
+  one public-sequence owner and a fixed 16 kHz bounded source. Scrubbing changes
+  that source once; unsupported or invalid events retire it. Global sound and
+  focus controls remain local, while close restores the room score or rejoins
+  live radio. Real Times Tables and Studio sessions prove exact shared-core
+  sample parity. The App QA inventory grows to 2,913 screens with Watch Agent
+  source badges at both sizes. Other game visuals remain 0.3 work. Process- and
+  thread-isolated App test roots now prevent concurrent release or checker
+  processes from colliding in playtest-note and radio-cache fixtures.
 - Public status and roadmap documentation now match the July 18 release
-  evidence: 2,981 passing tests plus one ignored screenshot diagnostic,
+  evidence: 2,985 passing tests plus one ignored screenshot diagnostic,
   95.44 percent region coverage, 95.55 percent line coverage, and green native
   installer checks on all three CI operating systems. Digital-mind docs now
   distinguish the shipped managed-state inventory and erasure foundation from

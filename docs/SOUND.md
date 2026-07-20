@@ -30,6 +30,19 @@ audio source is no longer rebuilt from render-loop cadence. Native device rates 
 are covered by pitch and duration tests. Built-in radio remains the sole source
 while tuned.
 
+Watch Agent is an explicit fourth App audio owner. A strictly accepted native
+room selection calls the same core `sound_input` state used by CLI and MCP; a
+strictly attested Formula Jam selection calls the same bounded core melody
+mapping used by the live Studio. The viewer validates every catalog room sound
+against finite 64-second and 512-note caps, renders once at a fixed 16 kHz
+source rate, and lets the mixer resample without a device-rate-sized source
+copy. Public sequence identity prevents redraws from restarting the phrase.
+Scrubbing replaces the source, while invalid, forged, unsupported, and Nim
+selections explicitly publish silence. Mute, volume, focus fade, and output
+failure use the existing local controls. Closing the viewer restores the room
+score or rejoins a valid selected radio at its wall-clock position. None of
+these local audio operations sends a command to the MCP player.
+
 Formula Jam curated recipe changes use a request-scoped 600 ms equal-power
 source crossfade paired with the Studio's 600 ms curve morph. A deferred source
 retains its own requested duration instead of mutating an active fade. Requested
