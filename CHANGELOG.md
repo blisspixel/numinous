@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Visualizer path (cycle 149): room-bed spectrum bands on MCP `listen_room`
+  ambient beds; pure `draw_spectrum_bars` and App spectrum meter under the audio
+  badge, driven by the current motif arrangement (offline Winamp path; OS
+  loopback remains open).
 - Panel depth pack (cycle 148): citations unlock with the first deep cut on CLI
   describe and MCP describe/reveal; catalog citation table expanded across wings;
   pure `spectrum` band-energy substrate for the music visualizer path; adaptive

@@ -1132,6 +1132,9 @@ fn room_screen_with_mode(
         width,
         height,
     );
+    // Offline visualizer meter keeps the screens matrix honest about spectrum chrome.
+    let bands = [0.15, 0.35, 0.7, 0.45, 0.25, 0.1, 0.05];
+    hud::draw_spectrum_meter(&mut raster, &bands, width, height);
     raster
 }
 

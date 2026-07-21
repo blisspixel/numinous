@@ -277,6 +277,8 @@ struct App {
     gamepad: gamepad::GamepadInput,
     /// The last input family that performed a meaningful action.
     input_mode: input_legend::InputMode,
+    /// Cached room-bed spectrum for the visualizer meter (room index + bands).
+    spectrum_cache: Option<(usize, [f32; numinous_core::BAND_COUNT])>,
     mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera,
     life_session: numinous_core::rooms::game_of_life::LifeSession,
     life_accumulator: f64,
@@ -410,6 +412,7 @@ impl App {
             interaction_audio_events: std::cell::Cell::new(0),
             gamepad: gamepad::GamepadInput::new(),
             input_mode: input_legend::InputMode::default(),
+            spectrum_cache: None,
             mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera::new(0),
             life_session: numinous_core::rooms::game_of_life::LifeSession::new(0),
             life_accumulator: 0.0,
@@ -2293,7 +2296,25 @@ impl App {
 
     fn reset_current_room(&mut self) {
         self.reset_room_runtime();
+        self.spectrum_cache = None;
         self.update_audio();
+    }
+
+    /// Normalized room-bed spectrum for the visualizer meter (cached per room).
+    fn room_spectrum_bands(&mut self) -> Option<[f32; numinous_core::BAND_COUNT]> {
+        if let Some((idx, bands)) = self.spectrum_cache
+            && idx == self.current
+        {
+            return Some(bands);
+        }
+        let motif = self.rooms.get(self.current)?.motif()?;
+        let samples = motif
+            .arrangement()
+            .render_stereo(numinous_core::ROOM_BED_SOURCE_RATE);
+        let bands =
+            numinous_core::arrangement_spectrum(&samples, numinous_core::ROOM_BED_SOURCE_RATE);
+        self.spectrum_cache = Some((self.current, bands));
+        Some(bands)
     }
 
     fn current_room_is_life(&self) -> bool {
@@ -2613,6 +2634,12 @@ impl App {
         }
         self.draw_banner_on_raster(&mut raster, width, height);
         hud::draw_audio_state(&mut raster, &self.audio_state(), width);
+        // Offline visualizer path: room-bed spectrum meter from the current motif.
+        if !self.muted
+            && let Some(bands) = self.room_spectrum_bands()
+        {
+            hud::draw_spectrum_meter(&mut raster, &bands, width, height);
+        }
         let (rw, rh) = (raster.width(), raster.height());
         let mut rgba = raster.to_rgba();
         self.era.apply(&mut rgba, rw, rh);

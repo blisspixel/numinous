@@ -107,10 +107,73 @@ pub fn low_band_onset(previous: &[f32; BAND_COUNT], current: &[f32; BAND_COUNT])
     (curr / prev).clamp(0.0, 8.0)
 }
 
+/// Normalized spectrum of a stereo arrangement render at the room-bed rate.
+///
+/// This is the offline visualizer path for room beds and CLI/MCP listen exports.
+/// OS loopback capture remains separate future work.
+#[must_use]
+pub fn arrangement_spectrum(samples: &[f32], sample_rate: u32) -> [f32; BAND_COUNT] {
+    normalize_bands(&band_energies(samples, 2, sample_rate))
+}
+
+/// Layout for [`draw_spectrum_bars`].
+#[derive(Debug, Clone, Copy)]
+pub struct SpectrumBarLayout {
+    /// Left edge of the first bar, in pixels.
+    pub left: usize,
+    /// Bottom edge of the bars, in pixels.
+    pub bottom: usize,
+    /// Width of each bar in pixels.
+    pub bar_width: usize,
+    /// Maximum bar height in pixels.
+    pub max_height: usize,
+}
+
+/// Draw seven vertical spectrum bars into an RGBA buffer (visualizer chrome).
+///
+/// Bars sit at the bottom of the given layout. Empty bands draw a one-pixel
+/// baseline so the meter stays readable when the bed is quiet. Modern-era
+/// identity is preserved for the rest of the frame: this only writes the bar
+/// region.
+pub fn draw_spectrum_bars(
+    rgba: &mut [u8],
+    width: usize,
+    height: usize,
+    bands: &[f32; BAND_COUNT],
+    layout: SpectrumBarLayout,
+) {
+    if width == 0 || height == 0 || rgba.len() < width * height * 4 {
+        return;
+    }
+    let bar_width = layout.bar_width.max(1);
+    let max_height = layout.max_height.max(1).min(height);
+    let gap = 1usize;
+    for (i, &level) in bands.iter().enumerate() {
+        let h = ((level.clamp(0.0, 1.0) * max_height as f32).round() as usize).max(1);
+        let x0 = layout.left + i * (bar_width + gap);
+        let y1 = layout.bottom.min(height.saturating_sub(1));
+        let y0 = y1.saturating_sub(h.saturating_sub(1));
+        for y in y0..=y1 {
+            for x in x0..x0.saturating_add(bar_width).min(width) {
+                let o = (y * width + x) * 4;
+                if o + 3 >= rgba.len() {
+                    return;
+                }
+                // Soft cyan meter that reads on both phosphor green and modern.
+                rgba[o] = 40;
+                rgba[o + 1] = 220;
+                rgba[o + 2] = 255;
+                rgba[o + 3] = 255;
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        BAND_COUNT, BAND_NAMES, band_energies, bass_mid_treble, low_band_onset, normalize_bands,
+        BAND_COUNT, BAND_NAMES, SpectrumBarLayout, arrangement_spectrum, band_energies,
+        bass_mid_treble, draw_spectrum_bars, low_band_onset, normalize_bands,
     };
 
     fn sine_stereo(freq: f32, rate: u32, frames: usize) -> Vec<f32> {
@@ -188,6 +251,40 @@ mod tests {
         assert_eq!(
             band_energies(&samples, 2, 16_000),
             band_energies(&samples, 2, 16_000)
+        );
+    }
+
+    #[test]
+    fn arrangement_spectrum_and_bars_are_safe() {
+        let samples = sine_stereo(150.0, 16_000, 1_024);
+        let bands = arrangement_spectrum(&samples, 16_000);
+        assert!(bands.iter().all(|b| (0.0..=1.0).contains(b)));
+        let mut rgba = vec![0u8; 64 * 32 * 4];
+        draw_spectrum_bars(
+            &mut rgba,
+            64,
+            32,
+            &bands,
+            SpectrumBarLayout {
+                left: 2,
+                bottom: 30,
+                bar_width: 3,
+                max_height: 20,
+            },
+        );
+        assert!(rgba.iter().any(|&v| v > 0), "bars should light some pixels");
+        // Hostile geometry must not panic.
+        draw_spectrum_bars(
+            &mut [],
+            0,
+            0,
+            &bands,
+            SpectrumBarLayout {
+                left: 0,
+                bottom: 0,
+                bar_width: 0,
+                max_height: 0,
+            },
         );
     }
 }

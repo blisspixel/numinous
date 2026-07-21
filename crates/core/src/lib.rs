@@ -122,7 +122,8 @@ pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
 pub use sims::{all_sims, sim_by_id};
 pub use sound::{Note, ParametricSound, SoundSpec};
 pub use spectrum::{
-    BAND_COUNT, BAND_NAMES, band_energies, bass_mid_treble, low_band_onset, normalize_bands,
+    BAND_COUNT, BAND_NAMES, SpectrumBarLayout, arrangement_spectrum, band_energies,
+    bass_mid_treble, draw_spectrum_bars, low_band_onset, normalize_bands,
 };
 pub use studio::{
     Expr, MAX_STUDIO_SOURCE_CHARS, StudioCreation, eval, parse, plot_text, to_melody,

@@ -2120,6 +2120,18 @@ fn ambient_bed_value(motif: numinous_core::Motif, include_events: bool) -> Resul
         "events_included": include_events,
     });
 
+    // Compact spectrum is always available: render once and share with detail.
+    let samples = arrangement.render_stereo(numinous_core::ROOM_BED_SOURCE_RATE);
+    let spectrum =
+        numinous_core::arrangement_spectrum(&samples, numinous_core::ROOM_BED_SOURCE_RATE);
+    value["spectrum"] = json!({
+        "schema": "numinous.spectrum.bands",
+        "schema_version": 1,
+        "band_count": numinous_core::BAND_COUNT,
+        "names": numinous_core::BAND_NAMES,
+        "levels": spectrum.to_vec(),
+    });
+
     if include_events {
         let events = arrangement
             .notes
@@ -2139,7 +2151,6 @@ fn ambient_bed_value(motif: numinous_core::Motif, include_events: bool) -> Resul
                 })
             })
             .collect::<Vec<_>>();
-        let samples = arrangement.render_stereo(numinous_core::ROOM_BED_SOURCE_RATE);
         let metrics = numinous_core::stereo_signal_metrics(&samples);
         value["events"] = json!(events);
         value["signal_metrics"] = json!({
@@ -6319,6 +6330,13 @@ plays 2
         assert_eq!(sound["ambient_bed"]["events_included"], false);
         assert!(sound["ambient_bed"].get("events").is_none());
         assert!(sound["ambient_bed"].get("signal_metrics").is_none());
+        let spectrum = &sound["ambient_bed"]["spectrum"];
+        assert_eq!(spectrum["schema"], "numinous.spectrum.bands");
+        assert_eq!(spectrum["band_count"], numinous_core::BAND_COUNT);
+        assert_eq!(
+            spectrum["levels"].as_array().map(|a| a.len()),
+            Some(numinous_core::BAND_COUNT)
+        );
         assert!(
             sound["notes"]
                 .as_array()
