@@ -22,6 +22,7 @@ use winit::keyboard::{Key, NamedKey};
 use winit::window::{Icon, Window, WindowId};
 
 mod audio_state;
+mod bindings;
 mod feedback;
 mod gamepad;
 mod hud;

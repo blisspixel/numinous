@@ -6,6 +6,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- **Configurable Inputs and Controller Certification**: Gamepad button mappings are now fully configurable via a `~/.numinous-bindings.json` file. Support for cross-platform hardware validation is now built-in using SDL's Game Controller DB, ensuring seamless compatibility for thousands of missing or custom controller types across all environments.
 - Source provenance and math review checklists to the Times Tables, Game of Life, Galton Board, and Double Pendulum flagships to anchor 0.4 Understanding Alpha learning claims.
 - An opt-in, player-owned MCP experience journal (`Journal` / `JournalEntry`) tracking room encounters, creations, and connections over time. Fully backed by new `read_journal`, `record_journal`, and `erase_journal` tools to enable continuous MCP return sessions under user control.
 - The local MCP session viewer now has a hardened shared transport foundation,
