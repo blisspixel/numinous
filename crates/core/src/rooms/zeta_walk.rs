@@ -220,14 +220,6 @@ impl Room for ZetaWalk {
         }
         let h = self.height_at(t, pokes);
         draw_spiral(canvas, &eta_spiral(h, TERMS));
-        let (width, height) = canvas.draw_bounds();
-        if width > 0 && height > 0 {
-            for &(x, y) in &hands {
-                let px = (x * width.saturating_sub(1) as f64).round() as i32;
-                let py = (y * height.saturating_sub(1) as f64).round() as i32;
-                canvas.plot(px, py, '+');
-            }
-        }
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

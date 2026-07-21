@@ -293,16 +293,8 @@ pub(crate) fn draw_cursor(
     }
     let x = (point.0.clamp(0.0, 1.0) * width.saturating_sub(1) as f64).round() as i32;
     let y = (point.1.clamp(0.0, 1.0) * height.saturating_sub(1) as f64).round() as i32;
-    // Match the pointer reticle scale: small enough not to cover the math.
-    let radius = ((width.min(height) as f64 * 0.012).round() as i32).clamp(2, 6);
-    let gap = 1;
-    if radius > gap {
-        surface.line(x - radius, y, x - gap, y, '#');
-        surface.line(x + gap, y, x + radius, y, '#');
-        surface.line(x, y - radius, x, y - gap, '#');
-        surface.line(x, y + gap, x, y + radius, '#');
-    }
-    surface.plot(x, y, '#');
+    // One soft pixel only: enough to aim without covering the art.
+    surface.plot(x, y, '*');
 }
 
 #[cfg(test)]
@@ -490,8 +482,8 @@ mod tests {
 
         let mut canvas = Canvas::new(30, 20);
         draw_cursor(&mut canvas, (2.0, -1.0), 30, 20);
-        assert_eq!(canvas.cell(29, 0), Some('#'));
-        assert!(canvas.ink_count() >= 5);
+        assert_eq!(canvas.cell(29, 0), Some('*'));
+        assert_eq!(canvas.ink_count(), 1, "controller hand is one soft pixel");
     }
 
     #[test]

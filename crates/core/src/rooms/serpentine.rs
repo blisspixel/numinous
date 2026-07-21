@@ -36,22 +36,25 @@ fn param_a(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     }
 }
 
-fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, a: f64, seed: u64, hand: Option<(f64, f64)>) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
     }
     let a = a.clamp(0.3, 2.0);
-    let b = 1.2
-        + if seed == 0 {
+    // Hand y steers amplitude. Fixed screen scale (not /a or /b) so a drag
+    // actually reshapes the snake instead of a self-similar re-raster of a.
+    let hand_amp = hand.map_or(1.0, |(_, y)| 0.45 + y * 1.1);
+    let b =
+        (1.2 + if seed == 0 {
             0.0
         } else {
             (seed % 4) as f64 * 0.1
-        };
+        }) * hand_amp;
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let sx = (width as f64) * 0.4 / (3.0 * a);
-    let sy = (height as f64) * 0.35 / b.max(0.5);
+    let sx = (width as f64) * 0.12;
+    let sy = (height as f64) * 0.28;
     // y = a b x / (x^2 + a^2)
     let mut prev: Option<(i32, i32)> = None;
     let steps = 280;
@@ -101,7 +104,7 @@ impl Room for Serpentine {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, param_a(t, None, self.seed), self.seed);
+        draw(canvas, param_a(t, None, self.seed), self.seed, None);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -129,17 +132,9 @@ impl Room for Serpentine {
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
-        let a = param_a(t, hands.last().copied(), self.seed);
-        draw(canvas, a, self.seed ^ hands.len() as u64);
-        if let Some(&(x, y)) = hands.last() {
-            let (bw, bh) = canvas.draw_bounds();
-            if bw > 0 && bh > 0 {
-                let px = (x * bw.saturating_sub(1) as f64).round() as i32;
-                let py = (y * bh.saturating_sub(1) as f64).round() as i32;
-                canvas.line(px - 2, py, px + 2, py, 'o');
-                canvas.line(px, py - 2, px, py + 2, 'o');
-            }
-        }
+        let hand = hands.last().copied();
+        let a = param_a(t, hand, self.seed);
+        draw(canvas, a, self.seed ^ hands.len() as u64, hand);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

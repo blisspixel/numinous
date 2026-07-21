@@ -461,19 +461,14 @@ fn largest_tile_cluster(changed: &[bool], width: usize, height: usize) -> usize 
     largest
 }
 
-/// Live pointer chrome is intentionally tiny. Domain rooms still use the full
-/// domain floor; feedback only needs a visible compact reticle.
+/// Art-first: pointer feedback must never ink the room. The domain response
+/// oracle still checks that interaction moves the math; this only guards that
+/// the overlay layer stays empty.
 fn feedback_chrome_error(id: &str, state: &str, before: &Raster, after: &Raster) -> Option<String> {
     let diff = difference(before, after);
-    if diff.changed == 0 {
-        return Some(format!("{id} {state} feedback reticle is invisible"));
-    }
-    // Arms stay under ~1.2% of the short edge; allow a small safety margin.
-    let short = before.width().min(before.height());
-    let max_changed = (short / 8).max(24);
-    if diff.changed > max_changed {
+    if diff.changed != 0 {
         return Some(format!(
-            "{id} {state} feedback reticle is too large: {} changed pixels (cap {max_changed})",
+            "{id} {state} paints {} chrome pixels over the art; feedback must be empty",
             diff.changed
         ));
     }
@@ -2570,11 +2565,11 @@ mod tests {
             let immediate = room_content(room, 0.0, &scenario.immediate, ROOM_SIZE);
             let delayed_base = room_content(room, scenario.delayed_phase, &[], ROOM_SIZE);
             let delayed = room_content(room, scenario.delayed_phase, &scenario.delayed, ROOM_SIZE);
-            assert!(
-                domain_response_error(id, "default", &base, &immediate, &delayed_base, &delayed,)
-                    .is_none(),
-                "{id} must retain a perceptible domain consequence"
-            );
+            if let Some(err) =
+                domain_response_error(id, "default", &base, &immediate, &delayed_base, &delayed)
+            {
+                panic!("{id} must retain a perceptible domain consequence: {err}");
+            }
         }
     }
 }

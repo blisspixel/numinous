@@ -235,14 +235,6 @@ impl Room for KeplerLoom {
         let steps = ENTRY_STEPS + (phase_unit(t) * (MAX_STEPS - ENTRY_STEPS) as f64) as usize;
         let (path, _, _) = integrate(state, sx, sy, steps);
         draw_orbit(canvas, sx, sy, &path);
-        let (width, height) = canvas.draw_bounds();
-        if width > 0 && height > 0 {
-            for &(x, y) in &hands {
-                let px = (x * width.saturating_sub(1) as f64).round() as i32;
-                let py = (y * height.saturating_sub(1) as f64).round() as i32;
-                canvas.plot(px, py, '+');
-            }
-        }
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
