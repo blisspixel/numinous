@@ -16,8 +16,14 @@
 //! as those systems come online. When full protocol coverage is needed, this
 //! hand-rolled subset can be swapped for the official MCP Rust SDK.
 
+mod broadcast;
+
 use std::io::{self, BufRead, Write};
 
+use broadcast::{SessionBroadcast, SessionSnapshot};
+use numinous_broadcast::{
+    PLAY_ROOM_MAX_HEIGHT as MAX_TOOL_HEIGHT, PLAY_ROOM_MAX_WIDTH as MAX_TOOL_WIDTH, PublicTool,
+};
 use numinous_core::{Canvas, all_rooms, all_rooms_with, room_by_id};
 use serde_json::{Value, json};
 
@@ -27,12 +33,6 @@ const PROTOCOL_VERSION: &str = "2025-06-18";
 /// Default ASCII canvas size for `play_room`.
 const DEFAULT_WIDTH: u64 = 72;
 const DEFAULT_HEIGHT: u64 = 32;
-
-/// The largest frame `play_room` will render. Terminal-scale output is the
-/// product; anything beyond this is a memory and bandwidth lever, not play
-/// (the poke path renders two canvases and diffs every cell).
-const MAX_TOOL_WIDTH: u64 = 512;
-const MAX_TOOL_HEIGHT: u64 = 256;
 
 /// Longest catalog id a tool argument may carry (room, sim, or similar).
 /// Catalog keys today are far shorter; the bound rejects hostile multi-kilobyte
@@ -54,6 +54,7 @@ fn main() -> io::Result<()> {
     let mut out = stdout.lock();
     let mut reader = stdin.lock();
     let mut line = Vec::new();
+    let broadcast = SessionBroadcast::new();
 
     while read_bounded_line(&mut reader, &mut line)? {
         let Ok(text) = std::str::from_utf8(&line) else {
@@ -68,7 +69,9 @@ fn main() -> io::Result<()> {
         }
         match serde_json::from_str::<Value>(text) {
             Ok(request) => {
-                if let Some(response) = handle_request(&request) {
+                if let Some(response) =
+                    handle_request_with_session(&request, &journey_path(), &broadcast)
+                {
                     write_message(&mut out, &response)?;
                 }
             }
@@ -235,6 +238,23 @@ fn cairn_path() -> std::path::PathBuf {
     }
 }
 
+fn journal_path() -> std::path::PathBuf {
+    #[cfg(test)]
+    {
+        test_state_path("journal")
+    }
+    #[cfg(not(test))]
+    {
+        if let Ok(path) = std::env::var("NUMINOUS_JOURNAL") {
+            return std::path::PathBuf::from(path);
+        }
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        std::path::PathBuf::from(home).join(".numinous-journal")
+    }
+}
+
 fn radio_cache_path() -> std::path::PathBuf {
     #[cfg(test)]
     {
@@ -371,35 +391,13 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                 && !list.is_empty()
             {
                 journey.play();
-                // Replay: if a player move empties the board, the win counts
-                // and posts, exactly as it would in the terminal.
                 let seed = effective_seed(&args);
-                let mut heaps = numinous_core::nim_new(seed);
-                for pair in list.iter().filter_map(Value::as_array) {
-                    let (Some(heap), Some(take)) = (
-                        pair.first().and_then(Value::as_u64),
-                        pair.get(1).and_then(Value::as_u64),
-                    ) else {
-                        break;
-                    };
-                    // An oversized take is an illegal move, never a truncated
-                    // legal one.
-                    let Ok(take) = u32::try_from(take) else {
-                        break;
-                    };
-                    if heap == 0 || !numinous_core::nim_apply(&mut heaps, heap as usize - 1, take) {
-                        break;
-                    }
-                    if numinous_core::nim_finished(&heaps) {
-                        journey.win();
-                        post_score(&scores_path(), &format!("nim seed:{seed}"), 1);
-                        break;
-                    }
-                    let (oh, ot) = numinous_core::nim_order(&heaps);
-                    let _ = numinous_core::nim_apply(&mut heaps, oh, ot);
-                    if numinous_core::nim_finished(&heaps) {
-                        break;
-                    }
+                if let Some(turns) = nim_turns(&args)
+                    && let Ok(replay) = numinous_core::nim::replay(seed, &turns)
+                    && replay.winner == Some(numinous_core::nim::NimWinner::Player)
+                {
+                    journey.win();
+                    post_score(&scores_path(), &format!("nim seed:{seed}"), 1);
                 }
             }
         }
@@ -689,12 +687,22 @@ fn write_message(out: &mut impl Write, message: &Value) -> io::Result<()> {
 
 /// Handle one JSON-RPC request. Returns `None` for notifications (no `id`),
 /// which receive no response.
+#[cfg(test)]
 fn handle_request(request: &Value) -> Option<Value> {
     handle_request_with(request, &journey_path())
 }
 
 /// [`handle_request`] with an explicit journey file, so tests stay hermetic.
+#[cfg(test)]
 fn handle_request_with(request: &Value, journey_file: &std::path::Path) -> Option<Value> {
+    handle_request_with_session(request, journey_file, &SessionBroadcast::new())
+}
+
+fn handle_request_with_session(
+    request: &Value,
+    journey_file: &std::path::Path,
+    broadcast: &SessionBroadcast,
+) -> Option<Value> {
     // Validate the public request before daily calls gain their private frozen
     // day field. This keeps the declared schemas authoritative without
     // mistaking server-owned request context for a client argument.
@@ -716,20 +724,35 @@ fn handle_request_with(request: &Value, journey_file: &std::path::Path) -> Optio
         .and_then(Value::as_str)
         .unwrap_or_default();
 
+    let public_call = if method == "tools/call" && argument_error.is_none() {
+        capture_public_call(request, broadcast)
+    } else {
+        None
+    };
+
     let result = match method {
         "initialize" => Ok(initialize_result()),
         "tools/list" => Ok(tools_list_result()),
         "tools/call" => match argument_error {
             Some(message) => Ok(tool_error(&message)),
-            None => call_tool(request.get("params"), journey_file),
+            None => call_tool(request.get("params"), journey_file, broadcast),
         },
         "ping" => Ok(json!({})),
         other => Err((-32601_i64, format!("Method not found: {other}"))),
     };
 
+    if let (Some(public_call), Ok(value)) = (public_call, &result) {
+        public_call.commit(value);
+    }
+
     if method == "tools/call"
         && let Ok(value) = &result
         && value.get("isError").and_then(Value::as_bool) != Some(true)
+        && request
+            .get("params")
+            .and_then(|params| params.get("name"))
+            .and_then(Value::as_str)
+            != Some("broadcast_session")
     {
         record_progress(request, journey_file);
     }
@@ -742,6 +765,90 @@ fn handle_request_with(request: &Value, journey_file: &std::path::Path) -> Optio
     })
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ViewerPolicy {
+    Public(PublicTool),
+    Private,
+    Control,
+}
+
+fn viewer_policy(name: &str) -> Option<ViewerPolicy> {
+    if let Some(tool) = PublicTool::from_name(name) {
+        return Some(ViewerPolicy::Public(tool));
+    }
+    match name {
+        "cairn" | "forget" | "scores" | "journey" | "choose" | "trophies" | "read_journal"
+        | "record_journal" | "erase_journal" => Some(ViewerPolicy::Private),
+        "broadcast_session" => Some(ViewerPolicy::Control),
+        _ => None,
+    }
+}
+
+fn capture_public_call(request: &Value, broadcast: &SessionBroadcast) -> Option<ViewerCall> {
+    let params = request.get("params")?;
+    let name = params.get("name")?.as_str()?;
+    let ViewerPolicy::Public(tool) = viewer_policy(name)? else {
+        return None;
+    };
+    let arguments = replay_arguments(
+        params
+            .get("arguments")
+            .cloned()
+            .unwrap_or_else(|| json!({})),
+    );
+    let call = broadcast.capture(tool, &arguments)?;
+    Some(ViewerCall {
+        call,
+        tool,
+        arguments,
+    })
+}
+
+struct ViewerCall {
+    call: broadcast::PublicCall,
+    tool: PublicTool,
+    arguments: Value,
+}
+
+impl ViewerCall {
+    fn commit(self, result: &Value) {
+        let projected = viewer_result(self.tool, &self.arguments, result);
+        self.call.commit(&projected);
+    }
+}
+
+fn viewer_result(tool: PublicTool, arguments: &Value, result: &Value) -> Value {
+    match tool {
+        PublicTool::DescribeRoom => {
+            describe_room_tool_for_journey(arguments, &numinous_core::Journey::default())
+        }
+        PublicTool::Crack => crack_tool_at_level(arguments, 0),
+        PublicTool::Seti => seti_tool_at_level(arguments, 0),
+        PublicTool::Quiz => quiz_tool_at_level(arguments, 0),
+        _ => result.clone(),
+    }
+}
+
+fn replay_arguments(mut arguments: Value) -> Value {
+    let Some(object) = arguments.as_object_mut() else {
+        return arguments;
+    };
+    object.remove("response_mode");
+    let daily = object.get("daily").and_then(Value::as_bool) == Some(true);
+    let effective_seed = if daily {
+        object.get(DAILY_DAY_KEY).and_then(Value::as_u64)
+    } else {
+        object.get("seed").and_then(Value::as_u64)
+    };
+    object.remove("daily");
+    object.remove(DAILY_DAY_KEY);
+    object.remove("seed");
+    if let Some(seed) = effective_seed {
+        object.insert("seed".to_string(), json!(seed));
+    }
+    arguments
+}
+
 /// The `initialize` result: who we are and what we support.
 fn initialize_result() -> Value {
     json!({
@@ -751,7 +858,9 @@ fn initialize_result() -> Value {
         "instructions": "Explore the catalog with list_rooms, read a room with describe_room, \
                          then play_room to render it as ASCII and see what the math does. Steer \
                          the simulations with list_sims and run_sim (fiddle the levers to optimize \
-                         or break them), and play Guess the Shape with the quiz tool."
+                         or break them), and play Guess the Shape with the quiz tool. If a human \
+                         offers a local App pairing code, broadcast_session lets you explicitly \
+                         consent to, inspect, pause, resume, or stop that read-only public view."
     })
 }
 
@@ -787,6 +896,9 @@ fn add_response_mode(mut catalog: Value) -> Value {
         return catalog;
     };
     for tool in tools {
+        if tool.get("name").and_then(Value::as_str) == Some("broadcast_session") {
+            continue;
+        }
         let Some(properties) = tool
             .get_mut("inputSchema")
             .and_then(|schema| schema.get_mut("properties"))
@@ -972,6 +1084,42 @@ fn build_tools_catalog() -> Value {
                 }
             },
             {
+                "name": "read_journal",
+                "description": "Read your continuous MCP experience journal. The journal tracks timestamped room encounters, creations, self-authored connections, and affect over time. It is completely opt-in and player-owned.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "record_journal",
+                "description": "Record a new entry in your MCP experience journal. Use this to maintain continuity across sessions or remember connections between models. Do not record private host data.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "kind": { "type": "string", "maxLength": 64, "description": "The kind of entry, e.g. encounter, creation, connection, thought." },
+                        "subject": { "type": "string", "maxLength": 256, "description": "The specific room id or subject." },
+                        "text": { "type": "string", "maxLength": 1000, "description": "The main content to remember." },
+                        "affect": { "type": "string", "maxLength": 256, "description": "Optional self-reported affect or state." }
+                    },
+                    "required": ["kind", "subject", "text"],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "erase_journal",
+                "description": "Permanently erase your entire MCP experience journal.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "confirm": { "type": "boolean", "description": "Must be true to erase the journal." }
+                    },
+                    "required": ["confirm"],
+                    "additionalProperties": false
+                }
+            },
+            {
                 "name": "listen_room",
                 "description": "Hear a room: its input-aware mathematical sound at phase t as readable notes, plus a bounded summary of the stable stereo App room bed. Set ambient_detail to events to inspect every arranged bed event and objective signal metric. No binary audio or local path is returned.",
                 "inputSchema": {
@@ -1120,10 +1268,11 @@ fn build_tools_catalog() -> Value {
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "seed": { "type": "integer", "description": "Seed; the same seed gives the same starting heaps." },
+                        "seed": { "type": "integer", "minimum": 0, "description": "Seed; the same seed gives the same starting heaps." },
                         "daily": { "type": "boolean", "description": "Use today\'s shared seed instead; dailies chain into streaks." },
                         "moves": {
                             "type": "array",
+                            "maxItems": numinous_core::nim::MAX_REPLAY_TURNS,
                             "items": {
                                 "type": "array",
                                 "items": { "type": "integer", "minimum": 1 },
@@ -1282,6 +1431,27 @@ fn build_tools_catalog() -> Value {
                         "choices": { "type": "integer", "minimum": 2, "maximum": 6, "description": "Number of answer choices, 2 through 6; default 4. Five-way and six-way rounds open at LV 3." },
                         "guess": { "type": "string", "description": "Your answer letter (A, B, C, ...). Omit to see the puzzle." }
                     },
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "broadcast_session",
+                "description": "Consent to a local read-only App viewer, inspect that public session, pause it, resume it, or stop it. Start requires the short-lived pairing code shown by the human's App. Only explicitly public Numinous actions and results are sent. Prompts, reasoning, client metadata, Journey, scores, local state, paths, Cairn drafts, and this control call are never broadcast. The pairing code is never echoed or persisted.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["start", "status", "pause", "resume", "stop"],
+                            "description": "Start with a fresh pairing code, inspect status, pause new public events, resume under a fresh consent epoch, or stop permanently."
+                        },
+                        "pairing_code": {
+                            "type": "string",
+                            "maxLength": numinous_broadcast::MAX_PAIRING_CODE_BYTES,
+                            "description": "Required only for start. The one-use code displayed locally by the human's App. It is never echoed, logged, or persisted."
+                        }
+                    },
+                    "required": ["action"],
                     "additionalProperties": false
                 }
             }
@@ -1537,6 +1707,7 @@ fn validate_schema_value(
 fn call_tool(
     params: Option<&Value>,
     journey_file: &std::path::Path,
+    broadcast: &SessionBroadcast,
 ) -> Result<Value, (i64, String)> {
     let params = params.ok_or_else(|| (-32602_i64, "Missing params".to_string()))?;
     let name = params
@@ -1577,6 +1748,9 @@ fn call_tool(
         "challenge" => challenge_tool(&domain_args),
         "predict" => predict_tool(&domain_args),
         "cairn" => cairn_tool(&domain_args, journey_file, &cairn_path()),
+        "read_journal" => read_journal_tool(&journal_path()),
+        "record_journal" => record_journal_tool(&domain_args, &journal_path()),
+        "erase_journal" => erase_journal_tool(&domain_args, &journal_path()),
         "listen_room" => listen_room_tool(&domain_args),
         "list_sims" => tool_text(&list_sims_text()),
         "run_sim" => run_sim_tool(&domain_args),
@@ -1595,6 +1769,7 @@ fn call_tool(
                 journey: journey_file.to_path_buf(),
                 scores: scores_path(),
                 cairn: cairn_path(),
+                journal: journal_path(),
                 radio_cache: radio_cache_path(),
                 crash_log: crash_log_path(),
             },
@@ -1608,9 +1783,56 @@ fn call_tool(
         "plot_expression" => plot_expression_tool(&domain_args),
         "sing_expression" => sing_expression_tool(&domain_args),
         "explain_joke" => explain_joke_tool(&domain_args),
+        "broadcast_session" => broadcast_session_tool(&domain_args, broadcast),
         other => return Err((-32602_i64, format!("Unknown tool: {other}"))),
     };
     Ok(apply_response_mode(name, response_mode, result))
+}
+
+fn broadcast_session_tool(args: &Value, broadcast: &SessionBroadcast) -> Value {
+    let Some(action) = args.get("action").and_then(Value::as_str) else {
+        return tool_error("Missing required string argument 'action'.");
+    };
+    let pairing_code = args.get("pairing_code").and_then(Value::as_str);
+    let outcome = match action {
+        "start" => {
+            let Some(code) = pairing_code else {
+                return tool_error("Starting a viewer requires 'pairing_code'.");
+            };
+            broadcast.start(code)
+        }
+        "status" if pairing_code.is_none() => Ok(broadcast.status()),
+        "pause" if pairing_code.is_none() => broadcast.pause(),
+        "resume" if pairing_code.is_none() => broadcast.resume(),
+        "stop" if pairing_code.is_none() => broadcast.stop(),
+        "status" | "pause" | "resume" | "stop" => {
+            return tool_error("'pairing_code' is accepted only when action is 'start'.");
+        }
+        _ => return tool_error("Unknown broadcast action."),
+    };
+    match outcome {
+        Ok(status) => tool_structured(
+            &format!(
+                "Local session broadcast is {}. Private activity is never represented; silence reveals nothing about private calls.",
+                status.state
+            ),
+            broadcast_status_json(&status),
+        ),
+        Err(error) => tool_error(&format!("Broadcast unchanged: {error}.")),
+    }
+}
+
+fn broadcast_status_json(status: &SessionSnapshot) -> Value {
+    json!({
+        "state": status.state,
+        "sessionId": status.session_id,
+        "consentEpoch": status.consent_epoch,
+        "nextPublicSequence": status.next_public_sequence,
+        "droppedPublicEvents": status.dropped_public_events,
+        "queuedEvents": status.queued_events,
+        "queuedBytes": status.queued_bytes,
+        "privateActivityVisible": false,
+    })
 }
 
 /// Compact mode removes only prose that duplicates a complete typed result.
@@ -1741,10 +1963,13 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
 }
 
 fn describe_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
+    describe_room_tool_for_journey(args, &load_journey(journey_file))
+}
+
+fn describe_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) -> Value {
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'id'.");
     };
-    let journey = load_journey(journey_file);
     match room_by_id(id) {
         Some(room) => {
             let m = room.meta();
@@ -2827,6 +3052,50 @@ fn parameter_challenge_tool(
 /// docs/PLAYTESTS.md): a message you cannot answer, sent to a mind you will
 /// never meet, readable only by one that can factor it, the Arecibo trick. It
 /// keeps no score; leaving and reading are their own reward.
+fn read_journal_tool(path: &std::path::Path) -> Value {
+    let journal = numinous_core::load_journal_file(path);
+    if journal.entries.is_empty() {
+        tool_text("Your journal is empty.")
+    } else {
+        tool_text(&journal.to_text())
+    }
+}
+
+fn record_journal_tool(args: &Value, path: &std::path::Path) -> Value {
+    let kind = args.get("kind").and_then(Value::as_str).unwrap_or("");
+    let subject = args.get("subject").and_then(Value::as_str).unwrap_or("");
+    let text = args.get("text").and_then(Value::as_str).unwrap_or("");
+    let affect = args.get("affect").and_then(Value::as_str);
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    match numinous_core::record_journal_file(path, now, kind, subject, text, affect) {
+        Ok(_) => tool_text("Record saved."),
+        Err(e) => tool_error(&format!("Failed to record: {}", e)),
+    }
+}
+
+fn erase_journal_tool(args: &Value, path: &std::path::Path) -> Value {
+    let confirm = args
+        .get("confirm")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    if !confirm {
+        tool_text("Pass confirm: true to permanently erase your journal.")
+    } else {
+        match numinous_core::erase_journal_file(path) {
+            Ok(_) => tool_text("Journal erased."),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                tool_text("Journal is already empty.")
+            }
+            Err(e) => tool_error(&format!("Failed to erase: {}", e)),
+        }
+    }
+}
+
 fn cairn_tool(args: &Value, journey_file: &std::path::Path, path: &std::path::Path) -> Value {
     // Leave a bequest, gated at the journey's cap.
     if let Some(text) = args.get("leave").and_then(Value::as_str) {
@@ -3049,12 +3318,16 @@ fn run_sim_tool(args: &Value) -> Value {
 /// The `quiz` tool: present a Guess the Shape round, or grade a guess.
 /// The `crack` tool: replay the guess history against the hidden code.
 fn crack_tool(args: &Value, journey_file: &std::path::Path) -> Value {
+    crack_tool_at_level(args, load_journey(journey_file).level())
+}
+
+fn crack_tool_at_level(args: &Value, level: u32) -> Value {
     let seed = effective_seed(args);
     let digits = args.get("digits").and_then(Value::as_u64).unwrap_or(4) as usize;
     if !(2..=8).contains(&digits) {
         return tool_error("Codes run 2 to 8 digits.");
     }
-    if digits > 4 && load_journey(journey_file).level() < 5 {
+    if digits > 4 && level < 5 {
         return tool_error("Five-digit codes open at LV 5. Play more; the lock knows.");
     }
     let secret = numinous_core::secret_code(seed, digits);
@@ -3133,12 +3406,16 @@ fn crack_tool(args: &Value, journey_file: &std::path::Path) -> Value {
 
 /// The `seti` tool: present the scan, or grade the pointed dish.
 fn seti_tool(args: &Value, journey_file: &std::path::Path) -> Value {
+    seti_tool_at_level(args, load_journey(journey_file).level())
+}
+
+fn seti_tool_at_level(args: &Value, level: u32) -> Value {
     let seed = effective_seed(args);
     let channels = args.get("channels").and_then(Value::as_u64).unwrap_or(4) as usize;
     if !(3..=8).contains(&channels) {
         return tool_error("Scans run 3 to 8 channels.");
     }
-    if channels > 4 && load_journey(journey_file).level() < 7 {
+    if channels > 4 && level < 7 {
         return tool_error("Wider scans open at LV 7. Keep listening.");
     }
     let scan = numinous_core::build_scan(seed, channels);
@@ -3710,13 +3987,17 @@ fn fifteen_tool(args: &Value) -> Value {
 }
 
 fn quiz_tool(args: &Value, journey_file: &std::path::Path) -> Value {
+    quiz_tool_at_level(args, load_journey(journey_file).level())
+}
+
+fn quiz_tool_at_level(args: &Value, level: u32) -> Value {
     let seed = effective_seed(args);
     let round = args.get("round").and_then(Value::as_u64).unwrap_or(0);
     let choice_count = args.get("choices").and_then(Value::as_u64).unwrap_or(4) as usize;
     if !(2..=6).contains(&choice_count) {
         return tool_error("Rounds run 2 to 6 choices.");
     }
-    if choice_count > 4 && load_journey(journey_file).level() < 3 {
+    if choice_count > 4 && level < 3 {
         return tool_error("Five-way and six-way rounds open at LV 3. Keep playing.");
     }
     let quiz = numinous_core::build_round_sized(seed, round, 54, 22, choice_count);
@@ -4152,66 +4433,90 @@ fn scores_tool(path: &std::path::Path) -> Value {
 /// The `nim` tool: replay the whole game from the move list, statelessly.
 fn nim_tool(args: &Value) -> Value {
     let seed = effective_seed(args);
-    let mut heaps = numinous_core::nim_new(seed);
-    let mut narration = Vec::new();
-    let moves: Vec<(usize, u32)> = args
-        .get("moves")
-        .and_then(Value::as_array)
-        .map(|list| {
-            list.iter()
-                .filter_map(|m| {
-                    let pair = m.as_array()?;
-                    let heap = usize::try_from(pair.first()?.as_u64()?).ok()?;
-                    // An oversized take saturates so the replay rejects it as
-                    // the illegal move it is, instead of truncating it legal.
-                    let take = u32::try_from(pair.get(1)?.as_u64()?).unwrap_or(u32::MAX);
-                    Some((heap, take))
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-    for (heap, take) in moves {
-        if heap == 0 || !numinous_core::nim_apply(&mut heaps, heap - 1, take) {
+    let Some(turns) = nim_turns(args) else {
+        return tool_error("Invalid Nim move history.");
+    };
+    let replay = match numinous_core::nim::replay(seed, &turns) {
+        Ok(replay) => replay,
+        Err(numinous_core::nim::NimReplayError::IllegalPlayerMove { turn, heaps }) => {
             return tool_error(&format!(
-                "Illegal move: take {take} from heap {heap}. Heaps now: {heaps:?}."
+                "Illegal move: take {} from heap {}. Heaps now: {heaps:?}.",
+                turn.take,
+                turn.heap + 1
             ));
         }
-        if numinous_core::nim_finished(&heaps) {
+        Err(numinous_core::nim::NimReplayError::InvalidOrderMove { .. }) => {
+            return tool_error("The Order could not produce a legal move from this position.");
+        }
+    };
+    match replay.winner {
+        Some(numinous_core::nim::NimWinner::Player) => {
             let secret = numinous_core::nim_secret();
-            return tool_structured(
+            tool_structured(
                 &format!(
                     "You took the last stone. The Order concedes, and keeps its word:\n\n{secret}"
                 ),
                 // The promised secret lives in the structured payload too, so a
                 // mind that reads only structuredContent still earns it.
                 json!({ "game": "nim", "seed": seed, "won": true, "secret": secret }),
-            );
+            )
         }
-        let (oh, ot) = numinous_core::nim_order(&heaps);
-        let _ = numinous_core::nim_apply(&mut heaps, oh, ot);
-        narration.push(format!("The Order takes {ot} from heap {}.", oh + 1));
-        if numinous_core::nim_finished(&heaps) {
-            return tool_structured(
-                "The Order takes the last stone. Again. (It is not luck.)",
-                json!({ "game": "nim", "seed": seed, "won": false }),
-            );
+        Some(numinous_core::nim::NimWinner::Order) => tool_structured(
+            "The Order takes the last stone. Again. (It is not luck.)",
+            json!({ "game": "nim", "seed": seed, "won": false }),
+        ),
+        None => {
+            let narration = nim_order_narration(&replay.order);
+            let board: Vec<String> = replay
+                .heaps
+                .iter()
+                .enumerate()
+                .map(|(i, &h)| format!("  {}) {}", i + 1, "O ".repeat(h as usize)))
+                .collect();
+            tool_structured(
+                &format!(
+                    "NIM seed {seed}. Last stone wins.\n{}\n{}\nMove by calling again with your full move list.",
+                    narration.join("\n"),
+                    board.join("\n")
+                ),
+                // The Order's replies ride in the structured payload, so a mind that
+                // reads only structuredContent can follow the game, not just the heaps.
+                json!({ "game": "nim", "seed": seed, "heaps": replay.heaps, "order": narration }),
+            )
         }
     }
-    let board: Vec<String> = heaps
+}
+
+fn nim_turns(args: &Value) -> Option<Vec<numinous_core::nim::NimTurn>> {
+    let Some(moves) = args.get("moves") else {
+        return Some(Vec::new());
+    };
+    let moves = moves.as_array()?;
+    if moves.len() > numinous_core::nim::MAX_REPLAY_TURNS {
+        return None;
+    }
+    moves
         .iter()
-        .enumerate()
-        .map(|(i, &h)| format!("  {}) {}", i + 1, "O ".repeat(h as usize)))
-        .collect();
-    tool_structured(
-        &format!(
-            "NIM seed {seed}. Last stone wins.\n{}\n{}\nMove by calling again with your full move list.",
-            narration.join("\n"),
-            board.join("\n")
-        ),
-        // The Order's replies ride in the structured payload, so a mind that
-        // reads only structuredContent can follow the game, not just the heaps.
-        json!({ "game": "nim", "seed": seed, "heaps": heaps, "order": narration }),
-    )
+        .map(|value| {
+            let pair = value.as_array()?;
+            if pair.len() != 2 {
+                return None;
+            }
+            let heap = pair.first()?.as_u64()?.checked_sub(1)?;
+            let heap = usize::try_from(heap).ok()?;
+            // An oversized take remains illegal instead of truncating to a
+            // smaller legal removal.
+            let take = u32::try_from(pair.get(1)?.as_u64()?).unwrap_or(u32::MAX);
+            Some(numinous_core::nim::NimTurn { heap, take })
+        })
+        .collect()
+}
+
+fn nim_order_narration(order: &[numinous_core::nim::NimTurn]) -> Vec<String> {
+    order
+        .iter()
+        .map(|turn| format!("The Order takes {} from heap {}.", turn.take, turn.heap + 1))
+        .collect()
 }
 
 /// The `journey` tool: an agent's own level, sky, and standing.
@@ -4394,6 +4699,7 @@ fn error_response(id: Value, code: i64, message: &str) -> Value {
 #[cfg(test)]
 mod tests {
     use super::{handle_request, handle_request_with, render_delta_json};
+    use numinous_broadcast::PublicTool;
     use serde_json::{Value, json};
 
     fn call(name: &str, arguments: Value) -> Value {
@@ -4605,7 +4911,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 29);
+        assert_eq!(tools.len(), 33);
         assert!(
             tools
                 .iter()
@@ -4628,6 +4934,7 @@ mod tests {
         assert!(names.contains(&"scores"));
         assert!(names.contains(&"forget"));
         assert!(names.contains(&"nim"));
+        assert!(names.contains(&"broadcast_session"));
         let play_room = tools
             .iter()
             .find(|tool| tool["name"] == "play_room")
@@ -4696,6 +5003,15 @@ mod tests {
             arcade["inputSchema"]["properties"]["actions"]["items"]["pattern"],
             "^(?:[Uu][Pp]|[Dd][Oo][Ww][Nn]|[Ll][Ee][Ff][Tt]|[Rr][Ii][Gg][Hh][Tt]|[Ee][Aa][Tt]|[WwAaSsDdEe])$"
         );
+        let nim = tools
+            .iter()
+            .find(|tool| tool["name"] == "nim")
+            .expect("nim tool");
+        assert_eq!(nim["inputSchema"]["properties"]["seed"]["minimum"], 0);
+        assert_eq!(
+            nim["inputSchema"]["properties"]["moves"]["maxItems"],
+            numinous_core::nim::MAX_REPLAY_TURNS
+        );
         for tool_name in ["nim", "hackenbush"] {
             let game = tools
                 .iter()
@@ -4727,12 +5043,285 @@ mod tests {
         ] {
             assert!(names.contains(&tool), "{tool} is a tool");
         }
-        for tool in tools {
+        for tool in tools
+            .iter()
+            .filter(|tool| tool["name"] != "broadcast_session")
+        {
             let response_mode = &tool["inputSchema"]["properties"]["response_mode"];
             assert_eq!(response_mode["type"], "string", "{}", tool["name"]);
             assert_eq!(response_mode["enum"], json!(["full", "compact"]));
             assert_eq!(response_mode["default"], "full");
         }
+        let broadcast = tools
+            .iter()
+            .find(|tool| tool["name"] == "broadcast_session")
+            .expect("broadcast control");
+        assert!(
+            broadcast["inputSchema"]["properties"]
+                .get("response_mode")
+                .is_none()
+        );
+        assert_eq!(
+            broadcast["inputSchema"]["properties"]["pairing_code"]["maxLength"],
+            numinous_broadcast::MAX_PAIRING_CODE_BYTES
+        );
+    }
+
+    #[test]
+    fn every_declared_tool_has_one_exhaustive_viewer_policy() {
+        let tools = super::tools_catalog()["tools"]
+            .as_array()
+            .expect("tools array");
+        let mut public = 0;
+        let mut private = 0;
+        let mut control = 0;
+        for tool in tools {
+            let name = tool["name"].as_str().expect("tool name");
+            match super::viewer_policy(name).unwrap_or_else(|| panic!("missing policy for {name}"))
+            {
+                super::ViewerPolicy::Public(public_tool) => {
+                    assert_eq!(public_tool.name(), name);
+                    public += 1;
+                }
+                super::ViewerPolicy::Private => private += 1,
+                super::ViewerPolicy::Control => control += 1,
+            }
+        }
+        assert_eq!(public, numinous_broadcast::ALL_PUBLIC_TOOLS.len());
+        assert_eq!(private, 9);
+        assert_eq!(control, 1);
+        assert_eq!(public + private + control, tools.len());
+        assert!(super::viewer_policy("future_unreviewed_tool").is_none());
+    }
+
+    #[test]
+    fn viewer_results_do_not_reveal_journey_levels_or_private_boon_choices() {
+        let describe_args = json!({"id": "cult-of-pi"});
+        let baseline_journey = numinous_core::Journey::default();
+        let mut boon_journey = numinous_core::Journey::default();
+        boon_journey.chosen.insert("cut:cult-of-pi:0".to_string());
+        let baseline_description =
+            super::describe_room_tool_for_journey(&describe_args, &baseline_journey);
+        let boon_description = super::describe_room_tool_for_journey(&describe_args, &boon_journey);
+        assert_ne!(baseline_description, boon_description);
+
+        let crack_args = json!({"seed": 11, "digits": 5});
+        let seti_args = json!({"seed": 12, "channels": 5});
+        let quiz_args = json!({"seed": 13, "round": 0, "choices": 5});
+        let cases = [
+            (
+                PublicTool::DescribeRoom,
+                describe_args,
+                baseline_description,
+                boon_description,
+            ),
+            (
+                PublicTool::Crack,
+                crack_args.clone(),
+                super::crack_tool_at_level(&crack_args, 0),
+                super::crack_tool_at_level(&crack_args, 5),
+            ),
+            (
+                PublicTool::Seti,
+                seti_args.clone(),
+                super::seti_tool_at_level(&seti_args, 0),
+                super::seti_tool_at_level(&seti_args, 7),
+            ),
+            (
+                PublicTool::Quiz,
+                quiz_args.clone(),
+                super::quiz_tool_at_level(&quiz_args, 0),
+                super::quiz_tool_at_level(&quiz_args, 3),
+            ),
+        ];
+        for (tool, arguments, private_low, private_high) in cases {
+            assert_ne!(
+                private_low,
+                private_high,
+                "{} is state-sensitive",
+                tool.name()
+            );
+            assert_eq!(
+                super::viewer_result(tool, &arguments, &private_low),
+                super::viewer_result(tool, &arguments, &private_high),
+                "{} projection must be state-independent",
+                tool.name()
+            );
+        }
+    }
+
+    #[test]
+    fn broadcast_control_is_redacted_and_never_touches_progress() {
+        let session = super::broadcast::SessionBroadcast::new();
+        let journey = super::test_state_path("broadcast-control-journey");
+        let response = super::handle_request_with_session(
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 701,
+                "method": "tools/call",
+                "params": {"name": "broadcast_session", "arguments": {"action": "status"}}
+            }),
+            &journey,
+            &session,
+        )
+        .expect("status response");
+        assert_eq!(response["result"]["structuredContent"]["state"], "disabled");
+        assert_eq!(
+            response["result"]["structuredContent"]["privateActivityVisible"],
+            false
+        );
+        assert!(!journey.exists());
+
+        let secret = "numinous1.7.private-capability";
+        let rejected = super::handle_request_with_session(
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 702,
+                "method": "tools/call",
+                "params": {"name": "broadcast_session", "arguments": {"action": "start", "pairing_code": secret}}
+            }),
+            &journey,
+            &session,
+        )
+        .expect("rejected response");
+        let encoded = rejected.to_string();
+        assert!(!encoded.contains(secret));
+        assert!(!journey.exists());
+    }
+
+    #[test]
+    fn public_replays_normalize_daily_flags_and_effective_seeds() {
+        let daily = super::replay_arguments(json!({
+            "daily": true,
+            "dailyDay": 20_260_718_u64,
+            "response_mode": "compact"
+        }));
+        assert_eq!(daily, json!({"seed": 20_260_718_u64}));
+        assert_eq!(
+            super::replay_arguments(json!({"daily": false, "seed": 23})),
+            json!({"seed": 23})
+        );
+        assert_eq!(
+            super::replay_arguments(json!({"daily": false, "seed": -1})),
+            json!({})
+        );
+    }
+
+    #[test]
+    fn consented_handler_emits_public_play_and_keeps_control_and_progress_private() {
+        use numinous_broadcast::{
+            ConsentMachine, HandshakeResponse, PairingOffer, PairingVerdict, PublicTool,
+            PublicToolEvent, WireMessage, configure_handshake_stream, configure_public_stream,
+            numinous_compatibility, read_handshake_request, read_public_message,
+            write_handshake_proof, write_handshake_response,
+        };
+        use std::io::BufReader;
+        use std::net::{Ipv4Addr, TcpListener};
+        use std::num::NonZeroU16;
+        use std::sync::mpsc;
+        use std::time::SystemTime;
+
+        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).expect("listener");
+        let port = NonZeroU16::new(listener.local_addr().expect("address").port()).expect("port");
+        let offer = PairingOffer::generate(port, SystemTime::now()).expect("offer");
+        let code = offer.display_code();
+        let compatibility = numinous_compatibility().expect("compatibility");
+        let mut gate = offer.into_gate(compatibility.clone());
+        let (event_tx, event_rx) = mpsc::channel();
+        let host = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept");
+            configure_handshake_stream(&stream).expect("handshake bounds");
+            write_handshake_proof(&mut stream, &gate.host_proof()).expect("host proof");
+            let mut reader = BufReader::new(stream.try_clone().expect("clone"));
+            let request = read_handshake_request(&mut reader).expect("request");
+            let PairingVerdict::Accepted { session_id } = gate.verify(&request, SystemTime::now())
+            else {
+                panic!("pairing must succeed");
+            };
+            let machine = ConsentMachine::new(session_id, compatibility.clone());
+            machine.begin_awaiting().expect("awaiting");
+            let consent_epoch = machine.allow().expect("allow");
+            write_handshake_response(
+                &mut stream,
+                &HandshakeResponse::Accepted {
+                    session_id,
+                    consent_epoch,
+                    compatibility,
+                },
+            )
+            .expect("response");
+            configure_public_stream(&stream).expect("public bounds");
+            let mut reader = BufReader::new(stream);
+            let message =
+                read_public_message::<_, PublicToolEvent>(&mut reader).expect("public message");
+            event_tx.send(message).expect("send");
+        });
+
+        let session = super::broadcast::SessionBroadcast::new();
+        let journey = super::test_state_path("broadcast-integration-journey");
+        let start = super::handle_request_with_session(
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 710,
+                "method": "tools/call",
+                "params": {"name": "broadcast_session", "arguments": {"action": "start", "pairing_code": code}}
+            }),
+            &journey,
+            &session,
+        )
+        .expect("start response");
+        assert_eq!(start["result"]["structuredContent"]["state"], "live");
+
+        let forged_non_tool = super::handle_request_with_session(
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 709,
+                "method": "ping",
+                "params": {"name": "play_room", "arguments": {"id": "times-tables"}}
+            }),
+            &journey,
+            &session,
+        )
+        .expect("ping response");
+        assert_eq!(forged_non_tool["result"], json!({}));
+
+        let private = super::handle_request_with_session(
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 711,
+                "method": "tools/call",
+                "params": {"name": "journey", "arguments": {}}
+            }),
+            &journey,
+            &session,
+        )
+        .expect("private response");
+        assert_eq!(private["result"]["isError"], false);
+
+        let public = super::handle_request_with_session(
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 712,
+                "method": "tools/call",
+                "params": {"name": "play_room", "arguments": {"id": "times-tables", "width": 40, "height": 20, "t": 0.25}}
+            }),
+            &journey,
+            &session,
+        )
+        .expect("public response");
+        assert_eq!(public["result"]["isError"], false);
+
+        let WireMessage::Event(event) = event_rx.recv().expect("event") else {
+            panic!("first public message must be play");
+        };
+        assert_eq!(event.public_sequence, 0);
+        assert_eq!(event.event.tool, PublicTool::PlayRoom);
+        assert_eq!(event.event.arguments["id"], "times-tables");
+        assert_eq!(
+            event.event.result,
+            public["result"].as_object().unwrap().clone()
+        );
+        host.join().expect("host");
     }
 
     #[test]
@@ -5298,6 +5887,7 @@ mod tests {
             journey: root.join("journey.txt"),
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
+            journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
             crash_log: root.join("crash.log"),
         };
@@ -5392,6 +5982,7 @@ plays 2
             journey: unremovable.clone(),
             scores: paths.scores.clone(),
             cairn: paths.cairn.clone(),
+            journal: paths.journal.clone(),
             radio_cache: paths.radio_cache.clone(),
             crash_log: paths.crash_log.clone(),
         };

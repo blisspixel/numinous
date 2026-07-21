@@ -7,7 +7,7 @@ How Numinous is built. Non-negotiables: it is a **real native application** (not
 > live fractal paths with portable **`wgpu`** and WGSL. The same deterministic
 > headless core powers the App, CLI, and MCP faces. Details below.
 
-**Shipped stack, 2026-07-13:** the app uses a bespoke `winit` event loop,
+**Shipped stack, 2026-07-18:** the app uses a bespoke `winit` event loop,
 `softbuffer` CPU presentation, `gilrs` standard-controller input, and targeted
 `wgpu` paths for Mandelbrot and Julia. The headless core renders every room
 through `Surface`; the CLI and MCP faces consume the same core. Audio uses
@@ -202,7 +202,8 @@ numinous/
 ├── crates/
 │   ├── core/            # rooms, sims, games, Studio math, persistence, audio specs
 │   ├── gpu/             # optional wgpu fractal renderer with CPU fallback
-│   └── audio/           # cpal output and looping sample player
+│   ├── audio/           # cpal output and looping sample player
+│   └── broadcast/       # consent, pairing, framing, identity, bounded queue
 ├── faces/
 │   ├── app/             # winit window, softbuffer, mouse/controller input, radio
 │   ├── cli/             # terminal play, render, export, Studio, games
@@ -214,9 +215,17 @@ numinous/
 ```
 
 **Dependency rule:** mathematical domain behavior lives in `numinous-core`.
-The three faces depend on core but never on one another. `numinous-gpu` and
+The three production faces depend on core but never on one another. The MCP
+integration suite uses the App library as a development-only dependency so one
+test can exercise the shipped viewer against the shipped MCP subprocess without
+duplicating either face. `numinous-gpu` and
 `numinous-audio` are adapters used by faces, not alternate owners of room logic.
-Rooms are core modules registered through one registry.
+`numinous-broadcast` owns face-independent local session transport primitives,
+typed public replay values, and the compatibility identity derived from core
+catalog metadata. It never owns gameplay or persistence. MCP depends on that
+crate through a thin producer adapter. The App depends on it through a
+face-local loopback listener and read-only presentation adapter. Rooms are core
+modules registered through one registry.
 
 **Headless in production today.** Core rendering and audio synthesis work without
 a window. The CLI, MCP server, exporters, and automated suite all use that seam.
@@ -244,11 +253,37 @@ a window. The CLI, MCP server, exporters, and automated suite all use that seam.
 - **Current CI:** house style, dependency policy, coverage, format plus clippy
   plus rustdoc, doctests, all-target tests, and macOS, Ubuntu, and Windows
   builds. There is no automated beauty screenshot job.
-- **Planned local session broadcast:** the App and MCP faces remain independent.
-  A small shared broadcast crate will own an authenticated, bounded loopback
-  event protocol so the App can reconstruct a consenting MCP guest's public
-  Numinous play without receiving prompts, reasoning, host logs, or arbitrary
-  protocol traffic. `INTERFACES.md` owns the complete contract.
+- **Local session broadcast, native room, Studio, Nim, and sound viewer, and subprocess proof built:**
+  the App and MCP production faces remain independent. The shared broadcast
+  crate owns one-use loopback pairing, server-first host proof, strict bounded
+  framing, replay compatibility identity, typed public tool events, atomic
+  consent epochs, ordered control barriers, and a fixed event queue. MCP adds
+  one consent control, an exhaustive 23-public, 6-private, 1-control policy,
+  daily-seed replay normalization, one serialized lifecycle, a bounded
+  failed-start budget, and separate socket monitor and writer workers. The App
+  adds exact receive-side session, compatibility, epoch, transition, sequence,
+  and gap validation, an ephemeral loopback listener, and a read-only Watch
+  Agent surface for typed action identity, input JSON, and human-readable MCP
+  result text. Valid `play_room` actions are revalidated and reconstructed from
+  the same core `Room` implementation at the local viewport size; invalid replay
+  values fall back to typed text. Successful `plot_expression` actions are
+  strictly parsed and rendered through one deterministic curve sampler shared
+  with the live App Studio. Successful public `nim` actions are reduced through
+  the shared core replay rules, attested against the complete MCP result, and
+  drawn through one bounded heap renderer shared with the live App. Its ring
+  retains at most 256 serialized public
+  events or 16 MiB, persists nothing, and clears on close. A development-only
+  MCP integration test opens that exact viewer and drives the actual MCP binary
+  through the Times Tables explore, challenge, K5 goal, reveal, and stop path.
+  Separate real sessions prove Formula Jam expression delivery, native Nim
+  delivery, and exact local-viewport body pixels. `INTERFACES.md` owns the
+  complete contract and privacy boundary. Strictly accepted native room and
+  Studio selections derive bounded mono sound from their shared core state at a
+  fixed 16 kHz source rate, then the audio adapter resamples to the output
+  device. One public-sequence owner prevents render-loop restarts; unsupported
+  selections publish silence. Mute, volume, focus, scrub, close, room-score
+  restoration, and live-radio restoration remain App-local behavior with no
+  control edge to MCP. Other native game replay remains 0.3 work.
 - **Release path:** packaged artifacts belong to 0.6. The public launch gate is
   0.9.
 

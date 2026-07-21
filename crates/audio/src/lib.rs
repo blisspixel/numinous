@@ -964,6 +964,16 @@ impl LoopPlayer {
         self.replace_source(next);
     }
 
+    /// Crossfade to mono samples rendered at their original rate.
+    ///
+    /// The real-time loop interpolates them at the device rate, so a bounded
+    /// source does not need to allocate again for a high-rate output device.
+    /// Content and source rate together form the replacement identity.
+    pub fn set_samples_at_rate(&self, samples: Vec<f32>, source_rate: u32) {
+        let next = LoopBuffer::new_at_rate(samples, 1, source_rate, self.sample_rate);
+        self.replace_source(next);
+    }
+
     /// Crossfade to a mono looping buffer over a caller-selected duration.
     ///
     /// Accepted durations are finite and between 5 milliseconds and 2 seconds.

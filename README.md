@@ -120,6 +120,30 @@ lever-driven simulations, Journey progression, Formula Jam, local music and
 radio, still and short-loop sharing, mouse and keyboard control, and
 hotplugged-controller support.
 
+The native App now includes Watch Agent, a human-facing local MCP session
+viewer. Press X, or choose Watch Agent from the controller menu, to open a
+short-lived one-use loopback pairing offer. A separately consenting MCP player
+can then broadcast allowlisted public play while the human pauses the local
+display, scrubs a bounded in-memory timeline, and reads typed public actions,
+inputs, and human-readable MCP result text. Public `play_room` actions
+reconstruct the same deterministic core room as a native frame at the human's
+local viewport size. Successful public `plot_expression` actions reconstruct
+their validated Formula Jam curve through the same sampler as the live Studio.
+Public `nim` actions replay the shared core rules and reconstruct the same
+bounded three-heap board used by the live App.
+Selected native room and Formula Jam actions also replay their deterministic
+core sound locally. Scrubbing changes the owned sound once, unsupported or
+invalid actions are silent, M and the controller sound chord remain global,
+and closing Watch Agent restores the room score or rejoins a live radio station.
+The viewer receives no prompts,
+reasoning, private progression, local paths, logs, client metadata, or arbitrary
+protocol traffic, and it persists no transcript. A real MCP subprocess test now
+proves the complete Times Tables explore, challenge, K5 goal, reveal, and stop
+path through the actual App viewer, and a separate real session proves native
+Studio creation and exact Formula Jam sound samples. A third real session
+proves native Nim delivery and exact game body pixels. Other public game tools
+remain active 0.3 work.
+
 The alpha label is meaningful. Automated correctness, security, coverage,
 cross-platform build, and installer gates are strong, but the 0.2 release still
 requires real hallway playtests, accessibility sessions, representative
@@ -139,13 +163,14 @@ The ordered release criteria and open evidence are in
 Numinous is **version 0.2.0-alpha.1**, actively earning the 0.2 Flagship Proof
 gate. It is not on the old 0.1 line: the 0.1 Public Foundation is complete.
 Numinous already has a headless core, a
-windowed app, a full CLI, an MCP server, GPU and audio adapters, 351 catalog
+windowed app, a full CLI, an MCP server, GPU, audio, and local-broadcast
+adapters, 351 catalog
 rooms plus hidden content, games, progression, a Studio foundation, and the
 built-in soundtrack. Mouse, keyboard, and hotplugged controllers share the
 native App, including a controller-driven virtual hand for every room. The
 visible legends follow the last meaningful keyboard, pointer, or controller
 action across rooms, games, Show, Journey, and Studio. Controller routes cover
-all eight menu destinations, while R3 provides a visible pause that blocks
+all nine menu destinations, while R3 provides a visible pause that blocks
 gameplay input until resumed. Studio formula entry still requires a keyboard
 and says so directly.
 
@@ -212,18 +237,19 @@ This is an alpha-tagged prerelease. Capability breadth is ahead of release
 maturity because the 0.2 Flagship Proof gate, including the real hallway
 evidence, remains open.
 
-The MCP face exposes 29 mostly flat, replayable tools. Every tool advertises an
-optional `response_mode`: `full` remains the exact default, while `compact`
+The MCP face exposes 29 mostly flat play tools plus one local broadcast consent
+control. Every play tool advertises an optional `response_mode`: `full` remains
+the exact default, while `compact`
 removes duplicated prose only when the unchanged `structuredContent` already
 carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The verified July 18, 2026 gate has 2,869 passing all-target test cases plus one
-ignored screenshot diagnostic, 95.39% region coverage and 95.44% line coverage
+The verified July 18, 2026 gate has 2,985 passing all-target test cases plus one
+ignored screenshot diagnostic, 95.44% region coverage and 95.55% line coverage
 with an enforced 80% line floor, Clippy with warnings denied, and dependency
 policy checks. Release QA also regenerates an exact
-2,911-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
+2,913-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
 room receipts, per-room interaction scenarios, semantic checks, and coarse
 perceptual response thresholds, including a regression that rejects
 four isolated corner markers as a meaningful interaction. The inventory is

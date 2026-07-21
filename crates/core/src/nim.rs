@@ -11,6 +11,61 @@ use crate::rng::SplitMix64;
 /// Decorrelates nim seeds from other seeded systems.
 const NIM_MIX: u64 = 0x0000_1D1E_0000_D00D;
 
+/// Maximum player turns accepted in one serialized stateless replay.
+///
+/// A legal three-heap game ends well before this cap because the opening board
+/// contains at most 21 stones. The extra headroom preserves compatibility while
+/// bounding padded histories before replay.
+pub const MAX_REPLAY_TURNS: usize = 64;
+
+/// One zero-based heap removal in a deterministic Nim replay.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct NimTurn {
+    /// Zero-based heap index.
+    pub heap: usize,
+    /// Positive number of stones removed.
+    pub take: u32,
+}
+
+/// The side that took the final stone in a completed replay.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum NimWinner {
+    /// The player supplied the final move.
+    Player,
+    /// The deterministic Order reply supplied the final move.
+    Order,
+}
+
+/// Complete public state produced by replaying one player move history.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NimReplay {
+    /// Heap sizes after every accepted player move and deterministic reply.
+    pub heaps: Vec<u32>,
+    /// Deterministic Order replies made before the replay ended.
+    pub order: Vec<NimTurn>,
+    /// Winner when the board is empty, otherwise `None`.
+    pub winner: Option<NimWinner>,
+}
+
+/// A replay that cannot follow the supplied or internally selected move.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum NimReplayError {
+    /// The player attempted an illegal removal from the current heaps.
+    IllegalPlayerMove {
+        /// Rejected zero-based move.
+        turn: NimTurn,
+        /// Heap state immediately before the rejected move.
+        heaps: Vec<u32>,
+    },
+    /// The Order reducer produced no legal move from a nonempty board.
+    InvalidOrderMove {
+        /// Rejected zero-based Order move.
+        turn: NimTurn,
+        /// Heap state immediately before the rejected move.
+        heaps: Vec<u32>,
+    },
+}
+
 /// A fresh game's heaps: three piles, never a lost cause for the first mover.
 #[must_use]
 pub fn new_game(seed: u64) -> Vec<u32> {
@@ -64,6 +119,46 @@ pub fn order_move(heaps: &[u32]) -> (usize, u32) {
     }
 }
 
+/// Replays a player's complete move history and every deterministic Order reply.
+///
+/// Reaching either winner ends the replay immediately, matching the faces that
+/// treat a completed game as terminal even if a caller supplied trailing moves.
+pub fn replay(seed: u64, player_turns: &[NimTurn]) -> Result<NimReplay, NimReplayError> {
+    let mut heaps = new_game(seed);
+    let mut order = Vec::new();
+    for &turn in player_turns {
+        if !apply(&mut heaps, turn.heap, turn.take) {
+            return Err(NimReplayError::IllegalPlayerMove { turn, heaps });
+        }
+        if finished(&heaps) {
+            return Ok(NimReplay {
+                heaps,
+                order,
+                winner: Some(NimWinner::Player),
+            });
+        }
+
+        let (heap, take) = order_move(&heaps);
+        let turn = NimTurn { heap, take };
+        if !apply(&mut heaps, turn.heap, turn.take) {
+            return Err(NimReplayError::InvalidOrderMove { turn, heaps });
+        }
+        order.push(turn);
+        if finished(&heaps) {
+            return Ok(NimReplay {
+                heaps,
+                order,
+                winner: Some(NimWinner::Order),
+            });
+        }
+    }
+    Ok(NimReplay {
+        heaps,
+        order,
+        winner: None,
+    })
+}
+
 /// The secret, handed over in full when it has been earned.
 #[must_use]
 pub fn the_secret() -> &'static str {
@@ -77,7 +172,10 @@ pub fn the_secret() -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::{apply, finished, new_game, order_move, the_secret};
+    use super::{
+        NimReplayError, NimTurn, NimWinner, apply, finished, new_game, order_move, replay,
+        the_secret,
+    };
 
     fn xor(heaps: &[u32]) -> u32 {
         heaps.iter().fold(0, |x, &h| x ^ h)
@@ -142,6 +240,50 @@ mod tests {
         assert!(!finished(&heaps));
         assert!(apply(&mut heaps, 0, 3));
         assert!(finished(&heaps));
+    }
+
+    #[test]
+    fn replay_owns_player_validation_order_replies_and_terminal_state() {
+        let seed = 23;
+        let opening = replay(seed, &[]).expect("opening replay");
+        assert_eq!(opening.heaps, new_game(seed));
+        assert!(opening.order.is_empty());
+        assert_eq!(opening.winner, None);
+
+        let turn = NimTurn { heap: 0, take: 1 };
+        let continued = replay(seed, &[turn]).expect("legal replay");
+        assert_eq!(continued.order.len(), 1);
+        assert_eq!(continued.winner, None);
+
+        let invalid = replay(seed, &[NimTurn { heap: 3, take: 1 }]);
+        assert_eq!(
+            invalid,
+            Err(NimReplayError::IllegalPlayerMove {
+                turn: NimTurn { heap: 3, take: 1 },
+                heaps: new_game(seed),
+            })
+        );
+    }
+
+    #[test]
+    fn replay_stops_when_a_perfect_player_takes_the_last_stone() {
+        for seed in 0..15 {
+            let mut heaps = new_game(seed);
+            let mut turns = Vec::new();
+            loop {
+                let (heap, take) = order_move(&heaps);
+                turns.push(NimTurn { heap, take });
+                assert!(apply(&mut heaps, heap, take));
+                if finished(&heaps) {
+                    break;
+                }
+                let (heap, take) = order_move(&heaps);
+                assert!(apply(&mut heaps, heap, take));
+            }
+            let replayed = replay(seed, &turns).expect("perfect history");
+            assert_eq!(replayed.winner, Some(NimWinner::Player));
+            assert!(replayed.heaps.iter().all(|heap| *heap == 0));
+        }
     }
 
     #[test]
