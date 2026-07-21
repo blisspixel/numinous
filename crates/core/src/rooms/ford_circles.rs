@@ -233,7 +233,17 @@ fn draw_fords(canvas: &mut dyn Surface, circles: &[Ford], highlight: Option<Ford
         plate.draw_circle(canvas, f.x(), f.radius(), f.radius(), '*');
     }
     if let Some(born) = highlight {
-        plate.draw_circle(canvas, born.x(), born.radius(), born.radius(), '#');
+        // New mediants can be tiny; enforce a visible floor so birth is the art,
+        // not a one-pixel blink or a reticle overlay.
+        let r = born.radius().max(1.0 / (2.0 * 12.0 * 12.0));
+        plate.draw_circle(canvas, born.x(), r, r, '#');
+        let cx = (plate.ox + born.x() * plate.scale).round() as i32;
+        let cy = (plate.baseline - r * plate.scale).round() as i32;
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                canvas.plot(cx + dx, cy + dy, '#');
+            }
+        }
     }
     // Baseline number line.
     let y = height.saturating_sub(1) as i32;

@@ -108,29 +108,68 @@ pub(crate) fn record_pointer_move(inputs: &mut Vec<RoomInput>, point: (f64, f64)
     true
 }
 
+/// How a room should treat the lift that ends a pointer gesture.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ReleaseMode {
+    /// Dial: strip drag so ambient resumes; pure click keeps its plant.
+    Dial,
+    /// Click plant: micro-moves collapse to one plant at the release point.
+    Plant,
+    /// Fling / drop: keep the full down / move / up sequence.
+    Fling,
+}
+
+/// Choose release retention from the room id and its declared verb.
+#[must_use]
+pub(crate) fn release_mode(room_id: &str, verb: &str) -> ReleaseMode {
+    if room_keeps_drag_after_release(room_id) {
+        return ReleaseMode::Fling;
+    }
+    if verb.starts_with("CLICK") {
+        return ReleaseMode::Plant;
+    }
+    ReleaseMode::Dial
+}
+
 /// Record the lift that completes a gesture, stamped with the room phase.
 ///
-/// When `keep_drag` is false and the open gesture included moves (a dial
-/// drag), the whole gesture is dropped so the room resumes ambient motion
-/// with no sticky hand. Pure clicks always keep their down. When `keep_drag`
-/// is true (fling/drop rooms), the full release sequence is retained.
+/// - [`ReleaseMode::Dial`]: a drag is dropped so the room resumes ambient
+///   motion with no sticky hand. A pure click keeps its plant.
+/// - [`ReleaseMode::Plant`]: even a jittery click collapses to one down/up at
+///   the release point (no leftover trail, plant still fires).
+/// - [`ReleaseMode::Fling`]: the full release sequence is retained.
 pub(crate) fn record_pointer_up(
     inputs: &mut Vec<RoomInput>,
     point: (f64, f64),
     t: f64,
-    keep_drag: bool,
+    mode: ReleaseMode,
 ) -> bool {
     let Some((x, y)) = normalize_poke(point) else {
         keep_newest_inputs(inputs);
         return false;
     };
     let drag = last_open_gesture_had_move(inputs);
-    if drag && !keep_drag {
-        strip_last_open_gesture(inputs);
-        keep_newest_inputs(inputs);
-        return true;
+    match mode {
+        ReleaseMode::Fling => {
+            inputs.push(RoomInput::PointerUp { x, y, t });
+        }
+        ReleaseMode::Dial => {
+            if drag {
+                strip_last_open_gesture(inputs);
+                keep_newest_inputs(inputs);
+                return true;
+            }
+            inputs.push(RoomInput::PointerUp { x, y, t });
+        }
+        ReleaseMode::Plant => {
+            if drag {
+                // Drop move samples so CLICK rooms add one plant, not a trail.
+                strip_last_open_gesture(inputs);
+                inputs.push(RoomInput::PointerDown { x, y, t });
+            }
+            inputs.push(RoomInput::PointerUp { x, y, t });
+        }
     }
-    inputs.push(RoomInput::PointerUp { x, y, t });
     keep_newest_inputs(inputs);
     true
 }
@@ -302,7 +341,12 @@ mod tests {
                 ));
             }
         }
-        assert!(record_pointer_up(&mut inputs, (0.60, 0.50), 0.15, false));
+        assert!(record_pointer_up(
+            &mut inputs,
+            (0.60, 0.50),
+            0.15,
+            ReleaseMode::Dial
+        ));
         // Drag release clears the gesture so dial rooms resume ambient art.
         assert!(
             inputs.is_empty(),
@@ -316,7 +360,12 @@ mod tests {
         assert!(record_pointer_down(&mut inputs, (0.1, 0.2), 0.0));
         assert!(record_pointer_move(&mut inputs, (0.4, 0.5), 0.1));
         assert!(record_pointer_move(&mut inputs, (0.7, 0.6), 0.2));
-        assert!(record_pointer_up(&mut inputs, (0.8, 0.7), 0.3, false));
+        assert!(record_pointer_up(
+            &mut inputs,
+            (0.8, 0.7),
+            0.3,
+            ReleaseMode::Dial
+        ));
         assert!(
             inputs.is_empty(),
             "dial drags must not leave sticky hands: {inputs:?}"
@@ -327,10 +376,55 @@ mod tests {
     fn a_pure_click_keeps_the_plant_for_rooms_that_need_it() {
         let mut inputs = Vec::new();
         assert!(record_pointer_down(&mut inputs, (0.3, 0.4), 0.0));
-        assert!(record_pointer_up(&mut inputs, (0.3, 0.4), 0.1, false));
+        assert!(record_pointer_up(
+            &mut inputs,
+            (0.3, 0.4),
+            0.1,
+            ReleaseMode::Plant
+        ));
         assert_eq!(inputs.len(), 2);
         assert!(matches!(inputs[0], RoomInput::PointerDown { .. }));
         assert!(matches!(inputs[1], RoomInput::PointerUp { .. }));
+    }
+
+    #[test]
+    fn a_jittery_click_collapses_to_one_plant_not_a_trail() {
+        let mut inputs = Vec::new();
+        assert!(record_pointer_down(&mut inputs, (0.30, 0.40), 0.0));
+        assert!(record_pointer_move(&mut inputs, (0.31, 0.41), 0.02));
+        assert!(record_pointer_move(&mut inputs, (0.32, 0.42), 0.04));
+        assert!(record_pointer_up(
+            &mut inputs,
+            (0.33, 0.43),
+            0.06,
+            ReleaseMode::Plant
+        ));
+        assert_eq!(
+            inputs.len(),
+            2,
+            "jitter must not leave move chrome: {inputs:?}"
+        );
+        assert!(matches!(
+            inputs[0],
+            RoomInput::PointerDown {
+                x,
+                y,
+                ..
+            } if (x - 0.33).abs() < 1e-9 && (y - 0.43).abs() < 1e-9
+        ));
+        assert!(matches!(inputs[1], RoomInput::PointerUp { .. }));
+        assert_eq!(
+            release_mode("upside-ruler", "CLICK: ADD ONE"),
+            ReleaseMode::Plant
+        );
+        assert_eq!(
+            release_mode("serpentine", "DRAG: TUNE A"),
+            ReleaseMode::Dial
+        );
+        assert_eq!(
+            release_mode("double-pendulum", "CLICK: RE-DROP"),
+            ReleaseMode::Fling
+        );
     }
 
     #[test]
@@ -338,7 +432,12 @@ mod tests {
         let mut inputs = Vec::new();
         assert!(record_pointer_down(&mut inputs, (0.1, 0.2), 0.0));
         assert!(record_pointer_move(&mut inputs, (0.4, 0.5), 0.1));
-        assert!(record_pointer_up(&mut inputs, (0.8, 0.7), 0.3, true));
+        assert!(record_pointer_up(
+            &mut inputs,
+            (0.8, 0.7),
+            0.3,
+            ReleaseMode::Fling
+        ));
         assert_eq!(inputs.len(), 3);
         assert!(matches!(inputs[2], RoomInput::PointerUp { .. }));
     }
@@ -360,7 +459,7 @@ mod tests {
             &mut inputs,
             (0.5, f64::INFINITY),
             0.2,
-            false
+            ReleaseMode::Dial
         ));
         assert_eq!(inputs.len(), 1);
         for i in 0..numinous_core::MAX_ROOM_INPUTS + 9 {
@@ -393,7 +492,7 @@ mod tests {
             "a closed gesture is not re-cancelled"
         );
         record_pointer_down(&mut inputs, (0.6, 0.5), 0.2);
-        record_pointer_up(&mut inputs, (0.6, 0.5), 0.3, false);
+        record_pointer_up(&mut inputs, (0.6, 0.5), 0.3, ReleaseMode::Dial);
         assert!(
             !cancel_open_gesture(&mut inputs, 0.4),
             "a released gesture is not cancelled"
