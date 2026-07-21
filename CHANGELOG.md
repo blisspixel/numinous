@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Panel depth pack (cycle 152): App key K writes a share pack (postcard + loop +
+  README folder, CLI `share` parity) with a dedicated save-gate cooldown;
+  wrong-number Munch bites add a soft buzz and screen shake on top of the
+  crunch; The Show phase rate answers visualizer motion when the mix is driving.
 - Mega pack (cycle 151): spectrum levers drive room motion and soft beat pokes
   when the visualizer is on output-mix or loopback (bass pumps a visualizer
   time scale, treble/onset nudge phase, beat hits plant a soft hand point);

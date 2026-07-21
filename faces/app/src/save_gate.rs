@@ -4,12 +4,15 @@ const MIN_SAVE_INTERVAL: Duration = Duration::from_millis(500);
 /// Short loops encode many frames; keep a longer cooldown so one hold cannot
 /// flood the home directory with multi-megabyte APNGs.
 const MIN_LOOP_INTERVAL: Duration = Duration::from_secs(2);
+/// Share packs write still + loop + README; match the loop cooldown.
+const MIN_BUNDLE_INTERVAL: Duration = Duration::from_secs(2);
 
 #[derive(Clone, Copy)]
 pub(crate) enum SaveKind {
     PlaytestNote,
     Postcard,
     ShortLoop,
+    ShareBundle,
 }
 
 #[derive(Default)]
@@ -17,12 +20,13 @@ pub(crate) struct SaveGate {
     playtest_note: Option<Instant>,
     postcard: Option<Instant>,
     short_loop: Option<Instant>,
+    share_bundle: Option<Instant>,
 }
 
 impl SaveGate {
     /// Admit one physical press per save action and bound rapid synthetic
     /// presses. Actions remain independent so a diagnostic note, a still
-    /// postcard, and a short loop never block each other.
+    /// postcard, a short loop, and a share pack never block each other.
     pub(crate) fn admit(&mut self, kind: SaveKind, now: Instant, repeated: bool) -> bool {
         if repeated {
             return false;
@@ -31,6 +35,7 @@ impl SaveGate {
             SaveKind::PlaytestNote => (&mut self.playtest_note, MIN_SAVE_INTERVAL),
             SaveKind::Postcard => (&mut self.postcard, MIN_SAVE_INTERVAL),
             SaveKind::ShortLoop => (&mut self.short_loop, MIN_LOOP_INTERVAL),
+            SaveKind::ShareBundle => (&mut self.share_bundle, MIN_BUNDLE_INTERVAL),
         };
         if let Some(elapsed) = previous.and_then(|last| now.checked_duration_since(last)) {
             if elapsed < min_interval {
@@ -71,9 +76,11 @@ mod tests {
         assert!(gate.admit(SaveKind::PlaytestNote, start, false));
         assert!(gate.admit(SaveKind::Postcard, start, false));
         assert!(gate.admit(SaveKind::ShortLoop, start, false));
+        assert!(gate.admit(SaveKind::ShareBundle, start, false));
         assert!(!gate.admit(SaveKind::PlaytestNote, start, true));
         assert!(!gate.admit(SaveKind::Postcard, start, true));
         assert!(!gate.admit(SaveKind::ShortLoop, start, true));
+        assert!(!gate.admit(SaveKind::ShareBundle, start, true));
     }
 
     #[test]
