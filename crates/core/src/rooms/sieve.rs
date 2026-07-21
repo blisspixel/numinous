@@ -153,15 +153,6 @@ impl Room for Sieve {
             .map(|&(_, y)| 2 + (y * (n as f64).sqrt()) as usize)
             .unwrap_or(n);
         draw(canvas, &primes, strike);
-        if let Some(&(x, y)) = hands.last() {
-            let (width, height) = canvas.draw_bounds();
-            if width > 0 && height > 0 {
-                let px = (x * width.saturating_sub(1) as f64).round() as i32;
-                let py = (y * height.saturating_sub(1) as f64).round() as i32;
-                canvas.line(px - 2, py, px + 2, py, 'o');
-                canvas.line(px, py - 2, px, py + 2, 'o');
-            }
-        }
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

@@ -143,15 +143,6 @@ impl Room for Unknot {
         let hands = finite_pokes(pokes);
         let k = kink(t, hands.last().copied(), self.seed);
         draw(canvas, k, self.seed ^ hands.len() as u64);
-        if let Some(&(x, y)) = hands.last() {
-            let (bw, bh) = canvas.draw_bounds();
-            if bw > 0 && bh > 0 {
-                let px = (x * bw.saturating_sub(1) as f64).round() as i32;
-                let py = (y * bh.saturating_sub(1) as f64).round() as i32;
-                canvas.line(px - 2, py, px + 2, py, 'o');
-                canvas.line(px, py - 2, px, py + 2, 'o');
-            }
-        }
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

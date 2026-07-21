@@ -202,14 +202,6 @@ impl Room for Starbow {
         }
         let beta = self.beta_at(t, pokes);
         draw_starbow(canvas, beta, self.seed);
-        let (width, height) = canvas.draw_bounds();
-        if width > 0 && height > 0 {
-            for &(x, y) in &hands {
-                let px = (x * width.saturating_sub(1) as f64).round() as i32;
-                let py = (y * height.saturating_sub(1) as f64).round() as i32;
-                canvas.plot(px, py, '+');
-            }
-        }
     }
 
     fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
