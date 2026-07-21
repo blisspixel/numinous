@@ -291,55 +291,87 @@ pub const fn quiz_direction(mode: InputMode, index: usize) -> &'static str {
 }
 
 pub fn munch_live(mode: InputMode) -> String {
+    munch_live_with_face(mode, ControllerFace::Generic)
+}
+
+/// Munch live chrome with adaptive face glyphs.
+pub fn munch_live_with_face(mode: InputMode, face: ControllerFace) -> String {
     format!(
         "{}   {}   {}   {}",
-        item(mode, Control::Move, "MOVE"),
-        item(mode, Control::Primary, "EAT"),
-        item(mode, Control::Submit, "DONE"),
-        item(mode, Control::Back, "LEAVE")
+        item_with_face(mode, Control::Move, "MOVE", face),
+        item_with_face(mode, Control::Primary, "EAT", face),
+        item_with_face(mode, Control::Submit, "DONE", face),
+        item_with_face(mode, Control::Back, "LEAVE", face)
     )
 }
 
 pub fn munch_result(mode: InputMode) -> String {
+    munch_result_with_face(mode, ControllerFace::Generic)
+}
+
+/// Munch result chrome with adaptive face glyphs.
+pub fn munch_result_with_face(mode: InputMode, face: ControllerFace) -> String {
     format!(
         "{}   {}",
-        item(mode, Control::Retry, "NEXT BOARD"),
-        item(mode, Control::Back, "LEAVE")
+        item_with_face(mode, Control::Retry, "NEXT BOARD", face),
+        item_with_face(mode, Control::Back, "LEAVE", face)
     )
 }
 
 pub fn arcade_live(mode: InputMode) -> String {
+    arcade_live_with_face(mode, ControllerFace::Generic)
+}
+
+/// Arcade live chrome with adaptive face glyphs.
+pub fn arcade_live_with_face(mode: InputMode, face: ControllerFace) -> String {
     format!(
         "{}   {}   DON'T BE CAUGHT   {}",
-        item(mode, Control::Move, "RUN"),
-        item(mode, Control::Primary, "EAT"),
-        item(mode, Control::Back, "LEAVE")
+        item_with_face(mode, Control::Move, "RUN", face),
+        item_with_face(mode, Control::Primary, "EAT", face),
+        item_with_face(mode, Control::Back, "LEAVE", face)
     )
 }
 
 pub fn arcade_over(mode: InputMode) -> String {
+    arcade_over_with_face(mode, ControllerFace::Generic)
+}
+
+/// Arcade over chrome with adaptive face glyphs.
+pub fn arcade_over_with_face(mode: InputMode, face: ControllerFace) -> String {
     match mode {
         InputMode::KeyboardMouse => "ANY KEY LEAVES".to_string(),
-        InputMode::Controller => item(mode, Control::Retry, "LEAVES"),
+        InputMode::Controller => item_with_face(mode, Control::Retry, "LEAVES", face),
     }
 }
 
 pub fn nim_live(mode: InputMode, take: u32) -> String {
+    nim_live_with_face(mode, take, ControllerFace::Generic)
+}
+
+/// Nim live chrome with adaptive face glyphs.
+pub fn nim_live_with_face(mode: InputMode, take: u32, face: ControllerFace) -> String {
     match mode {
         InputMode::KeyboardMouse => {
             format!("W/S HEAP   A/D TAKE {take}   ENTER TAKE   ESC LEAVE")
         }
-        InputMode::Controller => {
-            format!("D-PAD U/D HEAP   D-PAD L/R TAKE {take}   SOUTH TAKE   EAST LEAVE")
-        }
+        InputMode::Controller => format!(
+            "D-PAD U/D HEAP   D-PAD L/R TAKE {take}   {} TAKE   {} LEAVE",
+            face.token(Control::Primary),
+            face.token(Control::Back)
+        ),
     }
 }
 
 pub fn nim_result(mode: InputMode) -> String {
+    nim_result_with_face(mode, ControllerFace::Generic)
+}
+
+/// Nim result chrome with adaptive face glyphs.
+pub fn nim_result_with_face(mode: InputMode, face: ControllerFace) -> String {
     format!(
         "{}   {}",
-        item(mode, Control::Retry, "RETRY"),
-        item(mode, Control::Back, "LEAVE")
+        item_with_face(mode, Control::Retry, "RETRY", face),
+        item_with_face(mode, Control::Back, "LEAVE", face)
     )
 }
 
@@ -351,16 +383,30 @@ pub fn gauntlet_choice(mode: InputMode) -> String {
 }
 
 pub fn gauntlet_bomb(mode: InputMode) -> String {
+    gauntlet_bomb_with_face(mode, ControllerFace::Generic)
+}
+
+/// Gauntlet bomb chrome with adaptive face glyphs.
+pub fn gauntlet_bomb_with_face(mode: InputMode, face: ControllerFace) -> String {
     match mode {
         InputMode::KeyboardMouse => "TYPE DIGITS   ENTER CUTS   BACKSPACE FIXES".to_string(),
-        InputMode::Controller => "UP/DOWN DIGIT   SOUTH ADD   LEFT FIX   NORTH CUT".to_string(),
+        InputMode::Controller => format!(
+            "UP/DOWN DIGIT   {} ADD   LEFT FIX   {} CUT",
+            face.token(Control::Primary),
+            face.token(Control::Submit)
+        ),
     }
 }
 
 pub fn gauntlet_done(mode: InputMode) -> String {
+    gauntlet_done_with_face(mode, ControllerFace::Generic)
+}
+
+/// Gauntlet done chrome with adaptive face glyphs.
+pub fn gauntlet_done_with_face(mode: InputMode, face: ControllerFace) -> String {
     match mode {
         InputMode::KeyboardMouse => "ANY KEY LEAVES".to_string(),
-        InputMode::Controller => item(mode, Control::Retry, "LEAVES"),
+        InputMode::Controller => item_with_face(mode, Control::Retry, "LEAVES", face),
     }
 }
 
@@ -518,6 +564,38 @@ mod tests {
             InputMode::KeyboardMouse.token_with_face(Control::Primary, ControllerFace::Xbox),
             "SPACE"
         );
+        // Game chrome carries face tokens for Xbox and PlayStation.
+        let xbox_munch = munch_live_with_face(InputMode::Controller, ControllerFace::Xbox);
+        assert!(xbox_munch.contains("A EAT"), "{xbox_munch}");
+        assert!(xbox_munch.contains("B LEAVE"), "{xbox_munch}");
+        let ps_arcade = arcade_live_with_face(InputMode::Controller, ControllerFace::PlayStation);
+        assert!(ps_arcade.contains("CROSS EAT"), "{ps_arcade}");
+        assert!(ps_arcade.contains("CIRCLE LEAVE"), "{ps_arcade}");
+        let xbox_nim = nim_live_with_face(InputMode::Controller, 2, ControllerFace::Xbox);
+        assert!(xbox_nim.contains("A TAKE"), "{xbox_nim}");
+    }
+
+    /// Certification roster: known product-name fragments map to face families.
+    #[test]
+    fn controller_cert_matrix_covers_common_pads() {
+        let cases = [
+            ("Xbox 360 Controller", ControllerFace::Xbox),
+            ("Xbox One Controller", ControllerFace::Xbox),
+            ("Xbox Series X Controller", ControllerFace::Xbox),
+            ("Microsoft X-Box pad", ControllerFace::Xbox),
+            ("DualShock 4", ControllerFace::PlayStation),
+            ("DualSense Wireless Controller", ControllerFace::PlayStation),
+            (
+                "Sony Interactive Entertainment Controller",
+                ControllerFace::PlayStation,
+            ),
+            ("Wireless Controller", ControllerFace::Generic),
+            ("8BitDo Pro 2", ControllerFace::Generic),
+            ("Logitech F310", ControllerFace::Generic),
+        ];
+        for (name, expected) in cases {
+            assert_eq!(ControllerFace::from_name(name), expected, "pad name {name}");
+        }
     }
 
     #[test]

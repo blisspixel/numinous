@@ -166,8 +166,23 @@ pub fn build_board(seed: u64, round: u64) -> Board {
             99,
         ),
     };
+    // Density band (panel munch variety): enough targets to play, not a full
+    // board of fits that turns grading into bookkeeping. Deterministic: same
+    // seed and round always settle on the same re-roll path. Sparse rules
+    // (digit-sum, high primes) may fall through to the edible floor.
+    let cells = ROWS * COLS;
+    let min_fits = 3; // at least a small handful to chase
+    let max_fits = (cells * 2 / 3).max(min_fits); // at most two-thirds
+    for _ in 0..96 {
+        let numbers: Vec<u64> = (0..cells).map(|_| 1 + rng.below(max)).collect();
+        let fits = numbers.iter().filter(|&&n| rule.fits(n)).count();
+        if fits >= min_fits && fits <= max_fits {
+            return Board { numbers, rule };
+        }
+    }
+    // Fail closed with a legal board: any fit is better than an empty plate.
     loop {
-        let numbers: Vec<u64> = (0..ROWS * COLS).map(|_| 1 + rng.below(max)).collect();
+        let numbers: Vec<u64> = (0..cells).map(|_| 1 + rng.below(max)).collect();
         if numbers.iter().any(|&n| rule.fits(n)) {
             return Board { numbers, rule };
         }
@@ -288,6 +303,38 @@ mod tests {
             assert!(a.numbers.iter().any(|&n| a.rule.fits(n)));
             assert_eq!(a.numbers.len(), super::ROWS * super::COLS);
         }
+    }
+
+    #[test]
+    fn boards_prefer_a_playable_target_density() {
+        let cells = super::ROWS * super::COLS;
+        let max_fits = (cells * 2 / 3).max(3);
+        let mut banded = 0usize;
+        let mut total = 0usize;
+        for seed in 0..24 {
+            for round in 0..12 {
+                let board = build_board(seed, round);
+                let fits = board
+                    .numbers
+                    .iter()
+                    .filter(|&&n| board.rule.fits(n))
+                    .count();
+                assert!(fits >= 1, "always edible: seed {seed} round {round}");
+                assert!(
+                    fits <= max_fits,
+                    "too dense: seed {seed} round {round} fits {fits}"
+                );
+                if fits >= 3 {
+                    banded += 1;
+                }
+                total += 1;
+            }
+        }
+        // Soft density: most boards should offer a handful of targets.
+        assert!(
+            banded * 100 / total >= 85,
+            "only {banded}/{total} boards met the min-target preference"
+        );
     }
 
     #[test]

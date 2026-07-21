@@ -126,6 +126,26 @@ enum Command {
         #[arg(long = "gesture")]
         gestures: Vec<String>,
     },
+    /// Package a postcard, short loop, and README into one share folder.
+    Share {
+        /// Room id, e.g. "times-tables".
+        id: String,
+        /// Parent directory for the share folder (created if missing).
+        #[arg(long)]
+        out: PathBuf,
+        /// Visual era: phosphor, 8bit, vector, or modern.
+        #[arg(long, default_value = "modern")]
+        era: String,
+        /// Use this exact room variation seed (default 0).
+        #[arg(long, default_value_t = 0)]
+        variation: u64,
+        /// Starting phase in [0, 1) for still and loop.
+        #[arg(long, default_value_t = 0.0)]
+        t: f64,
+        /// Still/loop edge in pixels (square). Default matches App postcard scale.
+        #[arg(long, default_value_t = 480)]
+        size: usize,
+    },
     /// The Show for the terminal: every room in turn, full color, sound.
     Tour {
         /// Frames per second.
@@ -1413,6 +1433,27 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
                 RoomRenderInput::with_gesture(variation, &gesture)
             };
             let report = render_loop_apng(&id, size, t, &out, allow_hidden, era, input);
+            if report.is_ok() && find_room(&id, allow_hidden).is_some() {
+                journey.visit(&id);
+            }
+            emit(report)
+        }
+        Command::Share {
+            id,
+            out,
+            era,
+            variation,
+            t,
+            size,
+        } => {
+            let Some(era) = numinous_core::Era::parse(&era) else {
+                eprintln!(
+                    "Unknown era '{}'. Eras: phosphor, 8bit, vector, modern.",
+                    terminal_safe(&era)
+                );
+                return ExitCode::FAILURE;
+            };
+            let report = render_share_bundle(&id, &out, size, t, allow_hidden, era, variation);
             if report.is_ok() && find_room(&id, allow_hidden).is_some() {
                 journey.visit(&id);
             }
@@ -2930,6 +2971,93 @@ fn render_loop_apng(
     );
     report.push_str(&render_guidance(room.as_ref(), start_t, input));
     Ok(report)
+}
+
+/// Package still + loop + README into one share folder.
+fn render_share_bundle(
+    id: &str,
+    parent: &Path,
+    size: usize,
+    t: f64,
+    allow_hidden: bool,
+    era: numinous_core::Era,
+    variation: u64,
+) -> Result<String, String> {
+    let Some(room) = find_room(id, allow_hidden) else {
+        return Err(not_found_message(id));
+    };
+    std::fs::create_dir_all(parent).map_err(|e| format!("could not create share parent: {e}"))?;
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let dir = numinous_core::share_bundle_dir(parent, room.meta().id, stamp);
+    std::fs::create_dir_all(&dir).map_err(|e| format!("could not create share folder: {e}"))?;
+
+    let postcard_path = dir.join("postcard.png");
+    let loop_path = dir.join("loop.png");
+    let input = RoomRenderInput::new(variation, &[]);
+    // Still: one frame at t.
+    let mut raster = Raster::with_accent(size, size, room.meta().accent);
+    room.render(&mut raster, t);
+    let mut rgba = raster.to_rgba();
+    if era != numinous_core::Era::Modern {
+        era.apply(&mut rgba, raster.width(), raster.height());
+    }
+    write_png_file(&postcard_path, size as u32, size as u32, &rgba)?;
+    let _ = numinous_core::write_share_sidecar(
+        &postcard_path,
+        &numinous_core::ShareMeta {
+            room_id: room.meta().id.to_string(),
+            era: era.name().to_string(),
+            kind: numinous_core::ShareKind::Postcard,
+            version: env!("CARGO_PKG_VERSION").to_string(),
+        },
+    );
+    // Loop APNG into the bundle.
+    render_loop_apng(id, size, t, &loop_path, allow_hidden, era, input)?;
+    let _ = numinous_core::write_share_sidecar(
+        &loop_path,
+        &numinous_core::ShareMeta {
+            room_id: room.meta().id.to_string(),
+            era: era.name().to_string(),
+            kind: numinous_core::ShareKind::Loop,
+            version: env!("CARGO_PKG_VERSION").to_string(),
+        },
+    );
+    numinous_core::write_share_bundle_readme(
+        &dir,
+        &numinous_core::ShareBundleMeta {
+            room_id: room.meta().id.to_string(),
+            era: era.name().to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            variation,
+        },
+        true,
+        true,
+    )
+    .map_err(|e| format!("could not write share README: {e}"))?;
+    Ok(format!(
+        "wrote share bundle {}\n  postcard.png  loop.png  README.share.txt\n",
+        terminal_safe_path(&dir)
+    ))
+}
+
+/// Write a single-frame PNG (Share still inside a bundle).
+fn write_png_file(path: &Path, width: u32, height: u32, rgba: &[u8]) -> Result<(), String> {
+    let file = File::create(path)
+        .map_err(|e| format!("could not create {}: {e}", terminal_safe_path(path)))?;
+    let mut encoder = png::Encoder::new(BufWriter::new(file), width, height);
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    encoder.set_compression(png::Compression::Fast);
+    let mut writer = encoder
+        .write_header()
+        .map_err(|e| format!("png header failed: {e}"))?;
+    writer
+        .write_image_data(rgba)
+        .map_err(|e| format!("png write failed: {e}"))?;
+    Ok(())
 }
 
 /// Encode a square looping APNG (Share v1 short loop).
@@ -5444,6 +5572,32 @@ mod tests {
                 variation: 0,
                 ..
             })
+        ));
+    }
+
+    #[test]
+    fn share_subcommand_parses_bundle_defaults() {
+        let cli = Cli::try_parse_from([
+            "numinous",
+            "share",
+            "lorenz",
+            "--out",
+            "shares",
+            "--era",
+            "phosphor",
+            "--variation",
+            "3",
+        ])
+        .expect("share parses");
+        assert!(matches!(
+            cli.command,
+            Some(Command::Share {
+                size: 480,
+                t: 0.0,
+                variation: 3,
+                era,
+                ..
+            }) if era == "phosphor"
         ));
     }
 
