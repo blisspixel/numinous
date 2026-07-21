@@ -229,28 +229,52 @@ pub fn show_controls_with_face(mode: InputMode, face: ControllerFace) -> String 
 }
 
 pub fn studio_controls(mode: InputMode) -> String {
+    studio_controls_with_face(mode, ControllerFace::Generic)
+}
+
+/// Studio chrome with adaptive face glyphs.
+pub fn studio_controls_with_face(mode: InputMode, face: ControllerFace) -> String {
     match mode {
         InputMode::KeyboardMouse => "TYPE  F1 HELP  F2 RANDOM  F3 AUTO  TAB/ESC CLOSE".to_string(),
-        InputMode::Controller => "KEYBOARD TYPES   EAST CLOSES   START HELP".to_string(),
+        InputMode::Controller => format!(
+            "KEYBOARD TYPES   {} CLOSES   {} HELP",
+            face.token(Control::Back),
+            face.token(Control::Menu)
+        ),
     }
 }
 
 pub fn journey_close(mode: InputMode) -> String {
+    journey_close_with_face(mode, ControllerFace::Generic)
+}
+
+/// Journey close copy with adaptive face glyphs.
+pub fn journey_close_with_face(mode: InputMode, face: ControllerFace) -> String {
     match mode {
         InputMode::KeyboardMouse => "J CLOSES".to_string(),
-        InputMode::Controller => item(mode, Control::Back, "CLOSES"),
+        InputMode::Controller => item_with_face(mode, Control::Back, "CLOSES", face),
     }
 }
 
 pub fn pause_resume(mode: InputMode) -> String {
-    item(mode, Control::Pause, "RESUME")
+    pause_resume_with_face(mode, ControllerFace::Generic)
+}
+
+/// Pause resume copy with adaptive face glyphs.
+pub fn pause_resume_with_face(mode: InputMode, face: ControllerFace) -> String {
+    item_with_face(mode, Control::Pause, "RESUME", face)
 }
 
 pub fn quiz_result(mode: InputMode) -> String {
+    quiz_result_with_face(mode, ControllerFace::Generic)
+}
+
+/// Quiz result chrome with adaptive face glyphs.
+pub fn quiz_result_with_face(mode: InputMode, face: ControllerFace) -> String {
     format!(
         "{}   {}",
-        item(mode, Control::Retry, "NEXT"),
-        item(mode, Control::Back, "LEAVE")
+        item_with_face(mode, Control::Retry, "NEXT", face),
+        item_with_face(mode, Control::Back, "LEAVE", face)
     )
 }
 

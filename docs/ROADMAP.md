@@ -456,10 +456,14 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
 - **Done (visualizer path, cycle 149):** MCP listen beds expose normalized
   spectrum bands; the App draws a room-bed spectrum meter under the audio
   badge from the cached motif arrangement. OS loopback capture remains open.
+- **Done (mega pack, cycle 150):** `LoopPlayer` mixed-output capture ring;
+  optional loopback input when the OS exposes a mix-like device; App key O
+  cycles room bed / output mix / loopback; spectrum lever mapping; Share
+  sidecar notes; earlier aliens base ramp; more adaptive face glyph surfaces.
 - **Then (the panel's remaining list, see `PANEL.md`):** munch rule variety is
-  partly shipped; OS loopback music visualizer capture on top of the spectrum
-  substrate; full Share v1 packaging beyond PNG/APNG; cross-platform controller
-  certification; full 2026-07-28 wire migration after the final specification ships.
+  partly shipped; spectrum-to-room lever drive; full Share v1 packaging beyond
+  PNG/APNG (GIF/MP4); cross-platform controller certification; full 2026-07-28
+  wire migration after the final specification ships.
 - **Done (0.4 Understanding Alpha prep):** added Source Provenance and Math Review Checklist fields to the Times Tables, Game of Life, Galton Board, and Double Pendulum flagships to anchor their learning claims.
 - **Done (0.4 Understanding Alpha prep):** added an opt-in, player-owned MCP experience journal. The `Journal` tracks timestamped room encounters, creations, and connections. It is fully integrated into persistence and backed by new `read_journal`, `record_journal`, and `erase_journal` tools for MCP agents. The journal is explicitly disjoint from `forget` tool erasure, providing its own dedicated `erase_journal` path to maintain player ownership over when its contents are destroyed.
 
