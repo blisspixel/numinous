@@ -36,14 +36,23 @@ fn endpoints(seed: u64) -> ((f64, f64), (f64, f64)) {
     ((0.15, 0.5 + s), (0.85, 0.5 - s))
 }
 
-/// Path gamma_s(u): straight line plus a bump of height controlled by s and hand.
-fn path_point(u: f64, s: f64, bump: f64, a: (f64, f64), b: (f64, f64)) -> (f64, f64) {
-    let x = a.0 + (b.0 - a.0) * u;
-    let y = a.1 + (b.1 - a.1) * u + bump * s * (PI * u).sin();
-    (x, y.clamp(0.05, 0.95))
+/// Path gamma_s(u): straight line plus a bump controlled by s and the hand.
+fn path_point(u: f64, s: f64, bump: f64, lateral: f64, a: (f64, f64), b: (f64, f64)) -> (f64, f64) {
+    let arch = (PI * u).sin();
+    let x = a.0 + (b.0 - a.0) * u + lateral * s * arch;
+    let y = a.1 + (b.1 - a.1) * u + bump * s * arch;
+    (x.clamp(0.02, 0.98), y.clamp(0.05, 0.95))
 }
 
-fn draw(canvas: &mut dyn Surface, s: f64, bump: f64, a: (f64, f64), b: (f64, f64), seed: u64) {
+fn draw(
+    canvas: &mut dyn Surface,
+    s: f64,
+    bump: f64,
+    lateral: f64,
+    a: (f64, f64),
+    b: (f64, f64),
+    seed: u64,
+) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -63,7 +72,7 @@ fn draw(canvas: &mut dyn Surface, s: f64, bump: f64, a: (f64, f64), b: (f64, f64
         let ch = if k == layers { '#' } else { '.' };
         for i in 0..=steps {
             let u = i as f64 / steps as f64;
-            let p = path_point(u, sk, bump, a, b);
+            let p = path_point(u, sk, bump, lateral, a, b);
             let q = to_px(p);
             if let Some(o) = prev {
                 canvas.line(o.0, o.1, q.0, q.1, ch);
@@ -112,7 +121,7 @@ impl Room for SoftProof {
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let (a, b) = endpoints(self.seed);
         let s = phase_unit(t);
-        draw(canvas, s, 0.35, a, b, self.seed);
+        draw(canvas, s, 0.35, 0.0, a, b, self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -141,9 +150,13 @@ impl Room for SoftProof {
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let (a, b) = endpoints(self.seed);
-        let s = phase_unit(t).max(0.3);
-        let bump = hands.last().map(|&(_, y)| (y - 0.5) * 1.2).unwrap_or(0.35);
-        draw(canvas, s, bump, a, b, self.seed);
+        let s = phase_unit(t).max(0.35);
+        // Hand y sets arch height; hand x pulls the strip sideways so a drag
+        // is never a near-ambient re-raster of the default bump.
+        let (bump, lateral) = hands
+            .last()
+            .map_or((0.35, 0.0), |&(x, y)| (0.08 + y * 0.85, (x - 0.5) * 0.55));
+        draw(canvas, s, bump, lateral, a, b, self.seed);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -152,9 +165,11 @@ impl Room for SoftProof {
         if hands.is_empty() {
             return self.status(t);
         }
-        let bump = hands.last().map(|&(_, y)| (y - 0.5) * 1.2).unwrap_or(0.0);
-        let s = phase_unit(t).max(0.3);
-        Some(format!("DEFORM s={s:.2}  bump={bump:.2}  ok"))
+        let (bump, lateral) = hands
+            .last()
+            .map_or((0.0, 0.0), |&(x, y)| (0.08 + y * 0.85, (x - 0.5) * 0.55));
+        let s = phase_unit(t).max(0.35);
+        Some(format!("DEFORM s={s:.2}  b={bump:.2}  L={lateral:.2}"))
     }
 
     fn reveal(&self) -> &'static str {

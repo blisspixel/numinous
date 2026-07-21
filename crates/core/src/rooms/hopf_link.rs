@@ -36,7 +36,7 @@ fn angle(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     }
 }
 
-fn draw(canvas: &mut dyn Surface, phi: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, phi: f64, sep_scale: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -44,13 +44,13 @@ fn draw(canvas: &mut dyn Surface, phi: f64, seed: u64) {
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
     let r = (width.min(height) as f64) * 0.28;
-    let sep = r * 0.55;
+    let sep = r * (0.25 + 0.55 * sep_scale.clamp(0.15, 1.35));
     let tilt = if seed == 0 {
         0.55
     } else {
         0.4 + (seed % 4) as f64 * 0.05
     };
-    // circle A in xy
+    // circle A in xy (phase tracks the hand so rotation is not self-similar alone)
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=100 {
         let th = std::f64::consts::TAU * (i as f64) / 100.0 + phi;
@@ -63,10 +63,10 @@ fn draw(canvas: &mut dyn Surface, phi: f64, seed: u64) {
         }
         prev = Some((px, py));
     }
-    // circle B in xz, linked
+    // circle B in xz, linked; phase offset follows phi so the crossing moves
     prev = None;
     for i in 0..=100 {
-        let th = std::f64::consts::TAU * (i as f64) / 100.0;
+        let th = std::f64::consts::TAU * (i as f64) / 100.0 + phi * 0.5;
         let x = r * th.cos() * tilt * 0.3 + sep * 0.2;
         let z = r * th.sin();
         let y = z * 0.85;
@@ -110,7 +110,7 @@ impl Room for HopfLink {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, angle(t, None, self.seed), self.seed);
+        draw(canvas, angle(t, None, self.seed), 1.0, self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -138,8 +138,12 @@ impl Room for HopfLink {
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
-        let p = angle(t, hands.last().copied(), self.seed);
-        draw(canvas, p, self.seed ^ hands.len() as u64);
+        let hand = hands.last().copied();
+        let p = angle(t, hand, self.seed);
+        // Hand y steers ring separation so a drag reshapes the link, not only
+        // re-phases a self-similar projection.
+        let sep = hand.map_or(1.0, |(_, y)| 0.35 + y * 1.1);
+        draw(canvas, p, sep, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

@@ -36,14 +36,14 @@ fn phase(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     }
 }
 
-fn draw(canvas: &mut dyn Surface, ph: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, ph: f64, scale: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let a = (width.min(height) as f64) * 0.28;
+    let a = (width.min(height) as f64) * 0.28 * scale.clamp(0.55, 1.45);
     let rot = if seed == 0 {
         0.0
     } else {
@@ -112,7 +112,7 @@ impl Room for Viviani {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, phase(t, None, self.seed), self.seed);
+        draw(canvas, phase(t, None, self.seed), 1.0, self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -140,8 +140,11 @@ impl Room for Viviani {
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
-        let p = phase(t, hands.last().copied(), self.seed);
-        draw(canvas, p, self.seed ^ hands.len() as u64);
+        let hand = hands.last().copied();
+        let p = phase(t, hand, self.seed);
+        // Hand y scales the figure so phase drag is not a near-self-similar loop.
+        let scale = hand.map_or(1.0, |(_, y)| 0.55 + y * 0.9);
+        draw(canvas, p, scale, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

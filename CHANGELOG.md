@@ -5,6 +5,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- Playtest pass on broken interaction: jittery mouse moves no longer wipe
+  CLICK plants (collapse to one plant at release instead of stripping the
+  gesture or leaving a move trail). Upside-Down Ruler draws a readable digit
+  tower with floor ticks and a clear +1 carry. Soft Proof and Hopf Link respond
+  with real domain motion under drag (no self-similar dead dials).
+
 ### Changed
 - Art-first interaction: no pointer reticle or drag trail painted over rooms;
   controller hand is a single soft pixel. Sticky dial-room hand crosses (`o`)
