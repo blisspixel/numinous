@@ -2432,6 +2432,8 @@ fn describe_report(
     let m = room.meta();
     let action = numinous_core::room_action(room.as_ref());
     let goal = room.goal();
+    let cut0_by_boon = journey.chosen.contains(&format!("cut:{id}:0"));
+    let citation = numinous_core::room_citation_unlocked(id, level, cut0_by_boon);
     Ok(if json {
         let mut value = meta_json(&m);
         value["action"] = serde_json::Value::String(action.to_string());
@@ -2445,11 +2447,15 @@ fn describe_report(
                 .map(serde_json::Value::String)
                 .collect(),
         );
+        if let Some(citation) = citation {
+            value["citation"] = serde_json::Value::String(citation.to_string());
+        }
         format!("{}\n", to_pretty(&value))
     } else {
         let goal = goal.map_or_else(String::new, |goal| format!("\nGoal: {goal}"));
+        let reading = citation.map(|c| format!("\n{c}\n")).unwrap_or_default();
         format!(
-            "{} ({})\nWing: {}\nAction: {action}{goal}\n\n{}\n\nReveal: {}\n{cuts}",
+            "{} ({})\nWing: {}\nAction: {action}{goal}\n\n{}\n\nReveal: {}\n{cuts}{reading}",
             m.title,
             m.id,
             m.wing,
@@ -6085,6 +6091,22 @@ mod tests {
             "third cut is reachable: {cap}"
         );
         assert!(!cap.contains("4294967295"), "no sentinel leaks: {cap}");
+        assert!(
+            cap.contains("See also:"),
+            "citation unlocks with deep cuts: {cap}"
+        );
+
+        let locked = super::describe_report(
+            "mandelbrot",
+            false,
+            false,
+            &numinous_core::Journey::default(),
+        )
+        .expect("describe");
+        assert!(
+            !locked.contains("See also:"),
+            "fresh journey keeps further reading locked: {locked}"
+        );
     }
 
     #[test]

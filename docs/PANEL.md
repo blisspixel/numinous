@@ -72,10 +72,13 @@ is absent anymore; everything on this list makes an existing organ stronger.
 
 ## The list, in order
 
-> Progress: items 1, 2, 3, 4, 5, 7 (citations table), 8 (era grain + Show
-> crossfade), 9 (play/win spark soft caps), controller input, and remapping are
-> built. Open Problems opened (Goldbach); Engine B v0 shipped. Full Share v1
-> packaging, the music visualizer, and adaptive glyphs remain.
+> Progress: items 1, 2, 3, 4, 5, 7 (citations table + deep-cut unlock + CLI/MCP
+> parity), 8 (era grain including phosphor bloom + Show crossfade + spectrum
+> substrate), 9 (play/win spark soft caps), controller input, remapping, and
+> adaptive face glyphs (Xbox / PlayStation / generic) are built. Aliens base
+> ramp softens earlier for denser seeds. Open Problems opened (Goldbach);
+> Engine B v0 shipped. Full Share v1 packaging beyond PNG/APNG, OS loopback
+> visualizer capture, and cross-platform controller certification remain.
 
 
 1. **Juice in the window games**: per-action feedback (flash on eat, shake

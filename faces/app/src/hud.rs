@@ -1,6 +1,6 @@
 use numinous_core::{Raster, Room, RoomInput, Surface};
 
-use crate::input_legend::{self, InputMode};
+use crate::input_legend::{self, ControllerFace, InputMode};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum AudioSource {
@@ -80,22 +80,28 @@ pub(crate) struct RoomChrome {
     pub(crate) muted: bool,
     pub(crate) level: u32,
     pub(crate) input_mode: InputMode,
+    pub(crate) controller_face: ControllerFace,
 }
 
 pub(crate) fn room_action(room: &dyn Room) -> &'static str {
     numinous_core::room_touch_action(room)
 }
 
-fn displayed_room_action(room: &dyn Room, input_mode: InputMode) -> String {
-    input_legend::room_action(input_mode, room_action(room))
+fn displayed_room_action(room: &dyn Room, input_mode: InputMode, face: ControllerFace) -> String {
+    input_legend::room_action_with_face(input_mode, room_action(room), face)
 }
 
 fn journey_level_label(level: u32) -> String {
     format!("JOURNEY LV {level}")
 }
 
-fn arrival_lines(room: &dyn Room, columns: usize, input_mode: InputMode) -> Vec<String> {
-    let mut lines = vec![displayed_room_action(room, input_mode)];
+fn arrival_lines(
+    room: &dyn Room,
+    columns: usize,
+    input_mode: InputMode,
+    face: ControllerFace,
+) -> Vec<String> {
+    let mut lines = vec![displayed_room_action(room, input_mode, face)];
     if let Some(goal) = room.goal() {
         lines.push(format!("GOAL: {goal}"));
     }
@@ -139,23 +145,24 @@ fn footer_copy(
     inputs: &[RoomInput],
     muted: bool,
     input_mode: InputMode,
+    face: ControllerFace,
     status_override: Option<&str>,
 ) -> FooterCopy {
     let status = status_override.map_or_else(
         || {
             room.status_input(t, inputs)
-                .unwrap_or_else(|| input_legend::room_inspect(input_mode))
+                .unwrap_or_else(|| input_legend::room_inspect_with_face(input_mode, face))
         },
         str::to_owned,
     );
     FooterCopy {
-        action: displayed_room_action(room, input_mode),
+        action: displayed_room_action(room, input_mode, face),
         status: if muted {
             format!("{status}   MUTED")
         } else {
             status
         },
-        controls: input_legend::room_controls(input_mode),
+        controls: input_legend::room_controls_with_face(input_mode, face),
     }
 }
 
@@ -188,7 +195,7 @@ pub(crate) fn draw_room_chrome(
         && !state.studio
     {
         let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
-        arrival_lines(room, columns, state.input_mode)
+        arrival_lines(room, columns, state.input_mode, state.controller_face)
     } else {
         Vec::new()
     };
@@ -254,7 +261,7 @@ pub(crate) fn draw_room_chrome(
             '-',
         );
         let controls = fit_footer_text(
-            &input_legend::show_controls(state.input_mode),
+            &input_legend::show_controls_with_face(state.input_mode, state.controller_face),
             width as i32 - 20,
             scale,
         );
@@ -319,6 +326,7 @@ pub(crate) fn draw_room_chrome(
             inputs,
             state.muted,
             state.input_mode,
+            state.controller_face,
             status_override,
         );
         let controls_width = footer.controls.chars().count() as i32 * 6 * scale;
@@ -383,7 +391,12 @@ mod tests {
             "AIM + CLICK: PLACE A 5-CELL GLIDER"
         );
         assert_eq!(
-            arrival_lines(&quiet, 32, InputMode::KeyboardMouse)[0],
+            arrival_lines(
+                &quiet,
+                32,
+                InputMode::KeyboardMouse,
+                ControllerFace::Generic
+            )[0],
             DEFAULT_TOUCH_ROOM_ACTION,
             "quiet rooms still teach what hands do"
         );
@@ -392,7 +405,12 @@ mod tests {
     #[test]
     fn compact_arrival_copy_is_bounded_and_marks_truncation() {
         let room = room("golden-angle");
-        let lines = arrival_lines(room.as_ref(), 24, InputMode::KeyboardMouse);
+        let lines = arrival_lines(
+            room.as_ref(),
+            24,
+            InputMode::KeyboardMouse,
+            ControllerFace::Generic,
+        );
 
         assert_eq!(lines.len(), 4, "one action plus three blurb lines");
         assert_eq!(lines[0], room_action(room.as_ref()));
@@ -403,7 +421,12 @@ mod tests {
     #[test]
     fn flagship_arrival_names_its_earned_goal() {
         let room = room("times-tables");
-        let lines = arrival_lines(room.as_ref(), 40, InputMode::KeyboardMouse);
+        let lines = arrival_lines(
+            room.as_ref(),
+            40,
+            InputMode::KeyboardMouse,
+            ControllerFace::Generic,
+        );
 
         assert_eq!(lines[0], "DRAG: TURN THE DIAL");
         assert_eq!(lines[1], "GOAL: LAND ON EXACTLY 4 LOBES");
@@ -418,6 +441,7 @@ mod tests {
             &[],
             false,
             InputMode::KeyboardMouse,
+            ControllerFace::Generic,
             None,
         );
         let open = footer_copy(
@@ -426,6 +450,7 @@ mod tests {
             &[],
             true,
             InputMode::KeyboardMouse,
+            ControllerFace::Generic,
             None,
         );
 
@@ -531,9 +556,18 @@ mod tests {
             &[],
             false,
             InputMode::KeyboardMouse,
+            ControllerFace::Generic,
             None,
         );
-        let controller = footer_copy(room.as_ref(), 0.0, &[], false, InputMode::Controller, None);
+        let controller = footer_copy(
+            room.as_ref(),
+            0.0,
+            &[],
+            false,
+            InputMode::Controller,
+            ControllerFace::Generic,
+            None,
+        );
 
         assert_eq!(keyboard.action, "CLICK: PLANT A SEED");
         // First-contact status names the room state; inspect only appears when
@@ -571,6 +605,7 @@ mod tests {
             &input,
             false,
             InputMode::KeyboardMouse,
+            ControllerFace::Generic,
             None,
         );
         assert_eq!(footer.action, "AIM + CLICK: PLACE A 5-CELL GLIDER");
@@ -587,7 +622,15 @@ mod tests {
         session.advance();
         let status = session.compact_status();
         for mode in [InputMode::KeyboardMouse, InputMode::Controller] {
-            let footer = footer_copy(room.as_ref(), 0.0, &[], false, mode, Some(&status));
+            let footer = footer_copy(
+                room.as_ref(),
+                0.0,
+                &[],
+                false,
+                mode,
+                ControllerFace::Generic,
+                Some(&status),
+            );
             let controls_width = footer.controls.chars().count() as i32 * 6;
             let controls_x = 360 - controls_width - 10;
             assert_eq!(fit_footer_text(&footer.status, controls_x - 20, 1), status);
@@ -600,6 +643,7 @@ mod tests {
             &[],
             false,
             InputMode::Controller,
+            ControllerFace::Generic,
             Some(&status),
         );
         assert_eq!(
@@ -623,6 +667,7 @@ mod tests {
             &input,
             false,
             InputMode::KeyboardMouse,
+            ControllerFace::Generic,
             None,
         );
         let controls_width = footer.controls.chars().count() as i32 * 6;
@@ -641,6 +686,7 @@ mod tests {
             &input,
             false,
             InputMode::Controller,
+            ControllerFace::Generic,
             None,
         );
         assert_eq!(
@@ -666,6 +712,7 @@ mod tests {
             &inputs,
             false,
             InputMode::KeyboardMouse,
+            ControllerFace::Generic,
             None,
         );
         let controls_width = footer.controls.chars().count() as i32 * 6;
@@ -698,6 +745,7 @@ mod tests {
                 muted: false,
                 level: 3,
                 input_mode: InputMode::KeyboardMouse,
+                controller_face: ControllerFace::Generic,
             },
             &[],
             None,
@@ -729,6 +777,7 @@ mod tests {
                 muted: true,
                 level: 3,
                 input_mode: InputMode::KeyboardMouse,
+                controller_face: ControllerFace::Generic,
             },
             &[],
             None,
@@ -760,6 +809,7 @@ mod tests {
                     muted: false,
                     level: 1,
                     input_mode: InputMode::KeyboardMouse,
+                    controller_face: ControllerFace::Generic,
                 },
                 &[],
                 None,
@@ -800,6 +850,7 @@ mod tests {
                     muted: false,
                     level: 1,
                     input_mode,
+                    controller_face: ControllerFace::Generic,
                 },
                 &[],
                 None,
@@ -847,6 +898,7 @@ mod tests {
                 muted: false,
                 level: 1,
                 input_mode: InputMode::KeyboardMouse,
+                controller_face: ControllerFace::Generic,
             },
             &[],
             None,

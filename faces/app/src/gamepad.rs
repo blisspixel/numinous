@@ -177,6 +177,8 @@ pub(crate) struct GamepadInput {
     hand: VirtualHand,
     last_tick: Instant,
     active: bool,
+    /// Adaptive face-button vocabulary inferred from the last active pad name.
+    face: crate::input_legend::ControllerFace,
 }
 
 impl GamepadInput {
@@ -196,7 +198,14 @@ impl GamepadInput {
             hand: VirtualHand::default(),
             last_tick: Instant::now(),
             active: true,
+            face: crate::input_legend::ControllerFace::Generic,
         }
+    }
+
+    /// Face-button vocabulary for HUD copy (Xbox / PlayStation / generic).
+    #[must_use]
+    pub(crate) fn face(&self) -> crate::input_legend::ControllerFace {
+        self.face
     }
 
     pub(crate) fn poll(&mut self, now: Instant) -> Vec<Command> {
@@ -208,6 +217,9 @@ impl GamepadInput {
         }
         if let Some(gilrs) = &mut self.gilrs {
             while let Some(event) = gilrs.next_event() {
+                if let Some(pad) = gilrs.connected_gamepad(event.id) {
+                    self.face = crate::input_legend::ControllerFace::from_name(pad.name());
+                }
                 match event.event {
                     EventType::ButtonPressed(button, _) => {
                         if let Some(cmd) = self.hand.press(button, &self.bindings) {
@@ -304,6 +316,12 @@ mod tests {
         assert!((shaped_axis(1.0) - 1.0).abs() < 1e-9);
         assert!((shaped_axis(-1.0) + 1.0).abs() < 1e-9);
         assert!(shaped_axis(0.5) > 0.0 && shaped_axis(0.5) < 0.5);
+    }
+
+    #[test]
+    fn default_controller_face_is_generic_until_a_pad_speaks() {
+        let input = GamepadInput::new();
+        assert_eq!(input.face(), crate::input_legend::ControllerFace::Generic);
     }
 
     #[test]

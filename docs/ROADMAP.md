@@ -448,7 +448,15 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   further-reading citations on `reveal_room`; The Show crossfade; 8-bit dither
   and vector bloom; arcade beat juice; MCP protocol version negotiation that
   accepts 2025-06-18, 2025-11-25, and names 2026-07-28 for dual-stack hosts.
-- **Then (the panel's remaining list, see `PANEL.md`):** munch rule variety and an aliens base ramp (depth where play repeats) are partly shipped; the music visualizer; full Share v1 packaging beyond PNG/APNG; adaptive glyphs; full 2026-07-28 wire migration after the final specification ships.
+- **Done (panel depth pack, cycle 148):** citations unlock with the first deep
+  cut on CLI and MCP; expanded wing-specific further reading; pure spectrum
+  band-energy substrate for the visualizer path; adaptive Xbox/PlayStation/
+  generic face glyphs with pad-name inference; phosphor soft bloom; aliens base
+  ramp for denser seeds.
+- **Then (the panel's remaining list, see `PANEL.md`):** munch rule variety is
+  partly shipped; OS loopback music visualizer capture on top of the spectrum
+  substrate; full Share v1 packaging beyond PNG/APNG; cross-platform controller
+  certification; full 2026-07-28 wire migration after the final specification ships.
 - **Done (0.4 Understanding Alpha prep):** added Source Provenance and Math Review Checklist fields to the Times Tables, Game of Life, Galton Board, and Double Pendulum flagships to anchor their learning claims.
 - **Done (0.4 Understanding Alpha prep):** added an opt-in, player-owned MCP experience journal. The `Journal` tracks timestamped room encounters, creations, and connections. It is fully integrated into persistence and backed by new `read_journal`, `record_journal`, and `erase_journal` tools for MCP agents. The journal is explicitly disjoint from `forget` tool erasure, providing its own dedicated `erase_journal` path to maintain player ownership over when its contents are destroyed.
 

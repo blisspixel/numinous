@@ -2568,6 +2568,7 @@ impl App {
                 muted: self.muted,
                 level: self.journey.level(),
                 input_mode: self.input_mode,
+                controller_face: self.gamepad.face(),
             },
             inputs,
             status_override.as_deref(),

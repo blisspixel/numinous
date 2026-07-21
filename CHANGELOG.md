@@ -6,6 +6,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Panel depth pack (cycle 148): citations unlock with the first deep cut on CLI
+  describe and MCP describe/reveal; catalog citation table expanded across wings;
+  pure `spectrum` band-energy substrate for the music visualizer path; adaptive
+  Xbox/PlayStation/generic controller face glyphs; phosphor soft bloom; aliens
+  base ramp so denser seeds leave decimal earlier.
 - Panel pack (cycle 147): soft play/win spark caps (anti-grind without scolding);
   further-reading citations for every catalog room via `Room::citation` and
   MCP `reveal_room.citation`; The Show room-to-room RGBA crossfade; 8-bit ordered

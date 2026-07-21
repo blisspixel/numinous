@@ -54,6 +54,7 @@ pub mod seti;
 pub mod sim;
 pub mod sims;
 pub mod sound;
+pub mod spectrum;
 pub mod studio;
 pub mod surface;
 pub mod trophies;
@@ -73,7 +74,7 @@ pub use chiptune::{
     Arrangement, ChipNote, Pattern, StereoSignalMetrics, Voice, compose, game_buzz, game_tick,
     munch_crunch, pitch, quantize_pcm16, stereo_signal_metrics,
 };
-pub use citations::for_room as room_citation;
+pub use citations::{for_room as room_citation, for_room_unlocked as room_citation_unlocked};
 pub use codebreaker::{Feedback, grade, hint, secret_code};
 pub use concepts::concept;
 pub use era::Era;
@@ -120,6 +121,9 @@ pub use seti::{SetiChannel, SetiScan, build_scan};
 pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
 pub use sims::{all_sims, sim_by_id};
 pub use sound::{Note, ParametricSound, SoundSpec};
+pub use spectrum::{
+    BAND_COUNT, BAND_NAMES, band_energies, bass_mid_treble, low_band_onset, normalize_bands,
+};
 pub use studio::{
     Expr, MAX_STUDIO_SOURCE_CHARS, StudioCreation, eval, parse, plot_text, to_melody,
 };
