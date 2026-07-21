@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Mega pack (cycle 150): mixed-output capture ring on `LoopPlayer` for the
+  visualizer; optional OS loopback input when a Stereo Mix / virtual cable /
+  BlackHole style device is present; App key O cycles room bed, output mix, and
+  loopback sources; spectrum levers helper for future room-parameter drive;
+  Share sidecar notes beside postcard and loop exports; earlier aliens base
+  ramp; adaptive face glyphs on Studio, Journey, pause, and quiz result chrome.
 - Visualizer path (cycle 149): room-bed spectrum bands on MCP `listen_room`
   ambient beds; pure `draw_spectrum_bars` and App spectrum meter under the audio
   badge, driven by the current motif arrangement (offline Winamp path; OS

@@ -4,12 +4,17 @@
 //! its default configuration, so it "just works" and follows the machine's sound
 //! settings on Windows (WASAPI), macOS (CoreAudio), and Linux (ALSA). The tone
 //! synthesis is a pure, testable function; opening and driving the device is kept
-//! separate. See `docs/SOUND.md` and `docs/ARCHITECTURE.md`.
+//! separate. An optional fixed capture ring taps the mixed output for the
+//! visualizer path, and [`capture`] can open a loopback-like input when the OS
+//! exposes one. See `docs/SOUND.md` and `docs/ARCHITECTURE.md`.
 
 use std::f32::consts::TAU;
 use std::sync::{Arc, Mutex};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+
+pub mod capture;
+pub use capture::{CaptureRing, InputCapture, looks_like_loopback_name};
 
 /// A gentle amplitude so a test tone is never harsh.
 const AMPLITUDE: f32 = 0.2;
@@ -598,6 +603,8 @@ struct MixerState {
     gain_step: f32,
     parameter_voice: ParameterVoice,
     oneshot: Option<OneshotPlay>,
+    /// Optional visualizer tap of the post-gain mixed frame.
+    output_tap: Option<Arc<Mutex<CaptureRing>>>,
 }
 
 impl MixerState {
@@ -619,6 +626,7 @@ impl MixerState {
             gain_step: 1.0 / (GAIN_RAMP_SECONDS * rate).max(1.0),
             parameter_voice: ParameterVoice::new(sample_rate),
             oneshot: None,
+            output_tap: None,
         }
     }
 
@@ -833,10 +841,14 @@ impl MixerState {
         } else if self.current_gain > target {
             self.current_gain = (self.current_gain - self.gain_step).max(target);
         }
-        (
-            (mixed.0 * self.current_gain).clamp(-1.0, 1.0),
-            (mixed.1 * self.current_gain).clamp(-1.0, 1.0),
-        )
+        let left = (mixed.0 * self.current_gain).clamp(-1.0, 1.0);
+        let right = (mixed.1 * self.current_gain).clamp(-1.0, 1.0);
+        if let Some(tap) = self.output_tap.as_ref()
+            && let Ok(mut ring) = tap.try_lock()
+        {
+            ring.push_frame(left, right);
+        }
+        (left, right)
     }
 }
 
@@ -878,6 +890,8 @@ pub struct LoopPlayer {
     _stream: cpal::Stream,
     sample_rate: u32,
     state: Arc<Mutex<MixerState>>,
+    /// Mixed-output tap for the visualizer (always present; may be empty early).
+    output_tap: Arc<Mutex<CaptureRing>>,
 }
 
 impl LoopPlayer {
@@ -892,7 +906,10 @@ impl LoopPlayer {
         validate_output_dimensions(sample_rate, channel_count)?;
         let channels = channel_count as usize;
         let config: cpal::StreamConfig = context.config.into();
-        let state = Arc::new(Mutex::new(MixerState::new(sample_rate)));
+        let output_tap = Arc::new(Mutex::new(CaptureRing::new(4_096, sample_rate)));
+        let mut mixer = MixerState::new(sample_rate);
+        mixer.output_tap = Some(Arc::clone(&output_tap));
+        let state = Arc::new(Mutex::new(mixer));
 
         let stream = match context.config.sample_format() {
             cpal::SampleFormat::I8 => {
@@ -943,6 +960,7 @@ impl LoopPlayer {
             _stream: stream,
             sample_rate,
             state,
+            output_tap,
         })
     }
 
@@ -950,6 +968,18 @@ impl LoopPlayer {
     #[must_use]
     pub fn sample_rate(&self) -> u32 {
         self.sample_rate
+    }
+
+    /// Snapshot recent mixed-output frames for the visualizer (interleaved stereo).
+    ///
+    /// Empty when the stream has not yet produced enough audio. Always safe to
+    /// call from the control thread; never blocks the audio callback long-term.
+    #[must_use]
+    pub fn snapshot_output_tap(&self, max_frames: usize) -> Vec<f32> {
+        self.output_tap
+            .lock()
+            .map(|ring| ring.snapshot_frames(max_frames))
+            .unwrap_or_default()
     }
 
     /// Crossfade to a mono looping buffer.
@@ -1125,6 +1155,32 @@ impl LoopPlayer {
     pub fn set_active(&self, active: bool) {
         if let Ok(mut state) = self.state.lock() {
             state.active = active;
+        }
+    }
+}
+
+/// Source of spectrum samples for the App visualizer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VisualizerSource {
+    /// No audio available yet.
+    Silent,
+    /// Mixed LoopPlayer output tap (what Numinous is playing).
+    OutputMix,
+    /// System loopback-like input device.
+    Loopback,
+    /// Deterministic room-bed arrangement analysis.
+    RoomBed,
+}
+
+impl VisualizerSource {
+    /// Short HUD label.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Silent => "SILENT",
+            Self::OutputMix => "OUTPUT MIX",
+            Self::Loopback => "LOOPBACK",
+            Self::RoomBed => "ROOM BED",
         }
     }
 }

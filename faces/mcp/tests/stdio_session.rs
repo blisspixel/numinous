@@ -55,7 +55,7 @@ fn run_session_with_barrier(
     }
     stdin.flush().expect("flush requests before barrier");
 
-    let barrier_deadline = Instant::now() + Duration::from_secs(2);
+    let barrier_deadline = Instant::now() + Duration::from_secs(5);
     while !barrier() {
         if Instant::now() >= barrier_deadline {
             drop(stdin);
@@ -64,7 +64,7 @@ fn run_session_with_barrier(
             let _ = output_reader.join();
             let _ = std::fs::remove_file(&journey);
             let _ = std::fs::remove_file(&scores);
-            panic!("MCP session barrier did not resolve within 2 seconds");
+            panic!("MCP session barrier did not resolve within 5 seconds");
         }
         thread::sleep(Duration::from_millis(5));
     }
@@ -184,44 +184,56 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
             "params": {"name": name, "arguments": arguments}
         })
     };
-    let replies = run_session(&[
-        json!({
-            "jsonrpc":"2.0","id":0,"method":"initialize","params":{
-                "protocolVersion":"2025-06-18",
-                "capabilities":{},
-                "clientInfo":{"name":"viewer-acceptance","version":"1.0"}
-            }
-        }),
-        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
-        call(
-            1,
-            "broadcast_session",
-            json!({"action":"start", "pairing_code": pairing_code}),
-        ),
-        call(2, "journey", json!({})),
-        call(
-            3,
-            "play_room",
-            json!({"id":"times-tables","t":0.2,"width":40,"height":20,"variation":42}),
-        ),
-        call(4, "challenge", json!({"id":"times-tables","seed":7})),
-        call(
-            5,
-            "challenge",
-            json!({"id":"times-tables","seed":7,"t":0.81,"pokes":[[0.375,0.5]]}),
-        ),
-        call(
-            6,
-            "play_room",
+    // Wait until the viewer has absorbed every public projection before stop.
+    // Stop clears unwritten queue frames, so racing stop after reveal drops
+    // RevealRoom under CI load.
+    let replies = run_session_with_barrier(
+        &[
             json!({
-                "id":"times-tables","t":0.81,"width":40,"height":20,
-                "variation":42,"pokes":[[0.375,0.5]]
+                "jsonrpc":"2.0","id":0,"method":"initialize","params":{
+                    "protocolVersion":"2025-06-18",
+                    "capabilities":{},
+                    "clientInfo":{"name":"viewer-acceptance","version":"1.0"}
+                }
             }),
-        ),
-        call(7, "reveal_room", json!({"id":"times-tables"})),
-        call(8, "journey", json!({})),
-        call(9, "broadcast_session", json!({"action":"stop"})),
-    ]);
+            json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+            call(
+                1,
+                "broadcast_session",
+                json!({"action":"start", "pairing_code": pairing_code}),
+            ),
+            call(2, "journey", json!({})),
+            call(
+                3,
+                "play_room",
+                json!({"id":"times-tables","t":0.2,"width":40,"height":20,"variation":42}),
+            ),
+            call(4, "challenge", json!({"id":"times-tables","seed":7})),
+            call(
+                5,
+                "challenge",
+                json!({"id":"times-tables","seed":7,"t":0.81,"pokes":[[0.375,0.5]]}),
+            ),
+            call(
+                6,
+                "play_room",
+                json!({
+                    "id":"times-tables","t":0.81,"width":40,"height":20,
+                    "variation":42,"pokes":[[0.375,0.5]]
+                }),
+            ),
+            call(7, "reveal_room", json!({"id":"times-tables"})),
+            call(8, "journey", json!({})),
+        ],
+        || {
+            viewer.retained_events().len() >= 5
+                && viewer
+                    .retained_events()
+                    .last()
+                    .is_some_and(|event| event.event.tool == PublicTool::RevealRoom)
+        },
+        &[call(9, "broadcast_session", json!({"action":"stop"}))],
+    );
     let by_id = |id: u64| -> &Value {
         replies
             .iter()
@@ -237,7 +249,7 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
     assert!(text_of(by_id(7)).contains("Mandelbrot"));
     assert_eq!(by_id(9)["result"]["structuredContent"]["state"], "stopped");
 
-    let deadline = Instant::now() + Duration::from_secs(2);
+    let deadline = Instant::now() + Duration::from_secs(3);
     while viewer.status() != ViewerStatus::GuestStopped {
         assert!(Instant::now() < deadline, "viewer stop marker timed out");
         thread::sleep(Duration::from_millis(5));

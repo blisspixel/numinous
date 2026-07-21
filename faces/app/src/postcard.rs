@@ -34,7 +34,14 @@ pub(crate) fn write_room_postcard(
     dir: &Path,
 ) -> std::io::Result<PathBuf> {
     let rgba = render_room_postcard_rgba(room, phase, inputs, era);
-    write_rendered_postcard(room.meta().id, u64::from(phase_code(phase)), &rgba, dir)
+    let path = write_rendered_postcard(room.meta().id, u64::from(phase_code(phase)), &rgba, dir)?;
+    write_share_note(
+        &path,
+        room.meta().id,
+        era,
+        numinous_core::ShareKind::Postcard,
+    );
+    Ok(path)
 }
 
 pub(crate) fn write_rendered_postcard(
@@ -57,6 +64,16 @@ pub(crate) fn write_rendered_postcard(
     ))
 }
 
+fn write_share_note(path: &Path, room_id: &str, era: Era, kind: numinous_core::ShareKind) {
+    let meta = numinous_core::ShareMeta {
+        room_id: room_id.to_string(),
+        era: era.name().to_string(),
+        kind,
+        version: env!("CARGO_PKG_VERSION").to_string(),
+    };
+    let _ = numinous_core::write_share_sidecar(path, &meta);
+}
+
 /// Export one full phase cycle of the current visit as a looping APNG.
 ///
 /// Gesture history and Visual Era match the still postcard path so a short
@@ -69,12 +86,14 @@ pub(crate) fn write_room_loop(
     dir: &Path,
 ) -> std::io::Result<PathBuf> {
     let frames = render_room_loop_frames(room, start_phase, inputs, era);
-    write_rendered_loop(
+    let path = write_rendered_loop(
         room.meta().id,
         u64::from(phase_code(start_phase)),
         &frames,
         dir,
-    )
+    )?;
+    write_share_note(&path, room.meta().id, era, numinous_core::ShareKind::Loop);
+    Ok(path)
 }
 
 /// Export advancing generations from a Life visit without mutating the live

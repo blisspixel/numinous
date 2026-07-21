@@ -78,9 +78,10 @@ is absent anymore; everything on this list makes an existing organ stronger.
 > adaptive face glyphs (Xbox / PlayStation / generic) are built. Aliens base
 > ramp softens earlier for denser seeds. Room-bed spectrum meter and MCP
 > spectrum bands ship as the offline visualizer path. Open Problems opened
-> (Goldbach); Engine B v0 shipped. Full Share v1 packaging beyond PNG/APNG,
-> OS loopback visualizer capture, and cross-platform controller certification
-> remain.
+> (Goldbach); Engine B v0 shipped. Output-mix and optional OS loopback spectrum
+> sources ship (key O); Share sidecars accompany PNG/APNG. Full Share packaging
+> beyond PNG/APNG (GIF/MP4), broader controller certification, and room-lever
+> drive from spectrum remain.
 
 
 1. **Juice in the window games**: per-action feedback (flash on eat, shake

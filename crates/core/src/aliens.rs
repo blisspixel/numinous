@@ -143,13 +143,13 @@ pub fn alien_message(seed: u64, shown: usize) -> AlienMessage {
     let shown = shown.max(2);
     let (name, explanation, generator) = SEQUENCES[(rng.below(SEQUENCES.len() as u64)) as usize];
     let terms = (0..shown).map(generator).collect();
-    // Soft base ramp (panel): early seeds favor decimal; later seed depths leave
-    // base 10 sooner so alien counting systems show up before grind deepens.
+    // Soft base ramp (panel): early seeds favor decimal; mid seeds leave 10
+    // sooner so alien counting systems show up before grind deepens.
     let roll = rng.below(6) as usize;
     let depth = seed % 32;
-    let base = if depth >= 24 {
+    let base = if depth >= 16 {
         [8, 2, 16, 12, 8, 16][roll]
-    } else if depth >= 12 {
+    } else if depth >= 6 {
         [10, 8, 2, 16, 12, 8][roll]
     } else {
         [10, 10, 8, 2, 16, 12][roll]
@@ -238,12 +238,12 @@ mod tests {
 
     #[test]
     fn denser_seeds_can_leave_decimal_earlier() {
-        // Depth tiers by seed % 32: early keep more decimal, late leave 10.
-        let early_decimal = (0u64..12)
+        // Depth tiers by seed % 32: early keep more decimal, mid/late leave 10.
+        let early_decimal = (0u64..6)
             .map(|s| alien_message(s, 3).base)
             .filter(|&b| b == 10)
             .count();
-        let late_decimal = (24u64..36)
+        let late_decimal = (16u64..28)
             .map(|s| alien_message(s, 3).base)
             .filter(|&b| b == 10)
             .count();

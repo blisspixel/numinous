@@ -109,11 +109,43 @@ pub fn low_band_onset(previous: &[f32; BAND_COUNT], current: &[f32; BAND_COUNT])
 
 /// Normalized spectrum of a stereo arrangement render at the room-bed rate.
 ///
-/// This is the offline visualizer path for room beds and CLI/MCP listen exports.
-/// OS loopback capture remains separate future work.
+/// Offline path for room beds and CLI/MCP listen exports. Live App paths also
+/// feed output-mix or loopback captures through the same band pipeline.
 #[must_use]
 pub fn arrangement_spectrum(samples: &[f32], sample_rate: u32) -> [f32; BAND_COUNT] {
     normalize_bands(&band_energies(samples, 2, sample_rate))
+}
+
+/// Lever-style controls derived from spectrum bands (visualizer to room params).
+///
+/// Values are normalized 0..=1. Faces may map them onto zoom, scatter, rule
+/// flips, or other room inputs without inventing a second analysis path.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SpectrumLevers {
+    /// Sub + bass energy.
+    pub bass: f32,
+    /// Low-mid through high-mid energy.
+    pub mid: f32,
+    /// Treble + air energy.
+    pub treble: f32,
+    /// Onset strength vs the previous frame (1.0 is steady).
+    pub onset: f32,
+}
+
+/// Map seven bands into bass / mid / treble levers plus an onset proxy.
+#[must_use]
+pub fn levers_from_bands(
+    previous: &[f32; BAND_COUNT],
+    current: &[f32; BAND_COUNT],
+) -> SpectrumLevers {
+    let (bass, mid, treble) = bass_mid_treble(current);
+    let total = (bass + mid + treble).max(f32::EPSILON);
+    SpectrumLevers {
+        bass: (bass / total).clamp(0.0, 1.0),
+        mid: (mid / total).clamp(0.0, 1.0),
+        treble: (treble / total).clamp(0.0, 1.0),
+        onset: low_band_onset(previous, current),
+    }
 }
 
 /// Layout for [`draw_spectrum_bars`].
@@ -173,7 +205,7 @@ pub fn draw_spectrum_bars(
 mod tests {
     use super::{
         BAND_COUNT, BAND_NAMES, SpectrumBarLayout, arrangement_spectrum, band_energies,
-        bass_mid_treble, draw_spectrum_bars, low_band_onset, normalize_bands,
+        bass_mid_treble, draw_spectrum_bars, levers_from_bands, low_band_onset, normalize_bands,
     };
 
     fn sine_stereo(freq: f32, rate: u32, frames: usize) -> Vec<f32> {
@@ -286,5 +318,10 @@ mod tests {
                 max_height: 0,
             },
         );
+        let levers = levers_from_bands(&[0.0; BAND_COUNT], &bands);
+        assert!((0.0..=1.0).contains(&levers.bass));
+        assert!((0.0..=1.0).contains(&levers.mid));
+        assert!((0.0..=1.0).contains(&levers.treble));
+        assert!(levers.onset >= 1.0);
     }
 }
