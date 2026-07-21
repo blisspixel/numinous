@@ -586,10 +586,10 @@ without relying on the founder's machine or undocumented context?"
     and forged structured results. Munch open state defaults to
     `FULL_DECK_ROUND` to match MCP. Unit tests cover open, graded, forged, and
     cache fallback paths for the four games. Real MCP stdio acceptances prove
-    public Munch, Arcade, and Quiz openings with schema rejection of illegal
-    arguments, private tool silence, exact native board-body pixel parity,
-    metadata exclusion, and close-time erasure. Other public game sound remains
-    open.
+    public Munch, Arcade, Quiz, and Gauntlet openings with schema rejection of
+    illegal arguments, private tool silence, exact native board-body pixel
+    parity, metadata exclusion, and close-time erasure. Other public game sound
+    remains open.
 
 Owner docs: `ROOMS.md`, `INTERFACES.md`, `SOUND.md`, `STUDIO.md`, `QUALITY.md`.
 

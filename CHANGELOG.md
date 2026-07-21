@@ -11,9 +11,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   unknown arcade actions rejected, public quiz limited to journey-independent
   choice counts (2 through 4), and Munch open state defaults to the MCP full
   deck round. Unit tests cover forged and malformed cases. Real MCP subprocess
-  acceptances reconstruct public Munch, Arcade, and Quiz openings with exact
-  board-body pixels, private tool silence, and close-time erasure. Other public
-  game sound remains open 0.3 work.
+  acceptances reconstruct public Munch, Arcade, Quiz, and Gauntlet openings with
+  exact board-body pixels, private tool silence, and close-time erasure. Other
+  public game sound remains open 0.3 work.
 
 ### Added
 - **Configurable Inputs and Controller Certification**: Gamepad button mappings are now fully configurable via a `~/.numinous-bindings.json` file. Support for cross-platform hardware validation is now built-in using SDL's Game Controller DB, ensuring seamless compatibility for thousands of missing or custom controller types across all environments.
