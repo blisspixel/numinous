@@ -84,25 +84,52 @@ fn noise_p(t: f64, pokes: &[(f64, f64)]) -> f64 {
     }
 }
 
+fn draw_bit_block(canvas: &mut dyn Surface, px: i32, py: i32, on: bool, wound: bool) {
+    let ch = if on { '#' } else { '.' };
+    // Fat bit cell so a large window is a row of chips, not seven freckles.
+    for dy in 0..3 {
+        for dx in 0..3 {
+            canvas.plot(px + dx, py + dy, ch);
+        }
+    }
+    if wound {
+        canvas.plot(px + 1, py + 3, 'x');
+        canvas.plot(px + 1, py - 1, 'x');
+    }
+}
+
 fn draw(canvas: &mut dyn Surface, sent: &[u8; 7], recv: &[u8; 7], fixed: &[u8; 7]) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
     }
-    let mut row = |bits: &[u8; 7], y: f64, mark_bad: bool| {
-        let py = (y * height.saturating_sub(1) as f64).round() as i32;
+    let cell = (width.saturating_sub(8) / 7).clamp(4, 10) as i32;
+    let left = ((width as i32) - cell * 7) / 2;
+    let rows = [
+        (sent, 0.22_f64, false),
+        (recv, 0.50, true),
+        (fixed, 0.78, false),
+    ];
+    for (bits, yf, mark_bad) in rows {
+        let py = (yf * height.saturating_sub(4) as f64).round() as i32;
         for (i, &b) in bits.iter().enumerate() {
-            let px = ((0.15 + i as f64 * 0.1) * width.saturating_sub(1) as f64).round() as i32;
-            let ch = if b == 1 { '#' } else { '.' };
-            canvas.plot(px, py, ch);
-            if mark_bad && b != sent[i] {
-                canvas.plot(px, py + 1, 'x');
+            let px = left + i as i32 * cell;
+            let wound = mark_bad && b != sent[i];
+            draw_bit_block(canvas, px, py, b == 1, wound);
+            // Wire between chips.
+            if i + 1 < bits.len() {
+                let wx0 = px + 3;
+                let wx1 = left + (i as i32 + 1) * cell - 1;
+                canvas.line(wx0, py + 1, wx1, py + 1, '-');
             }
         }
-    };
-    row(sent, 0.25, false);
-    row(recv, 0.5, true);
-    row(fixed, 0.75, false);
+        // Bus from previous row.
+        if (yf - 0.22).abs() > 0.05 {
+            let mid = left + cell * 3 + 1;
+            let y0 = ((0.22 + 0.06) * height.saturating_sub(4) as f64).round() as i32;
+            canvas.line(mid, y0, mid, py, if mark_bad { '~' } else { '|' });
+        }
+    }
 }
 
 /// Message That Heals room.
@@ -251,7 +278,10 @@ mod tests {
     fn render_ink() {
         let mut c = Canvas::new(40, 24);
         MessageHeals::new().render(&mut c, 0.2);
-        assert!(c.ink_count() > 5);
+        assert!(
+            c.ink_count() > 40,
+            "bit rows must be fat cells, not freckles"
+        );
     }
 
     #[test]

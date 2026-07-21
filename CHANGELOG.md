@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Fixed
+- Room bug-hunt: Murmuration is a real flock (heading streaks, more birds), not
+  forty freckles or a blank plate. Tinkerbell and Bedhead stay in their
+  attractor basins so they no longer collapse to a blank/line frame. Message
+  That Heals draws fat Hamming chips and wires. Collatz Tree draws branch edges.
+
+### Fixed
 - Playtest pass on broken interaction: jittery mouse moves no longer wipe
   CLICK plants (collapse to one plant at release instead of stripping the
   gesture or leaving a move trail). Upside-Down Ruler draws a readable digit

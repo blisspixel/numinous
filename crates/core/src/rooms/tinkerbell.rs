@@ -27,17 +27,28 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 }
 
 fn params(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64, f64, f64) {
-    // Classic a=0.9, b=-0.6013, c=2.0, d=0.5
+    // Classic a=0.9, b=-0.6013, c=2.0, d=0.5. Keep a,c inside the butterfly basin;
+    // wider sweeps explode to a few divergent pixels and look blank.
     let s = if seed == 0 {
         0.0
     } else {
-        (seed % 5) as f64 * 0.01
+        (seed % 5) as f64 * 0.008
     };
     if let Some((x, y)) = hand {
-        (0.7 + x * 0.35 + s, -0.6013, 1.5 + y * 1.0, 0.5)
+        (
+            (0.82 + x * 0.16 + s).clamp(0.78, 0.98),
+            -0.6013,
+            (1.7 + y * 0.55).clamp(1.55, 2.35),
+            0.5,
+        )
     } else {
         let u = phase_unit(t);
-        (0.85 + u * 0.1 + s, -0.6013, 1.8 + u * 0.4, 0.5)
+        (
+            (0.88 + u * 0.06 + s).clamp(0.85, 0.96),
+            -0.6013,
+            (1.85 + u * 0.25).clamp(1.75, 2.2),
+            0.5,
+        )
     }
 }
 
@@ -46,40 +57,75 @@ fn draw(canvas: &mut dyn Surface, a: f64, b: f64, c: f64, d: f64) {
     if width == 0 || height == 0 {
         return;
     }
-    let mut x = -0.72;
-    let mut y = -0.64;
     let mut min_x = f64::MAX;
     let mut max_x = f64::MIN;
     let mut min_y = f64::MAX;
     let mut max_y = f64::MIN;
     let mut pts = Vec::with_capacity(ITERS);
-    for _ in 0..50 {
-        let nx = x * x - y * y + a * x + b * y;
-        let ny = 2.0 * x * y + c * x + d * y;
-        x = nx;
-        y = ny;
-    }
-    for _ in 0..ITERS {
-        let nx = x * x - y * y + a * x + b * y;
-        let ny = 2.0 * x * y + c * x + d * y;
-        x = nx;
-        y = ny;
-        if !x.is_finite() || !y.is_finite() {
+    // Burn-in, then sample. Restart from classic seed if the orbit escapes.
+    for attempt in 0..3 {
+        let mut x = -0.72 + attempt as f64 * 0.02;
+        let mut y = -0.64 - attempt as f64 * 0.01;
+        pts.clear();
+        min_x = f64::MAX;
+        max_x = f64::MIN;
+        min_y = f64::MAX;
+        max_y = f64::MIN;
+        let mut ok = true;
+        for _ in 0..80 {
+            let nx = x * x - y * y + a * x + b * y;
+            let ny = 2.0 * x * y + c * x + d * y;
+            if !nx.is_finite() || !ny.is_finite() || nx.abs() > 20.0 || ny.abs() > 20.0 {
+                ok = false;
+                break;
+            }
+            x = nx;
+            y = ny;
+        }
+        if !ok {
+            continue;
+        }
+        for _ in 0..ITERS {
+            let nx = x * x - y * y + a * x + b * y;
+            let ny = 2.0 * x * y + c * x + d * y;
+            if !nx.is_finite() || !ny.is_finite() || nx.abs() > 20.0 || ny.abs() > 20.0 {
+                break;
+            }
+            x = nx;
+            y = ny;
+            min_x = min_x.min(x);
+            max_x = max_x.max(x);
+            min_y = min_y.min(y);
+            max_y = max_y.max(y);
+            pts.push((x, y));
+        }
+        if pts.len() > 200 {
             break;
         }
-        min_x = min_x.min(x);
-        max_x = max_x.max(x);
-        min_y = min_y.min(y);
-        max_y = max_y.max(y);
-        pts.push((x, y));
+    }
+    if pts.is_empty() {
+        // Fallback silhouette so the room never paints blank.
+        for i in 0..120 {
+            let u = i as f64 / 119.0;
+            let th = u * std::f64::consts::TAU;
+            let px = (0.5 + 0.28 * th.cos()) * width.saturating_sub(1) as f64;
+            let py = (0.5 + 0.18 * th.sin()) * height.saturating_sub(1) as f64;
+            canvas.plot(px.round() as i32, py.round() as i32, '*');
+        }
+        return;
     }
     let dx = (max_x - min_x).max(1e-6);
     let dy = (max_y - min_y).max(1e-6);
+    // Keep a margin so wings do not collapse into the corners.
+    let mx = width as f64 * 0.06;
+    let my = height as f64 * 0.06;
+    let iw = (width as f64 - 2.0 * mx).max(1.0);
+    let ih = (height as f64 - 2.0 * my).max(1.0);
     for (i, &(px, py)) in pts.iter().enumerate() {
         let u = ((px - min_x) / dx).clamp(0.0, 1.0);
         let v = ((py - min_y) / dy).clamp(0.0, 1.0);
-        let ix = (u * width.saturating_sub(1) as f64).round() as i32;
-        let iy = ((1.0 - v) * height.saturating_sub(1) as f64).round() as i32;
+        let ix = (mx + u * iw).round() as i32;
+        let iy = (my + (1.0 - v) * ih).round() as i32;
         let ch = if i % 9 == 0 { '#' } else { '*' };
         canvas.plot(ix, iy, ch);
     }
@@ -230,7 +276,16 @@ mod tests {
     fn render_ink() {
         let mut c = Canvas::new(40, 28);
         Tinkerbell::new().render(&mut c, 0.5);
-        assert!(c.ink_count() > 10);
+        assert!(c.ink_count() > 80, "butterfly must fill the plate");
+        for t in [0.0, 0.35, 0.55, 0.9] {
+            let mut large = Canvas::new(120, 70);
+            Tinkerbell::new().render(&mut large, t);
+            assert!(
+                large.ink_count() > 100,
+                "t={t} must not collapse to blank: {}",
+                large.ink_count()
+            );
+        }
     }
 
     #[test]

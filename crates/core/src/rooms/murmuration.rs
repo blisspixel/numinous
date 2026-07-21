@@ -8,9 +8,9 @@ use crate::rng::SplitMix64;
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
-const N: usize = 40;
+const N: usize = 96;
 const NEIGH: usize = 7;
-const STEPS: usize = 24;
+const STEPS: usize = 48;
 const SEED: u64 = 0xB01D_5EED_0000_0001;
 
 fn phase_unit(t: f64) -> f64 {
@@ -41,12 +41,17 @@ struct Bird {
 
 fn init(seed: u64) -> Vec<Bird> {
     let mut rng = SplitMix64::new(SEED ^ seed);
+    // Start as a loose cloud so the first frames are a flock, not dust.
     (0..N)
-        .map(|_| Bird {
-            x: rng.next_f64(),
-            y: rng.next_f64(),
-            vx: (rng.next_f64() - 0.5) * 0.04,
-            vy: (rng.next_f64() - 0.5) * 0.04,
+        .map(|i| {
+            let ring = (i as f64 / N as f64) * std::f64::consts::TAU;
+            let r = 0.12 + rng.next_f64() * 0.18;
+            Bird {
+                x: (0.5 + r * ring.cos() + (rng.next_f64() - 0.5) * 0.04).rem_euclid(1.0),
+                y: (0.5 + r * ring.sin() * 0.7 + (rng.next_f64() - 0.5) * 0.04).rem_euclid(1.0),
+                vx: (rng.next_f64() - 0.5) * 0.03 + 0.01 * ring.cos(),
+                vy: (rng.next_f64() - 0.5) * 0.03 + 0.01 * ring.sin(),
+            }
         })
         .collect()
 }
@@ -74,7 +79,7 @@ fn step(birds: &mut [Bird], falcon: Option<(f64, f64)>) {
         let mut cy = 0.0;
         for &(d, j) in idxs.iter().take(k) {
             let o = snap[j];
-            if d < 0.06 && d > 1e-9 {
+            if d < 0.07 && d > 1e-9 {
                 sx -= (o.x - b.x) / d;
                 sy -= (o.y - b.y) / d;
             }
@@ -95,15 +100,15 @@ fn step(birds: &mut [Bird], falcon: Option<(f64, f64)>) {
             let dx = b.x - px;
             let dy = b.y - py;
             let d = dx.hypot(dy).max(1e-3);
-            if d < 0.35 {
-                fx = dx / d * 0.08;
-                fy = dy / d * 0.08;
+            if d < 0.4 {
+                fx = dx / d * 0.1;
+                fy = dy / d * 0.1;
             }
         }
-        b.vx += sx * 0.03 + (ax - b.vx) * 0.05 + cx * 0.02 + fx;
-        b.vy += sy * 0.03 + (ay - b.vy) * 0.05 + cy * 0.02 + fy;
+        b.vx += sx * 0.035 + (ax - b.vx) * 0.06 + cx * 0.025 + fx;
+        b.vy += sy * 0.035 + (ay - b.vy) * 0.06 + cy * 0.025 + fy;
         let sp = b.vx.hypot(b.vy).max(1e-6);
-        let max_sp = 0.05;
+        let max_sp = 0.045;
         if sp > max_sp {
             b.vx *= max_sp / sp;
             b.vy *= max_sp / sp;
@@ -133,17 +138,28 @@ fn draw(canvas: &mut dyn Surface, birds: &[Bird], falcon: Option<(f64, f64)>) {
     if width == 0 || height == 0 {
         return;
     }
+    let short = width.min(height) as f64;
+    // Trail length grows with canvas so a large window is a cloud, not dust.
+    let trail = ((short * 0.02).round() as i32).clamp(2, 6);
     for b in birds {
         let px = (b.x * width.saturating_sub(1) as f64).round() as i32;
         let py = (b.y * height.saturating_sub(1) as f64).round() as i32;
-        canvas.plot(px, py, '*');
+        let sp = b.vx.hypot(b.vy).max(1e-6);
+        let dx = ((b.vx / sp) * trail as f64).round() as i32;
+        let dy = ((b.vy / sp) * trail as f64).round() as i32;
+        // Body + short heading streak: readable birds, not one-pixel freckles.
+        canvas.line(px - dx, py - dy, px, py, '*');
+        canvas.plot(px, py, '#');
     }
     if let Some((x, y)) = falcon {
         let px = (x * width.saturating_sub(1) as f64).round() as i32;
         let py = (y * height.saturating_sub(1) as f64).round() as i32;
-        canvas.plot(px, py, '#');
-        canvas.plot(px + 1, py, '#');
-        canvas.plot(px, py + 1, '#');
+        // Falcon is a solid blot the flock flees, not a reticle cross.
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                canvas.plot(px + dx, py + dy, '@');
+            }
+        }
     }
 }
 
@@ -180,7 +196,7 @@ impl Room for Murmuration {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        let steps = 4 + (phase_unit(t) * STEPS as f64) as usize;
+        let steps = 12 + (phase_unit(t) * STEPS as f64) as usize;
         let (birds, _) = flock(self.seed, steps, None);
         draw(canvas, &birds, None);
     }
@@ -204,7 +220,7 @@ impl Room for Murmuration {
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        let steps = 4 + (phase_unit(t) * STEPS as f64) as usize;
+        let steps = 12 + (phase_unit(t) * STEPS as f64) as usize;
         let (_, spread) = flock(self.seed, steps, None);
         Some(format!("N{N}  k={NEIGH}  spread={spread:.2}  HOLD:FALCON"))
     }
@@ -212,7 +228,7 @@ impl Room for Murmuration {
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let falcon = hands.last().copied();
-        let steps = 4 + (phase_unit(t) * STEPS as f64) as usize;
+        let steps = 12 + (phase_unit(t) * STEPS as f64) as usize;
         let (birds, _) = flock(self.seed, steps, falcon);
         draw(canvas, &birds, falcon);
     }
@@ -228,7 +244,7 @@ impl Room for Murmuration {
             return self.status(t);
         }
         let falcon = hands.last().copied();
-        let steps = 4 + (phase_unit(t) * STEPS as f64) as usize;
+        let steps = 12 + (phase_unit(t) * STEPS as f64) as usize;
         let (_, spread) = flock(self.seed, steps, falcon);
         let (fx, fy) = falcon.unwrap();
         Some(format!(
@@ -277,10 +293,36 @@ mod tests {
     }
 
     #[test]
-    fn render_ink() {
-        let mut c = Canvas::new(40, 28);
-        Murmuration::new().render(&mut c, 0.5);
-        assert!(c.ink_count() > 10);
+    fn render_is_a_visible_flock_not_dust() {
+        let mut small = Canvas::new(40, 28);
+        Murmuration::new().render(&mut small, 0.5);
+        assert!(small.ink_count() > 80, "small flock must fill the plate");
+        let mut large = Canvas::new(160, 90);
+        Murmuration::new().render(&mut large, 0.55);
+        assert!(
+            large.ink_count() > 200,
+            "large window must scale ink, not stay 40 freckles: {}",
+            large.ink_count()
+        );
+    }
+
+    #[test]
+    fn falcon_parts_the_cloud() {
+        let room = Murmuration::new();
+        let mut base = Canvas::new(72, 40);
+        let mut held = Canvas::new(72, 40);
+        room.render(&mut base, 0.5);
+        room.render_input(
+            &mut held,
+            0.5,
+            &[RoomInput::PointerDown {
+                x: 0.5,
+                y: 0.5,
+                t: 0.0,
+            }],
+        );
+        assert_ne!(base.to_text(), held.to_text());
+        assert!(held.to_text().contains('@'));
     }
 
     #[test]
