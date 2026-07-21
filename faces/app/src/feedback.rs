@@ -116,7 +116,7 @@ pub(crate) fn room_goal(goal: &str) -> Banner {
         _ => format!("GOAL COMPLETE: {}", goal.to_uppercase()),
     };
     Banner::new(
-        vec![heading, "INSPECT: WHY THE HEART MATTERS".to_string()],
+        vec![heading, "EXPLAIN: WHY THE HEART MATTERS".to_string()],
         ROOM_GOAL_FRAMES,
     )
 }
@@ -185,7 +185,7 @@ mod tests {
         let goal = room_goal("LAND ON EXACTLY 4 LOBES");
         assert_eq!(
             goal.lines(),
-            ["FOUR LOBES FOUND", "INSPECT: WHY THE HEART MATTERS"]
+            ["FOUR LOBES FOUND", "EXPLAIN: WHY THE HEART MATTERS"]
         );
         assert_eq!(goal.frames_left(), 240);
     }

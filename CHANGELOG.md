@@ -5,6 +5,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- Optional concept explainers for rooms: App E / ? (and controller SELECT)
+  opens EXPLAIN with THE CONCEPT when known, then the reveal. Flagship rooms
+  including Coffee Cup, Times Tables, Mandelbrot, Life, Lorenz, and others
+  ship concepts; games keep the same door on CLI `?`. MCP `reveal_room` and
+  CLI describe carry concept when present.
+
 ### Fixed
 - Coffee Cup no longer freezes after a swing or leaves a hand trail of `+`
   marks over the rays. While held, the sun pins to the hand; after release it

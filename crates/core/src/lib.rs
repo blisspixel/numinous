@@ -77,7 +77,7 @@ pub use chiptune::{
 };
 pub use citations::{for_room as room_citation, for_room_unlocked as room_citation_unlocked};
 pub use codebreaker::{Feedback, grade, hint, secret_code};
-pub use concepts::concept;
+pub use concepts::{concept, explain_text};
 pub use era::Era;
 pub use font::{draw_text, text_width, wrap_text};
 pub use humor::{Joke, explain_joke, jokes};

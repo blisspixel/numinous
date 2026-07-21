@@ -192,11 +192,12 @@ pub fn room_action_with_face(mode: InputMode, action: &str, face: ControllerFace
 }
 
 pub fn room_inspect(mode: InputMode) -> String {
-    item(mode, Control::Inspect, "INSPECT")
+    item(mode, Control::Inspect, "EXPLAIN")
 }
 
+/// Room explain control with adaptive face glyphs (concept + reveal).
 pub fn room_inspect_with_face(mode: InputMode, face: ControllerFace) -> String {
-    item_with_face(mode, Control::Inspect, "INSPECT", face)
+    item_with_face(mode, Control::Inspect, "EXPLAIN", face)
 }
 
 pub fn room_controls(mode: InputMode) -> String {
@@ -433,7 +434,7 @@ pub fn help_lines(mode: InputMode, selected: Option<usize>, activity_paused: boo
             "WANDER",
             "A / D      PREV / NEXT ROOM    1-9 JUMP",
             "W / S      TIME SPEED   MOUSE  SCRUB",
-            "E          INSPECT    Q  ERA    R  RESET",
+            "E / ?      EXPLAIN    Q  ERA    R  RESET",
             "B          THE SHOW   TAB  THE STUDIO",
             "J          JOURNEY    F  FULLSCREEN    X  WATCH AGENT",
             "Y          RADIO    P  POSTCARD   L  LOOP   K  SHARE PACK",
@@ -457,7 +458,7 @@ pub fn help_lines(mode: InputMode, selected: Option<usize>, activity_paused: boo
                     "WANDER",
                     "LEFT STICK HAND   SOUTH TOUCH / HOLD",
                     "LB / RB ROOMS   LT / RT SPEED   RIGHT STICK TIME",
-                    "SELECT INSPECT   L3 RESET   R3 PAUSE",
+                    "SELECT EXPLAIN   L3 RESET   R3 PAUSE",
                     "WEST ERA   NORTH RADIO",
                     "HOLD NORTH + D-PAD VOLUME   + SOUTH MUTE",
                     "START MENU   EAST BACK",

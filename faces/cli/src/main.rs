@@ -2482,6 +2482,9 @@ fn describe_report(
             value["goal"] = serde_json::Value::String(goal.to_string());
         }
         value["reveal"] = serde_json::Value::String(room.reveal().to_string());
+        if let Some(concept) = room.concept() {
+            value["concept"] = serde_json::Value::String(concept.to_string());
+        }
         value["deep_cuts"] = serde_json::Value::Array(
             unlocked
                 .into_iter()
@@ -2495,8 +2498,12 @@ fn describe_report(
     } else {
         let goal = goal.map_or_else(String::new, |goal| format!("\nGoal: {goal}"));
         let reading = citation.map(|c| format!("\n{c}\n")).unwrap_or_default();
+        let concept = room
+            .concept()
+            .map(|c| format!("\n\n{c}"))
+            .unwrap_or_default();
         format!(
-            "{} ({})\nWing: {}\nAction: {action}{goal}\n\n{}\n\nReveal: {}\n{cuts}{reading}",
+            "{} ({})\nWing: {}\nAction: {action}{goal}\n\n{}{concept}\n\nReveal: {}\n{cuts}{reading}",
             m.title,
             m.id,
             m.wing,

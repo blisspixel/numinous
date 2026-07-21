@@ -209,7 +209,9 @@ pub(crate) fn draw_room_chrome(
     let scale = (width as i32 / 400).clamp(1, 4);
     let reveal_lines = if state.show_info && !state.the_show && !state.studio {
         let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
-        numinous_core::wrap_text(&room.reveal().to_uppercase(), columns)
+        // Optional concept first, then the room reveal: both only on EXPLAIN.
+        let panel = numinous_core::explain_text(room.meta().id, room.reveal());
+        numinous_core::wrap_text(&panel.to_uppercase(), columns)
     } else {
         Vec::new()
     };

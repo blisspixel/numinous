@@ -3180,8 +3180,8 @@ impl ApplicationHandler for App {
                             self.time_scale = (self.time_scale / 2.0).max(0.25);
                         }
                         Key::Named(NamedKey::Space) => self.toggle_pause(),
-                        // E inspects, like use in every shooter.
-                        Key::Character(c) if c.as_str() == "e" => {
+                        // E / ? opens the optional concept + reveal door.
+                        Key::Character(c) if c.as_str() == "e" || c.as_str() == "?" => {
                             self.show_info = !self.show_info;
                         }
                         // Q swaps the era, like swapping weapons.
@@ -4341,7 +4341,7 @@ mod tests {
         assert!(app.goal_announced);
         assert_eq!(
             app.banner.as_ref().expect("earned Aha").lines(),
-            ["FOUR LOBES FOUND", "INSPECT: WHY THE HEART MATTERS"]
+            ["FOUR LOBES FOUND", "EXPLAIN: WHY THE HEART MATTERS"]
         );
 
         app.maybe_announce_room_goal();
