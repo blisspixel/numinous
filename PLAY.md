@@ -89,6 +89,7 @@ the right stick scrubs time, Start opens or closes the menu, Select inspects,
 and clicking the left stick resets the room. West changes the visual era.
 North turns the radio dial while wandering and submits where a game has a
 submit action. Start pauses a live game behind the menu without discarding it.
+You can remap any controller input by creating a JSON configuration file at `~/.numinous-bindings.json`.
 
 To watch a separately consenting MCP player, press X or choose Watch Agent in
 the controller menu. Give that player the one-use code shown in the App. Arrow
