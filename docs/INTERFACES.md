@@ -69,8 +69,10 @@ The full interactive audiovisual experience. The UX is specified in depth across
   Input-aware legends cover rooms, all games, The Show, the Journey, and the
   Studio. The controller opens and closes all nine menu destinations; Studio
   formula entry remains honestly keyboard-required.
-  Focus loss or disconnect cancels a held gesture. Touch, pen, MIDI, remapping,
-  and platform hardware certification remain planned rather than implied.
+  Focus loss or disconnect cancels a held gesture. Controller bindings load from
+  `~/.numinous-bindings.json` with shipped `gamecontrollerdb.txt` fallback.
+  Touch, pen, MIDI, adaptive glyphs, and broader platform hardware certification
+  remain planned rather than implied.
 
 Nothing here is a compromise for the other faces; this is the headline experience. It is simply *one* consumer of the core.
 
@@ -265,8 +267,11 @@ renderer shared with the live App. Strictly accepted native room and Studio
 selections also derive their deterministic core sound locally. The App renders
 a bounded fixed-rate source once per selected public sequence and resamples it
 at the device; an unsupported, invalid, forged, or non-sonic selection
-explicitly retires the older sound. Other game visuals are not yet
-reconstructed. Arrow keys or the D-pad scrub retained actions and scroll a long result.
+explicitly retires the older sound. Public Munch, Arcade, Quiz, and Gauntlet
+actions reconstruct through the same live App draw paths with fail-closed
+argument and result attestation, and they publish deterministic local sound
+once per public sequence. Nim remains silent. Arrow keys or the D-pad scrub
+retained actions and scroll a long result.
 A and D, or LB and RB, pan fixed-width result text without reflow. Space or R3
 pauses only the human display. M or the controller sound chord uses the existing
 global mute path. Escape or East closes the viewer, clears its ring, and restores

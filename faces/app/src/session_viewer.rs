@@ -504,7 +504,6 @@ impl NativeReplay {
         }
     }
 
-    #[allow(dead_code)]
     fn sound(&self) -> Option<numinous_core::SoundSpec> {
         match &self.kind {
             NativeReplayKind::Room(replay) => Some(
@@ -519,12 +518,70 @@ impl NativeReplay {
                 32,
                 replay.parameter,
             )),
+            // Nim stays silent: the board is pure combinatorial text and pixels.
             NativeReplayKind::Nim(_) => None,
-            NativeReplayKind::Munch(_) => None,
-            NativeReplayKind::Arcade(_) => None,
-            NativeReplayKind::Quiz(_) => None,
-            NativeReplayKind::Gauntlet(_) => None,
+            NativeReplayKind::Munch(replay) => Some(munch_public_sound(replay)),
+            NativeReplayKind::Arcade(replay) => Some(arcade_public_sound(replay)),
+            NativeReplayKind::Quiz(replay) => Some(quiz_public_sound(replay)),
+            NativeReplayKind::Gauntlet(replay) => Some(gauntlet_public_sound(replay)),
         }
+    }
+}
+
+/// Quiet waiting board, or a short graded consequence phrase.
+fn munch_public_sound(replay: &MunchGameReplay) -> numinous_core::SoundSpec {
+    match &replay.play.graded {
+        None => {
+            let root = 196.0 + (replay.seed % 5) as f32 * 16.0;
+            numinous_core::SoundSpec::tone(root, 2.0, 0.04)
+        }
+        Some(outcome) => {
+            if outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0 {
+                numinous_core::SoundSpec::arpeggio(&[392.0, 494.0, 587.0, 784.0], 1.2, 0.08)
+            } else if outcome.score > 0 {
+                numinous_core::SoundSpec::arpeggio(&[330.0, 392.0, 494.0], 1.0, 0.07)
+            } else {
+                numinous_core::SoundSpec::arpeggio(&[196.0, 185.0, 165.0], 1.0, 0.06)
+            }
+        }
+    }
+}
+
+/// Arcade opening and mid-run state: a short level-rooted phrase.
+fn arcade_public_sound(replay: &ArcadeGameReplay) -> numinous_core::SoundSpec {
+    let level = replay.play.run.level.max(1) as f32;
+    let root = 220.0 * (1.0 + (level - 1.0) * 0.06);
+    if replay.play.over {
+        numinous_core::SoundSpec::arpeggio(&[root, root * 0.75, root * 0.5], 1.1, 0.07)
+    } else {
+        numinous_core::SoundSpec::arpeggio(&[root, root * 1.25, root * 1.5], 1.0, 0.06)
+    }
+}
+
+/// Quiz pose is soft; graded answers speak a clear major or minor chord.
+fn quiz_public_sound(replay: &QuizGameReplay) -> numinous_core::SoundSpec {
+    match replay.play.flash {
+        Some((true, _)) => numinous_core::SoundSpec::chord(&[392.0, 494.0, 587.0], 1.2, 0.07),
+        Some((false, _)) => numinous_core::SoundSpec::chord(&[233.0, 277.0, 349.0], 1.2, 0.06),
+        None => {
+            let root = 262.0 + (replay.seed % 4) as f32 * 12.0;
+            numinous_core::SoundSpec::tone(root, 2.0, 0.04)
+        }
+    }
+}
+
+/// Gauntlet open stage hum, or a complete-run phrase from combo total.
+fn gauntlet_public_sound(replay: &GauntletGameReplay) -> numinous_core::SoundSpec {
+    if replay.play.stage >= 4 {
+        let total = crate::play::gauntlet_total(&replay.play.scores, &replay.play.cleared);
+        if total >= 50 {
+            numinous_core::SoundSpec::arpeggio(&[330.0, 415.0, 494.0, 660.0], 1.4, 0.08)
+        } else {
+            numinous_core::SoundSpec::arpeggio(&[247.0, 294.0, 370.0], 1.2, 0.07)
+        }
+    } else {
+        let root = 175.0 + (replay.seed % 6) as f32 * 10.0;
+        numinous_core::SoundSpec::tone(root, 2.0, 0.04)
     }
 }
 
@@ -930,13 +987,60 @@ fn parse_native_replay(event: &PublicToolEvent) -> Option<NativeReplay> {
             parse_studio_replay(&event.arguments, &event.result).map(NativeReplay::studio)
         }
         PublicTool::Nim => parse_nim_replay(&event.arguments, &event.result).map(NativeReplay::nim),
-        PublicTool::Munch => parse_munch_replay(&event.arguments).map(NativeReplay::munch),
-        PublicTool::MunchArcade => parse_arcade_replay(&event.arguments).map(NativeReplay::arcade),
-        PublicTool::Quiz => parse_quiz_replay(&event.arguments).map(NativeReplay::quiz),
-        PublicTool::Gauntlet => parse_gauntlet_replay(&event.arguments).map(NativeReplay::gauntlet),
+        PublicTool::Munch => {
+            parse_munch_replay(&event.arguments, &event.result).map(NativeReplay::munch)
+        }
+        PublicTool::MunchArcade => {
+            parse_arcade_replay(&event.arguments, &event.result).map(NativeReplay::arcade)
+        }
+        PublicTool::Quiz => {
+            parse_quiz_replay(&event.arguments, &event.result).map(NativeReplay::quiz)
+        }
+        PublicTool::Gauntlet => {
+            parse_gauntlet_replay(&event.arguments, &event.result).map(NativeReplay::gauntlet)
+        }
         _ => None,
     }
 }
+
+/// Shared envelope for a successful public tool result used by game replay.
+fn successful_structured_result(result: &Map<String, Value>) -> Option<&Map<String, Value>> {
+    if result.get("isError").and_then(Value::as_bool) != Some(false) {
+        return None;
+    }
+    let blocks = result.get("content")?.as_array()?;
+    if blocks.len() != 1 {
+        return None;
+    }
+    let block = blocks.first()?.as_object()?;
+    if block.get("type").and_then(Value::as_str) != Some("text") {
+        return None;
+    }
+    if !block.get("text").map(Value::is_string).unwrap_or(false) {
+        return None;
+    }
+    if result.len() != 3 {
+        return None;
+    }
+    result.get("structuredContent")?.as_object()
+}
+
+fn replay_seed(arguments: &Map<String, Value>) -> Option<u64> {
+    match arguments.get("seed") {
+        Some(seed) => seed.as_u64(),
+        None => Some(1),
+    }
+}
+
+fn only_known_keys(arguments: &Map<String, Value>, allowed: &[&str]) -> bool {
+    arguments.keys().all(|key| allowed.contains(&key.as_str()))
+}
+
+/// Gauntlet bomb mix matches the MCP face constant.
+const GAUNTLET_BOMB_MIX: u64 = 0x0000_6A17_0000_0B0B;
+
+/// Bound arcade action lists so hostile public events cannot spin forever.
+const MAX_ARCADE_REPLAY_ACTIONS: usize = 4_096;
 
 fn parse_nim_replay(
     arguments: &Map<String, Value>,
@@ -1039,30 +1143,44 @@ fn canonical_nim_result(seed: u64, replay: &numinous_core::nim::NimReplay) -> Va
     }
 }
 
-fn parse_munch_replay(arguments: &Map<String, Value>) -> Option<MunchGameReplay> {
-    let seed = arguments.get("seed").and_then(Value::as_u64).unwrap_or(1);
-    let round = arguments.get("round").and_then(Value::as_u64).unwrap_or(0);
-    let board = numinous_core::build_board(seed, round);
-
-    let bites: std::collections::BTreeSet<usize> = arguments
-        .get("bites")
-        .and_then(Value::as_array)
-        .map(|list| {
-            list.iter()
-                .filter_map(Value::as_u64)
-                .filter(|&n| n >= 1)
-                .map(|n| (n - 1) as usize)
-                .collect()
-        })
-        .unwrap_or_default();
-
-    let graded = if arguments.contains_key("bites") {
-        let bites_vec: Vec<usize> = bites.iter().copied().collect();
-        Some(numinous_core::grade_munch(&board, &bites_vec))
-    } else {
-        None
+fn parse_munch_replay(
+    arguments: &Map<String, Value>,
+    result: &Map<String, Value>,
+) -> Option<MunchGameReplay> {
+    if !only_known_keys(arguments, &["seed", "round", "bites"]) {
+        return None;
+    }
+    let structured = successful_structured_result(result)?;
+    let seed = replay_seed(arguments)?;
+    let round = match arguments.get("round") {
+        Some(round) => round.as_u64()?,
+        None => numinous_core::FULL_DECK_ROUND,
     };
-
+    let board = numinous_core::build_board(seed, round);
+    let (bites, graded) = match arguments.get("bites") {
+        Some(raw) => {
+            let list = raw.as_array()?;
+            let mut cells = std::collections::BTreeSet::new();
+            let mut order = Vec::with_capacity(list.len());
+            for value in list {
+                let one_based = value.as_u64()?;
+                if one_based < 1 {
+                    return None;
+                }
+                let cell = usize::try_from(one_based.checked_sub(1)?).ok()?;
+                cells.insert(cell);
+                order.push(cell);
+            }
+            let outcome = numinous_core::grade_munch(&board, &order);
+            (cells, Some(outcome))
+        }
+        None => (std::collections::BTreeSet::new(), None),
+    };
+    if Value::Object(structured.clone())
+        != canonical_munch_structured(seed, round, &board, graded.as_ref())
+    {
+        return None;
+    }
     let play = crate::play::MunchPlay {
         board,
         seed,
@@ -1075,28 +1193,73 @@ fn parse_munch_replay(arguments: &Map<String, Value>) -> Option<MunchGameReplay>
     Some(MunchGameReplay { seed, round, play })
 }
 
-fn parse_arcade_replay(arguments: &Map<String, Value>) -> Option<ArcadeGameReplay> {
-    let seed = arguments.get("seed").and_then(Value::as_u64).unwrap_or(1);
-    let mut run = numinous_core::munch_arcade::Arcade::new(seed);
+fn canonical_munch_structured(
+    seed: u64,
+    round: u64,
+    board: &numinous_core::Board,
+    graded: Option<&numinous_core::Munched>,
+) -> Value {
+    match graded {
+        Some(outcome) => serde_json::json!({
+            "game": "munch",
+            "seed": seed,
+            "round": round,
+            "hits": outcome.hits,
+            "badBites": outcome.bad_bites,
+            "leftBehind": outcome.left_behind,
+            "wronglyEaten": outcome.wrongly_eaten,
+            "missed": outcome.missed,
+            "perfect": outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0,
+            "score": outcome.score
+        }),
+        None => serde_json::json!({
+            "game": "munch",
+            "seed": seed,
+            "round": round,
+            "rule": board.rule.describe(),
+            "board": numinous_core::board_text(board)
+        }),
+    }
+}
 
-    if let Some(actions) = arguments.get("actions").and_then(Value::as_array) {
-        for action_val in actions {
-            if let Some(action_str) = action_val.as_str() {
-                let action = match action_str.to_ascii_lowercase().as_str() {
-                    "up" | "w" => Some(numinous_core::munch_arcade::Action::Up),
-                    "down" | "s" => Some(numinous_core::munch_arcade::Action::Down),
-                    "left" | "a" => Some(numinous_core::munch_arcade::Action::Left),
-                    "right" | "d" => Some(numinous_core::munch_arcade::Action::Right),
-                    "eat" | "e" => Some(numinous_core::munch_arcade::Action::Eat),
-                    _ => None,
-                };
-                if let Some(a) = action {
-                    run.turn(a);
-                }
+fn parse_arcade_action(value: &Value) -> Option<numinous_core::munch_arcade::Action> {
+    use numinous_core::munch_arcade::Action;
+    Some(match value.as_str()?.to_ascii_lowercase().as_str() {
+        "up" | "w" => Action::Up,
+        "down" | "s" => Action::Down,
+        "left" | "a" => Action::Left,
+        "right" | "d" => Action::Right,
+        "eat" | "e" => Action::Eat,
+        _ => return None,
+    })
+}
+
+fn parse_arcade_replay(
+    arguments: &Map<String, Value>,
+    result: &Map<String, Value>,
+) -> Option<ArcadeGameReplay> {
+    if !only_known_keys(arguments, &["seed", "actions"]) {
+        return None;
+    }
+    let structured = successful_structured_result(result)?;
+    let seed = replay_seed(arguments)?;
+    let mut run = numinous_core::munch_arcade::Arcade::new(seed);
+    let mut cleared = false;
+    if let Some(raw) = arguments.get("actions") {
+        let actions = raw.as_array()?;
+        if actions.len() > MAX_ARCADE_REPLAY_ACTIONS {
+            return None;
+        }
+        for value in actions {
+            let action = parse_arcade_action(value)?;
+            if matches!(run.turn(action), numinous_core::munch_arcade::Turn::Cleared) {
+                cleared = true;
             }
         }
     }
-
+    if Value::Object(structured.clone()) != canonical_arcade_structured(seed, &run, cleared) {
+        return None;
+    }
     let over = run.lives == 0;
     let play = crate::play::ArcadePlay {
         run,
@@ -1107,105 +1270,338 @@ fn parse_arcade_replay(arguments: &Map<String, Value>) -> Option<ArcadeGameRepla
     Some(ArcadeGameReplay { seed, play })
 }
 
-fn parse_quiz_replay(arguments: &Map<String, Value>) -> Option<QuizGameReplay> {
-    let seed = arguments.get("seed").and_then(Value::as_u64).unwrap_or(1);
-    let round_idx = arguments.get("round").and_then(Value::as_u64).unwrap_or(0);
-    let choice_count = arguments
-        .get("choices")
-        .and_then(Value::as_u64)
-        .unwrap_or(4) as usize;
-    let round = numinous_core::build_round_sized(seed, round_idx, 54, 22, choice_count);
+fn canonical_arcade_structured(
+    seed: u64,
+    run: &numinous_core::munch_arcade::Arcade,
+    cleared: bool,
+) -> Value {
+    use numinous_core::munch_arcade::Mind;
+    use numinous_core::munchers::{COLS, ROWS};
+    let mut board_text = String::new();
+    for row in 0..ROWS {
+        for col in 0..COLS {
+            let cell = row * COLS + col;
+            if cell == run.muncher {
+                board_text.push_str("[@]");
+            } else if let Some(vex) = run.vexations.iter().find(|vex| vex.cell == cell) {
+                let mind = match vex.mind {
+                    Mind::Drifter => "d",
+                    Mind::Tracker => "T",
+                    Mind::Editor => "e",
+                };
+                board_text.push_str(&format!("[{mind}]"));
+            } else if run.eaten[cell] {
+                board_text.push_str("[ ]");
+            } else {
+                board_text.push_str(&format!("[{:>2}]", run.board.numbers[cell]));
+            }
+        }
+        board_text.push('\n');
+    }
+    serde_json::json!({
+        "game": "arcade",
+        "seed": seed,
+        "level": run.level,
+        "lives": run.lives,
+        "score": run.score,
+        "muncher": run.muncher,
+        "vexations": run.vexations.iter().map(|vex| serde_json::json!({
+            "cell": vex.cell,
+            "mind": format!("{:?}", vex.mind)
+        })).collect::<Vec<_>>(),
+        "rule": run.board.rule.describe(),
+        "board": board_text,
+        "cleared": cleared,
+        "over": run.lives == 0
+    })
+}
 
-    let flash = arguments.get("guess").and_then(Value::as_str).map(|g| {
-        let letter = g.trim().chars().next().map(|c| c.to_ascii_uppercase());
-        let correct = letter == Some(round.answer);
-        (correct, 60)
-    });
-
-    let play = crate::play::QuizPlay { round, flash };
+fn parse_quiz_replay(
+    arguments: &Map<String, Value>,
+    result: &Map<String, Value>,
+) -> Option<QuizGameReplay> {
+    if !only_known_keys(arguments, &["seed", "round", "choices", "guess"]) {
+        return None;
+    }
+    let structured = successful_structured_result(result)?;
+    let seed = replay_seed(arguments)?;
+    let round_idx = match arguments.get("round") {
+        Some(round) => round.as_u64()?,
+        None => 0,
+    };
+    let choice_count = match arguments.get("choices") {
+        Some(choices) => {
+            let count = choices.as_u64()?;
+            let count = usize::try_from(count).ok()?;
+            // Public quiz projection is state-independent at journey level 0:
+            // only 2 through 4 choices are legal without private progress.
+            if !(2..=4).contains(&count) {
+                return None;
+            }
+            count
+        }
+        None => 4,
+    };
+    let quiz = numinous_core::build_round_sized(seed, round_idx, 54, 22, choice_count);
+    let flash = match arguments.get("guess") {
+        Some(guess) => {
+            let text = guess.as_str()?;
+            let letter = text.trim().chars().next().map(|c| c.to_ascii_uppercase())?;
+            let correct = letter == quiz.answer;
+            Some((correct, 60_u64))
+        }
+        None => None,
+    };
+    if Value::Object(structured.clone())
+        != canonical_quiz_structured(seed, round_idx, choice_count, &quiz, flash.map(|(c, _)| c))
+    {
+        return None;
+    }
+    let play = crate::play::QuizPlay { round: quiz, flash };
     Some(QuizGameReplay {
         seed,
-        plays: round_idx as u32,
+        plays: u32::try_from(round_idx).ok()?,
         play,
         rooms: numinous_core::all_rooms(),
     })
 }
 
-fn parse_gauntlet_replay(arguments: &Map<String, Value>) -> Option<GauntletGameReplay> {
-    let seed = arguments.get("seed").and_then(Value::as_u64).unwrap_or(1);
+fn canonical_quiz_structured(
+    seed: u64,
+    round: u64,
+    choice_count: usize,
+    quiz: &numinous_core::QuizRound,
+    graded_correct: Option<bool>,
+) -> Value {
+    match graded_correct {
+        Some(correct) => serde_json::json!({
+            "game": "quiz",
+            "seed": seed,
+            "round": round,
+            "choiceCount": choice_count,
+            "correct": correct,
+            "answer": quiz.answer.to_string(),
+            "answerTitle": quiz.answer_title,
+            "why": quiz.answer_reveal
+        }),
+        None => {
+            let choice_json: Vec<Value> = quiz
+                .choices
+                .iter()
+                .map(|choice| {
+                    serde_json::json!({
+                        "letter": choice.letter.to_string(),
+                        "title": choice.title
+                    })
+                })
+                .collect();
+            serde_json::json!({
+                "game": "quiz",
+                "seed": seed,
+                "round": round,
+                "choiceCount": choice_count,
+                "art": quiz.art,
+                "choices": choice_json
+            })
+        }
+    }
+}
+
+fn parse_gauntlet_answers(
+    seed: u64,
+    answers: &Value,
+) -> Option<(Vec<i64>, Vec<bool>, Vec<String>)> {
+    let answers = answers.as_object()?;
+    if !only_known_keys(answers, &["bites", "shape", "sky", "wires"]) {
+        return None;
+    }
     let mut scores = Vec::new();
     let mut cleared = Vec::new();
+    let mut reveals = Vec::new();
 
-    let stage = if let Some(answers) = arguments.get("answers") {
-        let board = numinous_core::build_board(seed, 0);
-        let bites: Vec<usize> = answers
-            .get("bites")
-            .and_then(Value::as_array)
-            .map(|l| {
-                l.iter()
-                    .filter_map(Value::as_u64)
-                    .filter(|&n| n >= 1)
-                    .map(|n| (n - 1) as usize)
-                    .collect()
-            })
-            .unwrap_or_default();
-        let outcome = numinous_core::grade_munch(&board, &bites);
-        let clean = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
-        scores.push(outcome.score);
-        cleared.push(clean);
-
-        let round = numinous_core::build_round(seed, 1, 44, 18);
-        let guess = answers
-            .get("shape")
-            .and_then(Value::as_str)
-            .and_then(|g| g.trim().chars().next())
-            .map(|c| c.to_ascii_uppercase());
-        let clean = guess == Some(round.answer);
-        scores.push(if clean { 25 } else { 0 });
-        cleared.push(clean);
-
-        let scan = numinous_core::build_scan(seed, 4);
-        let guess = answers
-            .get("sky")
-            .and_then(Value::as_str)
-            .and_then(|g| g.trim().chars().next())
-            .map(|c| c.to_ascii_uppercase());
-        let clean = guess == Some(scan.answer);
-        scores.push(if clean { 25 } else { 0 });
-        cleared.push(clean);
-
-        let secret = numinous_core::secret_code(seed ^ 0x0000_6A17_0000_0B0B, 4);
-        let wires: Vec<&str> = answers
-            .get("wires")
-            .and_then(Value::as_array)
-            .map(|l| l.iter().filter_map(Value::as_str).collect())
-            .unwrap_or_default();
-        let mut clean = false;
-        let mut bomb_points = 0i64;
-        for (i, raw) in wires.iter().take(5).enumerate() {
-            let guess: Vec<u8> = raw
-                .chars()
-                .filter(|c| c.is_ascii_digit())
-                .map(|c| c as u8 - b'0')
-                .collect();
-            if guess.len() == 4 && numinous_core::grade(&secret, &guess).locked == 4 {
-                clean = true;
-                bomb_points = 10 * (5 - i as i64 - 1).max(0);
-                break;
+    let board = numinous_core::build_board(seed, 0);
+    let bites: Vec<usize> = match answers.get("bites") {
+        Some(raw) => {
+            let list = raw.as_array()?;
+            let mut cells = Vec::with_capacity(list.len());
+            for value in list {
+                let one_based = value.as_u64()?;
+                if one_based < 1 {
+                    return None;
+                }
+                cells.push(usize::try_from(one_based.checked_sub(1)?).ok()?);
             }
+            cells
         }
-        scores.push(bomb_points);
-        cleared.push(clean);
-        4
+        None => Vec::new(),
+    };
+    let outcome = numinous_core::grade_munch(&board, &bites);
+    let clean = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
+    reveals.push(format!(
+        "MUNCH: +{}{}",
+        outcome.score,
+        if clean { "  CLEAN" } else { "" }
+    ));
+    scores.push(outcome.score);
+    cleared.push(clean);
+
+    let round = numinous_core::build_round(seed, 1, 44, 18);
+    let shape = match answers.get("shape") {
+        Some(value) => {
+            let text = value.as_str()?;
+            text.trim().chars().next().map(|c| c.to_ascii_uppercase())
+        }
+        None => None,
+    };
+    let clean = shape == Some(round.answer);
+    reveals.push(format!(
+        "SHAPE: it was {} ({}). +{}{}",
+        round.answer,
+        round.answer_title,
+        if clean { 25 } else { 0 },
+        if clean { "  CLEAN" } else { "" }
+    ));
+    scores.push(if clean { 25 } else { 0 });
+    cleared.push(clean);
+
+    let scan = numinous_core::build_scan(seed, 4);
+    let sky = match answers.get("sky") {
+        Some(value) => {
+            let text = value.as_str()?;
+            text.trim().chars().next().map(|c| c.to_ascii_uppercase())
+        }
+        None => None,
+    };
+    let clean = sky == Some(scan.answer);
+    reveals.push(format!(
+        "SKY: the signal was {}. +{}{}",
+        scan.answer,
+        if clean { 25 } else { 0 },
+        if clean { "  CLEAN" } else { "" }
+    ));
+    scores.push(if clean { 25 } else { 0 });
+    cleared.push(clean);
+
+    let secret = numinous_core::secret_code(seed ^ GAUNTLET_BOMB_MIX, 4);
+    let wires: Vec<&str> = match answers.get("wires") {
+        Some(raw) => {
+            let list = raw.as_array()?;
+            let mut out = Vec::with_capacity(list.len());
+            for value in list {
+                out.push(value.as_str()?);
+            }
+            out
+        }
+        None => Vec::new(),
+    };
+    let mut bomb_points = 0i64;
+    let mut clean = false;
+    for (i, raw) in wires.iter().take(5).enumerate() {
+        let guess: Vec<u8> = raw
+            .chars()
+            .filter(char::is_ascii_digit)
+            .map(|c| c as u8 - b'0')
+            .collect();
+        if guess.len() == 4 && numinous_core::grade(&secret, &guess).locked == 4 {
+            clean = true;
+            bomb_points = 10 * (5 - i as i64 - 1).max(0);
+            break;
+        }
+    }
+    let code: String = secret.iter().map(|&d| char::from(b'0' + d)).collect();
+    reveals.push(if clean {
+        format!("BOMB: DEFUSED. +{bomb_points}  CLEAN")
     } else {
-        0
+        format!("BOMB: BOOM. It was {code}. +0")
+    });
+    scores.push(bomb_points);
+    cleared.push(clean);
+    Some((scores, cleared, reveals))
+}
+
+fn gauntlet_combo_total(scores: &[i64], cleared: &[bool]) -> i64 {
+    let mut total = 0;
+    let mut combo = 1;
+    for (score, &clear) in scores.iter().zip(cleared) {
+        total += score * combo;
+        combo = if clear { combo + 1 } else { 1 };
+    }
+    total
+}
+
+fn parse_gauntlet_replay(
+    arguments: &Map<String, Value>,
+    result: &Map<String, Value>,
+) -> Option<GauntletGameReplay> {
+    if !only_known_keys(arguments, &["seed", "answers"]) {
+        return None;
+    }
+    let structured = successful_structured_result(result)?;
+    let seed = replay_seed(arguments)?;
+    let board = numinous_core::build_board(seed, 0);
+    let quiz = numinous_core::build_round(seed, 1, 44, 18);
+    let scan = numinous_core::build_scan(seed, 4);
+    let secret = numinous_core::secret_code(seed ^ GAUNTLET_BOMB_MIX, 4);
+
+    let (stage, scores, cleared) = match arguments.get("answers") {
+        Some(answers) => {
+            let (scores, cleared, reveals) = parse_gauntlet_answers(seed, answers)?;
+            let total = gauntlet_combo_total(&scores, &cleared);
+            let cleans = cleared.iter().filter(|&&c| c).count();
+            let expected = serde_json::json!({
+                "game": "gauntlet",
+                "seed": seed,
+                "total": total,
+                "clean": cleans,
+                "stageScores": scores,
+                "reveals": reveals
+            });
+            if Value::Object(structured.clone()) != expected {
+                return None;
+            }
+            (4_usize, scores, cleared)
+        }
+        None => {
+            let choices: Vec<String> = quiz
+                .choices
+                .iter()
+                .map(|choice| format!("{}) {}", choice.letter, choice.title))
+                .collect();
+            let sky_rows: Vec<Value> = scan
+                .channels
+                .iter()
+                .map(|channel| {
+                    serde_json::json!({
+                        "letter": channel.letter.to_string(),
+                        "frequency": channel.frequency,
+                        "trace": channel.trace
+                    })
+                })
+                .collect();
+            let expected = serde_json::json!({
+                "game": "gauntlet",
+                "seed": seed,
+                "stages": 4,
+                "munch": {
+                    "rule": board.rule.describe(),
+                    "board": numinous_core::board_text(&board)
+                },
+                "shape": { "art": quiz.art, "choices": choices },
+                "sky": sky_rows,
+                "bomb": { "clue": numinous_core::hint(&secret) }
+            });
+            if Value::Object(structured.clone()) != expected {
+                return None;
+            }
+            (0_usize, Vec::new(), Vec::new())
+        }
     };
 
     let play = crate::play::GauntletPlay {
         seed,
         stage,
         munch: crate::play::MunchPlay {
-            board: numinous_core::build_board(seed, 0),
+            board,
             seed,
             round: 0,
             cursor: 30,
@@ -1214,11 +1610,11 @@ fn parse_gauntlet_replay(arguments: &Map<String, Value>) -> Option<GauntletGameR
             bite_flash: None,
         },
         quiz: crate::play::QuizPlay {
-            round: numinous_core::build_round(seed, 1, 44, 18),
+            round: quiz,
             flash: None,
         },
-        scan: numinous_core::build_scan(seed, 4),
-        secret: numinous_core::secret_code(seed ^ 0x0000_6A17_0000_0B0B, 4),
+        scan,
+        secret,
         wire: String::new(),
         wire_lines: Vec::new(),
         scores,
@@ -2541,6 +2937,309 @@ mod tests {
                 .expect("forged terminal event");
             assert!(parse_native_replay(&event).is_none());
         }
+    }
+
+    fn munch_success(structured: Value) -> Value {
+        serde_json::json!({
+            "content": [{"type": "text", "text": "PUBLIC MUNCH"}],
+            "structuredContent": structured,
+            "isError": false
+        })
+    }
+
+    #[test]
+    fn public_game_sounds_are_deterministic_and_nonempty_when_present() {
+        let seed = 7_u64;
+        let board = numinous_core::build_board(seed, numinous_core::FULL_DECK_ROUND);
+        let open = munch_success(canonical_munch_structured(
+            seed,
+            numinous_core::FULL_DECK_ROUND,
+            &board,
+            None,
+        ));
+        let open_event =
+            PublicToolEvent::new(PublicTool::Munch, &serde_json::json!({"seed": seed}), &open)
+                .expect("open munch");
+        let open_native = parse_native_replay(&open_event).expect("open munch replay");
+        let open_sound = open_native.sound().expect("open munch has a quiet bed");
+        assert!(open_sound.duration > 0.0);
+        assert!(!open_sound.render(8_000).is_empty());
+
+        let cells = vec![0_usize, 1, 2];
+        let outcome = numinous_core::grade_munch(&board, &cells);
+        let graded = munch_success(canonical_munch_structured(
+            seed,
+            numinous_core::FULL_DECK_ROUND,
+            &board,
+            Some(&outcome),
+        ));
+        let graded_event = PublicToolEvent::new(
+            PublicTool::Munch,
+            &serde_json::json!({"seed": seed, "bites": [1, 2, 3]}),
+            &graded,
+        )
+        .expect("graded munch");
+        let graded_native = parse_native_replay(&graded_event).expect("graded munch");
+        let graded_sound = graded_native.sound().expect("graded munch has a phrase");
+        assert_ne!(
+            open_sound.render(8_000),
+            graded_sound.render(8_000),
+            "graded consequence must change the phrase"
+        );
+
+        let quiz = numinous_core::build_round_sized(seed, 0, 54, 22, 4);
+        let quiz_open = munch_success(canonical_quiz_structured(seed, 0, 4, &quiz, None));
+        let quiz_event = PublicToolEvent::new(
+            PublicTool::Quiz,
+            &serde_json::json!({"seed": seed}),
+            &quiz_open,
+        )
+        .expect("quiz open");
+        assert!(
+            parse_native_replay(&quiz_event)
+                .expect("quiz")
+                .sound()
+                .is_some()
+        );
+
+        let nim = numinous_core::nim::replay(23, &[]).expect("nim open");
+        let nim_result = canonical_nim_result(23, &nim);
+        let nim_event = PublicToolEvent::new(
+            PublicTool::Nim,
+            &serde_json::json!({"seed": 23}),
+            &nim_result,
+        )
+        .expect("nim");
+        assert!(
+            parse_native_replay(&nim_event)
+                .expect("nim replay")
+                .sound()
+                .is_none(),
+            "Nim remains silent by design"
+        );
+    }
+
+    #[test]
+    fn native_munch_replay_defaults_to_full_deck_and_rejects_forged_state() {
+        let seed = 7_u64;
+        let round = numinous_core::FULL_DECK_ROUND;
+        let board = numinous_core::build_board(seed, round);
+        let open = munch_success(canonical_munch_structured(seed, round, &board, None));
+        let event =
+            PublicToolEvent::new(PublicTool::Munch, &serde_json::json!({"seed": seed}), &open)
+                .expect("open munch event");
+        let native = parse_native_replay(&event).expect("open munch replay");
+        assert!(matches!(native.kind, NativeReplayKind::Munch(_)));
+        assert!(native.detail().contains("MUNCH / SEED 7 / ROUND 4"));
+        let open_frame = native.render(360, 220);
+        assert!(open_frame.lit_count() > 100);
+
+        let wrong_default = munch_success(canonical_munch_structured(
+            seed,
+            0,
+            &numinous_core::build_board(seed, 0),
+            None,
+        ));
+        let wrong_event = PublicToolEvent::new(
+            PublicTool::Munch,
+            &serde_json::json!({"seed": seed}),
+            &wrong_default,
+        )
+        .expect("wrong default event");
+        assert!(parse_native_replay(&wrong_event).is_none());
+
+        let bites = vec![1_u64, 2, 3];
+        let cells: Vec<usize> = bites.iter().map(|n| (*n as usize) - 1).collect();
+        let outcome = numinous_core::grade_munch(&board, &cells);
+        let graded = munch_success(canonical_munch_structured(
+            seed,
+            round,
+            &board,
+            Some(&outcome),
+        ));
+        let graded_event = PublicToolEvent::new(
+            PublicTool::Munch,
+            &serde_json::json!({"seed": seed, "bites": bites}),
+            &graded,
+        )
+        .expect("graded munch event");
+        let graded_native = parse_native_replay(&graded_event).expect("graded munch");
+        assert!(graded_native.render(360, 220).lit_count() > 50);
+
+        for bad in [
+            serde_json::json!({"seed": seed, "private": true}),
+            serde_json::json!({"seed": "7"}),
+            serde_json::json!({"seed": seed, "bites": [0]}),
+            serde_json::json!({"seed": seed, "bites": ["1"]}),
+        ] {
+            let event =
+                PublicToolEvent::new(PublicTool::Munch, &bad, &open).expect("public envelope");
+            assert!(
+                parse_native_replay(&event).is_none(),
+                "accepted malformed munch args: {bad}"
+            );
+        }
+
+        let forged = munch_success(serde_json::json!({
+            "game": "munch",
+            "seed": seed,
+            "round": round,
+            "rule": "forged",
+            "board": "nope"
+        }));
+        let forged_event = PublicToolEvent::new(
+            PublicTool::Munch,
+            &serde_json::json!({"seed": seed}),
+            &forged,
+        )
+        .expect("forged envelope");
+        assert!(parse_native_replay(&forged_event).is_none());
+    }
+
+    #[test]
+    fn native_arcade_quiz_gauntlet_replays_require_exact_public_state() {
+        let seed = 11_u64;
+        let opening = numinous_core::munch_arcade::Arcade::new(seed);
+        let arcade_result = munch_success(canonical_arcade_structured(seed, &opening, false));
+        let arcade_event = PublicToolEvent::new(
+            PublicTool::MunchArcade,
+            &serde_json::json!({"seed": seed}),
+            &arcade_result,
+        )
+        .expect("arcade open");
+        let arcade = parse_native_replay(&arcade_event).expect("arcade replay");
+        assert!(matches!(arcade.kind, NativeReplayKind::Arcade(_)));
+        assert!(arcade.render(360, 220).lit_count() > 100);
+
+        let bad_action = PublicToolEvent::new(
+            PublicTool::MunchArcade,
+            &serde_json::json!({"seed": seed, "actions": ["fly"]}),
+            &arcade_result,
+        )
+        .expect("bad action envelope");
+        assert!(parse_native_replay(&bad_action).is_none());
+
+        let quiz = numinous_core::build_round_sized(seed, 0, 54, 22, 4);
+        let quiz_result = munch_success(canonical_quiz_structured(seed, 0, 4, &quiz, None));
+        let quiz_event = PublicToolEvent::new(
+            PublicTool::Quiz,
+            &serde_json::json!({"seed": seed}),
+            &quiz_result,
+        )
+        .expect("quiz open");
+        let quiz_native = parse_native_replay(&quiz_event).expect("quiz replay");
+        assert!(matches!(quiz_native.kind, NativeReplayKind::Quiz(_)));
+        assert!(quiz_native.render(360, 220).lit_count() > 50);
+
+        let high_choices = PublicToolEvent::new(
+            PublicTool::Quiz,
+            &serde_json::json!({"seed": seed, "choices": 5}),
+            &quiz_result,
+        )
+        .expect("high choice envelope");
+        assert!(
+            parse_native_replay(&high_choices).is_none(),
+            "public quiz must not accept journey-gated choice counts"
+        );
+
+        let board = numinous_core::build_board(seed, 0);
+        let round = numinous_core::build_round(seed, 1, 44, 18);
+        let scan = numinous_core::build_scan(seed, 4);
+        let secret = numinous_core::secret_code(seed ^ GAUNTLET_BOMB_MIX, 4);
+        let choices: Vec<String> = round
+            .choices
+            .iter()
+            .map(|choice| format!("{}) {}", choice.letter, choice.title))
+            .collect();
+        let sky_rows: Vec<Value> = scan
+            .channels
+            .iter()
+            .map(|channel| {
+                serde_json::json!({
+                    "letter": channel.letter.to_string(),
+                    "frequency": channel.frequency,
+                    "trace": channel.trace
+                })
+            })
+            .collect();
+        let gauntlet_open = munch_success(serde_json::json!({
+            "game": "gauntlet",
+            "seed": seed,
+            "stages": 4,
+            "munch": {
+                "rule": board.rule.describe(),
+                "board": numinous_core::board_text(&board)
+            },
+            "shape": { "art": round.art, "choices": choices },
+            "sky": sky_rows,
+            "bomb": { "clue": numinous_core::hint(&secret) }
+        }));
+        let gauntlet_event = PublicToolEvent::new(
+            PublicTool::Gauntlet,
+            &serde_json::json!({"seed": seed}),
+            &gauntlet_open,
+        )
+        .expect("gauntlet open");
+        let gauntlet = parse_native_replay(&gauntlet_event).expect("gauntlet replay");
+        assert!(matches!(gauntlet.kind, NativeReplayKind::Gauntlet(_)));
+        assert!(gauntlet.render(360, 220).lit_count() > 50);
+        assert!(gauntlet.detail().contains("GAUNTLET / SEED 11"));
+    }
+
+    #[test]
+    fn public_game_native_bodies_use_the_shared_cache_and_invalid_actions_fall_back() {
+        let mut viewer = SessionViewer::default();
+        let seed = 7_u64;
+        let board = numinous_core::build_board(seed, numinous_core::FULL_DECK_ROUND);
+        let open = munch_success(canonical_munch_structured(
+            seed,
+            numinous_core::FULL_DECK_ROUND,
+            &board,
+            None,
+        ));
+        {
+            let mut shared = lock(&viewer.shared);
+            shared.status = ViewerStatus::Live;
+            shared
+                .retain(&EventEnvelope {
+                    session_id: numinous_broadcast::SessionId::generate().expect("session"),
+                    consent_epoch: 2,
+                    public_sequence: 0,
+                    skipped: None,
+                    compatibility: numinous_compatibility().expect("compatibility"),
+                    event: PublicToolEvent::new(
+                        PublicTool::Munch,
+                        &serde_json::json!({"seed": seed}),
+                        &open,
+                    )
+                    .expect("munch event"),
+                })
+                .expect("retain munch");
+        }
+        let first = viewer.draw(360, 220, ViewerInputMode::KeyboardMouse);
+        assert!(first.lit_count() > 100);
+        assert_eq!(cached_render_count(&viewer), 1);
+        let _ = viewer.draw(360, 220, ViewerInputMode::Controller);
+        assert_eq!(cached_render_count(&viewer), 1);
+
+        lock(&viewer.shared)
+            .retain(&EventEnvelope {
+                session_id: numinous_broadcast::SessionId::generate().expect("session"),
+                consent_epoch: 2,
+                public_sequence: 1,
+                skipped: None,
+                compatibility: numinous_compatibility().expect("compatibility"),
+                event: PublicToolEvent::new(
+                    PublicTool::Munch,
+                    &serde_json::json!({"seed": seed, "private": true}),
+                    &open,
+                )
+                .expect("invalid munch"),
+            })
+            .expect("retain invalid");
+        let fallback = viewer.draw(360, 220, ViewerInputMode::KeyboardMouse);
+        assert!(fallback.lit_count() > 0);
+        assert!(matches!(viewer.cached_replay, Some((1, None))));
     }
 
     #[test]
