@@ -52,6 +52,15 @@ pub trait Room {
     /// just did (see `docs/INSIGHTS.md`). Surfaced only when asked, never pushed.
     fn reveal(&self) -> &'static str;
 
+    /// Optional concept explainer for this room (see [`crate::concept`]).
+    ///
+    /// Default looks up the shared concept table by [`RoomMeta::id`]. Faces
+    /// show it only on EXPLAIN / "?", never uninvited. None means the reveal
+    /// alone is the insight door.
+    fn concept(&self) -> Option<&'static str> {
+        crate::concept(self.meta().id)
+    }
+
     /// Further-reading citation for this room (panel item 7).
     ///
     /// Default uses the shared catalog table in [`crate::citations`]. Faces

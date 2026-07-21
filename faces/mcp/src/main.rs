@@ -2310,7 +2310,7 @@ fn listen_room_tool(args: &Value) -> Value {
     )
 }
 
-/// The `reveal_room` tool: return just the room's revelation (the learn surface).
+/// The `reveal_room` tool: optional concept + revelation (the learn surface).
 fn reveal_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'id'.");
@@ -2320,19 +2320,22 @@ fn reveal_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
         Some(room) => {
             let cut0_by_boon = journey.chosen.contains(&format!("cut:{id}:0"));
             let citation = numinous_core::room_citation_unlocked(id, journey.level(), cut0_by_boon);
-            let text = match citation {
-                Some(citation) => format!("{}\n\n{citation}", room.reveal()),
-                None => room.reveal().to_string(),
-            };
+            let mut body = numinous_core::explain_text(room.meta().id, room.reveal());
+            if let Some(citation) = citation {
+                body = format!("{body}\n\n{citation}");
+            }
             let mut structured = json!({
                 "room": room.meta().id,
                 "title": room.meta().title,
                 "reveal": room.reveal(),
             });
+            if let Some(concept) = room.concept() {
+                structured["concept"] = json!(concept);
+            }
             if let Some(citation) = citation {
                 structured["citation"] = json!(citation);
             }
-            tool_structured(&text, structured)
+            tool_structured(&body, structured)
         }
         // The Cairn is not a room but a mind pausing there naturally reaches for
         // reveal; point it at the right door rather than saying it does not exist.
@@ -6965,6 +6968,17 @@ plays 2
             .as_str()
             .unwrap_or_default();
         assert!(text.contains("Mandelbrot"));
+        assert!(
+            text.contains("THE CONCEPT:"),
+            "flagship rooms carry an optional concept before the reveal"
+        );
+        assert!(
+            resp["result"]["structuredContent"]["concept"]
+                .as_str()
+                .unwrap_or_default()
+                .starts_with("THE CONCEPT:"),
+            "structured concept matches the text door"
+        );
         // Fresh journey is below the first deep cut: no citation yet.
         assert!(!text.contains("See also:"));
         assert!(
