@@ -529,6 +529,467 @@ fn app_viewer_reconstructs_a_real_normalized_nim_agent_opening() {
 }
 
 #[test]
+fn app_viewer_reconstructs_a_real_munch_agent_opening() {
+    let mut viewer = SessionViewer::default();
+    viewer.open().expect("open the App session viewer");
+    let pairing_code = viewer.pairing_code().expect("fresh pairing code");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments}
+        })
+    };
+    let seed = 7_u64;
+    let before_stop = [
+        json!({
+            "jsonrpc":"2.0","id":0,"method":"initialize","params":{
+                "protocolVersion":"2025-06-18",
+                "capabilities":{},
+                "clientInfo":{"name":"munch-viewer-acceptance","version":"1.0"}
+            }
+        }),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(
+            1,
+            "broadcast_session",
+            json!({"action":"start", "pairing_code": pairing_code}),
+        ),
+        call(2, "munch", json!({"seed": seed})),
+        call(3, "munch", json!({"seed": seed, "bites": [0]})),
+        call(4, "journey", json!({})),
+    ];
+    let after_stop = [call(5, "broadcast_session", json!({"action":"stop"}))];
+    let replies = run_session_with_barrier(
+        &before_stop,
+        || viewer.retained_events().len() == 1,
+        &after_stop,
+    );
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+    assert_eq!(by_id(1)["result"]["structuredContent"]["state"], "live");
+    assert_eq!(by_id(2)["result"]["structuredContent"]["game"], "munch");
+    assert_eq!(
+        by_id(2)["result"]["structuredContent"]["round"],
+        numinous_core::FULL_DECK_ROUND
+    );
+    assert_eq!(by_id(3)["result"]["isError"], true);
+    assert_eq!(by_id(5)["result"]["structuredContent"]["state"], "stopped");
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while viewer.status() != ViewerStatus::GuestStopped {
+        assert!(Instant::now() < deadline, "viewer stop marker timed out");
+        thread::sleep(Duration::from_millis(5));
+    }
+    let events = viewer.retained_events();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].event.tool, PublicTool::Munch);
+    assert_eq!(events[0].public_sequence, 0);
+    assert_eq!(
+        Value::Object(events[0].event.arguments.clone()),
+        json!({"seed": seed})
+    );
+
+    let frame = viewer.draw(360, 220, ViewerInputMode::KeyboardMouse);
+    let board = numinous_core::build_board(seed, numinous_core::FULL_DECK_ROUND);
+    let expected_play = numinous_app::play::MunchPlay {
+        board,
+        seed,
+        round: numinous_core::FULL_DECK_ROUND,
+        cursor: 30,
+        bites: std::collections::BTreeSet::new(),
+        graded: None,
+        bite_flash: None,
+    };
+    let expected = numinous_app::game_draw::draw_munch(
+        &expected_play,
+        0,
+        numinous_app::input_legend::InputMode::KeyboardMouse,
+        360,
+        220,
+    );
+    let actual_rgba = frame.to_rgba();
+    let expected_rgba = expected.to_rgba();
+    let body_start = 31 * 360 * 4;
+    let body_end = (220 - 13) * 360 * 4;
+    assert_eq!(
+        &actual_rgba[body_start..body_end],
+        &expected_rgba[body_start..body_end],
+        "the retained Munch action reconstructs the exact native game body outside viewer chrome"
+    );
+    let body_lit = expected_rgba[body_start..body_end]
+        .chunks_exact(4)
+        .filter(|pixel| *pixel != [10, 11, 15, 255])
+        .count();
+    assert!(
+        body_lit > 100,
+        "the native Munch body contains board geometry"
+    );
+    let munch_audio = viewer
+        .audio_selection()
+        .expect("the retained Munch opening selects local sound");
+    assert_eq!(munch_audio.public_sequence(), 0);
+    let expected_sound =
+        numinous_core::SoundSpec::tone(196.0 + (seed % 5) as f32 * 16.0, 2.0, 0.04);
+    assert_eq!(
+        munch_audio.render(8_000),
+        Some(expected_sound.render(8_000)),
+        "the real selected Munch opening replays exact shared game sound"
+    );
+    let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
+    for forbidden in [
+        "munch-viewer-acceptance",
+        "clientInfo",
+        "jsonrpc",
+        "pairing_code",
+        "NUMINOUS_JOURNEY",
+        "NUMINOUS_SCORES",
+    ] {
+        assert!(
+            !public_bytes.contains(forbidden),
+            "public evidence contained private field {forbidden}"
+        );
+    }
+
+    viewer.close();
+    assert!(viewer.retained_events().is_empty());
+}
+
+#[test]
+fn app_viewer_reconstructs_a_real_arcade_agent_opening() {
+    let mut viewer = SessionViewer::default();
+    viewer.open().expect("open the App session viewer");
+    let pairing_code = viewer.pairing_code().expect("fresh pairing code");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments}
+        })
+    };
+    let seed = 11_u64;
+    let before_stop = [
+        json!({
+            "jsonrpc":"2.0","id":0,"method":"initialize","params":{
+                "protocolVersion":"2025-06-18",
+                "capabilities":{},
+                "clientInfo":{"name":"arcade-viewer-acceptance","version":"1.0"}
+            }
+        }),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(
+            1,
+            "broadcast_session",
+            json!({"action":"start", "pairing_code": pairing_code}),
+        ),
+        call(2, "munch_arcade", json!({"seed": seed})),
+        call(3, "munch_arcade", json!({"seed": seed, "actions": ["fly"]})),
+        call(4, "scores", json!({})),
+    ];
+    let after_stop = [call(5, "broadcast_session", json!({"action":"stop"}))];
+    let replies = run_session_with_barrier(
+        &before_stop,
+        || viewer.retained_events().len() == 1,
+        &after_stop,
+    );
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+    assert_eq!(by_id(1)["result"]["structuredContent"]["state"], "live");
+    assert_eq!(by_id(2)["result"]["structuredContent"]["game"], "arcade");
+    assert_eq!(by_id(2)["result"]["structuredContent"]["seed"], seed);
+    assert_eq!(by_id(3)["result"]["isError"], true);
+    assert_eq!(by_id(5)["result"]["structuredContent"]["state"], "stopped");
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while viewer.status() != ViewerStatus::GuestStopped {
+        assert!(Instant::now() < deadline, "viewer stop marker timed out");
+        thread::sleep(Duration::from_millis(5));
+    }
+    let events = viewer.retained_events();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].event.tool, PublicTool::MunchArcade);
+    assert_eq!(events[0].public_sequence, 0);
+
+    let frame = viewer.draw(360, 220, ViewerInputMode::KeyboardMouse);
+    let run = numinous_core::munch_arcade::Arcade::new(seed);
+    let expected_play = numinous_app::play::ArcadePlay {
+        run,
+        seed,
+        flash: None,
+        over: false,
+    };
+    let expected = numinous_app::game_draw::draw_arcade(
+        &expected_play,
+        numinous_app::input_legend::InputMode::KeyboardMouse,
+        360,
+        220,
+    );
+    let actual_rgba = frame.to_rgba();
+    let expected_rgba = expected.to_rgba();
+    let body_start = 31 * 360 * 4;
+    let body_end = (220 - 13) * 360 * 4;
+    assert_eq!(
+        &actual_rgba[body_start..body_end],
+        &expected_rgba[body_start..body_end],
+        "the retained Arcade action reconstructs the exact native game body outside viewer chrome"
+    );
+    let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
+    for forbidden in [
+        "arcade-viewer-acceptance",
+        "clientInfo",
+        "jsonrpc",
+        "pairing_code",
+        "NUMINOUS_JOURNEY",
+        "NUMINOUS_SCORES",
+    ] {
+        assert!(
+            !public_bytes.contains(forbidden),
+            "public evidence contained private field {forbidden}"
+        );
+    }
+    viewer.close();
+    assert!(viewer.retained_events().is_empty());
+}
+
+#[test]
+fn app_viewer_reconstructs_a_real_quiz_agent_opening() {
+    let mut viewer = SessionViewer::default();
+    viewer.open().expect("open the App session viewer");
+    let pairing_code = viewer.pairing_code().expect("fresh pairing code");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments}
+        })
+    };
+    let seed = 13_u64;
+    let before_stop = [
+        json!({
+            "jsonrpc":"2.0","id":0,"method":"initialize","params":{
+                "protocolVersion":"2025-06-18",
+                "capabilities":{},
+                "clientInfo":{"name":"quiz-viewer-acceptance","version":"1.0"}
+            }
+        }),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(
+            1,
+            "broadcast_session",
+            json!({"action":"start", "pairing_code": pairing_code}),
+        ),
+        call(2, "quiz", json!({"seed": seed})),
+        // Schema rejects one choice before capture, so no public event is emitted.
+        call(3, "quiz", json!({"seed": seed, "choices": 1})),
+        call(4, "trophies", json!({})),
+    ];
+    let after_stop = [call(5, "broadcast_session", json!({"action":"stop"}))];
+    let replies = run_session_with_barrier(
+        &before_stop,
+        || viewer.retained_events().len() == 1,
+        &after_stop,
+    );
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+    assert_eq!(by_id(1)["result"]["structuredContent"]["state"], "live");
+    assert_eq!(by_id(2)["result"]["structuredContent"]["game"], "quiz");
+    assert_eq!(by_id(2)["result"]["structuredContent"]["seed"], seed);
+    assert_eq!(by_id(2)["result"]["structuredContent"]["choiceCount"], 4);
+    assert_eq!(by_id(3)["result"]["isError"], true);
+    assert_eq!(by_id(5)["result"]["structuredContent"]["state"], "stopped");
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while viewer.status() != ViewerStatus::GuestStopped {
+        assert!(Instant::now() < deadline, "viewer stop marker timed out");
+        thread::sleep(Duration::from_millis(5));
+    }
+    let events = viewer.retained_events();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].event.tool, PublicTool::Quiz);
+    assert_eq!(events[0].public_sequence, 0);
+
+    let frame = viewer.draw(360, 220, ViewerInputMode::KeyboardMouse);
+    let rooms = numinous_core::all_rooms();
+    let round = numinous_core::build_round_sized(seed, 0, 54, 22, 4);
+    let expected_play = numinous_app::play::QuizPlay { round, flash: None };
+    let expected = numinous_app::game_draw::draw_quiz(
+        &rooms,
+        &expected_play,
+        numinous_app::input_legend::InputMode::KeyboardMouse,
+        360,
+        220,
+    );
+    let actual_rgba = frame.to_rgba();
+    let expected_rgba = expected.to_rgba();
+    let body_start = 31 * 360 * 4;
+    let body_end = (220 - 13) * 360 * 4;
+    assert_eq!(
+        &actual_rgba[body_start..body_end],
+        &expected_rgba[body_start..body_end],
+        "the retained Quiz action reconstructs the exact native game body outside viewer chrome"
+    );
+    let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
+    for forbidden in [
+        "quiz-viewer-acceptance",
+        "clientInfo",
+        "jsonrpc",
+        "pairing_code",
+        "NUMINOUS_JOURNEY",
+        "NUMINOUS_SCORES",
+    ] {
+        assert!(
+            !public_bytes.contains(forbidden),
+            "public evidence contained private field {forbidden}"
+        );
+    }
+    viewer.close();
+    assert!(viewer.retained_events().is_empty());
+}
+
+#[test]
+fn app_viewer_reconstructs_a_real_gauntlet_agent_opening() {
+    let mut viewer = SessionViewer::default();
+    viewer.open().expect("open the App session viewer");
+    let pairing_code = viewer.pairing_code().expect("fresh pairing code");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments}
+        })
+    };
+    let seed = 17_u64;
+    let before_stop = [
+        json!({
+            "jsonrpc":"2.0","id":0,"method":"initialize","params":{
+                "protocolVersion":"2025-06-18",
+                "capabilities":{},
+                "clientInfo":{"name":"gauntlet-viewer-acceptance","version":"1.0"}
+            }
+        }),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(
+            1,
+            "broadcast_session",
+            json!({"action":"start", "pairing_code": pairing_code}),
+        ),
+        call(2, "gauntlet", json!({"seed": seed})),
+        // Unexpected answers fields fail schema before public capture.
+        call(
+            3,
+            "gauntlet",
+            json!({"seed": seed, "answers": {"private": true}}),
+        ),
+        call(4, "choose", json!({})),
+    ];
+    let after_stop = [call(5, "broadcast_session", json!({"action":"stop"}))];
+    let replies = run_session_with_barrier(
+        &before_stop,
+        || viewer.retained_events().len() == 1,
+        &after_stop,
+    );
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+    assert_eq!(by_id(1)["result"]["structuredContent"]["state"], "live");
+    assert_eq!(by_id(2)["result"]["structuredContent"]["game"], "gauntlet");
+    assert_eq!(by_id(2)["result"]["structuredContent"]["seed"], seed);
+    assert_eq!(by_id(2)["result"]["structuredContent"]["stages"], 4);
+    assert_eq!(by_id(3)["result"]["isError"], true);
+    assert_eq!(by_id(5)["result"]["structuredContent"]["state"], "stopped");
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while viewer.status() != ViewerStatus::GuestStopped {
+        assert!(Instant::now() < deadline, "viewer stop marker timed out");
+        thread::sleep(Duration::from_millis(5));
+    }
+    let events = viewer.retained_events();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].event.tool, PublicTool::Gauntlet);
+    assert_eq!(events[0].public_sequence, 0);
+
+    let frame = viewer.draw(360, 220, ViewerInputMode::KeyboardMouse);
+    let rooms = numinous_core::all_rooms();
+    let board = numinous_core::build_board(seed, 0);
+    let expected_play = numinous_app::play::GauntletPlay {
+        seed,
+        stage: 0,
+        munch: numinous_app::play::MunchPlay {
+            board,
+            seed,
+            round: 0,
+            cursor: 30,
+            bites: std::collections::BTreeSet::new(),
+            graded: None,
+            bite_flash: None,
+        },
+        quiz: numinous_app::play::QuizPlay {
+            round: numinous_core::build_round(seed, 1, 44, 18),
+            flash: None,
+        },
+        scan: numinous_core::build_scan(seed, 4),
+        secret: numinous_core::secret_code(seed ^ 0x0000_6A17_0000_0B0B, 4),
+        wire: String::new(),
+        wire_lines: Vec::new(),
+        scores: Vec::new(),
+        cleared: Vec::new(),
+        message: String::new(),
+    };
+    let expected = numinous_app::game_draw::draw_gauntlet(
+        &rooms,
+        &expected_play,
+        0,
+        numinous_app::input_legend::InputMode::KeyboardMouse,
+        360,
+        220,
+    );
+    let actual_rgba = frame.to_rgba();
+    let expected_rgba = expected.to_rgba();
+    let body_start = 31 * 360 * 4;
+    let body_end = (220 - 13) * 360 * 4;
+    assert_eq!(
+        &actual_rgba[body_start..body_end],
+        &expected_rgba[body_start..body_end],
+        "the retained Gauntlet action reconstructs the exact native game body outside viewer chrome"
+    );
+    let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
+    for forbidden in [
+        "gauntlet-viewer-acceptance",
+        "clientInfo",
+        "jsonrpc",
+        "pairing_code",
+        "NUMINOUS_JOURNEY",
+        "NUMINOUS_SCORES",
+    ] {
+        assert!(
+            !public_bytes.contains(forbidden),
+            "public evidence contained private field {forbidden}"
+        );
+    }
+    viewer.close();
+    assert!(viewer.retained_events().is_empty());
+}
+
+#[test]
 fn a_full_agent_session_walks_every_tool() {
     let call = |id: u64, name: &str, args: Value| {
         json!({"jsonrpc":"2.0","id":id,"method":"tools/call",

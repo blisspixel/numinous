@@ -5,6 +5,23 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- Watch Agent now truly owns live App audio for the paired session. Opening the
+  viewer publishes silence under an explicit Watch Agent program, each retained
+  public sequence publishes its reconstructed sound once at the shared 16 kHz
+  source rate, scrubbing changes the owned source once, radio wall-clock resync
+  cannot steal the stream, and close restores the room score or rejoins radio.
+  Public Munch, Arcade, Quiz, and Gauntlet selections now have deterministic
+  SoundSpecs (Nim stays silent). SessionAudio sequence ownership is wired into
+  the App binary. Unit tests cover game sound identity and ownership.
+- Watch Agent public Munch, Arcade, Quiz, and Gauntlet native replay now fails
+  closed like Nim: argument key whitelists, exact structured-result attestation,
+  unknown arcade actions rejected, public quiz limited to journey-independent
+  choice counts (2 through 4), and Munch open state defaults to the MCP full
+  deck round. Unit tests cover forged and malformed cases. Real MCP subprocess
+  acceptances reconstruct public Munch, Arcade, Quiz, and Gauntlet openings with
+  exact board-body pixels, private tool silence, and close-time erasure.
+
 ### Added
 - **Configurable Inputs and Controller Certification**: Gamepad button mappings are now fully configurable via a `~/.numinous-bindings.json` file. Support for cross-platform hardware validation is now built-in using SDL's Game Controller DB, ensuring seamless compatibility for thousands of missing or custom controller types across all environments.
 - Source provenance and math review checklists to the Times Tables, Game of Life, Galton Board, and Double Pendulum flagships to anchor 0.4 Understanding Alpha learning claims.
@@ -82,9 +99,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   focus controls remain local, while close restores the room score or rejoins
   live radio. Real Times Tables and Studio sessions prove exact shared-core
   sample parity. The App QA inventory grows to 2,913 screens with Watch Agent
-  source badges at both sizes. Other game visuals remain 0.3 work. Process- and
-  thread-isolated App test roots now prevent concurrent release or checker
-  processes from colliding in playtest-note and radio-cache fixtures.
+  source badges at both sizes. Subsequent cycle 144 hardens native public Munch,
+  Arcade, Quiz, and Gauntlet visuals; other public game sound remains open.
+  Process- and thread-isolated App test roots now prevent concurrent release or
+  checker processes from colliding in playtest-note and radio-cache fixtures.
 - Public status and roadmap documentation now match the July 18 release
   evidence: 2,985 passing tests plus one ignored screenshot diagnostic,
   95.44 percent region coverage, 95.55 percent line coverage, and green native
