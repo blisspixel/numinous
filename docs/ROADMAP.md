@@ -444,7 +444,11 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   Munch cell flash and crunch (existing), bad-grade camera shake plus buzz,
   quiz answer ticks, and Nim legal/illegal/win/loss ticks through shared
   chiptune one-shots. See `PANEL.md` item 1.
-- **Then (the panel's remaining list, see `PANEL.md`):** munch rule variety and an aliens base ramp (depth where play repeats) are partly shipped; further-reading citations unlocked with deep cuts; era grain and Show crossfade; the music visualizer; full Share v1 beyond the built P-key PNG postcard; a visit-spark cap per room (anti-grind); and an MCP 2026-07-28 compatibility pass once the final spec target is selected after the scheduled July 28, 2026 publication.
+- **Done (panel pack, cycle 147):** soft play/win spark caps; catalog-wide
+  further-reading citations on `reveal_room`; The Show crossfade; 8-bit dither
+  and vector bloom; arcade beat juice; MCP protocol version negotiation that
+  accepts 2025-06-18, 2025-11-25, and names 2026-07-28 for dual-stack hosts.
+- **Then (the panel's remaining list, see `PANEL.md`):** munch rule variety and an aliens base ramp (depth where play repeats) are partly shipped; the music visualizer; full Share v1 packaging beyond PNG/APNG; adaptive glyphs; full 2026-07-28 wire migration after the final specification ships.
 - **Done (0.4 Understanding Alpha prep):** added Source Provenance and Math Review Checklist fields to the Times Tables, Game of Life, Galton Board, and Double Pendulum flagships to anchor their learning claims.
 - **Done (0.4 Understanding Alpha prep):** added an opt-in, player-owned MCP experience journal. The `Journal` tracks timestamped room encounters, creations, and connections. It is fully integrated into persistence and backed by new `read_journal`, `record_journal`, and `erase_journal` tools for MCP agents. The journal is explicitly disjoint from `forget` tool erasure, providing its own dedicated `erase_journal` path to maintain player ownership over when its contents are destroyed.
 

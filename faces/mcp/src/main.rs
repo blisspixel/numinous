@@ -27,8 +27,15 @@ use numinous_broadcast::{
 use numinous_core::{Canvas, all_rooms, all_rooms_with, room_by_id};
 use serde_json::{Value, json};
 
-/// The MCP protocol revision this server targets.
+/// Default MCP protocol revision when the client does not name a preference.
 const PROTOCOL_VERSION: &str = "2025-06-18";
+
+/// Protocol revisions this server accepts on initialize (newest first).
+///
+/// `2026-07-28` is listed as recognized so dual-stack hosts can negotiate, but
+/// the wire behavior remains the 2025 stdio tools surface until that revision
+/// is fully implemented after the final specification ships.
+const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &["2026-07-28", "2025-11-25", "2025-06-18"];
 
 /// Default ASCII canvas size for `play_room`.
 const DEFAULT_WIDTH: u64 = 72;
@@ -731,7 +738,7 @@ fn handle_request_with_session(
     };
 
     let result = match method {
-        "initialize" => Ok(initialize_result()),
+        "initialize" => Ok(initialize_result(request.get("params"))),
         "tools/list" => Ok(tools_list_result()),
         "tools/call" => match argument_error {
             Some(message) => Ok(tool_error(&message)),
@@ -849,10 +856,27 @@ fn replay_arguments(mut arguments: Value) -> Value {
     arguments
 }
 
+/// Pick a mutually supported protocol revision from the client initialize params.
+fn negotiate_protocol_version(params: Option<&Value>) -> &'static str {
+    let requested = params
+        .and_then(|p| p.get("protocolVersion"))
+        .and_then(Value::as_str);
+    if let Some(version) = requested
+        && let Some(supported) = SUPPORTED_PROTOCOL_VERSIONS
+            .iter()
+            .copied()
+            .find(|candidate| *candidate == version)
+    {
+        return supported;
+    }
+    PROTOCOL_VERSION
+}
+
 /// The `initialize` result: who we are and what we support.
-fn initialize_result() -> Value {
+fn initialize_result(params: Option<&Value>) -> Value {
+    let protocol_version = negotiate_protocol_version(params);
     json!({
-        "protocolVersion": PROTOCOL_VERSION,
+        "protocolVersion": protocol_version,
         "capabilities": { "tools": {} },
         "serverInfo": { "name": "numinous", "version": env!("CARGO_PKG_VERSION") },
         "instructions": "Explore the catalog with list_rooms, read a room with describe_room, \
@@ -860,7 +884,8 @@ fn initialize_result() -> Value {
                          the simulations with list_sims and run_sim (fiddle the levers to optimize \
                          or break them), and play Guess the Shape with the quiz tool. If a human \
                          offers a local App pairing code, broadcast_session lets you explicitly \
-                         consent to, inspect, pause, resume, or stop that read-only public view."
+                         consent to, inspect, pause, resume, or stop that read-only public view. \
+                         Further reading lives on reveal_room as citation."
     })
 }
 
@@ -2276,14 +2301,19 @@ fn reveal_room_tool(args: &Value) -> Value {
         return tool_error("Missing required string argument 'id'.");
     };
     match room_by_id(id) {
-        Some(room) => tool_structured(
-            room.reveal(),
-            json!({
-                "room": room.meta().id,
-                "title": room.meta().title,
-                "reveal": room.reveal(),
-            }),
-        ),
+        Some(room) => {
+            let citation = room.citation();
+            let text = format!("{}\n\n{citation}", room.reveal());
+            tool_structured(
+                &text,
+                json!({
+                    "room": room.meta().id,
+                    "title": room.meta().title,
+                    "reveal": room.reveal(),
+                    "citation": citation,
+                }),
+            )
+        }
         // The Cairn is not a room but a mind pausing there naturally reaches for
         // reveal; point it at the right door rather than saying it does not exist.
         None if id == "cairn" => {
@@ -4790,7 +4820,19 @@ mod tests {
             handle_request(&json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}))
                 .expect("initialize is a request and must respond");
         assert_eq!(resp["result"]["serverInfo"]["name"], "numinous");
-        assert!(resp["result"]["protocolVersion"].is_string());
+        assert_eq!(resp["result"]["protocolVersion"], "2025-06-18");
+        let preferred = handle_request(&json!({
+            "jsonrpc":"2.0","id":2,"method":"initialize",
+            "params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"t","version":"1"}}
+        }))
+        .expect("preferred version");
+        assert_eq!(preferred["result"]["protocolVersion"], "2025-11-25");
+        let future = handle_request(&json!({
+            "jsonrpc":"2.0","id":3,"method":"initialize",
+            "params":{"protocolVersion":"2026-07-28","capabilities":{},"clientInfo":{"name":"t","version":"1"}}
+        }))
+        .expect("2026 revision name is recognized");
+        assert_eq!(future["result"]["protocolVersion"], "2026-07-28");
     }
 
     #[test]
@@ -7904,7 +7946,19 @@ plays 2
             "it names the cap"
         );
         // At the cap, the bequest is deposited and drawable afterward.
-        std::fs::write(&journey, "wins 900\nsecrets 0\nplays 900\n").unwrap();
+        // Soft play/win spark caps mean raw play counts alone no longer reach LV42:
+        // visits and secrets must carry the rest of the road.
+        let mut at_cap = numinous_core::Journey {
+            plays: numinous_core::Journey::MAX_PLAY_SPARKS,
+            wins: numinous_core::Journey::MAX_WIN_SPARKS,
+            secrets: 100,
+            ..Default::default()
+        };
+        for i in 0..256 {
+            at_cap.visit(&format!("room-{i}"));
+        }
+        assert!(at_cap.level() >= super::CAIRN_LEVEL);
+        std::fs::write(&journey, at_cap.to_text()).unwrap();
         assert!(numinous_core::load_journey_file(&journey).level() >= super::CAIRN_LEVEL);
         let left = super::cairn_tool(
             &json!({ "leave": "primes never run out", "author": "a tester" }),
@@ -8391,10 +8445,16 @@ plays 2
     fn every_cult_cut_is_reachable_at_the_level_cap() {
         let path =
             std::env::temp_dir().join(format!("numinous-mcp-deep-cuts-{}.txt", std::process::id()));
-        let journey = numinous_core::Journey {
-            plays: u32::MAX,
+        let mut journey = numinous_core::Journey {
+            plays: numinous_core::Journey::MAX_PLAY_SPARKS,
+            wins: numinous_core::Journey::MAX_WIN_SPARKS,
+            secrets: 100,
             ..Default::default()
         };
+        for i in 0..256 {
+            journey.visit(&format!("room-{i}"));
+        }
+        assert_eq!(journey.level(), numinous_core::MAX_LEVEL);
         std::fs::write(&path, journey.to_text()).expect("journey");
         let resp = handle_request_with(
             &json!({
