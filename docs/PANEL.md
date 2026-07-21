@@ -22,7 +22,7 @@ doors' design goals. The point is what we are missing, not what we have.
   accepts left-click (Munch, Quiz, Nim, Arcade, Gauntlet stages).
 - "When I eat a number nothing happens until the end." **Machine juice path:**
   Munch flashes the toggled cell and plays a soft crunch one-shot on each
-  bite. Wrong-bite shake after grading remains open.
+  bite; wrong-number bites also buzz and shake. Bad-grade shake remains.
 - "Can I keep the picture?" **P now saves a PNG postcard in the app.** The
   remaining share gap is polish: loops, links, and a discoverable share flow.
 
@@ -82,10 +82,12 @@ is absent anymore; everything on this list makes an existing organ stronger.
 > spectrum bands ship as the offline visualizer path. Open Problems opened
 > (Goldbach); Engine B v0 shipped. Output-mix and optional OS loopback spectrum
 > sources ship (key O). Spectrum levers now soft-drive room time scale, phase
-> nudge, and beat pokes on output-mix/loopback. Share sidecars and CLI share
-> bundles (postcard + loop + README) ship; GIF/MP4 and physical pad certification
+> nudge, and beat pokes on output-mix/loopback, and The Show phase rate answers
+> that motion. Share sidecars, CLI share bundles, and App key K share packs
+> (postcard + loop + README) ship; GIF/MP4 and physical pad certification
 > remain. Munch generator prefers a playable target-density band without
-> rewriting score identity.
+> rewriting score identity. Wrong-number bites buzz and shake in standalone
+> Munch; grade-time shake remains for bad boards.
 
 
 1. **Juice in the window games**: per-action feedback (flash on eat, shake

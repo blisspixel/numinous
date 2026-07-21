@@ -107,7 +107,115 @@ pub(crate) fn write_life_loop(
     dir: &Path,
 ) -> std::io::Result<PathBuf> {
     let frames = render_life_loop_frames(session, accent, era);
-    write_rendered_loop(room_id, session.generation(), &frames, dir)
+    let path = write_rendered_loop(room_id, session.generation(), &frames, dir)?;
+    write_share_note(&path, room_id, era, numinous_core::ShareKind::Loop);
+    Ok(path)
+}
+
+/// Package still + short loop + README into one share folder (CLI parity).
+pub(crate) fn write_room_share_bundle(
+    room: &dyn Room,
+    phase: f64,
+    inputs: &[RoomInput],
+    era: Era,
+    variation: u64,
+    parent: &Path,
+) -> std::io::Result<PathBuf> {
+    std::fs::create_dir_all(parent)?;
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let dir = numinous_core::share_bundle_dir(parent, room.meta().id, stamp);
+    std::fs::create_dir_all(&dir)?;
+
+    let postcard_path = dir.join("postcard.png");
+    let loop_path = dir.join("loop.png");
+    let postcard_rgba = render_room_postcard_rgba(room, phase, inputs, era);
+    let postcard_encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, &postcard_rgba)?;
+    // Bundle paths are unique by stamp; create_new would fight a re-stamp collision.
+    std::fs::write(&postcard_path, postcard_encoded)?;
+    write_share_note(
+        &postcard_path,
+        room.meta().id,
+        era,
+        numinous_core::ShareKind::Postcard,
+    );
+
+    let frames = render_room_loop_frames(room, phase, inputs, era);
+    let loop_encoded = encode_rgba_apng(LOOP_SIZE, LOOP_SIZE, &frames)?;
+    std::fs::write(&loop_path, loop_encoded)?;
+    write_share_note(
+        &loop_path,
+        room.meta().id,
+        era,
+        numinous_core::ShareKind::Loop,
+    );
+
+    numinous_core::write_share_bundle_readme(
+        &dir,
+        &numinous_core::ShareBundleMeta {
+            room_id: room.meta().id.to_string(),
+            era: era.name().to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            variation,
+        },
+        true,
+        true,
+    )?;
+    Ok(dir)
+}
+
+/// Life share bundle: current generation still + advancing loop + README.
+pub(crate) fn write_life_share_bundle(
+    room_id: &str,
+    accent: [u8; 3],
+    session: &LifeSession,
+    era: Era,
+    variation: u64,
+    parent: &Path,
+) -> std::io::Result<PathBuf> {
+    std::fs::create_dir_all(parent)?;
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let dir = numinous_core::share_bundle_dir(parent, room_id, stamp);
+    std::fs::create_dir_all(&dir)?;
+
+    let size = POSTCARD_SIZE as usize;
+    let mut raster = Raster::with_accent(size, size, accent);
+    session.render(&mut raster);
+    let mut rgba = raster.to_rgba();
+    era.apply(&mut rgba, size, size);
+    let postcard_path = dir.join("postcard.png");
+    let postcard_encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, &rgba)?;
+    std::fs::write(&postcard_path, postcard_encoded)?;
+    write_share_note(
+        &postcard_path,
+        room_id,
+        era,
+        numinous_core::ShareKind::Postcard,
+    );
+
+    let frames = render_life_loop_frames(session, accent, era);
+    let loop_path = dir.join("loop.png");
+    let loop_encoded = encode_rgba_apng(LOOP_SIZE, LOOP_SIZE, &frames)?;
+    std::fs::write(&loop_path, loop_encoded)?;
+    write_share_note(&loop_path, room_id, era, numinous_core::ShareKind::Loop);
+
+    numinous_core::write_share_bundle_readme(
+        &dir,
+        &numinous_core::ShareBundleMeta {
+            room_id: room_id.to_string(),
+            era: era.name().to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            variation,
+        },
+        true,
+        true,
+    )?;
+    Ok(dir)
 }
 
 pub(crate) fn write_rendered_loop(
@@ -455,6 +563,29 @@ mod tests {
         let _ = std::fs::remove_file(path);
         let _ = std::fs::remove_file(second_path);
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn write_room_share_bundle_lists_postcard_loop_and_readme() {
+        let rooms = numinous_core::all_rooms();
+        let room = rooms
+            .iter()
+            .find(|room| room.meta().id == "lorenz")
+            .expect("lorenz")
+            .as_ref();
+        let parent =
+            std::env::temp_dir().join(format!("numinous_share_bundle_test_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&parent);
+        std::fs::create_dir_all(&parent).expect("parent");
+        let dir = write_room_share_bundle(room, 0.2, &[], Era::Modern, 7, &parent).expect("bundle");
+        assert!(dir.join("postcard.png").is_file());
+        assert!(dir.join("loop.png").is_file());
+        let readme = std::fs::read_to_string(dir.join("README.share.txt")).expect("readme");
+        assert!(readme.contains("postcard.png"));
+        assert!(readme.contains("loop.png"));
+        assert!(readme.contains("room lorenz"));
+        assert!(readme.contains("variation 7"));
+        let _ = std::fs::remove_dir_all(parent);
     }
 
     #[test]
