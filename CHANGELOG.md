@@ -6,14 +6,21 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Fixed
+- Watch Agent now truly owns live App audio for the paired session. Opening the
+  viewer publishes silence under an explicit Watch Agent program, each retained
+  public sequence publishes its reconstructed sound once at the shared 16 kHz
+  source rate, scrubbing changes the owned source once, radio wall-clock resync
+  cannot steal the stream, and close restores the room score or rejoins radio.
+  Public Munch, Arcade, Quiz, and Gauntlet selections now have deterministic
+  SoundSpecs (Nim stays silent). SessionAudio sequence ownership is wired into
+  the App binary. Unit tests cover game sound identity and ownership.
 - Watch Agent public Munch, Arcade, Quiz, and Gauntlet native replay now fails
   closed like Nim: argument key whitelists, exact structured-result attestation,
   unknown arcade actions rejected, public quiz limited to journey-independent
   choice counts (2 through 4), and Munch open state defaults to the MCP full
   deck round. Unit tests cover forged and malformed cases. Real MCP subprocess
   acceptances reconstruct public Munch, Arcade, Quiz, and Gauntlet openings with
-  exact board-body pixels, private tool silence, and close-time erasure. Other
-  public game sound remains open 0.3 work.
+  exact board-body pixels, private tool silence, and close-time erasure.
 
 ### Added
 - **Configurable Inputs and Controller Certification**: Gamepad button mappings are now fully configurable via a `~/.numinous-bindings.json` file. Support for cross-platform hardware validation is now built-in using SDL's Game Controller DB, ensuring seamless compatibility for thousands of missing or custom controller types across all environments.

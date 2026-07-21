@@ -504,7 +504,6 @@ impl NativeReplay {
         }
     }
 
-    #[allow(dead_code)]
     fn sound(&self) -> Option<numinous_core::SoundSpec> {
         match &self.kind {
             NativeReplayKind::Room(replay) => Some(
@@ -519,12 +518,70 @@ impl NativeReplay {
                 32,
                 replay.parameter,
             )),
+            // Nim stays silent: the board is pure combinatorial text and pixels.
             NativeReplayKind::Nim(_) => None,
-            NativeReplayKind::Munch(_) => None,
-            NativeReplayKind::Arcade(_) => None,
-            NativeReplayKind::Quiz(_) => None,
-            NativeReplayKind::Gauntlet(_) => None,
+            NativeReplayKind::Munch(replay) => Some(munch_public_sound(replay)),
+            NativeReplayKind::Arcade(replay) => Some(arcade_public_sound(replay)),
+            NativeReplayKind::Quiz(replay) => Some(quiz_public_sound(replay)),
+            NativeReplayKind::Gauntlet(replay) => Some(gauntlet_public_sound(replay)),
         }
+    }
+}
+
+/// Quiet waiting board, or a short graded consequence phrase.
+fn munch_public_sound(replay: &MunchGameReplay) -> numinous_core::SoundSpec {
+    match &replay.play.graded {
+        None => {
+            let root = 196.0 + (replay.seed % 5) as f32 * 16.0;
+            numinous_core::SoundSpec::tone(root, 2.0, 0.04)
+        }
+        Some(outcome) => {
+            if outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0 {
+                numinous_core::SoundSpec::arpeggio(&[392.0, 494.0, 587.0, 784.0], 1.2, 0.08)
+            } else if outcome.score > 0 {
+                numinous_core::SoundSpec::arpeggio(&[330.0, 392.0, 494.0], 1.0, 0.07)
+            } else {
+                numinous_core::SoundSpec::arpeggio(&[196.0, 185.0, 165.0], 1.0, 0.06)
+            }
+        }
+    }
+}
+
+/// Arcade opening and mid-run state: a short level-rooted phrase.
+fn arcade_public_sound(replay: &ArcadeGameReplay) -> numinous_core::SoundSpec {
+    let level = replay.play.run.level.max(1) as f32;
+    let root = 220.0 * (1.0 + (level - 1.0) * 0.06);
+    if replay.play.over {
+        numinous_core::SoundSpec::arpeggio(&[root, root * 0.75, root * 0.5], 1.1, 0.07)
+    } else {
+        numinous_core::SoundSpec::arpeggio(&[root, root * 1.25, root * 1.5], 1.0, 0.06)
+    }
+}
+
+/// Quiz pose is soft; graded answers speak a clear major or minor chord.
+fn quiz_public_sound(replay: &QuizGameReplay) -> numinous_core::SoundSpec {
+    match replay.play.flash {
+        Some((true, _)) => numinous_core::SoundSpec::chord(&[392.0, 494.0, 587.0], 1.2, 0.07),
+        Some((false, _)) => numinous_core::SoundSpec::chord(&[233.0, 277.0, 349.0], 1.2, 0.06),
+        None => {
+            let root = 262.0 + (replay.seed % 4) as f32 * 12.0;
+            numinous_core::SoundSpec::tone(root, 2.0, 0.04)
+        }
+    }
+}
+
+/// Gauntlet open stage hum, or a complete-run phrase from combo total.
+fn gauntlet_public_sound(replay: &GauntletGameReplay) -> numinous_core::SoundSpec {
+    if replay.play.stage >= 4 {
+        let total = crate::play::gauntlet_total(&replay.play.scores, &replay.play.cleared);
+        if total >= 50 {
+            numinous_core::SoundSpec::arpeggio(&[330.0, 415.0, 494.0, 660.0], 1.4, 0.08)
+        } else {
+            numinous_core::SoundSpec::arpeggio(&[247.0, 294.0, 370.0], 1.2, 0.07)
+        }
+    } else {
+        let root = 175.0 + (replay.seed % 6) as f32 * 10.0;
+        numinous_core::SoundSpec::tone(root, 2.0, 0.04)
     }
 }
 
@@ -2888,6 +2945,78 @@ mod tests {
             "structuredContent": structured,
             "isError": false
         })
+    }
+
+    #[test]
+    fn public_game_sounds_are_deterministic_and_nonempty_when_present() {
+        let seed = 7_u64;
+        let board = numinous_core::build_board(seed, numinous_core::FULL_DECK_ROUND);
+        let open = munch_success(canonical_munch_structured(
+            seed,
+            numinous_core::FULL_DECK_ROUND,
+            &board,
+            None,
+        ));
+        let open_event =
+            PublicToolEvent::new(PublicTool::Munch, &serde_json::json!({"seed": seed}), &open)
+                .expect("open munch");
+        let open_native = parse_native_replay(&open_event).expect("open munch replay");
+        let open_sound = open_native.sound().expect("open munch has a quiet bed");
+        assert!(open_sound.duration > 0.0);
+        assert!(!open_sound.render(8_000).is_empty());
+
+        let cells = vec![0_usize, 1, 2];
+        let outcome = numinous_core::grade_munch(&board, &cells);
+        let graded = munch_success(canonical_munch_structured(
+            seed,
+            numinous_core::FULL_DECK_ROUND,
+            &board,
+            Some(&outcome),
+        ));
+        let graded_event = PublicToolEvent::new(
+            PublicTool::Munch,
+            &serde_json::json!({"seed": seed, "bites": [1, 2, 3]}),
+            &graded,
+        )
+        .expect("graded munch");
+        let graded_native = parse_native_replay(&graded_event).expect("graded munch");
+        let graded_sound = graded_native.sound().expect("graded munch has a phrase");
+        assert_ne!(
+            open_sound.render(8_000),
+            graded_sound.render(8_000),
+            "graded consequence must change the phrase"
+        );
+
+        let quiz = numinous_core::build_round_sized(seed, 0, 54, 22, 4);
+        let quiz_open = munch_success(canonical_quiz_structured(seed, 0, 4, &quiz, None));
+        let quiz_event = PublicToolEvent::new(
+            PublicTool::Quiz,
+            &serde_json::json!({"seed": seed}),
+            &quiz_open,
+        )
+        .expect("quiz open");
+        assert!(
+            parse_native_replay(&quiz_event)
+                .expect("quiz")
+                .sound()
+                .is_some()
+        );
+
+        let nim = numinous_core::nim::replay(23, &[]).expect("nim open");
+        let nim_result = canonical_nim_result(23, &nim);
+        let nim_event = PublicToolEvent::new(
+            PublicTool::Nim,
+            &serde_json::json!({"seed": 23}),
+            &nim_result,
+        )
+        .expect("nim");
+        assert!(
+            parse_native_replay(&nim_event)
+                .expect("nim replay")
+                .sound()
+                .is_none(),
+            "Nim remains silent by design"
+        );
     }
 
     #[test]

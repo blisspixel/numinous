@@ -630,6 +630,17 @@ fn app_viewer_reconstructs_a_real_munch_agent_opening() {
         body_lit > 100,
         "the native Munch body contains board geometry"
     );
+    let munch_audio = viewer
+        .audio_selection()
+        .expect("the retained Munch opening selects local sound");
+    assert_eq!(munch_audio.public_sequence(), 0);
+    let expected_sound =
+        numinous_core::SoundSpec::tone(196.0 + (seed % 5) as f32 * 16.0, 2.0, 0.04);
+    assert_eq!(
+        munch_audio.render(8_000),
+        Some(expected_sound.render(8_000)),
+        "the real selected Munch opening replays exact shared game sound"
+    );
     let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
     for forbidden in [
         "munch-viewer-acceptance",

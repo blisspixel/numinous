@@ -5,7 +5,7 @@ pub(crate) enum Program {
     RoomScore,
     Studio,
     Radio,
-    #[allow(dead_code)]
+    /// Local reconstruction of consented public MCP play.
     WatchAgent,
 }
 

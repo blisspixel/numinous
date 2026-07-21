@@ -269,8 +269,9 @@ a bounded fixed-rate source once per selected public sequence and resamples it
 at the device; an unsupported, invalid, forged, or non-sonic selection
 explicitly retires the older sound. Public Munch, Arcade, Quiz, and Gauntlet
 actions reconstruct through the same live App draw paths with fail-closed
-argument and result attestation. Other public game sound is not yet
-reconstructed. Arrow keys or the D-pad scrub retained actions and scroll a long result.
+argument and result attestation, and they publish deterministic local sound
+once per public sequence. Nim remains silent. Arrow keys or the D-pad scrub
+retained actions and scroll a long result.
 A and D, or LB and RB, pan fixed-width result text without reflow. Space or R3
 pauses only the human display. M or the controller sound chord uses the existing
 global mute path. Escape or East closes the viewer, clears its ring, and restores

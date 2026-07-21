@@ -145,8 +145,9 @@ proves native Nim delivery and exact game body pixels. Public Munch, Arcade,
 Quiz, and Gauntlet actions reconstruct through the same live App draw paths
 with fail-closed argument whitelists and exact structured-result attestation.
 Additional real MCP subprocess sessions prove native Munch, Arcade, Quiz, and
-Gauntlet delivery with exact board-body pixels. Other public game sound remains
-0.3 work.
+Gauntlet delivery with exact board-body pixels. Watch Agent also owns live App
+audio for the paired session: room, Studio, and public game selections publish
+deterministic sound once per public sequence, while Nim stays silent by design.
 
 The alpha label is meaningful. Automated correctness, security, coverage,
 cross-platform build, and installer gates are strong, but the 0.2 release still

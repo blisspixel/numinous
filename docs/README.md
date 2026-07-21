@@ -16,7 +16,8 @@ built. Real cross-process Times Tables, Studio, Nim, and Munch acceptance
 sessions are also built. Selected native room and Studio actions now replay
 bounded deterministic local sound with explicit source ownership, global mute
 and volume, focus silence, scrub replacement, and close-time restoration.
-Other native game sound remains 0.3 work. Public CI passes on Windows, macOS,
+Watch Agent owns live App audio for retained public room, Studio, and game
+selections. Public CI passes on Windows, macOS,
 and Ubuntu, but capability
 breadth remains ahead of release evidence: stranger playtests, accessibility
 work, and real macOS and Linux execution remain open. See `../CHANGELOG.md`

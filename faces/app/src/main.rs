@@ -35,9 +35,11 @@ mod postcard;
 mod radio_cache;
 mod room_input;
 mod save_gate;
+mod session_audio;
 mod studio_panel;
 
 use crate::audio_state::Program as AudioProgram;
+use crate::session_audio::SessionAudio;
 use numinous_app::{controls, game_draw, input_legend, play, room_phase};
 use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_total};
 use room_phase::{effective_room_phase, has_finite_parameter_input};
@@ -250,6 +252,8 @@ struct App {
     studio_panel: studio_panel::StudioPanel,
     /// Human-owned, read-only view of one explicitly paired MCP session.
     session_viewer: SessionViewer,
+    /// Publishes each retained public sequence's sound at most once.
+    session_audio: SessionAudio,
     /// GPU fractal renderer, when this machine has one (CPU raster otherwise).
     gpu: Option<numinous_gpu::FractalRenderer>,
     /// Adaptive live-render resolution for CPU room frames (see live_render).
@@ -371,6 +375,7 @@ impl App {
             studio: false,
             studio_panel: studio_panel::StudioPanel::default(),
             session_viewer: SessionViewer::default(),
+            session_audio: SessionAudio::default(),
             gpu: None,
             live_scale: live_render::LiveScale::new(),
             era: numinous_core::Era::default(),
@@ -1023,7 +1028,11 @@ impl App {
         self.show_journey = false;
         self.banner = None;
         match self.session_viewer.open() {
-            Ok(()) => self.sync_room_parameter_voice(),
+            Ok(()) => {
+                self.session_audio.begin();
+                self.audio_program = AudioProgram::WatchAgent;
+                self.publish_viewer_audio(None);
+            }
             Err(_) => {
                 self.banner = Some(feedback::session_viewer_unavailable());
             }
@@ -1035,10 +1044,52 @@ impl App {
 
     fn close_session_viewer(&mut self) {
         self.session_viewer.close();
-        self.sync_room_parameter_voice();
+        self.session_audio.end();
+        // Restore the pre-viewer program: live radio if still selected, else room.
+        if self.radio.is_some() && self.sync_radio_to_wall_clock() {
+            // radio_play already owns the source.
+        } else {
+            self.update_audio();
+        }
         if let Some(window) = &self.window {
             window.set_title(&self.title());
         }
+    }
+
+    /// Publish Watch Agent sound once per selected public sequence.
+    fn sync_viewer_audio(&mut self) {
+        if !self.session_viewer.is_open() {
+            return;
+        }
+        self.audio_program = AudioProgram::WatchAgent;
+        let selection = self.session_viewer.audio_selection();
+        let sequence = selection.as_ref().map(|sel| sel.public_sequence());
+        if !self.session_audio.select(sequence) {
+            self.apply_master_gain();
+            return;
+        }
+        self.publish_viewer_audio(selection.as_ref());
+    }
+
+    fn publish_viewer_audio(
+        &mut self,
+        selection: Option<&numinous_app::session_viewer::AudioSelection>,
+    ) {
+        self.audio_program = AudioProgram::WatchAgent;
+        let Some(player) = &self.player else {
+            return;
+        };
+        player.clear_parameter_voice();
+        player.clear_oneshot();
+        player.set_master_gain(if self.muted { 0.0 } else { self.volume });
+        let stereo = match selection.and_then(|sel| sel.render(ROOM_BED_SOURCE_RATE)) {
+            Some(mono) if !mono.is_empty() => mono
+                .into_iter()
+                .flat_map(|sample| [sample, sample])
+                .collect::<Vec<_>>(),
+            _ => vec![0.0, 0.0],
+        };
+        player.set_shared_stereo_at_rate(Arc::new(stereo), ROOM_BED_SOURCE_RATE);
     }
 
     fn toggle_show(&mut self) {
@@ -1782,7 +1833,8 @@ impl App {
     }
 
     fn sync_radio_at(&mut self, now_secs: f64) -> bool {
-        if self.studio {
+        // Watch Agent owns the source for the whole paired session.
+        if self.studio || self.session_viewer.is_open() {
             return false;
         }
         if self.radio.is_none() {
@@ -1987,6 +2039,10 @@ impl App {
 
     /// Render the current room's stable score and crossfade to it.
     fn update_audio(&mut self) {
+        if self.session_viewer.is_open() {
+            self.sync_viewer_audio();
+            return;
+        }
         if self.studio {
             self.audio_program = AudioProgram::Studio;
             if let Some(player) = &self.player {
@@ -2304,6 +2360,8 @@ impl App {
                 input_legend::InputMode::Controller => ViewerInputMode::Controller,
             };
             let raster = self.session_viewer.draw(width, height, viewer_input_mode);
+            // Cache is warm after draw; publish sequence-owned sound once.
+            self.sync_viewer_audio();
             self.present_raster(raster, width, height);
             return;
         }
@@ -2438,8 +2496,13 @@ impl App {
     }
 
     fn audio_state(&self) -> hud::AudioState {
+        let program = if self.session_viewer.is_open() {
+            AudioProgram::WatchAgent
+        } else {
+            self.audio_program
+        };
         audio_state::describe(
-            self.audio_program,
+            program,
             self.radio
                 .and_then(|index| numinous_core::STATIONS.get(index))
                 .map(|station| station.name),
@@ -3319,6 +3382,27 @@ mod tests {
             largest <= 2_000_000,
             "largest room score held {largest} samples"
         );
+    }
+
+    #[test]
+    fn watch_agent_owns_audio_across_radio_resync_and_close_restores_prior_source() {
+        let mut app = headless("numinous_app_test_watch_agent_audio_owner.txt");
+        app.audio_program = AudioProgram::RoomScore;
+        app.radio = Some(0);
+        app.radio_paths = vec![std::path::PathBuf::from("unused")];
+
+        app.open_session_viewer();
+        assert!(app.session_viewer.is_open());
+        assert_eq!(app.audio_program, AudioProgram::WatchAgent);
+        // Wall-clock radio must not steal the paired source.
+        assert!(!app.sync_radio_at(1.0));
+        assert_eq!(app.audio_program, AudioProgram::WatchAgent);
+
+        app.close_session_viewer();
+        assert!(!app.session_viewer.is_open());
+        // No player and no real radio tracks: ownership returns to the room score.
+        assert_eq!(app.audio_program, AudioProgram::RoomScore);
+        let _ = std::fs::remove_file(&app.journey_file);
     }
 
     fn select_life(app: &mut App) {
