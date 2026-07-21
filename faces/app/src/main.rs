@@ -279,6 +279,12 @@ struct App {
     input_mode: input_legend::InputMode,
     /// Cached room-bed spectrum for the visualizer meter (room index + bands).
     spectrum_cache: Option<(usize, [f32; numinous_core::BAND_COUNT])>,
+    /// Preferred visualizer sample source (room bed, output mix, loopback).
+    visualizer_source: numinous_audio::VisualizerSource,
+    /// Optional system loopback capture when the OS exposes a mix device.
+    loopback: Option<numinous_audio::InputCapture>,
+    /// Previous frame bands for onset / lever mapping.
+    spectrum_prev: [f32; numinous_core::BAND_COUNT],
     mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera,
     life_session: numinous_core::rooms::game_of_life::LifeSession,
     life_accumulator: f64,
@@ -413,6 +419,9 @@ impl App {
             gamepad: gamepad::GamepadInput::new(),
             input_mode: input_legend::InputMode::default(),
             spectrum_cache: None,
+            visualizer_source: numinous_audio::VisualizerSource::RoomBed,
+            loopback: None,
+            spectrum_prev: [0.0; numinous_core::BAND_COUNT],
             mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera::new(0),
             life_session: numinous_core::rooms::game_of_life::LifeSession::new(0),
             life_accumulator: 0.0,
@@ -2317,6 +2326,89 @@ impl App {
         Some(bands)
     }
 
+    /// Live visualizer bands from the preferred source, with graceful fallback.
+    fn visualizer_bands(
+        &mut self,
+    ) -> Option<(
+        [f32; numinous_core::BAND_COUNT],
+        numinous_audio::VisualizerSource,
+    )> {
+        match self.visualizer_source {
+            numinous_audio::VisualizerSource::Loopback => {
+                if let Some(capture) = self.loopback.as_ref() {
+                    let samples = capture.snapshot_frames(2_048);
+                    if samples.len() >= 64 {
+                        let bands =
+                            numinous_core::arrangement_spectrum(&samples, capture.sample_rate());
+                        return Some((bands, numinous_audio::VisualizerSource::Loopback));
+                    }
+                }
+                // Fall through to output mix, then room bed.
+                if let Some(bands) = self.output_mix_bands() {
+                    return Some((bands, numinous_audio::VisualizerSource::OutputMix));
+                }
+                self.room_spectrum_bands()
+                    .map(|b| (b, numinous_audio::VisualizerSource::RoomBed))
+            }
+            numinous_audio::VisualizerSource::OutputMix => {
+                if let Some(bands) = self.output_mix_bands() {
+                    return Some((bands, numinous_audio::VisualizerSource::OutputMix));
+                }
+                self.room_spectrum_bands()
+                    .map(|b| (b, numinous_audio::VisualizerSource::RoomBed))
+            }
+            numinous_audio::VisualizerSource::RoomBed
+            | numinous_audio::VisualizerSource::Silent => self
+                .room_spectrum_bands()
+                .map(|b| (b, numinous_audio::VisualizerSource::RoomBed)),
+        }
+    }
+
+    fn output_mix_bands(&self) -> Option<[f32; numinous_core::BAND_COUNT]> {
+        let player = self.player.as_ref()?;
+        let samples = player.snapshot_output_tap(2_048);
+        if samples.len() < 64 {
+            return None;
+        }
+        Some(numinous_core::arrangement_spectrum(
+            &samples,
+            player.sample_rate(),
+        ))
+    }
+
+    /// Cycle visualizer source: room bed, output mix, loopback (when present).
+    fn cycle_visualizer_source(&mut self) {
+        self.visualizer_source = match self.visualizer_source {
+            numinous_audio::VisualizerSource::RoomBed
+            | numinous_audio::VisualizerSource::Silent => {
+                numinous_audio::VisualizerSource::OutputMix
+            }
+            numinous_audio::VisualizerSource::OutputMix => {
+                if self.loopback.is_none() {
+                    self.loopback = numinous_audio::InputCapture::try_open_loopback().ok();
+                }
+                if self.loopback.is_some() {
+                    numinous_audio::VisualizerSource::Loopback
+                } else {
+                    numinous_audio::VisualizerSource::RoomBed
+                }
+            }
+            numinous_audio::VisualizerSource::Loopback => {
+                self.loopback = None;
+                numinous_audio::VisualizerSource::RoomBed
+            }
+        };
+        let label = match self.visualizer_source {
+            numinous_audio::VisualizerSource::Loopback => self
+                .loopback
+                .as_ref()
+                .map(|c| format!("VIZ {}", c.device_name()))
+                .unwrap_or_else(|| "VIZ LOOPBACK".into()),
+            other => format!("VIZ {}", other.label()),
+        };
+        self.banner = Some(feedback::Banner::status(label, 90));
+    }
+
     fn current_room_is_life(&self) -> bool {
         self.rooms[self.current].meta().id == "game-of-life"
     }
@@ -2634,11 +2726,14 @@ impl App {
         }
         self.draw_banner_on_raster(&mut raster, width, height);
         hud::draw_audio_state(&mut raster, &self.audio_state(), width);
-        // Offline visualizer path: room-bed spectrum meter from the current motif.
+        // Visualizer path: room bed, mixed output tap, or OS loopback capture.
         if !self.muted
-            && let Some(bands) = self.room_spectrum_bands()
+            && let Some((bands, source)) = self.visualizer_bands()
         {
             hud::draw_spectrum_meter(&mut raster, &bands, width, height);
+            let levers = numinous_core::levers_from_bands(&self.spectrum_prev, &bands);
+            let _ = (source, levers); // levers reserved for room-parameter drive
+            self.spectrum_prev = bands;
         }
         let (rw, rh) = (raster.width(), raster.height());
         let mut rgba = raster.to_rgba();
@@ -3095,6 +3190,10 @@ impl ApplicationHandler for App {
                         // B for the big show (lean back).
                         Key::Character(c) if c.as_str() == "b" => {
                             self.toggle_show();
+                        }
+                        // O cycles the visualizer source: room bed, output mix, loopback.
+                        Key::Character(c) if c.as_str() == "o" && !repeat => {
+                            self.cycle_visualizer_source();
                         }
                         // Number keys are room slots, like weapon slots.
                         Key::Character(c)

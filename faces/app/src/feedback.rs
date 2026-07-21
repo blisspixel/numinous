@@ -21,6 +21,11 @@ impl Banner {
         Self { lines, frames_left }
     }
 
+    /// One-line status banner (visualizer source changes, etc.).
+    pub(crate) fn status(line: impl Into<String>, frames_left: u64) -> Self {
+        Self::new(vec![line.into().to_uppercase()], frames_left.max(1))
+    }
+
     pub(crate) fn lines(&self) -> &[String] {
         &self.lines
     }
