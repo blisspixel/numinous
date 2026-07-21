@@ -203,14 +203,6 @@ impl Room for Audioactive {
         let step = (ambient_gen(t) + hands.len()).min(MAX_GEN + 8);
         let s = look_line(seed_string(self.seed), step);
         draw_digits(canvas, &s, step);
-        let (width, height) = canvas.draw_bounds();
-        if width > 0 && height > 0 {
-            for &(x, y) in &hands {
-                let px = (x * width.saturating_sub(1) as f64).round() as i32;
-                let py = (y * height.saturating_sub(1) as f64).round() as i32;
-                canvas.plot(px, py, '+');
-            }
-        }
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

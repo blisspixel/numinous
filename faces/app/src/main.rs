@@ -1667,8 +1667,15 @@ impl App {
 
     fn end_pointer_at(&mut self, point: (f64, f64)) {
         self.set_mouse_from_normalized(point);
-        let accepted =
-            self.poking && room_input::record_pointer_up(&mut self.inputs, point, self.t);
+        let room_id = self.rooms[self.current].meta().id;
+        let keep_drag = room_input::room_keeps_drag_after_release(room_id);
+        let was_dial_drag = self.poking && self.pokes.len() > 1 && !keep_drag;
+        let accepted = self.poking
+            && room_input::record_pointer_up(&mut self.inputs, point, self.t, keep_drag);
+        if was_dial_drag {
+            // Dial drags leave no sticky trail; plant rooms use single-click downs.
+            self.pokes.clear();
+        }
         self.set_pointer_state(mouse_input::pointer_state_after_left_release());
         self.maybe_announce_room_goal();
         self.sync_room_parameter_voice();
@@ -4457,7 +4464,7 @@ mod tests {
         // A release recorded normally is not followed by a stray cancel.
         app.poking = true;
         crate::room_input::record_pointer_down(&mut app.inputs, (0.5, 0.5), 0.2);
-        crate::room_input::record_pointer_up(&mut app.inputs, (0.5, 0.5), 0.25);
+        crate::room_input::record_pointer_up(&mut app.inputs, (0.5, 0.5), 0.25, false);
         app.clear_pointer_state();
         assert!(matches!(
             app.inputs.last(),

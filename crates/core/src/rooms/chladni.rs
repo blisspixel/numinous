@@ -208,14 +208,6 @@ impl Room for Chladni {
         let (nx, ny) = *hands.last().expect("nonempty hands");
         let (n, m) = tuned_modes(nx, ny);
         draw_plate(canvas, n, m);
-        let (width, height) = canvas.draw_bounds();
-        if width > 0 && height > 0 {
-            for &(x, y) in &hands {
-                let px = (x * width.saturating_sub(1) as f64).round() as i32;
-                let py = (y * height.saturating_sub(1) as f64).round() as i32;
-                canvas.plot(px, py, '+');
-            }
-        }
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

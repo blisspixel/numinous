@@ -214,14 +214,6 @@ impl Room for TheMagnet {
         let temp = self.temp_at(t, pokes);
         let (spins, _, _) = equilibrate(temp, self.seed);
         draw_spins(canvas, &spins);
-        let (width, height) = canvas.draw_bounds();
-        if width > 0 && height > 0 {
-            for &(x, y) in &hands {
-                let px = (x * width.saturating_sub(1) as f64).round() as i32;
-                let py = (y * height.saturating_sub(1) as f64).round() as i32;
-                canvas.plot(px, py, '+');
-            }
-        }
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

@@ -5,6 +5,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- Art-first interaction: no pointer reticle or drag trail painted over rooms;
+  controller hand is a single soft pixel. Sticky dial-room hand crosses (`o`)
+  are gone. Releasing a drag clears the gesture so rooms resume ambient motion
+  instead of freezing under a leftover hand mark. Pure clicks still plant.
+
 ### Added
 - Optional concept explainers for rooms: App E / ? (and controller SELECT)
   opens EXPLAIN with THE CONCEPT when known, then the reveal. Flagship rooms

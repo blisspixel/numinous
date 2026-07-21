@@ -225,9 +225,15 @@ fn draw_fords(canvas: &mut dyn Surface, circles: &[Ford], highlight: Option<Ford
         return;
     }
     let plate = PlateMap::new(width, height, seed);
+    // Draw ambient first so a birth highlight is never buried under a neighbor.
     for &f in circles {
-        let mark = if highlight == Some(f) { '#' } else { '*' };
-        plate.draw_circle(canvas, f.x(), f.radius(), f.radius(), mark);
+        if highlight == Some(f) {
+            continue;
+        }
+        plate.draw_circle(canvas, f.x(), f.radius(), f.radius(), '*');
+    }
+    if let Some(born) = highlight {
+        plate.draw_circle(canvas, born.x(), born.radius(), born.radius(), '#');
     }
     // Baseline number line.
     let y = height.saturating_sub(1) as i32;
@@ -324,14 +330,6 @@ impl Room for FordCircles {
         let base = self.ambient(t);
         let (circles, birth) = apply_mediants(&base, &hands);
         draw_fords(canvas, &circles, birth, self.seed);
-        let (width, height) = canvas.draw_bounds();
-        if width > 0 && height > 0 {
-            for &(x, y) in &hands {
-                let px = (x * width.saturating_sub(1) as f64).round() as i32;
-                let py = (y * height.saturating_sub(1) as f64).round() as i32;
-                canvas.plot(px, py, '+');
-            }
-        }
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -505,10 +503,14 @@ mod tests {
         let room = FordCircles::new();
         let mut base = Canvas::new(50, 30);
         let mut poked = Canvas::new(50, 30);
-        room.render(&mut base, 0.2);
-        // Click in a shallow Farey gap so a new mediant appears.
-        room.render_poked(&mut poked, 0.2, &[(0.3, 0.5)]);
+        // Shallow ceiling so the mediant under the hand is a real new circle.
+        room.render(&mut base, 0.0);
+        room.render_poked(&mut poked, 0.0, &[(0.35, 0.5)]);
         assert_ne!(base.to_text(), poked.to_text());
+        assert!(
+            poked.to_text().contains('#'),
+            "birth should ink the mediant with a distinct mark"
+        );
     }
 
     #[test]
