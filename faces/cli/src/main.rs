@@ -6069,16 +6069,17 @@ mod tests {
         .expect("describe");
         assert!(high.contains("Deeper still:") && high.contains("Shishikura"));
 
-        let cap = super::describe_report(
-            "cult-of-pi",
-            false,
-            false,
-            &numinous_core::Journey {
-                plays: u32::MAX,
-                ..Default::default()
-            },
-        )
-        .expect("describe");
+        let mut at_cap = numinous_core::Journey {
+            plays: numinous_core::Journey::MAX_PLAY_SPARKS,
+            wins: numinous_core::Journey::MAX_WIN_SPARKS,
+            secrets: 100,
+            ..Default::default()
+        };
+        for i in 0..256 {
+            at_cap.visit(&format!("room-{i}"));
+        }
+        assert_eq!(at_cap.level(), numinous_core::MAX_LEVEL);
+        let cap = super::describe_report("cult-of-pi", false, false, &at_cap).expect("describe");
         assert!(
             cap.contains("Feynman point"),
             "third cut is reachable: {cap}"

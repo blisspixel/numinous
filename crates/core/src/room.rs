@@ -52,6 +52,14 @@ pub trait Room {
     /// just did (see `docs/INSIGHTS.md`). Surfaced only when asked, never pushed.
     fn reveal(&self) -> &'static str;
 
+    /// Further-reading citation for this room (panel item 7).
+    ///
+    /// Default uses the shared catalog table in [`crate::citations`]. Faces
+    /// show it with reveal and deep cuts; keep the line short and offline-friendly.
+    fn citation(&self) -> &'static str {
+        crate::citations::for_room(self.meta().id)
+    }
+
     /// The phase this room is proudest of: what the gallery, the contact
     /// sheet, and any other postcard should show. Found by looking (the beauty
     /// QA loop in `docs/QUALITY.md`); defaults to the start of the sweep.

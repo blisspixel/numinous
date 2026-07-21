@@ -148,6 +148,9 @@ Additional real MCP subprocess sessions prove native Munch, Arcade, Quiz, and
 Gauntlet delivery with exact board-body pixels. Watch Agent also owns live App
 audio for the paired session: room, Studio, and public game selections publish
 deterministic sound once per public sequence, while Nim stays silent by design.
+Further reading rides with `reveal_room` as a citation line. The Show crossfades
+between rooms; Visual Eras carry richer grain (dither, bloom). Play and win
+spark contributions soft-cap so curiosity stays ahead of grind.
 
 The alpha label is meaningful. Automated correctness, security, coverage,
 cross-platform build, and installer gates are strong, but the 0.2 release still

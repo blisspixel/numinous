@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Panel pack (cycle 147): soft play/win spark caps (anti-grind without scolding);
+  further-reading citations for every catalog room via `Room::citation` and
+  MCP `reveal_room.citation`; The Show room-to-room RGBA crossfade; 8-bit ordered
+  dither and vector soft bloom; arcade beat juice (caught/clear/over ticks);
+  MCP initialize negotiates `2025-06-18`, `2025-11-25`, and names `2026-07-28`
+  for dual-stack hosts while tools remain on the current stdio surface.
 - Window game juice: short chiptune `game_tick` and `game_buzz` one-shots for
   quiz answers, Nim moves, and Munch grades; a camera shake on bad Munch grades
   that decays over 14 frames. Bite flash and crunch remain for cell toggles.
