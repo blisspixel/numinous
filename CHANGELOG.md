@@ -5,6 +5,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- Pointer chrome is quieter: the live reticle is small and only appears while
+  the hand is held; completed gestures no longer leave a crosshair or stroke
+  trail over the room. Gamepad cursor matches. Default room phase rate is a
+  little faster so quiet visits still feel alive.
+
 ### Added
 - Panel depth pack (cycle 152): App key K writes a share pack (postcard + loop +
   README folder, CLI `share` parity) with a dedicated save-gate cooldown;

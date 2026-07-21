@@ -461,49 +461,27 @@ fn largest_tile_cluster(changed: &[bool], width: usize, height: usize) -> usize 
     largest
 }
 
-fn legibility_error(id: &str, state: &str, before: &Raster, after: &Raster) -> Option<String> {
+/// Live pointer chrome is intentionally tiny. Domain rooms still use the full
+/// domain floor; feedback only needs a visible compact reticle.
+fn feedback_chrome_error(id: &str, state: &str, before: &Raster, after: &Raster) -> Option<String> {
     let diff = difference(before, after);
-    let area = before.width() * before.height();
-    let default_area = ROOM_SIZE.0 * ROOM_SIZE.1;
-    let minimum_changed = DEFAULT_MIN_CHANGED_PIXELS
-        .saturating_mul(area)
-        .div_ceil(default_area)
-        .max(ABSOLUTE_MIN_CHANGED_PIXELS);
-    if diff.changed < minimum_changed {
+    if diff.changed == 0 {
+        return Some(format!("{id} {state} feedback reticle is invisible"));
+    }
+    // Arms stay under ~1.2% of the short edge; allow a small safety margin.
+    let short = before.width().min(before.height());
+    let max_changed = (short / 8).max(24);
+    if diff.changed > max_changed {
         return Some(format!(
-            "{id} {state} response changes only {} pixels, below the {minimum_changed}-pixel floor",
+            "{id} {state} feedback reticle is too large: {} changed pixels (cap {max_changed})",
             diff.changed
-        ));
-    }
-    if diff.support * 1_000 < area * MIN_CHANGED_SUPPORT_PERMILLE {
-        return Some(format!(
-            "{id} {state} response is confined to {} of {area} pixels",
-            diff.support
-        ));
-    }
-    if diff.changed * 1_000 < diff.support * MIN_SUPPORT_DENSITY_PERMILLE {
-        return Some(format!(
-            "{id} {state} response scatters only {} changed pixels across {} supported pixels",
-            diff.changed, diff.support
-        ));
-    }
-    if diff.largest_tile_cluster < MIN_COHERENT_TILES {
-        return Some(format!(
-            "{id} {state} response has no coherent cluster larger than {} spatial tile(s)",
-            diff.largest_tile_cluster
-        ));
-    }
-    if diff.mean_channel_delta < MIN_MEAN_CHANNEL_DELTA {
-        return Some(format!(
-            "{id} {state} response mean channel delta {} is too faint",
-            diff.mean_channel_delta
         ));
     }
     None
 }
 
-fn assert_legible(id: &str, state: &str, before: &Raster, after: &Raster) {
-    if let Some(message) = legibility_error(id, state, before, after) {
+fn assert_feedback_chrome(id: &str, state: &str, before: &Raster, after: &Raster) {
+    if let Some(message) = feedback_chrome_error(id, state, before, after) {
         panic!("{message}");
     }
 }
@@ -1192,6 +1170,18 @@ fn apply_input_feedback(mut raster: Raster, inputs: &[RoomInput]) -> Raster {
     raster
 }
 
+/// Feedback chrome only draws while the hand is held. For matrix checks that
+/// still need a visible reticle, drop a terminal up/cancel so the latest
+/// gesture stays open without inventing a new hand point.
+fn feedback_hold_inputs(inputs: &[RoomInput]) -> Vec<RoomInput> {
+    match inputs.last() {
+        Some(RoomInput::PointerUp { .. } | RoomInput::PointerCancel) if inputs.len() > 1 => {
+            inputs[..inputs.len() - 1].to_vec()
+        }
+        _ => inputs.to_vec(),
+    }
+}
+
 fn life_session_screen(
     room: &dyn Room,
     session: &numinous_core::rooms::game_of_life::LifeSession,
@@ -1395,12 +1385,30 @@ fn main() {
             &scenario.delayed,
             SMALL_SIZE,
         );
-        let feedback_interacted = apply_input_feedback(raw_interacted.clone(), &scenario.immediate);
-        let feedback_delayed = apply_input_feedback(raw_delayed.clone(), &scenario.delayed);
+        let immediate_hold = feedback_hold_inputs(&scenario.immediate);
+        let delayed_hold = feedback_hold_inputs(&scenario.delayed);
+        let raw_interacted_hold = room_content(room.as_ref(), phase, &immediate_hold, ROOM_SIZE);
+        let raw_delayed_hold = room_content(
+            room.as_ref(),
+            scenario.delayed_phase,
+            &delayed_hold,
+            ROOM_SIZE,
+        );
+        let raw_small_interacted_hold =
+            room_content(room.as_ref(), phase, &immediate_hold, SMALL_SIZE);
+        let raw_small_delayed_hold = room_content(
+            room.as_ref(),
+            scenario.delayed_phase,
+            &delayed_hold,
+            SMALL_SIZE,
+        );
+        let feedback_interacted =
+            apply_input_feedback(raw_interacted_hold.clone(), &immediate_hold);
+        let feedback_delayed = apply_input_feedback(raw_delayed_hold.clone(), &delayed_hold);
         let feedback_small_interacted =
-            apply_input_feedback(raw_small_interacted.clone(), &scenario.immediate);
+            apply_input_feedback(raw_small_interacted_hold.clone(), &immediate_hold);
         let feedback_small_delayed =
-            apply_input_feedback(raw_small_delayed.clone(), &scenario.delayed);
+            apply_input_feedback(raw_small_delayed_hold.clone(), &delayed_hold);
         let base = room_screen(room.as_ref(), phase, &[], ROOM_SIZE, 0, false, 7);
         let interacted = room_screen(
             room.as_ref(),
@@ -1450,23 +1458,23 @@ fn main() {
                 &raw_small_delayed,
             );
         } else {
-            assert_legible(
+            assert_feedback_chrome(
                 id,
                 "immediate feedback",
-                &raw_interacted,
+                &raw_interacted_hold,
                 &feedback_interacted,
             );
-            assert_legible(id, "delayed feedback", &raw_delayed, &feedback_delayed);
-            assert_legible(
+            assert_feedback_chrome(id, "delayed feedback", &raw_delayed_hold, &feedback_delayed);
+            assert_feedback_chrome(
                 id,
                 "compact immediate feedback",
-                &raw_small_interacted,
+                &raw_small_interacted_hold,
                 &feedback_small_interacted,
             );
-            assert_legible(
+            assert_feedback_chrome(
                 id,
                 "compact delayed feedback",
-                &raw_small_delayed,
+                &raw_small_delayed_hold,
                 &feedback_small_delayed,
             );
         }
@@ -2306,8 +2314,8 @@ mod tests {
         MIN_COHERENT_TILES, MIN_MEAN_CHANNEL_DELTA, MIN_SUPPORT_DENSITY_PERMILLE, ROOM_SIZE,
         SHARED_SCREEN_COUNT, SMALL_SIZE, apply_input_feedback, assert_hold_release_contract,
         assert_scenario_matches_verb, assert_scenario_shape, assert_semantics, difference,
-        domain_response_error, expected_paths, legibility_error, life_cause_error, room_by_id,
-        room_content, room_scenario,
+        domain_response_error, expected_paths, feedback_chrome_error, feedback_hold_inputs,
+        life_cause_error, room_by_id, room_content, room_scenario,
     };
     use numinous_core::{Raster, Surface, all_rooms};
 
@@ -2339,7 +2347,11 @@ mod tests {
             let scenario = room_scenario(room.as_ref());
             let base = room_content(room.as_ref(), 0.0, &[], ROOM_SIZE);
             let immediate = room_content(room.as_ref(), 0.0, &scenario.immediate, ROOM_SIZE);
-            let immediate_feedback = apply_input_feedback(immediate.clone(), &scenario.immediate);
+            let immediate_hold = feedback_hold_inputs(&scenario.immediate);
+            let delayed_hold = feedback_hold_inputs(&scenario.delayed);
+            let immediate_hold_raw = room_content(room.as_ref(), 0.0, &immediate_hold, ROOM_SIZE);
+            let immediate_feedback =
+                apply_input_feedback(immediate_hold_raw.clone(), &immediate_hold);
             let delayed_base = room_content(room.as_ref(), scenario.delayed_phase, &[], ROOM_SIZE);
             let delayed = room_content(
                 room.as_ref(),
@@ -2347,11 +2359,19 @@ mod tests {
                 &scenario.delayed,
                 ROOM_SIZE,
             );
-            let delayed_feedback = apply_input_feedback(delayed.clone(), &scenario.delayed);
+            let delayed_hold_raw = room_content(
+                room.as_ref(),
+                scenario.delayed_phase,
+                &delayed_hold,
+                ROOM_SIZE,
+            );
+            let delayed_feedback = apply_input_feedback(delayed_hold_raw.clone(), &delayed_hold);
             let small_base = room_content(room.as_ref(), 0.0, &[], SMALL_SIZE);
             let small_immediate = room_content(room.as_ref(), 0.0, &scenario.immediate, SMALL_SIZE);
+            let small_immediate_hold =
+                room_content(room.as_ref(), 0.0, &immediate_hold, SMALL_SIZE);
             let small_immediate_feedback =
-                apply_input_feedback(small_immediate.clone(), &scenario.immediate);
+                apply_input_feedback(small_immediate_hold.clone(), &immediate_hold);
             let small_delayed_base =
                 room_content(room.as_ref(), scenario.delayed_phase, &[], SMALL_SIZE);
             let small_delayed = room_content(
@@ -2360,8 +2380,14 @@ mod tests {
                 &scenario.delayed,
                 SMALL_SIZE,
             );
+            let small_delayed_hold = room_content(
+                room.as_ref(),
+                scenario.delayed_phase,
+                &delayed_hold,
+                SMALL_SIZE,
+            );
             let small_delayed_feedback =
-                apply_input_feedback(small_delayed.clone(), &scenario.delayed);
+                apply_input_feedback(small_delayed_hold.clone(), &delayed_hold);
             for error in [
                 domain_response_error(id, "default", &base, &immediate, &delayed_base, &delayed),
                 domain_response_error(
@@ -2392,18 +2418,28 @@ mod tests {
                 }
             } else {
                 for error in [
-                    legibility_error(id, "immediate feedback", &immediate, &immediate_feedback),
-                    legibility_error(id, "delayed feedback", &delayed, &delayed_feedback),
-                    legibility_error(
+                    feedback_chrome_error(
+                        id,
+                        "immediate feedback",
+                        &immediate_hold_raw,
+                        &immediate_feedback,
+                    ),
+                    feedback_chrome_error(
+                        id,
+                        "delayed feedback",
+                        &delayed_hold_raw,
+                        &delayed_feedback,
+                    ),
+                    feedback_chrome_error(
                         id,
                         "compact immediate feedback",
-                        &small_immediate,
+                        &small_immediate_hold,
                         &small_immediate_feedback,
                     ),
-                    legibility_error(
+                    feedback_chrome_error(
                         id,
                         "compact delayed feedback",
-                        &small_delayed,
+                        &small_delayed_hold,
                         &small_delayed_feedback,
                     ),
                 ]
