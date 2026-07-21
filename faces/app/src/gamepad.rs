@@ -293,11 +293,15 @@ pub(crate) fn draw_cursor(
     }
     let x = (point.0.clamp(0.0, 1.0) * width.saturating_sub(1) as f64).round() as i32;
     let y = (point.1.clamp(0.0, 1.0) * height.saturating_sub(1) as f64).round() as i32;
-    let radius = (width.min(height) / 90).clamp(5, 12) as i32;
-    surface.line(x - radius, y, x - 2, y, '#');
-    surface.line(x + 2, y, x + radius, y, '#');
-    surface.line(x, y - radius, x, y - 2, '#');
-    surface.line(x, y + 2, x, y + radius, '#');
+    // Match the pointer reticle scale: small enough not to cover the math.
+    let radius = ((width.min(height) as f64 * 0.012).round() as i32).clamp(2, 6);
+    let gap = 1;
+    if radius > gap {
+        surface.line(x - radius, y, x - gap, y, '#');
+        surface.line(x + gap, y, x + radius, y, '#');
+        surface.line(x, y - radius, x, y - gap, '#');
+        surface.line(x, y + gap, x, y + radius, '#');
+    }
     surface.plot(x, y, '#');
 }
 

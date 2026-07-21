@@ -164,9 +164,12 @@ fn julia_gpu_vertical_span(width: u32, height: u32) -> f32 {
 }
 
 /// Normal room phase cycles per elapsed second.
-const T_RATE: f64 = 0.24;
+///
+/// Slightly above a quarter-cycle per second so quiet rooms still feel alive
+/// without rushing the math past readability.
+const T_RATE: f64 = 0.30;
 /// The Show advances more slowly for a deliberate, hypnotic pace.
-const SHOW_T_RATE: f64 = 0.096;
+const SHOW_T_RATE: f64 = 0.11;
 /// A restored or stalled window never consumes a giant simulation step.
 const MAX_TICK_SECONDS: f64 = 0.05;
 /// Target presentation cadence. The simulation still uses measured time.
