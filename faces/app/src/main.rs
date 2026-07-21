@@ -46,6 +46,17 @@ use room_phase::{effective_room_phase, has_finite_parameter_input};
 
 /// Near-black background (matches the `Raster` stage), packed `0x00RRGGBB`.
 const BACKGROUND: u32 = 0x000A_0B0F;
+/// Frames of The Show crossfade when the gallery advances rooms.
+const SHOW_CROSSFADE_FRAMES: u8 = 14;
+
+/// Blend `prev` into `dest` with `weight` of the previous frame in [0, 1].
+fn blend_rgba(dest: &mut [u8], prev: &[u8], weight: f32) {
+    let w = weight.clamp(0.0, 1.0);
+    let inv = 1.0 - w;
+    for (d, p) in dest.iter_mut().zip(prev.iter()) {
+        *d = (f32::from(*d) * inv + f32::from(*p) * w) as u8;
+    }
+}
 
 /// Shift an RGBA buffer a few pixels left or right for a short bad-grade shake.
 fn apply_screen_shake(rgba: &mut [u8], width: usize, height: usize, frames_left: u8) {
@@ -277,6 +288,10 @@ struct App {
     show_info: bool,
     /// The Show: lean back and let the whole collection play itself.
     the_show: bool,
+    /// Last presented Show frame for room-to-room crossfade.
+    show_crossfade_prev: Option<Vec<u8>>,
+    /// Remaining frames of Show crossfade blend.
+    show_crossfade_frames: u8,
     /// The Studio: type an expression and watch it live.
     studio: bool,
     /// The typed Studio expression and its last-good parse state.
@@ -405,6 +420,8 @@ impl App {
             dragging: false,
             show_info: false,
             the_show: false,
+            show_crossfade_prev: None,
+            show_crossfade_frames: 0,
             studio: false,
             studio_panel: studio_panel::StudioPanel::default(),
             session_viewer: SessionViewer::default(),
@@ -681,20 +698,37 @@ impl App {
     /// The spirits' beat: called from the frame clock.
     fn arcade_beat(&mut self) {
         use numinous_core::munch_arcade::Turn;
-        let Some(play) = self.arcade.as_mut() else {
-            return;
-        };
-        if play.over {
-            return;
-        }
-        match play.run.tick() {
-            Turn::Caught => play.flash = Some((true, 40)),
-            Turn::Over => {
-                play.over = true;
-                let (seed, score) = (play.seed, play.run.score);
-                self.post_score(&format!("arcade seed:{seed}"), score);
+        let feedback = {
+            let Some(play) = self.arcade.as_mut() else {
+                return;
+            };
+            if play.over {
+                return;
             }
-            _ => {}
+            match play.run.tick() {
+                Turn::Caught => {
+                    play.flash = Some((true, 40));
+                    Some(false)
+                }
+                Turn::Over => {
+                    play.over = true;
+                    let (seed, score) = (play.seed, play.run.score);
+                    self.post_score(&format!("arcade seed:{seed}"), score);
+                    Some(false)
+                }
+                Turn::Cleared => Some(true),
+                Turn::Going => None,
+            }
+        };
+        if let Some(good) = feedback {
+            if good {
+                self.play_game_tick(true);
+            } else if self.arcade.as_ref().is_some_and(|play| play.over) {
+                let seed = self.arcade.as_ref().map(|play| play.seed).unwrap_or(0);
+                self.play_game_buzz(seed);
+            } else {
+                self.play_game_tick(false);
+            }
         }
     }
 
@@ -2227,6 +2261,9 @@ impl App {
     }
 
     fn switch(&mut self, delta: isize) {
+        if self.the_show && self.show_crossfade_prev.is_some() {
+            self.show_crossfade_frames = SHOW_CROSSFADE_FRAMES;
+        }
         self.current = room_input::wrapped_room_index(self.current, delta, self.rooms.len());
         self.rooms = room_input::redeal_rooms(&mut self.variation, &mut self.current);
         self.reset_room_runtime();
@@ -2578,6 +2615,21 @@ impl App {
         let (rw, rh) = (raster.width(), raster.height());
         let mut rgba = raster.to_rgba();
         self.era.apply(&mut rgba, rw, rh);
+        if self.the_show
+            && self.show_crossfade_frames > 0
+            && let Some(prev) = self.show_crossfade_prev.as_ref()
+            && prev.len() == rgba.len()
+        {
+            let weight = f32::from(self.show_crossfade_frames) / f32::from(SHOW_CROSSFADE_FRAMES);
+            blend_rgba(&mut rgba, prev, weight);
+            self.show_crossfade_frames = self.show_crossfade_frames.saturating_sub(1);
+        }
+        if self.the_show {
+            self.show_crossfade_prev = Some(rgba.clone());
+        } else {
+            self.show_crossfade_prev = None;
+            self.show_crossfade_frames = 0;
+        }
         if self.screen_shake > 0 {
             apply_screen_shake(&mut rgba, rw, rh, self.screen_shake);
             self.screen_shake = self.screen_shake.saturating_sub(1);

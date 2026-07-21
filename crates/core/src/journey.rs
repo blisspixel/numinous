@@ -91,16 +91,28 @@ impl Rank {
 }
 
 impl Journey {
+    /// Soft caps so endless same-loop play cannot grind past curiosity.
+    ///
+    /// Unique visits still count fully (each room at most once). Plays and wins
+    /// keep working for scores and fun; only their contribution to level sparks
+    /// is bounded (panel anti-grind: visit-spark discipline without scolding).
+    pub const MAX_PLAY_SPARKS: u32 = 200;
+    /// Wins still matter, but not as an infinite doubling grind.
+    pub const MAX_WIN_SPARKS: u32 = 100;
+
     /// The journey's sparks: how much of the record has accumulated. Showing up
     /// (visits and plays) counts as much as anything: being right earns a little
     /// more, but the road to the cap is paved with playing, which is why anyone
-    /// who keeps playing gets there.
+    /// who keeps playing gets there. Play and win contributions soft-cap so a
+    /// single loop cannot replace the catalog.
     #[must_use]
     pub fn sparks(&self) -> u32 {
         let visits = u32::try_from(self.visited.len()).unwrap_or(u32::MAX);
+        let play_sparks = self.plays.min(Self::MAX_PLAY_SPARKS);
+        let win_sparks = self.wins.min(Self::MAX_WIN_SPARKS).saturating_mul(2);
         visits
-            .saturating_add(self.plays)
-            .saturating_add(self.wins.saturating_mul(2))
+            .saturating_add(play_sparks)
+            .saturating_add(win_sparks)
             .saturating_add(self.secrets.saturating_mul(5))
     }
 
@@ -479,9 +491,12 @@ mod tests {
         assert_eq!(journey.level(), 2); // T(1) = 1
         journey.plays = 3;
         assert_eq!(journey.level(), 3); // T(2) = 3
-        journey.plays = 860;
-        assert_eq!(journey.level(), 41); // one shy of T(41) = 861
-        journey.plays = 861;
+        // Soft play-spark cap is 200: fill visits and secrets for the rest of the road.
+        journey.plays = Journey::MAX_PLAY_SPARKS;
+        for i in 0..351 {
+            journey.visit(&format!("room-{i}"));
+        }
+        journey.secrets = 80;
         assert_eq!(journey.level(), 42);
         journey.plays = 5_000;
         assert_eq!(journey.level(), 42, "the cap is the cap");
@@ -489,12 +504,35 @@ mod tests {
 
     #[test]
     fn anyone_who_plays_levels_up_even_losing_every_round() {
-        // No wins, no secrets: pure participation still reaches the cap.
-        let journey = Journey {
-            plays: 861,
+        // No wins: participation plus unique visits still reaches the cap.
+        let mut journey = Journey {
+            plays: Journey::MAX_PLAY_SPARKS,
             ..Journey::default()
         };
+        for i in 0..400 {
+            journey.visit(&format!("room-{i}"));
+        }
+        journey.secrets = 100;
         assert_eq!(journey.level(), super::MAX_LEVEL);
+    }
+
+    #[test]
+    fn play_and_win_spark_contributions_soft_cap() {
+        let mut journey = Journey {
+            plays: Journey::MAX_PLAY_SPARKS,
+            wins: Journey::MAX_WIN_SPARKS,
+            ..Journey::default()
+        };
+        let capped = journey.sparks();
+        journey.plays = Journey::MAX_PLAY_SPARKS.saturating_mul(10);
+        journey.wins = Journey::MAX_WIN_SPARKS.saturating_mul(10);
+        assert_eq!(
+            journey.sparks(),
+            capped,
+            "extra plays and wins beyond the soft caps do not raise sparks"
+        );
+        journey.visit("new-room");
+        assert_eq!(journey.sparks(), capped.saturating_add(1));
     }
 
     #[test]
@@ -555,7 +593,12 @@ mod tests {
         journey.plays = 2; // level 2 (T1=1), one spark into a span of 2
         let bar = journey.level_bar(10);
         assert!(bar.starts_with('#') && bar.contains('-'), "got {bar}");
-        journey.plays = 2_000;
+        for i in 0..256 {
+            journey.visit(&format!("cap-{i}"));
+        }
+        journey.plays = Journey::MAX_PLAY_SPARKS;
+        journey.secrets = 120;
+        assert_eq!(journey.level(), super::MAX_LEVEL);
         assert_eq!(journey.level_bar(10), "##########");
     }
 

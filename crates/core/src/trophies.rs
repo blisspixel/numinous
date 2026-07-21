@@ -175,10 +175,16 @@ mod tests {
 
     #[test]
     fn the_answer_trophy_needs_the_cap() {
-        let journey = Journey {
-            plays: 861,
+        let mut journey = Journey {
+            plays: Journey::MAX_PLAY_SPARKS,
+            wins: Journey::MAX_WIN_SPARKS,
+            secrets: 100,
             ..Default::default()
         };
+        for i in 0..256 {
+            journey.visit(&format!("room-{i}"));
+        }
+        assert_eq!(journey.level(), crate::MAX_LEVEL);
         let case = trophies(&journey, &Scoreboard::default());
         assert!(case.iter().any(|t| t.name == "The Answer" && t.earned));
     }

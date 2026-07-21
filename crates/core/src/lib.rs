@@ -20,6 +20,7 @@ pub mod cairn;
 pub mod canvas;
 pub mod challenge;
 pub mod chiptune;
+pub mod citations;
 pub mod codebreaker;
 pub mod concepts;
 pub mod era;
@@ -72,6 +73,7 @@ pub use chiptune::{
     Arrangement, ChipNote, Pattern, StereoSignalMetrics, Voice, compose, game_buzz, game_tick,
     munch_crunch, pitch, quantize_pcm16, stereo_signal_metrics,
 };
+pub use citations::for_room as room_citation;
 pub use codebreaker::{Feedback, grade, hint, secret_code};
 pub use concepts::concept;
 pub use era::Era;

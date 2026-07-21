@@ -103,6 +103,7 @@ impl Era {
             }
             Era::EightBit => {
                 pixelate(rgba, width, height, 2);
+                ordered_dither(rgba, width, height);
                 for pixel in rgba.chunks_exact_mut(4) {
                     let snapped = nearest_palette(pixel[0], pixel[1], pixel[2]);
                     pixel[0] = snapped[0];
@@ -125,6 +126,53 @@ impl Era {
                         pixel[2] = boost(pixel[2]);
                     }
                 }
+                // Soft bloom: bright neighbors lift dim neighbors slightly.
+                soft_bloom(rgba, width, height);
+            }
+        }
+    }
+}
+
+/// Bayer 4x4 ordered dither before palette snap (8-bit grain).
+fn ordered_dither(rgba: &mut [u8], width: usize, height: usize) {
+    const BAYER: [[i16; 4]; 4] = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+    for y in 0..height {
+        for x in 0..width {
+            let o = (y * width + x) * 4;
+            if o + 2 >= rgba.len() {
+                return;
+            }
+            let bias = BAYER[y % 4][x % 4] - 8;
+            for c in 0..3 {
+                let v = i16::from(rgba[o + c]) + bias * 2;
+                rgba[o + c] = v.clamp(0, 255) as u8;
+            }
+        }
+    }
+}
+
+/// Cheap single-pass bloom for the vector scope.
+fn soft_bloom(rgba: &mut [u8], width: usize, height: usize) {
+    if width < 3 || height < 3 || rgba.len() < width * height * 4 {
+        return;
+    }
+    let src = rgba.to_vec();
+    for y in 1..height.saturating_sub(1) {
+        for x in 1..width.saturating_sub(1) {
+            let o = (y * width + x) * 4;
+            let mut acc = [0u32; 3];
+            for dy in 0..=2 {
+                for dx in 0..=2 {
+                    let n = ((y + dy - 1) * width + (x + dx - 1)) * 4;
+                    acc[0] += u32::from(src[n]);
+                    acc[1] += u32::from(src[n + 1]);
+                    acc[2] += u32::from(src[n + 2]);
+                }
+            }
+            for c in 0..3 {
+                let avg = (acc[c] / 9) as u8;
+                let base = rgba[o + c];
+                rgba[o + c] = base.saturating_add(avg / 8);
             }
         }
     }
