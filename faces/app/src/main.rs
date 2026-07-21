@@ -46,6 +46,37 @@ use room_phase::{effective_room_phase, has_finite_parameter_input};
 
 /// Near-black background (matches the `Raster` stage), packed `0x00RRGGBB`.
 const BACKGROUND: u32 = 0x000A_0B0F;
+
+/// Shift an RGBA buffer a few pixels left or right for a short bad-grade shake.
+fn apply_screen_shake(rgba: &mut [u8], width: usize, height: usize, frames_left: u8) {
+    if width < 4 || height == 0 || rgba.len() < width * height * 4 {
+        return;
+    }
+    let shift = if frames_left.is_multiple_of(2) {
+        3_isize
+    } else {
+        -3_isize
+    };
+    let row_bytes = width * 4;
+    let mut shifted = vec![10_u8, 11, 15, 255]
+        .into_iter()
+        .cycle()
+        .take(rgba.len())
+        .collect::<Vec<_>>();
+    for y in 0..height {
+        let src = y * row_bytes;
+        for x in 0..width {
+            let dest_x = x as isize + shift;
+            if dest_x < 0 || dest_x >= width as isize {
+                continue;
+            }
+            let from = src + x * 4;
+            let to = src + dest_x as usize * 4;
+            shifted[to..to + 4].copy_from_slice(&rgba[from..from + 4]);
+        }
+    }
+    rgba.copy_from_slice(&shifted);
+}
 #[cfg(test)]
 fn mandelbrot_gpu_view(
     t: f64,
@@ -288,6 +319,8 @@ struct App {
     level_seen: u32,
     /// Transient on-screen feedback such as LEVEL UP, volume, and save status.
     banner: Option<feedback::Banner>,
+    /// Remaining presentation frames for a short camera shake (bad Munch grades).
+    screen_shake: u8,
     /// Whether this visit's room goal has already raised its earned Aha.
     goal_announced: bool,
     /// The quiz, when playing: the round, its number, and the answer flash.
@@ -393,6 +426,7 @@ impl App {
             journey_saved: journey,
             level_seen: 1,
             banner: None,
+            screen_shake: 0,
             goal_announced: false,
             quiz: None,
             quiz_recent: Vec::new(),
@@ -466,12 +500,15 @@ impl App {
 
     /// Answer the quiz with a letter; right or wrong, the reveal follows.
     fn quiz_answer(&mut self, letter: char) {
-        if self
+        let Some(correct) = self
             .quiz
             .as_mut()
             .and_then(|quiz| play::answer_quiz(quiz, letter))
-            == Some(true)
-        {
+        else {
+            return;
+        };
+        self.play_game_tick(correct);
+        if correct {
             self.journey.win();
             self.journey_changed();
         }
@@ -515,11 +552,19 @@ impl App {
         let bites: Vec<usize> = play.bites.iter().copied().collect();
         let outcome = numinous_core::grade_munch(&play.board, &bites);
         let clean = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
+        let bad = outcome.bad_bites > 0;
         let (seed, round, score) = (play.seed, play.round, outcome.score);
         play.graded = Some(outcome);
         self.post_score(&format!("munch seed:{seed} board:{round}"), score);
         if clean {
             self.journey.win();
+            self.play_game_tick(true);
+        } else if bad {
+            // Panel juice: shake the board on a bad bite set, with a low buzz.
+            self.screen_shake = 14;
+            self.play_game_buzz(seed ^ round);
+        } else {
+            self.play_game_tick(false);
         }
         self.journey_changed();
     }
@@ -545,36 +590,53 @@ impl App {
 
     /// Commit the aimed Nim move; the Order answers at once.
     fn nim_move(&mut self) {
-        let Some(play) = self.nim.as_mut() else {
-            return;
+        let tick = {
+            let Some(play) = self.nim.as_mut() else {
+                return;
+            };
+            if play.over.is_some() {
+                return;
+            }
+            if !numinous_core::nim_apply(&mut play.heaps, play.selected, play.take) {
+                play.message = String::from("THAT MOVE IS NOT ON THE BOARD.");
+                Some(false)
+            } else if numinous_core::nim_finished(&play.heaps) {
+                play.over = Some(true);
+                let seed = play.seed;
+                self.journey.win();
+                self.post_score(&format!("nim seed:{seed}"), 1);
+                Some(true)
+            } else {
+                let (heap, take) = numinous_core::nim_order(&play.heaps);
+                let _ = numinous_core::nim_apply(&mut play.heaps, heap, take);
+                if numinous_core::nim_finished(&play.heaps) {
+                    play.over = Some(false);
+                    play.message =
+                        String::from("THE ORDER TAKES THE LAST STONE. AGAIN. (NOT LUCK.)");
+                    Some(false)
+                } else {
+                    play.message = format!("THE ORDER TAKES {take} FROM HEAP {}.", heap + 1);
+                    if play.heaps.get(play.selected).copied().unwrap_or(0) == 0 {
+                        play.selected = play.heaps.iter().position(|&h| h > 0).unwrap_or(0);
+                    }
+                    play.take = play.take.min(play.heaps[play.selected].max(1));
+                    Some(true)
+                }
+            }
         };
-        if play.over.is_some() {
-            return;
+        if matches!(tick, Some(true)) {
+            // Win path posts score before journey change so the borrow ends first.
+            if self
+                .nim
+                .as_ref()
+                .is_some_and(|play| play.over == Some(true))
+            {
+                self.journey_changed();
+            }
         }
-        if !numinous_core::nim_apply(&mut play.heaps, play.selected, play.take) {
-            play.message = String::from("THAT MOVE IS NOT ON THE BOARD.");
-            return;
+        if let Some(good) = tick {
+            self.play_game_tick(good);
         }
-        if numinous_core::nim_finished(&play.heaps) {
-            play.over = Some(true);
-            let seed = play.seed;
-            self.journey.win();
-            self.journey_changed();
-            self.post_score(&format!("nim seed:{seed}"), 1);
-            return;
-        }
-        let (heap, take) = numinous_core::nim_order(&play.heaps);
-        let _ = numinous_core::nim_apply(&mut play.heaps, heap, take);
-        if numinous_core::nim_finished(&play.heaps) {
-            play.over = Some(false);
-            play.message = String::from("THE ORDER TAKES THE LAST STONE. AGAIN. (NOT LUCK.)");
-            return;
-        }
-        play.message = format!("THE ORDER TAKES {take} FROM HEAP {}.", heap + 1);
-        if play.heaps.get(play.selected).copied().unwrap_or(0) == 0 {
-            play.selected = play.heaps.iter().position(|&h| h > 0).unwrap_or(0);
-        }
-        play.take = play.take.min(play.heaps[play.selected].max(1));
     }
 
     /// Start the arcade: today's run, spirits loose, the beat ticking.
@@ -857,6 +919,30 @@ impl App {
         }
         let samples = numinous_core::munch_crunch(player.sample_rate(), seed);
         player.play_oneshot(samples, 0.55 * self.volume);
+    }
+
+    /// Bright or low square tick for quiz, nim, and graded munch feedback.
+    fn play_game_tick(&self, good: bool) {
+        let Some(player) = &self.player else {
+            return;
+        };
+        if self.muted {
+            return;
+        }
+        let samples = numinous_core::game_tick(player.sample_rate(), good);
+        player.play_oneshot(samples, 0.5 * self.volume);
+    }
+
+    /// Low buzz for a bad Munch grade (pairs with screen shake).
+    fn play_game_buzz(&self, seed: u64) {
+        let Some(player) = &self.player else {
+            return;
+        };
+        if self.muted {
+            return;
+        }
+        let samples = numinous_core::game_buzz(player.sample_rate(), seed);
+        player.play_oneshot(samples, 0.45 * self.volume);
     }
 
     fn clear_transient_audio(&self) {
@@ -2492,6 +2578,10 @@ impl App {
         let (rw, rh) = (raster.width(), raster.height());
         let mut rgba = raster.to_rgba();
         self.era.apply(&mut rgba, rw, rh);
+        if self.screen_shake > 0 {
+            apply_screen_shake(&mut rgba, rw, rh, self.screen_shake);
+            self.screen_shake = self.screen_shake.saturating_sub(1);
+        }
         self.blit(&rgba, rw, rh, width, height);
     }
 
@@ -3382,6 +3472,30 @@ mod tests {
             largest <= 2_000_000,
             "largest room score held {largest} samples"
         );
+    }
+
+    #[test]
+    fn screen_shake_shifts_rgba_and_decays_on_present() {
+        let mut rgba = vec![0_u8; 8 * 4 * 4];
+        for (i, chunk) in rgba.chunks_exact_mut(4).enumerate() {
+            chunk[0] = i as u8;
+            chunk[3] = 255;
+        }
+        let before = rgba.clone();
+        super::apply_screen_shake(&mut rgba, 8, 4, 3);
+        assert_ne!(rgba, before, "shake must move pixels");
+        let mut app = headless("numinous_app_test_screen_shake.txt");
+        app.screen_shake = 2;
+        let raster = numinous_core::Raster::with_accent(40, 30, [20, 30, 40]);
+        app.present_raster(raster, 40, 30);
+        assert_eq!(app.screen_shake, 1);
+        app.present_raster(
+            numinous_core::Raster::with_accent(40, 30, [20, 30, 40]),
+            40,
+            30,
+        );
+        assert_eq!(app.screen_shake, 0);
+        let _ = std::fs::remove_file(&app.journey_file);
     }
 
     #[test]

@@ -5,6 +5,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- Window game juice: short chiptune `game_tick` and `game_buzz` one-shots for
+  quiz answers, Nim moves, and Munch grades; a camera shake on bad Munch grades
+  that decays over 14 frames. Bite flash and crunch remain for cell toggles.
+
 ### Fixed
 - Watch Agent now truly owns live App audio for the paired session. Opening the
   viewer publishes silence under an explicit Watch Agent program, each retained

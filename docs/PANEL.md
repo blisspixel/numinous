@@ -72,11 +72,10 @@ is absent anymore; everything on this list makes an existing organ stronger.
 
 ## The list, in order
 
-> Progress: items 1 (first serving), 2, 3, 4, 5, controller input, and the
-> phosphor half of 8 are
-> built. Open Problems opened (Goldbach); Engine B v0 shipped (the dial, the
-> fetch pipeline, Y in the app). Citations (7), full Share v1,
-> Show crossfade, the visualizer, controller remapping, and the spark cap remain.
+> Progress: items 1, 2, 3, 4, 5, controller input, remapping, and the phosphor
+> half of 8 are built. Open Problems opened (Goldbach); Engine B v0 shipped
+> (the dial, the fetch pipeline, Y in the app). Citations (7), full Share v1,
+> Show crossfade, the visualizer, adaptive glyphs, and the spark cap remain.
 
 
 1. **Juice in the window games**: per-action feedback (flash on eat, shake
