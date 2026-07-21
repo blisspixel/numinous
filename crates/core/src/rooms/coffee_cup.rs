@@ -9,7 +9,9 @@
 
 use std::f64::consts::TAU;
 
-use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
+use crate::room::{
+    Gesture, MAX_ROOM_POKES, Room, RoomInput, RoomMeta, latest_gesture, pokes_from_inputs,
+};
 use crate::surface::Surface;
 
 /// How many source rays are cast around the circle.
@@ -188,14 +190,38 @@ impl CoffeeCup {
         Self { seed }
     }
 
-    fn sun_at(&self, t: f64, pokes: &[(f64, f64)]) -> f64 {
+    /// Sun angle for a static poke list (CLI/MCP bridge).
+    ///
+    /// A hand sets a sticky origin; phase keeps walking so the figure never
+    /// freezes after a swing.
+    fn sun_from_pokes(&self, t: f64, pokes: &[(f64, f64)]) -> f64 {
         let hands = finite_pokes(pokes);
         if let Some(&(x, y)) = hands.last() {
-            sun_from_hand(x, y)
+            walking_sun(sun_from_hand(x, y), t)
         } else {
             ambient_sun(t, self.seed)
         }
     }
+
+    /// Sun angle from a full gesture trail.
+    ///
+    /// Held: pin exactly to the hand (DRAG: SWING THE SUN). Released or
+    /// cancelled: keep walking from the last hand angle so the cup stays alive.
+    /// Idle: ambient walk with variation seed.
+    fn sun_from_inputs(&self, t: f64, inputs: &[RoomInput]) -> f64 {
+        match latest_gesture(inputs) {
+            Some(Gesture::Held { at, .. }) => sun_from_hand(at.0, at.1),
+            Some(Gesture::Released { at, .. }) | Some(Gesture::Cancelled { at }) => {
+                walking_sun(sun_from_hand(at.0, at.1), t)
+            }
+            None => ambient_sun(t, self.seed),
+        }
+    }
+}
+
+/// Sticky origin plus ambient phase so a finished swing keeps moving.
+fn walking_sun(sticky: f64, t: f64) -> f64 {
+    (sticky + phase_unit(t) * TAU).rem_euclid(TAU)
 }
 
 impl Room for CoffeeCup {
@@ -240,34 +266,47 @@ impl Room for CoffeeCup {
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
-        let sun = self.sun_at(t, pokes);
-        draw_cup(canvas, sun);
-        let hands = finite_pokes(pokes);
-        let (width, height) = canvas.draw_bounds();
-        if width > 0 && height > 0 {
-            for &(x, y) in &hands {
-                let px = (x * width.saturating_sub(1) as f64).round() as i32;
-                let py = (y * height.saturating_sub(1) as f64).round() as i32;
-                canvas.plot(px, py, '+');
-            }
-        }
+        // No hand trail ink: the App reticle owns live chrome, and a trail of
+        // + marks over the rays is noise after a swing.
+        draw_cup(canvas, self.sun_from_pokes(t, pokes));
+    }
+
+    fn render_input(&self, canvas: &mut dyn Surface, t: f64, inputs: &[RoomInput]) {
+        draw_cup(canvas, self.sun_from_inputs(t, inputs));
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
-        let pokes = crate::pokes_from_inputs(inputs);
-        let hands = finite_pokes(&pokes);
-        if hands.is_empty() {
-            return self.status(t);
-        }
-        let sun = self.sun_at(t, &pokes);
+        let sun = self.sun_from_inputs(t, inputs);
         let deg = (sun * 360.0 / TAU).round() as i32;
-        let (nx, ny) = *hands.last().expect("nonempty hands");
-        // Cardioid cusp sits at the sun: the bright envelope always kisses there.
-        Some(format!(
-            "SWING {deg}deg  CUSP@{:.0}%{:.0}%  RAYS {RAY_COUNT}",
-            nx * 100.0,
-            ny * 100.0
-        ))
+        match latest_gesture(inputs) {
+            Some(Gesture::Held { at, .. }) => {
+                let nx = at.0.clamp(0.0, 1.0);
+                let ny = at.1.clamp(0.0, 1.0);
+                Some(format!(
+                    "SWING {deg}deg  CUSP@{:.0}%{:.0}%  RAYS {RAY_COUNT}",
+                    nx * 100.0,
+                    ny * 100.0
+                ))
+            }
+            Some(Gesture::Released { .. }) | Some(Gesture::Cancelled { .. }) => {
+                // Keep naming the walk after a swing so the room still answers.
+                Some(format!("WALK {deg}deg  CARDIOID  RAYS {RAY_COUNT}"))
+            }
+            None => {
+                // Static poke bridges (CLI/MCP) still need a consequence line.
+                let pokes = pokes_from_inputs(inputs);
+                let hands = finite_pokes(&pokes);
+                if hands.is_empty() {
+                    return self.status(t);
+                }
+                let (nx, ny) = *hands.last().expect("nonempty hands");
+                Some(format!(
+                    "SWING {deg}deg  CUSP@{:.0}%{:.0}%  RAYS {RAY_COUNT}",
+                    nx * 100.0,
+                    ny * 100.0
+                ))
+            }
+        }
     }
 
     fn reveal(&self) -> &'static str {
@@ -366,6 +405,94 @@ mod tests {
         room.render(&mut base, 0.0);
         room.render_poked(&mut poked, 0.0, &[(0.1, 0.9)]);
         assert_ne!(base.to_text(), poked.to_text());
+    }
+
+    #[test]
+    fn after_a_swing_the_sun_keeps_walking() {
+        let room = CoffeeCup::new();
+        let inputs = [
+            RoomInput::PointerDown {
+                x: 0.95,
+                y: 0.5,
+                t: 0.0,
+            },
+            RoomInput::PointerUp {
+                x: 0.95,
+                y: 0.5,
+                t: 0.1,
+            },
+        ];
+        let mut early = Canvas::new(48, 32);
+        let mut late = Canvas::new(48, 32);
+        room.render_input(&mut early, 0.05, &inputs);
+        room.render_input(&mut late, 0.55, &inputs);
+        assert_ne!(
+            early.to_text(),
+            late.to_text(),
+            "released swing must not freeze the cardioid"
+        );
+    }
+
+    #[test]
+    fn a_completed_drag_does_not_leave_hand_trail_ink() {
+        let room = CoffeeCup::new();
+        let mut ambient = Canvas::new(48, 32);
+        let mut swung = Canvas::new(48, 32);
+        room.render(&mut ambient, 0.0);
+        // End on the top rim so the sticky sun is far from ambient east.
+        let inputs = [
+            RoomInput::PointerDown {
+                x: 0.2,
+                y: 0.2,
+                t: 0.0,
+            },
+            RoomInput::PointerMove {
+                x: 0.4,
+                y: 0.15,
+                t: 0.05,
+            },
+            RoomInput::PointerMove {
+                x: 0.55,
+                y: 0.08,
+                t: 0.08,
+            },
+            RoomInput::PointerUp {
+                x: 0.5,
+                y: 0.0,
+                t: 0.1,
+            },
+        ];
+        room.render_input(&mut swung, 0.0, &inputs);
+        // No '+' hand trail: ink should only be cup geometry (., *, #).
+        assert_eq!(
+            swung.to_text().matches('+').count(),
+            0,
+            "hand trail must not remain as + marks over the cup"
+        );
+        assert_ne!(
+            ambient.to_text(),
+            swung.to_text(),
+            "the swing still changes the math"
+        );
+    }
+
+    #[test]
+    fn held_hand_pins_the_sun_without_phase_walk() {
+        let room = CoffeeCup::new();
+        let held = [RoomInput::PointerDown {
+            x: 1.0,
+            y: 0.5,
+            t: 0.0,
+        }];
+        let mut a = Canvas::new(40, 28);
+        let mut b = Canvas::new(40, 28);
+        room.render_input(&mut a, 0.1, &held);
+        room.render_input(&mut b, 0.7, &held);
+        assert_eq!(
+            a.to_text(),
+            b.to_text(),
+            "while held, the sun should pin to the hand"
+        );
     }
 
     #[test]
