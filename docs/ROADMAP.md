@@ -464,10 +464,14 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   beat pokes on output-mix/loopback; `numinous share` bundles postcard + loop +
   README; Munch target-density preference; adaptive face glyphs on every window
   game HUD with a common-pad cert matrix.
+- **Done (panel depth pack, cycle 152):** App key K share packs (postcard + loop
+  + README); wrong-number Munch bite buzz/shake; The Show phase rate follows
+  visualizer motion when the mix drives.
 - **Then (the panel's remaining list, see `PANEL.md`):** deeper spectrum-to-room
-  levers beyond soft pokes; full Share v1 packaging beyond PNG/APNG (GIF/MP4);
-  physical cross-platform controller certification; full 2026-07-28 wire
-  migration after the final specification ships; human hallway and a11y gates.
+  levers beyond soft pokes and Show rate; full Share v1 packaging beyond
+  PNG/APNG (GIF/MP4); physical cross-platform controller certification; full
+  2026-07-28 wire migration after the final specification ships; human hallway
+  and a11y gates.
 - **Done (0.4 Understanding Alpha prep):** added Source Provenance and Math Review Checklist fields to the Times Tables, Game of Life, Galton Board, and Double Pendulum flagships to anchor their learning claims.
 - **Done (0.4 Understanding Alpha prep):** added an opt-in, player-owned MCP experience journal. The `Journal` tracks timestamped room encounters, creations, and connections. It is fully integrated into persistence and backed by new `read_journal`, `record_journal`, and `erase_journal` tools for MCP agents. The journal is explicitly disjoint from `forget` tool erasure, providing its own dedicated `erase_journal` path to maintain player ownership over when its contents are destroyed.
 

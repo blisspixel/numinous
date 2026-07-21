@@ -436,7 +436,7 @@ pub fn help_lines(mode: InputMode, selected: Option<usize>, activity_paused: boo
             "E          INSPECT    Q  ERA    R  RESET",
             "B          THE SHOW   TAB  THE STUDIO",
             "J          JOURNEY    F  FULLSCREEN    X  WATCH AGENT",
-            "Y          RADIO    P  POSTCARD   L  LOOP",
+            "Y          RADIO    P  POSTCARD   L  LOOP   K  SHARE PACK",
             "F9         PLAYTEST NOTE",
             "M          MUTE    [/] VOLUME   SPACE PAUSE",
             "",

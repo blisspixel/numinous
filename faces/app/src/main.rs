@@ -841,6 +841,8 @@ impl App {
                             controls::apply_munch_control(&mut play.cursor, &mut play.bites, key)
                         {
                             play.flash_bite(cell);
+                            // Gauntlet stage keeps the crunch; wrong-bite shake
+                            // lives on the standalone Munch path (borrowed stage).
                             self.play_munch_crunch(cell as u64 ^ 0x6A17);
                         }
                     }
@@ -947,12 +949,22 @@ impl App {
             }
             Key::Named(NamedKey::Enter) => self.munch_grade(),
             key => {
-                if let Some(play) = &mut self.munch
-                    && let Some(cell) =
+                let feedback = if let Some(play) = &mut self.munch {
+                    let was = play.bites.contains(&play.cursor);
+                    if let Some(cell) =
                         controls::apply_munch_control(&mut play.cursor, &mut play.bites, key)
-                {
-                    play.flash_bite(cell);
-                    self.play_munch_crunch(cell as u64);
+                    {
+                        play.flash_bite(cell);
+                        let now = play.bites.contains(&cell);
+                        Some((play.board.clone(), play.seed, cell, was, now))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+                if let Some((board, seed, cell, was, now)) = feedback {
+                    self.munch_bite_feedback(&board, seed, cell, was, now);
                 }
             }
         }
@@ -1088,6 +1100,58 @@ impl App {
             self.era,
             dir,
         )
+    }
+
+    /// Package postcard + loop + README into one share folder (CLI parity).
+    fn save_share_bundle(&self) -> Option<std::path::PathBuf> {
+        self.save_share_bundle_to(&postcard::default_postcard_dir())
+            .ok()
+    }
+
+    fn save_share_bundle_to(&self, dir: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
+        if self.current_room_is_life() {
+            let room = self.rooms[self.current].as_ref();
+            return postcard::write_life_share_bundle(
+                room.meta().id,
+                room.meta().accent,
+                &self.life_session,
+                self.era,
+                self.variation,
+                dir,
+            );
+        }
+        postcard::write_room_share_bundle(
+            self.rooms[self.current].as_ref(),
+            self.t,
+            &self.inputs,
+            self.era,
+            self.variation,
+            dir,
+        )
+    }
+
+    /// Soft juice when the player bites a number that does not fit the rule.
+    fn munch_wrong_bite_juice(&mut self, seed: u64) {
+        self.screen_shake = self.screen_shake.max(6);
+        self.play_game_buzz(seed);
+    }
+
+    /// Crunch plus optional wrong-bite buzz when a toggle turns a bite on.
+    fn munch_bite_feedback(
+        &mut self,
+        board: &numinous_core::Board,
+        seed: u64,
+        cell: usize,
+        was_bitten: bool,
+        now_bitten: bool,
+    ) {
+        self.play_munch_crunch(cell as u64);
+        if now_bitten && !was_bitten {
+            let value = board.numbers.get(cell).copied().unwrap_or(0);
+            if !board.rule.fits(value) {
+                self.munch_wrong_bite_juice(seed ^ cell as u64 ^ 0x0000_0BAD_B17E);
+            }
+        }
     }
 
     fn save_playtest_note(&self) -> std::io::Result<std::path::PathBuf> {
@@ -1449,11 +1513,19 @@ impl App {
             if play.graded.is_some() {
                 return;
             }
-            if let Some(cell) = game_draw::MunchLayout::new(width, height).hit(mx, my) {
-                play.cursor = cell;
-                controls::toggle_munch_bite(&mut play.bites, cell);
-                play.flash_bite(cell);
-                self.play_munch_crunch(cell as u64);
+            let feedback =
+                if let Some(cell) = game_draw::MunchLayout::new(width, height).hit(mx, my) {
+                    play.cursor = cell;
+                    let was = play.bites.contains(&cell);
+                    controls::toggle_munch_bite(&mut play.bites, cell);
+                    play.flash_bite(cell);
+                    let now = play.bites.contains(&cell);
+                    Some((play.board.clone(), play.seed, cell, was, now))
+                } else {
+                    None
+                };
+            if let Some((board, seed, cell, was, now)) = feedback {
+                self.munch_bite_feedback(&board, seed, cell, was, now);
             }
             return;
         }
@@ -3231,6 +3303,21 @@ impl ApplicationHandler for App {
                                 ));
                             }
                         }
+                        // K packs still + loop + README into one share folder.
+                        Key::Character(c) if c.as_str() == "k" => {
+                            if self.save_gate.admit(
+                                save_gate::SaveKind::ShareBundle,
+                                Instant::now(),
+                                repeat,
+                            ) && let Some(path) = self.save_share_bundle()
+                                && let Some(window) = &self.window
+                            {
+                                window.set_title(&format!(
+                                    "Numinous  |  share pack: {}",
+                                    path.display()
+                                ));
+                            }
+                        }
                         // B for the big show (lean back).
                         Key::Character(c) if c.as_str() == "b" => {
                             self.toggle_show();
@@ -3388,7 +3475,13 @@ impl ApplicationHandler for App {
                 self.mandelbrot_camera.advance(elapsed * motion);
             }
             let show_active = self.show_mode_active();
-            let rate = if show_active { SHOW_T_RATE } else { T_RATE };
+            // When the visualizer is driving, mid energy quickens The Show's
+            // phase rate so denser mixes move the gallery a little faster.
+            let rate = if show_active {
+                SHOW_T_RATE * (0.72 + self.visualizer_scale.clamp(0.55, 1.55) * 0.28)
+            } else {
+                T_RATE
+            };
             let (next_phase, wrapped) =
                 advance_gallery_phase(self.t, elapsed, motion, rate, first_contact_obscured);
             self.t = next_phase;
