@@ -100,6 +100,8 @@ impl Era {
                         }
                     }
                 }
+                // Soft phosphor glow: bright neighbors bleed a little green.
+                soft_bloom(rgba, width, height);
             }
             Era::EightBit => {
                 pixelate(rgba, width, height, 2);
@@ -285,6 +287,33 @@ mod tests {
         assert_eq!(rgba, before);
         assert_eq!(Era::Modern.next(), Era::Phosphor);
         assert_eq!(Era::Phosphor.next().next().next(), Era::Modern);
+    }
+
+    #[test]
+    fn grain_passes_do_not_touch_modern_identity() {
+        let mut eight = frame(16, 16);
+        let modern = eight.clone();
+        Era::EightBit.apply(&mut eight, 16, 16);
+        assert_ne!(eight, modern, "8-bit dither and palette change the frame");
+        let mut vector = vec![0u8; 16 * 16 * 4];
+        // A bright cross so bloom has neighbors to lift.
+        for y in 6..10 {
+            for x in 0..16 {
+                let o = (y * 16 + x) * 4;
+                vector[o] = 220;
+                vector[o + 1] = 220;
+                vector[o + 2] = 40;
+                vector[o + 3] = 255;
+            }
+        }
+        let before = vector.clone();
+        Era::Vector.apply(&mut vector, 16, 16);
+        assert_ne!(vector, before, "vector bloom should change bright frames");
+        let mut phosphor = frame(12, 12);
+        Era::Phosphor.apply(&mut phosphor, 12, 12);
+        for pixel in phosphor.chunks_exact(4) {
+            assert!(pixel[1] >= pixel[0]);
+        }
     }
 
     #[test]

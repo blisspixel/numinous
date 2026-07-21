@@ -1768,7 +1768,7 @@ fn call_tool(
     let result = match name {
         "list_rooms" => list_rooms_tool(),
         "describe_room" => describe_room_tool(&domain_args, journey_file),
-        "reveal_room" => reveal_room_tool(&domain_args),
+        "reveal_room" => reveal_room_tool(&domain_args, journey_file),
         "play_room" => play_room_tool(&domain_args),
         "challenge" => challenge_tool(&domain_args),
         "predict" => predict_tool(&domain_args),
@@ -2030,8 +2030,11 @@ fn describe_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey
                 .goal()
                 .map(|goal| format!("\nGoal: {goal}"))
                 .unwrap_or_default();
+            let cut0_by_boon = journey.chosen.contains(&format!("cut:{id}:0"));
+            let citation = numinous_core::room_citation_unlocked(id, journey.level(), cut0_by_boon);
+            let reading = citation.map(|c| format!("\n\n{c}")).unwrap_or_default();
             let text = format!(
-                "{} ({})\nWing: {}\nAction: {}{goal_line}\n\n{}\n\nReveal: {}{cuts}",
+                "{} ({})\nWing: {}\nAction: {}{goal_line}\n\n{}\n\nReveal: {}{cuts}{reading}",
                 m.title,
                 m.id,
                 m.wing,
@@ -2039,19 +2042,20 @@ fn describe_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey
                 m.blurb,
                 room.reveal()
             );
-            tool_structured(
-                &text,
-                json!({
-                    "room": m.id,
-                    "title": m.title,
-                    "wing": m.wing,
-                    "action": numinous_core::room_action(room.as_ref()),
-                    "goal": room.goal(),
-                    "blurb": m.blurb,
-                    "reveal": room.reveal(),
-                    "deep_cuts": structured_cuts,
-                }),
-            )
+            let mut structured = json!({
+                "room": m.id,
+                "title": m.title,
+                "wing": m.wing,
+                "action": numinous_core::room_action(room.as_ref()),
+                "goal": room.goal(),
+                "blurb": m.blurb,
+                "reveal": room.reveal(),
+                "deep_cuts": structured_cuts,
+            });
+            if let Some(citation) = citation {
+                structured["citation"] = json!(citation);
+            }
+            tool_structured(&text, structured)
         }
         // Not every name is a room. A few answer anyway, and a few answer
         // only those with standing.
@@ -2296,23 +2300,28 @@ fn listen_room_tool(args: &Value) -> Value {
 }
 
 /// The `reveal_room` tool: return just the room's revelation (the learn surface).
-fn reveal_room_tool(args: &Value) -> Value {
+fn reveal_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'id'.");
     };
+    let journey = load_journey(journey_file);
     match room_by_id(id) {
         Some(room) => {
-            let citation = room.citation();
-            let text = format!("{}\n\n{citation}", room.reveal());
-            tool_structured(
-                &text,
-                json!({
-                    "room": room.meta().id,
-                    "title": room.meta().title,
-                    "reveal": room.reveal(),
-                    "citation": citation,
-                }),
-            )
+            let cut0_by_boon = journey.chosen.contains(&format!("cut:{id}:0"));
+            let citation = numinous_core::room_citation_unlocked(id, journey.level(), cut0_by_boon);
+            let text = match citation {
+                Some(citation) => format!("{}\n\n{citation}", room.reveal()),
+                None => room.reveal().to_string(),
+            };
+            let mut structured = json!({
+                "room": room.meta().id,
+                "title": room.meta().title,
+                "reveal": room.reveal(),
+            });
+            if let Some(citation) = citation {
+                structured["citation"] = json!(citation);
+            }
+            tool_structured(&text, structured)
         }
         // The Cairn is not a room but a mind pausing there naturally reaches for
         // reveal; point it at the right door rather than saying it does not exist.
@@ -6938,6 +6947,49 @@ plays 2
             .as_str()
             .unwrap_or_default();
         assert!(text.contains("Mandelbrot"));
+        // Fresh journey is below the first deep cut: no citation yet.
+        assert!(!text.contains("See also:"));
+        assert!(
+            resp["result"]["structuredContent"]["citation"].is_null()
+                || resp["result"]["structuredContent"]
+                    .get("citation")
+                    .is_none()
+        );
+    }
+
+    #[test]
+    fn reveal_room_unlocks_citation_with_the_first_deep_cut() {
+        let journey = std::env::temp_dir().join(format!(
+            "numinous-mcp-reveal-cite-{}.txt",
+            std::process::id()
+        ));
+        let at_cut = numinous_core::Journey {
+            plays: 20,
+            ..Default::default()
+        };
+        // Level 5 needs T(4)=10 sparks; twenty plays clears the first cut.
+        assert!(at_cut.level() >= numinous_core::CUT_LEVELS[0]);
+        std::fs::write(&journey, at_cut.to_text()).expect("journey");
+        let resp = handle_request_with(
+            &json!({
+                "jsonrpc":"2.0","id":16,"method":"tools/call",
+                "params":{"name":"reveal_room","arguments":{"id":"mandelbrot"}}
+            }),
+            &journey,
+        )
+        .expect("tools/call must respond");
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("See also:"), "citation in text: {text}");
+        assert!(
+            resp["result"]["structuredContent"]["citation"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("See also:"),
+            "citation in structured content"
+        );
+        let _ = std::fs::remove_file(journey);
     }
 
     #[test]
@@ -8368,7 +8420,7 @@ plays 2
             assert_eq!(description["reveal"], room.reveal(), "describe {}", meta.id);
             assert!(description["deep_cuts"].is_array(), "describe {}", meta.id);
 
-            let revealed = super::reveal_room_tool(&args);
+            let revealed = super::reveal_room_tool(&args, &journey);
             assert_eq!(revealed["isError"], false, "reveal {}", meta.id);
             let revelation = &revealed["structuredContent"];
             assert_eq!(revelation["room"], meta.id, "reveal {}", meta.id);
