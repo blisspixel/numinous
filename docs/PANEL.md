@@ -52,8 +52,9 @@ doors' design goals. The point is what we are missing, not what we have.
 - "Munch became bookkeeping after round three": **the original shallow app
   loop repeated one opening board.** The standalone game now starts in the full
   seeded rule deck, advances continuously, and avoids adjacent repeats from the
-  same rule family. Target-density balancing remains a versioned generator
-  follow-up because changing board contents would invalidate comparable scores.
+  same rule family. Target-density balancing now prefers a playable fit band
+  (about 3 to two-thirds of cells) with deterministic re-rolls; score formulas
+  stay unchanged so existing seeds remain comparable when the board settles.
 - "Aliens got real when the base changed. More of that, earlier."
 - "`listen_room` disappointed everywhere": **resolved in Engine A2.** Every
   catalog room now exposes a structured phrase, and automatic room beds use a
@@ -74,14 +75,17 @@ is absent anymore; everything on this list makes an existing organ stronger.
 
 > Progress: items 1, 2, 3, 4, 5, 7 (citations table + deep-cut unlock + CLI/MCP
 > parity), 8 (era grain including phosphor bloom + Show crossfade + spectrum
-> substrate), 9 (play/win spark soft caps), controller input, remapping, and
-> adaptive face glyphs (Xbox / PlayStation / generic) are built. Aliens base
+> substrate plus output-mix/loopback meters), 9 (play/win spark soft caps),
+> controller input, remapping, and adaptive face glyphs (Xbox / PlayStation /
+> generic) across room chrome and every window game HUD are built. Aliens base
 > ramp softens earlier for denser seeds. Room-bed spectrum meter and MCP
 > spectrum bands ship as the offline visualizer path. Open Problems opened
 > (Goldbach); Engine B v0 shipped. Output-mix and optional OS loopback spectrum
-> sources ship (key O); Share sidecars accompany PNG/APNG. Full Share packaging
-> beyond PNG/APNG (GIF/MP4), broader controller certification, and room-lever
-> drive from spectrum remain.
+> sources ship (key O). Spectrum levers now soft-drive room time scale, phase
+> nudge, and beat pokes on output-mix/loopback. Share sidecars and CLI share
+> bundles (postcard + loop + README) ship; GIF/MP4 and physical pad certification
+> remain. Munch generator prefers a playable target-density band without
+> rewriting score identity.
 
 
 1. **Juice in the window games**: per-action feedback (flash on eat, shake

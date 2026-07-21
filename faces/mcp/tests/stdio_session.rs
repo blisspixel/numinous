@@ -622,6 +622,7 @@ fn app_viewer_reconstructs_a_real_munch_agent_opening() {
         &expected_play,
         0,
         numinous_app::input_legend::InputMode::KeyboardMouse,
+        numinous_app::input_legend::ControllerFace::Generic,
         360,
         220,
     );
@@ -743,6 +744,7 @@ fn app_viewer_reconstructs_a_real_arcade_agent_opening() {
     let expected = numinous_app::game_draw::draw_arcade(
         &expected_play,
         numinous_app::input_legend::InputMode::KeyboardMouse,
+        numinous_app::input_legend::ControllerFace::Generic,
         360,
         220,
     );
@@ -843,6 +845,7 @@ fn app_viewer_reconstructs_a_real_quiz_agent_opening() {
         &rooms,
         &expected_play,
         numinous_app::input_legend::InputMode::KeyboardMouse,
+        numinous_app::input_legend::ControllerFace::Generic,
         360,
         220,
     );
@@ -971,6 +974,7 @@ fn app_viewer_reconstructs_a_real_gauntlet_agent_opening() {
         &expected_play,
         0,
         numinous_app::input_legend::InputMode::KeyboardMouse,
+        numinous_app::input_legend::ControllerFace::Generic,
         360,
         220,
     );

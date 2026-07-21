@@ -1928,6 +1928,7 @@ fn main() {
             &rooms,
             &quiz_play,
             input_legend::InputMode::KeyboardMouse,
+            input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -1941,6 +1942,7 @@ fn main() {
             &rooms,
             &quiz_correct,
             input_legend::InputMode::KeyboardMouse,
+            input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -1954,6 +1956,7 @@ fn main() {
             &rooms,
             &quiz_wrong,
             input_legend::InputMode::KeyboardMouse,
+            input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -1974,6 +1977,7 @@ fn main() {
             &munch,
             20,
             input_legend::InputMode::KeyboardMouse,
+            input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -1986,6 +1990,7 @@ fn main() {
             &munch,
             20,
             input_legend::InputMode::KeyboardMouse,
+            input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -2001,6 +2006,7 @@ fn main() {
         game_draw::draw_arcade(
             &arcade_live,
             input_legend::InputMode::KeyboardMouse,
+            input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -2015,6 +2021,7 @@ fn main() {
         game_draw::draw_arcade(
             &arcade_caught,
             input_legend::InputMode::KeyboardMouse,
+            input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -2029,6 +2036,7 @@ fn main() {
         game_draw::draw_arcade(
             &arcade_clear,
             input_legend::InputMode::KeyboardMouse,
+            input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -2043,6 +2051,7 @@ fn main() {
         game_draw::draw_arcade(
             &arcade_over,
             input_legend::InputMode::KeyboardMouse,
+            input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -2057,7 +2066,13 @@ fn main() {
         over: None,
     };
     save_sizes("nim-live", &mut manifest, |width, height| {
-        game_draw::draw_nim(&nim, input_legend::InputMode::KeyboardMouse, width, height)
+        game_draw::draw_nim(
+            &nim,
+            input_legend::InputMode::KeyboardMouse,
+            input_legend::ControllerFace::Generic,
+            width,
+            height,
+        )
     });
     let nim_over = play::NimPlay {
         heaps: vec![0, 0, 0],
@@ -2071,6 +2086,7 @@ fn main() {
         game_draw::draw_nim(
             &nim_over,
             input_legend::InputMode::KeyboardMouse,
+            input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -2087,6 +2103,7 @@ fn main() {
         game_draw::draw_nim(
             &nim_loss,
             input_legend::InputMode::KeyboardMouse,
+            input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -2104,6 +2121,7 @@ fn main() {
                     &gauntlet,
                     20,
                     input_legend::InputMode::KeyboardMouse,
+                    input_legend::ControllerFace::Generic,
                     width,
                     height,
                 )
@@ -2204,6 +2222,7 @@ fn main() {
             &rooms,
             &quiz_correct,
             controller,
+            input_legend::ControllerFace::Generic,
             SMALL_SIZE.0,
             SMALL_SIZE.1,
         ),
@@ -2211,17 +2230,36 @@ fn main() {
         &mut manifest,
     );
     save(
-        &game_draw::draw_munch(&munch, 20, controller, SMALL_SIZE.0, SMALL_SIZE.1),
+        &game_draw::draw_munch(
+            &munch,
+            20,
+            controller,
+            input_legend::ControllerFace::Generic,
+            SMALL_SIZE.0,
+            SMALL_SIZE.1,
+        ),
         "games/controller-munch-result-small-360x240.png",
         &mut manifest,
     );
     save(
-        &game_draw::draw_arcade(&arcade_over, controller, SMALL_SIZE.0, SMALL_SIZE.1),
+        &game_draw::draw_arcade(
+            &arcade_over,
+            controller,
+            input_legend::ControllerFace::Generic,
+            SMALL_SIZE.0,
+            SMALL_SIZE.1,
+        ),
         "games/controller-arcade-over-small-360x240.png",
         &mut manifest,
     );
     save(
-        &game_draw::draw_nim(&nim_over, controller, SMALL_SIZE.0, SMALL_SIZE.1),
+        &game_draw::draw_nim(
+            &nim_over,
+            controller,
+            input_legend::ControllerFace::Generic,
+            SMALL_SIZE.0,
+            SMALL_SIZE.1,
+        ),
         "games/controller-nim-win-small-360x240.png",
         &mut manifest,
     );
@@ -2232,6 +2270,7 @@ fn main() {
             &gauntlet,
             20,
             controller,
+            input_legend::ControllerFace::Generic,
             SMALL_SIZE.0,
             SMALL_SIZE.1,
         ),

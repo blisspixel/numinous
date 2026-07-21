@@ -318,6 +318,7 @@ impl MunchGameReplay {
             &self.play,
             0,
             crate::input_legend::InputMode::KeyboardMouse,
+            crate::input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -338,6 +339,7 @@ impl ArcadeGameReplay {
         crate::game_draw::draw_arcade(
             &self.play,
             crate::input_legend::InputMode::KeyboardMouse,
+            crate::input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -364,6 +366,7 @@ impl QuizGameReplay {
             &self.rooms,
             &self.play,
             crate::input_legend::InputMode::KeyboardMouse,
+            crate::input_legend::ControllerFace::Generic,
             width,
             height,
         )
@@ -387,6 +390,7 @@ impl GauntletGameReplay {
             &self.play,
             0,
             crate::input_legend::InputMode::KeyboardMouse,
+            crate::input_legend::ControllerFace::Generic,
             width,
             height,
         )

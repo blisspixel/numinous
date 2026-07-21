@@ -6,6 +6,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Mega pack (cycle 151): spectrum levers drive room motion and soft beat pokes
+  when the visualizer is on output-mix or loopback (bass pumps a visualizer
+  time scale, treble/onset nudge phase, beat hits plant a soft hand point);
+  Share bundle packaging (`numinous share`) writes postcard.png, loop.png,
+  sidecars, and README.share.txt into one folder; Munch boards prefer a
+  playable target density (about 3 to two-thirds of cells) without changing
+  score rules; adaptive Xbox/PlayStation/generic face glyphs on every window
+  game HUD (Munch, Arcade, Nim, Gauntlet, Quiz) plus a pad-name cert matrix.
 - Mega pack (cycle 150): mixed-output capture ring on `LoopPlayer` for the
   visualizer; optional OS loopback input when a Stereo Mix / virtual cable /
   BlackHole style device is present; App key O cycles room bed, output mix, and
