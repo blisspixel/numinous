@@ -453,6 +453,9 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   band-energy substrate for the visualizer path; adaptive Xbox/PlayStation/
   generic face glyphs with pad-name inference; phosphor soft bloom; aliens base
   ramp for denser seeds.
+- **Done (visualizer path, cycle 149):** MCP listen beds expose normalized
+  spectrum bands; the App draws a room-bed spectrum meter under the audio
+  badge from the cached motif arrangement. OS loopback capture remains open.
 - **Then (the panel's remaining list, see `PANEL.md`):** munch rule variety is
   partly shipped; OS loopback music visualizer capture on top of the spectrum
   substrate; full Share v1 packaging beyond PNG/APNG; cross-platform controller

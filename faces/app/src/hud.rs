@@ -68,6 +68,33 @@ pub(crate) fn draw_audio_state(raster: &mut Raster, state: &AudioState, width: u
     numinous_core::draw_text(raster, &label, x, 2, scale, '.');
 }
 
+/// Draw a compact room-bed spectrum meter under the audio badge (visualizer path).
+pub(crate) fn draw_spectrum_meter(
+    raster: &mut Raster,
+    bands: &[f32; numinous_core::BAND_COUNT],
+    width: usize,
+    height: usize,
+) {
+    if width < 80 || height < 40 {
+        return;
+    }
+    let bar_w = 3i32;
+    let max_h = 16i32.min(height as i32 / 8).max(4);
+    let left = (width as i32)
+        .saturating_sub(8 + numinous_core::BAND_COUNT as i32 * (bar_w + 1))
+        .max(0);
+    let bottom = 20i32.min(height as i32 - 1).max(0);
+    for (i, &level) in bands.iter().enumerate() {
+        let h = ((level.clamp(0.0, 1.0) * max_h as f32).round() as i32).max(1);
+        let x0 = left + i as i32 * (bar_w + 1);
+        let y1 = bottom;
+        let y0 = (y1 - h + 1).max(0);
+        for x in x0..x0 + bar_w {
+            raster.line(x, y0, x, y1, '#');
+        }
+    }
+}
+
 pub(crate) struct RoomChrome {
     pub(crate) t: f64,
     pub(crate) room_card: u64,
@@ -505,6 +532,18 @@ mod tests {
         for (state, expected) in cases {
             assert_eq!(state.label(), expected);
         }
+    }
+
+    #[test]
+    fn spectrum_meter_lights_pixels_without_changing_frame_size() {
+        let (width, height) = (360, 240);
+        let mut raster = Raster::new(width, height);
+        let before = raster.to_rgba();
+        let bands = [0.1, 0.3, 0.8, 0.5, 0.2, 0.1, 0.05];
+        draw_spectrum_meter(&mut raster, &bands, width, height);
+        let after = raster.to_rgba();
+        assert_ne!(before, after, "spectrum bars should paint");
+        assert_eq!(after.len(), width * height * 4);
     }
 
     #[test]
