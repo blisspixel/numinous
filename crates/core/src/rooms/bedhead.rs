@@ -27,16 +27,17 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 }
 
 fn params(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64) {
+    // Classic gallery Bedhead sits near a=-0.81, b=-0.92 (negative b).
     let s = if seed == 0 {
         0.0
     } else {
-        (seed % 5) as f64 * 0.05
+        (seed % 5) as f64 * 0.03
     };
     if let Some((x, y)) = hand {
-        (-1.0 + x * 2.0 + s, 0.5 + y * 1.5)
+        (-1.1 + x * 0.7 + s, -1.2 + y * 0.7)
     } else {
         let u = phase_unit(t);
-        (-0.81 + u * 0.4 + s, 0.92 + (1.0 - u) * 0.2)
+        (-0.95 + u * 0.35 + s, -1.05 + u * 0.3)
     }
 }
 
@@ -52,28 +53,51 @@ fn draw(canvas: &mut dyn Surface, a: f64, b: f64) {
     let mut min_y = f64::MAX;
     let mut max_y = f64::MIN;
     let mut pts = Vec::with_capacity(ITERS);
-    let b = b.max(0.05);
+    let b = if b.abs() < 0.05 { b.signum() * 0.05 } else { b };
+    for _ in 0..40 {
+        let nx = (x * y / b).sin() * y + (a * x - y).cos();
+        let ny = x + y.sin() / b;
+        if !nx.is_finite() || !ny.is_finite() {
+            break;
+        }
+        x = nx;
+        y = ny;
+    }
     for _ in 0..ITERS {
         let nx = (x * y / b).sin() * y + (a * x - y).cos();
         let ny = x + y.sin() / b;
-        x = nx;
-        y = ny;
-        if !x.is_finite() || !y.is_finite() {
+        if !nx.is_finite() || !ny.is_finite() || nx.abs() > 50.0 || ny.abs() > 50.0 {
             break;
         }
+        x = nx;
+        y = ny;
         min_x = min_x.min(x);
         max_x = max_x.max(x);
         min_y = min_y.min(y);
         max_y = max_y.max(y);
         pts.push((x, y));
     }
+    if pts.len() < 50 {
+        // Keep a soft oval if the orbit fails so the plate is never empty.
+        for i in 0..180 {
+            let th = i as f64 / 179.0 * std::f64::consts::TAU;
+            let px = (0.5 + 0.32 * th.cos()) * width.saturating_sub(1) as f64;
+            let py = (0.5 + 0.22 * th.sin()) * height.saturating_sub(1) as f64;
+            canvas.plot(px.round() as i32, py.round() as i32, '*');
+        }
+        return;
+    }
     let dx = (max_x - min_x).max(1e-6);
     let dy = (max_y - min_y).max(1e-6);
+    let mx = width as f64 * 0.05;
+    let my = height as f64 * 0.05;
+    let iw = (width as f64 - 2.0 * mx).max(1.0);
+    let ih = (height as f64 - 2.0 * my).max(1.0);
     for (i, &(px, py)) in pts.iter().enumerate() {
         let u = ((px - min_x) / dx).clamp(0.0, 1.0);
         let v = ((py - min_y) / dy).clamp(0.0, 1.0);
-        let ix = (u * width.saturating_sub(1) as f64).round() as i32;
-        let iy = ((1.0 - v) * height.saturating_sub(1) as f64).round() as i32;
+        let ix = (mx + u * iw).round() as i32;
+        let iy = (my + (1.0 - v) * ih).round() as i32;
         let ch = if i % 11 == 0 { '#' } else { '*' };
         canvas.plot(ix, iy, ch);
     }
@@ -157,7 +181,7 @@ impl Room for Bedhead {
         let mut max_x = x;
         let mut min_y = y;
         let mut max_y = y;
-        let bb = b.max(0.05);
+        let bb = if b.abs() < 0.05 { b.signum() * 0.05 } else { b };
         for _ in 0..600 {
             let nx = (x * y / bb).sin() * y + (a * x - y).cos();
             let ny = x + y.sin() / bb;
@@ -216,7 +240,7 @@ mod tests {
     fn render_ink() {
         let mut c = Canvas::new(40, 28);
         Bedhead::new().render(&mut c, 0.5);
-        assert!(c.ink_count() > 10);
+        assert!(c.ink_count() > 80, "pillow attractor must fill the plate");
     }
 
     #[test]

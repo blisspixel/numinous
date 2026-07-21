@@ -52,21 +52,23 @@ fn draw(canvas: &mut dyn Surface, root: u64, depth: usize, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    // BFS layers
-    let mut layer = vec![root];
-    let mut all: Vec<(u64, usize, f64)> = vec![(root, 0, 0.5)];
+    // BFS layers with parent links so the tree reads as branches, not freckles.
+    let mut layer: Vec<(u64, f64)> = vec![(root, 0.5)];
+    let mut nodes: Vec<(u64, usize, f64)> = vec![(root, 0, 0.5)];
+    let mut edges: Vec<(f64, usize, f64, usize)> = Vec::new();
     for d in 0..depth {
         let mut next = Vec::new();
         let count = layer.len().max(1);
-        for (i, &n) in layer.iter().enumerate() {
+        for (i, &(n, parent_u)) in layer.iter().enumerate() {
             let base = (i as f64 + 0.5) / count as f64;
             for (j, &a) in ancestors(n).iter().enumerate() {
                 if a > 10_000 {
                     continue;
                 }
-                let u = base + (j as f64 - 0.5) * 0.08 / (d as f64 + 1.0);
-                all.push((a, d + 1, u.clamp(0.02, 0.98)));
-                next.push(a);
+                let u = (base + (j as f64 - 0.5) * 0.12 / (d as f64 + 1.0)).clamp(0.02, 0.98);
+                nodes.push((a, d + 1, u));
+                edges.push((parent_u, d, u, d + 1));
+                next.push((a, u));
                 if next.len() > 200 {
                     break;
                 }
@@ -85,16 +87,24 @@ fn draw(canvas: &mut dyn Surface, root: u64, depth: usize, seed: u64) {
     } else {
         (seed % 9) as f64 * 0.01
     };
-    for &(n, d, u) in &all {
+    let h = height.saturating_sub(2) as f64;
+    let w = width.saturating_sub(1) as f64;
+    let y_of = |d: usize| ((d as f64 / depth.max(1) as f64) * h).round() as i32;
+    for &(pu, pd, cu, cd) in &edges {
+        let px0 = ((pu + shift).fract().clamp(0.02, 0.98) * w).round() as i32;
+        let py0 = y_of(pd);
+        let px1 = ((cu + shift).fract().clamp(0.02, 0.98) * w).round() as i32;
+        let py1 = y_of(cd);
+        canvas.line(px0, py0, px1, py1, '.');
+    }
+    for &(n, d, u) in &nodes {
         let uu = (u + shift).fract().clamp(0.02, 0.98);
-        let px = (uu * width.saturating_sub(1) as f64).round() as i32;
-        let py =
-            ((d as f64 / depth.max(1) as f64) * height.saturating_sub(2) as f64).round() as i32;
+        let px = (uu * w).round() as i32;
+        let py = y_of(d);
         let ch = if n % 2 == 0 { '*' } else { '#' };
         canvas.plot(px, py, ch);
-        if d > 0 {
-            canvas.plot(px, py.saturating_sub(1), '.');
-        }
+        canvas.plot(px.saturating_sub(1), py, ch);
+        canvas.plot(px + 1, py, ch);
     }
 }
 
@@ -238,7 +248,7 @@ mod tests {
     fn render_ink() {
         let mut c = Canvas::new(40, 28);
         CollatzTree::new().render(&mut c, 0.5);
-        assert!(c.ink_count() > 10);
+        assert!(c.ink_count() > 30, "tree edges and nodes must be visible");
     }
 
     #[test]
