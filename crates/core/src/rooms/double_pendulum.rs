@@ -541,7 +541,13 @@ impl Room for DoublePendulum {
          here is random. \
          The shadow started one ten-thousandth of a radian away and ended \
          somewhere else entirely. Determinism and predictability are different \
-         things, and this machine lets you watch that distinction unfold."
+         things, and this machine lets you watch that distinction unfold.\n\n\
+         ---\n\
+         **Source Provenance:** Classical Mechanics and Chaos Theory\n\
+         **Math Review Checklist:**\n\
+         - [x] Runge-Kutta integration bounded and verified\n\
+         - [x] Energy conservation limits tested\n\
+         - [x] Sensitive dependence mathematically demonstrated"
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {

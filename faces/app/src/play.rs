@@ -2,33 +2,33 @@ use std::collections::BTreeSet;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// The in-window quiz state: what is asked, and how the last answer landed.
-pub(crate) struct QuizPlay {
-    pub(crate) round: numinous_core::QuizRound,
+pub struct QuizPlay {
+    pub round: numinous_core::QuizRound,
     /// After an answer: (was it right, frames left on the flash).
-    pub(crate) flash: Option<(bool, u64)>,
+    pub flash: Option<(bool, u64)>,
 }
 
 /// The in-window Munch: a board, a cursor, your bites, and the verdict.
-pub(crate) struct MunchPlay {
-    pub(crate) board: numinous_core::Board,
-    pub(crate) seed: u64,
-    pub(crate) round: u64,
+pub struct MunchPlay {
+    pub board: numinous_core::Board,
+    pub seed: u64,
+    pub round: u64,
     /// Cursor cell, 0-based (5 rows of 6).
-    pub(crate) cursor: usize,
+    pub cursor: usize,
     /// Cells bitten so far, 0-based.
-    pub(crate) bites: BTreeSet<usize>,
+    pub bites: BTreeSet<usize>,
     /// After Enter: the graded outcome, shown until a key.
-    pub(crate) graded: Option<numinous_core::Munched>,
+    pub graded: Option<numinous_core::Munched>,
     /// Bite juice: cell index and remaining presentation frames.
-    pub(crate) bite_flash: Option<(usize, u64)>,
+    pub bite_flash: Option<(usize, u64)>,
 }
 
 /// Frames a bite flash holds so a toggle is felt before the board settles.
-pub(crate) const MUNCH_BITE_FLASH_FRAMES: u64 = 12;
+pub const MUNCH_BITE_FLASH_FRAMES: u64 = 12;
 
 impl MunchPlay {
     /// Count down bite juice; returns true while a flash still shows.
-    pub(crate) fn tick_bite_flash(&mut self) -> bool {
+    pub fn tick_bite_flash(&mut self) -> bool {
         if let Some((_, frames)) = &mut self.bite_flash {
             *frames = frames.saturating_sub(1);
             if *frames == 0 {
@@ -39,7 +39,7 @@ impl MunchPlay {
     }
 
     /// Mark a cell as just toggled for a short bright flash.
-    pub(crate) fn flash_bite(&mut self, cell: usize) {
+    pub fn flash_bite(&mut self, cell: usize) {
         self.bite_flash = Some((cell, MUNCH_BITE_FLASH_FRAMES));
     }
 }
@@ -70,7 +70,7 @@ mod juice_tests {
 
 const MUNCH_RULE_LOOKAHEAD: u64 = 16;
 
-pub(crate) fn same_rule_family(
+pub fn same_rule_family(
     a: numinous_core::munchers::Rule,
     b: numinous_core::munchers::Rule,
 ) -> bool {
@@ -86,7 +86,7 @@ pub(crate) fn same_rule_family(
     )
 }
 
-pub(crate) fn deal_munch(
+pub fn deal_munch(
     seed: u64,
     start_round: u64,
     previous: Option<numinous_core::munchers::Rule>,
@@ -104,50 +104,50 @@ pub(crate) fn deal_munch(
 }
 
 /// The in-window Gauntlet: four stages riding the other games' state.
-pub(crate) struct GauntletPlay {
-    pub(crate) seed: u64,
+pub struct GauntletPlay {
+    pub seed: u64,
     /// 0 munch, 1 shape, 2 sky, 3 bomb, 4 done.
-    pub(crate) stage: usize,
-    pub(crate) munch: MunchPlay,
-    pub(crate) quiz: QuizPlay,
-    pub(crate) scan: numinous_core::SetiScan,
-    pub(crate) secret: Vec<u8>,
+    pub stage: usize,
+    pub munch: MunchPlay,
+    pub quiz: QuizPlay,
+    pub scan: numinous_core::SetiScan,
+    pub secret: Vec<u8>,
     /// The bomb keypad: what is typed, and the feedback so far.
-    pub(crate) wire: String,
-    pub(crate) wire_lines: Vec<String>,
+    pub wire: String,
+    pub wire_lines: Vec<String>,
     /// Stage scores and clean flags, in order.
-    pub(crate) scores: Vec<i64>,
-    pub(crate) cleared: Vec<bool>,
+    pub scores: Vec<i64>,
+    pub cleared: Vec<bool>,
     /// The running narration line.
-    pub(crate) message: String,
+    pub message: String,
 }
 
 /// The in-window arcade: the run, its beat, and the last event's flash.
-pub(crate) struct ArcadePlay {
-    pub(crate) run: numinous_core::munch_arcade::Arcade,
-    pub(crate) seed: u64,
+pub struct ArcadePlay {
+    pub run: numinous_core::munch_arcade::Arcade,
+    pub seed: u64,
     /// Flash frames left and what happened (true = caught, false = clear).
-    pub(crate) flash: Option<(bool, u64)>,
+    pub flash: Option<(bool, u64)>,
     /// The run has ended; any key leaves.
-    pub(crate) over: bool,
+    pub over: bool,
 }
 
 /// The in-window Nim: the heaps, your aim, and the Order's last word.
-pub(crate) struct NimPlay {
-    pub(crate) heaps: Vec<u32>,
-    pub(crate) seed: u64,
+pub struct NimPlay {
+    pub heaps: Vec<u32>,
+    pub seed: u64,
     /// Which heap you are aiming at.
-    pub(crate) selected: usize,
+    pub selected: usize,
     /// How many stones you mean to take.
-    pub(crate) take: u32,
+    pub take: u32,
     /// The Order's last move, narrated.
-    pub(crate) message: String,
+    pub message: String,
     /// The end: Some(true) is your win (the secret shows), Some(false) is not.
-    pub(crate) over: Option<bool>,
+    pub over: Option<bool>,
 }
 
 /// Today's seed: everyone who plays today plays the same boards.
-pub(crate) fn daily_seed() -> u64 {
+pub fn daily_seed() -> u64 {
     daily_seed_from(SystemTime::now())
 }
 
@@ -158,12 +158,7 @@ fn daily_seed_from(now: SystemTime) -> u64 {
 }
 
 /// Deal a fresh app quiz round and update the no-repeat history.
-pub(crate) fn deal_quiz<I>(
-    seed: u64,
-    plays: u32,
-    room_ids: I,
-    recent: &mut Vec<&'static str>,
-) -> QuizPlay
+pub fn deal_quiz<I>(seed: u64, plays: u32, room_ids: I, recent: &mut Vec<&'static str>) -> QuizPlay
 where
     I: IntoIterator<Item = &'static str>,
 {
@@ -190,7 +185,7 @@ where
 }
 
 /// Accept one quiz letter. Returns whether the accepted answer was correct.
-pub(crate) fn answer_quiz(quiz: &mut QuizPlay, letter: char) -> Option<bool> {
+pub fn answer_quiz(quiz: &mut QuizPlay, letter: char) -> Option<bool> {
     if quiz.flash.is_some() || !quiz.round.choices.iter().any(|c| c.letter == letter) {
         return None;
     }
@@ -200,7 +195,7 @@ pub(crate) fn answer_quiz(quiz: &mut QuizPlay, letter: char) -> Option<bool> {
 }
 
 /// Combo math: cleared stages multiply what follows.
-pub(crate) fn gauntlet_total(scores: &[i64], cleared: &[bool]) -> i64 {
+pub fn gauntlet_total(scores: &[i64], cleared: &[bool]) -> i64 {
     let mut total = 0;
     let mut combo = 1;
     for (score, &clear) in scores.iter().zip(cleared) {

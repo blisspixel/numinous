@@ -52,7 +52,7 @@ fn munch_control(key: &Key) -> Option<MunchControl> {
     })
 }
 
-pub(crate) fn arcade_action_for_key(key: &Key) -> Option<Action> {
+pub fn arcade_action_for_key(key: &Key) -> Option<Action> {
     Some(match grid_control(key)? {
         GridControl::Primary => Action::Eat,
         GridControl::Right => Action::Right,
@@ -87,7 +87,7 @@ fn nim_control(key: &Key) -> Option<NimControl> {
     }
 }
 
-pub(crate) fn apply_nim_control(play: &mut NimPlay, key: &Key) -> bool {
+pub fn apply_nim_control(play: &mut NimPlay, key: &Key) -> bool {
     let Some(control) = nim_control(key) else {
         return false;
     };
@@ -131,14 +131,14 @@ fn selected_nim_heap(play: &NimPlay) -> u32 {
     play.heaps.get(play.selected).copied().unwrap_or(0)
 }
 
-pub(crate) fn toggle_munch_bite(bites: &mut BTreeSet<usize>, cell: usize) {
+pub fn toggle_munch_bite(bites: &mut BTreeSet<usize>, cell: usize) {
     if !bites.remove(&cell) {
         let _ = bites.insert(cell);
     }
 }
 
 /// Apply keyboard munch control. Returns `Some(cell)` when a bite was toggled.
-pub(crate) fn apply_munch_control(
+pub fn apply_munch_control(
     cursor: &mut usize,
     bites: &mut BTreeSet<usize>,
     key: &Key,

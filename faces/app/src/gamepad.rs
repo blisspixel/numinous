@@ -81,7 +81,7 @@ impl VirtualHand {
         }
     }
 
-    fn press(&mut self, button: Button) -> Option<Command> {
+    fn press(&mut self, button: Button, bindings: &crate::bindings::Bindings) -> Option<Command> {
         if button == Button::North {
             self.visible = true;
             if !self.audio_modifier {
@@ -103,7 +103,7 @@ impl VirtualHand {
                 _ => None,
             };
         }
-        let command = pressed_command(button)?;
+        let command = pressed_command(button, bindings)?;
         self.visible = true;
         if button == Button::South {
             self.held = true;
@@ -173,6 +173,7 @@ fn shaped_axis(value: f32) -> f64 {
 
 pub(crate) struct GamepadInput {
     gilrs: Option<Gilrs>,
+    bindings: crate::bindings::Bindings,
     hand: VirtualHand,
     last_tick: Instant,
     active: bool,
@@ -183,9 +184,15 @@ impl GamepadInput {
         #[cfg(test)]
         let gilrs = None;
         #[cfg(not(test))]
-        let gilrs = Gilrs::new().ok();
+        let gilrs = gilrs::GilrsBuilder::new()
+            .with_default_filters(true)
+            .add_env_mappings(true)
+            .add_mappings(include_str!("../../../assets/gamecontrollerdb.txt"))
+            .build()
+            .ok();
         Self {
             gilrs,
+            bindings: crate::bindings::Bindings::load(),
             hand: VirtualHand::default(),
             last_tick: Instant::now(),
             active: true,
@@ -203,8 +210,8 @@ impl GamepadInput {
             while let Some(event) = gilrs.next_event() {
                 match event.event {
                     EventType::ButtonPressed(button, _) => {
-                        if let Some(command) = self.hand.press(button) {
-                            commands.push(command);
+                        if let Some(cmd) = self.hand.press(button, &self.bindings) {
+                            commands.push(cmd);
                         }
                     }
                     EventType::ButtonReleased(button, _) => {
@@ -259,25 +266,8 @@ impl GamepadInput {
     }
 }
 
-fn pressed_command(button: Button) -> Option<Command> {
-    Some(match button {
-        Button::South => Command::PrimaryDown,
-        Button::East => Command::Back,
-        Button::Start => Command::Menu,
-        Button::Select => Command::Inspect,
-        Button::LeftThumb => Command::Reset,
-        Button::LeftTrigger => Command::PreviousRoom,
-        Button::RightTrigger => Command::NextRoom,
-        Button::LeftTrigger2 => Command::Slower,
-        Button::RightTrigger2 => Command::Faster,
-        Button::DPadUp => Command::Up,
-        Button::DPadDown => Command::Down,
-        Button::DPadLeft => Command::Left,
-        Button::DPadRight => Command::Right,
-        Button::West => Command::CycleEra,
-        Button::RightThumb => Command::Pause,
-        _ => return None,
-    })
+fn pressed_command(button: Button, bindings: &crate::bindings::Bindings) -> Option<Command> {
+    bindings.gamepad.get(&button).copied()
 }
 
 pub(crate) fn draw_cursor(
@@ -382,20 +372,27 @@ mod tests {
             (Button::West, Command::CycleEra),
             (Button::RightThumb, Command::Pause),
         ];
+        let bindings = crate::bindings::Bindings::default();
         for (button, expected) in cases {
-            assert_eq!(pressed_command(button), Some(expected));
+            assert_eq!(pressed_command(button, &bindings), Some(expected));
         }
-        assert_eq!(pressed_command(Button::North), None);
-        assert_eq!(pressed_command(Button::Mode), None);
+        assert_eq!(pressed_command(Button::North, &bindings), None);
+        assert_eq!(pressed_command(Button::Mode, &bindings), None);
+        assert_eq!(pressed_command(Button::Mode, &bindings), None);
     }
 
     #[test]
-    fn only_supported_button_presses_reveal_the_virtual_hand() {
+    fn gamepad_virtual_hand() {
         let mut hand = VirtualHand::default();
-        assert_eq!(hand.press(Button::Mode), None);
+        let bindings = crate::bindings::Bindings::default();
+        assert!(!hand.visible);
+        assert_eq!(hand.press(Button::Mode, &bindings), None);
         assert!(!hand.visible);
 
-        assert_eq!(hand.press(Button::RightThumb), Some(Command::Pause));
+        assert_eq!(
+            hand.press(Button::RightThumb, &bindings),
+            Some(Command::Pause)
+        );
         assert!(hand.visible);
         assert!(!hand.held);
     }
@@ -403,19 +400,29 @@ mod tests {
     #[test]
     fn north_is_radio_on_release_and_a_global_audio_modifier_when_held() {
         let mut hand = VirtualHand::default();
-        assert_eq!(hand.press(Button::North), None);
+        let bindings = crate::bindings::Bindings::default();
+        assert_eq!(hand.press(Button::North, &bindings), None);
         assert_eq!(hand.release(Button::North), Some(Command::CycleRadio));
 
-        assert_eq!(hand.press(Button::North), None);
-        assert_eq!(hand.press(Button::DPadUp), Some(Command::VolumeUp));
+        assert_eq!(hand.press(Button::North, &bindings), None);
+        assert_eq!(
+            hand.press(Button::DPadUp, &bindings),
+            Some(Command::VolumeUp)
+        );
         assert_eq!(hand.release(Button::North), None);
 
-        assert_eq!(hand.press(Button::North), None);
-        assert_eq!(hand.press(Button::DPadDown), Some(Command::VolumeDown));
+        assert_eq!(hand.press(Button::North, &bindings), None);
+        assert_eq!(
+            hand.press(Button::DPadDown, &bindings),
+            Some(Command::VolumeDown)
+        );
         assert_eq!(hand.release(Button::North), None);
 
-        assert_eq!(hand.press(Button::North), None);
-        assert_eq!(hand.press(Button::South), Some(Command::ToggleMute));
+        assert_eq!(hand.press(Button::North, &bindings), None);
+        assert_eq!(
+            hand.press(Button::South, &bindings),
+            Some(Command::ToggleMute)
+        );
         assert_eq!(hand.release(Button::South), None);
         assert_eq!(hand.release(Button::North), None);
         assert!(!hand.held);
@@ -424,7 +431,7 @@ mod tests {
     #[test]
     fn deactivation_discards_an_unfinished_audio_chord() {
         let mut input = GamepadInput::new();
-        assert_eq!(input.hand.press(Button::North), None);
+        assert_eq!(input.hand.press(Button::North, &input.bindings), None);
         assert_eq!(input.deactivate(), None);
         input.activate();
         assert_eq!(input.hand.release(Button::North), None);

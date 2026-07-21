@@ -6,9 +6,88 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- **Configurable Inputs and Controller Certification**: Gamepad button mappings are now fully configurable via a `~/.numinous-bindings.json` file. Support for cross-platform hardware validation is now built-in using SDL's Game Controller DB, ensuring seamless compatibility for thousands of missing or custom controller types across all environments.
+- Source provenance and math review checklists to the Times Tables, Game of Life, Galton Board, and Double Pendulum flagships to anchor 0.4 Understanding Alpha learning claims.
+- An opt-in, player-owned MCP experience journal (`Journal` / `JournalEntry`) tracking room encounters, creations, and connections over time. Fully backed by new `read_journal`, `record_journal`, and `erase_journal` tools to enable continuous MCP return sessions under user control.
+- The local MCP session viewer now has a hardened shared transport foundation,
+  a connected MCP producer, and a native App Watch Agent surface.
+  The new `numinous-broadcast` crate provides one-use 128-bit loopback pairing,
+  wall-clock plus monotonic expiry, constant-time capability verification,
+  strict bounded newline-delimited JSON, replay-semantic compatibility
+  fingerprints, atomic consent epochs and public sequences, ordered pause,
+  resume, and stop barriers, and a fixed drop-oldest event queue with exact gap
+  reporting. Unwritten leases restore without exceeding count or byte limits;
+  partial destination failures terminate and clear the session instead of
+  retrying a corrupt frame. The crate also owns a strict typed public-tool event
+  and one shared compatibility identity over current room, simulation, game,
+  source, and asset semantics. Sixty-five focused tests cover hostile framing,
+  schema strictness, concurrency, revocation, partial writes, capacity, gap
+  ordering, semantic inputs, and monotonic expiry. Independent correctness and
+  security reviews of the foundation pass. MCP now exposes one redacted
+  `broadcast_session` control for start, status, pause, resume, and stop. An
+  exhaustive policy classifies all 30 tools as 23 public, 6 private, and 1
+  control; valid public actions carry exact state-independent results, while
+  Describe Room, Crack, SETI, and Quiz use a deterministic baseline projection
+  that cannot reveal Journey level or boon choices. Daily play is pinned to a
+  replayable seed, and private or control calls consume no sequence. Separate
+  monitor and writer workers keep ordinary public play from waiting for socket
+  writes and close on stop or disconnect. A server-first capability proof
+  prevents guest bytes from reaching an unproven loopback peer, eight failures
+  close the process pairing budget, and one serialized lifecycle prevents
+  concurrent starts from leaking workers. Pairing and consent controls remain
+  explicit bounded operations. One hundred seven MCP unit tests, six real
+  stdio tests, and real loopback handshake, ordering, redaction,
+  private-silence, and result parity paths pass. The App opens its explicit
+  human listener through X or the
+  ninth controller menu destination, sends the server-first proof before
+  reading guest data, and validates compatibility before content. One shared
+  receiver authority rejects a wrong session, replay identity, consent epoch,
+  transition, sequence, or gap. The read-only surface presents typed public
+  actions, input JSON, and human-readable MCP `content` result text, preserves
+  fixed-width text without reflow through horizontal pan, identifies transport
+  and retention gaps, and provides local pause, event scrub, and result scroll
+  controls. Its serialized ring is
+  capped at 256 events or 16 MiB, writes no transcript, and is destroyed on
+  close. Valid retained `play_room` actions are independently revalidated and
+  reconstructed through the same core room at the local App viewport size,
+  with session state, event position, room status, privacy copy, and read-only
+  controls overlaid on the native frame. Malformed or unbounded replay values
+  fail to the existing typed text timeline without panicking. Focused
+  real-loopback tests cover pairing, one public event, stop, timeline controls,
+  privacy copy, count and byte caps, cleanup, native room parity, strict replay
+  input bounds, text fallback, and compact drawing. A real MCP subprocess
+  acceptance opens the actual App viewer, then
+  runs Times Tables explore, challenge pose and grade, the K5 four-lobe goal,
+  reveal, private Journey calls, and stop. It retains exactly the five public
+  actions with sequences 0 through 4, reconstructs the K5 frame natively,
+  exposes no private or protocol metadata, and clears on close. Successful public
+  `plot_expression` actions now reconstruct native Formula Jam curves from an
+  exact source, finite ordered range, parameter, successful result, and the
+  bounded core parser. One deterministic sampler and autoscaler serves both the
+  live App Studio and viewer replay. Invalid, undefined, or error actions retain
+  the typed text fallback, while the existing semantic body cache avoids repeat
+  work beneath dynamic viewer chrome. A separate real MCP subprocess session
+  proves one paired public Studio creation at sequence 0, native local-viewport
+  drawing, metadata exclusion, and close-time erasure. Public Nim histories now
+  replay through one shared core reducer for legal moves, deterministic Order
+  replies, and winner state. One bounded heap renderer serves both live App play
+  and Watch Agent. The viewer requires exact normalized arguments and the
+  complete canonical MCP result before native reconstruction; malformed,
+  excessive, illegal, forged, or failed actions retain text. A third real MCP
+  subprocess session proves exactly one public Nim event, shared core state,
+  native body pixel parity, metadata exclusion, and close-time erasure. Native
+  room and Studio selections now replay their deterministic core sound through
+  one public-sequence owner and a fixed 16 kHz bounded source. Scrubbing changes
+  that source once; unsupported or invalid events retire it. Global sound and
+  focus controls remain local, while close restores the room score or rejoins
+  live radio. Real Times Tables and Studio sessions prove exact shared-core
+  sample parity. The App QA inventory grows to 2,913 screens with Watch Agent
+  source badges at both sizes. Other game visuals remain 0.3 work. Process- and
+  thread-isolated App test roots now prevent concurrent release or checker
+  processes from colliding in playtest-note and radio-cache fixtures.
 - Public status and roadmap documentation now match the July 18 release
-  evidence: 2,869 passing tests plus one ignored screenshot diagnostic,
-  95.39 percent region coverage, 95.44 percent line coverage, and green native
+  evidence: 2,985 passing tests plus one ignored screenshot diagnostic,
+  95.44 percent region coverage, 95.55 percent line coverage, and green native
   installer checks on all three CI operating systems. Digital-mind docs now
   distinguish the shipped managed-state inventory and erasure foundation from
   the still-unbuilt per-mind episodic continuity design. Clean rustdoc and
@@ -38,9 +117,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   alter a real player profile. Bounded cache and adjacent-entry caps,
   replacement-owner lock release, absent-state idempotence, non-file temporary
   rejection, exact retry termination, and a production CLI process path have
-  direct regressions. The full Windows release gate passes with 2,869
+  direct regressions. The full Windows release gate passes with 2,924
   all-target test cases plus one ignored screenshot diagnostic, 95.39 percent
-  region coverage, and 95.44 percent line coverage.
+  region coverage, and 95.48 percent line coverage.
 - Mathematical truth checks now protect three flagship foundations. Formula
   Jam follows conventional precedence, so exponentiation binds before unary
   minus while negative exponents and right-associative powers still work. The
@@ -215,8 +294,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   error-body diagnostics under ureq 3. Dependabot no longer suppresses the
   completed major migrations, and Rust 1.97 Clippy idioms are applied across
   the workspace without changing the underlying divisibility predicates. The
-  full Windows release gate passes with 2,869 all-target test cases plus one
-  ignored screenshot diagnostic, 95.39 percent region coverage, 95.44 percent
+  full Windows release gate passes with 2,924 all-target test cases plus one
+  ignored screenshot diagnostic, 95.39 percent region coverage, 95.48 percent
   line coverage, and the exact 2,911-screen App matrix. Native Linux and macOS
   CI invoke the deliberately nonexecutable POSIX installer through Bash, so its
   safety self-test does not depend on a checkout file-mode convention.

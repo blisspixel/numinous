@@ -10,7 +10,7 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
-**Implementation boundary, 2026-07-13:** all three faces are shipped from the
+**Implementation boundary, 2026-07-18:** all three faces are shipped from the
 same headless core in 0.2.0-alpha.1. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
@@ -67,7 +67,7 @@ The full interactive audiovisual experience. The UX is specified in depth across
   badge reports source, level, and effective silence without relying on a
   transient banner.
   Input-aware legends cover rooms, all games, The Show, the Journey, and the
-  Studio. The controller opens and closes all eight menu destinations; Studio
+  Studio. The controller opens and closes all nine menu destinations; Studio
   formula entry remains honestly keyboard-required.
   Focus loss or disconnect cancels a held gesture. Touch, pen, MIDI, remapping,
   and platform hardware certification remain planned rather than implied.
@@ -159,10 +159,10 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 
 ### What it exposes (shaped by the above)
 - **Current protocol surface:** `initialize`, `tools/list`, `tools/call`, and
-  `ping` over stdio, advertising the tools capability. The 29 tools include
+  `ping` over stdio, advertising the tools capability. The 33 tools include
   `list_rooms`, `describe_room`, `play_room`, `listen_room`, `reveal_room`,
   `challenge`, `predict`, `list_sims`, `run_sim`, `plot_expression`,
-  `sing_expression`, Journey operations, and the shared games. `PLAYING.md`
+  `sing_expression`, Journey operations, experience journal operations (`read_journal`, `record_journal`, `erase_journal`), and the shared games. `PLAYING.md`
   carries the complete user-facing list.
 - **Current room input shape:** `play_room` and `listen_room` accept `variation`
   plus optional normalized `pokes: [[x, y], ...]`, newest last and bounded to 24
@@ -210,8 +210,9 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   EXACTLY 4 LOBES`. `play_room` returns `goal`, `goalMet`, and a null reveal
   until accepted K=5 input closes four lobes. The earned response then includes
   the same reveal the App points to. Ambient phase alone cannot earn it.
-- **Compatibility-preserving compact output (built):** every tool schema accepts
-  `response_mode: "full" | "compact"`. The argument is stripped before domain
+- **Compatibility-preserving compact output (built):** every play-tool schema
+  accepts `response_mode: "full" | "compact"`; the local broadcast consent
+  control intentionally does not. The argument is stripped before domain
   dispatch, so it cannot change grading, replay, persistence, or effective
   values. Omitted and explicit `full` results are equal. Eligible catalog, room,
   listening, simulation, Quiz, Gauntlet, and trophy replies keep identical
@@ -236,24 +237,91 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 - **Interactive surfaces, planned:** an MCP App panel can later carry a rendered
   room where hosts support it. No app resource or interactive panel ships now.
 
-### Local MCP session broadcast, planned
+### Local MCP session broadcast, native room, Studio, Nim, and sound replay, and subprocess proof built
+
+The shared `numinous-broadcast` foundation implements the pairing,
+compatibility, framing, consent, sequence, control-marker, typed public-event,
+and bounded-queue contracts below. The MCP face now connects that foundation
+through `broadcast_session`, a complete fail-closed policy for all 30 declared
+tools, replay-safe daily seed normalization, and separate nonblocking writer
+and disconnect-monitor workers. Twenty-three tools are explicitly public, six
+progression or local-state tools are private, and the consent control broadcasts
+neither itself nor progress. The native App now ships the human Watch Agent
+surface. X or the ninth controller-menu destination opens the ephemeral
+listener. The surface shows pairing, consent state, typed public actions,
+input JSON, human-readable text from MCP `content` result blocks, exact producer
+gaps, and local retention loss. For `play_room`, it strictly revalidates the
+public id, phase, variation, dimensions, pokes, and gesture, then reconstructs
+the native pixel frame through the same deterministic core `Room` at the local
+viewport size. Invalid replay values fall back to typed text. It retains each
+complete typed serialized envelope. A successful `plot_expression` action is
+also revalidated against its exact source, finite ordered range, parameter,
+core parser, and successful public result, then reconstructed as a native
+Formula Jam curve. Live Studio and viewer replay share one deterministic
+sampling and autoscaling implementation. Public `nim` actions are replayed
+through one shared core reducer, accepted only when the complete MCP result
+matches that canonical replay, and drawn through the bounded three-heap
+renderer shared with the live App. Strictly accepted native room and Studio
+selections also derive their deterministic core sound locally. The App renders
+a bounded fixed-rate source once per selected public sequence and resamples it
+at the device; an unsupported, invalid, forged, or non-sonic selection
+explicitly retires the older sound. Other game visuals are not yet
+reconstructed. Arrow keys or the D-pad scrub retained actions and scroll a long result.
+A and D, or LB and RB, pan fixed-width result text without reflow. Space or R3
+pauses only the human display. M or the controller sound chord uses the existing
+global mute path. Escape or East closes the viewer, clears its ring, and restores
+the room score or rejoins a valid live radio source. One real integration test
+opens this exact App viewer and launches the
+actual MCP binary. Times Tables explore, challenge pose, challenge grade, K5
+goal, reveal, private Journey calls, and stop produce exactly five public events
+numbered 0 through 4, no gaps, a native K5 frame, exact shared room sound
+samples, and no private or protocol metadata.
+
+A second real integration session pairs the same viewer with the actual MCP
+binary, calls `plot_expression`, retains exactly one public event at sequence
+0, draws the Formula Jam curve at the local viewport, and reproduces exact
+shared Studio sound samples. Source length,
+unknown fields, nonfinite or unordered geometry, parser failure, undefined
+curves, and error results all fail back to the bounded typed timeline. The
+native body uses the same public-sequence and viewport cache as room replay;
+local pause and control labels change only the cloned presentation chrome.
+
+A third real integration session calls `nim` with a false daily flag and fixed
+seed, proves the flag is removed from replay arguments, rejects an over-cap
+history and a negative seed without emitting either event, retains exactly one
+public event at sequence 0, reconstructs its core heaps, and compares every
+native body pixel outside viewer chrome with the shared App renderer. Unknown
+fields, malformed or excessive move lists, illegal heap or take values, forged
+text, forged structured state, and error results all retain the typed fallback.
 
 A human should be able to open Numinous and watch a consenting digital player
 explore through MCP, like a live Let's Play. This is an observation surface,
-not surveillance and not duet control. The viewer reconstructs the same rooms,
-games, Studio output, actions, status, and public results the MCP guest receives.
-It never receives the guest's prompts, private reasoning, host logs, client
-metadata, environment, or arbitrary JSON-RPC traffic.
+not surveillance and not duet control. The current viewer reconstructs public
+room actions, successful Formula Jam plot actions, and public Nim states, and
+replays local sound for the first two while representing every other public
+action through the typed text timeline. The remaining native presentation
+layer will add the other games. Typed
+actions, status, and state-independent results already
+match the MCP guest except where
+Describe Room, Crack, SETI, or Quiz would reveal private Journey level or boon
+choices; those four already use a deterministic baseline projection instead.
+The viewer never receives the guest's prompts, private reasoning, host logs,
+client metadata, environment, or arbitrary JSON-RPC traffic.
 
-The first implementation has these hard boundaries:
+The implementation has these hard boundaries:
 
 - The App creates an ephemeral loopback listener and displays a short-lived,
   one-use pairing code containing a version, loopback endpoint, and 128-bit
   operating-system-random capability. It never binds a public interface, puts
   the capability in a command line or log, writes a discovery file, or opens a
-  remote service. The code expires after five minutes. The server bounds and
-  parses it before creating an event buffer, compares the capability in constant
-  time, and rejects invalid or expired codes without echoing their contents.
+  remote service. The code expires after five minutes. Before the MCP producer
+  writes any guest byte, the listener must send a strict server-first SHA-256
+  proof bound to the capability and wire version. The producer compares that
+  proof in constant time, then sends the bounded authentication request. This
+  prevents an untrusted MCP client from turning a forged code into a
+  cross-protocol write to an unrelated loopback service. The host verifies the
+  capability in constant time and rejects invalid or expired codes without
+  echoing their contents.
 - Human enablement opens the listener but broadcasts no play. The human may
   offer the pairing code to the MCP guest, which must explicitly allow the
   broadcast through a bounded `broadcast_session` control tool. That call is
@@ -283,11 +351,13 @@ The first implementation has these hard boundaries:
   self-contained replay, never a delta that silently depends on a missing prior
   event. If a future event cannot carry complete replay inputs, a sequence gap
   marks the viewer desynchronized until an explicit full snapshot resets it.
-- The MCP request path never waits for the viewer. A fixed queue drops oldest
-  public events under pressure. The next transmitted envelope names the exact
-  skipped public sequence range, and `broadcast_session` status reports the
-  cumulative dropped count to the guest. A slow or disconnected viewer cannot
-  delay, fail, or alter the guest's play.
+- Ordinary public play emission never waits for a viewer socket write. A fixed
+  queue drops oldest public events under pressure. The next transmitted
+  envelope names the exact skipped public sequence range, and
+  `broadcast_session` status reports the cumulative dropped count to the guest.
+  A slow or disconnected viewer cannot delay, fail, or alter ordinary play.
+  Pairing, pause, and stop remain explicit consent controls and may perform one
+  bounded handshake, barrier wait, or worker join before returning.
 - The human surface is read-only. It may pause its own display, scrub a fixed
   in-memory ring of retained public events, or leave, but it cannot inject a
   tool call or change MCP state. The ring has explicit event and byte caps and
@@ -301,10 +371,12 @@ The first implementation has these hard boundaries:
 The first contract fixes its resource limits rather than leaving them to an
 implementation guess: pairing codes are at most 128 bytes and expire after five
 minutes; a code permits one live connection and is revoked after eight failed
-handshakes; the handshake is at most 4 KiB with a two-second deadline; each
-event is at most 64 KiB with JSON depth at most 16 and a two-second write
-deadline; the writer queue holds at most 64 events or 4 MiB; and the viewer ring
-holds at most 256 events or 16 MiB. Framing reads incrementally through
+handshakes; the MCP producer also refuses further starts after eight failures
+for that process lifetime; the proof, request, and response frames are each at
+most 4 KiB with a two-second deadline; each event is at most 64 KiB with JSON
+depth at most 16 and a two-second write deadline; the writer queue holds at most
+64 events or 4 MiB; and the viewer ring holds at most 256 events or 16 MiB.
+Framing reads incrementally through
 `MAX + 1`, rejects oversize input before JSON deserialization, and never grows a
 buffer from an untrusted declared length.
 
@@ -319,24 +391,36 @@ keeps the authenticated connection but emits nothing until an explicit resume
 creates a fresh epoch. Stop and disconnect shut down both directions, revoke
 the capability, and leave no writer, queue, or listener task alive.
 
-The cross-face implementation should live behind one small shared broadcast
-crate rather than making the App and MCP faces depend on each other. It should
-use loopback TCP from the standard library, a capability drawn from the
+The cross-face foundation lives behind one small shared broadcast crate rather
+than making the App and MCP faces depend on each other. It uses loopback TCP
+contracts from the standard library, a capability drawn from the
 operating system's cryptographic random source, newline-delimited versioned
-envelopes capped before allocation, and the existing deterministic core to
-reconstruct visuals and sound. Tests must
+envelopes capped before allocation, and strict typed public events. Native room
+replay now uses the existing deterministic core to reconstruct visuals. Native
+Studio replay uses the same deterministic curve sampler as the live App panel.
+Nim replay uses the same core reducer and bounded board renderer as live play.
+Native room and Studio sound use the same core state through a bounded local
+source and explicit App ownership. Other native game presentation remains
+planned. Tests
 prove code parsing and expiry, loopback-only connection, consent-before-content,
 allowlist completeness across every MCP tool, redaction, sequence and gap
 behavior, reconnect refusal after capability use, nonblocking failure, exact
-replay, and immediate stop. The acceptance session is
-one consenting MCP guest completing a Times Tables explore, challenge, and
-reveal loop while a human follows the same causal states in the App, with zero
-private protocol or host data in the captured stream.
+replay, and immediate stop. The automated acceptance session opens the actual
+App viewer and drives one real MCP subprocess through Times Tables explore,
+challenge, K5 goal, reveal, and stop. It proves exact public causal states and
+zero named private or protocol data in the retained stream. A second real
+process session proves one native Formula Jam creation with the same privacy
+boundary. These tests do not claim
+that a human followed or understood those states; that remains participant
+evidence for the 0.3 exit criterion.
 
 Dependency arrows are one-way: `numinous-core` never depends on the broadcast
-crate; the broadcast crate may depend on core wire and domain types but never on
-a face, persistence, or raw MCP JSON-RPC; and only the App and MCP faces depend
-on the broadcast crate. The CLI remains outside this first slice.
+crate; the broadcast crate consumes only core catalog metadata and never a face,
+persistence, or raw MCP JSON-RPC; MCP and the App now depend on the broadcast
+crate. Production faces never depend on one another. The real subprocess
+acceptance uses the App library only as an MCP development dependency, so it
+exercises both shipped implementations without adding a production edge. The
+CLI remains outside this slice.
 
 ### Protocol watch: MCP 2026-07-28 release candidate
 

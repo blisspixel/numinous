@@ -999,6 +999,13 @@ fn local_state_paths() -> numinous_core::LocalStatePaths {
         journey: journey_path(),
         scores: scores_path(),
         cairn: cairn_path(),
+        journal: std::env::var_os("NUMINOUS_JOURNAL")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                let mut p = cairn_path();
+                p.set_file_name("journal.txt");
+                p
+            }),
         radio_cache: radio_dir(),
         crash_log: crash_log_path(),
     }
@@ -6122,6 +6129,7 @@ mod tests {
             journey: root.join("journey.txt"),
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
+            journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
             crash_log: root.join("crash.log"),
         };

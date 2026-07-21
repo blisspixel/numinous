@@ -5,6 +5,8 @@ pub(crate) enum Program {
     RoomScore,
     Studio,
     Radio,
+    #[allow(dead_code)]
+    WatchAgent,
 }
 
 pub(crate) fn describe(
@@ -22,6 +24,7 @@ pub(crate) fn describe(
         Program::RoomScore => AudioSource::RoomScore,
         Program::Studio => AudioSource::Studio,
         Program::Radio => radio_station.map_or(AudioSource::RoomScore, AudioSource::Radio),
+        Program::WatchAgent => AudioSource::WatchAgent,
     };
     AudioState::new(
         source,
@@ -49,6 +52,10 @@ mod tests {
             (
                 describe(Program::Studio, None, 0.7, false, true, true),
                 "STUDIO: VOL 70%",
+            ),
+            (
+                describe(Program::WatchAgent, None, 0.6, false, true, true),
+                "WATCH AGENT: VOL 60%",
             ),
             (
                 describe(Program::RoomScore, None, 0.45, true, true, true),

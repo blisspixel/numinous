@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::{Journey, Scoreboard};
+use crate::{Journal, Journey, Scoreboard};
 
 const LOCK_RETRIES: usize = 2500;
 const LOCK_SLEEP: Duration = Duration::from_millis(2);
@@ -26,6 +26,7 @@ const LOCK_STALE_AFTER_SECS: u64 = 30 * 60;
 const LOCK_DEAD_PID_GRACE_SECS: u64 = 10;
 const MAX_JOURNEY_FILE_BYTES: u64 = 64 * 1024;
 const MAX_LOCK_FILE_BYTES: u64 = 4 * 1024;
+const MAX_JOURNAL_FILE_BYTES: u64 = 1024 * 1024;
 const MAX_SCOREBOARD_FILE_BYTES: u64 = 1024 * 1024;
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 const MAX_MANAGED_CACHE_ENTRIES: usize = 4096;
@@ -44,6 +45,8 @@ pub struct LocalStatePaths {
     pub scores: PathBuf,
     /// Player-owned local Cairn draft text file.
     pub cairn: PathBuf,
+    /// Player-owned opt-in MCP experience journal.
+    pub journal: PathBuf,
     /// Flat directory of generated radio WAV files.
     pub radio_cache: PathBuf,
     /// App crash diagnostic text file.
@@ -708,12 +711,49 @@ pub fn load_scoreboard_file(path: &Path) -> Scoreboard {
     try_load_scoreboard_file(path).unwrap_or_default()
 }
 
+/// Load a journal file, repairing malformed text through [`Journal::from_text`].
+#[must_use]
+pub fn load_journal_file(path: &Path) -> Journal {
+    try_load_journal_file(path).unwrap_or_default()
+}
+
 fn try_load_journey_file(path: &Path) -> io::Result<Journey> {
     match read_local_text_bounded(path, MAX_JOURNEY_FILE_BYTES) {
         Ok(text) => Ok(Journey::from_text(&text)),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(Journey::default()),
         Err(error) => Err(error),
     }
+}
+
+fn try_load_journal_file(path: &Path) -> io::Result<Journal> {
+    match read_local_text_bounded(path, MAX_JOURNAL_FILE_BYTES) {
+        Ok(text) => Ok(Journal::from_text(&text)),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(Journal::default()),
+        Err(error) => Err(error),
+    }
+}
+
+/// Appends a new record to the player's journal.
+pub fn record_journal_file(
+    path: &Path,
+    timestamp_utc: u64,
+    kind: &str,
+    subject: &str,
+    text: &str,
+    affect: Option<&str>,
+) -> io::Result<()> {
+    let _lock = PersistLock::acquire(path)?;
+    let mut journal = try_load_journal_file(path)?;
+    journal.record(timestamp_utc, kind, subject, text, affect);
+    atomic_write(path, journal.to_text().as_bytes())?;
+    Ok(())
+}
+
+/// Wipes the player's journal.
+pub fn erase_journal_file(path: &Path) -> io::Result<()> {
+    let _lock = PersistLock::acquire(path)?;
+    let _ = std::fs::remove_file(path);
+    Ok(())
 }
 
 fn try_load_scoreboard_file(path: &Path) -> io::Result<Scoreboard> {
@@ -1460,6 +1500,7 @@ mod tests {
             journey: root.join("journey.txt"),
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
+            journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
             crash_log: root.join("crash.log"),
         }
@@ -1472,6 +1513,7 @@ mod tests {
             journey: root.join("journey.txt"),
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
+            journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
             crash_log: root.join("crash.log"),
         };
@@ -1531,6 +1573,7 @@ mod tests {
             journey: relative_root.join("journey.txt"),
             scores: relative_root.join("scores.txt"),
             cairn: relative_root.join("cairn.txt"),
+            journal: relative_root.join("journal.txt"),
             radio_cache: relative_root.join("radio"),
             crash_log: relative_root.join("crash.log"),
         };
@@ -1556,6 +1599,7 @@ mod tests {
             journey: root.join("journey.txt"),
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
+            journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
             crash_log: root.join("crash.log"),
         };
@@ -1800,6 +1844,7 @@ mod tests {
             journey: root.join("journey.txt"),
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
+            journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
             crash_log: root.join("crash.log"),
         };
@@ -1819,6 +1864,7 @@ mod tests {
             journey: root.join("journey.txt"),
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
+            journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
             crash_log: root.join("crash.log"),
         };
@@ -1842,6 +1888,7 @@ mod tests {
             journey: root.join("journey.txt"),
             scores: root.join("radio").join("trance-001.wav"),
             cairn: root.join("cairn.txt"),
+            journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
             crash_log: root.join("crash.log"),
         };
@@ -1878,6 +1925,7 @@ mod tests {
             journey: shared.clone(),
             scores: shared.clone(),
             cairn: root.join("cairn.txt"),
+            journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
             crash_log: root.join("crash.log"),
         };
@@ -1907,6 +1955,7 @@ mod tests {
             journey: root.join("journey.txt"),
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
+            journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
             crash_log: root.join("crash.log"),
         };
@@ -1944,6 +1993,7 @@ mod tests {
             journey: root.join("journey.txt"),
             scores: root.join("scores.txt"),
             cairn: root.join("cairn.txt"),
+            journal: root.join("journal.txt"),
             radio_cache: root.join("radio"),
             crash_log: root.join("crash.log"),
         };

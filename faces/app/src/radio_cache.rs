@@ -558,6 +558,20 @@ impl MediaSource for BoundedMediaSource {
 mod tests {
     use super::*;
 
+    fn isolated_path(name: &str) -> PathBuf {
+        use std::hash::{Hash, Hasher};
+
+        let thread = std::thread::current();
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        thread.id().hash(&mut hasher);
+        thread.name().hash(&mut hasher);
+        std::env::temp_dir().join(format!(
+            "numinous-radio-cache-{}-{:016x}-{name}",
+            std::process::id(),
+            hasher.finish()
+        ))
+    }
+
     fn bundled_radio_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("..")
@@ -633,7 +647,7 @@ mod tests {
 
     #[test]
     fn station_discovery_stops_at_aggregate_work_limits() {
-        let dir = std::env::temp_dir().join("numinous_radio_cache_scan_budget");
+        let dir = isolated_path("scan-budget");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
         for i in 0..3 {
@@ -654,7 +668,7 @@ mod tests {
 
     #[test]
     fn station_tracks_are_bounded_sorted_and_station_scoped() {
-        let dir = std::env::temp_dir().join("numinous_radio_cache_tracks");
+        let dir = isolated_path("tracks");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
         write_wav(&dir.join("trance-002.wav"), 1, 1);
@@ -704,7 +718,7 @@ mod tests {
 
     #[test]
     fn station_tracks_are_sorted_before_the_track_cap() {
-        let dir = std::env::temp_dir().join("numinous_radio_cache_sorted_cap");
+        let dir = isolated_path("sorted-cap");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
         for i in (0..MAX_TRACKS + 3).rev() {
@@ -722,7 +736,7 @@ mod tests {
 
     #[test]
     fn invalid_low_sorted_tracks_do_not_consume_the_track_cap() {
-        let dir = std::env::temp_dir().join("numinous_radio_cache_invalid_low_names");
+        let dir = isolated_path("invalid-low-names");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
         for i in 0..MAX_TRACKS {
@@ -743,7 +757,7 @@ mod tests {
 
     #[test]
     fn duration_uses_frames_for_stereo_tracks() {
-        let dir = std::env::temp_dir().join("numinous_radio_cache_duration");
+        let dir = isolated_path("duration");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
         let path = dir.join("stereo.wav");
@@ -760,7 +774,7 @@ mod tests {
 
     #[test]
     fn load_track_keeps_source_rate_stereo_and_rotates_into_the_broadcast() {
-        let dir = std::env::temp_dir().join("numinous_radio_cache_load");
+        let dir = isolated_path("load");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
         let path = dir.join("mono.wav");
@@ -777,7 +791,7 @@ mod tests {
 
     #[test]
     fn load_track_does_not_amplify_storage_for_high_rate_devices() {
-        let dir = std::env::temp_dir().join("numinous_radio_cache_high_rate");
+        let dir = isolated_path("high-rate");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
         let path = dir.join("mono.wav");
@@ -792,7 +806,7 @@ mod tests {
 
     #[test]
     fn low_rate_tracks_remain_small_at_high_device_rates() {
-        let dir = std::env::temp_dir().join("numinous_radio_cache_output_budget");
+        let dir = isolated_path("output-budget");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
         let path = dir.join("low-rate.wav");
@@ -843,7 +857,7 @@ mod tests {
 
     #[test]
     fn load_track_does_not_wrap_the_end_of_a_live_track() {
-        let dir = std::env::temp_dir().join("numinous_radio_cache_boundary");
+        let dir = isolated_path("boundary");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
         let path = dir.join("mono.wav");
@@ -862,7 +876,7 @@ mod tests {
 
     #[test]
     fn unsupported_wav_files_are_not_playable_tracks() {
-        let dir = std::env::temp_dir().join("numinous_radio_cache_unsupported");
+        let dir = isolated_path("unsupported");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
         let path = dir.join("trance-float.wav");
@@ -887,7 +901,7 @@ mod tests {
 
     #[test]
     fn oversized_files_are_rejected_before_decode() {
-        let path = std::env::temp_dir().join("numinous_radio_cache_oversized.wav");
+        let path = isolated_path("oversized.wav");
         let file = std::fs::File::create(&path).expect("oversized placeholder");
         file.set_len(MAX_AUDIO_BYTES + 1).expect("make sparse file");
 
@@ -900,7 +914,7 @@ mod tests {
 
     #[test]
     fn sample_read_rechecks_file_bounds_on_the_opened_handle() {
-        let dir = std::env::temp_dir().join("numinous_radio_cache_swapped_bounds");
+        let dir = isolated_path("swapped-bounds");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
         let path = dir.join("trance-001.wav");
@@ -919,7 +933,7 @@ mod tests {
 
     #[test]
     fn symphonia_source_enforces_the_opened_file_length_for_its_lifetime() {
-        let path = std::env::temp_dir().join("numinous_radio_cache_swapped_bounds.mp3");
+        let path = isolated_path("swapped-bounds.mp3");
         std::fs::write(&path, b"bounded placeholder").expect("write placeholder");
         assert!(audio_is_bounded(&path));
         let mut source = BoundedMediaSource::open(&path).expect("open bounded source");
@@ -945,7 +959,7 @@ mod tests {
 
     #[test]
     fn sample_read_rejects_bounded_swapped_track_info() {
-        let dir = std::env::temp_dir().join("numinous_radio_cache_swapped_header");
+        let dir = isolated_path("swapped-header");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create dir");
         let path = dir.join("trance-001.wav");

@@ -352,41 +352,21 @@ impl StudioPanel {
         if self.expr.is_none() {
             return;
         }
-        if width < 2 {
-            return;
-        }
         let a = t * TAU;
         let (xmin, xmax) = (-TAU, TAU);
-        let samples: Vec<(usize, f64)> = (0..width)
-            .map(|i| {
-                let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
-                (i, self.curve_value(x, a).unwrap_or(f64::NAN))
-            })
-            .filter(|(_, y)| y.is_finite())
-            .collect();
-        if samples.is_empty() {
-            return;
-        }
-        let ymin = samples.iter().map(|p| p.1).fold(f64::INFINITY, f64::min);
-        let ymax = samples
-            .iter()
-            .map(|p| p.1)
-            .fold(f64::NEG_INFINITY, f64::max);
-        let yspan = (ymax - ymin).max(1e-9);
         let top = (60 * scale) as f64;
-        let plot_h = height as f64 - top - f64::from(24 * scale);
-        if plot_h < 8.0 {
-            return;
-        }
-        let mut previous: Option<(i32, i32)> = None;
-        for &(i, y) in &samples {
-            let sx = i as i32;
-            let sy = (top + (1.0 - (y - ymin) / yspan) * plot_h) as i32;
-            if let Some((px, py)) = previous {
-                raster.line(px, py, sx, sy, '#');
-            }
-            previous = Some((sx, sy));
-        }
+        let _ = numinous_app::studio_render::draw_curve(
+            raster,
+            numinous_app::studio_render::CurveLayout {
+                width,
+                height,
+                top,
+                bottom_margin: f64::from(24 * scale),
+            },
+            xmin,
+            xmax,
+            |x| self.curve_value(x, a),
+        );
     }
 
     #[cfg(test)]

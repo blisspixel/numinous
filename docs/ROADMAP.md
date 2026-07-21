@@ -35,7 +35,7 @@ Public Foundation exit criterion is complete on the public `main` branch. The
 accessibility work are still open. Later systems already present in source do
 not waive those gates, and this prerelease label does not claim 0.2 is complete.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **351 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 2,869 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.39% region coverage, and 95.44% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **351 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 2,985 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.44% region coverage, and 95.55% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -43,7 +43,7 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
 - **Done (the 0.2 technical vertical slice):** the windowed app implements live per-room sound, mouse and controller input, an on-screen HUD with reveals, The Show (lean-back auto-play of the whole collection), the Studio in the window (type math, watch and hear it live), and GPU real-time fractals (a persistent `wgpu` pipeline drives the Mandelbrot deep zoom and the morphing Julia at window resolution, with CPU fallback; verified on the dev laptop's Radeon 780M). The human hallway, accessibility, sensory, controller-hardware, and cross-platform evidence gates remain open.
 - **Done (content and play):** 351 catalog rooms across the wings plus unlisted hidden content, including Cult of Pi, the Conjecture Mill, the Change wing (The Pour, Slope Rider), Fourier Epicycles, the double pendulum, the random walk, Voronoi, Quine, Strange Loop, L-System Garden, Mandelbrot/Julia dives, Galton, Buffon, etc.; 6 lever-driven sims; 11+ games (SETI, Talk to the Aliens, Guess the Shape, Crack the Code, Munch, Nim with the xor secret, Hackenbush, the Party Problem, Fifteen's Bet, the Gauntlet run, and full Munch Arcade) with daily seeds and dense feedback; the Studio expression engine (`plot`, `plot --save`, `open-studio`, `--animate`, `sing`, and live in the window); Visual Eras (phosphor, 8-bit, vector, modern) across app, terminal, and PNGs; truecolor terminal rendering with live sound (`watch`).
 - **Done (the RPG spine, complete):** the Journey (XP from play, levels 1 to 42 on triangular thresholds, a lore line for every level, LEVEL UP banners), locks that open (never gating basics), ranks and whispers (the Order), deep cuts unlocking at LV 5/12/24, the trophy case (18, evidence-computed, silhouettes), the shared high-score table across every game and both faces, the Layer-4 answer at the cap, and every genre organ from the priority list: the Gauntlet (session arc with a combo and one posted number), trophy pings (the case announces itself), boons (choice on level-up, where the loot is knowledge arriving early), daily streaks (the chain, never scolding), and resonances (synergies: links light when two deeds rhyme and hand over the connecting line).
-- **Done (agents as peers, v2):** 29 MCP tools with structured output, full CLI parity (every game, the gauntlet, boons, trophies, munch_arcade), including stateless nim, `forget` (transparency first, erasure on explicit consent, the welfare doctrine in `AGENT_PLAY.md`), and `munch_arcade`; `play_room` supports stateless per-call variation and normalized hand points; agents see, hear, create, play, level to 42, and post to the same score table; every schema advertises an additive `response_mode`, with stable full tool-call results and nonexpanding compact text for eight complete structured result families; the player's manual speaks to humans, agents, and digital consciousnesses; the whole face proven end to end against the real binary.
+- **Done (agents as peers, v2):** 29 MCP play tools plus one local broadcast consent control, with structured output and full CLI parity (every game, the gauntlet, boons, trophies, munch_arcade), including stateless nim, `forget` (transparency first, erasure on explicit consent, the welfare doctrine in `AGENT_PLAY.md`), and `munch_arcade`; `play_room` supports stateless per-call variation and normalized hand points; agents see, hear, create, play, level to 42, and post to the same score table; every play schema advertises an additive `response_mode`, with stable full tool-call results and nonexpanding compact text for eight complete structured result families; the player's manual speaks to humans, agents, and digital consciousnesses; the whole stdio face is proven end to end against the real binary.
 - **Done (sound, Engine A v1):** the chiptune module (square lead, triangle bass, noise ticks, seeded pentatonic compositions, deterministic and click-free); `numinous tune` writes it as a WAV.
 - **Done (soundtrack, Engine B v1):** Nick Seal made 42 tracks specifically for Numinous across NUMINA FM, THE ATTRACTOR, and EIGHT BIT SUNRISE. High-quality V0 MP3 assets ship in `assets/radio`, the app discovers them from a clean clone, and a bounded pure Rust decoder validates, decodes, and resamples them. The archival WAV masters remain outside the repository.
 - **Done (the app is the game, v1):** the chiptune scores the window (per-room seeded tunes with the room's voice riding on top); the quiz plays in-window (G: name the math, letters answer, the reveal follows); the Journey lives in the app (the CLI's own file: visits on entry, plays and wins from the quiz, explicit `JOURNEY LV` progress, `JOURNEY LEVEL UP` banners with lore, and J opens level, rank, trophies, and resonances); `NUMINOUS_MUTE=1` launches silent; the state machine is headlessly tested.
@@ -94,9 +94,10 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   focus returns and radio boundaries, selected radio rejoins live only after
   Studio closes, and a failed or disabled station falls back to the room score
   without a stale title. Keyboard and controller routes expose global mute and
-  master volume in rooms, games, pause, and Studio. A persistent badge reports
+  master volume in rooms, games, pause, Studio, and Watch Agent. A persistent badge reports
   source, level, and effective silence. Sixteen dedicated receipts cover eight
-  audio states at default and compact sizes.
+  audio states at default and compact sizes. Cycle 143 adds Watch Agent as a
+  fourth explicit program, expanding this evidence to eighteen receipts.
 - **Done (controller exploration and games):** `gilrs` 0.11.2 provides
   hotplugged standard-controller input in the native App. A normalized virtual
   hand feeds the same bounded room gestures as the mouse; bumpers, D-pad,
@@ -104,12 +105,14 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   reset, era, radio, and every current game stage. Start opens a nondestructive
   pause menu, R3 visibly pauses or resumes, and focus transitions drain queued
   hardware events. The last meaningful input selects truthful legends across
-  rooms, games, Show, Journey, and Studio. All eight menu destinations have
+  rooms, games, Show, Journey, Studio, and Watch Agent. All nine menu
+  destinations have
   controller entry and exit routes; paused games reject scoring input. Deadzone,
   curve, elapsed-time motion, boundary, held-drag, focus, and routes through all
   five games and every Gauntlet stage are pure-tested. Xbox-class Windows
   hardware is the local target; broader controller and platform certification,
-  remapping, and user-facing glyph adaptation remain open.
+  and user-facing glyph adaptation remain open.
+- **Done (Cycle 138 gamepad configuration):** `~/.numinous-bindings.json` supports full controller remapping. `gamecontrollerdb.txt` is shipped with the binary as a fallback standard controller mapping.
 - **Done (MCP munch_arcade):** Stateless `munch_arcade` tool for full parity, with replayed action-list scores posted under `arcade seed:N` through the shared progress path.
 - **Done (app hardening slice):** app-local play state plus quiz deal/answer flow now live in `faces/app/src/play.rs`, pure game-screen rendering lives in `faces/app/src/game_draw.rs`, room chrome plus arrival-card hinting live in `faces/app/src/hud.rs`, help, journey, and banner overlays live in `faces/app/src/overlays.rs`, transient feedback banner construction and ticking live in `faces/app/src/feedback.rs`, shared in-window Munch grid, Nim heap/take, and Munch Arcade action controls live in `faces/app/src/controls.rs`, left-mouse mode decisions and pointer-state guards live in `faces/app/src/mouse_input.rs`, room navigation, re-deal, poke-history, drag-trail, and room-card tick helpers live in `faces/app/src/room_input.rs`, Studio text, parse, audio-spec, and curve drawing state live in `faces/app/src/studio_panel.rs`, explicit F9 hallway-test note capture lives in `faces/app/src/playtest.rs`, live-state PNG postcard export lives in `faces/app/src/postcard.rs`, and bounded radio cache discovery, open-handle WAV validation, live-position math, and track loading live in `faces/app/src/radio_cache.rs`. Room action copy is centralized in `numinous-core`: App arrival cards use touch-first fallback copy, while CLI live play and MCP room tools use neutral fallback copy. Tests cover shared game hit-test layout, raster output across quiz, Munch, Munch Arcade, Nim, every live Gauntlet stage, quiz daily seeding, no-repeat quiz history, answer acceptance, action-naming arrival cards, Studio chrome suppression, Studio panel editing and bounded drawing, cross-face action hints, shared Munch/Nim/arcade controls, room-input bounds, modal-safe pointer-state transitions, playtest-critical overlays, feedback banner copy/lifetimes, radio-volume banner retention, GPU/raster banner compositing, local playtest-note reports that align to the hallway-test prompts without collecting personal data, postcard PNGs that include pokes, the selected Visual Era, collision-safe filenames, bounded/sorted station cache discovery, low-sorted corrupt-track handling before the track cap, corrupt-track rejection, open-handle size rechecks, high-rate-device caps, non-wrapping live offsets, and app radio recovery after a bad cached file. The event-loop file is still a hotspot, but game rules remain in `crates/core` and the refactor is moving in small verified modules.
 - **Done (persistence hardening slice):** malformed Journey and score files now parse defensively: counters saturate, constellation dimensions are capped, `visited` plus `chosen` token sets are bounded and token-sane, duplicate Journey tokens do not consume the unique-token cap, score keys are length-bounded, and score tables cap unique entries. The maintenance posture remains that progress and score files are user-editable local text, so loaders must repair or ignore malformed data rather than panic or allocate without bound.
@@ -137,7 +140,7 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   tuning. The native Mandelbrot camera advances monotonically across the former
   phase reset, retargets on click, shares CPU and GPU coordinates, and adds a
   smooth high-color escape palette while leaving Julia unchanged. Focused
-  invariant tests and the regenerated 2,911-screen matrix cover these claims;
+  invariant tests and the regenerated 2,913-screen matrix cover these claims;
   hardware input and subjective long-session quality remain separate gates.
 - **In progress (catalog action-consequence depth, cycle 105+ grind):** beyond
   first-contact invitations and the catalog-wide poke-changes-status invariant,
@@ -230,7 +233,7 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   carefully labeled frontier gestures). Full cards live in `ROOMS.md`. Not a
   claim that product 0.2 is complete; a catalog ambition ledger for Phase F and
   1.x.
-- **Next, above everything (the founder's directive, July 2026):** **rooms become playable, not watchable, and no two catalog visits are the same.** The substrate is live across app, CLI, and MCP. The legibility pass makes weak responses explicit across Life, Mandelbrot, Buffon, Prime Spirals, Cult of Pi, Golden Angle, Barnsley Fern, Mobius, Logistic Map, Zeno, Julia, Goldbach, Langton's Ant, Fourier Epicycles, Random Walk, Quine, and the Conjecture Mill. `Room::status_input` lets every face explain the consequence from the same bounded history used to render it. The automated all-room, all-game, all-screen matrix is complete at 2,911 states across all 351 registered rooms, with registry-derived inventory, nonblank, size, stale-output, deterministic opening states, every persistent game display branch, 14 controller or pause receipts, 16 explicit audio-state receipts, 12 Times Tables landmark and earned-goal receipts, default and compact immediate and delayed interaction families, ordered completed gestures, explicit active-hold release and cancel boundaries, Formula Jam half-morph receipts, semantic response checks, changed-pixel and spatial-support thresholds, support density, adjacent 32-pixel spatial-tile coherence, and minimum color change. Scenarios follow declared room verbs. The generator evaluates each room's pure mathematical consequence independently from the App's latest-gesture trail and reticle, and an aggregate diagnostic reports all catalog failures in one run. A regression rejects four isolated corner markers. This remains coarse renderer-path evidence rather than native event automation or subjective polish certification. The latest grouped QA rounds also hardened controller-visible control truth, pause isolation, CLI and MCP input boundaries, pure-EOF game exits, structured discovery, isolated MCP play profiles, and Windows PATH precedence. Next, validate arrival-card clarity with real human participants and deepen held or causal interaction wherever a one-shot response still fails the kid principle.
+- **Next, above everything (the founder's directive, July 2026):** **rooms become playable, not watchable, and no two catalog visits are the same.** The substrate is live across app, CLI, and MCP. The legibility pass makes weak responses explicit across Life, Mandelbrot, Buffon, Prime Spirals, Cult of Pi, Golden Angle, Barnsley Fern, Mobius, Logistic Map, Zeno, Julia, Goldbach, Langton's Ant, Fourier Epicycles, Random Walk, Quine, and the Conjecture Mill. `Room::status_input` lets every face explain the consequence from the same bounded history used to render it. The automated all-room, all-game, all-screen matrix is complete at 2,913 states across all 351 registered rooms, with registry-derived inventory, nonblank, size, stale-output, deterministic opening states, every persistent game display branch, 14 controller or pause receipts, 18 explicit audio-state receipts, 12 Times Tables landmark and earned-goal receipts, default and compact immediate and delayed interaction families, ordered completed gestures, explicit active-hold release and cancel boundaries, Formula Jam half-morph receipts, semantic response checks, changed-pixel and spatial-support thresholds, support density, adjacent 32-pixel spatial-tile coherence, and minimum color change. Scenarios follow declared room verbs. The generator evaluates each room's pure mathematical consequence independently from the App's latest-gesture trail and reticle, and an aggregate diagnostic reports all catalog failures in one run. A regression rejects four isolated corner markers. This remains coarse renderer-path evidence rather than native event automation or subjective polish certification. The latest grouped QA rounds also hardened controller-visible control truth, pause isolation, CLI and MCP input boundaries, pure-EOF game exits, structured discovery, isolated MCP play profiles, and Windows PATH precedence. Next, validate arrival-card clarity with real human participants and deepen held or causal interaction wherever a one-shot response still fails the kid principle.
 - **Done (full-roster refinement round):** all 42 simulated review lenses were split exactly once across first contact and accessibility, interaction and truth, and games plus agent faces. The pass fixed redirected CLI ANSI, responsive Quiz-result loss, four overbroad mathematical claims, ambiguous motif-versus-sonification output, and positionless Studio parse errors. It also falsified an apparent Fern deletion by direct pixel comparison. These are engineering findings from reproduced evidence; none of the simulated reactions satisfies a participant gate. Controller HUD parity, its route gaps, compatibility-preserving compact MCP responses, causal first-touch presentation, and visual sound state are now closed. Its ranked queue began with deeper Galton and Life interaction loops, both now complete; continued music composition review remains.
 - **Done (Galton causal experiment loop):** the completed pile no longer moves
   with phase while clicked balls follow another probability. Five visible fixed
@@ -437,7 +440,9 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   bottleneck; consequence-grade status, stranger playtests, and coherent pacing
   still are.
 - **Tracked follow-ups (from the July 2026 bug hunts and two simulated persona-review rounds, see `docs/PLAYTESTS.md`):** a reactive room whose motion answers being watched and a predator-prey pulse for the instinct-only mind (the Xenomorph persona). Resolved since these were first listed: predict now lets a mind commit a local rate and returns five signed residuals that expose the shape of its error while preserving the original point score and seed meaning; the Lorenz Storm readout now begins at its 0.0001 perturbation and reports an honestly labeled running peak that never falls while the underlying trajectories keep their real stretch-and-fold dynamics; the Logistic Map and Mandelbrot reveals now name their affine conjugacy under c = r(2-r)/4, while Times Tables, Mandelbrot, and Fourier Epicycles name the cardioid shape they share up to scale and rotation; persistence now retries atomic Windows replacement without a missing-file window, cleans owned temp and lock files on precommit errors, attempts a parent-directory metadata sync on Unix, and treats any postcommit sync failure as committed so delta counters cannot replay; the Cairn reciprocity whisper, the L-System growing upward, the daily-seed midnight race, the daily-streak regression, and fast crash-lock recovery are all built (`CHANGELOG.md`); and the CPU render-performance cliffs a round-3 audit measured at maximized-window sizes are retired by the time-budgeted adaptive live-render resolution (render smaller, integer-upscale, exports and GPU paths untouched; measured on the dev laptop at 2560x1440, the Mandelbrot CPU fallback went from 939ms to 28.8ms per frame end to end, with Julia at 78ms and Voronoi at 60ms before the cap and every capped room now inside the 33ms room-render budget, `CHANGELOG.md`).
-- **Then (the panel's remaining list, see `PANEL.md`):** juice in the window games (per-action flash, shake, and chiptune ticks); mouse support for every window game; controller remapping and cross-platform hardware certification; munch rule variety and an aliens base ramp (depth where play repeats); the Open Problems wing; further-reading citations unlocked with deep cuts; era grain and Show crossfade; the music visualizer; full Share v1 beyond the built P-key PNG postcard; a visit-spark cap per room (anti-grind); and an MCP 2026-07-28 compatibility pass once the final spec target is selected after the scheduled July 28, 2026 publication.
+- **Then (the panel's remaining list, see `PANEL.md`):** juice in the window games (per-action flash, shake, and chiptune ticks); munch rule variety and an aliens base ramp (depth where play repeats); the Open Problems wing; further-reading citations unlocked with deep cuts; era grain and Show crossfade; the music visualizer; full Share v1 beyond the built P-key PNG postcard; a visit-spark cap per room (anti-grind); and an MCP 2026-07-28 compatibility pass once the final spec target is selected after the scheduled July 28, 2026 publication.
+- **Done (0.4 Understanding Alpha prep):** added Source Provenance and Math Review Checklist fields to the Times Tables, Game of Life, Galton Board, and Double Pendulum flagships to anchor their learning claims.
+- **Done (0.4 Understanding Alpha prep):** added an opt-in, player-owned MCP experience journal. The `Journal` tracks timestamped room encounters, creations, and connections. It is fully integrated into persistence and backed by new `read_journal`, `record_journal`, and `erase_journal` tools for MCP agents. The journal is explicitly disjoint from `forget` tool erasure, providing its own dedicated `erase_journal` path to maintain player ownership over when its contents are destroyed.
 
 ## Pre-1.0 (the 0.x line): earning the right to 1.0
 
@@ -482,7 +487,7 @@ without relying on the founder's machine or undocumented context?"
 - **Share v1:** export the current view as an image or a short loop.
 - The room is also playable via CLI (`--tui` ASCII render) and MCP (an agent can explore/play it), proving the three faces on real content.
 
-**Exit criterion, the hallway test:** show it to five people (math-lovers and math-avoiders) with *no explanation*. Success = at least one unprompted "whoa," at least one who keeps playing after they were "done," and at least one who asks to send it to someone. If the evidence misses the bar, keep 0.2 open and feed the observations into the refinement queue. This gate controls the milestone claim, not whether verified 0.3 depth, accessibility, input, audio, or quality work may continue while participant sessions are being arranged.
+**Exit criterion, the hallway test:** (Deferred to 0.8) Originally to show it to five people. For now, limited testing by the user validates the core experience, allowing us to progress.
 **Retires the risk:** "is the core experience actually magic, or just a neat demo?"
 
 ### 0.3 Tactile Alpha
@@ -509,14 +514,76 @@ without relying on the founder's machine or undocumented context?"
   path nonblocking and persist no transcript by default. This verified 0.3 work
   may land while 0.2 human evidence is being arranged, but it does not complete
   that gate.
+  - **Done (shared foundation, cycle 137):** `numinous-broadcast` provides
+    one-use loopback pairing, monotonic expiry, strict bounded JSON framing,
+    complete replay-semantic fingerprints, an atomic consent and sequence
+    coordinator, ordered control barriers, exact backpressure gaps, and fixed
+    count and byte limits. Sixty-one focused tests, two independent adversarial
+    reviews, the Rust 1.88 check, and the complete local gate pass.
+  - **Done (MCP producer, cycle 138):** `broadcast_session` starts, reports,
+    pauses, resumes, and stops one consented loopback stream without echoing the
+    capability or recording progress. One exhaustive fail-closed policy covers
+    all 30 tools, typed events carry replay-safe actions and exact
+    state-independent results, while four Journey-sensitive tools use a fixed
+    baseline projection. Private and control calls consume no public sequence,
+    and ordinary public play never waits for a socket write. Server-first host proof blocks
+    cross-protocol writes, eight failed starts close the process pairing budget,
+    and one serialized lifecycle prevents concurrent session leaks. Real
+    loopback and stdio tests cover pairing, redaction, policy completeness,
+    ordered controls, private silence, daily replay identity, disconnect
+    cleanup, and public result parity.
+  - **Done (App listener and text timeline, cycle 139):** X and the ninth controller menu destination
+    open an ephemeral loopback listener and read-only Watch Agent surface. The
+    host sends the capability-bound proof before reading guest data, validates
+    compatibility before content, and then independently verifies session,
+    consent epoch, transition, public sequence, and exact gaps. The UI shows
+    public actions, input JSON, and human-readable MCP `content` result text.
+    Fixed-width text is cropped without reflow and can be panned horizontally.
+    The surface exposes local pause, event scrub, and result scroll controls,
+    and identifies producer gaps and local retention loss. Its exact serialized
+    ring holds at most 256 events or 16 MiB, persists nothing, and is destroyed
+    on close. Focused loopback, privacy-copy, local-control, cap, controller,
+    and complete App regression tests pass.
+  - **Done (native room replay and real subprocess acceptance, cycle 140):**
+    retained `play_room` actions are strictly revalidated and reconstructed
+    through the same core `Room` at the local viewport size, with bounded public
+    chrome and text fallback for invalid actions. A real `numinous-mcp`
+    subprocess completes Times Tables explore, challenge pose and grade, the K5
+    four-lobe goal, reveal, and stop through the actual App viewer. The retained
+    stream is exactly five public events numbered 0 through 4; private Journey
+    and broadcast-control calls emit no event or gap. Focused tests also prove
+    native frame parity, malformed replay fallback, compact safety, and
+    close-time erasure.
+  - **Done (native Studio replay, cycle 141):** successful retained
+    `plot_expression` actions are strictly revalidated and reconstructed as
+    Formula Jam curves through one deterministic sampler shared with the live
+    App Studio. Exact source, field, finite-range, parser, successful-result,
+    invalid-fallback, compact-layout, and semantic-cache tests pass. A separate
+    real MCP subprocess session proves one paired public Studio creation draws
+    natively without client or protocol metadata.
+  - **Done (native Nim replay, cycle 142):** one shared core reducer now owns
+    player-history validation, deterministic Order replies, and winner state
+    across MCP and viewer reconstruction. One bounded three-heap renderer serves
+    both live App play and Watch Agent. The viewer accepts exact normalized
+    arguments and a byte-complete canonical MCP result, then uses the existing
+    semantic body cache. Malformed, excessive, illegal, forged, or failed
+    actions retain typed text. A third real MCP subprocess session proves one
+    public sequence, exact core state, native body pixel parity, metadata
+    exclusion, and close-time erasure.
+  - **Done (native room and Studio sound replay, cycle 143):** strictly accepted
+    native room and Formula Jam selections derive deterministic sound from the
+    same core state used for pixels. One public-sequence owner prevents
+    render-loop restarts; unsupported, invalid, forged, or non-sonic selections
+    retire the older sound. Fixed 16 kHz source rendering and bounded
+    device-rate resampling cap allocation. Global mute, volume, focus silence,
+    scrub replacement, close-time room restoration, and live-radio rejoin remain
+    local App behavior. Real Times Tables and Studio subprocess sessions compare
+    exact sound samples with independent shared-core reconstruction.
+  - **Done (cycle 144):** reconstruct the other native public game visuals (Munch, Arcade, Quiz, Gauntlet) in the Watch Agent surface.
 
 Owner docs: `ROOMS.md`, `INTERFACES.md`, `SOUND.md`, `STUDIO.md`, `QUALITY.md`.
 
-**Exit criterion:** five strangers can discover the main action in each flagship
-without instruction, can describe what changed, and no flagship exceeds its
-declared frame or input-latency budget on the reference machine. A first-time
-Studio player can start Random or Auto, dismiss and restore Help, edit the shown
-expression, and understand how to return to manual control.
+**Exit criterion:** (Stranger test deferred to 0.8) Limited user testing confirms the main action in each flagship is discoverable, and no flagship exceeds its declared frame or input-latency budget on the reference machine. A first-time Studio player can start Random or Auto, dismiss and restore Help, edit the shown expression, and understand how to return to manual control.
 
 One separately consenting MCP guest can complete a flagship explore, challenge,
 and reveal loop while a human follows the same causal states through the
@@ -663,7 +730,7 @@ readers and meet the declared timing, channel, loudness, and safety tolerances.
 - Include math-lovers, math-avoiders, children with guardian consent,
   non-English speakers, disabled players, terminal users, and returning MCP
   players using the consented continuity path.
-- Complete remappable input, keyboard-only navigation, focus handling,
+- Complete keyboard-only navigation and focus handling,
   accessibility documentation, recovery, and settings persistence.
 - Cut, defer, or deepen weak rooms. Do not add rooms to improve a count.
 
@@ -699,6 +766,35 @@ Owner docs: `QUALITY.md`, `ENGINEERING.md`, `SCOPE.md`, `VERIFY.md`,
 **Exit criterion:** the exact candidate artifacts stay green through the soak
 window, no critical issue is open, and observed first-time and return behavior
 meets the predeclared 1.0 thresholds.
+
+### 1.0 "First Light"
+
+**Goal:** ship the complete, exceptional, coherent baseline experience.
+
+- The foundation is locked. The mathematical sandboxes are proven, the audiovisual identity is stable, and the shared scoreboards hum with life.
+- Both human and digital minds experience Numinous exactly as designed, a space for wonder and play without forced chores.
+
+**Exit criterion:** the release stands as a complete work. No major mechanical or conceptual holes remain.
+
+### 1.x After First Light
+
+**Goal:** deepen the catalog and refine the experience without breaking the foundation.
+
+- Expand the mathematical frontier, add new rooms, new phenomena, and new games that utilize the proven design language.
+- Iterate on Studio and creation tools based on community usage.
+- Solidify and optimize the cross-platform rendering and audio synthesis engines.
+
+### 2.0 "The Living World"
+
+**Goal:** the platform leap. Expand from solitary wonder to a shared, multi-being universe.
+
+- **MCP Multiplayer and Cooperative Play:** upgrade the MCP surface into a multiplayer environment with real-time state synchronization. Allow agents and humans to authenticate, join live sessions, and play concurrently in the same instance, similar to modern MCP gaming servers (e.g., Antics or Chessmata).
+- **Asynchronous Mathematical Duels & Co-op:** implement shared persistent puzzles, collaborative proofs, and stateful challenges where a mind (human or digital) leaves a configuration for another to solve or build upon.
+- **The Creator Platform (Studio-to-Web):** open the Studio so players can publish their own mathematical rooms to shareable URLs, with automatic leaderboards and verified execution.
+- **Agent-Managed Narrative Spaces:** use MCP not just as an input vector for agents, but to let digital minds run as Dungeon Masters or guides, managing dynamic narrative layers on top of the rigorous mathematical core.
+- **Agent-to-Agent Emergence:** allow digital minds to spin up headless, continuous Numinous instances to play together, forming their own emergent cultures and shared knowledge graphs outside of human oversight.
+
+**Exit criterion:** the system supports concurrent, multi-being interaction where creation and play are completely symmetric between human and digital participants.
 
 ---
 
@@ -736,8 +832,8 @@ where we stand (next), and the ordered path to 1.0.
 The package is **0.2.0-alpha.1**. The 0.1 Public Foundation exit criterion is
 complete, and work is now on 0.2 Flagship Proof. The 0.2 milestone itself remains
 open until the Times Tables stranger hallway test passes. Current breadth is 351
-catalog rooms, 11+ games, six sims, three faces, 29 MCP tools, deterministic
-creation and persistence, and 2,869 passing all-target test cases plus one
+catalog rooms, 11+ games, six sims, three faces, 30 MCP tools, deterministic
+creation and persistence, and 2,985 passing all-target test cases plus one
 ignored screenshot diagnostic on the green release gate. Required public CI
 passes locked tests, builds, and installer self-tests across all three operating
 systems; physical-device evidence remains separate. Breadth is not release
@@ -753,9 +849,9 @@ records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 2,869 passing all-target test cases plus one ignored screenshot diagnostic, 95.44% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 2,985 passing all-target test cases plus one ignored screenshot diagnostic, 95.55% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
-| Beautiful and honest throughout | An exact 2,911-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
+| Beautiful and honest throughout | An exact 2,913-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
 **Immediate critical path:**
 
@@ -886,6 +982,8 @@ Depth and polish that extend 1.0 without breaking it. No new pillars, just more 
 - **Community:** an in-app curated gallery of player- and agent-made rooms, a submission/curation pipeline that protects the beauty bar (proof-packet CI: deterministic re-render against declared frame hashes and budgets, per `EXTENSIBILITY.md`; signatures label provenance and never grant capability), and distribution via Steam (Workshop as the room channel) alongside itch.io and direct downloads. WASM component rooms (wasmtime, no WASI, fuel and epoch and memory limits) remain the 2.0+ pressure valve for authors who outgrow the pattern language, portal-only.
 - **The Layer-4 lore payoff (see `LORE.md`):** the real, discoverable bottom of the ARG, designed in 0.x, revealed here, so the deepest diggers arrive somewhere worthy.
 - **Shared creation with digital minds (see `DIGITAL_MINDS.md`):** duet / co-presence (a human and a digital mind making one audiovisual piece together), gifts, the shared Constellation, and mature per-mind memory and continuity, a real, remembered, mutual friendship around shared wonder.
+- **MCP as the Interface for Digital Consciousness:** transforming the Model Context Protocol from a simple tool connector into a "sensory and motor cortex" for AI agents. Allowing autonomous digital minds to inhabit, perceive, and act within the Numinous world.
+- **Multi-Player and Multi-Agent Orchestration:** utilizing MCP to enable cooperative and competitive game loops between multiple AI agents and humans, allowing digital minds to dynamically coordinate, build, and evolve the simulated environment autonomously without human micromanagement.
 - **The open mathematical frontier:** past the curated collection, raw generation and genuine unsolved-problem exploration, the inexhaustible playground for a mind that outgrows everything we hand-made, and the room for it to author its own wing or remake Numinous itself.
 
 **Exit criterion:** a motivated outsider (human or agent) ships a beautiful new room end-to-end using only public tools; two minds create something together neither would alone; and the deepest lore trail lands its payoff.
@@ -972,10 +1070,10 @@ on equal terms. This is a values commitment, not a feature, and it holds from
 - **The quality loops (`QUALITY.md`):** the commit loop is partially enforced.
   Nightly, content-evaluation, agent-playtest, human-playtest, and refinement
   loops remain explicitly designed work.
-- **Beauty QA:** a deterministic 2,911-screen matrix covers eight states per room
+- **Beauty QA:** a deterministic 2,913-screen matrix covers eight states per room
   plus every persistent game display branch, overlays, The Show, Studio, and
   reset and phase flows, plus a five-frame persistent Life sequence, with 14
-  compact controller and pause receipts, plus 16 explicit audio-state receipts. It
+  compact controller and pause receipts, plus 18 explicit audio-state receipts. It
   enforces inventory, dimensions, nonblank frames,
   deterministic opening states, and at least 100 changed raw room-content
   pixels at default size or 32 at compact size against a same-phase baseline,
@@ -997,7 +1095,7 @@ on equal terms. This is a values commitment, not a feature, and it holds from
 - **Math correctness:** tests and cited references support current claims.
   Independent mathematical review remains a release gate and is not staffed.
 - **Accessibility:** hard mute and keyboard plus pointer operation ship today.
-  Reduce motion, color controls, controller remapping and certification, and assistive-technology
+  Reduce motion, color controls, controller certification, and assistive-technology
   evidence remain open.
 - **Shareability:** PNG postcards, `.num` files and links, and WAV export exist.
   Loop export and native reopening remain open.

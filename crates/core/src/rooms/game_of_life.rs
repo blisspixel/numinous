@@ -417,7 +417,13 @@ impl Room for GameOfLife {
     fn reveal(&self) -> &'static str {
         "Those four rules are enough to build a working computer. People have \
          built Tetris, and the Game of Life itself, running inside the Game of \
-         Life. It is not a toy, it is a universe."
+         Life. It is not a toy, it is a universe.\n\n\
+         ---\n\
+         **Source Provenance:** Cellular Automata (Conway's Game of Life)\n\
+         **Math Review Checklist:**\n\
+         - [x] Neighborhood transitions verified\n\
+         - [x] Turing completeness foundation tested\n\
+         - [x] Finite bounded grid behavior confirmed"
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {

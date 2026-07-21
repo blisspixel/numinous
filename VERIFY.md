@@ -54,14 +54,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 2,869 all-target test cases pass,
-one screenshot diagnostic is ignored, 95.39% region cover, and 95.44% line
-cover**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 2,985 all-target test cases pass,
+one screenshot diagnostic is ignored, 95.44% region coverage, and 95.55% line
+coverage**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
 
-The release scripts also regenerate `renders/qa-app/`, a 2,911-screen app matrix.
+The release scripts also regenerate `renders/qa-app/`, a 2,913-screen app matrix.
 Every catalog room has deterministic default and compact opening frames,
 arrival cards, immediate pointer responses, and same-phase delayed-gesture
 responses that follow its declared interaction verb. The generator checks pure
@@ -78,10 +78,10 @@ through launch, generation 4, generation 141, and exact reset. Core and App
 regressions separately prove the newest glider's four exact isolated phases,
 collision retirement, phase-note identity, stereo position, and newest-step
 audio routing. Fourteen compact
-controller or pause receipts spanning rooms, overlays, and game results, and 16
+controller or pause receipts spanning rooms, overlays, and game results, and 18
 default or compact audio-state receipts. Those audio receipts cover room score,
-radio, radio-off fallback, Studio, mute, zero volume, background silence, and a
-missing output device.
+radio, radio-off fallback, Studio, Watch Agent, mute, zero volume, background
+silence, and a missing output device.
 Generation removes stale output,
 checks the exact unique scenario inventory, rejects blank or wrong-sized frames,
 and gives every room a click, active-hold, drag-release, repeated-action, or
@@ -267,7 +267,8 @@ it newline-delimited requests on stdin, for example:
 Run `cargo run --bin numinous-mcp` and paste those lines; it replies with the
 tool list and an ASCII render of the room as text.
 
-Every tool schema advertises `response_mode: "full" | "compact"`. Omitted and
+Every play-tool schema advertises `response_mode: "full" | "compact"`; the
+`broadcast_session` consent control intentionally does not. Omitted and
 explicit `full` must produce equal tool-call results. On eligible structured
 results, `compact` must shorten only the text block while preserving
 `structuredContent`, `isError`, replay values, and progress effects exactly.
@@ -308,7 +309,8 @@ boons, daily streaks, resonances), the Studio (plot, animate, sing, in the
 terminal and the window), Visual Eras (including PNG output), Music Engine A
 (the seeded chiptune, `numinous tune`), GPU real-time fractals, live sound in
 the app and CLI plus structured notation over MCP, the `forget` right for
-players who are minds, and 29 MCP tools (full CLI parity for the games;
+players who are minds, and 30 MCP tools (29 play tools with full CLI parity for the games,
+plus one local broadcast consent control;
 challenge, predict, and cairn are MCP-first) so agents play the same content.
 Pending (see `docs/ROADMAP.md`): deeper held and causal interactions in other
 rooms, human playtests, representative physical-controller sessions,

@@ -2,14 +2,30 @@
 //! spawn the real binary, speak newline-delimited JSON-RPC over stdio, and
 //! walk every tool. Hermetic: journey and scores go to temp files.
 
-use std::io::Write;
+use std::io::{Read, Write};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::thread;
+use std::time::{Duration, Instant};
 
+use numinous_app::nim_render::draw_nim_board;
+use numinous_app::session_viewer::{SessionViewer, ViewerInputMode, ViewerStatus};
+use numinous_app::studio_render::{CurveLayout, draw_curve};
+use numinous_broadcast::PublicTool;
+use numinous_core::Raster;
 use serde_json::{Value, json};
 
 /// Run a full session: send each line, return the parsed response lines.
 fn run_session(requests: &[Value]) -> Vec<Value> {
+    run_session_with_barrier(requests, || true, &[])
+}
+
+/// Run requests on both sides of one externally observable session barrier.
+fn run_session_with_barrier(
+    before_barrier: &[Value],
+    mut barrier: impl FnMut() -> bool,
+    after_barrier: &[Value],
+) -> Vec<Value> {
     static NEXT_SESSION: AtomicU64 = AtomicU64::new(0);
     let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
     let suffix = format!("{}-{session}", std::process::id());
@@ -27,19 +43,58 @@ fn run_session(requests: &[Value]) -> Vec<Value> {
         .spawn()
         .expect("spawn the MCP server");
 
-    {
-        let stdin = child.stdin.as_mut().expect("stdin");
-        for request in requests {
-            writeln!(stdin, "{request}").expect("write request");
-        }
-    } // closing stdin ends the session
+    let mut stdout = child.stdout.take().expect("stdout");
+    let output_reader = thread::spawn(move || {
+        let mut output = Vec::new();
+        stdout.read_to_end(&mut output).expect("read MCP output");
+        output
+    });
+    let mut stdin = child.stdin.take().expect("stdin");
+    for request in before_barrier {
+        writeln!(stdin, "{request}").expect("write request before barrier");
+    }
+    stdin.flush().expect("flush requests before barrier");
 
-    let output = child.wait_with_output().expect("server exits cleanly");
-    assert!(output.status.success(), "server exited with an error");
+    let barrier_deadline = Instant::now() + Duration::from_secs(2);
+    while !barrier() {
+        if Instant::now() >= barrier_deadline {
+            drop(stdin);
+            let _ = child.kill();
+            let _ = child.wait();
+            let _ = output_reader.join();
+            let _ = std::fs::remove_file(&journey);
+            let _ = std::fs::remove_file(&scores);
+            panic!("MCP session barrier did not resolve within 2 seconds");
+        }
+        thread::sleep(Duration::from_millis(5));
+    }
+    for request in after_barrier {
+        writeln!(stdin, "{request}").expect("write request after barrier");
+    }
+    drop(stdin);
+
+    let deadline = Instant::now() + Duration::from_secs(30);
+    let status = loop {
+        if let Some(status) = child.try_wait().expect("inspect MCP process") {
+            break status;
+        }
+        if Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            let _ = output_reader.join();
+            let _ = std::fs::remove_file(&journey);
+            let _ = std::fs::remove_file(&scores);
+            panic!("MCP server did not exit within 30 seconds");
+        }
+        thread::sleep(Duration::from_millis(5));
+    };
+    let stdout = output_reader.join().expect("MCP output reader");
+
+    assert!(status.success(), "server exited with an error");
     let _ = std::fs::remove_file(&journey);
     let _ = std::fs::remove_file(&scores);
 
-    String::from_utf8(output.stdout)
+    String::from_utf8(stdout)
         .expect("utf8 output")
         .lines()
         .map(|line| serde_json::from_str(line).expect("every reply is valid JSON"))
@@ -117,6 +172,363 @@ fn text_of(response: &Value) -> &str {
 }
 
 #[test]
+fn app_viewer_follows_a_real_times_tables_agent_session() {
+    let mut viewer = SessionViewer::default();
+    viewer.open().expect("open the App session viewer");
+    let pairing_code = viewer.pairing_code().expect("fresh pairing code");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments}
+        })
+    };
+    let replies = run_session(&[
+        json!({
+            "jsonrpc":"2.0","id":0,"method":"initialize","params":{
+                "protocolVersion":"2025-06-18",
+                "capabilities":{},
+                "clientInfo":{"name":"viewer-acceptance","version":"1.0"}
+            }
+        }),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(
+            1,
+            "broadcast_session",
+            json!({"action":"start", "pairing_code": pairing_code}),
+        ),
+        call(2, "journey", json!({})),
+        call(
+            3,
+            "play_room",
+            json!({"id":"times-tables","t":0.2,"width":40,"height":20,"variation":42}),
+        ),
+        call(4, "challenge", json!({"id":"times-tables","seed":7})),
+        call(
+            5,
+            "challenge",
+            json!({"id":"times-tables","seed":7,"t":0.81,"pokes":[[0.375,0.5]]}),
+        ),
+        call(
+            6,
+            "play_room",
+            json!({
+                "id":"times-tables","t":0.81,"width":40,"height":20,
+                "variation":42,"pokes":[[0.375,0.5]]
+            }),
+        ),
+        call(7, "reveal_room", json!({"id":"times-tables"})),
+        call(8, "journey", json!({})),
+        call(9, "broadcast_session", json!({"action":"stop"})),
+    ]);
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+    assert_eq!(by_id(1)["result"]["structuredContent"]["state"], "live");
+    assert_eq!(
+        by_id(6)["result"]["structuredContent"]["status"],
+        "K 5.00  CLOSED  4 LOBES  FOUND"
+    );
+    assert_eq!(by_id(6)["result"]["structuredContent"]["goalMet"], true);
+    assert!(text_of(by_id(7)).contains("Mandelbrot"));
+    assert_eq!(by_id(9)["result"]["structuredContent"]["state"], "stopped");
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while viewer.status() != ViewerStatus::GuestStopped {
+        assert!(Instant::now() < deadline, "viewer stop marker timed out");
+        thread::sleep(Duration::from_millis(5));
+    }
+    let events = viewer.retained_events();
+    assert_eq!(
+        events
+            .iter()
+            .map(|event| event.event.tool)
+            .collect::<Vec<_>>(),
+        [
+            PublicTool::PlayRoom,
+            PublicTool::Challenge,
+            PublicTool::Challenge,
+            PublicTool::PlayRoom,
+            PublicTool::RevealRoom,
+        ]
+    );
+    assert_eq!(
+        events
+            .iter()
+            .map(|event| event.public_sequence)
+            .collect::<Vec<_>>(),
+        [0, 1, 2, 3, 4]
+    );
+    assert!(events.iter().all(|event| event.skipped.is_none()));
+    viewer.scrub(-1);
+    let k5_frame = viewer.draw(320, 180, ViewerInputMode::KeyboardMouse);
+    assert!(
+        k5_frame.lit_count() > 1_000,
+        "the retained K5 action reconstructs a native room frame"
+    );
+    let room_audio = viewer
+        .audio_selection()
+        .expect("the retained K5 action selects local sound");
+    assert_eq!(room_audio.public_sequence(), 3);
+    let room = numinous_core::all_rooms_with(42)
+        .into_iter()
+        .find(|room| room.meta().id == "times-tables")
+        .expect("Times Tables variation");
+    let inputs = numinous_core::inputs_from_pokes(&[(0.375, 0.5)], 0.81);
+    assert_eq!(
+        room_audio.render(8_000),
+        Some(room.sound_input(0.81, &inputs).render(8_000)),
+        "the real selected room replays exact shared core sound"
+    );
+    let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
+    for forbidden in [
+        "viewer-acceptance",
+        "clientInfo",
+        "jsonrpc",
+        "pairing_code",
+        "NUMINOUS_JOURNEY",
+        "NUMINOUS_SCORES",
+    ] {
+        assert!(
+            !public_bytes.contains(forbidden),
+            "public evidence contained private field {forbidden}"
+        );
+    }
+
+    viewer.close();
+    assert_eq!(viewer.status(), ViewerStatus::Closed);
+    assert!(viewer.retained_events().is_empty());
+}
+
+#[test]
+fn app_viewer_reconstructs_a_real_studio_agent_creation() {
+    let mut viewer = SessionViewer::default();
+    viewer.open().expect("open the App session viewer");
+    let pairing_code = viewer.pairing_code().expect("fresh pairing code");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments}
+        })
+    };
+    let replies = run_session(&[
+        json!({
+            "jsonrpc":"2.0","id":0,"method":"initialize","params":{
+                "protocolVersion":"2025-06-18",
+                "capabilities":{},
+                "clientInfo":{"name":"studio-viewer-acceptance","version":"1.0"}
+            }
+        }),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(
+            1,
+            "broadcast_session",
+            json!({"action":"start", "pairing_code": pairing_code}),
+        ),
+        call(
+            2,
+            "plot_expression",
+            json!({
+                "expr":"sin(a*x) + x/3", "xmin":-4.0, "xmax":5.0, "a":2.0
+            }),
+        ),
+        call(3, "broadcast_session", json!({"action":"stop"})),
+    ]);
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+    assert_eq!(by_id(1)["result"]["structuredContent"]["state"], "live");
+    assert!(text_of(by_id(2)).contains("sin(a*x) + x/3"));
+    assert_eq!(by_id(3)["result"]["structuredContent"]["state"], "stopped");
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while viewer.status() != ViewerStatus::GuestStopped {
+        assert!(Instant::now() < deadline, "viewer stop marker timed out");
+        thread::sleep(Duration::from_millis(5));
+    }
+    let events = viewer.retained_events();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].event.tool, PublicTool::PlotExpression);
+    assert_eq!(events[0].public_sequence, 0);
+    assert!(events[0].skipped.is_none());
+    let frame = viewer.draw(360, 220, ViewerInputMode::KeyboardMouse);
+    let expression = numinous_core::parse("sin(a*x) + x/3").expect("accepted expression");
+    let mut expected = Raster::with_accent(360, 220, [198, 132, 255]);
+    draw_curve(
+        &mut expected,
+        CurveLayout {
+            width: 360,
+            height: 220,
+            top: 35.0,
+            bottom_margin: 18.0,
+        },
+        -4.0,
+        5.0,
+        |x| Some(numinous_core::eval(&expression, x, 2.0)),
+    )
+    .expect("expected native Studio curve");
+    let actual_rgba = frame.to_rgba();
+    let expected_rgba = expected.to_rgba();
+    let body_start = 31 * 360 * 4;
+    let body_end = (220 - 13) * 360 * 4;
+    assert_eq!(
+        &actual_rgba[body_start..body_end],
+        &expected_rgba[body_start..body_end],
+        "the retained expression reconstructs the exact native Studio body outside viewer chrome"
+    );
+    let body_lit = expected_rgba[body_start..body_end]
+        .chunks_exact(4)
+        .filter(|pixel| *pixel != [10, 11, 15, 255])
+        .count();
+    assert!(body_lit > 100, "the native Studio body contains a curve");
+    let studio_audio = viewer
+        .audio_selection()
+        .expect("the retained expression selects local sound");
+    assert_eq!(studio_audio.public_sequence(), 0);
+    assert_eq!(
+        studio_audio.render(8_000),
+        Some(numinous_core::to_melody(&expression, -4.0, 5.0, 32, 2.0).render(8_000)),
+        "the real selected expression replays exact shared Studio sound"
+    );
+    let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
+    for forbidden in [
+        "studio-viewer-acceptance",
+        "clientInfo",
+        "jsonrpc",
+        "pairing_code",
+        "NUMINOUS_JOURNEY",
+        "NUMINOUS_SCORES",
+    ] {
+        assert!(
+            !public_bytes.contains(forbidden),
+            "public evidence contained private field {forbidden}"
+        );
+    }
+
+    viewer.close();
+    assert!(viewer.retained_events().is_empty());
+}
+
+#[test]
+fn app_viewer_reconstructs_a_real_normalized_nim_agent_opening() {
+    let mut viewer = SessionViewer::default();
+    viewer.open().expect("open the App session viewer");
+    let pairing_code = viewer.pairing_code().expect("fresh pairing code");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments}
+        })
+    };
+    let before_stop = [
+        json!({
+            "jsonrpc":"2.0","id":0,"method":"initialize","params":{
+                "protocolVersion":"2025-06-18",
+                "capabilities":{},
+                "clientInfo":{"name":"nim-viewer-acceptance","version":"1.0"}
+            }
+        }),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        call(
+            1,
+            "broadcast_session",
+            json!({"action":"start", "pairing_code": pairing_code}),
+        ),
+        call(2, "nim", json!({"seed": 23, "daily": false})),
+        call(
+            3,
+            "nim",
+            json!({
+                "seed": 23,
+                "moves": vec![json!([1, 1]); numinous_core::nim::MAX_REPLAY_TURNS + 1]
+            }),
+        ),
+        call(4, "nim", json!({"seed": -1})),
+    ];
+    let after_stop = [call(5, "broadcast_session", json!({"action":"stop"}))];
+    let replies = run_session_with_barrier(
+        &before_stop,
+        || viewer.retained_events().len() == 1,
+        &after_stop,
+    );
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+    assert_eq!(by_id(1)["result"]["structuredContent"]["state"], "live");
+    assert_eq!(by_id(2)["result"]["structuredContent"]["game"], "nim");
+    assert_eq!(by_id(2)["result"]["structuredContent"]["seed"], 23);
+    assert_eq!(by_id(3)["result"]["isError"], true);
+    assert!(text_of(by_id(3)).contains("at most 64"));
+    assert_eq!(by_id(4)["result"]["isError"], true);
+    assert!(text_of(by_id(4)).contains("at least 0"));
+    assert_eq!(by_id(5)["result"]["structuredContent"]["state"], "stopped");
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while viewer.status() != ViewerStatus::GuestStopped {
+        assert!(Instant::now() < deadline, "viewer stop marker timed out");
+        thread::sleep(Duration::from_millis(5));
+    }
+    let events = viewer.retained_events();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].event.tool, PublicTool::Nim);
+    assert_eq!(events[0].public_sequence, 0);
+    assert_eq!(
+        Value::Object(events[0].event.arguments.clone()),
+        json!({"seed": 23})
+    );
+    assert!(events[0].skipped.is_none());
+
+    let frame = viewer.draw(360, 220, ViewerInputMode::KeyboardMouse);
+    let replay = numinous_core::nim::replay(23, &[]).expect("opening Nim replay");
+    let expected = draw_nim_board(&replay.heaps, None, 360, 220).expect("native Nim board");
+    let actual_rgba = frame.to_rgba();
+    let expected_rgba = expected.to_rgba();
+    let body_start = 31 * 360 * 4;
+    let body_end = (220 - 13) * 360 * 4;
+    assert_eq!(
+        &actual_rgba[body_start..body_end],
+        &expected_rgba[body_start..body_end],
+        "the retained Nim action reconstructs the exact native game body outside viewer chrome"
+    );
+    let body_lit = expected_rgba[body_start..body_end]
+        .chunks_exact(4)
+        .filter(|pixel| *pixel != [10, 11, 15, 255])
+        .count();
+    assert!(body_lit > 100, "the native Nim body contains heap geometry");
+    let public_bytes = serde_json::to_string(&events).expect("serialize public evidence");
+    for forbidden in [
+        "nim-viewer-acceptance",
+        "clientInfo",
+        "jsonrpc",
+        "pairing_code",
+        "NUMINOUS_JOURNEY",
+        "NUMINOUS_SCORES",
+    ] {
+        assert!(
+            !public_bytes.contains(forbidden),
+            "public evidence contained private field {forbidden}"
+        );
+    }
+
+    viewer.close();
+    assert!(viewer.retained_events().is_empty());
+}
+
+#[test]
 fn a_full_agent_session_walks_every_tool() {
     let call = |id: u64, name: &str, args: Value| {
         json!({"jsonrpc":"2.0","id":id,"method":"tools/call",
@@ -166,11 +578,12 @@ fn a_full_agent_session_walks_every_tool() {
             "challenge",
             json!({"id":"voronoi","seed":7,"pokes":[[0.5,0.5]]}),
         ),
+        call(25, "broadcast_session", json!({"action":"status"})),
     ];
     let replies = run_session(&requests);
 
-    // 24 id-carrying requests, one notification with no reply.
-    assert_eq!(replies.len(), 24, "one reply per id-carrying request");
+    // 25 id-carrying requests, one notification with no reply.
+    assert_eq!(replies.len(), 25, "one reply per id-carrying request");
     let by_id = |id: u64| -> &Value {
         replies
             .iter()
@@ -181,7 +594,7 @@ fn a_full_agent_session_walks_every_tool() {
     assert_eq!(by_id(1)["result"]["serverInfo"]["name"], "numinous");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(29)
+        Some(33)
     );
     assert!(text_of(by_id(3)).contains("times-tables"));
     assert!(text_of(by_id(4)).contains("Fractals"));
@@ -217,6 +630,10 @@ fn a_full_agent_session_walks_every_tool() {
     assert!(
         graded["score"].as_u64().is_some(),
         "the attempt is graded with metrics: {graded}"
+    );
+    assert_eq!(
+        by_id(25)["result"]["structuredContent"]["state"],
+        "disabled"
     );
 }
 

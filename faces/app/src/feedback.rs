@@ -8,6 +8,7 @@ const FULLSCREEN_FRAMES: u64 = 120;
 const VOLUME_FRAMES: u64 = 90;
 const SOUND_DEVICE_FRAMES: u64 = 600;
 const ROOM_GOAL_FRAMES: u64 = 240;
+const SESSION_VIEWER_FRAMES: u64 = 240;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Banner {
@@ -119,6 +120,16 @@ pub(crate) fn sound_device_unavailable(error: &str) -> Banner {
     Banner::new(
         vec!["SOUND DEVICE UNAVAILABLE".to_string(), error.to_uppercase()],
         SOUND_DEVICE_FRAMES,
+    )
+}
+
+pub(crate) fn session_viewer_unavailable() -> Banner {
+    Banner::new(
+        vec![
+            "WATCH AGENT UNAVAILABLE".to_string(),
+            "THE LOCAL LISTENER COULD NOT OPEN".to_string(),
+        ],
+        SESSION_VIEWER_FRAMES,
     )
 }
 

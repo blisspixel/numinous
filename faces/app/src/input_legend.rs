@@ -5,14 +5,14 @@
 //! actions, so each screen describes the controls that actually reach it.
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum InputMode {
+pub enum InputMode {
     #[default]
     KeyboardMouse,
     Controller,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Control {
+pub enum Control {
     Back,
     Inspect,
     Menu,
@@ -25,7 +25,7 @@ pub(crate) enum Control {
 }
 
 impl InputMode {
-    pub(crate) const fn token(self, control: Control) -> &'static str {
+    pub const fn token(self, control: Control) -> &'static str {
         match (self, control) {
             (Self::KeyboardMouse, Control::Back | Control::Menu) => "ESC",
             (Self::KeyboardMouse, Control::Inspect) => "E",
@@ -46,7 +46,7 @@ impl InputMode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum MenuChoice {
+pub enum MenuChoice {
     Quiz,
     Munch,
     Nim,
@@ -55,10 +55,11 @@ pub(crate) enum MenuChoice {
     Show,
     Studio,
     Journey,
+    WatchAgent,
 }
 
 impl MenuChoice {
-    pub(crate) const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::Quiz,
         Self::Munch,
         Self::Nim,
@@ -67,9 +68,10 @@ impl MenuChoice {
         Self::Show,
         Self::Studio,
         Self::Journey,
+        Self::WatchAgent,
     ];
 
-    pub(crate) const fn at(index: usize) -> Self {
+    pub const fn at(index: usize) -> Self {
         Self::ALL[index % Self::ALL.len()]
     }
 
@@ -83,6 +85,7 @@ impl MenuChoice {
             Self::Show => "THE SHOW: LET THE WORLD WANDER",
             Self::Studio => "THE STUDIO: TYPE A CURVE",
             Self::Journey => "THE JOURNEY: WHAT PLAY MADE",
+            Self::WatchAgent => "WATCH AGENT: LIVE MCP PLAY",
         }
     }
 }
@@ -91,7 +94,7 @@ fn item(mode: InputMode, control: Control, action: &str) -> String {
     format!("{} {action}", mode.token(control))
 }
 
-pub(crate) fn room_action(mode: InputMode, action: &str) -> String {
+pub fn room_action(mode: InputMode, action: &str) -> String {
     if mode == InputMode::KeyboardMouse {
         return action.to_string();
     }
@@ -112,11 +115,11 @@ pub(crate) fn room_action(mode: InputMode, action: &str) -> String {
     format!("SOUTH / LEFT STICK: {action}")
 }
 
-pub(crate) fn room_inspect(mode: InputMode) -> String {
+pub fn room_inspect(mode: InputMode) -> String {
     item(mode, Control::Inspect, "INSPECT")
 }
 
-pub(crate) fn room_controls(mode: InputMode) -> String {
+pub fn room_controls(mode: InputMode) -> String {
     format!(
         "{}   {}",
         item(mode, Control::Reset, "RESET ROOM"),
@@ -124,32 +127,32 @@ pub(crate) fn room_controls(mode: InputMode) -> String {
     )
 }
 
-pub(crate) fn show_controls(mode: InputMode) -> String {
+pub fn show_controls(mode: InputMode) -> String {
     match mode {
         InputMode::KeyboardMouse => "B EXIT SHOW   SPACE PAUSE".to_string(),
         InputMode::Controller => "EAST EXIT SHOW   R3 PAUSE".to_string(),
     }
 }
 
-pub(crate) fn studio_controls(mode: InputMode) -> String {
+pub fn studio_controls(mode: InputMode) -> String {
     match mode {
         InputMode::KeyboardMouse => "TYPE  F1 HELP  F2 RANDOM  F3 AUTO  TAB/ESC CLOSE".to_string(),
         InputMode::Controller => "KEYBOARD TYPES   EAST CLOSES   START HELP".to_string(),
     }
 }
 
-pub(crate) fn journey_close(mode: InputMode) -> String {
+pub fn journey_close(mode: InputMode) -> String {
     match mode {
         InputMode::KeyboardMouse => "J CLOSES".to_string(),
         InputMode::Controller => item(mode, Control::Back, "CLOSES"),
     }
 }
 
-pub(crate) fn pause_resume(mode: InputMode) -> String {
+pub fn pause_resume(mode: InputMode) -> String {
     item(mode, Control::Pause, "RESUME")
 }
 
-pub(crate) fn quiz_result(mode: InputMode) -> String {
+pub fn quiz_result(mode: InputMode) -> String {
     format!(
         "{}   {}",
         item(mode, Control::Retry, "NEXT"),
@@ -157,7 +160,7 @@ pub(crate) fn quiz_result(mode: InputMode) -> String {
     )
 }
 
-pub(crate) const fn quiz_direction(mode: InputMode, index: usize) -> &'static str {
+pub const fn quiz_direction(mode: InputMode, index: usize) -> &'static str {
     match mode {
         InputMode::KeyboardMouse => "",
         InputMode::Controller => match index {
@@ -169,7 +172,7 @@ pub(crate) const fn quiz_direction(mode: InputMode, index: usize) -> &'static st
     }
 }
 
-pub(crate) fn munch_live(mode: InputMode) -> String {
+pub fn munch_live(mode: InputMode) -> String {
     format!(
         "{}   {}   {}   {}",
         item(mode, Control::Move, "MOVE"),
@@ -179,7 +182,7 @@ pub(crate) fn munch_live(mode: InputMode) -> String {
     )
 }
 
-pub(crate) fn munch_result(mode: InputMode) -> String {
+pub fn munch_result(mode: InputMode) -> String {
     format!(
         "{}   {}",
         item(mode, Control::Retry, "NEXT BOARD"),
@@ -187,7 +190,7 @@ pub(crate) fn munch_result(mode: InputMode) -> String {
     )
 }
 
-pub(crate) fn arcade_live(mode: InputMode) -> String {
+pub fn arcade_live(mode: InputMode) -> String {
     format!(
         "{}   {}   DON'T BE CAUGHT   {}",
         item(mode, Control::Move, "RUN"),
@@ -196,14 +199,14 @@ pub(crate) fn arcade_live(mode: InputMode) -> String {
     )
 }
 
-pub(crate) fn arcade_over(mode: InputMode) -> String {
+pub fn arcade_over(mode: InputMode) -> String {
     match mode {
         InputMode::KeyboardMouse => "ANY KEY LEAVES".to_string(),
         InputMode::Controller => item(mode, Control::Retry, "LEAVES"),
     }
 }
 
-pub(crate) fn nim_live(mode: InputMode, take: u32) -> String {
+pub fn nim_live(mode: InputMode, take: u32) -> String {
     match mode {
         InputMode::KeyboardMouse => {
             format!("W/S HEAP   A/D TAKE {take}   ENTER TAKE   ESC LEAVE")
@@ -214,7 +217,7 @@ pub(crate) fn nim_live(mode: InputMode, take: u32) -> String {
     }
 }
 
-pub(crate) fn nim_result(mode: InputMode) -> String {
+pub fn nim_result(mode: InputMode) -> String {
     format!(
         "{}   {}",
         item(mode, Control::Retry, "RETRY"),
@@ -222,32 +225,28 @@ pub(crate) fn nim_result(mode: InputMode) -> String {
     )
 }
 
-pub(crate) fn gauntlet_choice(mode: InputMode) -> String {
+pub fn gauntlet_choice(mode: InputMode) -> String {
     match mode {
         InputMode::KeyboardMouse => "PRESS THE LETTER".to_string(),
         InputMode::Controller => "D-PAD: UP A   RIGHT B   DOWN C   LEFT D".to_string(),
     }
 }
 
-pub(crate) fn gauntlet_bomb(mode: InputMode) -> String {
+pub fn gauntlet_bomb(mode: InputMode) -> String {
     match mode {
         InputMode::KeyboardMouse => "TYPE DIGITS   ENTER CUTS   BACKSPACE FIXES".to_string(),
         InputMode::Controller => "UP/DOWN DIGIT   SOUTH ADD   LEFT FIX   NORTH CUT".to_string(),
     }
 }
 
-pub(crate) fn gauntlet_done(mode: InputMode) -> String {
+pub fn gauntlet_done(mode: InputMode) -> String {
     match mode {
         InputMode::KeyboardMouse => "ANY KEY LEAVES".to_string(),
         InputMode::Controller => item(mode, Control::Retry, "LEAVES"),
     }
 }
 
-pub(crate) fn help_lines(
-    mode: InputMode,
-    selected: Option<usize>,
-    activity_paused: bool,
-) -> Vec<String> {
+pub fn help_lines(mode: InputMode, selected: Option<usize>, activity_paused: bool) -> Vec<String> {
     if activity_paused {
         let resume = match mode {
             InputMode::KeyboardMouse => "ESC RETURNS",
@@ -272,7 +271,7 @@ pub(crate) fn help_lines(
             "W / S      TIME SPEED   MOUSE  SCRUB",
             "E          INSPECT    Q  ERA    R  RESET",
             "B          THE SHOW   TAB  THE STUDIO",
-            "J          JOURNEY    F  FULLSCREEN",
+            "J          JOURNEY    F  FULLSCREEN    X  WATCH AGENT",
             "Y          RADIO    P  POSTCARD   L  LOOP",
             "F9         PLAYTEST NOTE",
             "M          MUTE    [/] VOLUME   SPACE PAUSE",
@@ -307,7 +306,7 @@ pub(crate) fn help_lines(
     }
 }
 
-pub(crate) fn compact_controller_help_lines(selected: usize) -> Vec<String> {
+pub fn compact_controller_help_lines(selected: usize) -> Vec<String> {
     let pair = |left_index: usize, left: &str, right_index: usize, right: &str| -> String {
         format!(
             "{} {:<9} {} {}",
@@ -327,7 +326,10 @@ pub(crate) fn compact_controller_help_lines(selected: usize) -> Vec<String> {
         "STICK+SOUTH TOUCH SEL INFO".to_string(),
         "HOLD NORTH: D-PAD VOL/S MUTE".to_string(),
         "L3 RESET R3 PAUSE START MENU".to_string(),
-        "EAST BACK    NORTH RADIO".to_string(),
+        format!(
+            "{} WATCH AGENT   EAST BACK",
+            if selected == 8 { ">" } else { " " }
+        ),
     ]
 }
 
@@ -370,12 +372,12 @@ mod tests {
 
     #[test]
     fn every_controller_menu_choice_has_one_stable_index() {
-        assert_eq!(MenuChoice::ALL.len(), 8);
+        assert_eq!(MenuChoice::ALL.len(), 9);
         for (index, expected) in MenuChoice::ALL.into_iter().enumerate() {
             assert_eq!(MenuChoice::at(index), expected);
             assert!(!expected.controller_label().is_empty());
         }
-        assert_eq!(MenuChoice::at(8), MenuChoice::Quiz);
+        assert_eq!(MenuChoice::at(9), MenuChoice::Quiz);
         assert_eq!(
             help_lines(InputMode::Controller, None, true),
             [
