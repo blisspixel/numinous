@@ -579,7 +579,16 @@ without relying on the founder's machine or undocumented context?"
     scrub replacement, close-time room restoration, and live-radio rejoin remain
     local App behavior. Real Times Tables and Studio subprocess sessions compare
     exact sound samples with independent shared-core reconstruction.
-  - **Done (cycle 144):** reconstruct the other native public game visuals (Munch, Arcade, Quiz, Gauntlet) in the Watch Agent surface.
+  - **Done (cycle 144, hardened):** public Munch, Arcade, Quiz, and Gauntlet
+    actions reconstruct native Watch Agent frames through the same App
+    `game_draw` paths used by live play. Parsers fail closed on unknown keys,
+    hostile values, unknown arcade actions, journey-gated quiz choice counts,
+    and forged structured results. Munch open state defaults to
+    `FULL_DECK_ROUND` to match MCP. Unit tests cover open, graded, forged, and
+    cache fallback paths for the four games. A real MCP stdio acceptance proves
+    one public Munch open at the full deck, schema rejection of illegal bites,
+    private Journey silence, exact native board-body pixel parity, metadata
+    exclusion, and close-time erasure. Other public game sound remains open.
 
 Owner docs: `ROOMS.md`, `INTERFACES.md`, `SOUND.md`, `STUDIO.md`, `QUALITY.md`.
 

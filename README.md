@@ -141,8 +141,11 @@ protocol traffic, and it persists no transcript. A real MCP subprocess test now
 proves the complete Times Tables explore, challenge, K5 goal, reveal, and stop
 path through the actual App viewer, and a separate real session proves native
 Studio creation and exact Formula Jam sound samples. A third real session
-proves native Nim delivery and exact game body pixels. Other public game tools
-remain active 0.3 work.
+proves native Nim delivery and exact game body pixels. Public Munch, Arcade,
+Quiz, and Gauntlet actions reconstruct through the same live App draw paths
+with fail-closed argument whitelists and exact structured-result attestation.
+A fourth real MCP subprocess session proves native Munch delivery and exact
+board-body pixels. Other public game sound remains 0.3 work.
 
 The alpha label is meaningful. Automated correctness, security, coverage,
 cross-platform build, and installer gates are strong, but the 0.2 release still

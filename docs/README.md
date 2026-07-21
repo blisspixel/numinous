@@ -11,12 +11,12 @@ GPU and audio adapters, 351 catalog rooms plus hidden content, 6 sims, 11+
 games, the RPG spine, standard-controller input, and a built-in 42-track radio
 are built. The hardened local-broadcast substrate, MCP producer, native App
 Watch Agent, bounded in-memory timeline, and native reconstruction for
-`play_room`, Formula Jam plots, and Nim are built. Real cross-process Times
-Tables, Studio, and Nim acceptance sessions are also built. Selected native
-room and Studio actions now replay bounded deterministic local sound with
-explicit source ownership, global mute and volume, focus silence, scrub
-replacement, and close-time restoration. Other native game replay remains 0.3
-work. Public CI passes on Windows, macOS,
+`play_room`, Formula Jam plots, Nim, Munch, Arcade, Quiz, and Gauntlet are
+built. Real cross-process Times Tables, Studio, Nim, and Munch acceptance
+sessions are also built. Selected native room and Studio actions now replay
+bounded deterministic local sound with explicit source ownership, global mute
+and volume, focus silence, scrub replacement, and close-time restoration.
+Other native game sound remains 0.3 work. Public CI passes on Windows, macOS,
 and Ubuntu, but capability
 breadth remains ahead of release evidence: stranger playtests, accessibility
 work, and real macOS and Linux execution remain open. See `../CHANGELOG.md`
