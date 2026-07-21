@@ -333,6 +333,44 @@ pub fn munch_crunch(sample_rate: u32, seed: u64) -> Vec<f32> {
     out
 }
 
+/// A short square tick for game actions (quiz, nim, gauntlet).
+///
+/// `good` picks a bright upper pitch; otherwise a short low buzz for a miss.
+#[must_use]
+pub fn game_tick(sample_rate: u32, good: bool) -> Vec<f32> {
+    let rate = sample_rate.max(8_000);
+    let seconds = if good { 0.055 } else { 0.09 };
+    let length = ((rate as f32) * seconds).round() as usize;
+    let length = length.clamp(48, rate as usize / 6);
+    let freq = if good { 784.0 } else { 165.0 };
+    let mut out = Vec::with_capacity(length);
+    for i in 0..length {
+        let t = i as f32 / length as f32;
+        let envelope = (1.0 - t).powi(2) * edge_envelope(i, length, rate);
+        let sample = wave(Voice::Square, freq, &mut SplitMix64::new(1)) * 0.28 * envelope;
+        out.push(sample.clamp(-1.0, 1.0));
+    }
+    out
+}
+
+/// A harsher buzz for bad Munch grades (pairs with a short screen shake).
+#[must_use]
+pub fn game_buzz(sample_rate: u32, seed: u64) -> Vec<f32> {
+    let rate = sample_rate.max(8_000);
+    let length = ((rate as f32) * 0.11).round() as usize;
+    let length = length.clamp(64, rate as usize / 5);
+    let mut noise = SplitMix64::new(TUNE_MIX ^ seed.wrapping_mul(0xA5A5_A5A5_1234_5678));
+    let mut out = Vec::with_capacity(length);
+    for i in 0..length {
+        let t = i as f32 / length as f32;
+        let envelope = (1.0 - t).powi(2) * edge_envelope(i, length, rate);
+        let square = wave(Voice::Square, 110.0 + (seed % 7) as f32 * 4.0, &mut noise);
+        let grit = wave(Voice::Noise, 0.0, &mut noise) * 0.35;
+        out.push(((square * 0.22 + grit * 0.12) * envelope).clamp(-1.0, 1.0));
+    }
+    out
+}
+
 impl Arrangement {
     /// Render a stereo interleaved buffer with constant-power panning.
     #[must_use]
@@ -513,6 +551,25 @@ mod tests {
         assert!(a.iter().any(|s| s.abs() > 0.01), "crunch has energy");
         let other = super::munch_crunch(48_000, 8);
         assert_ne!(a, other, "seed changes the noise draw");
+    }
+
+    #[test]
+    fn game_tick_and_buzz_are_short_bounded_and_deterministic() {
+        let good = super::game_tick(48_000, true);
+        let again = super::game_tick(48_000, true);
+        let bad = super::game_tick(48_000, false);
+        assert_eq!(good, again);
+        assert_ne!(good, bad);
+        assert!(good.len() < 48_000 / 8);
+        assert!(
+            bad.iter()
+                .all(|s| s.is_finite() && (-1.0..=1.0).contains(s))
+        );
+        let buzz = super::game_buzz(48_000, 3);
+        let buzz2 = super::game_buzz(48_000, 3);
+        assert_eq!(buzz, buzz2);
+        assert!(buzz.iter().any(|s| s.abs() > 0.01));
+        assert_ne!(buzz, super::game_buzz(48_000, 4));
     }
 
     #[test]
