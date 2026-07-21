@@ -5,6 +5,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- Coffee Cup no longer freezes after a swing or leaves a hand trail of `+`
+  marks over the rays. While held, the sun pins to the hand; after release it
+  keeps walking from that angle so the cardioid stays alive.
+
 ### Changed
 - Pointer chrome is quieter: the live reticle is small and only appears while
   the hand is held; completed gestures no longer leave a crosshair or stroke
