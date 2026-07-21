@@ -3,12 +3,73 @@
 //! Routing remains in the focused keyboard, pointer, and controller adapters.
 //! This module is the single presentation vocabulary for those semantic
 //! actions, so each screen describes the controls that actually reach it.
+//! Adaptive face glyphs (Xbox / PlayStation / generic) live here so HUD copy
+//! can name the buttons a player actually sees.
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum InputMode {
     #[default]
     KeyboardMouse,
     Controller,
+}
+
+/// Which face-button vocabulary to show for a standard controller.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum ControllerFace {
+    /// Semantic compass labels (SOUTH, EAST, ...). Safe default.
+    #[default]
+    Generic,
+    /// Xbox / XInput style (A B X Y).
+    Xbox,
+    /// PlayStation style (cross, circle, square, triangle).
+    PlayStation,
+}
+
+impl ControllerFace {
+    /// Guess a face vocabulary from a controller product name.
+    #[must_use]
+    pub fn from_name(name: &str) -> Self {
+        let lower = name.to_ascii_lowercase();
+        if lower.contains("dualshock")
+            || lower.contains("dualsense")
+            || lower.contains("playstation")
+            || lower.contains("sony")
+            || lower.contains("ps4")
+            || lower.contains("ps5")
+        {
+            Self::PlayStation
+        } else if lower.contains("xbox")
+            || lower.contains("xinput")
+            || lower.contains("microsoft")
+            || lower.contains("series")
+            || lower.contains("360")
+        {
+            Self::Xbox
+        } else {
+            Self::Generic
+        }
+    }
+
+    /// Face / system token for a semantic control on this controller family.
+    #[must_use]
+    pub const fn token(self, control: Control) -> &'static str {
+        match (self, control) {
+            (_, Control::Move) => "D-PAD",
+            (_, Control::Menu) => "START",
+            (_, Control::Inspect) => "SELECT",
+            (_, Control::Pause) => "R3",
+            (_, Control::Reset) => "L3",
+            (Self::Generic, Control::Back) => "EAST",
+            (Self::Generic, Control::Primary | Control::Retry) => "SOUTH",
+            (Self::Generic, Control::Submit) => "NORTH",
+            (Self::Xbox, Control::Back) => "B",
+            (Self::Xbox, Control::Primary | Control::Retry) => "A",
+            (Self::Xbox, Control::Submit) => "Y",
+            (Self::PlayStation, Control::Back) => "CIRCLE",
+            (Self::PlayStation, Control::Primary | Control::Retry) => "CROSS",
+            (Self::PlayStation, Control::Submit) => "TRIANGLE",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,21 +87,26 @@ pub enum Control {
 
 impl InputMode {
     pub const fn token(self, control: Control) -> &'static str {
-        match (self, control) {
-            (Self::KeyboardMouse, Control::Back | Control::Menu) => "ESC",
-            (Self::KeyboardMouse, Control::Inspect) => "E",
-            (Self::KeyboardMouse, Control::Move) => "WASD/ARROWS",
-            (Self::KeyboardMouse, Control::Pause | Control::Primary) => "SPACE",
-            (Self::KeyboardMouse, Control::Reset) => "R",
-            (Self::KeyboardMouse, Control::Retry | Control::Submit) => "ENTER",
-            (Self::Controller, Control::Back) => "EAST",
-            (Self::Controller, Control::Inspect) => "SELECT",
-            (Self::Controller, Control::Menu) => "START",
-            (Self::Controller, Control::Move) => "D-PAD",
-            (Self::Controller, Control::Pause) => "R3",
-            (Self::Controller, Control::Primary | Control::Retry) => "SOUTH",
-            (Self::Controller, Control::Reset) => "L3",
-            (Self::Controller, Control::Submit) => "NORTH",
+        match self {
+            Self::KeyboardMouse => match control {
+                Control::Back | Control::Menu => "ESC",
+                Control::Inspect => "E",
+                Control::Move => "WASD/ARROWS",
+                Control::Pause | Control::Primary => "SPACE",
+                Control::Reset => "R",
+                Control::Retry | Control::Submit => "ENTER",
+            },
+            // Default controller legends stay generic until a face is known.
+            Self::Controller => ControllerFace::Generic.token(control),
+        }
+    }
+
+    /// Token for this mode, using adaptive face glyphs when on controller.
+    #[must_use]
+    pub const fn token_with_face(self, control: Control, face: ControllerFace) -> &'static str {
+        match self {
+            Self::KeyboardMouse => self.token(control),
+            Self::Controller => face.token(control),
         }
     }
 }
@@ -91,46 +157,74 @@ impl MenuChoice {
 }
 
 fn item(mode: InputMode, control: Control, action: &str) -> String {
-    format!("{} {action}", mode.token(control))
+    item_with_face(mode, control, action, ControllerFace::Generic)
+}
+
+fn item_with_face(mode: InputMode, control: Control, action: &str, face: ControllerFace) -> String {
+    format!("{} {action}", mode.token_with_face(control, face))
 }
 
 pub fn room_action(mode: InputMode, action: &str) -> String {
+    room_action_with_face(mode, action, ControllerFace::Generic)
+}
+
+/// Room action copy with adaptive controller face glyphs.
+pub fn room_action_with_face(mode: InputMode, action: &str, face: ControllerFace) -> String {
     if mode == InputMode::KeyboardMouse {
         return action.to_string();
     }
+    let primary = face.token(Control::Primary);
     if let Some((gesture, result)) = action.split_once(':') {
         if gesture == "AIM + CLICK" {
-            return format!("LEFT STICK + SOUTH: {}", result.trim_start());
+            return format!("LEFT STICK + {primary}: {}", result.trim_start());
         }
         if let Some(qualifier) = gesture.strip_prefix("CLICK") {
-            return format!("SOUTH{qualifier}: {}", result.trim_start());
+            return format!("{primary}{qualifier}: {}", result.trim_start());
         }
         if let Some(qualifier) = gesture.strip_prefix("DRAG") {
             return format!(
-                "HOLD SOUTH + LEFT STICK{qualifier}: {}",
+                "HOLD {primary} + LEFT STICK{qualifier}: {}",
                 result.trim_start()
             );
         }
     }
-    format!("SOUTH / LEFT STICK: {action}")
+    format!("{primary} / LEFT STICK: {action}")
 }
 
 pub fn room_inspect(mode: InputMode) -> String {
     item(mode, Control::Inspect, "INSPECT")
 }
 
+pub fn room_inspect_with_face(mode: InputMode, face: ControllerFace) -> String {
+    item_with_face(mode, Control::Inspect, "INSPECT", face)
+}
+
 pub fn room_controls(mode: InputMode) -> String {
+    room_controls_with_face(mode, ControllerFace::Generic)
+}
+
+/// Room chrome controls with adaptive controller face glyphs.
+pub fn room_controls_with_face(mode: InputMode, face: ControllerFace) -> String {
     format!(
         "{}   {}",
-        item(mode, Control::Reset, "RESET ROOM"),
-        item(mode, Control::Menu, "MENU")
+        item_with_face(mode, Control::Reset, "RESET ROOM", face),
+        item_with_face(mode, Control::Menu, "MENU", face)
     )
 }
 
 pub fn show_controls(mode: InputMode) -> String {
+    show_controls_with_face(mode, ControllerFace::Generic)
+}
+
+/// Show-mode controls with adaptive face glyphs.
+pub fn show_controls_with_face(mode: InputMode, face: ControllerFace) -> String {
     match mode {
         InputMode::KeyboardMouse => "B EXIT SHOW   SPACE PAUSE".to_string(),
-        InputMode::Controller => "EAST EXIT SHOW   R3 PAUSE".to_string(),
+        InputMode::Controller => format!(
+            "{} EXIT SHOW   {} PAUSE",
+            face.token(Control::Back),
+            face.token(Control::Pause)
+        ),
     }
 }
 
@@ -368,6 +462,38 @@ mod tests {
                 "leaked {keyboard_only}: {copy}"
             );
         }
+    }
+
+    #[test]
+    fn adaptive_face_glyphs_name_xbox_and_playstation_buttons() {
+        assert_eq!(
+            ControllerFace::from_name("Xbox Series Controller"),
+            ControllerFace::Xbox
+        );
+        assert_eq!(
+            ControllerFace::from_name("DualSense Wireless Controller"),
+            ControllerFace::PlayStation
+        );
+        assert_eq!(
+            ControllerFace::from_name("Generic pad"),
+            ControllerFace::Generic
+        );
+        assert_eq!(ControllerFace::Xbox.token(Control::Primary), "A");
+        assert_eq!(ControllerFace::PlayStation.token(Control::Primary), "CROSS");
+        assert_eq!(ControllerFace::Generic.token(Control::Primary), "SOUTH");
+        assert_eq!(
+            InputMode::Controller.token_with_face(Control::Back, ControllerFace::Xbox),
+            "B"
+        );
+        assert_eq!(
+            InputMode::Controller.token_with_face(Control::Back, ControllerFace::PlayStation),
+            "CIRCLE"
+        );
+        // Keyboard mode ignores face.
+        assert_eq!(
+            InputMode::KeyboardMouse.token_with_face(Control::Primary, ControllerFace::Xbox),
+            "SPACE"
+        );
     }
 
     #[test]

@@ -143,8 +143,17 @@ pub fn alien_message(seed: u64, shown: usize) -> AlienMessage {
     let shown = shown.max(2);
     let (name, explanation, generator) = SEQUENCES[(rng.below(SEQUENCES.len() as u64)) as usize];
     let terms = (0..shown).map(generator).collect();
-    // Mostly decimal, but sometimes the aliens have a different number of fingers.
-    let base = [10u32, 10, 8, 2, 16, 12][(rng.below(6)) as usize];
+    // Soft base ramp (panel): early seeds favor decimal; later seed depths leave
+    // base 10 sooner so alien counting systems show up before grind deepens.
+    let roll = rng.below(6) as usize;
+    let depth = seed % 32;
+    let base = if depth >= 24 {
+        [8, 2, 16, 12, 8, 16][roll]
+    } else if depth >= 12 {
+        [10, 8, 2, 16, 12, 8][roll]
+    } else {
+        [10, 10, 8, 2, 16, 12][roll]
+    };
     AlienMessage {
         name,
         terms,
@@ -213,5 +222,35 @@ mod tests {
     #[test]
     fn message_is_deterministic() {
         assert_eq!(alien_message(11, 5), alien_message(11, 5));
+    }
+
+    #[test]
+    fn base_ramp_still_uses_legal_alien_bases() {
+        for seed in 0..64 {
+            let m = alien_message(seed, 4);
+            assert!(
+                matches!(m.base, 2 | 8 | 10 | 12 | 16),
+                "seed {seed} base {}",
+                m.base
+            );
+        }
+    }
+
+    #[test]
+    fn denser_seeds_can_leave_decimal_earlier() {
+        // Depth tiers by seed % 32: early keep more decimal, late leave 10.
+        let early_decimal = (0u64..12)
+            .map(|s| alien_message(s, 3).base)
+            .filter(|&b| b == 10)
+            .count();
+        let late_decimal = (24u64..36)
+            .map(|s| alien_message(s, 3).base)
+            .filter(|&b| b == 10)
+            .count();
+        assert!(
+            early_decimal > late_decimal,
+            "early should keep more decimal than late: early={early_decimal} late={late_decimal}"
+        );
+        assert_eq!(late_decimal, 0, "late tier table has no decimal slots");
     }
 }
