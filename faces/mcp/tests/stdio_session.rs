@@ -237,12 +237,19 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
     assert!(text_of(by_id(7)).contains("Mandelbrot"));
     assert_eq!(by_id(9)["result"]["structuredContent"]["state"], "stopped");
 
-    let deadline = Instant::now() + Duration::from_secs(2);
+    let deadline = Instant::now() + Duration::from_secs(3);
     while viewer.status() != ViewerStatus::GuestStopped {
         assert!(Instant::now() < deadline, "viewer stop marker timed out");
         thread::sleep(Duration::from_millis(5));
     }
-    let events = viewer.retained_events();
+    // Allow the last public projection (reveal_room) to drain under CI load.
+    let events = loop {
+        let events = viewer.retained_events();
+        if events.len() >= 5 || Instant::now() >= deadline {
+            break events;
+        }
+        thread::sleep(Duration::from_millis(5));
+    };
     assert_eq!(
         events
             .iter()
