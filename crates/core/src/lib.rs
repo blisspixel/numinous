@@ -119,13 +119,18 @@ pub use room::{
 pub use scores::Scoreboard;
 pub use secret::{akousma, deep_akousma};
 pub use seti::{SetiChannel, SetiScan, build_scan};
-pub use share::{ShareKind, ShareMeta, sidecar_path, write_share_sidecar};
+pub use share::{
+    ShareBundleMeta, ShareKind, ShareMeta, share_bundle_dir, sidecar_path,
+    write_share_bundle_readme, write_share_sidecar,
+};
 pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
 pub use sims::{all_sims, sim_by_id};
 pub use sound::{Note, ParametricSound, SoundSpec};
 pub use spectrum::{
-    BAND_COUNT, BAND_NAMES, SpectrumBarLayout, SpectrumLevers, arrangement_spectrum, band_energies,
-    bass_mid_treble, draw_spectrum_bars, levers_from_bands, low_band_onset, normalize_bands,
+    BAND_COUNT, BAND_NAMES, ONSET_HIT, SpectrumBarLayout, SpectrumLevers, arrangement_spectrum,
+    band_energies, bass_mid_treble, draw_spectrum_bars, levers_from_bands, low_band_onset,
+    normalize_bands, spectrum_hand_point, spectrum_phase_nudge, spectrum_should_poke,
+    spectrum_time_scale,
 };
 pub use studio::{
     Expr, MAX_STUDIO_SOURCE_CHARS, StudioCreation, eval, parse, plot_text, to_melody,

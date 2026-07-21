@@ -285,6 +285,8 @@ struct App {
     loopback: Option<numinous_audio::InputCapture>,
     /// Previous frame bands for onset / lever mapping.
     spectrum_prev: [f32; numinous_core::BAND_COUNT],
+    /// Multiplier from live spectrum bass (1.0 when drive is off).
+    visualizer_scale: f64,
     mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera,
     life_session: numinous_core::rooms::game_of_life::LifeSession,
     life_accumulator: f64,
@@ -422,6 +424,7 @@ impl App {
             visualizer_source: numinous_audio::VisualizerSource::RoomBed,
             loopback: None,
             spectrum_prev: [0.0; numinous_core::BAND_COUNT],
+            visualizer_scale: 1.0,
             mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera::new(0),
             life_session: numinous_core::rooms::game_of_life::LifeSession::new(0),
             life_accumulator: 0.0,
@@ -2537,7 +2540,7 @@ impl App {
         {
             return 0;
         }
-        self.advance_life(elapsed * self.time_scale)
+        self.advance_life(elapsed * self.time_scale * self.visualizer_scale)
     }
 
     fn draw_studio(&self, raster: &mut Raster, width: usize, height: usize) {
@@ -2549,14 +2552,22 @@ impl App {
         if self.show_help && self.modal_mode_active() {
             return None;
         }
+        let face = self.gamepad.face();
         if let Some(play) = &self.arcade {
-            Some(game_draw::draw_arcade(play, self.input_mode, width, height))
+            Some(game_draw::draw_arcade(
+                play,
+                self.input_mode,
+                face,
+                width,
+                height,
+            ))
         } else if let Some(run) = &self.gauntlet {
             Some(game_draw::draw_gauntlet(
                 &self.rooms,
                 run,
                 self.frame,
                 self.input_mode,
+                face,
                 width,
                 height,
             ))
@@ -2565,15 +2576,22 @@ impl App {
                 play,
                 self.frame,
                 self.input_mode,
+                face,
                 width,
                 height,
             ))
         } else if let Some(play) = &self.nim {
-            Some(game_draw::draw_nim(play, self.input_mode, width, height))
+            Some(game_draw::draw_nim(
+                play,
+                self.input_mode,
+                face,
+                width,
+                height,
+            ))
         } else {
-            self.quiz
-                .as_ref()
-                .map(|quiz| game_draw::draw_quiz(&self.rooms, quiz, self.input_mode, width, height))
+            self.quiz.as_ref().map(|quiz| {
+                game_draw::draw_quiz(&self.rooms, quiz, self.input_mode, face, width, height)
+            })
         }
     }
 
@@ -2727,12 +2745,38 @@ impl App {
         self.draw_banner_on_raster(&mut raster, width, height);
         hud::draw_audio_state(&mut raster, &self.audio_state(), width);
         // Visualizer path: room bed, mixed output tap, or OS loopback capture.
+        // Output mix and loopback drive a scale multiplier and soft beat pokes.
+        self.visualizer_scale = 1.0;
         if !self.muted
             && let Some((bands, source)) = self.visualizer_bands()
         {
             hud::draw_spectrum_meter(&mut raster, &bands, width, height);
             let levers = numinous_core::levers_from_bands(&self.spectrum_prev, &bands);
-            let _ = (source, levers); // levers reserved for room-parameter drive
+            let drive = matches!(
+                source,
+                numinous_audio::VisualizerSource::OutputMix
+                    | numinous_audio::VisualizerSource::Loopback
+            );
+            if drive && !self.modal_mode_active() && !self.paused {
+                // Bass pumps motion without rewriting the player's time_scale.
+                self.visualizer_scale = numinous_core::spectrum_time_scale(1.0, &levers);
+                let nudge = numinous_core::spectrum_phase_nudge(&levers);
+                if nudge > 0.0 {
+                    self.t = (self.t + nudge).rem_euclid(1.0);
+                }
+                if numinous_core::spectrum_should_poke(&levers)
+                    && !self.studio
+                    && !self.the_show
+                    && self.pokes.len() < 24
+                {
+                    let (x, y) = numinous_core::spectrum_hand_point(&levers);
+                    // Avoid stacking identical soft beats in one breath.
+                    let last = self.pokes.last().copied();
+                    if last != Some((x, y)) {
+                        self.pokes.push((x, y));
+                    }
+                }
+            }
             self.spectrum_prev = bands;
         }
         let (rw, rh) = (raster.width(), raster.height());
@@ -3339,18 +3383,14 @@ impl ApplicationHandler for App {
             self.advance_life_if_active(elapsed);
         }
         if !(self.paused || self.dragging || self.show_help && self.modal_mode_active()) {
+            let motion = self.time_scale * self.visualizer_scale;
             if !first_contact_obscured && self.rooms[self.current].meta().id == "mandelbrot" {
-                self.mandelbrot_camera.advance(elapsed * self.time_scale);
+                self.mandelbrot_camera.advance(elapsed * motion);
             }
             let show_active = self.show_mode_active();
             let rate = if show_active { SHOW_T_RATE } else { T_RATE };
-            let (next_phase, wrapped) = advance_gallery_phase(
-                self.t,
-                elapsed,
-                self.time_scale,
-                rate,
-                first_contact_obscured,
-            );
+            let (next_phase, wrapped) =
+                advance_gallery_phase(self.t, elapsed, motion, rate, first_contact_obscured);
             self.t = next_phase;
             if wrapped {
                 // In The Show, a finished sweep drifts into the next room.

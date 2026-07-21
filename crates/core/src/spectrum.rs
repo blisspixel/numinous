@@ -148,6 +148,48 @@ pub fn levers_from_bands(
     }
 }
 
+/// Onset strength above which a beat is considered to "hit".
+pub const ONSET_HIT: f32 = 1.55;
+
+/// Scale room time from spectrum bass (panel visualizer: bass pumps motion).
+///
+/// `base` is the player's ordinary time scale. Bass 0 keeps a calm floor;
+/// bass 1 nearly doubles pace. Clamped so rooms never freeze or race.
+#[must_use]
+pub fn spectrum_time_scale(base: f64, levers: &SpectrumLevers) -> f64 {
+    let pump = 0.55 + f64::from(levers.bass) * 0.95;
+    (base * pump).clamp(0.25, 2.25)
+}
+
+/// Micro phase nudge from treble and onset (treble scatters time; beats kick).
+#[must_use]
+pub fn spectrum_phase_nudge(levers: &SpectrumLevers) -> f64 {
+    let treble = f64::from(levers.treble) * 0.012;
+    let beat = if levers.onset >= ONSET_HIT {
+        0.018 * f64::from((levers.onset - 1.0).clamp(0.0, 3.0) / 3.0)
+    } else {
+        0.0
+    };
+    (treble + beat).clamp(0.0, 0.04)
+}
+
+/// Normalized hand point driven by spectrum (mid -> x, bass -> y).
+///
+/// Used as an optional soft poke target when a beat hits, so chaos rooms and
+/// planting rooms can answer the music without scolding quiet mixes.
+#[must_use]
+pub fn spectrum_hand_point(levers: &SpectrumLevers) -> (f64, f64) {
+    let x = (0.15 + f64::from(levers.mid) * 0.70).clamp(0.05, 0.95);
+    let y = (0.20 + f64::from(levers.bass) * 0.60).clamp(0.05, 0.95);
+    (x, y)
+}
+
+/// True when this frame should plant a soft spectrum poke.
+#[must_use]
+pub fn spectrum_should_poke(levers: &SpectrumLevers) -> bool {
+    levers.onset >= ONSET_HIT && levers.bass + levers.mid + levers.treble > 0.05
+}
+
 /// Layout for [`draw_spectrum_bars`].
 #[derive(Debug, Clone, Copy)]
 pub struct SpectrumBarLayout {
@@ -204,8 +246,10 @@ pub fn draw_spectrum_bars(
 #[cfg(test)]
 mod tests {
     use super::{
-        BAND_COUNT, BAND_NAMES, SpectrumBarLayout, arrangement_spectrum, band_energies,
-        bass_mid_treble, draw_spectrum_bars, levers_from_bands, low_band_onset, normalize_bands,
+        BAND_COUNT, BAND_NAMES, SpectrumBarLayout, SpectrumLevers, arrangement_spectrum,
+        band_energies, bass_mid_treble, draw_spectrum_bars, levers_from_bands, low_band_onset,
+        normalize_bands, spectrum_hand_point, spectrum_phase_nudge, spectrum_should_poke,
+        spectrum_time_scale,
     };
 
     fn sine_stereo(freq: f32, rate: u32, frames: usize) -> Vec<f32> {
@@ -323,5 +367,23 @@ mod tests {
         assert!((0.0..=1.0).contains(&levers.mid));
         assert!((0.0..=1.0).contains(&levers.treble));
         assert!(levers.onset >= 1.0);
+        let quiet = SpectrumLevers {
+            bass: 0.1,
+            mid: 0.2,
+            treble: 0.1,
+            onset: 1.0,
+        };
+        let loud = SpectrumLevers {
+            bass: 0.9,
+            mid: 0.5,
+            treble: 0.8,
+            onset: 2.5,
+        };
+        assert!(spectrum_time_scale(1.0, &loud) > spectrum_time_scale(1.0, &quiet));
+        assert!(spectrum_phase_nudge(&loud) > spectrum_phase_nudge(&quiet));
+        assert!(spectrum_should_poke(&loud));
+        assert!(!spectrum_should_poke(&quiet));
+        let (x, y) = spectrum_hand_point(&loud);
+        assert!((0.05..=0.95).contains(&x) && (0.05..=0.95).contains(&y));
     }
 }
