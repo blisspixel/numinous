@@ -1,26 +1,24 @@
 //! Pointer feedback for the native App surface.
 //!
 //! The room renderer owns the mathematical consequence. This layer only makes
-//! the latest accepted hand gesture locatable. Gesture boundaries ensure
-//! separate clicks never become a false trail or a field of stale markers.
+//! an *active* hand locatable: a small reticle while held. Completed gestures
+//! leave no chrome so the math can breathe. Separate clicks never become a
+//! false trail or a field of stale markers.
 
 use numinous_core::{Gesture, MAX_ROOM_INPUTS, RoomInput, Surface, latest_gesture};
-
-fn point(input: &RoomInput) -> Option<(f64, f64)> {
-    let (x, y) = match *input {
-        RoomInput::PointerDown { x, y, .. }
-        | RoomInput::PointerMove { x, y, .. }
-        | RoomInput::PointerUp { x, y, .. } => (x, y),
-        _ => return None,
-    };
-    (x.is_finite() && y.is_finite()).then(|| (x.clamp(0.0, 1.0), y.clamp(0.0, 1.0)))
-}
 
 fn pixel(point: (f64, f64), width: usize, height: usize) -> (i32, i32) {
     (
         (point.0 * width.saturating_sub(1) as f64).round() as i32,
         (point.1 * height.saturating_sub(1) as f64).round() as i32,
     )
+}
+
+/// Half-arm of the live reticle in pixels. Kept small so it never competes
+/// with the room: roughly 1.2% of the short edge, clamped to a few pixels.
+fn reticle_half_span(width: usize, height: usize) -> i32 {
+    let short = width.min(height) as f64;
+    ((short * 0.012).round() as i32).clamp(2, 6)
 }
 
 pub(crate) fn draw(surface: &mut dyn Surface, inputs: &[RoomInput]) {
@@ -33,88 +31,32 @@ pub(crate) fn draw(surface: &mut dyn Surface, inputs: &[RoomInput]) {
     let Some(gesture) = latest_gesture(bounded) else {
         return;
     };
-    let end = match gesture {
-        Gesture::Held { .. } => bounded
-            .iter()
-            .rposition(|input| {
-                matches!(
-                    input,
-                    RoomInput::PointerDown { .. } | RoomInput::PointerMove { .. }
-                )
-            })
-            .expect("held gesture has a down or move"),
-        Gesture::Released { .. } => bounded
-            .iter()
-            .rposition(|input| matches!(input, RoomInput::PointerUp { .. }))
-            .expect("released gesture has an up"),
-        Gesture::Cancelled { .. } => bounded
-            .iter()
-            .rposition(|input| matches!(input, RoomInput::PointerCancel))
-            .expect("cancelled gesture has a cancel"),
+    // Only while the hand is still down. A released or cancelled gesture
+    // already wrote its math into the room; leaving a crosshair or stroke
+    // trail on top of most rooms is noise, not guidance.
+    let Gesture::Held { at, .. } = gesture else {
+        return;
     };
-    let mut start = end;
-    if !matches!(bounded[end], RoomInput::PointerDown { .. }) {
-        for index in (0..end).rev() {
-            match bounded[index] {
-                RoomInput::PointerMove { .. } => start = index,
-                RoomInput::PointerDown { .. } => {
-                    start = index;
-                    break;
-                }
-                RoomInput::Wheel { .. } | RoomInput::Key { .. } => {}
-                RoomInput::PointerUp { .. } | RoomInput::PointerCancel => break,
-                _ => {}
-            }
-        }
-    }
-    let mut held = None;
-    for input in &bounded[start..=end] {
-        match input {
-            RoomInput::PointerDown { .. } => {
-                held = point(input);
-            }
-            RoomInput::PointerMove { .. } => {
-                let to = point(input);
-                if let (Some(from), Some(to)) = (held, to) {
-                    let from = pixel(from, width, height);
-                    let to = pixel(to, width, height);
-                    surface.line(from.0, from.1, to.0, to.1, '+');
-                }
-                held = to;
-            }
-            RoomInput::PointerUp { .. } => {
-                if let (Some(from), Some(to)) = (held, point(input)) {
-                    let from_pixel = pixel(from, width, height);
-                    let to_pixel = pixel(to, width, height);
-                    if from_pixel != to_pixel {
-                        surface.line(from_pixel.0, from_pixel.1, to_pixel.0, to_pixel.1, '+');
-                    }
-                }
-                held = None;
-            }
-            RoomInput::PointerCancel => held = None,
-            RoomInput::Wheel { .. } | RoomInput::Key { .. } => {}
-            _ => {}
-        }
-    }
-    let latest = match gesture {
-        Gesture::Held { at, .. } | Gesture::Released { at, .. } | Gesture::Cancelled { at } => {
-            (at.0, at.1)
-        }
-    };
-    if !latest.0.is_finite() || !latest.1.is_finite() {
+    if !at.0.is_finite() || !at.1.is_finite() {
         return;
     }
-    let latest = (latest.0.clamp(0.0, 1.0), latest.1.clamp(0.0, 1.0));
+    let latest = (at.0.clamp(0.0, 1.0), at.1.clamp(0.0, 1.0));
     let (x, y) = pixel(latest, width, height);
-    let half_span = ((width.min(height) as f64 * 0.09).round() as i32).max(5);
-    surface.line(x - half_span, y, x + half_span, y, '+');
-    surface.line(x, y - half_span, x, y + half_span, '+');
+    let half = reticle_half_span(width, height);
+    // Gap at the center so the reticle reads as a cross, not a filled blot.
+    let gap = 1;
+    if half > gap {
+        surface.line(x - half, y, x - gap, y, '+');
+        surface.line(x + gap, y, x + half, y, '+');
+        surface.line(x, y - half, x, y - gap, '+');
+        surface.line(x, y + gap, x, y + half, '+');
+    }
+    surface.plot(x, y, '+');
 }
 
 #[cfg(test)]
 mod tests {
-    use super::draw;
+    use super::{draw, reticle_half_span};
     use numinous_core::{Canvas, RoomInput};
 
     fn down(x: f64, y: f64) -> RoomInput {
@@ -125,16 +67,30 @@ mod tests {
         RoomInput::PointerUp { x, y, t: 0.1 }
     }
 
+    fn move_to(x: f64, y: f64, t: f64) -> RoomInput {
+        RoomInput::PointerMove { x, y, t }
+    }
+
     #[test]
-    fn separate_clicks_do_not_gain_a_connecting_stroke() {
+    fn reticle_stays_compact_on_large_surfaces() {
+        // 9% of 900 would be ~81; we want a handful of pixels.
+        assert!(reticle_half_span(900, 900) <= 6);
+        assert!(reticle_half_span(100, 60) <= 4);
+        assert!(reticle_half_span(40, 40) >= 2);
+    }
+
+    #[test]
+    fn completed_clicks_leave_no_chrome() {
         let mut canvas = Canvas::new(100, 60);
         draw(
             &mut canvas,
             &[down(0.1, 0.2), up(0.1, 0.2), down(0.9, 0.8), up(0.9, 0.8)],
         );
-        assert_eq!(canvas.cell(10, 12), Some(' '));
-        assert_eq!(canvas.cell(50, 30), Some(' '));
-        assert_eq!(canvas.cell(89, 47), Some('+'));
+        assert_eq!(
+            canvas.ink_count(),
+            0,
+            "released gestures must not leave a reticle or trail"
+        );
     }
 
     #[test]
@@ -144,52 +100,39 @@ mod tests {
             &mut canvas,
             &[
                 down(0.1, 0.2),
-                RoomInput::PointerMove {
-                    x: 0.3,
-                    y: 0.2,
-                    t: 0.05,
-                },
+                move_to(0.3, 0.2, 0.05),
                 up(0.3, 0.2),
                 down(0.9, 0.8),
                 up(0.9, 0.8),
             ],
         );
-        assert_eq!(canvas.cell(20, 12), Some(' '));
-        assert_eq!(canvas.cell(89, 47), Some('+'));
+        assert_eq!(canvas.ink_count(), 0);
     }
 
     #[test]
-    fn a_truncated_active_drag_still_draws_from_its_oldest_retained_move() {
-        let mut canvas = Canvas::new(100, 60);
-        let inputs: Vec<_> = (0..100)
-            .map(|index| RoomInput::PointerMove {
-                x: index as f64 / 100.0,
-                y: 0.5,
-                t: index as f64 / 100.0,
-            })
-            .collect();
-        draw(&mut canvas, &inputs);
-        assert_eq!(canvas.cell(50, 30), Some('+'));
-        assert_eq!(canvas.cell(98, 30), Some('+'));
-    }
-
-    #[test]
-    fn one_drag_draws_its_path_and_latest_reticle() {
+    fn a_held_hand_draws_only_a_compact_reticle_not_a_path() {
         let mut canvas = Canvas::new(100, 60);
         draw(
             &mut canvas,
             &[
                 down(0.1, 0.2),
-                RoomInput::PointerMove {
-                    x: 0.5,
-                    y: 0.5,
-                    t: 0.05,
-                },
-                up(0.9, 0.8),
+                move_to(0.5, 0.5, 0.05),
+                move_to(0.9, 0.8, 0.1),
             ],
         );
-        assert_eq!(canvas.cell(50, 30), Some('+'));
+        // Path strokes would light the mid-line; only the latest reticle should ink.
+        assert_eq!(
+            canvas.cell(50, 30),
+            Some(' '),
+            "path strokes must not draw across the room"
+        );
         assert_eq!(canvas.cell(89, 47), Some('+'));
+        let ink = canvas.ink_count();
+        // Compact cross: center plus a few arm pixels, far below a long trail.
+        assert!(
+            (3..=25).contains(&ink),
+            "held reticle should stay small, ink={ink}"
+        );
     }
 
     #[test]
