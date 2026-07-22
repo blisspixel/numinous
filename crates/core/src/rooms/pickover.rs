@@ -6,7 +6,7 @@
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
-const ITERS: usize = 14_000;
+const ITERS: usize = 24_000;
 
 fn phase_unit(t: f64) -> f64 {
     if t.is_finite() {
@@ -27,19 +27,25 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 }
 
 fn params(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64, f64, f64) {
-    // Keep the classic Pickover quartet; only nudge a,b gently.
+    // Gallery basin: classic a,b with positive c,d. Negative c,d collapse to a
+    // tiny periodic freckle (tens of unique cells instead of thousands).
     let s = if seed == 0 {
         0.0
     } else {
-        (seed % 5) as f64 * 0.02
+        (seed % 5) as f64 * 0.015
     };
     let u = phase_unit(t);
     let (da, db) = if let Some((x, y)) = hand {
-        ((x - 0.5) * 0.25, (y - 0.5) * 0.35)
+        ((x - 0.5) * 0.18, (y - 0.5) * 0.22)
     } else {
-        ((u - 0.5) * 0.12, (0.5 - u) * 0.15)
+        ((u - 0.5) * 0.1, (0.5 - u) * 0.12)
     };
-    (-0.759 + da + s, 2.449 + db, -1.234, -1.506)
+    (
+        (-0.76 + da + s).clamp(-0.9, -0.55),
+        (2.45 + db).clamp(2.2, 2.7),
+        1.253,
+        1.5,
+    )
 }
 
 fn draw(canvas: &mut dyn Surface, a: f64, b: f64, c: f64, d: f64) {
@@ -71,12 +77,13 @@ fn draw(canvas: &mut dyn Surface, a: f64, b: f64, c: f64, d: f64) {
         pts.push((x, y));
     }
     if pts.len() < 50 {
-        for i in 0..320 {
-            let th = i as f64 / 319.0 * std::f64::consts::TAU * 3.0;
-            let r = 0.1 + 0.28 * (i as f64 / 319.0);
+        for i in 0..480 {
+            let th = i as f64 / 479.0 * std::f64::consts::TAU * 3.0;
+            let r = 0.1 + 0.32 * (i as f64 / 479.0);
             let px = (0.5 + r * th.cos()) * width.saturating_sub(1) as f64;
-            let py = (0.5 + r * th.sin() * 0.65) * height.saturating_sub(1) as f64;
+            let py = (0.5 + r * th.sin() * 0.7) * height.saturating_sub(1) as f64;
             canvas.plot(px.round() as i32, py.round() as i32, '*');
+            canvas.plot(px.round() as i32 + 1, py.round() as i32, '.');
         }
         return;
     }
@@ -92,8 +99,8 @@ fn draw(canvas: &mut dyn Surface, a: f64, b: f64, c: f64, d: f64) {
     }
     let dx = (max_x - min_x).max(1e-6);
     let dy = (max_y - min_y).max(1e-6);
-    let mx = width as f64 * 0.06;
-    let my = height as f64 * 0.06;
+    let mx = width as f64 * 0.05;
+    let my = height as f64 * 0.05;
     let iw = (width as f64 - 2.0 * mx).max(1.0);
     let ih = (height as f64 - 2.0 * my).max(1.0);
     for (i, &(px, py)) in pts.iter().enumerate() {
@@ -103,8 +110,11 @@ fn draw(canvas: &mut dyn Surface, a: f64, b: f64, c: f64, d: f64) {
         let iy = (my + (1.0 - v) * ih).round() as i32;
         let ch = if i % 10 == 0 { '#' } else { '*' };
         canvas.plot(ix, iy, ch);
-        if i % 4 == 0 {
+        if i % 2 == 0 {
             canvas.plot(ix + 1, iy, ch);
+        }
+        if i % 4 == 0 {
+            canvas.plot(ix, iy + 1, '.');
         }
     }
 }
@@ -258,7 +268,16 @@ mod tests {
     fn render_ink() {
         let mut c = Canvas::new(40, 28);
         Pickover::new().render(&mut c, 0.5);
-        assert!(c.ink_count() > 20);
+        assert!(c.ink_count() > 80, "swirl must fill the plate");
+        for t in [0.0, 0.35, 0.55, 0.9] {
+            let mut large = Canvas::new(120, 70);
+            Pickover::new().render(&mut large, t);
+            assert!(
+                large.ink_count() > 150,
+                "t={t} must not collapse to freckles: {}",
+                large.ink_count()
+            );
+        }
     }
 
     #[test]

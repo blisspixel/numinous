@@ -31,9 +31,9 @@ fn ratio(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
         (seed % 5) as f64 * 0.02
     };
     if let Some((x, _)) = hand {
-        0.55 + x * 0.9 + s
+        0.7 + x * 0.8 + s
     } else {
-        0.7 + phase_unit(t) * 0.7 + s
+        0.9 + phase_unit(t) * 0.55 + s
     }
 }
 
@@ -44,8 +44,8 @@ fn draw(canvas: &mut dyn Surface, ba: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let a = (width.min(height) as f64) * 0.18;
-    let ba = ba.clamp(0.5, 1.6);
+    let a = (width.min(height) as f64) * 0.24;
+    let ba = ba.clamp(0.65, 1.6);
     let b = ba * a;
     let b2 = b * b;
     let b4 = b2 * b2;
@@ -58,7 +58,7 @@ fn draw(canvas: &mut dyn Surface, ba: f64, seed: u64) {
     let cos_r = rot.cos();
     let sin_r = rot.sin();
     // Polar form: r^2 = a^2 cos(2th) +/- sqrt(b^4 - a^4 sin^2(2th))
-    let steps = 360;
+    let steps = 480;
     for sign in [1.0_f64, -1.0] {
         let mut prev: Option<(i32, i32)> = None;
         for i in 0..=steps {
@@ -81,7 +81,7 @@ fn draw(canvas: &mut dyn Surface, ba: f64, seed: u64) {
             let xr = x * cos_r - y * sin_r;
             let yr = x * sin_r + y * cos_r;
             let px = (cx + xr).round() as i32;
-            let py = (cy - yr).round() as i32;
+            let py = (cy - yr * 0.9).round() as i32;
             if let Some((ox, oy)) = prev {
                 let ch = if ba < 1.0 {
                     '*'
@@ -91,18 +91,22 @@ fn draw(canvas: &mut dyn Surface, ba: f64, seed: u64) {
                     '#'
                 };
                 canvas.line(ox, oy, px, py, ch);
+                canvas.line(ox, oy + 1, px, py + 1, '.');
             }
             prev = Some((px, py));
         }
     }
-    // Foci marks.
+    // Foci: filled blots, not reticle crosses.
     let fx = a * cos_r;
     let fy = a * sin_r;
     for (sx, sy) in [(fx, fy), (-fx, -fy)] {
         let px = (cx + sx).round() as i32;
-        let py = (cy - sy).round() as i32;
-        canvas.line(px - 1, py, px + 1, py, 'o');
-        canvas.line(px, py - 1, px, py + 1, 'o');
+        let py = (cy - sy * 0.9).round() as i32;
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                canvas.plot(px + dx, py + dy, 'o');
+            }
+        }
     }
 }
 

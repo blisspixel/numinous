@@ -6,7 +6,7 @@
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
-const STEPS: usize = 7_000;
+const STEPS: usize = 11_000;
 const DT: f64 = 0.002;
 
 fn phase_unit(t: f64) -> f64 {
@@ -100,6 +100,7 @@ fn draw(canvas: &mut dyn Surface, pts: &[(f64, f64, f64)]) {
                 '*'
             };
             canvas.line(o.0, o.1, px, py, ch);
+            canvas.line(o.0, o.1 + 1, px, py + 1, if i % 3 == 0 { '*' } else { '.' });
         }
         prev = Some((px, py));
     }
