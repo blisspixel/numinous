@@ -1,6 +1,7 @@
 //! Epitrochoid: roulette of a circle rolling outside a fixed circle.
 //!
-//! DRAG: TUNE RATIO. See `docs/ROOMS.md`.
+//! Ambient phase draws the roulette with a pen. DRAG: TUNE RATIO.
+//! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -23,7 +24,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn ratio(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn ratio(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -32,11 +33,12 @@ fn ratio(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         1.5 + x * 5.0 + s
     } else {
-        2.0 + phase_unit(t) * 3.5 + s
+        // Ambient ratio holds a readable bloom; motion lives in the pen.
+        3.0 + s
     }
 }
 
-fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, k: f64, show: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -56,9 +58,12 @@ fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) {
     // x = (R+r) cos t - d cos((R+r)/r t)
     let r_sum = big + rr;
     let scale = (width.min(height) as f64) * 0.38 / (r_sum + d).max(1.0);
+    let show = show.clamp(0.0, 1.0);
     let steps = 800;
-    let mut prev: Option<(i32, i32)> = None;
     let turns = 4.0;
+    let drawn = ((show * steps as f64).round() as usize).min(steps);
+    // Soft ghost of the full outer roulette.
+    let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let th = turns * std::f64::consts::TAU * (i as f64 / steps as f64);
         let x = r_sum * th.cos() - d * ((r_sum / rr) * th).cos();
@@ -66,9 +71,35 @@ fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) {
         let px = (cx + scale * x).round() as i32;
         let py = (cy - scale * y).round() as i32;
         if let Some((ox, oy)) = prev {
-            canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy, px, py, '.');
         }
         prev = Some((px, py));
+    }
+    // Bright path so far.
+    prev = None;
+    for i in 0..=drawn {
+        let th = turns * std::f64::consts::TAU * (i as f64 / steps as f64);
+        let x = r_sum * th.cos() - d * ((r_sum / rr) * th).cos();
+        let y = r_sum * th.sin() - d * ((r_sum / rr) * th).sin();
+        let px = (cx + scale * x).round() as i32;
+        let py = (cy - scale * y).round() as i32;
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
+        }
+        prev = Some((px, py));
+    }
+    let pen_th = show * turns * std::f64::consts::TAU;
+    let pen_x =
+        (cx + scale * (r_sum * pen_th.cos() - d * ((r_sum / rr) * pen_th).cos())).round() as i32;
+    let pen_y =
+        (cy - scale * (r_sum * pen_th.sin() - d * ((r_sum / rr) * pen_th).sin())).round() as i32;
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(pen_x + dx, pen_y + dy, 'o');
+            }
+        }
     }
 }
 
@@ -97,13 +128,13 @@ impl Room for Epitrochoid {
             id: "epitrochoid",
             title: "Epitrochoid",
             wing: "Shape & Space",
-            blurb: "Outer rolling roulette: epicycloid family. t and DRAG: TUNE RATIO.",
+            blurb: "Outer rolling roulette draws itself. Watch the pen; DRAG: TUNE RATIO.",
             accent: [80, 60, 180],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, ratio(t, None, self.seed), self.seed);
+        draw(canvas, ratio(t, None, self.seed), phase_unit(t), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -126,13 +157,18 @@ impl Room for Epitrochoid {
 
     fn status(&self, t: f64) -> Option<String> {
         let k = ratio(t, None, self.seed);
-        Some(format!("R/r={k:.1}  epi  DRAG"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("R/r={k:.1}  draw={p}%  DRAG"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let k = ratio(t, hands.last().copied(), self.seed);
-        draw(canvas, k, self.seed ^ hands.len() as u64);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, k, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -164,7 +200,7 @@ mod tests {
     #[test]
     fn status_invites() {
         let s = Epitrochoid::new().status(0.3).unwrap();
-        assert!(s.contains("DRAG") || s.contains("epi"));
+        assert!(s.contains("DRAG") || s.contains("draw"));
         assert!(s.chars().count() <= 56);
     }
 
@@ -183,6 +219,18 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn ambient_pen_moves_the_plate() {
+        let r = Epitrochoid::new();
+        let mut a = Canvas::new(80, 48);
+        let mut b = Canvas::new(80, 48);
+        r.render(&mut a, 0.15);
+        r.render(&mut b, 0.75);
+        assert_ne!(a.to_text(), b.to_text(), "pen must walk the roulette");
+        assert!(a.ink_count() > 40);
+        assert!(b.ink_count() > 40);
     }
 
     #[test]

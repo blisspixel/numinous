@@ -157,8 +157,8 @@ Catalog plate quality is under active machine evidence: art-first interaction
 (no reticle or drag trail over the math), zero phase-thin frames, zero
 dead-domain rooms, and zero dead dials on full-catalog scans. Ambient phase is
 a *show* on flagship curves and waves (rolling construction, pens, breathing
-strings, scrolling partials), not a frozen plot. Soft-thin densify continues
-where honest. The six-question plate filter lives in
+strings, scrolling partials, unfurling spirals), not a frozen plot. Soft-thin
+densify continues where honest. The six-question plate filter lives in
 [`docs/RESEARCH.md`](docs/RESEARCH.md). Detail also lives in
 [`CHANGELOG.md`](CHANGELOG.md) and the Progress section of
 [`docs/ROADMAP.md`](docs/ROADMAP.md).
