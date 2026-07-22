@@ -5,15 +5,23 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
-### Changed
-- App: Enter starts The Show (the room tour), same as B, including from the
-  open menu. The front-door start no longer needs a letter key.
-
 ### Fixed
+- Catalog plate bug-hunt (cycle 168): Log Spiral t=0 was phase-thin under the
+  80-ink bar; unfurl floor and early-arm stroke fix it. Dead domain on Coffee
+  Cup (hand sun no longer re-adds ambient phase), Degree-720 (hand x sweeps
+  the full double cover), The Stretch (home galaxy at plate center; hand y
+  steers H0), and Catenary (sag maps per-chain so dial a is visible). Full-
+  catalog scan: 0 phase-thin, 0 dead domain, 0 dead dial.
 - Arcade selection no longer hides the number under the Muncher. The App draws
   the digit first, then a selection frame and open ring; CLI shows the yellow
   digits while you stand on them; MCP board text keeps the value with an `@`
   mark. You can read what you are about to eat.
+
+### Changed
+- App: Enter starts The Show (the room tour), same as B, including from the
+  open menu. The front-door start no longer needs a letter key.
+- Docs: PLAYING, ARCADE, ROADMAP, README, and the unreleased changelog track
+  Enter, arcade selection, and cycle-168 plate fixes.
 
 ### Changed
 - Live motion pack (cycles 164 to 167): static graph rooms now perform.

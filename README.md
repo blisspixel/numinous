@@ -87,7 +87,7 @@ Humans can also play through the full-color CLI. The detailed manual is
 | | |
 |---|---|
 | ![The Numinous menu](assets/screens/menu.png) | ![The Golden Angle room](assets/screens/golden-angle.png) |
-| **Enter.** Choose how to play, or close the menu and wander. | **One room.** The rest are better discovered inside Numinous. |
+| **Enter.** Starts The Show (the room tour). Esc opens the menu. | **One room.** The rest are better discovered inside Numinous. |
 
 ## The experience
 
