@@ -30,27 +30,27 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 /// Clifford attractor parameters (a,b,c,d).
 fn params(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64, f64, f64) {
     let u = phase_unit(t);
-    let (a, b, c, d) = if let Some((x, y)) = hand {
+    let s = if seed == 0 {
+        0.0
+    } else {
+        (seed % 5) as f64 * 0.03
+    };
+    // Keep every phase inside the dense gallery basin (old ±2 sweeps blanked t=1).
+    if let Some((x, y)) = hand {
         (
-            -2.0 + x * 4.0,
-            -2.0 + y * 4.0,
-            -1.5 + u * 3.0,
-            -1.5 + (1.0 - u) * 3.0,
+            (-1.8 + x * 0.7 + s).clamp(-1.85, -1.05),
+            (1.2 + y * 0.7).clamp(1.1, 1.95),
+            (0.7 + u * 0.5).clamp(0.55, 1.35),
+            (0.5 + (1.0 - u) * 0.4).clamp(0.4, 1.0),
         )
     } else {
-        // Famous-ish Clifford look.
         (
-            -1.4 + u * 0.3,
-            1.6 - u * 0.2,
+            (-1.55 + u * 0.25 + s).clamp(-1.6, -1.2),
+            (1.7 - u * 0.2).clamp(1.35, 1.8),
             1.0,
-            0.7 + if seed == 0 {
-                0.0
-            } else {
-                (seed % 5) as f64 * 0.05
-            },
+            (0.65 + s).clamp(0.55, 0.9),
         )
-    };
-    (a, b, c, d)
+    }
 }
 
 fn clifford_step(x: f64, y: f64, a: f64, b: f64, c: f64, d: f64) -> (f64, f64) {

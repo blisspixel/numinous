@@ -45,20 +45,27 @@ fn draw(canvas: &mut dyn Surface, lam: f64) {
     if width == 0 || height == 0 {
         return;
     }
-    // Fixed view keeps ink dense even when the attractor is thin.
-    let mut x: f64 = std::f64::consts::FRAC_1_PI;
-    let mut y: f64 = 0.0;
-    for i in 0..ITERS {
-        y = lam * y + (4.0 * std::f64::consts::PI * x).cos();
-        x = (2.0 * x).rem_euclid(1.0);
-        if !x.is_finite() || !y.is_finite() {
-            break;
+    // Fixed view; multi-orbit + vertical thickening so the fractal ribbon fills.
+    for orbit in 0..4 {
+        let mut x: f64 = std::f64::consts::FRAC_1_PI + orbit as f64 * 0.07;
+        let mut y: f64 = orbit as f64 * 0.05;
+        for i in 0..ITERS {
+            y = lam * y + (4.0 * std::f64::consts::PI * x).cos();
+            x = (2.0 * x).rem_euclid(1.0);
+            if !x.is_finite() || !y.is_finite() {
+                break;
+            }
+            let u = x.clamp(0.0, 1.0);
+            let v = ((y + 2.5) / 5.0).clamp(0.0, 1.0);
+            let ix = (u * width.saturating_sub(1) as f64).round() as i32;
+            let iy = ((1.0 - v) * height.saturating_sub(1) as f64).round() as i32;
+            let ch = if i % 6 == 0 { '#' } else { '*' };
+            canvas.plot(ix, iy, ch);
+            canvas.plot(ix, iy.saturating_sub(1), ch);
+            if height > 40 {
+                canvas.plot(ix, iy + 1, '.');
+            }
         }
-        let u = x.clamp(0.0, 1.0);
-        let v = ((y + 2.5) / 5.0).clamp(0.0, 1.0);
-        let ix = (u * width.saturating_sub(1) as f64).round() as i32;
-        let iy = ((1.0 - v) * height.saturating_sub(1) as f64).round() as i32;
-        canvas.plot(ix, iy, if i % 6 == 0 { '#' } else { '*' });
     }
 }
 

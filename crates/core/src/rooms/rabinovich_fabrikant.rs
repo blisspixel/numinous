@@ -26,21 +26,29 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn gamma(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn params(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64) {
+    // Classic gallery often uses gamma≈0.87, alpha≈1.1. Hand must leave that
+    // neighborhood far enough that the projection is not a re-raster.
     let s = if seed == 0 {
         0.0
     } else {
-        (seed % 5) as f64 * 0.01
+        (seed % 5) as f64 * 0.015
     };
-    if let Some((x, _)) = hand {
-        0.1 + x * 1.0 + s
+    if let Some((x, y)) = hand {
+        (
+            (0.25 + x * 0.95 + s).clamp(0.2, 1.25),
+            (0.85 + y * 0.5).clamp(0.8, 1.4),
+        )
     } else {
-        0.87 + phase_unit(t) * 0.2 + s
+        let u = phase_unit(t);
+        (
+            (0.7 + u * 0.35 + s).clamp(0.65, 1.1),
+            (1.05 + (1.0 - u) * 0.15).clamp(0.95, 1.25),
+        )
     }
 }
 
-fn integrate(g: f64) -> Vec<(f64, f64, f64)> {
-    let alpha = 1.1;
+fn integrate(g: f64, alpha: f64) -> Vec<(f64, f64, f64)> {
     let mut x = -1.0;
     let mut y = 0.0;
     let mut z = 0.5;
@@ -52,7 +60,7 @@ fn integrate(g: f64) -> Vec<(f64, f64, f64)> {
         x += DT * dx;
         y += DT * dy;
         z += DT * dz;
-        if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+        if !x.is_finite() || !y.is_finite() || !z.is_finite() || x.abs() > 50.0 {
             break;
         }
         out.push((x, y, z));
@@ -128,7 +136,8 @@ impl Room for RabinovichFabrikant {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, &integrate(gamma(t, None, self.seed)));
+        let (g, a) = params(t, None, self.seed);
+        draw(canvas, &integrate(g, a));
     }
 
     fn postcard_t(&self) -> f64 {
@@ -150,14 +159,14 @@ impl Room for RabinovichFabrikant {
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        let g = gamma(t, None, self.seed);
+        let (g, _) = params(t, None, self.seed);
         Some(format!("gamma={g:.2}  DRAG:TUNE"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
-        let g = gamma(t, hands.last().copied(), self.seed);
-        draw(canvas, &integrate(g));
+        let (g, a) = params(t, hands.last().copied(), self.seed);
+        draw(canvas, &integrate(g, a));
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -166,8 +175,7 @@ impl Room for RabinovichFabrikant {
         if hands.is_empty() {
             return self.status(t);
         }
-        let g = gamma(t, hands.last().copied(), self.seed);
-        let alpha = 1.1;
+        let (g, alpha) = params(t, hands.last().copied(), self.seed);
         let mut x = -1.0_f64;
         let mut y = 0.0_f64;
         let mut z = 0.5_f64;

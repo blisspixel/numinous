@@ -61,42 +61,56 @@ fn draw_belt(canvas: &mut dyn Surface, ang: f64, twist: f64) {
     }
     let cx = width as f64 / 2.0;
     let cy = height as f64 / 2.0;
-    let r = width.min(height) as f64 * 0.32;
-    // Anchor.
-    canvas.plot(cx.round() as i32, cy.round() as i32, '+');
-    // Ribbon samples: twisted band.
-    let n = 48;
+    let r = width.min(height) as f64 * 0.34;
+    // Always draw a full double-cover guide so t=0 is a belt, not a speck.
+    let guide_steps = 96;
+    let guide_span = TAU * 2.0;
+    let mut prev_g: Option<(i32, i32)> = None;
+    for i in 0..=guide_steps {
+        let u = i as f64 / guide_steps as f64;
+        let a = guide_span * u;
+        let half = 2.0 * PI_F * u;
+        let rr = r * (0.5 + 0.35 * (half * 2.0).cos().abs());
+        let x = (cx + rr * a.cos()).round() as i32;
+        let y = (cy + rr * a.sin() * 0.72).round() as i32;
+        if let Some((ox, oy)) = prev_g {
+            canvas.line(ox, oy, x, y, '.');
+        }
+        prev_g = Some((x, y));
+    }
+    // Live ribbon follows the stone angle (thick so it reads on a large window).
+    let span = ang.abs().max(0.4);
+    let n = 72;
+    let mut prev: Option<(i32, i32)> = None;
     for i in 0..=n {
         let u = i as f64 / n as f64;
-        let a = ang * u;
-        // Double-cover visual: half-twist per 360 so 720 closes.
+        let a = if ang >= 0.0 { span * u } else { -span * u };
         let half = twist * PI_F * u;
         let rr = r * (0.55 + 0.45 * (half * 2.0).cos().abs());
-        let x = cx + rr * a.cos();
-        let y = cy + rr * a.sin();
+        let x = (cx + rr * a.cos()).round() as i32;
+        let y = (cy + rr * a.sin() * 0.72).round() as i32;
         let mark = if i == n { '#' } else { '*' };
-        canvas.plot(x.round() as i32, y.round() as i32, mark);
-        if i > 0 {
-            let a0 = ang * ((i - 1) as f64 / n as f64);
-            let half0 = twist * PI_F * ((i - 1) as f64 / n as f64);
-            let rr0 = r * (0.55 + 0.45 * (half0 * 2.0).cos().abs());
-            let x0 = cx + rr0 * a0.cos();
-            let y0 = cy + rr0 * a0.sin();
-            canvas.line(
-                x0.round() as i32,
-                y0.round() as i32,
-                x.round() as i32,
-                y.round() as i32,
-                '.',
-            );
+        canvas.plot(x, y, mark);
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, x, y, '*');
+        }
+        prev = Some((x, y));
+    }
+    // Anchor hub.
+    for dy in -1..=1 {
+        for dx in -1..=1 {
+            canvas.plot(cx.round() as i32 + dx, cy.round() as i32 + dy, '+');
         }
     }
     // Stone at tip.
-    let sx = cx + r * ang.cos();
-    let sy = cy + r * ang.sin();
-    for dy in -1..=1 {
-        for dx in -1..=1 {
-            canvas.plot(sx.round() as i32 + dx, sy.round() as i32 + dy, 'O');
+    let tip_a = if ang.abs() < 1e-9 { 0.0 } else { ang };
+    let sx = cx + r * tip_a.cos();
+    let sy = cy + r * tip_a.sin() * 0.72;
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(sx.round() as i32 + dx, sy.round() as i32 + dy, 'O');
+            }
         }
     }
 }
