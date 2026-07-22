@@ -26,9 +26,9 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 
 fn depth(t: f64, hand: Option<(f64, f64)>) -> usize {
     if let Some((x, _)) = hand {
-        (2 + (x * 8.0) as usize).clamp(2, 10)
+        (4 + (x * 7.0) as usize).clamp(4, 11)
     } else {
-        (3 + (phase_unit(t) * 6.0) as usize).clamp(2, 9)
+        (5 + (phase_unit(t) * 5.0) as usize).clamp(4, 10)
     }
 }
 
@@ -81,9 +81,13 @@ fn draw(canvas: &mut dyn Surface, d: usize, seed: u64) {
         } else {
             '*'
         };
-        canvas.plot(px, py, ch);
+        for dy in 0..2 {
+            for dx in -1..=1 {
+                canvas.plot(px + dx, py + dy, ch);
+            }
+        }
         if level > 0 {
-            canvas.plot(px, py.saturating_sub(1), '.');
+            canvas.line(px, py.saturating_sub(2), px, py, '.');
         }
         let _ = (a, b);
     }

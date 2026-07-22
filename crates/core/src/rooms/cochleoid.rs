@@ -29,10 +29,11 @@ fn scale_a(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     } else {
         (seed % 5) as f64 * 0.04
     };
+    // Floor keeps t=0 a full shell, not a hairline.
     if let Some((x, _)) = hand {
-        0.4 + x * 1.2 + s
+        0.75 + x * 1.0 + s
     } else {
-        0.5 + phase_unit(t) * 0.9 + s
+        0.9 + phase_unit(t) * 0.7 + s
     }
 }
 
@@ -43,22 +44,23 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let a = a.clamp(0.35, 1.8) * (width.min(height) as f64) * 0.35;
+    let a = a.clamp(0.7, 2.0) * (width.min(height) as f64) * 0.42;
     let rot = if seed == 0 {
         0.0
     } else {
         (seed % 7) as f64 * 0.05
     };
-    let steps = 400;
+    let steps = 560;
     let mut prev: Option<(i32, i32)> = None;
     for i in 1..=steps {
-        let th = 0.15 + 6.0 * std::f64::consts::PI * (i as f64 / steps as f64);
+        let th = 0.12 + 7.0 * std::f64::consts::PI * (i as f64 / steps as f64);
         let r = a * th.sin() / th;
         let ang = th + rot;
         let px = (cx + r * ang.cos()).round() as i32;
-        let py = (cy - r * ang.sin() * 0.55).round() as i32;
+        let py = (cy - r * ang.sin() * 0.62).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
         }
         prev = Some((px, py));
     }

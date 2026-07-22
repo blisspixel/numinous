@@ -25,10 +25,11 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 }
 
 fn ceiling(t: f64, hand: Option<(f64, f64)>) -> usize {
+    // Start denser so t=0 is a filled plate, not a sparse grid.
     if let Some((x, _)) = hand {
-        (30 + (x * 170.0) as usize).clamp(20, 200)
+        (80 + (x * 220.0) as usize).clamp(60, 320)
     } else {
-        (40 + (phase_unit(t) * 120.0) as usize).clamp(20, 160)
+        (90 + (phase_unit(t) * 180.0) as usize).clamp(70, 280)
     }
 }
 
@@ -59,11 +60,13 @@ fn draw(canvas: &mut dyn Surface, is_prime: &[bool], strike_upto: usize) {
     let n = is_prime.len() - 1;
     let cols = ((n as f64).sqrt().ceil() as usize).max(4);
     let rows = n.div_ceil(cols);
+    let cell_w = (width / cols).max(1) as i32;
+    let cell_h = (height / rows.max(1)).max(1) as i32;
     for (i, &prime) in is_prime.iter().enumerate().take(n + 1).skip(1) {
         let col = (i - 1) % cols;
         let row = (i - 1) / cols;
-        let x = ((col as f64 + 0.5) / cols as f64 * width as f64).round() as i32;
-        let y = ((row as f64 + 0.5) / rows as f64 * height as f64).round() as i32;
+        let x0 = (col * width) / cols;
+        let y0 = (row * height) / rows.max(1);
         let ch = if prime {
             '#'
         } else if i <= strike_upto {
@@ -71,7 +74,12 @@ fn draw(canvas: &mut dyn Surface, is_prime: &[bool], strike_upto: usize) {
         } else {
             '+'
         };
-        canvas.plot(x, y, ch);
+        // Fat cells so a large window is a solid board.
+        for dy in 0..cell_h {
+            for dx in 0..cell_w {
+                canvas.plot(x0 as i32 + dx, y0 as i32 + dy, ch);
+            }
+        }
     }
 }
 

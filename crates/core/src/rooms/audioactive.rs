@@ -88,36 +88,48 @@ fn draw_digits(canvas: &mut dyn Surface, s: &str, step: usize) {
         return;
     }
     let digits: Vec<char> = s.chars().take(MAX_DRAW).collect();
-    let top = height as f64 * 0.16;
-    let baseline = height as f64 * 0.82;
+    let top = height as f64 * 0.12;
+    let baseline = height as f64 * 0.78;
     let band = (baseline - top).max(1.0);
+    let base_y = baseline.round() as i32;
+    // Floor rail so gen-0 is never a single freckle.
+    canvas.line(0, base_y, width.saturating_sub(1) as i32, base_y, '.');
     let mut previous_peak = None;
+    let n = digits.len().max(1);
     for (index, ch) in digits.iter().copied().enumerate() {
-        let px = ((index + 1) as f64 * width as f64 / (digits.len() + 1) as f64).round() as i32;
+        let px = ((index + 1) as f64 * width as f64 / (n + 1) as f64).round() as i32;
         let level = match ch {
-            '1' => 0.38,
-            '2' => 0.62,
-            '3' => 0.86,
+            '1' => 0.42,
+            '2' => 0.66,
+            '3' => 0.88,
             _ => 1.0,
         };
         let py = (baseline - band * level).round() as i32;
         let mark = match ch {
-            '1' => '.',
-            '2' => ':',
-            '3' => '+',
+            '1' => '*',
+            '2' => '+',
+            '3' => '#',
             _ => '#',
         };
-        canvas.line(px, baseline.round() as i32, px, py, mark);
+        // Fat bar: three vertical strokes so large windows stay readable.
+        for dx in -1..=1 {
+            canvas.line(px + dx, base_y, px + dx, py, mark);
+        }
+        canvas.plot(px, py, ch);
         if let Some((last_x, last_y)) = previous_peak {
             canvas.line(last_x, last_y, px, py, mark);
+            canvas.line(last_x, last_y + 1, px, py + 1, '.');
         }
         previous_peak = Some((px, py));
     }
-    // Generation tick marks along the bottom.
+    // Generation ladder along the bottom.
     let gy = height.saturating_sub(1) as i32;
-    for g in 0..=step.min(20) {
+    for g in 0..=MAX_GEN.min(20) {
         let x = ((g as f64 / 20.0) * width.saturating_sub(1) as f64).round() as i32;
         canvas.plot(x, gy, if g == step { '#' } else { '.' });
+        if g == step {
+            canvas.plot(x, gy.saturating_sub(1), '#');
+        }
     }
 }
 

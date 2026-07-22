@@ -28,7 +28,7 @@ fn p_winds(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         2.0 + x * 5.0 + s * 0.1
     } else {
-        2.0 + phase_unit(t) * 4.0 + s * 0.1
+        3.0 + phase_unit(t) * 3.0 + s * 0.1
     }
 }
 
@@ -41,9 +41,9 @@ fn draw(canvas: &mut dyn Surface, p: f64, seed: u64) {
     let cy = (height.saturating_sub(1) / 2) as f64;
     let p = p.round().clamp(2.0, 7.0);
     let q = 3.0 + if seed == 0 { 0.0 } else { (seed % 2) as f64 };
-    let r0 = (width.min(height) as f64) * 0.22;
-    let r1 = r0 * 0.45;
-    let steps = 320;
+    let r0 = (width.min(height) as f64) * 0.28;
+    let r1 = r0 * 0.48;
+    let steps = 480;
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let t = 2.0 * std::f64::consts::PI * (i as f64 / steps as f64);
@@ -51,12 +51,13 @@ fn draw(canvas: &mut dyn Surface, p: f64, seed: u64) {
         let x = r * (p * t).cos();
         let y = r * (p * t).sin();
         let z = r1 * (q * t).sin();
-        let d = 1.0 / (2.8 + z * 0.02);
+        let d = 1.0 / (2.5 + z * 0.02);
         let px = (cx + x * d).round() as i32;
-        let py = (cy - y * d * 0.55).round() as i32;
+        let py = (cy - y * d * 0.7).round() as i32;
         if let Some((ox, oy)) = prev {
             let ch = if z > 0.0 { '#' } else { '*' };
             canvas.line(ox, oy, px, py, ch);
+            canvas.line(ox, oy + 1, px, py + 1, '.');
         }
         prev = Some((px, py));
     }

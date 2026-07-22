@@ -30,11 +30,11 @@ fn limit(t: f64, hand: Option<(f64, f64)>, seed: u64) -> usize {
         (seed % 7) as usize * 4
     };
     let base = if let Some((x, _)) = hand {
-        30.0 + x * 150.0
+        80.0 + x * 200.0
     } else {
-        40.0 + phase_unit(t) * 120.0
+        90.0 + phase_unit(t) * 160.0
     };
-    (base as usize + s).clamp(20, 220)
+    (base as usize + s).clamp(70, 320)
 }
 
 /// Josephus-style lucky sieve: survivors of successive count-strike.
@@ -80,12 +80,18 @@ fn draw(canvas: &mut dyn Surface, n: usize, seed: u64) {
     let jitter = if seed == 0 { 0 } else { (seed % 3) as i32 };
     for k in 1..=n {
         let idx = k - 1;
-        let cx = ((idx % cols) * cell_w + cell_w / 2) as i32 + jitter;
-        let cy = ((idx / cols) * cell_h + cell_h / 2) as i32;
+        let x0 = ((idx % cols) * cell_w) as i32 + jitter;
+        let y0 = ((idx / cols) * cell_h) as i32;
         let is_lucky = lucky.binary_search(&k).is_ok();
         let ch = if is_lucky { '#' } else { '.' };
-        if cx >= 0 && cy >= 0 && (cx as usize) < width && (cy as usize) < height {
-            canvas.line(cx, cy, cx, cy, ch);
+        for dy in 0..cell_h as i32 {
+            for dx in 0..cell_w as i32 {
+                let cx = x0 + dx;
+                let cy = y0 + dy;
+                if cx >= 0 && cy >= 0 && (cx as usize) < width && (cy as usize) < height {
+                    canvas.plot(cx, cy, ch);
+                }
+            }
         }
     }
 }
