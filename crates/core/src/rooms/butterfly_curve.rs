@@ -1,6 +1,7 @@
 //! Butterfly curve: polar r = e^{cos th} - 2 cos(4 th) + sin^5(th/12).
 //!
-//! DRAG: TUNE PHASE. See `docs/ROOMS.md`.
+//! Ambient phase draws the Temple-Fay wings with a pen. DRAG: TUNE SPIN.
+//! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -23,7 +24,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn phase(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn spin(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -32,11 +33,12 @@ fn phase(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         x * 12.0 * std::f64::consts::PI + s
     } else {
-        phase_unit(t) * 12.0 * std::f64::consts::PI + s
+        // Ambient spin holds; motion lives in the wing draw.
+        s
     }
 }
 
-fn draw(canvas: &mut dyn Surface, ph: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, ph: f64, show: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -51,8 +53,13 @@ fn draw(canvas: &mut dyn Surface, ph: f64, seed: u64) {
             } else {
                 (seed % 3) as f64 * 0.05
             });
+    let show = show.clamp(0.0, 1.0);
     // Temple-Fay butterfly over th in 0..12 pi
     let steps = 900;
+    let drawn = ((show * steps as f64).round() as usize).min(steps);
+    let max_jump = (width as i32 / 2).max(8);
+    let max_jumph = (height as i32 / 2).max(8);
+    // Soft ghost of the full wings.
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let th = ph + 12.0 * std::f64::consts::PI * (i as f64 / steps as f64);
@@ -60,12 +67,37 @@ fn draw(canvas: &mut dyn Surface, ph: f64, seed: u64) {
         let px = (cx + scale * r * th.sin()).round() as i32;
         let py = (cy - scale * r * th.cos() * 0.55).round() as i32;
         if let Some((ox, oy)) = prev
-            && (px - ox).abs() < width as i32 / 2
-            && (py - oy).abs() < height as i32 / 2
+            && (px - ox).abs() < max_jump
+            && (py - oy).abs() < max_jumph
         {
-            canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy, px, py, '.');
         }
         prev = Some((px, py));
+    }
+    // Bright wings so far.
+    prev = None;
+    let mut tip = (cx.round() as i32, cy.round() as i32);
+    for i in 0..=drawn {
+        let th = ph + 12.0 * std::f64::consts::PI * (i as f64 / steps as f64);
+        let r = th.cos().exp() - 2.0 * (4.0 * th).cos() + (th / 12.0).sin().powi(5);
+        let px = (cx + scale * r * th.sin()).round() as i32;
+        let py = (cy - scale * r * th.cos() * 0.55).round() as i32;
+        if let Some((ox, oy)) = prev
+            && (px - ox).abs() < max_jump
+            && (py - oy).abs() < max_jumph
+        {
+            canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
+        }
+        tip = (px, py);
+        prev = Some((px, py));
+    }
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(tip.0 + dx, tip.1 + dy, 'o');
+            }
+        }
     }
 }
 
@@ -94,13 +126,13 @@ impl Room for ButterflyCurve {
             id: "butterfly-curve",
             title: "Butterfly Curve",
             wing: "Shape & Space",
-            blurb: "Temple-Fay polar butterfly. t and DRAG: TUNE PHASE.",
+            blurb: "Temple-Fay wings draw themselves. Watch the pen; DRAG: TUNE SPIN.",
             accent: [160, 50, 100],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, phase(t, None, self.seed), self.seed);
+        draw(canvas, spin(t, None, self.seed), phase_unit(t), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -118,18 +150,22 @@ impl Room for ButterflyCurve {
     }
 
     fn verb(&self) -> Option<&'static str> {
-        Some("DRAG: TUNE PHASE")
+        Some("DRAG: TUNE SPIN")
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        let p = phase(t, None, self.seed);
-        Some(format!("ph={p:.1}  wing  DRAG:PH"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("wings draw={p}%  DRAG:SPIN"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
-        let p = phase(t, hands.last().copied(), self.seed);
-        draw(canvas, p, self.seed ^ hands.len() as u64);
+        let ph = spin(t, hands.last().copied(), self.seed);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, ph, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -138,9 +174,12 @@ impl Room for ButterflyCurve {
         if hands.is_empty() {
             return self.status(t);
         }
-        let p = phase(t, hands.last().copied(), self.seed);
-        let wing = ((p.rem_euclid(1.0) * 12.0).floor() as i32) + 1;
-        Some(format!("ph={p:.2}  wing={wing}/12"))
+        let p = spin(t, hands.last().copied(), self.seed);
+        let wing = ((p.rem_euclid(12.0 * std::f64::consts::PI) / (std::f64::consts::PI)).floor()
+            as i32)
+            .rem_euclid(12)
+            + 1;
+        Some(format!("spin={p:.2}  lobe~{wing}/12"))
     }
 
     fn reveal(&self) -> &'static str {
@@ -159,12 +198,12 @@ mod tests {
     #[test]
     fn status_invites() {
         let s = ButterflyCurve::new().status(0.3).unwrap();
-        assert!(s.contains("DRAG") || s.contains("wing"));
+        assert!(s.contains("DRAG") || s.contains("draw"));
         assert!(s.chars().count() <= 56);
     }
 
     #[test]
-    fn phase_changes() {
+    fn spin_changes() {
         let r = ButterflyCurve::new();
         let o = r.status(0.3).unwrap();
         let a = r
@@ -178,6 +217,18 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn ambient_pen_moves_the_plate() {
+        let r = ButterflyCurve::new();
+        let mut a = Canvas::new(80, 48);
+        let mut b = Canvas::new(80, 48);
+        r.render(&mut a, 0.15);
+        r.render(&mut b, 0.75);
+        assert_ne!(a.to_text(), b.to_text(), "pen must walk the wings");
+        assert!(a.ink_count() > 40);
+        assert!(b.ink_count() > 40);
     }
 
     #[test]

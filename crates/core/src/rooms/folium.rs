@@ -1,6 +1,7 @@
 //! Folium of Descartes: the classical cubic x^3 + y^3 = 3 a x y.
 //!
-//! DRAG: TUNE A. See `docs/ROOMS.md`.
+//! Ambient phase draws the leaf with a pen. DRAG: TUNE A.
+//! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -23,7 +24,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn a_param(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn a_param(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -32,11 +33,12 @@ fn a_param(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         0.3 + x * 1.0 + s
     } else {
-        0.5 + phase_unit(t) * 0.7 + s
+        // Ambient a holds a readable leaf; motion lives in the pen.
+        0.85 + s
     }
 }
 
-fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, a: f64, show: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -51,11 +53,41 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     } else {
         (seed % 5) as f64 * 0.02
     };
+    let show = show.clamp(0.0, 1.0);
     // parametric: x = 3 a t / (1+t^3), y = 3 a t^2 / (1+t^3)
-    let mut prev: Option<(i32, i32)> = None;
     let steps = 420;
+    let drawn = ((show * steps as f64).round() as usize).min(steps);
+    // Soft ghost of the full leaf.
+    let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         // skip near t = -1 pole
+        let t = -2.5 + 5.0 * (i as f64 / steps as f64) + j * 0.05;
+        if (t + 1.0).abs() < 0.08 {
+            prev = None;
+            continue;
+        }
+        let d = 1.0 + t * t * t;
+        if d.abs() < 1e-6 {
+            prev = None;
+            continue;
+        }
+        let x = 3.0 * a * t / d;
+        let y = 3.0 * a * t * t / d;
+        if !x.is_finite() || !y.is_finite() || x.abs() > 4.0 * a || y.abs() > 4.0 * a {
+            prev = None;
+            continue;
+        }
+        let px = (cx + scale * x).round() as i32;
+        let py = (cy - scale * y).round() as i32;
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, px, py, '.');
+        }
+        prev = Some((px, py));
+    }
+    // Bright path so far.
+    prev = None;
+    let mut tip = (cx.round() as i32, cy.round() as i32);
+    for i in 0..=drawn {
         let t = -2.5 + 5.0 * (i as f64 / steps as f64) + j * 0.05;
         if (t + 1.0).abs() < 0.08 {
             prev = None;
@@ -78,6 +110,7 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
             canvas.line(ox, oy, px, py, '#');
             canvas.line(ox, oy + 1, px, py + 1, '*');
         }
+        tip = (px, py);
         prev = Some((px, py));
     }
     // asymptote x + y + a = 0
@@ -90,6 +123,13 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     let ax1 = (cx + scale * x1).round() as i32;
     let ay1 = (cy - scale * y1).round() as i32;
     canvas.line(ax0, ay0, ax1, ay1, '.');
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(tip.0 + dx, tip.1 + dy, 'o');
+            }
+        }
+    }
 }
 
 /// Folium of Descartes room.
@@ -117,13 +157,18 @@ impl Room for Folium {
             id: "folium",
             title: "Folium",
             wing: "Shape & Space",
-            blurb: "Descartes' leaf cubic with a node and asymptote. t and DRAG: TUNE A.",
+            blurb: "Descartes leaf draws its loop and asymptote. Watch the pen; DRAG: TUNE A.",
             accent: [60, 140, 80],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, a_param(t, None, self.seed), self.seed);
+        draw(
+            canvas,
+            a_param(t, None, self.seed),
+            phase_unit(t),
+            self.seed,
+        );
     }
 
     fn postcard_t(&self) -> f64 {
@@ -146,13 +191,18 @@ impl Room for Folium {
 
     fn status(&self, t: f64) -> Option<String> {
         let a = a_param(t, None, self.seed);
-        Some(format!("a={a:.2}  leaf  DRAG:A"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("a={a:.2}  draw={p}%  DRAG:A"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let a = a_param(t, hands.last().copied(), self.seed);
-        draw(canvas, a, self.seed ^ hands.len() as u64);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, a, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -183,7 +233,7 @@ mod tests {
     #[test]
     fn status_invites() {
         let s = Folium::new().status(0.3).unwrap();
-        assert!(s.contains("DRAG") || s.contains("leaf"));
+        assert!(s.contains("DRAG") || s.contains("draw"));
         assert!(s.chars().count() <= 56);
     }
 
@@ -202,6 +252,18 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn ambient_pen_moves_the_plate() {
+        let r = Folium::new();
+        let mut a = Canvas::new(80, 48);
+        let mut b = Canvas::new(80, 48);
+        r.render(&mut a, 0.15);
+        r.render(&mut b, 0.75);
+        assert_ne!(a.to_text(), b.to_text(), "pen must walk the leaf");
+        assert!(a.ink_count() > 20);
+        assert!(b.ink_count() > 20);
     }
 
     #[test]

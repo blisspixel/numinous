@@ -1,6 +1,6 @@
 //! Archimedean spiral: arithmetic growth, r = a + b theta.
 //!
-//! DRAG: TUNE PITCH. See `docs/ROOMS.md`.
+//! Ambient phase unfurls the arm. DRAG: TUNE PITCH. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -23,7 +23,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn pitch(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn pitch(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -32,11 +32,12 @@ fn pitch(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         0.04 + x * 0.14 + s
     } else {
-        0.06 + phase_unit(t) * 0.1 + s
+        // Ambient pitch holds even grooves; motion lives in the unfurl.
+        0.12 + s
     }
 }
 
-fn draw(canvas: &mut dyn Surface, b: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, b: f64, unfurl: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -51,13 +52,34 @@ fn draw(canvas: &mut dyn Surface, b: f64, seed: u64) {
         } else {
             (seed % 4) as f64 * 0.3
         };
+    let unfurl = unfurl.clamp(0.0, 1.0);
     let steps = 520;
+    let drawn = (((0.15 + 0.85 * unfurl) * steps as f64).round() as usize).min(steps);
+    let max_r = (width.min(height) as f64) * 0.48;
+    // Soft ghost of the full arm.
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let u = i as f64 / steps as f64;
         let th = u * turns * 2.0 * std::f64::consts::PI;
         let r = scale * b * th;
-        let max_r = (width.min(height) as f64) * 0.48;
+        if r > max_r {
+            prev = None;
+            continue;
+        }
+        let px = (cx + r * th.cos()).round() as i32;
+        let py = (cy - r * th.sin()).round() as i32;
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, px, py, '.');
+        }
+        prev = Some((px, py));
+    }
+    // Bright arm so far.
+    prev = None;
+    let mut tip = (cx.round() as i32, cy.round() as i32);
+    for i in 0..=drawn {
+        let u = i as f64 / steps as f64;
+        let th = u * turns * 2.0 * std::f64::consts::PI;
+        let r = scale * b * th;
         if r > max_r {
             prev = None;
             continue;
@@ -66,8 +88,17 @@ fn draw(canvas: &mut dyn Surface, b: f64, seed: u64) {
         let py = (cy - r * th.sin()).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
         }
+        tip = (px, py);
         prev = Some((px, py));
+    }
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(tip.0 + dx, tip.1 + dy, 'o');
+            }
+        }
     }
 }
 
@@ -96,13 +127,13 @@ impl Room for Archimedean {
             id: "archimedean",
             title: "Archimedean Spiral",
             wing: "Shape & Space",
-            blurb: "Arithmetic arms r = a + b theta. t and DRAG: TUNE PITCH.",
+            blurb: "Arithmetic arm unfurls at constant gap. Watch the tip; DRAG: TUNE PITCH.",
             accent: [90, 120, 50],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, pitch(t, None, self.seed), self.seed);
+        draw(canvas, pitch(t, None, self.seed), phase_unit(t), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -125,13 +156,18 @@ impl Room for Archimedean {
 
     fn status(&self, t: f64) -> Option<String> {
         let b = pitch(t, None, self.seed);
-        Some(format!("b={b:.2}  arms  DRAG:PITCH"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("b={b:.2}  unfurl={p}%  DRAG"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let b = pitch(t, hands.last().copied(), self.seed);
-        draw(canvas, b, self.seed ^ hands.len() as u64);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, b, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -162,7 +198,7 @@ mod tests {
     #[test]
     fn status_invites() {
         let s = Archimedean::new().status(0.3).unwrap();
-        assert!(s.contains("DRAG") || s.contains("arms"));
+        assert!(s.contains("DRAG") || s.contains("unfurl"));
         assert!(s.chars().count() <= 56);
     }
 
@@ -181,6 +217,18 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn ambient_unfurl_moves_the_plate() {
+        let r = Archimedean::new();
+        let mut a = Canvas::new(80, 48);
+        let mut b = Canvas::new(80, 48);
+        r.render(&mut a, 0.15);
+        r.render(&mut b, 0.75);
+        assert_ne!(a.to_text(), b.to_text(), "arm must unfurl");
+        assert!(a.ink_count() > 30);
+        assert!(b.ink_count() > 30);
     }
 
     #[test]

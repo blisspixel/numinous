@@ -1,6 +1,7 @@
 //! Conchoid of Nicomedes: classical curve for trisecting angles.
 //!
-//! DRAG: TUNE K. See `docs/ROOMS.md`.
+//! Ambient phase draws both branches with pens. DRAG: TUNE K.
+//! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -23,7 +24,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn k_param(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn k_param(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -32,11 +33,12 @@ fn k_param(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         0.4 + x * 1.6 + s
     } else {
-        0.6 + phase_unit(t) * 1.2 + s
+        // Ambient k holds a readable shell; motion lives in the pen.
+        1.0 + s
     }
 }
 
-fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, k: f64, show: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -50,10 +52,13 @@ fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) {
     } else {
         (seed % 5) as f64 * 0.03
     };
+    let show = show.clamp(0.0, 1.0);
+    let steps = 240;
+    let drawn = ((show * steps as f64).round() as usize).min(steps);
     // polar form relative to focus: r = a / cos theta +/- k
+    // Soft ghost of both branches.
     for sign in [1.0_f64, -1.0] {
         let mut prev: Option<(i32, i32)> = None;
-        let steps = 240;
         for i in 0..=steps {
             let th = -1.3 + 2.6 * (i as f64 / steps as f64) + j * 0.1;
             let c = th.cos();
@@ -69,7 +74,36 @@ fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) {
             let px = (cx + scale * r * th.cos()).round() as i32;
             let py = (cy - scale * r * th.sin()).round() as i32;
             if let Some((ox, oy)) = prev {
-                canvas.line(ox, oy, px, py, if sign > 0.0 { '#' } else { '*' });
+                canvas.line(ox, oy, px, py, '.');
+            }
+            prev = Some((px, py));
+        }
+    }
+    // Bright branches so far.
+    let mut tip = (cx.round() as i32, cy.round() as i32);
+    for sign in [1.0_f64, -1.0] {
+        let mut prev: Option<(i32, i32)> = None;
+        for i in 0..=drawn {
+            let th = -1.3 + 2.6 * (i as f64 / steps as f64) + j * 0.1;
+            let c = th.cos();
+            if c.abs() < 0.08 {
+                prev = None;
+                continue;
+            }
+            let r = a / c + sign * k;
+            if !r.is_finite() || r.abs() > 8.0 {
+                prev = None;
+                continue;
+            }
+            let px = (cx + scale * r * th.cos()).round() as i32;
+            let py = (cy - scale * r * th.sin()).round() as i32;
+            if let Some((ox, oy)) = prev {
+                let ch = if sign > 0.0 { '#' } else { '*' };
+                canvas.line(ox, oy, px, py, ch);
+                canvas.line(ox, oy + 1, px, py + 1, '.');
+            }
+            if sign > 0.0 {
+                tip = (px, py);
             }
             prev = Some((px, py));
         }
@@ -77,6 +111,13 @@ fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) {
     // directrix
     let dx = (cx + scale * a).round() as i32;
     canvas.line(dx, 0, dx, height.saturating_sub(1) as i32, '.');
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(tip.0 + dx, tip.1 + dy, 'o');
+            }
+        }
+    }
 }
 
 /// Conchoid room.
@@ -104,13 +145,18 @@ impl Room for Conchoid {
             id: "conchoid",
             title: "Conchoid",
             wing: "Shape & Space",
-            blurb: "Nicomedes' shell curve for angle trisection. t and DRAG: TUNE K.",
+            blurb: "Nicomedes shell draws both branches. Watch the pen; DRAG: TUNE K.",
             accent: [40, 120, 160],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, k_param(t, None, self.seed), self.seed);
+        draw(
+            canvas,
+            k_param(t, None, self.seed),
+            phase_unit(t),
+            self.seed,
+        );
     }
 
     fn postcard_t(&self) -> f64 {
@@ -133,13 +179,18 @@ impl Room for Conchoid {
 
     fn status(&self, t: f64) -> Option<String> {
         let k = k_param(t, None, self.seed);
-        Some(format!("k={k:.2}  conch  DRAG:K"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("k={k:.2}  draw={p}%  DRAG:K"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let k = k_param(t, hands.last().copied(), self.seed);
-        draw(canvas, k, self.seed ^ hands.len() as u64);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, k, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -171,7 +222,7 @@ mod tests {
     #[test]
     fn status_invites() {
         let s = Conchoid::new().status(0.3).unwrap();
-        assert!(s.contains("DRAG") || s.contains("K"));
+        assert!(s.contains("DRAG") || s.contains("draw"));
         assert!(s.chars().count() <= 56);
     }
 
@@ -190,6 +241,18 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn ambient_pen_moves_the_plate() {
+        let r = Conchoid::new();
+        let mut a = Canvas::new(80, 48);
+        let mut b = Canvas::new(80, 48);
+        r.render(&mut a, 0.15);
+        r.render(&mut b, 0.75);
+        assert_ne!(a.to_text(), b.to_text(), "pen must walk the shell");
+        assert!(a.ink_count() > 20);
+        assert!(b.ink_count() > 20);
     }
 
     #[test]
