@@ -20,8 +20,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ### Changed
 - App: Enter starts The Show (the room tour), same as B, including from the
   open menu. The front-door start no longer needs a letter key.
-- Docs: PLAYING, ARCADE, ROADMAP, README, and the unreleased changelog track
-  Enter, arcade selection, and cycle-168 plate fixes.
+- Docs: PLAYING, ARCADE, ROADMAP, README, NORTH_STAR, PEDAGOGY, and the
+  unreleased changelog track Enter, arcade selection, cycle-168 plate fixes,
+  and the Exceptional Path Phase A vertical slice (Times Tables engineered
+  aha) as immediate next engineering after machine plate bars went green.
 
 ### Changed
 - Live motion pack (cycles 164 to 167): static graph rooms now perform.

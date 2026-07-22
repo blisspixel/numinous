@@ -93,11 +93,15 @@ arrive last and confirm what the player already felt.
 
 ### Canonical engineered ahas
 
-- **Times Tables to Mandelbrot (the flagship).** Prime: "You made a heart. Guess
-  where else in this app this exact curve lives." Restructure: the cardioid
-  detaches from the string-circle and slides onto the Mandelbrot's main bulb,
-  matching edge for edge. Confirm: the k-dial now drives both the times-table and
-  a marker riding the Mandelbrot boundary. The player feels they are one object.
+- **Times Tables to Mandelbrot (the flagship).** *Designed; App vertical slice
+  next (see `ROADMAP.md` Exceptional Path Phase A).* Technical Toy is Built
+  (K=2 hold, integer snap, earned K=5, three-face agreement). The five-beat
+  staged reveal is not yet the visit: E still opens a text reveal card.
+  Prime: "You made a heart. Guess where else in this app this exact curve
+  lives." Restructure: the cardioid detaches from the string-circle and slides
+  onto the Mandelbrot's main bulb, matching edge for edge. Confirm: the k-dial
+  now drives both the times-table and a marker riding the Mandelbrot boundary.
+  The player feels they are one object.
 - **Buffon's Needle to pi.** Prime: "This floor has no circles. Drag your guess
   for what number the crossings settle on." (Almost nobody guesses pi.)
   Restructure: as the tally converges, a circle grows out of the needle geometry

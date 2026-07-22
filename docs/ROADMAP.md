@@ -260,7 +260,10 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   text). App Enter starts The Show from the menu (same toggle as B). Full-
   catalog machine scan re-zeroed phase-thin (Log Spiral t=0 floor), dead domain
   (Coffee Cup, Degree-720, The Stretch, Catenary), and dead dial.
-- **Next, above everything (the founder's directive, July 2026):** **rooms become playable, not watchable, and no two catalog visits are the same.** The substrate is live across app, CLI, and MCP. The legibility pass makes weak responses explicit across Life, Mandelbrot, Buffon, Prime Spirals, Cult of Pi, Golden Angle, Barnsley Fern, Mobius, Logistic Map, Zeno, Julia, Goldbach, Langton's Ant, Fourier Epicycles, Random Walk, Quine, and the Conjecture Mill. `Room::status_input` lets every face explain the consequence from the same bounded history used to render it. The automated all-room, all-game, all-screen matrix is complete at 2,913 states across all 351 registered rooms, with registry-derived inventory, nonblank, size, stale-output, deterministic opening states, every persistent game display branch, 14 controller or pause receipts, 18 explicit audio-state receipts, 12 Times Tables landmark and earned-goal receipts, default and compact immediate and delayed interaction families, ordered completed gestures, explicit active-hold release and cancel boundaries, Formula Jam half-morph receipts, semantic response checks, changed-pixel and spatial-support thresholds, support density, adjacent 32-pixel spatial-tile coherence, and minimum color change. Scenarios follow declared room verbs. The generator evaluates each room's pure mathematical consequence independently from the App's latest-gesture trail and reticle, and an aggregate diagnostic reports all catalog failures in one run. A regression rejects four isolated corner markers. Catalog plate scans now also hold zero phase-thin, zero dead dial, and zero dead domain (see cycles 161 to 163 above). This remains coarse renderer-path evidence rather than native event automation or subjective polish certification. The latest grouped QA rounds also hardened controller-visible control truth, pause isolation, CLI and MCP input boundaries, pure-EOF game exits, structured discovery, isolated MCP play profiles, and Windows PATH precedence. **Immediate next engineering:** finish the soft-thin tail where honest, then deepen held or causal loops on rooms that still feel one-shot. **Immediate next product evidence:** stranger hallway, arrival-card clarity with real humans, and plate beauty under real window sizes.
+- **Next, above everything (the founder's directive, July 2026):** **rooms become playable, not watchable, and no two catalog visits are the same.** The substrate is live across app, CLI, and MCP. Catalog machine plate bars hold zero phase-thin, zero dead dial, and zero dead domain (cycles 161 to 168). Live motion covers a large classical curve set (cycles 164 to 167). Soft-thin densify on large plates remains a background grind (order of ~90 rooms still under 0.02 density or 280 ink on 160x90, many intentionally sparse CLICK/HOLD). That grind is not the next high-leverage move.
+- **Immediate next engineering (Exceptional Path Phase A, App vertical slice):** complete the **Times Tables engineered aha** as the flagship prediction wager on the human face. MCP already has `predict` and Galton already has a one-ball Toy wager; the App Times Tables visit still opens a static reveal card rather than the five-beat cardioid-to-Mandelbrot morph in `PEDAGOGY.md` and `NORTH_STAR.md`. Why this next: (1) cheapest deep win on the north-star keystone, (2) works on the highest wow-to-build room already technically flagship, (3) turns plate performance work into a stake (a frozen graph cannot host a wager; we now have motion), (4) one verb seeds understanding, curiosity, mastery, and creation, (5) densify and glow do not create a generation act. Plan of record for the slice: see the Phase A vertical-slice section below in this file.
+- **Immediate next product evidence:** stranger hallway on Times Tables after the engineered aha ships; arrival-card clarity with real humans; plate beauty under real window sizes. Soft-thin densify continues in parallel only where honest and never as a substitute for the keystone.
+- **Background engineering (not the critical path):** soft-thin densify where structure supports it; more live-motion pens on remaining static classical curves; more causal held loops modeled on Galton and Life for one-shot rooms (Buffon next is the natural pair with the Galton wager).
 - **Done (full-roster refinement round):** all 42 simulated review lenses were split exactly once across first contact and accessibility, interaction and truth, and games plus agent faces. The pass fixed redirected CLI ANSI, responsive Quiz-result loss, four overbroad mathematical claims, ambiguous motif-versus-sonification output, and positionless Studio parse errors. It also falsified an apparent Fern deletion by direct pixel comparison. These are engineering findings from reproduced evidence; none of the simulated reactions satisfies a participant gate. Controller HUD parity, its route gaps, compatibility-preserving compact MCP responses, causal first-touch presentation, and visual sound state are now closed. Its ranked queue began with deeper Galton and Life interaction loops, both now complete; continued music composition review remains.
 - **Done (Galton causal experiment loop):** the completed pile no longer moves
   with phase while clicked balls follow another probability. Five visible fixed
@@ -950,13 +953,79 @@ is not yet built. The phased milestones below thread the six lanes into the gate
 above, in leverage order. They deepen what exists rather than jumping the
 "do not build twenty more rooms first" queue.
 
-- **Phase A, the keystone.** The prediction wager wired into a five-beat
-  engineered-aha reveal, on Times Tables first (the cardioid-to-Mandelbrot morph
-  as the worked example), with insight-collection gated on the generation act,
-  and the same predict-then-reveal verb exposed over MCP as compression progress
-  for digital minds. One mechanic seeds the understanding, curiosity, mastery,
-  and creation loops at once. Owner doc: `PEDAGOGY.md`. Moves "every room compels"
-  and "meta and lore alive."
+- **Phase A, the keystone (partially built).** MCP `predict` and graded
+  `challenge` ship the agent-facing verb; Galton ships a Toy-layer one-ball
+  wager. Still open: the App five-beat engineered-aha on Times Tables (cardioid
+  to Mandelbrot morph with a generation act before reveal). Owner doc:
+  `PEDAGOGY.md`. Moves "every room compels" and "meta and lore alive."
+
+### Phase A vertical slice (next build plan, July 2026)
+
+Provable on one room before it scales. Owner docs: `PEDAGOGY.md`,
+`NORTH_STAR.md`, Times Tables technical flagship notes above.
+
+**Why this, not soft-thin densify or more pens.** Machine plate bars are green.
+Soft-thin still lists on the order of ninety large-plate rooms; finishing that
+tail is honest craft but does not create a stake. The north-star research
+converged on one missing verb: a prediction that meets a deterministic truth.
+The App still lacks that verb on its flagship. Galton proves the Toy wager
+pattern; Times Tables is the highest wow-to-build room and already holds K=2
+until the hand acts, snaps to integers, and earns K=5. The gap is composition:
+stage the reveal as a five-beat event, not a text card.
+
+**Research bar (what "exceptional" means here).** Generation before explanation
+(Schwartz and Bransford; Kapur). Fluency illusion risk if we only polish motion
+(Deslauriers et al.). Predict-observe-explain, generation effect, information
+gap (White and Gunstone; Slamecka and Graf; Loewenstein). Wrong predictions are
+the jackpot. The reveal payload is gap, morph, and the player's own hand; copy
+is the punchline (`PEDAGOGY.md`).
+
+**Five beats (Times Tables):**
+
+1. **Prime the gap.** After the player has landed a readable cardioid (hand on
+   K=2, or first meaningful dial hold), invite one gesture: "Where else in this
+   app does this exact curve live?" Options are short and language-light (room
+   names or silhouettes of Mandelbrot / nephroid / circle). No wager, no reveal
+   yet. Status and optional soft prompt only.
+2. **Withhold and earn.** Reveal content stays closed until a generation act:
+   either the gap wager above or the existing K=5 goal. Watching The Show never
+   counts as understanding.
+3. **Restructure by showing.** On summon (E after earn, or automatic once
+   earned and the player asks), animate: the chord envelope cardioid detaches
+   and overlays a Mandelbrot main-bulb outline at matching scale and rotation
+   (the room already proves the affine link in tests). One screen, no lecture.
+4. **Confirm by hand.** The k-dial (or a linked marker) moves both the times-
+   table chords and a bead on the Mandelbrot boundary together. Re-deriving is
+   the generation act that sticks.
+5. **Consolidate.** Status names the shared cardioid; reveal copy delivers the
+   punchline already in `reveal()`; optional Constellation edge later. Leave
+   the open door (Fourier Epicycles, scale and rotation) without homework.
+
+**Faces and contracts.**
+
+- **Core:** pure state machine for wager pose, commit, grade band, and morph
+  progress (0..1), deterministic from seed and inputs. No wall clock in core.
+  Reuse challenge/predict gap language where it fits without forcing status-
+  readout shape onto a place-guess.
+- **App:** one flagship visit owns the beats; chrome stays art-first (no
+  reticle over the plate). Controller maps primary to commit/advance, inspect
+  to summon.
+- **CLI / MCP:** same earn rules; MCP keeps existing `predict` for readout
+  wagers and gains structured fields if the place-guess is exposed. No second
+  truth.
+- **Tests:** beat transitions, no reveal before generation, morph endpoints
+  match the known cardioid transform, hand-confirm moves both pictures, Show
+  does not auto-earn, compact status length, three-face agreement on goal_met.
+
+**Out of scope for the slice.** HDR glow (Phase B), Constellation Rumor-Mode
+(Phase C), gallery fork (Phase D), bulk densify, new rooms. Buffon pi wager is
+the natural second room after this pattern lands.
+
+**Exit criterion for the slice.** A stranger can, in one App visit, make a
+heart, commit a wrong or right guess about where else it lives, summon a morph
+that shows the Mandelbrot bulb, and turn the dial while both figures agree,
+without reading a paragraph first. Hallway evidence still required for 0.2.
+
 - **Phase B, the glow pipeline.** The GPU post-stack (HDR bright-pass bloom,
   ping-pong phosphor persistence, tonemap, the sample-lattice Era filter) as one
   systemic pipeline every room inherits, then the Sensory Bus (one event stream,
