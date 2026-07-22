@@ -41,27 +41,30 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let a = a.clamp(0.2, 2.5);
+    // Fixed abutment span: a only changes sag depth (self-similar rescales are dead).
+    let a = a.clamp(0.35, 2.2);
     let j = if seed == 0 {
         0.0
     } else {
         (seed % 5) as f64 * 0.02
     };
-    let x_span = 2.5 * a;
+    let x_span = 2.2_f64;
     let mut prev: Option<(i32, i32)> = None;
-    // sample y range
-    let y_min = a; // cosh(0)=1 so y_min=a
-    let y_max = a * (x_span / a).cosh();
+    // Map y into a fixed plate band so deeper a hangs lower, not identical.
+    let plate_top = height as f64 * 0.08;
+    let plate_bot = height as f64 * 0.92;
+    let y_ref_min = 0.35_f64;
+    let y_ref_max = 2.2 * (x_span / 0.35_f64).cosh(); // deepest plausible sag
     for col in 0..width {
         let x = -x_span + 2.0 * x_span * (col as f64 / width.saturating_sub(1).max(1) as f64) + j;
         let y = a * (x / a).cosh();
         let u = col as f64 / width.saturating_sub(1).max(1) as f64;
-        let v = ((y - y_min) / (y_max - y_min).max(1e-6)).clamp(0.0, 1.0);
+        let v = ((y - y_ref_min) / (y_ref_max - y_ref_min).max(1e-6)).clamp(0.0, 1.0);
         let px = (u * width.saturating_sub(1) as f64).round() as i32;
-        // hang from top: larger y is lower
-        let py = (v * height.saturating_sub(1) as f64 * 0.9 + height as f64 * 0.05).round() as i32;
+        let py = (plate_top + v * (plate_bot - plate_top)).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
         }
         prev = Some((px, py));
     }

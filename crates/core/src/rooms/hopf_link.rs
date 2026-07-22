@@ -43,39 +43,58 @@ fn draw(canvas: &mut dyn Surface, phi: f64, sep_scale: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let r = (width.min(height) as f64) * 0.28;
-    let sep = r * (0.25 + 0.55 * sep_scale.clamp(0.15, 1.35));
-    let tilt = if seed == 0 {
-        0.55
-    } else {
-        0.4 + (seed % 4) as f64 * 0.05
-    };
-    // circle A in xy (phase tracks the hand so rotation is not self-similar alone)
+    let r = (width.min(height) as f64) * 0.32;
+    let sep = r * (0.2 + 0.7 * sep_scale.clamp(0.15, 1.4));
+    let tilt = 0.35
+        + 0.45 * (phi * 0.35).sin().abs()
+        + if seed == 0 {
+            0.0
+        } else {
+            (seed % 4) as f64 * 0.03
+        };
+    // Circle A: thick stroke + bead so phase is not a silent re-parametrization.
     let mut prev: Option<(i32, i32)> = None;
-    for i in 0..=100 {
-        let th = std::f64::consts::TAU * (i as f64) / 100.0 + phi;
-        let x = r * th.cos() - sep * 0.3;
+    let mut bead_a = (0_i32, 0_i32);
+    for i in 0..=140 {
+        let th = std::f64::consts::TAU * (i as f64) / 140.0 + phi;
+        let x = r * th.cos() - sep * 0.35;
         let y = r * th.sin() * tilt;
         let px = (cx + x).round() as i32;
         let py = (cy - y).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
+        }
+        if i == 0 {
+            bead_a = (px, py);
         }
         prev = Some((px, py));
     }
-    // circle B in xz, linked; phase offset follows phi so the crossing moves
+    // Circle B linked through A.
     prev = None;
-    for i in 0..=100 {
-        let th = std::f64::consts::TAU * (i as f64) / 100.0 + phi * 0.5;
-        let x = r * th.cos() * tilt * 0.3 + sep * 0.2;
+    let mut bead_b = (0_i32, 0_i32);
+    for i in 0..=140 {
+        let th = std::f64::consts::TAU * (i as f64) / 140.0 + phi * 0.5;
+        let x = r * th.cos() * tilt * 0.35 + sep * 0.25;
         let z = r * th.sin();
-        let y = z * 0.85;
-        let px = (cx + x + z * 0.25).round() as i32;
+        let y = z * 0.9;
+        let px = (cx + x + z * 0.28).round() as i32;
         let py = (cy - y).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '=');
+            canvas.line(ox, oy + 1, px, py + 1, '.');
+        }
+        if i == 0 {
+            bead_b = (px, py);
         }
         prev = Some((px, py));
+    }
+    for (bx, by) in [bead_a, bead_b] {
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                canvas.plot(bx + dx, by + dy, 'o');
+            }
+        }
     }
 }
 
@@ -110,7 +129,9 @@ impl Room for HopfLink {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, angle(t, None, self.seed), 1.0, self.seed);
+        // Ambient phase also walks separation so t is not a silent re-phase.
+        let sep = 0.55 + phase_unit(t) * 0.7;
+        draw(canvas, angle(t, None, self.seed), sep, self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -140,9 +161,8 @@ impl Room for HopfLink {
         let hands = finite_pokes(pokes);
         let hand = hands.last().copied();
         let p = angle(t, hand, self.seed);
-        // Hand y steers ring separation so a drag reshapes the link, not only
-        // re-phases a self-similar projection.
-        let sep = hand.map_or(1.0, |(_, y)| 0.35 + y * 1.1);
+        // x and y both reshape: sep from x (left/right), tilt already from phi.
+        let sep = hand.map_or(1.0, |(x, y)| 0.3 + x * 0.7 + y * 0.5);
         draw(canvas, p, sep, self.seed ^ hands.len() as u64);
     }
 

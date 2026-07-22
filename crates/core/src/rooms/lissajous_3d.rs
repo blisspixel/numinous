@@ -51,17 +51,17 @@ fn draw(canvas: &mut dyn Surface, b: f64, seed: u64) {
         } else {
             (seed % 3) as f64 * 0.5
         };
-    let sc = (width.min(height) as f64) * 0.38;
-    let steps = 400;
+    let sc = (width.min(height) as f64) * 0.44;
+    let steps = 640;
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let t = 2.0 * std::f64::consts::PI * (i as f64 / steps as f64);
         let x = (a * t).sin();
         let y = (b * t + 0.3).sin();
         let z = (c * t + 0.7).sin();
-        let d = 1.0 / (2.4 + z * 0.5);
+        let d = 1.0 / (2.2 + z * 0.45);
         let px = (cx + x * sc * d).round() as i32;
-        let py = (cy - y * sc * d * 0.55).round() as i32;
+        let py = (cy - y * sc * d * 0.7).round() as i32;
         if let Some((ox, oy)) = prev {
             let ch = if z > 0.2 {
                 '#'
@@ -71,6 +71,7 @@ fn draw(canvas: &mut dyn Surface, b: f64, seed: u64) {
                 '.'
             };
             canvas.line(ox, oy, px, py, ch);
+            canvas.line(ox, oy + 1, px, py + 1, if z > 0.0 { '*' } else { '.' });
         }
         prev = Some((px, py));
     }

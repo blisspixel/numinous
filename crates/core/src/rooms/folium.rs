@@ -41,10 +41,11 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let a = a.clamp(0.2, 1.5);
-    let cx = width as f64 * 0.35;
-    let cy = height as f64 * 0.65;
-    let scale = (width.min(height) as f64) * 0.4 / a.max(0.3);
+    // Fixed canvas scale: a must grow the leaf, not cancel via scale/a.
+    let a = a.clamp(0.35, 1.6);
+    let cx = width as f64 * 0.32;
+    let cy = height as f64 * 0.68;
+    let scale = (width.min(height) as f64) * 0.42;
     let j = if seed == 0 {
         0.0
     } else {
@@ -52,7 +53,7 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     };
     // parametric: x = 3 a t / (1+t^3), y = 3 a t^2 / (1+t^3)
     let mut prev: Option<(i32, i32)> = None;
-    let steps = 300;
+    let steps = 420;
     for i in 0..=steps {
         // skip near t = -1 pole
         let t = -2.5 + 5.0 * (i as f64 / steps as f64) + j * 0.05;
@@ -75,11 +76,11 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         let py = (cy - scale * y).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
         }
         prev = Some((px, py));
     }
     // asymptote x + y + a = 0
-    // y = -x - a
     let x0 = -2.0 * a;
     let x1 = 2.0 * a;
     let y0 = -x0 - a;
