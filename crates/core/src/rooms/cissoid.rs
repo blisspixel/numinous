@@ -23,7 +23,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn scale(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn scale(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -32,11 +32,11 @@ fn scale(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         0.55 + x * 0.55 + s
     } else {
-        0.7 + phase_unit(t) * 0.35 + s
+        0.85 + s * 0.5
     }
 }
 
-fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, a: f64, show: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -49,6 +49,7 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     } else {
         (seed % 7) as f64 * 0.02
     };
+    let show = show.clamp(0.0, 1.0);
     // Guiding circle and line.
     let mut prev_c: Option<(i32, i32)> = None;
     for i in 0..=72 {
@@ -63,10 +64,38 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     let line_x = (cx + rad + j).round() as i32;
     canvas.line(line_x, 0, line_x, height.saturating_sub(1) as i32, '|');
     // cissoid: y^2 (2a - x) = x^3
+    let steps = 320;
+    let drawn = (1 + ((show * (steps - 2) as f64).round() as usize)).min(steps - 1);
     let mut prev_u: Option<(i32, i32)> = None;
     let mut prev_l: Option<(i32, i32)> = None;
-    let steps = 320;
+    // Ghost full curve.
     for i in 1..steps {
+        let x = rad * (i as f64 / steps as f64) * 1.85;
+        let denom = (2.0 * rad - x).max(1e-6);
+        let y2 = x * x * x / denom;
+        if y2 < 0.0 {
+            prev_u = None;
+            prev_l = None;
+            continue;
+        }
+        let y = y2.sqrt();
+        let px = (cx + x * 0.55).round() as i32;
+        let py1 = (cy - y * 0.55).round() as i32;
+        let py2 = (cy + y * 0.55).round() as i32;
+        if let Some((ox, oy)) = prev_u {
+            canvas.line(ox, oy, px, py1, '.');
+        }
+        if let Some((ox, oy)) = prev_l {
+            canvas.line(ox, oy, px, py2, '.');
+        }
+        prev_u = Some((px, py1));
+        prev_l = Some((px, py2));
+    }
+    // Bright path so far + pen.
+    prev_u = None;
+    prev_l = None;
+    let mut tip = (cx.round() as i32, cy.round() as i32);
+    for i in 1..=drawn {
         let x = rad * (i as f64 / steps as f64) * 1.85;
         let denom = (2.0 * rad - x).max(1e-6);
         let y2 = x * x * x / denom;
@@ -87,8 +116,16 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
             canvas.line(ox, oy, px, py2, '#');
             canvas.line(ox, oy + 1, px, py2 + 1, '*');
         }
+        tip = (px, py1);
         prev_u = Some((px, py1));
         prev_l = Some((px, py2));
+    }
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(tip.0 + dx, tip.1 + dy, 'o');
+            }
+        }
     }
 }
 
@@ -123,7 +160,7 @@ impl Room for Cissoid {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, scale(t, None, self.seed), self.seed);
+        draw(canvas, scale(t, None, self.seed), phase_unit(t), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -146,13 +183,18 @@ impl Room for Cissoid {
 
     fn status(&self, t: f64) -> Option<String> {
         let a = scale(t, None, self.seed);
-        Some(format!("a={a:.2}  cissoid  DRAG"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("a={a:.2}  draw={p}%  DRAG"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let a = scale(t, hands.last().copied(), self.seed);
-        draw(canvas, a, self.seed ^ hands.len() as u64);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, a, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
