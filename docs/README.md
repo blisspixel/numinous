@@ -22,8 +22,10 @@ interaction with zero phase-thin, zero dead-domain, and zero dead-dial rooms on
 machine scans; ambient phase is a show on growing sets of curves and waves
 (not a static graph), including the cycle-166 and cycle-167 pen and unfurl
 packs and the cycle-168 plate bug-hunt; soft-thin densify continues where
-honest. App Enter starts The Show. The six-question plate filter,
-contact-language, and MCP teammate posture live in `RESEARCH.md`. Public CI passes on Windows, macOS, and Ubuntu, but capability
+honest but is not the critical path. App Enter starts The Show. Immediate next
+engineering is Exceptional Path Phase A on the App: Times Tables engineered
+aha (see `ROADMAP.md`, `NORTH_STAR.md`, `PEDAGOGY.md`). The six-question plate
+filter, contact-language, and MCP teammate posture live in `RESEARCH.md`. Public CI passes on Windows, macOS, and Ubuntu, but capability
 breadth remains ahead of release evidence: stranger playtests, accessibility
 work, and real macOS and Linux execution remain open. See `../CHANGELOG.md`
 and the Progress section of `ROADMAP.md`. These docs remain the plan of
