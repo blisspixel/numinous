@@ -27,22 +27,16 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-/// Angle from hand (atan2) plus ambient sweep; returns radians and twist 0..2.
+/// Angle from hand or ambient sweep; returns radians and twist 0..2.
 fn angle_from(t: f64, pokes: &[(f64, f64)], seed: u64) -> (f64, f64) {
     let base = phase_unit(t) * TAU * 2.0; // ambient can show full 720 path
     let hands = finite_pokes(pokes);
     let ang = if let Some(&(x, y)) = hands.last() {
-        let dx = x - 0.5;
-        let dy = y - 0.5;
-        if dx.abs() < 1e-9 && dy.abs() < 1e-9 {
-            base
-        } else {
-            // Map continuous drag: accumulate via angle, fold into 0..4pi via seed offset.
-            let a = dy.atan2(dx).rem_euclid(TAU);
-            // Two full turns: use hand angle + floor from phase so 720 is reachable.
-            let turns = phase_unit(t) * 2.0;
-            a + turns * TAU
-        }
+        // Hand owns the double cover: x sweeps 0..720deg, y fine-tunes a half turn.
+        // Pure atan2 + ambient phase could land on the same angle as idle t, a dead dial.
+        let coarse = x.clamp(0.0, 1.0) * TAU * 2.0;
+        let fine = (y.clamp(0.0, 1.0) - 0.5) * TAU;
+        (coarse + fine).rem_euclid(TAU * 2.0)
     } else {
         base + if seed == 0 {
             0.0
@@ -246,6 +240,20 @@ mod tests {
         let mut c = Canvas::new(40, 28);
         Degree720::new().render(&mut c, 0.7);
         assert!(c.ink_count() > 10);
+    }
+
+    #[test]
+    fn hand_spin_moves_the_belt() {
+        let r = Degree720::new();
+        let mut base = Canvas::new(120, 70);
+        let mut poked = Canvas::new(120, 70);
+        r.render(&mut base, 0.5);
+        r.render_poked(&mut poked, 0.5, &[(0.8, 0.5)]);
+        assert_ne!(
+            base.to_text(),
+            poked.to_text(),
+            "hand must rotate the stone"
+        );
     }
 
     #[test]

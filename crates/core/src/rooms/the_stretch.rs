@@ -129,7 +129,10 @@ impl Room for TheStretch {
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
         let gs = galaxies(self.seed);
         let h0 = 0.5 + phase_unit(t);
-        draw(canvas, &gs, 0, h0);
+        // Ambient stands at the plate center's nearest galaxy, not always index 0,
+        // so a corner click is unlikely to re-select the same home.
+        let home = nearest(&gs, (0.5, 0.5));
+        draw(canvas, &gs, home, h0);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -152,14 +155,21 @@ impl Room for TheStretch {
 
     fn status(&self, t: f64) -> Option<String> {
         let h0 = 0.5 + phase_unit(t);
-        Some(format!("H0={h0:.2}  CENTER 0  CLICK:GALAXY"))
+        let gs = galaxies(self.seed);
+        let home = nearest(&gs, (0.5, 0.5));
+        Some(format!("H0={h0:.2}  CENTER {home}  CLICK:GALAXY"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let gs = galaxies(self.seed);
-        let h0 = 0.5 + phase_unit(t);
-        let c = hands.last().map(|&p| nearest(&gs, p)).unwrap_or(0);
+        // Hand y also steers H0 so a poke always moves the plate even if the
+        // nearest galaxy matches ambient home.
+        let (c, h0) = if let Some(&(x, y)) = hands.last() {
+            (nearest(&gs, (x, y)), 0.35 + y * 1.4)
+        } else {
+            (nearest(&gs, (0.5, 0.5)), 0.5 + phase_unit(t))
+        };
         draw(canvas, &gs, c, h0);
     }
 
@@ -170,8 +180,9 @@ impl Room for TheStretch {
             return self.status(t);
         }
         let gs = galaxies(self.seed);
-        let h0 = 0.5 + phase_unit(t);
-        let c = nearest(&gs, *hands.last().unwrap());
+        let &(hx, hy) = hands.last().unwrap();
+        let h0 = 0.35 + hy * 1.4;
+        let c = nearest(&gs, (hx, hy));
         let (cx, cy) = gs[c];
         let mut max_z: f64 = 0.0;
         for (i, &(x, y)) in gs.iter().enumerate() {
@@ -201,6 +212,20 @@ mod tests {
         let s = TheStretch::new().status(0.0).unwrap();
         assert!(s.contains("CLICK") || s.contains("GALAXY"));
         assert!(s.chars().count() <= 56);
+    }
+
+    #[test]
+    fn poke_moves_the_plate() {
+        let r = TheStretch::new();
+        let mut base = Canvas::new(120, 70);
+        let mut poked = Canvas::new(120, 70);
+        r.render(&mut base, 0.5);
+        r.render_poked(&mut poked, 0.5, &[(0.8, 0.5)]);
+        assert_ne!(
+            base.to_text(),
+            poked.to_text(),
+            "click must stretch the field"
+        );
     }
 
     #[test]

@@ -9,16 +9,15 @@ outside the catalog replay contract. Every catalog room has `verb()` +
 `render_poked()` touch actions (usually CLICK or DRAG on arrival cards) and an
 Engine A2 motif. Optional concept explainers ship on flagship rooms (App E / ?,
 CLI `?`, MCP `reveal_room`). **Plate quality bar (machine path, cycles 161 to
-167):** interaction is art-first (no reticle or drag trail over the math);
+168):** interaction is art-first (no reticle or drag trail over the math);
 catalog scans hold 0 phase-thin frames, 0 dead-domain rooms, and 0 dead dials;
 soft-thin large plates densify where honest. Ambient phase is a *show* on a
 growing set of curves and waves (rolling construction, pens, breathing
 strings, scrolling partials, unfurling spirals), not a static graph. Live
-motion now also covers Lemniscate, Rose, Epitrochoid, Hypotrochoid, Fermat
-Spiral, Strophoid, Piriform, Hippopede, Archimedean, Trochoid, Conchoid,
-Butterfly Curve, Cassini, and Folium. Six-question filter: `RESEARCH.md`.
-See `CHANGELOG.md` and the Progress section of `ROADMAP.md`. See `ARCADE.md`
-for design.
+motion covers flagship classical curves through cycle 167; cycle 168 re-zeroed
+phase-thin and dead-domain regressions (Log Spiral, Coffee Cup, Degree-720,
+Stretch, Catenary). Six-question filter: `RESEARCH.md`. See `CHANGELOG.md` and
+the Progress section of `ROADMAP.md`. See `ARCADE.md` for design.
 
 Every room is scored on two axes to help sequencing:
 

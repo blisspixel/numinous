@@ -53,7 +53,8 @@ fn draw(canvas: &mut dyn Surface, b: f64, unfurl: f64, seed: u64) {
             (seed % 3) as f64 * 0.25
         };
     // Unfurl: ambient phase grows the spiral from the center outward.
-    let turns = turns_full * (0.2 + 0.8 * unfurl.clamp(0.0, 1.0));
+    // Floor keeps t=0 above the phase-thin ink bar on a 120x70 plate.
+    let turns = turns_full * (0.42 + 0.58 * unfurl.clamp(0.0, 1.0));
     let spin = unfurl * std::f64::consts::TAU * 0.5;
     let steps = 720;
     let mut prev: Option<(i32, i32)> = None;
@@ -72,6 +73,10 @@ fn draw(canvas: &mut dyn Surface, b: f64, unfurl: f64, seed: u64) {
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
             canvas.line(ox, oy + 1, px, py + 1, '*');
+            // Triple stroke near the origin so the early arm still fills.
+            if r < max_r * 0.35 {
+                canvas.line(ox, oy - 1, px, py - 1, '.');
+            }
         }
         tip = (px, py);
         prev = Some((px, py));
@@ -209,5 +214,16 @@ mod tests {
         let mut c = Canvas::new(48, 24);
         LogSpiral::new().render(&mut c, 0.55);
         assert!(c.ink_count() > 0);
+    }
+
+    #[test]
+    fn opening_unfurl_is_not_phase_thin() {
+        let mut c = Canvas::new(120, 70);
+        LogSpiral::new().render(&mut c, 0.0);
+        assert!(
+            c.ink_count() >= 80,
+            "t=0 must clear the phase-thin bar, got {}",
+            c.ink_count()
+        );
     }
 }
