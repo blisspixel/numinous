@@ -192,12 +192,13 @@ impl CoffeeCup {
 
     /// Sun angle for a static poke list (CLI/MCP bridge).
     ///
-    /// A hand sets a sticky origin; phase keeps walking so the figure never
-    /// freezes after a swing.
+    /// A hand pins the sun on the rim. Do not add ambient phase here: that
+    /// collides with idle t and can paint the same cardioid as no poke (dead
+    /// domain). Walking after a release lives in `sun_from_inputs`.
     fn sun_from_pokes(&self, t: f64, pokes: &[(f64, f64)]) -> f64 {
         let hands = finite_pokes(pokes);
         if let Some(&(x, y)) = hands.last() {
-            walking_sun(sun_from_hand(x, y), t)
+            sun_from_hand(x, y)
         } else {
             ambient_sun(t, self.seed)
         }

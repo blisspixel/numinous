@@ -32,18 +32,23 @@ theirs; nothing is borrowed.
 ### App (real time, the fun half)
 - WASD moves cell to cell (repeat-rate limited), Space eats, Vexations step
   on a beat (every N frames, N shrinks per level).
+- Selection never hides the number: the digit paints first, then a selection
+  frame and open Muncher ring around it so you can read what you are about to
+  eat.
 - Juice: bite flash on eat, screen nudge on a wrong bite, Vexation contact
   flashes red and thins the lives row, per-level chiptune tempo up.
 - The arrival line names the verb: "WASD: RUN. SPACE: EAT. DON'T BE CAUGHT."
 
 ### CLI (turn-based twin)
 - Same core, board redrawn per turn, moves `w a s d` and `e`. Slower, same
-  math, same scores table (`arcade seed:N`), daily-able.
+  math, same scores table (`arcade seed:N`), daily-able. Selected cells keep
+  yellow digits (not a blank `@` over the value).
 
 ### MCP (parity from day one)
 - Stateless replay like nim: pass the full action list; Vexation steps are
   deterministic, so the same actions give the same run. Tool: `munch_arcade`;
   replayed action lists post to the shared score table as `arcade seed:N`.
+  Shared `board_text` prints values under the Muncher as `[nn@]`.
 
 ## Half two: the poke (every room answers)
 

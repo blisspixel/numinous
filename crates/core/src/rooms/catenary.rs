@@ -50,18 +50,22 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     };
     let x_span = 2.2_f64;
     let mut prev: Option<(i32, i32)> = None;
-    // Map y into a fixed plate band so deeper a hangs lower, not identical.
-    let plate_top = height as f64 * 0.08;
-    let plate_bot = height as f64 * 0.92;
-    let y_ref_min = 0.35_f64;
-    let y_ref_max = 2.2 * (x_span / 0.35_f64).cosh(); // deepest plausible sag
+    // Map this chain's own [bottom, posts] into the plate. Small a hangs deep;
+    // large a hangs shallow, so left and right dials are never self-similar.
+    let y_bottom = a;
+    let y_posts = a * (x_span / a).cosh();
+    let rel_sag = ((y_posts - y_bottom) / a).clamp(0.2, 12.0);
+    let fill = (0.22 + 0.55 * (rel_sag / 8.0).clamp(0.0, 1.0)).clamp(0.22, 0.78);
+    let plate_posts = height as f64 * 0.1;
+    let plate_bottom = plate_posts + fill * (height as f64 * 0.8);
     for col in 0..width {
         let x = -x_span + 2.0 * x_span * (col as f64 / width.saturating_sub(1).max(1) as f64) + j;
         let y = a * (x / a).cosh();
         let u = col as f64 / width.saturating_sub(1).max(1) as f64;
-        let v = ((y - y_ref_min) / (y_ref_max - y_ref_min).max(1e-6)).clamp(0.0, 1.0);
+        // 0 at the low point of the chain, 1 at the posts.
+        let rel = ((y - y_bottom) / (y_posts - y_bottom).max(1e-6)).clamp(0.0, 1.0);
         let px = (u * width.saturating_sub(1) as f64).round() as i32;
-        let py = (plate_top + v * (plate_bot - plate_top)).round() as i32;
+        let py = (plate_bottom - rel * (plate_bottom - plate_posts)).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
             canvas.line(ox, oy + 1, px, py + 1, '*');
@@ -69,12 +73,14 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         prev = Some((px, py));
     }
     // support posts
-    canvas.line(2, 0, 2, height.saturating_sub(1) as i32, '|');
+    let post_y1 = plate_posts.round() as i32;
+    let post_y0 = plate_bottom.round() as i32;
+    canvas.line(2, post_y1, 2, post_y0, '|');
     canvas.line(
         width.saturating_sub(3) as i32,
-        0,
+        post_y1,
         width.saturating_sub(3) as i32,
-        height.saturating_sub(1) as i32,
+        post_y0,
         '|',
     );
 }
@@ -198,5 +204,15 @@ mod tests {
         let mut c = Canvas::new(48, 24);
         Catenary::new().render(&mut c, 0.5);
         assert!(c.ink_count() > 0);
+    }
+
+    #[test]
+    fn dial_a_moves_the_chain() {
+        let r = Catenary::new();
+        let mut left = Canvas::new(100, 60);
+        let mut right = Canvas::new(100, 60);
+        r.render_poked(&mut left, 0.5, &[(0.15, 0.5)]);
+        r.render_poked(&mut right, 0.5, &[(0.85, 0.5)]);
+        assert_ne!(left.to_text(), right.to_text(), "a must change sag");
     }
 }
