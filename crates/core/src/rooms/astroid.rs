@@ -23,7 +23,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn scale(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn scale(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -32,11 +32,11 @@ fn scale(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         0.55 + x * 0.55 + s
     } else {
-        0.7 + phase_unit(t) * 0.35 + s
+        0.85 + s * 0.5
     }
 }
 
-fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, a: f64, show: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -49,11 +49,26 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     } else {
         (seed % 11) as f64 * 0.03
     };
+    let show = show.clamp(0.0, 1.0);
     let steps = 480;
+    let drawn = ((show * steps as f64).round() as usize).min(steps);
+    // Ghost full star.
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let th = rot + std::f64::consts::TAU * (i as f64 / steps as f64);
-        // x = a cos^3 t, y = a sin^3 t
+        let x = rad * th.cos().powi(3);
+        let y = rad * th.sin().powi(3);
+        let px = (cx + x).round() as i32;
+        let py = (cy - y * 0.9).round() as i32;
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, px, py, '.');
+        }
+        prev = Some((px, py));
+    }
+    // Bright path so far.
+    prev = None;
+    for i in 0..=drawn {
+        let th = rot + std::f64::consts::TAU * (i as f64 / steps as f64);
         let x = rad * th.cos().powi(3);
         let y = rad * th.sin().powi(3);
         let px = (cx + x).round() as i32;
@@ -64,16 +79,42 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         }
         prev = Some((px, py));
     }
-    // Envelope circle (dense stroke).
+    // Envelope circle.
     let mut prev_c: Option<(i32, i32)> = None;
     for i in 0..=96 {
         let th = std::f64::consts::TAU * (i as f64 / 96.0);
         let px = (cx + rad * th.cos()).round() as i32;
         let py = (cy - rad * th.sin() * 0.9).round() as i32;
         if let Some(o) = prev_c {
-            canvas.line(o.0, o.1, px, py, '.');
+            canvas.line(o.0, o.1, px, py, ':');
         }
         prev_c = Some((px, py));
+    }
+    // Rolling circle of radius a/4 inside a circle of radius a (classic hypocycloid).
+    let pen_th = rot + show * std::f64::consts::TAU;
+    let roll_r = rad * 0.25;
+    let path_r = rad - roll_r;
+    let rcx = cx + path_r * pen_th.cos();
+    let rcy = cy - path_r * pen_th.sin() * 0.9;
+    let mut prev_r: Option<(i32, i32)> = None;
+    for i in 0..=40 {
+        let th = std::f64::consts::TAU * (i as f64 / 40.0);
+        let px = (rcx + roll_r * th.cos()).round() as i32;
+        let py = (rcy - roll_r * th.sin() * 0.9).round() as i32;
+        if let Some(o) = prev_r {
+            canvas.line(o.0, o.1, px, py, '+');
+        }
+        prev_r = Some((px, py));
+    }
+    let pen_x = (cx + rad * pen_th.cos().powi(3)).round() as i32;
+    let pen_y = (cy - rad * pen_th.sin().powi(3) * 0.9).round() as i32;
+    canvas.line(rcx.round() as i32, rcy.round() as i32, pen_x, pen_y, '-');
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(pen_x + dx, pen_y + dy, 'o');
+            }
+        }
     }
 }
 
@@ -108,7 +149,7 @@ impl Room for Astroid {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, scale(t, None, self.seed), self.seed);
+        draw(canvas, scale(t, None, self.seed), phase_unit(t), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -131,13 +172,18 @@ impl Room for Astroid {
 
     fn status(&self, t: f64) -> Option<String> {
         let a = scale(t, None, self.seed);
-        Some(format!("a={a:.2}  astroid  DRAG"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("a={a:.2}  draw={p}%  DRAG"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let a = scale(t, hands.last().copied(), self.seed);
-        draw(canvas, a, self.seed ^ hands.len() as u64);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, a, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

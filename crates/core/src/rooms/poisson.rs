@@ -23,7 +23,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn rate(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn rate(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -32,7 +32,8 @@ fn rate(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         0.5 + x * 8.0 + s
     } else {
-        1.0 + phase_unit(t) * 6.0 + s
+        // Ambient advances the horizon; rate holds a lively staircase.
+        4.0 + s
     }
 }
 
@@ -42,24 +43,27 @@ fn next_u01(state: &mut u64) -> f64 {
     ((*state >> 33) as f64) / ((1u64 << 31) as f64)
 }
 
-fn draw(canvas: &mut dyn Surface, lam: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, lam: f64, horizon: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
     }
     let lam = lam.clamp(0.5, 12.0);
+    // Ambient horizon advances so the staircase *runs*, not freezes.
+    let t_max = (0.35 + 0.65 * horizon.clamp(0.0, 1.0)).max(0.2);
     let mut state = if seed == 0 {
         0x9e37_79b9_7f4a_7c15
     } else {
         seed ^ 0xdead_beef_cafe_babe
     };
+    // Mix horizon into the RNG so different moments are different runs.
+    state ^= ((horizon.clamp(0.0, 1.0) * 10_000.0) as u64).wrapping_mul(0x9E37_79B9);
     // Unit time horizon; N(t) staircase (double stroke so large plates read).
     let mut t = 0.0_f64;
     let mut n = 0u32;
     let mut prev_x = 0i32;
     let mut prev_y = height.saturating_sub(2) as i32;
-    let t_max = 1.0;
-    let n_scale = height as f64 * 0.85 / (lam * t_max * 2.2).max(4.0);
+    let n_scale = height as f64 * 0.85 / (lam * 1.0 * 2.2).max(4.0);
     while t < t_max {
         let u = next_u01(&mut state).clamp(1e-12, 1.0 - 1e-12);
         let wait = -u.ln() / lam;
@@ -130,17 +134,17 @@ impl Room for Poisson {
             id: "poisson",
             title: "Poisson Process",
             wing: "Chance & Order",
-            blurb: "Exponential waits make a count staircase. t and DRAG: TUNE RATE.",
+            blurb: "Exponential waits build a living staircase. Watch it run; DRAG: TUNE RATE.",
             accent: [40, 120, 100],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, rate(t, None, self.seed), self.seed);
+        draw(canvas, rate(t, None, self.seed), phase_unit(t), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
-        0.45
+        0.7
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -159,13 +163,14 @@ impl Room for Poisson {
 
     fn status(&self, t: f64) -> Option<String> {
         let lam = rate(t, None, self.seed);
-        Some(format!("lam={lam:.2}  N(t)  DRAG:RATE"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("lam={lam:.1}  run={p}%  DRAG:RATE"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let lam = rate(t, hands.last().copied(), self.seed);
-        draw(canvas, lam, self.seed ^ hands.len() as u64);
+        draw(canvas, lam, phase_unit(t), self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

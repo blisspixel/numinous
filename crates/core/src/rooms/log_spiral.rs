@@ -23,7 +23,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn growth(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn growth(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -32,11 +32,12 @@ fn growth(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         0.08 + x * 0.22 + s
     } else {
-        0.1 + phase_unit(t) * 0.16 + s
+        // Ambient unfurls; growth rate holds a readable spiral.
+        0.14 + s
     }
 }
 
-fn draw(canvas: &mut dyn Surface, b: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, b: f64, unfurl: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -45,18 +46,22 @@ fn draw(canvas: &mut dyn Surface, b: f64, seed: u64) {
     let cy = (height.saturating_sub(1) / 2) as f64;
     let a0 = (width.min(height) as f64) * 0.025;
     let b = b.clamp(0.08, 0.35);
-    let turns = 5.0
+    let turns_full = 5.0
         + if seed == 0 {
             0.0
         } else {
             (seed % 3) as f64 * 0.25
         };
+    // Unfurl: ambient phase grows the spiral from the center outward.
+    let turns = turns_full * (0.2 + 0.8 * unfurl.clamp(0.0, 1.0));
+    let spin = unfurl * std::f64::consts::TAU * 0.5;
     let steps = 720;
     let mut prev: Option<(i32, i32)> = None;
+    let mut tip = (cx.round() as i32, cy.round() as i32);
     for i in 0..=steps {
         let u = i as f64 / steps as f64;
-        let th = u * turns * 2.0 * std::f64::consts::PI;
-        let r = a0 * (b * th).exp();
+        let th = spin + u * turns * 2.0 * std::f64::consts::PI;
+        let r = a0 * (b * (u * turns * 2.0 * std::f64::consts::PI)).exp();
         let max_r = (width.min(height) as f64) * 0.48;
         if r > max_r {
             prev = None;
@@ -68,7 +73,16 @@ fn draw(canvas: &mut dyn Surface, b: f64, seed: u64) {
             canvas.line(ox, oy, px, py, '#');
             canvas.line(ox, oy + 1, px, py + 1, '*');
         }
+        tip = (px, py);
         prev = Some((px, py));
+    }
+    // Tip bead rides the growing arm.
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(tip.0 + dx, tip.1 + dy, 'o');
+            }
+        }
     }
 }
 
@@ -103,7 +117,7 @@ impl Room for LogSpiral {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, growth(t, None, self.seed), self.seed);
+        draw(canvas, growth(t, None, self.seed), phase_unit(t), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -126,13 +140,18 @@ impl Room for LogSpiral {
 
     fn status(&self, t: f64) -> Option<String> {
         let b = growth(t, None, self.seed);
-        Some(format!("b={b:.2}  equiang  DRAG:GRW"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("b={b:.2}  unfurl={p}%  DRAG"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let b = growth(t, hands.last().copied(), self.seed);
-        draw(canvas, b, self.seed ^ hands.len() as u64);
+        let unfurl = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, b, unfurl, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
