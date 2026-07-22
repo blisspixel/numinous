@@ -70,6 +70,9 @@ fn draw(canvas: &mut dyn Surface, n: u64, seed: u64) {
     }
     let jitter = if seed == 0 { 0i32 } else { (seed % 3) as i32 };
     let mut twins = 0u32;
+    let cy = height as i32 / 2;
+    // Base number line.
+    canvas.line(0, cy, width.saturating_sub(1) as i32, cy, '.');
     for p in 3..=n {
         if p % 2 == 0 {
             continue;
@@ -78,24 +81,32 @@ fn draw(canvas: &mut dyn Surface, n: u64, seed: u64) {
             twins += 1;
             let x =
                 ((p as f64 / n as f64) * width.saturating_sub(1) as f64).round() as i32 + jitter;
-            let y = (height as i32 / 2) - ((twins % 7) as i32 - 3);
+            let band = ((twins % 5) as i32 - 2) * 2;
+            let y = cy + band;
             if x >= 0 && x < width as i32 {
-                canvas.line(x, y, x, y + 1, '#');
+                // Fat twin pair stems so large plates are a field of pairs.
+                for dy in -1..=2 {
+                    canvas.plot(x, y + dy, '#');
+                }
                 let x2 =
                     (((p + 2) as f64 / n as f64) * width.saturating_sub(1) as f64).round() as i32;
                 if x2 >= 0 && x2 < width as i32 {
-                    canvas.line(x2, y, x2, y + 1, '=');
-                    canvas.line(x, y, x2, y, '.');
+                    for dy in -1..=2 {
+                        canvas.plot(x2, y + dy, '=');
+                    }
+                    canvas.line(x, y, x2, y, '*');
+                    canvas.line(x, y + 1, x2, y + 1, '.');
                 }
             }
         }
     }
-    // density trend of twin count
+    // Density trend of twin count.
     let dens = twins as f64 / (n as f64).ln().max(1.0);
     let hy = ((1.0 - dens * 0.15) * height.saturating_sub(1) as f64)
         .round()
         .clamp(0.0, height.saturating_sub(1) as f64) as i32;
     canvas.line(0, hy, width as i32 - 1, hy, '-');
+    canvas.line(0, hy + 1, width as i32 - 1, hy + 1, '-');
 }
 
 /// Twin primes room.

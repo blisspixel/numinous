@@ -41,19 +41,19 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let a = a.clamp(0.4, 2.0);
+    let a = a.clamp(0.55, 2.0);
     let b = 1.0
         + if seed == 0 {
             0.0
         } else {
             (seed % 3) as f64 * 0.1
         };
-    let ox = width as f64 * 0.15;
+    let ox = width as f64 * 0.12;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let sx = (width as f64 * 0.7) / a.max(0.4);
-    let sy = (height as f64 * 0.35) / b.max(0.5);
-    let steps = 200;
-    // upper and lower branches
+    let sx = (width as f64 * 0.76) / a.max(0.4);
+    let sy = (height as f64 * 0.42) / b.max(0.5);
+    let steps = 320;
+    // Upper and lower branches.
     for sign in [1.0_f64, -1.0] {
         let mut prev: Option<(i32, i32)> = None;
         for i in 0..=steps {
@@ -68,7 +68,9 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
             let px = (ox + x * sx).round() as i32;
             let py = (cy - y * sy).round() as i32;
             if let Some((qx, qy)) = prev {
-                canvas.line(qx, qy, px, py, if sign > 0.0 { '#' } else { '*' });
+                let ch = if sign > 0.0 { '#' } else { '*' };
+                canvas.line(qx, qy, px, py, ch);
+                canvas.line(qx, qy + 1, px, py + 1, '.');
             }
             prev = Some((px, py));
         }
