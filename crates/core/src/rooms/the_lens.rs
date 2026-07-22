@@ -43,25 +43,40 @@ fn draw(canvas: &mut dyn Surface, lens: (f64, f64), source: (f64, f64), mass: f6
         )
     };
     let re = einstein_radius(mass);
-    // Dark mass: invisible except as a faint cross of absence.
+    // Dark mass: soft blot (the lens you never quite see).
     let lp = to_px(lens.0, lens.1);
-    canvas.plot(lp.0, lp.1, '+');
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(lp.0 + dx, lp.1 + dy, '.');
+            }
+        }
+    }
     // Source true position (behind).
     let sp = to_px(source.0, source.1);
-    canvas.plot(sp.0, sp.1, 'o');
-    // Image ring/arcs: points on Einstein ring around lens, weighted by alignment.
+    for dy in -1..=1 {
+        for dx in -1..=1 {
+            canvas.plot(sp.0 + dx, sp.1 + dy, 'o');
+        }
+    }
+    // Einstein ring / arcs: dense samples with a double stroke.
     let dx = source.0 - lens.0;
     let dy = source.1 - lens.1;
     let align = 1.0 - (dx.hypot(dy) / 0.4).clamp(0.0, 1.0);
-    let n = 64;
-    for i in 0..n {
+    let n = 128;
+    let mut prev: Option<(i32, i32)> = None;
+    for i in 0..=n {
         let a = TAU * i as f64 / n as f64;
-        // Offset ring toward source side for arcs when misaligned.
         let ox = lens.0 + re * a.cos() + dx * 0.15 * (1.0 - align);
         let oy = lens.1 + re * a.sin() + dy * 0.15 * (1.0 - align);
         let p = to_px(ox, oy);
         let ch = if align > 0.7 { '#' } else { '*' };
         canvas.plot(p.0, p.1, ch);
+        if let Some(o) = prev {
+            canvas.line(o.0, o.1, p.0, p.1, ch);
+            canvas.line(o.0, o.1 + 1, p.0, p.1 + 1, '.');
+        }
+        prev = Some(p);
     }
 }
 

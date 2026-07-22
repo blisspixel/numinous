@@ -30,11 +30,11 @@ fn tmax(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
         (seed % 4) as f64 * 0.2
     };
     if let Some((x, _)) = hand {
-        0.5 + x * 4.5 + s
+        1.2 + x * 4.0 + s
     } else {
-        1.0 + phase_unit(t) * 3.5 + s
+        1.8 + phase_unit(t) * 3.2 + s
     }
-    .clamp(0.4, 6.0)
+    .clamp(1.2, 6.0)
 }
 
 fn draw(canvas: &mut dyn Surface, tmax: f64, seed: u64) {
@@ -44,8 +44,8 @@ fn draw(canvas: &mut dyn Surface, tmax: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let sc = (width.min(height) as f64) * 0.35;
-    let steps = 200;
+    let sc = (width.min(height) as f64) * 0.4;
+    let steps = 360;
     let mut prev: Option<(i32, i32)> = None;
     let mut c = 0.0;
     let mut s = 0.0;
@@ -70,14 +70,18 @@ fn draw(canvas: &mut dyn Surface, tmax: f64, seed: u64) {
         let py = (cy - y * sc).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
         }
         prev = Some((px, py));
     }
-    // asymptote point (0.5,0.5) scaled
+    // Asymptote attractor mark (filled blot, not a reticle).
     let ax = (cx + 0.5 * sc).round() as i32;
     let ay = (cy - 0.5 * sc).round() as i32;
-    canvas.line(ax - 1, ay, ax + 1, ay, 'o');
-    canvas.line(ax, ay - 1, ax, ay + 1, 'o');
+    for dy in -1..=1 {
+        for dx in -1..=1 {
+            canvas.plot(ax + dx, ay + dy, 'o');
+        }
+    }
 }
 
 /// Fresnel integrals room.

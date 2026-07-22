@@ -25,12 +25,13 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 
 fn count(t: f64, hand: Option<(f64, f64)>, seed: u64) -> usize {
     let s = if seed == 0 { 0 } else { (seed % 3) as usize };
+    // Always show several bars; t=0 must not be a single freckle.
     let base = if let Some((x, _)) = hand {
-        1.0 + x * 6.0
+        3.0 + x * 5.0
     } else {
-        2.0 + phase_unit(t) * 5.0
+        3.0 + phase_unit(t) * 5.0
     };
-    (base as usize + s).clamp(1, 8)
+    (base as usize + s).clamp(3, 8)
 }
 
 fn is_prime(n: u64) -> bool {
@@ -81,23 +82,37 @@ fn draw(canvas: &mut dyn Surface, k: usize, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let k = k.min(MERSENNE_P.len());
-    let bar_w = (width / k.max(1)).max(2);
+    let k = k.min(MERSENNE_P.len()).max(1);
+    let bar_w = (width / k).max(3) as i32;
     let pad = if seed == 0 { 0i32 } else { (seed % 2) as i32 };
+    let floor = height as i32 - 1;
+    canvas.line(0, floor, width.saturating_sub(1) as i32, floor, '.');
     for (i, &p) in MERSENNE_P.iter().take(k).enumerate() {
         let n = perfect_from_p(p).unwrap_or(0);
-        let x0 = (i * bar_w) as i32 + pad;
+        let x0 = i as i32 * bar_w + pad;
         // log height of perfect number
         let h = if n > 1 {
-            ((n as f64).ln() / 25.0 * height as f64).round() as i32
+            ((n as f64).ln() / 22.0 * height as f64).round() as i32
         } else {
-            2
+            3
         };
-        let h = h.clamp(2, height as i32 - 1);
-        canvas.line(x0, height as i32 - 1, x0, height as i32 - 1 - h, '#');
-        // Mersenne exponent as short top tick
-        let th = (p as i32).min(height as i32 / 3);
-        canvas.line(x0 + 1, 1, x0 + 1, 1 + th, '=');
+        let h = h.clamp(3, height as i32 - 2);
+        // Fat column fills most of the slot so large windows stay dense.
+        let body = (bar_w - 1).clamp(2, 8);
+        for dx in 0..body {
+            canvas.line(
+                x0 + dx,
+                floor,
+                x0 + dx,
+                floor - h,
+                if dx == 0 { '#' } else { '*' },
+            );
+        }
+        // Mersenne exponent tick cluster at the top of the bar.
+        let th = (p as i32 / 2).clamp(2, height as i32 / 4);
+        for dx in 0..body.min(3) {
+            canvas.line(x0 + dx, floor - h, x0 + dx, (floor - h - th).max(0), '=');
+        }
     }
 }
 
