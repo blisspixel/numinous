@@ -3168,6 +3168,11 @@ impl ApplicationHandler for App {
                                 self.show_help = !self.show_help;
                             }
                         }
+                        // Enter is the front-door start: into The Show (the room
+                        // tour). Same toggle as B, including from the open menu.
+                        Key::Named(NamedKey::Enter) => {
+                            self.toggle_show();
+                        }
                         Key::Named(NamedKey::Tab) => {
                             self.enter_studio();
                         }
@@ -4213,6 +4218,20 @@ mod tests {
 
         assert!(app.the_show);
         assert_eq!(app.transient_audio_clears.get(), clears_before + 1);
+    }
+
+    #[test]
+    fn enter_from_the_menu_starts_the_show() {
+        // Enter is the front-door start into the room tour (The Show), same as B.
+        let mut app = headless("numinous_app_test_enter_starts_show.txt");
+        assert!(app.show_help, "fresh install opens on the menu");
+        assert!(!app.the_show);
+
+        app.toggle_show();
+
+        assert!(app.the_show);
+        assert!(!app.show_help, "The Show dismisses the menu");
+        let _ = std::fs::remove_file(&app.journey_file);
     }
 
     #[test]

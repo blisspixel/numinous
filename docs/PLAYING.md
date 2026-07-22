@@ -48,7 +48,7 @@ your hands already know it:
 | R | reset the current room, including its clock and interactions |
 | F | fullscreen |
 | M | global sound on / off, including games, pause, radio, and Studio |
-| B | The Show: sit back, it plays itself |
+| B or Enter | The Show: sit back, rooms play themselves (the room tour) |
 | Esc | the menu: all games, Show, Studio, Journey, and every control |
 | G (in the menu) | the quiz: name the math |
 | C (in the menu) | Munch: cursor over the board, eat what fits |

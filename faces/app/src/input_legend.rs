@@ -435,7 +435,7 @@ pub fn help_lines(mode: InputMode, selected: Option<usize>, activity_paused: boo
             "A / D      PREV / NEXT ROOM    1-9 JUMP",
             "W / S      TIME SPEED   MOUSE  SCRUB",
             "E / ?      EXPLAIN    Q  ERA    R  RESET",
-            "B          THE SHOW   TAB  THE STUDIO",
+            "ENTER / B  THE SHOW   TAB  THE STUDIO",
             "J          JOURNEY    F  FULLSCREEN    X  WATCH AGENT",
             "Y          RADIO    P  POSTCARD   L  LOOP   K  SHARE PACK",
             "F9         PLAYTEST NOTE",
@@ -501,6 +501,15 @@ pub fn compact_controller_help_lines(selected: usize) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn keyboard_help_offers_enter_for_the_show() {
+        let lines = help_lines(InputMode::KeyboardMouse, None, false).join("\n");
+        assert!(
+            lines.contains("ENTER") && lines.contains("THE SHOW"),
+            "front-door Enter must start The Show:\n{lines}"
+        );
+    }
 
     #[test]
     fn controller_copy_names_only_routed_controller_tokens() {
