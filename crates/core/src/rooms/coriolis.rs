@@ -30,9 +30,9 @@ fn spin(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
         (seed % 5) as f64 * 0.05
     };
     if let Some((x, _)) = hand {
-        0.2 + x * 2.2 + s
+        0.4 + x * 2.0 + s
     } else {
-        0.4 + phase_unit(t) * 1.8 + s
+        0.6 + phase_unit(t) * 1.6 + s
     }
 }
 
@@ -43,13 +43,12 @@ fn draw(canvas: &mut dyn Surface, omega: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let scale = (width.min(height) as f64) * 0.42;
-    let omega = omega.clamp(0.1, 3.0);
+    let scale = (width.min(height) as f64) * 0.44;
+    let omega = omega.clamp(0.25, 3.0);
     // Inertial straight shot from left, viewed in a frame rotating at omega.
-    // Path: r_rot = R(-omega t) * (x0 + v t, 0).
     let v = 1.2;
     let x0 = -1.0;
-    let steps = 200;
+    let steps = 320;
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let u = i as f64 / steps as f64;
@@ -68,22 +67,24 @@ fn draw(canvas: &mut dyn Surface, omega: f64, seed: u64) {
         let py = (cy - yr * scale).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
         }
         prev = Some((px, py));
     }
-    // Reference: inertial chord (dashed by sparse marks) along horizontal.
-    for i in 0..12 {
-        let u = i as f64 / 11.0;
-        let x = -1.0 + 2.0 * u;
-        let px = (cx + x * scale).round() as i32;
-        let py = cy.round() as i32;
-        canvas.line(px, py, px, py, '.');
+    // Inertial reference chord.
+    let rx0 = (cx - scale).round() as i32;
+    let rx1 = (cx + scale).round() as i32;
+    canvas.line(rx0, cy.round() as i32, rx1, cy.round() as i32, '.');
+    // Frame spin indicator (filled hub, not a lone reticle).
+    let tip_ang = omega * 0.45;
+    let tx = (cx + 0.18 * scale * tip_ang.cos()).round() as i32;
+    let ty = (cy - 0.18 * scale * tip_ang.sin()).round() as i32;
+    canvas.line(cx.round() as i32, cy.round() as i32, tx, ty, '+');
+    for dy in -1..=1 {
+        for dx in -1..=1 {
+            canvas.plot(cx.round() as i32 + dx, cy.round() as i32 + dy, 'o');
+        }
     }
-    // Frame spin indicator.
-    let tip_ang = omega * 0.4;
-    let tx = (cx + 0.15 * scale * tip_ang.cos()).round() as i32;
-    let ty = (cy - 0.15 * scale * tip_ang.sin()).round() as i32;
-    canvas.line(cx as i32, cy as i32, tx, ty, '+');
 }
 
 /// Coriolis room.

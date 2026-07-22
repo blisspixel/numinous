@@ -6,7 +6,7 @@
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
-const ITERS: usize = 8_000;
+const ITERS: usize = 16_000;
 
 fn phase_unit(t: f64) -> f64 {
     if t.is_finite() {
@@ -128,6 +128,13 @@ fn draw(canvas: &mut dyn Surface, a: f64, b: f64, c: f64, d: f64) {
         let iy = (my + (1.0 - v) * ih).round() as i32;
         let ch = if i % 9 == 0 { '#' } else { '*' };
         canvas.plot(ix, iy, ch);
+        // Wings are dust on large plates without a second pass of ink.
+        if i % 2 == 0 {
+            canvas.plot(ix + 1, iy, ch);
+        }
+        if i % 5 == 0 {
+            canvas.plot(ix, iy + 1, '.');
+        }
     }
 }
 

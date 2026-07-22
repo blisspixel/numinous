@@ -8,7 +8,7 @@ use crate::rng::SplitMix64;
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
-const N: usize = 36;
+const N: usize = 64;
 const SEED: u64 = 0x57E7_5EED_0000_0001;
 
 fn phase_unit(t: f64) -> f64 {
@@ -56,27 +56,38 @@ fn draw(canvas: &mut dyn Surface, gs: &[(f64, f64)], center: usize, h0: f64) {
         let px = (x * width.saturating_sub(1) as f64).round() as i32;
         let py = (y * height.saturating_sub(1) as f64).round() as i32;
         if i == center {
-            canvas.plot(px, py, '#');
-            canvas.plot(px + 1, py, '#');
-            canvas.plot(px, py + 1, '#');
+            for dy in -2..=2 {
+                for dx in -2..=2 {
+                    if dx * dx + dy * dy <= 5 {
+                        canvas.plot(px + dx, py + dy, '#');
+                    }
+                }
+            }
             continue;
         }
         let d = (x - cx).hypot(y - cy);
         let z = h0 * d;
-        let ch = if z > 0.4 {
+        let ch = if z > 0.45 {
             '.'
-        } else if z > 0.2 {
-            ':'
-        } else {
+        } else if z > 0.22 {
             '*'
+        } else {
+            '#'
         };
-        canvas.plot(px, py, ch);
-        // Recession ray.
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                if dx * dx + dy * dy <= 2 {
+                    canvas.plot(px + dx, py + dy, ch);
+                }
+            }
+        }
+        // Recession ray scales with redshift so the stretch is visible.
         if d > 1e-3 {
             let ux = (x - cx) / d;
             let uy = (y - cy) / d;
-            let ex = x + ux * 0.04 * z.min(1.0);
-            let ey = y + uy * 0.04 * z.min(1.0);
+            let len = 0.06 + 0.1 * z.min(1.2);
+            let ex = x + ux * len;
+            let ey = y + uy * len;
             let qx = (ex * width.saturating_sub(1) as f64).round() as i32;
             let qy = (ey * height.saturating_sub(1) as f64).round() as i32;
             canvas.line(px, py, qx, qy, '.');

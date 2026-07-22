@@ -30,9 +30,9 @@ fn scale(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
         (seed % 5) as f64 * 0.03
     };
     if let Some((x, _)) = hand {
-        0.3 + x * 0.7 + s
+        0.55 + x * 0.55 + s
     } else {
-        0.4 + phase_unit(t) * 0.5 + s
+        0.7 + phase_unit(t) * 0.35 + s
     }
 }
 
@@ -41,9 +41,9 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let cx = width as f64 * 0.2;
+    let cx = width as f64 * 0.18;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let rad = (width.min(height) as f64) * 0.4 * a.clamp(0.25, 1.0);
+    let rad = (width.min(height) as f64) * 0.48 * a.clamp(0.5, 1.15);
     let j = if seed == 0 {
         0.0
     } else {
@@ -52,9 +52,9 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     // parametric: x = t^2, y = t^3  (semicubical)
     let mut prev_u: Option<(i32, i32)> = None;
     let mut prev_l: Option<(i32, i32)> = None;
-    let steps = 200;
+    let steps = 320;
     for i in 0..=steps {
-        let t = (i as f64 / steps as f64) * 1.4 + j * 0.1;
+        let t = (i as f64 / steps as f64) * 1.45 + j * 0.1;
         let x = rad * t * t;
         let y = rad * t * t * t;
         let px = (cx + x).round() as i32;
@@ -62,15 +62,21 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         let py_l = (cy + y).round() as i32;
         if let Some((ox, oy)) = prev_u {
             canvas.line(ox, oy, px, py_u, '#');
+            canvas.line(ox, oy + 1, px, py_u + 1, '*');
         }
         if let Some((ox, oy)) = prev_l {
             canvas.line(ox, oy, px, py_l, '#');
+            canvas.line(ox, oy + 1, px, py_l + 1, '*');
         }
         prev_u = Some((px, py_u));
         prev_l = Some((px, py_l));
     }
-    // cusp mark
-    canvas.plot(cx.round() as i32, cy.round() as i32, 'o');
+    // Cusp blot.
+    for dy in -1..=1 {
+        for dx in -1..=1 {
+            canvas.plot(cx.round() as i32 + dx, cy.round() as i32 + dy, 'o');
+        }
+    }
 }
 
 /// Semicubical parabola room.
