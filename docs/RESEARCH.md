@@ -57,6 +57,42 @@ hypotheses with testable consequences:
 The working bet is that mathematical emergence supplies unusually rich feedback.
 The hallway test decides whether that bet survives contact with players.
 
+### Show, not static graph (plate performance)
+
+A room can be mathematically correct and still fail as play if ambient phase
+only redraws a frozen plot. Motion research and 3Blue1Brown-style practice
+agree: continuous change makes invariants visible. For Numinous this is a
+testable engineering bar, not a vibe:
+
+- **Ambient phase is a show.** Construction rolls, pens travel, strings
+  breathe, processes advance, partials scroll. The visit moves without a hand.
+- **The hand changes the domain.** Scale, mode, rate, or plant must rewrite
+  the math, not only chrome. Art-first interaction forbids reticles and trails
+  over the plate.
+- **Beauty is of structure.** Glow, density, and motion encode the same
+  relationship as the model. Thick freckles that do not move are not beauty.
+- **Edutainment that works:** Toy before tell, predict before reveal, optional
+  depth, no worksheet cosplay. Intrinsic curiosity beats extrinsic grind.
+- **Contact language (alien door and peer minds):** start from shared formal
+  objects (counts, primes, ratios, geometry), escalate complexity honestly,
+  leave reverse-engineerable traces (seed, status, structured MCP results).
+  Structural humor can travel without shared culture; flattery and captivity
+  cannot.
+- **Agent channel (MCP):** structured observe, act, and reflect on the same
+  deterministic core. Agents need deltas, goals, and notation as much as
+  pictures. Teammate posture: clear verbs, fail-closed bounds, consent, forget,
+  creation rights. Not a dumb screenshot pipe.
+
+A short design filter used in catalog work (see also `PLAYFUL.md`,
+`QUALITY.md`, `DIGITAL_MINDS.md`):
+
+1. Does ambient phase *show* the idea?
+2. Does the hand *change* the idea?
+3. Would a first encounter work language-light?
+4. Would a stronger mind still find depth?
+5. Would an agent get a structured story of what happened?
+6. Is beauty of structure, not decoration?
+
 ## 2. Why *these* math concepts (the awe inventory)
 
 We're mining the concepts that reliably blow non-mathematicians' minds while staying visually/audibly playable. The recurring "mind-blowing math" lists point at the same greats, and they cluster into the awe-types we've spread across the Wings:

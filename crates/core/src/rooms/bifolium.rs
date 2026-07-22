@@ -23,7 +23,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn param_a(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn param_a(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -32,11 +32,11 @@ fn param_a(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         0.7 + x * 1.0 + s
     } else {
-        0.85 + phase_unit(t) * 0.7 + s
+        1.1 + s
     }
 }
 
-fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, a: f64, show: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -49,8 +49,10 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     } else {
         (seed % 6) as f64 * 0.06
     };
-    // Polar: r = a sin(th) cos^2(th); both leaves via full 0..2pi.
+    let show = show.clamp(0.0, 1.0);
     let steps = 560;
+    let drawn = ((show * steps as f64).round() as usize).min(steps);
+    // Ghost full leaves.
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let th = std::f64::consts::TAU * (i as f64 / steps as f64);
@@ -63,13 +65,39 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         let px = (cx + r * ang.cos()).round() as i32;
         let py = (cy - r * ang.sin() * 0.85).round() as i32;
         if let Some((ox, oy)) = prev {
-            canvas.line(ox, oy, px, py, '#');
-            canvas.line(ox, oy + 1, px, py + 1, '*');
-            if i % 3 == 0 {
-                canvas.line(ox + 1, oy, px + 1, py, '.');
-            }
+            canvas.line(ox, oy, px, py, '.');
         }
         prev = Some((px, py));
+    }
+    // Bright path so far.
+    prev = None;
+    for i in 0..=drawn {
+        let th = std::f64::consts::TAU * (i as f64 / steps as f64);
+        let r = a * th.sin() * th.cos().powi(2);
+        if r.abs() < 1e-6 {
+            prev = None;
+            continue;
+        }
+        let ang = th + rot;
+        let px = (cx + r * ang.cos()).round() as i32;
+        let py = (cy - r * ang.sin() * 0.85).round() as i32;
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
+        }
+        prev = Some((px, py));
+    }
+    let pen_th = show * std::f64::consts::TAU;
+    let pen_r = a * pen_th.sin() * pen_th.cos().powi(2);
+    let ang = pen_th + rot;
+    let pen_x = (cx + pen_r * ang.cos()).round() as i32;
+    let pen_y = (cy - pen_r * ang.sin() * 0.85).round() as i32;
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(pen_x + dx, pen_y + dy, 'o');
+            }
+        }
     }
 }
 
@@ -104,7 +132,12 @@ impl Room for Bifolium {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, param_a(t, None, self.seed), self.seed);
+        draw(
+            canvas,
+            param_a(t, None, self.seed),
+            phase_unit(t),
+            self.seed,
+        );
     }
 
     fn postcard_t(&self) -> f64 {
@@ -127,13 +160,18 @@ impl Room for Bifolium {
 
     fn status(&self, t: f64) -> Option<String> {
         let a = param_a(t, None, self.seed);
-        Some(format!("a={a:.2}  2leaf  DRAG:A"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("a={a:.2}  draw={p}%  DRAG:A"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let a = param_a(t, hands.last().copied(), self.seed);
-        draw(canvas, a, self.seed ^ hands.len() as u64);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, a, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
