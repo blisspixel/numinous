@@ -55,9 +55,9 @@ fn ambient_height(t: f64, seed: u64) -> f64 {
     }
 }
 
-/// Hand y climbs the line (top = higher imag height).
-fn height_from_hand(y: f64) -> f64 {
-    let u = 1.0 - y.clamp(0.0, 1.0);
+/// Hand climbs the line: top and right = higher imag height (x or y both work).
+fn height_from_hand(x: f64, y: f64) -> f64 {
+    let u = (0.55 * (1.0 - y.clamp(0.0, 1.0)) + 0.45 * x.clamp(0.0, 1.0)).clamp(0.0, 1.0);
     T_MIN + u * (T_MAX - T_MIN)
 }
 
@@ -160,8 +160,8 @@ impl ZetaWalk {
 
     fn height_at(&self, t: f64, pokes: &[(f64, f64)]) -> f64 {
         let hands = finite_pokes(pokes);
-        if let Some(&(_, y)) = hands.last() {
-            height_from_hand(y)
+        if let Some(&(x, y)) = hands.last() {
+            height_from_hand(x, y)
         } else {
             ambient_height(t, self.seed)
         }
@@ -320,9 +320,12 @@ mod tests {
 
     #[test]
     fn hand_top_is_high_and_bottom_is_low() {
-        assert!(height_from_hand(0.0) > height_from_hand(1.0));
-        assert!((height_from_hand(1.0) - T_MIN).abs() < 1e-12);
-        assert!((height_from_hand(0.0) - T_MAX).abs() < 1e-12);
+        // Top-right climbs; bottom-left drops.
+        assert!(height_from_hand(1.0, 0.0) > height_from_hand(0.0, 1.0));
+        assert!((height_from_hand(0.0, 1.0) - T_MIN).abs() < 1e-12);
+        assert!((height_from_hand(1.0, 0.0) - T_MAX).abs() < 1e-12);
+        // Horizontal drag alone also climbs.
+        assert!(height_from_hand(0.9, 0.5) > height_from_hand(0.1, 0.5));
     }
 
     #[test]

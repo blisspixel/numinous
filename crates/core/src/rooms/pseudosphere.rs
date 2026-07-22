@@ -43,13 +43,14 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let a = a.clamp(0.4, 1.9);
-    let scale = (height as f64) * 0.28 / a.max(0.4);
+    // Fixed scale so flare (a) changes the waist vs rim, not a cancelled self-copy.
+    let a = a.clamp(0.55, 1.85);
+    let scale = (height as f64) * 0.32;
     // Tractrix: x = a sin u, z = a (cos u + ln tan(u/2)), u in (0, pi).
-    let steps = 100;
+    let steps = 160;
     let mut prev_l: Option<(i32, i32)> = None;
     let mut prev_r: Option<(i32, i32)> = None;
-    let u0 = 0.25
+    let u0 = 0.22
         + if seed == 0 {
             0.0
         } else {
@@ -61,30 +62,32 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         let r = a * u.sin();
         let tan_half = (u * 0.5).tan().abs().max(1e-6);
         let z = a * (u.cos() + tan_half.ln());
-        let py = (cy - z * scale * 0.45).round() as i32;
+        let py = (cy - z * scale * 0.42).round() as i32;
         let pl = (cx - r * scale).round() as i32;
         let pr = (cx + r * scale).round() as i32;
         if let Some((ox, oy)) = prev_l {
             canvas.line(ox, oy, pl, py, '#');
+            canvas.line(ox, oy + 1, pl, py + 1, '*');
         }
         if let Some((ox, oy)) = prev_r {
             canvas.line(ox, oy, pr, py, '#');
+            canvas.line(ox, oy + 1, pr, py + 1, '*');
         }
         prev_l = Some((pl, py));
         prev_r = Some((pr, py));
     }
-    // A few latitude rings near the rim.
-    for k in 0..4 {
-        let u = u0 + (u1 - u0) * ((k as f64 + 0.5) / 4.0);
+    // Latitude rings: denser near the rim so the flare reads as a solid of revolution.
+    for k in 0..6 {
+        let u = u0 + (u1 - u0) * ((k as f64 + 0.5) / 6.0);
         let r = a * u.sin();
         let tan_half = (u * 0.5).tan().abs().max(1e-6);
         let z = a * (u.cos() + tan_half.ln());
-        let py = (cy - z * scale * 0.45).round() as i32;
+        let py = (cy - z * scale * 0.42).round() as i32;
         let rx = r * scale;
-        let ry = rx * 0.25;
+        let ry = rx * 0.28;
         let mut prev: Option<(i32, i32)> = None;
-        for j in 0..=32 {
-            let th = 2.0 * std::f64::consts::PI * (j as f64 / 32.0);
+        for j in 0..=48 {
+            let th = 2.0 * std::f64::consts::PI * (j as f64 / 48.0);
             let px = (cx + rx * th.cos()).round() as i32;
             let qy = (py as f64 + ry * th.sin()).round() as i32;
             if let Some((ox, oy)) = prev {

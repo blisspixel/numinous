@@ -41,15 +41,16 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let a = a.clamp(0.3, 2.5);
+    // Fixed plate scale: a changes how fast curvature rises (coil tightness),
+    // not a self-similar auto-fit of the same spiral.
+    let a = a.clamp(0.45, 2.4);
     let rot = if seed == 0 {
         0.0
     } else {
         (seed % 9) as f64 * 0.04
     };
-    // Fresnel integrals: x = int cos(s^2/(2a^2)) ds, y = int sin(...)
-    let steps = 400;
-    let s_max = 4.0 * a;
+    let steps = 520;
+    let s_max = 5.2;
     let ds = s_max / steps as f64;
     let mut x = 0.0;
     let mut y = 0.0;
@@ -62,7 +63,6 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         y += th.sin() * ds;
         pts.push((x, y));
     }
-    // also negative branch
     let mut xn = 0.0;
     let mut yn = 0.0;
     let mut pts_n = Vec::with_capacity(steps + 1);
@@ -74,28 +74,16 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         yn += th.sin() * (-ds);
         pts_n.push((xn, yn));
     }
-    let mut min_x = f64::MAX;
-    let mut max_x = f64::MIN;
-    let mut min_y = f64::MAX;
-    let mut max_y = f64::MIN;
-    for &(px, py) in pts.iter().chain(pts_n.iter()) {
-        min_x = min_x.min(px);
-        max_x = max_x.max(px);
-        min_y = min_y.min(py);
-        max_y = max_y.max(py);
-    }
-    let dx = (max_x - min_x).max(1e-6);
-    let dy = (max_y - min_y).max(1e-6);
+    let cx = (width.saturating_sub(1) / 2) as f64;
+    let cy = (height.saturating_sub(1) / 2) as f64;
+    let sc = (width.min(height) as f64) * 0.22;
     let c = rot.cos();
     let s = rot.sin();
     let map = |px: f64, py: f64| -> (i32, i32) {
         let rx = c * px - s * py;
         let ry = s * px + c * py;
-        // recompute bounds lightly via unrotated span
-        let u = ((rx - min_x) / dx).clamp(0.0, 1.0);
-        let v = ((ry - min_y) / dy).clamp(0.0, 1.0);
-        let ix = ((0.1 + 0.8 * u) * width.saturating_sub(1) as f64).round() as i32;
-        let iy = ((0.1 + 0.8 * (1.0 - v)) * height.saturating_sub(1) as f64).round() as i32;
+        let ix = (cx + rx * sc).round() as i32;
+        let iy = (cy - ry * sc).round() as i32;
         (ix, iy)
     };
     let mut prev: Option<(i32, i32)> = None;
@@ -103,6 +91,7 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         let (ix, iy) = map(px, py);
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, ix, iy, '#');
+            canvas.line(ox, oy + 1, ix, iy + 1, '*');
         }
         prev = Some((ix, iy));
     }
@@ -111,6 +100,7 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         let (ix, iy) = map(px, py);
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, ix, iy, '*');
+            canvas.line(ox, oy + 1, ix, iy + 1, '.');
         }
         prev = Some((ix, iy));
     }
