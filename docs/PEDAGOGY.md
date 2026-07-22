@@ -93,15 +93,18 @@ arrive last and confirm what the player already felt.
 
 ### Canonical engineered ahas
 
-- **Times Tables to Mandelbrot (the flagship).** *Designed; App vertical slice
-  next (see `ROADMAP.md` Exceptional Path Phase A).* Technical Toy is Built
-  (K=2 hold, integer snap, earned K=5, three-face agreement). The five-beat
-  staged reveal is not yet the visit: E still opens a text reveal card.
-  Prime: "You made a heart. Guess where else in this app this exact curve
-  lives." Restructure: the cardioid detaches from the string-circle and slides
-  onto the Mandelbrot's main bulb, matching edge for edge. Confirm: the k-dial
-  now drives both the times-table and a marker riding the Mandelbrot boundary.
-  The player feels they are one object.
+- **Times Tables to Mandelbrot (the flagship).** *App vertical slice Built
+  (machine path; stranger hallway still open).* Technical Toy remains
+  (K=2 hold, integer snap, earned K=5, three-face agreement). The ordinary App
+  visit now stages the five-beat engineered aha instead of opening a text card
+  on E first. Prime: after a hand-held K=2 heart, status and bottom marks invite
+  1=Mandelbrot / 2=Nephroid / 3=Circle (keys or bottom-band click). Withhold:
+  reveal text stays closed until a generation act (place wager or four-lobe
+  goal). Restructure: E summons a deterministic cardioid-to-Mandelbrot morph
+  (core pure state; App owns wall-clock progress). Confirm: the dial drives
+  chords and a bead on the Mandelbrot-frame outline together. Consolidate: E
+  opens the existing reveal copy as punchline. The Show still sweeps and does
+  not auto-earn. Core module: `rooms/times_tables_aha.rs`.
 - **Buffon's Needle to pi.** Prime: "This floor has no circles. Drag your guess
   for what number the crossings settle on." (Almost nobody guesses pi.)
   Restructure: as the tally converges, a circle grows out of the needle geometry
