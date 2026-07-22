@@ -5,6 +5,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- App: Enter starts The Show (the room tour), same as B, including from the
+  open menu. The front-door start no longer needs a letter key.
+
 ### Fixed
 - Arcade selection no longer hides the number under the Muncher. The App draws
   the digit first, then a selection frame and open ring; CLI shows the yellow
