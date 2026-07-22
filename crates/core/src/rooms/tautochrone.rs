@@ -42,12 +42,12 @@ fn draw(canvas: &mut dyn Surface, phase: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let r = (height as f64) * 0.22;
-    let scale = (width as f64 * 0.85) / (std::f64::consts::PI * r).max(1.0);
-    let ox = width as f64 * 0.08;
-    let oy = height as f64 * 0.12;
+    let r = (height as f64) * 0.28;
+    let scale = (width as f64 * 0.9) / (std::f64::consts::PI * r).max(1.0);
+    let ox = width as f64 * 0.05;
+    let oy = height as f64 * 0.1;
     // Half-cycloid trough: x = r(theta - sin), y = r(1 - cos), theta 0..pi.
-    let steps = 120;
+    let steps = 200;
     let mut prev: Option<(i32, i32)> = None;
     let mut path: Vec<(f64, f64, f64)> = Vec::with_capacity(steps + 1);
     for i in 0..=steps {
@@ -59,6 +59,7 @@ fn draw(canvas: &mut dyn Surface, phase: f64, seed: u64) {
         let py = (oy + y * scale).round() as i32;
         if let Some((qx, qy)) = prev {
             canvas.line(qx, qy, px, py, '#');
+            canvas.line(qx, qy + 1, px, py + 1, '*');
         }
         prev = Some((px, py));
     }
@@ -77,8 +78,11 @@ fn draw(canvas: &mut dyn Surface, phase: f64, seed: u64) {
             1 => '*',
             _ => '+',
         };
-        canvas.line(px - 1, py, px + 1, py, ch);
-        canvas.line(px, py - 1, px, py + 1, ch);
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                canvas.plot(px + dx, py + dy, ch);
+            }
+        }
     }
     let _ = seed;
 }

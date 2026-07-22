@@ -25,10 +25,11 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 
 fn length(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 { 0.0 } else { (seed % 16) as f64 };
+    // Longer default path so t=0 is a dragon, not a stub.
     if let Some((x, _)) = hand {
-        16.0 + x * 120.0 + s
+        48.0 + x * 160.0 + s
     } else {
-        24.0 + phase_unit(t) * 100.0 + s
+        64.0 + phase_unit(t) * 140.0 + s
     }
 }
 
@@ -50,12 +51,12 @@ fn draw(canvas: &mut dyn Surface, n_f: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let n = n_f.round().clamp(8.0, 160.0) as u32;
+    let n = n_f.round().clamp(32.0, 220.0) as u32;
     // Dragon-like polyline: turn by paperfold bits.
-    let mut x = width as f64 * 0.15;
-    let mut y = height as f64 * 0.5;
+    let mut x = width as f64 * 0.18;
+    let mut y = height as f64 * 0.55;
     let mut dir = 0i32; // 0E 1N 2W 3S
-    let step = (width.min(height) as f64) * 0.9 / (n as f64).sqrt().max(4.0);
+    let step = (width.min(height) as f64) * 0.95 / (n as f64).sqrt().max(5.0);
     let mut prev = (x.round() as i32, y.round() as i32);
     for i in 1..=n {
         let bit = paperfold_bit(i);
@@ -73,7 +74,9 @@ fn draw(canvas: &mut dyn Surface, n_f: f64, seed: u64) {
         }
         let px = x.round() as i32;
         let py = y.round() as i32;
-        canvas.line(prev.0, prev.1, px, py, if bit == 1 { '#' } else { '*' });
+        let ch = if bit == 1 { '#' } else { '*' };
+        canvas.line(prev.0, prev.1, px, py, ch);
+        canvas.line(prev.0, prev.1 + 1, px, py + 1, '.');
         prev = (px, py);
     }
     let _ = seed;

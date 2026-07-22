@@ -25,9 +25,9 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 
 fn levels(t: f64, hand: Option<(f64, f64)>) -> usize {
     if let Some((x, _)) = hand {
-        (3 + (x * 7.0) as usize).clamp(3, 10)
+        (5 + (x * 6.0) as usize).clamp(5, 11)
     } else {
-        (4 + (phase_unit(t) * 5.0) as usize).clamp(3, 9)
+        (5 + (phase_unit(t) * 5.0) as usize).clamp(5, 10)
     }
 }
 
@@ -124,7 +124,11 @@ fn draw(canvas: &mut dyn Surface, depth: usize, seed: u64) {
         } else {
             '*'
         };
-        canvas.plot(px, py, ch);
+        for dy in 0..2 {
+            for dx in -1..=1 {
+                canvas.plot(px + dx, py + dy, ch);
+            }
+        }
         // Thin stem up from parent band.
         if level > 1 {
             canvas.plot(px, py.saturating_sub(1), '.');

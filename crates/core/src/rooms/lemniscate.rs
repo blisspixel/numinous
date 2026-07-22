@@ -29,10 +29,11 @@ fn scale(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     } else {
         (seed % 5) as f64 * 0.02
     };
+    // Keep a full infinity mark even at t=0.
     if let Some((x, _)) = hand {
-        0.3 + x * 0.65 + s
+        0.55 + x * 0.5 + s
     } else {
-        0.4 + phase_unit(t) * 0.4 + s
+        0.7 + phase_unit(t) * 0.3 + s
     }
 }
 
@@ -43,60 +44,29 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let rad = (width.min(height) as f64) * 0.42 * a.clamp(0.25, 1.0);
+    let rad = (width.min(height) as f64) * 0.48 * a.clamp(0.5, 1.15);
     let rot = if seed == 0 {
         0.0
     } else {
         (seed % 9) as f64 * 0.04
     };
-    // Polar: r^2 = 2 a^2 cos(2 theta)
-    let steps = 400;
+    // Parametric Bernoulli lemniscate (both lobes in one sweep).
+    let steps = 520;
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
-        let th =
-            -std::f64::consts::FRAC_PI_4 + std::f64::consts::FRAC_PI_2 * (i as f64 / steps as f64);
-        let c2 = (2.0 * th).cos();
-        if c2 <= 0.0 {
-            prev = None;
-            continue;
-        }
-        let r = rad * (2.0 * c2).sqrt() / std::f64::consts::SQRT_2;
-        for sign in [1.0, -1.0] {
-            let ang = th + rot;
-            let x = sign * r * ang.cos();
-            let y = sign * r * ang.sin();
-            // For lemniscate both lobes: use th covering both with full circle form
-            let _ = (x, y);
-        }
-        let ang = th + rot;
-        let x = r * ang.cos();
-        let y = r * ang.sin();
-        let px = (cx + x).round() as i32;
-        let py = (cy - y).round() as i32;
+        let th = std::f64::consts::TAU * (i as f64 / steps as f64);
+        let s = th.sin();
+        let c = th.cos();
+        let den = 1.0 + s * s;
+        let x = rad * c / den;
+        let y = rad * s * c / den;
+        let xr = x * rot.cos() - y * rot.sin();
+        let yr = x * rot.sin() + y * rot.cos();
+        let px = (cx + xr).round() as i32;
+        let py = (cy - yr * 0.85).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
-        }
-        prev = Some((px, py));
-    }
-    // other lobe
-    prev = None;
-    for i in 0..=steps {
-        let th = std::f64::consts::FRAC_PI_4
-            + std::f64::consts::PI
-            + std::f64::consts::FRAC_PI_2 * (i as f64 / steps as f64);
-        let c2 = (2.0 * th).cos();
-        if c2 <= 0.0 {
-            prev = None;
-            continue;
-        }
-        let r = rad * (2.0 * c2).sqrt() / std::f64::consts::SQRT_2;
-        let ang = th + rot;
-        let x = r * ang.cos();
-        let y = r * ang.sin();
-        let px = (cx + x).round() as i32;
-        let py = (cy - y).round() as i32;
-        if let Some((ox, oy)) = prev {
-            canvas.line(ox, oy, px, py, '*');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
         }
         prev = Some((px, py));
     }

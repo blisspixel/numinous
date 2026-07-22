@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Fixed
+- Catalog polish: thin curve and number rooms now fill the plate at every phase
+  (thicker strokes, higher t=0 floors, fat cells). Covers Audioactive, Perfect
+  Numbers, Lemniscate, Cochleoid, Bifolium, Deltoid, Limacon, Fresnel, Torus
+  Knot, Sieve, Paperfold, Lucky Numbers, Calkin-Wilf, Stern-Brocot, The Lens,
+  and Tautochrone.
+
+### Fixed
 - Catalog quality pass: Percolation RNG was capped near 0.5 so high-p frames
   looked identical (dead dial); now opens 0..1 and meters p. Landauer is a fat
   register with heat bar (no hand reticle). Hopalong, Lozi, Clifford, Menagerie,
