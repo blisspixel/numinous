@@ -42,13 +42,20 @@ fn draw(canvas: &mut dyn Surface, p: f64, seed: u64) -> f64 {
     if width == 0 || height == 0 {
         return 0.0;
     }
-    let w = width.min(64);
-    let h = height.min(32);
+    // Grid tracks the canvas so a drag changes real open density, not a
+    // tiny upsampled stamp. Leave a strip for the p meter.
+    let meter_h = 2usize;
+    let h = height.saturating_sub(meter_h).max(4);
+    let w = width.max(8);
     let mut open = vec![false; w * h];
+    // Full 0..1 unit randoms (old >>33 / u32::MAX only reached ~0.5, so any
+    // p above half opened every site and made high-p frames look identical).
     let mut state = seed ^ 0xC0FF_EE00_D15E_A5E5;
     let mut next_u = || {
-        state = state.wrapping_mul(0x5851_f42d_4c95_7f2d).wrapping_add(1);
-        (state >> 33) as f64 / (u32::MAX as f64)
+        state = state
+            .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+            .wrapping_add(0x5851_F42D_4C95_7F2D);
+        (state >> 11) as f64 / ((1u64 << 53) as f64)
     };
     for cell in &mut open {
         *cell = next_u() < p;
@@ -88,21 +95,29 @@ fn draw(canvas: &mut dyn Surface, p: f64, seed: u64) -> f64 {
             break;
         }
     }
-    for y in 0..height {
-        for x in 0..width {
-            let gx = (x * w / width.max(1)).min(w - 1);
-            let gy = (y * h / height.max(1)).min(h - 1);
-            let i = gy * w + gx;
+    for y in 0..h {
+        for x in 0..w {
+            let i = y * w + x;
             let ch = if seen[i] {
                 if right_touch { '#' } else { '*' }
             } else if open[i] {
                 '+'
             } else {
-                ' '
+                '.'
             };
             canvas.plot(x as i32, y as i32, ch);
         }
     }
+    // Open-probability meter: domain consequence even when masks look busy.
+    let meter_y = height.saturating_sub(1) as i32;
+    let filled = ((p.clamp(0.0, 1.0)) * width.saturating_sub(1) as f64).round() as i32;
+    canvas.line(0, meter_y, width.saturating_sub(1) as i32, meter_y, '-');
+    if filled > 0 {
+        canvas.line(0, meter_y, filled, meter_y, '=');
+    }
+    // Critical tick near square-site p_c ≈ 0.59.
+    let pc_x = (0.592_746 * width.saturating_sub(1) as f64).round() as i32;
+    canvas.plot(pc_x, meter_y.saturating_sub(1), '|');
     cluster as f64 / (w * h) as f64
 }
 

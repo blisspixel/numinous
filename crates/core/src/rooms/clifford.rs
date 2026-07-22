@@ -27,17 +27,28 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 }
 
 fn params(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64, f64, f64) {
-    // A famous gallery: a=-1.4, b=1.6, c=1.0, d=0.7
+    // Famous gallery a=-1.4, b=1.6, c=1.0, d=0.7. Small sweeps only: far
+    // corners of the old range collapsed to a blank plate near t=1.
     let s = if seed == 0 {
         0.0
     } else {
-        (seed % 7) as f64 * 0.05
+        (seed % 7) as f64 * 0.03
     };
     if let Some((x, y)) = hand {
-        (-1.8 + x * 0.8 + s, 1.2 + y * 0.8, 1.0, 0.7)
+        (
+            (-1.7 + x * 0.55 + s).clamp(-1.75, -1.05),
+            (1.25 + y * 0.55).clamp(1.15, 1.9),
+            1.0,
+            0.7,
+        )
     } else {
         let u = phase_unit(t);
-        (-1.4 + u * 0.3 + s, 1.6 - u * 0.2, 1.0, 0.7 + s * 0.1)
+        (
+            (-1.55 + u * 0.25 + s).clamp(-1.6, -1.2),
+            (1.7 - u * 0.2).clamp(1.35, 1.8),
+            1.0,
+            (0.65 + s * 0.05).clamp(0.55, 0.85),
+        )
     }
 }
 
