@@ -4212,8 +4212,7 @@ fn post_munch_arcade_score(
 
 /// The `munch_arcade` tool: the full hunted arcade. Call with seed to see the board; call with "actions" list to replay the run (stateless). Returns text + structured state. Scores as "arcade seed:N".
 fn munch_arcade_tool(args: &Value) -> Value {
-    use numinous_core::munch_arcade::Turn;
-    use numinous_core::munch_arcade::{Arcade, Mind};
+    use numinous_core::munch_arcade::{Arcade, Turn};
     let seed = effective_seed(args);
     let mut run = Arcade::new(seed);
     let mut cleared = false;
@@ -4224,35 +4223,15 @@ fn munch_arcade_tool(args: &Value) -> Value {
             }
         }
     }
-    // Simple board text (dupe of cli for MCP independence)
-    let mut board_text = String::new();
-    for row in 0..numinous_core::munchers::ROWS {
-        for col in 0..numinous_core::munchers::COLS {
-            let cell = row * numinous_core::munchers::COLS + col;
-            if cell == run.muncher {
-                board_text.push_str("[@]");
-            } else if let Some(v) = run.vexations.iter().find(|v| v.cell == cell) {
-                let m = match v.mind {
-                    Mind::Drifter => "d",
-                    Mind::Tracker => "T",
-                    Mind::Editor => "e",
-                };
-                board_text.push_str(&format!("[{}]", m));
-            } else if run.eaten[cell] {
-                board_text.push_str("[ ]");
-            } else {
-                board_text.push_str(&format!("[{:>2}]", run.board.numbers[cell]));
-            }
-        }
-        board_text.push('\n');
-    }
+    // Shared with the App viewer attestation path: muncher never hides digits.
+    let board = numinous_core::munch_arcade::board_text(&run);
     let state_text = format!(
         "ARCADE seed {seed} LEVEL {} LIVES {} SCORE {}\nRULE: {}\n{}",
         run.level,
         run.lives,
         run.score,
         run.board.rule.describe(),
-        board_text
+        board
     );
     tool_structured(
         &state_text,
@@ -4267,7 +4246,7 @@ fn munch_arcade_tool(args: &Value) -> Value {
             // The rule to eat by and the board a mind reads ride in the
             // structured payload, not only the text state.
             "rule": run.board.rule.describe(),
-            "board": board_text,
+            "board": board,
             "cleared": cleared,
             "over": run.lives == 0
         }),

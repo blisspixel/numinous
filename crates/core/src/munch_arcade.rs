@@ -285,10 +285,66 @@ impl Arcade {
     }
 }
 
+/// Plain text board for CLI/MCP/viewer attestation.
+///
+/// The Muncher never hides an uneaten number: the selected cell prints the
+/// digits with an `@` mark so a player can decide whether to eat. Empty
+/// muncher cells stay `[@]`. Structured payloads still carry `muncher`.
+#[must_use]
+pub fn board_text(run: &Arcade) -> String {
+    let mut out = String::new();
+    for row in 0..ROWS {
+        for col in 0..COLS {
+            let cell = row * COLS + col;
+            if cell == run.muncher {
+                if run.eaten[cell] {
+                    out.push_str("[@]");
+                } else {
+                    out.push_str(&format!("[{:>2}@]", run.board.numbers[cell]));
+                }
+            } else if let Some(vex) = run.vexations.iter().find(|vex| vex.cell == cell) {
+                let mind = match vex.mind {
+                    Mind::Drifter => "d",
+                    Mind::Tracker => "T",
+                    Mind::Editor => "e",
+                };
+                out.push_str(&format!("[{mind}]"));
+            } else if run.eaten[cell] {
+                out.push_str("[ ]");
+            } else {
+                out.push_str(&format!("[{:>2}]", run.board.numbers[cell]));
+            }
+        }
+        out.push('\n');
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Action, Arcade, LIVES, Mind, Turn, Vexation, distance, neighbors};
+    use super::{Action, Arcade, LIVES, Mind, Turn, Vexation, board_text, distance, neighbors};
     use crate::munchers::{COLS, ROWS};
+
+    #[test]
+    fn board_text_keeps_the_number_under_the_muncher() {
+        let mut run = Arcade::new(11);
+        let n = run.board.numbers[run.muncher];
+        let open = board_text(&run);
+        assert!(
+            open.contains(&format!("[{n:>2}@]")),
+            "selected cell must show digits, got:\n{open}"
+        );
+        assert!(
+            !open.contains("[@]"),
+            "bare [@] must not hide an uneaten opening value:\n{open}"
+        );
+        run.eaten[run.muncher] = true;
+        let empty = board_text(&run);
+        assert!(
+            empty.contains("[@]"),
+            "empty muncher cell keeps the bare mark:\n{empty}"
+        );
+    }
 
     #[test]
     fn runs_start_fair_and_deterministic() {

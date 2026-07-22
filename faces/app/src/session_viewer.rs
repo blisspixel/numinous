@@ -1279,29 +1279,7 @@ fn canonical_arcade_structured(
     run: &numinous_core::munch_arcade::Arcade,
     cleared: bool,
 ) -> Value {
-    use numinous_core::munch_arcade::Mind;
-    use numinous_core::munchers::{COLS, ROWS};
-    let mut board_text = String::new();
-    for row in 0..ROWS {
-        for col in 0..COLS {
-            let cell = row * COLS + col;
-            if cell == run.muncher {
-                board_text.push_str("[@]");
-            } else if let Some(vex) = run.vexations.iter().find(|vex| vex.cell == cell) {
-                let mind = match vex.mind {
-                    Mind::Drifter => "d",
-                    Mind::Tracker => "T",
-                    Mind::Editor => "e",
-                };
-                board_text.push_str(&format!("[{mind}]"));
-            } else if run.eaten[cell] {
-                board_text.push_str("[ ]");
-            } else {
-                board_text.push_str(&format!("[{:>2}]", run.board.numbers[cell]));
-            }
-        }
-        board_text.push('\n');
-    }
+    let board = numinous_core::munch_arcade::board_text(run);
     serde_json::json!({
         "game": "arcade",
         "seed": seed,
@@ -1314,7 +1292,7 @@ fn canonical_arcade_structured(
             "mind": format!("{:?}", vex.mind)
         })).collect::<Vec<_>>(),
         "rule": run.board.rule.describe(),
-        "board": board_text,
+        "board": board,
         "cleared": cleared,
         "over": run.lives == 0
     })
