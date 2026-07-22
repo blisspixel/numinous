@@ -562,8 +562,30 @@ pub fn draw_arcade(
         raster.line(x1, y0, x1, y1, '-');
         let center_x = x0 + cell_w / 2;
         let center_y = y0 + cell_h / 2;
-        if cell == run.muncher {
-            let r = (cell_h / 3).max(4);
+        let on_muncher = cell == run.muncher;
+        let vex = run.vexations.iter().find(|v| v.cell == cell);
+        // Number first whenever it is still on the board. The Muncher is a ring
+        // around the digit, never a blank that hides what you are about to eat.
+        if !run.eaten[cell] && (on_muncher || vex.is_none()) {
+            let label = run.board.numbers[cell].to_string();
+            numinous_core::draw_text(
+                &mut raster,
+                &label,
+                center_x - (label.len() as i32 * 3 * scale),
+                center_y - 4 * scale,
+                scale,
+                if on_muncher { '#' } else { '*' },
+            );
+        }
+        if on_muncher {
+            // Selection frame (same idea as Munch's cursor) plus the open ring.
+            let inset = 2.max(scale);
+            raster.line(x0 + inset, y0 + inset, x1 - inset, y0 + inset, '#');
+            raster.line(x0 + inset, y1 - inset, x1 - inset, y1 - inset, '#');
+            raster.line(x0 + inset, y0 + inset, x0 + inset, y1 - inset, '#');
+            raster.line(x1 - inset, y0 + inset, x1 - inset, y1 - inset, '#');
+            // Open-mouth ring sits outside the digit so the value stays readable.
+            let r = (cell_h.min(cell_w) / 2 - 2).max(6);
             for i in 0..40 {
                 let a = std::f64::consts::TAU * f64::from(i) / 40.0;
                 if !(0.9..=5.4).contains(&a) {
@@ -574,7 +596,7 @@ pub fn draw_arcade(
                 raster.plot(px, py, '#');
                 raster.plot(px + 1, py, '#');
             }
-        } else if let Some(v) = run.vexations.iter().find(|v| v.cell == cell) {
+        } else if let Some(v) = vex {
             let mark = match v.mind {
                 Mind::Tracker => "T",
                 Mind::Drifter => "D",
@@ -587,16 +609,6 @@ pub fn draw_arcade(
                 center_y - 4 * scale,
                 scale + 1,
                 '#',
-            );
-        } else if !run.eaten[cell] {
-            let label = run.board.numbers[cell].to_string();
-            numinous_core::draw_text(
-                &mut raster,
-                &label,
-                center_x - (label.len() as i32 * 3 * scale),
-                center_y - 4 * scale,
-                scale,
-                '*',
             );
         }
     }
@@ -1539,6 +1551,48 @@ mod tests {
             let text_width = message.chars().count() as i32 * 6 * scale;
             assert!((2 * x + text_width - width as i32).abs() <= 1);
         }
+    }
+
+    #[test]
+    fn arcade_selection_keeps_the_number_visible() {
+        // Standing on a cell used to draw only the Muncher ring and hide the
+        // digit. Eating that cell (without moving) must drop ink, which proves
+        // the number underfoot was painted while selected.
+        let mut run = numinous_core::munch_arcade::Arcade::new(19);
+        let cell = run.muncher;
+        assert!(
+            !run.eaten[cell],
+            "opening cell under the Muncher must still hold a number"
+        );
+        let with_number = draw_arcade(
+            &ArcadePlay {
+                run: run.clone(),
+                seed: 19,
+                flash: None,
+                over: false,
+            },
+            InputMode::KeyboardMouse,
+            ControllerFace::Generic,
+            360,
+            240,
+        );
+        run.eaten[cell] = true;
+        let without_number = draw_arcade(
+            &ArcadePlay {
+                run,
+                seed: 19,
+                flash: None,
+                over: false,
+            },
+            InputMode::KeyboardMouse,
+            ControllerFace::Generic,
+            360,
+            240,
+        );
+        assert!(
+            with_number.lit_count() > without_number.lit_count(),
+            "number under the Muncher must contribute ink so the selection is readable"
+        );
     }
 
     #[test]
