@@ -1,6 +1,7 @@
 //! Rhodonea (rose) curves: r = cos(k theta) polar flowers.
 //!
-//! DRAG: TUNE PETALS. See `docs/ROOMS.md`.
+//! Ambient phase draws the petals with a traveling pen. DRAG: TUNE PETALS.
+//! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -23,21 +24,22 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn petals(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn petals(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
         (seed % 5) as f64 * 0.1
     };
-    if let Some((x, y)) = hand {
-        // continuous k: integer-ish and half-integer roses
-        1.5 + x * 7.0 + y * 0.5 + s
+    if let Some((x, _)) = hand {
+        // Hand x sets petal count; y scrubs the pen in render_poked.
+        1.5 + x * 7.0 + s
     } else {
-        2.0 + phase_unit(t) * 5.0 + s
+        // Ambient k holds a readable flower; motion lives in the pen.
+        3.0 + s
     }
 }
 
-fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, k: f64, show: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -50,19 +52,46 @@ fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) {
     } else {
         (seed % 11) as f64 * 0.05
     };
+    let show = show.clamp(0.0, 1.0);
+    // Two full turns so even roses close cleanly.
     let steps = 720;
+    let drawn = ((show * steps as f64).round() as usize).min(steps);
+    let stroke = if k > 5.0 { '#' } else { '*' };
+    // Soft ghost of the full rose.
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let th = rot + std::f64::consts::TAU * 2.0 * (i as f64 / steps as f64);
         let r = (k * th).cos().abs();
-        let x = cx + rad * r * th.cos();
-        let y = cy - rad * r * th.sin();
-        let px = x.round() as i32;
-        let py = y.round() as i32;
+        let px = (cx + rad * r * th.cos()).round() as i32;
+        let py = (cy - rad * r * th.sin()).round() as i32;
         if let Some((ox, oy)) = prev {
-            canvas.line(ox, oy, px, py, if k > 5.0 { '#' } else { '*' });
+            canvas.line(ox, oy, px, py, '.');
         }
         prev = Some((px, py));
+    }
+    // Bright petals so far.
+    prev = None;
+    for i in 0..=drawn {
+        let th = rot + std::f64::consts::TAU * 2.0 * (i as f64 / steps as f64);
+        let r = (k * th).cos().abs();
+        let px = (cx + rad * r * th.cos()).round() as i32;
+        let py = (cy - rad * r * th.sin()).round() as i32;
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, px, py, stroke);
+            canvas.line(ox, oy + 1, px, py + 1, '*');
+        }
+        prev = Some((px, py));
+    }
+    let pen_th = rot + show * std::f64::consts::TAU * 2.0;
+    let pen_r = (k * pen_th).cos().abs();
+    let pen_x = (cx + rad * pen_r * pen_th.cos()).round() as i32;
+    let pen_y = (cy - rad * pen_r * pen_th.sin()).round() as i32;
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(pen_x + dx, pen_y + dy, 'o');
+            }
+        }
     }
 }
 
@@ -91,13 +120,13 @@ impl Room for Rose {
             id: "rose",
             title: "Rose Curve",
             wing: "Shape & Space",
-            blurb: "Rhodonea flowers r = cos(k theta). t and DRAG: TUNE PETALS.",
+            blurb: "Rhodonea petals draw themselves. Watch the pen; DRAG: TUNE PETALS.",
             accent: [220, 40, 100],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, petals(t, None, self.seed), self.seed);
+        draw(canvas, petals(t, None, self.seed), phase_unit(t), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -120,13 +149,19 @@ impl Room for Rose {
 
     fn status(&self, t: f64) -> Option<String> {
         let k = petals(t, None, self.seed);
-        Some(format!("k={k:.2}  rose  DRAG:PETALS"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("k={k:.2}  draw={p}%  DRAG"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let k = petals(t, hands.last().copied(), self.seed);
-        draw(canvas, k, self.seed ^ hands.len() as u64);
+        // When held, x still drives k via petals(); y scrubs the pen.
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, k, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -158,7 +193,7 @@ mod tests {
     #[test]
     fn status_invites() {
         let s = Rose::new().status(0.3).unwrap();
-        assert!(s.contains("DRAG") || s.contains("PETALS"));
+        assert!(s.contains("DRAG") || s.contains("draw"));
         assert!(s.chars().count() <= 56);
     }
 
@@ -177,6 +212,18 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn ambient_pen_moves_the_plate() {
+        let r = Rose::new();
+        let mut a = Canvas::new(80, 48);
+        let mut b = Canvas::new(80, 48);
+        r.render(&mut a, 0.15);
+        r.render(&mut b, 0.75);
+        assert_ne!(a.to_text(), b.to_text(), "pen must walk the petals");
+        assert!(a.ink_count() > 40);
+        assert!(b.ink_count() > 40);
     }
 
     #[test]

@@ -1,6 +1,7 @@
 //! Hippopede of Proclus: figure-eight from intersecting sphere and cylinder.
 //!
-//! DRAG: TUNE ECC. See `docs/ROOMS.md`.
+//! Ambient phase walks a pen along the fetter. DRAG: TUNE ECC.
+//! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -23,7 +24,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn ecc(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn ecc(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -32,11 +33,12 @@ fn ecc(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         0.3 + x * 1.4 + s
     } else {
-        0.5 + phase_unit(t) * 1.1 + s
+        // Ambient ecc holds a readable eight; motion lives in the pen.
+        1.0 + s
     }
 }
 
-fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, k: f64, show: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -52,7 +54,10 @@ fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) {
     } else {
         (seed % 6) as f64 * 0.05
     };
+    let show = show.clamp(0.0, 1.0);
     let steps = 320;
+    let drawn = ((show * steps as f64).round() as usize).min(steps);
+    // Soft ghost of the full fetter.
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let th = 2.0 * std::f64::consts::PI * (i as f64 / steps as f64);
@@ -68,9 +73,39 @@ fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) {
         let px = (cx + x * scale).round() as i32;
         let py = (cy - y * scale).round() as i32;
         if let Some((ox, oy)) = prev {
-            canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy, px, py, '.');
         }
         prev = Some((px, py));
+    }
+    // Bright path so far.
+    prev = None;
+    let mut tip = (cx.round() as i32, cy.round() as i32);
+    for i in 0..=drawn {
+        let th = 2.0 * std::f64::consts::PI * (i as f64 / steps as f64);
+        let r2 = 4.0 * a * (b - a * th.sin().powi(2));
+        if r2 <= 0.0 {
+            prev = None;
+            continue;
+        }
+        let r = r2.sqrt();
+        let ang = th + rot;
+        let x = r * ang.cos();
+        let y = r * ang.sin();
+        let px = (cx + x * scale).round() as i32;
+        let py = (cy - y * scale).round() as i32;
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
+        }
+        tip = (px, py);
+        prev = Some((px, py));
+    }
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(tip.0 + dx, tip.1 + dy, 'o');
+            }
+        }
     }
 }
 
@@ -99,13 +134,13 @@ impl Room for Hippopede {
             id: "hippopede",
             title: "Hippopede",
             wing: "Shape & Space",
-            blurb: "Proclus horse-fetter figure-eight. t and DRAG: TUNE ECC.",
+            blurb: "Proclus horse-fetter draws itself. Watch the pen; DRAG: TUNE ECC.",
             accent: [100, 70, 50],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, ecc(t, None, self.seed), self.seed);
+        draw(canvas, ecc(t, None, self.seed), phase_unit(t), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -128,13 +163,18 @@ impl Room for Hippopede {
 
     fn status(&self, t: f64) -> Option<String> {
         let k = ecc(t, None, self.seed);
-        Some(format!("b={k:.2}  fetter  DRAG:ECC"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("b={k:.2}  draw={p}%  DRAG"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let k = ecc(t, hands.last().copied(), self.seed);
-        draw(canvas, k, self.seed ^ hands.len() as u64);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, k, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -170,7 +210,7 @@ mod tests {
     #[test]
     fn status_invites() {
         let s = Hippopede::new().status(0.3).unwrap();
-        assert!(s.contains("DRAG") || s.contains("fetter"));
+        assert!(s.contains("DRAG") || s.contains("draw"));
         assert!(s.chars().count() <= 56);
     }
 
@@ -189,6 +229,18 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn ambient_pen_moves_the_plate() {
+        let r = Hippopede::new();
+        let mut a = Canvas::new(80, 48);
+        let mut b = Canvas::new(80, 48);
+        r.render(&mut a, 0.15);
+        r.render(&mut b, 0.75);
+        assert_ne!(a.to_text(), b.to_text(), "pen must walk the fetter");
+        assert!(a.ink_count() > 20);
+        assert!(b.ink_count() > 20);
     }
 
     #[test]

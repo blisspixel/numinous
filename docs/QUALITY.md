@@ -64,7 +64,7 @@ built, so an aspiration is never mistaken for a result.
   coarse renderer-path checks, not certification of subjective visual quality.
   Production input routing has separate unit tests; native operating system
   event dispatch is not claimed as automated end-to-end evidence.
-- **Catalog plate quality (cycles 161 to 164, machine path):** full-catalog
+- **Catalog plate quality (cycles 161 to 166, machine path):** full-catalog
   scans hold (1) zero phase-thin frames (worst t among 0, 0.25, 0.5, 0.75, 1.0
   has under 80 ink on 120x70), (2) zero dead-domain rooms (base raster equals
   interacted raster under the room verb), and (3) zero dead dials (left-hand vs
@@ -74,8 +74,10 @@ built, so an aspiration is never mistaken for a result.
   pointer reticle or drag trail painted over the room math. **Live motion:**
   ambient phase should change the raster for curve, wave, and process rooms
   (pen travel, construction roll, scroll, unfurl, breathe); targeted tests
-  assert distinct frames at different t. These scans are engineering evidence,
-  not stranger plate-beauty certification. Fun and beauty still need hallway
+  assert distinct frames at different t. Cycles 164 to 166 cover rolling
+  cardioids and cycloids, pens on classical polar curves, unfurling spirals,
+  and breathing or scrolling waves. These scans are engineering evidence, not
+  stranger plate-beauty certification. Fun and beauty still need hallway
   observation.
   Twelve flagship receipts additionally capture K=2, K=3, K=pi, K=4, K=5,
   and the earned four-lobe Aha at both sizes. The generator asserts all five
