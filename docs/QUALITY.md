@@ -64,6 +64,15 @@ built, so an aspiration is never mistaken for a result.
   coarse renderer-path checks, not certification of subjective visual quality.
   Production input routing has separate unit tests; native operating system
   event dispatch is not claimed as automated end-to-end evidence.
+- **Catalog plate quality (cycles 161 to 163, machine path):** full-catalog
+  scans hold (1) zero phase-thin frames (worst t among 0, 0.25, 0.5, 0.75, 1.0
+  has under 80 ink on 120x70), (2) zero dead-domain rooms (base raster equals
+  interacted raster under the room verb), and (3) zero dead dials (left-hand vs
+  right-hand hamming under 8 on DRAG/TUNE rooms). Soft-thin large plates
+  (density under 0.02 or under 280 ink on 160x90) are tracked and densified
+  with floors, double strokes, and filled lobes. Art-first interaction: no
+  pointer reticle or drag trail painted over the room math. These scans are
+  engineering evidence, not stranger plate-beauty certification.
   Twelve flagship receipts additionally capture K=2, K=3, K=pi, K=4, K=5,
   and the earned four-lobe Aha at both sizes. The generator asserts all five
   spectral inks and the dial marker, while core tests bound compact ASCII

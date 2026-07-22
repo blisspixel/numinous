@@ -7,7 +7,12 @@ hidden content. Per-visit variation seed is threaded through registry/app/CLI/
 MCP; every catalog room uses it for replay novelty, while hidden content stays
 outside the catalog replay contract. Every catalog room has `verb()` +
 `render_poked()` touch actions (usually CLICK or DRAG on arrival cards) and an
-Engine A2 motif. See `ARCADE.md` for design.
+Engine A2 motif. Optional concept explainers ship on flagship rooms (App E / ?,
+CLI `?`, MCP `reveal_room`). **Plate quality bar (machine path, cycles 161 to
+163):** interaction is art-first (no reticle or drag trail over the math);
+catalog scans hold 0 phase-thin frames, 0 dead-domain rooms, and 0 dead dials;
+soft-thin large plates are under active densify passes. See `CHANGELOG.md` and
+the Progress section of `ROADMAP.md`. See `ARCADE.md` for design.
 
 Every room is scored on two axes to help sequencing:
 
