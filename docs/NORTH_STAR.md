@@ -122,12 +122,13 @@ Sequenced by leverage and dependency. Each phase is a coherent slice, provable
 on one room before it scales, matching the "vertical slice first" discipline
 already in `ROADMAP.md`.
 
-**Phase A, the keystone (cheapest deep win).** Build the prediction wager into a
-five-beat engineered-aha reveal, on the flagship room first (Times Tables), with
-the cardioid-to-Mandelbrot morph as the worked example. Gate insight-collection
-on the generation act. Expose the same predict-then-reveal verb over MCP so a
-digital mind's guess is graded as compression progress. One mechanic, all four
-loops seeded. See `PEDAGOGY.md`.
+**Phase A, the keystone (cheapest deep win; partially built).** MCP `predict`
+and graded challenges ship the agent-facing verb; Galton ships a Toy-layer
+one-ball wager. Still open, and the next critical App slice: the five-beat
+engineered-aha reveal on Times Tables (cardioid-to-Mandelbrot morph with a
+generation act before reveal). Gate insight-collection on the generation act.
+One mechanic, all four loops seeded. Vertical-slice plan: `ROADMAP.md`
+(Exceptional Path Phase A). Detail: `PEDAGOGY.md`.
 
 **Phase B, the glow pipeline (the systemic aesthetic multiplier).** The GPU
 post-stack: HDR target, bright-pass bloom, ping-pong phosphor persistence,
