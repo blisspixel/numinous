@@ -23,7 +23,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn a_param(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn a_param(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -32,11 +32,11 @@ fn a_param(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         0.3 + x * 1.2 + s
     } else {
-        0.5 + phase_unit(t) * 0.8 + s
+        0.9 + s
     }
 }
 
-fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, a: f64, show: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -47,13 +47,30 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     } else {
         (seed % 5) as f64 * 0.02
     };
+    let show = show.clamp(0.0, 1.0);
     let x_span = 6.0 * a;
+    // Ghost full witch.
     let mut prev: Option<(i32, i32)> = None;
     for col in 0..width {
         let x = -x_span + 2.0 * x_span * (col as f64 / width.saturating_sub(1).max(1) as f64) + j;
         let y = 8.0 * a * a * a / (x * x + 4.0 * a * a);
         let u = (col as f64 / width.saturating_sub(1).max(1) as f64).clamp(0.0, 1.0);
-        let v = (y / (2.0 * a)).clamp(0.0, 1.0); // peak is 2a at x=0
+        let v = (y / (2.0 * a)).clamp(0.0, 1.0);
+        let px = (u * width.saturating_sub(1) as f64).round() as i32;
+        let py = ((1.0 - v * 0.85 - 0.05) * height.saturating_sub(1) as f64).round() as i32;
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, px, py, '.');
+        }
+        prev = Some((px, py));
+    }
+    // Bright path from left up to the pen (show advances along the plate).
+    let cut = ((show * width as f64).round() as usize).min(width.saturating_sub(1));
+    prev = None;
+    for col in 0..=cut {
+        let x = -x_span + 2.0 * x_span * (col as f64 / width.saturating_sub(1).max(1) as f64) + j;
+        let y = 8.0 * a * a * a / (x * x + 4.0 * a * a);
+        let u = (col as f64 / width.saturating_sub(1).max(1) as f64).clamp(0.0, 1.0);
+        let v = (y / (2.0 * a)).clamp(0.0, 1.0);
         let px = (u * width.saturating_sub(1) as f64).round() as i32;
         let py = ((1.0 - v * 0.85 - 0.05) * height.saturating_sub(1) as f64).round() as i32;
         if let Some((ox, oy)) = prev {
@@ -62,19 +79,31 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         }
         prev = Some((px, py));
     }
-    // Guiding circle of diameter 2a (construction geometry).
+    // Guiding circle (construction geometry) spins gently with show.
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) as f64) * 0.7;
     let rad = (height as f64) * 0.18 * a.clamp(0.5, 1.5);
+    let spin = show * std::f64::consts::TAU;
     let mut prev_c: Option<(i32, i32)> = None;
     for i in 0..=72 {
-        let th = std::f64::consts::TAU * (i as f64 / 72.0);
+        let th = spin + std::f64::consts::TAU * (i as f64 / 72.0);
         let px = (cx + rad * th.cos()).round() as i32;
         let py = (cy - rad * th.sin()).round() as i32;
         if let Some(o) = prev_c {
-            canvas.line(o.0, o.1, px, py, '.');
+            canvas.line(o.0, o.1, px, py, ':');
         }
         prev_c = Some((px, py));
+    }
+    // Construction ray and pen on the curve.
+    if let Some((px, py)) = prev {
+        canvas.line(cx.round() as i32, cy.round() as i32, px, py, '-');
+        for dy in -2..=2 {
+            for dx in -2..=2 {
+                if dx * dx + dy * dy <= 5 {
+                    canvas.plot(px + dx, py + dy, 'o');
+                }
+            }
+        }
     }
 }
 
@@ -109,7 +138,12 @@ impl Room for WitchOfAgnesi {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, a_param(t, None, self.seed), self.seed);
+        draw(
+            canvas,
+            a_param(t, None, self.seed),
+            phase_unit(t),
+            self.seed,
+        );
     }
 
     fn postcard_t(&self) -> f64 {
@@ -138,7 +172,11 @@ impl Room for WitchOfAgnesi {
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let a = a_param(t, hands.last().copied(), self.seed);
-        draw(canvas, a, self.seed ^ hands.len() as u64);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, a, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

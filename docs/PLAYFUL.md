@@ -87,6 +87,13 @@ constructionism and Lockhart's math-as-art:
   advanced concept is learned when it is the *mechanic*, not the *content*.
   Nobody solves calculus here; someone plays a thing and accumulation was the
   controls.
+- **Show, not static graph.** Ambient phase must *perform* the idea (a rolling
+  wheel laying a cycloid, a string breathing, a spiral unfurling). A correct
+  but frozen plot is watch-mode death. Densify and thicken only when motion
+  already carries the eye. The six-question filter lives in `RESEARCH.md`.
+- **Five doors, one bar.** Human, agent, and alien doors all need language-light
+  first contact, reverse-engineerable structure, and a ceiling that does not
+  condescend. MCP is a peer face for structure and play, not a utility dump.
 
 **Experience rooms** (the queue this implies; each is an advanced concept as a
 verb, per the reverse-calculus brief):
