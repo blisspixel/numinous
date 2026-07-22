@@ -105,11 +105,15 @@ arrive last and confirm what the player already felt.
   chords and a bead on the Mandelbrot-frame outline together. Consolidate: E
   opens the existing reveal copy as punchline. The Show still sweeps and does
   not auto-earn. Core module: `rooms/times_tables_aha.rs`.
-- **Buffon's Needle to pi.** Prime: "This floor has no circles. Drag your guess
-  for what number the crossings settle on." (Almost nobody guesses pi.)
-  Restructure: as the tally converges, a circle grows out of the needle geometry
-  to show why pi was always hiding. The wrong guess is what makes pi's arrival
-  uncanny.
+- **Buffon's Needle to pi.** *App vertical slice Built (machine path; stranger
+  hallway still open).* Second room on the generation-before-reveal pattern.
+  Prime: after the first throw, status and a bottom number line invite a guess
+  on 1.5..4.5 (drag, or keys 1=2 / 2=e / 3=3 / 4=pi). Withhold: reveal text
+  stays closed until a generation act (number wager, or eight throws).
+  Restructure: E grows a circle out of the lined floor. Confirm: throws still
+  update the estimate under the full circle. Consolidate: E opens the existing
+  reveal copy as punchline. The Show does not auto-earn. Core module:
+  `rooms/buffon_aha.rs`.
 - **Galton Board to the binomial and its normal approximation.** Prime: "Drop
   your bet: where does this one ball land?" Restructure: 64-ball waves build an
   empirical pile against a distinct exact `Binomial(16, p)` outline without
