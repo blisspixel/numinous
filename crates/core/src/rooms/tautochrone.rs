@@ -42,12 +42,12 @@ fn draw(canvas: &mut dyn Surface, phase: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let r = (height as f64) * 0.28;
-    let scale = (width as f64 * 0.9) / (std::f64::consts::PI * r).max(1.0);
-    let ox = width as f64 * 0.05;
-    let oy = height as f64 * 0.1;
+    let r = (height as f64) * 0.36;
+    let scale = (width as f64 * 0.94) / (std::f64::consts::PI * r).max(1.0);
+    let ox = width as f64 * 0.04;
+    let oy = height as f64 * 0.08;
     // Half-cycloid trough: x = r(theta - sin), y = r(1 - cos), theta 0..pi.
-    let steps = 200;
+    let steps = 320;
     let mut prev: Option<(i32, i32)> = None;
     let mut path: Vec<(f64, f64, f64)> = Vec::with_capacity(steps + 1);
     for i in 0..=steps {
@@ -63,24 +63,25 @@ fn draw(canvas: &mut dyn Surface, phase: f64, seed: u64) {
         }
         prev = Some((px, py));
     }
-    // Three beads start at different arc fractions; tautochrone shares arrival phase.
-    let starts = [0.15, 0.4, 0.7];
+    // Five beads start at different arc fractions; tautochrone shares arrival phase.
+    let starts = [0.1, 0.28, 0.46, 0.64, 0.82];
     let n = path.len().saturating_sub(1).max(1);
     for (bi, &s0) in starts.iter().enumerate() {
-        // Remaining fraction of path shrinks with phase; all meet at end.
         let u = s0 + (1.0 - s0) * phase;
         let idx = ((u.clamp(0.0, 1.0) * n as f64).round() as usize).min(n);
         let (_, x, y) = path[idx];
         let px = (ox + x * scale).round() as i32;
         let py = (oy + y * scale).round() as i32;
-        let ch = match bi {
+        let ch = match bi % 3 {
             0 => 'o',
             1 => '*',
             _ => '+',
         };
-        for dy in -1..=1 {
-            for dx in -1..=1 {
-                canvas.plot(px + dx, py + dy, ch);
+        for dy in -2..=2 {
+            for dx in -2..=2 {
+                if dx * dx + dy * dy <= 5 {
+                    canvas.plot(px + dx, py + dy, ch);
+                }
             }
         }
     }

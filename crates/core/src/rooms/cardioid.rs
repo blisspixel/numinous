@@ -30,9 +30,9 @@ fn scale(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
         (seed % 5) as f64 * 0.02
     };
     if let Some((x, _)) = hand {
-        0.25 + x * 0.7 + s
+        0.55 + x * 0.55 + s
     } else {
-        0.4 + phase_unit(t) * 0.4 + s
+        0.7 + phase_unit(t) * 0.35 + s
     }
 }
 
@@ -43,24 +43,25 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let rad = (width.min(height) as f64) * 0.22 * a.clamp(0.2, 1.0);
+    let rad = (width.min(height) as f64) * 0.28 * a.clamp(0.5, 1.2);
     let rot = if seed == 0 {
         0.0
     } else {
         (seed % 11) as f64 * 0.03
     };
     // r = 2a (1 - cos theta) in polar, rotated
-    let steps = 360;
+    let steps = 480;
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let th = rot + std::f64::consts::TAU * (i as f64 / steps as f64);
         let r = 2.0 * rad * (1.0 - th.cos());
         let x = r * th.cos();
         let y = r * th.sin();
-        let px = (cx + x).round() as i32;
-        let py = (cy - y).round() as i32;
+        let px = (cx + x * 0.55).round() as i32;
+        let py = (cy - y * 0.55).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
         }
         prev = Some((px, py));
     }

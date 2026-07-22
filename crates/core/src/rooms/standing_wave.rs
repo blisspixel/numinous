@@ -37,7 +37,7 @@ fn draw(canvas: &mut dyn Surface, n: usize, seed: u64) {
         return;
     }
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let amp = height as f64 * 0.4;
+    let amp = height as f64 * 0.42;
     let phase = if seed == 0 {
         0.0
     } else {
@@ -52,18 +52,40 @@ fn draw(canvas: &mut dyn Surface, n: usize, seed: u64) {
         let py = (cy - y).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, col as i32, py, '#');
+            canvas.line(ox, oy + 1, col as i32, py + 1, '*');
         }
         prev = Some((col as i32, py));
     }
-    // nodes
+    // Envelope (dashed) for the standing mode amplitude.
+    let mut prev_e: Option<(i32, i32)> = None;
+    for col in 0..width {
+        let x = col as f64 / width.saturating_sub(1).max(1) as f64;
+        let y = amp * (n as f64 * std::f64::consts::PI * x).sin().abs();
+        let py = (cy - y).round() as i32;
+        if let Some((ox, oy)) = prev_e
+            && col % 2 == 0
+        {
+            canvas.line(ox, oy, col as i32, py, '.');
+        }
+        prev_e = Some((col as i32, py));
+    }
+    // Nodes.
     for k in 0..=n {
         let x = k as f64 / n as f64;
         let px = (x * width.saturating_sub(1) as f64).round() as i32;
-        canvas.line(px, (cy - 2.0) as i32, px, (cy + 2.0) as i32, '|');
+        canvas.line(px, (cy - 3.0) as i32, px, (cy + 3.0) as i32, '|');
     }
-    // string ends
-    canvas.plot(0, cy.round() as i32, 'o');
-    canvas.plot(width.saturating_sub(1) as i32, cy.round() as i32, 'o');
+    // String ends.
+    for dy in -1..=1 {
+        for dx in -1..=1 {
+            canvas.plot(dx, cy.round() as i32 + dy, 'o');
+            canvas.plot(
+                width.saturating_sub(1) as i32 + dx,
+                cy.round() as i32 + dy,
+                'o',
+            );
+        }
+    }
 }
 
 /// Standing wave room.

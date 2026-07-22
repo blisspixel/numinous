@@ -43,15 +43,15 @@ fn draw(canvas: &mut dyn Surface, b: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let a0 = (width.min(height) as f64) * 0.02;
-    let b = b.clamp(0.06, 0.35);
-    let turns = 4.0
+    let a0 = (width.min(height) as f64) * 0.025;
+    let b = b.clamp(0.08, 0.35);
+    let turns = 5.0
         + if seed == 0 {
             0.0
         } else {
             (seed % 3) as f64 * 0.25
         };
-    let steps = 500;
+    let steps = 720;
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let u = i as f64 / steps as f64;
@@ -63,9 +63,10 @@ fn draw(canvas: &mut dyn Surface, b: f64, seed: u64) {
             continue;
         }
         let px = (cx + r * th.cos()).round() as i32;
-        let py = (cy - r * th.sin()).round() as i32;
+        let py = (cy - r * th.sin() * 0.9).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
         }
         prev = Some((px, py));
     }

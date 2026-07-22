@@ -44,20 +44,20 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let a = a.clamp(0.7, 2.0) * (width.min(height) as f64) * 0.42;
+    let a = a.clamp(0.95, 2.2) * (width.min(height) as f64) * 0.55;
     let rot = if seed == 0 {
         0.0
     } else {
         (seed % 7) as f64 * 0.05
     };
-    let steps = 560;
+    let steps = 720;
     let mut prev: Option<(i32, i32)> = None;
     for i in 1..=steps {
-        let th = 0.12 + 7.0 * std::f64::consts::PI * (i as f64 / steps as f64);
+        let th = 0.1 + 7.5 * std::f64::consts::PI * (i as f64 / steps as f64);
         let r = a * th.sin() / th;
         let ang = th + rot;
         let px = (cx + r * ang.cos()).round() as i32;
-        let py = (cy - r * ang.sin() * 0.62).round() as i32;
+        let py = (cy - r * ang.sin() * 0.75).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
             canvas.line(ox, oy + 1, px, py + 1, '*');

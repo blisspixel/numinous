@@ -95,16 +95,21 @@ fn draw(canvas: &mut dyn Surface, root: u64, depth: usize, seed: u64) {
         let py0 = y_of(pd);
         let px1 = ((cu + shift).fract().clamp(0.02, 0.98) * w).round() as i32;
         let py1 = y_of(cd);
-        canvas.line(px0, py0, px1, py1, '.');
+        canvas.line(px0, py0, px1, py1, '*');
+        canvas.line(px0, py0 + 1, px1, py1 + 1, '.');
     }
     for &(n, d, u) in &nodes {
         let uu = (u + shift).fract().clamp(0.02, 0.98);
         let px = (uu * w).round() as i32;
         let py = y_of(d);
         let ch = if n % 2 == 0 { '*' } else { '#' };
-        canvas.plot(px, py, ch);
-        canvas.plot(px.saturating_sub(1), py, ch);
-        canvas.plot(px + 1, py, ch);
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                if dx * dx + dy * dy <= 2 {
+                    canvas.plot(px + dx, py + dy, ch);
+                }
+            }
+        }
     }
 }
 

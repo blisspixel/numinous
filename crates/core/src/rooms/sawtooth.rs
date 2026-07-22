@@ -61,8 +61,20 @@ fn draw(canvas: &mut dyn Surface, n: usize, seed: u64) {
         let py = (cy - amp * y / 1.2).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, col as i32, py, '#');
+            canvas.line(ox, oy + 1, col as i32, py + 1, '*');
         }
         prev = Some((col as i32, py));
+    }
+    // Ideal sawtooth ghost for the harmonic limit shape.
+    let mut prev_g: Option<(i32, i32)> = None;
+    for col in 0..width {
+        let x = (col as f64 / width.saturating_sub(1).max(1) as f64 + j).fract();
+        let y = 2.0 * x - 1.0;
+        let py = (cy - amp * y * 0.9 / 1.2).round() as i32;
+        if let Some((ox, oy)) = prev_g {
+            canvas.line(ox, oy, col as i32, py, '.');
+        }
+        prev_g = Some((col as i32, py));
     }
 }
 
