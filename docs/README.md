@@ -23,10 +23,10 @@ machine scans; ambient phase is a show on growing sets of curves and waves
 (not a static graph), including the cycle-166 and cycle-167 pen and unfurl
 packs and the cycle-168 plate bug-hunt; soft-thin densify continues where
 honest but is not the critical path. App Enter starts The Show. Exceptional
-Path Phase A App vertical slice is Built on the machine path: Times Tables
-five-beat engineered aha (wager or four-lobe earn, morph, hand confirm, gated
-reveal). Next product evidence is the stranger hallway; Buffon is the natural
-second wager room. The six-question plate filter, contact-language, and MCP
+Path Phase A App vertical slices are Built on the machine path: Times Tables
+and Buffon five-beat engineered ahas (generation before reveal, morph, hand
+confirm, gated punchline). Next product evidence is the stranger hallway on
+those visits. The six-question plate filter, contact-language, and MCP
 teammate posture live in `RESEARCH.md`. Public CI passes on Windows, macOS, and
 Ubuntu, but capability breadth remains ahead of release evidence: stranger
 playtests, accessibility work, and real macOS and Linux execution remain open.

@@ -111,6 +111,18 @@ impl BuffonNeedle {
         points
     }
 
+    /// Finite player throw count under the same click contract as the plate.
+    ///
+    /// Faces use this when staging the engineered aha so throw priming and the
+    /// status line never disagree.
+    #[must_use]
+    pub fn throw_count(inputs: &[RoomInput]) -> usize {
+        Self::click_pokes(inputs)
+            .iter()
+            .filter(|(x, y)| x.is_finite() && y.is_finite())
+            .count()
+    }
+
     /// Estimate pi by dropping `needles` needles with the given length ratio.
     ///
     /// Deterministic (fixed seed). Returns infinity if nothing crosses. Exposed
