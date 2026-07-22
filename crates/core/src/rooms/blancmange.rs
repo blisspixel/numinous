@@ -59,6 +59,7 @@ fn draw(canvas: &mut dyn Surface, n: usize, seed: u64) {
         (seed % 5) as f64 * 0.002
     };
     let mut prev: Option<(i32, i32)> = None;
+    let base = height.saturating_sub(2) as i32;
     for col in 0..width {
         let x = col as f64 / width.saturating_sub(1).max(1) as f64 + j;
         let y = takagi(x.rem_euclid(1.0), n);
@@ -66,8 +67,15 @@ fn draw(canvas: &mut dyn Surface, n: usize, seed: u64) {
         let py = ((1.0 - y.clamp(0.0, 1.0) * 0.9 - 0.05) * height.saturating_sub(1) as f64).round()
             as i32;
         let px = col as i32;
+        // Fill under the mountain so the plate is a massif, not a wire ridge.
+        let mut fy = py;
+        while fy <= base {
+            canvas.plot(px, fy, if fy == py { '#' } else { '.' });
+            fy += 2;
+        }
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, if n >= 8 { '#' } else { '*' });
+            canvas.line(ox, oy + 1, px, py + 1, '*');
         } else {
             canvas.plot(px, py, '#');
         }

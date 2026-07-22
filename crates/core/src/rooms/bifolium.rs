@@ -43,14 +43,14 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let a = a.clamp(0.7, 2.0) * (width.min(height) as f64) * 0.62;
+    let a = a.clamp(0.85, 2.1) * (width.min(height) as f64) * 0.72;
     let rot = if seed == 0 {
         0.0
     } else {
         (seed % 6) as f64 * 0.06
     };
     // Polar: r = a sin(th) cos^2(th); both leaves via full 0..2pi.
-    let steps = 420;
+    let steps = 560;
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let th = std::f64::consts::TAU * (i as f64 / steps as f64);
@@ -61,10 +61,13 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         }
         let ang = th + rot;
         let px = (cx + r * ang.cos()).round() as i32;
-        let py = (cy - r * ang.sin() * 0.7).round() as i32;
+        let py = (cy - r * ang.sin() * 0.85).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
             canvas.line(ox, oy + 1, px, py + 1, '*');
+            if i % 3 == 0 {
+                canvas.line(ox + 1, oy, px + 1, py, '.');
+            }
         }
         prev = Some((px, py));
     }

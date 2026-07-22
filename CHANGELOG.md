@@ -6,6 +6,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Fixed
+- Catalog soft-thin pack: wire curves and number plots fill large plates with
+  floors, double strokes, denser samples, and filled lobes. Covers Cardioid,
+  Astroid, Nephroid, Bifolium, Poisson, Cochleoid, Limacon, Sawtooth, Log
+  Spiral, Cartesian Oval, Tautochrone, Witch of Agnesi, Strophoid, Fresnel,
+  Partition, Cycloid, Standing Wave, Cissoid, Piriform, Kappa, Tinkerbell,
+  Blancmange, Twin Primes, Continued Fractions, Collatz Tree, and Hopf
+  Fibration. Dead dials and phase-thin stay at zero.
+
+### Fixed
 - Catalog exceptional pass: kill self-similar dead dials where scale cancelled
   into auto-fit (Clothoid, Folium, Pseudosphere, Catenary, Tractrix, Kampyle)
   or phase only re-parametrized a closed curve (Viviani, Trefoil, Figure-Eight,

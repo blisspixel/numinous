@@ -30,9 +30,9 @@ fn scale(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
         (seed % 5) as f64 * 0.03
     };
     if let Some((x, _)) = hand {
-        0.3 + x * 0.7 + s
+        0.55 + x * 0.55 + s
     } else {
-        0.4 + phase_unit(t) * 0.5 + s
+        0.7 + phase_unit(t) * 0.35 + s
     }
 }
 
@@ -41,43 +41,54 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let cx = width as f64 * 0.25;
+    let cx = width as f64 * 0.22;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let rad = (width.min(height) as f64) * 0.35 * a.clamp(0.25, 1.0);
+    let rad = (width.min(height) as f64) * 0.42 * a.clamp(0.5, 1.15);
     let j = if seed == 0 {
         0.0
     } else {
         (seed % 7) as f64 * 0.02
     };
-    // guiding circle and line
-    for i in 0..64 {
-        let th = std::f64::consts::TAU * (i as f64 / 64.0);
+    // Guiding circle and line.
+    let mut prev_c: Option<(i32, i32)> = None;
+    for i in 0..=72 {
+        let th = std::f64::consts::TAU * (i as f64 / 72.0);
         let px = (cx + rad * 0.5 * th.cos()).round() as i32;
         let py = (cy - rad * 0.5 * th.sin()).round() as i32;
-        canvas.plot(px, py, '.');
+        if let Some(o) = prev_c {
+            canvas.line(o.0, o.1, px, py, '.');
+        }
+        prev_c = Some((px, py));
     }
     let line_x = (cx + rad + j).round() as i32;
     canvas.line(line_x, 0, line_x, height.saturating_sub(1) as i32, '|');
     // cissoid: y^2 (2a - x) = x^3
-    let mut prev: Option<(i32, i32)> = None;
-    let steps = 200;
+    let mut prev_u: Option<(i32, i32)> = None;
+    let mut prev_l: Option<(i32, i32)> = None;
+    let steps = 320;
     for i in 1..steps {
-        let x = rad * (i as f64 / steps as f64) * 1.8;
+        let x = rad * (i as f64 / steps as f64) * 1.85;
         let denom = (2.0 * rad - x).max(1e-6);
         let y2 = x * x * x / denom;
         if y2 < 0.0 {
-            prev = None;
+            prev_u = None;
+            prev_l = None;
             continue;
         }
         let y = y2.sqrt();
-        let px = (cx + x * 0.5).round() as i32;
-        let py1 = (cy - y * 0.5).round() as i32;
-        let py2 = (cy + y * 0.5).round() as i32;
-        if let Some((ox, oy)) = prev {
+        let px = (cx + x * 0.55).round() as i32;
+        let py1 = (cy - y * 0.55).round() as i32;
+        let py2 = (cy + y * 0.55).round() as i32;
+        if let Some((ox, oy)) = prev_u {
             canvas.line(ox, oy, px, py1, '#');
+            canvas.line(ox, oy + 1, px, py1 + 1, '*');
         }
-        canvas.plot(px, py2, '#');
-        prev = Some((px, py1));
+        if let Some((ox, oy)) = prev_l {
+            canvas.line(ox, oy, px, py2, '#');
+            canvas.line(ox, oy + 1, px, py2 + 1, '*');
+        }
+        prev_u = Some((px, py1));
+        prev_l = Some((px, py2));
     }
 }
 

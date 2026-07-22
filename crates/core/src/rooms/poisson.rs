@@ -47,19 +47,19 @@ fn draw(canvas: &mut dyn Surface, lam: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let lam = lam.clamp(0.3, 12.0);
+    let lam = lam.clamp(0.5, 12.0);
     let mut state = if seed == 0 {
         0x9e37_79b9_7f4a_7c15
     } else {
         seed ^ 0xdead_beef_cafe_babe
     };
-    // Unit time horizon; N(t) staircase.
+    // Unit time horizon; N(t) staircase (double stroke so large plates read).
     let mut t = 0.0_f64;
     let mut n = 0u32;
     let mut prev_x = 0i32;
     let mut prev_y = height.saturating_sub(2) as i32;
     let t_max = 1.0;
-    let n_scale = height as f64 * 0.85 / (lam * t_max * 2.5).max(4.0);
+    let n_scale = height as f64 * 0.85 / (lam * t_max * 2.2).max(4.0);
     while t < t_max {
         let u = next_u01(&mut state).clamp(1e-12, 1.0 - 1e-12);
         let wait = -u.ln() / lam;
@@ -72,13 +72,37 @@ fn draw(canvas: &mut dyn Surface, lam: f64, seed: u64) {
         let y = (height as f64 - 2.0 - n as f64 * n_scale)
             .round()
             .clamp(1.0, height.saturating_sub(2) as f64) as i32;
-        // horizontal then vertical step
+        // Horizontal then vertical step, doubled for density.
         canvas.line(prev_x, prev_y, x, prev_y, '#');
+        canvas.line(prev_x, prev_y - 1, x, prev_y - 1, '*');
         canvas.line(x, prev_y, x, y, '*');
+        canvas.line(x + 1, prev_y, x + 1, y, '.');
+        // Event blot at the jump.
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                if dx * dx + dy * dy <= 2 {
+                    canvas.plot(x + dx, y + dy, 'o');
+                }
+            }
+        }
         prev_x = x;
         prev_y = y;
     }
     canvas.line(prev_x, prev_y, width.saturating_sub(1) as i32, prev_y, '#');
+    canvas.line(
+        prev_x,
+        prev_y - 1,
+        width.saturating_sub(1) as i32,
+        prev_y - 1,
+        '*',
+    );
+    // Rate meter.
+    let meter_y = height.saturating_sub(1) as i32;
+    let filled = ((lam / 12.0).clamp(0.0, 1.0) * width.saturating_sub(1) as f64).round() as i32;
+    canvas.line(0, meter_y, width.saturating_sub(1) as i32, meter_y, '-');
+    if filled > 0 {
+        canvas.line(0, meter_y, filled, meter_y, '=');
+    }
 }
 
 /// Poisson process room.

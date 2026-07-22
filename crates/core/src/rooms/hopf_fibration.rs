@@ -43,27 +43,28 @@ fn draw(canvas: &mut dyn Surface, base: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let sc = (width.min(height) as f64) * 0.35;
+    let sc = (width.min(height) as f64) * 0.4;
     // Villarceau-like linked circles: stereographic fibers over S2 base points.
-    let n_fibers = 6 + if seed == 0 { 0 } else { (seed % 2) as usize };
+    let n_fibers = 8 + if seed == 0 { 0 } else { (seed % 2) as usize };
     for f in 0..n_fibers {
-        let lat = -0.8 + 1.6 * (f as f64 / (n_fibers - 1).max(1) as f64);
-        let lon = base + f as f64 * 0.4;
+        let lat = -0.85 + 1.7 * (f as f64 / (n_fibers - 1).max(1) as f64);
+        let lon = base + f as f64 * 0.35;
         // Circle in a plane; project as ellipse.
         let mut prev: Option<(i32, i32)> = None;
-        for i in 0..=48 {
-            let th = 2.0 * std::f64::consts::PI * (i as f64 / 48.0);
+        for i in 0..=80 {
+            let th = 2.0 * std::f64::consts::PI * (i as f64 / 80.0);
             // Fiber circle radius depends on latitude.
             let rr = (1.0 - lat * lat).sqrt().max(0.15);
             let x = rr * th.cos() * lon.cos() - lat * lon.sin() * 0.3;
             let y = rr * th.sin();
             let z = rr * th.cos() * lon.sin() + lat * lon.cos() * 0.3;
-            let d = 1.0 / (2.2 + z);
+            let d = 1.0 / (2.1 + z);
             let px = (cx + x * sc * d).round() as i32;
-            let py = (cy - y * sc * d * 0.65).round() as i32;
+            let py = (cy - y * sc * d * 0.75).round() as i32;
             if let Some((ox, oy)) = prev {
                 let ch = if f % 2 == 0 { '#' } else { '*' };
                 canvas.line(ox, oy, px, py, ch);
+                canvas.line(ox, oy + 1, px, py + 1, if f % 2 == 0 { '*' } else { '.' });
             }
             prev = Some((px, py));
         }

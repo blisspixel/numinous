@@ -41,7 +41,7 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let a = a.clamp(0.2, 2.0);
+    let a = a.clamp(0.35, 2.0);
     let j = if seed == 0 {
         0.0
     } else {
@@ -58,18 +58,23 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         let py = ((1.0 - v * 0.85 - 0.05) * height.saturating_sub(1) as f64).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
         }
         prev = Some((px, py));
     }
-    // guiding circle of diameter 2a at origin of construction
+    // Guiding circle of diameter 2a (construction geometry).
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) as f64) * 0.7;
-    let rad = (height as f64) * 0.15 * a.clamp(0.5, 1.5);
-    for i in 0..48 {
-        let th = std::f64::consts::TAU * (i as f64 / 48.0);
+    let rad = (height as f64) * 0.18 * a.clamp(0.5, 1.5);
+    let mut prev_c: Option<(i32, i32)> = None;
+    for i in 0..=72 {
+        let th = std::f64::consts::TAU * (i as f64 / 72.0);
         let px = (cx + rad * th.cos()).round() as i32;
         let py = (cy - rad * th.sin()).round() as i32;
-        canvas.plot(px, py, '.');
+        if let Some(o) = prev_c {
+            canvas.line(o.0, o.1, px, py, '.');
+        }
+        prev_c = Some((px, py));
     }
 }
 

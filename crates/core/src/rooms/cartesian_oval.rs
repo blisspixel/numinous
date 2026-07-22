@@ -43,52 +43,54 @@ fn draw(canvas: &mut dyn Surface, m: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let m = m.clamp(0.35, 2.0);
+    let m = m.clamp(0.45, 2.0);
     let f = 0.55
         + if seed == 0 {
             0.0
         } else {
             (seed % 3) as f64 * 0.05
         };
-    let scale = (width.min(height) as f64) * 0.32;
+    let scale = (width.min(height) as f64) * 0.38;
     // m r1 + r2 = k. Sample polar around midpoint.
     let k = m * f + 1.4;
-    let steps = 280;
+    let steps = 400;
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let th = 2.0 * std::f64::consts::PI * (i as f64 / steps as f64);
         // Solve for r from focus1 at (-f,0): m |p-F1| + |p-F2| = k
-        // p = (r cos, r sin) from origin between foci.
-        // Try r via quadratic-ish search.
         let mut found = None;
-        for j in 1..80 {
-            let r = j as f64 * 0.04;
+        for j in 1..120 {
+            let r = j as f64 * 0.03;
             let x = r * th.cos();
             let y = r * th.sin();
             let d1 = ((x + f).powi(2) + y * y).sqrt();
             let d2 = ((x - f).powi(2) + y * y).sqrt();
-            if (m * d1 + d2 - k).abs() < 0.06 {
+            if (m * d1 + d2 - k).abs() < 0.05 {
                 found = Some((x, y));
                 break;
             }
         }
         if let Some((x, y)) = found {
             let px = (cx + x * scale).round() as i32;
-            let py = (cy - y * scale).round() as i32;
+            let py = (cy - y * scale * 0.9).round() as i32;
             if let Some((ox, oy)) = prev {
                 canvas.line(ox, oy, px, py, '#');
+                canvas.line(ox, oy + 1, px, py + 1, '*');
             }
             prev = Some((px, py));
         } else {
             prev = None;
         }
     }
-    // Foci.
+    // Foci as solid blots.
     for sx in [-f, f] {
         let px = (cx + sx * scale).round() as i32;
         let py = cy.round() as i32;
-        canvas.line(px - 1, py, px + 1, py, 'o');
-        canvas.line(px, py - 1, px, py + 1, 'o');
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                canvas.plot(px + dx, py + dy, 'o');
+            }
+        }
     }
 }
 

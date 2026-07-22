@@ -153,6 +153,13 @@ MCP), with a catalog citation table and wing fallbacks. The Show crossfades
 between rooms; Visual Eras carry richer grain (dither, bloom). Play and win
 spark contributions soft-cap so curiosity stays ahead of grind.
 
+Catalog plate quality is under active machine evidence: art-first interaction
+(no reticle or drag trail over the math), zero phase-thin frames, zero
+dead-domain rooms, and zero dead dials on full-catalog scans, with soft-thin
+large plates still densifying. Detail lives in
+[`CHANGELOG.md`](CHANGELOG.md) and the Progress section of
+[`docs/ROADMAP.md`](docs/ROADMAP.md).
+
 The alpha label is meaningful. Automated correctness, security, coverage,
 cross-platform build, and installer gates are strong, but the 0.2 release still
 requires real hallway playtests, accessibility sessions, representative

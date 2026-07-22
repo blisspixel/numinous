@@ -85,17 +85,20 @@ fn draw(canvas: &mut dyn Surface, terms: &[u32], conv: &[(u64, u64)], x: f64) {
     if width == 0 || height == 0 {
         return;
     }
-    // Ladder of a_i as bars.
+    // Ladder of a_i as fat bars.
     for (i, &a) in terms.iter().enumerate().take(10) {
-        let y = ((0.15 + i as f64 * 0.07) * height as f64).round() as i32;
-        let len = ((a.min(12) as f64 / 12.0) * 0.5 * width as f64).max(2.0);
-        let x0 = (0.1 * width as f64).round() as i32;
+        let y = ((0.12 + i as f64 * 0.075) * height as f64).round() as i32;
+        let len = ((a.min(12) as f64 / 12.0) * 0.55 * width as f64).max(3.0);
+        let x0 = (0.08 * width as f64).round() as i32;
         let x1 = x0 + len as i32;
         canvas.line(x0, y, x1, y, '#');
+        canvas.line(x0, y + 1, x1, y + 1, '*');
+        canvas.line(x0, y + 2, x1, y + 2, '.');
     }
     // Convergents as points approaching a vertical line at x position.
     let tx = ((0.15 + (x - 1.0) / 2.0 * 0.7).clamp(0.15, 0.85) * width as f64).round() as i32;
     canvas.line(tx, 0, tx, height.saturating_sub(1) as i32, '.');
+    canvas.line(tx + 1, 0, tx + 1, height.saturating_sub(1) as i32, '.');
     for (i, &(p, q)) in conv.iter().enumerate() {
         if q == 0 {
             continue;
@@ -104,7 +107,14 @@ fn draw(canvas: &mut dyn Surface, terms: &[u32], conv: &[(u64, u64)], x: f64) {
         let ax =
             ((0.15 + (approx - 1.0) / 2.0 * 0.7).clamp(0.05, 0.95) * width as f64).round() as i32;
         let ay = ((0.2 + i as f64 * 0.06) * height as f64).round() as i32;
-        canvas.plot(ax, ay, if i + 1 == conv.len() { 'R' } else { '*' });
+        let ch = if i + 1 == conv.len() { 'R' } else { '*' };
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                if dx * dx + dy * dy <= 2 {
+                    canvas.plot(ax + dx, ay + dy, ch);
+                }
+            }
+        }
     }
 }
 

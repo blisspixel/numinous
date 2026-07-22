@@ -17,7 +17,9 @@ sessions are also built. Selected native room and Studio actions now replay
 bounded deterministic local sound with explicit source ownership, global mute
 and volume, focus silence, scrub replacement, and close-time restoration.
 Watch Agent owns live App audio for retained public room, Studio, and game
-selections. Public CI passes on Windows, macOS,
+selections. Catalog plate quality (cycles 161 to 163) holds art-first
+interaction with zero phase-thin, zero dead-domain, and zero dead-dial rooms on
+machine scans; soft-thin densify continues. Public CI passes on Windows, macOS,
 and Ubuntu, but capability
 breadth remains ahead of release evidence: stranger playtests, accessibility
 work, and real macOS and Linux execution remain open. See `../CHANGELOG.md`

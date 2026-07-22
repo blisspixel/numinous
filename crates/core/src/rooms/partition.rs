@@ -49,17 +49,21 @@ fn draw(canvas: &mut dyn Surface, n_f: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let n = n_f.round().clamp(5.0, 70.0) as usize;
+    let n = n_f.round().clamp(8.0, 70.0) as usize;
     let p = partitions_up_to(n);
     let max_p = *p.iter().max().unwrap_or(&1).max(&1) as f64;
     let mut prev: Option<(i32, i32)> = None;
     for (i, &v) in p.iter().enumerate().skip(1) {
         let x = ((i as f64 / n as f64) * width.saturating_sub(1) as f64).round() as i32;
-        let y = ((1.0 - v as f64 / max_p) * height.saturating_sub(1) as f64 * 0.9
-            + height as f64 * 0.05)
+        let y = ((1.0 - v as f64 / max_p) * height.saturating_sub(1) as f64 * 0.88
+            + height as f64 * 0.06)
             .round() as i32;
+        // Stem under the curve so p(n) is a filled growth, not a wire.
+        let base = (height.saturating_sub(2)) as i32;
+        canvas.line(x, y, x, base, '.');
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, x, y, '#');
+            canvas.line(ox, oy + 1, x, y + 1, '*');
         }
         prev = Some((x, y));
     }

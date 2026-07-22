@@ -46,23 +46,23 @@ fn draw(canvas: &mut dyn Surface, ab: f64, seed: u64) {
     let a = ab;
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let scale = (width.min(height) as f64) * 0.34 / (a + b).max(1.0);
+    let scale = (width.min(height) as f64) * 0.46 / (a + b).max(1.0);
     let rot = if seed == 0 {
         0.0
     } else {
         (seed % 9) as f64 * 0.05
     };
-    let steps = 420;
+    let steps = 560;
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let th = rot + std::f64::consts::TAU * (i as f64 / steps as f64);
         let r = b + a * th.cos();
         let px = (cx + scale * r * th.cos()).round() as i32;
-        let py = (cy - scale * r * th.sin()).round() as i32;
+        let py = (cy - scale * r * th.sin() * 0.9).round() as i32;
         if let Some((ox, oy)) = prev {
             let ch = if ab > 1.0 { '#' } else { '*' };
             canvas.line(ox, oy, px, py, ch);
-            canvas.line(ox, oy + 1, px, py + 1, '.');
+            canvas.line(ox, oy + 1, px, py + 1, if ab > 1.0 { '*' } else { '.' });
         }
         prev = Some((px, py));
     }

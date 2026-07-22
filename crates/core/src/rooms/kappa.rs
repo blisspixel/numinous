@@ -30,9 +30,9 @@ fn scale(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
         (seed % 5) as f64 * 0.03
     };
     if let Some((x, _)) = hand {
-        0.3 + x * 0.7 + s
+        0.55 + x * 0.55 + s
     } else {
-        0.4 + phase_unit(t) * 0.5 + s
+        0.7 + phase_unit(t) * 0.35 + s
     }
 }
 
@@ -43,37 +43,43 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let rad = (width.min(height) as f64) * 0.35 * a.clamp(0.25, 1.0);
+    let rad = (width.min(height) as f64) * 0.42 * a.clamp(0.5, 1.15);
     let j = if seed == 0 {
         0.0
     } else {
         (seed % 7) as f64 * 0.03
     };
-    // polar: r = a cot theta  (kappa / versiera cousin)
-    // or y^2 (x^2 + y^2) = a^2 x^2
-    let mut prev: Option<(i32, i32)> = None;
-    let steps = 280;
+    // polar: r = a cot theta
+    let mut prev_u: Option<(i32, i32)> = None;
+    let mut prev_l: Option<(i32, i32)> = None;
+    let steps = 400;
     for i in 0..=steps {
         let th = 0.15 + (std::f64::consts::PI - 0.3) * (i as f64 / steps as f64) + j * 0.05;
         let s = th.sin();
         if s.abs() < 1e-3 {
-            prev = None;
+            prev_u = None;
+            prev_l = None;
             continue;
         }
         let r = rad * th.cos() / s; // a cot theta
         if !r.is_finite() || r.abs() > rad * 4.0 {
-            prev = None;
+            prev_u = None;
+            prev_l = None;
             continue;
         }
         let px = (cx + r * th.cos()).round() as i32;
-        let py = (cy - r * th.sin()).round() as i32;
-        if let Some((ox, oy)) = prev {
+        let py = (cy - r * th.sin() * 0.9).round() as i32;
+        let py2 = (cy + r * th.sin() * 0.9).round() as i32;
+        if let Some((ox, oy)) = prev_u {
             canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
         }
-        prev = Some((px, py));
-        // mirror lower half
-        let py2 = (cy + r * th.sin()).round() as i32;
-        canvas.plot(px, py2, '*');
+        if let Some((ox, oy)) = prev_l {
+            canvas.line(ox, oy, px, py2, '#');
+            canvas.line(ox, oy + 1, px, py2 + 1, '*');
+        }
+        prev_u = Some((px, py));
+        prev_l = Some((px, py2));
     }
     // vertical asymptote x = 0 through focus region
     canvas.line(

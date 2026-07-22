@@ -41,20 +41,20 @@ fn draw(canvas: &mut dyn Surface, n_cups: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let r = (height as f64) * 0.18;
+    let r = (height as f64) * 0.22;
     let total_theta = n_cups * std::f64::consts::TAU;
     let span_x = r * total_theta; // x = r(theta - sin)
     // Also x advances ~ r * theta for envelope; full cycloid width ~ 2 pi r * n
     let full_w = 2.0 * std::f64::consts::PI * r * n_cups;
-    let scale = (width as f64 * 0.9) / full_w.max(1.0);
-    let ox = width as f64 * 0.05;
-    let oy = height as f64 * 0.2;
+    let scale = (width as f64 * 0.92) / full_w.max(1.0);
+    let ox = width as f64 * 0.04;
+    let oy = height as f64 * 0.15;
     let jitter = if seed == 0 {
         0.0
     } else {
         (seed % 5) as f64 * 0.02
     };
-    let steps = 400;
+    let steps = 560;
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let th = total_theta * (i as f64 / steps as f64) + jitter;
@@ -64,24 +64,33 @@ fn draw(canvas: &mut dyn Surface, n_cups: f64, seed: u64) {
         let py = (oy + y * scale).round() as i32;
         if let Some((ax, ay)) = prev {
             canvas.line(ax, ay, px, py, '#');
+            canvas.line(ax, ay + 1, px, py + 1, '*');
         }
         prev = Some((px, py));
     }
-    // Rolling circle at end of sweep
+    // Rolling circle at mid sweep.
     let th = total_theta * 0.65;
     let cx = ox + r * th * scale;
     let cy = oy + r * scale;
     let cr = r * scale;
-    for i in 0..48 {
-        let a = std::f64::consts::TAU * (i as f64 / 48.0);
+    let mut prev_c: Option<(i32, i32)> = None;
+    for i in 0..=64 {
+        let a = std::f64::consts::TAU * (i as f64 / 64.0);
         let px = (cx + cr * a.cos()).round() as i32;
         let py = (cy - cr * a.sin()).round() as i32;
-        canvas.plot(px, py, '.');
+        if let Some(o) = prev_c {
+            canvas.line(o.0, o.1, px, py, '.');
+        }
+        prev_c = Some((px, py));
     }
     // Trace point
     let px = (ox + r * (th - th.sin()) * scale).round() as i32;
     let py = (oy + r * (1.0 - th.cos()) * scale).round() as i32;
-    canvas.plot(px, py, 'o');
+    for dy in -1..=1 {
+        for dx in -1..=1 {
+            canvas.plot(px + dx, py + dy, 'o');
+        }
+    }
     let _ = span_x;
 }
 

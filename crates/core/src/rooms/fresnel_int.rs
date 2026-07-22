@@ -44,8 +44,8 @@ fn draw(canvas: &mut dyn Surface, tmax: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let sc = (width.min(height) as f64) * 0.4;
-    let steps = 360;
+    let sc = (width.min(height) as f64) * 0.5;
+    let steps = 720;
     let mut prev: Option<(i32, i32)> = None;
     let mut c = 0.0;
     let mut s = 0.0;
