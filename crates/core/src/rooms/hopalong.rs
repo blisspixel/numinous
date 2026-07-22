@@ -27,16 +27,27 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 }
 
 fn params(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64, f64) {
+    // Stay near Martin's gallery hopalong (a≈0.4, b≈1, c≈0). Wide sweeps
+    // collapse the orbit to a few pixels at some phases.
     let s = if seed == 0 {
         0.0
     } else {
-        (seed % 6) as f64 * 0.05
+        (seed % 6) as f64 * 0.03
     };
+    // Classic Martin gallery center: a=0.4, b=1.0, c=0.
     if let Some((x, y)) = hand {
-        (0.1 + x * 2.0 + s, 0.1 + y * 1.5, 0.0)
+        (
+            (0.4 + (x - 0.5) * 0.35 + s).clamp(0.2, 0.7),
+            (1.0 + (y - 0.5) * 0.5).clamp(0.6, 1.4),
+            0.0,
+        )
     } else {
         let u = phase_unit(t);
-        (0.4 + u * 0.8 + s, 1.0, 0.0)
+        (
+            (0.4 + (u - 0.5) * 0.2 + s).clamp(0.28, 0.55),
+            (1.0 + (0.5 - u) * 0.25).clamp(0.75, 1.25),
+            0.0,
+        )
     }
 }
 
@@ -56,24 +67,37 @@ fn draw(canvas: &mut dyn Surface, a: f64, b: f64, c: f64) {
         let sign = if x >= 0.0 { 1.0 } else { -1.0 };
         let nx = y - sign * (b * x - c).abs().sqrt();
         let ny = a - x;
-        x = nx;
-        y = ny;
-        if !x.is_finite() || !y.is_finite() {
+        if !nx.is_finite() || !ny.is_finite() || nx.abs() > 1e4 || ny.abs() > 1e4 {
             break;
         }
+        x = nx;
+        y = ny;
         min_x = min_x.min(x);
         max_x = max_x.max(x);
         min_y = min_y.min(y);
         max_y = max_y.max(y);
         pts.push((x, y));
     }
+    if pts.len() < 80 {
+        for i in 0..200 {
+            let th = i as f64 / 199.0 * std::f64::consts::TAU;
+            let px = (0.5 + 0.3 * th.cos()) * width.saturating_sub(1) as f64;
+            let py = (0.5 + 0.22 * th.sin()) * height.saturating_sub(1) as f64;
+            canvas.plot(px.round() as i32, py.round() as i32, '*');
+        }
+        return;
+    }
     let dx = (max_x - min_x).max(1e-6);
     let dy = (max_y - min_y).max(1e-6);
+    let mx = width as f64 * 0.04;
+    let my = height as f64 * 0.04;
+    let iw = (width as f64 - 2.0 * mx).max(1.0);
+    let ih = (height as f64 - 2.0 * my).max(1.0);
     for (i, &(px, py)) in pts.iter().enumerate() {
         let u = ((px - min_x) / dx).clamp(0.0, 1.0);
         let v = ((py - min_y) / dy).clamp(0.0, 1.0);
-        let ix = (u * width.saturating_sub(1) as f64).round() as i32;
-        let iy = ((1.0 - v) * height.saturating_sub(1) as f64).round() as i32;
+        let ix = (mx + u * iw).round() as i32;
+        let iy = (my + (1.0 - v) * ih).round() as i32;
         let ch = if i % 8 == 0 { '#' } else { '*' };
         canvas.plot(ix, iy, ch);
     }

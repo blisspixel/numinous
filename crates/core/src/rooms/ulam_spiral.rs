@@ -42,10 +42,11 @@ fn is_prime(n: u32) -> bool {
 }
 
 fn max_n(t: f64, hand: Option<(f64, f64)>) -> u32 {
+    // Larger ceilings so primes fill a large window.
     if let Some((x, _)) = hand {
-        (100 + (x * 900.0) as u32).clamp(100, 1000)
+        (400 + (x * 2_600.0) as u32).clamp(400, 3_200)
     } else {
-        (150 + (phase_unit(t) * 600.0) as u32).clamp(100, 800)
+        (500 + (phase_unit(t) * 2_000.0) as u32).clamp(400, 2_800)
     }
 }
 
@@ -94,13 +95,18 @@ fn draw(canvas: &mut dyn Surface, max_n: u32, seed: u64) {
     let _ = seed;
     let dx = (max_x - min_x).max(1) as f64;
     let dy = (max_y - min_y).max(1) as f64;
+    let cell = ((width.min(height) as f64 / dx.max(dy)).floor() as i32).clamp(1, 3);
     for &(x, y, n) in &pts {
         let u = (x - min_x) as f64 / dx;
         let v = (y - min_y) as f64 / dy;
         let px = (u * width.saturating_sub(1) as f64).round() as i32;
         let py = ((1.0 - v) * height.saturating_sub(1) as f64).round() as i32;
         let ch = if n < 20 { '#' } else { '*' };
-        canvas.plot(px, py, ch);
+        for dy in 0..cell {
+            for dx in 0..cell {
+                canvas.plot(px + dx, py + dy, ch);
+            }
+        }
     }
 }
 

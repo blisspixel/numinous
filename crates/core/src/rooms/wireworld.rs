@@ -144,17 +144,24 @@ fn draw(canvas: &mut dyn Surface, g: &[u8]) {
     if width == 0 || height == 0 {
         return;
     }
+    // Fat cells so a large window is a visible computer, not a wire of freckles.
+    let cw = (width / W).max(1) as i32;
+    let chh = (height / H).max(1) as i32;
     for y in 0..H {
         for x in 0..W {
-            let ch = match g[idx(x, y)] {
+            let mark = match g[idx(x, y)] {
                 HEAD => '#',
                 TAIL => '+',
                 CONDUCTOR => '*',
                 _ => continue,
             };
-            let px = ((x as f64 + 0.5) / W as f64 * width as f64).round() as i32;
-            let py = ((y as f64 + 0.5) / H as f64 * height as f64).round() as i32;
-            canvas.plot(px, py, ch);
+            let px0 = (x as i32 * width as i32) / W as i32;
+            let py0 = (y as i32 * height as i32) / H as i32;
+            for dy in 0..chh {
+                for dx in 0..cw {
+                    canvas.plot(px0 + dx, py0 + dy, mark);
+                }
+            }
         }
     }
 }

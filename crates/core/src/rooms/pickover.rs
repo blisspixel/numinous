@@ -6,7 +6,7 @@
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
 
-const ITERS: usize = 9_000;
+const ITERS: usize = 14_000;
 
 fn phase_unit(t: f64) -> f64 {
     if t.is_finite() {
@@ -27,17 +27,19 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 }
 
 fn params(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64, f64, f64) {
+    // Keep the classic Pickover quartet; only nudge a,b gently.
     let s = if seed == 0 {
         0.0
     } else {
-        (seed % 5) as f64 * 0.05
+        (seed % 5) as f64 * 0.02
     };
-    if let Some((x, y)) = hand {
-        (-0.5 - x * 2.0 + s, 0.5 + y * 2.0, -0.5, -0.5)
+    let u = phase_unit(t);
+    let (da, db) = if let Some((x, y)) = hand {
+        ((x - 0.5) * 0.25, (y - 0.5) * 0.35)
     } else {
-        let u = phase_unit(t);
-        (-0.759 + u * 0.2 + s, 2.449 - u * 0.2, -1.234, -1.506)
-    }
+        ((u - 0.5) * 0.12, (0.5 - u) * 0.15)
+    };
+    (-0.759 + da + s, 2.449 + db, -1.234, -1.506)
 }
 
 fn draw(canvas: &mut dyn Surface, a: f64, b: f64, c: f64, d: f64) {
@@ -45,39 +47,65 @@ fn draw(canvas: &mut dyn Surface, a: f64, b: f64, c: f64, d: f64) {
     if width == 0 || height == 0 {
         return;
     }
-    let mut x: f64 = 0.1;
-    let mut y: f64 = 0.1;
-    let mut z: f64 = 0.1;
-    let mut min_x = f64::MAX;
-    let mut max_x = f64::MIN;
-    let mut min_y = f64::MAX;
-    let mut max_y = f64::MIN;
+    let mut x = 0.1_f64;
+    let mut y = 0.1_f64;
+    let mut z = 0.1_f64;
     let mut pts = Vec::with_capacity(ITERS);
     for _ in 0..ITERS {
         let nx = (a * y).sin() - z * (b * x).cos();
         let ny = z * (c * x).sin() - (d * y).cos();
         let nz = x.sin();
+        if !nx.is_finite() || !ny.is_finite() || !nz.is_finite() {
+            break;
+        }
+        if nx.abs() > 20.0 || ny.abs() > 20.0 {
+            // Soft reset keeps ink flowing instead of going blank.
+            x = 0.1;
+            y = 0.1;
+            z = 0.1;
+            continue;
+        }
         x = nx;
         y = ny;
         z = nz;
-        if !x.is_finite() || !y.is_finite() {
-            break;
-        }
-        min_x = min_x.min(x);
-        max_x = max_x.max(x);
-        min_y = min_y.min(y);
-        max_y = max_y.max(y);
         pts.push((x, y));
+    }
+    if pts.len() < 50 {
+        for i in 0..320 {
+            let th = i as f64 / 319.0 * std::f64::consts::TAU * 3.0;
+            let r = 0.1 + 0.28 * (i as f64 / 319.0);
+            let px = (0.5 + r * th.cos()) * width.saturating_sub(1) as f64;
+            let py = (0.5 + r * th.sin() * 0.65) * height.saturating_sub(1) as f64;
+            canvas.plot(px.round() as i32, py.round() as i32, '*');
+        }
+        return;
+    }
+    let mut min_x = f64::MAX;
+    let mut max_x = f64::MIN;
+    let mut min_y = f64::MAX;
+    let mut max_y = f64::MIN;
+    for &(px, py) in &pts {
+        min_x = min_x.min(px);
+        max_x = max_x.max(px);
+        min_y = min_y.min(py);
+        max_y = max_y.max(py);
     }
     let dx = (max_x - min_x).max(1e-6);
     let dy = (max_y - min_y).max(1e-6);
+    let mx = width as f64 * 0.06;
+    let my = height as f64 * 0.06;
+    let iw = (width as f64 - 2.0 * mx).max(1.0);
+    let ih = (height as f64 - 2.0 * my).max(1.0);
     for (i, &(px, py)) in pts.iter().enumerate() {
         let u = ((px - min_x) / dx).clamp(0.0, 1.0);
         let v = ((py - min_y) / dy).clamp(0.0, 1.0);
-        let ix = (u * width.saturating_sub(1) as f64).round() as i32;
-        let iy = ((1.0 - v) * height.saturating_sub(1) as f64).round() as i32;
+        let ix = (mx + u * iw).round() as i32;
+        let iy = (my + (1.0 - v) * ih).round() as i32;
         let ch = if i % 10 == 0 { '#' } else { '*' };
         canvas.plot(ix, iy, ch);
+        if i % 4 == 0 {
+            canvas.plot(ix + 1, iy, ch);
+        }
     }
 }
 

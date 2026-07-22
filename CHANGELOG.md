@@ -6,6 +6,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Fixed
+- Catalog quality pass: Percolation RNG was capped near 0.5 so high-p frames
+  looked identical (dead dial); now opens 0..1 and meters p. Landauer is a fat
+  register with heat bar (no hand reticle). Hopalong, Lozi, Clifford, Menagerie,
+  Pickover stay in dense attractor basins across phase. Kaplan-Yorke, Wireworld,
+  Ulam Spiral, and Degree-720 fill large windows instead of freckles or a speck.
+
+### Fixed
 - Room bug-hunt: Murmuration is a real flock (heading streaks, more birds), not
   forty freckles or a blank plate. Tinkerbell and Bedhead stay in their
   attractor basins so they no longer collapse to a blank/line frame. Message

@@ -26,17 +26,25 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 }
 
 fn params(t: f64, hand: Option<(f64, f64)>, seed: u64) -> (f64, f64) {
-    // Classic a=1.7, b=0.5
+    // Classic a=1.7, b=0.5. Keep a high enough that the attractor does not
+    // collapse to a few pixels at t=0.
     let s = if seed == 0 {
         0.0
     } else {
-        (seed % 5) as f64 * 0.02
+        (seed % 5) as f64 * 0.015
     };
+    // Classic a=1.7, b=0.5; tiny phase sweeps only.
     if let Some((x, y)) = hand {
-        (1.2 + x * 0.8 + s, 0.2 + y * 0.5)
+        (
+            (1.7 + (x - 0.5) * 0.25 + s).clamp(1.55, 1.9),
+            (0.5 + (y - 0.5) * 0.2).clamp(0.35, 0.65),
+        )
     } else {
         let u = phase_unit(t);
-        (1.5 + u * 0.3 + s, 0.4 + (1.0 - u) * 0.15)
+        (
+            (1.7 + (u - 0.5) * 0.12 + s).clamp(1.6, 1.85),
+            (0.5 + (0.5 - u) * 0.1).clamp(0.4, 0.6),
+        )
     }
 }
 
