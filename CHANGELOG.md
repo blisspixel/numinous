@@ -5,6 +5,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- Arcade selection no longer hides the number under the Muncher. The App draws
+  the digit first, then a selection frame and open ring; CLI shows the yellow
+  digits while you stand on them; MCP board text keeps the value with an `@`
+  mark. You can read what you are about to eat.
+
 ### Changed
 - Live motion pack (cycles 164 to 167): static graph rooms now perform.
   Cardioid and Cycloid roll a generating circle with a pen; Astroid, Nephroid,

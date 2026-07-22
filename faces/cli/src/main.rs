@@ -3727,6 +3727,9 @@ fn quiz_remark(score: usize, rounds: usize) -> &'static str {
 }
 
 /// Draw the arcade board: the Muncher, the spirits, the numbers.
+///
+/// The Muncher is yellow. On an uneaten cell it keeps the digits so you can
+/// see what you are about to eat; only empty cells show the bare `@`.
 fn arcade_text(run: &numinous_core::munch_arcade::Arcade) -> String {
     use numinous_core::munch_arcade::Mind;
     use numinous_core::munchers::{COLS, ROWS};
@@ -3735,7 +3738,12 @@ fn arcade_text(run: &numinous_core::munch_arcade::Arcade) -> String {
         for col in 0..COLS {
             let cell = row * COLS + col;
             if cell == run.muncher {
-                out.push_str("\x1b[93m[ @]\x1b[0m");
+                if run.eaten[cell] {
+                    out.push_str("\x1b[93m[ @]\x1b[0m");
+                } else {
+                    // Yellow digits: you stand here; the value stays legible.
+                    out.push_str(&format!("\x1b[93m[{:>2}]\x1b[0m", run.board.numbers[cell]));
+                }
             } else if let Some(v) = run.vexations.iter().find(|v| v.cell == cell) {
                 let mark = match v.mind {
                     Mind::Drifter => "\x1b[95m[ d]\x1b[0m",
