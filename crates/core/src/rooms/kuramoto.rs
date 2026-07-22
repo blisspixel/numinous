@@ -84,20 +84,31 @@ fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) -> f64 {
     let r = order_param(&phases);
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let rad = (width.min(height) as f64) * 0.38;
-    // unit circle
-    for i in 0..64 {
-        let th = std::f64::consts::TAU * (i as f64 / 64.0);
+    let rad = (width.min(height) as f64) * 0.4;
+    // Unit circle guide (dense stroke).
+    let mut prev_c: Option<(i32, i32)> = None;
+    for i in 0..=96 {
+        let th = std::f64::consts::TAU * (i as f64 / 96.0);
         let px = (cx + rad * th.cos()).round() as i32;
         let py = (cy - rad * th.sin()).round() as i32;
-        canvas.plot(px, py, '.');
+        if let Some(o) = prev_c {
+            canvas.line(o.0, o.1, px, py, '.');
+        }
+        prev_c = Some((px, py));
     }
     for &th in &phases {
         let px = (cx + rad * th.cos()).round() as i32;
         let py = (cy - rad * th.sin()).round() as i32;
-        canvas.plot(px, py, if r > 0.6 { '#' } else { '*' });
+        let ch = if r > 0.6 { '#' } else { '*' };
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                if dx * dx + dy * dy <= 2 {
+                    canvas.plot(px + dx, py + dy, ch);
+                }
+            }
+        }
     }
-    // order vector
+    // Order vector (mean phase).
     let mut sx = 0.0;
     let mut sy = 0.0;
     for &th in &phases {
@@ -109,6 +120,7 @@ fn draw(canvas: &mut dyn Surface, k: f64, seed: u64) -> f64 {
     let ox = (cx + rad * sx).round() as i32;
     let oy = (cy - rad * sy).round() as i32;
     canvas.line(cx.round() as i32, cy.round() as i32, ox, oy, '+');
+    canvas.line(cx.round() as i32, cy.round() as i32 + 1, ox, oy + 1, '*');
     r
 }
 

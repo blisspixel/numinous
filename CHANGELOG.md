@@ -6,6 +6,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Fixed
+- Catalog density pack: zero phase-thin and zero large-thin on the full room
+  list. Erdos-Renyi, Cassini, Watt, Stretch, Coriolis, Kuramoto, Semicubical,
+  Trefoil, Three-Scroll, Gerono, Zeta Walk, Torus Knot, Strange Loop, and
+  Tinkerbell gain floors, double strokes, denser samples, and fat nodes.
+  Pickover was freckle-thin because c and d sat in a collapsed basin; it now
+  stays in the classic positive gallery with a filled swirl.
+
+### Fixed
 - Catalog polish: thin curve and number rooms now fill the plate at every phase
   (thicker strokes, higher t=0 floors, fat cells). Covers Audioactive, Perfect
   Numbers, Lemniscate, Cochleoid, Bifolium, Deltoid, Limacon, Fresnel, Torus

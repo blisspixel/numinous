@@ -229,9 +229,12 @@ impl StrangeLoop {
             return;
         }
         canvas.line(from.0, from.1, to.0, to.1, mark);
-        if canvas.width() >= 160 && canvas.height() >= 120 {
-            canvas.line(from.0, from.1 - 1, to.0, to.1 - 1, mark);
+        // Double stroke on any plate wide enough that a single U reads as wire.
+        if canvas.width() >= 80 || canvas.height() >= 50 {
             canvas.line(from.0, from.1 + 1, to.0, to.1 + 1, mark);
+        }
+        if canvas.width() >= 160 && canvas.height() >= 90 {
+            canvas.line(from.0, from.1 - 1, to.0, to.1 - 1, '.');
         }
     }
 
@@ -268,7 +271,7 @@ impl StrangeLoop {
         // One continuous parabola makes the recursive unit an actual U. Each
         // nested copy remains a separate object, but no level is assembled from
         // disconnected arms and a floating crossbar.
-        let steps = 48;
+        let steps = 72;
         let mut previous = None;
         for i in 0..=steps {
             let f = i as f64 / steps as f64;
@@ -279,7 +282,7 @@ impl StrangeLoop {
             previous = Some(next);
         }
         // recurse inner
-        let sub_r = r * 0.4;
+        let sub_r = r * 0.45;
         let sub_cx = cx + inner_ox;
         let sub_cy = cy - r * 0.18 * aspect + inner_oy;
         self.draw_loop(canvas, sub_cx, sub_cy, sub_r, rot + 1.0, depth - 1, aspect);

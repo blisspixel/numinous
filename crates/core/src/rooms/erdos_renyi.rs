@@ -29,15 +29,16 @@ fn edge_p(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     } else {
         (seed % 5) as f64 * 0.01
     };
+    // Floor keeps t=0 a graph, not a ring of freckles.
     if let Some((x, _)) = hand {
-        (x * 0.55 + s).clamp(0.0, 0.7)
+        (0.12 + x * 0.55 + s).clamp(0.08, 0.75)
     } else {
-        (phase_unit(t) * 0.45 + s).clamp(0.0, 0.7)
+        (0.15 + phase_unit(t) * 0.4 + s).clamp(0.12, 0.7)
     }
 }
 
 fn node_count(seed: u64) -> usize {
-    8 + if seed == 0 { 0 } else { (seed % 5) as usize }
+    14 + if seed == 0 { 0 } else { (seed % 5) as usize }
 }
 
 fn hash_u(a: u64, b: u64, salt: u64) -> f64 {
@@ -66,21 +67,31 @@ fn draw(canvas: &mut dyn Surface, p: f64, seed: u64) {
         let x = (cx + r * th.cos()).round() as i32;
         let y = (cy + r * th.sin() * 0.9).round() as i32;
         pts.push((x, y));
-        canvas.line(x - 1, y, x + 1, y, 'o');
-        canvas.line(x, y - 1, x, y + 1, 'o');
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                canvas.plot(x + dx, y + dy, 'o');
+            }
+        }
     }
     for i in 0..n {
         for j in (i + 1)..n {
             let u = hash_u(i as u64, j as u64, seed.wrapping_mul(17) + 3);
             if u < p {
                 canvas.line(pts[i].0, pts[i].1, pts[j].0, pts[j].1, '#');
+                canvas.line(pts[i].0, pts[i].1 + 1, pts[j].0, pts[j].1 + 1, '*');
             }
         }
     }
-    // threshold marker: connectivity ~ log(n)/n
+    // p meter + connectivity threshold tick.
+    let meter_y = height as i32 - 1;
+    let filled = (p.clamp(0.0, 1.0) * width.saturating_sub(1) as f64).round() as i32;
+    canvas.line(0, meter_y, width.saturating_sub(1) as i32, meter_y, '-');
+    if filled > 0 {
+        canvas.line(0, meter_y, filled, meter_y, '=');
+    }
     let crit = (n as f64).ln() / n as f64;
     let mx = (crit.clamp(0.0, 1.0) * width.saturating_sub(1) as f64).round() as i32;
-    canvas.line(mx, height as i32 - 1, mx, height as i32 - 1, '+');
+    canvas.plot(mx, meter_y.saturating_sub(1), '|');
 }
 
 fn edge_count(n: usize, p: f64, seed: u64) -> usize {

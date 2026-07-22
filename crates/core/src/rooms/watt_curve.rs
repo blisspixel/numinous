@@ -30,9 +30,9 @@ fn rod(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
         (seed % 5) as f64 * 0.02
     };
     if let Some((x, _)) = hand {
-        0.4 + x * 0.9 + s
+        0.55 + x * 0.75 + s
     } else {
-        0.55 + phase_unit(t) * 0.7 + s
+        0.7 + phase_unit(t) * 0.55 + s
     }
 }
 
@@ -51,28 +51,24 @@ fn draw(canvas: &mut dyn Surface, c: f64, seed: u64) {
         } else {
             (seed % 4) as f64 * 0.05
         };
-    let c = c.clamp(0.35, 1.4);
-    let scale = (width.min(height) as f64) * 0.28;
-    // Watt algebraic: (x^2+y^2)(x^2+y^2-a^2-b^2+c^2)^2 + 4 b^2 y^2 (x^2+y^2-c^2) = 0
+    let c = c.clamp(0.55, 1.4);
+    let scale = (width.min(height) as f64) * 0.34;
     // Sample by angle on coupler and intersection of two circles.
-    let steps = 220;
+    let steps = 360;
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let th = 2.0 * std::f64::consts::PI * (i as f64 / steps as f64);
-        // Left pivot joint: (-b + a cos th, a sin th)
         let lx = -b + a * th.cos();
         let ly = a * th.sin();
-        // Right pivot joint must be at distance 2c from left, on circle center (b,0) radius a.
-        // Solve for angle on right circle.
         let mut found = false;
-        for j in 0..48 {
-            let ph = 2.0 * std::f64::consts::PI * (j as f64 / 48.0);
+        for j in 0..72 {
+            let ph = 2.0 * std::f64::consts::PI * (j as f64 / 72.0);
             let rx = b + a * ph.cos();
             let ry = a * ph.sin();
             let dx = rx - lx;
             let dy = ry - ly;
             let dist = (dx * dx + dy * dy).sqrt();
-            if (dist - 2.0 * c).abs() < 0.08 {
+            if (dist - 2.0 * c).abs() < 0.06 {
                 let mx = 0.5 * (lx + rx);
                 let my = 0.5 * (ly + ry);
                 let px = (cx + mx * scale).round() as i32;
@@ -82,6 +78,7 @@ fn draw(canvas: &mut dyn Surface, c: f64, seed: u64) {
                     && (py - oy).abs() < height as i32 / 3
                 {
                     canvas.line(ox, oy, px, py, '#');
+                    canvas.line(ox, oy + 1, px, py + 1, '*');
                 }
                 prev = Some((px, py));
                 found = true;
@@ -92,12 +89,15 @@ fn draw(canvas: &mut dyn Surface, c: f64, seed: u64) {
             prev = None;
         }
     }
-    // Anchors.
+    // Anchors as solid blots.
     for sx in [-b, b] {
         let px = (cx + sx * scale).round() as i32;
         let py = cy.round() as i32;
-        canvas.line(px - 1, py, px + 1, py, 'o');
-        canvas.line(px, py - 1, px, py + 1, 'o');
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                canvas.plot(px + dx, py + dy, 'o');
+            }
+        }
     }
 }
 

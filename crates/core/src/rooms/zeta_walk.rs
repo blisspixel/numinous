@@ -108,32 +108,35 @@ fn draw_spiral(canvas: &mut dyn Surface, points: &[(f64, f64)]) {
     let extent = spiral_extent(points) * 1.08;
     let cx = width as f64 / 2.0;
     let cy = height as f64 / 2.0;
-    let scale = (width.min(height) as f64 * 0.42) / extent;
+    let scale = (width.min(height) as f64 * 0.46) / extent;
     let to_px = |x: f64, y: f64| -> (i32, i32) {
         (
             (cx + x * scale).round() as i32,
             (cy - y * scale).round() as i32,
         )
     };
-    // Origin crosshair.
+    // Origin hub.
     let (ox, oy) = to_px(0.0, 0.0);
-    canvas.plot(ox, oy, '+');
-    canvas.plot(ox + 1, oy, '+');
-    canvas.plot(ox - 1, oy, '+');
-    canvas.plot(ox, oy + 1, '+');
-    canvas.plot(ox, oy - 1, '+');
+    for dy in -1..=1 {
+        for dx in -1..=1 {
+            canvas.plot(ox + dx, oy + dy, '+');
+        }
+    }
 
     let mut prev = to_px(points[0].0, points[0].1);
     for &(x, y) in &points[1..] {
         let cur = to_px(x, y);
         canvas.line(prev.0, prev.1, cur.0, cur.1, '*');
+        canvas.line(prev.0, prev.1 + 1, cur.0, cur.1 + 1, '.');
         prev = cur;
     }
     // Tip of the walk (last partial sum).
     let (tx, ty) = prev;
-    canvas.plot(tx, ty, '#');
-    canvas.plot(tx + 1, ty, '#');
-    canvas.plot(tx, ty + 1, '#');
+    for dy in -1..=1 {
+        for dx in -1..=1 {
+            canvas.plot(tx + dx, ty + dy, '#');
+        }
+    }
 }
 
 /// The Zeta Walk room.
