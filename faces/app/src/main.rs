@@ -4096,24 +4096,40 @@ mod tests {
 
     #[test]
     fn crash_writer_waits_for_the_shared_erasure_lock() {
-        let path = super::test_state_path("crash-lock");
+        // Unique path: avoid collisions if this test is ever re-entered, and keep
+        // the fixture out of shared test-root names used by other suites.
+        let path = super::test_state_path(&format!(
+            "crash-lock-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
         let _ = std::fs::remove_file(&path);
         let guard = numinous_core::lock_local_state(&path).expect("hold erasure lock");
         let writer_path = path.clone();
+        let (started_tx, started_rx) = std::sync::mpsc::channel();
         let (sent, received) = std::sync::mpsc::channel();
         let writer = std::thread::spawn(move || {
+            // Signal after the worker is live, before the blocking lock wait.
+            started_tx.send(()).expect("signal writer start");
             let result = append_crash_log_at(&writer_path, "diagnostic\n");
             sent.send(result).expect("report writer result");
         });
+        started_rx
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .expect("writer thread starts");
         assert!(
             received
-                .recv_timeout(std::time::Duration::from_millis(25))
+                .recv_timeout(std::time::Duration::from_millis(50))
                 .is_err(),
             "writer must wait while erasure owns the path"
         );
         drop(guard);
+        // Lock acquire retries for about five seconds; allow that budget plus
+        // margin so a loaded Windows runner cannot flake on resume alone.
         received
-            .recv_timeout(std::time::Duration::from_secs(2))
+            .recv_timeout(std::time::Duration::from_secs(10))
             .expect("writer resumes")
             .expect("writer succeeds");
         writer.join().expect("writer joined");

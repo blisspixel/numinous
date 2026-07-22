@@ -5,6 +5,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- App Windows CI flake: crash-log writer lock test now handshakes before the
+  blocking acquire and allows the full lock-retry budget to resume, so loaded
+  runners no longer time out while waiting for the shared erasure lock.
+
 ### Added
 - Times Tables five-beat engineered aha on the ordinary App visit (Exceptional
   Path Phase A, machine path). Core pure state in `times_tables_aha`: place
