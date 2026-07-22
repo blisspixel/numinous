@@ -17,10 +17,12 @@ sessions are also built. Selected native room and Studio actions now replay
 bounded deterministic local sound with explicit source ownership, global mute
 and volume, focus silence, scrub replacement, and close-time restoration.
 Watch Agent owns live App audio for retained public room, Studio, and game
-selections. Catalog plate quality (cycles 161 to 163) holds art-first
+selections. Catalog plate quality (cycles 161 to 165) holds art-first
 interaction with zero phase-thin, zero dead-domain, and zero dead-dial rooms on
-machine scans; soft-thin densify continues. Public CI passes on Windows, macOS,
-and Ubuntu, but capability
+machine scans; ambient phase is a show on growing sets of curves and waves
+(not a static graph); soft-thin densify continues where honest. The
+six-question plate filter, contact-language, and MCP teammate posture live in
+`RESEARCH.md`. Public CI passes on Windows, macOS, and Ubuntu, but capability
 breadth remains ahead of release evidence: stranger playtests, accessibility
 work, and real macOS and Linux execution remain open. See `../CHANGELOG.md`
 and the Progress section of `ROADMAP.md`. These docs remain the plan of

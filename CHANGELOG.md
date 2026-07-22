@@ -6,16 +6,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
-- Live motion pack: static graph rooms now perform. Cardioid and Cycloid roll
-  a generating circle with a pen that lays the path; Astroid and Nephroid draw
-  with a traveling bead; Log Spiral unfurls from the center; Standing Wave
-  breathes with real cos(omega t) antinodes; Sawtooth and Triangle scroll;
-  Poisson runs its staircase forward; Limacon, Bifolium, and Witch of Agnesi
-  draw with pens and construction rays. Ambient phase is a show, not a frozen
+- Live motion pack (cycles 164 to 165): static graph rooms now perform.
+  Cardioid and Cycloid roll a generating circle with a pen; Astroid, Nephroid,
+  and Deltoid draw with a traveling bead; Log Spiral and Cochleoid unfurl;
+  Standing Wave breathes with real cos(omega t); Sawtooth and Triangle scroll;
+  Poisson runs its staircase; Limacon, Bifolium, Witch of Agnesi, Cissoid, and
+  Kappa draw with pens and construction. Ambient phase is a show, not a frozen
   plot. Hand still tunes the dial; y or phase scrubs the pen where natural.
-- Docs: RESEARCH, PLAYFUL, NORTH_STAR, and QUALITY state the six-question
-  plate filter (show, hand, language-light, ceiling, agent story, beauty of
-  structure) plus contact-language and MCP teammate posture.
+- Docs: RESEARCH, PLAYFUL, NORTH_STAR, QUALITY, ROOMS, README, and docs index
+  state the six-question plate filter plus contact-language and MCP teammate
+  posture; README and ROOMS cite live motion on flagship curves.
 
 ### Fixed
 - Catalog soft-thin pack: wire curves and number plots fill large plates with

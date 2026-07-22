@@ -23,21 +23,21 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn scale_a(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn scale_a(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
         (seed % 5) as f64 * 0.04
     };
-    // Floor keeps t=0 a full shell, not a hairline.
+    // Floor keeps the shell readable; ambient unfurls.
     if let Some((x, _)) = hand {
         0.75 + x * 1.0 + s
     } else {
-        0.9 + phase_unit(t) * 0.7 + s
+        1.2 + s
     }
 }
 
-fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, a: f64, show: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -50,9 +50,26 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     } else {
         (seed % 7) as f64 * 0.05
     };
+    let show = show.clamp(0.0, 1.0);
     let steps = 720;
+    let drawn = (1 + ((show * (steps - 1) as f64).round() as usize)).min(steps);
     let mut prev: Option<(i32, i32)> = None;
+    let mut tip = (cx.round() as i32, cy.round() as i32);
+    // Ghost full shell.
     for i in 1..=steps {
+        let th = 0.1 + 7.5 * std::f64::consts::PI * (i as f64 / steps as f64);
+        let r = a * th.sin() / th;
+        let ang = th + rot;
+        let px = (cx + r * ang.cos()).round() as i32;
+        let py = (cy - r * ang.sin() * 0.75).round() as i32;
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, px, py, '.');
+        }
+        prev = Some((px, py));
+    }
+    // Bright unfurl so far.
+    prev = None;
+    for i in 1..=drawn {
         let th = 0.1 + 7.5 * std::f64::consts::PI * (i as f64 / steps as f64);
         let r = a * th.sin() / th;
         let ang = th + rot;
@@ -62,7 +79,15 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
             canvas.line(ox, oy, px, py, '#');
             canvas.line(ox, oy + 1, px, py + 1, '*');
         }
+        tip = (px, py);
         prev = Some((px, py));
+    }
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(tip.0 + dx, tip.1 + dy, 'o');
+            }
+        }
     }
 }
 
@@ -91,13 +116,18 @@ impl Room for Cochleoid {
             id: "cochleoid",
             title: "Cochleoid",
             wing: "Shape & Space",
-            blurb: "Snail curve r = a sin(th)/th. t and DRAG: TUNE A.",
+            blurb: "Snail curve unfurls: r = a sin(th)/th. DRAG: TUNE A.",
             accent: [140, 80, 50],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, scale_a(t, None, self.seed), self.seed);
+        draw(
+            canvas,
+            scale_a(t, None, self.seed),
+            phase_unit(t),
+            self.seed,
+        );
     }
 
     fn postcard_t(&self) -> f64 {
@@ -120,13 +150,18 @@ impl Room for Cochleoid {
 
     fn status(&self, t: f64) -> Option<String> {
         let a = scale_a(t, None, self.seed);
-        Some(format!("a={a:.2}  snail  DRAG:A"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("a={a:.2}  unfurl={p}%  DRAG"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let a = scale_a(t, hands.last().copied(), self.seed);
-        draw(canvas, a, self.seed ^ hands.len() as u64);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, a, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
