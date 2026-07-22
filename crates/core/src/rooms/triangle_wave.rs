@@ -42,7 +42,7 @@ fn tri_partial(x: f64, n: usize) -> f64 {
     8.0 * s / (std::f64::consts::PI * std::f64::consts::PI)
 }
 
-fn draw(canvas: &mut dyn Surface, n: usize, seed: u64) {
+fn draw(canvas: &mut dyn Surface, n: usize, scroll: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -54,9 +54,10 @@ fn draw(canvas: &mut dyn Surface, n: usize, seed: u64) {
     } else {
         (seed % 5) as f64 * 0.01
     };
+    let scroll = scroll.rem_euclid(1.0);
     let mut prev: Option<(i32, i32)> = None;
     for col in 0..width {
-        let x = col as f64 / width.saturating_sub(1).max(1) as f64 + j;
+        let x = col as f64 / width.saturating_sub(1).max(1) as f64 + j + scroll;
         let y = tri_partial(x.fract(), n).clamp(-1.2, 1.2);
         let py = (cy - amp * y).round() as i32;
         if let Some((ox, oy)) = prev {
@@ -68,7 +69,7 @@ fn draw(canvas: &mut dyn Surface, n: usize, seed: u64) {
     // Ideal triangle ghost so harmonics read against the limit shape.
     let mut prev_g: Option<(i32, i32)> = None;
     for col in 0..width {
-        let x = (col as f64 / width.saturating_sub(1).max(1) as f64 + j).fract();
+        let x = (col as f64 / width.saturating_sub(1).max(1) as f64 + j + scroll).fract();
         // Period-1 triangle in [-1,1].
         let y = if x < 0.25 {
             4.0 * x
@@ -116,7 +117,7 @@ impl Room for TriangleWave {
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, harmonics(t, None), self.seed);
+        draw(canvas, harmonics(0.45, None), phase_unit(t), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -138,14 +139,15 @@ impl Room for TriangleWave {
     }
 
     fn status(&self, t: f64) -> Option<String> {
-        let n = harmonics(t, None);
-        Some(format!("n={n}  tri  DRAG:N"))
+        let n = harmonics(0.45, None);
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("n={n}  scroll={p}%  DRAG:N"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let n = harmonics(t, hands.last().copied());
-        draw(canvas, n, self.seed ^ hands.len() as u64);
+        draw(canvas, n, phase_unit(t), self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

@@ -71,6 +71,16 @@ look on screen. This is not a criticism of the design; the design is right. It
 is the single highest-leverage aesthetic build, because it is systemic: one
 pipeline lifts all 351 rooms and every Era at once. See `SYNESTHESIA.md`.
 
+## Plate performance (alongside the keystone)
+
+The keystone is predict-then-reveal. The plate still has to *be fun to watch and
+touch* before anyone predicts. Catalog work in mid-2026 fixed blank frames,
+dead dials, and art-first chrome, then turned classic static plots into
+ambient shows (rolling construction, breathing waves, unfurling spirals). That
+is not a separate product; it is the condition under which the keystone lands.
+A frozen graph does not invite a wager. Principles and the six-question filter
+live in `RESEARCH.md` and `PLAYFUL.md`; machine plate bars live in `QUALITY.md`.
+
 ## The four loops, and where each lives
 
 | Loop | Player | The act | The grade | Doc |

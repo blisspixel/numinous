@@ -23,7 +23,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn ratio(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn ratio(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     // a/b: <1 dimple, =1 cardioid, >1 loop
     let s = if seed == 0 {
         0.0
@@ -33,11 +33,12 @@ fn ratio(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         0.4 + x * 1.8 + s
     } else {
-        0.7 + phase_unit(t) * 1.3 + s
+        // Ambient draws and spins; hand picks dimple / heart / loop.
+        1.0 + s * 0.2
     }
 }
 
-fn draw(canvas: &mut dyn Surface, ab: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, ab: f64, show: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -51,10 +52,25 @@ fn draw(canvas: &mut dyn Surface, ab: f64, seed: u64) {
         0.0
     } else {
         (seed % 9) as f64 * 0.05
-    };
+    } + show * std::f64::consts::TAU * 0.15;
+    let show = show.clamp(0.0, 1.0);
     let steps = 560;
+    let drawn = ((show * steps as f64).round() as usize).min(steps);
+    // Ghost full snail.
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
+        let th = rot + std::f64::consts::TAU * (i as f64 / steps as f64);
+        let r = b + a * th.cos();
+        let px = (cx + scale * r * th.cos()).round() as i32;
+        let py = (cy - scale * r * th.sin() * 0.9).round() as i32;
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, px, py, '.');
+        }
+        prev = Some((px, py));
+    }
+    // Bright path so far.
+    prev = None;
+    for i in 0..=drawn {
         let th = rot + std::f64::consts::TAU * (i as f64 / steps as f64);
         let r = b + a * th.cos();
         let px = (cx + scale * r * th.cos()).round() as i32;
@@ -65,6 +81,17 @@ fn draw(canvas: &mut dyn Surface, ab: f64, seed: u64) {
             canvas.line(ox, oy + 1, px, py + 1, if ab > 1.0 { '*' } else { '.' });
         }
         prev = Some((px, py));
+    }
+    let pen_th = rot + show * std::f64::consts::TAU;
+    let pen_r = b + a * pen_th.cos();
+    let pen_x = (cx + scale * pen_r * pen_th.cos()).round() as i32;
+    let pen_y = (cy - scale * pen_r * pen_th.sin() * 0.9).round() as i32;
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(pen_x + dx, pen_y + dy, 'o');
+            }
+        }
     }
 }
 
@@ -93,17 +120,17 @@ impl Room for Limacon {
             id: "limacon",
             title: "Limacon",
             wing: "Shape & Space",
-            blurb: "Pascal's snail: dimple, cardioid, or loop. t and DRAG: TUNE RATIO.",
+            blurb: "Pascal's snail draws itself: dimple, heart, or loop. DRAG: TUNE RATIO.",
             accent: [200, 80, 60],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, ratio(t, None, self.seed), self.seed);
+        draw(canvas, ratio(t, None, self.seed), phase_unit(t), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
-        0.45
+        0.7
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
@@ -122,13 +149,18 @@ impl Room for Limacon {
 
     fn status(&self, t: f64) -> Option<String> {
         let ab = ratio(t, None, self.seed);
-        Some(format!("a/b={ab:.2}  snail  DRAG"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("a/b={ab:.2}  draw={p}%  DRAG"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let ab = ratio(t, hands.last().copied(), self.seed);
-        draw(canvas, ab, self.seed ^ hands.len() as u64);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, ab, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
