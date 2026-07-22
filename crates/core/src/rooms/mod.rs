@@ -323,6 +323,7 @@ pub mod three_scroll;
 pub mod thue_morse;
 pub mod tilt_cone;
 pub mod times_tables;
+pub mod times_tables_aha;
 pub mod tinkerbell;
 pub mod torus_knot;
 pub mod tractrix;

@@ -48,6 +48,8 @@ use room_phase::{effective_room_phase, has_finite_parameter_input};
 const BACKGROUND: u32 = 0x000A_0B0F;
 /// Frames of The Show crossfade when the gallery advances rooms.
 const SHOW_CROSSFADE_FRAMES: u8 = 14;
+/// Wall time for the Times Tables cardioid-to-Mandelbrot morph beat.
+const TIMES_TABLES_MORPH_SECONDS: f64 = 1.6;
 
 /// Blend `prev` into `dest` with `weight` of the previous frame in [0, 1].
 fn blend_rgba(dest: &mut [u8], prev: &[u8], weight: f32) {
@@ -293,6 +295,8 @@ struct App {
     mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera,
     life_session: numinous_core::rooms::game_of_life::LifeSession,
     life_accumulator: f64,
+    /// Times Tables five-beat engineered aha for the ordinary App visit.
+    times_tables_aha: numinous_core::rooms::times_tables_aha::TimesTablesAha,
     rooms: Vec<Box<dyn Room>>,
     current: usize,
     t: f64,
@@ -431,6 +435,7 @@ impl App {
             mandelbrot_camera: numinous_core::rooms::mandelbrot::MandelbrotCamera::new(0),
             life_session: numinous_core::rooms::game_of_life::LifeSession::new(0),
             life_accumulator: 0.0,
+            times_tables_aha: numinous_core::rooms::times_tables_aha::TimesTablesAha::new(),
             rooms: all_rooms_with(0),
             current: 0,
             t: 0.0,
@@ -1634,8 +1639,28 @@ impl App {
         match action {
             mouse_input::LeftPressAction::GameClick => self.click(),
             mouse_input::LeftPressAction::RoomPoke => {
+                // Times Tables bottom band: commit the place wager without
+                // turning the dial (y is ignored by the dial, but a clean
+                // commit beat keeps the generation act distinct).
+                if self.current_room_is_times_tables()
+                    && !self.the_show
+                    && point.1 >= numinous_core::rooms::times_tables_aha::WAGER_BAND_Y
+                    && matches!(
+                        self.times_tables_aha.beat(),
+                        numinous_core::rooms::times_tables_aha::AhaBeat::Prime
+                            | numinous_core::rooms::times_tables_aha::AhaBeat::Explore
+                    )
+                {
+                    let place =
+                        numinous_core::rooms::times_tables_aha::CardioidHome::from_unit_x(point.0);
+                    if self.commit_times_tables_wager(place) {
+                        self.poking = false;
+                        return;
+                    }
+                }
                 self.poking = true;
                 self.record_room_touch(point);
+                self.sync_times_tables_aha();
                 if self.rooms[self.current].meta().id == "mandelbrot"
                     && let Some(window) = &self.window
                 {
@@ -1657,9 +1682,25 @@ impl App {
             return;
         }
         self.set_mouse_from_normalized(point);
+        if self.current_room_is_times_tables()
+            && !self.the_show
+            && matches!(
+                self.times_tables_aha.beat(),
+                numinous_core::rooms::times_tables_aha::AhaBeat::Prime
+            )
+        {
+            if point.1 >= numinous_core::rooms::times_tables_aha::WAGER_BAND_Y {
+                self.times_tables_aha.set_hover(Some(
+                    numinous_core::rooms::times_tables_aha::CardioidHome::from_unit_x(point.0),
+                ));
+            } else {
+                self.times_tables_aha.set_hover(None);
+            }
+        }
         if held && self.poking && room_input::extend_poke_trail(&mut self.pokes, point) {
             let accepted = room_input::record_pointer_move(&mut self.inputs, point, self.t);
             self.maybe_announce_room_goal();
+            self.sync_times_tables_aha();
             self.sync_room_parameter_voice();
             self.play_room_interaction_audio(accepted);
         }
@@ -1681,6 +1722,7 @@ impl App {
         }
         self.set_pointer_state(mouse_input::pointer_state_after_left_release());
         self.maybe_announce_room_goal();
+        self.sync_times_tables_aha();
         self.sync_room_parameter_voice();
         self.play_room_interaction_audio(accepted);
     }
@@ -1983,7 +2025,7 @@ impl App {
             }
             gamepad::Command::Back => self.gamepad_back(),
             gamepad::Command::Menu => self.gamepad_menu(),
-            gamepad::Command::Inspect => self.show_info = !self.show_info,
+            gamepad::Command::Inspect => self.toggle_inspect(),
             gamepad::Command::Reset => self.reset_current_room(),
             gamepad::Command::PreviousRoom if !self.modal_mode_active() => self.switch(-1),
             gamepad::Command::NextRoom if !self.modal_mode_active() => self.switch(1),
@@ -2388,6 +2430,7 @@ impl App {
         );
         self.mandelbrot_camera.reset(self.variation);
         self.reset_life_session();
+        self.reset_times_tables_aha();
         self.goal_announced = false;
     }
 
@@ -2501,20 +2544,117 @@ impl App {
         self.rooms[self.current].meta().id == "game-of-life"
     }
 
+    fn current_room_is_times_tables(&self) -> bool {
+        self.rooms[self.current].meta().id == "times-tables"
+    }
+
     fn current_status_override(&self, width: usize) -> Option<String> {
-        self.current_room_is_life().then(|| {
-            if width <= 400 {
+        if self.current_room_is_life() {
+            return Some(if width <= 400 {
                 self.life_session.compact_status()
             } else {
                 self.life_session.status()
-            }
-        })
+            });
+        }
+        if self.current_room_is_times_tables() && !self.the_show {
+            let phase = effective_room_phase("times-tables", self.t, &self.inputs, self.the_show);
+            let dial = self.rooms[self.current]
+                .status_input(phase, &self.inputs)
+                .or_else(|| self.rooms[self.current].status(phase));
+            return Some(self.times_tables_aha.status(dial.as_deref()));
+        }
+        None
     }
 
     fn reset_life_session(&mut self) {
         self.life_session = numinous_core::rooms::game_of_life::LifeSession::new(self.variation);
         self.life_accumulator = 0.0;
         self.clear_transient_audio();
+    }
+
+    fn reset_times_tables_aha(&mut self) {
+        self.times_tables_aha = numinous_core::rooms::times_tables_aha::TimesTablesAha::new();
+        if self.current_room_is_times_tables() {
+            self.show_info = false;
+        }
+    }
+
+    /// Keep the Times Tables aha in step with hand dial and the four-lobe goal.
+    fn sync_times_tables_aha(&mut self) {
+        if !self.current_room_is_times_tables() || self.the_show {
+            return;
+        }
+        let phase = effective_room_phase("times-tables", self.t, &self.inputs, false);
+        let room = numinous_core::rooms::times_tables::TimesTables::new_with(self.variation);
+        if has_finite_parameter_input(&self.inputs) {
+            let k = room.live_multiplier(phase, &self.inputs);
+            self.times_tables_aha.note_hand_multiplier(k);
+        }
+        if room.goal_met(phase, &self.inputs) {
+            let _ = self.times_tables_aha.note_four_lobes();
+        }
+    }
+
+    /// E / Inspect: summon the staged aha on Times Tables; elsewhere toggle reveal.
+    fn toggle_inspect(&mut self) {
+        if self.the_show || self.studio {
+            return;
+        }
+        if self.current_room_is_times_tables() {
+            use numinous_core::rooms::times_tables_aha::AhaBeat;
+            if self.times_tables_aha.allow_reveal_text() {
+                self.show_info = !self.show_info;
+                return;
+            }
+            if self.times_tables_aha.can_summon()
+                || matches!(self.times_tables_aha.beat(), AhaBeat::Morph { .. })
+            {
+                if self.times_tables_aha.summon() {
+                    self.show_info = false;
+                }
+                return;
+            }
+            // Generation first: do not open the punchline card early.
+            self.show_info = false;
+            return;
+        }
+        self.show_info = !self.show_info;
+    }
+
+    fn commit_times_tables_wager(
+        &mut self,
+        place: numinous_core::rooms::times_tables_aha::CardioidHome,
+    ) -> bool {
+        if !self.current_room_is_times_tables() || self.the_show {
+            return false;
+        }
+        if self.times_tables_aha.commit_wager(place) {
+            self.show_info = false;
+            self.banner = Some(feedback::Banner::status(
+                format!("GUESSED {}", place.label()),
+                90,
+            ));
+            true
+        } else {
+            false
+        }
+    }
+
+    fn advance_times_tables_morph(&mut self, elapsed: f64) {
+        if !self.current_room_is_times_tables() || self.the_show || self.paused {
+            return;
+        }
+        if !matches!(
+            self.times_tables_aha.beat(),
+            numinous_core::rooms::times_tables_aha::AhaBeat::Morph { .. }
+        ) {
+            return;
+        }
+        if !elapsed.is_finite() || elapsed <= 0.0 {
+            return;
+        }
+        let delta = elapsed / TIMES_TABLES_MORPH_SECONDS;
+        self.times_tables_aha.advance_morph(delta);
     }
 
     fn record_room_touch(&mut self, point: (f64, f64)) -> bool {
@@ -2740,10 +2880,35 @@ impl App {
                 self.mandelbrot_camera.render(&mut raster);
             } else if room.meta().id == "game-of-life" {
                 self.life_session.render(&mut raster);
+            } else if room.meta().id == "times-tables"
+                && !self.the_show
+                && self.times_tables_aha.uses_aha_plate()
+            {
+                let phase =
+                    effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
+                let k = numinous_core::rooms::times_tables::TimesTables::new_with(self.variation)
+                    .live_multiplier(phase, room_inputs);
+                numinous_core::rooms::times_tables_aha::render_aha_plate(
+                    &mut raster,
+                    self.times_tables_aha.beat(),
+                    k,
+                );
             } else {
                 let phase =
                     effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
                 room.render_input(&mut raster, phase, room_inputs);
+                if room.meta().id == "times-tables"
+                    && !self.the_show
+                    && matches!(
+                        self.times_tables_aha.beat(),
+                        numinous_core::rooms::times_tables_aha::AhaBeat::Prime
+                    )
+                {
+                    numinous_core::rooms::times_tables_aha::render_wager_options(
+                        &mut raster,
+                        self.times_tables_aha.hover(),
+                    );
+                }
             }
             input_feedback::draw(&mut raster, room_inputs);
             self.live_scale
@@ -2769,13 +2934,18 @@ impl App {
         let status_override = self.current_status_override(width);
         let phase = effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
         let inputs = effective_room_inputs(&self.inputs, self.the_show);
+        // Times Tables gates the text reveal until the morph consolidates.
+        let show_info = self.show_info
+            && (!self.current_room_is_times_tables()
+                || self.the_show
+                || self.times_tables_aha.allow_reveal_text());
         hud::draw_room_chrome(
             raster,
             room,
             &hud::RoomChrome {
                 t: phase,
                 room_card: self.room_card,
-                show_info: self.show_info,
+                show_info,
                 show_help: self.show_help,
                 show_journey: self.show_journey,
                 banner_active: self.banner.is_some(),
@@ -3196,8 +3366,24 @@ impl ApplicationHandler for App {
                         }
                         Key::Named(NamedKey::Space) => self.toggle_pause(),
                         // E / ? opens the optional concept + reveal door.
+                        // On Times Tables it summons the staged aha first.
                         Key::Character(c) if c.as_str() == "e" || c.as_str() == "?" => {
-                            self.show_info = !self.show_info;
+                            self.toggle_inspect();
+                        }
+                        // Times Tables place wager: 1 Mandelbrot, 2 Nephroid, 3 Circle.
+                        Key::Character(c)
+                            if matches!(c.as_str(), "1" | "2" | "3")
+                                && self.current_room_is_times_tables()
+                                && !self.the_show =>
+                        {
+                            let digit = c.as_str().as_bytes()[0].saturating_sub(b'0');
+                            if let Some(place) =
+                                numinous_core::rooms::times_tables_aha::CardioidHome::from_key_digit(
+                                    digit,
+                                )
+                            {
+                                let _ = self.commit_times_tables_wager(place);
+                            }
                         }
                         // Q swaps the era, like swapping weapons.
                         Key::Character(c) if c.as_str() == "q" => {
@@ -3486,6 +3672,7 @@ impl ApplicationHandler for App {
         let first_contact_obscured = self.banner.is_some() && self.room_card > 0;
         if !first_contact_obscured {
             self.advance_life_if_active(elapsed);
+            self.advance_times_tables_morph(elapsed);
         }
         if !(self.paused || self.dragging || self.show_help && self.modal_mode_active()) {
             let motion = self.time_scale * self.visualizer_scale;
@@ -3912,6 +4099,109 @@ mod tests {
             effective_room_phase("times-tables", 0.73, &invalid_release, false),
             0.0
         );
+    }
+
+    #[test]
+    fn times_tables_aha_gates_reveal_until_generation_and_morph() {
+        use numinous_core::rooms::times_tables_aha::{AhaBeat, CardioidHome};
+
+        let mut app = headless("numinous_app_test_times_tables_aha.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "times-tables")
+            .expect("times-tables in catalog");
+        app.reset_times_tables_aha();
+        app.show_help = false;
+        app.show_info = false;
+
+        // Inspect before generation must not open the reveal card.
+        app.toggle_inspect();
+        assert!(!app.show_info);
+        assert_eq!(app.times_tables_aha.beat(), AhaBeat::Explore);
+
+        // Hand on the K=2 heart primes the gap.
+        app.begin_pointer_at((0.0, 0.5));
+        app.end_pointer_at((0.0, 0.5));
+        app.sync_times_tables_aha();
+        assert_eq!(app.times_tables_aha.beat(), AhaBeat::Prime);
+
+        assert!(app.commit_times_tables_wager(CardioidHome::Circle));
+        assert_eq!(app.times_tables_aha.beat(), AhaBeat::Withheld);
+        assert!(!app.times_tables_aha.allow_reveal_text());
+
+        // Summon starts the morph; reveal stays closed.
+        app.toggle_inspect();
+        assert!(matches!(app.times_tables_aha.beat(), AhaBeat::Morph { .. }));
+        assert!(!app.show_info);
+
+        app.advance_times_tables_morph(super::TIMES_TABLES_MORPH_SECONDS);
+        assert_eq!(app.times_tables_aha.beat(), AhaBeat::Confirm);
+        assert!(!app.times_tables_aha.allow_reveal_text());
+
+        // Confirm -> consolidated punchline; only then may E open text.
+        app.toggle_inspect();
+        assert_eq!(app.times_tables_aha.beat(), AhaBeat::Consolidated);
+        assert!(app.times_tables_aha.allow_reveal_text());
+        app.toggle_inspect();
+        assert!(app.show_info);
+
+        // Reset clears the visit state.
+        app.reset_current_room();
+        assert_eq!(app.times_tables_aha.beat(), AhaBeat::Explore);
+        assert!(!app.show_info);
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
+    fn times_tables_four_lobes_earns_without_place_wager() {
+        use numinous_core::rooms::times_tables_aha::AhaBeat;
+
+        let mut app = headless("numinous_app_test_times_tables_k5_earn.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "times-tables")
+            .expect("times-tables in catalog");
+        app.reset_times_tables_aha();
+        app.show_help = false;
+
+        // x ~ 0.375 snaps to K=5 under the room dial contract.
+        app.begin_pointer_at((0.374, 0.5));
+        app.end_pointer_at((0.374, 0.5));
+        app.sync_times_tables_aha();
+        assert_eq!(app.times_tables_aha.beat(), AhaBeat::Withheld);
+        assert_eq!(
+            app.times_tables_aha.earn(),
+            Some(numinous_core::rooms::times_tables_aha::EarnPath::FourLobes)
+        );
+        assert!(!app.times_tables_aha.allow_reveal_text());
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
+    fn the_show_does_not_auto_earn_times_tables_aha() {
+        use numinous_core::rooms::times_tables_aha::AhaBeat;
+
+        let mut app = headless("numinous_app_test_times_tables_show_no_earn.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "times-tables")
+            .expect("times-tables in catalog");
+        app.reset_times_tables_aha();
+        app.the_show = true;
+        app.t = 0.375;
+        app.sync_times_tables_aha();
+        assert_eq!(app.times_tables_aha.beat(), AhaBeat::Explore);
+        assert!(!app.times_tables_aha.earned());
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
     }
 
     #[test]

@@ -5,6 +5,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- Times Tables five-beat engineered aha on the ordinary App visit (Exceptional
+  Path Phase A, machine path). Core pure state in `times_tables_aha`: place
+  wager (Mandelbrot / Nephroid / Circle), four-lobe earn, morph progress, dual
+  plate for morph and hand confirm, reveal gated until consolidate. App: prime
+  after hand-held K=2, keys 1-3 or bottom-band click, E summons morph then
+  confirm then punchline text; The Show does not auto-earn. Focused core and
+  App tests cover the beat machine.
+
 ### Fixed
 - Catalog plate bug-hunt (cycle 168): Log Spiral t=0 was phase-thin under the
   80-ink bar; unfurl floor and early-arm stroke fix it. Dead domain on Coffee
@@ -20,10 +29,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ### Changed
 - App: Enter starts The Show (the room tour), same as B, including from the
   open menu. The front-door start no longer needs a letter key.
-- Docs: PLAYING, ARCADE, ROADMAP, README, NORTH_STAR, PEDAGOGY, and the
-  unreleased changelog track Enter, arcade selection, cycle-168 plate fixes,
-  and the Exceptional Path Phase A vertical slice (Times Tables engineered
-  aha) as immediate next engineering after machine plate bars went green.
+- Docs: NORTH_STAR, PEDAGOGY, and ROADMAP mark Phase A App vertical slice Built
+  on the machine path; stranger hallway and Buffon as second wager room remain
+  open.
 
 ### Changed
 - Live motion pack (cycles 164 to 167): static graph rooms now perform.

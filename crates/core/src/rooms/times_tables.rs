@@ -84,6 +84,15 @@ impl TimesTables {
             .unwrap_or_else(|| K_MIN + K_SWEEP * self.phase_for(t))
     }
 
+    /// Live multiplier under the same dial contract as the plate and status.
+    ///
+    /// Faces use this when staging the engineered aha so the dual plate and the
+    /// ordinary dial never disagree on K.
+    #[must_use]
+    pub fn live_multiplier(&self, t: f64, inputs: &[RoomInput]) -> f64 {
+        self.multiplier(t, &Self::pokes(inputs))
+    }
+
     fn pokes(inputs: &[RoomInput]) -> Vec<(f64, f64)> {
         inputs
             .iter()
