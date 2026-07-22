@@ -262,8 +262,9 @@ not waive those gates, and this prerelease label does not claim 0.2 is complete.
   (Coffee Cup, Degree-720, The Stretch, Catenary), and dead dial.
 - **Next, above everything (the founder's directive, July 2026):** **rooms become playable, not watchable, and no two catalog visits are the same.** The substrate is live across app, CLI, and MCP. Catalog machine plate bars hold zero phase-thin, zero dead dial, and zero dead domain (cycles 161 to 168). Live motion covers a large classical curve set (cycles 164 to 167). Soft-thin densify on large plates remains a background grind (order of ~90 rooms still under 0.02 density or 280 ink on 160x90, many intentionally sparse CLICK/HOLD). That grind is not the next high-leverage move.
 - **Done (Exceptional Path Phase A, App vertical slice, machine path):** Times Tables five-beat engineered aha on the ordinary App visit. Core pure state (`times_tables_aha`): place wager (Mandelbrot / Nephroid / Circle), four-lobe earn path, morph progress 0..1, reveal gated until consolidate. App: prime after hand-held K=2, keys 1-3 or bottom-band click commit, E summons morph then confirm then punchline text, dial drives dual plate in confirm, The Show does not auto-earn. Focused core and App tests cover beat transitions, morph endpoints, hand-confirm plate change, and show non-earn. Stranger hallway remains open for 0.2.
-- **Immediate next engineering:** Buffon Needle pi wager as the second room on the same generation-before-reveal pattern, or Phase B glow if sensory ceiling is the binding constraint. Soft-thin densify stays background craft.
-- **Immediate next product evidence:** stranger hallway on Times Tables with the engineered aha; arrival-card clarity with real humans; plate beauty under real window sizes.
+- **Done (Buffon pi wager, second aha room, machine path):** Buffon's Needle five-beat engineered aha. Core pure state (`buffon_aha`): number wager on 1.5..4.5 graded against pi (NAILED/CLOSE/WILD), eight-throw alternate earn, circle morph overlay, reveal gated until consolidate. App: prime after first throw, bottom number line or keys 1-4, E summons growing circle then confirm then punchline; The Show does not auto-earn. Focused core and App tests cover the beat machine.
+- **Immediate next engineering:** Phase B glow pipeline if sensory ceiling binds, or soft-thin densify / more causal rooms only as craft. The generation-before-reveal pattern has two flagship rooms; scale carefully.
+- **Immediate next product evidence:** stranger hallway on Times Tables and Buffon engineered ahas; arrival-card clarity with real humans; plate beauty under real window sizes.
 - **Background engineering (not the critical path):** soft-thin densify where structure supports it; more live-motion pens on remaining static classical curves; more causal held loops modeled on Galton and Life for one-shot rooms.
 - **Done (full-roster refinement round):** all 42 simulated review lenses were split exactly once across first contact and accessibility, interaction and truth, and games plus agent faces. The pass fixed redirected CLI ANSI, responsive Quiz-result loss, four overbroad mathematical claims, ambiguous motif-versus-sonification output, and positionless Studio parse errors. It also falsified an apparent Fern deletion by direct pixel comparison. These are engineering findings from reproduced evidence; none of the simulated reactions satisfies a participant gate. Controller HUD parity, its route gaps, compatibility-preserving compact MCP responses, causal first-touch presentation, and visual sound state are now closed. Its ranked queue began with deeper Galton and Life interaction loops, both now complete; continued music composition review remains.
 - **Done (Galton causal experiment loop):** the completed pile no longer moves
@@ -954,30 +955,29 @@ is not yet built. The phased milestones below thread the six lanes into the gate
 above, in leverage order. They deepen what exists rather than jumping the
 "do not build twenty more rooms first" queue.
 
-- **Phase A, the keystone (App vertical slice Built on machine path).** MCP
+- **Phase A, the keystone (App vertical slices Built on machine path).** MCP
   `predict` and graded `challenge` ship the agent-facing verb; Galton ships a
-  Toy-layer one-ball wager; Times Tables ships the five-beat engineered aha on
-  the App (place wager or four-lobe earn, morph, hand confirm, gated punchline).
-  Stranger hallway and Buffon as second room remain open. Owner doc:
-  `PEDAGOGY.md`. Moves "every room compels" and "meta and lore alive."
+  Toy-layer one-ball wager; Times Tables and Buffon ship five-beat engineered
+  ahas on the App. Stranger hallway remains open. Owner doc: `PEDAGOGY.md`.
+  Moves "every room compels" and "meta and lore alive."
 
 ### Phase A vertical slice (Built, machine path, July 2026)
 
 Provable on one room before it scales. Owner docs: `PEDAGOGY.md`,
 `NORTH_STAR.md`, Times Tables technical flagship notes above.
 
-**Shipped.** Core module `crates/core/src/rooms/times_tables_aha.rs`: pure beat
-state (Explore, Prime, Withheld, Morph, Confirm, Consolidated), place options
-(Mandelbrot / Nephroid / Circle), earn via wager or four lobes, morph progress
-fed by the face, affine cardioid geometry tests, dual-plate render for morph
-and confirm. App visit owns wall-clock morph (~1.6s), keys 1-3 and bottom-band
-click for the wager, E/Inspect summon path, status chrome, reveal text gated
-until consolidate. The Show does not auto-earn. Focused tests cover the beat
-machine and App gates.
+**Shipped (Times Tables).** Core module `crates/core/src/rooms/times_tables_aha.rs`:
+pure beat state, place options (Mandelbrot / Nephroid / Circle), earn via wager
+or four lobes, morph progress fed by the face, dual-plate render. App owns
+wall-clock morph (~1.6s), keys 1-3, E/Inspect summon, gated reveal.
 
-**Still open for product exit.** Stranger hallway on the engineered aha;
-optional MCP structured fields for the place-guess; Buffon pi wager as the
-second room on the pattern.
+**Shipped (Buffon, second room).** Core module
+`crates/core/src/rooms/buffon_aha.rs`: number wager on 1.5..4.5 graded against
+pi, eight-throw alternate earn, circle morph overlay. App owns wall-clock morph,
+keys 1-4 and bottom number line, same E/Inspect summon path and gated reveal.
+
+**Still open for product exit.** Stranger hallway on both engineered ahas;
+optional MCP structured fields for place and number wagers.
 
 **Out of scope for the slice (unchanged).** HDR glow (Phase B), Constellation
 Rumor-Mode (Phase C), gallery fork (Phase D), bulk densify, new rooms.

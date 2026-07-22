@@ -40,6 +40,7 @@ pub mod brewster;
 pub mod brownian;
 pub mod brusselator;
 pub mod buddhabrot;
+pub mod buffon_aha;
 pub mod buffon_needle;
 pub mod burning_ship;
 pub mod busy_beaver;

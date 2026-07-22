@@ -50,6 +50,8 @@ const BACKGROUND: u32 = 0x000A_0B0F;
 const SHOW_CROSSFADE_FRAMES: u8 = 14;
 /// Wall time for the Times Tables cardioid-to-Mandelbrot morph beat.
 const TIMES_TABLES_MORPH_SECONDS: f64 = 1.6;
+/// Wall time for the Buffon circle-grows-from-sticks morph beat.
+const BUFFON_MORPH_SECONDS: f64 = 1.6;
 
 /// Blend `prev` into `dest` with `weight` of the previous frame in [0, 1].
 fn blend_rgba(dest: &mut [u8], prev: &[u8], weight: f32) {
@@ -297,6 +299,8 @@ struct App {
     life_accumulator: f64,
     /// Times Tables five-beat engineered aha for the ordinary App visit.
     times_tables_aha: numinous_core::rooms::times_tables_aha::TimesTablesAha,
+    /// Buffon five-beat engineered aha for the ordinary App visit.
+    buffon_aha: numinous_core::rooms::buffon_aha::BuffonAha,
     rooms: Vec<Box<dyn Room>>,
     current: usize,
     t: f64,
@@ -436,6 +440,7 @@ impl App {
             life_session: numinous_core::rooms::game_of_life::LifeSession::new(0),
             life_accumulator: 0.0,
             times_tables_aha: numinous_core::rooms::times_tables_aha::TimesTablesAha::new(),
+            buffon_aha: numinous_core::rooms::buffon_aha::BuffonAha::new(),
             rooms: all_rooms_with(0),
             current: 0,
             t: 0.0,
@@ -1658,9 +1663,26 @@ impl App {
                         return;
                     }
                 }
+                // Buffon bottom band: commit the number wager without a throw.
+                if self.current_room_is_buffon()
+                    && !self.the_show
+                    && point.1 >= numinous_core::rooms::buffon_aha::WAGER_BAND_Y
+                    && matches!(
+                        self.buffon_aha.beat(),
+                        numinous_core::rooms::buffon_aha::AhaBeat::Prime
+                            | numinous_core::rooms::buffon_aha::AhaBeat::Explore
+                    )
+                {
+                    let guess = numinous_core::rooms::buffon_aha::guess_from_unit_x(point.0);
+                    if self.commit_buffon_wager(guess) {
+                        self.poking = false;
+                        return;
+                    }
+                }
                 self.poking = true;
                 self.record_room_touch(point);
                 self.sync_times_tables_aha();
+                self.sync_buffon_aha();
                 if self.rooms[self.current].meta().id == "mandelbrot"
                     && let Some(window) = &self.window
                 {
@@ -1697,10 +1719,26 @@ impl App {
                 self.times_tables_aha.set_hover(None);
             }
         }
+        if self.current_room_is_buffon()
+            && !self.the_show
+            && matches!(
+                self.buffon_aha.beat(),
+                numinous_core::rooms::buffon_aha::AhaBeat::Prime
+            )
+        {
+            if point.1 >= numinous_core::rooms::buffon_aha::WAGER_BAND_Y {
+                self.buffon_aha.set_hover(Some(
+                    numinous_core::rooms::buffon_aha::guess_from_unit_x(point.0),
+                ));
+            } else {
+                self.buffon_aha.set_hover(None);
+            }
+        }
         if held && self.poking && room_input::extend_poke_trail(&mut self.pokes, point) {
             let accepted = room_input::record_pointer_move(&mut self.inputs, point, self.t);
             self.maybe_announce_room_goal();
             self.sync_times_tables_aha();
+            self.sync_buffon_aha();
             self.sync_room_parameter_voice();
             self.play_room_interaction_audio(accepted);
         }
@@ -1723,6 +1761,7 @@ impl App {
         self.set_pointer_state(mouse_input::pointer_state_after_left_release());
         self.maybe_announce_room_goal();
         self.sync_times_tables_aha();
+        self.sync_buffon_aha();
         self.sync_room_parameter_voice();
         self.play_room_interaction_audio(accepted);
     }
@@ -2431,6 +2470,7 @@ impl App {
         self.mandelbrot_camera.reset(self.variation);
         self.reset_life_session();
         self.reset_times_tables_aha();
+        self.reset_buffon_aha();
         self.goal_announced = false;
     }
 
@@ -2548,6 +2588,10 @@ impl App {
         self.rooms[self.current].meta().id == "times-tables"
     }
 
+    fn current_room_is_buffon(&self) -> bool {
+        self.rooms[self.current].meta().id == "buffon-needle"
+    }
+
     fn current_status_override(&self, width: usize) -> Option<String> {
         if self.current_room_is_life() {
             return Some(if width <= 400 {
@@ -2563,6 +2607,13 @@ impl App {
                 .or_else(|| self.rooms[self.current].status(phase));
             return Some(self.times_tables_aha.status(dial.as_deref()));
         }
+        if self.current_room_is_buffon() && !self.the_show {
+            let phase = effective_room_phase("buffon-needle", self.t, &self.inputs, self.the_show);
+            let throws = self.rooms[self.current]
+                .status_input(phase, &self.inputs)
+                .or_else(|| self.rooms[self.current].status(phase));
+            return Some(self.buffon_aha.status(throws.as_deref()));
+        }
         None
     }
 
@@ -2575,6 +2626,13 @@ impl App {
     fn reset_times_tables_aha(&mut self) {
         self.times_tables_aha = numinous_core::rooms::times_tables_aha::TimesTablesAha::new();
         if self.current_room_is_times_tables() {
+            self.show_info = false;
+        }
+    }
+
+    fn reset_buffon_aha(&mut self) {
+        self.buffon_aha = numinous_core::rooms::buffon_aha::BuffonAha::new();
+        if self.current_room_is_buffon() {
             self.show_info = false;
         }
     }
@@ -2595,7 +2653,16 @@ impl App {
         }
     }
 
-    /// E / Inspect: summon the staged aha on Times Tables; elsewhere toggle reveal.
+    /// Keep the Buffon aha in step with player throws.
+    fn sync_buffon_aha(&mut self) {
+        if !self.current_room_is_buffon() || self.the_show {
+            return;
+        }
+        let throws = numinous_core::rooms::buffon_needle::BuffonNeedle::throw_count(&self.inputs);
+        self.buffon_aha.note_throws(throws);
+    }
+
+    /// E / Inspect: summon staged aha on flagship rooms; elsewhere toggle reveal.
     fn toggle_inspect(&mut self) {
         if self.the_show || self.studio {
             return;
@@ -2615,6 +2682,23 @@ impl App {
                 return;
             }
             // Generation first: do not open the punchline card early.
+            self.show_info = false;
+            return;
+        }
+        if self.current_room_is_buffon() {
+            use numinous_core::rooms::buffon_aha::AhaBeat;
+            if self.buffon_aha.allow_reveal_text() {
+                self.show_info = !self.show_info;
+                return;
+            }
+            if self.buffon_aha.can_summon()
+                || matches!(self.buffon_aha.beat(), AhaBeat::Morph { .. })
+            {
+                if self.buffon_aha.summon() {
+                    self.show_info = false;
+                }
+                return;
+            }
             self.show_info = false;
             return;
         }
@@ -2655,6 +2739,36 @@ impl App {
         }
         let delta = elapsed / TIMES_TABLES_MORPH_SECONDS;
         self.times_tables_aha.advance_morph(delta);
+    }
+
+    fn commit_buffon_wager(&mut self, guess: f64) -> bool {
+        if !self.current_room_is_buffon() || self.the_show {
+            return false;
+        }
+        if self.buffon_aha.commit_wager(guess) {
+            self.show_info = false;
+            self.banner = Some(feedback::Banner::status(format!("GUESSED {guess:.2}"), 90));
+            true
+        } else {
+            false
+        }
+    }
+
+    fn advance_buffon_morph(&mut self, elapsed: f64) {
+        if !self.current_room_is_buffon() || self.the_show || self.paused {
+            return;
+        }
+        if !matches!(
+            self.buffon_aha.beat(),
+            numinous_core::rooms::buffon_aha::AhaBeat::Morph { .. }
+        ) {
+            return;
+        }
+        if !elapsed.is_finite() || elapsed <= 0.0 {
+            return;
+        }
+        let delta = elapsed / BUFFON_MORPH_SECONDS;
+        self.buffon_aha.advance_morph(delta);
     }
 
     fn record_room_touch(&mut self, point: (f64, f64)) -> bool {
@@ -2909,6 +3023,29 @@ impl App {
                         self.times_tables_aha.hover(),
                     );
                 }
+                if room.meta().id == "buffon-needle" && !self.the_show {
+                    if matches!(
+                        self.buffon_aha.beat(),
+                        numinous_core::rooms::buffon_aha::AhaBeat::Prime
+                    ) {
+                        numinous_core::rooms::buffon_aha::render_guess_band(
+                            &mut raster,
+                            self.buffon_aha.hover(),
+                        );
+                    }
+                    if self.buffon_aha.uses_circle_overlay() {
+                        let progress = match self.buffon_aha.beat() {
+                            numinous_core::rooms::buffon_aha::AhaBeat::Morph { progress } => {
+                                progress
+                            }
+                            _ => 1.0,
+                        };
+                        numinous_core::rooms::buffon_aha::render_circle_overlay(
+                            &mut raster,
+                            progress,
+                        );
+                    }
+                }
             }
             input_feedback::draw(&mut raster, room_inputs);
             self.live_scale
@@ -2934,11 +3071,13 @@ impl App {
         let status_override = self.current_status_override(width);
         let phase = effective_room_phase(room.meta().id, self.t, &self.inputs, self.the_show);
         let inputs = effective_room_inputs(&self.inputs, self.the_show);
-        // Times Tables gates the text reveal until the morph consolidates.
+        // Flagship ahas gate the text reveal until the morph consolidates.
         let show_info = self.show_info
-            && (!self.current_room_is_times_tables()
-                || self.the_show
-                || self.times_tables_aha.allow_reveal_text());
+            && (self.the_show
+                || (!self.current_room_is_times_tables() && !self.current_room_is_buffon())
+                || (self.current_room_is_times_tables()
+                    && self.times_tables_aha.allow_reveal_text())
+                || (self.current_room_is_buffon() && self.buffon_aha.allow_reveal_text()));
         hud::draw_room_chrome(
             raster,
             room,
@@ -3385,6 +3524,19 @@ impl ApplicationHandler for App {
                                 let _ = self.commit_times_tables_wager(place);
                             }
                         }
+                        // Buffon number wager: 1=2, 2=e, 3=3, 4=pi.
+                        Key::Character(c)
+                            if matches!(c.as_str(), "1" | "2" | "3" | "4")
+                                && self.current_room_is_buffon()
+                                && !self.the_show =>
+                        {
+                            let digit = c.as_str().as_bytes()[0].saturating_sub(b'0');
+                            if let Some(guess) =
+                                numinous_core::rooms::buffon_aha::guess_from_key_digit(digit)
+                            {
+                                let _ = self.commit_buffon_wager(guess);
+                            }
+                        }
                         // Q swaps the era, like swapping weapons.
                         Key::Character(c) if c.as_str() == "q" => {
                             self.era = self.era.next();
@@ -3673,6 +3825,7 @@ impl ApplicationHandler for App {
         if !first_contact_obscured {
             self.advance_life_if_active(elapsed);
             self.advance_times_tables_morph(elapsed);
+            self.advance_buffon_morph(elapsed);
         }
         if !(self.paused || self.dragging || self.show_help && self.modal_mode_active()) {
             let motion = self.time_scale * self.visualizer_scale;
@@ -4199,6 +4352,103 @@ mod tests {
         app.sync_times_tables_aha();
         assert_eq!(app.times_tables_aha.beat(), AhaBeat::Explore);
         assert!(!app.times_tables_aha.earned());
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
+    fn buffon_aha_gates_reveal_until_generation_and_morph() {
+        use numinous_core::rooms::buffon_aha::AhaBeat;
+
+        let mut app = headless("numinous_app_test_buffon_aha.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "buffon-needle")
+            .expect("buffon-needle in catalog");
+        app.reset_buffon_aha();
+        app.show_help = false;
+        app.show_info = false;
+
+        app.toggle_inspect();
+        assert!(!app.show_info);
+        assert_eq!(app.buffon_aha.beat(), AhaBeat::Explore);
+
+        // One throw primes the gap.
+        app.begin_pointer_at((0.5, 0.4));
+        app.end_pointer_at((0.5, 0.4));
+        app.sync_buffon_aha();
+        assert_eq!(app.buffon_aha.beat(), AhaBeat::Prime);
+
+        assert!(app.commit_buffon_wager(2.0));
+        assert_eq!(app.buffon_aha.beat(), AhaBeat::Withheld);
+        assert!(!app.buffon_aha.allow_reveal_text());
+
+        app.toggle_inspect();
+        assert!(matches!(app.buffon_aha.beat(), AhaBeat::Morph { .. }));
+        assert!(!app.show_info);
+
+        app.advance_buffon_morph(super::BUFFON_MORPH_SECONDS);
+        assert_eq!(app.buffon_aha.beat(), AhaBeat::Confirm);
+        assert!(!app.buffon_aha.allow_reveal_text());
+
+        app.toggle_inspect();
+        assert_eq!(app.buffon_aha.beat(), AhaBeat::Consolidated);
+        assert!(app.buffon_aha.allow_reveal_text());
+        app.toggle_inspect();
+        assert!(app.show_info);
+
+        app.reset_current_room();
+        assert_eq!(app.buffon_aha.beat(), AhaBeat::Explore);
+        assert!(!app.show_info);
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
+    fn buffon_eight_throws_earn_without_number_wager() {
+        use numinous_core::rooms::buffon_aha::{AhaBeat, EarnPath};
+
+        let mut app = headless("numinous_app_test_buffon_throw_earn.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "buffon-needle")
+            .expect("buffon-needle in catalog");
+        app.reset_buffon_aha();
+        app.show_help = false;
+
+        for i in 0..8 {
+            let y = 0.15 + (i as f64) * 0.08;
+            app.begin_pointer_at((0.4, y.min(0.85)));
+            app.end_pointer_at((0.4, y.min(0.85)));
+            app.sync_buffon_aha();
+        }
+        assert_eq!(app.buffon_aha.beat(), AhaBeat::Withheld);
+        assert_eq!(app.buffon_aha.earn(), Some(EarnPath::Throws { count: 8 }));
+        assert!(!app.buffon_aha.allow_reveal_text());
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
+    fn the_show_does_not_auto_earn_buffon_aha() {
+        use numinous_core::rooms::buffon_aha::AhaBeat;
+
+        let mut app = headless("numinous_app_test_buffon_show_no_earn.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "buffon-needle")
+            .expect("buffon-needle in catalog");
+        app.reset_buffon_aha();
+        app.the_show = true;
+        app.sync_buffon_aha();
+        assert_eq!(app.buffon_aha.beat(), AhaBeat::Explore);
+        assert!(!app.buffon_aha.earned());
 
         let _ = std::fs::remove_file(&app.journey_file);
         let _ = std::fs::remove_file(&app.scores_file);

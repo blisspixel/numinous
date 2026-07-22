@@ -13,6 +13,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   after hand-held K=2, keys 1-3 or bottom-band click, E summons morph then
   confirm then punchline text; The Show does not auto-earn. Focused core and
   App tests cover the beat machine.
+- Buffon's Needle five-beat engineered aha (second generation-before-reveal
+  room, machine path). Core pure state in `buffon_aha`: number wager on
+  1.5..4.5 graded against pi, eight-throw alternate earn, circle morph overlay,
+  reveal gated until consolidate. App: prime after first throw, bottom number
+  line or keys 1-4, E summons growing circle then confirm then punchline; The
+  Show does not auto-earn. Focused core and App tests cover the beat machine.
 
 ### Fixed
 - Catalog plate bug-hunt (cycle 168): Log Spiral t=0 was phase-thin under the
@@ -29,9 +35,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ### Changed
 - App: Enter starts The Show (the room tour), same as B, including from the
   open menu. The front-door start no longer needs a letter key.
-- Docs: NORTH_STAR, PEDAGOGY, and ROADMAP mark Phase A App vertical slice Built
-  on the machine path; stranger hallway and Buffon as second wager room remain
-  open.
+- Docs: NORTH_STAR, PEDAGOGY, and ROADMAP mark Phase A App vertical slices Built
+  on the machine path for Times Tables and Buffon; stranger hallway remains open.
 
 ### Changed
 - Live motion pack (cycles 164 to 167): static graph rooms now perform.
