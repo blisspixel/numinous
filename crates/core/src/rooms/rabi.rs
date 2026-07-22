@@ -24,15 +24,16 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 }
 
 fn detune(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+    // One-sided detune: |delta| alone is self-similar (left = right in plot).
     let s = if seed == 0 {
         0.0
     } else {
-        (seed % 5) as f64 * 0.1
+        (seed % 5) as f64 * 0.08
     };
     if let Some((x, _)) = hand {
-        (x - 0.5) * 4.0 + s
+        (0.05 + x * 3.4 + s).clamp(0.0, 3.6)
     } else {
-        (phase_unit(t) - 0.5) * 3.0 + s
+        (0.1 + phase_unit(t) * 2.8 + s).clamp(0.0, 3.2)
     }
 }
 
@@ -59,6 +60,7 @@ fn draw(canvas: &mut dyn Surface, delta: f64, seed: u64) {
             .round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, col as i32, py, '#');
+            canvas.line(ox, oy + 1, col as i32, py + 1, '*');
         }
         prev = Some((col as i32, py));
     }
@@ -67,6 +69,13 @@ fn draw(canvas: &mut dyn Surface, delta: f64, seed: u64) {
     let y_e = (height as f64 * 0.08).round() as i32;
     canvas.line(0, y_g, width.saturating_sub(1) as i32, y_g, '.');
     canvas.line(0, y_e, width.saturating_sub(1) as i32, y_e, '.');
+    // Pmax meter so detune is readable without reading the oscillation alone.
+    let meter_y = height.saturating_sub(2) as i32;
+    let filled = (amp.clamp(0.0, 1.0) * width.saturating_sub(1) as f64).round() as i32;
+    canvas.line(0, meter_y, width.saturating_sub(1) as i32, meter_y, '-');
+    if filled > 0 {
+        canvas.line(0, meter_y, filled, meter_y, '=');
+    }
 }
 
 /// Rabi oscillation room.

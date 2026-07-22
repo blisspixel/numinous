@@ -41,27 +41,27 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     if width == 0 || height == 0 {
         return;
     }
-    let a = a.clamp(0.3, 2.0);
+    // Fixed mapping: a is tow-rope length, so the pull spreads farther on the plate.
+    let a = a.clamp(0.4, 1.9);
     let j = if seed == 0 {
         0.0
     } else {
         (seed % 5) as f64 * 0.02
     };
-    // parametric: x = a sech(t), y = a (t - tanh t)  for t in R
-    // or classic: x = a sin phi, y = a (cos phi + ln tan(phi/2))
+    let scale = (width.min(height) as f64) * 0.38;
+    let cx = (width.saturating_sub(1) / 2) as f64;
+    let top = height as f64 * 0.08;
     let mut prev: Option<(i32, i32)> = None;
-    let steps = 200;
+    let steps = 320;
     for i in 1..steps {
         let t = 0.05 + 3.5 * (i as f64 / steps as f64);
-        let x = a / t.cosh() + j * 0.1;
+        let x = a / t.cosh() + j * 0.05;
         let y = a * (t - t.tanh());
-        // map to canvas: x horizontal from center, y down from top band
-        let u = 0.5 + 0.4 * (x / a).clamp(-1.0, 1.0);
-        let v = (y / (a * 2.5)).clamp(0.0, 1.0);
-        let px = (u * width.saturating_sub(1) as f64).round() as i32;
-        let py = (v * height.saturating_sub(1) as f64 * 0.9 + height as f64 * 0.05).round() as i32;
+        let px = (cx + x * scale).round() as i32;
+        let py = (top + y * scale * 0.55).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
             // mirror left
             let mx = width.saturating_sub(1) as i32 - px;
             let mox = width.saturating_sub(1) as i32 - ox;
@@ -69,8 +69,8 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
         }
         prev = Some((px, py));
     }
-    // asymptote (x-axis)
-    let ay = (height as f64 * 0.05).round() as i32;
+    // asymptote (pull line)
+    let ay = top.round() as i32;
     canvas.line(0, ay, width.saturating_sub(1) as i32, ay, '.');
 }
 

@@ -6,6 +6,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Fixed
+- Catalog exceptional pass: kill self-similar dead dials where scale cancelled
+  into auto-fit (Clothoid, Folium, Pseudosphere, Catenary, Tractrix, Kampyle)
+  or phase only re-parametrized a closed curve (Viviani, Trefoil, Figure-Eight,
+  Hopf Link). Rabi detune is one-sided so left and right no longer paint the
+  same |delta|. Message That Heals folds noise into the channel seed, guarantees
+  a wound past the soft cliff, and draws a p meter. Zeta Walk climbs on x or y.
+  Soft density: Lissajous-3d, triangle wave, heat kernel fill, superellipse.
+
+### Fixed
 - Catalog density pack: zero phase-thin and zero large-thin on the full room
   list. Erdos-Renyi, Cassini, Watt, Stretch, Coriolis, Kuramoto, Semicubical,
   Trefoil, Three-Scroll, Gerono, Zeta Walk, Torus Knot, Strange Loop, and

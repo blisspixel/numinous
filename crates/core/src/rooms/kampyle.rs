@@ -43,27 +43,28 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let a = a.clamp(0.3, 1.05);
-    let scale = (width.min(height) as f64) * 0.4 * a;
+    // Fixed plate scale: a grows the horn, not a self-similar rescaling.
+    let a = a.clamp(0.4, 1.15);
+    let scale = (width.min(height) as f64) * 0.22;
     let rot = if seed == 0 {
         0.0
     } else {
         (seed % 8) as f64 * 0.04
     };
     // Polar: r = a / cos^2(th) for |th| < pi/2.
-    let steps = 200;
+    let steps = 320;
     for sign in [1.0_f64, -1.0] {
         let mut prev: Option<(i32, i32)> = None;
         for i in 0..=steps {
             let u = i as f64 / steps as f64;
-            let th = (-0.9 + 1.8 * u) * std::f64::consts::FRAC_PI_2;
+            let th = (-0.88 + 1.76 * u) * std::f64::consts::FRAC_PI_2;
             let c = th.cos();
             if c.abs() < 0.12 {
                 prev = None;
                 continue;
             }
             let r = a / (c * c);
-            if r > 4.0 {
+            if r > 5.0 {
                 prev = None;
                 continue;
             }
@@ -71,9 +72,11 @@ fn draw(canvas: &mut dyn Surface, a: f64, seed: u64) {
             let x = sign * r * ang.cos();
             let y = r * ang.sin();
             let px = (cx + x * scale).round() as i32;
-            let py = (cy - y * scale).round() as i32;
+            let py = (cy - y * scale * 0.85).round() as i32;
             if let Some((ox, oy)) = prev {
-                canvas.line(ox, oy, px, py, if sign > 0.0 { '#' } else { '*' });
+                let ch = if sign > 0.0 { '#' } else { '*' };
+                canvas.line(ox, oy, px, py, ch);
+                canvas.line(ox, oy + 1, px, py + 1, '.');
             }
             prev = Some((px, py));
         }

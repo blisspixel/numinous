@@ -43,27 +43,30 @@ fn draw(canvas: &mut dyn Surface, ph: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let sc = (width.min(height) as f64) * 0.28;
-    let rot = if seed == 0 {
-        0.0
-    } else {
-        (seed % 6) as f64 * 0.06
-    };
+    let sc = (width.min(height) as f64) * 0.32;
+    // Phase is camera turn so the projection actually moves.
+    let rot = ph
+        + if seed == 0 {
+            0.0
+        } else {
+            (seed % 6) as f64 * 0.06
+        };
     // Parametric figure-eight knot (Lissajous-type):
     // x = (2+cos 2t) cos 3t, y = (2+cos 2t) sin 3t, z = sin 4t
-    let steps = 260;
+    let steps = 420;
     let mut prev: Option<(i32, i32)> = None;
+    let mut bead = (0_i32, 0_i32);
     for i in 0..=steps {
-        let t = ph + 2.0 * std::f64::consts::PI * (i as f64 / steps as f64);
+        let t = 2.0 * std::f64::consts::PI * (i as f64 / steps as f64);
         let r = 2.0 + (2.0 * t).cos();
         let x = r * (3.0 * t).cos();
         let y = r * (3.0 * t).sin();
         let z = (4.0 * t).sin();
         let xr = x * rot.cos() - y * rot.sin();
         let yr = x * rot.sin() + y * rot.cos();
-        let d = 1.0 / (4.0 + z * 0.4);
+        let d = 1.0 / (3.6 + z * 0.45);
         let px = (cx + xr * sc * d).round() as i32;
-        let py = (cy - yr * sc * d * 0.65).round() as i32;
+        let py = (cy - yr * sc * d * 0.75).round() as i32;
         if let Some((ox, oy)) = prev {
             let ch = if z > 0.3 {
                 '#'
@@ -73,8 +76,17 @@ fn draw(canvas: &mut dyn Surface, ph: f64, seed: u64) {
                 '.'
             };
             canvas.line(ox, oy, px, py, ch);
+            canvas.line(ox, oy + 1, px, py + 1, if z > 0.0 { '*' } else { '.' });
+        }
+        if i == 0 {
+            bead = (px, py);
         }
         prev = Some((px, py));
+    }
+    for dy in -1..=1 {
+        for dx in -1..=1 {
+            canvas.plot(bead.0 + dx, bead.1 + dy, 'o');
+        }
     }
 }
 

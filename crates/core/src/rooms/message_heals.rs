@@ -65,11 +65,28 @@ fn heal(mut c: [u8; 7]) -> ([u8; 7], u8) {
 }
 
 fn channel(code: [u8; 7], p_flip: f64, seed: u64, msg: u64) -> [u8; 7] {
-    let mut rng = SplitMix64::new(SEED ^ seed ^ msg.wrapping_mul(0x9E37_79B9));
+    // Fold p into the seed so dial/phase cannot land on the same flip mask.
+    let p_bits = (p_flip.clamp(0.0, 1.0) * 10_000.0) as u64;
+    let mut rng = SplitMix64::new(SEED ^ seed ^ msg.wrapping_mul(0x9E37_79B9) ^ p_bits);
     let mut out = code;
     for b in &mut out {
         if rng.next_f64() < p_flip {
             *b ^= 1;
+        }
+    }
+    // Guarantee at least one wound once noise is past the soft cliff so the
+    // mid row never freezes as a silent copy of the sent code.
+    if p_flip >= 0.12 {
+        let mut any = false;
+        for i in 0..7 {
+            if out[i] != code[i] {
+                any = true;
+                break;
+            }
+        }
+        if !any {
+            let i = (p_bits as usize) % 7;
+            out[i] ^= 1;
         }
     }
     out
@@ -78,57 +95,67 @@ fn channel(code: [u8; 7], p_flip: f64, seed: u64, msg: u64) -> [u8; 7] {
 fn noise_p(t: f64, pokes: &[(f64, f64)]) -> f64 {
     let hands = finite_pokes(pokes);
     if let Some(&(x, _)) = hands.last() {
-        x.clamp(0.0, 0.45)
+        (0.02 + x * 0.55).clamp(0.02, 0.55)
     } else {
-        phase_unit(t) * 0.35
+        (0.04 + phase_unit(t) * 0.48).clamp(0.04, 0.52)
     }
 }
 
 fn draw_bit_block(canvas: &mut dyn Surface, px: i32, py: i32, on: bool, wound: bool) {
     let ch = if on { '#' } else { '.' };
     // Fat bit cell so a large window is a row of chips, not seven freckles.
-    for dy in 0..3 {
-        for dx in 0..3 {
+    for dy in 0..4 {
+        for dx in 0..4 {
             canvas.plot(px + dx, py + dy, ch);
         }
     }
     if wound {
-        canvas.plot(px + 1, py + 3, 'x');
+        canvas.plot(px + 1, py + 4, 'x');
+        canvas.plot(px + 2, py + 4, 'x');
         canvas.plot(px + 1, py - 1, 'x');
+        canvas.plot(px + 2, py - 1, 'x');
     }
 }
 
-fn draw(canvas: &mut dyn Surface, sent: &[u8; 7], recv: &[u8; 7], fixed: &[u8; 7]) {
+fn draw(canvas: &mut dyn Surface, sent: &[u8; 7], recv: &[u8; 7], fixed: &[u8; 7], p: f64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
     }
-    let cell = (width.saturating_sub(8) / 7).clamp(4, 10) as i32;
+    let cell = (width.saturating_sub(8) / 7).clamp(5, 12) as i32;
     let left = ((width as i32) - cell * 7) / 2;
     let rows = [
-        (sent, 0.22_f64, false),
-        (recv, 0.50, true),
-        (fixed, 0.78, false),
+        (sent, 0.2_f64, false),
+        (recv, 0.48, true),
+        (fixed, 0.76, false),
     ];
     for (bits, yf, mark_bad) in rows {
-        let py = (yf * height.saturating_sub(4) as f64).round() as i32;
+        let py = (yf * height.saturating_sub(5) as f64).round() as i32;
         for (i, &b) in bits.iter().enumerate() {
             let px = left + i as i32 * cell;
             let wound = mark_bad && b != sent[i];
             draw_bit_block(canvas, px, py, b == 1, wound);
             // Wire between chips.
             if i + 1 < bits.len() {
-                let wx0 = px + 3;
+                let wx0 = px + 4;
                 let wx1 = left + (i as i32 + 1) * cell - 1;
                 canvas.line(wx0, py + 1, wx1, py + 1, '-');
+                canvas.line(wx0, py + 2, wx1, py + 2, '-');
             }
         }
         // Bus from previous row.
-        if (yf - 0.22).abs() > 0.05 {
+        if (yf - 0.2).abs() > 0.05 {
             let mid = left + cell * 3 + 1;
-            let y0 = ((0.22 + 0.06) * height.saturating_sub(4) as f64).round() as i32;
+            let y0 = ((0.2 + 0.08) * height.saturating_sub(5) as f64).round() as i32;
             canvas.line(mid, y0, mid, py, if mark_bad { '~' } else { '|' });
         }
+    }
+    // Noise meter: the dial must move something even when flips are sparse.
+    let meter_y = height.saturating_sub(1) as i32;
+    let filled = (p.clamp(0.0, 1.0) * width.saturating_sub(1) as f64).round() as i32;
+    canvas.line(0, meter_y, width.saturating_sub(1) as i32, meter_y, '-');
+    if filled > 0 {
+        canvas.line(0, meter_y, filled, meter_y, '=');
     }
 }
 
@@ -169,7 +196,7 @@ impl Room for MessageHeals {
         let p = noise_p(t, &[]);
         let recv = channel(sent, p, self.seed, 0);
         let (fixed, _) = heal(recv);
-        draw(canvas, &sent, &recv, &fixed);
+        draw(canvas, &sent, &recv, &fixed, p);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -207,7 +234,7 @@ impl Room for MessageHeals {
         let sent = hamming74_encode(0b1011);
         let recv = channel(sent, p, self.seed, 1);
         let (fixed, _) = heal(recv);
-        draw(canvas, &sent, &recv, &fixed);
+        draw(canvas, &sent, &recv, &fixed, p);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {

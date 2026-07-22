@@ -43,41 +43,52 @@ fn draw(canvas: &mut dyn Surface, ph: f64, scale: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let a = (width.min(height) as f64) * 0.28 * scale.clamp(0.55, 1.45);
-    let rot = if seed == 0 {
-        0.0
-    } else {
-        (seed % 8) as f64 * 0.04
-    };
+    let a = (width.min(height) as f64) * 0.34 * scale.clamp(0.7, 1.4);
+    // Phase is a camera turn: re-phasing a closed polyline alone is invisible.
+    let rot = ph
+        + if seed == 0 {
+            0.0
+        } else {
+            (seed % 8) as f64 * 0.04
+        };
     // Sphere outline.
     let mut prev: Option<(i32, i32)> = None;
-    for i in 0..=48 {
-        let th = 2.0 * std::f64::consts::PI * (i as f64 / 48.0);
+    for i in 0..=72 {
+        let th = 2.0 * std::f64::consts::PI * (i as f64 / 72.0);
         let px = (cx + a * th.cos()).round() as i32;
-        let py = (cy - a * th.sin() * 0.55).round() as i32;
+        let py = (cy - a * th.sin() * 0.6).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '.');
         }
         prev = Some((px, py));
     }
-    // Viviani: x = a(1+cos t), y = a sin t, z = 2 a sin(t/2)
-    // (or classic: a(1+cos t), a sin t, 2a sin(t/2))
+    // Viviani: sphere meets a tangent cylinder.
     prev = None;
-    let steps = 200;
+    let steps = 360;
+    let mut bead = (0_i32, 0_i32);
     for i in 0..=steps {
-        let t = ph + 4.0 * std::f64::consts::PI * (i as f64 / steps as f64);
+        let t = 4.0 * std::f64::consts::PI * (i as f64 / steps as f64);
         let x = a * (1.0 + t.cos()) * 0.5;
         let y = a * t.sin();
-        let z = 2.0 * a * (t * 0.5).sin() * 0.35;
+        let z = 2.0 * a * (t * 0.5).sin() * 0.4;
         let xr = x * rot.cos() - y * rot.sin();
         let yr = x * rot.sin() + y * rot.cos();
-        let d = 1.0 / (2.5 + z * 0.02);
+        let d = 1.0 / (2.4 + z * 0.03);
         let px = (cx + (xr - a * 0.25) * d).round() as i32;
-        let py = (cy - yr * 0.55 * d).round() as i32;
+        let py = (cy - yr * 0.65 * d).round() as i32;
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
+        }
+        if i == steps / 4 {
+            bead = (px, py);
         }
         prev = Some((px, py));
+    }
+    for dy in -1..=1 {
+        for dx in -1..=1 {
+            canvas.plot(bead.0 + dx, bead.1 + dy, 'o');
+        }
     }
 }
 

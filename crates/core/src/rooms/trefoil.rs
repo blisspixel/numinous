@@ -43,25 +43,28 @@ fn draw(canvas: &mut dyn Surface, ph: f64, seed: u64) {
     }
     let cx = (width.saturating_sub(1) / 2) as f64;
     let cy = (height.saturating_sub(1) / 2) as f64;
-    let sc = (width.min(height) as f64) * 0.28;
-    let rot = if seed == 0 {
-        0.0
-    } else {
-        (seed % 7) as f64 * 0.05
-    };
+    let sc = (width.min(height) as f64) * 0.3;
+    // Phase is camera turn; re-parametrizing a closed knot alone is invisible.
+    let rot = ph
+        + if seed == 0 {
+            0.0
+        } else {
+            (seed % 7) as f64 * 0.05
+        };
     // Parametric trefoil: (sin t + 2 sin 2t, cos t - 2 cos 2t, -sin 3t)
-    let steps = 420;
+    let steps = 480;
     let mut prev: Option<(i32, i32)> = None;
+    let mut bead = (0_i32, 0_i32);
     for i in 0..=steps {
-        let t = ph + 2.0 * std::f64::consts::PI * (i as f64 / steps as f64);
+        let t = 2.0 * std::f64::consts::PI * (i as f64 / steps as f64);
         let x = t.sin() + 2.0 * (2.0 * t).sin();
         let y = t.cos() - 2.0 * (2.0 * t).cos();
         let z = -(3.0 * t).sin();
         let xr = x * rot.cos() - y * rot.sin();
         let yr = x * rot.sin() + y * rot.cos();
-        let d = 1.0 / (3.2 + z * 0.3);
+        let d = 1.0 / (3.0 + z * 0.35);
         let px = (cx + xr * sc * d * 1.2).round() as i32;
-        let py = (cy - yr * sc * d * 0.85).round() as i32;
+        let py = (cy - yr * sc * d * 0.9).round() as i32;
         if let Some((ox, oy)) = prev {
             let ch = if z > 0.2 {
                 '#'
@@ -73,7 +76,15 @@ fn draw(canvas: &mut dyn Surface, ph: f64, seed: u64) {
             canvas.line(ox, oy, px, py, ch);
             canvas.line(ox, oy + 1, px, py + 1, if z > 0.0 { '*' } else { '.' });
         }
+        if i == 0 {
+            bead = (px, py);
+        }
         prev = Some((px, py));
+    }
+    for dy in -1..=1 {
+        for dx in -1..=1 {
+            canvas.plot(bead.0 + dx, bead.1 + dy, 'o');
+        }
     }
 }
 

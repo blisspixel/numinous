@@ -43,20 +43,31 @@ fn draw(canvas: &mut dyn Surface, tau: f64, seed: u64) {
     }
     let tau = tau.clamp(0.04, 2.0);
     // 1D heat kernel K(x,t) = (4 pi t)^{-1/2} exp(-x^2/(4t))
+    // Fixed vertical scale so early-time peaks actually grow taller on the plate.
     let amp = 1.0 / (4.0 * std::f64::consts::PI * tau).sqrt();
-    let y0 = height as f64 * 0.9;
-    let y_scale = height as f64 * 0.75 / amp.max(0.1);
+    let y0 = height as f64 * 0.92;
+    let y_scale = height as f64 * 0.55;
     let mut prev: Option<(i32, i32)> = None;
     for col in 0..width {
         let x = -3.0 + 6.0 * (col as f64) / width.saturating_sub(1).max(1) as f64;
         let k = amp * (-x * x / (4.0 * tau)).exp();
-        let py = (y0 - k * y_scale).round() as i32;
+        let py = (y0 - k * y_scale)
+            .clamp(1.0, height.saturating_sub(2) as f64)
+            .round() as i32;
+        // Fill under the curve so the kernel is a lobe, not a wire.
+        let base = y0.round() as i32;
+        let mut fy = py;
+        while fy <= base {
+            canvas.plot(col as i32, fy, if fy == py { '#' } else { '.' });
+            fy += 2;
+        }
         if let Some((ox, oy)) = prev {
             canvas.line(ox, oy, col as i32, py, '#');
+            canvas.line(ox, oy + 1, col as i32, py + 1, '*');
         }
         prev = Some((col as i32, py));
     }
-    // sigma tick: width ~ sqrt(2 tau)
+    // sigma ticks: width ~ sqrt(2 tau)
     let sig = (2.0 * tau).sqrt();
     let px = (((sig + 3.0) / 6.0) * width.saturating_sub(1) as f64).round() as i32;
     canvas.line(
