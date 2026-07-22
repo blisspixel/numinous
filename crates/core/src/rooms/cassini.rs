@@ -1,6 +1,7 @@
 //! Cassini ovals: product of distances to two foci is constant.
 //!
-//! DRAG: TUNE B. See `docs/ROOMS.md`.
+//! Ambient phase draws the ovals with a pen. DRAG: TUNE B.
+//! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -24,7 +25,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
 }
 
 /// Ratio b/a: below 1 two loops, at 1 lemniscate, above 1 single oval.
-fn ratio(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn ratio(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -33,11 +34,12 @@ fn ratio(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         0.7 + x * 0.8 + s
     } else {
-        0.9 + phase_unit(t) * 0.55 + s
+        // Ambient b/a holds a readable oval family; motion lives in the pen.
+        1.05 + s
     }
 }
 
-fn draw(canvas: &mut dyn Surface, ba: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, ba: f64, show: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -57,8 +59,18 @@ fn draw(canvas: &mut dyn Surface, ba: f64, seed: u64) {
     };
     let cos_r = rot.cos();
     let sin_r = rot.sin();
+    let show = show.clamp(0.0, 1.0);
     // Polar form: r^2 = a^2 cos(2th) +/- sqrt(b^4 - a^4 sin^2(2th))
     let steps = 480;
+    let drawn = ((show * steps as f64).round() as usize).min(steps);
+    let ch = if ba < 1.0 {
+        '*'
+    } else if (ba - 1.0).abs() < 0.05 {
+        '8'
+    } else {
+        '#'
+    };
+    // Soft ghost of full branches.
     for sign in [1.0_f64, -1.0] {
         let mut prev: Option<(i32, i32)> = None;
         for i in 0..=steps {
@@ -83,15 +95,42 @@ fn draw(canvas: &mut dyn Surface, ba: f64, seed: u64) {
             let px = (cx + xr).round() as i32;
             let py = (cy - yr * 0.9).round() as i32;
             if let Some((ox, oy)) = prev {
-                let ch = if ba < 1.0 {
-                    '*'
-                } else if (ba - 1.0).abs() < 0.05 {
-                    '8'
-                } else {
-                    '#'
-                };
+                canvas.line(ox, oy, px, py, '.');
+            }
+            prev = Some((px, py));
+        }
+    }
+    // Bright path so far.
+    let mut tip = (cx.round() as i32, cy.round() as i32);
+    for sign in [1.0_f64, -1.0] {
+        let mut prev: Option<(i32, i32)> = None;
+        for i in 0..=drawn {
+            let th = 2.0 * std::f64::consts::PI * (i as f64 / steps as f64);
+            let c2 = (2.0 * th).cos();
+            let s2 = (2.0 * th).sin();
+            let disc = b4 - a2 * a2 * s2 * s2;
+            if disc < 0.0 {
+                prev = None;
+                continue;
+            }
+            let r2 = a2 * c2 + sign * disc.sqrt();
+            if r2 <= 0.0 {
+                prev = None;
+                continue;
+            }
+            let r = r2.sqrt();
+            let x = r * th.cos();
+            let y = r * th.sin();
+            let xr = x * cos_r - y * sin_r;
+            let yr = x * sin_r + y * cos_r;
+            let px = (cx + xr).round() as i32;
+            let py = (cy - yr * 0.9).round() as i32;
+            if let Some((ox, oy)) = prev {
                 canvas.line(ox, oy, px, py, ch);
                 canvas.line(ox, oy + 1, px, py + 1, '.');
+            }
+            if sign > 0.0 {
+                tip = (px, py);
             }
             prev = Some((px, py));
         }
@@ -105,6 +144,13 @@ fn draw(canvas: &mut dyn Surface, ba: f64, seed: u64) {
         for dy in -1..=1 {
             for dx in -1..=1 {
                 canvas.plot(px + dx, py + dy, 'o');
+            }
+        }
+    }
+    for dy in -2..=2 {
+        for dx in -2..=2 {
+            if dx * dx + dy * dy <= 5 {
+                canvas.plot(tip.0 + dx, tip.1 + dy, 'o');
             }
         }
     }
@@ -135,13 +181,13 @@ impl Room for Cassini {
             id: "cassini",
             title: "Cassini Ovals",
             wing: "Shape & Space",
-            blurb: "Product of distances to two foci is b^2. t and DRAG: TUNE B.",
+            blurb: "Two-foci product curves draw themselves. Watch the pen; DRAG: TUNE B.",
             accent: [140, 60, 120],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, ratio(t, None, self.seed), self.seed);
+        draw(canvas, ratio(t, None, self.seed), phase_unit(t), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -164,20 +210,18 @@ impl Room for Cassini {
 
     fn status(&self, t: f64) -> Option<String> {
         let ba = ratio(t, None, self.seed);
-        let shape = if ba < 0.95 {
-            "2loop"
-        } else if ba > 1.05 {
-            "oval"
-        } else {
-            "lemni"
-        };
-        Some(format!("b/a={ba:.2}  {shape}  DRAG:B"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("b/a={ba:.2}  draw={p}%  DRAG"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let ba = ratio(t, hands.last().copied(), self.seed);
-        draw(canvas, ba, self.seed ^ hands.len() as u64);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, ba, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -215,7 +259,7 @@ mod tests {
     #[test]
     fn status_invites() {
         let s = Cassini::new().status(0.3).unwrap();
-        assert!(s.contains("DRAG") || s.contains("b/a"));
+        assert!(s.contains("DRAG") || s.contains("draw"));
         assert!(s.chars().count() <= 56);
     }
 
@@ -234,6 +278,18 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn ambient_pen_moves_the_plate() {
+        let r = Cassini::new();
+        let mut a = Canvas::new(80, 48);
+        let mut b = Canvas::new(80, 48);
+        r.render(&mut a, 0.15);
+        r.render(&mut b, 0.75);
+        assert_ne!(a.to_text(), b.to_text(), "pen must walk the ovals");
+        assert!(a.ink_count() > 40);
+        assert!(b.ink_count() > 40);
     }
 
     #[test]
