@@ -1,6 +1,7 @@
 //! Fermat (parabolic) spiral: r^2 = a^2 theta.
 //!
-//! DRAG: TUNE TURNS. See `docs/ROOMS.md`.
+//! Ambient phase unfurls both equal-area arms. DRAG: TUNE TURNS.
+//! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -23,7 +24,7 @@ fn finite_pokes(pokes: &[(f64, f64)]) -> Vec<(f64, f64)> {
         .collect()
 }
 
-fn turns(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
+fn turns(_t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     let s = if seed == 0 {
         0.0
     } else {
@@ -32,11 +33,12 @@ fn turns(t: f64, hand: Option<(f64, f64)>, seed: u64) -> f64 {
     if let Some((x, _)) = hand {
         1.0 + x * 6.0 + s
     } else {
-        2.0 + phase_unit(t) * 4.0 + s
+        // Ambient turns hold a readable pair of arms; motion lives in unfurl.
+        4.0 + s
     }
 }
 
-fn draw(canvas: &mut dyn Surface, n_turns: f64, seed: u64) {
+fn draw(canvas: &mut dyn Surface, n_turns: f64, unfurl: f64, seed: u64) {
     let (width, height) = canvas.draw_bounds();
     if width == 0 || height == 0 {
         return;
@@ -50,7 +52,12 @@ fn draw(canvas: &mut dyn Surface, n_turns: f64, seed: u64) {
     } else {
         (seed % 9) as f64 * 0.05
     };
+    let unfurl = unfurl.clamp(0.0, 1.0);
+    // Unfurl grows both arms from the center outward.
+    let active = 0.12 + 0.88 * unfurl;
     let steps = 500;
+    let drawn = ((active * steps as f64).round() as usize).min(steps);
+    // Soft ghost of the full double arm.
     let mut prev: Option<(i32, i32)> = None;
     for i in 0..=steps {
         let th = max_th * (i as f64 / steps as f64);
@@ -59,11 +66,10 @@ fn draw(canvas: &mut dyn Surface, n_turns: f64, seed: u64) {
         let px = (cx + r * ang.cos()).round() as i32;
         let py = (cy - r * ang.sin()).round() as i32;
         if let Some((ox, oy)) = prev {
-            canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy, px, py, '.');
         }
         prev = Some((px, py));
     }
-    // opposite arm (negative theta branch of r^2 = a^2 theta)
     prev = None;
     for i in 0..=steps {
         let th = max_th * (i as f64 / steps as f64);
@@ -72,9 +78,49 @@ fn draw(canvas: &mut dyn Surface, n_turns: f64, seed: u64) {
         let px = (cx + r * ang.cos()).round() as i32;
         let py = (cy - r * ang.sin()).round() as i32;
         if let Some((ox, oy)) = prev {
-            canvas.line(ox, oy, px, py, '*');
+            canvas.line(ox, oy, px, py, '.');
         }
         prev = Some((px, py));
+    }
+    // Bright arms so far.
+    prev = None;
+    let mut tip_a = (cx.round() as i32, cy.round() as i32);
+    for i in 0..=drawn {
+        let th = max_th * (i as f64 / steps as f64);
+        let r = a * th.sqrt();
+        let ang = th + rot;
+        let px = (cx + r * ang.cos()).round() as i32;
+        let py = (cy - r * ang.sin()).round() as i32;
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
+        }
+        tip_a = (px, py);
+        prev = Some((px, py));
+    }
+    prev = None;
+    let mut tip_b = (cx.round() as i32, cy.round() as i32);
+    for i in 0..=drawn {
+        let th = max_th * (i as f64 / steps as f64);
+        let r = a * th.sqrt();
+        let ang = th + rot + std::f64::consts::PI;
+        let px = (cx + r * ang.cos()).round() as i32;
+        let py = (cy - r * ang.sin()).round() as i32;
+        if let Some((ox, oy)) = prev {
+            canvas.line(ox, oy, px, py, '#');
+            canvas.line(ox, oy + 1, px, py + 1, '*');
+        }
+        tip_b = (px, py);
+        prev = Some((px, py));
+    }
+    for tip in [tip_a, tip_b] {
+        for dy in -2..=2 {
+            for dx in -2..=2 {
+                if dx * dx + dy * dy <= 5 {
+                    canvas.plot(tip.0 + dx, tip.1 + dy, 'o');
+                }
+            }
+        }
     }
 }
 
@@ -103,13 +149,13 @@ impl Room for FermatSpiral {
             id: "fermat-spiral",
             title: "Fermat Spiral",
             wing: "Shape & Space",
-            blurb: "Parabolic spiral r squared equals a squared theta. t and DRAG: TUNE TURNS.",
+            blurb: "Equal-area arms unfurl together. Watch the tips; DRAG: TUNE TURNS.",
             accent: [200, 160, 40],
         }
     }
 
     fn render(&self, canvas: &mut dyn Surface, t: f64) {
-        draw(canvas, turns(t, None, self.seed), self.seed);
+        draw(canvas, turns(t, None, self.seed), phase_unit(t), self.seed);
     }
 
     fn postcard_t(&self) -> f64 {
@@ -132,13 +178,18 @@ impl Room for FermatSpiral {
 
     fn status(&self, t: f64) -> Option<String> {
         let n = turns(t, None, self.seed);
-        Some(format!("turns={n:.1}  fermat  DRAG"))
+        let p = (phase_unit(t) * 100.0).round() as i32;
+        Some(format!("turns={n:.1}  unfurl={p}%  DRAG"))
     }
 
     fn render_poked(&self, canvas: &mut dyn Surface, t: f64, pokes: &[(f64, f64)]) {
         let hands = finite_pokes(pokes);
         let n = turns(t, hands.last().copied(), self.seed);
-        draw(canvas, n, self.seed ^ hands.len() as u64);
+        let show = hands
+            .last()
+            .map(|&(_, y)| y)
+            .unwrap_or_else(|| phase_unit(t));
+        draw(canvas, n, show, self.seed ^ hands.len() as u64);
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -170,7 +221,7 @@ mod tests {
     #[test]
     fn status_invites() {
         let s = FermatSpiral::new().status(0.3).unwrap();
-        assert!(s.contains("DRAG") || s.contains("turns"));
+        assert!(s.contains("DRAG") || s.contains("unfurl"));
         assert!(s.chars().count() <= 56);
     }
 
@@ -189,6 +240,18 @@ mod tests {
             )
             .unwrap();
         assert_ne!(o, a);
+    }
+
+    #[test]
+    fn ambient_unfurl_moves_the_plate() {
+        let r = FermatSpiral::new();
+        let mut a = Canvas::new(80, 48);
+        let mut b = Canvas::new(80, 48);
+        r.render(&mut a, 0.15);
+        r.render(&mut b, 0.75);
+        assert_ne!(a.to_text(), b.to_text(), "arms must unfurl");
+        assert!(a.ink_count() > 40);
+        assert!(b.ink_count() > 40);
     }
 
     #[test]
