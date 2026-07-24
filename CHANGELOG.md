@@ -5,6 +5,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- Game of Life first-contact status invites the hand (`CLICK:GLIDER`) instead of
+  only naming soup inventory (`GLIDERS 0`). Compact opening matches. Agent
+  tactile round-09 probes Life at t=0 so the opening invite is the bar.
+
 ### Added
 - Bloch Sphere joins Shape & Space as room 354 (`bloch-sphere`): pure qubit
   states on S^2, poles |0>/|1>, equator goal (equal superposition), Born P0

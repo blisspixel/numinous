@@ -18,7 +18,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 DRIVER = ROOT / "scripts" / "mcp-play.py"
-OUT = ROOT / ".agent" / "tester-cohort" / "round-08-tactile-0.3"
+OUT = ROOT / ".agent" / "tester-cohort" / "round-09-tactile-0.3"
 
 
 @dataclass(frozen=True)
@@ -70,16 +70,17 @@ PROBES = [
         slug="game-of-life",
         title="Game of Life",
         open_tool="play_room",
-        open_args={"id": "game-of-life", "t": 0.2, "width": 56, "height": 28},
+        open_args={"id": "game-of-life", "t": 0.0, "width": 56, "height": 28},
         hand_tool="play_room",
         hand_args={
             "id": "game-of-life",
-            "t": 0.2,
+            "t": 0.0,
             "width": 56,
             "height": 28,
             "pokes": [[0.45, 0.45]],
         },
-        invite_tokens=("CLICK", "GLIDER", "PLACE", "LIFE", "GEN"),
+        # Opening must invite the plant; GEN alone is ambient soup.
+        invite_tokens=("CLICK", "GLIDER", "PLACE"),
         expect_status_change=True,
     ),
     Probe(

@@ -219,9 +219,10 @@ impl LifeSession {
         };
         let tracking = self.tracking_status();
         match self.event {
+            // Opening must invite the hand: GLIDERS 0 alone is ambient inventory.
             LifeEvent::Opening => format!(
-                "B3/S23  GEN {}  LIVE {}  {glider} {}{tracking}",
-                self.generation, self.live_cells, self.launches,
+                "CLICK:GLIDER  GEN {}  LIVE {}{tracking}",
+                self.generation, self.live_cells,
             ),
             LifeEvent::Launch { planted, cleared } => format!(
                 "PLANTED {planted}  CLEARED {cleared}  GEN {}  LIVE {}  {glider} {}{tracking}",
@@ -238,10 +239,7 @@ impl LifeSession {
     #[must_use]
     pub fn compact_status(&self) -> String {
         match self.event {
-            LifeEvent::Opening => format!(
-                "RULE B3/S23 G{} L{} GL{}",
-                self.generation, self.live_cells, self.launches
-            ),
+            LifeEvent::Opening => format!("CLICK:GLIDER G{} L{}", self.generation, self.live_cells),
             LifeEvent::Launch { planted, cleared } => format!(
                 "PLANT{planted} CLEAR{cleared} G{} L{} GL{}",
                 self.generation, self.live_cells, self.launches
@@ -952,8 +950,21 @@ mod tests {
     }
 
     #[test]
+    fn life_opening_status_invites_a_glider_click() {
+        let open = LifeSession::new(0).status();
+        assert!(open.contains("CLICK"), "got: {open}");
+        assert!(open.contains("GLIDER"), "got: {open}");
+        assert!(open.chars().count() <= 56, "got: {open}");
+        let compact = LifeSession::new(0).compact_status();
+        assert!(compact.contains("CLICK"), "got: {compact}");
+        assert!(compact.chars().count() <= 56, "got: {compact}");
+    }
+
+    #[test]
     fn life_session_status_names_the_action_then_the_rule_consequence() {
         let mut session = LifeSession::new(0);
+        let open = session.status();
+        assert!(open.starts_with("CLICK:GLIDER"), "got: {open}");
         session.launch((0.4, 0.6));
         let launched = session.status();
         assert!(launched.contains("GLIDER 1"), "got: {launched}");
