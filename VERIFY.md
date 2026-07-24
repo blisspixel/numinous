@@ -312,14 +312,14 @@ the app and CLI plus structured notation over MCP, the `forget` right for
 players who are minds, and 30 MCP tools (29 play tools with full CLI parity for the games,
 plus one local broadcast consent control;
 challenge, predict, and cairn are MCP-first) so agents play the same content.
-Pending for product 0.2 (critical path; see **Critical path right now** in
-`docs/ROADMAP.md`): stranger hallway on Times Tables and Buffon engineered
-ahas, arrival-card clarity with real humans, and plate beauty under real
-window sizes. Soft-thin densify, bulk new rooms, and Phase B glow are not
-substitutes for that human gate.
+Product 0.2 Flagship Proof is exit-met on the agent-and-machine bar (see
+**Critical path right now** in `docs/ROADMAP.md`): Times Tables and Buffon
+engineered ahas, MCP wager path, `scripts/agent-hallway.py` PASS, F9 capture,
+green CI. Human stranger hallway is deferred to 0.8 / 1.0.
 
-Also pending later gates: deeper held and causal interactions in other rooms,
-representative physical-controller sessions, musician-led long-listening
-review, physical clean-machine cross-platform proof, full Studio save/share
-beyond the first CLI `.num` save/open slice, the music visualizer, and more
-GPU room paths.
+Pending next (0.3 and later): deeper held and causal interactions on the five
+flagships, representative physical-controller sessions, musician-led
+long-listening, accessibility review, physical clean-machine cross-platform
+proof, full Studio save/share beyond the first CLI `.num` slice, the music
+visualizer, and more GPU room paths. Soft-thin densify and Phase B glow are
+not the default next move.

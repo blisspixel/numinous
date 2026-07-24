@@ -23,18 +23,17 @@ machine scans; ambient phase is a show on growing sets of curves and waves
 (not a static graph), including the cycle-166 and cycle-167 pen and unfurl
 packs and the cycle-168 plate bug-hunt; soft-thin densify continues where
 honest but is not the critical path. App Enter starts The Show. Exceptional
-Path Phase A App vertical slices are Built on the machine path: Times Tables
-and Buffon five-beat engineered ahas (generation before reveal, morph, hand
-confirm, gated punchline). **Critical path for product 0.2:** stranger hallway
-on those visits, then arrival-card clarity and real-window plate beauty.
+Path Phase A is Built on App and MCP: Times Tables and Buffon five-beat
+engineered ahas, agent hallway cohort PASS, F9 capture. **0.2 Flagship Proof
+is exit-met on the agent-and-machine bar;** human stranger hallway is deferred
+to 0.8 / 1.0. **Critical path now:** 0.3 Tactile Alpha and keep CI green.
 Soft-thin densify, bulk new rooms, and Phase B glow are not the high-leverage
 next move. Supply chain is current on public `main` (empty deny/audit ignores,
 weekly Dependabot, pinned CI actions); detail in `ENGINEERING.md`. The six-
 question plate filter, contact-language, and MCP teammate posture live in
-`RESEARCH.md`. Public CI passes on Windows, macOS, and Ubuntu, but capability
-breadth remains ahead of release evidence: stranger playtests, accessibility
-work, and real macOS and Linux execution remain open. See `../CHANGELOG.md` and
-**Critical path right now** in `ROADMAP.md`. These docs remain the plan of
+`RESEARCH.md`. Public CI passes on Windows, macOS, and Ubuntu. Accessibility
+and physical multi-OS App sessions remain later gates. See `../CHANGELOG.md`
+and **Critical path right now** in `ROADMAP.md`. These docs remain the plan of
 record; Built, Measured, Observed, Designed, and Hypothesis have the meanings
 defined in `RESEARCH.md`.
 
