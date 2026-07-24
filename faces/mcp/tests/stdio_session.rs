@@ -246,6 +246,10 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
         "K 5.00  CLOSED  4 LOBES  FOUND"
     );
     assert_eq!(by_id(6)["result"]["structuredContent"]["goalMet"], true);
+    assert_eq!(
+        by_id(6)["result"]["structuredContent"]["engineeredAha"]["earn"],
+        "four-lobes"
+    );
     assert!(text_of(by_id(7)).contains("Mandelbrot"));
     assert_eq!(by_id(9)["result"]["structuredContent"]["state"], "stopped");
 

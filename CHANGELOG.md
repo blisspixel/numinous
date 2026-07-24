@@ -5,6 +5,34 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- Hallway F9 notes capture flagship aha state on Times Tables and Buffon
+  ordinary visits: beat label, footer status, earn path, reveal and summon
+  flags, and aha-plate overlay. Notes also add engineered-aha facilitator
+  prompts (wager discovery, morph summon, confirm hand play, furthest beat,
+  consolidation without narration). The Show visits omit aha state so Show
+  sweeps are not mistaken for ordinary-visit progress. Core exposes stable
+  `beat_label` / `earn_label` on both aha modules for diagnostics. App tests
+  cover both rooms' wire path.
+- MCP `play_room` optional `place_wager` (Times Tables), `number_wager`
+  (Buffon), and `aha_summon` walk the engineered aha without App session
+  state. `structuredContent.engineeredAha` reports beat, earn, status, and
+  allowReveal; generation args withhold reveal until summon consolidates.
+  Watch Agent admits the new keys without changing native room bodies.
+  `scripts/agent-hallway.py` runs a five-persona MCP cohort note pack under
+  `.agent/tester-cohort/round-07-flagship-aha/` (agent evidence, not human
+  stranger hallway). INTERFACES documents the MCP aha contract.
+
+### Fixed
+- Flagship aha Confirm and Consolidated footers name the next E action
+  (`PRESS E` after morph, `E:WHY` after consolidation) so the dual-plate and
+  circle stages are not a silent dead end before the punchline.
+- Times Tables Prime footer invites a place guess (`WHERE? 1=M 2=N 3=C`)
+  instead of only naming the heart, so the generation act is readable without
+  narration.
+- MCP K5 four-lobe earn without place_wager keeps the dial status line, so
+  agents do not see PRESS E when goalMet already unlocks reveal.
+
 ### Changed
 - Docs: ROADMAP, ENGINEERING, README, docs index, NORTH_STAR, and PEDAGOGY name
   the same critical path: 0.2 is blocked on stranger hallway for Times Tables

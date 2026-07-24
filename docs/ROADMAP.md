@@ -1023,8 +1023,20 @@ keys 1-4 and bottom number line, same E/Inspect summon path and gated reveal.
 
 **Still open for product exit (this is the critical path).** Stranger hallway
 on both engineered ahas; arrival-card clarity with real humans; plate beauty
-under real window sizes. Optional MCP structured fields for place and number
-wagers.
+under real window sizes. Agent MCP cohort scripts and optional wager fields are
+machine support, not a substitute for that human gate.
+
+**Done (hallway capture readiness, machine path):** F9 playtest notes on Times
+Tables and Buffon ordinary visits now record aha beat, earn path, footer
+status, reveal/summon flags, and aha-specific facilitator prompts so session
+findings map to the five-beat machine. The Show omits aha state. This does not
+satisfy the stranger evidence gate.
+
+**Done (MCP flagship aha fields + agent cohort, machine path):** `play_room`
+accepts `place_wager`, `number_wager`, and `aha_summon` with
+`structuredContent.engineeredAha`. `scripts/agent-hallway.py` records a
+five-persona MCP cohort under `.agent/tester-cohort/round-07-flagship-aha/`.
+Agent evidence only; product 0.2 still requires human strangers.
 
 **Out of scope for the slice and not the next high-leverage move.** HDR glow
 (Phase B, only if sensory ceiling binds), Constellation Rumor-Mode (Phase C),

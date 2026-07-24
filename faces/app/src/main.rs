@@ -1179,6 +1179,7 @@ impl App {
         let room = self.rooms.get(self.current).ok_or_else(|| {
             std::io::Error::new(std::io::ErrorKind::NotFound, "current room is missing")
         })?;
+        let flagship_aha = self.flagship_aha_playtest_note();
         let snapshot = playtest::PlaytestSnapshot {
             room: room.as_ref(),
             journey: &self.journey,
@@ -1190,9 +1191,40 @@ impl App {
             time_scale: self.time_scale,
             poke_points: &self.pokes,
             active_mode: self.playtest_mode(),
+            flagship_aha,
         };
         let report = playtest::build_report(&snapshot, now);
         playtest::write_report(dir, now, &report)
+    }
+
+    /// Capture Times Tables / Buffon aha state for hallway F9 notes.
+    fn flagship_aha_playtest_note(&self) -> Option<playtest::FlagshipAhaNote> {
+        if self.the_show {
+            return None;
+        }
+        if self.current_room_is_times_tables() {
+            let aha = &self.times_tables_aha;
+            return Some(playtest::FlagshipAhaNote {
+                beat: aha.beat_label().to_string(),
+                status: aha.status(None),
+                earn: aha.earn_label().unwrap_or("none").to_string(),
+                allow_reveal: aha.allow_reveal_text(),
+                can_summon: aha.can_summon(),
+                aha_plate: aha.uses_aha_plate(),
+            });
+        }
+        if self.current_room_is_buffon() {
+            let aha = &self.buffon_aha;
+            return Some(playtest::FlagshipAhaNote {
+                beat: aha.beat_label().to_string(),
+                status: aha.status(None),
+                earn: aha.earn_label().unwrap_or_else(|| "none".to_string()),
+                allow_reveal: aha.allow_reveal_text(),
+                can_summon: aha.can_summon(),
+                aha_plate: aha.uses_circle_overlay(),
+            });
+        }
+        None
     }
 
     fn playtest_mode(&self) -> &'static str {
@@ -5905,6 +5937,73 @@ mod tests {
         assert!(report.contains("Poke points newest-last: (0.200,0.400) (0.800,0.100)"));
         assert!(report.contains("Sound: off"));
         assert!(report.contains("First unprompted whoa"));
+        let _ = std::fs::remove_dir_all(dir);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn playtest_note_captures_times_tables_aha_beat() {
+        let mut app = headless("numinous_app_test_playtest_aha.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "times-tables")
+            .expect("times-tables in catalog");
+        app.reset_room_runtime();
+        app.times_tables_aha.note_hand_multiplier(2.0);
+        assert_eq!(app.times_tables_aha.beat_label(), "prime");
+        let dir = std::env::temp_dir().join("numinous_app_playtest_aha");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let path = app
+            .save_playtest_note_to(&dir, UNIX_EPOCH + Duration::from_secs(101))
+            .expect("report saved");
+        let report = std::fs::read_to_string(&path).expect("report readable");
+
+        assert!(report.contains("## Flagship Aha Snapshot"));
+        assert!(report.contains("- Aha beat: prime"));
+        assert!(report.contains("- Earn path: none"));
+        assert!(report.contains("### Engineered aha (Times Tables / Buffon)"));
+        assert!(report.contains("Observable aha or consolidation moment"));
+
+        // The Show must not claim ordinary-visit aha state.
+        app.the_show = true;
+        let path_show = app
+            .save_playtest_note_to(&dir, UNIX_EPOCH + Duration::from_secs(102))
+            .expect("show report saved");
+        let show_report = std::fs::read_to_string(&path_show).expect("show report readable");
+        assert!(!show_report.contains("## Flagship Aha Snapshot"));
+
+        let _ = std::fs::remove_dir_all(dir);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn playtest_note_captures_buffon_aha_beat() {
+        let mut app = headless("numinous_app_test_playtest_buffon_aha.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "buffon-needle")
+            .expect("buffon-needle in catalog");
+        app.reset_room_runtime();
+        app.buffon_aha.note_throws(1);
+        assert!(app.buffon_aha.commit_wager(3.0));
+        assert_eq!(app.buffon_aha.beat_label(), "withheld");
+        let dir = std::env::temp_dir().join("numinous_app_playtest_buffon_aha");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let path = app
+            .save_playtest_note_to(&dir, UNIX_EPOCH + Duration::from_secs(201))
+            .expect("report saved");
+        let report = std::fs::read_to_string(&path).expect("report readable");
+
+        assert!(report.contains("## Flagship Aha Snapshot"));
+        assert!(report.contains("- Aha beat: withheld"));
+        assert!(report.contains("- Earn path: wager:3.000:close"));
+        assert!(report.contains("- Can summon with E: yes"));
+        assert!(report.contains("### Engineered aha (Times Tables / Buffon)"));
+
         let _ = std::fs::remove_dir_all(dir);
         let _ = std::fs::remove_file(&app.journey_file);
     }
