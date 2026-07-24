@@ -336,13 +336,15 @@ impl TimesTablesAha {
                 let pct = (progress * 100.0).round() as i32;
                 format!("MORPH {pct}%")
             }
+            // E consolidates to the punchline; keep the summon cue visible even
+            // when a dial readout is present so Confirm is not a dead end.
             AhaBeat::Confirm => match dial {
-                Some(d) => format!("BOTH  {d}"),
-                None => "BOTH  DRAG DIAL".to_string(),
+                Some(d) => format!("BOTH E  {d}"),
+                None => "BOTH  PRESS E".to_string(),
             },
             AhaBeat::Consolidated => match dial {
                 Some(d) => format!("ONE HEART  {d}"),
-                None => "ONE HEART".to_string(),
+                None => "ONE HEART  E:WHY".to_string(),
             },
         }
     }
@@ -757,6 +759,13 @@ mod tests {
         aha.summon();
         aha.set_morph_progress(0.5);
         assert!(aha.status(None).chars().count() <= 16);
+        aha.set_morph_progress(1.0);
+        assert_eq!(aha.beat(), AhaBeat::Confirm);
+        assert!(aha.status(None).contains("PRESS E"));
+        assert!(aha.status(None).chars().count() <= 16);
+        assert!(aha.summon());
+        assert!(aha.status(None).contains("E:WHY"));
+        assert!(aha.status(None).chars().count() <= 20);
     }
 
     #[test]

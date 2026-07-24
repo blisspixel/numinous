@@ -5979,6 +5979,36 @@ mod tests {
     }
 
     #[test]
+    fn playtest_note_captures_buffon_aha_beat() {
+        let mut app = headless("numinous_app_test_playtest_buffon_aha.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "buffon-needle")
+            .expect("buffon-needle in catalog");
+        app.reset_room_runtime();
+        app.buffon_aha.note_throws(1);
+        assert!(app.buffon_aha.commit_wager(3.0));
+        assert_eq!(app.buffon_aha.beat_label(), "withheld");
+        let dir = std::env::temp_dir().join("numinous_app_playtest_buffon_aha");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let path = app
+            .save_playtest_note_to(&dir, UNIX_EPOCH + Duration::from_secs(201))
+            .expect("report saved");
+        let report = std::fs::read_to_string(&path).expect("report readable");
+
+        assert!(report.contains("## Flagship Aha Snapshot"));
+        assert!(report.contains("- Aha beat: withheld"));
+        assert!(report.contains("- Earn path: wager:3.000:close"));
+        assert!(report.contains("- Can summon with E: yes"));
+        assert!(report.contains("### Engineered aha (Times Tables / Buffon)"));
+
+        let _ = std::fs::remove_dir_all(dir);
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
     fn playtest_shortcut_is_global_and_reports_failures() {
         use winit::keyboard::{Key, NamedKey};
         let mut app = headless("numinous_app_test_playtest_shortcut.txt");

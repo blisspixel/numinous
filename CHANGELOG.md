@@ -12,7 +12,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   prompts (wager discovery, morph summon, confirm hand play, furthest beat,
   consolidation without narration). The Show visits omit aha state so Show
   sweeps are not mistaken for ordinary-visit progress. Core exposes stable
-  `beat_label` / `earn_label` on both aha modules for diagnostics.
+  `beat_label` / `earn_label` on both aha modules for diagnostics. App tests
+  cover both rooms' wire path.
+
+### Fixed
+- Flagship aha Confirm and Consolidated footers name the next E action
+  (`PRESS E` after morph, `E:WHY` after consolidation) so the dual-plate and
+  circle stages are not a silent dead end before the punchline.
 
 ### Changed
 - Docs: ROADMAP, ENGINEERING, README, docs index, NORTH_STAR, and PEDAGOGY name
