@@ -23,6 +23,7 @@ use winit::window::{Icon, Window, WindowId};
 
 mod audio_state;
 mod bindings;
+mod console;
 mod feedback;
 mod gamepad;
 mod hud;
@@ -414,6 +415,8 @@ struct App {
     journey_file: std::path::PathBuf,
     /// Where scores persist (the shared table; a scratch file in tests).
     scores_file: std::path::PathBuf,
+    /// Power-user console (` / ~): room load, phase, variation, and friends.
+    console: console::Console,
 }
 
 impl App {
@@ -500,6 +503,7 @@ impl App {
             radio_until: None,
             journey_file,
             scores_file,
+            console: console::Console::default(),
         }
     }
 
@@ -2488,6 +2492,189 @@ impl App {
         self.update_audio();
     }
 
+    /// Jump to a catalog index without bumping variation (console / power users).
+    fn goto_room_index(&mut self, index: usize) {
+        if index >= self.rooms.len() {
+            return;
+        }
+        if self.the_show && self.show_crossfade_prev.is_some() {
+            self.show_crossfade_frames = SHOW_CROSSFADE_FRAMES;
+        }
+        self.current = index;
+        self.reset_room_runtime();
+        self.tune = Arc::new(Vec::new());
+        if let Some(window) = &self.window {
+            window.set_title(&self.title());
+        }
+        self.visit_current();
+        self.update_audio();
+    }
+
+    /// Rebind rooms at a variation seed while keeping the same room id when possible.
+    fn set_variation_seed(&mut self, variation: u64) {
+        let id = self
+            .rooms
+            .get(self.current)
+            .map(|r| r.meta().id)
+            .unwrap_or("");
+        self.variation = variation;
+        self.rooms = all_rooms_with(variation);
+        if let Some(i) = self.rooms.iter().position(|r| r.meta().id == id) {
+            self.current = i;
+        } else if !self.rooms.is_empty() {
+            self.current = self.current.min(self.rooms.len() - 1);
+        }
+        self.reset_room_runtime();
+        self.tune = Arc::new(Vec::new());
+        if let Some(window) = &self.window {
+            window.set_title(&self.title());
+        }
+        self.visit_current();
+        self.update_audio();
+    }
+
+    /// Apply one parsed console command; returns log lines to print.
+    fn run_console_command(&mut self, command: console::Command) -> Vec<String> {
+        use console::Command;
+        match command {
+            Command::Empty => Vec::new(),
+            Command::Close => {
+                self.console.close();
+                Vec::new()
+            }
+            Command::Clear => {
+                self.console.clear_log();
+                Vec::new()
+            }
+            Command::Help => console::help_lines(),
+            Command::Where => {
+                let room = &self.rooms[self.current];
+                let meta = room.meta();
+                vec![format!(
+                    "[{}] {}  t={:.3}  vary={}  speed={:.2}",
+                    meta.id,
+                    meta.title,
+                    self.t.clamp(0.0, 1.0),
+                    self.variation,
+                    self.time_scale
+                )]
+            }
+            Command::Goto(target) => match console::resolve_room(&target, &self.rooms) {
+                Ok(index) => {
+                    self.goto_room_index(index);
+                    let meta = self.rooms[index].meta();
+                    vec![format!("loaded [{}] {}", meta.id, meta.title)]
+                }
+                Err(err) => vec![err],
+            },
+            Command::List { query } => console::list_rooms(&self.rooms, query.as_deref(), 12),
+            Command::Reset => {
+                self.reset_current_room();
+                vec!["reset visit".into()]
+            }
+            Command::Era(name) => match console::parse_era(&name) {
+                Some(era) => {
+                    self.era = era;
+                    if let Some(window) = &self.window {
+                        window.set_title(&self.title());
+                    }
+                    vec![format!("era {}", era.name())]
+                }
+                None => vec![format!("unknown era '{name}'")],
+            },
+            Command::Mute => {
+                self.muted = true;
+                self.apply_master_gain();
+                self.banner = Some(feedback::volume(self.volume, self.muted));
+                vec!["muted".into()]
+            }
+            Command::Unmute => {
+                self.muted = false;
+                self.apply_master_gain();
+                self.banner = Some(feedback::volume(self.volume, self.muted));
+                vec!["unmuted".into()]
+            }
+            Command::Volume(v) => {
+                self.volume = v.clamp(0.0, 1.0);
+                self.apply_master_gain();
+                self.banner = Some(feedback::volume(self.volume, self.muted));
+                vec![format!("volume {:.0}%", self.volume * 100.0)]
+            }
+            Command::Speed(s) => {
+                self.time_scale = s.clamp(0.25, 8.0);
+                vec![format!("speed {:.2}", self.time_scale)]
+            }
+            Command::Phase(t) => {
+                self.t = t.clamp(0.0, 1.0);
+                vec![format!("t={:.3}", self.t)]
+            }
+            Command::Vary(v) => {
+                self.set_variation_seed(v);
+                vec![format!("variation {v}")]
+            }
+            Command::Studio => {
+                self.console.close();
+                self.enter_studio();
+                vec!["studio".into()]
+            }
+            Command::Show => {
+                self.console.close();
+                self.toggle_show();
+                vec!["the show".into()]
+            }
+            Command::Unknown(msg) => vec![msg],
+        }
+    }
+
+    /// Keyboard path while the console is open. Returns true when handled.
+    fn handle_console_key(&mut self, key: &Key) -> bool {
+        if !self.console.is_open() {
+            return false;
+        }
+        match key {
+            Key::Named(NamedKey::Escape) => {
+                self.console.close();
+                true
+            }
+            Key::Named(NamedKey::Enter) => {
+                let line = self.console.take_line();
+                if !line.is_empty() {
+                    self.console.push_log(format!("> {line}"));
+                }
+                let command = console::parse_line(&line);
+                for out in self.run_console_command(command) {
+                    self.console.push_log(out);
+                }
+                true
+            }
+            Key::Named(NamedKey::Backspace) => {
+                self.console.backspace();
+                true
+            }
+            Key::Named(NamedKey::ArrowUp) => {
+                self.console.history_older();
+                true
+            }
+            Key::Named(NamedKey::ArrowDown) => {
+                self.console.history_newer();
+                true
+            }
+            Key::Named(NamedKey::Space) => {
+                self.console.push_char(' ');
+                true
+            }
+            Key::Character(text) => {
+                if console::is_toggle_key(text.as_str()) {
+                    self.console.close();
+                    return true;
+                }
+                self.console.push_text(text.as_str());
+                true
+            }
+            _ => true, // swallow other keys while open
+        }
+    }
+
     fn reset_room_runtime(&mut self) {
         self.clear_pointer_state();
         if self.goal_announced {
@@ -3157,6 +3344,10 @@ impl App {
             );
         }
 
+        if self.console.is_open() {
+            console::draw(raster, &self.console, width, height);
+        }
+
         if self.input_mode == input_legend::InputMode::Controller
             && let Some(point) = self.gamepad.cursor()
         {
@@ -3379,6 +3570,30 @@ impl ApplicationHandler for App {
             } => {
                 self.clear_pointer_state();
                 if self.handle_global_audio_key(&logical_key, repeat) {
+                    return;
+                }
+                // Power-user console: when open, it owns the keyboard; ` / ~
+                // toggles it from ordinary room play (not Studio text entry).
+                if self.console.is_open() {
+                    self.input_mode = input_legend::InputMode::KeyboardMouse;
+                    let _ = self.handle_console_key(&logical_key);
+                    return;
+                }
+                if let Key::Character(text) = &logical_key
+                    && console::is_toggle_key(text.as_str())
+                    && !self.studio
+                    && !self.session_viewer.is_open()
+                {
+                    self.input_mode = input_legend::InputMode::KeyboardMouse;
+                    // Leave games and overlays so the console has a clean room.
+                    self.quiz = None;
+                    self.munch = None;
+                    self.nim = None;
+                    self.gauntlet = None;
+                    self.arcade = None;
+                    self.show_help = false;
+                    self.show_journey = false;
+                    self.console.open();
                     return;
                 }
                 if self.session_viewer.is_open() {
@@ -3749,6 +3964,10 @@ impl ApplicationHandler for App {
                 ..
             } => {
                 if self.paused {
+                    self.clear_pointer_state();
+                    return;
+                }
+                if self.console.is_open() {
                     self.clear_pointer_state();
                     return;
                 }
@@ -4124,6 +4343,40 @@ mod tests {
         let _ = std::fs::remove_file(&app.scores_file);
         app.level_seen = 1;
         app
+    }
+
+    #[test]
+    fn power_console_loads_a_room_and_sets_phase() {
+        let mut app = headless("console-goto");
+        app.console.open();
+        assert!(app.console.is_open());
+        let lines = app.run_console_command(crate::console::Command::Goto("times-tables".into()));
+        assert!(
+            lines.iter().any(|l| l.contains("times-tables")),
+            "{lines:?}"
+        );
+        assert_eq!(app.rooms[app.current].meta().id, "times-tables");
+        let lines = app.run_console_command(crate::console::Command::Phase(0.42));
+        assert!(lines.iter().any(|l| l.contains("0.420")), "{lines:?}");
+        assert!((app.t - 0.42).abs() < 1e-9);
+        let lines = app.run_console_command(crate::console::Command::Where);
+        assert!(
+            lines.iter().any(|l| l.contains("times-tables")),
+            "{lines:?}"
+        );
+        app.run_console_command(crate::console::Command::Close);
+        assert!(!app.console.is_open());
+    }
+
+    #[test]
+    fn power_console_toggle_key_opens_from_room_mode() {
+        let mut app = headless("console-toggle");
+        assert!(!app.console.is_open());
+        // Simulate the early key path: Character("~") opens.
+        assert!(crate::console::is_toggle_key("~"));
+        app.console.open();
+        assert!(app.handle_console_key(&Key::Character("~".into())));
+        assert!(!app.console.is_open());
     }
 
     #[test]
