@@ -292,6 +292,7 @@ pub mod sinc_interp;
 pub mod sir;
 pub mod slingshot;
 pub mod slope_rider;
+pub mod smith_chart;
 pub mod snell;
 pub mod snell_prism;
 pub mod soap_film;

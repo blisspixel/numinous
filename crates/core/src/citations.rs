@@ -211,6 +211,10 @@ pub fn for_room(id: &str) -> &'static str {
         "interference" | "standing-wave" | "beats" => {
             "See also: wave interference; any introductory waves chapter."
         }
+        "smith-chart" => {
+            "See also: P. H. Smith, Transmission Line Calculator (Electronics, 1939); \
+             Pozar, Microwave Engineering (Smith chart and matching)."
+        }
         "sawtooth" | "triangle-wave" | "fourier-square" | "gibbs-square" => {
             "See also: Fourier series of discontinuous waves; Gibbs phenomenon."
         }
