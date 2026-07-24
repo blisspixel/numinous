@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- Docs: ROADMAP, ENGINEERING, README, docs index, NORTH_STAR, and PEDAGOGY name
+  the same critical path: 0.2 is blocked on stranger hallway for Times Tables
+  and Buffon engineered ahas; soft-thin densify, bulk rooms, and Phase B glow
+  are background; supply chain is current (empty deny/audit ignores, weekly
+  Dependabot, pinned CI actions). ROADMAP adds a **Critical path right now**
+  table and a reviewed 2026-07-24 stand.
 - Supply-chain refresh: `cargo update` for current patch and minor lockfile
   bumps (including wayland-scanner / quick-xml 0.41), drop the temporary
   RUSTSEC-2026-0194/0195 ignores from deny and audit now that quick-xml is
