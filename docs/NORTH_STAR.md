@@ -126,8 +126,9 @@ already in `ROADMAP.md`.
 product exit open).** MCP `predict` and graded challenges ship the agent-facing
 verb; Galton ships a Toy-layer one-ball wager; Times Tables and Buffon ship
 five-beat engineered ahas on the App (generation before reveal, morph, hand
-confirm, punchline). Machine path is Built. **The critical path to claim 0.2 is
-stranger hallway on those ahas**, not more rooms or densify. Detail:
+confirm, punchline). Machine and MCP agent path is Built; 0.2 exits on that bar.
+**Human stranger hallway is deferred to 0.8 / 1.0.** Active work after 0.2 is
+0.3 tactile depth, not more rooms or densify. Detail:
 `PEDAGOGY.md`, `ROADMAP.md` (Critical path right now; Exceptional Path Phase A).
 
 **Phase B, the glow pipeline (systemic aesthetic multiplier; not the default

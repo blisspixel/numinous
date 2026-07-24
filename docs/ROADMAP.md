@@ -29,28 +29,28 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.2.0-alpha.1, Flagship Proof in progress.** The 0.1
-Public Foundation exit criterion is complete on the public `main` branch. The
-0.2 stranger hallway test, independent macOS and Linux app execution, and
-accessibility work are still open. Later systems already present in source do
-not waive those gates, and this prerelease label does not claim 0.2 is complete.
+**Current release state: 0.2.0-alpha.1, Flagship Proof exit met on the
+agent-and-machine bar (2026-07-24).** The 0.1 Public Foundation remains
+complete. Product 0.2 no longer waits on human stranger sessions: those sit
+with 0.8 Closed Beta and 1.0 First Light. Independent macOS/Linux App execution
+sessions and accessibility review remain later gates, not 0.2 blockers.
 
 ### Critical path right now (read this first)
 
-**The bottleneck is people, not code volume.** Machine evidence for the
-flagship path is strong: Times Tables and Buffon five-beat engineered ahas,
-catalog plate bars, three faces, CI, and a current supply chain. Product 0.2
-still fails closed until human evidence lands.
+**Do not stall 0.2 on humans.** Founder policy (2026-07-24): agent faces and
+machine evidence carry Flagship Proof. Human strangers, a11y panels, and
+musician sessions are real later gates (0.5 through 1.0), not pre-0.2
+stop-the-world work.
 
 | Priority | What | Why |
 | --- | --- | --- |
-| **1. Product exit (blocks 0.2)** | Stranger hallway on Times Tables, then Buffon: can a new person feel the aha without narration? | Exit criterion for Flagship Proof. CI and catalog size do not substitute. |
-| **2. Product evidence (same gate)** | Arrival-card / first-contact clarity with real humans; plate beauty under real App window sizes | Machine verb and status invariants do not prove discovery or beauty. |
-| **3. Keep the floor green** | Public `main` stays CI-green (fmt, Clippy, tests, deny, audit, coverage, three-OS builds) | 0.1 foundation must not regress while human sessions run. |
-| **Not the high-leverage next move** | Soft-thin densify (~90 sparse large plates), bulk new rooms, Phase B glow unless a sensory ceiling clearly binds | Feel before features; depth before breadth. Background craft only. |
+| **1. Keep 0.2 proof green** | Times Tables and Buffon five-beat ahas, MCP place/number wager path, `scripts/agent-hallway.py` PASS, F9 capture, three faces, public CI | Standing 0.2 exit evidence; regressions fail the milestone again |
+| **2. Enter 0.3 Tactile Alpha** | Deepen five flagships (Times Tables, Double Pendulum, Life, Galton, Formula Jam) with reproduced defects and agent/MCP/CLI review | Next version gate after Flagship Proof |
+| **3. Keep the floor green** | Public `main` stays CI-green (fmt, Clippy, tests, deny, audit, coverage, three-OS builds) | 0.1 foundation must not regress |
+| **Deferred past 0.2** | Human stranger hallway, a11y sessions, musician long-listening, soft-thin densify, bulk rooms, Phase B glow | Humans before 1.0; densify/glow only if a sensory ceiling binds |
 
-After 0.2 exits: 0.3 five tactile flagships, 0.4 understanding retention, 0.5
-sensory identity with accessibility. Detail below and in the version sections.
+After 0.3: 0.4 understanding retention, 0.5 sensory identity with accessibility.
+Detail below and in the version sections.
 
 - **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **352 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 2,985 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.44% region coverage, and 95.55% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
@@ -284,8 +284,14 @@ sensory identity with accessibility. Detail below and in the version sections.
   a large classical curve set (cycles 164 to 167). Soft-thin densify on large
   plates remains background craft only (order of ~90 rooms still under 0.02
   density or 280 ink on 160x90, many intentionally sparse CLICK/HOLD).
-- **Done (Exceptional Path Phase A, App vertical slice, machine path):** Times Tables five-beat engineered aha on the ordinary App visit. Core pure state (`times_tables_aha`): place wager (Mandelbrot / Nephroid / Circle), four-lobe earn path, morph progress 0..1, reveal gated until consolidate. App: prime after hand-held K=2, keys 1-3 or bottom-band click commit, E summons morph then confirm then punchline text, dial drives dual plate in confirm, The Show does not auto-earn. Focused core and App tests cover beat transitions, morph endpoints, hand-confirm plate change, and show non-earn. **Product exit for 0.2 still needs the stranger hallway on this visit.**
-- **Done (Buffon pi wager, second aha room, machine path):** Buffon's Needle five-beat engineered aha. Core pure state (`buffon_aha`): number wager on 1.5..4.5 graded against pi (NAILED/CLOSE/WILD), eight-throw alternate earn, circle morph overlay, reveal gated until consolidate. App: prime after first throw, bottom number line or keys 1-4, E summons growing circle then confirm then punchline; The Show does not auto-earn. Focused core and App tests cover the beat machine. **Same human gate: stranger hallway open.**
+- **Done (Exceptional Path Phase A, App + MCP, 0.2 exit):** Times Tables
+  five-beat engineered aha on the ordinary App visit and MCP wager path. Core
+  pure state (`times_tables_aha`): place wager, four-lobe earn, morph, gated
+  reveal. App and agent-hallway evidence green. Human strangers deferred past
+  0.2.
+- **Done (Buffon pi wager, second aha room, 0.2 exit):** Buffon's Needle
+  five-beat engineered aha on App and MCP (`number_wager` / `aha_summon`).
+  Human strangers deferred past 0.2.
 - **Done (supply chain current, July 2026):** lockfile refreshed with
   compatible patch and minor bumps (including wayland-scanner / quick-xml
   0.41); temporary RUSTSEC-2026-0194/0195 ignores removed; CI pins
@@ -293,9 +299,9 @@ sensory identity with accessibility. Detail below and in the version sections.
   stays Rust 1.97.1 with MSRV 1.88.0; `cargo deny` and `cargo audit` run with
   empty advisory ignore lists; Dependabot remains weekly on Cargo and GitHub
   Actions. See `ENGINEERING.md`.
-- **Immediate next (product, blocks claiming 0.2):** stranger hallway on Times
-  Tables and Buffon engineered ahas; arrival-card clarity with real humans;
-  plate beauty under real window sizes. See **Critical path right now** above.
+- **Immediate next (product, after 0.2 agent-and-machine exit):** 0.3 Tactile
+  Alpha on the five flagships; keep agent-hallway and CI green. Human stranger
+  hallway is deferred to 0.8 / 1.0. See **Critical path right now** above.
 - **Background engineering (not the critical path):** soft-thin densify where
   structure supports it; more live-motion pens on remaining static classical
   curves; more causal held loops modeled on Galton and Life; Phase B glow only
@@ -575,18 +581,35 @@ authorship attribution is present in tracked content or commit metadata.
 without relying on the founder's machine or undocumented context?"
 
 ### 0.2 Flagship Proof ("does it slap?")
-**Goal:** Build **one** flagship room to *jaw-dropping* quality, plus exactly enough shell to frame it. The make-or-break milestone.
 
-**The room:** **Times Tables** (modular multiplication circles), highest wow-to-build, continuous/performable, a floor-tilting Reveal (see `ROOMS.md`).
+**Status:** exit met on the agent-and-machine bar (2026-07-24). Package label
+remains `0.2.0-alpha.1` until a deliberate release cut. Human stranger hallway
+is **not** part of this exit; it is deferred to 0.8 / 1.0.
 
-- All three layers real: **Toy** (drag the multiplier, buttery morphing), **Aha** (one small challenge), **Reveal** (the Mandelbrot card).
-- Full **audiovisual polish:** the signature palette + glow, tuned musical sonification, smooth 60fps, screenshot-worthy at every frame.
-- The **design system** born here (color, type, motion, sound voice, the fade-in-on-approach UI), extracted as we go so later rooms inherit it.
-- **Share v1:** export the current view as an image or a short loop.
-- The room is also playable via CLI (`--tui` ASCII render) and MCP (an agent can explore/play it), proving the three faces on real content.
+**Goal:** Build **one** flagship room (and a second on the same pattern) to
+high quality, plus enough shell to frame it, proved on all three faces without
+waiting for recruited humans.
 
-**Exit criterion, the hallway test:** (Deferred to 0.8) Originally to show it to five people. For now, limited testing by the user validates the core experience, allowing us to progress.
-**Retires the risk:** "is the core experience actually magic, or just a neat demo?"
+**The room:** **Times Tables** (modular multiplication circles), with **Buffon**
+as the second generation-before-reveal check (see `ROOMS.md`, `PEDAGOGY.md`).
+
+- All three layers real: **Toy** (drag the multiplier, buttery morphing), **Aha**
+  (place or number wager, morph, hand confirm), **Reveal** (gated punchline).
+- Full **audiovisual polish** on the machine path: eras, sonification, share
+  still PNG and short-loop APNG, App/CLI/MCP parity for the flagship story.
+- **Agent proof:** MCP `place_wager` / `number_wager` / `aha_summon`,
+  `structuredContent.engineeredAha`, and `scripts/agent-hallway.py` cohort PASS.
+- **Facilitator capture:** App F9 notes record aha beat state for later human
+  sessions when those are scheduled for 0.8 / 1.0.
+
+**Exit criterion (agent-and-machine):** Times Tables and Buffon engineered ahas
+are Built on App and MCP; agent hallway cohort and focused tests pass;
+generation-before-reveal holds on the wager path; public CI stays green. Human
+stranger "whoa" counts are a **1.0 / 0.8** evidence bar, not a 0.2 stop.
+
+**Retires the risk:** "is the core experience actually magic, or just a neat
+demo?" under digital-mind and automated play; human-stranger magic remains a
+later risk.
 
 ### 0.3 Tactile Alpha
 
@@ -945,18 +968,17 @@ where we stand (next), and the ordered path to 1.0.
 ## Where we stand (reviewed 2026-07-24)
 
 The package is **0.2.0-alpha.1**. The 0.1 Public Foundation exit criterion is
-complete, and work is now on 0.2 Flagship Proof. The 0.2 milestone itself remains
-open until the Times Tables stranger hallway test passes (Buffon aha is the
-second human check on the same generation-before-reveal pattern). Current
-breadth is 352 catalog rooms, 11+ games, six sims, three faces, 30 MCP tools,
-deterministic creation and persistence, and a green release-style gate on public
-CI. Required public CI passes locked tests, builds, installer self-tests, and
-supply-chain checks (deny + audit with no standing advisory ignores) across all
-three operating systems; physical-device evidence remains separate. **Breadth is
-not release evidence.** The machine flagship path is Built; the missing 0.2
-proof is stranger play, not another catalog room. No calibrated method supports
-assigning completion percentages to subjective 1.0 gates, so this scorecard
-records evidence instead.
+complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
+Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS,
+F9 capture, three faces, and green public CI. Human stranger hallway is
+**deferred to 0.8 / 1.0** by founder policy: do not stall pre-0.2 work on
+recruited humans. Current breadth is 352 catalog rooms, 11+ games, six sims,
+three faces, 30 MCP tools, deterministic creation and persistence. Required
+public CI passes locked tests, builds, installer self-tests, and supply-chain
+checks across three operating systems; physical-device and a11y evidence remain
+later. **Breadth is still not a substitute for depth.** Active work moves to
+**0.3 Tactile Alpha**. No calibrated method supports assigning completion
+percentages to subjective 1.0 gates, so this scorecard records evidence instead.
 
 | 1.0 gate | Evidence today | Missing evidence or work |
 |---|---|---|
@@ -972,18 +994,16 @@ records evidence instead.
 
 **Immediate critical path** (same order as **Critical path right now** above):
 
-1. **Run the 0.2 stranger hallway** on Times Tables (then Buffon). Do not claim
-   the milestone until it passes. This is the product bottleneck.
-2. Keep the completed 0.1 public-foundation gate green on every public commit
-   (including current deny, audit, and action pins).
-3. Capture arrival-card clarity and real-window plate notes from those sessions.
-4. After 0.2 exits: deepen five flagships for 0.3 using reproduced defects,
-   structured review, and participant observations.
-5. Then 0.4 understanding and retention; then 0.5 sensory identity with
+1. Keep 0.2 agent-and-machine proof green (ahas, agent-hallway, CI).
+2. **0.3 Tactile Alpha:** deepen the five flagships with reproduced defects and
+   agent/MCP/CLI review (human strangers not required for 0.3 entry).
+3. Then 0.4 understanding and retention; then 0.5 sensory identity with
    accessibility.
+4. Schedule human stranger and a11y sessions for **0.8 / 1.0**, not as a 0.2
+   stop-the-world gate.
 
 **Not on this list as next work:** soft-thin densify grind, bulk new rooms, or
-Phase B glow unless human sessions show a binding sensory ceiling.
+Phase B glow unless measurement shows a binding sensory ceiling.
 
 Portable packaging, the creator loop, closed beta, and release operations follow
 in 0.6 through 0.9. The version sections above own their detailed order.
@@ -999,12 +1019,11 @@ is not yet built. The phased milestones below thread the six lanes into the gate
 above, in leverage order. They deepen what exists rather than jumping the
 "do not build twenty more rooms first" queue.
 
-- **Phase A, the keystone (App vertical slices Built on machine path; human
-  gate open).** MCP `predict` and graded `challenge` ship the agent-facing
-  verb; Galton ships a Toy-layer one-ball wager; Times Tables and Buffon ship
-  five-beat engineered ahas on the App. Machine path is Built. **Product exit
-  for 0.2 is the stranger hallway on those ahas**, not more engine work.
-  Owner doc: `PEDAGOGY.md`. Moves "every room compels" and "meta and lore alive."
+- **Phase A, the keystone (0.2 exit met, agent-and-machine).** MCP `predict`
+  and graded `challenge` ship the agent-facing verb; Galton ships a Toy-layer
+  one-ball wager; Times Tables and Buffon ship five-beat engineered ahas on App
+  and MCP with agent hallway cohort PASS. Human stranger hallway is deferred to
+  0.8 / 1.0. Owner doc: `PEDAGOGY.md`.
 
 ### Phase A vertical slice (Built, machine path, July 2026)
 
@@ -1021,22 +1040,20 @@ wall-clock morph (~1.6s), keys 1-3, E/Inspect summon, gated reveal.
 pi, eight-throw alternate earn, circle morph overlay. App owns wall-clock morph,
 keys 1-4 and bottom number line, same E/Inspect summon path and gated reveal.
 
-**Still open for product exit (this is the critical path).** Stranger hallway
-on both engineered ahas; arrival-card clarity with real humans; plate beauty
-under real window sizes. Agent MCP cohort scripts and optional wager fields are
-machine support, not a substitute for that human gate.
+**0.2 product exit (agent-and-machine, 2026-07-24):** closed. App and MCP
+engineered ahas, agent hallway cohort PASS, F9 capture, green CI. Human
+stranger hallway is deferred to 0.8 / 1.0.
 
-**Done (hallway capture readiness, machine path):** F9 playtest notes on Times
-Tables and Buffon ordinary visits now record aha beat, earn path, footer
-status, reveal/summon flags, and aha-specific facilitator prompts so session
-findings map to the five-beat machine. The Show omits aha state. This does not
-satisfy the stranger evidence gate.
+**Done (hallway capture readiness):** F9 playtest notes on Times Tables and
+Buffon ordinary visits record aha beat, earn path, footer status,
+reveal/summon flags, and aha-specific facilitator prompts. The Show omits aha
+state. Capture remains ready for later human sessions.
 
-**Done (MCP flagship aha fields + agent cohort, machine path):** `play_room`
-accepts `place_wager`, `number_wager`, and `aha_summon` with
+**Done (MCP flagship aha fields + agent cohort):** `play_room` accepts
+`place_wager`, `number_wager`, and `aha_summon` with
 `structuredContent.engineeredAha`. `scripts/agent-hallway.py` records a
 five-persona MCP cohort under `.agent/tester-cohort/round-07-flagship-aha/`.
-Agent evidence only; product 0.2 still requires human strangers.
+This is the 0.2 proof bar for digital minds and automated play.
 
 **Out of scope for the slice and not the next high-leverage move.** HDR glow
 (Phase B, only if sensory ceiling binds), Constellation Rumor-Mode (Phase C),

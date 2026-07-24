@@ -5,6 +5,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- Product policy: 0.2 Flagship Proof exits on the agent-and-machine bar (App
+  and MCP engineered ahas, agent hallway cohort, green CI). Human stranger
+  hallway, a11y panels, and musician sessions are deferred to 0.8 / 1.0 and
+  must not stall pre-0.2 work. ROADMAP critical path, README, VERIFY,
+  PEDAGOGY, QUALITY, and the docs index agree.
+
 ### Added
 - MCP initialize instructions teach play_room-first discovery and the Times
   Tables / Buffon place_wager and number_wager aha path, and warn that
