@@ -166,15 +166,15 @@ densify continues where honest. The six-question plate filter lives in
 The alpha label is meaningful. Automated correctness, security, coverage,
 cross-platform build, installer, and supply-chain gates are strong (deny and
 audit run with no standing advisory ignores; Dependabot watches Cargo and
-Actions). The 0.2 release still requires **real hallway playtests** on the
-Times Tables and Buffon engineered ahas, plus accessibility sessions,
-representative controller sessions, musician-led long listening, and broader
-native hardware evidence. Capability breadth is not a substitute for that
-human evidence.
+Actions). **0.2 Flagship Proof is exit-met on the agent-and-machine bar:**
+Times Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort,
+and green CI. Human stranger sessions, accessibility panels, musician
+long-listening, and broad hardware certification are real gates for **0.8 /
+1.0**, not stop-the-world work before 0.2.
 
-**What blocks claiming 0.2:** stranger hallway proof that the flagship aha
-lands without narration. Soft-thin densify, more rooms, and sensory pipeline
-work are background craft until that gate is met. Ordered criteria live in
+**What is next after 0.2:** 0.3 Tactile Alpha on the five flagships; keep the
+floor green. Soft-thin densify, bulk rooms, and Phase B glow stay background
+unless measurement binds. Ordered criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md) (**Critical path right now**).
 Reproducible engineering checks are in [`VERIFY.md`](VERIFY.md); completed
 changes are in [`CHANGELOG.md`](CHANGELOG.md).

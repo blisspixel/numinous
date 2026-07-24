@@ -93,28 +93,21 @@ arrive last and confirm what the player already felt.
 
 ### Canonical engineered ahas
 
-- **Times Tables to Mandelbrot (the flagship).** *App vertical slice Built
-  (machine path). Product 0.2 still blocked on stranger hallway.* Technical Toy
-  remains (K=2 hold, integer snap, earned K=5, three-face agreement). The
-  ordinary App visit now stages the five-beat engineered aha instead of opening
-  a text card on E first. Prime: after a hand-held K=2 heart, status and bottom
-  marks invite 1=Mandelbrot / 2=Nephroid / 3=Circle (keys or bottom-band click).
-  Withhold: reveal text stays closed until a generation act (place wager or
-  four-lobe goal). Restructure: E summons a deterministic cardioid-to-Mandelbrot
-  morph (core pure state; App owns wall-clock progress). Confirm: the dial
-  drives chords and a bead on the Mandelbrot-frame outline together.
-  Consolidate: E opens the existing reveal copy as punchline. The Show still
-  sweeps and does not auto-earn. Core module: `rooms/times_tables_aha.rs`. This
-  is the primary 0.2 hallway room: can a stranger feel the aha without narration?
-- **Buffon's Needle to pi.** *App vertical slice Built (machine path). Second
-  human check on the same pattern; stranger hallway still open.* Second room on
-  the generation-before-reveal pattern. Prime: after the first throw, status and
-  a bottom number line invite a guess on 1.5..4.5 (drag, or keys 1=2 / 2=e /
-  3=3 / 4=pi). Withhold: reveal text stays closed until a generation act
-  (number wager, or eight throws). Restructure: E grows a circle out of the
-  lined floor. Confirm: throws still update the estimate under the full circle.
-  Consolidate: E opens the existing reveal copy as punchline. The Show does not
-  auto-earn. Core module: `rooms/buffon_aha.rs`.
+- **Times Tables to Mandelbrot (the flagship).** *0.2 exit met on App + MCP
+  agent-and-machine evidence. Human stranger hallway deferred to 0.8 / 1.0.*
+  Technical Toy remains (K=2 hold, integer snap, earned K=5, three-face
+  agreement). The ordinary App visit stages the five-beat engineered aha.
+  Prime: after a hand-held K=2 heart, status and bottom marks invite
+  1=Mandelbrot / 2=Nephroid / 3=Circle (keys or bottom-band click; MCP
+  `place_wager`). Withhold: reveal text stays closed until a generation act.
+  Restructure: E / `aha_summon` morphs cardioid to Mandelbrot. Confirm and
+  consolidate follow. The Show does not auto-earn. Core:
+  `rooms/times_tables_aha.rs`. Agent cohort: `scripts/agent-hallway.py`.
+- **Buffon's Needle to pi.** *0.2 exit met on the same agent-and-machine bar.
+  Human strangers deferred to 0.8 / 1.0.* Second room on the
+  generation-before-reveal pattern. Prime: after the first throw, status and a
+  bottom number line invite a guess on 1.5..4.5 (MCP `number_wager`). Withhold,
+  morph, confirm, consolidate mirror Times Tables. Core: `rooms/buffon_aha.rs`.
 - **Galton Board to the binomial and its normal approximation.** Prime: "Drop
   your bet: where does this one ball land?" Restructure: 64-ball waves build an
   empirical pile against a distinct exact `Binomial(16, p)` outline without

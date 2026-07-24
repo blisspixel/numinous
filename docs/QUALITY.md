@@ -226,8 +226,16 @@ line of UI copy would run through an automated evaluation before it ships.
 - **Calibration is mandatory**: the judge is validated against a **human-labeled golden set** and must hit 75 to 90 percent agreement before we trust it, and it is re-calibrated as content grows. We actively counter known judge biases (verbosity, position, self-preference), and give the judge a human-written exemplar as a quality anchor.
 - **Math correctness is a separate, stricter gate.** No AI has the final word on whether the math is right. Every mathematical claim is checked against known results / a computer-algebra system *and* signed off by a human mathematician. A wrong sign or a fudged theorem is a release blocker (see `VISION.md` on PhD-real rigor). The AI judge flags dubious claims for the human; it never clears them.
 
-### 4. Playtest loop (capture implemented, human evidence pending)
-- **The formalized hallway test**: five-plus strangers (a mix of math-lovers and math-avoiders), no explanation, a written protocol. Count unprompted "whoa"s, spontaneous shares, "just one more" continuations, and where attention drops. Repeatable, scored, run at every phase gate (see `ROADMAP.md`).
+### 4. Playtest loop (agent bar for 0.2; human bar for 0.8 / 1.0)
+- **Agent and machine bar (0.2):** `scripts/agent-hallway.py` and focused App/MCP
+  tests on Times Tables and Buffon engineered ahas. Generation-before-reveal must
+  hold; cold open must not leak punchline reveal. This is the standing 0.2 proof
+  under founder policy (no pre-0.2 wait on recruited humans).
+- **Formalized human hallway (0.8 / 1.0):** five-plus strangers (a mix of
+  math-lovers and math-avoiders), no explanation, a written protocol. Count
+  unprompted "whoa"s, spontaneous shares, "just one more" continuations, and
+  where attention drops. Repeatable, scored, run at late phase gates (see
+  `ROADMAP.md`).
 
 #### Running the hallway test (the facilitator sheet)
 
@@ -402,15 +410,14 @@ tests establish what is verified today.
 ## Cadence (tied to the roadmap)
 
 - **0.1**: keep the current commit gate green and add honest public evidence.
-- **0.2**: run the first stranger hallway test and establish a reproducible
-  baseline for the flagship room. Keep that milestone open until the evidence
-  passes, while continuing verified 0.3 refinement in parallel.
+- **0.2**: agent-and-machine flagship proof (agent hallway + engineered ahas);
+  do not wait on recruited humans for this gate.
 - **0.3 to 0.5**: add property, perceptual, audio, accessibility, and performance
   harnesses as their corresponding product systems mature.
-- **0.6 to 0.9**: add real-platform execution, soak, packaging, and release
-  provenance, then use repeated human sessions for keep, cut, and tuning decisions.
-- **1.0 and later**: automation may assist refinement, but no judge or telemetry
-  system replaces representative playtests and mathematical review.
+- **0.6 to 0.9**: real-platform execution, soak, packaging, release provenance,
+  and human stranger / a11y sessions for keep, cut, and tuning.
+- **1.0 and later**: automation may assist refinement, but representative human
+  playtests and mathematical review still close First Light.
 
 ## Anti-patterns
 
