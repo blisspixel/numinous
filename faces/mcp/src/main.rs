@@ -2626,8 +2626,11 @@ fn play_room_tool(args: &Value) -> Value {
             } else {
                 goal_met.then(|| room.reveal())
             };
-            // Prefer aha footer once the visit leaves free explore or once a
-            // generation arg is present; keep dial/throw status for pure explore.
+            // Prefer aha footer for generation-arg visits and for prime/morph/
+            // confirm/consolidated beats. Keep dial/throw status for pure
+            // explore and for the established K5 goal path (four-lobe earn
+            // without place_wager), so PRESS E does not appear when reveal is
+            // already unlocked by goalMet.
             let status = {
                 let aha_beat = engineered_aha
                     .as_ref()
@@ -2636,7 +2639,7 @@ fn play_room_tool(args: &Value) -> Value {
                 let use_aha_status = aha_request.uses_generation_args()
                     || matches!(
                         aha_beat,
-                        Some("prime" | "withheld" | "morph" | "confirm" | "consolidated")
+                        Some("prime" | "morph" | "confirm" | "consolidated")
                     );
                 if use_aha_status {
                     engineered_aha
@@ -7337,16 +7340,9 @@ plays 2
         let earned = call("play_room", earned_arguments.clone());
         let earned_content = &earned["result"]["structuredContent"];
         assert_eq!(earned_content["variation"], 42);
-        // Aha footer replaces the raw dial status when the four-lobe path earns.
-        assert!(
-            earned_content["status"]
-                .as_str()
-                .is_some_and(|s| s.contains("EARNED")
-                    || s.contains("4 LOBES")
-                    || s.contains("PRESS E")),
-            "status={}",
-            earned_content["status"]
-        );
+        // K5 goal path keeps dial status; aha footer is reserved for wager args.
+        assert_eq!(earned_content["status"], "K 5.00  CLOSED  4 LOBES  FOUND");
+        assert_eq!(earned_content["engineeredAha"]["earn"], "four-lobes");
         assert_eq!(earned_content["goalMet"], true);
         assert!(
             earned_content["reveal"]

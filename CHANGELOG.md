@@ -30,6 +30,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - Times Tables Prime footer invites a place guess (`WHERE? 1=M 2=N 3=C`)
   instead of only naming the heart, so the generation act is readable without
   narration.
+- MCP K5 four-lobe earn without place_wager keeps the dial status line, so
+  agents do not see PRESS E when goalMet already unlocks reveal.
 
 ### Changed
 - Docs: ROADMAP, ENGINEERING, README, docs index, NORTH_STAR, and PEDAGOGY name
