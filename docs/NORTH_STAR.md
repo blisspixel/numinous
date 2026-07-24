@@ -69,7 +69,7 @@ persistence, no tonemap, and the GPU path is wired only to the Mandelbrot and
 Julia escape-time fractals. The documented look is a promise on paper, not a
 look on screen. This is not a criticism of the design; the design is right. It
 is the single highest-leverage aesthetic build, because it is systemic: one
-pipeline lifts all 351 rooms and every Era at once. See `SYNESTHESIA.md`.
+pipeline lifts all 352 rooms and every Era at once. See `SYNESTHESIA.md`.
 
 ## Plate performance (alongside the keystone)
 

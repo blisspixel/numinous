@@ -11,6 +11,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   runners no longer time out while waiting for the shared erasure lock.
 
 ### Added
+- The Scariest Chart joins Waves & Sound as room 352 (`smith-chart`). Philip H.
+  Smith's impedance chart: constant-R and constant-X families in the unit disk
+  of the reflection coefficient, load placement by hand, phase as electrical
+  length on a constant-|Gamma| orbit (one lap = lambda/2), goal to land on the
+  unit-resistance ring, MATCHED/CANCEL-X status, three deep cuts on the shared
+  LV 5/12/24 road, and a further-reading citation. Catalog size is now 352
+  across App, CLI, MCP, README, ROADMAP, and ROOMS.
+
+### Fixed
+- Smith chart deep cuts trimmed to three so every cut unlocks on the shared
+  Journey road (`CUT_LEVELS`); five cuts had broken
+  `every_catalog_deep_cut_has_an_attainable_level`. Ambient status now tags
+  CANCEL-X / MATCHED when the orbit lands on unit resistance or the center,
+  instead of only advertising DRAG:LOAD.
 - Times Tables five-beat engineered aha on the ordinary App visit (Exceptional
   Path Phase A, machine path). Core pure state in `times_tables_aha`: place
   wager (Mandelbrot / Nephroid / Circle), four-lobe earn, morph progress, dual

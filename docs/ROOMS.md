@@ -2,7 +2,7 @@
 
 The content catalog: the phenomena Numinous is built from. Each **room** is one playable mathematical object. Rooms are grouped into **Wings** by feeling, not by curriculum.
 
-**Current status (as of 2026-07):** 351 catalog rooms across the wings plus
+**Current status (as of 2026-07):** 352 catalog rooms across the wings plus
 hidden content. Per-visit variation seed is threaded through registry/app/CLI/
 MCP; every catalog room uses it for replay novelty, while hidden content stays
 outside the catalog replay contract. Every catalog room has `verb()` +
@@ -107,6 +107,14 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 - **Aha:** "Make a trumpet." / "Recreate this mystery sound."
 - **Reveal:** *"Every instrument, every voice, every sound you've ever heard is just a recipe of these pure tones in different amounts. That recipe is called its Fourier spectrum, the same math as the circle-drawing room next door."*
 - **Sound:** *is* the room. The most literally-an-instrument room; ties the Waves wing together.
+
+### 8.5. The Scariest Chart (Smith Chart)  Wow 5 / Build 2  [x]
+- **Rule:** Normalize impedance by Z0, then map it through the reflection coefficient Gamma = (z-1)/(z+1). The infinite z-plane folds into a unit disk.
+- **Toy:** The chart draws constant-R circles and constant-X arcs. A load sits at L; phase walks a constant-|Gamma| orbit (one full lap is half a wavelength on a lossless line). DRAG: PLACE LOAD by pointing at a chart position. Status reads |Gamma|, normalized z, and line angle. When the moving bead hits the unit-resistance ring (r=1), ambient and hand status both tag CANCEL-X: only pure reactance remains to cancel. Near the center it says MATCHED. At most three deep cuts (Journey LV 5 / 12 / 24).
+- **Aha:** "Land the bead on r=1" (then a stub or series L/C would finish the match). Feel that rotation, not algebra, is the line length.
+- **Reveal:** *"The scary chart is a conformal map of the reflection coefficient. Normalize by Z0, then Gamma packs every passive load into the unit disk. Constant R and X become circles; a lossless line is pure rotation. Match is the center: Gamma = 0."*
+- **Sound:** motif encodes constant-|Gamma| rotation and the quiet of the matched center.
+- *Built as `smith-chart` in Waves & Sound. Deep cuts cover Smith at Bell Labs, independent rediscovery, lambda/2, stubs, and why the chart outlives slide rules and still sits on VNAs.*
 
 ---
 
@@ -318,7 +326,7 @@ you are not told it), and **the kid principle** (the play carries itself even
 if the concept never consciously lands). If an idea cannot pass both, it does
 not ship, however important the syllabus thinks it is.
 
-**Current interaction inventory (2026-07):** 351 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, RESTORE AND HOLD A PATCH in Cult of Pi, STEER THE SEARCH in the Conjecture Mill, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
+**Current interaction inventory (2026-07):** 352 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, RESTORE AND HOLD A PATCH in Cult of Pi, STEER THE SEARCH in the Conjecture Mill, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
 
 **Interaction update, 2026-07-13:** the verb inventory above records the first
 complete poke substrate. The current contract also includes `render_input` and
@@ -908,7 +916,7 @@ edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
 
 ### What we already have (feel, not curriculum)
 
-**Built now (351 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+**Built now (352 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
 Julia, Cult of Pi, Life and Cellular Automata and Langton and Rule 30, The
 Sandpile, The First Rain, The Magnet, Phantom Jam, Chaos Game, Golden Angle,
 Galton and Buffon, Lissajous, Chladni Figures, Ripple Tank, The Coffee Cup,
@@ -945,7 +953,7 @@ Wallis Product, Superellipse, Cochleoid, Serpentine, Bifolium, Butterfly Curve,
 Piriform, Simple Pendulum, Blackbody, Kepler Areas, Escape Velocity, Coupled
 Oscillators, Prism Dispersion, Lucky Numbers, Gaussian Primes, Quadratic
 Residues, Zeckendorf, Egyptian Fractions, Pell Path, Shannon Entropy, Bayes
-Update, Erdos-Renyi, Markov Chain, Huffman Tree, Mutual Info, Klein Bottle, Cross-Cap, Boy Surface, Solid Torus, Hopf Link, Unknot, Gamma Function, Error Function, Fresnel Integrals, Lambert W, Sinc Interpolation, Dirichlet Eta, AGM Mean, Twin Primes, Perfect Numbers, Napoleon Theorem, plus Awe Engine /
+Update, Erdos-Renyi, Markov Chain, Huffman Tree, Mutual Info, Klein Bottle, Cross-Cap, Boy Surface, Solid Torus, Hopf Link, Unknot, Gamma Function, Error Function, Fresnel Integrals, Lambert W, Sinc Interpolation, Dirichlet Eta, AGM Mean, Twin Primes, Perfect Numbers, Napoleon Theorem, The Scariest Chart (Smith chart), plus Awe Engine /
 Next Wave / universal wonder catalog rooms
 and games (Quiz, Munch, Arcade, Nim, Gauntlet, SETI, Aliens, Codebreaker, and
 kin), Studio, radio, Journey, Cairn, predict.
