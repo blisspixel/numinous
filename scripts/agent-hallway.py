@@ -65,6 +65,67 @@ def call_tool(tool: str, arguments: dict[str, Any]) -> dict[str, Any]:
     return {"ok": True, "text": text, "structured": structured}
 
 
+def initialize_script() -> dict[str, Any]:
+    """Confirm agents are taught play-first aha discovery at session start."""
+    import os
+    import tempfile
+
+    subprocess.run(
+        ["cargo", "build", "--quiet", "--bin", "numinous-mcp"],
+        cwd=ROOT,
+        check=True,
+    )
+    binary = ROOT / "target" / "debug" / "numinous-mcp"
+    windows_binary = binary.with_suffix(".exe")
+    path = str(windows_binary if windows_binary.exists() else binary)
+    with tempfile.TemporaryDirectory(prefix="numinous-mcp-play-") as state_dir:
+        env = dict(os.environ)
+        env.update(
+            {
+                "NUMINOUS_JOURNEY": str(Path(state_dir) / "journey.txt"),
+                "NUMINOUS_SCORES": str(Path(state_dir) / "scores.txt"),
+                "NUMINOUS_CAIRN": str(Path(state_dir) / "cairn.json"),
+            }
+        )
+        request = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "agent-hallway", "version": "1"},
+            },
+        }
+        proc = subprocess.run(
+            [path],
+            input=json.dumps(request) + "\n",
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+            env=env,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return {"ok": False, "error": proc.stderr.strip() or proc.stdout.strip()}
+        try:
+            response = json.loads(proc.stdout.strip().splitlines()[0])
+        except (ValueError, IndexError) as error:
+            return {"ok": False, "error": str(error)}
+        instructions = ((response.get("result") or {}).get("instructions")) or ""
+        ok = (
+            "place_wager" in instructions
+            and "number_wager" in instructions
+            and "prefer play_room first" in instructions
+        )
+        return {
+            "ok": ok,
+            "has_place_wager": "place_wager" in instructions,
+            "has_number_wager": "number_wager" in instructions,
+            "prefer_play_first": "prefer play_room first" in instructions,
+        }
+
+
 def times_tables_script() -> list[dict[str, Any]]:
     steps = []
     open_call = call_tool(
@@ -294,10 +355,15 @@ def write_persona_note(
     return path
 
 
-def write_synthesis(results: list[tuple[Persona, dict[str, Any], dict[str, Any]]]) -> Path:
+def write_synthesis(
+    results: list[tuple[Persona, dict[str, Any], dict[str, Any]]],
+    initialize: dict[str, Any],
+) -> Path:
     path = OUT / "SYNTHESIS.md"
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    all_pass = all(t["passed"] and b["passed"] for _, t, b in results)
+    all_pass = all(t["passed"] and b["passed"] for _, t, b in results) and initialize.get(
+        "ok"
+    )
     lines = [
         "# Round 07 synthesis: flagship aha over MCP",
         "",
@@ -310,6 +376,11 @@ def write_synthesis(results: list[tuple[Persona, dict[str, Any], dict[str, Any]]
         "sessions are arranged. Product 0.2 still names stranger humans as exit.",
         "",
         f"## Machine script: {'PASS' if all_pass else 'FAIL'}",
+        "",
+        f"- initialize instructions: {initialize.get('ok')}",
+        f"- place_wager taught: {initialize.get('has_place_wager')}",
+        f"- number_wager taught: {initialize.get('has_number_wager')}",
+        f"- prefer play_room first: {initialize.get('prefer_play_first')}",
         "",
     ]
     for persona, times, buffon in results:
@@ -327,6 +398,7 @@ def write_synthesis(results: list[tuple[Persona, dict[str, Any], dict[str, Any]]
             "2. place_wager / number_wager withhold reveal until aha_summon.",
             "3. Truth summon consolidates and unlocks punchline reveal.",
             "4. engineeredAha is present for agent discovery on both flagships.",
+            "5. initialize teaches play-first aha discovery for digital minds.",
             "",
         ]
     )
@@ -338,6 +410,7 @@ def main() -> int:
     results: list[tuple[Persona, dict[str, Any], dict[str, Any]]] = []
     # One shared script per room; personas re-score the same machine evidence
     # through different lenses (cheap, deterministic cohort).
+    initialize = initialize_script()
     times_steps = times_tables_script()
     buffon_steps = buffon_script()
     times_score = score_times(times_steps)
@@ -345,9 +418,11 @@ def main() -> int:
     for persona in PERSONAS:
         write_persona_note(persona, times_score, buffon_score, times_steps, buffon_steps)
         results.append((persona, times_score, buffon_score))
-    synthesis = write_synthesis(results)
+    synthesis = write_synthesis(results, initialize)
     print(f"wrote {len(PERSONAS)} persona notes and {synthesis}")
     print(
+        "initialize",
+        initialize.get("ok"),
         "times_tables",
         times_score["passed"],
         "buffon",
@@ -355,7 +430,11 @@ def main() -> int:
         "findings",
         times_score["findings"] + buffon_score["findings"],
     )
-    return 0 if times_score["passed"] and buffon_score["passed"] else 1
+    return (
+        0
+        if initialize.get("ok") and times_score["passed"] and buffon_score["passed"]
+        else 1
+    )
 
 
 if __name__ == "__main__":
