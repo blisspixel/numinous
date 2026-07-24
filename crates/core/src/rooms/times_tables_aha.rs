@@ -315,12 +315,13 @@ impl TimesTablesAha {
     pub fn status(&self, dial: Option<&str>) -> String {
         match self.beat {
             AhaBeat::Explore => dial.unwrap_or("DRAG THE DIAL").to_string(),
+            // Language-light place invite: where does this heart also live?
             AhaBeat::Prime => {
                 let hover = self
                     .hover
                     .map(|h| format!(" >{}", h.tag()))
                     .unwrap_or_default();
-                format!("HEART  1=M 2=N 3=C{hover}")
+                format!("WHERE? 1=M 2=N 3=C{hover}")
             }
             AhaBeat::Withheld => match self.earn {
                 Some(EarnPath::Wager { guess }) if guess.is_truth() => {
@@ -336,13 +337,15 @@ impl TimesTablesAha {
                 let pct = (progress * 100.0).round() as i32;
                 format!("MORPH {pct}%")
             }
+            // E consolidates to the punchline; keep the summon cue visible even
+            // when a dial readout is present so Confirm is not a dead end.
             AhaBeat::Confirm => match dial {
-                Some(d) => format!("BOTH  {d}"),
-                None => "BOTH  DRAG DIAL".to_string(),
+                Some(d) => format!("BOTH E  {d}"),
+                None => "BOTH  PRESS E".to_string(),
             },
             AhaBeat::Consolidated => match dial {
                 Some(d) => format!("ONE HEART  {d}"),
-                None => "ONE HEART".to_string(),
+                None => "ONE HEART  E:WHY".to_string(),
             },
         }
     }
@@ -352,6 +355,33 @@ impl TimesTablesAha {
     pub fn punchline(&self) -> Option<&'static str> {
         matches!(self.beat, AhaBeat::Consolidated)
             .then_some("Same cardioid: times-2 chords and the Mandelbrot main bulb.")
+    }
+
+    /// Stable beat name for playtest notes and diagnostics (not player chrome).
+    #[must_use]
+    pub fn beat_label(&self) -> &'static str {
+        match self.beat {
+            AhaBeat::Explore => "explore",
+            AhaBeat::Prime => "prime",
+            AhaBeat::Withheld => "withheld",
+            AhaBeat::Morph { .. } => "morph",
+            AhaBeat::Confirm => "confirm",
+            AhaBeat::Consolidated => "consolidated",
+        }
+    }
+
+    /// Compact earn path for playtest notes, or None before generation.
+    #[must_use]
+    pub fn earn_label(&self) -> Option<&'static str> {
+        match self.earn {
+            Some(EarnPath::Wager { guess }) => Some(match guess {
+                CardioidHome::Mandelbrot => "wager:mandelbrot",
+                CardioidHome::Nephroid => "wager:nephroid",
+                CardioidHome::Circle => "wager:circle",
+            }),
+            Some(EarnPath::FourLobes) => Some("four-lobes"),
+            None => None,
+        }
     }
 }
 
@@ -619,11 +649,16 @@ mod tests {
     fn heart_hold_primes_then_wager_withholds() {
         let mut aha = TimesTablesAha::new();
         assert_eq!(aha.beat(), AhaBeat::Explore);
+        assert_eq!(aha.beat_label(), "explore");
+        assert!(aha.earn_label().is_none());
         aha.note_hand_multiplier(2.0);
         assert!(aha.heart_held());
         assert_eq!(aha.beat(), AhaBeat::Prime);
+        assert_eq!(aha.beat_label(), "prime");
         assert!(aha.commit_wager(CardioidHome::Circle));
         assert_eq!(aha.beat(), AhaBeat::Withheld);
+        assert_eq!(aha.beat_label(), "withheld");
+        assert_eq!(aha.earn_label(), Some("wager:circle"));
         assert!(!aha.allow_reveal_text());
         assert_eq!(
             aha.earn(),
@@ -719,12 +754,20 @@ mod tests {
     fn status_stays_compact() {
         let mut aha = TimesTablesAha::new();
         aha.note_hand_multiplier(2.0);
+        assert!(aha.status(None).starts_with("WHERE?"));
         assert!(aha.status(None).chars().count() <= 24);
         aha.commit_wager(CardioidHome::Nephroid);
         assert!(aha.status(None).chars().count() <= 24);
         aha.summon();
         aha.set_morph_progress(0.5);
         assert!(aha.status(None).chars().count() <= 16);
+        aha.set_morph_progress(1.0);
+        assert_eq!(aha.beat(), AhaBeat::Confirm);
+        assert!(aha.status(None).contains("PRESS E"));
+        assert!(aha.status(None).chars().count() <= 16);
+        assert!(aha.summon());
+        assert!(aha.status(None).contains("E:WHY"));
+        assert!(aha.status(None).chars().count() <= 20);
     }
 
     #[test]

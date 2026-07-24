@@ -944,7 +944,17 @@ fn parse_room_replay(arguments: &Map<String, Value>) -> Option<RoomReplay> {
     if arguments.keys().any(|key| {
         !matches!(
             key.as_str(),
-            "id" | "t" | "width" | "height" | "variation" | "pokes" | "gesture"
+            // Visual replay keys, plus engineered-aha arguments that affect
+            // MCP structured results only (no native body change).
+            "id" | "t"
+                | "width"
+                | "height"
+                | "variation"
+                | "pokes"
+                | "gesture"
+                | "place_wager"
+                | "number_wager"
+                | "aha_summon"
         )
     }) {
         return None;
