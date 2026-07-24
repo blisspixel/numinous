@@ -2,7 +2,6 @@
 # two supply-chain gates agree. See docs/ENGINEERING.md.
 
 [advisories]
-# quick-xml is pulled only by wayland-scanner at build time on trusted bundled
-# protocol XML. Remove these ignores when wayland-scanner adopts quick-xml 0.41
-# or later (see deny.toml for the same rationale).
-ignore = ["RUSTSEC-2026-0194", "RUSTSEC-2026-0195"]
+# Keep empty unless a temporary, documented exception is required.
+# Mirror any exception in deny.toml so the two gates agree.
+ignore = []

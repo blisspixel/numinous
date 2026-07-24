@@ -4,10 +4,7 @@
 [advisories]
 # Fail on any known RustSec advisory in the dependency tree.
 yanked = "deny"
-ignore = [
-    { id = "RUSTSEC-2026-0194", reason = "quick-xml is used only by wayland-scanner at build time on trusted bundled protocol XML; remove when wayland-scanner adopts quick-xml 0.41 or later" },
-    { id = "RUSTSEC-2026-0195", reason = "quick-xml is used only by wayland-scanner at build time on trusted bundled protocol XML; remove when wayland-scanner adopts quick-xml 0.41 or later" },
-]
+ignore = []
 
 [licenses]
 # Allow compatible, well-understood licenses. Symphonia's MPL-2.0 is file-level
