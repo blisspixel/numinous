@@ -12,6 +12,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   ZERO/UNIT/INF status tags, goal to send the bead to infinity, three deep
   cuts on the shared LV 5/12/24 road, and a further-reading citation. Catalog
   size is now 353 across App, CLI, MCP, README, ROADMAP, and ROOMS.
+- `scripts/agent-tactile.py` runs a five-flagship 0.3 tactile MCP cohort
+  (Times Tables, Double Pendulum, Life, Galton, Formula Jam) and writes notes
+  under `.agent/tester-cohort/round-08-tactile-0.3/`.
+
+### Fixed
+- Riemann Sphere INF goal is earnable by dragging to the drawn plane rim
+  (`INF_R` inside the plane window), not only by ambient phase growth.
 
 ### Changed
 - Product policy: 0.2 Flagship Proof exits on the agent-and-machine bar (App

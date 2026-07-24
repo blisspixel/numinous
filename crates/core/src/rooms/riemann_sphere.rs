@@ -12,6 +12,7 @@ use crate::surface::Surface;
 /// Half-width of the complex plane window in surface coordinates (around center).
 const PLANE_HALF: f64 = 0.42;
 /// Complex half-span mapped into that window: hand at the rim is about |z| = SPAN.
+/// Chosen so a drag to the drawn plane edge can earn INF (north pole).
 const SPAN: f64 = 4.0;
 /// Sphere drawing radius in normalized surface coordinates.
 const SPHERE_RAD: f64 = 0.28;
@@ -24,9 +25,10 @@ const PCY: f64 = 0.78;
 /// View tilt for the sphere projection (radians).
 const TILT: f64 = 0.55;
 /// |z| at which the lift counts as the north pole (goal).
-const INF_R: f64 = 6.0;
-/// Z coordinate threshold matching INF_R on the unit sphere.
-const INF_Z: f64 = 0.94;
+/// Must sit inside the drawn plane window so DRAG to the rim can earn INF.
+const INF_R: f64 = 3.2;
+/// Z coordinate threshold matching INF_R on the unit sphere (~0.82 at |z|=3.2).
+const INF_Z: f64 = 0.80;
 
 fn phase_unit(t: f64) -> f64 {
     if t.is_finite() {
@@ -391,7 +393,9 @@ impl Room for RiemannSphere {
 
 #[cfg(test)]
 mod tests {
-    use super::{INF_R, RiemannSphere, default_z, is_inf, is_unit, is_zero, lift, mag, working_z};
+    use super::{
+        INF_R, INF_Z, RiemannSphere, default_z, is_inf, is_unit, is_zero, lift, mag, working_z,
+    };
     use crate::canvas::Canvas;
     use crate::room::{Room, RoomInput};
 
@@ -468,8 +472,10 @@ mod tests {
     #[test]
     fn large_z_approaches_north_pole() {
         let (_, _, z) = lift(INF_R, 0.0);
-        assert!(z > 0.9);
+        assert!(z >= INF_Z - 1e-9, "lift Z={z} should meet INF_Z={INF_Z}");
         assert!(is_inf(INF_R, 0.0));
+        let (_, _, z_far) = lift(20.0, 0.0);
+        assert!(z_far > 0.99);
     }
 
     #[test]
@@ -522,34 +528,19 @@ mod tests {
     }
 
     #[test]
-    fn hand_far_out_hits_infinity() {
+    fn hand_on_plane_rim_hits_infinity() {
         let room = RiemannSphere::new();
-        // Corners of the plane strip map past INF_R / SPAN * half window.
+        // Right rim of the drawn complex plane (u = PCX + PLANE_HALF).
         let inputs = [RoomInput::PointerDown {
-            x: 0.98,
-            y: 0.60,
+            x: 0.92,
+            y: 0.78,
             t: 0.0,
         }];
-        // If the corner is not far enough, try several rim points.
-        let mut found = room.goal_met(0.0, &inputs);
-        if !found {
-            for &(x, y) in &[
-                (0.99, 0.78),
-                (0.01, 0.78),
-                (0.50, 0.58),
-                (0.50, 0.96),
-                (0.99, 0.58),
-            ] {
-                let inputs = [RoomInput::PointerDown { x, y, t: 0.0 }];
-                if room.goal_met(0.0, &inputs) {
-                    found = true;
-                    break;
-                }
-            }
-        }
-        // At minimum, a large constructed |z| is infinity.
+        assert!(
+            room.goal_met(0.0, &inputs),
+            "drag to the plane rim must earn the north-pole goal"
+        );
         assert!(is_inf(INF_R, 0.0));
-        let _ = found;
     }
 
     #[test]
