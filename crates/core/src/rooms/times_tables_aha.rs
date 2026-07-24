@@ -315,12 +315,13 @@ impl TimesTablesAha {
     pub fn status(&self, dial: Option<&str>) -> String {
         match self.beat {
             AhaBeat::Explore => dial.unwrap_or("DRAG THE DIAL").to_string(),
+            // Language-light place invite: where does this heart also live?
             AhaBeat::Prime => {
                 let hover = self
                     .hover
                     .map(|h| format!(" >{}", h.tag()))
                     .unwrap_or_default();
-                format!("HEART  1=M 2=N 3=C{hover}")
+                format!("WHERE? 1=M 2=N 3=C{hover}")
             }
             AhaBeat::Withheld => match self.earn {
                 Some(EarnPath::Wager { guess }) if guess.is_truth() => {
@@ -753,6 +754,7 @@ mod tests {
     fn status_stays_compact() {
         let mut aha = TimesTablesAha::new();
         aha.note_hand_multiplier(2.0);
+        assert!(aha.status(None).starts_with("WHERE?"));
         assert!(aha.status(None).chars().count() <= 24);
         aha.commit_wager(CardioidHome::Nephroid);
         assert!(aha.status(None).chars().count() <= 24);

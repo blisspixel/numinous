@@ -261,7 +261,7 @@ mod tests {
     fn flagship_note() -> FlagshipAhaNote {
         FlagshipAhaNote {
             beat: "prime".to_string(),
-            status: "HEART  1=M 2=N 3=C".to_string(),
+            status: "WHERE? 1=M 2=N 3=C".to_string(),
             earn: "none".to_string(),
             allow_reveal: false,
             can_summon: false,
@@ -330,7 +330,7 @@ mod tests {
             &[
                 "## Flagship Aha Snapshot",
                 "- Aha beat: prime",
-                "- Footer status: HEART  1=M 2=N 3=C",
+                "- Footer status: WHERE? 1=M 2=N 3=C",
                 "- Earn path: none",
                 "- Allow reveal text: no",
                 "- Can summon with E: no",

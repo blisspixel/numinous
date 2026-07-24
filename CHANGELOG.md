@@ -19,6 +19,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - Flagship aha Confirm and Consolidated footers name the next E action
   (`PRESS E` after morph, `E:WHY` after consolidation) so the dual-plate and
   circle stages are not a silent dead end before the punchline.
+- Times Tables Prime footer invites a place guess (`WHERE? 1=M 2=N 3=C`)
+  instead of only naming the heart, so the generation act is readable without
+  narration.
 
 ### Changed
 - Docs: ROADMAP, ENGINEERING, README, docs index, NORTH_STAR, and PEDAGOGY name
