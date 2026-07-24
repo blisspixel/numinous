@@ -21,7 +21,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   Watch Agent admits the new keys without changing native room bodies.
   `scripts/agent-hallway.py` runs a five-persona MCP cohort note pack under
   `.agent/tester-cohort/round-07-flagship-aha/` (agent evidence, not human
-  stranger hallway).
+  stranger hallway). INTERFACES documents the MCP aha contract.
 
 ### Fixed
 - Flagship aha Confirm and Consolidated footers name the next E action

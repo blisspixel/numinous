@@ -212,6 +212,17 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   EXACTLY 4 LOBES`. `play_room` returns `goal`, `goalMet`, and a null reveal
   until accepted K=5 input closes four lobes. The earned response then includes
   the same reveal the App points to. Ambient phase alone cannot earn it.
+- **Engineered aha wagers, MCP slice (built):** on Times Tables and Buffon's
+  Needle, `play_room` always includes `structuredContent.engineeredAha` with
+  beat, status, earn, allowReveal, and canSummon. Optional `place_wager`
+  (`mandelbrot` | `nephroid` | `circle`) or `number_wager` (finite, 1.5..4.5)
+  is a generation act. Optional `aha_summon: true` advances through morph to
+  consolidated and unlocks punchline reveal when generation has occurred.
+  Generation args withhold `reveal` until consolidation; the established K5
+  goal path still unlocks reveal without those args. Stateless and
+  fail-closed on wrong rooms or hostile values. App F9 notes and
+  `scripts/agent-hallway.py` exercise the same five-beat story for human
+  facilitators and agent cohorts; agent notes are not a human stranger gate.
 - **Compatibility-preserving compact output (built):** every play-tool schema
   accepts `response_mode: "full" | "compact"`; the local broadcast consent
   control intentionally does not. The argument is stripped before domain
