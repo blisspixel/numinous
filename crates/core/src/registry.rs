@@ -407,6 +407,7 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::napoleon::Napoleon::new_with(variation)),
         Box::new(rooms::smith_chart::SmithChart::new_with(variation)),
         Box::new(rooms::riemann_sphere::RiemannSphere::new_with(variation)),
+        Box::new(rooms::bloch_sphere::BlochSphere::new_with(variation)),
     ]
 }
 

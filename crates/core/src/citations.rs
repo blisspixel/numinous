@@ -203,6 +203,11 @@ pub fn for_room(id: &str) -> &'static str {
             "See also: Riemann sphere and stereographic projection; Needham, \
              Visual Complex Analysis; Ahlfors, Complex Analysis."
         }
+        "bloch-sphere" => {
+            "See also: Bloch sphere and pure qubit states; Nielsen and Chuang, \
+             Quantum Computation and Quantum Information; stereographic link \
+             to the Riemann sphere."
+        }
         "sphere-eversion" => "See also: sphere eversion; Smale's paradox and Outside In.",
         "trefoil" | "unknot" | "figure-eight-knot" | "borromean" => {
             "See also: knot theory intros; Adams, The Knot Book."

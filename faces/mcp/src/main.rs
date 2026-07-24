@@ -8789,9 +8789,9 @@ plays 2
         assert!(text.contains("times-tables"));
         assert_eq!(resp["result"]["isError"], false);
         let structured = &resp["result"]["structuredContent"];
-        assert_eq!(structured["count"], 353);
+        assert_eq!(structured["count"], 354);
         let rooms = structured["rooms"].as_array().expect("room catalog");
-        assert_eq!(rooms.len(), 353);
+        assert_eq!(rooms.len(), 354);
         assert!(rooms.iter().all(|room| {
             room["id"].is_string() && room["title"].is_string() && room["wing"].is_string()
         }));
@@ -8827,7 +8827,7 @@ plays 2
         ));
         let _ = std::fs::remove_file(&journey);
         let rooms = numinous_core::all_rooms();
-        assert_eq!(rooms.len(), 353);
+        assert_eq!(rooms.len(), 354);
 
         for room in rooms {
             let meta = room.meta();

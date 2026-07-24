@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Bloch Sphere joins Shape & Space as room 354 (`bloch-sphere`): pure qubit
+  states on S^2, poles |0>/|1>, equator goal (equal superposition), Born P0
+  status, phase precession, three deep cuts, citation. Compact-map cousin of
+  the Riemann sphere. Catalog size is now 354.
+- Riemann Sphere draws stereographic teaching rays (north pole through the
+  lift to the plane image), the classic university projection diagram.
 - App power-user console on ` or ~: load any catalog room by id, title, or
   index; list matches; set phase, variation, speed, era, and volume; mute;
   reset; jump to Studio or The Show. Esc or the same key closes. Documented in

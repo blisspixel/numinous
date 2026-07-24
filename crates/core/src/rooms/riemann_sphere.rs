@@ -273,13 +273,20 @@ fn draw(canvas: &mut dyn Surface, hand: Option<(f64, f64)>, t: f64, seed: u64) {
     let (up, vp) = z_to_plane_uv(re, im);
     plot_uv(canvas, up, vp, 'z');
 
+    // Stereographic teaching ray: north pole -> lift -> plane image.
+    // This is the diagram universities draw: projection lines, not just a bead.
+    let (un, vn) = sphere_to_uv(0.0, 0.0, 1.0, az);
+    if !is_inf(re, im) {
+        line_uv(canvas, un, vn, us, vs, '.');
+        line_uv(canvas, us, vs, up, vp, '.');
+    }
+
     // Chord from south pole toward the lift, so the climb reads as motion.
     let (u0, v0) = sphere_to_uv(0.0, 0.0, -1.0, az);
     line_uv(canvas, u0, v0, us, vs, '+');
 
-    // When near infinity, mark the north pole brightly.
+    // When near infinity, mark the north pole brightly (ray collapses to N).
     if is_inf(re, im) {
-        let (un, vn) = sphere_to_uv(0.0, 0.0, 1.0, az);
         plot_uv(canvas, un, vn, '@');
     }
 }
