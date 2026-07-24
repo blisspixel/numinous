@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- App power-user console on ` or ~: load any catalog room by id, title, or
+  index; list matches; set phase, variation, speed, era, and volume; mute;
+  reset; jump to Studio or The Show. Esc or the same key closes. Documented in
+  PLAYING and the help menu. Aimed at hackery power users, not first contact.
 - Riemann Sphere joins Shape & Space as room 353 (`riemann-sphere`). Complex
   plane plus infinity as one compact surface: stereographic lift of hand-placed
   z onto the unit sphere, ambient phase walks |z| toward the north pole,
