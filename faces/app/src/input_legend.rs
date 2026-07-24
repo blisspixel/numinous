@@ -440,6 +440,7 @@ pub fn help_lines(mode: InputMode, selected: Option<usize>, activity_paused: boo
             "Y          RADIO    P  POSTCARD   L  LOOP   K  SHARE PACK",
             "F9         PLAYTEST NOTE",
             "M          MUTE    [/] VOLUME   SPACE PAUSE",
+            "` / ~      POWER CONSOLE (room, list, t, vary)",
             "",
             "ESC        CLOSE MENU AND WANDER",
         ]

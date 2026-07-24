@@ -60,6 +60,7 @@ your hands already know it:
 | P | keep the picture: saves the room as a PNG postcard |
 | L | keep the motion: saves a short looping APNG of this visit |
 | F9 | save a local hallway-test note in repo-root `logs/` |
+| ` or ~ | power-user console: load rooms, set phase, variation, era, mute |
 | Y | the radio dial: off, trance, chill, arcade (42 built-in tracks) |
 | [ / ] | global volume down / up; - / = are aliases outside Studio |
 | mouse | click munch cells and quiz choices directly |
@@ -89,6 +90,26 @@ label reports accumulated progress in the local profile, not room difficulty.
 Radio stations appear only when compatible local tracks are present. Visible controller legends use generic directional button names, not
 platform-specific glyphs. The Studio can be entered and left with a controller,
 but formula entry requires a keyboard and the footer states that boundary.
+
+**Power console (` or ~).** For hackery power users, not the first-time path.
+Press backtick or tilde to open a bottom command line (Esc or the same key
+closes it). Useful commands:
+
+```
+help
+room times-tables          load by id, unique title fragment, or index
+room 12
+list riemann               match catalog rooms
+where                      current id, phase, variation, speed
+t 0.35                     set phase
+vary 7                     rebind rooms at variation seed 7
+speed 2
+era phosphor
+mute / unmute / vol 0.5
+reset
+studio
+show
+```
 
 **Or live in the terminal.** Everything also runs in a terminal, in full color:
 
