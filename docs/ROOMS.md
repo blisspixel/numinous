@@ -2,7 +2,7 @@
 
 The content catalog: the phenomena Numinous is built from. Each **room** is one playable mathematical object. Rooms are grouped into **Wings** by feeling, not by curriculum.
 
-**Current status (as of 2026-07):** 353 catalog rooms across the wings plus
+**Current status (as of 2026-07):** 354 catalog rooms across the wings plus
 hidden content. Per-visit variation seed is threaded through registry/app/CLI/
 MCP; every catalog room uses it for replay novelty, while hidden content stays
 outside the catalog replay contract. Every catalog room has `verb()` +
@@ -118,11 +118,19 @@ Each room lists its **Rule** (the deliberately-tiny input), the three layers (**
 
 ### 8.6. Riemann Sphere  Wow 5 / Build 2  [x]
 - **Rule:** The complex plane plus one point at infinity is a sphere. Stereographic projection from the north pole maps the unit sphere (minus that pole) onto C; the south pole is z = 0, the equator is |z| = 1, and the north pole is infinity.
-- **Toy:** Wireframe sphere above a complex-plane strip with unit circle. DRAG: PLACE z on the plane; the bead lifts to the sphere. Phase walks ambient |z| outward so the climb to infinity plays without a hand. Status reads |z|, z, and ZERO / UNIT / INF / C / DRAG:z. Goal: send the lifted bead to the north pole. At most three deep cuts (Journey LV 5 / 12 / 24).
+- **Toy:** Wireframe sphere above a complex-plane strip with unit circle. DRAG: PLACE z on the plane; the bead lifts to the sphere. Stereographic teaching rays run north pole through the lift to the plane image. Phase walks ambient |z| outward so the climb to infinity plays without a hand. Status reads |z|, z, and ZERO / UNIT / INF / C / DRAG:z. Goal: send the lifted bead to the north pole. At most three deep cuts (Journey LV 5 / 12 / 24).
 - **Aha:** "Drag far out and watch the bead climb to N." Infinity is a place on the map, not a failure of the map.
 - **Reveal:** *"The Riemann sphere is the complex plane with one point at infinity. Stereographic projection from the north pole maps the sphere minus that pole onto C. Circles through the pole become straight lines; every other circle stays a circle. One compact surface holds all of C."*
 - **Sound:** motif encodes plane-plus-infinity closing as one sphere.
 - *Built as `riemann-sphere` in Shape & Space. Compact-map cousin of the Smith chart and Poincare disc. Deep cuts cover Riemann, circle/line duality and Mobius automorphisms, and the Bloch / celestial cousins.*
+
+### 8.7. Bloch Sphere  Wow 5 / Build 2  [x]
+- **Rule:** Pure states of a single qubit are points on a unit sphere. North is |0>, south is |1>, and the equator is equal superpositions with a free relative phase. Born probability of |0> is cos^2(theta/2).
+- **Toy:** Wireframe sphere with poles, equator, and |+>/|-> marks. DRAG: PLACE STATE; a state vector points from the center. Phase precesses around Z. Status reads theta, phi, P0, and tags |0> / |1> / EQ / PSI / DRAG:STATE. Goal: land on the equator (equal superposition). At most three deep cuts (Journey LV 5 / 12 / 24).
+- **Aha:** "Hit the equator and watch P0 sit at one half." Superposition is a place on the map, not a vibe word.
+- **Reveal:** *"The Bloch sphere is the pure-state space of a single qubit. North is |0>, south is |1>, and every other point is a coherent superposition. Born probability for |0> is cos^2(theta/2). Relative phase is the longitude. Unitary gates are rotations of this sphere."*
+- **Sound:** motif encodes pure states on a sphere and the equal-weight equator.
+- *Built as `bloch-sphere` in Shape & Space. Compact-map cousin of the Riemann sphere (same S^2 / CP^1 geometry with quantum labels). Deep cuts cover Bloch history, measurement, and gates as rotations.*
 
 ---
 
@@ -334,7 +342,7 @@ you are not told it), and **the kid principle** (the play carries itself even
 if the concept never consciously lands). If an idea cannot pass both, it does
 not ship, however important the syllabus thinks it is.
 
-**Current interaction inventory (2026-07):** 353 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, RESTORE AND HOLD A PATCH in Cult of Pi, STEER THE SEARCH in the Conjecture Mill, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
+**Current interaction inventory (2026-07):** 354 catalog rooms plus hidden content are built. Every catalog room exposes a touch verb, replayable bounded input, and per-visit variation across the app, CLI, and MCP. Representative actions include ADD A CORNER in Chaos Game, PLACE A 5-CELL GLIDER in Life, FLIP A CELL in Cellular Automata and Langton's Ant, SEED A SHADOW STORM in Lorenz, PLANT A WALKER in Random Walk, DROP A WELL in Voronoi, TRACE PRIME DIAGONALS in Prime Spirals, PLANT A SEED in Golden Angle, RESTORE AND HOLD A PATCH in Cult of Pi, STEER THE SEARCH in the Conjecture Mill, THROW A NEEDLE in Buffon, DIVE AT POINT in Mandelbrot, MORPH C in Julia, TURN THE DIAL in Times Tables, and TEST THIS EVEN in Goldbach. Full-frame or held responses use `render_input`; interaction-aware readouts use `status_input` in every face.
 
 **Interaction update, 2026-07-13:** the verb inventory above records the first
 complete poke substrate. The current contract also includes `render_input` and
@@ -924,7 +932,7 @@ edge claims stay labeled as *frontier gesture* (a truthful toy of one idea) or
 
 ### What we already have (feel, not curriculum)
 
-**Built now (353 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
+**Built now (354 catalog + hidden):** Times Tables (flagship dial), Mandelbrot and
 Julia, Cult of Pi, Life and Cellular Automata and Langton and Rule 30, The
 Sandpile, The First Rain, The Magnet, Phantom Jam, Chaos Game, Golden Angle,
 Galton and Buffon, Lissajous, Chladni Figures, Ripple Tank, The Coffee Cup,
@@ -961,7 +969,7 @@ Wallis Product, Superellipse, Cochleoid, Serpentine, Bifolium, Butterfly Curve,
 Piriform, Simple Pendulum, Blackbody, Kepler Areas, Escape Velocity, Coupled
 Oscillators, Prism Dispersion, Lucky Numbers, Gaussian Primes, Quadratic
 Residues, Zeckendorf, Egyptian Fractions, Pell Path, Shannon Entropy, Bayes
-Update, Erdos-Renyi, Markov Chain, Huffman Tree, Mutual Info, Klein Bottle, Cross-Cap, Boy Surface, Solid Torus, Hopf Link, Unknot, Gamma Function, Error Function, Fresnel Integrals, Lambert W, Sinc Interpolation, Dirichlet Eta, AGM Mean, Twin Primes, Perfect Numbers, Napoleon Theorem, The Scariest Chart (Smith chart), Riemann Sphere, plus Awe Engine /
+Update, Erdos-Renyi, Markov Chain, Huffman Tree, Mutual Info, Klein Bottle, Cross-Cap, Boy Surface, Solid Torus, Hopf Link, Unknot, Gamma Function, Error Function, Fresnel Integrals, Lambert W, Sinc Interpolation, Dirichlet Eta, AGM Mean, Twin Primes, Perfect Numbers, Napoleon Theorem, The Scariest Chart (Smith chart), Riemann Sphere, Bloch Sphere, plus Awe Engine /
 Next Wave / universal wonder catalog rooms
 and games (Quiz, Munch, Arcade, Nim, Gauntlet, SETI, Aliens, Codebreaker, and
 kin), Studio, radio, Journey, Cairn, predict.

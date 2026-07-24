@@ -31,6 +31,7 @@ pub mod bifurcation;
 pub mod birthday;
 pub mod blackbody;
 pub mod blancmange;
+pub mod bloch_sphere;
 pub mod bogdanov;
 pub mod borromean;
 pub mod boy_surface;
