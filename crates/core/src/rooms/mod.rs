@@ -268,6 +268,7 @@ pub mod random_walk;
 pub mod recaman;
 pub mod reuleaux;
 pub mod ricker;
+pub mod riemann_sphere;
 pub mod ripple;
 pub mod roman_surface;
 pub mod rose;
