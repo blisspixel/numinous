@@ -25,14 +25,18 @@ packs and the cycle-168 plate bug-hunt; soft-thin densify continues where
 honest but is not the critical path. App Enter starts The Show. Exceptional
 Path Phase A App vertical slices are Built on the machine path: Times Tables
 and Buffon five-beat engineered ahas (generation before reveal, morph, hand
-confirm, gated punchline). Next product evidence is the stranger hallway on
-those visits. The six-question plate filter, contact-language, and MCP
-teammate posture live in `RESEARCH.md`. Public CI passes on Windows, macOS, and
-Ubuntu, but capability breadth remains ahead of release evidence: stranger
-playtests, accessibility work, and real macOS and Linux execution remain open.
-See `../CHANGELOG.md` and the Progress section of `ROADMAP.md`. These docs
-remain the plan of record; Built, Measured, Observed, Designed, and Hypothesis
-have the meanings defined in `RESEARCH.md`.
+confirm, gated punchline). **Critical path for product 0.2:** stranger hallway
+on those visits, then arrival-card clarity and real-window plate beauty.
+Soft-thin densify, bulk new rooms, and Phase B glow are not the high-leverage
+next move. Supply chain is current on public `main` (empty deny/audit ignores,
+weekly Dependabot, pinned CI actions); detail in `ENGINEERING.md`. The six-
+question plate filter, contact-language, and MCP teammate posture live in
+`RESEARCH.md`. Public CI passes on Windows, macOS, and Ubuntu, but capability
+breadth remains ahead of release evidence: stranger playtests, accessibility
+work, and real macOS and Linux execution remain open. See `../CHANGELOG.md` and
+**Critical path right now** in `ROADMAP.md`. These docs remain the plan of
+record; Built, Measured, Observed, Designed, and Hypothesis have the meanings
+defined in `RESEARCH.md`.
 
 ## Reading paths (start by who you are)
 

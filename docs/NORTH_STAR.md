@@ -122,18 +122,21 @@ Sequenced by leverage and dependency. Each phase is a coherent slice, provable
 on one room before it scales, matching the "vertical slice first" discipline
 already in `ROADMAP.md`.
 
-**Phase A, the keystone (cheapest deep win; App slices Built on machine path).**
-MCP `predict` and graded challenges ship the agent-facing verb; Galton ships a
-Toy-layer one-ball wager; Times Tables and Buffon ship five-beat engineered
-ahas on the App (generation before reveal, morph, hand confirm, punchline).
-Stranger hallway evidence remains open. Detail: `PEDAGOGY.md`, `ROADMAP.md`
-(Exceptional Path Phase A).
+**Phase A, the keystone (cheapest deep win; App slices Built on machine path;
+product exit open).** MCP `predict` and graded challenges ship the agent-facing
+verb; Galton ships a Toy-layer one-ball wager; Times Tables and Buffon ship
+five-beat engineered ahas on the App (generation before reveal, morph, hand
+confirm, punchline). Machine path is Built. **The critical path to claim 0.2 is
+stranger hallway on those ahas**, not more rooms or densify. Detail:
+`PEDAGOGY.md`, `ROADMAP.md` (Critical path right now; Exceptional Path Phase A).
 
-**Phase B, the glow pipeline (the systemic aesthetic multiplier).** The GPU
-post-stack: HDR target, bright-pass bloom, ping-pong phosphor persistence,
-tonemap, and the sample-lattice Era filter, as one pipeline every room renders
-through. Then the Sensory Bus (one event stream, consumed by both renderer and
-synth, so sight and sound cannot desync). See `SYNESTHESIA.md`.
+**Phase B, the glow pipeline (systemic aesthetic multiplier; not the default
+next step).** The GPU post-stack: HDR target, bright-pass bloom, ping-pong
+phosphor persistence, tonemap, and the sample-lattice Era filter, as one
+pipeline every room renders through. Then the Sensory Bus (one event stream,
+consumed by both renderer and synth, so sight and sound cannot desync). Schedule
+only if human sessions show a binding sensory ceiling; do not use it to delay
+the hallway. See `SYNESTHESIA.md`.
 
 **Phase C, the game spine.** Constructions (each room's puzzle gets a par, an
 elegance histogram, and a ghost of your past self), and the Constellation
