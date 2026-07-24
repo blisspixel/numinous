@@ -5,6 +5,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- Supply-chain refresh: `cargo update` for current patch and minor lockfile
+  bumps (including wayland-scanner / quick-xml 0.41), drop the temporary
+  RUSTSEC-2026-0194/0195 ignores from deny and audit now that quick-xml is
+  current, pin CI `actions/checkout` to v7.0.1 and `taiki-e/install-action` to
+  v2.85.0. Toolchain pins stay on Rust 1.97.1 / MSRV 1.88.0.
+
 ### Fixed
 - App Windows CI flake: crash-log writer lock test now handshakes before the
   blocking acquire and allows the full lock-retry budget to resume, so loaded

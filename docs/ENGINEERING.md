@@ -113,9 +113,9 @@ and the published crate records for
 - **`cargo-audit`** is a second, independent RustSec advisory check. CI runs it
   on every PR. Local `scripts/verify` runs it when `cargo-audit` is installed.
   Project ignores live in `.cargo/audit.toml` and must stay aligned with the
-  advisory ignores in `deny.toml` (today: build-time `quick-xml` via
-  wayland-scanner only). **`cargo-auditable`** release binaries remain planned
-  hardening, not a current gate.
+  advisory ignores in `deny.toml` (currently none; add only with a temporary
+  reason and an exit condition). **`cargo-auditable`** release binaries remain
+  planned hardening, not a current gate.
 - **Dependencies are minimal and vetted.** Each new dependency is justified in review; prefer well-maintained, widely-used crates; give extra scrutiny to unsafe-heavy deps (a CVE in an unsafe-heavy crate is more urgent than the same score in pure-safe code).
 
 ## Local threat model (security review baseline)
