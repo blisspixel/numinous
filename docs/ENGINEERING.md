@@ -6,32 +6,42 @@ perfection. This document separates gates enforced today from hardening work
 that still has to earn its place. The automated enforcement that exists lives
 in `QUALITY.md` and `.github/workflows/ci.yml`.
 
-## Toolchain and versions (verified 2026-07-18)
+## Toolchain and versions (verified 2026-07-24)
 
 The current baseline is deliberate and green. A newer major release is a review
-candidate, not an automatic upgrade. Patch updates within the lockfile are kept
-current through Dependabot and must pass the full gate.
+candidate, not an automatic upgrade. Compatible patch and minor lockfile
+updates are kept current through reviewed PRs and weekly Dependabot; they must
+pass the full gate. Direct major bumps stay measured roadmap work, not
+automatic merges.
 
 | Component | Enforced baseline | Notes |
 | --- | --- | --- |
 | Rust edition | **2024** | The current edition; use it from the first commit. |
-| Rust toolchain | **1.97.1** | Exact developer and CI toolchain. CI separately checks the verified 1.88 MSRV. |
+| Rust toolchain | **1.97.1** | Exact developer and CI toolchain (`rust-toolchain.toml`). CI separately checks the verified 1.88 MSRV. |
 | `wgpu` | **30.0.0** | Current GPU stack. The migration preserves unbucketed adapter limits and handles mapped-range failures as typed errors. |
 | `winit`, `softbuffer` | **0.30.x, 0.4.x** | Current native window and software presentation path. |
 | `cpal` | **0.18.1** | Current native audio I/O. Every PCM format is converted from the shared float mix; DSD remains explicitly unsupported. |
 | `png`, `pollster`, `ureq` | **0.18.1, 1.0.1, 3.3.0** | Current image, blocking-future, and synchronous HTTP baselines. HTTP redirects remain disabled for the credentialed music request and error bodies remain bounded. |
 | `gilrs` | **0.11.2** | Current cross-platform gamepad input. Linux CI installs `libudev-dev`. |
 | Test runner | **cargo test** | Enforced today. `cargo-nextest` is a possible speed improvement, not a current dependency. |
-| Supply chain | **cargo-deny** and **cargo-audit** | Both enforced in CI. Deny covers advisories, licenses, bans, and sources; audit is the independent RustSec path with ignores in `.cargo/audit.toml`. `cargo-auditable` release binaries remain planned hardening. |
+| Supply chain | **cargo-deny** and **cargo-audit** | Both enforced in CI. Deny covers advisories, licenses, bans, and sources; audit is the independent RustSec path. Advisory ignore lists are currently empty. `cargo-auditable` release binaries remain planned hardening. |
 | Coverage | **cargo-llvm-cov** | Tracked, not fetishized (see Testing). |
 
 **Version hygiene:** commit `Cargo.lock`, build with `--locked` in CI,
 centralize shared versions in `[workspace.dependencies]`, and update through
-reviewed changes. The 2026-07-18 audit migrated every direct dependency with a
-newer general-availability line and refreshed all compatible transitive
-packages. `cargo update --dry-run --verbose` reports no remaining update.
-Dependabot watches Cargo and action releases without migration-era ignores.
-The release evidence comes from the official
+reviewed changes. Direct stack lines above are on their current general-
+availability majors. Compatible transitive packages were refreshed on
+2026-07-24 (including wayland-scanner with quick-xml 0.41, which cleared the
+former temporary RUSTSEC ignores). Dependabot watches Cargo and GitHub Actions
+weekly (`.github/dependabot.yml`) without migration-era ignore rules.
+
+**CI action pins (current):** `actions/checkout` v7.0.1, `taiki-e/install-action`
+v2.85.0, `EmbarkStudios/cargo-deny-action` v2.1.1, `dtolnay/rust-toolchain`
+pinned to the 1.97.1 and 1.88.0 channel commits named in `.github/workflows/ci.yml`.
+Bump pins through review when Dependabot or a manual check shows a newer
+release.
+
+The release evidence for the major stack lines comes from the official
 [`wgpu` 30.0.0 release](https://github.com/gfx-rs/wgpu/releases/tag/v30.0.0),
 [`cpal` 0.18.1 release](https://github.com/RustAudio/cpal/releases/tag/v0.18.1),
 and the published crate records for
@@ -113,10 +123,23 @@ and the published crate records for
 - **`cargo-audit`** is a second, independent RustSec advisory check. CI runs it
   on every PR. Local `scripts/verify` runs it when `cargo-audit` is installed.
   Project ignores live in `.cargo/audit.toml` and must stay aligned with the
-  advisory ignores in `deny.toml` (currently none; add only with a temporary
-  reason and an exit condition). **`cargo-auditable`** release binaries remain
-  planned hardening, not a current gate.
-- **Dependencies are minimal and vetted.** Each new dependency is justified in review; prefer well-maintained, widely-used crates; give extra scrutiny to unsafe-heavy deps (a CVE in an unsafe-heavy crate is more urgent than the same score in pure-safe code).
+  advisory ignores in `deny.toml` (currently **none**; add only with a temporary
+  reason and a named exit condition, then remove when the dependency catches
+  up). **`cargo-auditable`** release binaries remain planned hardening, not a
+  current gate.
+- **Dependabot** opens weekly PRs for Cargo and GitHub Actions
+  (`.github/dependabot.yml`, limit five open PRs per ecosystem). Compatible
+  updates merge after the full CI gate. Breaking major bumps stay deliberate
+  reviews, not automatic landings.
+- **Current posture (2026-07-24):** public `main` is green on deny and audit
+  with empty ignore lists; lockfile and action pins are refreshed as above.
+  Standing Dependabot security alerts should stay at zero; if an alert appears,
+  fix or document a temporary ignore with an exit condition before claiming a
+  clean supply chain.
+- **Dependencies are minimal and vetted.** Each new dependency is justified in
+  review; prefer well-maintained, widely-used crates; give extra scrutiny to
+  unsafe-heavy deps (a CVE in an unsafe-heavy crate is more urgent than the same
+  score in pure-safe code).
 
 ## Local threat model (security review baseline)
 

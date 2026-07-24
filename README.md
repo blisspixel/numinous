@@ -164,16 +164,20 @@ densify continues where honest. The six-question plate filter lives in
 [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 The alpha label is meaningful. Automated correctness, security, coverage,
-cross-platform build, and installer gates are strong, but the 0.2 release still
-requires real hallway playtests, accessibility sessions, representative
-controller sessions, musician-led long listening, and broader native hardware
-evidence. Capability breadth is not being used as a substitute for that human
-evidence.
+cross-platform build, installer, and supply-chain gates are strong (deny and
+audit run with no standing advisory ignores; Dependabot watches Cargo and
+Actions). The 0.2 release still requires **real hallway playtests** on the
+Times Tables and Buffon engineered ahas, plus accessibility sessions,
+representative controller sessions, musician-led long listening, and broader
+native hardware evidence. Capability breadth is not a substitute for that
+human evidence.
 
-The ordered release criteria and open evidence are in
-[`docs/ROADMAP.md`](docs/ROADMAP.md). Reproducible engineering checks are in
-[`VERIFY.md`](VERIFY.md), and completed changes are in
-[`CHANGELOG.md`](CHANGELOG.md).
+**What blocks claiming 0.2:** stranger hallway proof that the flagship aha
+lands without narration. Soft-thin densify, more rooms, and sensory pipeline
+work are background craft until that gate is met. Ordered criteria live in
+[`docs/ROADMAP.md`](docs/ROADMAP.md) (**Critical path right now**).
+Reproducible engineering checks are in [`VERIFY.md`](VERIFY.md); completed
+changes are in [`CHANGELOG.md`](CHANGELOG.md).
 
 <details>
 <summary>Detailed engineering evidence for this alpha</summary>
