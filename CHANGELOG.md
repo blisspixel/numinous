@@ -8,7 +8,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ### Added
 - MCP initialize instructions teach play_room-first discovery and the Times
   Tables / Buffon place_wager and number_wager aha path, and warn that
-  describe_room / reveal_room can spoil generation-before-reveal.
+  describe_room / reveal_room can spoil generation-before-reveal. PLAYING.md
+  documents the same agent contract.
 - Hallway F9 notes capture flagship aha state on Times Tables and Buffon
   ordinary visits: beat label, footer status, earn path, reveal and summon
   flags, and aha-plate overlay. Notes also add engineered-aha facilitator

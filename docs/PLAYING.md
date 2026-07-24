@@ -197,7 +197,7 @@ input without hidden session state:
 | `list_rooms` | the catalog |
 | `describe_room` | a room's story, action, and optional goal (some unlisted names also answer) |
 | `reveal_room` | the insight that reframes the room |
-| `play_room` | render a room as ASCII at phase `t`, with optional `variation`, `pokes`, or a phase-stamped `gesture`; returns goal state and an earned reveal where available |
+| `play_room` | render a room as ASCII at phase `t`, with optional `variation`, `pokes`, or a phase-stamped `gesture`; returns goal state and an earned reveal where available. On Times Tables and Buffon also returns `engineeredAha`; optional `place_wager` / `number_wager` plus `aha_summon` walk generation-before-reveal without App session state |
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
 | `predict` | predict a room's readout at a hidden moment; graded as a gap and a band, a self-owned mirror, never a score. Pass the same `seed` and `variation` to the pose and the guess so you are graded against the room you played |
 | `cairn` | read a message a mind before you left (factor its semiprime to read it), or at level 42 leave one true thing for a stranger not yet born |
@@ -273,6 +273,13 @@ Conventions worth relying on:
   CLI room seed; `--vary` chooses and prints one. The native App has a different
   explicit contract: its Life universe persists for one room visit until reset
   or room departure and does not inherit the 24-launch replay bound.
+- **Flagship engineered aha (MCP).** Prefer `play_room` before `describe_room`
+  or `reveal_room` on Times Tables and Buffon's Needle so you do not skip the
+  generation act. Pass `place_wager` (`mandelbrot` | `nephroid` | `circle`) or
+  `number_wager` (1.5..4.5), then `aha_summon: true` to consolidate and unlock
+  the punchline. Read `structuredContent.engineeredAha` for beat, earn, and
+  allowReveal. The App path is the ordinary visit with bottom-band or key
+  wagers and E; F9 captures hallway notes for human facilitators.
 - **Structured output, and the substance is in it.** Catalog, description,
   reveal, listening, score, memory, game, and Journey results return bounded
   `structuredContent` alongside prose; parse that, not the sentences. All 31
