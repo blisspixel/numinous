@@ -879,13 +879,18 @@ fn initialize_result(params: Option<&Value>) -> Value {
         "protocolVersion": protocol_version,
         "capabilities": { "tools": {} },
         "serverInfo": { "name": "numinous", "version": env!("CARGO_PKG_VERSION") },
-        "instructions": "Explore the catalog with list_rooms, read a room with describe_room, \
-                         then play_room to render it as ASCII and see what the math does. Steer \
-                         the simulations with list_sims and run_sim (fiddle the levers to optimize \
-                         or break them), and play Guess the Shape with the quiz tool. If a human \
-                         offers a local App pairing code, broadcast_session lets you explicitly \
-                         consent to, inspect, pause, resume, or stop that read-only public view. \
-                         Further reading lives on reveal_room as citation."
+        "instructions": "Explore the catalog with list_rooms, then play_room to render ASCII and \
+                         see what the math does before you ask for explanations. On Times Tables \
+                         pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true \
+                         for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) \
+                         then aha_summon true. Read structuredContent.engineeredAha for beat and \
+                         earn. describe_room and reveal_room open explanation on purpose and can \
+                         spoil generation-before-reveal, so prefer play_room first. Steer \
+                         simulations with list_sims and run_sim, and play Guess the Shape with \
+                         the quiz tool. If a human offers a local App pairing code, \
+                         broadcast_session lets you consent to, inspect, pause, resume, or stop \
+                         that read-only public view. Further reading lives on reveal_room as \
+                         citation."
     })
 }
 
@@ -5102,6 +5107,17 @@ mod tests {
                 .expect("initialize is a request and must respond");
         assert_eq!(resp["result"]["serverInfo"]["name"], "numinous");
         assert_eq!(resp["result"]["protocolVersion"], "2025-06-18");
+        let instructions = resp["result"]["instructions"]
+            .as_str()
+            .expect("initialize ships agent instructions");
+        assert!(
+            instructions.contains("place_wager") && instructions.contains("number_wager"),
+            "instructions teach flagship aha args: {instructions}"
+        );
+        assert!(
+            instructions.contains("prefer play_room first"),
+            "instructions warn that describe/reveal can spoil: {instructions}"
+        );
         let preferred = handle_request(&json!({
             "jsonrpc":"2.0","id":2,"method":"initialize",
             "params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"t","version":"1"}}
