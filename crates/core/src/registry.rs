@@ -405,6 +405,7 @@ pub fn all_rooms_with(variation: u64) -> Vec<Box<dyn Room>> {
         Box::new(rooms::twin_primes::TwinPrimes::new_with(variation)),
         Box::new(rooms::perfect_num::PerfectNum::new_with(variation)),
         Box::new(rooms::napoleon::Napoleon::new_with(variation)),
+        Box::new(rooms::smith_chart::SmithChart::new_with(variation)),
     ]
 }
 
