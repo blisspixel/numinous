@@ -14,6 +14,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   sweeps are not mistaken for ordinary-visit progress. Core exposes stable
   `beat_label` / `earn_label` on both aha modules for diagnostics. App tests
   cover both rooms' wire path.
+- MCP `play_room` optional `place_wager` (Times Tables), `number_wager`
+  (Buffon), and `aha_summon` walk the engineered aha without App session
+  state. `structuredContent.engineeredAha` reports beat, earn, status, and
+  allowReveal; generation args withhold reveal until summon consolidates.
+  Watch Agent admits the new keys without changing native room bodies.
+  `scripts/agent-hallway.py` runs a five-persona MCP cohort note pack under
+  `.agent/tester-cohort/round-07-flagship-aha/` (agent evidence, not human
+  stranger hallway).
 
 ### Fixed
 - Flagship aha Confirm and Consolidated footers name the next E action

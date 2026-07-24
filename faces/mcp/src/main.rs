@@ -1028,7 +1028,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "play_room",
-                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. When you supply pokes or a gesture, the structured result includes a delta (cells changed, ink added/removed/reshaped, changed region) measuring exactly how the math answered your hand. This call is stateless: replay the same inputs for the same result.",
+                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. When you supply pokes or a gesture, the structured result includes a delta (cells changed, ink added/removed/reshaped, changed region) measuring exactly how the math answered your hand. This call is stateless: replay the same inputs for the same result. On Times Tables and Buffon's Needle, optional place_wager or number_wager plus aha_summon walk the engineered aha without App session state; structuredContent.engineeredAha reports the beat.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -1038,7 +1038,22 @@ fn build_tools_catalog() -> Value {
                         "height": { "type": "integer", "minimum": 1, "maximum": MAX_TOOL_HEIGHT, "description": "ASCII canvas height in rows, from 1 through 256." },
                         "variation": { "type": "integer", "minimum": 0, "description": "Per-visit variation seed (default 0) for replayable novelty in supporting rooms." },
                         "pokes": room_pokes_schema(),
-                        "gesture": room_gesture_schema()
+                        "gesture": room_gesture_schema(),
+                        "place_wager": {
+                            "type": "string",
+                            "enum": ["mandelbrot", "nephroid", "circle"],
+                            "description": "Times Tables engineered aha only: commit where the K=2 heart also lives. Generation before reveal."
+                        },
+                        "number_wager": {
+                            "type": "number",
+                            "minimum": 1.5,
+                            "maximum": 4.5,
+                            "description": "Buffon's Needle engineered aha only: commit a finite number on 1.5..4.5 for the crossing ratio."
+                        },
+                        "aha_summon": {
+                            "type": "boolean",
+                            "description": "After a generation act on Times Tables or Buffon, advance the engineered aha through morph to consolidated and unlock punchline reveal text. Stateless one-shot."
+                        }
                     },
                     "required": ["id"],
                     "additionalProperties": false
@@ -1926,8 +1941,15 @@ fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
             {
                 summary.push_str(&format!(" Touch changed {cells} cells."));
             }
+            if let Some(beat) = structured
+                .get("engineeredAha")
+                .and_then(|aha| aha.get("beat"))
+                .and_then(Value::as_str)
+            {
+                summary.push_str(&format!(" Aha beat: {beat}."));
+            }
             summary.push_str(
-                " Read structuredContent.render, pokes, gesture, status, delta, goal, goalMet, and the earned reveal for the complete result.",
+                " Read structuredContent.render, pokes, gesture, status, delta, goal, goalMet, engineeredAha, and the earned reveal for the complete result.",
             );
             Some(summary)
         }
@@ -2532,6 +2554,10 @@ fn play_room_tool(args: &Value) -> Value {
         Ok(inputs) => inputs,
         Err(message) => return tool_error(&message),
     };
+    let aha_request = match parse_flagship_aha_request(args, id) {
+        Ok(request) => request,
+        Err(message) => return tool_error(&message),
+    };
 
     let room = if variation != 0 {
         all_rooms_with(variation)
@@ -2569,14 +2595,60 @@ fn play_room_tool(args: &Value) -> Value {
             };
             let m = room.meta();
             let action = numinous_core::room_action(room.as_ref());
-            let status = if !accepted_inputs.is_empty() {
+            let room_status = if !accepted_inputs.is_empty() {
                 room.status_input(t, accepted_inputs)
             } else {
                 room.status(t)
             };
             let goal = room.goal();
             let goal_met = goal.is_some() && room.goal_met(t, accepted_inputs);
-            let earned_reveal = goal_met.then(|| room.reveal());
+            let engineered_aha = match project_flagship_aha(
+                id,
+                variation,
+                t,
+                accepted_inputs,
+                goal_met,
+                aha_request,
+            ) {
+                Ok(value) => value,
+                Err(message) => return tool_error(&message),
+            };
+            // Place/number wagers gate reveal on aha consolidation. The
+            // established K5/goal path still unlocks reveal without aha args.
+            let aha_gates_reveal = aha_request.uses_generation_args();
+            let aha_allows_reveal = engineered_aha
+                .as_ref()
+                .and_then(|value| value.get("allowReveal"))
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            let earned_reveal = if aha_gates_reveal {
+                aha_allows_reveal.then(|| room.reveal())
+            } else {
+                goal_met.then(|| room.reveal())
+            };
+            // Prefer aha footer once the visit leaves free explore or once a
+            // generation arg is present; keep dial/throw status for pure explore.
+            let status = {
+                let aha_beat = engineered_aha
+                    .as_ref()
+                    .and_then(|value| value.get("beat"))
+                    .and_then(Value::as_str);
+                let use_aha_status = aha_request.uses_generation_args()
+                    || matches!(
+                        aha_beat,
+                        Some("prime" | "withheld" | "morph" | "confirm" | "consolidated")
+                    );
+                if use_aha_status {
+                    engineered_aha
+                        .as_ref()
+                        .and_then(|value| value.get("status"))
+                        .and_then(Value::as_str)
+                        .map(str::to_owned)
+                        .or(room_status)
+                } else {
+                    room_status
+                }
+            };
             let status_line = status
                 .as_ref()
                 .map(|readout| format!("\nStatus: {readout}"))
@@ -2593,13 +2665,19 @@ fn play_room_tool(args: &Value) -> Value {
             let goal_line = goal
                 .map(|objective| format!("\nGoal: {objective}"))
                 .unwrap_or_default();
+            let aha_line = engineered_aha
+                .as_ref()
+                .and_then(|value| value.get("beat"))
+                .and_then(Value::as_str)
+                .map(|beat| format!("\nAha beat: {beat}"))
+                .unwrap_or_default();
             let reveal_line = earned_reveal
                 .map(|reveal| format!("\nReveal: {reveal}"))
                 .unwrap_or_default();
             let render = canvas.to_text();
             tool_structured(
                 &format!(
-                    "{} at t={t:.3}:\nAction: {action}{goal_line}{status_line}{touch_line}{reveal_line}\n\n{render}",
+                    "{} at t={t:.3}:\nAction: {action}{goal_line}{status_line}{aha_line}{touch_line}{reveal_line}\n\n{render}",
                     m.title,
                 ),
                 json!({
@@ -2616,6 +2694,7 @@ fn play_room_tool(args: &Value) -> Value {
                     "goal": goal,
                     "goalMet": goal_met,
                     "reveal": earned_reveal,
+                    "engineeredAha": engineered_aha,
                     // The picture itself, so a mind on a client that surfaces
                     // only structuredContent still sees the math, not just its
                     // metadata. The render is the substance, never text-only.
@@ -2625,6 +2704,203 @@ fn play_room_tool(args: &Value) -> Value {
             )
         }
         None => tool_error(&unknown_room(id)),
+    }
+}
+
+/// Optional engineered-aha arguments for the two Phase A flagship rooms.
+#[derive(Debug, Clone, Copy, Default)]
+struct FlagshipAhaRequest {
+    place_wager: Option<numinous_core::rooms::times_tables_aha::CardioidHome>,
+    number_wager: Option<f64>,
+    summon: bool,
+}
+
+impl FlagshipAhaRequest {
+    fn uses_generation_args(self) -> bool {
+        self.place_wager.is_some() || self.number_wager.is_some() || self.summon
+    }
+}
+
+fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAhaRequest, String> {
+    let place_raw = args.get("place_wager");
+    let number_raw = args.get("number_wager");
+    let summon = args
+        .get("aha_summon")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+
+    let place_wager = if let Some(value) = place_raw {
+        let Some(name) = value.as_str() else {
+            return Err("Argument 'place_wager' must be a string.".to_string());
+        };
+        if room_id != "times-tables" {
+            return Err("place_wager is only valid on Times Tables (id times-tables).".to_string());
+        }
+        Some(match name {
+            "mandelbrot" => numinous_core::rooms::times_tables_aha::CardioidHome::Mandelbrot,
+            "nephroid" => numinous_core::rooms::times_tables_aha::CardioidHome::Nephroid,
+            "circle" => numinous_core::rooms::times_tables_aha::CardioidHome::Circle,
+            other => {
+                return Err(format!(
+                    "place_wager must be mandelbrot, nephroid, or circle; got '{other}'."
+                ));
+            }
+        })
+    } else {
+        None
+    };
+
+    let number_wager = if let Some(value) = number_raw {
+        let Some(guess) = value.as_f64() else {
+            return Err("Argument 'number_wager' must be a finite number.".to_string());
+        };
+        if !guess.is_finite() {
+            return Err("Argument 'number_wager' must be a finite number.".to_string());
+        }
+        if room_id != "buffon-needle" {
+            return Err(
+                "number_wager is only valid on Buffon's Needle (id buffon-needle).".to_string(),
+            );
+        }
+        if !(numinous_core::rooms::buffon_aha::GUESS_MIN
+            ..=numinous_core::rooms::buffon_aha::GUESS_MAX)
+            .contains(&guess)
+        {
+            return Err(format!(
+                "number_wager must be in [{}, {}].",
+                numinous_core::rooms::buffon_aha::GUESS_MIN,
+                numinous_core::rooms::buffon_aha::GUESS_MAX
+            ));
+        }
+        Some(guess)
+    } else {
+        None
+    };
+
+    if place_wager.is_some() && number_wager.is_some() {
+        return Err("Pass place_wager or number_wager, not both.".to_string());
+    }
+    if summon && room_id != "times-tables" && room_id != "buffon-needle" {
+        return Err("aha_summon is only valid on Times Tables or Buffon's Needle.".to_string());
+    }
+
+    Ok(FlagshipAhaRequest {
+        place_wager,
+        number_wager,
+        summon,
+    })
+}
+
+fn project_flagship_aha(
+    room_id: &str,
+    variation: u64,
+    t: f64,
+    inputs: &[numinous_core::RoomInput],
+    goal_met: bool,
+    request: FlagshipAhaRequest,
+) -> Result<Option<Value>, String> {
+    match room_id {
+        "times-tables" => {
+            use numinous_core::rooms::times_tables_aha::{AhaBeat, TimesTablesAha};
+            let room = numinous_core::rooms::times_tables::TimesTables::new_with(variation);
+            let mut aha = TimesTablesAha::new();
+            // Same dial contract as the plate: closed K=2 primes the gap.
+            aha.note_hand_multiplier(room.live_multiplier(t, inputs));
+            if goal_met {
+                let _ = aha.note_four_lobes();
+            }
+            if let Some(place) = request.place_wager {
+                // Generation may open from Explore; a second wager is a no-op.
+                let _ = aha.commit_wager(place);
+            }
+            if request.summon {
+                if !aha.earned() {
+                    return Err(
+                        "aha_summon requires a place_wager or the four-lobe goal first."
+                            .to_string(),
+                    );
+                }
+                advance_aha_to_consolidated(&mut aha);
+            }
+            // Footer aha status uses its own compact lines; dial detail is optional.
+            let dial = None::<String>;
+            Ok(Some(json!({
+                "kind": "place",
+                "beat": aha.beat_label(),
+                "status": aha.status(dial.as_deref()),
+                "earn": aha.earn_label(),
+                "allowReveal": aha.allow_reveal_text(),
+                "canSummon": aha.can_summon()
+                    || matches!(aha.beat(), AhaBeat::Morph { .. }),
+                "placeOptions": ["mandelbrot", "nephroid", "circle"],
+                "punchline": aha.punchline(),
+            })))
+        }
+        "buffon-needle" => {
+            use numinous_core::rooms::buffon_aha::{AhaBeat, BuffonAha};
+            let mut aha = BuffonAha::new();
+            let throws = numinous_core::rooms::buffon_needle::BuffonNeedle::throw_count(inputs);
+            aha.note_throws(throws);
+            if let Some(guess) = request.number_wager {
+                let _ = aha.commit_wager(guess);
+            }
+            if request.summon {
+                if !aha.earned() {
+                    return Err(
+                        "aha_summon requires a number_wager or eight throws first.".to_string()
+                    );
+                }
+                advance_buffon_to_consolidated(&mut aha);
+            }
+            let throw_status = None::<String>;
+            Ok(Some(json!({
+                "kind": "number",
+                "beat": aha.beat_label(),
+                "status": aha.status(throw_status.as_deref()),
+                "earn": aha.earn_label(),
+                "allowReveal": aha.allow_reveal_text(),
+                "canSummon": aha.can_summon()
+                    || matches!(aha.beat(), AhaBeat::Morph { .. }),
+                "guessMin": numinous_core::rooms::buffon_aha::GUESS_MIN,
+                "guessMax": numinous_core::rooms::buffon_aha::GUESS_MAX,
+                "punchline": aha.punchline(),
+            })))
+        }
+        _ => {
+            if request.uses_generation_args() {
+                return Err(
+                    "Engineered aha arguments are only valid on Times Tables or Buffon's Needle."
+                        .to_string(),
+                );
+            }
+            Ok(None)
+        }
+    }
+}
+
+fn advance_aha_to_consolidated(aha: &mut numinous_core::rooms::times_tables_aha::TimesTablesAha) {
+    use numinous_core::rooms::times_tables_aha::AhaBeat;
+    if matches!(aha.beat(), AhaBeat::Withheld) {
+        let _ = aha.summon();
+    }
+    if matches!(aha.beat(), AhaBeat::Morph { .. }) {
+        aha.set_morph_progress(1.0);
+    }
+    if matches!(aha.beat(), AhaBeat::Confirm) {
+        let _ = aha.summon();
+    }
+}
+
+fn advance_buffon_to_consolidated(aha: &mut numinous_core::rooms::buffon_aha::BuffonAha) {
+    use numinous_core::rooms::buffon_aha::AhaBeat;
+    if matches!(aha.beat(), AhaBeat::Withheld) {
+        let _ = aha.summon();
+    }
+    if matches!(aha.beat(), AhaBeat::Morph { .. }) {
+        aha.set_morph_progress(1.0);
+    }
+    if matches!(aha.beat(), AhaBeat::Confirm) {
+        let _ = aha.summon();
     }
 }
 
@@ -7047,6 +7323,8 @@ plays 2
                 .unwrap_or_default()
                 .contains("Reveal:")
         );
+        assert_eq!(unearned_content["engineeredAha"]["kind"], "place");
+        assert_eq!(unearned_content["engineeredAha"]["allowReveal"], false);
 
         let earned_arguments = json!({
             "id":"times-tables",
@@ -7059,7 +7337,16 @@ plays 2
         let earned = call("play_room", earned_arguments.clone());
         let earned_content = &earned["result"]["structuredContent"];
         assert_eq!(earned_content["variation"], 42);
-        assert_eq!(earned_content["status"], "K 5.00  CLOSED  4 LOBES  FOUND");
+        // Aha footer replaces the raw dial status when the four-lobe path earns.
+        assert!(
+            earned_content["status"]
+                .as_str()
+                .is_some_and(|s| s.contains("EARNED")
+                    || s.contains("4 LOBES")
+                    || s.contains("PRESS E")),
+            "status={}",
+            earned_content["status"]
+        );
         assert_eq!(earned_content["goalMet"], true);
         assert!(
             earned_content["reveal"]
@@ -7078,6 +7365,126 @@ plays 2
             compact["result"]["structuredContent"],
             earned["result"]["structuredContent"]
         );
+    }
+
+    #[test]
+    fn times_tables_place_wager_gates_reveal_until_aha_summon() {
+        let wagered = call(
+            "play_room",
+            json!({
+                "id": "times-tables",
+                "width": 40,
+                "height": 20,
+                "place_wager": "circle"
+            }),
+        );
+        let content = &wagered["result"]["structuredContent"];
+        assert_eq!(content["engineeredAha"]["beat"], "withheld");
+        assert_eq!(content["engineeredAha"]["earn"], "wager:circle");
+        assert_eq!(content["engineeredAha"]["allowReveal"], false);
+        assert!(content["reveal"].is_null());
+        assert!(
+            content["status"]
+                .as_str()
+                .is_some_and(|s| s.contains("PRESS E"))
+        );
+
+        let consolidated = call(
+            "play_room",
+            json!({
+                "id": "times-tables",
+                "width": 40,
+                "height": 20,
+                "place_wager": "mandelbrot",
+                "aha_summon": true
+            }),
+        );
+        let done = &consolidated["result"]["structuredContent"];
+        assert_eq!(done["engineeredAha"]["beat"], "consolidated");
+        assert_eq!(done["engineeredAha"]["allowReveal"], true);
+        assert!(
+            done["reveal"]
+                .as_str()
+                .is_some_and(|reveal| reveal.contains("Mandelbrot"))
+        );
+        assert_eq!(done["engineeredAha"]["earn"], "wager:mandelbrot");
+    }
+
+    #[test]
+    fn buffon_number_wager_walks_the_engineered_aha() {
+        let open = call(
+            "play_room",
+            json!({"id": "buffon-needle", "width": 40, "height": 20}),
+        );
+        assert_eq!(
+            open["result"]["structuredContent"]["engineeredAha"]["kind"],
+            "number"
+        );
+        assert_eq!(
+            open["result"]["structuredContent"]["engineeredAha"]["beat"],
+            "explore"
+        );
+
+        let wagered = call(
+            "play_room",
+            json!({
+                "id": "buffon-needle",
+                "width": 40,
+                "height": 20,
+                "number_wager": 3.0
+            }),
+        );
+        let content = &wagered["result"]["structuredContent"];
+        assert_eq!(content["engineeredAha"]["beat"], "withheld");
+        assert!(content["reveal"].is_null());
+        assert!(
+            content["engineeredAha"]["earn"]
+                .as_str()
+                .is_some_and(|e| e.starts_with("wager:3.000:"))
+        );
+
+        let done = call(
+            "play_room",
+            json!({
+                "id": "buffon-needle",
+                "width": 40,
+                "height": 20,
+                "number_wager": std::f64::consts::PI,
+                "aha_summon": true
+            }),
+        );
+        let done_content = &done["result"]["structuredContent"];
+        assert_eq!(done_content["engineeredAha"]["beat"], "consolidated");
+        assert_eq!(done_content["engineeredAha"]["allowReveal"], true);
+        assert!(
+            done_content["reveal"]
+                .as_str()
+                .is_some_and(|r| r.to_ascii_lowercase().contains("pi") || r.contains("circle"))
+        );
+    }
+
+    #[test]
+    fn flagship_aha_args_reject_wrong_rooms_and_hostile_values() {
+        let wrong = call(
+            "play_room",
+            json!({"id": "lorenz", "place_wager": "mandelbrot"}),
+        );
+        assert_eq!(wrong["result"]["isError"], true);
+        let buffon_place = call(
+            "play_room",
+            json!({"id": "buffon-needle", "place_wager": "circle"}),
+        );
+        assert_eq!(buffon_place["result"]["isError"], true);
+        let over = call(
+            "play_room",
+            json!({"id": "buffon-needle", "number_wager": 9.0}),
+        );
+        assert_eq!(over["result"]["isError"], true);
+        let summon_alone = call(
+            "play_room",
+            json!({"id": "times-tables", "aha_summon": true}),
+        );
+        assert_eq!(summon_alone["result"]["isError"], true);
     }
 
     #[test]

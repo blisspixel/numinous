@@ -241,11 +241,19 @@ fn app_viewer_follows_a_real_times_tables_agent_session() {
             .unwrap_or_else(|| panic!("no reply with id {id}"))
     };
     assert_eq!(by_id(1)["result"]["structuredContent"]["state"], "live");
-    assert_eq!(
-        by_id(6)["result"]["structuredContent"]["status"],
-        "K 5.00  CLOSED  4 LOBES  FOUND"
+    let k5_status = by_id(6)["result"]["structuredContent"]["status"]
+        .as_str()
+        .expect("play_room status");
+    // Four-lobe earn also advances the engineered aha footer (PRESS E path).
+    assert!(
+        k5_status.contains("4 LOBES") || k5_status.contains("EARNED"),
+        "unexpected K5 status: {k5_status}"
     );
     assert_eq!(by_id(6)["result"]["structuredContent"]["goalMet"], true);
+    assert_eq!(
+        by_id(6)["result"]["structuredContent"]["engineeredAha"]["earn"],
+        "four-lobes"
+    );
     assert!(text_of(by_id(7)).contains("Mandelbrot"));
     assert_eq!(by_id(9)["result"]["structuredContent"]["state"], "stopped");
 
