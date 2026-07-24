@@ -290,7 +290,7 @@ Cairn, so it cannot change the player's profile or collide with another run.
 
 ## 5. Where things are
 
-- `crates/core` the headless engine: rooms (352 catalog rooms plus hidden
+- `crates/core` the headless engine: rooms (353 catalog rooms plus hidden
   content), sims, games (including nim and the chiptune composer), the Studio
   expression engine, the journey, scores, trophies, resonances, sound, eras,
   and the drawing surfaces.
@@ -302,7 +302,7 @@ Cairn, so it cannot change the player's profile or collide with another run.
 
 ## 6. What is done vs pending
 
-Done and verifiable now: 352 catalog rooms plus hidden content, 6 sims, 11+
+Done and verifiable now: 353 catalog rooms plus hidden content, 6 sims, 11+
 games with a shared high-score table and daily seeds, the complete RPG spine
 (levels to 42 with lore, locks, 18 trophies with pings, the Gauntlet run,
 boons, daily streaks, resonances), the Studio (plot, animate, sing, in the

@@ -186,7 +186,7 @@ fn expected_dimensions(relative: &str) -> (usize, usize) {
 }
 
 fn expected_paths(rooms: &[Box<dyn Room>]) -> BTreeSet<String> {
-    assert_eq!(rooms.len(), 352, "current catalog size");
+    assert_eq!(rooms.len(), 353, "current catalog size");
     let mut expected = BTreeSet::new();
     for room in rooms {
         let id = room.meta().id;

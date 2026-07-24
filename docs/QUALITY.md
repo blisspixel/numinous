@@ -91,7 +91,7 @@ built, so an aspiration is never mistaken for a result.
   reports finite-sample integrity, clipping, RMS, crest, channel balance, DC,
   correlation, side-to-mid ratio, adjacent steps, and exact-zero fraction.
   CLI tests parse RIFF independently and compare every exported PCM16 sample to
-  the shared quantizer's projection of the App source; MCP tests compare every event for all 352 rooms, enforce a
+  the shared quantizer's projection of the App source; MCP tests compare every event for all 353 rooms, enforce a
   96-event and 64 KiB result budget, and reject binary or local-path transport.
   The App's fixed 16 kHz room-score source is
   capped below two million interleaved samples and shared with the mixer, so
@@ -305,7 +305,7 @@ review, never as a claim that fictional participants had an experience.
    cards and compact states. Record clipping, low contrast, unclear controls,
    hidden consequences, unstable layout, and screens that fail to invite a
    first action.
-2. **Interaction and game-flow group:** traverse all 352 rooms through immediate
+2. **Interaction and game-flow group:** traverse all 353 rooms through immediate
    click, delayed gesture, release, and reset. Traverse every game from initial
    state through each stage and result. Compare the rendered consequence with
    its status copy and with the underlying mathematical rule. A changed image

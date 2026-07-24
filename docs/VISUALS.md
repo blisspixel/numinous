@@ -107,7 +107,7 @@ HDR modern pass, and per-Era audio voices are planned. Era progression must not
 be described as complete until those visual and sonic variants are both built
 and tested.
 
-## Per-wing visual identity (so 352 rooms feel varied but unified)
+## Per-wing visual identity (so 353 rooms feel varied but unified)
 
 The shared pipeline guarantees coherence; these keep the wings distinct:
 - **Emergence:** dense fields and grids, particle clouds, feedback trails. Cellular, alive.

@@ -5,6 +5,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- Riemann Sphere joins Shape & Space as room 353 (`riemann-sphere`). Complex
+  plane plus infinity as one compact surface: stereographic lift of hand-placed
+  z onto the unit sphere, ambient phase walks |z| toward the north pole,
+  ZERO/UNIT/INF status tags, goal to send the bead to infinity, three deep
+  cuts on the shared LV 5/12/24 road, and a further-reading citation. Catalog
+  size is now 353 across App, CLI, MCP, README, ROADMAP, and ROOMS.
+
 ### Changed
 - Product policy: 0.2 Flagship Proof exits on the agent-and-machine bar (App
   and MCP engineered ahas, agent hallway cohort, green CI). Human stranger

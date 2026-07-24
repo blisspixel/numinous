@@ -7,7 +7,7 @@ you find yourself duplicating a concept, stop and link instead.
 
 Status: **0.2.0-alpha.1, Flagship Proof in progress.** The 0.1 Public
 Foundation is complete. The headless core, CLI, MCP server, windowed app,
-GPU and audio adapters, 352 catalog rooms plus hidden content, 6 sims, 11+
+GPU and audio adapters, 353 catalog rooms plus hidden content, 6 sims, 11+
 games, the RPG spine, standard-controller input, and a built-in 42-track radio
 are built. The hardened local-broadcast substrate, MCP producer, native App
 Watch Agent, bounded in-memory timeline, and native reconstruction for

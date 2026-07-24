@@ -115,7 +115,7 @@ is in [`docs/MUSIC.md`](docs/MUSIC.md) and [`docs/STUDIO.md`](docs/STUDIO.md).
 
 Numinous **0.2.0-alpha.1** is playable today. The native App, full-color CLI,
 and MCP server all use the same deterministic mathematical core. The current
-build includes 352 catalog rooms plus hidden content, 11+ games, six
+build includes 353 catalog rooms plus hidden content, 11+ games, six
 lever-driven simulations, Journey progression, Formula Jam, local music and
 radio, still and short-loop sharing, mouse and keyboard control, and
 hotplugged-controller support.
@@ -187,7 +187,7 @@ Numinous is **version 0.2.0-alpha.1**, actively earning the 0.2 Flagship Proof
 gate. It is not on the old 0.1 line: the 0.1 Public Foundation is complete.
 Numinous already has a headless core, a
 windowed app, a full CLI, an MCP server, GPU, audio, and local-broadcast
-adapters, 352 catalog
+adapters, 353 catalog
 rooms plus hidden content, games, progression, a Studio foundation, and the
 built-in soundtrack. Mouse, keyboard, and hotplugged controllers share the
 native App, including a controller-driven virtual hand for every room. The
@@ -276,7 +276,7 @@ policy checks. Release QA also regenerates an exact
 room receipts, per-room interaction scenarios, semantic checks, and coarse
 perceptual response thresholds, including a regression that rejects
 four isolated corner markers as a meaningful interaction. The inventory is
-derived from all 352 registered rooms, and scenarios follow each room's declared
+derived from all 353 registered rooms, and scenarios follow each room's declared
 interaction verb. QA evaluates the room's mathematical consequence separately
 from the App's latest-gesture trail and reticle. An optional aggregate diagnostic
 reports all catalog failures in one run. Fourteen compact
