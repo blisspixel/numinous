@@ -99,7 +99,9 @@ closes it). Useful commands:
 help
 room times-tables          load by id, unique title fragment, or index
 room 12
-list riemann               match catalog rooms
+room bloch-sphere          pure qubit sphere (equator = equal superpositions)
+room riemann-sphere        complex plane plus infinity (drag out to INF)
+list sphere                match catalog rooms
 where                      current id, phase, variation, speed
 t 0.35                     set phase
 vary 7                     rebind rooms at variation seed 7
