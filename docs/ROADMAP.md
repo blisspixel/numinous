@@ -45,7 +45,7 @@ stop-the-world work.
 | Priority | What | Why |
 | --- | --- | --- |
 | **1. Keep 0.2 proof green** | Times Tables and Buffon five-beat ahas, MCP place/number wager path, `scripts/agent-hallway.py` PASS, F9 capture, three faces, public CI | Standing 0.2 exit evidence; regressions fail the milestone again |
-| **2. Enter 0.3 Tactile Alpha** | Deepen five flagships (Times Tables, Double Pendulum, Life, Galton, Formula Jam) with reproduced defects and agent/MCP/CLI review | Next version gate after Flagship Proof |
+| **2. Enter 0.3 Tactile Alpha** | Deepen five flagships (Times Tables, Double Pendulum, Life, Galton, Formula Jam) with reproduced defects and agent/MCP/CLI review (`scripts/agent-tactile.py`) | Next version gate after Flagship Proof |
 | **3. Keep the floor green** | Public `main` stays CI-green (fmt, Clippy, tests, deny, audit, coverage, three-OS builds) | 0.1 foundation must not regress |
 | **Deferred past 0.2** | Human stranger hallway, a11y sessions, musician long-listening, soft-thin densify, bulk rooms, Phase B glow | Humans before 1.0; densify/glow only if a sensory ceiling binds |
 
