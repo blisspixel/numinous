@@ -353,6 +353,33 @@ impl TimesTablesAha {
         matches!(self.beat, AhaBeat::Consolidated)
             .then_some("Same cardioid: times-2 chords and the Mandelbrot main bulb.")
     }
+
+    /// Stable beat name for playtest notes and diagnostics (not player chrome).
+    #[must_use]
+    pub fn beat_label(&self) -> &'static str {
+        match self.beat {
+            AhaBeat::Explore => "explore",
+            AhaBeat::Prime => "prime",
+            AhaBeat::Withheld => "withheld",
+            AhaBeat::Morph { .. } => "morph",
+            AhaBeat::Confirm => "confirm",
+            AhaBeat::Consolidated => "consolidated",
+        }
+    }
+
+    /// Compact earn path for playtest notes, or None before generation.
+    #[must_use]
+    pub fn earn_label(&self) -> Option<&'static str> {
+        match self.earn {
+            Some(EarnPath::Wager { guess }) => Some(match guess {
+                CardioidHome::Mandelbrot => "wager:mandelbrot",
+                CardioidHome::Nephroid => "wager:nephroid",
+                CardioidHome::Circle => "wager:circle",
+            }),
+            Some(EarnPath::FourLobes) => Some("four-lobes"),
+            None => None,
+        }
+    }
 }
 
 /// Times-table chord envelope at K=2 (unit cardioid, cusp at the right).
@@ -619,11 +646,16 @@ mod tests {
     fn heart_hold_primes_then_wager_withholds() {
         let mut aha = TimesTablesAha::new();
         assert_eq!(aha.beat(), AhaBeat::Explore);
+        assert_eq!(aha.beat_label(), "explore");
+        assert!(aha.earn_label().is_none());
         aha.note_hand_multiplier(2.0);
         assert!(aha.heart_held());
         assert_eq!(aha.beat(), AhaBeat::Prime);
+        assert_eq!(aha.beat_label(), "prime");
         assert!(aha.commit_wager(CardioidHome::Circle));
         assert_eq!(aha.beat(), AhaBeat::Withheld);
+        assert_eq!(aha.beat_label(), "withheld");
+        assert_eq!(aha.earn_label(), Some("wager:circle"));
         assert!(!aha.allow_reveal_text());
         assert_eq!(
             aha.earn(),

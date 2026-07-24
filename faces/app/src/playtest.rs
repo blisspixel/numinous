@@ -6,6 +6,26 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use numinous_core::{Journey, Room};
 
+/// Machine-readable capture of an engineered aha visit for hallway notes.
+///
+/// Lives beside the session snapshot so a facilitator can later match a human
+/// observation to the exact beat without replaying the session from memory.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct FlagshipAhaNote {
+    /// Stable beat name: explore, prime, withheld, morph, confirm, consolidated.
+    pub(crate) beat: String,
+    /// Footer status the player would have seen at capture time.
+    pub(crate) status: String,
+    /// Compact earn path, or `none` before generation.
+    pub(crate) earn: String,
+    /// Whether reveal text may open (consolidated only).
+    pub(crate) allow_reveal: bool,
+    /// Whether E / Inspect can advance a staged beat right now.
+    pub(crate) can_summon: bool,
+    /// Whether the dual-plate or circle overlay is active.
+    pub(crate) aha_plate: bool,
+}
+
 pub(crate) struct PlaytestSnapshot<'a> {
     pub(crate) room: &'a dyn Room,
     pub(crate) journey: &'a Journey,
@@ -17,6 +37,8 @@ pub(crate) struct PlaytestSnapshot<'a> {
     pub(crate) time_scale: f64,
     pub(crate) poke_points: &'a [(f64, f64)],
     pub(crate) active_mode: &'a str,
+    /// Present only on Times Tables and Buffon ordinary visits with aha state.
+    pub(crate) flagship_aha: Option<FlagshipAhaNote>,
 }
 
 pub(crate) fn default_log_dir() -> PathBuf {
@@ -75,6 +97,29 @@ pub(crate) fn build_report(snapshot: &PlaytestSnapshot<'_>, now: SystemTime) -> 
         snapshot.journey.plays,
         snapshot.journey.wins
     );
+    if let Some(aha) = &snapshot.flagship_aha {
+        let _ = writeln!(report);
+        let _ = writeln!(report, "## Flagship Aha Snapshot");
+        let _ = writeln!(report);
+        let _ = writeln!(report, "- Aha beat: {}", aha.beat);
+        let _ = writeln!(report, "- Footer status: {}", aha.status);
+        let _ = writeln!(report, "- Earn path: {}", aha.earn);
+        let _ = writeln!(
+            report,
+            "- Allow reveal text: {}",
+            if aha.allow_reveal { "yes" } else { "no" }
+        );
+        let _ = writeln!(
+            report,
+            "- Can summon with E: {}",
+            if aha.can_summon { "yes" } else { "no" }
+        );
+        let _ = writeln!(
+            report,
+            "- Aha plate or circle overlay: {}",
+            if aha.aha_plate { "yes" } else { "no" }
+        );
+    }
     let _ = writeln!(report);
     let _ = writeln!(report, "## Facilitator Prompts");
     let _ = writeln!(report);
@@ -97,6 +142,35 @@ pub(crate) fn build_report(snapshot: &PlaytestSnapshot<'_>, now: SystemTime) -> 
     let _ = writeln!(report, "- Anything that felt like pressure or grind:");
     let _ = writeln!(report, "- What they learned or what surprised them:");
     let _ = writeln!(report, "- One change they would make first:");
+    if snapshot.flagship_aha.is_some() {
+        let _ = writeln!(report);
+        let _ = writeln!(report, "### Engineered aha (Times Tables / Buffon)");
+        let _ = writeln!(report);
+        let _ = writeln!(
+            report,
+            "- Did they discover the bottom-band or key wager without help:"
+        );
+        let _ = writeln!(
+            report,
+            "- Did they summon morph with E or Inspect without help:"
+        );
+        let _ = writeln!(
+            report,
+            "- Did they continue hand play during confirm after the morph:"
+        );
+        let _ = writeln!(
+            report,
+            "- Furthest aha beat reached this visit (explore/prime/withheld/morph/confirm/consolidated):"
+        );
+        let _ = writeln!(
+            report,
+            "- Did punchline/reveal open only after consolidation, or did they get stuck earlier:"
+        );
+        let _ = writeln!(
+            report,
+            "- Observable aha or consolidation moment without facilitator math narration (yes/no):"
+        );
+    }
     let _ = writeln!(
         report,
         "- Validated instrument: GEQ / FSS-2 / DFS-2 / GUESS / none recorded here:"
@@ -180,6 +254,18 @@ mod tests {
             time_scale: 2.0,
             poke_points: &[(0.25, 0.75)],
             active_mode: "wander",
+            flagship_aha: None,
+        }
+    }
+
+    fn flagship_note() -> FlagshipAhaNote {
+        FlagshipAhaNote {
+            beat: "prime".to_string(),
+            status: "HEART  1=M 2=N 3=C".to_string(),
+            earn: "none".to_string(),
+            allow_reveal: false,
+            can_summon: false,
+            aha_plate: false,
         }
     }
 
@@ -201,6 +287,8 @@ mod tests {
         assert!(report.contains("Poke points newest-last: (0.250,0.750)"));
         assert!(report.contains("level"));
         assert!(report.contains("Poke trail: 1 point(s)"));
+        assert!(!report.contains("## Flagship Aha Snapshot"));
+        assert!(!report.contains("### Engineered aha"));
         assert_lines_in_order(
             &report,
             &[
@@ -223,6 +311,39 @@ mod tests {
         );
         assert!(report.contains("Where the fun stopped"));
         assert!(report.contains("One change they would make first"));
+    }
+
+    #[test]
+    fn report_includes_flagship_aha_snapshot_and_engineered_prompts() {
+        let rooms = numinous_core::all_rooms_with(0);
+        let room = rooms
+            .iter()
+            .find(|r| r.meta().id == "times-tables")
+            .expect("times-tables in catalog");
+        let journey = Journey::default();
+        let mut snap = snapshot(room.as_ref(), &journey);
+        snap.flagship_aha = Some(flagship_note());
+        let report = build_report(&snap, UNIX_EPOCH + Duration::from_secs(99));
+
+        assert_lines_in_order(
+            &report,
+            &[
+                "## Flagship Aha Snapshot",
+                "- Aha beat: prime",
+                "- Footer status: HEART  1=M 2=N 3=C",
+                "- Earn path: none",
+                "- Allow reveal text: no",
+                "- Can summon with E: no",
+                "- Aha plate or circle overlay: no",
+                "### Engineered aha (Times Tables / Buffon)",
+                "- Did they discover the bottom-band or key wager without help:",
+                "- Did they summon morph with E or Inspect without help:",
+                "- Did they continue hand play during confirm after the morph:",
+                "- Furthest aha beat reached this visit (explore/prime/withheld/morph/confirm/consolidated):",
+                "- Did punchline/reveal open only after consolidation, or did they get stuck earlier:",
+                "- Observable aha or consolidation moment without facilitator math narration (yes/no):",
+            ],
+        );
     }
 
     fn assert_lines_in_order(report: &str, expected: &[&str]) {

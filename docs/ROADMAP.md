@@ -1026,6 +1026,12 @@ on both engineered ahas; arrival-card clarity with real humans; plate beauty
 under real window sizes. Optional MCP structured fields for place and number
 wagers.
 
+**Done (hallway capture readiness, machine path):** F9 playtest notes on Times
+Tables and Buffon ordinary visits now record aha beat, earn path, footer
+status, reveal/summon flags, and aha-specific facilitator prompts so session
+findings map to the five-beat machine. The Show omits aha state. This does not
+satisfy the stranger evidence gate.
+
 **Out of scope for the slice and not the next high-leverage move.** HDR glow
 (Phase B, only if sensory ceiling binds), Constellation Rumor-Mode (Phase C),
 gallery fork (Phase D), bulk densify, new rooms for breadth.

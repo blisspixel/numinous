@@ -346,6 +346,32 @@ impl BuffonAha {
         matches!(self.beat, AhaBeat::Consolidated)
             .then_some("No circle on the floor, yet the crossings settle on pi.")
     }
+
+    /// Stable beat name for playtest notes and diagnostics (not player chrome).
+    #[must_use]
+    pub fn beat_label(&self) -> &'static str {
+        match self.beat {
+            AhaBeat::Explore => "explore",
+            AhaBeat::Prime => "prime",
+            AhaBeat::Withheld => "withheld",
+            AhaBeat::Morph { .. } => "morph",
+            AhaBeat::Confirm => "confirm",
+            AhaBeat::Consolidated => "consolidated",
+        }
+    }
+
+    /// Compact earn path for playtest notes, or None before generation.
+    #[must_use]
+    pub fn earn_label(&self) -> Option<String> {
+        match self.earn {
+            Some(EarnPath::Wager { guess, band }) => Some(format!(
+                "wager:{guess:.3}:{}",
+                band.name().to_ascii_lowercase()
+            )),
+            Some(EarnPath::Throws { count }) => Some(format!("throws:{count}")),
+            None => None,
+        }
+    }
 }
 
 /// Draw a growing circle over the plate (morph / confirm overlay).
@@ -444,10 +470,15 @@ mod tests {
     fn first_throw_primes_then_wager_withholds() {
         let mut aha = BuffonAha::new();
         assert_eq!(aha.beat(), AhaBeat::Explore);
+        assert_eq!(aha.beat_label(), "explore");
+        assert!(aha.earn_label().is_none());
         aha.note_throws(1);
         assert_eq!(aha.beat(), AhaBeat::Prime);
+        assert_eq!(aha.beat_label(), "prime");
         assert!(aha.commit_wager(2.0));
         assert_eq!(aha.beat(), AhaBeat::Withheld);
+        assert_eq!(aha.beat_label(), "withheld");
+        assert_eq!(aha.earn_label().as_deref(), Some("wager:2.000:wild"));
         assert!(!aha.allow_reveal_text());
         match aha.earn() {
             Some(EarnPath::Wager { guess, band }) => {

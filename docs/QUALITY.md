@@ -252,7 +252,10 @@ five to fifteen minutes per person.
    writes a local note under `logs/` with the live session snapshot
    (room, phase, era, poke trail, journey state) and the facilitator prompts
    as fill-in lines: first unprompted action, first unprompted whoa, share
-   intent, quotes. Fill the blanks while it is fresh. Notes are local files;
+   intent, quotes. On Times Tables and Buffon ordinary visits the note also
+   records the engineered-aha beat (explore through consolidated), earn path,
+   footer status, and summon/reveal flags, plus extra aha prompts. The Show
+   omits that block. Fill the blanks while it is fresh. Notes are local files;
    the report itself warns against recording personal data, so write
    "P3" not names.
 5. **Afterwards (optional, adds the tracked number).** Have them fill the

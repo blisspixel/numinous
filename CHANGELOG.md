@@ -5,6 +5,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- Hallway F9 notes capture flagship aha state on Times Tables and Buffon
+  ordinary visits: beat label, footer status, earn path, reveal and summon
+  flags, and aha-plate overlay. Notes also add engineered-aha facilitator
+  prompts (wager discovery, morph summon, confirm hand play, furthest beat,
+  consolidation without narration). The Show visits omit aha state so Show
+  sweeps are not mistaken for ordinary-visit progress. Core exposes stable
+  `beat_label` / `earn_label` on both aha modules for diagnostics.
+
 ### Changed
 - Docs: ROADMAP, ENGINEERING, README, docs index, NORTH_STAR, and PEDAGOGY name
   the same critical path: 0.2 is blocked on stranger hallway for Times Tables
