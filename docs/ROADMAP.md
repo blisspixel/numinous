@@ -627,8 +627,9 @@ later risk.
     chrome so parameter goals keep instrument names. MCP Times Tables open keeps
     dial status until a real hand arrives. Agent tactile probes open flagships
     with status-level invites and checks listen_room note change for Times
-    Tables, Double Pendulum fling, and Galton; round-09 PASS; PRs #95-#101;
-    agent-hallway PASS. Human formative sessions remain later.
+    Tables, Double Pendulum fling, Life early-plant births, and Galton;
+    round-09 PASS; PRs #95-#102; agent-hallway PASS. Human formative sessions
+    remain later.
 - Run a short formative session after each interaction change and record where
   the action or consequence is unclear.
 - Keep the release-profile ambient and accepted-input-to-room-raster baselines
