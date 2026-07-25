@@ -101,7 +101,13 @@ PROBES = [
         # Opening must invite the plant; GEN alone is ambient soup.
         invite_tokens=("CLICK", "GLIDER", "PLACE"),
         expect_status_change=True,
-        # Plant-at-snapshot is status-first; births sound on later gens only.
+        # Early plant must change birth notes by a later snapshot (not t=0).
+        sonic_open_args={"id": "game-of-life", "t": 0.37},
+        sonic_hand_args={
+            "id": "game-of-life",
+            "t": 0.37,
+            "gesture": [{"kind": "down", "x": 0.24, "y": 0.71, "t": 0.08}],
+        },
     ),
     Probe(
         slug="galton-board",
