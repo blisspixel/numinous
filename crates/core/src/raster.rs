@@ -9,24 +9,28 @@
 use crate::surface::{MAX_DIM, Surface};
 
 /// The near-black background (the Numinous stage).
-const BACKGROUND: [u8; 3] = [10, 11, 15];
+const BACKGROUND: [f32; 3] = [10.0, 11.0, 15.0];
 
 /// The accent used when a room does not specify one.
 const DEFAULT_ACCENT: [u8; 3] = [36, 120, 180];
 
-/// Scale a color by `factor`, clamping each channel to 255.
-fn scale(color: [u8; 3], factor: f32) -> [u8; 3] {
-    let ch = |c: u8| (f32::from(c) * factor).round().clamp(0.0, 255.0) as u8;
-    [ch(color[0]), ch(color[1]), ch(color[2])]
+/// Scale a color by `factor`.
+fn scale(color: [u8; 3], factor: f32) -> [f32; 3] {
+    [
+        f32::from(color[0]) * factor,
+        f32::from(color[1]) * factor,
+        f32::from(color[2]) * factor,
+    ]
 }
 
 /// A fixed-size RGB pixel buffer that rooms draw into, in a room's accent color.
+/// Uses f32 for true HDR additive blending.
 #[derive(Debug, Clone)]
 pub struct Raster {
     width: usize,
     height: usize,
     accent: [u8; 3],
-    pixels: Vec<[u8; 3]>,
+    pixels: Vec<[f32; 3]>,
 }
 
 impl Raster {
@@ -67,7 +71,13 @@ impl Raster {
         }
         let pixels = rgba
             .chunks_exact(4)
-            .map(|pixel| [pixel[0], pixel[1], pixel[2]])
+            .map(|pixel| {
+                [
+                    f32::from(pixel[0]),
+                    f32::from(pixel[1]),
+                    f32::from(pixel[2]),
+                ]
+            })
             .collect();
         Some(Self {
             width,
@@ -79,26 +89,42 @@ impl Raster {
 
     /// The color added for a mark: semantic interface colors plus four
     /// spectral inks that rooms can combine additively for prismatic light.
-    fn ink(&self, mark: char) -> [u8; 3] {
+    fn ink(&self, mark: char) -> [f32; 3] {
         match mark {
             '#' => scale(self.accent, 1.7),
-            '!' => [230, 72, 72],
-            '-' => [16, 20, 34],
-            '@' => [216, 40, 190],
-            '%' => [56, 224, 132],
-            '&' => [242, 148, 36],
-            '~' => [116, 72, 232],
-            _ => self.accent,
+            '!' => [230.0, 72.0, 72.0],
+            '-' => [16.0, 20.0, 34.0],
+            '@' => [216.0, 40.0, 190.0],
+            '%' => [56.0, 224.0, 132.0],
+            '&' => [242.0, 148.0, 36.0],
+            '~' => [116.0, 72.0, 232.0],
+            _ => scale(self.accent, 1.0),
         }
     }
 
+    /// The pixels as a tightly packed HDR f32 RGBA buffer (`width * height * 4`).
+    /// Alpha is always 1.0.
+    #[must_use]
+    pub fn to_f32_rgba(&self) -> Vec<f32> {
+        let mut out = Vec::with_capacity(self.pixels.len() * 4);
+        for p in &self.pixels {
+            out.extend_from_slice(&[p[0], p[1], p[2], 1.0]);
+        }
+        out
+    }
+
     /// The pixels as a tightly packed RGBA byte buffer (`width * height * 4`),
-    /// suitable for PNG encoding. Alpha is always fully opaque.
+    /// suitable for PNG encoding. Clamps values for SDR. Alpha is always fully opaque.
     #[must_use]
     pub fn to_rgba(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(self.pixels.len() * 4);
         for p in &self.pixels {
-            out.extend_from_slice(&[p[0], p[1], p[2], 255]);
+            out.extend_from_slice(&[
+                p[0].round().clamp(0.0, 255.0) as u8,
+                p[1].round().clamp(0.0, 255.0) as u8,
+                p[2].round().clamp(0.0, 255.0) as u8,
+                255,
+            ]);
         }
         out
     }
@@ -112,10 +138,10 @@ impl Raster {
     /// Dim every pixel to `keep` percent of its brightness, a backdrop for
     /// overlay text so menus stay legible over busy rooms.
     pub fn dim(&mut self, keep: u32) {
-        let keep = keep.min(100);
+        let keep_f = (keep.min(100) as f32) / 100.0;
         for pixel in &mut self.pixels {
             for channel in pixel.iter_mut() {
-                *channel = ((u32::from(*channel) * keep) / 100) as u8;
+                *channel *= keep_f;
             }
         }
     }
@@ -123,14 +149,14 @@ impl Raster {
     /// Dim only the rows from `y0` to `y1` (clamped): a legibility band
     /// behind HUD text, so words stay readable over bright rooms.
     pub fn dim_rows(&mut self, y0: i32, y1: i32, keep: u32) {
-        let keep = keep.min(100);
+        let keep_f = (keep.min(100) as f32) / 100.0;
         let from = y0.max(0) as usize;
         let to = (y1.max(0) as usize).min(self.height);
         for y in from..to {
             for x in 0..self.width {
                 let pixel = &mut self.pixels[y * self.width + x];
                 for channel in pixel.iter_mut() {
-                    *channel = ((u32::from(*channel) * keep) / 100) as u8;
+                    *channel *= keep_f;
                 }
             }
         }
@@ -155,7 +181,11 @@ impl Raster {
     /// for example a visual era, back onto a raster.
     pub fn set_rgba(&mut self, rgba: &[u8]) {
         for (pixel, bytes) in self.pixels.iter_mut().zip(rgba.chunks_exact(4)) {
-            *pixel = [bytes[0], bytes[1], bytes[2]];
+            *pixel = [
+                f32::from(bytes[0]),
+                f32::from(bytes[1]),
+                f32::from(bytes[2]),
+            ];
         }
     }
 
@@ -234,7 +264,7 @@ impl Surface for Raster {
             let add = self.ink(mark);
             let pixel = &mut self.pixels[y * self.width + x];
             for i in 0..3 {
-                pixel[i] = pixel[i].saturating_add(add[i]);
+                pixel[i] += add[i];
             }
         }
     }
@@ -265,7 +295,7 @@ mod tests {
     fn semantic_warning_ink_is_distinct_from_structure_and_accent() {
         let raster = Raster::with_accent(4, 4, [40, 210, 90]);
 
-        assert_eq!(raster.ink('!'), [230, 72, 72]);
+        assert_eq!(raster.ink('!'), [230.0, 72.0, 72.0]);
         assert_ne!(raster.ink('!'), raster.ink('.'));
         assert_ne!(raster.ink('!'), raster.ink('-'));
         assert_ne!(raster.ink('!'), raster.ink('#'));
@@ -281,8 +311,8 @@ mod tests {
             assert_ne!(*color, raster.ink('!'));
             assert!(spectral[index + 1..].iter().all(|other| other != color));
         }
-        assert_eq!(raster.ink('!'), [230, 72, 72]);
-        assert_eq!(raster.ink('-'), [16, 20, 34]);
+        assert_eq!(raster.ink('!'), [230.0, 72.0, 72.0]);
+        assert_eq!(raster.ink('-'), [16.0, 20.0, 34.0]);
     }
 
     #[test]
@@ -298,7 +328,14 @@ mod tests {
         let r = Raster::new(3, 2);
         let bytes = r.to_rgba();
         assert_eq!(bytes.len(), 3 * 2 * 4);
-        assert_eq!(bytes[0..3], BACKGROUND);
+        assert_eq!(
+            bytes[0..3],
+            [
+                BACKGROUND[0] as u8,
+                BACKGROUND[1] as u8,
+                BACKGROUND[2] as u8
+            ]
+        );
         assert_eq!(bytes[3], 255);
     }
 
@@ -323,9 +360,12 @@ mod tests {
         let mut r = Raster::with_accent(2, 2, [200, 0, 0]);
         r.plot(0, 0, '*');
         let bytes = r.to_rgba();
-        assert!(bytes[0] > BACKGROUND[0] + 100, "red channel should be lit");
         assert!(
-            bytes[2] <= BACKGROUND[2] + 1,
+            bytes[0] > (BACKGROUND[0] + 100.0) as u8,
+            "red channel should be lit"
+        );
+        assert!(
+            bytes[2] <= (BACKGROUND[2] + 1.0) as u8,
             "blue channel should stay dark"
         );
     }
@@ -394,7 +434,7 @@ mod tests {
         assert_eq!(big.width(), 7);
         assert_eq!(big.height(), 5);
         let rgba = big.to_rgba();
-        let lit = |x: usize, y: usize| rgba[(y * 7 + x) * 4] > BACKGROUND[0];
+        let lit = |x: usize, y: usize| rgba[(y * 7 + x) * 4] > BACKGROUND[0] as u8;
         // The lit source pixel covers exactly the 3x3 block at the origin.
         assert!(lit(0, 0) && lit(2, 2), "block interior is lit");
         assert!(!lit(3, 0) && !lit(0, 3), "neighboring blocks stay dark");
@@ -413,7 +453,7 @@ mod tests {
         assert_eq!(cropped.width(), 4);
         assert_eq!(cropped.height(), 4);
         let rgba = cropped.to_rgba();
-        let lit = |x: usize, y: usize| rgba[(y * 4 + x) * 4] > BACKGROUND[0];
+        let lit = |x: usize, y: usize| rgba[(y * 4 + x) * 4] > BACKGROUND[0] as u8;
         assert!(lit(0, 0) && lit(1, 1), "top-left block survives the crop");
         assert_eq!(
             cropped.lit_count(),

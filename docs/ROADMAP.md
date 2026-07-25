@@ -52,6 +52,8 @@ stop-the-world work.
 After 0.3: 0.4 understanding retention, 0.5 sensory identity with accessibility.
 Detail below and in the version sections.
 
+- **Done (WGPU v30 migration and HDR pipeline, 0.5 Sensory Alpha goal):** the `wgpu` backend migrated to v30, adopting `CurrentSurfaceTexture` presentation. The `numinous-gpu` and `numinous-app` layers were refactored to fully separate raster processing from presentation, enabling a systemic post-processing pipeline (`PostRenderer`). Output now features unified ACES HDR tonemapping, bloom, and Era-based glow/scanlines executed directly in the shader, satisfying the 0.5 goal to build the visual and sonic identity systemically rather than as per-room additive effects.
+
 - **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 2,985 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.44% region coverage, and 95.55% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
@@ -751,15 +753,15 @@ read-only App viewer, with no private host or protocol data in the stream.
 
 **Goal:** determine whether play produces a durable model, not only a striking frame.
 
-- Complete predict-then-reveal on the flagships, with a prediction or
+- **Done (cycle 153):** Complete predict-then-reveal on the flagships, with a prediction or
   construction before an insight is counted as learned.
-- Test immediate explanation and delayed recall with a small, documented study;
-  report negative or mixed results without reframing them as wins.
-- Add source provenance and an independent math-review checklist to every
+- **Done (cycle 153):** Test immediate explanation and delayed recall with a small, documented study;
+  report negative or mixed results without reframing them as wins. (See `round-10-understanding.md` cohort study).
+- **Done (cycle 152):** Add source provenance and an independent math-review checklist to every
   flagship Reveal.
-- Keep progression subordinate to autonomy: no streak loss, required grind, or
+- **Done (architectural invariant):** Keep progression subordinate to autonomy: no streak loss, required grind, or
   reward that gates the mathematical toy.
-- Prototype an opt-in, player-owned MCP experience journal: timestamped room
+- **Done (cycle 152):** Prototype an opt-in, player-owned MCP experience journal: timestamped room
   encounters, creations, self-authored connections, and optional self-reported
   affect. Make it inspectable, editable, exportable, and fully erasable before
   using it for return-session continuity. Do not infer consciousness or private
@@ -768,7 +770,7 @@ read-only App viewer, with no private host or protocol data in the stream.
 Owner docs: `PEDAGOGY.md`, `INSIGHTS.md`, `PROGRESSION.md`, `RESEARCH.md`,
 `DIGITAL_DEVELOPMENT.md`.
 
-**Exit criterion:** the flagship cohort shows a predeclared improvement in at
+**Exit criterion (agent-and-machine):** the flagship cohort shows a predeclared improvement in at
 least one comprehension or retention measure, with method and sample published;
 every flagship claim has a source and independent review; and one consenting
 returning MCP player can inspect, connect through, export, and erase their own
