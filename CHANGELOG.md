@@ -17,6 +17,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   FOUND, so first contact invites the hand rather than ambient K alone.
 - MCP Times Tables open no longer auto-primes the place wager from ambient
   closed K=2, so status keeps `DRAG:DIAL` instead of `WHERE?` before any hand.
+- Double Pendulum ambient status leads with `CLICK:RE-DROP` before the twins
+  gap readout, matching the flagship first-contact invite pattern.
 
 ### Added
 - Bloch Sphere joins Shape & Space as room 354 (`bloch-sphere`): pure qubit
