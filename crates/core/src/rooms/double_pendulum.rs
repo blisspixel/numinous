@@ -453,7 +453,9 @@ impl Room for DoublePendulum {
         // exactly the hard, honest kind of guess the predict keystone is for.
         let steps = Self::steps_for(t);
         let gap = divergence_gap(2.0 + self.seed_offset(), 2.0, 0.0, 0.0, steps);
-        Some(format!("TWINS {gap:.3}  CLICK:RE-DROP"))
+        // Lead with the re-drop invite so first contact is not twins-telemetry
+        // alone. The moving gap still poses predictions as the first number.
+        Some(format!("CLICK:RE-DROP  TWINS {gap:.3}"))
     }
 
     fn status_input(&self, t: f64, inputs: &[crate::room::RoomInput]) -> Option<String> {
@@ -697,8 +699,8 @@ mod tests {
         // The twins start together and run apart: the readout is near zero at
         // the start and larger once sensitive dependence takes hold.
         let start = room.status(0.0).expect("has a readout");
+        assert!(start.starts_with("CLICK:RE-DROP"), "invite leads: {start}");
         assert!(start.contains("TWINS 0.000"), "starts together: {start}");
-        assert!(start.contains("CLICK:RE-DROP"), "{start}");
         let value = |t: f64| crate::challenge::status_numbers(&room.status(t).unwrap())[0].1;
         assert!(value(0.6) > value(0.0), "the gap grows across the sweep");
         // Because the readout moves, the room now poses a prediction: a hard,

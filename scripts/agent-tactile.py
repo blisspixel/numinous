@@ -64,7 +64,8 @@ PROBES = [
             "height": 28,
             "pokes": [[0.30, 0.28]],
         },
-        invite_tokens=("CLICK", "RE-DROP", "TWINS"),
+        # Opening must lead with re-drop, not twins telemetry alone.
+        invite_tokens=("CLICK", "RE-DROP"),
         expect_status_change=True,
     ),
     Probe(
