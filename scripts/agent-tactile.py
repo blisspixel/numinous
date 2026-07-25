@@ -87,16 +87,17 @@ PROBES = [
         slug="galton-board",
         title="Galton Board",
         open_tool="play_room",
-        open_args={"id": "galton-board", "t": 0.2, "width": 56, "height": 28},
+        open_args={"id": "galton-board", "t": 0.0, "width": 56, "height": 28},
         hand_tool="play_room",
         hand_args={
             "id": "galton-board",
-            "t": 0.2,
+            "t": 0.0,
             "width": 56,
             "height": 28,
             "pokes": [[0.20, 0.50]],
         },
-        invite_tokens=("CLICK", "DROP", "PICK", "COIN", "BALL", "p="),
+        # Opening must lead with the drop invite, not coin inventory alone.
+        invite_tokens=("CLICK", "DROP", "PICK", "COIN", "BET"),
         expect_status_change=True,
     ),
     Probe(
