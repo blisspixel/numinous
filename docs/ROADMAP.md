@@ -626,9 +626,9 @@ later risk.
     ambient-only readout copy. Challenge label parsing strips leading invite
     chrome so parameter goals keep instrument names. MCP Times Tables open keeps
     dial status until a real hand arrives. Agent tactile probes open flagships
-    with status-level invites and checks listen_room note change for Times
-    Tables, Double Pendulum fling, Life early-plant births, and Galton;
-    round-09 PASS; PRs #95-#102; agent-hallway PASS. Human formative sessions
+    with status-level invites and hand sonic change for all five flagships
+    (listen_room for TT/DP/Life/Galton; sing_expression for Formula Jam);
+    round-09 PASS; PRs #95-#103; agent-hallway PASS. Human formative sessions
     remain later.
 - Run a short formative session after each interaction change and record where
   the action or consequence is unclear.

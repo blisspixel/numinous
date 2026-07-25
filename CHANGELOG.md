@@ -19,9 +19,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   closed K=2, so status keeps `DRAG:DIAL` instead of `WHERE?` before any hand.
 - Double Pendulum ambient status leads with `CLICK:RE-DROP` before the twins
   gap readout, matching the flagship first-contact invite pattern.
-- `scripts/agent-tactile.py` gates Times Tables, Double Pendulum fling, Game of
-  Life early-plant birth notes, and Galton Board on listen_room note differences
-  after the hand, so 0.3 sonic consequence is machine-checked.
+- `scripts/agent-tactile.py` gates all five 0.3 flagships on hand sonic change:
+  listen_room for Times Tables, Double Pendulum fling, Life early-plant births,
+  and Galton; `sing_expression` for Formula Jam.
 
 ### Added
 - Bloch Sphere joins Shape & Space as room 354 (`bloch-sphere`): pure qubit
