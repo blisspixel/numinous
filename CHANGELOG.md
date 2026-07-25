@@ -13,6 +13,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   pick-coin plus move-bet, instead of inventory-first copy.
 - ROADMAP 0.3 notes machine evidence for Life and Galton first-contact invites
   (agent-tactile round-09, agent-hallway PASS).
+- Times Tables dial status leads with `DRAG:DIAL` until the four-lobe goal is
+  FOUND, so first contact invites the hand rather than ambient K alone.
 
 ### Added
 - Bloch Sphere joins Shape & Space as room 354 (`bloch-sphere`): pure qubit

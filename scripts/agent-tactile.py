@@ -38,16 +38,17 @@ PROBES = [
         slug="times-tables",
         title="Times Tables",
         open_tool="play_room",
-        open_args={"id": "times-tables", "t": 0.15, "width": 56, "height": 28},
+        open_args={"id": "times-tables", "t": 0.0, "width": 56, "height": 28},
         hand_tool="play_room",
         hand_args={
             "id": "times-tables",
-            "t": 0.15,
+            "t": 0.0,
             "width": 56,
             "height": 28,
             "pokes": [[0.72, 0.50]],
         },
-        invite_tokens=("TURN", "DIAL", "K=", "DRAG", "CLICK"),
+        # Opening must lead with the dial invite, not ambient K alone.
+        invite_tokens=("DRAG", "DIAL"),
         expect_status_change=True,
     ),
     Probe(

@@ -5204,7 +5204,7 @@ mod tests {
                     &app.inputs,
                 )
                 .as_deref(),
-            Some("K 2.00  CLOSED  1 LOBE  TARGET 4")
+            Some("DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4")
         );
 
         assert!(app.record_room_touch((0.374, 0.5)));
@@ -5228,7 +5228,7 @@ mod tests {
                     &app.inputs,
                 )
                 .as_deref(),
-            Some("K 2.00  CLOSED  1 LOBE  TARGET 4")
+            Some("DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4")
         );
     }
 

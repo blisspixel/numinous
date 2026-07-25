@@ -122,7 +122,13 @@ impl TimesTables {
         } else {
             "TARGET 4"
         };
-        format!("K {k:.2}  {state}  {target}")
+        // Lead with the dial invite so first contact is not ambient-only K/TARGET.
+        // Drop the prefix once the four-lobe goal is earned (FOUND).
+        if target == "FOUND" {
+            format!("K {k:.2}  {state}  {target}")
+        } else {
+            format!("DRAG:DIAL  K {k:.2}  {state}  {target}")
+        }
     }
 
     fn voice(k: f64) -> ParametricSound {
@@ -299,7 +305,7 @@ mod tests {
             t: 0.6,
         }];
         let status = room.status_input(0.6, &inputs).expect("dial readout");
-        assert!(status.starts_with("K 6.24"), "{status}");
+        assert!(status.starts_with("DRAG:DIAL  K 6.24"), "{status}");
         assert_ne!(Some(status), room.status(0.6));
     }
 
@@ -477,7 +483,7 @@ mod tests {
             let room = TimesTables::new_with(seed);
             assert_eq!(
                 room.status(0.0).as_deref(),
-                Some("K 2.00  CLOSED  1 LOBE  TARGET 4"),
+                Some("DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4"),
                 "seed {seed}"
             );
         }
@@ -487,7 +493,7 @@ mod tests {
     fn ambient_passage_through_four_lobes_does_not_claim_the_hand_goal() {
         assert_eq!(
             TimesTables::new().status(0.375).as_deref(),
-            Some("K 5.00  CLOSED  4 LOBES  TARGET 4")
+            Some("DRAG:DIAL  K 5.00  CLOSED  4 LOBES  TARGET 4")
         );
     }
 
@@ -506,7 +512,7 @@ mod tests {
     fn singular_lobe_grammar_is_correct() {
         assert_eq!(
             TimesTables::new().status(0.0).as_deref(),
-            Some("K 2.00  CLOSED  1 LOBE  TARGET 4")
+            Some("DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4")
         );
     }
 
