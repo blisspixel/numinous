@@ -73,6 +73,17 @@ PROBES = [
         # Opening must lead with re-drop, not twins telemetry alone.
         invite_tokens=("CLICK", "RE-DROP"),
         expect_status_change=True,
+        # Fling release must change mathematical notes vs ambient open.
+        sonic_open_args={"id": "double-pendulum", "t": 0.35},
+        sonic_hand_args={
+            "id": "double-pendulum",
+            "t": 0.35,
+            "gesture": [
+                {"kind": "down", "x": 0.3, "y": 0.5, "t": 0.10},
+                {"kind": "move", "x": 0.3, "y": 0.5, "t": 0.147},
+                {"kind": "up", "x": 0.6, "y": 0.5, "t": 0.15},
+            ],
+        },
     ),
     Probe(
         slug="game-of-life",
