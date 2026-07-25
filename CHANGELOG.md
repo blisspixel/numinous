@@ -9,6 +9,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - Game of Life first-contact status invites the hand (`CLICK:GLIDER`) instead of
   only naming soup inventory (`GLIDERS 0`). Compact opening matches. Agent
   tactile round-09 probes Life at t=0 so the opening invite is the bar.
+- Galton Board first-contact status leads with `CLICK:DROP 64` and names
+  pick-coin plus move-bet, instead of inventory-first copy.
 
 ### Added
 - Bloch Sphere joins Shape & Space as room 354 (`bloch-sphere`): pure qubit

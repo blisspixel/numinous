@@ -444,7 +444,9 @@ impl Room for GaltonBoard {
     }
 
     fn status(&self, _t: f64) -> Option<String> {
-        Some("5 COINS  DROP 64  MOVE TO BET ONE BALL".into())
+        // Lead with the hand: inventory-only open lines hide the dual path
+        // (click to drop a wave; move to place a one-ball bet).
+        Some("CLICK:DROP 64  PICK COIN  MOVE:BET".into())
     }
 
     fn status_input(&self, t: f64, inputs: &[RoomInput]) -> Option<String> {
@@ -1174,8 +1176,12 @@ mod tests {
 
         let room = GaltonBoard::new();
         let open = room.status(0.0).expect("open");
-        assert!(open.contains("MOVE TO BET"));
-        assert!(open.contains("DROP 64"));
+        assert!(open.contains("CLICK:DROP"), "got: {open}");
+        assert!(
+            open.contains("MOVE:BET") || open.contains("BET"),
+            "got: {open}"
+        );
+        assert!(open.chars().count() <= 56, "got: {open}");
 
         let bet_only = [RoomInput::PointerMove {
             x: 0.5,
