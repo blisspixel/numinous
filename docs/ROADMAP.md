@@ -620,10 +620,13 @@ later risk.
   Jam for creation.
 - Give each a room-specific click, drag, or held gesture whose visual and sonic
   consequence follows the mathematics, not a decorative overlay.
-  - **Done (machine path, 2026-07-24/25):** Life and Galton first-contact status
-    lines now lead with hand invites (`CLICK:GLIDER`, `CLICK:DROP 64`) rather
-    than inventory-only ambient copy. Agent tactile round-09 PASS (t=0 open for
-    Life and Galton); agent-hallway PASS. Human formative sessions remain later.
+  - **Done (machine path, 2026-07-24/25):** Times Tables, Life, and Galton
+    first-contact status lines now lead with hand invites (`DRAG:DIAL`,
+    `CLICK:GLIDER`, `CLICK:DROP 64`) rather than ambient-only readout copy.
+    Challenge label parsing strips leading invite chrome so parameter goals keep
+    instrument names. Agent tactile probes open Times Tables, Life, and Galton
+    at t=0; round-09 PASS; PR #98; agent-hallway PASS. Human formative sessions
+    remain later.
 - Run a short formative session after each interaction change and record where
   the action or consequence is unclear.
 - Keep the release-profile ambient and accepted-input-to-room-raster baselines

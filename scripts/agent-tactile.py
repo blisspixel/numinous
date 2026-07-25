@@ -176,19 +176,18 @@ def review_probe(probe: Probe) -> dict[str, Any]:
         defects.append(f"hand failed: {hand_result.get('stderr') or hand_result.get('stdout')}")
 
     if probe.invite_tokens and open_result.get("ok"):
+        # Status must carry the invite. Action-only chrome is not enough for
+        # first contact: agents and footers read status first.
         upper = open_status.upper()
         if not any(token.upper() in upper for token in probe.invite_tokens):
-            # Fall back to action field when status is ambient-only.
             action = ""
             structured = open_result.get("structured") or {}
             if isinstance(structured.get("action"), str):
                 action = structured["action"]
-            combined = f"{open_status} {action}".upper()
-            if not any(token.upper() in combined for token in probe.invite_tokens):
-                defects.append(
-                    f"first contact missing invite tokens {probe.invite_tokens}: "
-                    f"status={open_status!r} action={action!r}"
-                )
+            defects.append(
+                f"first contact status missing invite tokens {probe.invite_tokens}: "
+                f"status={open_status!r} action={action!r}"
+            )
 
     if probe.expect_status_change and open_result.get("ok") and hand_result.get("ok"):
         if open_status == hand_status and open_plate == hand_plate:
