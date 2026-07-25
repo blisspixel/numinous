@@ -6,6 +6,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- WGPU renderer now uses a systemic HDR post-processing pass (`PostRenderer`) providing ACES tonemapping, bloom, and Era-based glow/scanlines, unifying the visual output style instead of applying per-room fake additive 8-bit raster effects (0.5 Sensory Alpha goal).
+
+### Changed
+- `numinous-gpu` and `numinous-app` migrated to WGPU v30 and its updated presentation flow using `CurrentSurfaceTexture` and explicit queue presentation.
 - Formula Jam discovery is shared across App, CLI, and MCP: curated recipe bank
   in core; MCP `plot_expression` supports manual expr, `recipe`, `seed`,
   `auto_step`, and `list_recipes` with structured discovery results; CLI `plot`
