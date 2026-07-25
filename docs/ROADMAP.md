@@ -635,6 +635,10 @@ later risk.
 - Keep the release-profile ambient and accepted-input-to-room-raster baselines
   under the declared 33 ms p95 reference-machine budget. Native end-to-end
   input latency remains a separate real-hardware measurement.
+  - **Done (machine path, 2026-07-25):** `scripts/flagship-perf.ps1` on Windows
+    release, 900x700, 40 samples: all five flagships PASS ambient and
+    input-to-room-raster p95 under 33 ms (worst p95 1.684 ms, Game of Life
+    ambient).
 - Give Formula Jam three legible ways to begin: manual expression entry,
   curated Random, and an Auto set that changes about every 21 seconds at phrase
   boundaries. Add a dismissible, recallable help overlay and pause Auto on edit.

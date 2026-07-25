@@ -10,6 +10,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   in core; MCP `plot_expression` supports manual expr, `recipe`, `seed`,
   `auto_step`, and `list_recipes` with structured discovery results; CLI `plot`
   gains `--recipe`, `--seed`, `--auto-step`, and `--list-recipes`.
+- ROADMAP 0.3 records a release-profile five-flagship perf re-check: all ambient
+  and input-to-room-raster p95 under 33 ms on the reference Windows machine.
 - Bloch Sphere joins Shape & Space as room 354 (`bloch-sphere`): pure qubit
   states on S^2, poles |0>/|1>, equator goal (equal superposition), Born P0
   status, phase precession, three deep cuts, citation. Compact-map cousin of
