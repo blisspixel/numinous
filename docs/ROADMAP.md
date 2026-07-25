@@ -628,8 +628,9 @@ later risk.
     dial status until a real hand arrives. Agent tactile probes open flagships
     with status-level invites and hand sonic change for all five flagships
     (listen_room for TT/DP/Life/Galton; sing_expression for Formula Jam);
-    round-09 PASS; PRs #95-#103; agent-hallway PASS. Human formative sessions
-    remain later.
+    round-09 PASS; PRs #95-#106; agent-hallway PASS. Galton post-drop status
+    leads with DROP and last landing before probability metrics. Human
+    formative sessions remain later.
 - Run a short formative session after each interaction change and record where
   the action or consequence is unclear.
 - Keep the release-profile ambient and accepted-input-to-room-raster baselines

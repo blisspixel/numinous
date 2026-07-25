@@ -5893,7 +5893,10 @@ mod tests {
         )
         .expect("gesture coin sound");
 
-        assert!(report.contains("Status: P.30 1x64=64"));
+        assert!(
+            report.contains("Status: DROP 1x64=64") && report.contains("P.30"),
+            "got: {report}"
+        );
         let left_audio = std::fs::read(&left).expect("left WAV");
         assert_ne!(
             left_audio,

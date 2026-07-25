@@ -463,7 +463,12 @@ impl Room for DoublePendulum {
             return self.status(t);
         };
         let gap = divergence_status(state.first, state.second, state.w1, state.w2, state.steps);
-        Some(format!("{}   {gap}", state.label))
+        // Cause first, then the twin metric. Pinned names the release next step.
+        let lead = match state.label {
+            "PINNED" => "PINNED  RELEASE",
+            other => other,
+        };
+        Some(format!("{lead}  {gap}"))
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {
