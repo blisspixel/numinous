@@ -716,10 +716,14 @@ mod tests {
         let fitted = fit_footer_text(&footer.status, controls_x - 20, 1);
 
         assert_eq!(fitted, footer.status);
-        assert!(fitted.starts_with("P.70"));
+        assert!(
+            fitted.starts_with("DROP 1x64=64"),
+            "action result leads: {fitted}"
+        );
         assert!(fitted.contains("1x64=64"));
+        assert!(fitted.contains("P.70"), "probability stays: {fitted}");
         assert!(fitted.contains('~'));
-        assert!(fitted.ends_with('R'));
+        assert!(fitted.contains('R'));
 
         let controller = footer_copy(
             room.as_ref(),
@@ -761,10 +765,10 @@ mod tests {
         let fitted = fit_footer_text(&footer.status, controls_x - 20, 1);
 
         assert_eq!(fitted, footer.status);
-        assert!(fitted.starts_with("P.70"));
-        assert!(fitted.contains("FULL=1536"));
+        assert!(fitted.starts_with("DROP FULL"), "full drop leads: {fitted}");
+        assert!(fitted.contains("P.70"), "probability stays: {fitted}");
         assert!(fitted.contains('~'));
-        assert!(fitted.ends_with('R'));
+        assert!(fitted.contains('R'));
     }
 
     #[test]

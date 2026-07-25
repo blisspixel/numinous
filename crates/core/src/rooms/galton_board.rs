@@ -475,10 +475,10 @@ impl Room for GaltonBoard {
         let expected = BOARD_ROWS as f64 * p_right;
         let probability = format!("{p_right:.2}");
         let probability = probability.strip_prefix('0').unwrap_or(&probability);
-        // Compact status: must fit App compact footer budgets (360 wide).
-        // M~E is empirical mean versus binomial expectation np.
-        // Optional B{n}H/M grades a move-committed one-ball bet against the
-        // highlighted last ball of the contiguous run (the prediction beat).
+        // Action result first (DROP + last landing), then probability and
+        // mean-versus-expectation metrics. Optional B{n}H/M grades a
+        // move-committed one-ball bet against the highlighted last ball.
+        // Compact enough for the App 360-wide footer budget.
         let grade = bet.map(|bin| {
             if bin == rights {
                 format!(" B{bin}H")
@@ -487,15 +487,16 @@ impl Room for GaltonBoard {
             }
         });
         let grade = grade.as_deref().unwrap_or("");
-        if wave_count == MAX_ROOM_POKES {
-            Some(format!(
-                "P{probability} FULL={balls} M{mean:.1}~{expected:.1} L{rights}R{grade}"
-            ))
+        // Single spaces keep the line inside the App 360-wide footer budget.
+        // FULL omits the ball total so metrics still fit beside fixed controls.
+        let drop = if wave_count == MAX_ROOM_POKES {
+            "DROP FULL".to_string()
         } else {
-            Some(format!(
-                "P{probability} {wave_count}x64={balls} M{mean:.1}~{expected:.1} L{rights}R{grade}"
-            ))
-        }
+            format!("DROP {wave_count}x64={balls}")
+        };
+        Some(format!(
+            "{drop} L{rights}R P{probability} M{mean:.1}~{expected:.1}{grade}"
+        ))
     }
 
     fn parameter_sound(&self, _t: f64, inputs: &[RoomInput]) -> Option<ParametricSound> {
@@ -1063,7 +1064,10 @@ mod tests {
         let status = room
             .status_input(0.0, &crate::room::inputs_from_pokes(&overfull, 0.0))
             .expect("full-run status");
-        assert!(status.contains("FULL=1536"));
+        assert!(
+            status.starts_with("DROP FULL"),
+            "saturated run names the full drop: {status}"
+        );
     }
 
     #[test]
@@ -1158,8 +1162,14 @@ mod tests {
         let status = GaltonBoard::new()
             .status_input(0.0, &crate::room::inputs_from_pokes(&[(1.0, 0.2)], 0.0))
             .expect("interaction status");
-        assert!(status.starts_with("P.70"));
-        assert!(status.contains("1x64=64"));
+        assert!(
+            status.starts_with("DROP 1x64=64"),
+            "action result leads: {status}"
+        );
+        assert!(
+            status.contains("P.70"),
+            "probability stays legible: {status}"
+        );
         assert!(status.contains('M'));
         assert!(status.contains("~11.2")); // 16 rows * 0.70
         assert!(status.contains('L'));
@@ -1219,8 +1229,16 @@ mod tests {
             },
         ];
         let status = room.status_input(0.0, &graded).expect("graded status");
+        assert!(
+            status.starts_with("DROP 1x64=64"),
+            "drop consequence leads: {status}"
+        );
         assert!(status.contains("1x64=64"));
         assert!(status.contains(&format!("L{rights}R")));
+        assert!(
+            status.contains("P."),
+            "probability after the landing: {status}"
+        );
         if bet == rights {
             assert!(status.ends_with(&format!("B{bet}H")), "{status}");
         } else {
