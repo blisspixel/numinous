@@ -31,8 +31,9 @@ class Probe:
     hand_args: dict[str, Any]
     invite_tokens: tuple[str, ...]
     expect_status_change: bool
-    # Optional listen_room args: hand notes must differ from open notes.
-    # Empty means no sonic gate (visual/status only for this probe).
+    # Optional sonic gate: hand signature must differ from open.
+    # Default tool is listen_room; Formula Jam uses sing_expression.
+    sonic_tool: str = "listen_room"
     sonic_open_args: dict[str, Any] | None = None
     sonic_hand_args: dict[str, Any] | None = None
 
@@ -137,6 +138,9 @@ PROBES = [
         hand_args={"expr": "sin(2*x)"},
         invite_tokens=(),
         expect_status_change=True,
+        sonic_tool="sing_expression",
+        sonic_open_args={"expr": "sin(x)"},
+        sonic_hand_args={"expr": "sin(2*x)"},
     ),
 ]
 
@@ -189,19 +193,29 @@ def plate_fingerprint(result: dict[str, Any]) -> str:
 
 
 def notes_signature(result: dict[str, Any]) -> str:
-    """Stable fingerprint of mathematical notes from listen_room."""
+    """Stable fingerprint of mathematical notes from listen_room or melody text."""
     structured = result.get("structured") or {}
     notes = structured.get("notes")
-    if not isinstance(notes, list) or not notes:
-        return ""
-    parts: list[str] = []
-    for note in notes:
-        if not isinstance(note, dict):
+    if isinstance(notes, list) and notes:
+        parts: list[str] = []
+        for note in notes:
+            if not isinstance(note, dict):
+                continue
+            parts.append(
+                f"{note.get('frequency_hz')}:{note.get('amplitude')}:{note.get('duration_seconds')}"
+            )
+        if parts:
+            return "|".join(parts)
+    # sing_expression returns readable melody lines in text, not notes JSON.
+    text = result.get("text") or ""
+    freqs = []
+    for line in text.splitlines():
+        if "Hz" not in line:
             continue
-        parts.append(
-            f"{note.get('frequency_hz')}:{note.get('amplitude')}:{note.get('duration_seconds')}"
-        )
-    return "|".join(parts)
+        token = line.split("Hz", 1)[0].strip().split()
+        if token:
+            freqs.append(token[-1])
+    return "|".join(freqs)
 
 
 def review_probe(probe: Probe) -> dict[str, Any]:
@@ -243,8 +257,8 @@ def review_probe(probe: Probe) -> dict[str, Any]:
 
     sonic_diff = None
     if probe.sonic_open_args is not None and probe.sonic_hand_args is not None:
-        sonic_open = call_tool("listen_room", probe.sonic_open_args)
-        sonic_hand = call_tool("listen_room", probe.sonic_hand_args)
+        sonic_open = call_tool(probe.sonic_tool, probe.sonic_open_args)
+        sonic_hand = call_tool(probe.sonic_tool, probe.sonic_hand_args)
         if not sonic_open.get("ok"):
             defects.append(
                 f"sonic open failed: {sonic_open.get('stderr') or sonic_open.get('stdout')}"
