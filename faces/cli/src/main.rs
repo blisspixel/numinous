@@ -5195,7 +5195,7 @@ mod tests {
         )
         .expect("ambient target render");
 
-        assert!(report.contains("Status: K 5.00  CLOSED  4 LOBES  TARGET 4"));
+        assert!(report.contains("Status: DRAG:DIAL  K 5.00  CLOSED  4 LOBES  TARGET 4"));
         assert!(!report.contains("FOUND"));
         assert!(!report.contains("Aha earned:"));
     }

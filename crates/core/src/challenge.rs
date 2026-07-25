@@ -126,12 +126,35 @@ pub(crate) fn status_numbers(status: &str) -> Vec<(usize, f64)> {
     numbers
 }
 
+/// First-contact chrome: leading `VERB:OBJECT` tokens (all-caps, both sides
+/// at least two characters) such as `DRAG:DIAL` or `CLICK:GLIDER`. Stripped
+/// from readout labels so the instrument name stays clean (`K`, not
+/// `DRAG:DIAL  K`). Single-letter ratios like `X:Y` are not chrome.
+fn strip_leading_invite_tokens(prefix: &str) -> &str {
+    let mut s = prefix.trim();
+    while let Some(token) = s.split_whitespace().next() {
+        let invite = token.split_once(':').is_some_and(|(verb, object)| {
+            !verb.is_empty()
+                && !object.is_empty()
+                && verb.len() >= 2
+                && object.len() >= 2
+                && token
+                    .chars()
+                    .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == ':' || c == '-')
+        });
+        if !invite {
+            break;
+        }
+        s = s[token.len()..].trim_start();
+    }
+    s
+}
+
 /// The readout's label: the status text before the number at byte offset
-/// `cut`, trimmed of separators. Falls back to "READOUT" for label-less
-/// lines.
+/// `cut`, trimmed of separators and leading first-contact invite tokens.
+/// Falls back to "READOUT" for label-less lines.
 fn status_label(status: &str, cut: usize) -> String {
-    let label = status[..cut]
-        .trim()
+    let label = strip_leading_invite_tokens(status[..cut].trim())
         .trim_end_matches(['=', ':', ' '])
         .trim();
     if label.is_empty() {
@@ -657,6 +680,10 @@ mod tests {
         assert_eq!(label("X:Y = 3:2.00", 1), "X:Y = 3");
         assert_eq!(label("E-FIELD 0.5", 0), "E-FIELD");
         assert_eq!(super::status_label("1.85", 0), "READOUT");
+        // First-contact invite chrome is not part of the instrument name.
+        assert_eq!(label("DRAG:DIAL  K 6.24  TARGET 4", 0), "K");
+        assert_eq!(label("CLICK:GLIDER  GEN 3  LIVE 12", 0), "GEN");
+        assert_eq!(label("X:Y = 3:2.00", 0), "X:Y");
     }
 
     #[test]
@@ -689,10 +716,9 @@ mod tests {
 
     #[test]
     fn times_tables_poses_on_its_moving_k_despite_a_wandering_note() {
-        // Times Tables' status is "K = {k}   {note}" where the note's own
-        // number comes and goes ("CLOSED: 5 LOBES" vs "OPEN, WANDERING").
-        // The whole-line count is unstable, but the leading K column is the
-        // readout and it sweeps; the room must pose on it, not decline.
+        // Times Tables status is "DRAG:DIAL  K {k}  {note}" until FOUND.
+        // The invite is chrome; the K column is the readout and it sweeps.
+        // Lobe counts come and go, so only the stable K column may pose.
         let room = crate::registry::room_by_id("times-tables").expect("room");
         let goal =
             super::pose_parameter_goal(room.as_ref(), 1).expect("K is a moving, aligned readout");
