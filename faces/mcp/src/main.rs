@@ -392,7 +392,13 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                 }
             }
         }
-        "run_sim" | "plot_expression" | "sing_expression" => journey.play(),
+        "run_sim" | "sing_expression" => journey.play(),
+        "plot_expression" => {
+            // Listing the recipe bank is discovery, not a creation play.
+            if args.get("list_recipes").and_then(Value::as_bool) != Some(true) {
+                journey.play();
+            }
+        }
         "nim" => {
             if let Some(list) = args.get("moves").and_then(Value::as_array)
                 && !list.is_empty()
@@ -1202,20 +1208,38 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "plot_expression",
-                "description": "Create in the Studio: plot your own function of x (and optional knob a) and see the curve as ASCII. Functions: sin cos tan exp ln abs sqrt; constants pi, e. Example: sin(3*x) + x/2.",
+                "description": "Create in Formula Jam / Studio. Three discovery paths: (1) manual expr, (2) curated recipe index, (3) random seed into the same bank the App uses for F2 Random. Optional auto_step with seed walks the bank like Auto without session state. Pass list_recipes true to inspect the bank. Functions: sin cos tan exp ln abs sqrt; constants pi, e.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "expr": {
                             "type": "string",
                             "maxLength": numinous_core::MAX_STUDIO_SOURCE_CHARS,
-                            "description": "The expression in x, for example sin(3*x) + x/2."
+                            "description": "Manual expression in x. Omit when using recipe, seed, or list_recipes."
+                        },
+                        "recipe": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Curated recipe index (wraps). Mutually exclusive with expr and seed."
+                        },
+                        "seed": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Random discovery seed into the curated bank (wraps). Mutually exclusive with expr and recipe."
+                        },
+                        "auto_step": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "With seed only: bank entry at seed+auto_step (stateless Auto walk)."
+                        },
+                        "list_recipes": {
+                            "type": "boolean",
+                            "description": "When true, return the curated recipe bank without plotting."
                         },
                         "xmin": { "type": "number", "description": "Left edge of x (default -tau)." },
                         "xmax": { "type": "number", "description": "Right edge of x (default tau)." },
                         "a": { "type": "number", "description": "Value of the knob a (default 1)." }
                     },
-                    "required": ["expr"],
                     "additionalProperties": false
                 }
             },
@@ -4885,19 +4909,99 @@ fn journey_tool(path: &std::path::Path) -> Value {
     )
 }
 
-/// The `plot_expression` tool: an agent creates in the Studio.
+/// The `plot_expression` tool: Formula Jam discovery and still plots.
 fn plot_expression_tool(args: &Value) -> Value {
     use std::f64::consts::TAU;
-    let Some(expr) = args.get("expr").and_then(Value::as_str) else {
-        return tool_error("Missing required string argument 'expr'.");
+    if args.get("list_recipes").and_then(Value::as_bool) == Some(true) {
+        let recipes: Vec<Value> = numinous_core::STUDIO_RECIPES
+            .iter()
+            .enumerate()
+            .map(|(i, source)| json!({ "index": i, "expr": source }))
+            .collect();
+        let lines: Vec<String> = numinous_core::STUDIO_RECIPES
+            .iter()
+            .enumerate()
+            .map(|(i, source)| format!("  {i}: {source}"))
+            .collect();
+        return tool_structured(
+            &format!(
+                "Formula Jam curated recipes ({}):\n{}",
+                numinous_core::studio_recipe_count(),
+                lines.join("\n")
+            ),
+            json!({
+                "discovery": "list",
+                "recipeCount": numinous_core::studio_recipe_count(),
+                "recipes": recipes,
+                "valid": true
+            }),
+        );
+    }
+
+    let has_expr = args.get("expr").and_then(Value::as_str).is_some();
+    let has_recipe = args.get("recipe").is_some();
+    let has_seed = args.get("seed").is_some();
+    let has_auto_step = args.get("auto_step").is_some();
+    let mode_count = usize::from(has_expr) + usize::from(has_recipe) + usize::from(has_seed);
+    if mode_count != 1 {
+        return tool_error(
+            "Provide exactly one of: expr (manual), recipe (index), or seed (random bank). Use list_recipes true to inspect the bank.",
+        );
+    }
+    if has_auto_step && !has_seed {
+        return tool_error("auto_step requires seed (stateless Auto walk over the curated bank).");
+    }
+
+    let (expr, discovery, recipe_index): (String, &str, Option<u64>) = if has_expr {
+        let source = args
+            .get("expr")
+            .and_then(Value::as_str)
+            .expect("expr present")
+            .to_string();
+        (source, "manual", None)
+    } else if has_recipe {
+        let Some(index) = args.get("recipe").and_then(Value::as_u64) else {
+            return tool_error("Argument 'recipe' must be a non-negative integer.");
+        };
+        let source = numinous_core::studio_recipe(index).to_string();
+        let wrapped = index % numinous_core::studio_recipe_count() as u64;
+        (source, "recipe", Some(wrapped))
+    } else {
+        let Some(seed) = args.get("seed").and_then(Value::as_u64) else {
+            return tool_error("Argument 'seed' must be a non-negative integer.");
+        };
+        let step = args.get("auto_step").and_then(Value::as_u64).unwrap_or(0);
+        let index = seed.wrapping_add(step) % numinous_core::studio_recipe_count() as u64;
+        let source = numinous_core::studio_auto_recipe(seed, step).to_string();
+        let discovery = if has_auto_step { "auto" } else { "random" };
+        (source, discovery, Some(index))
     };
+
     let xmin = args.get("xmin").and_then(Value::as_f64).unwrap_or(-TAU);
     let xmax = args.get("xmax").and_then(Value::as_f64).unwrap_or(TAU);
     let a = args.get("a").and_then(Value::as_f64).unwrap_or(1.0);
-    match numinous_core::plot_text(expr, xmin, xmax, a, 72, 26) {
-        Ok((text, ymin, ymax)) => tool_text(&format!(
-            "y = {expr}    x in [{xmin:.3}, {xmax:.3}]    y in [{ymin:.3}, {ymax:.3}]\n\n{text}"
-        )),
+    match numinous_core::plot_text(&expr, xmin, xmax, a, 72, 26) {
+        Ok((text, ymin, ymax)) => {
+            let summary = format!(
+                "y = {expr}    x in [{xmin:.3}, {xmax:.3}]    y in [{ymin:.3}, {ymax:.3}]\nDiscovery: {discovery}\n\n{text}"
+            );
+            tool_structured(
+                &summary,
+                json!({
+                    "expression": expr,
+                    "discovery": discovery,
+                    "recipeIndex": recipe_index,
+                    "recipeCount": numinous_core::studio_recipe_count(),
+                    "a": a,
+                    "xmin": xmin,
+                    "xmax": xmax,
+                    "ymin": ymin,
+                    "ymax": ymax,
+                    "valid": true,
+                    "plot": text
+                }),
+            )
+        }
         Err(message) => tool_error(&message),
     }
 }
@@ -6509,6 +6613,8 @@ plays 2
             .unwrap_or_default();
         assert!(text.contains('#'), "the curve has ink");
         assert_eq!(resp["result"]["isError"], false);
+        assert_eq!(resp["result"]["structuredContent"]["discovery"], "manual");
+        assert_eq!(resp["result"]["structuredContent"]["valid"], true);
 
         let bad = handle_request(&json!({
             "jsonrpc":"2.0","id":41,"method":"tools/call",
@@ -6533,6 +6639,47 @@ plays 2
             .expect("tools/call must respond, not crash");
             assert_eq!(bomb["result"]["isError"], true, "{tool} rejects the bomb");
         }
+    }
+
+    #[test]
+    fn formula_jam_discovery_lists_recipes_and_walks_the_bank() {
+        let listed = call("plot_expression", json!({"list_recipes": true}));
+        let content = &listed["result"]["structuredContent"];
+        assert_eq!(content["discovery"], "list");
+        assert_eq!(content["recipeCount"], numinous_core::studio_recipe_count());
+        assert_eq!(
+            content["recipes"].as_array().expect("bank").len(),
+            numinous_core::studio_recipe_count()
+        );
+
+        let recipe = call("plot_expression", json!({"recipe": 0}));
+        assert_eq!(recipe["result"]["structuredContent"]["discovery"], "recipe");
+        assert_eq!(
+            recipe["result"]["structuredContent"]["expression"],
+            numinous_core::studio_recipe(0)
+        );
+        assert!(
+            recipe["result"]["structuredContent"]["plot"]
+                .as_str()
+                .is_some_and(|p| p.contains('#') || p.contains('*') || p.contains('.'))
+        );
+
+        let random = call("plot_expression", json!({"seed": 7}));
+        assert_eq!(random["result"]["structuredContent"]["discovery"], "random");
+        assert_eq!(
+            random["result"]["structuredContent"]["expression"],
+            numinous_core::studio_recipe(7)
+        );
+
+        let auto = call("plot_expression", json!({"seed": 3, "auto_step": 2}));
+        assert_eq!(auto["result"]["structuredContent"]["discovery"], "auto");
+        assert_eq!(
+            auto["result"]["structuredContent"]["expression"],
+            numinous_core::studio_auto_recipe(3, 2)
+        );
+
+        let conflict = call("plot_expression", json!({"expr": "x", "recipe": 1}));
+        assert_eq!(conflict["result"]["isError"], true);
     }
 
     #[test]

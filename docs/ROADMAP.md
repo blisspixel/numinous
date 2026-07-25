@@ -638,6 +638,11 @@ later risk.
 - Give Formula Jam three legible ways to begin: manual expression entry,
   curated Random, and an Auto set that changes about every 21 seconds at phrase
   boundaries. Add a dismissible, recallable help overlay and pause Auto on edit.
+  - **Done (machine path, 2026-07-25):** App keeps F2 Random, F3 Auto, and help.
+    Core owns the curated bank. CLI and MCP expose manual, recipe index, seed
+    random, and stateless Auto walk (`auto_step` with seed) plus list-recipes,
+    with structured MCP discovery fields. Agent and CLI can open the same bank
+    as the App without session state.
 - Build the local read-only MCP session broadcast specified in `INTERFACES.md`.
   Both the human operator and MCP guest must opt in. Broadcast only allowlisted,
   replayable Numinous actions and public results, never prompts, reasoning,

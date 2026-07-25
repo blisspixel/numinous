@@ -133,7 +133,8 @@ pub use spectrum::{
     spectrum_time_scale,
 };
 pub use studio::{
-    Expr, MAX_STUDIO_SOURCE_CHARS, StudioCreation, eval, parse, plot_text, to_melody,
+    Expr, MAX_STUDIO_SOURCE_CHARS, STUDIO_RECIPES, StudioCreation, eval, parse, plot_text,
+    studio_auto_recipe, studio_recipe, studio_recipe_count, to_melody,
 };
 pub use surface::Surface;
 pub use trophies::{Trophy, trophies};

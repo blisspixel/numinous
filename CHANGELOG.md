@@ -5,25 +5,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
-### Fixed
-- Game of Life first-contact status invites the hand (`CLICK:GLIDER`) instead of
-  only naming soup inventory (`GLIDERS 0`). Compact opening matches. Agent
-  tactile round-09 probes Life at t=0 so the opening invite is the bar.
-- Galton Board first-contact status leads with `CLICK:DROP 64` and names
-  pick-coin plus move-bet, instead of inventory-first copy.
-- ROADMAP 0.3 notes machine evidence for Times Tables, Life, and Galton
-  first-contact invites (agent-tactile round-09, agent-hallway PASS).
-- Times Tables dial status leads with `DRAG:DIAL` until the four-lobe goal is
-  FOUND, so first contact invites the hand rather than ambient K alone.
-- MCP Times Tables open no longer auto-primes the place wager from ambient
-  closed K=2, so status keeps `DRAG:DIAL` instead of `WHERE?` before any hand.
-- Double Pendulum ambient status leads with `CLICK:RE-DROP` before the twins
-  gap readout, matching the flagship first-contact invite pattern.
-- `scripts/agent-tactile.py` gates all five 0.3 flagships on hand sonic change:
-  listen_room for Times Tables, Double Pendulum fling, Life early-plant births,
-  and Galton; `sing_expression` for Formula Jam.
-
 ### Added
+- Formula Jam discovery is shared across App, CLI, and MCP: curated recipe bank
+  in core; MCP `plot_expression` supports manual expr, `recipe`, `seed`,
+  `auto_step`, and `list_recipes` with structured discovery results; CLI `plot`
+  gains `--recipe`, `--seed`, `--auto-step`, and `--list-recipes`.
 - Bloch Sphere joins Shape & Space as room 354 (`bloch-sphere`): pure qubit
   states on S^2, poles |0>/|1>, equator goal (equal superposition), Born P0
   status, phase precession, three deep cuts, citation. Compact-map cousin of
@@ -47,6 +33,22 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   under `.agent/tester-cohort/round-08-tactile-0.3/`.
 
 ### Fixed
+- Game of Life first-contact status invites the hand (`CLICK:GLIDER`) instead of
+  only naming soup inventory (`GLIDERS 0`). Compact opening matches. Agent
+  tactile round-09 probes Life at t=0 so the opening invite is the bar.
+- Galton Board first-contact status leads with `CLICK:DROP 64` and names
+  pick-coin plus move-bet, instead of inventory-first copy.
+- ROADMAP 0.3 notes machine evidence for Times Tables, Life, and Galton
+  first-contact invites (agent-tactile round-09, agent-hallway PASS).
+- Times Tables dial status leads with `DRAG:DIAL` until the four-lobe goal is
+  FOUND, so first contact invites the hand rather than ambient K alone.
+- MCP Times Tables open no longer auto-primes the place wager from ambient
+  closed K=2, so status keeps `DRAG:DIAL` instead of `WHERE?` before any hand.
+- Double Pendulum ambient status leads with `CLICK:RE-DROP` before the twins
+  gap readout, matching the flagship first-contact invite pattern.
+- `scripts/agent-tactile.py` gates all five 0.3 flagships on hand sonic change:
+  listen_room for Times Tables, Double Pendulum fling, Life early-plant births,
+  and Galton; `sing_expression` for Formula Jam.
 - Riemann Sphere INF goal is earnable by dragging to the drawn plane rim
   (`INF_R` inside the plane window), not only by ambient phase growth.
 

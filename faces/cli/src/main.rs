@@ -426,9 +426,23 @@ enum Command {
         height: usize,
     },
     /// Plot a function of x, e.g. numinous plot "sin(a*x)". Use a for a knob.
+    /// Discovery: pass an expression, or --recipe N, or --seed N (curated bank).
     Plot {
-        /// The expression in x and a (funcs: sin cos tan exp ln abs sqrt; consts pi e).
-        expr: String,
+        /// Manual expression in x and a (funcs: sin cos tan exp ln abs sqrt; consts pi e).
+        /// Omit when using --recipe, --seed, or --list-recipes.
+        expr: Option<String>,
+        /// Curated Formula Jam recipe index (wraps). Mutually exclusive with expr and --seed.
+        #[arg(long)]
+        recipe: Option<u64>,
+        /// Random discovery seed into the curated bank. Mutually exclusive with expr and --recipe.
+        #[arg(long)]
+        seed: Option<u64>,
+        /// With --seed: bank entry at seed+step (stateless Auto walk).
+        #[arg(long, default_value_t = 0)]
+        auto_step: u64,
+        /// List curated recipes and exit without plotting.
+        #[arg(long)]
+        list_recipes: bool,
         /// Left edge of the x range.
         #[arg(long, default_value_t = -std::f64::consts::TAU)]
         xmin: f64,
@@ -1715,6 +1729,10 @@ Or name a room to watch it as ASCII: numinous play lorenz"
         }
         Command::Plot {
             expr,
+            recipe,
+            seed,
+            auto_step,
+            list_recipes,
             xmin,
             xmax,
             a,
@@ -1725,6 +1743,21 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             height,
             save,
         } => {
+            if list_recipes {
+                let mut lines = vec![format!(
+                    "Formula Jam curated recipes ({}):",
+                    numinous_core::studio_recipe_count()
+                )];
+                for (i, source) in numinous_core::STUDIO_RECIPES.iter().enumerate() {
+                    lines.push(format!("  {i}: {source}"));
+                }
+                lines.push(String::new());
+                return emit(Ok(lines.join("\n")));
+            }
+            let expr = match resolve_plot_expression(expr.as_deref(), recipe, seed, auto_step) {
+                Ok(source) => source,
+                Err(message) => return emit(Err(message)),
+            };
             if animate && save.is_some() {
                 return emit(Err(
                     "--save is for still Studio plots; omit --animate to save a .num file\n"
@@ -2163,6 +2196,34 @@ fn sing_wav(
         spec.notes.len(),
         terminal_safe(source)
     ))
+}
+
+/// Resolve manual, recipe, or seeded bank discovery into one Studio source.
+fn resolve_plot_expression(
+    expr: Option<&str>,
+    recipe: Option<u64>,
+    seed: Option<u64>,
+    auto_step: u64,
+) -> Result<String, String> {
+    let modes =
+        usize::from(expr.is_some()) + usize::from(recipe.is_some()) + usize::from(seed.is_some());
+    if modes != 1 {
+        return Err(
+            "plot needs exactly one of: expression, --recipe N, or --seed N (use --list-recipes)\n"
+                .to_string(),
+        );
+    }
+    if let Some(source) = expr {
+        return Ok(source.to_string());
+    }
+    if let Some(index) = recipe {
+        if auto_step != 0 {
+            return Err("--auto-step is only valid with --seed\n".to_string());
+        }
+        return Ok(numinous_core::studio_recipe(index).to_string());
+    }
+    let seed = seed.expect("seed present when exclusive");
+    Ok(numinous_core::studio_auto_recipe(seed, auto_step).to_string())
 }
 
 /// Plot `source` as y = f(x, a) over `[xmin, xmax]`, auto-scaling y.
@@ -6590,6 +6651,46 @@ mod tests {
     }
 
     #[test]
+    fn plot_discovery_resolves_recipe_seed_and_list() {
+        assert_eq!(
+            super::resolve_plot_expression(Some("x"), None, None, 0).expect("manual"),
+            "x"
+        );
+        assert_eq!(
+            super::resolve_plot_expression(None, Some(0), None, 0).expect("recipe"),
+            numinous_core::studio_recipe(0)
+        );
+        assert_eq!(
+            super::resolve_plot_expression(None, None, Some(7), 2).expect("auto"),
+            numinous_core::studio_auto_recipe(7, 2)
+        );
+        assert!(super::resolve_plot_expression(None, None, None, 0).is_err());
+        assert!(super::resolve_plot_expression(Some("x"), Some(1), None, 0).is_err());
+        let mut journey = numinous_core::Journey::default();
+        let code = run(
+            Command::Plot {
+                expr: None,
+                recipe: None,
+                seed: None,
+                auto_step: 0,
+                list_recipes: true,
+                xmin: -1.0,
+                xmax: 1.0,
+                a: 1.0,
+                animate: false,
+                amin: 0.0,
+                amax: 1.0,
+                width: 24,
+                height: 8,
+                save: None,
+            },
+            &mut journey,
+        );
+        assert_eq!(code, std::process::ExitCode::SUCCESS);
+        assert_eq!(journey.plays, 0, "listing recipes is not a play");
+    }
+
+    #[test]
     fn plot_report_draws_a_known_function() {
         let out = super::plot_report("x", -1.0, 1.0, 0.0, 24, 8).expect("plot");
         assert!(out.contains("y = x"));
@@ -6651,7 +6752,11 @@ mod tests {
         let mut journey = numinous_core::Journey::default();
         let code = run(
             Command::Plot {
-                expr: "x".to_string(),
+                expr: Some("x".to_string()),
+                recipe: None,
+                seed: None,
+                auto_step: 0,
+                list_recipes: false,
                 xmin: -1.0,
                 xmax: 1.0,
                 a: 1.0,
@@ -6674,7 +6779,11 @@ mod tests {
         let mut journey = numinous_core::Journey::default();
         let code = run(
             Command::Plot {
-                expr: "x".to_string(),
+                expr: Some("x".to_string()),
+                recipe: None,
+                seed: None,
+                auto_step: 0,
+                list_recipes: false,
                 xmin: -1.0,
                 xmax: 1.0,
                 a: 1.0,
@@ -6699,7 +6808,11 @@ mod tests {
         let mut journey = numinous_core::Journey::default();
         let code = run(
             Command::Plot {
-                expr: "x".to_string(),
+                expr: Some("x".to_string()),
+                recipe: None,
+                seed: None,
+                auto_step: 0,
+                list_recipes: false,
                 xmin: -1.0,
                 xmax: 1.0,
                 a: 1.0,
@@ -6724,7 +6837,11 @@ mod tests {
         let mut journey = numinous_core::Journey::default();
         let code = run(
             Command::Plot {
-                expr: "ln(-1)".to_string(),
+                expr: Some("ln(-1)".to_string()),
+                recipe: None,
+                seed: None,
+                auto_step: 0,
+                list_recipes: false,
                 xmin: -2.0,
                 xmax: -1.0,
                 a: 1.0,
@@ -6749,7 +6866,11 @@ mod tests {
         let mut journey = numinous_core::Journey::default();
         let code = run(
             Command::Plot {
-                expr: "x".to_string(),
+                expr: Some("x".to_string()),
+                recipe: None,
+                seed: None,
+                auto_step: 0,
+                list_recipes: false,
                 xmin: -1.0,
                 xmax: 1.0,
                 a: 1.0,
