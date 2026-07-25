@@ -1624,13 +1624,19 @@ fn parse_studio_replay(
     arguments: &Map<String, Value>,
     result: &Map<String, Value>,
 ) -> Option<StudioReplay> {
-    if arguments
-        .keys()
-        .any(|key| !matches!(key.as_str(), "expr" | "xmin" | "xmax" | "a"))
-    {
+    if arguments.keys().any(|key| {
+        !matches!(
+            key.as_str(),
+            "expr" | "xmin" | "xmax" | "a" | "recipe" | "seed" | "auto_step" | "list_recipes"
+        )
+    }) {
         return None;
     }
-    if result.len() != 2 || result.get("isError").and_then(Value::as_bool) != Some(false) {
+    // Listing the bank is not a curve replay.
+    if arguments.get("list_recipes").and_then(Value::as_bool) == Some(true) {
+        return None;
+    }
+    if result.get("isError").and_then(Value::as_bool) != Some(false) {
         return None;
     }
     let blocks = result.get("content")?.as_array()?;
@@ -1642,11 +1648,49 @@ fn parse_studio_replay(
         return None;
     }
     let result_text = block.get("text")?.as_str()?;
-    let source = arguments.get("expr")?.as_str()?;
+
+    let has_expr = arguments.get("expr").and_then(Value::as_str).is_some();
+    let has_recipe = arguments.get("recipe").is_some();
+    let has_seed = arguments.get("seed").is_some();
+    let mode_count = usize::from(has_expr) + usize::from(has_recipe) + usize::from(has_seed);
+    if mode_count != 1 {
+        return None;
+    }
+    if arguments.get("auto_step").is_some() && !has_seed {
+        return None;
+    }
+
+    let (source, discovery) = if has_expr {
+        (
+            arguments.get("expr")?.as_str()?.to_string(),
+            "manual".to_string(),
+        )
+    } else if has_recipe {
+        let index = arguments.get("recipe")?.as_u64()?;
+        (
+            numinous_core::studio_recipe(index).to_string(),
+            "recipe".to_string(),
+        )
+    } else {
+        let seed = arguments.get("seed")?.as_u64()?;
+        let step = match arguments.get("auto_step") {
+            None => 0,
+            Some(value) => value.as_u64()?,
+        };
+        let discovery = if arguments.get("auto_step").is_some() {
+            "auto"
+        } else {
+            "random"
+        };
+        (
+            numinous_core::studio_auto_recipe(seed, step).to_string(),
+            discovery.to_string(),
+        )
+    };
     if source.chars().count() > numinous_core::MAX_STUDIO_SOURCE_CHARS {
         return None;
     }
-    let expression = numinous_core::parse(source).ok()?;
+    let expression = numinous_core::parse(&source).ok()?;
     let xmin = optional_finite(arguments.get("xmin"), -std::f64::consts::TAU)?;
     let xmax = optional_finite(arguments.get("xmax"), std::f64::consts::TAU)?;
     let parameter = optional_finite(arguments.get("a"), 1.0)?;
@@ -1655,11 +1699,31 @@ fn parse_studio_replay(
         return None;
     }
     let (plot, expected_ymin, expected_ymax) =
-        numinous_core::plot_text(source, xmin, xmax, parameter, 72, 26).ok()?;
+        numinous_core::plot_text(&source, xmin, xmax, parameter, 72, 26).ok()?;
     let expected_result = format!(
-        "y = {source}    x in [{xmin:.3}, {xmax:.3}]    y in [{expected_ymin:.3}, {expected_ymax:.3}]\n\n{plot}"
+        "y = {source}    x in [{xmin:.3}, {xmax:.3}]    y in [{expected_ymin:.3}, {expected_ymax:.3}]\nDiscovery: {discovery}\n\n{plot}"
     );
     if result_text != expected_result {
+        return None;
+    }
+    // Prefer structured discovery when present; require exact agreement with the curve.
+    if let Some(structured) = result.get("structuredContent").and_then(Value::as_object) {
+        if result.len() != 3 {
+            return None;
+        }
+        if structured.get("valid").and_then(Value::as_bool) != Some(true) {
+            return None;
+        }
+        if structured.get("expression").and_then(Value::as_str) != Some(source.as_str()) {
+            return None;
+        }
+        if structured.get("discovery").and_then(Value::as_str) != Some(discovery.as_str()) {
+            return None;
+        }
+        if structured.get("plot").and_then(Value::as_str) != Some(plot.as_str()) {
+            return None;
+        }
+    } else if result.len() != 2 {
         return None;
     }
     let (ymin, ymax) = crate::studio_render::curve_range(72, xmin, xmax, |x| {
@@ -1669,7 +1733,7 @@ fn parse_studio_replay(
         return None;
     }
     Some(StudioReplay {
-        source: source.to_string(),
+        source,
         expression,
         xmin,
         xmax,
@@ -2358,9 +2422,22 @@ mod tests {
             "content": [{
                 "type": "text",
                 "text": format!(
-                    "y = {source}    x in [{xmin:.3}, {xmax:.3}]    y in [{ymin:.3}, {ymax:.3}]\n\n{plot}"
+                    "y = {source}    x in [{xmin:.3}, {xmax:.3}]    y in [{ymin:.3}, {ymax:.3}]\nDiscovery: manual\n\n{plot}"
                 )
             }],
+            "structuredContent": {
+                "expression": source,
+                "discovery": "manual",
+                "recipeIndex": null,
+                "recipeCount": numinous_core::studio_recipe_count(),
+                "a": parameter,
+                "xmin": xmin,
+                "xmax": xmax,
+                "ymin": ymin,
+                "ymax": ymax,
+                "valid": true,
+                "plot": plot
+            },
             "isError": false
         })
     }

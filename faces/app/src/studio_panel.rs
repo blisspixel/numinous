@@ -25,22 +25,8 @@ fn sound_for_expression(expr: &Expr) -> SoundSpec {
     numinous_core::to_melody(expr, -TAU, TAU, 32, 1.0)
 }
 
-/// Curated Formula Jam recipes: each must parse and make a melody.
-/// Random discovery draws only from this bank, never free assembly.
-pub(crate) const STUDIO_RECIPES: &[&str] = &[
-    "sin(a*x) + x/3",
-    "sin(x) + sin(2*x)/2",
-    "cos(x)*sin(a*x)",
-    "abs(sin(x))",
-    "x^2/12 - 1",
-    "sin(x) + cos(a*x)/2",
-    "sin(3*x)/3 + sin(x)",
-    "cos(x + a) + x/8",
-    "abs(x)/3 - cos(x)",
-    "sin(a*x) * cos(x)",
-    "x/4 + sin(2*x)",
-    "cos(x)^2 - sin(x)^2",
-];
+/// App-local alias of the shared curated bank (core owns the list).
+pub(crate) const STUDIO_RECIPES: &[&str] = numinous_core::STUDIO_RECIPES;
 
 /// Short vocabulary for the Studio help overlay (never permanent chrome).
 pub(crate) const STUDIO_HELP_LINES: &[&str] = &[

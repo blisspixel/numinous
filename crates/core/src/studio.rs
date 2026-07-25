@@ -13,6 +13,44 @@ use crate::sound::{Note, SoundSpec};
 /// Maximum accepted Studio source length for share files and links.
 pub const MAX_STUDIO_SOURCE_CHARS: usize = 512;
 
+/// Curated Formula Jam recipes shared by App Random/Auto, CLI, and MCP.
+/// Random discovery draws only from this bank, never free assembly.
+pub const STUDIO_RECIPES: &[&str] = &[
+    "sin(a*x) + x/3",
+    "sin(x) + sin(2*x)/2",
+    "cos(x)*sin(a*x)",
+    "abs(sin(x))",
+    "x^2/12 - 1",
+    "sin(x) + cos(a*x)/2",
+    "sin(3*x)/3 + sin(x)",
+    "cos(x + a) + x/8",
+    "abs(x)/3 - cos(x)",
+    "sin(a*x) * cos(x)",
+    "x/4 + sin(2*x)",
+    "cos(x)^2 - sin(x)^2",
+];
+
+/// How many curated recipes the bank holds.
+#[must_use]
+pub fn studio_recipe_count() -> usize {
+    STUDIO_RECIPES.len()
+}
+
+/// Recipe at a wrapped index (App Random cursor and MCP/CLI discovery).
+#[must_use]
+pub fn studio_recipe(index: u64) -> &'static str {
+    let count = STUDIO_RECIPES.len() as u64;
+    debug_assert!(count > 0, "recipe bank is never empty");
+    STUDIO_RECIPES[(index % count) as usize]
+}
+
+/// Deterministic Auto walk: bank entry after `step` advances from `seed`.
+/// Stateless stand-in for the App's dwell-and-phrase Auto set.
+#[must_use]
+pub fn studio_auto_recipe(seed: u64, step: u64) -> &'static str {
+    studio_recipe(seed.wrapping_add(step))
+}
+
 /// A shareable Studio expression plus its viewing parameters.
 #[derive(Debug, Clone, PartialEq)]
 pub struct StudioCreation {
@@ -769,8 +807,29 @@ impl Parser {
 mod tests {
     use super::{
         MAX_EXPR_TOKENS, MAX_MELODY_NOTES, MAX_PARSE_DEPTH, MAX_STUDIO_SOURCE_CHARS,
-        StudioCreation, eval, parse, to_melody,
+        STUDIO_RECIPES, StudioCreation, eval, parse, studio_auto_recipe, studio_recipe,
+        studio_recipe_count, to_melody,
     };
+
+    #[test]
+    fn curated_recipes_parse_and_auto_walk_is_deterministic() {
+        assert!(studio_recipe_count() >= 8);
+        for (index, source) in STUDIO_RECIPES.iter().enumerate() {
+            let expr = parse(source).unwrap_or_else(|e| panic!("recipe {index}: {e}"));
+            let _ = eval(&expr, 0.5, 1.0);
+            assert_eq!(studio_recipe(index as u64), *source);
+        }
+        assert_eq!(
+            studio_recipe(studio_recipe_count() as u64),
+            STUDIO_RECIPES[0]
+        );
+        assert_eq!(studio_auto_recipe(3, 0), studio_recipe(3));
+        assert_eq!(studio_auto_recipe(3, 1), studio_recipe(4));
+        assert_eq!(
+            studio_auto_recipe(3, studio_recipe_count() as u64),
+            studio_recipe(3)
+        );
+    }
 
     fn at(source: &str, x: f64) -> f64 {
         eval(&parse(source).expect("parse"), x, 0.0)
