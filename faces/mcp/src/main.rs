@@ -2812,8 +2812,20 @@ fn project_flagship_aha(
             use numinous_core::rooms::times_tables_aha::{AhaBeat, TimesTablesAha};
             let room = numinous_core::rooms::times_tables::TimesTables::new_with(variation);
             let mut aha = TimesTablesAha::new();
-            // Same dial contract as the plate: closed K=2 primes the gap.
-            aha.note_hand_multiplier(room.live_multiplier(t, inputs));
+            // Match the App: only a real hand primes the K=2 gap. Ambient open
+            // phase sits on closed K=2, and must not steal the dial invite with
+            // WHERE? chrome before anyone touches the instrument.
+            let hand_controls_dial = inputs.iter().any(|input| match *input {
+                numinous_core::RoomInput::PointerDown { x, y, .. }
+                | numinous_core::RoomInput::PointerMove { x, y, .. }
+                | numinous_core::RoomInput::PointerUp { x, y, .. } => {
+                    x.is_finite() && y.is_finite()
+                }
+                _ => false,
+            });
+            if hand_controls_dial {
+                aha.note_hand_multiplier(room.live_multiplier(t, inputs));
+            }
             if goal_met {
                 let _ = aha.note_four_lobes();
             }
@@ -7327,6 +7339,30 @@ plays 2
     }
 
     #[test]
+    fn times_tables_open_keeps_dial_invite_without_hand() {
+        // Ambient open phase is closed K=2. That must not auto-prime the place
+        // wager and replace DRAG:DIAL with WHERE? before any hand arrives.
+        let open = call(
+            "play_room",
+            json!({"id":"times-tables","t":0.0,"width":40,"height":20}),
+        );
+        let content = &open["result"]["structuredContent"];
+        assert_eq!(content["engineeredAha"]["beat"], "explore");
+        assert_eq!(
+            content["status"],
+            "DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4"
+        );
+        assert!(
+            !content["status"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("WHERE?"),
+            "aha prime chrome must not steal first contact: {}",
+            content["status"]
+        );
+    }
+
+    #[test]
     fn times_tables_reveals_only_after_the_k5_goal_is_earned() {
         let unearned = call(
             "play_room",
@@ -7343,7 +7379,16 @@ plays 2
                 .contains("Reveal:")
         );
         assert_eq!(unearned_content["engineeredAha"]["kind"], "place");
+        assert_eq!(unearned_content["engineeredAha"]["beat"], "explore");
         assert_eq!(unearned_content["engineeredAha"]["allowReveal"], false);
+        assert!(
+            unearned_content["status"]
+                .as_str()
+                .unwrap_or_default()
+                .starts_with("DRAG:DIAL"),
+            "ambient target keeps dial invite: {}",
+            unearned_content["status"]
+        );
 
         let earned_arguments = json!({
             "id":"times-tables",
