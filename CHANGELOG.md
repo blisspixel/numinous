@@ -11,6 +11,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   tactile round-09 probes Life at t=0 so the opening invite is the bar.
 - Galton Board first-contact status leads with `CLICK:DROP 64` and names
   pick-coin plus move-bet, instead of inventory-first copy.
+- ROADMAP 0.3 notes machine evidence for Life and Galton first-contact invites
+  (agent-tactile round-09, agent-hallway PASS).
 
 ### Added
 - Bloch Sphere joins Shape & Space as room 354 (`bloch-sphere`): pure qubit
