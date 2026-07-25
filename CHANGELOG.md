@@ -11,10 +11,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   tactile round-09 probes Life at t=0 so the opening invite is the bar.
 - Galton Board first-contact status leads with `CLICK:DROP 64` and names
   pick-coin plus move-bet, instead of inventory-first copy.
-- ROADMAP 0.3 notes machine evidence for Life and Galton first-contact invites
-  (agent-tactile round-09, agent-hallway PASS).
+- ROADMAP 0.3 notes machine evidence for Times Tables, Life, and Galton
+  first-contact invites (agent-tactile round-09, agent-hallway PASS).
 - Times Tables dial status leads with `DRAG:DIAL` until the four-lobe goal is
   FOUND, so first contact invites the hand rather than ambient K alone.
+- MCP Times Tables open no longer auto-primes the place wager from ambient
+  closed K=2, so status keeps `DRAG:DIAL` instead of `WHERE?` before any hand.
 
 ### Added
 - Bloch Sphere joins Shape & Space as room 354 (`bloch-sphere`): pure qubit
