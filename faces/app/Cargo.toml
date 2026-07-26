@@ -25,11 +25,11 @@ winit = { version = "0.30", default-features = false, features = [
     "wayland-dlopen",
     "x11",
 ] }
+softbuffer = "0.4"
 png = "0.18"
 hound = "3"
 symphonia = { version = "0.6", default-features = false, features = ["mp3"] }
 gilrs = "0.11.2"
-wgpu = "30.0.0"
 
 [dev-dependencies]
 

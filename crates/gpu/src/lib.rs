@@ -9,9 +9,6 @@
 use bytemuck::{Pod, Zeroable};
 use wgpu::util::DeviceExt;
 
-/// The post-processing pipeline for HDR tonemapping, scanlines, and bloom.
-pub mod post;
-
 /// Largest frame dimension accepted by the renderer.
 pub const MAX_FRAME_DIMENSION: u32 = 4096;
 
@@ -180,7 +177,6 @@ fn capture_device_errors<T>(
 
 /// A ready-to-use GPU device and queue, chosen adaptively for this machine.
 pub struct GpuContext {
-    adapter: wgpu::Adapter,
     device: wgpu::Device,
     queue: wgpu::Queue,
     adapter_name: String,
@@ -228,65 +224,33 @@ impl GpuContext {
     /// Returns an error string if no adapter at all can be acquired.
     pub fn new() -> Result<Self, String> {
         let instance = wgpu::Instance::default();
-        let adapter = Self::request_adapter(&instance, None)?;
-        let (device, queue) = Self::request_device(&adapter)?;
-        let info = adapter.get_info();
-        Ok(Self {
-            adapter,
-            device,
-            queue,
-            adapter_name: info.name,
-            backend: format!("{:?}", info.backend),
-        })
-    }
-
-    /// Create a context along with a window surface.
-    pub fn new_with_surface<'a>(
-        target: impl Into<wgpu::SurfaceTarget<'a>>,
-    ) -> Result<(Self, wgpu::Surface<'a>), String> {
-        let instance = wgpu::Instance::default();
-        let surface = instance
-            .create_surface(target)
-            .map_err(|e| format!("failed to create surface: {e:?}"))?;
-        let adapter = Self::request_adapter(&instance, Some(&surface))?;
-        let (device, queue) = Self::request_device(&adapter)?;
-        let info = adapter.get_info();
-        Ok((
-            Self {
-                adapter,
-                device,
-                queue,
-                adapter_name: info.name,
-                backend: format!("{:?}", info.backend),
-            },
-            surface,
-        ))
-    }
-
-    fn request_adapter(
-        instance: &wgpu::Instance,
-        compatible_surface: Option<&wgpu::Surface>,
-    ) -> Result<wgpu::Adapter, String> {
-        pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
-            compatible_surface,
+            compatible_surface: None,
             force_fallback_adapter: false,
             apply_limit_buckets: false,
         }))
         .or_else(|_| {
             pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
-                compatible_surface,
+                compatible_surface: None,
                 force_fallback_adapter: true,
                 apply_limit_buckets: false,
             }))
         })
-        .map_err(|e| format!("no GPU or CPU adapter available: {e:?}"))
-    }
+        .map_err(|e| format!("no GPU or CPU adapter available: {e:?}"))?;
 
-    fn request_device(adapter: &wgpu::Adapter) -> Result<(wgpu::Device, wgpu::Queue), String> {
-        pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
-            .map_err(|e| format!("failed to acquire device: {e:?}"))
+        let info = adapter.get_info();
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
+                .map_err(|e| format!("failed to acquire device: {e:?}"))?;
+
+        Ok(Self {
+            device,
+            queue,
+            adapter_name: info.name,
+            backend: format!("{:?}", info.backend),
+        })
     }
 
     /// The human-readable name of the chosen adapter (for example the GPU model).
@@ -299,24 +263,6 @@ impl GpuContext {
     #[must_use]
     pub fn backend(&self) -> &str {
         &self.backend
-    }
-
-    /// Returns the underlying `wgpu::Adapter`.
-    #[must_use]
-    pub fn adapter(&self) -> &wgpu::Adapter {
-        &self.adapter
-    }
-
-    /// Returns the underlying `wgpu::Device`.
-    #[must_use]
-    pub fn device(&self) -> &wgpu::Device {
-        &self.device
-    }
-
-    /// Returns the underlying `wgpu::Queue`.
-    #[must_use]
-    pub fn queue(&self) -> &wgpu::Queue {
-        &self.queue
     }
 
     /// Render the Mandelbrot set to an RGBA byte buffer (`width * height * 4`).
@@ -356,12 +302,6 @@ pub struct FractalRenderer {
 }
 
 impl FractalRenderer {
-    /// Returns the underlying `GpuContext`.
-    #[must_use]
-    pub fn context(&self) -> &GpuContext {
-        &self.context
-    }
-
     /// Create a renderer on an adaptive context.
     ///
     /// # Errors
