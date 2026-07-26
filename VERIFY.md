@@ -309,17 +309,21 @@ boons, daily streaks, resonances), the Studio (plot, animate, sing, in the
 terminal and the window), Visual Eras (including PNG output), Music Engine A
 (the seeded chiptune, `numinous tune`), GPU real-time fractals, live sound in
 the app and CLI plus structured notation over MCP, the `forget` right for
-players who are minds, and 30 MCP tools (29 play tools with full CLI parity for the games,
-plus one local broadcast consent control;
-challenge, predict, and cairn are MCP-first) so agents play the same content.
-Product 0.2 Flagship Proof is exit-met on the agent-and-machine bar (see
-**Critical path right now** in `docs/ROADMAP.md`): Times Tables and Buffon
-engineered ahas, MCP wager path, `scripts/agent-hallway.py` PASS, F9 capture,
-green CI. Human stranger hallway is deferred to 0.8 / 1.0.
+players who are minds, and 33 MCP tools: 23 public play tools, nine private
+progression or local-state tools, and one local broadcast consent control.
+Products 0.2 Flagship Proof and 0.3 Tactile Alpha are exit-met on the
+agent-and-machine bar. Their evidence includes the engineered flagship ahas,
+MCP wager path, hallway and five-flagship tactile cohorts, scoped reference
+measurements with every ambient and input-to-room-raster p95 under 33 ms, F9
+capture, and green public CI. Human stranger hallway is deferred to 0.8 / 1.0.
 
-Pending next (0.3 and later): deeper held and causal interactions on the five
-flagships, representative physical-controller sessions, musician-led
-long-listening, accessibility review, physical clean-machine cross-platform
-proof, full Studio save/share beyond the first CLI `.num` slice, the music
-visualizer, and more GPU room paths. Soft-thin densify and Phase B glow are
-not the default next move.
+Pending next is 0.4 Understanding Alpha: build the frozen study runner and
+held-out probe bank from `docs/UNDERSTANDING_STUDY.md`, complete
+provenance-preserving journal correction, export, erasure, and two-process
+evidence, then run and publish the qualifying cohort. Representative
+physical-controller sessions, musician-led long-listening, accessibility
+review, physical clean-machine cross-platform proof, full Studio save/share
+beyond the first CLI `.num` slice,
+native end-to-end input latency, the music visualizer, and more GPU room paths
+remain later work. Soft-thin densify and Phase B glow are not the default next
+move.
