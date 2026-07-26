@@ -5,6 +5,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- The canonical docs now name 0.4 Understanding Alpha as the active milestone,
+  correct the MCP inventory and negotiated protocol status, and publish the
+  predeclared 20-pair agent study contract. The contract uses an active control,
+  corrective feedback, held-out transfer, frozen pass criteria, bounded data,
+  and a separate returning-journal sovereignty acceptance. No qualifying study
+  result is claimed, and the current journal is documented as a read, record,
+  and erase prototype rather than complete continuity.
+
 ### Added
 - Formula Jam discovery is shared across App, CLI, and MCP: curated recipe bank
   in core; MCP `plot_expression` supports manual expr, `recipe`, `seed`,
@@ -38,6 +47,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   and revision plus checker identity in its evidence.
 
 ### Fixed
+- MCP initialization no longer echoes the breaking `2026-07-28` release
+  candidate from the legacy 2025 handshake. The server negotiates current
+  `2025-11-25`, retains `2025-06-18` as its compatibility default, and treats
+  the future identifier as unsupported until the new wire shape is implemented.
 - Security and correctness maintenance closes four Low findings and adjacent
   reproduced defects. Watch Agent `reveal_room` output is independent of the
   private Journey. Broadcast handshakes and public writes use total deadlines.

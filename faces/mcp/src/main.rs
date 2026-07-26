@@ -31,11 +31,9 @@ use serde_json::{Value, json};
 const PROTOCOL_VERSION: &str = "2025-06-18";
 
 /// Protocol revisions this server accepts on initialize (newest first).
-///
-/// `2026-07-28` is listed as recognized so dual-stack hosts can negotiate, but
-/// the wire behavior remains the 2025 stdio tools surface until that revision
-/// is fully implemented after the final specification ships.
-const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &["2026-07-28", "2025-11-25", "2025-06-18"];
+/// The breaking 2026 revision is intentionally absent until its stateless wire
+/// protocol replaces this legacy initialization path.
+const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &["2025-11-25", "2025-06-18"];
 
 /// Default ASCII canvas size for `play_room`.
 const DEFAULT_WIDTH: u64 = 72;
@@ -5246,12 +5244,15 @@ mod tests {
         }))
         .expect("preferred version");
         assert_eq!(preferred["result"]["protocolVersion"], "2025-11-25");
-        let future = handle_request(&json!({
+        let unsupported_future = handle_request(&json!({
             "jsonrpc":"2.0","id":3,"method":"initialize",
             "params":{"protocolVersion":"2026-07-28","capabilities":{},"clientInfo":{"name":"t","version":"1"}}
         }))
-        .expect("2026 revision name is recognized");
-        assert_eq!(future["result"]["protocolVersion"], "2026-07-28");
+        .expect("unsupported version receives the compatibility default");
+        assert_eq!(
+            unsupported_future["result"]["protocolVersion"],
+            "2025-06-18"
+        );
     }
 
     #[test]

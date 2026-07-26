@@ -182,9 +182,8 @@ construct validity, not only a "whoa" tally.
 **Understanding without tests (the gap).** Three layers, none school-like:
 
 1. **The aha self-report (per reveal).** A four-item micro-scale from insight
-   research: suddenness, surprise, confidence, pleasure. One optional swipe. High
-   scores predict correctness and retention in the lab, so this is an
-   understanding proxy, not a satisfaction proxy.
+   research: suddenness, surprise, confidence, pleasure. One optional swipe.
+   This can describe the experience, but it is not evidence of understanding.
 2. **The transfer probe (the honest eval).** After a room, present a novel
    configuration and ask the player to predict its behavior. Transfer, not
    recall, is the field's gold standard for conceptual understanding (Kapur).
@@ -201,13 +200,17 @@ construct validity, not only a "whoa" tally.
 reveal-open-rate and dwell measure delight, never understanding. Any claim that a
 room "teaches" must be backed by transfer-probe or caption-structure data, the
 same way `QUALITY.md` already forbids the AI judge from clearing math
-correctness. Delight informs; a generation-based measure decides.
+correctness. Delight informs; a generation-based measure decides. The 0.4
+agent-and-machine comparison, active control, sample, pass rule, and limits are
+predeclared in `UNDERSTANDING_STUDY.md`. Its primary outcome is immediate novel
+transfer. Within-context delay is not described as durable learning, and human
+delayed recall remains a later study.
 
 New rubric row for the Fun and Awe table:
 
 | Dimension | The question | Measured by |
 |---|---|---|
-| Understanding | Did their model actually restructure (can they predict a new case)? | transfer-probe accuracy, caption structure-vs-surface, aha self-report |
+| Understanding | Did their model actually restructure (can they predict a new case)? | transfer-probe accuracy and caption structure-vs-surface; aha self-report describes the experience only |
 
 ## Anti-patterns
 

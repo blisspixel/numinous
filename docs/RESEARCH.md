@@ -3,7 +3,8 @@
 The evidence and influences behind Numinous: what may support engagement and
 learning, why these mathematical phenomena are promising, what prior art can
 teach us, and where the project is still making a hypothesis. Evidence links
-were reviewed on 2026-07-14.
+were broadly reviewed on 2026-07-14. Learning-study, privacy, and MCP protocol
+guidance was reviewed again on 2026-07-26.
 
 ## Evidence posture
 
@@ -45,7 +46,7 @@ hypotheses with testable consequences:
 - **Generation before explanation.** A prediction, construction, or
   self-explanation before Reveal is supported by generation, prequestioning, and
   retrieval-practice research. Whether it improves understanding here needs a
-  Numinous-specific retention study.
+  controlled Numinous-specific study.
 - **Conceptually congruent modalities.** Sound should encode the same
   mathematical relationship as the picture, systematically and reproducibly.
   More sensory output is not automatically better; redundant noise and
@@ -56,6 +57,15 @@ hypotheses with testable consequences:
 
 The working bet is that mathematical emergence supplies unusually rich feedback.
 The hallway test decides whether that bet survives contact with players.
+
+A 2025 systematic and meta-analytic review tempers the retrieval claim. Against
+credible elaborative activities, retrieval practice had only a small average
+advantage, and the advantage depended strongly on corrective feedback. The 0.4
+study therefore compares generation-before-reveal with an explanation-first
+active control, gives both conditions the same feedback and exposure, and uses
+novel transfer rather than confidence or dwell as its primary outcome. The
+frozen design and its agent-memory limitation live in
+`UNDERSTANDING_STUDY.md`.
 
 ### Show, not static graph (plate performance)
 
@@ -226,6 +236,8 @@ human mathematical scrutiny.
   certification.
 
 **Learning and motivation evidence**
+- [Retrieval practice versus elaborative encoding, 2025 systematic and meta-analytic review](https://doi.org/10.1007/s10648-025-10076-6)
+- [Center for Open Science preregistration guidance](https://www.cos.io/initiatives/prereg)
 - [Active learning increases student performance in STEM, PNAS meta-analysis](https://doi.org/10.1073/pnas.1319030111)
 - [The generation effect, meta-analytic review](https://pubmed.ncbi.nlm.nih.gov/17645161/)
 - [Guessing as a learning intervention, meta-analytic review](https://pubmed.ncbi.nlm.nih.gov/37640836/)
@@ -249,12 +261,14 @@ human mathematical scrutiny.
 - [MIDI specifications](https://midi.org/specifications)
 
 **Accessibility and safety practice**
+- [NIST Privacy Framework](https://www.nist.gov/privacy-framework)
 - [Web Content Accessibility Guidelines 2.2, W3C](https://www.w3.org/TR/WCAG22/)
 - [Xbox Accessibility Guidelines 3.2](https://learn.microsoft.com/en-us/xbox/accessibility/guidelines)
 - [Game Accessibility Guidelines](https://gameaccessibilityguidelines.com/)
 
 **Protocol and software supply-chain practice**
 - [MCP versioning, current and draft status](https://modelcontextprotocol.io/docs/learn/versioning)
+- [MCP security best practices](https://modelcontextprotocol.io/docs/tutorials/security/security_best_practices)
 - [MCP 2026-07-28 release candidate](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/)
 - [GitHub Actions secure-use guidance](https://docs.github.com/en/actions/reference/security/secure-use)
 - [OpenSSF Scorecard checks](https://scorecard.dev/)

@@ -438,9 +438,12 @@ acceptance uses the App library only as an MCP development dependency, so it
 exercises both shipped implementations without adding a production edge. The
 CLI remains outside this slice.
 
-### Protocol watch: MCP 2026-07-28 release candidate
+### Protocol watch: current MCP and the 2026-07-28 release candidate
 
-As of 2026-07-13, the official
+As of 2026-07-26, the official versioning page names
+[MCP 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25)
+as current. The stdio face negotiates that revision and retains 2025-06-18 as
+its compatibility default. The official
 [MCP 2026-07-28 release-candidate post](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/)
 is roadmap-relevant but not an immediate blocker for the current stdio face. The
 final specification is scheduled for July 28, 2026. The compatibility pass
