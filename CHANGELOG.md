@@ -47,6 +47,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   and revision plus checker identity in its evidence.
 
 ### Fixed
+- The real-session MCP viewer test barrier tolerates loaded Windows CI while
+  retaining a strict 15-second failure bound.
 - MCP initialization no longer echoes the breaking `2026-07-28` release
   candidate from the legacy 2025 handshake. The server negotiates current
   `2025-11-25`, retains `2025-06-18` as its compatibility default, and treats
