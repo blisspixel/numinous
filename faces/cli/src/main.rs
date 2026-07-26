@@ -841,6 +841,7 @@ impl<'a> RoomRenderInput<'a> {
     }
 }
 
+#[cfg(test)]
 impl RoomRenderInput<'static> {
     fn plain() -> Self {
         Self {
@@ -1446,7 +1447,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             } else {
                 RoomRenderInput::with_gesture(variation, &gesture)
             };
-            let report = render_loop_apng(&id, size, t, &out, allow_hidden, era, input);
+            let report = render_loop_apng(&id, size, t, &out, allow_hidden, era, input, false);
             if report.is_ok() && find_room(&id, allow_hidden).is_some() {
                 journey.visit(&id);
             }
@@ -2959,9 +2960,45 @@ fn render_png(
 
 /// Encode a raster as an RGBA PNG at `path`.
 fn write_png(path: &Path, raster: &Raster) -> Result<(), String> {
-    let (w, h) = (raster.width(), raster.height());
     let file = File::create(path)
         .map_err(|e| format!("could not create {}: {e}", terminal_safe_path(path)))?;
+    write_png_to(file, raster)
+}
+
+fn write_png_new(path: &Path, raster: &Raster) -> Result<(), String> {
+    let file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map_err(|e| format!("could not create {}: {e}", terminal_safe_path(path)))?;
+    write_png_to(file, raster)
+}
+
+fn write_derived_png(path: &Path, raster: &Raster) -> Result<(), String> {
+    match std::fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.file_type().is_file() => {
+            std::fs::remove_file(path)
+                .map_err(|e| format!("could not replace {}: {e}", terminal_safe_path(path)))?;
+        }
+        Ok(_) => {
+            return Err(format!(
+                "refusing to replace non-file gallery member {}",
+                terminal_safe_path(path)
+            ));
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(format!(
+                "could not inspect {}: {error}",
+                terminal_safe_path(path)
+            ));
+        }
+    }
+    write_png_new(path, raster)
+}
+
+fn write_png_to(file: File, raster: &Raster) -> Result<(), String> {
+    let (w, h) = (raster.width(), raster.height());
     let mut encoder = png::Encoder::new(BufWriter::new(file), w as u32, h as u32);
     encoder.set_color(png::ColorType::Rgba);
     encoder.set_depth(png::BitDepth::Eight);
@@ -3003,6 +3040,7 @@ fn render_loop_apng(
     allow_hidden: bool,
     era: numinous_core::Era,
     input: RoomRenderInput<'_>,
+    exclusive: bool,
 ) -> Result<String, String> {
     let room = find_room_with_variation(id, allow_hidden, input.variation)
         .ok_or_else(|| not_found_message(id))?;
@@ -3030,7 +3068,14 @@ fn render_loop_apng(
         }
         Ok(rgba)
     });
-    write_apng(path, size as u32, size as u32, LOOP_FRAMES, frames)?;
+    write_apng(
+        path,
+        size as u32,
+        size as u32,
+        LOOP_FRAMES,
+        frames,
+        exclusive,
+    )?;
     let mut report = format!(
         "wrote {} ({}x{}, {LOOP_FRAMES} frames, loop)\n",
         terminal_safe_path(path),
@@ -3059,8 +3104,10 @@ fn render_share_bundle(
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let dir = numinous_core::share_bundle_dir(parent, room.meta().id, stamp);
-    std::fs::create_dir_all(&dir).map_err(|e| format!("could not create share folder: {e}"))?;
+    let mut nonce = [0_u8; 16];
+    getrandom::fill(&mut nonce).map_err(|e| format!("could not generate share name: {e}"))?;
+    let dir = numinous_core::create_share_bundle_dir(parent, room.meta().id, stamp, nonce)
+        .map_err(|e| format!("could not create share folder: {e}"))?;
 
     let postcard_path = dir.join("postcard.png");
     let loop_path = dir.join("loop.png");
@@ -3083,7 +3130,7 @@ fn render_share_bundle(
         },
     );
     // Loop APNG into the bundle.
-    render_loop_apng(id, size, t, &loop_path, allow_hidden, era, input)?;
+    render_loop_apng(id, size, t, &loop_path, allow_hidden, era, input, true)?;
     let _ = numinous_core::write_share_sidecar(
         &loop_path,
         &numinous_core::ShareMeta {
@@ -3113,7 +3160,10 @@ fn render_share_bundle(
 
 /// Write a single-frame PNG (Share still inside a bundle).
 fn write_png_file(path: &Path, width: u32, height: u32, rgba: &[u8]) -> Result<(), String> {
-    let file = File::create(path)
+    let file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
         .map_err(|e| format!("could not create {}: {e}", terminal_safe_path(path)))?;
     let mut encoder = png::Encoder::new(BufWriter::new(file), width, height);
     encoder.set_color(png::ColorType::Rgba);
@@ -3135,10 +3185,15 @@ fn write_apng(
     height: u32,
     frame_count: u32,
     frames: impl IntoIterator<Item = Result<Vec<u8>, String>>,
+    exclusive: bool,
 ) -> Result<(), String> {
     let expected_frame_bytes = apng_frame_bytes(width as usize, height as usize)?;
-    let file = File::create(path)
-        .map_err(|e| format!("could not create {}: {e}", terminal_safe_path(path)))?;
+    let file = if exclusive {
+        OpenOptions::new().write(true).create_new(true).open(path)
+    } else {
+        File::create(path)
+    }
+    .map_err(|e| format!("could not create {}: {e}", terminal_safe_path(path)))?;
     let mut encoder = png::Encoder::new(BufWriter::new(file), width, height);
     encoder.set_color(png::ColorType::Rgba);
     encoder.set_depth(png::BitDepth::Eight);
@@ -3323,16 +3378,9 @@ fn gallery(dir: &Path, width: usize, height: usize) -> Result<String, String> {
     for room in all_rooms() {
         let id = room.meta().id;
         let path = dir.join(format!("{id}.png"));
-        render_png(
-            id,
-            width,
-            height,
-            room.postcard_t(),
-            &path,
-            false,
-            numinous_core::Era::Modern,
-            RoomRenderInput::plain(),
-        )?;
+        let mut raster = Raster::with_accent(width, height, room.meta().accent);
+        room.render(&mut raster, room.postcard_t());
+        write_derived_png(&path, &raster)?;
         count += 1;
     }
     Ok(format!(
@@ -5689,6 +5737,7 @@ mod tests {
             false,
             numinous_core::Era::Modern,
             RoomRenderInput::plain(),
+            false,
         )
         .expect("render loop");
         assert!(message.contains("wrote"));
@@ -6078,6 +6127,48 @@ mod tests {
         let files = std::fs::read_dir(&dir).expect("dir exists").count();
         assert_eq!(files, numinous_core::all_rooms().len());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn gallery_replaces_a_hard_link_by_name_without_mutating_its_peer() {
+        let dir = std::env::temp_dir().join("numinous_gallery_hard_link_test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir(&dir).expect("gallery fixture");
+        let first_id = numinous_core::all_rooms()
+            .into_iter()
+            .next()
+            .expect("catalog is not empty")
+            .meta()
+            .id;
+        let peer = dir.join("peer.txt");
+        std::fs::write(&peer, b"sentinel").expect("peer sentinel");
+        let derived = dir.join(format!("{first_id}.png"));
+        std::fs::hard_link(&peer, &derived).expect("hard link fixture");
+
+        super::gallery(&dir, 40, 40).expect("gallery replaces ordinary names");
+
+        assert_eq!(std::fs::read(&peer).expect("preserved peer"), b"sentinel");
+        assert_ne!(std::fs::read(&derived).expect("new PNG"), b"sentinel");
+        std::fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn gallery_refuses_a_non_file_derived_member() {
+        let dir = std::env::temp_dir().join("numinous_gallery_directory_test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir(&dir).expect("gallery fixture");
+        let first_id = numinous_core::all_rooms()
+            .into_iter()
+            .next()
+            .expect("catalog is not empty")
+            .meta()
+            .id;
+        let derived = dir.join(format!("{first_id}.png"));
+        std::fs::create_dir(&derived).expect("directory fixture");
+
+        assert!(super::gallery(&dir, 40, 40).is_err());
+        assert!(derived.is_dir());
+        std::fs::remove_dir_all(dir).expect("cleanup");
     }
 
     #[test]

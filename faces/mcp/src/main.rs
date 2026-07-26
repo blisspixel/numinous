@@ -835,6 +835,9 @@ fn viewer_result(tool: PublicTool, arguments: &Value, result: &Value) -> Value {
         PublicTool::DescribeRoom => {
             describe_room_tool_for_journey(arguments, &numinous_core::Journey::default())
         }
+        PublicTool::RevealRoom => {
+            reveal_room_tool_for_journey(arguments, &numinous_core::Journey::default())
+        }
         PublicTool::Crack => crack_tool_at_level(arguments, 0),
         PublicTool::Seti => seti_tool_at_level(arguments, 0),
         PublicTool::Quiz => quiz_tool_at_level(arguments, 0),
@@ -2363,10 +2366,13 @@ fn listen_room_tool(args: &Value) -> Value {
 
 /// The `reveal_room` tool: optional concept + revelation (the learn surface).
 fn reveal_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
+    reveal_room_tool_for_journey(args, &load_journey(journey_file))
+}
+
+fn reveal_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) -> Value {
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'id'.");
     };
-    let journey = load_journey(journey_file);
     match room_by_id(id) {
         Some(room) => {
             let cut0_by_boon = journey.chosen.contains(&format!("cut:{id}:0"));
@@ -5563,12 +5569,21 @@ mod tests {
         let crack_args = json!({"seed": 11, "digits": 5});
         let seti_args = json!({"seed": 12, "channels": 5});
         let quiz_args = json!({"seed": 13, "round": 0, "choices": 5});
+        let reveal_args = json!({"id": "cult-of-pi"});
+        let baseline_reveal = super::reveal_room_tool_for_journey(&reveal_args, &baseline_journey);
+        let boon_reveal = super::reveal_room_tool_for_journey(&reveal_args, &boon_journey);
         let cases = [
             (
                 PublicTool::DescribeRoom,
                 describe_args,
                 baseline_description,
                 boon_description,
+            ),
+            (
+                PublicTool::RevealRoom,
+                reveal_args,
+                baseline_reveal,
+                boon_reveal,
             ),
             (
                 PublicTool::Crack,

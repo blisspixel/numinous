@@ -841,14 +841,22 @@ impl MixerState {
         } else if self.current_gain > target {
             self.current_gain = (self.current_gain - self.gain_step).max(target);
         }
-        let left = (mixed.0 * self.current_gain).clamp(-1.0, 1.0);
-        let right = (mixed.1 * self.current_gain).clamp(-1.0, 1.0);
+        let left = finite_output_sample(mixed.0 * self.current_gain);
+        let right = finite_output_sample(mixed.1 * self.current_gain);
         if let Some(tap) = self.output_tap.as_ref()
             && let Ok(mut ring) = tap.try_lock()
         {
             ring.push_frame(left, right);
         }
         (left, right)
+    }
+}
+
+fn finite_output_sample(sample: f32) -> f32 {
+    if sample.is_finite() {
+        sample.clamp(-1.0, 1.0)
+    } else {
+        0.0
     }
 }
 
@@ -1733,6 +1741,18 @@ mod tests {
             assert!(mixer.next_frame().0.is_finite());
         }
         assert_eq!(mixer.parameter_voice.current_gain, 0.0);
+    }
+
+    #[test]
+    fn mixer_neutralizes_non_finite_source_samples() {
+        let mut mixer = MixerState::new(48_000);
+        let _ = mixer.replace(LoopBuffer::new(
+            vec![f32::NAN, f32::INFINITY, f32::NEG_INFINITY],
+            1,
+        ));
+        for _ in 0..6 {
+            assert_eq!(mixer.next_frame(), (0.0, 0.0));
+        }
     }
 
     #[test]

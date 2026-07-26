@@ -1,8 +1,10 @@
 use crate::gamepad::Command;
 use gilrs::Button;
 use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
+use std::io::Read;
+use std::path::{Path, PathBuf};
+
+const MAX_BINDINGS_BYTES: u64 = 64 * 1024;
 
 #[derive(Debug, Clone)]
 pub struct Bindings {
@@ -33,9 +35,18 @@ impl Default for Bindings {
 
 impl Bindings {
     pub fn load() -> Self {
+        Self::path().map_or_else(Self::default, |path| Self::load_from(&path))
+    }
+
+    fn load_from(path: &Path) -> Self {
         let mut bindings = Self::default();
-        if let Some(path) = Self::path()
-            && let Ok(content) = fs::read_to_string(path)
+        let mut content = String::new();
+        if let Ok(file) = std::fs::File::open(path)
+            && file
+                .take(MAX_BINDINGS_BYTES + 1)
+                .read_to_string(&mut content)
+                .is_ok()
+            && content.len() as u64 <= MAX_BINDINGS_BYTES
             && let Ok(json) = serde_json::from_str::<serde_json::Value>(&content)
             && let Some(map) = json.as_object()
         {
@@ -90,5 +101,52 @@ impl Bindings {
             .or_else(|_| std::env::var("USERPROFILE"))
             .map(|h| PathBuf::from(h).join(".numinous-bindings.json"))
             .ok()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Bindings, MAX_BINDINGS_BYTES};
+    use crate::gamepad::Command;
+    use gilrs::Button;
+
+    #[test]
+    fn oversized_bindings_file_falls_back_without_parsing_the_tail() {
+        let path = std::env::temp_dir().join(format!(
+            "numinous_bindings_oversized_{}.json",
+            std::process::id()
+        ));
+        let mut content = String::from("{\"South\":\"Pause\"");
+        content.push_str(&" ".repeat(MAX_BINDINGS_BYTES as usize));
+        content.push('}');
+        std::fs::write(&path, content).expect("oversized bindings fixture");
+
+        let bindings = Bindings::load_from(&path);
+
+        assert_eq!(
+            bindings.gamepad.get(&Button::South),
+            Some(&Command::PrimaryDown)
+        );
+        std::fs::remove_file(path).expect("cleanup");
+    }
+
+    #[test]
+    fn bounded_bindings_file_overrides_known_commands_only() {
+        let path = std::env::temp_dir().join(format!(
+            "numinous_bindings_valid_{}.json",
+            std::process::id()
+        ));
+        std::fs::write(
+            &path,
+            r#"{"South":"Pause","Mode":"Reset","East":"unknown"}"#,
+        )
+        .expect("bindings fixture");
+
+        let bindings = Bindings::load_from(&path);
+
+        assert_eq!(bindings.gamepad.get(&Button::South), Some(&Command::Pause));
+        assert_eq!(bindings.gamepad.get(&Button::East), Some(&Command::Back));
+        assert!(!bindings.gamepad.contains_key(&Button::Mode));
+        std::fs::remove_file(path).expect("cleanup");
     }
 }

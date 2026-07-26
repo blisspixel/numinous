@@ -8,8 +8,8 @@ use numinous_broadcast::{
     ConsentMachine, ControlMarker, EventEnvelope, FrameError, HandshakeResponse,
     PLAY_ROOM_MAX_HEIGHT, PLAY_ROOM_MAX_WIDTH, PairingGate, PairingOffer, PairingVerdict,
     PublicReceiver, PublicTool, PublicToolEvent, ReceiveOutcome, configure_handshake_stream,
-    configure_public_stream, numinous_compatibility, read_handshake_request, read_public_message,
-    write_handshake_proof, write_handshake_response,
+    configure_public_stream, numinous_compatibility, read_handshake_request_stream,
+    read_public_message, write_handshake_proof_stream, write_handshake_response_stream,
 };
 use numinous_core::{Expr, Raster, Room, RoomInput, Surface};
 use serde_json::{Map, Value};
@@ -2039,25 +2039,21 @@ enum HandshakeOutcome {
 }
 
 fn handshake(
-    mut stream: TcpStream,
+    stream: TcpStream,
     gate: &mut PairingGate,
     compatibility: &numinous_broadcast::Compatibility,
     shared: &Arc<Mutex<SharedState>>,
     control: &Arc<WorkerControl>,
 ) -> HandshakeOutcome {
     if configure_handshake_stream(&stream).is_err()
-        || write_handshake_proof(&mut stream, &gate.host_proof()).is_err()
+        || write_handshake_proof_stream(&stream, &gate.host_proof()).is_err()
     {
         return HandshakeOutcome::Rejected;
     }
-    let reader_stream = match stream.try_clone() {
-        Ok(reader_stream) => reader_stream,
-        Err(_) => return HandshakeOutcome::Rejected,
-    };
-    let request = match read_handshake_request(&mut BufReader::new(reader_stream)) {
+    let request = match read_handshake_request_stream(&stream) {
         Ok(request) => request,
         Err(_) => {
-            let _ = write_handshake_response(&mut stream, &HandshakeResponse::Rejected);
+            let _ = write_handshake_response_stream(&stream, &HandshakeResponse::Rejected);
             return HandshakeOutcome::Rejected;
         }
     };
@@ -2076,7 +2072,7 @@ fn handshake(
                 consent_epoch: epoch,
                 compatibility: compatibility.clone(),
             };
-            if write_handshake_response(&mut stream, &response).is_err()
+            if write_handshake_response_stream(&stream, &response).is_err()
                 || configure_public_stream(&stream).is_err()
                 || control.is_cancelled()
             {
@@ -2088,15 +2084,15 @@ fn handshake(
             HandshakeOutcome::Accepted(stream, session_id, epoch)
         }
         PairingVerdict::Rejected { .. } => {
-            let _ = write_handshake_response(&mut stream, &HandshakeResponse::Rejected);
+            let _ = write_handshake_response_stream(&stream, &HandshakeResponse::Rejected);
             HandshakeOutcome::Rejected
         }
         PairingVerdict::Expired => {
-            let _ = write_handshake_response(&mut stream, &HandshakeResponse::Rejected);
+            let _ = write_handshake_response_stream(&stream, &HandshakeResponse::Rejected);
             HandshakeOutcome::Expired
         }
         PairingVerdict::Revoked => {
-            let _ = write_handshake_response(&mut stream, &HandshakeResponse::Rejected);
+            let _ = write_handshake_response_stream(&stream, &HandshakeResponse::Rejected);
             HandshakeOutcome::Rejected
         }
     }

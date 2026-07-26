@@ -439,12 +439,14 @@ pub fn to_melody(expr: &Expr, xmin: f64, xmax: f64, notes: usize, a: f64) -> Sou
     }
     let ymin = samples.iter().copied().fold(f64::INFINITY, f64::min);
     let ymax = samples.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    let span = (ymax - ymin).max(1e-9);
+    let scale = ymin.abs().max(ymax.abs()).max(1.0);
+    let scaled_min = ymin / scale;
+    let span = (ymax / scale - scaled_min).max(f64::EPSILON);
     let note_vec: Vec<Note> = samples
         .iter()
         .enumerate()
         .map(|(i, &y)| {
-            let norm = ((y - ymin) / span) as f32; // 0..1
+            let norm = ((y / scale - scaled_min) / span).clamp(0.0, 1.0) as f32;
             Note {
                 freq: 220.0 * 2.0_f32.powf(norm * 2.0), // two octaves, 220..880 Hz
                 start: i as f32 * step,
@@ -843,6 +845,17 @@ mod tests {
         let spec = to_melody(&expr, 0.0, 1.0, usize::MAX, 0.0);
         assert!(spec.notes.len() <= MAX_MELODY_NOTES);
         assert!(!spec.notes.is_empty());
+    }
+
+    #[test]
+    fn to_melody_keeps_extreme_finite_ranges_finite() {
+        let source = format!("x*{}", f64::MAX);
+        let expr = parse(&source).expect("extreme finite expression parses");
+        let spec = to_melody(&expr, -1.0, 1.0, 32, 0.0);
+
+        assert_eq!(spec.notes.len(), 32);
+        assert!(spec.notes.iter().all(|note| note.freq.is_finite()));
+        assert!(spec.render(16_000).iter().all(|sample| sample.is_finite()));
     }
 
     #[test]

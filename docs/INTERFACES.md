@@ -255,9 +255,9 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 The shared `numinous-broadcast` foundation implements the pairing,
 compatibility, framing, consent, sequence, control-marker, typed public-event,
 and bounded-queue contracts below. The MCP face now connects that foundation
-through `broadcast_session`, a complete fail-closed policy for all 30 declared
+through `broadcast_session`, a complete fail-closed policy for all 33 declared
 tools, replay-safe daily seed normalization, and separate nonblocking writer
-and disconnect-monitor workers. Twenty-three tools are explicitly public, six
+and disconnect-monitor workers. Twenty-three tools are explicitly public, nine
 progression or local-state tools are private, and the consent control broadcasts
 neither itself nor progress. The native App now ships the human Watch Agent
 surface. X or the ninth controller-menu destination opens the ephemeral

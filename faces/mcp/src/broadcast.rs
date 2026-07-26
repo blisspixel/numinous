@@ -1,12 +1,12 @@
 use numinous_broadcast::{
     ConsentMachine, ConsentState, ConsentTicket, HandshakeResponse, MAX_HANDSHAKE_ATTEMPTS,
     PairingCode, PublicTool, PublicToolEvent, SessionId, configure_handshake_stream,
-    configure_public_stream, numinous_compatibility, read_handshake_proof, read_handshake_response,
-    write_handshake_request,
+    configure_public_stream, numinous_compatibility, read_handshake_proof_stream,
+    read_handshake_response_stream, write_handshake_request_stream,
 };
 use serde_json::Value;
 use std::fmt;
-use std::io::{BufReader, Read};
+use std::io::Read;
 use std::net::{Shutdown, TcpStream};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread::{self, JoinHandle};
@@ -77,17 +77,16 @@ impl SessionBroadcast {
             TcpStream::connect_timeout(&endpoint.into(), numinous_broadcast::HANDSHAKE_TIMEOUT)
                 .map_err(|_| SessionError::PairingRejected)?;
         configure_handshake_stream(&stream).map_err(|_| SessionError::PairingRejected)?;
-        let mut reader = BufReader::new(stream.try_clone().map_err(|_| SessionError::Unavailable)?);
-        let proof = read_handshake_proof(&mut reader).map_err(|_| SessionError::PairingRejected)?;
+        let proof =
+            read_handshake_proof_stream(&stream).map_err(|_| SessionError::PairingRejected)?;
         if !code.verifies_host_proof(&proof) {
             return Err(SessionError::PairingRejected);
         }
         let request = code.handshake_request(compatibility.clone());
-        let mut writer = stream.try_clone().map_err(|_| SessionError::Unavailable)?;
-        write_handshake_request(&mut writer, &request)
+        write_handshake_request_stream(&stream, &request)
             .map_err(|_| SessionError::PairingRejected)?;
         let response =
-            read_handshake_response(&mut reader).map_err(|_| SessionError::PairingRejected)?;
+            read_handshake_response_stream(&stream).map_err(|_| SessionError::PairingRejected)?;
         let (session_id, remote_epoch) = match response {
             HandshakeResponse::Accepted {
                 session_id,
@@ -360,11 +359,11 @@ const fn state_name(state: ConsentState) -> &'static str {
     }
 }
 
-fn writer_loop(mut stream: TcpStream, machine: Arc<ConsentMachine>) {
+fn writer_loop(stream: TcpStream, machine: Arc<ConsentMachine>) {
     loop {
         match machine.wait_lease(WRITER_POLL_INTERVAL) {
             Ok(Some(lease)) => {
-                if lease.write_to(&mut stream).is_err() {
+                if lease.write_to_stream(&stream).is_err() {
                     break;
                 }
             }

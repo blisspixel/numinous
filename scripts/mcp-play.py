@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Drive a freshly built Numinous MCP server over stdio.
 
-Each invocation owns a unique temporary profile containing Journey, scores,
-and Cairn state. The profile is removed before the process exits, so QA calls
-cannot contaminate a player or another concurrent tester.
+Each invocation owns a unique temporary profile containing every MCP-managed
+state path. The profile is removed before the process exits, so QA calls cannot
+contaminate a player or another concurrent tester.
 """
 
 from __future__ import annotations
@@ -48,6 +48,9 @@ def _session(requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "NUMINOUS_JOURNEY": str(state_root / "journey.txt"),
                 "NUMINOUS_SCORES": str(state_root / "scores.txt"),
                 "NUMINOUS_CAIRN": str(state_root / "cairn.json"),
+                "NUMINOUS_JOURNAL": str(state_root / "journal.txt"),
+                "HOME": str(state_root),
+                "USERPROFILE": str(state_root),
             }
         )
         payload = "".join(json.dumps(request) + "\n" for request in requests)
@@ -198,9 +201,10 @@ def _parser() -> argparse.ArgumentParser:
               python scripts/mcp-play.py call predict '{"id":"slope-rider","seed":4}'
               '{"id":"cult-of-pi"}' | python scripts/mcp-play.py call describe_room -
 
-            Each command starts with empty Journey, score, and Cairn state. Use a
-            direct MCP session when a test intentionally needs persistent state.
-            Pass - to read JSON from stdin, which avoids shell quoting differences.
+            Each command starts with empty Journey, score, Cairn, journal, radio,
+            and crash state. Use a direct MCP session when a test intentionally
+            needs persistent state. Pass - to read JSON from stdin, which avoids
+            shell quoting differences.
             """
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,

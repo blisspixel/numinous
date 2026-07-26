@@ -180,9 +180,21 @@ impl SoundSpec {
     #[must_use]
     pub fn render(&self, sample_rate: u32) -> Vec<f32> {
         let rate = sample_rate.max(1) as f32;
-        let total = (self.duration.max(0.0) * rate) as usize;
+        let duration = if self.duration.is_finite() {
+            self.duration.max(0.0)
+        } else {
+            0.0
+        };
+        let total = (duration * rate) as usize;
         let mut buffer = vec![0.0f32; total];
         for note in &self.notes {
+            if !note.freq.is_finite()
+                || !note.start.is_finite()
+                || !note.dur.is_finite()
+                || !note.amp.is_finite()
+            {
+                continue;
+            }
             let start = (note.start.max(0.0) * rate) as usize;
             let len = (note.dur.max(0.0) * rate) as usize;
             for i in 0..len {
@@ -196,7 +208,11 @@ impl SoundSpec {
             }
         }
         for sample in &mut buffer {
-            *sample = sample.clamp(-1.0, 1.0);
+            *sample = if sample.is_finite() {
+                sample.clamp(-1.0, 1.0)
+            } else {
+                0.0
+            };
         }
         buffer
     }
@@ -215,7 +231,7 @@ fn envelope(t: f32, dur: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{ParametricSound, SoundSpec, envelope};
+    use super::{Note, ParametricSound, SoundSpec, envelope};
     use crate::Motif;
 
     #[test]
@@ -257,6 +273,26 @@ mod tests {
         let b = spec.render(44_100);
         assert_eq!(a, b);
         assert!(a.iter().all(|s| (-1.0..=1.0).contains(s)));
+    }
+
+    #[test]
+    fn render_neutralizes_non_finite_specs() {
+        let spec = SoundSpec {
+            duration: 0.1,
+            notes: vec![Note {
+                freq: f32::NAN,
+                start: 0.0,
+                dur: 0.1,
+                amp: 0.5,
+            }],
+        };
+        assert!(spec.render(1_000).iter().all(|sample| *sample == 0.0));
+
+        let invalid_duration = SoundSpec {
+            duration: f32::INFINITY,
+            notes: Vec::new(),
+        };
+        assert!(invalid_duration.render(1_000).is_empty());
     }
 
     #[test]

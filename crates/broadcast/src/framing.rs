@@ -5,8 +5,9 @@ use crate::wire::{
 use serde::{Serialize, de::DeserializeOwned};
 use std::error::Error;
 use std::fmt;
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
+use std::time::{Duration, Instant};
 
 /// Applies the two-second handshake read and write deadlines.
 pub fn configure_handshake_stream(stream: &TcpStream) -> io::Result<()> {
@@ -25,6 +26,11 @@ pub fn read_handshake_proof<R: BufRead>(reader: &mut R) -> Result<HandshakeProof
     read_json(reader, MAX_HANDSHAKE_BYTES)
 }
 
+/// Reads one proof from a socket under an absolute two-second deadline.
+pub fn read_handshake_proof_stream(stream: &TcpStream) -> Result<HandshakeProof, FrameError> {
+    read_handshake_stream(stream)
+}
+
 /// Writes one bounded server-first handshake proof.
 pub fn write_handshake_proof<W: Write>(
     writer: &mut W,
@@ -33,9 +39,22 @@ pub fn write_handshake_proof<W: Write>(
     write_json(writer, proof, MAX_HANDSHAKE_BYTES)
 }
 
+/// Writes one proof to a socket under an absolute two-second deadline.
+pub fn write_handshake_proof_stream(
+    stream: &TcpStream,
+    proof: &HandshakeProof,
+) -> Result<(), FrameError> {
+    write_handshake_stream(stream, proof)
+}
+
 /// Reads one bounded handshake request.
 pub fn read_handshake_request<R: BufRead>(reader: &mut R) -> Result<HandshakeRequest, FrameError> {
     read_json(reader, MAX_HANDSHAKE_BYTES)
+}
+
+/// Reads one request from a socket under an absolute two-second deadline.
+pub fn read_handshake_request_stream(stream: &TcpStream) -> Result<HandshakeRequest, FrameError> {
+    read_handshake_stream(stream)
 }
 
 /// Writes one bounded handshake request.
@@ -46,11 +65,24 @@ pub fn write_handshake_request<W: Write>(
     write_json(writer, request, MAX_HANDSHAKE_BYTES)
 }
 
+/// Writes one request to a socket under an absolute two-second deadline.
+pub fn write_handshake_request_stream(
+    stream: &TcpStream,
+    request: &HandshakeRequest,
+) -> Result<(), FrameError> {
+    write_handshake_stream(stream, request)
+}
+
 /// Reads one bounded handshake response.
 pub fn read_handshake_response<R: BufRead>(
     reader: &mut R,
 ) -> Result<HandshakeResponse, FrameError> {
     read_json(reader, MAX_HANDSHAKE_BYTES)
+}
+
+/// Reads one response from a socket under an absolute two-second deadline.
+pub fn read_handshake_response_stream(stream: &TcpStream) -> Result<HandshakeResponse, FrameError> {
+    read_handshake_stream(stream)
 }
 
 /// Writes one bounded handshake response.
@@ -59,6 +91,14 @@ pub fn write_handshake_response<W: Write>(
     response: &HandshakeResponse,
 ) -> Result<(), FrameError> {
     write_json(writer, response, MAX_HANDSHAKE_BYTES)
+}
+
+/// Writes one response to a socket under an absolute two-second deadline.
+pub fn write_handshake_response_stream(
+    stream: &TcpStream,
+    response: &HandshakeResponse,
+) -> Result<(), FrameError> {
+    write_handshake_stream(stream, response)
 }
 
 /// Reads one bounded public wire message.
@@ -101,6 +141,107 @@ where
     writer.write_all(&bytes).map_err(FrameError::Io)?;
     writer.write_all(b"\n").map_err(FrameError::Io)?;
     writer.flush().map_err(FrameError::Io)
+}
+
+fn read_handshake_stream<T>(stream: &TcpStream) -> Result<T, FrameError>
+where
+    T: DeserializeOwned,
+{
+    read_handshake_stream_with_timeout(stream, HANDSHAKE_TIMEOUT)
+}
+
+fn read_handshake_stream_with_timeout<T>(
+    stream: &TcpStream,
+    timeout: Duration,
+) -> Result<T, FrameError>
+where
+    T: DeserializeOwned,
+{
+    let reader = DeadlineReader::new(stream, timeout);
+    read_json(&mut BufReader::new(reader), MAX_HANDSHAKE_BYTES)
+}
+
+fn write_handshake_stream<T>(stream: &TcpStream, value: &T) -> Result<(), FrameError>
+where
+    T: Serialize,
+{
+    write_json(
+        &mut DeadlineWriter::new(stream, HANDSHAKE_TIMEOUT),
+        value,
+        MAX_HANDSHAKE_BYTES,
+    )
+}
+
+pub(crate) fn write_public_frame_stream(stream: &TcpStream, frame: &[u8]) -> io::Result<()> {
+    write_public_frame_stream_with_timeout(stream, frame, PUBLIC_WRITE_TIMEOUT)
+}
+
+pub(crate) fn write_public_frame_stream_with_timeout(
+    stream: &TcpStream,
+    frame: &[u8],
+    timeout: Duration,
+) -> io::Result<()> {
+    let mut writer = DeadlineWriter::new(stream, timeout);
+    writer.write_all(frame)?;
+    writer.write_all(b"\n")?;
+    writer.flush()
+}
+
+struct DeadlineReader<'a> {
+    stream: &'a TcpStream,
+    deadline: Instant,
+}
+
+impl<'a> DeadlineReader<'a> {
+    fn new(stream: &'a TcpStream, timeout: Duration) -> Self {
+        Self {
+            stream,
+            deadline: Instant::now() + timeout,
+        }
+    }
+}
+
+impl Read for DeadlineReader<'_> {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        self.stream
+            .set_read_timeout(Some(remaining(self.deadline)?))?;
+        self.stream.read(buffer)
+    }
+}
+
+struct DeadlineWriter<'a> {
+    stream: &'a TcpStream,
+    deadline: Instant,
+}
+
+impl<'a> DeadlineWriter<'a> {
+    fn new(stream: &'a TcpStream, timeout: Duration) -> Self {
+        Self {
+            stream,
+            deadline: Instant::now() + timeout,
+        }
+    }
+}
+
+impl Write for DeadlineWriter<'_> {
+    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+        self.stream
+            .set_write_timeout(Some(remaining(self.deadline)?))?;
+        self.stream.write(buffer)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.stream
+            .set_write_timeout(Some(remaining(self.deadline)?))?;
+        self.stream.flush()
+    }
+}
+
+fn remaining(deadline: Instant) -> io::Result<Duration> {
+    deadline
+        .checked_duration_since(Instant::now())
+        .filter(|duration| !duration.is_zero())
+        .ok_or_else(|| io::Error::new(io::ErrorKind::TimedOut, "broadcast deadline elapsed"))
 }
 
 pub(crate) fn serialize_bounded<T>(value: &T, maximum: usize) -> Result<Vec<u8>, FrameError>
@@ -275,9 +416,9 @@ mod tests {
     use super::{
         FrameError, LimitedBuffer, configure_handshake_stream, configure_public_stream,
         read_bounded_line, read_handshake_proof, read_handshake_request, read_handshake_response,
-        read_json, read_public_message, serialize_bounded, validate_json_depth,
-        write_handshake_proof, write_handshake_request, write_handshake_response, write_json,
-        write_public_message,
+        read_handshake_stream_with_timeout, read_json, read_public_message, serialize_bounded,
+        validate_json_depth, write_handshake_proof, write_handshake_request,
+        write_handshake_response, write_json, write_public_message,
     };
     use crate::{
         Compatibility, ControlMarker, HandshakeProof, HandshakeRequest, HandshakeResponse,
@@ -287,6 +428,8 @@ mod tests {
     use std::error::Error;
     use std::io::{self, Cursor, Write};
     use std::net::{TcpListener, TcpStream};
+    use std::thread;
+    use std::time::{Duration, Instant};
 
     #[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
     #[serde(deny_unknown_fields)]
@@ -461,6 +604,44 @@ mod tests {
             Some(super::PUBLIC_WRITE_TIMEOUT)
         );
         drop(client);
+    }
+
+    #[test]
+    fn handshake_reader_enforces_a_total_deadline_despite_progress() {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).expect("bind loopback");
+        let mut client = TcpStream::connect(listener.local_addr().expect("listener address"))
+            .expect("connect loopback");
+        let (server, _) = listener.accept().expect("accept loopback");
+        let mut bytes = serde_json::to_vec(&HandshakeProof {
+            wire_version: 1,
+            proof: "11".repeat(32),
+        })
+        .expect("serialize proof");
+        bytes.push(b'\n');
+        let chunk_size = bytes.len().div_ceil(4);
+        let chunks: Vec<Vec<u8>> = bytes.chunks(chunk_size).map(<[u8]>::to_vec).collect();
+        let sender = thread::spawn(move || {
+            for (index, chunk) in chunks.iter().enumerate() {
+                if client.write_all(chunk).is_err() {
+                    return;
+                }
+                if index + 1 != chunks.len() {
+                    thread::sleep(Duration::from_millis(80));
+                }
+            }
+        });
+        let started = Instant::now();
+
+        let result = read_handshake_stream_with_timeout::<HandshakeProof>(
+            &server,
+            Duration::from_millis(200),
+        );
+
+        assert!(
+            matches!(result, Err(FrameError::Io(error)) if error.kind() == io::ErrorKind::TimedOut || error.kind() == io::ErrorKind::WouldBlock)
+        );
+        assert!(started.elapsed() < Duration::from_millis(500));
+        sender.join().expect("sender joined");
     }
 
     struct Broken;

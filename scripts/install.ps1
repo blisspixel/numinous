@@ -167,6 +167,35 @@ function Protect-InstallDirectory([string]$Path) {
     Set-Acl -LiteralPath $Path -AclObject $acl
 }
 
+function New-RustupStage([string]$Parent) {
+    $parentItem = Get-Item -LiteralPath $Parent -Force -ErrorAction Stop
+    if (-not $parentItem.PSIsContainer -or
+        ($parentItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        Fail 'rustup staging requires a private ordinary install directory.'
+    }
+    $parentAcl = Get-Acl -LiteralPath $Parent
+    if (-not $parentAcl.AreAccessRulesProtected) {
+        Fail 'rustup staging requires a protected install directory.'
+    }
+
+    for ($attempt = 0; $attempt -lt 8; $attempt++) {
+        $stage = Join-Path $Parent ('.rustup-stage-' + [Guid]::NewGuid().ToString('N'))
+        if (Test-Path -LiteralPath $stage) { continue }
+        New-Item -ItemType Directory -Path $stage -ErrorAction Stop | Out-Null
+        Protect-InstallDirectory $stage
+        $item = Get-Item -LiteralPath $stage -Force
+        $acl = Get-Acl -LiteralPath $stage
+        if ($item.PSIsContainer -and
+            -not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -and
+            $acl.AreAccessRulesProtected) {
+            return $stage
+        }
+        Remove-DirectoryOrJunction $stage
+        Fail 'rustup staging could not establish a private ordinary directory.'
+    }
+    Fail 'rustup staging could not allocate a unique directory.'
+}
+
 function Complete-StagedFile([string]$Stage, [string]$Destination) {
     $backup = Join-Path (Split-Path -Parent $Destination) `
         ('.numinous-' + [Guid]::NewGuid().ToString('N') + '.old')
@@ -500,7 +529,39 @@ function Test-InstallerSafety {
     if (-not (Have 'tar')) { Fail 'installer safety self-test requires tar.exe.' }
     $testBase = Join-Path $env:TEMP ('numinous-installer-test-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $testBase | Out-Null
+    Protect-InstallDirectory $testBase
     try {
+        $firstRustupStage = New-RustupStage $testBase
+        $secondRustupStage = New-RustupStage $testBase
+        if ($firstRustupStage -eq $secondRustupStage -or
+            -not (Test-Path -LiteralPath $firstRustupStage -PathType Container) -or
+            -not (Test-Path -LiteralPath $secondRustupStage -PathType Container)) {
+            Fail 'rustup staging self-test: unique private directories were not created.'
+        }
+        Remove-DirectoryOrJunction $firstRustupStage
+        Remove-DirectoryOrJunction $secondRustupStage
+
+        $hadFailureProbe = Test-Path Env:NUMINOUS_INSTALLER_TEST_FAILURE
+        $previousFailureProbe = $env:NUMINOUS_INSTALLER_TEST_FAILURE
+        $previousErrorActionPreference = $ErrorActionPreference
+        $env:NUMINOUS_INSTALLER_TEST_FAILURE = '1'
+        $ErrorActionPreference = 'Continue'
+        try {
+            Get-Content -Raw -LiteralPath $PSCommandPath |
+                powershell -NoProfile -ExecutionPolicy Bypass -Command - 2>$null | Out-Null
+            $failureStatus = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+            if ($hadFailureProbe) {
+                $env:NUMINOUS_INSTALLER_TEST_FAILURE = $previousFailureProbe
+            } else {
+                Remove-Item Env:NUMINOUS_INSTALLER_TEST_FAILURE
+            }
+        }
+        if ($failureStatus -eq 0) {
+            Fail 'failure-status self-test: in-memory invocation swallowed a terminating error.'
+        }
+
         $rejectedHome = $false
         try { [void](Resolve-InstallRoot $HOME $HOME) } catch { $rejectedHome = $true }
         if (-not $rejectedHome) { Fail 'root self-test: HOME was accepted as an install root.' }
@@ -726,12 +787,21 @@ function Install-Rust {
         'ARM64' { 'aarch64' }
         default { Fail "unsupported processor architecture '$($env:PROCESSOR_ARCHITECTURE)'." }
     }
-    $rustupInit = Join-Path $env:TEMP 'numinous-rustup-init.exe'
-    Invoke-WebRequest -UseBasicParsing -Uri "https://win.rustup.rs/$arch" -OutFile $rustupInit
-    $rustupArgs = @('-y', '--default-toolchain', 'none')
-    if ($NoModifyPath) { $rustupArgs += '--no-modify-path' }
-    Invoke-Checked 'rustup' { & $rustupInit @rustupArgs }
-    Remove-Item $rustupInit -Force -ErrorAction SilentlyContinue
+    $stage = New-RustupStage $NuminousHome
+    try {
+        $rustupInit = Join-Path $stage 'rustup-init.exe'
+        Invoke-WebRequest -UseBasicParsing -Uri "https://win.rustup.rs/$arch" -OutFile $rustupInit
+        $download = Get-Item -LiteralPath $rustupInit -Force
+        if ($download.PSIsContainer -or
+            ($download.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            Fail 'rustup download did not produce an ordinary file.'
+        }
+        $rustupArgs = @('-y', '--default-toolchain', 'none')
+        if ($NoModifyPath) { $rustupArgs += '--no-modify-path' }
+        Invoke-Checked 'rustup' { & $rustupInit @rustupArgs }
+    } finally {
+        Remove-DirectoryOrJunction $stage
+    }
     $env:Path = "$cargoBin;$env:Path"
     if (-not (Have 'cargo')) {
         Fail 'rustup finished but cargo is still missing; open a new terminal and re-run.'
@@ -907,7 +977,9 @@ function Install-Numinous {
 }
 
 try {
-    if ($SelfTest) {
+    if ($env:NUMINOUS_INSTALLER_TEST_FAILURE) {
+        Fail 'intentional installer failure-status probe.'
+    } elseif ($SelfTest) {
         Test-PathPromotion
         Test-InstallerSafety
     } elseif ($Uninstall) {
@@ -918,4 +990,5 @@ try {
 } catch {
     Write-Host "numinous install: $($_.Exception.Message)" -ForegroundColor Red
     if ($PSCommandPath) { exit 1 }
+    throw
 }

@@ -54,8 +54,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 2,985 all-target test cases pass,
-one screenshot diagnostic is ignored, 95.44% region coverage, and 95.55% line
+Expected right now: **format and clippy clean, 3,180 all-target test cases pass,
+one screenshot diagnostic is ignored, 95.15% region coverage, and 95.33% line
 coverage**. The `gpu` and `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
