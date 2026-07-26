@@ -9,6 +9,7 @@
 //! Linux, and Windows.
 
 use std::num::NonZeroU32;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
@@ -44,6 +45,8 @@ use numinous_app::{controls, game_draw, input_legend, play, room_phase};
 use play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_total};
 use room_phase::{effective_room_phase, has_finite_parameter_input};
 
+/// Near-black background (matches the `Raster` stage), packed `0x00RRGGBB`.
+const BACKGROUND: u32 = 0x000A_0B0F;
 /// Frames of The Show crossfade when the gallery advances rooms.
 const SHOW_CROSSFADE_FRAMES: u8 = 14;
 /// Wall time for the Times Tables cardioid-to-Mandelbrot morph beat.
@@ -272,10 +275,8 @@ fn selected_room_interaction_audio(
 
 /// The application state driven by the winit event loop.
 struct App {
-    window: Option<Arc<Window>>,
-    surface: Option<wgpu::Surface<'static>>,
-    surface_config: Option<wgpu::SurfaceConfiguration>,
-    post: Option<numinous_gpu::post::PostRenderer>,
+    window: Option<Rc<Window>>,
+    surface: Option<softbuffer::Surface<Rc<Window>, Rc<Window>>>,
     player: Option<numinous_audio::LoopPlayer>,
     #[cfg(test)]
     transient_audio_clears: std::cell::Cell<usize>,
@@ -426,8 +427,6 @@ impl App {
         Self {
             window: None,
             surface: None,
-            surface_config: None,
-            post: None,
             player: None,
             #[cfg(test)]
             transient_audio_clears: std::cell::Cell::new(0),
@@ -3419,50 +3418,7 @@ impl App {
             apply_screen_shake(&mut rgba, rw, rh, self.screen_shake);
             self.screen_shake = self.screen_shake.saturating_sub(1);
         }
-        if let (Some(surface), Some(config)) = (&mut self.surface, &mut self.surface_config) {
-            if config.width != width as u32 || config.height != height as u32 {
-                config.width = width as u32;
-                config.height = height as u32;
-                if let Some(gpu) = &self.gpu {
-                    surface.configure(gpu.context().device(), config);
-                }
-            }
-
-            if let (Some(gpu), Some(post)) = (&self.gpu, &mut self.post) {
-                let frame = match surface.get_current_texture() {
-                    wgpu::CurrentSurfaceTexture::Success(f) => f,
-                    wgpu::CurrentSurfaceTexture::Suboptimal(f) => f,
-                    _ => return,
-                };
-
-                let view = frame
-                    .texture
-                    .create_view(&wgpu::TextureViewDescriptor::default());
-
-                let mode = match self.era {
-                    numinous_core::Era::Phosphor => 0,
-                    numinous_core::Era::EightBit => 1,
-                    numinous_core::Era::Vector => 2,
-                    numinous_core::Era::Modern => 3,
-                };
-
-                let elapsed = self.last_tick.elapsed().as_secs_f32();
-
-                let rgba_f32: Vec<f32> = rgba.iter().map(|&c| c as f32 / 255.0).collect();
-
-                post.render(
-                    gpu.context().device(),
-                    gpu.context().queue(),
-                    &view,
-                    &rgba_f32,
-                    rw as u32,
-                    rh as u32,
-                    mode,
-                    elapsed,
-                );
-                gpu.context().queue().present(frame);
-            }
-        }
+        self.blit(&rgba, rw, rh, width, height);
     }
 
     fn audio_state(&self) -> hud::AudioState {
@@ -3487,6 +3443,35 @@ impl App {
         if let Some(banner) = &self.banner {
             overlays::draw_banner(raster, banner.lines(), width, height);
         }
+    }
+
+    /// Copy an RGBA frame (`rw` x `rh`) onto the window surface (`width` x `height`).
+    fn blit(&mut self, rgba: &[u8], rw: usize, rh: usize, width: usize, height: usize) {
+        let (Some(w), Some(h)) = (
+            NonZeroU32::new(width as u32),
+            NonZeroU32::new(height as u32),
+        ) else {
+            return;
+        };
+        let Some(surface) = self.surface.as_mut() else {
+            return;
+        };
+        if surface.resize(w, h).is_err() {
+            return;
+        }
+        let Ok(mut buffer) = surface.buffer_mut() else {
+            return;
+        };
+        for (i, pixel) in buffer.iter_mut().enumerate() {
+            let (x, y) = (i % width, i / width);
+            *pixel = if x < rw && y < rh {
+                let o = (y * rw + x) * 4;
+                (u32::from(rgba[o]) << 16) | (u32::from(rgba[o + 1]) << 8) | u32::from(rgba[o + 2])
+            } else {
+                BACKGROUND
+            };
+        }
+        let _ = buffer.present();
     }
 }
 
@@ -3515,33 +3500,15 @@ impl ApplicationHandler for App {
         let Ok(window) = event_loop.create_window(attributes) else {
             return;
         };
-        let window = Arc::new(window);
-        let Ok((context, surface)) = numinous_gpu::GpuContext::new_with_surface(window.clone())
-        else {
+        let window = Rc::new(window);
+        let Ok(context) = softbuffer::Context::new(window.clone()) else {
             return;
         };
-        let gpu = numinous_gpu::FractalRenderer::from_context(context);
-        let format = surface.get_capabilities(gpu.context().adapter()).formats[0];
-        let surface_config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_DST,
-            format,
-            width: 900,
-            height: 900,
-            present_mode: wgpu::PresentMode::Fifo,
-            desired_maximum_frame_latency: 2,
-            alpha_mode: wgpu::CompositeAlphaMode::Auto,
-            view_formats: vec![],
-            color_space: wgpu::SurfaceColorSpace::Srgb,
+        let Ok(surface) = softbuffer::Surface::new(&context, window.clone()) else {
+            return;
         };
-        surface.configure(gpu.context().device(), &surface_config);
-
-        let post = numinous_gpu::post::PostRenderer::new(gpu.context().device(), format);
-
         self.window = Some(window);
         self.surface = Some(surface);
-        self.surface_config = Some(surface_config);
-        self.gpu = Some(gpu);
-        self.post = Some(post);
         // Apply initial fullscreen if requested (borderless for broad compat; exclusive available via F cycle).
         if self.start_fullscreen
             && let Some(w) = &self.window
