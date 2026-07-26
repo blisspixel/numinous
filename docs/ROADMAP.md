@@ -45,14 +45,16 @@ stop-the-world work.
 | Priority | What | Why |
 | --- | --- | --- |
 | **1. Keep 0.2 proof green** | Times Tables and Buffon five-beat ahas, MCP place/number wager path, `scripts/agent-hallway.py` PASS, F9 capture, three faces, public CI | Standing 0.2 exit evidence; regressions fail the milestone again |
-| **2. Enter 0.3 Tactile Alpha** | Deepen five flagships (Times Tables, Double Pendulum, Life, Galton, Formula Jam) with reproduced defects and agent/MCP/CLI review (`scripts/agent-tactile.py`, round-09 PASS including Life t=0 invite) | Next version gate after Flagship Proof |
+| **2. Keep 0.3 proof green** | Preserve the five tactile flagships, Watch Agent causal replay, Formula Jam discovery, and the 33 ms reference render budget | Standing 0.3 exit evidence; regressions reopen the milestone |
 | **3. Keep the floor green** | Public `main` stays CI-green (fmt, Clippy, tests, deny, audit, coverage, three-OS builds) | 0.1 foundation must not regress |
 | **Deferred past 0.2** | Human stranger hallway, a11y sessions, musician long-listening, soft-thin densify, bulk rooms, Phase B glow | Humans before 1.0; densify/glow only if a sensory ceiling binds |
 
-After 0.3: 0.4 understanding retention, 0.5 sensory identity with accessibility.
+The 0.3 agent-and-machine exit is met. The next incomplete milestone is 0.4
+understanding and retention. Some 0.4 mechanisms exist, but its tracked study
+and returning-player exit evidence remain open.
 Detail below and in the version sections.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 2,985 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.44% region coverage, and 95.55% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,180 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.15% region coverage, and 95.33% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -740,10 +742,23 @@ later risk.
     selections expose deterministic SoundSpecs; Nim remains intentionally
     silent. Unit ownership and game-sound regressions pass; room and Studio
     sample parity remain covered by real stdio acceptances.
+  - **Done (security and correctness maintenance, 2026-07-25):** public
+    `reveal_room` projection now uses a fixed baseline Journey, handshake reads
+    and public writes use total deadlines, non-finite Studio audio is
+    neutralized before the native callback, and isolated MCP QA owns every
+    state path. Journal growth, journal erase failures, preference-file reads,
+    Windows rustup staging, installer failure status, and derived export paths
+    now fail closed. Four Low findings from the bounded repository review are
+    remediated; the full quality gate remains the release authority rather than
+    the review being treated as proof of absence.
 
 Owner docs: `ROOMS.md`, `INTERFACES.md`, `SOUND.md`, `STUDIO.md`, `QUALITY.md`.
 
-**Exit criterion:** (Stranger test deferred to 0.8) Limited user testing confirms the main action in each flagship is discoverable, and no flagship exceeds its declared frame or input-latency budget on the reference machine. A first-time Studio player can start Random or Auto, dismiss and restore Help, edit the shown expression, and understand how to return to manual control.
+**Exit status:** met on the declared agent-and-machine bar. Stranger testing is
+deferred to 0.8. The five-flagship tactile cohort passes, every scoped ambient
+and input-to-room-raster path stays below 33 ms p95 on the reference machine,
+and Formula Jam exposes manual, Random, Auto, and recallable Help paths. Native
+end-to-end input latency remains a separate real-hardware measurement.
 
 One separately consenting MCP guest can complete a flagship explore, challenge,
 and reveal loop while a human follows the same causal states through the
@@ -755,8 +770,9 @@ read-only App viewer, with no private host or protocol data in the stream.
 
 - **Done (cycle 153):** Complete predict-then-reveal on the flagships, with a prediction or
   construction before an insight is counted as learned.
-- **Done (cycle 153):** Test immediate explanation and delayed recall with a small, documented study;
-  report negative or mixed results without reframing them as wins. (See `round-10-understanding.md` cohort study).
+- **Incomplete:** publish a tracked, predeclared immediate-explanation and
+  delayed-recall study with its method, sample, and results. Private working
+  notes do not satisfy this evidence gate.
 - **Done (cycle 152):** Add source provenance and an independent math-review checklist to every
   flagship Reveal.
 - **Done (architectural invariant):** Keep progression subordinate to autonomy: no streak loss, required grind, or
@@ -1010,7 +1026,7 @@ percentages to subjective 1.0 gates, so this scorecard records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 2,985 passing all-target test cases plus one ignored screenshot diagnostic, 95.55% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 3,180 passing all-target test cases plus one ignored screenshot diagnostic, 95.33% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,913-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 

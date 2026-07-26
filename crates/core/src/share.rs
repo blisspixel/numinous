@@ -4,6 +4,7 @@
 //! writes a small sidecar text note so a shared file carries room id, era,
 //! kind, and version without inventing a container format.
 
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -69,7 +70,10 @@ pub fn sidecar_path(share_path: &Path) -> PathBuf {
 /// Propagates filesystem errors from create/write.
 pub fn write_share_sidecar(share_path: &Path, meta: &ShareMeta) -> std::io::Result<PathBuf> {
     let path = sidecar_path(share_path);
-    let mut file = std::fs::File::create(&path)?;
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)?;
     file.write_all(meta.to_text().as_bytes())?;
     Ok(path)
 }
@@ -114,9 +118,7 @@ impl ShareBundleMeta {
     }
 }
 
-/// Sanitized folder name for a share bundle under `parent`.
-#[must_use]
-pub fn share_bundle_dir(parent: &Path, room_id: &str, stamp: u64) -> PathBuf {
+fn share_bundle_dir(parent: &Path, room_id: &str, stamp: u64, nonce: [u8; 16]) -> PathBuf {
     let safe: String = room_id
         .chars()
         .map(|c| {
@@ -132,7 +134,27 @@ pub fn share_bundle_dir(parent: &Path, room_id: &str, stamp: u64) -> PathBuf {
     } else {
         safe
     };
-    parent.join(format!("numinous-share-{safe}-{stamp}"))
+    let suffix: String = nonce.iter().map(|byte| format!("{byte:02x}")).collect();
+    parent.join(format!("numinous-share-{safe}-{stamp}-{suffix}"))
+}
+
+/// Create a fresh, unpredictably named share bundle below `parent`.
+///
+/// The caller supplies 128 bits from the operating system random source. The
+/// final component is created exclusively, so an existing file, directory, or
+/// link is rejected.
+///
+/// # Errors
+/// Propagates the final directory creation error.
+pub fn create_share_bundle_dir(
+    parent: &Path,
+    room_id: &str,
+    stamp: u64,
+    nonce: [u8; 16],
+) -> std::io::Result<PathBuf> {
+    let path = share_bundle_dir(parent, room_id, stamp, nonce);
+    std::fs::create_dir(&path)?;
+    Ok(path)
 }
 
 /// Write the bundle README into an existing share directory.
@@ -146,7 +168,10 @@ pub fn write_share_bundle_readme(
     has_loop: bool,
 ) -> std::io::Result<PathBuf> {
     let path = dir.join("README.share.txt");
-    let mut file = std::fs::File::create(&path)?;
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)?;
     file.write_all(meta.readme_text(has_postcard, has_loop).as_bytes())?;
     Ok(path)
 }
@@ -154,8 +179,8 @@ pub fn write_share_bundle_readme(
 #[cfg(test)]
 mod tests {
     use super::{
-        ShareBundleMeta, ShareKind, ShareMeta, share_bundle_dir, sidecar_path,
-        write_share_bundle_readme, write_share_sidecar,
+        ShareBundleMeta, ShareKind, ShareMeta, create_share_bundle_dir, share_bundle_dir,
+        sidecar_path, write_share_bundle_readme, write_share_sidecar,
     };
     use std::path::PathBuf;
 
@@ -172,6 +197,7 @@ mod tests {
     fn sidecar_round_trips_on_disk() {
         let dir =
             std::env::temp_dir().join(format!("numinous-share-sidecar-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
         let _ = std::fs::create_dir_all(&dir);
         let share = dir.join("mandelbrot.png");
         std::fs::write(&share, b"fake").expect("share file");
@@ -192,7 +218,7 @@ mod tests {
     #[test]
     fn share_bundle_dir_sanitizes_room_ids() {
         let parent = PathBuf::from("/tmp");
-        let dir = share_bundle_dir(&parent, "times tables!", 42);
+        let dir = share_bundle_dir(&parent, "times tables!", 42, [7; 16]);
         assert!(
             dir.file_name()
                 .and_then(|n| n.to_str())
@@ -203,9 +229,50 @@ mod tests {
     }
 
     #[test]
+    fn share_bundle_directory_is_exclusive_and_nonce_distinct() {
+        let parent =
+            std::env::temp_dir().join(format!("numinous-share-exclusive-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&parent);
+        std::fs::create_dir(&parent).expect("parent");
+        let first =
+            create_share_bundle_dir(&parent, "lorenz", 42, [1; 16]).expect("fresh first bundle");
+        let second =
+            create_share_bundle_dir(&parent, "lorenz", 42, [2; 16]).expect("fresh second bundle");
+
+        assert_ne!(first, second);
+        assert!(create_share_bundle_dir(&parent, "lorenz", 42, [1; 16]).is_err());
+        assert!(first.is_dir());
+        assert!(second.is_dir());
+        std::fs::remove_dir_all(parent).expect("cleanup");
+    }
+
+    #[test]
+    fn derived_metadata_writers_refuse_existing_files() {
+        let dir =
+            std::env::temp_dir().join(format!("numinous-share-existing-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir(&dir).expect("parent");
+        let share = dir.join("postcard.png");
+        std::fs::write(&share, b"image").expect("share fixture");
+        let sidecar = sidecar_path(&share);
+        std::fs::write(&sidecar, b"sentinel").expect("sidecar sentinel");
+        let meta = ShareMeta {
+            room_id: "lorenz".into(),
+            era: "Modern".into(),
+            kind: ShareKind::Postcard,
+            version: "0.2.0-alpha.1".into(),
+        };
+
+        assert!(write_share_sidecar(&share, &meta).is_err());
+        assert_eq!(std::fs::read(&sidecar).expect("sentinel"), b"sentinel");
+        std::fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
     fn bundle_readme_lists_contents() {
         let dir =
             std::env::temp_dir().join(format!("numinous-share-bundle-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
         let _ = std::fs::create_dir_all(&dir);
         let meta = ShareBundleMeta {
             room_id: "lorenz".into(),

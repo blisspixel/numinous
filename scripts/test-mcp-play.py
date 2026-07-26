@@ -36,7 +36,7 @@ class McpPlayLifecycleTests(unittest.TestCase):
         workers = 8
         barrier = threading.Barrier(workers)
         lock = threading.Lock()
-        captured: list[tuple[Path, Path, Path]] = []
+        captured: list[tuple[Path, Path, Path, Path]] = []
 
         def fake_run(*_args, **kwargs):
             env = kwargs["env"]
@@ -46,11 +46,18 @@ class McpPlayLifecycleTests(unittest.TestCase):
                     "NUMINOUS_JOURNEY",
                     "NUMINOUS_SCORES",
                     "NUMINOUS_CAIRN",
+                    "NUMINOUS_JOURNAL",
                 )
             )
             self.assertEqual(len({path.parent for path in paths}), 1)
+            self.assertEqual(Path(env["HOME"]), paths[0].parent)
+            self.assertEqual(Path(env["USERPROFILE"]), paths[0].parent)
             for path in paths:
                 path.write_text("isolated", encoding="utf-8")
+            (paths[0].parent / ".numinous-radio").mkdir()
+            (paths[0].parent / ".numinous-crash.log").write_text(
+                "isolated", encoding="utf-8"
+            )
             with lock:
                 captured.append(paths)
             barrier.wait(timeout=5)
@@ -133,7 +140,7 @@ class McpPlayCommandTests(unittest.TestCase):
         result = self.run_driver("tools")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("totals.", result.stdout)
-        self.assertIn("29 tools.", result.stdout)
+        self.assertIn("33 tools.", result.stdout)
 
 
 if __name__ == "__main__":

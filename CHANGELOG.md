@@ -38,6 +38,19 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   and revision plus checker identity in its evidence.
 
 ### Fixed
+- Security and correctness maintenance closes four Low findings and adjacent
+  reproduced defects. Watch Agent `reveal_room` output is independent of the
+  private Journey. Broadcast handshakes and public writes use total deadlines.
+  Extreme finite Studio expressions cannot pass non-finite notes or samples to
+  the native callback. Journal growth and erase errors, oversized controller
+  bindings, and MCP QA state isolation now fail closed. The complete Windows
+  gate passes 3,180 tests plus one ignored screenshot diagnostic, 95.33 percent
+  line coverage, and 95.15 percent region coverage.
+- Windows rustup bootstrap downloads into a private, unpredictable directory
+  under the protected install root, and in-memory installer failures return a
+  nonzero status. Share bundles use 128-bit operating-system randomness and
+  exclusive member creation; gallery regeneration replaces ordinary files by
+  name without following prepared links or mutating hard-linked peers.
 - Galton Board post-drop status leads with `DROP` and the last landing before
   probability and mean metrics, so the hand consequence is plain before
   telemetry. Full runs use compact `DROP FULL` to stay inside the App footer.

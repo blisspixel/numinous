@@ -745,15 +745,25 @@ pub fn record_journal_file(
     let _lock = PersistLock::acquire(path)?;
     let mut journal = try_load_journal_file(path)?;
     journal.record(timestamp_utc, kind, subject, text, affect);
-    atomic_write(path, journal.to_text().as_bytes())?;
+    let serialized = journal.to_text();
+    if serialized.len() as u64 > MAX_JOURNAL_FILE_BYTES {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("journal would exceed {MAX_JOURNAL_FILE_BYTES} bytes"),
+        ));
+    }
+    atomic_write(path, serialized.as_bytes())?;
     Ok(())
 }
 
 /// Wipes the player's journal.
 pub fn erase_journal_file(path: &Path) -> io::Result<()> {
     let _lock = PersistLock::acquire(path)?;
-    let _ = std::fs::remove_file(path);
-    Ok(())
+    match std::fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+    }
 }
 
 fn try_load_scoreboard_file(path: &Path) -> io::Result<Scoreboard> {
@@ -1428,9 +1438,9 @@ fn retry_atomic_replace_with(mut replace: impl FnMut() -> io::Result<()>) -> io:
 #[cfg(test)]
 mod tests {
     use super::{
-        Journey, LocalStateEraseSelection, LocalStatePaths, Scoreboard, erase_local_state,
-        inspect_local_state, load_journey_file, load_scoreboard_file, persist_journey_delta,
-        record_score_file, remove_persisted_file,
+        Journey, LocalStateEraseSelection, LocalStatePaths, Scoreboard, erase_journal_file,
+        erase_local_state, inspect_local_state, load_journey_file, load_scoreboard_file,
+        persist_journey_delta, record_journal_file, record_score_file, remove_persisted_file,
     };
     use std::fs::File;
     use std::io;
@@ -2633,6 +2643,37 @@ mod tests {
             super::MAX_JOURNEY_FILE_BYTES + 1
         );
         remove_persisted_file(&path).expect("cleanup");
+    }
+
+    #[test]
+    fn journal_record_rejects_a_result_over_the_read_limit_without_mutation() {
+        let path = temp_file("journal_growth_limit");
+        let text = "x".repeat(1_000);
+        let line = format!("1\tkind\tsubject\t{text}\t\n");
+        let count = super::MAX_JOURNAL_FILE_BYTES as usize / line.len();
+        let original = line.repeat(count);
+        assert!(original.len() as u64 <= super::MAX_JOURNAL_FILE_BYTES);
+        std::fs::write(&path, &original).expect("journal fixture");
+
+        let error = record_journal_file(&path, 1, "kind", "subject", &text, None)
+            .expect_err("growth past the readable limit must fail");
+
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(
+            std::fs::read(&path).expect("preserved journal"),
+            original.as_bytes()
+        );
+        remove_persisted_file(&path).expect("cleanup");
+    }
+
+    #[test]
+    fn journal_erase_propagates_non_missing_removal_errors() {
+        let path = temp_file("journal_erase_directory");
+        std::fs::create_dir(&path).expect("directory fixture");
+
+        assert!(erase_journal_file(&path).is_err());
+        assert!(path.is_dir(), "failed erase must preserve the object");
+        std::fs::remove_dir(&path).expect("cleanup");
     }
 
     #[test]
