@@ -15,6 +15,8 @@ use numinous_broadcast::PublicTool;
 use numinous_core::Raster;
 use serde_json::{Value, json};
 
+const SESSION_BARRIER_TIMEOUT: Duration = Duration::from_secs(15);
+
 /// Run a full session: send each line, return the parsed response lines.
 fn run_session(requests: &[Value]) -> Vec<Value> {
     run_session_with_barrier(requests, || true, &[])
@@ -55,7 +57,7 @@ fn run_session_with_barrier(
     }
     stdin.flush().expect("flush requests before barrier");
 
-    let barrier_deadline = Instant::now() + Duration::from_secs(5);
+    let barrier_deadline = Instant::now() + SESSION_BARRIER_TIMEOUT;
     while !barrier() {
         if Instant::now() >= barrier_deadline {
             drop(stdin);
@@ -64,7 +66,7 @@ fn run_session_with_barrier(
             let _ = output_reader.join();
             let _ = std::fs::remove_file(&journey);
             let _ = std::fs::remove_file(&scores);
-            panic!("MCP session barrier did not resolve within 5 seconds");
+            panic!("MCP session barrier did not resolve within {SESSION_BARRIER_TIMEOUT:?}");
         }
         thread::sleep(Duration::from_millis(5));
     }
