@@ -32,7 +32,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   size is now 353 across App, CLI, MCP, README, ROADMAP, and ROOMS.
 - `scripts/agent-tactile.py` runs a five-flagship 0.3 tactile MCP cohort
   (Times Tables, Double Pendulum, Life, Galton, Formula Jam) and writes notes
-  under `.agent/tester-cohort/round-08-tactile-0.3/`.
+  under `.agent/tester-cohort/round-09-tactile-0.3/`. The gate now requires
+  canonical structured visuals, internally consistent bounded render deltas,
+  strict first-contact invites, room-specific mathematical sonic invariants,
+  and revision plus checker identity in its evidence.
 
 ### Fixed
 - Galton Board post-drop status leads with `DROP` and the last landing before
@@ -52,9 +55,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   closed K=2, so status keeps `DRAG:DIAL` instead of `WHERE?` before any hand.
 - Double Pendulum ambient status leads with `CLICK:RE-DROP` before the twins
   gap readout, matching the flagship first-contact invite pattern.
-- `scripts/agent-tactile.py` gates all five 0.3 flagships on hand sonic change:
-  listen_room for Times Tables, Double Pendulum fling, Life early-plant births,
-  and Galton; `sing_expression` for Formula Jam.
+- `scripts/agent-tactile.py` gates all five 0.3 flagships on hand sonic change
+  and mathematical congruence: the Times Tables ratio follows `K / (K - 1)`,
+  the symmetric pendulum fling yields twin pitches, Life pitch-row amplitudes
+  reconstruct its birth count, Galton encodes its landing as a 3:2 interval,
+  and Formula Jam doubles phase ordering without changing the sampled pitch set.
 - Riemann Sphere INF goal is earnable by dragging to the drawn plane rim
   (`INF_R` inside the plane window), not only by ambient phase growth.
 

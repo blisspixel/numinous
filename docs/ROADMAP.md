@@ -626,9 +626,10 @@ later risk.
     ambient-only readout copy. Challenge label parsing strips leading invite
     chrome so parameter goals keep instrument names. MCP Times Tables open keeps
     dial status until a real hand arrives. Agent tactile probes open flagships
-    with status-level invites and hand sonic change for all five flagships
-    (listen_room for TT/DP/Life/Galton; sing_expression for Formula Jam);
-    round-09 PASS; PRs #95-#106; agent-hallway PASS. Galton post-drop status
+    with strict status-level invites, canonical visual deltas, and room-specific
+    mathematical sonic invariants for all five flagships (listen_room for
+    TT/DP/Life/Galton; sing_expression for Formula Jam); round-09 PASS;
+    PRs #95-#106; agent-hallway PASS. Galton post-drop status
     leads with DROP and last landing before probability metrics. Human
     formative sessions remain later.
 - Run a short formative session after each interaction change and record where
@@ -638,8 +639,9 @@ later risk.
   input latency remains a separate real-hardware measurement.
   - **Done (machine path, 2026-07-25):** `scripts/flagship-perf.ps1` on Windows
     release, 900x700, 40 samples: all five flagships PASS ambient and
-    input-to-room-raster p95 under 33 ms (worst p95 1.684 ms, Game of Life
-    ambient).
+    input-to-room-raster p95 under 33 ms. A fresh cycle-6 run remained green
+    with a worst p95 of 2.042 ms on Game of Life input; an independent 250
+    sample check remained green with a worst p95 of 1.896 ms.
 - Give Formula Jam three legible ways to begin: manual expression entry,
   curated Random, and an Auto set that changes about every 21 seconds at phrase
   boundaries. Add a dismissible, recallable help overlay and pause Auto on edit.
