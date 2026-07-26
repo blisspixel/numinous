@@ -368,6 +368,7 @@ The dimensions every room and every shareable clip is scored on, and how each is
 | **Flow** | Challenge-skill balance, instant feedback, no interruption? | GEQ Flow + telemetry (dwell, "just one more") |
 | **Beauty** | Every frame screenshot-worthy? | Visual-regression + aesthetic scoring + human eye |
 | **Insight** | Is the Reveal true, surprising, and legible? | Content judge + human mathematician |
+| **Understanding** | Can the player transfer the relation to a novel case? | Predeclared transfer probes; `UNDERSTANDING_STUDY.md` owns the 0.4 method |
 | **QoL** | Fast to play, no dead-ends, graceful, accessible? | Startup-time test + a11y checks + fault injection |
 | **Shareability** | Did it produce a shareable moment? | Telemetry share-rate + export usage |
 

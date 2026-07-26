@@ -178,6 +178,9 @@ reference performance budget. The next incomplete milestone is 0.4
 Understanding Alpha. Soft-thin densify, bulk rooms, and Phase B glow stay background unless
 measurement binds. Ordered criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md) (**Critical path right now**).
+The predeclared contract and evidence boundary for the next study live in
+[`docs/UNDERSTANDING_STUDY.md`](docs/UNDERSTANDING_STUDY.md); no qualifying
+cohort result is claimed yet.
 Reproducible engineering checks are in [`VERIFY.md`](VERIFY.md); completed
 changes are in [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -331,6 +334,8 @@ starting points:
   digital minds as peers and possible beings.
 - [`docs/DIGITAL_DEVELOPMENT.md`](docs/DIGITAL_DEVELOPMENT.md): current research
   and the careful path from stateless interaction toward continuity.
+- [`docs/UNDERSTANDING_STUDY.md`](docs/UNDERSTANDING_STUDY.md): the predeclared
+  0.4 comprehension comparison and returning-journal acceptance contract.
 - [`docs/ROOMS.md`](docs/ROOMS.md): the catalog and future room design archive.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): the native Rust architecture
   and three faces over one core.

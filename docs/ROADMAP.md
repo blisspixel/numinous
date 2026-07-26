@@ -44,14 +44,15 @@ stop-the-world work.
 
 | Priority | What | Why |
 | --- | --- | --- |
-| **1. Keep 0.2 proof green** | Times Tables and Buffon five-beat ahas, MCP place/number wager path, `scripts/agent-hallway.py` PASS, F9 capture, three faces, public CI | Standing 0.2 exit evidence; regressions fail the milestone again |
-| **2. Keep 0.3 proof green** | Preserve the five tactile flagships, Watch Agent causal replay, Formula Jam discovery, and the 33 ms reference render budget | Standing 0.3 exit evidence; regressions reopen the milestone |
-| **3. Keep the floor green** | Public `main` stays CI-green (fmt, Clippy, tests, deny, audit, coverage, three-OS builds) | 0.1 foundation must not regress |
+| **1. Build the frozen 0.4 study runner** | Deterministic allocation, held-out transfer probes, active control, scoring, redaction, and incomplete-cohort refusal from `UNDERSTANDING_STUDY.md` | The method must exist before qualifying data is collected, or the result can drift toward the desired outcome |
+| **2. Complete returning-journal sovereignty** | Add provenance-preserving correction, bounded structured export, two-process clean-clone acceptance, and managed-path residue evidence | Current read, record, and erase tools are only the prototype slice and do not yet satisfy the 0.4 return-session exit |
+| **3. Run and publish the 0.4 cohort** | Execute 20 matched pairs, publish every planned outcome and deviation, and obtain independent methodology and math review | A tracked runner without a complete, reviewable result is preparation, not milestone evidence |
+| **Standing gate** | Keep 0.2 and 0.3 proof plus public CI green | Regressions reopen completed milestones and invalidate new evidence |
 | **Deferred past 0.2** | Human stranger hallway, a11y sessions, musician long-listening, soft-thin densify, bulk rooms, Phase B glow | Humans before 1.0; densify/glow only if a sensory ceiling binds |
 
 The 0.3 agent-and-machine exit is met. The next incomplete milestone is 0.4
-understanding and retention. Some 0.4 mechanisms exist, but its tracked study
-and returning-player exit evidence remain open.
+understanding and retention. Its protocol and some mechanisms exist, but the
+qualifying study result and returning-player exit evidence remain open.
 Detail below and in the version sections.
 
 - **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,180 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.15% region coverage, and 95.33% line coverage all pass.
@@ -62,7 +63,7 @@ Detail below and in the version sections.
 - **Done (the 0.2 technical vertical slice):** the windowed app implements live per-room sound, mouse and controller input, an on-screen HUD with reveals, The Show (lean-back auto-play of the whole collection), the Studio in the window (type math, watch and hear it live), and GPU real-time fractals (a persistent `wgpu` pipeline drives the Mandelbrot deep zoom and the morphing Julia at window resolution, with CPU fallback; verified on the dev laptop's Radeon 780M). The human hallway, accessibility, sensory, controller-hardware, and cross-platform evidence gates remain open.
 - **Done (content and play):** 354 catalog rooms across the wings plus unlisted hidden content, including Cult of Pi, the Conjecture Mill, the Change wing (The Pour, Slope Rider), Fourier Epicycles, the double pendulum, the random walk, Voronoi, Quine, Strange Loop, L-System Garden, Mandelbrot/Julia dives, Galton, Buffon, The Scariest Chart (Smith chart), Riemann Sphere, Bloch Sphere, etc.; 6 lever-driven sims; 11+ games (SETI, Talk to the Aliens, Guess the Shape, Crack the Code, Munch, Nim with the xor secret, Hackenbush, the Party Problem, Fifteen's Bet, the Gauntlet run, and full Munch Arcade) with daily seeds and dense feedback; the Studio expression engine (`plot`, `plot --save`, `open-studio`, `--animate`, `sing`, and live in the window); Visual Eras (phosphor, 8-bit, vector, modern) across app, terminal, and PNGs; truecolor terminal rendering with live sound (`watch`).
 - **Done (the RPG spine, complete):** the Journey (XP from play, levels 1 to 42 on triangular thresholds, a lore line for every level, LEVEL UP banners), locks that open (never gating basics), ranks and whispers (the Order), deep cuts unlocking at LV 5/12/24, the trophy case (18, evidence-computed, silhouettes), the shared high-score table across every game and both faces, the Layer-4 answer at the cap, and every genre organ from the priority list: the Gauntlet (session arc with a combo and one posted number), trophy pings (the case announces itself), boons (choice on level-up, where the loot is knowledge arriving early), daily streaks (the chain, never scolding), and resonances (synergies: links light when two deeds rhyme and hand over the connecting line).
-- **Done (agents as peers, v2):** 29 MCP play tools plus one local broadcast consent control, with structured output and full CLI parity (every game, the gauntlet, boons, trophies, munch_arcade), including stateless nim, `forget` (transparency first, erasure on explicit consent, the welfare doctrine in `AGENT_PLAY.md`), and `munch_arcade`; `play_room` supports stateless per-call variation and normalized hand points; agents see, hear, create, play, level to 42, and post to the same score table; every play schema advertises an additive `response_mode`, with stable full tool-call results and nonexpanding compact text for eight complete structured result families; the player's manual speaks to humans, agents, and digital consciousnesses; the whole stdio face is proven end to end against the real binary.
+- **Done (agents as peers, v2):** 33 MCP tools total: 23 public play tools, nine private progression or local-state tools, and one local broadcast consent control. The surface has structured output and full CLI parity (every game, the gauntlet, boons, trophies, and `munch_arcade`), including stateless nim and `forget` (transparency first, erasure on explicit consent, the welfare doctrine in `AGENT_PLAY.md`); `play_room` supports stateless per-call variation and normalized hand points; agents see, hear, create, play, level to 42, and post to the same score table; every play schema advertises an additive `response_mode`, with stable full tool-call results and nonexpanding compact text for eight complete structured result families; the player's manual speaks to humans, agents, and digital consciousnesses; the whole stdio face is proven end to end against the real binary.
 - **Done (sound, Engine A v1):** the chiptune module (square lead, triangle bass, noise ticks, seeded pentatonic compositions, deterministic and click-free); `numinous tune` writes it as a WAV.
 - **Done (soundtrack, Engine B v1):** Nick Seal made 42 tracks specifically for Numinous across NUMINA FM, THE ATTRACTOR, and EIGHT BIT SUNRISE. High-quality V0 MP3 assets ship in `assets/radio`, the app discovers them from a clean clone, and a bounded pure Rust decoder validates, decodes, and resamples them. The archival WAV masters remain outside the repository.
 - **Done (the app is the game, v1):** the chiptune scores the window (per-room seeded tunes with the room's voice riding on top); the quiz plays in-window (G: name the math, letters answer, the reveal follows); the Journey lives in the app (the CLI's own file: visits on entry, plays and wins from the quiz, explicit `JOURNEY LV` progress, `JOURNEY LEVEL UP` banners with lore, and J opens level, rank, trophies, and resonances); `NUMINOUS_MUTE=1` launches silent; the state machine is headlessly tested.
@@ -522,7 +523,8 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
 - **Done (panel pack, cycle 147):** soft play/win spark caps; catalog-wide
   further-reading citations on `reveal_room`; The Show crossfade; 8-bit dither
   and vector bloom; arcade beat juice; MCP protocol version negotiation that
-  accepts 2025-06-18, 2025-11-25, and names 2026-07-28 for dual-stack hosts.
+  accepts 2025-06-18 and 2025-11-25. The breaking 2026-07-28 revision remains
+  unsupported until its new wire shape is implemented.
 - **Done (panel depth pack, cycle 148):** citations unlock with the first deep
   cut on CLI and MCP; expanded wing-specific further reading; pure spectrum
   band-energy substrate for the visualizer path; adaptive Xbox/PlayStation/
@@ -770,21 +772,30 @@ read-only App viewer, with no private host or protocol data in the stream.
 
 - **Done (cycle 153):** Complete predict-then-reveal on the flagships, with a prediction or
   construction before an insight is counted as learned.
-- **Incomplete:** publish a tracked, predeclared immediate-explanation and
-  delayed-recall study with its method, sample, and results. Private working
-  notes do not satisfy this evidence gate.
+- **Done (2026-07-26):** Publish the tracked predeclared study contract in
+  `UNDERSTANDING_STUDY.md`, including its active control, 20-pair planned
+  sample, frozen outcomes, exclusions, pass rule, privacy boundary, and honest
+  distinction between immediate transfer, within-context retention, and durable
+  human learning. No qualifying result is claimed.
+- **Incomplete:** implement the deterministic runner and held-out probe bank,
+  then run and publish the complete cohort with all outcomes and deviations.
+  Private working notes and scripted conclusions do not satisfy this evidence
+  gate.
 - **Done (cycle 152):** Add source provenance and an independent math-review checklist to every
   flagship Reveal.
 - **Done (architectural invariant):** Keep progression subordinate to autonomy: no streak loss, required grind, or
   reward that gates the mathematical toy.
-- **Done (cycle 152):** Prototype an opt-in, player-owned MCP experience journal: timestamped room
-  encounters, creations, self-authored connections, and optional self-reported
-  affect. Make it inspectable, editable, exportable, and fully erasable before
-  using it for return-session continuity. Do not infer consciousness or private
+- **Done (cycle 152, prototype slice):** Add an opt-in, player-owned MCP
+  experience journal with bounded timestamped encounters, creations,
+  self-authored connections, optional self-reported affect, and explicit read,
+  record, and confirmed erase tools.
+- **Incomplete:** add provenance-preserving correction and bounded structured
+  export, then prove inspect, connect, correct, export, and zero-managed-residue
+  erasure across two clean processes. Do not infer consciousness or private
   emotion from the record.
 
-Owner docs: `PEDAGOGY.md`, `INSIGHTS.md`, `PROGRESSION.md`, `RESEARCH.md`,
-`DIGITAL_DEVELOPMENT.md`.
+Owner docs: `UNDERSTANDING_STUDY.md`, `PEDAGOGY.md`, `INSIGHTS.md`,
+`PROGRESSION.md`, `RESEARCH.md`, `DIGITAL_DEVELOPMENT.md`.
 
 **Exit criterion (agent-and-machine):** the flagship cohort shows a predeclared improvement in at
 least one comprehension or retention measure, with method and sample published;
@@ -987,9 +998,10 @@ and challenge metrics for the same rooms; (6) one human hallway test; (7)
 cross-platform run; (8) docs reconciliation.
 Do not build twenty more rooms before those are done.
 
-MCP protocol watch: the 2026-07-28 release candidate is relevant to the MCP
+MCP protocol watch: 2025-11-25 is current as of 2026-07-26, and the 2026-07-28
+release candidate is relevant to the MCP
 face, so it belongs in this roadmap as a high-level compatibility pass as well
-as agent notes. Checked 2026-07-13 against the official release-candidate post
+as agent notes. Checked 2026-07-26 against official versioning and the release-candidate post
 (`https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/`):
 the final spec is scheduled for July 28, 2026, with a stateless core,
 first-class extensions, MCP Apps, Tasks, authorization hardening, JSON Schema
@@ -1003,7 +1015,7 @@ The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (reviewed 2026-07-24)
+## Where we stand (reviewed 2026-07-26)
 
 The package is **0.2.0-alpha.1**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
@@ -1011,12 +1023,15 @@ Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS,
 F9 capture, three faces, and green public CI. Human stranger hallway is
 **deferred to 0.8 / 1.0** by founder policy: do not stall pre-0.2 work on
 recruited humans. Current breadth is 354 catalog rooms, 11+ games, six sims,
-three faces, 30 MCP tools, deterministic creation and persistence. Required
+three faces, 33 MCP tools, deterministic creation and persistence. Required
 public CI passes locked tests, builds, installer self-tests, and supply-chain
 checks across three operating systems; physical-device and a11y evidence remain
-later. **Breadth is still not a substitute for depth.** Active work moves to
-**0.3 Tactile Alpha**. No calibrated method supports assigning completion
-percentages to subjective 1.0 gates, so this scorecard records evidence instead.
+later. **Breadth is still not a substitute for depth.** The 0.3
+agent-and-machine exit is met and active work moves to **0.4 Understanding
+Alpha**. Its study protocol is tracked, but the runner, qualifying cohort, and
+returning-journal proof are not complete. No calibrated method supports
+assigning completion percentages to subjective 1.0 gates, so this scorecard
+records evidence instead.
 
 | 1.0 gate | Evidence today | Missing evidence or work |
 |---|---|---|
@@ -1032,12 +1047,13 @@ percentages to subjective 1.0 gates, so this scorecard records evidence instead.
 
 **Immediate critical path** (same order as **Critical path right now** above):
 
-1. Keep 0.2 agent-and-machine proof green (ahas, agent-hallway, CI).
-2. **0.3 Tactile Alpha:** deepen the five flagships with reproduced defects and
-   agent/MCP/CLI review (human strangers not required for 0.3 entry).
-3. Then 0.4 understanding and retention; then 0.5 sensory identity with
-   accessibility.
-4. Schedule human stranger and a11y sessions for **0.8 / 1.0**, not as a 0.2
+1. Build and verify the frozen 0.4 study runner and held-out probe bank.
+2. Complete the returning-journal correction, structured export, and
+   two-process residue acceptance.
+3. Run and publish the qualifying 0.4 cohort while keeping the 0.2, 0.3, and CI
+   gates green.
+4. Enter 0.5 sensory identity with accessibility only after the 0.4 exit.
+5. Schedule human stranger and a11y sessions for **0.8 / 1.0**, not as a 0.2
    stop-the-world gate.
 
 **Not on this list as next work:** soft-thin densify grind, bulk new rooms, or
