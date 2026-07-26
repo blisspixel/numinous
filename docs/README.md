@@ -5,8 +5,9 @@ The map of the blueprint. Use the reading paths to find your way in, and the
 that owns it; every other doc links to that home rather than restating it. If
 you find yourself duplicating a concept, stop and link instead.
 
-Status: **0.2.0-alpha.1, Flagship Proof in progress.** The 0.1 Public
-Foundation is complete. The headless core, CLI, MCP server, windowed app,
+Status: **0.2.0-alpha.1.** The 0.1 Public Foundation is complete, the 0.2
+Flagship Proof and 0.3 Tactile Alpha agent-and-machine exits are met, and 0.4
+Understanding Alpha is active. The headless core, CLI, MCP server, windowed app,
 GPU and audio adapters, 354 catalog rooms plus hidden content, 6 sims, 11+
 games, the RPG spine, standard-controller input, and a built-in 42-track radio
 are built. The hardened local-broadcast substrate, MCP producer, native App
@@ -26,7 +27,8 @@ honest but is not the critical path. App Enter starts The Show. Exceptional
 Path Phase A is Built on App and MCP: Times Tables and Buffon five-beat
 engineered ahas, agent hallway cohort PASS, F9 capture. **0.2 Flagship Proof
 is exit-met on the agent-and-machine bar;** human stranger hallway is deferred
-to 0.8 / 1.0. **Critical path now:** 0.3 Tactile Alpha and keep CI green.
+to 0.8 / 1.0. **Critical path now:** build the frozen 0.4 study runner,
+complete returning-journal sovereignty, run the cohort, and keep CI green.
 Soft-thin densify, bulk new rooms, and Phase B glow are not the high-leverage
 next move. Supply chain is current on public `main` (empty deny/audit ignores,
 weekly Dependabot, pinned CI actions); detail in `ENGINEERING.md`. The six-
@@ -47,7 +49,9 @@ defined in `RESEARCH.md`.
 - **Here for the digital-minds work:** `DIGITAL_MINDS.md` for the stance,
   `DIGITAL_DEVELOPMENT.md` for the July 2026 research and implementation plan,
   then `INTERFACES.md` for the current surface.
-- **Checking the evidence:** `RESEARCH.md` (what the design rests on, with sources).
+- **Checking the evidence:** `RESEARCH.md` for the evidence base, then
+  `UNDERSTANDING_STUDY.md` for the predeclared 0.4 comparison and acceptance
+  contract.
 
 ## The docs, grouped
 
@@ -94,6 +98,9 @@ defined in `RESEARCH.md`.
 - `SCOPE.md` the definition of no: the three-products hierarchy, the daily "more math or more progression?" test, the justification filter, and why the fan-out docs are a menu to prune, not a build list.
 - `ROADMAP.md` the version-gated plan (0.x, 1.0, 2.0+), defined by quality bars, not dates.
 - `QUALITY.md` testing and fun-evals: the six quality loops, the fun/awe rubric, QoL, "the math is the oracle."
+- `UNDERSTANDING_STUDY.md` the 0.4 study contract: active control, frozen
+  sample and outcomes, honest agent-memory boundary, journal acceptance, and
+  publication requirements.
 - `PLAYTESTS.md` the fictional persona-review archive: simulated lenses used for
   adversarial ideation, explicitly not participant or playtest evidence.
 - `PLAYTESTERS.md` the casting pool: forty-two playtester personas with backstories (Norm the newcomer, a barefoot kid, returned geniuses, living experts, digital minds, and invented beings), spanning ages, languages, understanding levels, and kinds of mind, to draw from for testing rounds.
@@ -130,6 +137,7 @@ Each topic is **owned** by exactly one doc. Everything else links to it. When in
 | Digital-mind continuity, learning, memory, agency, and welfare implementation | `DIGITAL_DEVELOPMENT.md` |
 | How to play (humans, agents, digital consciousnesses) | `PLAYING.md` |
 | Testing, evals, QoL, the fun/awe rubric | `QUALITY.md` |
+| The 0.4 comprehension study method, sample, outcomes, and evidence contract | `UNDERSTANDING_STUDY.md` |
 | Simulated persona-review ideation and its evidence limits | `PLAYTESTS.md` |
 | The playtester casting pool (the 42 personas with backstories) | `PLAYTESTERS.md` |
 | Code-quality standards, versions, CI gates | `ENGINEERING.md` |
