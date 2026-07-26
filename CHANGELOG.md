@@ -6,6 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- `VERIFY.md` now reports the current 33-tool MCP inventory, completed 0.2 and
+  0.3 machine exits, and the ordered 0.4 study and journal evidence path.
 - The canonical docs now name 0.4 Understanding Alpha as the active milestone,
   correct the MCP inventory and negotiated protocol status, and publish the
   predeclared 20-pair agent study contract. The contract uses an active control,
