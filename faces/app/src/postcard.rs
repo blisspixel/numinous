@@ -126,15 +126,15 @@ pub(crate) fn write_room_share_bundle(
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let dir = numinous_core::share_bundle_dir(parent, room.meta().id, stamp);
-    std::fs::create_dir_all(&dir)?;
+    let mut nonce = [0_u8; 16];
+    getrandom::fill(&mut nonce).map_err(std::io::Error::other)?;
+    let dir = numinous_core::create_share_bundle_dir(parent, room.meta().id, stamp, nonce)?;
 
     let postcard_path = dir.join("postcard.png");
     let loop_path = dir.join("loop.png");
     let postcard_rgba = render_room_postcard_rgba(room, phase, inputs, era);
     let postcard_encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, &postcard_rgba)?;
-    // Bundle paths are unique by stamp; create_new would fight a re-stamp collision.
-    std::fs::write(&postcard_path, postcard_encoded)?;
+    write_png_file(&postcard_path, &postcard_encoded)?;
     write_share_note(
         &postcard_path,
         room.meta().id,
@@ -144,7 +144,7 @@ pub(crate) fn write_room_share_bundle(
 
     let frames = render_room_loop_frames(room, phase, inputs, era);
     let loop_encoded = encode_rgba_apng(LOOP_SIZE, LOOP_SIZE, &frames)?;
-    std::fs::write(&loop_path, loop_encoded)?;
+    write_png_file(&loop_path, &loop_encoded)?;
     write_share_note(
         &loop_path,
         room.meta().id,
@@ -180,8 +180,9 @@ pub(crate) fn write_life_share_bundle(
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let dir = numinous_core::share_bundle_dir(parent, room_id, stamp);
-    std::fs::create_dir_all(&dir)?;
+    let mut nonce = [0_u8; 16];
+    getrandom::fill(&mut nonce).map_err(std::io::Error::other)?;
+    let dir = numinous_core::create_share_bundle_dir(parent, room_id, stamp, nonce)?;
 
     let size = POSTCARD_SIZE as usize;
     let mut raster = Raster::with_accent(size, size, accent);
@@ -190,7 +191,7 @@ pub(crate) fn write_life_share_bundle(
     era.apply(&mut rgba, size, size);
     let postcard_path = dir.join("postcard.png");
     let postcard_encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, &rgba)?;
-    std::fs::write(&postcard_path, postcard_encoded)?;
+    write_png_file(&postcard_path, &postcard_encoded)?;
     write_share_note(
         &postcard_path,
         room_id,
@@ -201,7 +202,7 @@ pub(crate) fn write_life_share_bundle(
     let frames = render_life_loop_frames(session, accent, era);
     let loop_path = dir.join("loop.png");
     let loop_encoded = encode_rgba_apng(LOOP_SIZE, LOOP_SIZE, &frames)?;
-    std::fs::write(&loop_path, loop_encoded)?;
+    write_png_file(&loop_path, &loop_encoded)?;
     write_share_note(&loop_path, room_id, era, numinous_core::ShareKind::Loop);
 
     numinous_core::write_share_bundle_readme(

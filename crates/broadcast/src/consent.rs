@@ -583,11 +583,36 @@ impl EventLease<'_> {
     where
         W: Write,
     {
+        self.write_with(|frame| {
+            writer
+                .write_all(frame)
+                .and_then(|()| writer.write_all(b"\n"))
+                .and_then(|()| writer.flush())
+        })
+    }
+
+    /// Writes and acknowledges this frame to a socket under an absolute deadline.
+    pub fn write_to_stream(mut self, stream: &std::net::TcpStream) -> Result<(), WriteError> {
+        self.write_with(|frame| crate::framing::write_public_frame_stream(stream, frame))
+    }
+
+    #[cfg(test)]
+    fn write_to_stream_with_timeout(
+        mut self,
+        stream: &std::net::TcpStream,
+        timeout: std::time::Duration,
+    ) -> Result<(), WriteError> {
+        self.write_with(|frame| {
+            crate::framing::write_public_frame_stream_with_timeout(stream, frame, timeout)
+        })
+    }
+
+    fn write_with<F>(&mut self, write: F) -> Result<(), WriteError>
+    where
+        F: FnOnce(&[u8]) -> std::io::Result<()>,
+    {
         self.machine.begin_write(self.id)?;
-        let result = writer
-            .write_all(&self.frame)
-            .and_then(|()| writer.write_all(b"\n"))
-            .and_then(|()| writer.flush());
+        let result = write(&self.frame);
         if let Err(error) = result {
             if let Some(item) = self.item.take() {
                 self.machine.fail_write(self.id, item);
@@ -742,9 +767,10 @@ mod tests {
     use crate::{Compatibility, PreparedEvent, SessionId, WireMessage};
     use std::error::Error;
     use std::io::{self, Write};
+    use std::net::{TcpListener, TcpStream};
     use std::sync::mpsc;
     use std::thread;
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
     fn machine() -> ConsentMachine {
         let compatibility = Compatibility::from_catalogs(["life"], ["lorenz"], ["munch"])
@@ -1082,6 +1108,44 @@ mod tests {
         assert_eq!(status.state, ConsentState::Stopped);
         assert_eq!(status.dropped_public_events, 1);
         assert!(machine.lease().expect("lease result").is_none());
+    }
+
+    #[test]
+    fn backpressured_socket_deadline_stops_and_clears_the_session() {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).expect("bind loopback");
+        let client = TcpStream::connect(listener.local_addr().expect("listener address"))
+            .expect("connect loopback");
+        let (mut server, _) = listener.accept().expect("accept loopback");
+        server.set_nonblocking(true).expect("nonblocking fill");
+        let padding = [0_u8; 64 * 1_024];
+        loop {
+            match server.write(&padding) {
+                Ok(_) => {}
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => break,
+                Err(error) => panic!("socket fill failed: {error}"),
+            }
+        }
+        server.set_nonblocking(false).expect("blocking deadline");
+
+        let machine = live();
+        let ticket = machine.capture().expect("ticket");
+        let payload = "x".repeat(crate::MAX_EVENT_BYTES / 2);
+        machine
+            .commit(ticket, PreparedEvent::new(&payload).expect("prepare"))
+            .expect("commit");
+        let lease = machine.lease().expect("lease result").expect("lease");
+        let started = Instant::now();
+
+        lease
+            .write_to_stream_with_timeout(&server, Duration::from_millis(100))
+            .expect_err("backpressured write must expire");
+
+        assert!(started.elapsed() < Duration::from_secs(1));
+        let status = machine.status();
+        assert_eq!(status.state, ConsentState::Stopped);
+        assert_eq!(status.dropped_public_events, 1);
+        assert!(machine.lease().expect("lease result").is_none());
+        drop(client);
     }
 
     struct PartialWriter {

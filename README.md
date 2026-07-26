@@ -172,9 +172,11 @@ and green CI. Human stranger sessions, accessibility panels, musician
 long-listening, and broad hardware certification are real gates for **0.8 /
 1.0**, not stop-the-world work before 0.2.
 
-**What is next after 0.2:** 0.3 Tactile Alpha on the five flagships; keep the
-floor green. Soft-thin densify, bulk rooms, and Phase B glow stay background
-unless measurement binds. Ordered criteria live in
+**Current milestone:** 0.3 Tactile Alpha meets its agent-and-machine exit on
+the five flagships, including the consented Watch Agent path and the declared
+reference performance budget. The next incomplete milestone is 0.4
+Understanding Alpha. Soft-thin densify, bulk rooms, and Phase B glow stay background unless
+measurement binds. Ordered criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md) (**Critical path right now**).
 Reproducible engineering checks are in [`VERIFY.md`](VERIFY.md); completed
 changes are in [`CHANGELOG.md`](CHANGELOG.md).
@@ -183,8 +185,9 @@ changes are in [`CHANGELOG.md`](CHANGELOG.md).
 <summary>Detailed engineering evidence for this alpha</summary>
 
 
-Numinous is **version 0.2.0-alpha.1**, actively earning the 0.2 Flagship Proof
-gate. It is not on the old 0.1 line: the 0.1 Public Foundation is complete.
+Numinous is **version 0.2.0-alpha.1**. Its 0.2 Flagship Proof and 0.3 Tactile
+Alpha agent-and-machine exits are met. It is not on the old 0.1 line: the 0.1
+Public Foundation is complete.
 Numinous already has a headless core, a
 windowed app, a full CLI, an MCP server, GPU, audio, and local-broadcast
 adapters, 354 catalog
@@ -256,11 +259,11 @@ music. App, CLI, and MCP expose the same action, goal, accepted input, sound,
 and earned reveal. Ambient motion cannot claim that earned discovery. The Show
 retains its intentional automatic visual and audible sweep, independent of any
 retained hand position.
-This is an alpha-tagged prerelease. Capability breadth is ahead of release
-maturity because the 0.2 Flagship Proof gate, including the real hallway
-evidence, remains open.
+This is an alpha-tagged prerelease. Capability breadth remains ahead of release
+maturity. The 0.2 agent-and-machine exit is met, while human hallway,
+accessibility, listening, and broad hardware evidence remain later gates.
 
-The MCP face exposes 29 mostly flat play tools plus one local broadcast consent
+The MCP face exposes 32 mostly flat play tools plus one local broadcast consent
 control. Every play tool advertises an optional `response_mode`: `full` remains
 the exact default, while `compact`
 removes duplicated prose only when the unchanged `structuredContent` already
@@ -268,8 +271,8 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The verified July 18, 2026 gate has 2,985 passing all-target test cases plus one
-ignored screenshot diagnostic, 95.44% region coverage and 95.55% line coverage
+The verified July 25, 2026 gate has 3,180 passing all-target test cases plus one
+ignored screenshot diagnostic, 95.15% region coverage and 95.33% line coverage
 with an enforced 80% line floor, Clippy with warnings denied, and dependency
 policy checks. Release QA also regenerates an exact
 2,913-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact

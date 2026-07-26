@@ -1346,6 +1346,7 @@ dependencies = [
 name = "numinous-app"
 version = "0.2.0-alpha.1"
 dependencies = [
+ "getrandom 0.4.3",
  "gilrs",
  "hound",
  "numinous-audio",
@@ -1385,6 +1386,7 @@ name = "numinous-cli"
 version = "0.2.0-alpha.1"
 dependencies = [
  "clap",
+ "getrandom 0.4.3",
  "hound",
  "numinous-audio",
  "numinous-core",

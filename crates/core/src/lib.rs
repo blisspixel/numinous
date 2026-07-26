@@ -120,7 +120,7 @@ pub use scores::Scoreboard;
 pub use secret::{akousma, deep_akousma};
 pub use seti::{SetiChannel, SetiScan, build_scan};
 pub use share::{
-    ShareBundleMeta, ShareKind, ShareMeta, share_bundle_dir, sidecar_path,
+    ShareBundleMeta, ShareKind, ShareMeta, create_share_bundle_dir, sidecar_path,
     write_share_bundle_readme, write_share_sidecar,
 };
 pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};

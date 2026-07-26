@@ -9,9 +9,10 @@ target visual system.
 deterministically through CPU `Surface` implementations and presents app frames
 with `softbuffer`. Mandelbrot and Julia alone have targeted `wgpu` paths. Four
 CPU-styled Eras ship: phosphor, 8-bit, vector, and modern. PNG room renders,
-gallery sheets, and app postcards ship. HDR, bloom, feedback persistence, a
-universal GPU pipeline, 16-bit and blueprint Eras, audio voice swaps, loop or
-video export, and native link reopening are targets, not current evidence.
+gallery sheets, app postcards, and short-loop APNG bundles ship. HDR, bloom,
+feedback persistence, a universal GPU pipeline, 16-bit and blueprint Eras,
+audio voice swaps, longer video export, and native link reopening are targets,
+not current evidence.
 
 ## Philosophy
 
@@ -21,6 +22,27 @@ video export, and native link reopening are targets, not current evidence.
 - **Lit from within, not lit from above.** The aesthetic is additive light on a near-black stage (see `DESIGN.md`), not flat UI and not photorealism. Think glowing lines and points, HDR bloom, phosphor. The image looks *emissive*.
 - **Restraint is the style.** One idea per screen, one accent color per room, generous negative space. Beauty comes from precision and motion, not from clutter or spectacle.
 - **Beauty in stillness and in motion.** Both the paused frame and the animation must be gorgeous. Much of the magic lives in smooth, eased, continuous motion at a locked 60fps (120 where the display allows).
+
+## Design continuity gate
+
+New rooms, overlays, menus, and Studio views must feel like one Numinous
+instrument, not a collection of individually polished skins. Review every new
+visual surface against these invariants:
+
+- Keep the near-black stage, luminous geometry, and generous negative space.
+  Use one primary room accent. Additional hue must encode real state.
+- Give one mathematical idea visual priority. Controls and explanation support
+  that idea without competing with it.
+- Reuse shared typography, spacing, chrome, palette, Era, and motion primitives
+  before introducing a local treatment.
+- Make motion causal, continuous, and restrained. A quieter reduced-motion
+  treatment must preserve the same information and visual hierarchy.
+- Check the default frame, compact frame, and at least one consequential
+  interaction state. Pair color with shape, brightness, or text so meaning does
+  not depend on hue alone.
+
+These are continuity requirements, not evidence that the planned 0.5
+accessibility and human visual-review gates have already passed.
 
 ## Current and target render pipelines
 
@@ -123,8 +145,8 @@ The shared pipeline guarantees coherence; these keep the wings distinct:
   sheets, and app postcards of the live room state.
 - **Separate shipped artifacts:** Studio `.num` files and matching links round
   trip through the CLI, but do not reopen in the app yet.
-- **Planned:** HDR still capture after that pipeline exists, bounded loop or
-  video export, and native application reopening for files and links.
+- **Planned:** HDR still capture after that pipeline exists, longer video
+  export, and native application reopening for files and links.
 
 ## Open questions
 1. Bloom approach: physically-based HDR bloom vs. a cheaper stylized glow, per performance budget on integrated GPUs.

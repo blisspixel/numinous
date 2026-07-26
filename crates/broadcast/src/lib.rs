@@ -24,8 +24,11 @@ pub use fingerprint::{
 };
 pub use framing::{
     FrameError, configure_handshake_stream, configure_public_stream, read_handshake_proof,
-    read_handshake_request, read_handshake_response, read_public_message, write_handshake_proof,
-    write_handshake_request, write_handshake_response, write_public_message,
+    read_handshake_proof_stream, read_handshake_request, read_handshake_request_stream,
+    read_handshake_response, read_handshake_response_stream, read_public_message,
+    write_handshake_proof, write_handshake_proof_stream, write_handshake_request,
+    write_handshake_request_stream, write_handshake_response, write_handshake_response_stream,
+    write_public_message,
 };
 pub use pairing::{
     MAX_HANDSHAKE_ATTEMPTS, MAX_PAIRING_CODE_BYTES, PAIRING_TTL, PairingCode, PairingError,

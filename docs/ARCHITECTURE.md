@@ -247,9 +247,9 @@ a window. The CLI, MCP server, exporters, and automated suite all use that seam.
 
 - **Current delivery:** source installation through the repository scripts and
   a locked release build. Signed or packaged desktop artifacts are not shipped.
-- **Current sharing:** PNG postcards, `.num` Studio files and links, and WAV
-  audio export. Loop or video export and operating-system URL associations are
-  future work.
+- **Current sharing:** PNG postcards, short-loop APNG bundles, `.num` Studio
+  files and links, and WAV audio export. Longer video export and
+  operating-system URL associations are future work.
 - **Current CI:** house style, dependency policy, coverage, format plus clippy
   plus rustdoc, doctests, all-target tests, and macOS, Ubuntu, and Windows
   builds. There is no automated beauty screenshot job.
@@ -258,7 +258,7 @@ a window. The CLI, MCP server, exporters, and automated suite all use that seam.
   crate owns one-use loopback pairing, server-first host proof, strict bounded
   framing, replay compatibility identity, typed public tool events, atomic
   consent epochs, ordered control barriers, and a fixed event queue. MCP adds
-  one consent control, an exhaustive 23-public, 6-private, 1-control policy,
+  one consent control, an exhaustive 23-public, 9-private, 1-control policy,
   daily-seed replay normalization, one serialized lifecycle, a bounded
   failed-start budget, and separate socket monitor and writer workers. The App
   adds exact receive-side session, compatibility, epoch, transition, sequence,
