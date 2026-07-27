@@ -172,11 +172,14 @@ and green CI. Human stranger sessions, accessibility panels, musician
 long-listening, and broad hardware certification are real gates for **0.8 /
 1.0**, not stop-the-world work before 0.2.
 
-**Current milestone:** 0.3 Tactile Alpha meets its agent-and-machine exit on
-the five flagships, including the consented Watch Agent path and the declared
-reference performance budget. The next incomplete milestone is 0.4
-Understanding Alpha. Soft-thin densify, bulk rooms, and Phase B glow stay background unless
-measurement binds. Ordered criteria live in
+**Current milestone:** 0.4 Understanding Alpha. The 0.3 Tactile Alpha
+agent-and-machine exit is met on the five flagships, including the consented
+Watch Agent path and the declared reference performance budget. The frozen
+0.4 headless runner and held-out probe bank now exist and are CI-gated; no
+qualifying cohort result is claimed. Returning-journal sovereignty, independent
+pre-collection review, and the complete matched cohort remain open. Soft-thin
+densify, bulk rooms, and Phase B glow stay background unless measurement binds.
+Ordered criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md) (**Critical path right now**).
 The predeclared contract and evidence boundary for the next study live in
 [`docs/UNDERSTANDING_STUDY.md`](docs/UNDERSTANDING_STUDY.md); no qualifying

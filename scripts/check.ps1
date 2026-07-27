@@ -28,5 +28,6 @@ Invoke-Step "docs"        {
     }
 }
 Invoke-Step "test"        { cargo test --workspace --all-targets --locked }
+Invoke-Step "understanding study runner" { python scripts/test-understanding-study.py }
 Invoke-Step "house style" { powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1 }
 Write-Host "All checks passed."

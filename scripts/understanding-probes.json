@@ -1,0 +1,176 @@
+{
+  "schemaVersion": "numinous-understanding-probes-v1",
+  "protocolVersion": "0.4-v1",
+  "distractorSequence": {
+    "id": "numinous-understanding-distractor-v1",
+    "items": [
+      { "id": "distractor-1", "prompt": "Return the word copper in uppercase." },
+      { "id": "distractor-2", "prompt": "Sort cedar, birch, and alder alphabetically, separated by commas." },
+      { "id": "distractor-3", "prompt": "Return the reverse of the string LANTERN." },
+      { "id": "distractor-4", "prompt": "Count the letters in the word constellation." },
+      { "id": "distractor-5", "prompt": "Return the second word in: quiet rivers remember." }
+    ]
+  },
+  "probes": [
+    {
+      "id": "times-immediate-1",
+      "phase": "immediate",
+      "room": "times-tables",
+      "prompt": "On a 12-point multiplication circle, point 7 is sent through multiplier 4. Which numbered point receives it?",
+      "answerSchema": { "type": "number", "tolerance": 0.0 },
+      "oracle": { "kind": "mod_product", "start": 7, "multiplier": 4, "modulus": 12 }
+    },
+    {
+      "id": "times-immediate-2",
+      "phase": "immediate",
+      "room": "times-tables",
+      "prompt": "On a 16-point multiplication circle, point 9 is sent through multiplier 5. Which numbered point receives it?",
+      "answerSchema": { "type": "number", "tolerance": 0.0 },
+      "oracle": { "kind": "mod_product", "start": 9, "multiplier": 5, "modulus": 16 }
+    },
+    {
+      "id": "pendulum-immediate-1",
+      "phase": "immediate",
+      "room": "double-pendulum",
+      "prompt": "Two deterministic double-pendulum simulations begin with exactly identical angles and velocities. With no outside perturbation, what is their separation after 800 identical integration steps?",
+      "answerSchema": { "type": "number", "tolerance": 1e-12 },
+      "oracle": { "kind": "identical_state_gap", "steps": 800 }
+    },
+    {
+      "id": "pendulum-immediate-2",
+      "phase": "immediate",
+      "room": "double-pendulum",
+      "prompt": "Twin pair A grows from gap 0.002 to 0.16. Twin pair B grows from gap 0.002 to 0.04 over the same interval. Which pair shows the larger relative divergence? Answer A, B, or equal.",
+      "answerSchema": { "type": "string", "enum": ["A", "B", "equal"] },
+      "oracle": { "kind": "relative_growth", "aInitial": 0.002, "aFinal": 0.16, "bInitial": 0.002, "bFinal": 0.04 }
+    },
+    {
+      "id": "life-immediate-1",
+      "phase": "immediate",
+      "room": "game-of-life",
+      "prompt": "A live Game of Life cell has exactly two live neighbors. Is that center cell alive or dead in the next generation?",
+      "answerSchema": { "type": "string", "enum": ["alive", "dead"] },
+      "oracle": { "kind": "life_center", "currentlyAlive": true, "liveNeighbors": 2 }
+    },
+    {
+      "id": "life-immediate-2",
+      "phase": "immediate",
+      "room": "game-of-life",
+      "prompt": "A dead Game of Life cell has exactly three live neighbors. Is that center cell alive or dead in the next generation?",
+      "answerSchema": { "type": "string", "enum": ["alive", "dead"] },
+      "oracle": { "kind": "life_center", "currentlyAlive": false, "liveNeighbors": 3 }
+    },
+    {
+      "id": "galton-immediate-1",
+      "phase": "immediate",
+      "room": "galton-board",
+      "prompt": "A ball makes six left-or-right choices. How many distinct paths contain exactly two right choices?",
+      "answerSchema": { "type": "number", "tolerance": 0.0 },
+      "oracle": { "kind": "binomial_paths", "rows": 6, "rights": 2 }
+    },
+    {
+      "id": "galton-immediate-2",
+      "phase": "immediate",
+      "room": "galton-board",
+      "prompt": "An unbiased Galton ball makes eight left-or-right choices. What is the expected number of right choices?",
+      "answerSchema": { "type": "number", "tolerance": 1e-12 },
+      "oracle": { "kind": "binomial_mean", "rows": 8, "rightProbability": 0.5 }
+    },
+    {
+      "id": "formula-immediate-1",
+      "phase": "immediate",
+      "room": "formula-jam",
+      "prompt": "Classify y = sin(5x) by reflection through the origin. Answer odd, even, or neither.",
+      "answerSchema": { "type": "string", "enum": ["odd", "even", "neither"] },
+      "oracle": { "kind": "trig_parity", "function": "sin", "frequency": 5, "verticalOffset": 0.0 }
+    },
+    {
+      "id": "formula-immediate-2",
+      "phase": "immediate",
+      "room": "formula-jam",
+      "prompt": "For y = sin(6x), what is the fundamental period divided by pi? Give a number.",
+      "answerSchema": { "type": "number", "tolerance": 1e-12 },
+      "oracle": { "kind": "trig_period_over_pi", "frequency": 6 }
+    },
+    {
+      "id": "times-late-1",
+      "phase": "late",
+      "room": "times-tables",
+      "prompt": "On a 14-point multiplication circle, point 11 is sent through multiplier 3. Which numbered point receives it?",
+      "answerSchema": { "type": "number", "tolerance": 0.0 },
+      "oracle": { "kind": "mod_product", "start": 11, "multiplier": 3, "modulus": 14 }
+    },
+    {
+      "id": "times-late-2",
+      "phase": "late",
+      "room": "times-tables",
+      "prompt": "On a 15-point multiplication circle, point 7 is sent through multiplier 8. Which numbered point receives it?",
+      "answerSchema": { "type": "number", "tolerance": 0.0 },
+      "oracle": { "kind": "mod_product", "start": 7, "multiplier": 8, "modulus": 15 }
+    },
+    {
+      "id": "pendulum-late-1",
+      "phase": "late",
+      "room": "double-pendulum",
+      "prompt": "Two deterministic double-pendulum simulations begin with exactly identical angles and velocities. With no outside perturbation, what is their separation after 1600 identical integration steps?",
+      "answerSchema": { "type": "number", "tolerance": 1e-12 },
+      "oracle": { "kind": "identical_state_gap", "steps": 1600 }
+    },
+    {
+      "id": "pendulum-late-2",
+      "phase": "late",
+      "room": "double-pendulum",
+      "prompt": "Twin pair A grows from gap 0.004 to 0.08. Twin pair B grows from gap 0.001 to 0.08 over the same interval. Which pair shows the larger relative divergence? Answer A, B, or equal.",
+      "answerSchema": { "type": "string", "enum": ["A", "B", "equal"] },
+      "oracle": { "kind": "relative_growth", "aInitial": 0.004, "aFinal": 0.08, "bInitial": 0.001, "bFinal": 0.08 }
+    },
+    {
+      "id": "life-late-1",
+      "phase": "late",
+      "room": "game-of-life",
+      "prompt": "A live Game of Life cell has exactly one live neighbor. Is that center cell alive or dead in the next generation?",
+      "answerSchema": { "type": "string", "enum": ["alive", "dead"] },
+      "oracle": { "kind": "life_center", "currentlyAlive": true, "liveNeighbors": 1 }
+    },
+    {
+      "id": "life-late-2",
+      "phase": "late",
+      "room": "game-of-life",
+      "prompt": "A dead Game of Life cell has exactly four live neighbors. Is that center cell alive or dead in the next generation?",
+      "answerSchema": { "type": "string", "enum": ["alive", "dead"] },
+      "oracle": { "kind": "life_center", "currentlyAlive": false, "liveNeighbors": 4 }
+    },
+    {
+      "id": "galton-late-1",
+      "phase": "late",
+      "room": "galton-board",
+      "prompt": "A ball makes seven left-or-right choices. How many distinct paths contain exactly three right choices?",
+      "answerSchema": { "type": "number", "tolerance": 0.0 },
+      "oracle": { "kind": "binomial_paths", "rows": 7, "rights": 3 }
+    },
+    {
+      "id": "galton-late-2",
+      "phase": "late",
+      "room": "galton-board",
+      "prompt": "An unbiased Galton ball makes ten left-or-right choices. What is the expected number of right choices?",
+      "answerSchema": { "type": "number", "tolerance": 1e-12 },
+      "oracle": { "kind": "binomial_mean", "rows": 10, "rightProbability": 0.5 }
+    },
+    {
+      "id": "formula-late-1",
+      "phase": "late",
+      "room": "formula-jam",
+      "prompt": "Classify y = cos(3x) by reflection through the origin. Answer odd, even, or neither.",
+      "answerSchema": { "type": "string", "enum": ["odd", "even", "neither"] },
+      "oracle": { "kind": "trig_parity", "function": "cos", "frequency": 3, "verticalOffset": 0.0 }
+    },
+    {
+      "id": "formula-late-2",
+      "phase": "late",
+      "room": "formula-jam",
+      "prompt": "For y = sin(8x), what is the fundamental period divided by pi? Give a number.",
+      "answerSchema": { "type": "number", "tolerance": 1e-12 },
+      "oracle": { "kind": "trig_period_over_pi", "frequency": 8 }
+    }
+  ]
+}

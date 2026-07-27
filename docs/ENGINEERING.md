@@ -188,8 +188,9 @@ git config core.hooksPath scripts/hooks
 It runs the house-style guard on every commit (instant, and it applies to docs
 as much as code), and the cargo gate (fmt, Clippy and rustdoc with warnings
 denied, plus doctests and the full test suite) only when the commit touches
-Rust, `Cargo.*`, or a shader, so a docs-only commit stays fast. Coverage, the
-locked build, and artifact regeneration stay in
+Rust, `Cargo.*`, or a shader, so a docs-only commit stays fast. Changes to the
+frozen 0.4 study runner, probe bank, or its test file run the focused Python
+regressions. Coverage, the locked build, and artifact regeneration stay in
 `scripts/verify.sh` (the release gate); they are too slow for every commit.
 Emergency bypass is `git commit --no-verify`, after which you must run
 `scripts/verify.sh` before pushing.
