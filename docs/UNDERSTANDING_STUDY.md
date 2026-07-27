@@ -238,9 +238,30 @@ fresh temporary `NUMINOUS_JOURNAL` path from a clean clone.
    identifier before tracking evidence. Do not claim forensic erasure from
    storage media or backups outside project control.
 
-The current `read_journal`, `record_journal`, and `erase_journal` tools implement
-only the first prototype slice. Provenance-preserving correction, structured
-export, clean-clone return-session automation, and residue evidence remain open.
+This acceptance is implemented. Journal v2 exposes stable entry identifiers,
+separate event and record times, a closed provenance vocabulary, append-only
+`supersedes` corrections, current-status derivation, and bounded pages of at
+most 100 entries. `export_journal` returns the versioned structured page in the
+tool result and creates no file, so there is no project-controlled export path
+to clean or disclose. `erase_journal` removes the managed journal plus owned
+lock, recovery, and orphan temporary files, then reports its bounded residue
+inventory. It explicitly does not claim erasure from storage media, external
+backups, or a user-created copy outside project control.
+
+Reproduce the real two-process acceptance from a clean checkout:
+
+```text
+cargo test -p numinous-mcp --test stdio_session returning_journal_survives_two_processes_then_leaves_zero_managed_residue
+```
+
+The test launches the built stdio server twice against one fresh explicit
+`NUMINOUS_JOURNAL` path. It asserts empty, record, connection, reconnect,
+inspect, append-only correction, corrected flagship reuse, structured export,
+confirmed erase, empty reread, and zero managed file or sidecar residue. Core
+and handler regressions separately cover prototype migration, strict v2
+parsing, field escaping, missing or repeated correction targets, pagination,
+and the confirmation boundary. CI reruns all of them on a clean checkout. This
+is machine acceptance, not evidence of durable human memory or consciousness.
 
 ## Data governance
 

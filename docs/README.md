@@ -28,7 +28,9 @@ Path Phase A is Built on App and MCP: Times Tables and Buffon five-beat
 engineered ahas, agent hallway cohort PASS, F9 capture. **0.2 Flagship Proof
 is exit-met on the agent-and-machine bar;** human stranger hallway is deferred
 to 0.8 / 1.0. **Critical path now:** build the frozen 0.4 study runner,
-complete returning-journal sovereignty, run the cohort, and keep CI green.
+obtain independent pre-collection review, run the frozen cohort, and keep CI
+green. Returning-journal sovereignty is complete on the clean-process machine
+acceptance bar.
 Soft-thin densify, bulk new rooms, and Phase B glow are not the high-leverage
 next move. Supply chain is current on public `main` (empty deny/audit ignores,
 weekly Dependabot, pinned CI actions); detail in `ENGINEERING.md`. The six-

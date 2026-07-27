@@ -176,8 +176,10 @@ long-listening, and broad hardware certification are real gates for **0.8 /
 agent-and-machine exit is met on the five flagships, including the consented
 Watch Agent path and the declared reference performance budget. The frozen
 0.4 headless runner and held-out probe bank now exist and are CI-gated; no
-qualifying cohort result is claimed. Returning-journal sovereignty, independent
-pre-collection review, and the complete matched cohort remain open. Soft-thin
+qualifying cohort result is claimed. Returning-journal sovereignty now has an
+append-only correction chain, versioned bounded export, and real two-process
+erasure acceptance. Independent pre-collection review and the complete matched
+cohort remain open. Soft-thin
 densify, bulk rooms, and Phase B glow stay background unless measurement binds.
 Ordered criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md) (**Critical path right now**).
@@ -277,8 +279,8 @@ carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The verified July 25, 2026 gate has 3,180 passing all-target test cases plus one
-ignored screenshot diagnostic, 95.15% region coverage and 95.33% line coverage
+The verified July 27, 2026 gate has 3,188 passing all-target test cases plus one
+ignored screenshot diagnostic, 95.16% region coverage and 95.33% line coverage
 with an enforced 80% line floor, Clippy with warnings denied, and dependency
 policy checks. Release QA also regenerates an exact
 2,913-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
