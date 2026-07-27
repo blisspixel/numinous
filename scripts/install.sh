@@ -361,6 +361,22 @@ read_archive_checksum() (
     printf '%s' "$hash"
 )
 
+read_soundtrack_content_checksum() (
+    checksum_path="$1"
+    [ -f "$checksum_path" ] && [ ! -L "$checksum_path" ] \
+        || fail "the soundtrack content checksum is not an ordinary file"
+    [ "$(wc -c <"$checksum_path" | tr -d '[:space:]')" -le 128 ] \
+        || fail "the soundtrack content checksum is too large"
+    line="$(tr -d '\r\n' <"$checksum_path")"
+    hash="${line%%  *}"
+    label="${line#*  }"
+    [ "$line" = "$hash  $label" ] && [ "$label" = soundtrack-content-v1 ] \
+        && [ "${#hash}" -eq 64 ] \
+        || fail "the soundtrack content checksum is malformed"
+    case "$hash" in *[!0-9a-f]*) fail "the soundtrack content checksum is malformed" ;; esac
+    printf '%s' "$hash"
+)
+
 assert_archive_checksum() (
     archive_path="$1"
     checksum_path="$2"
@@ -433,6 +449,32 @@ assert_payload_manifest() (
     trap - EXIT HUP INT TERM
 )
 
+soundtrack_content_hash() (
+    root="$1"
+    manifest="$root/MANIFEST.sha256"
+    content="$(mktemp "${TMPDIR:-/tmp}/numinous-soundtrack-content.XXXXXX")" \
+        || fail "could not stage the soundtrack content identity"
+    trap 'rm -f -- "$content"' EXIT HUP INT TERM
+    has_license=0
+    mp3_count=0
+    while IFS= read -r line || [ -n "$line" ]; do
+        hash="${line%%  *}"
+        relative="${line#*  }"
+        case "$relative" in
+            radio/*)
+                printf '%s\n' "$line" >>"$content"
+                [ "$relative" = radio/ASSET-LICENSE.txt ] && has_license=1
+                case "$relative" in *.mp3) mp3_count=$((mp3_count + 1)) ;; esac
+                ;;
+        esac
+    done <"$manifest"
+    [ "$has_license" -eq 1 ] && [ "$mp3_count" -gt 0 ] \
+        || fail "the soundtrack manifest does not contain licensed audio content"
+    sha256_file "$content"
+    rm -f -- "$content"
+    trap - EXIT HUP INT TERM
+)
+
 assert_safe_tar_members() (
     archive_path="$1"
     expected_root="$2"
@@ -468,6 +510,7 @@ install_release_payload() (
     expected_tag="$5"
     expected_kind="$6"
     expected_target="$7"
+    expected_content_hash="${8:-}"
     install_marker_is_valid "$NUMINOUS_HOME" \
         || fail "release installation requires a marked install root"
     stage="$(mktemp -d "$NUMINOUS_HOME/.release-stage.XXXXXX")" \
@@ -485,6 +528,10 @@ install_release_payload() (
         && grep -Fqx "  \"kind\": \"$expected_kind\"," "$metadata" \
         && grep -Fqx "  \"target\": \"$expected_target\"," "$metadata" \
         || fail "the release metadata does not match the requested payload"
+    if [ -n "$expected_content_hash" ]; then
+        [ "$(soundtrack_content_hash "$new_tree")" = "$expected_content_hash" ] \
+            || fail "the soundtrack content checksum does not match the verified payload"
+    fi
     printf '%s\n' "$archive_hash" >"$new_tree/.archive.sha256"
     rm -rf -- "$destination"
     mv "$new_tree" "$destination"
@@ -531,12 +578,15 @@ copy_release_file() {
 }
 
 installed_soundtrack_is_current() (
-    expected_hash="$1"
+    expected_content_hash="$1"
     [ -d "$SOUNDTRACK_PATH" ] && [ ! -L "$SOUNDTRACK_PATH" ] || return 1
     receipt="$SOUNDTRACK_PATH/.archive.sha256"
     [ -f "$receipt" ] && [ ! -L "$receipt" ] || return 1
-    [ "$(tr -d '\r\n' <"$receipt")" = "$expected_hash" ] || return 1
-    assert_payload_manifest "$SOUNDTRACK_PATH" >/dev/null 2>&1
+    receipt_hash="$(tr -d '\r\n' <"$receipt")"
+    [ "${#receipt_hash}" -eq 64 ] || return 1
+    case "$receipt_hash" in *[!0-9a-f]*) return 1 ;; esac
+    assert_payload_manifest "$SOUNDTRACK_PATH" >/dev/null 2>&1 || return 1
+    [ "$(soundtrack_content_hash "$SOUNDTRACK_PATH")" = "$expected_content_hash" ]
 )
 
 install_latest_release() (
@@ -547,8 +597,10 @@ install_latest_release() (
         || { [ -z "$RELEASE_ARCHIVE" ] && [ -n "$RELEASE_CHECKSUM" ]; }; then
         fail "local release fixtures require matching archive and checksum paths"
     fi
-    if { [ -n "$SOUNDTRACK_ARCHIVE" ] && [ -z "$SOUNDTRACK_CHECKSUM" ]; } \
-        || { [ -z "$SOUNDTRACK_ARCHIVE" ] && [ -n "$SOUNDTRACK_CHECKSUM" ]; }; then
+    if { [ -n "$SOUNDTRACK_ARCHIVE" ] || [ -n "$SOUNDTRACK_CHECKSUM" ] \
+        || [ -n "$SOUNDTRACK_CONTENT_CHECKSUM" ]; } \
+        && { [ -z "$SOUNDTRACK_ARCHIVE" ] || [ -z "$SOUNDTRACK_CHECKSUM" ] \
+        || [ -z "$SOUNDTRACK_CONTENT_CHECKSUM" ]; }; then
         fail "local soundtrack fixtures require matching archive and checksum paths"
     fi
     target="$(release_target)"
@@ -556,6 +608,7 @@ install_latest_release() (
     payload_name="$payload_root.tar.gz"
     soundtrack_root="numinous-$tag-soundtrack"
     soundtrack_name="$soundtrack_root.tar.gz"
+    soundtrack_content_name="$soundtrack_name.content.sha256"
     stage="$(mktemp -d "$NUMINOUS_HOME/.download.XXXXXX")" \
         || fail "could not create a release download directory"
     trap 'rm -rf -- "$stage"' EXIT HUP INT TERM
@@ -572,11 +625,16 @@ install_latest_release() (
     copy_release_file "$SOUNDTRACK_CHECKSUM" "$release_base/$soundtrack_name.sha256" \
         "$soundtrack_checksum_path" "the soundtrack checksum"
     soundtrack_hash="$(read_archive_checksum "$soundtrack_checksum_path" "$soundtrack_name")"
+    soundtrack_content_path="$stage/$soundtrack_content_name"
+    copy_release_file "$SOUNDTRACK_CONTENT_CHECKSUM" \
+        "$release_base/$soundtrack_content_name" "$soundtrack_content_path" \
+        "the soundtrack content checksum"
+    soundtrack_content_hash="$(read_soundtrack_content_checksum "$soundtrack_content_path")"
 
     rm -rf -- "$BINARY_PATH/radio"
     install_release_payload "$payload_path" "$SOURCE_PATH" "$payload_root" \
         "$payload_hash" "$tag" binaries "$target"
-    if installed_soundtrack_is_current "$soundtrack_hash"; then
+    if installed_soundtrack_is_current "$soundtrack_content_hash"; then
         say "The verified built-in soundtrack is already current."
     else
         soundtrack_path="$stage/$soundtrack_name"
@@ -585,7 +643,8 @@ install_latest_release() (
         assert_archive_checksum "$soundtrack_path" "$soundtrack_checksum_path" \
             "$soundtrack_name" >/dev/null
         install_release_payload "$soundtrack_path" "$SOUNDTRACK_PATH" \
-            "$soundtrack_root" "$soundtrack_hash" "$tag" soundtrack all
+            "$soundtrack_root" "$soundtrack_hash" "$tag" soundtrack all \
+            "$soundtrack_content_hash"
     fi
     printf '%s\n' "$tag" >"$NUMINOUS_HOME/.installed-release"
 )
@@ -643,6 +702,32 @@ run_self_test() {
     export HOME
     mkdir "$HOME"
     chmod 700 "$HOME" 2>/dev/null || self_test_without_posix_modes
+
+    content_a="$test_base/content-a"
+    content_b="$test_base/content-b"
+    mkdir "$content_a" "$content_b"
+    radio_license_hash="$(printf '%064d' 1)"
+    radio_track_hash="$(printf '%064d' 2)"
+    release_hash_a="$(printf '%064d' 3)"
+    release_hash_b="$(printf '%064d' 4)"
+    {
+        printf '%s  RELEASE.json\n' "$release_hash_a"
+        printf '%s  radio/ASSET-LICENSE.txt\n' "$radio_license_hash"
+        printf '%s  radio/test-001.mp3\n' "$radio_track_hash"
+    } >"$content_a/MANIFEST.sha256"
+    {
+        printf '%s  RELEASE.json\n' "$release_hash_b"
+        printf '%s  radio/ASSET-LICENSE.txt\n' "$radio_license_hash"
+        printf '%s  radio/test-001.mp3\n' "$radio_track_hash"
+    } >"$content_b/MANIFEST.sha256"
+    content_hash="$(soundtrack_content_hash "$content_a")"
+    [ "$(soundtrack_content_hash "$content_b")" = "$content_hash" ] \
+        || fail "soundtrack self-test: release metadata changed the content identity"
+    printf '%s  soundtrack-content-v1\n' "$content_hash" \
+        >"$test_base/soundtrack.content.sha256"
+    [ "$(read_soundtrack_content_checksum "$test_base/soundtrack.content.sha256")" \
+        = "$content_hash" ] \
+        || fail "soundtrack self-test: the content checksum did not round-trip"
 
     printf '%s\n' fixture >"$test_base/relative-fixture"
     mkdir "$test_base/fixture-work"
@@ -807,6 +892,7 @@ RELEASE_ARCHIVE=''
 RELEASE_CHECKSUM=''
 SOUNDTRACK_ARCHIVE=''
 SOUNDTRACK_CHECKSUM=''
+SOUNDTRACK_CONTENT_CHECKSUM=''
 RELEASE_TAG=''
 WAIT_FOR_PID=0
 DELETE_INSTALLER=''
@@ -818,7 +904,8 @@ while [ $# -gt 0 ]; do
         --source) SOURCE_MODE=1 ;;
         --self-test) SELF_TEST=1 ;;
         --release-archive | --release-checksum | --soundtrack-archive | \
-            --soundtrack-checksum | --release-tag | --wait-for-pid | \
+            --soundtrack-checksum | --soundtrack-content-checksum | \
+            --release-tag | --wait-for-pid | \
             --delete-installer)
             option="$1"
             shift
@@ -828,6 +915,7 @@ while [ $# -gt 0 ]; do
                 --release-checksum) RELEASE_CHECKSUM="$1" ;;
                 --soundtrack-archive) SOUNDTRACK_ARCHIVE="$1" ;;
                 --soundtrack-checksum) SOUNDTRACK_CHECKSUM="$1" ;;
+                --soundtrack-content-checksum) SOUNDTRACK_CONTENT_CHECKSUM="$1" ;;
                 --release-tag) RELEASE_TAG="$1" ;;
                 --wait-for-pid) WAIT_FOR_PID="$1" ;;
                 --delete-installer) DELETE_INSTALLER="$1" ;;
@@ -850,6 +938,7 @@ fi
 if [ "$SOURCE_MODE" -eq 1 ] \
     && { [ -n "$RELEASE_ARCHIVE" ] || [ -n "$RELEASE_CHECKSUM" ] \
         || [ -n "$SOUNDTRACK_ARCHIVE" ] || [ -n "$SOUNDTRACK_CHECKSUM" ] \
+        || [ -n "$SOUNDTRACK_CONTENT_CHECKSUM" ] \
         || [ -n "$RELEASE_TAG" ]; }; then
     fail "--source cannot be combined with release fixture options"
 fi

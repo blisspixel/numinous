@@ -26,7 +26,8 @@ irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.p
 Run `numinous update` any time to install the latest GitHub release. Re-running
 the installer does the same. `--uninstall` (Windows: `-Uninstall`) removes
 everything it installed and leaves your play history alone. The large built-in
-soundtrack is retained when its verified release hash is unchanged. Pass
+soundtrack is retained when its verified audio content is unchanged, even when
+binary release metadata changes. Pass
 `--source` (Windows: `-Source`) only to build the current `main` branch locally.
 
 **Start the app:** open a new terminal and type `numinous-app`, or from a

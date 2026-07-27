@@ -73,7 +73,7 @@ irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.p
 Then open a new terminal and type `numinous-app`. Run `numinous update` any
 time to install the latest GitHub release; `--uninstall` (Windows:
 `-Uninstall`) removes it cleanly. The soundtrack is retained when its verified
-release hash has not changed. From a clone,
+audio content has not changed, even across binary releases. From a clone,
 `cargo run --release --bin numinous-app` still works directly. Pass `--source`
 (Windows: `-Source`) to the installer only when you deliberately want to build
 the current `main` branch locally.
@@ -117,7 +117,7 @@ is in [`docs/MUSIC.md`](docs/MUSIC.md) and [`docs/STUDIO.md`](docs/STUDIO.md).
 
 ## Release status
 
-Numinous **0.2.0-alpha.3** is playable today. The native App, full-color CLI,
+Numinous **0.2.0-alpha.4** is playable today. The native App, full-color CLI,
 and MCP server all use the same deterministic mathematical core. The current
 build includes 354 catalog rooms plus hidden content, 11+ games, six
 lever-driven simulations, Journey progression, Formula Jam, local music and
@@ -197,7 +197,7 @@ changes are in [`CHANGELOG.md`](CHANGELOG.md).
 <summary>Detailed engineering evidence for this alpha</summary>
 
 
-Numinous is **version 0.2.0-alpha.3**. Its 0.2 Flagship Proof and 0.3 Tactile
+Numinous is **version 0.2.0-alpha.4**. Its 0.2 Flagship Proof and 0.3 Tactile
 Alpha agent-and-machine exits are met. It is not on the old 0.1 line: the 0.1
 Public Foundation is complete.
 Numinous already has a headless core, a
