@@ -140,16 +140,8 @@ function Get-ReleaseTarget {
     return 'x86_64-pc-windows-msvc'
 }
 
-function Get-LatestReleaseTag {
-    Say "Checking the latest published release at $RepoUrl"
-    $headers = @{
-        Accept = 'application/vnd.github+json'
-        'User-Agent' = 'numinous-installer'
-        'X-GitHub-Api-Version' = '2022-11-28'
-    }
-    $releases = @(Invoke-RestMethod -UseBasicParsing -Headers $headers `
-        -Uri "$RepoApiUrl/releases?per_page=20")
-    $release = @($releases | Where-Object { -not $_.draft } | Select-Object -First 1)
+function Select-LatestReleaseTag([object]$Response) {
+    $release = @($Response | Where-Object { -not $_.draft } | Select-Object -First 1)
     if ($release.Count -ne 1) {
         Fail "no published Numinous release is available yet; use -Source to build main."
     }
@@ -158,6 +150,18 @@ function Get-LatestReleaseTag {
         Fail "the latest release returned an unsafe tag name."
     }
     return $tag
+}
+
+function Get-LatestReleaseTag {
+    Say "Checking the latest published release at $RepoUrl"
+    $headers = @{
+        Accept = 'application/vnd.github+json'
+        'User-Agent' = 'numinous-installer'
+        'X-GitHub-Api-Version' = '2022-11-28'
+    }
+    $response = Invoke-RestMethod -UseBasicParsing -Headers $headers `
+        -Uri "$RepoApiUrl/releases?per_page=20"
+    return Select-LatestReleaseTag $response
 }
 
 function Read-ArchiveChecksum([string]$Path, [string]$ArchiveName) {
@@ -779,7 +783,16 @@ function Test-PathPromotion {
 
 function Test-InstallerSafety {
     if (-not (Have 'tar')) { Fail 'installer safety self-test requires tar.exe.' }
-        $testBase = Join-Path $env:TEMP ('numinous-installer-test-' + [Guid]::NewGuid().ToString('N'))
+    $releaseFixture = @(
+        [pscustomobject]@{ draft = $true; tag_name = 'v9.9.9' },
+        [pscustomobject]@{ draft = $false; tag_name = 'v0.2.0-alpha.3' },
+        [pscustomobject]@{ draft = $false; tag_name = 'v0.2.0-alpha.2' }
+    )
+    if ((Select-LatestReleaseTag $releaseFixture) -cne 'v0.2.0-alpha.3') {
+        Fail 'release discovery self-test: the first published release was not selected.'
+    }
+
+    $testBase = Join-Path $env:TEMP ('numinous-installer-test-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $testBase | Out-Null
     Protect-InstallDirectory $testBase
     Protect-InstallDirectory $testBase
