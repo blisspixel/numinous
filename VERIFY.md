@@ -17,6 +17,7 @@ contributors and the curious.
   fresh shell does not see `cargo`, add that to `PATH`.
 - Optional, for the local coverage gate: `cargo install cargo-llvm-cov`.
 - Optional, for the local supply-chain gate: `cargo install cargo-deny`.
+- **Python 3.11 or newer**, for the frozen 0.4 study-runner regressions.
 - The Linux build needs the ALSA, xkbcommon, and libudev headers (the packages
   CI installs): `sudo apt-get install -y libasound2-dev libxkbcommon-dev libudev-dev`.
 
@@ -27,7 +28,8 @@ Run the full gate and regenerate every artifact:
 - Windows: `scripts\verify.ps1`
 - macOS / Linux: `bash scripts/verify.sh`
 
-It runs format, clippy and rustdoc with warnings denied, tests, locked build,
+It runs format, clippy and rustdoc with warnings denied, Rust and 0.4 study
+runner tests, locked build,
 coverage (if `cargo-llvm-cov` is present), supply-chain policy (if `cargo-deny`
 is present), the house-style guard, and the native installer safety self-test,
 then writes images and audio into `renders/`.
@@ -42,6 +44,8 @@ RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked  # macOS / L
 RUSTDOCFLAGS="-D warnings" cargo test --workspace --doc --locked     # macOS / Linux
 cmd /d /c "set RUSTDOCFLAGS=-D warnings&& cargo doc --workspace --no-deps --locked && cargo test --workspace --doc --locked"  # Windows
 cargo test --workspace --all-targets --locked
+python scripts/test-understanding-study.py          # Windows
+python3 scripts/test-understanding-study.py         # macOS / Linux
 cargo build --workspace --locked
 cargo +1.88.0 check --workspace --all-targets --locked
 cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'
@@ -54,9 +58,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 3,180 all-target test cases pass,
-one screenshot diagnostic is ignored, 95.15% region coverage, and 95.33% line
-coverage**. The `gpu` and `audio` crates plus the app event
+Expected right now: **format and clippy clean, 3,180 all-target Rust test cases
+and 15 frozen study-runner regressions pass, one screenshot diagnostic is
+ignored, 95.15% region coverage, and 95.33% line coverage**. The `gpu` and
+`audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.

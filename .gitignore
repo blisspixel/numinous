@@ -24,6 +24,8 @@
 # OS / editor cruft.
 .DS_Store
 Thumbs.db
+__pycache__/
+*.py[cod]
 *.swp
 .idea/
 .vscode/

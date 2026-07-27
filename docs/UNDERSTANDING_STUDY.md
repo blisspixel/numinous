@@ -1,8 +1,49 @@
 # Understanding Alpha Study Protocol
 
-Status: predeclared design, reviewed 2026-07-26. No qualifying cohort has
-started and no result is claimed. Earlier private scripted notes are exploratory
-only, are excluded from this study, and cannot satisfy the 0.4 evidence gate.
+Status: predeclared design and implemented frozen runner, reviewed 2026-07-27.
+No qualifying cohort has started and no result is claimed. Earlier private
+scripted notes are exploratory only, are excluded from this study, and cannot
+satisfy the 0.4 evidence gate.
+
+## Implemented runner boundary
+
+`scripts/understanding-study.py` and `scripts/understanding-probes.json` now
+implement the first dependency in this protocol. The dependency-free runner
+derives all 24 pairs from the declared allocation seed, balances condition
+order and cyclic room order within each model family, and binds each manifest
+to the canonical probe-bank hash. The bank contains 10 immediate and 10 late
+probes, two per flagship per phase, plus one five-item distractor sequence.
+
+Public commands emit one condition, probe, repair schema, or distractor at a
+time without the oracle. Analysis requires an exact runner-generated manifest,
+explicit consent metadata, 20 public tool events per session, identical Reveal
+payloads across each pair, ordered probe delivery, and all 20 qualifying pairs.
+The sanitizer removes forbidden fields, absolute host paths, and named host
+identifiers before tracked evidence is analyzed. Withdrawn records retain no
+response content. The scorer uses independent mathematical oracles and the
+declared 100,000-resample stratified paired percentile interval, implemented
+with a stable SHA-256 counter stream and frozen linear percentile interpolation.
+
+The current canonical hashes are:
+
+- probe bank: `4ac647fdfc4559b26ab417ece0eb01a021fc53d0decda35d8d5c798fd000cbc0`
+- generated allocation: `8a241287e91589d18e877f75d07d9fc03cb98dbd518e63b7cd26aa8922fd1a01`
+
+Before any qualifying response, independently review the probes and oracles,
+generate the manifest into the tracked evidence directory, validate it with the
+same runner revision, and commit it. A dry run stays gitignored:
+
+```text
+python scripts/understanding-study.py allocate --output .agent/understanding-allocation.json
+python scripts/understanding-study.py validate --manifest .agent/understanding-allocation.json
+python scripts/test-understanding-study.py
+```
+
+The 15 focused regressions prove deterministic balance and hashes, oracle
+coverage, oracle-free public packets, redaction, ordered reserve replacement,
+single schema repair, equal call ordering, identical Reveal delivery, and hard
+incomplete-cohort refusal. They do not constitute participant evidence or
+independent methodology or math review.
 
 ## Decision and scope
 
@@ -240,10 +281,10 @@ successful journal read does not satisfy this evidence contract.
 
 ## Implementation order and acceptance
 
-1. Build the deterministic allocation, probe, scoring, redaction, and report
-   runner. Prove allocation balance, answer-key independence, no condition
-   leakage, deterministic scoring, complete failure accounting, and refusal to
-   report an incomplete cohort.
+1. The deterministic allocation, probe, scoring, redaction, and report runner
+   is implemented and CI-gated. Independently review its probe content and
+   oracles, then commit its exact generated allocation before the first
+   qualifying response.
 2. Complete the journal correction, structured export, and residue receipt, then
    prove the two-process return path with an isolated journal location.
 3. Run the frozen cohort, publish all bounded evidence, obtain independent math
@@ -260,15 +301,19 @@ does not belong in Numinous.
 ## Current sources
 
 - [Center for Open Science preregistration guidance](https://www.cos.io/initiatives/prereg),
-  reviewed 2026-07-26. It separates planned confirmatory work from exploratory
+  reviewed 2026-07-27. It separates planned confirmatory work from exploratory
   work and calls for methods detailed enough to replicate.
 - [Retrieval Practice Versus Elaborative Encoding, 2025 systematic and
   meta-analytic review](https://doi.org/10.1007/s10648-025-10076-6), reviewed
   2026-07-26. It supports an active elaborative control, corrective feedback,
   and separate retention and transfer outcomes.
 - [NIST Privacy Framework](https://www.nist.gov/privacy-framework), reviewed
-  2026-07-26. Version 1.0 remains final; version 1.1 is an initial public draft
+  2026-07-27. Version 1.0 remains final; version 1.1 is an initial public draft
   as of this review.
 - [MCP 2025-11-25 security and trust principles](https://modelcontextprotocol.io/specification/2025-11-25),
-  reviewed 2026-07-26. The current specification requires explicit consent,
+  reviewed 2026-07-27. The current specification requires explicit consent,
   user control, and appropriate data protections.
+- [SciPy bootstrap reference](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.bootstrap.html),
+  reviewed 2026-07-27. It documents paired resampling, repeatable random input,
+  and two-sided percentile intervals. The runner implements the predeclared
+  stratified variant without adding SciPy as a runtime dependency.

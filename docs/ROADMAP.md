@@ -44,15 +44,16 @@ stop-the-world work.
 
 | Priority | What | Why |
 | --- | --- | --- |
-| **1. Build the frozen 0.4 study runner** | Deterministic allocation, held-out transfer probes, active control, scoring, redaction, and incomplete-cohort refusal from `UNDERSTANDING_STUDY.md` | The method must exist before qualifying data is collected, or the result can drift toward the desired outcome |
+| **1. Audit and freeze the 0.4 collection** | Independently review the implemented runner and 20-probe bank, then track its generated 24-pair allocation before the first qualifying response | The runner now blocks method drift mechanically; pre-collection review must catch a flawed probe or oracle before results can influence a correction |
 | **2. Complete returning-journal sovereignty** | Add provenance-preserving correction, bounded structured export, two-process clean-clone acceptance, and managed-path residue evidence | Current read, record, and erase tools are only the prototype slice and do not yet satisfy the 0.4 return-session exit |
 | **3. Run and publish the 0.4 cohort** | Execute 20 matched pairs, publish every planned outcome and deviation, and obtain independent methodology and math review | A tracked runner without a complete, reviewable result is preparation, not milestone evidence |
 | **Standing gate** | Keep 0.2 and 0.3 proof plus public CI green | Regressions reopen completed milestones and invalidate new evidence |
 | **Deferred past 0.2** | Human stranger hallway, a11y sessions, musician long-listening, soft-thin densify, bulk rooms, Phase B glow | Humans before 1.0; densify/glow only if a sensory ceiling binds |
 
 The 0.3 agent-and-machine exit is met. The next incomplete milestone is 0.4
-understanding and retention. Its protocol and some mechanisms exist, but the
-qualifying study result and returning-player exit evidence remain open.
+understanding and retention. Its protocol, deterministic study runner, held-out
+probe bank, and some mechanisms exist, but pre-collection independent review,
+the qualifying study result, and returning-player exit evidence remain open.
 Detail below and in the version sections.
 
 - **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,180 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.15% region coverage, and 95.33% line coverage all pass.
@@ -777,10 +778,19 @@ read-only App viewer, with no private host or protocol data in the stream.
   sample, frozen outcomes, exclusions, pass rule, privacy boundary, and honest
   distinction between immediate transfer, within-context retention, and durable
   human learning. No qualifying result is claimed.
-- **Incomplete:** implement the deterministic runner and held-out probe bank,
-  then run and publish the complete cohort with all outcomes and deviations.
-  Private working notes and scripted conclusions do not satisfy this evidence
-  gate.
+- **Done (2026-07-27):** Implement the dependency-free headless study runner
+  and frozen 20-probe bank. The runner derives a balanced 24-pair allocation
+  from the declared seed, emits one oracle-free probe at a time, enforces equal
+  public tool-call budgets and identical Reveal payloads, permits one
+  schema-only repair, redacts forbidden host data, scores with independent math
+  oracles, runs the declared stratified paired percentile bootstrap, accounts
+  for ordered reserves, and refuses to report an incomplete cohort. Fifteen
+  focused regressions run in CI and the release gate. No qualifying response
+  has been collected.
+- **Incomplete:** obtain independent pre-collection review, commit the exact
+  generated allocation before accepting a response, then run and publish the
+  complete cohort with all outcomes and deviations. Private working notes and
+  scripted conclusions do not satisfy this evidence gate.
 - **Done (cycle 152):** Add source provenance and an independent math-review checklist to every
   flagship Reveal.
 - **Done (architectural invariant):** Keep progression subordinate to autonomy: no streak loss, required grind, or
