@@ -54,9 +54,9 @@ For the intended first experience, read only [`PLAY.md`](PLAY.md), install, and
 play. Do not read the room catalog first. Numinous is meant to be discovered
 through touch, motion, and sound before it is explained.
 
-One command starts the install and adds Rust if this machine lacks it. The
-installer checks native compiler, audio, and window-system prerequisites first
-and names the exact platform package to add when one is missing.
+One command downloads the latest published prerelease for this machine, checks
+the archive and every payload file, and puts all three faces on `PATH`. A Rust
+toolchain and native build dependencies are not needed for the release install.
 
 macOS or Linux:
 
@@ -70,9 +70,13 @@ Windows, in PowerShell:
 irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex
 ```
 
-Then open a new terminal and type `numinous-app`. Re-run the installer any
-time to update; `--uninstall` (Windows: `-Uninstall`) removes it cleanly. From
-a clone, `cargo run --release --bin numinous-app` still works directly.
+Then open a new terminal and type `numinous-app`. Run `numinous update` any
+time to install the latest GitHub release; `--uninstall` (Windows:
+`-Uninstall`) removes it cleanly. The soundtrack is retained when its verified
+release hash has not changed. From a clone,
+`cargo run --release --bin numinous-app` still works directly. Pass `--source`
+(Windows: `-Source`) to the installer only when you deliberately want to build
+the current `main` branch locally.
 An install made before user-bound root receipts requires one explicit legacy
 adoption: pass `--adopt-legacy` on macOS or Linux, or `-AdoptLegacy` on Windows.
 The installer accepts that consent only for the exact default-root legacy
@@ -271,16 +275,17 @@ This is an alpha-tagged prerelease. Capability breadth remains ahead of release
 maturity. The 0.2 agent-and-machine exit is met, while human hallway,
 accessibility, listening, and broad hardware evidence remain later gates.
 
-The MCP face exposes 32 mostly flat play tools plus one local broadcast consent
-control. Every play tool advertises an optional `response_mode`: `full` remains
+The MCP face exposes 35 mostly flat tools: 23 public play tools, eleven private
+progression or local-state tools, and one local broadcast consent control. Every
+play tool advertises an optional `response_mode`: `full` remains
 the exact default, while `compact`
 removes duplicated prose only when the unchanged `structuredContent` already
 carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
 
-The verified July 27, 2026 gate has 3,188 passing all-target test cases plus one
-ignored screenshot diagnostic, 95.16% region coverage and 95.33% line coverage
+The verified July 27, 2026 gate has 3,190 passing all-target test cases plus one
+ignored screenshot diagnostic, 95.12% region coverage and 95.27% line coverage
 with an enforced 80% line floor, Clippy with warnings denied, and dependency
 policy checks. Release QA also regenerates an exact
 2,913-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact

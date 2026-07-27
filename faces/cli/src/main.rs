@@ -12,7 +12,7 @@ use std::ffi::OsStr;
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufWriter, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::ExitCode;
+use std::process::{Command as ProcessCommand, ExitCode, Stdio};
 use std::time::Duration;
 
 use clap::{Parser, Subcommand, ValueEnum};
@@ -28,6 +28,10 @@ const MAX_CLI_RENDER_HEIGHT: usize = 4096;
 const MAX_CLI_RENDER_PIXELS: usize = 16 * 1024 * 1024;
 const MAX_CLI_INPUT_BYTES: usize = 4 * 1024;
 const ELEVENLABS_MUSIC_URL: &str = "https://api.elevenlabs.io/v1/music?output_format=pcm_44100";
+#[cfg(windows)]
+const UPDATE_INSTALLER: &str = include_str!("../../../scripts/install.ps1");
+#[cfg(not(windows))]
+const UPDATE_INSTALLER: &str = include_str!("../../../scripts/install.sh");
 type ParsedRoomInputs = (Vec<(f64, f64)>, Vec<numinous_core::RoomInput>);
 
 #[derive(Parser)]
@@ -43,6 +47,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Install the latest verified GitHub release without touching play history.
+    Update,
     /// List all rooms in the catalog.
     Rooms {
         /// Emit machine-readable JSON.
@@ -577,6 +583,133 @@ fn cli_main() -> ExitCode {
     };
     finish_journey(&before, &journey, &earned_before);
     code
+}
+
+fn managed_install_root(executable: &Path) -> Result<PathBuf, String> {
+    let expected_name = if cfg!(windows) {
+        "numinous.exe"
+    } else {
+        "numinous"
+    };
+    if executable.file_name() != Some(OsStr::new(expected_name)) {
+        return Err("The running command is not the managed Numinous CLI.".to_string());
+    }
+    let Some(binary_dir) = executable.parent() else {
+        return Err("The running command has no installation directory.".to_string());
+    };
+    if binary_dir.file_name() != Some(OsStr::new("bin")) {
+        return Err("The running command is outside a managed Numinous bin directory.".to_string());
+    }
+    let Some(root) = binary_dir.parent() else {
+        return Err("The running command has no managed installation root.".to_string());
+    };
+    let marker = root.join(".numinous-install-root");
+    let metadata = marker
+        .symlink_metadata()
+        .map_err(|_| "The installation marker is missing.".to_string())?;
+    if !metadata.file_type().is_file() || metadata.file_type().is_symlink() || metadata.len() > 4096
+    {
+        return Err("The installation marker is not a bounded ordinary file.".to_string());
+    }
+    let marker_text = std::fs::read_to_string(&marker)
+        .map_err(|_| "The installation marker could not be read.".to_string())?;
+    if marker_text.lines().next() != Some("Numinous install root v2") {
+        return Err("The installation marker is not current.".to_string());
+    }
+    Ok(root.to_path_buf())
+}
+
+fn write_update_installer() -> Result<PathBuf, String> {
+    let mut nonce = [0_u8; 16];
+    getrandom::fill(&mut nonce)
+        .map_err(|error| format!("Could not choose a private updater name: {error}"))?;
+    let id = nonce
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    let extension = if cfg!(windows) { "ps1" } else { "sh" };
+    let path = std::env::temp_dir().join(format!("numinous-update-{id}.{extension}"));
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
+        .map_err(|error| format!("Could not stage the update helper: {error}"))?;
+    if let Err(error) = file
+        .write_all(UPDATE_INSTALLER.as_bytes())
+        .and_then(|()| file.sync_all())
+    {
+        let _ = std::fs::remove_file(&path);
+        return Err(format!("Could not write the update helper: {error}"));
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let permissions = std::fs::Permissions::from_mode(0o700);
+        if let Err(error) = std::fs::set_permissions(&path, permissions) {
+            let _ = std::fs::remove_file(&path);
+            return Err(format!("Could not protect the update helper: {error}"));
+        }
+    }
+    Ok(path)
+}
+
+fn update_installation() -> ExitCode {
+    let result = (|| {
+        let executable = std::env::current_exe()
+            .map_err(|error| format!("Could not locate the running command: {error}"))?;
+        let root = managed_install_root(&executable)?;
+        let installer = write_update_installer()?;
+        let pid = std::process::id().to_string();
+        let mut process = if cfg!(windows) {
+            let mut command = ProcessCommand::new("powershell.exe");
+            command
+                .arg("-NoProfile")
+                .arg("-ExecutionPolicy")
+                .arg("Bypass")
+                .arg("-File")
+                .arg(&installer)
+                .arg("-WaitForProcessId")
+                .arg(&pid)
+                .arg("-DeleteInstaller")
+                .arg(&installer);
+            command
+        } else {
+            let mut command = ProcessCommand::new("sh");
+            command
+                .arg(&installer)
+                .arg("--wait-for-pid")
+                .arg(&pid)
+                .arg("--delete-installer")
+                .arg(&installer);
+            command
+        };
+        process
+            .env("NUMINOUS_HOME", &root)
+            .stdin(Stdio::null())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+        if let Err(error) = process.spawn() {
+            let _ = std::fs::remove_file(&installer);
+            return Err(format!("Could not start the update helper: {error}"));
+        }
+        Ok(root)
+    })();
+    match result {
+        Ok(root) => {
+            println!(
+                "Updating the managed installation at {}. The helper will continue after this command closes.",
+                terminal_safe_path(&root)
+            );
+            ExitCode::SUCCESS
+        }
+        Err(error) => {
+            eprintln!("{error}");
+            eprintln!(
+                "Install a managed release first with the one-line installer in https://github.com/blisspixel/numinous/blob/main/PLAY.md"
+            );
+            ExitCode::FAILURE
+        }
+    }
 }
 
 /// The front door: what `numinous`, alone, opens onto. Today's room in full
@@ -1345,6 +1478,7 @@ fn find_room_with_variation(id: &str, allow_hidden: bool, variation: u64) -> Opt
 fn run(command: Command, journey: &mut Journey) -> ExitCode {
     let allow_hidden = journey.rank() >= Rank::Mathematikos;
     match command {
+        Command::Update => update_installation(),
         Command::Rooms { json } => {
             print!("{}", rooms_report(json));
             ExitCode::SUCCESS
@@ -4724,6 +4858,57 @@ mod tests {
     fn test_persistence_paths_never_resolve_to_the_player_profile() {
         assert!(super::journey_path().starts_with(std::env::temp_dir()));
         assert!(super::scores_path().starts_with(std::env::temp_dir()));
+    }
+
+    #[test]
+    fn updater_accepts_only_the_managed_install_shape() {
+        let state = super::TestStateRoot::new();
+        let root = state.path.join("managed");
+        let binary_dir = root.join("bin");
+        std::fs::create_dir_all(&binary_dir).expect("managed bin should be creatable");
+        let executable = binary_dir.join(if cfg!(windows) {
+            "numinous.exe"
+        } else {
+            "numinous"
+        });
+        std::fs::write(&executable, b"binary").expect("test binary should be writable");
+        assert!(super::managed_install_root(&executable).is_err());
+
+        std::fs::write(
+            root.join(".numinous-install-root"),
+            b"Numinous install root v2\nroot.abcdef\n",
+        )
+        .expect("test marker should be writable");
+        assert_eq!(
+            super::managed_install_root(&executable).expect("managed shape should be accepted"),
+            root
+        );
+        assert!(
+            super::managed_install_root(&state.path.join(executable.file_name().unwrap())).is_err()
+        );
+    }
+
+    #[test]
+    fn updater_stages_the_embedded_installer_privately() {
+        let path = super::write_update_installer().expect("updater should stage");
+        let bytes = std::fs::read(&path).expect("staged updater should be readable");
+        assert_eq!(bytes, super::UPDATE_INSTALLER.as_bytes());
+        let name = path.file_name().and_then(std::ffi::OsStr::to_str).unwrap();
+        let suffix = if cfg!(windows) { ".ps1" } else { ".sh" };
+        assert!(name.starts_with("numinous-update-"));
+        assert!(name.ends_with(suffix));
+        assert_eq!(name.len(), "numinous-update-".len() + 32 + suffix.len());
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&path)
+                .expect("updater metadata should be readable")
+                .permissions()
+                .mode()
+                & 0o777;
+            assert_eq!(mode, 0o700);
+        }
+        std::fs::remove_file(path).expect("staged updater should be removable");
     }
 
     #[test]

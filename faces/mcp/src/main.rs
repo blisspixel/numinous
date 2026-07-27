@@ -892,7 +892,7 @@ fn initialize_result(params: Option<&Value>) -> Value {
         "protocolVersion": protocol_version,
         "capabilities": { "tools": {} },
         "serverInfo": { "name": "numinous", "version": env!("CARGO_PKG_VERSION") },
-        "instructions": "Explore the catalog with list_rooms, then play_room to render ASCII and \
+        "instructions": "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and \
                          see what the math does before you ask for explanations. On Times Tables \
                          pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true \
                          for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) \
@@ -992,7 +992,7 @@ fn room_gesture_schema() -> Value {
     };
     json!({
         "type": "array",
-        "description": "A replayable pointer trail. Events run oldest to newest; phase timestamps wrap from 1 back to 0 like the App clock. In held rooms (double-pendulum) a down pins the bob, an up releases it with the velocity of the approach, and a cancel lets go gently. In Life, a down earlier than the final t plants a glider early enough to show its later evolution; the newest 24 down events become launches. Everywhere else the trail's down and move points paint like pokes. Not combinable with 'pokes'.",
+        "description": "A replayable pointer trail, for example [{\"kind\":\"down\",\"x\":0.5,\"y\":0.5,\"t\":0.25},{\"kind\":\"up\",\"x\":0.5,\"y\":0.5,\"t\":0.25}]. Events run oldest to newest; phase timestamps wrap from 1 back to 0 like the App clock. In held rooms (double-pendulum) a down pins the bob, an up releases it with the velocity of the approach, and a cancel lets go gently. In Life, a down earlier than the final t plants a glider early enough to show its later evolution; the newest 24 down events become launches. Everywhere else the trail's down and move points paint like pokes. Not combinable with 'pokes'.",
         "maxItems": numinous_core::MAX_ROOM_INPUTS,
         "items": {
             "oneOf": [
@@ -1017,7 +1017,7 @@ fn build_tools_catalog() -> Value {
         "tools": [
             {
                 "name": "list_rooms",
-                "description": "List the catalog of mathematical rooms you can explore and play.",
+                "description": "List the catalog of mathematical rooms you can explore and play. For a short first look, pass response_mode compact; structuredContent still carries every room.",
                 "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
             },
             {
@@ -1671,6 +1671,12 @@ fn validate_schema_value(
         };
         if !valid_type {
             let subject = argument_subject(path);
+            if path == "gesture" && expected_type == "array" {
+                return Err(
+                    "Argument 'gesture' must be an array, for example [{\"kind\":\"down\",\"x\":0.5,\"y\":0.5,\"t\":0.25},{\"kind\":\"up\",\"x\":0.5,\"y\":0.5,\"t\":0.25}]."
+                        .to_string(),
+                );
+            }
             return Err(format!(
                 "{subject} must be {article}{expected_type}.",
                 article = if matches!(expected_type, "array" | "integer" | "object") {
@@ -1725,6 +1731,12 @@ fn validate_schema_value(
                 _ => number < bound,
             };
             if !valid {
+                if path == "t" && keyword == "exclusiveMaximum" && bound == 1.0 {
+                    return Err(
+                        "Argument 't' must be less than 1. Use a finite phase from 0.0 through 0.999; the loop endpoint is 0.0."
+                            .to_string(),
+                    );
+                }
                 return Err(format!(
                     "{} must be {relation} {bound}.",
                     argument_subject(path)
@@ -2504,7 +2516,10 @@ fn parse_room_gesture(args: &Value) -> Result<Vec<numinous_core::RoomInput>, Str
         return Ok(Vec::new());
     };
     let Some(events) = raw.as_array() else {
-        return Err("Argument 'gesture' must be an array of event objects.".to_string());
+        return Err(
+            "Argument 'gesture' must be an array, for example [{\"kind\":\"down\",\"x\":0.5,\"y\":0.5,\"t\":0.25},{\"kind\":\"up\",\"x\":0.5,\"y\":0.5,\"t\":0.25}]."
+                .to_string(),
+        );
     };
     if events.len() > numinous_core::MAX_ROOM_INPUTS {
         return Err(format!(
@@ -6393,7 +6408,11 @@ mod tests {
                 "at most 256",
             ),
             ("play_room", json!({"id":"lorenz","t":-1.0}), "at least 0"),
-            ("play_room", json!({"id":"lorenz","t":1.0}), "less than 1"),
+            (
+                "play_room",
+                json!({"id":"lorenz","t":1.0}),
+                "the loop endpoint is 0.0",
+            ),
             (
                 "play_room",
                 json!({"id":"x".repeat(super::MAX_TOOL_ID_CHARS + 1)}),
@@ -6428,6 +6447,11 @@ mod tests {
                 "play_room",
                 json!({"id":"lorenz","gesture":[{"kind":"cancel","note":"hidden"}]}),
                 "exactly one declared event shape",
+            ),
+            (
+                "play_room",
+                json!({"id":"lorenz","gesture":{"kind":"down","x":0.5,"y":0.5,"t":0.25}}),
+                "for example [{\"kind\":\"down\"",
             ),
             (
                 "play_room",

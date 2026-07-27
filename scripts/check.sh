@@ -14,6 +14,8 @@ echo "== test =="
 cargo test --workspace --all-targets --locked
 echo "== understanding study runner =="
 python3 scripts/test-understanding-study.py
+echo "== release packaging =="
+python3 scripts/test-package-release.py
 echo "== house style =="
 bash scripts/check-style.sh
 echo "All checks passed."
