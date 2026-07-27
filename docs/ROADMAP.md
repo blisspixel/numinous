@@ -29,7 +29,7 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.2.0-alpha.1, Flagship Proof exit met on the
+**Current release state: 0.2.0-alpha.2, Flagship Proof exit met on the
 agent-and-machine bar (2026-07-24).** The 0.1 Public Foundation remains
 complete. Product 0.2 no longer waits on human stranger sessions: those sit
 with 0.8 Closed Beta and 1.0 First Light. Independent macOS/Linux App execution
@@ -112,7 +112,7 @@ Detail below and in the version sections.
   playhead. CLI render and sonify plus MCP play and listen accept the same
   bounded input, and all three faces agree on action, goal, status, sound, and
   earned reveal. The real stranger hallway and musician-led listening gates
-  remain open, so the package stays `0.2.0-alpha.1`.
+  remain open, so the package stays `0.2.0-alpha.2`.
 - **Done (Cycle 100 audio-state truth):** the App now owns exactly one explicit
   room-score, Studio, or radio program. Studio keeps formula audio through
   focus returns and radio boundaries, selected radio rejoins live only after
@@ -240,7 +240,7 @@ Detail below and in the version sections.
   invite tokens, Times Tables technical flagship path, Share still PNG and
   short-loop APNG (App L and CLI loop), and local security gates are green on
   this branch. Product 0.2 still requires the stranger hallway and other human
-  evidence listed above; the prerelease label remains `0.2.0-alpha.1`.
+  evidence listed above; the prerelease label remains `0.2.0-alpha.2`.
 - **Done (mouse for every window game):** left-click hits Quiz choices, Munch
   cells, Nim heaps and stones (commit move), Arcade cells (step toward or eat),
   and Gauntlet munch/quiz stages. Keyboard routes remain. Subjective juice and
@@ -363,7 +363,7 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   Wave and classical cards into dynamics, number theory, probability,
   topology, analysis, theory formation, and closing gems. MCP `list_rooms` count is 354; every
   catalog room keeps motif, verb, poke, first-contact status, and reveal.
-  Version remains `0.2.0-alpha.1`; product 0.2 is not claimed complete. See
+  Version remains `0.2.0-alpha.2`; product 0.2 is not claimed complete. See
   `CHANGELOG.md` Unreleased and `ROOMS.md` Built now.
 - **Done (Conjecture Mill, cycle 122):** a deterministic blackboard enumerates
   one complete finite grammar of primitive rational quadratic formulas. Every
@@ -591,7 +591,7 @@ without relying on the founder's machine or undocumented context?"
 ### 0.2 Flagship Proof ("does it slap?")
 
 **Status:** exit met on the agent-and-machine bar (2026-07-24). Package label
-remains `0.2.0-alpha.1` until a deliberate release cut. Human stranger hallway
+remains `0.2.0-alpha.2` until a deliberate release cut. Human stranger hallway
 is **not** part of this exit; it is deferred to 0.8 / 1.0.
 
 **Goal:** Build **one** flagship room (and a second on the same pattern) to
@@ -1049,7 +1049,7 @@ where we stand (next), and the ordered path to 1.0.
 
 ## Where we stand (reviewed 2026-07-26)
 
-The package is **0.2.0-alpha.1**. The 0.1 Public Foundation exit criterion is
+The package is **0.2.0-alpha.2**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS,
 F9 capture, three faces, and green public CI. Human stranger hallway is
