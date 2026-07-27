@@ -13,6 +13,8 @@
 #     full test suite) runs only when this commit actually touches Rust or the
 #     build manifest, so a docs-only commit stays fast while a code commit
 #     cannot land red.
+#   - The frozen 0.4 runner regressions run only when their runner, bank, or
+#     test file changes.
 #
 # Deliberately NOT here: coverage, the locked build, and artifact regeneration.
 # Those live in scripts/verify.sh (the release/CI gate); they are too slow to
@@ -41,6 +43,20 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
   RUSTDOCFLAGS="-D warnings" cargo test --workspace --doc --locked
   echo "== test =="
   cargo test --workspace --all-targets --locked
+fi
+
+if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
+    | grep -zqE '^scripts/(understanding-study\.py|understanding-probes\.json|test-understanding-study\.py)$'; then
+  if command -v python3 >/dev/null 2>&1; then
+    study_python=python3
+  elif command -v python >/dev/null 2>&1; then
+    study_python=python
+  else
+    echo "pre-commit: Python 3.11 or newer is required for the 0.4 runner gate" >&2
+    exit 1
+  fi
+  echo "== understanding study runner =="
+  "$study_python" scripts/test-understanding-study.py
 fi
 
 echo "pre-commit: all checks passed."

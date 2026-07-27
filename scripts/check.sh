@@ -12,6 +12,8 @@ RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked
 RUSTDOCFLAGS="-D warnings" cargo test --workspace --doc --locked
 echo "== test =="
 cargo test --workspace --all-targets --locked
+echo "== understanding study runner =="
+python3 scripts/test-understanding-study.py
 echo "== house style =="
 bash scripts/check-style.sh
 echo "All checks passed."

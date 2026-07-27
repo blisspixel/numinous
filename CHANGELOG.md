@@ -17,6 +17,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   and erase prototype rather than complete continuity.
 
 ### Added
+- A dependency-free frozen runner and 20-probe bank for 0.4 Understanding
+  Alpha. It derives the complete balanced 24-pair allocation from the declared
+  seed, emits oracle-free public study packets, redacts forbidden host data,
+  enforces equal call budgets and identical Reveal payloads, handles ordered
+  reserves and one schema repair, computes the predeclared stratified paired
+  percentile bootstrap, and refuses to report incomplete cohorts. Fifteen
+  focused regressions run in CI and the release gate. No qualifying response or
+  study result is claimed.
 - Formula Jam discovery is shared across App, CLI, and MCP: curated recipe bank
   in core; MCP `plot_expression` supports manual expr, `recipe`, `seed`,
   `auto_step`, and `list_recipes` with structured discovery results; CLI `plot`
