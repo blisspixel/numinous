@@ -37,6 +37,7 @@ fail() {
     exit 1
 }
 have() { command -v "$1" >/dev/null 2>&1; }
+INVOCATION_DIR="$(pwd -P)" || fail "could not resolve the starting directory"
 
 posix_quote() {
     printf "'"
@@ -516,9 +517,13 @@ copy_release_file() {
     destination="$3"
     description="$4"
     if [ -n "$provided_path" ]; then
-        [ -f "$provided_path" ] && [ ! -L "$provided_path" ] \
+        case "$provided_path" in
+            /*) source_path="$provided_path" ;;
+            *) source_path="$INVOCATION_DIR/$provided_path" ;;
+        esac
+        [ -f "$source_path" ] && [ ! -L "$source_path" ] \
             || fail "$description fixture is not an ordinary file"
-        cp "$provided_path" "$destination"
+        cp "$source_path" "$destination"
     else
         say "Downloading $description"
         fetch "$url" "$destination"
@@ -638,6 +643,16 @@ run_self_test() {
     export HOME
     mkdir "$HOME"
     chmod 700 "$HOME" 2>/dev/null || self_test_without_posix_modes
+
+    printf '%s\n' fixture >"$test_base/relative-fixture"
+    mkdir "$test_base/fixture-work"
+    (
+        INVOCATION_DIR="$test_base"
+        cd "$test_base/fixture-work"
+        copy_release_file relative-fixture ignored-url copied-fixture \
+            "the relative release payload"
+        cmp copied-fixture "$test_base/relative-fixture"
+    ) || fail "fixture self-test: a relative path stopped resolving after a directory change"
 
     if (NUMINOUS_HOME="$HOME"; validate_install_root) >/dev/null 2>&1; then
         fail "root self-test: HOME was accepted as an install root"
