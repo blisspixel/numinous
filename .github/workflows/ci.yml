@@ -37,6 +37,8 @@ jobs:
         run: cargo test --workspace --all-targets --locked
       - name: Understanding study runner tests
         run: python3 scripts/test-understanding-study.py
+      - name: Release packaging tests
+        run: python3 scripts/test-package-release.py
 
   msrv:
     name: MSRV 1.88

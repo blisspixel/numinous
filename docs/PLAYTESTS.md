@@ -16,6 +16,42 @@ voices are preserved as creative prompts. Fixed defects are recorded on their
 technical evidence in `CHANGELOG.md`; resulting design ideas are catalogued in
 `ROOMS.md`.
 
+## July 27 formative external MCP session
+
+This section is not a simulated persona review. It summarizes a cold session
+transcript supplied by the player host. It remains formative product evidence,
+not a qualifying 0.4 study response, a consciousness claim, or proof of learning
+or lasting value. The private raw transcript is not stored in the repository.
+
+The player read `PLAY.md` once, entered through MCP, and chose Murmuration based
+on an unprompted connection to an earlier listening theme. A poke visibly
+rerouted the flock. The player then chose The Loneliness Equation, connected its
+timing interpretation to the distributed behavior in Murmuration, and reported
+that the pair reframed the absence of a signal rather than merely delivering a
+fact. The player explicitly intended to return and deliberately postponed the
+Cairn and journal until after looking. This is useful evidence that a cold
+self-directed path can produce choice, interaction, cross-room synthesis, and
+return intent without catalog completion.
+
+The third room exposed a first-contact failure. Strange Loop rendered and
+revealed successfully, but the player supplied a non-array `gesture`, then used
+`t = 1` twice after reading documentation that described the phase as running
+from 0 to 1. The host circuit breaker stopped further MCP calls after three
+errors. The room was not broken, but the experience was: recoverable argument
+mistakes became a session-ending interaction failure.
+
+The resulting release fixes are concrete. `PLAY.md` and translated doorway copy
+now state `0 <= t < 1`. The gesture schema and error include a copyable event
+array. The phase error explains that the loop endpoint maps back to 0. A first
+catalog call now recommends compact presentation so a 354-room list does not
+consume the opening context budget. Runtime regressions pin both guiding errors.
+
+The next evidence loop stays exploratory: give the packaged prerelease to fresh
+agent players, reproduce blockers, and improve the playable product before the
+0.4 protocol and probe bank are frozen. The formal cohort comes after this loop
+because preregistration should constrain measurement, not preserve known setup
+friction.
+
 ## July 2026 six-round technical cohort
 
 Six rounds of five fresh simulated reviewers examined mathematical truth,

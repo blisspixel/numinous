@@ -20,6 +20,8 @@ echo "== tests =="
 cargo test --workspace --all-targets --locked
 echo "== understanding study runner =="
 python3 scripts/test-understanding-study.py
+echo "== release packaging =="
+python3 scripts/test-package-release.py
 echo "== build =="
 cargo build --workspace --locked
 

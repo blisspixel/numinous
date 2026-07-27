@@ -6,10 +6,10 @@ the first dependency fetch.
 
 ## 0. Prerequisites
 
-Just want to play? The one-line installers in `README.md` check the native
-prerequisites, explain any missing platform package, install Rust when needed,
-and build Numinous. What follows is the from-source verification path for
-contributors and the curious.
+Just want to play? The one-line installers in `README.md` download the latest
+published platform release and verify the archive plus its closed payload
+manifest. They do not need Rust or native build dependencies. What follows is
+the from-source verification path for contributors and the curious.
 
 - **Rust** (edition 2024; pinned to 1.97.1 in `rust-toolchain.toml`, with a
   verified 1.88 MSRV). Install from
@@ -28,8 +28,8 @@ Run the full gate and regenerate every artifact:
 - Windows: `scripts\verify.ps1`
 - macOS / Linux: `bash scripts/verify.sh`
 
-It runs format, clippy and rustdoc with warnings denied, Rust and 0.4 study
-runner tests, locked build,
+It runs format, clippy and rustdoc with warnings denied, Rust, 0.4 study-runner,
+and deterministic release-packaging tests, locked build,
 coverage (if `cargo-llvm-cov` is present), supply-chain policy (if `cargo-deny`
 is present), the house-style guard, and the native installer safety self-test,
 then writes images and audio into `renders/`.
@@ -46,6 +46,8 @@ cmd /d /c "set RUSTDOCFLAGS=-D warnings&& cargo doc --workspace --no-deps --lock
 cargo test --workspace --all-targets --locked
 python scripts/test-understanding-study.py          # Windows
 python3 scripts/test-understanding-study.py         # macOS / Linux
+python scripts/test-package-release.py              # Windows
+python3 scripts/test-package-release.py             # macOS / Linux
 cargo build --workspace --locked
 cargo +1.88.0 check --workspace --all-targets --locked
 cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'
@@ -58,9 +60,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 3,188 all-target Rust test cases
+Expected right now: **format and clippy clean, 3,190 all-target Rust test cases
 and 15 frozen study-runner regressions pass, one screenshot diagnostic is
-ignored, 95.16% region coverage, and 95.33% line coverage**. The `gpu` and
+ignored, 95.12% region coverage, and 95.27% line coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions

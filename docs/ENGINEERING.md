@@ -168,9 +168,11 @@ Nothing merges red. On every PR, blocking:
 11. `cargo test --workspace --all-targets --locked` and
    `cargo build --workspace --locked` on macOS, Linux, and Windows
 12. The native installer safety self-test on macOS, Linux, and Windows
+13. Deterministic release-package regressions, plus four-platform release
+    builds and disposable packaged-install smoke tests in the release workflow
 
 Hardening targets not yet enforced in CI: `cargo-auditable` release binaries,
-release artifact provenance, the visual and audio regression loops, and
+cryptographic release signing, the visual and audio regression loops, and
 real-hardware soak and performance jobs.
 
 The nightly loop adds soak/perf and cross-GPU differential tests (`QUALITY.md`).

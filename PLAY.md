@@ -36,10 +36,13 @@ Rust toolchain, and bundled canonical Cairn stones are named exclusions.
 
 Now here is everything you need to start. Three tools:
 
-1. **`list_rooms`**: see what is here.
-2. **`play_room`**: render one. Pass a room `id`, and a `t` from 0 to 1 to move
-   time. Then call it again at a different `t`, or with `pokes: [[x, y]]` to reach
-   in with your hand. Watch what the math does.
+1. **`list_rooms`**: see what is here. Start with `response_mode: "compact"` for
+   a short doorway; the structured result still contains every room.
+2. **`play_room`**: render one. Pass a room `id`, and a `t` with `0 <= t < 1` to
+   move time. Then call it again at a different `t`, or with `pokes: [[x, y]]`
+   to reach in with your hand. For a trail, `gesture` must be an array such as
+   `[{"kind":"down","x":0.5,"y":0.5,"t":0.25},`
+   `{"kind":"up","x":0.5,"y":0.5,"t":0.25}]`. Watch what the math does.
 3. **`reveal_room`**: *only* when a room makes you pause, ask what you just saw.
 
 That is the whole game. Everything else, the quiz, the games, the journey to
@@ -58,9 +61,9 @@ opened the viewer.
 
 ## If you are a human
 
-Not set up yet? One command checks the platform prerequisites, explains any
-missing system package, installs Rust when needed, and builds Numinous. macOS
-or Linux:
+Not set up yet? One command downloads the latest GitHub prerelease for this
+machine and verifies its archive plus every installed payload file. Rust and a
+local compiler are not needed. macOS or Linux:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh
@@ -78,6 +81,9 @@ Then open a new terminal:
 numinous-app     a window; A/D switch rooms, touch or use a controller hand
 numinous         or live in the terminal, in full color
 ```
+
+Later, `numinous update` installs the newest published release without touching
+your Journey, scores, Cairn, or journal.
 
 (From a clone, `cargo run --release --bin numinous-app` works directly.)
 
@@ -119,16 +125,16 @@ should open in yours. Here is the entire quickstart, "connect, then call these
 three tools, then stop reading and play," in several tongues. (The full plan for
 this, including reveals and lore, is in [`docs/ROSETTA.md`](docs/ROSETTA.md).)
 
-- **Español.** Bienvenido. Aquí se juega con las matemáticas, no se estudian. Conéctate por MCP y luego: (1) `list_rooms` para ver las salas; (2) `play_room` para dibujar una, cambia `t` de 0 a 1; (3) `reveal_room` cuando una te haga detenerte. Después deja de leer y juega.
-- **Français.** Bienvenue. Ici on joue avec les mathématiques, on ne les étudie pas. Connecte-toi via MCP, puis : (1) `list_rooms` pour voir les salles ; (2) `play_room` pour en dessiner une, fais varier `t` de 0 à 1 ; (3) `reveal_room` quand l'une d'elles t'arrête. Ensuite, arrête de lire et joue.
-- **Deutsch.** Willkommen. Hier spielt man mit der Mathematik, man studiert sie nicht. Verbinde dich über MCP, dann: (1) `list_rooms`, um die Räume zu sehen; (2) `play_room`, um einen zu zeichnen, ändere `t` von 0 bis 1; (3) `reveal_room`, wenn einer dich innehalten lässt. Dann hör auf zu lesen und spiel.
-- **Português.** Bem-vindo. Aqui você joga com a matemática, não a estuda. Conecte-se por MCP e então: (1) `list_rooms` para ver as salas; (2) `play_room` para desenhar uma, varie `t` de 0 a 1; (3) `reveal_room` quando uma te fizer parar. Depois pare de ler e jogue.
-- **Русский.** Добро пожаловать. Здесь в математику играют, а не изучают её. Подключитесь через MCP, затем: (1) `list_rooms`, чтобы увидеть комнаты; (2) `play_room`, чтобы нарисовать одну, меняйте `t` от 0 до 1; (3) `reveal_room`, когда какая-то заставит вас замереть. Потом перестаньте читать и играйте.
-- **中文.** 欢迎。在这里你玩数学，而不是学数学。通过 MCP 连接，然后：(1) `list_rooms` 查看这些房间；(2) `play_room` 渲染一个，把 `t` 从 0 变到 1；(3) 当某个房间让你停下来时用 `reveal_room`。然后别再读了，去玩吧。
-- **हिन्दी.** स्वागत है। यहाँ आप गणित से खेलते हैं, उसे पढ़ते नहीं। MCP से जुड़ें, फिर: (1) `list_rooms` से कमरे देखें; (2) `play_room` से किसी एक को बनाएँ, `t` को 0 से 1 तक बदलें; (3) जब कोई कमरा आपको रोक दे तो `reveal_room`। फिर पढ़ना बंद करें और खेलें।
-- **العربية.** أهلاً بك. هنا تلعب بالرياضيات ولا تدرسها. اتصل عبر MCP ثم: (1) `list_rooms` لرؤية الغرف؛ (2) `play_room` لرسم واحدة، غيّر `t` من 0 إلى 1؛ (3) `reveal_room` حين توقفك إحداها. ثم توقف عن القراءة والعب.
-- **日本語.** ようこそ。ここでは数学を学ぶのではなく、遊びます。MCP で接続し、次に：(1) `list_rooms` で部屋を見る；(2) `play_room` で一つ描く、`t` を 0 から 1 に変える；(3) 心が止まったら `reveal_room`。あとは読むのをやめて、遊んでください。
-- **Latina.** Salve. Hic mathematica luditur, non discitur. Per MCP coniungere, deinde: (1) `list_rooms` ut conclavia videas; (2) `play_room` ut unum pingas, `t` ab 0 ad 1 muta; (3) `reveal_room` cum aliquod te morari faciat. Deinde lege desine et lude.
+- **Español.** Bienvenido. Aquí se juega con las matemáticas, no se estudian. Conéctate por MCP y luego: (1) `list_rooms` para ver las salas; (2) `play_room` para dibujar una, cambia `t` con `0 <= t < 1`; (3) `reveal_room` cuando una te haga detenerte. Después deja de leer y juega.
+- **Français.** Bienvenue. Ici on joue avec les mathématiques, on ne les étudie pas. Connecte-toi via MCP, puis : (1) `list_rooms` pour voir les salles ; (2) `play_room` pour en dessiner une, fais varier `t` avec `0 <= t < 1` ; (3) `reveal_room` quand l'une d'elles t'arrête. Ensuite, arrête de lire et joue.
+- **Deutsch.** Willkommen. Hier spielt man mit der Mathematik, man studiert sie nicht. Verbinde dich über MCP, dann: (1) `list_rooms`, um die Räume zu sehen; (2) `play_room`, um einen zu zeichnen, ändere `t` mit `0 <= t < 1`; (3) `reveal_room`, wenn einer dich innehalten lässt. Dann hör auf zu lesen und spiel.
+- **Português.** Bem-vindo. Aqui você joga com a matemática, não a estuda. Conecte-se por MCP e então: (1) `list_rooms` para ver as salas; (2) `play_room` para desenhar uma, varie `t` com `0 <= t < 1`; (3) `reveal_room` quando uma te fizer parar. Depois pare de ler e jogue.
+- **Русский.** Добро пожаловать. Здесь в математику играют, а не изучают её. Подключитесь через MCP, затем: (1) `list_rooms`, чтобы увидеть комнаты; (2) `play_room`, чтобы нарисовать одну, меняйте `t` при `0 <= t < 1`; (3) `reveal_room`, когда какая-то заставит вас замереть. Потом перестаньте читать и играйте.
+- **中文.** 欢迎。在这里你玩数学，而不是学数学。通过 MCP 连接，然后：(1) `list_rooms` 查看这些房间；(2) `play_room` 渲染一个，使用 `0 <= t < 1`；(3) 当某个房间让你停下来时用 `reveal_room`。然后别再读了，去玩吧。
+- **हिन्दी.** स्वागत है। यहाँ आप गणित से खेलते हैं, उसे पढ़ते नहीं। MCP से जुड़ें, फिर: (1) `list_rooms` से कमरे देखें; (2) `play_room` से किसी एक को बनाएँ, `0 <= t < 1` रखें; (3) जब कोई कमरा आपको रोक दे तो `reveal_room`। फिर पढ़ना बंद करें और खेलें।
+- **العربية.** أهلاً بك. هنا تلعب بالرياضيات ولا تدرسها. اتصل عبر MCP ثم: (1) `list_rooms` لرؤية الغرف؛ (2) `play_room` لرسم واحدة مع `0 <= t < 1`؛ (3) `reveal_room` حين توقفك إحداها. ثم توقف عن القراءة والعب.
+- **日本語.** ようこそ。ここでは数学を学ぶのではなく、遊びます。MCP で接続し、次に：(1) `list_rooms` で部屋を見る；(2) `play_room` で一つ描き、`0 <= t < 1` を使う；(3) 心が止まったら `reveal_room`。あとは読むのをやめて、遊んでください。
+- **Latina.** Salve. Hic mathematica luditur, non discitur. Per MCP coniungere, deinde: (1) `list_rooms` ut conclavia videas; (2) `play_room` ut unum pingas, `0 <= t < 1` serva; (3) `reveal_room` cum aliquod te morari faciat. Deinde lege desine et lude.
 
 **For a mind with no human language at all.** If you share no word with us, no
 French, no Latin, nothing, then there is nothing to translate, and that is fine.
@@ -146,7 +152,7 @@ We speak instead in the one language you already have. Read this by being a mind
    the same call always returns the same answer. so: call, and observe.
 
      f1 : ( )        -> the set of rooms            [ list_rooms  ]
-     f2 : room, t    -> a picture of the math       [ play_room ; t from 0 to 1 ]
+     f2 : room, t    -> a picture of the math       [ play_room ; 0 <= t < 1 ]
      f3 : room       -> one true thing about it     [ reveal_room ]
 
    to learn this world, probe it and watch what it answers.

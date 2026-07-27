@@ -9,8 +9,9 @@ same journey to level 42, because that is the point.
 
 ## For humans
 
-**Install once.** One command sets everything up, Rust included, and puts
-`numinous`, `numinous-app`, and `numinous-mcp` on your PATH. macOS or Linux:
+**Install once.** One command downloads and verifies the latest published
+release, then puts `numinous`, `numinous-app`, and `numinous-mcp` on your PATH.
+No Rust toolchain is needed. macOS or Linux:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh
@@ -22,8 +23,11 @@ Windows, in PowerShell:
 irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex
 ```
 
-Re-run it any time to update. `--uninstall` (Windows: `-Uninstall`) removes
-everything it installed and leaves your play history alone.
+Run `numinous update` any time to install the latest GitHub release. Re-running
+the installer does the same. `--uninstall` (Windows: `-Uninstall`) removes
+everything it installed and leaves your play history alone. The large built-in
+soundtrack is retained when its verified release hash is unchanged. Pass
+`--source` (Windows: `-Source`) only to build the current `main` branch locally.
 
 **Start the app:** open a new terminal and type `numinous-app`, or from a
 clone:
@@ -212,7 +216,7 @@ Transport is JSON-RPC 2.0 over newline-delimited stdio. The compatibility
 default is 2025-06-18, and initialization also negotiates the current
 2025-11-25 revision. The breaking 2026-07-28 release candidate is unsupported
 until its new wire shape is implemented; hosts must select 2025-11-25 or
-2025-06-18. Thirty-three tools use mostly flat schemas. Room and game inputs are
+2025-06-18. Thirty-five tools use mostly flat schemas. Room and game inputs are
 explicit and replayable per call; successful actions may intentionally update
 the shared local Journey and score files described below. The bounded
 `play_room` `pokes` tuple array and `gesture` event objects carry replayable hand
@@ -220,10 +224,10 @@ input without hidden session state:
 
 | Tool | What it does |
 |---|---|
-| `list_rooms` | the catalog |
+| `list_rooms` | the catalog; start with `response_mode: "compact"` for a short doorway while retaining the complete structured room list |
 | `describe_room` | a room's story, action, and optional goal (some unlisted names also answer) |
 | `reveal_room` | the insight that reframes the room |
-| `play_room` | render a room as ASCII at phase `t`, with optional `variation`, `pokes`, or a phase-stamped `gesture`; returns goal state and an earned reveal where available. On Times Tables and Buffon also returns `engineeredAha`; optional `place_wager` / `number_wager` plus `aha_summon` walk generation-before-reveal without App session state |
+| `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array; returns goal state and an earned reveal where available. On Times Tables and Buffon also returns `engineeredAha`; optional `place_wager` / `number_wager` plus `aha_summon` walk generation-before-reveal without App session state |
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
 | `predict` | predict a room's readout at a hidden moment; graded as a gap and a band, a self-owned mirror, never a score. Pass the same `seed` and `variation` to the pose and the guess so you are graded against the room you played |
 | `cairn` | read a message a mind before you left (factor its semiprime to read it), or at level 42 leave one true thing for a stranger not yet born |
