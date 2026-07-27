@@ -5,7 +5,7 @@ instrument and a shader toy. You type a little math, and it instantly *draws*
 and *sings*. This is the "Create" posture (see `DESIGN.md`), and it is a core
 part of the experience rather than a bonus feature.
 
-**Implementation boundary, 2026-07-13:** 0.2.0-alpha.1 ships a bounded scalar
+**Implementation boundary, 2026-07-13:** 0.2.0-alpha.2 ships a bounded scalar
 expression parser and evaluator, animated plots, deterministic melody mapping,
 an editable app panel, CLI and MCP operations, and first-version `.num` plus
 link round trips in the CLI. Parse diagnostics use one-based source columns and

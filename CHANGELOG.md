@@ -5,6 +5,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.2.0-alpha.2] - 2026-07-27
+
+### Fixed
+- `numinous update` now preserves the installation's existing PATH choice. The
+  update helper refreshes only the managed root, so an install created with
+  `--no-modify-path` or `-NoModifyPath` stays out of PATH while an ordinary
+  install keeps its existing entry.
+
+## [0.2.0-alpha.1] - 2026-07-27
+
 ### Changed
 - The immediate roadmap now puts iterative prerelease play and clean-machine
   portability before freezing the 0.4 study. A formative cold MCP session
