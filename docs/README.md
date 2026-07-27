@@ -5,7 +5,7 @@ The map of the blueprint. Use the reading paths to find your way in, and the
 that owns it; every other doc links to that home rather than restating it. If
 you find yourself duplicating a concept, stop and link instead.
 
-Status: **0.2.0-alpha.1.** The 0.1 Public Foundation is complete, the 0.2
+Status: **0.2.0-alpha.2.** The 0.1 Public Foundation is complete, the 0.2
 Flagship Proof and 0.3 Tactile Alpha agent-and-machine exits are met, and 0.4
 Understanding Alpha is active. The headless core, CLI, MCP server, windowed app,
 GPU and audio adapters, 354 catalog rooms plus hidden content, 6 sims, 11+

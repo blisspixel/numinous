@@ -653,6 +653,34 @@ fn write_update_installer() -> Result<PathBuf, String> {
     Ok(path)
 }
 
+fn update_process(installer: &Path, pid: &str) -> ProcessCommand {
+    if cfg!(windows) {
+        let mut command = ProcessCommand::new("powershell.exe");
+        command
+            .arg("-NoProfile")
+            .arg("-ExecutionPolicy")
+            .arg("Bypass")
+            .arg("-File")
+            .arg(installer)
+            .arg("-NoModifyPath")
+            .arg("-WaitForProcessId")
+            .arg(pid)
+            .arg("-DeleteInstaller")
+            .arg(installer);
+        command
+    } else {
+        let mut command = ProcessCommand::new("sh");
+        command
+            .arg(installer)
+            .arg("--no-modify-path")
+            .arg("--wait-for-pid")
+            .arg(pid)
+            .arg("--delete-installer")
+            .arg(installer);
+        command
+    }
+}
+
 fn update_installation() -> ExitCode {
     let result = (|| {
         let executable = std::env::current_exe()
@@ -660,29 +688,7 @@ fn update_installation() -> ExitCode {
         let root = managed_install_root(&executable)?;
         let installer = write_update_installer()?;
         let pid = std::process::id().to_string();
-        let mut process = if cfg!(windows) {
-            let mut command = ProcessCommand::new("powershell.exe");
-            command
-                .arg("-NoProfile")
-                .arg("-ExecutionPolicy")
-                .arg("Bypass")
-                .arg("-File")
-                .arg(&installer)
-                .arg("-WaitForProcessId")
-                .arg(&pid)
-                .arg("-DeleteInstaller")
-                .arg(&installer);
-            command
-        } else {
-            let mut command = ProcessCommand::new("sh");
-            command
-                .arg(&installer)
-                .arg("--wait-for-pid")
-                .arg(&pid)
-                .arg("--delete-installer")
-                .arg(&installer);
-            command
-        };
+        let mut process = update_process(&installer, &pid);
         process
             .env("NUMINOUS_HOME", &root)
             .stdin(Stdio::null())
@@ -4909,6 +4915,22 @@ mod tests {
             assert_eq!(mode, 0o700);
         }
         std::fs::remove_file(path).expect("staged updater should be removable");
+    }
+
+    #[test]
+    fn updater_preserves_the_existing_path_choice() {
+        let installer = std::path::Path::new("staged-installer");
+        let command = super::update_process(installer, "123");
+        let args = command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+        let preserve_flag = if cfg!(windows) {
+            "-NoModifyPath"
+        } else {
+            "--no-modify-path"
+        };
+        assert!(args.iter().any(|arg| arg == preserve_flag));
     }
 
     #[test]
