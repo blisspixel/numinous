@@ -247,8 +247,10 @@ a window. The CLI, MCP server, exporters, and automated suite all use that seam.
 
 - **Current delivery:** GitHub prereleases carry deterministic, checksummed
   archives for Windows x64, Linux x64, macOS Intel, and macOS Apple silicon,
-  plus one shared soundtrack archive. The repository installers verify the
-  archive and closed payload manifest before replacing a managed install.
+  plus one shared soundtrack archive. The repository installers verify each
+  archive and closed payload manifest before replacing a managed install. A
+  separate stable soundtrack content checksum covers only the licensed radio
+  files, so binary-only releases do not force another large audio download.
   `numinous update` stages the matching installer, waits for the running CLI to
   exit, and installs the latest published release. Artifacts are not yet signed.
 - **Current sharing:** PNG postcards, short-loop APNG bundles, `.num` Studio
