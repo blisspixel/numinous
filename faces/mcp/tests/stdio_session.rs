@@ -16,6 +16,7 @@ use numinous_core::Raster;
 use serde_json::{Value, json};
 
 const SESSION_BARRIER_TIMEOUT: Duration = Duration::from_secs(15);
+static NEXT_SESSION: AtomicU64 = AtomicU64::new(0);
 
 /// Run a full session: send each line, return the parsed response lines.
 fn run_session(requests: &[Value]) -> Vec<Value> {
@@ -25,10 +26,22 @@ fn run_session(requests: &[Value]) -> Vec<Value> {
 /// Run requests on both sides of one externally observable session barrier.
 fn run_session_with_barrier(
     before_barrier: &[Value],
-    mut barrier: impl FnMut() -> bool,
+    barrier: impl FnMut() -> bool,
     after_barrier: &[Value],
 ) -> Vec<Value> {
-    static NEXT_SESSION: AtomicU64 = AtomicU64::new(0);
+    run_session_with_journal_barrier(before_barrier, barrier, after_barrier, None)
+}
+
+fn run_session_with_journal(requests: &[Value], journal: &std::path::Path) -> Vec<Value> {
+    run_session_with_journal_barrier(requests, || true, &[], Some(journal))
+}
+
+fn run_session_with_journal_barrier(
+    before_barrier: &[Value],
+    mut barrier: impl FnMut() -> bool,
+    after_barrier: &[Value],
+    journal: Option<&std::path::Path>,
+) -> Vec<Value> {
     let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
     let suffix = format!("{}-{session}", std::process::id());
     let journey = std::env::temp_dir().join(format!("numinous_mcp_e2e_journey_{suffix}.txt"));
@@ -36,14 +49,17 @@ fn run_session_with_barrier(
     let _ = std::fs::remove_file(&journey);
     let _ = std::fs::remove_file(&scores);
 
-    let mut child = Command::new(env!("CARGO_BIN_EXE_numinous-mcp"))
+    let mut command = Command::new(env!("CARGO_BIN_EXE_numinous-mcp"));
+    command
         .env("NUMINOUS_JOURNEY", &journey)
         .env("NUMINOUS_SCORES", &scores)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .expect("spawn the MCP server");
+        .stderr(Stdio::null());
+    if let Some(journal) = journal {
+        command.env("NUMINOUS_JOURNAL", journal);
+    }
+    let mut child = command.spawn().expect("spawn the MCP server");
 
     let mut stdout = child.stdout.take().expect("stdout");
     let output_reader = thread::spawn(move || {
@@ -171,6 +187,176 @@ fn text_of(response: &Value) -> &str {
     response["result"]["content"][0]["text"]
         .as_str()
         .unwrap_or_default()
+}
+
+#[test]
+fn returning_journal_survives_two_processes_then_leaves_zero_managed_residue() {
+    let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!(
+        "numinous_mcp_returning_journal_{}_{}",
+        std::process::id(),
+        session
+    ));
+    std::fs::create_dir(&root).expect("fresh journal acceptance root");
+    let journal = root.join("journal.txt");
+    let call = |id: u64, name: &str, arguments: Value| {
+        json!({
+            "jsonrpc":"2.0", "id":id, "method":"tools/call",
+            "params":{"name":name,"arguments":arguments}
+        })
+    };
+    let initialize = || {
+        json!({
+            "jsonrpc":"2.0", "id":1, "method":"initialize", "params":{
+                "protocolVersion":"2025-11-25",
+                "capabilities":{},
+                "clientInfo":{"name":"returning-journal-acceptance","version":"1.0"}
+            }
+        })
+    };
+
+    let first = run_session_with_journal(
+        &[
+            initialize(),
+            json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+            call(2, "read_journal", json!({})),
+            call(
+                3,
+                "record_journal",
+                json!({
+                    "kind":"encounter",
+                    "subject":"times-tables",
+                    "text":"The rendered multiplier closed nine loops.",
+                    "event_time_utc":100,
+                    "source":"numinous-result"
+                }),
+            ),
+            call(
+                4,
+                "record_journal",
+                json!({
+                    "kind":"connection",
+                    "subject":"times-tables",
+                    "text":"Nine means nine visible lobes.",
+                    "event_time_utc":101,
+                    "source":"self-authored"
+                }),
+            ),
+            call(5, "read_journal", json!({})),
+        ],
+        &journal,
+    );
+    let first_by_id = |id: u64| -> &Value {
+        first
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("missing first-process response {id}"))
+    };
+    assert_eq!(
+        first_by_id(2)["result"]["structuredContent"]["totalEntries"],
+        0
+    );
+    assert_eq!(first_by_id(3)["result"]["structuredContent"]["entryId"], 1);
+    assert_eq!(first_by_id(4)["result"]["structuredContent"]["entryId"], 2);
+    assert_eq!(
+        first_by_id(5)["result"]["structuredContent"]["totalEntries"],
+        2
+    );
+    assert!(text_of(first_by_id(5)).contains("Nine means nine visible lobes."));
+    assert!(
+        journal.exists(),
+        "first process persists the opted-in journal"
+    );
+
+    let second = run_session_with_journal(
+        &[
+            initialize(),
+            json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+            call(2, "read_journal", json!({})),
+            call(
+                3,
+                "correct_journal",
+                json!({
+                    "entry_id":2,
+                    "text":"The visible lobe count follows multiplier minus one.",
+                    "source":"self-authored"
+                }),
+            ),
+            call(
+                4,
+                "play_room",
+                json!({"id":"times-tables","t":0.25,"width":40,"height":20}),
+            ),
+            call(
+                5,
+                "record_journal",
+                json!({
+                    "kind":"encounter",
+                    "subject":"times-tables",
+                    "text":"Used the corrected connection in a new flagship encounter.",
+                    "event_time_utc":102,
+                    "source":"self-authored"
+                }),
+            ),
+            call(6, "export_journal", json!({"limit":100})),
+            call(7, "erase_journal", json!({"confirm":true})),
+            call(8, "read_journal", json!({})),
+        ],
+        &journal,
+    );
+    let second_by_id = |id: u64| -> &Value {
+        second
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("missing second-process response {id}"))
+    };
+    assert_eq!(
+        second_by_id(2)["result"]["structuredContent"]["totalEntries"],
+        2
+    );
+    assert_eq!(
+        second_by_id(3)["result"]["structuredContent"]["supersedes"],
+        2
+    );
+    assert_eq!(second_by_id(5)["result"]["structuredContent"]["entryId"], 4);
+    let exported = &second_by_id(6)["result"]["structuredContent"];
+    assert_eq!(exported["schema"], "numinous.experience-journal");
+    assert_eq!(exported["schemaVersion"], 2);
+    assert_eq!(exported["entries"].as_array().map(Vec::len), Some(4));
+    assert_eq!(exported["entries"][0]["source"], "numinous-result");
+    assert_eq!(exported["entries"][0]["eventAtUtc"], 100);
+    assert!(
+        exported["entries"][0]["recordedAtUtc"]
+            .as_u64()
+            .is_some_and(|recorded| recorded > 100)
+    );
+    assert_eq!(exported["entries"][1]["current"], false);
+    assert_eq!(exported["entries"][2]["current"], true);
+    assert_eq!(exported["entries"][2]["supersedes"], 2);
+    assert_eq!(exported["entries"][1]["source"], "self-authored");
+    assert_eq!(exported["entries"][2]["source"], "self-authored");
+    assert_eq!(exported["createdFile"], false);
+    assert_eq!(exported["containsHostPath"], false);
+    assert!(
+        !serde_json::to_string(exported)
+            .expect("export JSON")
+            .contains(&root.display().to_string()),
+        "portable export must not expose its host path"
+    );
+    let erased = &second_by_id(7)["result"]["structuredContent"];
+    assert_eq!(erased["recoverableManagedResidue"], 0);
+    assert_eq!(erased["managedSidecarFiles"], 0);
+    assert_eq!(erased["projectControlledExportFiles"], 0);
+    assert_eq!(
+        second_by_id(8)["result"]["structuredContent"]["totalEntries"],
+        0
+    );
+
+    let inventory = numinous_core::inspect_journal_file(&journal).expect("final inventory");
+    assert!(!inventory.exists);
+    assert_eq!(inventory.sidecar_files, 0);
+    assert!(!inventory.sidecar_scan_capped);
+    std::fs::remove_dir(&root).expect("empty acceptance root");
 }
 
 #[test]
@@ -1077,7 +1263,7 @@ fn a_full_agent_session_walks_every_tool() {
     assert_eq!(by_id(1)["result"]["serverInfo"]["name"], "numinous");
     assert_eq!(
         by_id(2)["result"]["tools"].as_array().map(Vec::len),
-        Some(33)
+        Some(35)
     );
     assert!(text_of(by_id(3)).contains("times-tables"));
     assert!(text_of(by_id(4)).contains("Fractals"));

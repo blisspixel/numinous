@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::{Journal, Journey, Scoreboard};
+use crate::{Journal, JournalRecord, Journey, Scoreboard};
 
 const LOCK_RETRIES: usize = 2500;
 const LOCK_SLEEP: Duration = Duration::from_millis(2);
@@ -711,10 +711,15 @@ pub fn load_scoreboard_file(path: &Path) -> Scoreboard {
     try_load_scoreboard_file(path).unwrap_or_default()
 }
 
-/// Load a journal file, repairing malformed text through [`Journal::from_text`].
+/// Load a journal file, returning an empty journal when it cannot be read.
 #[must_use]
 pub fn load_journal_file(path: &Path) -> Journal {
     try_load_journal_file(path).unwrap_or_default()
+}
+
+/// Inspect the journal file and every recognized adjacent transaction sidecar.
+pub fn inspect_journal_file(path: &Path) -> io::Result<LocalFileInventory> {
+    inspect_managed_file(path)
 }
 
 fn try_load_journey_file(path: &Path) -> io::Result<Journey> {
@@ -725,9 +730,11 @@ fn try_load_journey_file(path: &Path) -> io::Result<Journey> {
     }
 }
 
-fn try_load_journal_file(path: &Path) -> io::Result<Journal> {
+/// Load a journal without hiding an oversized or malformed persisted record.
+pub fn try_load_journal_file(path: &Path) -> io::Result<Journal> {
     match read_local_text_bounded(path, MAX_JOURNAL_FILE_BYTES) {
-        Ok(text) => Ok(Journal::from_text(&text)),
+        Ok(text) => Journal::try_from_text(&text)
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error)),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(Journal::default()),
         Err(error) => Err(error),
     }
@@ -736,15 +743,56 @@ fn try_load_journal_file(path: &Path) -> io::Result<Journal> {
 /// Appends a new record to the player's journal.
 pub fn record_journal_file(
     path: &Path,
-    timestamp_utc: u64,
-    kind: &str,
-    subject: &str,
-    text: &str,
-    affect: Option<&str>,
-) -> io::Result<()> {
+    record: JournalRecord<'_>,
+) -> io::Result<crate::JournalEntry> {
     let _lock = PersistLock::acquire(path)?;
     let mut journal = try_load_journal_file(path)?;
-    journal.record(timestamp_utc, kind, subject, text, affect);
+    let entry_id = journal
+        .record(record)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?;
+    let entry = journal
+        .entries
+        .iter()
+        .find(|entry| entry.entry_id == entry_id)
+        .cloned()
+        .ok_or_else(|| io::Error::other("new journal entry was not retained"))?;
+    persist_journal(path, &journal)?;
+    Ok(entry)
+}
+
+/// Appends a provenance-preserving correction to the player's journal.
+pub fn correct_journal_file(
+    path: &Path,
+    recorded_at_utc: u64,
+    event_at_utc: Option<u64>,
+    source: &str,
+    supersedes: u64,
+    text: &str,
+    affect: Option<&str>,
+) -> io::Result<crate::JournalEntry> {
+    let _lock = PersistLock::acquire(path)?;
+    let mut journal = try_load_journal_file(path)?;
+    let entry_id = journal
+        .correct(
+            recorded_at_utc,
+            event_at_utc,
+            source,
+            supersedes,
+            text,
+            affect,
+        )
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?;
+    let entry = journal
+        .entries
+        .iter()
+        .find(|entry| entry.entry_id == entry_id)
+        .cloned()
+        .ok_or_else(|| io::Error::other("new journal correction was not retained"))?;
+    persist_journal(path, &journal)?;
+    Ok(entry)
+}
+
+fn persist_journal(path: &Path, journal: &Journal) -> io::Result<()> {
     let serialized = journal.to_text();
     if serialized.len() as u64 > MAX_JOURNAL_FILE_BYTES {
         return Err(io::Error::new(
@@ -756,14 +804,21 @@ pub fn record_journal_file(
     Ok(())
 }
 
-/// Wipes the player's journal.
-pub fn erase_journal_file(path: &Path) -> io::Result<()> {
-    let _lock = PersistLock::acquire(path)?;
-    match std::fs::remove_file(path) {
-        Ok(()) => Ok(()),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error),
+/// Wipes the player's journal and reports the verified managed residue.
+pub fn erase_journal_file(path: &Path) -> io::Result<LocalFileInventory> {
+    {
+        let lock = PersistLock::acquire(path)?;
+        preflight_managed_file(path)?;
+        remove_managed_file_locked(path)?;
+        lock.release()?;
     }
+    let inventory = inspect_managed_file(path)?;
+    if inventory.exists || inventory.sidecar_files != 0 || inventory.sidecar_scan_capped {
+        return Err(io::Error::other(
+            "journal erasure left recoverable managed residue",
+        ));
+    }
+    Ok(inventory)
 }
 
 fn try_load_scoreboard_file(path: &Path) -> io::Result<Scoreboard> {
@@ -2655,8 +2710,19 @@ mod tests {
         assert!(original.len() as u64 <= super::MAX_JOURNAL_FILE_BYTES);
         std::fs::write(&path, &original).expect("journal fixture");
 
-        let error = record_journal_file(&path, 1, "kind", "subject", &text, None)
-            .expect_err("growth past the readable limit must fail");
+        let error = record_journal_file(
+            &path,
+            crate::JournalRecord {
+                recorded_at_utc: 1,
+                event_at_utc: 1,
+                source: crate::JOURNAL_SOURCE_SELF_AUTHORED,
+                kind: "kind",
+                subject: "subject",
+                text: &text,
+                affect: None,
+            },
+        )
+        .expect_err("growth past the readable limit must fail");
 
         assert_eq!(error.kind(), io::ErrorKind::InvalidData);
         assert_eq!(
