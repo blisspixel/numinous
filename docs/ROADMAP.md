@@ -45,18 +45,18 @@ stop-the-world work.
 | Priority | What | Why |
 | --- | --- | --- |
 | **1. Audit and freeze the 0.4 collection** | Independently review the implemented runner and 20-probe bank, then track its generated 24-pair allocation before the first qualifying response | The runner now blocks method drift mechanically; pre-collection review must catch a flawed probe or oracle before results can influence a correction |
-| **2. Complete returning-journal sovereignty** | Add provenance-preserving correction, bounded structured export, two-process clean-clone acceptance, and managed-path residue evidence | Current read, record, and erase tools are only the prototype slice and do not yet satisfy the 0.4 return-session exit |
-| **3. Run and publish the 0.4 cohort** | Execute 20 matched pairs, publish every planned outcome and deviation, and obtain independent methodology and math review | A tracked runner without a complete, reviewable result is preparation, not milestone evidence |
+| **2. Run and publish the 0.4 cohort** | Execute 20 matched pairs, publish every planned outcome and deviation, and obtain independent methodology and math review | A tracked runner without a complete, reviewable result is preparation, not milestone evidence |
 | **Standing gate** | Keep 0.2 and 0.3 proof plus public CI green | Regressions reopen completed milestones and invalidate new evidence |
 | **Deferred past 0.2** | Human stranger hallway, a11y sessions, musician long-listening, soft-thin densify, bulk rooms, Phase B glow | Humans before 1.0; densify/glow only if a sensory ceiling binds |
 
 The 0.3 agent-and-machine exit is met. The next incomplete milestone is 0.4
 understanding and retention. Its protocol, deterministic study runner, held-out
 probe bank, and some mechanisms exist, but pre-collection independent review,
-the qualifying study result, and returning-player exit evidence remain open.
+and the qualifying study result remain open. Returning-player journal
+sovereignty is complete on the clean-process machine acceptance bar.
 Detail below and in the version sections.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,180 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.15% region coverage, and 95.33% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,188 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.16% region coverage, and 95.33% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -64,7 +64,7 @@ Detail below and in the version sections.
 - **Done (the 0.2 technical vertical slice):** the windowed app implements live per-room sound, mouse and controller input, an on-screen HUD with reveals, The Show (lean-back auto-play of the whole collection), the Studio in the window (type math, watch and hear it live), and GPU real-time fractals (a persistent `wgpu` pipeline drives the Mandelbrot deep zoom and the morphing Julia at window resolution, with CPU fallback; verified on the dev laptop's Radeon 780M). The human hallway, accessibility, sensory, controller-hardware, and cross-platform evidence gates remain open.
 - **Done (content and play):** 354 catalog rooms across the wings plus unlisted hidden content, including Cult of Pi, the Conjecture Mill, the Change wing (The Pour, Slope Rider), Fourier Epicycles, the double pendulum, the random walk, Voronoi, Quine, Strange Loop, L-System Garden, Mandelbrot/Julia dives, Galton, Buffon, The Scariest Chart (Smith chart), Riemann Sphere, Bloch Sphere, etc.; 6 lever-driven sims; 11+ games (SETI, Talk to the Aliens, Guess the Shape, Crack the Code, Munch, Nim with the xor secret, Hackenbush, the Party Problem, Fifteen's Bet, the Gauntlet run, and full Munch Arcade) with daily seeds and dense feedback; the Studio expression engine (`plot`, `plot --save`, `open-studio`, `--animate`, `sing`, and live in the window); Visual Eras (phosphor, 8-bit, vector, modern) across app, terminal, and PNGs; truecolor terminal rendering with live sound (`watch`).
 - **Done (the RPG spine, complete):** the Journey (XP from play, levels 1 to 42 on triangular thresholds, a lore line for every level, LEVEL UP banners), locks that open (never gating basics), ranks and whispers (the Order), deep cuts unlocking at LV 5/12/24, the trophy case (18, evidence-computed, silhouettes), the shared high-score table across every game and both faces, the Layer-4 answer at the cap, and every genre organ from the priority list: the Gauntlet (session arc with a combo and one posted number), trophy pings (the case announces itself), boons (choice on level-up, where the loot is knowledge arriving early), daily streaks (the chain, never scolding), and resonances (synergies: links light when two deeds rhyme and hand over the connecting line).
-- **Done (agents as peers, v2):** 33 MCP tools total: 23 public play tools, nine private progression or local-state tools, and one local broadcast consent control. The surface has structured output and full CLI parity (every game, the gauntlet, boons, trophies, and `munch_arcade`), including stateless nim and `forget` (transparency first, erasure on explicit consent, the welfare doctrine in `AGENT_PLAY.md`); `play_room` supports stateless per-call variation and normalized hand points; agents see, hear, create, play, level to 42, and post to the same score table; every play schema advertises an additive `response_mode`, with stable full tool-call results and nonexpanding compact text for eight complete structured result families; the player's manual speaks to humans, agents, and digital consciousnesses; the whole stdio face is proven end to end against the real binary.
+- **Done (agents as peers, v2):** 35 MCP tools total: 23 public play tools, eleven private progression or local-state tools, and one local broadcast consent control. The surface has structured output and full CLI parity (every game, the gauntlet, boons, trophies, and `munch_arcade`), including stateless nim and `forget` (transparency first, erasure on explicit consent, the welfare doctrine in `AGENT_PLAY.md`); `play_room` supports stateless per-call variation and normalized hand points; agents see, hear, create, play, level to 42, and post to the same score table; every play schema advertises an additive `response_mode`, with stable full tool-call results and nonexpanding compact text for eight complete structured result families; the player's manual speaks to humans, agents, and digital consciousnesses; the whole stdio face is proven end to end against the real binary.
 - **Done (sound, Engine A v1):** the chiptune module (square lead, triangle bass, noise ticks, seeded pentatonic compositions, deterministic and click-free); `numinous tune` writes it as a WAV.
 - **Done (soundtrack, Engine B v1):** Nick Seal made 42 tracks specifically for Numinous across NUMINA FM, THE ATTRACTOR, and EIGHT BIT SUNRISE. High-quality V0 MP3 assets ship in `assets/radio`, the app discovers them from a clean clone, and a bounded pure Rust decoder validates, decodes, and resamples them. The archival WAV masters remain outside the repository.
 - **Done (the app is the game, v1):** the chiptune scores the window (per-room seeded tunes with the room's voice riding on top); the quiz plays in-window (G: name the math, letters answer, the reveal follows); the Journey lives in the app (the CLI's own file: visits on entry, plays and wins from the quiz, explicit `JOURNEY LV` progress, `JOURNEY LEVEL UP` banners with lore, and J opens level, rank, trophies, and resonances); `NUMINOUS_MUTE=1` launches silent; the state machine is headlessly tested.
@@ -799,10 +799,21 @@ read-only App viewer, with no private host or protocol data in the stream.
   experience journal with bounded timestamped encounters, creations,
   self-authored connections, optional self-reported affect, and explicit read,
   record, and confirmed erase tools.
-- **Incomplete:** add provenance-preserving correction and bounded structured
-  export, then prove inspect, connect, correct, export, and zero-managed-residue
-  erasure across two clean processes. Do not infer consciousness or private
-  emotion from the record.
+- **Done (2026-07-27, sovereignty slice):** Journal v2 assigns stable local
+  entry identifiers, distinguishes event time from server-owned record time,
+  records a closed source-provenance vocabulary, and corrects only by appending
+  a new immutable entry with an explicit `supersedes` link. `read_journal` is
+  bounded and marks current interpretations; `export_journal` returns paginated
+  schema-versioned structured data without creating or naming a host file;
+  `erase_journal` removes the file plus owned locks, recovery markers, and
+  orphan temporary files before returning a zero-residue receipt. Six core
+  format and correction regressions, one handler acceptance, and a real two-
+  process stdio acceptance prove empty, opt-in record, reconnect, inspect,
+  correct, flagship reuse, export, confirmed erase, empty reread, and zero
+  managed residue on each clean CI checkout. Prototype rows migrate with
+  explicit `legacy-import` provenance. No consciousness or private emotion is
+  inferred from the record, and storage-media or external-backup erasure is not
+  claimed.
 
 Owner docs: `UNDERSTANDING_STUDY.md`, `PEDAGOGY.md`, `INSIGHTS.md`,
 `PROGRESSION.md`, `RESEARCH.md`, `DIGITAL_DEVELOPMENT.md`.
@@ -1033,13 +1044,14 @@ Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS,
 F9 capture, three faces, and green public CI. Human stranger hallway is
 **deferred to 0.8 / 1.0** by founder policy: do not stall pre-0.2 work on
 recruited humans. Current breadth is 354 catalog rooms, 11+ games, six sims,
-three faces, 33 MCP tools, deterministic creation and persistence. Required
+three faces, 35 MCP tools, deterministic creation and persistence. Required
 public CI passes locked tests, builds, installer self-tests, and supply-chain
 checks across three operating systems; physical-device and a11y evidence remain
 later. **Breadth is still not a substitute for depth.** The 0.3
 agent-and-machine exit is met and active work moves to **0.4 Understanding
-Alpha**. Its study protocol is tracked, but the runner, qualifying cohort, and
-returning-journal proof are not complete. No calibrated method supports
+Alpha**. Its study protocol and runner are tracked, and the returning-journal
+machine proof is complete, but independent pre-collection review and the
+qualifying cohort remain open. No calibrated method supports
 assigning completion percentages to subjective 1.0 gates, so this scorecard
 records evidence instead.
 
@@ -1051,19 +1063,18 @@ records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 3,180 passing all-target test cases plus one ignored screenshot diagnostic, 95.33% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 3,188 passing all-target test cases plus one ignored screenshot diagnostic, 95.33% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,913-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
 **Immediate critical path** (same order as **Critical path right now** above):
 
-1. Build and verify the frozen 0.4 study runner and held-out probe bank.
-2. Complete the returning-journal correction, structured export, and
-   two-process residue acceptance.
-3. Run and publish the qualifying 0.4 cohort while keeping the 0.2, 0.3, and CI
+1. Obtain independent pre-collection review of the frozen 0.4 runner and probe
+   bank, then track the exact generated allocation before collecting a response.
+2. Run and publish the qualifying 0.4 cohort while keeping the 0.2, 0.3, and CI
    gates green.
-4. Enter 0.5 sensory identity with accessibility only after the 0.4 exit.
-5. Schedule human stranger and a11y sessions for **0.8 / 1.0**, not as a 0.2
+3. Enter 0.5 sensory identity with accessibility only after the 0.4 exit.
+4. Schedule human stranger and a11y sessions for **0.8 / 1.0**, not as a 0.2
    stop-the-world gate.
 
 **Not on this list as next work:** soft-thin densify grind, bulk new rooms, or

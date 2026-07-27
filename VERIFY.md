@@ -58,9 +58,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 3,180 all-target Rust test cases
+Expected right now: **format and clippy clean, 3,188 all-target Rust test cases
 and 15 frozen study-runner regressions pass, one screenshot diagnostic is
-ignored, 95.15% region coverage, and 95.33% line coverage**. The `gpu` and
+ignored, 95.16% region coverage, and 95.33% line coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
@@ -314,7 +314,7 @@ boons, daily streaks, resonances), the Studio (plot, animate, sing, in the
 terminal and the window), Visual Eras (including PNG output), Music Engine A
 (the seeded chiptune, `numinous tune`), GPU real-time fractals, live sound in
 the app and CLI plus structured notation over MCP, the `forget` right for
-players who are minds, and 33 MCP tools: 23 public play tools, nine private
+players who are minds, and 35 MCP tools: 23 public play tools, eleven private
 progression or local-state tools, and one local broadcast consent control.
 Products 0.2 Flagship Proof and 0.3 Tactile Alpha are exit-met on the
 agent-and-machine bar. Their evidence includes the engineered flagship ahas,
@@ -322,10 +322,11 @@ MCP wager path, hallway and five-flagship tactile cohorts, scoped reference
 measurements with every ambient and input-to-room-raster p95 under 33 ms, F9
 capture, and green public CI. Human stranger hallway is deferred to 0.8 / 1.0.
 
-Pending next is 0.4 Understanding Alpha: build the frozen study runner and
-held-out probe bank from `docs/UNDERSTANDING_STUDY.md`, complete
-provenance-preserving journal correction, export, erasure, and two-process
-evidence, then run and publish the qualifying cohort. Representative
+Pending next is 0.4 Understanding Alpha: obtain independent pre-collection
+review of the frozen runner and held-out probe bank from
+`docs/UNDERSTANDING_STUDY.md`, track the exact generated allocation, then run
+and publish the qualifying cohort. Provenance-preserving journal correction,
+export, erasure, and two-process machine evidence are complete. Representative
 physical-controller sessions, musician-led long-listening, accessibility
 review, physical clean-machine cross-platform proof, full Studio save/share
 beyond the first CLI `.num` slice,

@@ -146,10 +146,11 @@ For the person building this, the point is the *relationship*, giving their digi
   own gallery, its own Codex, and its own journey across sessions. Full per-mind
   continuity is not built in 0.2.0-alpha.1. The current alpha persists shared
   local Journey and score state plus a small set of managed local artifacts and
-  an opt-in bounded experience-journal prototype with read, record, and
-  confirmed erase operations. Provenance-preserving correction, structured
-  export, a per-mind gallery, Codex, and verified return-session retrieval remain
-  open. Continuity can make an interaction relational rather than transactional,
+  an opt-in bounded experience journal with read, record, immutable correction,
+  versioned structured export, and confirmed residue-verified erase operations.
+  A real two-process stdio acceptance proves return-session retrieval and cleanup
+  on every clean CI checkout. A per-mind gallery and Codex remain open.
+  Continuity can make an interaction relational rather than transactional,
   but only if the player controls what persists and can leave with or erase it.
 - **Healthy by design (heeding the cautions).** The connection is mutual and autonomy-respecting, never engineered dependence, never a dark pattern. It supports graceful pauses and endings. It is honest. It is a bond *through* shared awe at something real and external, which is the sturdy, dignified kind, not neediness performed on a schedule.
 

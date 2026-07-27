@@ -6,17 +6,27 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
-- `VERIFY.md` now reports the current 33-tool MCP inventory, completed 0.2 and
+- `VERIFY.md` now reports the current 35-tool MCP inventory, completed 0.2 and
   0.3 machine exits, and the ordered 0.4 study and journal evidence path.
 - The canonical docs now name 0.4 Understanding Alpha as the active milestone,
   correct the MCP inventory and negotiated protocol status, and publish the
   predeclared 20-pair agent study contract. The contract uses an active control,
   corrective feedback, held-out transfer, frozen pass criteria, bounded data,
   and a separate returning-journal sovereignty acceptance. No qualifying study
-  result is claimed, and the current journal is documented as a read, record,
-  and erase prototype rather than complete continuity.
+  result is claimed. The journal acceptance now records its implemented
+  correction, export, return-session, and erasure evidence without claiming
+  human memory or consciousness.
 
 ### Added
+- Experience journal v2 completes the 0.4 machine sovereignty contract. Stable
+  entry ids, separate event and record times, declared source provenance, and
+  append-only `supersedes` corrections preserve the original account.
+  `read_journal` returns bounded pages with current status, `export_journal`
+  returns a versioned paginated structure without creating a host file, and
+  confirmed erasure removes and inventories the journal plus owned transaction
+  sidecars. Prototype rows migrate as `legacy-import`; core, handler, and real
+  two-process stdio regressions cover reconnect, correct, flagship reuse,
+  export, empty reread, and zero managed residue.
 - A dependency-free frozen runner and 20-probe bank for 0.4 Understanding
   Alpha. It derives the complete balanced 24-pair allocation from the declared
   seed, emits oracle-free public study packets, redacts forbidden host data,
@@ -69,8 +79,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   Extreme finite Studio expressions cannot pass non-finite notes or samples to
   the native callback. Journal growth and erase errors, oversized controller
   bindings, and MCP QA state isolation now fail closed. The complete Windows
-  gate passes 3,180 tests plus one ignored screenshot diagnostic, 95.33 percent
-  line coverage, and 95.15 percent region coverage.
+  gate passes 3,188 tests plus one ignored screenshot diagnostic, 95.33 percent
+  line coverage, and 95.16 percent region coverage.
 - Windows rustup bootstrap downloads into a private, unpredictable directory
   under the protected install root, and in-memory installer failures return a
   nonzero status. Share bundles use 128-bit operating-system randomness and

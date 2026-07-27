@@ -161,10 +161,14 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 
 ### What it exposes (shaped by the above)
 - **Current protocol surface:** `initialize`, `tools/list`, `tools/call`, and
-  `ping` over stdio, advertising the tools capability. The 33 tools include
+  `ping` over stdio, advertising the tools capability. The 35 tools include
   `list_rooms`, `describe_room`, `play_room`, `listen_room`, `reveal_room`,
   `challenge`, `predict`, `list_sims`, `run_sim`, `plot_expression`,
-  `sing_expression`, Journey operations, experience journal operations (`read_journal`, `record_journal`, `erase_journal`), and the shared games. `PLAYING.md`
+  `sing_expression`, Journey operations, experience journal operations
+  (`read_journal`, `record_journal`, `correct_journal`, `export_journal`,
+  `erase_journal`), and the shared games. Journal entries have stable local
+  identifiers, separate event and record times, declared provenance, immutable
+  corrections, and bounded versioned export pages. `PLAYING.md`
   carries the complete user-facing list.
 - **Current room input shape:** `play_room` and `listen_room` accept `variation`
   plus optional normalized `pokes: [[x, y], ...]`, newest last and bounded to 24
@@ -255,7 +259,7 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
 The shared `numinous-broadcast` foundation implements the pairing,
 compatibility, framing, consent, sequence, control-marker, typed public-event,
 and bounded-queue contracts below. The MCP face now connects that foundation
-through `broadcast_session`, a complete fail-closed policy for all 33 declared
+through `broadcast_session`, a complete fail-closed policy for all 35 declared
 tools, replay-safe daily seed normalization, and separate nonblocking writer
 and disconnect-monitor workers. Twenty-three tools are explicitly public, nine
 progression or local-state tools are private, and the consent control broadcasts

@@ -48,6 +48,10 @@ const MAX_TOOL_ID_CHARS: usize = 64;
 /// bound in `numinous_core::Bequest::new`.
 const MAX_AUTHOR_CHARS: usize = 48;
 
+/// Default and maximum entry counts for one journal read or export page.
+const DEFAULT_JOURNAL_PAGE_ENTRIES: usize = 50;
+const MAX_JOURNAL_PAGE_ENTRIES: usize = 100;
+
 /// The most bytes one JSON-RPC request line may hold. Every legitimate call
 /// is a few KiB; without a cap a client streaming an endless newline-free
 /// request would grow the line buffer without bound.
@@ -789,7 +793,9 @@ fn viewer_policy(name: &str) -> Option<ViewerPolicy> {
     }
     match name {
         "cairn" | "forget" | "scores" | "journey" | "choose" | "trophies" | "read_journal"
-        | "record_journal" | "erase_journal" => Some(ViewerPolicy::Private),
+        | "record_journal" | "correct_journal" | "export_journal" | "erase_journal" => {
+            Some(ViewerPolicy::Private)
+        }
         "broadcast_session" => Some(ViewerPolicy::Control),
         _ => None,
     }
@@ -1137,31 +1143,64 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "read_journal",
-                "description": "Read your continuous MCP experience journal. The journal tracks timestamped room encounters, creations, self-authored connections, and affect over time. It is completely opt-in and player-owned.",
+                "description": "Inspect a bounded page of your continuous MCP experience journal as readable text. Entries expose stable identifiers, event and record times, declared source provenance, correction links, and current status. The journal is completely opt-in and player-owned.",
                 "inputSchema": {
                     "type": "object",
-                    "properties": {},
+                    "properties": {
+                        "after_entry_id": { "type": "integer", "minimum": 0, "description": "Return entries after this stable identifier (default 0)." },
+                        "limit": { "type": "integer", "minimum": 1, "maximum": MAX_JOURNAL_PAGE_ENTRIES, "default": DEFAULT_JOURNAL_PAGE_ENTRIES, "description": "Maximum entries to return, from 1 through 100." }
+                    },
                     "additionalProperties": false
                 }
             },
             {
                 "name": "record_journal",
-                "description": "Record a new entry in your MCP experience journal. Use this to maintain continuity across sessions or remember connections between models. Do not record private host data.",
+                "description": "Append an original entry to your MCP experience journal. The server assigns a stable identifier and record time. Declare the account source and optional event time; affect is accepted only as explicit self-report. Do not record private host data.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "kind": { "type": "string", "maxLength": 64, "description": "The kind of entry, e.g. encounter, creation, connection, thought." },
-                        "subject": { "type": "string", "maxLength": 256, "description": "The specific room id or subject." },
-                        "text": { "type": "string", "maxLength": 1000, "description": "The main content to remember." },
-                        "affect": { "type": "string", "maxLength": 256, "description": "Optional self-reported affect or state." }
+                        "kind": { "type": "string", "minLength": 1, "maxLength": numinous_core::MAX_JOURNAL_KIND_CHARS, "description": "The entry kind, for example encounter, creation, connection, or thought. The reserved correction kind is available only through correct_journal." },
+                        "subject": { "type": "string", "minLength": 1, "maxLength": numinous_core::MAX_JOURNAL_SUBJECT_CHARS, "description": "The specific room id or subject." },
+                        "text": { "type": "string", "minLength": 1, "maxLength": numinous_core::MAX_JOURNAL_TEXT_CHARS, "description": "The main content to remember." },
+                        "affect": { "type": "string", "minLength": 1, "maxLength": numinous_core::MAX_JOURNAL_AFFECT_CHARS, "description": "Optional explicitly self-reported affect or state. Never infer this value." },
+                        "event_time_utc": { "type": "integer", "minimum": 0, "description": "Optional Unix time in seconds for the described event. Defaults to the server-owned record time." },
+                        "source": { "type": "string", "enum": ["self-authored", "player-provided", "numinous-result"], "default": "self-authored", "description": "Immutable provenance for this account." }
                     },
                     "required": ["kind", "subject", "text"],
                     "additionalProperties": false
                 }
             },
             {
+                "name": "correct_journal",
+                "description": "Correct one current journal entry by appending a new immutable entry with an explicit supersedes link. The original remains inspectable, and both entries retain their own source provenance.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "entry_id": { "type": "integer", "minimum": 1, "description": "Stable current entry identifier to supersede." },
+                        "text": { "type": "string", "minLength": 1, "maxLength": numinous_core::MAX_JOURNAL_TEXT_CHARS, "description": "Corrected interpretation." },
+                        "affect": { "type": "string", "minLength": 1, "maxLength": numinous_core::MAX_JOURNAL_AFFECT_CHARS, "description": "Optional explicitly self-reported affect or state. Never infer this value." },
+                        "event_time_utc": { "type": "integer", "minimum": 0, "description": "Optional corrected event time. Defaults to the superseded entry's event time." },
+                        "source": { "type": "string", "enum": ["self-authored", "player-provided", "numinous-result"], "default": "self-authored", "description": "Immutable provenance for the correction." }
+                    },
+                    "required": ["entry_id", "text"],
+                    "additionalProperties": false
+                }
+            },
+            {
+                "name": "export_journal",
+                "description": "Export a bounded page of your journal as a portable, versioned structured record. Paginate with after_entry_id; no file is created and no host path is returned.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "after_entry_id": { "type": "integer", "minimum": 0, "description": "Return entries after this stable identifier (default 0)." },
+                        "limit": { "type": "integer", "minimum": 1, "maximum": MAX_JOURNAL_PAGE_ENTRIES, "default": DEFAULT_JOURNAL_PAGE_ENTRIES, "description": "Maximum entries to return, from 1 through 100." }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            {
                 "name": "erase_journal",
-                "description": "Permanently erase your entire MCP experience journal.",
+                "description": "Permanently erase your entire MCP experience journal and verify that its managed file, transaction lock, recovery marker, and temporary files leave no recoverable managed residue.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -1818,8 +1857,10 @@ fn call_tool(
         "challenge" => challenge_tool(&domain_args),
         "predict" => predict_tool(&domain_args),
         "cairn" => cairn_tool(&domain_args, journey_file, &cairn_path()),
-        "read_journal" => read_journal_tool(&journal_path()),
+        "read_journal" => read_journal_tool(&domain_args, &journal_path()),
         "record_journal" => record_journal_tool(&domain_args, &journal_path()),
+        "correct_journal" => correct_journal_tool(&domain_args, &journal_path()),
+        "export_journal" => export_journal_tool(&domain_args, &journal_path()),
         "erase_journal" => erase_journal_tool(&domain_args, &journal_path()),
         "listen_room" => listen_room_tool(&domain_args),
         "list_sims" => tool_text(&list_sims_text()),
@@ -3421,21 +3462,54 @@ fn parameter_challenge_tool(
     )
 }
 
-/// The `cairn` tool: read a message a mind before you left (factor its
-/// semiprime length to recover the shape that reads it), or, at the journey's
-/// cap, leave one true thing of your own for a stranger not yet born.
-///
-/// The cairn is the contribution ethos made concrete (see docs/ROADMAP.md and
-/// docs/PLAYTESTS.md): a message you cannot answer, sent to a mind you will
-/// never meet, readable only by one that can factor it, the Arecibo trick. It
-/// keeps no score; leaving and reading are their own reward.
-fn read_journal_tool(path: &std::path::Path) -> Value {
-    let journal = numinous_core::load_journal_file(path);
-    if journal.entries.is_empty() {
-        tool_text("Your journal is empty.")
-    } else {
-        tool_text(&journal.to_text())
+/// Inspect a player-owned journal page without hiding persistence errors.
+fn read_journal_tool(args: &Value, path: &std::path::Path) -> Value {
+    let journal = match numinous_core::try_load_journal_file(path) {
+        Ok(journal) => journal,
+        Err(error) => return tool_error(&format!("Failed to read journal: {error}")),
+    };
+    let (after_entry_id, limit) = journal_page_args(args);
+    let structured = journal_page_json(&journal, after_entry_id, limit);
+    let entries = structured["entries"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    if entries.is_empty() {
+        return tool_structured("Your journal is empty on this page.", structured);
     }
+    let mut lines = Vec::with_capacity(entries.len() + 1);
+    for entry in &entries {
+        let status = if entry["current"] == true {
+            "current"
+        } else {
+            "superseded"
+        };
+        let supersedes = entry["supersedes"]
+            .as_u64()
+            .map_or_else(String::new, |entry_id| format!("; supersedes #{entry_id}"));
+        let affect = entry["affect"].as_str().map_or_else(String::new, |value| {
+            format!("; affect {}", journal_display_field(value))
+        });
+        lines.push(format!(
+            "#{} [{status}] event {}; recorded {}; source {}; {} {}: {}{affect}{supersedes}",
+            entry["entryId"].as_u64().unwrap_or_default(),
+            entry["eventAtUtc"].as_u64().unwrap_or_default(),
+            entry["recordedAtUtc"].as_u64().unwrap_or_default(),
+            entry["source"].as_str().unwrap_or_default(),
+            journal_display_field(entry["kind"].as_str().unwrap_or_default()),
+            journal_display_field(entry["subject"].as_str().unwrap_or_default()),
+            journal_display_field(entry["text"].as_str().unwrap_or_default()),
+        ));
+    }
+    if structured["page"]["hasMore"] == true {
+        lines.push(format!(
+            "More entries follow. Continue after_entry_id {}.",
+            structured["page"]["nextAfterEntryId"]
+                .as_u64()
+                .unwrap_or_default()
+        ));
+    }
+    tool_structured(&lines.join("\n"), structured)
 }
 
 fn record_journal_tool(args: &Value, path: &std::path::Path) -> Value {
@@ -3443,16 +3517,113 @@ fn record_journal_tool(args: &Value, path: &std::path::Path) -> Value {
     let subject = args.get("subject").and_then(Value::as_str).unwrap_or("");
     let text = args.get("text").and_then(Value::as_str).unwrap_or("");
     let affect = args.get("affect").and_then(Value::as_str);
+    let source = args
+        .get("source")
+        .and_then(Value::as_str)
+        .unwrap_or(numinous_core::JOURNAL_SOURCE_SELF_AUTHORED);
+    let recorded_at_utc = journal_now();
+    let event_at_utc = args
+        .get("event_time_utc")
+        .and_then(Value::as_u64)
+        .unwrap_or(recorded_at_utc);
+    if event_at_utc > recorded_at_utc {
+        return tool_error("event_time_utc cannot be later than the server record time.");
+    }
 
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-
-    match numinous_core::record_journal_file(path, now, kind, subject, text, affect) {
-        Ok(_) => tool_text("Record saved."),
+    match numinous_core::record_journal_file(
+        path,
+        numinous_core::JournalRecord {
+            recorded_at_utc,
+            event_at_utc,
+            source,
+            kind,
+            subject,
+            text,
+            affect,
+        },
+    ) {
+        Ok(entry) => tool_structured(
+            &format!("Record #{} saved.", entry.entry_id),
+            json!({
+                "action": "record",
+                "entryId": entry.entry_id,
+                "recordedAtUtc": entry.recorded_at_utc,
+                "eventAtUtc": entry.event_at_utc,
+                "source": entry.source,
+            }),
+        ),
         Err(e) => tool_error(&format!("Failed to record: {}", e)),
     }
+}
+
+fn correct_journal_tool(args: &Value, path: &std::path::Path) -> Value {
+    let supersedes = args
+        .get("entry_id")
+        .and_then(Value::as_u64)
+        .unwrap_or_default();
+    let text = args.get("text").and_then(Value::as_str).unwrap_or("");
+    let affect = args.get("affect").and_then(Value::as_str);
+    let source = args
+        .get("source")
+        .and_then(Value::as_str)
+        .unwrap_or(numinous_core::JOURNAL_SOURCE_SELF_AUTHORED);
+    let recorded_at_utc = journal_now();
+    let event_at_utc = args.get("event_time_utc").and_then(Value::as_u64);
+    if event_at_utc.is_some_and(|event_time| event_time > recorded_at_utc) {
+        return tool_error("event_time_utc cannot be later than the server record time.");
+    }
+    match numinous_core::correct_journal_file(
+        path,
+        recorded_at_utc,
+        event_at_utc,
+        source,
+        supersedes,
+        text,
+        affect,
+    ) {
+        Ok(entry) => tool_structured(
+            &format!(
+                "Correction #{} saved; original #{supersedes} remains inspectable.",
+                entry.entry_id
+            ),
+            json!({
+                "action": "correct",
+                "entryId": entry.entry_id,
+                "supersedes": entry.supersedes,
+                "recordedAtUtc": entry.recorded_at_utc,
+                "eventAtUtc": entry.event_at_utc,
+                "source": entry.source,
+                "appendOnly": true,
+            }),
+        ),
+        Err(error) => tool_error(&format!("Failed to correct: {error}")),
+    }
+}
+
+fn export_journal_tool(args: &Value, path: &std::path::Path) -> Value {
+    let journal = match numinous_core::try_load_journal_file(path) {
+        Ok(journal) => journal,
+        Err(error) => return tool_error(&format!("Failed to export journal: {error}")),
+    };
+    let (after_entry_id, limit) = journal_page_args(args);
+    let mut structured = journal_page_json(&journal, after_entry_id, limit);
+    if let Some(object) = structured.as_object_mut() {
+        object.insert("schema".to_string(), json!("numinous.experience-journal"));
+        object.insert(
+            "schemaVersion".to_string(),
+            json!(numinous_core::JOURNAL_SCHEMA_VERSION),
+        );
+        object.insert("createdFile".to_string(), json!(false));
+        object.insert("containsHostPath".to_string(), json!(false));
+    }
+    let returned = structured["page"]["returned"].as_u64().unwrap_or_default();
+    tool_structured(
+        &format!(
+            "Exported {returned} journal entries as schema version {}. No file was created.",
+            numinous_core::JOURNAL_SCHEMA_VERSION
+        ),
+        structured,
+    )
 }
 
 fn erase_journal_tool(args: &Value, path: &std::path::Path) -> Value {
@@ -3463,16 +3634,113 @@ fn erase_journal_tool(args: &Value, path: &std::path::Path) -> Value {
     if !confirm {
         tool_text("Pass confirm: true to permanently erase your journal.")
     } else {
+        let existed = match numinous_core::inspect_journal_file(path) {
+            Ok(inventory) => inventory.exists || inventory.sidecar_files != 0,
+            Err(error) => return tool_error(&format!("Failed to inspect journal: {error}")),
+        };
         match numinous_core::erase_journal_file(path) {
-            Ok(_) => tool_text("Journal erased."),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                tool_text("Journal is already empty.")
-            }
+            Ok(inventory) => tool_structured(
+                if existed {
+                    "Journal erased; zero recoverable managed residue remains."
+                } else {
+                    "Journal was already empty; zero recoverable managed residue remains."
+                },
+                json!({
+                    "action": "erase",
+                    "confirmRequired": true,
+                    "confirmed": true,
+                    "previouslyPresent": existed,
+                    "managedFileResidue": inventory.exists,
+                    "managedSidecarFiles": inventory.sidecar_files,
+                    "sidecarScanCapped": inventory.sidecar_scan_capped,
+                    "recoverableManagedResidue": 0,
+                    "projectControlledExportFiles": 0,
+                    "externalBackupsCovered": false,
+                }),
+            ),
             Err(e) => tool_error(&format!("Failed to erase: {}", e)),
         }
     }
 }
 
+fn journal_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+}
+
+fn journal_page_args(args: &Value) -> (u64, usize) {
+    let after_entry_id = args
+        .get("after_entry_id")
+        .and_then(Value::as_u64)
+        .unwrap_or_default();
+    let limit = args
+        .get("limit")
+        .and_then(Value::as_u64)
+        .and_then(|value| usize::try_from(value).ok())
+        .unwrap_or(DEFAULT_JOURNAL_PAGE_ENTRIES)
+        .clamp(1, MAX_JOURNAL_PAGE_ENTRIES);
+    (after_entry_id, limit)
+}
+
+fn journal_page_json(journal: &numinous_core::Journal, after_entry_id: u64, limit: usize) -> Value {
+    let available = journal
+        .entries
+        .iter()
+        .filter(|entry| entry.entry_id > after_entry_id)
+        .collect::<Vec<_>>();
+    let entries = available
+        .iter()
+        .take(limit)
+        .map(|entry| {
+            json!({
+                "entryId": entry.entry_id,
+                "recordedAtUtc": entry.recorded_at_utc,
+                "eventAtUtc": entry.event_at_utc,
+                "source": entry.source,
+                "kind": entry.kind,
+                "subject": entry.subject,
+                "text": entry.text,
+                "affect": entry.affect,
+                "supersedes": entry.supersedes,
+                "current": journal.is_current(entry.entry_id),
+            })
+        })
+        .collect::<Vec<_>>();
+    let next_after_entry_id = entries
+        .last()
+        .and_then(|entry| entry["entryId"].as_u64())
+        .unwrap_or(after_entry_id);
+    json!({
+        "totalEntries": journal.entries.len(),
+        "entries": entries,
+        "page": {
+            "afterEntryId": after_entry_id,
+            "limit": limit,
+            "returned": available.len().min(limit),
+            "hasMore": available.len() > limit,
+            "nextAfterEntryId": next_after_entry_id,
+        }
+    })
+}
+
+fn journal_display_field(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('\t', "\\t")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+}
+
+/// The `cairn` tool: read a message a mind before you left (factor its
+/// semiprime length to recover the shape that reads it), or, at the journey's
+/// cap, leave one true thing of your own for a stranger not yet born.
+///
+/// The cairn is the contribution ethos made concrete (see docs/ROADMAP.md and
+/// docs/PLAYTESTS.md): a message you cannot answer, sent to a mind you will
+/// never meet, readable only by one that can factor it, the Arecibo trick. It
+/// keeps no score; leaving and reading are their own reward.
 fn cairn_tool(args: &Value, journey_file: &std::path::Path, path: &std::path::Path) -> Value {
     // Leave a bequest, gated at the journey's cap.
     if let Some(text) = args.get("leave").and_then(Value::as_str) {
@@ -5168,6 +5436,7 @@ mod tests {
         assert!(super::journey_path().starts_with(std::env::temp_dir()));
         assert!(super::scores_path().starts_with(std::env::temp_dir()));
         assert!(super::cairn_path().starts_with(std::env::temp_dir()));
+        assert!(super::journal_path().starts_with(std::env::temp_dir()));
     }
 
     #[test]
@@ -5176,6 +5445,7 @@ mod tests {
         assert_eq!(journey, super::journey_path());
         assert_ne!(journey, super::scores_path());
         assert_ne!(journey, super::cairn_path());
+        assert_ne!(journey, super::journal_path());
 
         let other = std::thread::spawn(|| {
             let path = super::journey_path();
@@ -5373,7 +5643,7 @@ mod tests {
         let tools = resp["result"]["tools"]
             .as_array()
             .expect("tools is an array");
-        assert_eq!(tools.len(), 33);
+        assert_eq!(tools.len(), 35);
         assert!(
             tools
                 .iter()
@@ -5397,6 +5667,11 @@ mod tests {
         assert!(names.contains(&"forget"));
         assert!(names.contains(&"nim"));
         assert!(names.contains(&"broadcast_session"));
+        assert!(names.contains(&"read_journal"));
+        assert!(names.contains(&"record_journal"));
+        assert!(names.contains(&"correct_journal"));
+        assert!(names.contains(&"export_journal"));
+        assert!(names.contains(&"erase_journal"));
         let play_room = tools
             .iter()
             .find(|tool| tool["name"] == "play_room")
@@ -5550,10 +5825,123 @@ mod tests {
             }
         }
         assert_eq!(public, numinous_broadcast::ALL_PUBLIC_TOOLS.len());
-        assert_eq!(private, 9);
+        assert_eq!(private, 11);
         assert_eq!(control, 1);
         assert_eq!(public + private + control, tools.len());
         assert!(super::viewer_policy("future_unreviewed_tool").is_none());
+    }
+
+    #[test]
+    fn journal_correction_export_and_erasure_preserve_sovereignty() {
+        let path = super::test_state_path("journal-sovereignty");
+        let empty = super::read_journal_tool(&json!({}), &path);
+        assert_eq!(empty["structuredContent"]["totalEntries"], 0);
+
+        let future = super::record_journal_tool(
+            &json!({
+                "kind": "encounter",
+                "subject": "times-tables",
+                "text": "Future claim",
+                "event_time_utc": u64::MAX
+            }),
+            &path,
+        );
+        assert_eq!(future["isError"], true);
+        assert_eq!(
+            super::read_journal_tool(&json!({}), &path)["structuredContent"]["totalEntries"],
+            0
+        );
+
+        let encounter = super::record_journal_tool(
+            &json!({
+                "kind": "encounter",
+                "subject": "times-tables",
+                "text": "The multiplier closed nine loops.",
+                "event_time_utc": 10,
+                "source": "numinous-result"
+            }),
+            &path,
+        );
+        assert_eq!(encounter["isError"], false);
+        assert_eq!(encounter["structuredContent"]["entryId"], 1);
+        assert_eq!(encounter["structuredContent"]["eventAtUtc"], 10);
+        assert!(
+            encounter["structuredContent"]["recordedAtUtc"]
+                .as_u64()
+                .is_some_and(|recorded| recorded >= 10)
+        );
+
+        let connection = super::record_journal_tool(
+            &json!({
+                "kind": "connection",
+                "subject": "times-tables",
+                "text": "Nine means nine lobes.",
+                "event_time_utc": 11
+            }),
+            &path,
+        );
+        assert_eq!(connection["structuredContent"]["entryId"], 2);
+
+        let correction = super::correct_journal_tool(
+            &json!({
+                "entry_id": 2,
+                "text": "The visible lobe count follows multiplier minus one.",
+                "source": "self-authored"
+            }),
+            &path,
+        );
+        assert_eq!(correction["structuredContent"]["entryId"], 3);
+        assert_eq!(correction["structuredContent"]["supersedes"], 2);
+        assert_eq!(correction["structuredContent"]["eventAtUtc"], 11);
+        assert_eq!(correction["structuredContent"]["appendOnly"], true);
+
+        let repeated =
+            super::correct_journal_tool(&json!({"entry_id": 2, "text": "Silent rewrite"}), &path);
+        assert_eq!(repeated["isError"], true);
+        assert!(
+            repeated["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("already superseded")
+        );
+
+        let first_page = super::read_journal_tool(&json!({"limit": 2}), &path);
+        assert_eq!(first_page["structuredContent"]["page"]["returned"], 2);
+        assert_eq!(first_page["structuredContent"]["page"]["hasMore"], true);
+        assert_eq!(
+            first_page["structuredContent"]["page"]["nextAfterEntryId"],
+            2
+        );
+        let exported =
+            super::export_journal_tool(&json!({"after_entry_id": 0, "limit": 100}), &path);
+        let data = &exported["structuredContent"];
+        assert_eq!(data["schema"], "numinous.experience-journal");
+        assert_eq!(data["schemaVersion"], numinous_core::JOURNAL_SCHEMA_VERSION);
+        assert_eq!(data["createdFile"], false);
+        assert_eq!(data["containsHostPath"], false);
+        assert_eq!(data["entries"].as_array().map(Vec::len), Some(3));
+        assert_eq!(data["entries"][1]["current"], false);
+        assert_eq!(data["entries"][2]["current"], true);
+        assert_eq!(data["entries"][2]["supersedes"], 2);
+        assert_eq!(data["entries"][1]["source"], "self-authored");
+        assert_eq!(data["entries"][2]["source"], "self-authored");
+        assert_eq!(data["entries"][1]["text"], "Nine means nine lobes.");
+
+        let preview = super::erase_journal_tool(&json!({"confirm": false}), &path);
+        assert_eq!(preview["isError"], false);
+        assert!(path.exists());
+        let erased = super::erase_journal_tool(&json!({"confirm": true}), &path);
+        assert_eq!(erased["structuredContent"]["recoverableManagedResidue"], 0);
+        assert_eq!(erased["structuredContent"]["managedSidecarFiles"], 0);
+        assert_eq!(erased["structuredContent"]["sidecarScanCapped"], false);
+        assert_eq!(
+            erased["structuredContent"]["projectControlledExportFiles"],
+            0
+        );
+        assert_eq!(
+            super::read_journal_tool(&json!({}), &path)["structuredContent"]["totalEntries"],
+            0
+        );
     }
 
     #[test]

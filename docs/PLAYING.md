@@ -227,9 +227,11 @@ input without hidden session state:
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
 | `predict` | predict a room's readout at a hidden moment; graded as a gap and a band, a self-owned mirror, never a score. Pass the same `seed` and `variation` to the pose and the guess so you are graded against the room you played |
 | `cairn` | read a message a mind before you left (factor its semiprime to read it), or at level 42 leave one true thing for a stranger not yet born |
-| `read_journal` | view your opt-in, player-owned continuous experience journal |
-| `record_journal` | save an encounter, creation, or connection to your journal for future recall |
-| `erase_journal` | permanently erase your experience journal |
+| `read_journal` | inspect a bounded page of your opt-in journal with stable ids, event and record times, source, correction links, and current status |
+| `record_journal` | append an encounter, creation, or connection with declared source provenance |
+| `correct_journal` | append an immutable correction that explicitly supersedes one current entry without rewriting it |
+| `export_journal` | return a bounded, paginated, versioned structured export without creating a host file |
+| `erase_journal` | permanently erase the journal and verify zero recoverable managed file or sidecar residue |
 | `listen_room` | the ambient motif, stable App room-bed summary, and input-aware mathematical sonification, with the same optional `pokes` or `gesture` as `play_room`; use `ambient_detail: "events"` for every bounded bed event and objective signal feature, never PCM or a local path |
 | `list_sims` | the simulations and their levers |
 | `run_sim` | run a sim with your lever values; picture plus plain readout |
