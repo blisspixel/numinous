@@ -32,6 +32,7 @@ RELEASE_FILES = (
     "scripts/install.ps1",
     "scripts/install.sh",
 )
+SOUNDTRACK_CONTENT_LABEL = "soundtrack-content-v1"
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -147,6 +148,21 @@ def soundtrack_payload(
     return payload
 
 
+def soundtrack_content_hash(payload: dict[str, bytes]) -> str:
+    entries = [
+        f"{sha256_bytes(data)}  {name}"
+        for name, data in sorted(payload.items())
+        if name.startswith("radio/")
+    ]
+    if "radio/ASSET-LICENSE.txt" not in payload:
+        raise ValueError("soundtrack content is missing ASSET-LICENSE.txt")
+    if not any(
+        name.startswith("radio/") and name.endswith(".mp3") for name in payload
+    ):
+        raise ValueError("soundtrack content contains no MP3 tracks")
+    return sha256_bytes(("\n".join(entries) + "\n").encode("ascii"))
+
+
 def add_manifest(payload: dict[str, bytes]) -> dict[str, bytes]:
     if "MANIFEST.sha256" in payload:
         raise ValueError("payload reserved MANIFEST.sha256")
@@ -204,6 +220,7 @@ def build_archive(
     root: Path = ROOT,
 ) -> tuple[Path, Path]:
     validate_version(version)
+    content_hash: str | None = None
     if kind == "binaries":
         if target not in TARGETS or binary_dir is None:
             raise ValueError("binary packaging requires a supported target and binary directory")
@@ -213,6 +230,7 @@ def build_archive(
         if target != "all":
             raise ValueError("soundtrack packaging uses target 'all'")
         payload = soundtrack_payload(version, radio_dir, root)
+        content_hash = soundtrack_content_hash(payload)
         archive_format = "tar.gz"
     payload = add_manifest(payload)
     root_name = archive_root(version, target, kind)
@@ -227,6 +245,10 @@ def build_archive(
     checksum_path.write_text(
         f"{sha256_file(archive_path)}  {archive_path.name}\n", encoding="ascii"
     )
+    if content_hash is not None:
+        Path(f"{archive_path}.content.sha256").write_text(
+            f"{content_hash}  {SOUNDTRACK_CONTENT_LABEL}\n", encoding="ascii"
+        )
     verify_archive(archive_path, checksum_path)
     return archive_path, checksum_path
 
@@ -283,6 +305,16 @@ def parse_checksum(checksum_path: Path, expected_name: str) -> str:
     return match.group(1)
 
 
+def parse_soundtrack_content_checksum(checksum_path: Path) -> str:
+    text = checksum_path.read_text(encoding="ascii")
+    match = re.fullmatch(
+        rf"([0-9a-f]{{64}})  {SOUNDTRACK_CONTENT_LABEL}\n?", text
+    )
+    if not match:
+        raise ValueError("soundtrack content checksum is malformed")
+    return match.group(1)
+
+
 def parse_manifest(data: bytes) -> dict[str, str]:
     try:
         text = data.decode("ascii")
@@ -336,6 +368,12 @@ def verify_archive(path: Path, checksum_path: Path) -> None:
     elif metadata.get("kind") == "soundtrack":
         if sum(name.startswith("radio/") and name.endswith(".mp3") for name in payload) < 1:
             raise ValueError("soundtrack payload contains no MP3 tracks")
+        content_checksum = Path(f"{path}.content.sha256")
+        if not content_checksum.is_file() or content_checksum.is_symlink():
+            raise ValueError("soundtrack archive has no content checksum")
+        expected_content_hash = parse_soundtrack_content_checksum(content_checksum)
+        if soundtrack_content_hash(payload) != expected_content_hash:
+            raise ValueError("soundtrack content checksum mismatch")
     else:
         raise ValueError("release metadata kind is unsupported")
 
@@ -391,6 +429,9 @@ def main() -> int:
     )
     print(archive_path)
     print(checksum_path)
+    content_checksum = Path(f"{archive_path}.content.sha256")
+    if content_checksum.exists():
+        print(content_checksum)
     return 0
 
 

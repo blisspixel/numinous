@@ -29,7 +29,7 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.2.0-alpha.3, Flagship Proof exit met on the
+**Current release state: 0.2.0-alpha.4, Flagship Proof exit met on the
 agent-and-machine bar (2026-07-24).** The 0.1 Public Foundation remains
 complete. Product 0.2 no longer waits on human stranger sessions: those sit
 with 0.8 Closed Beta and 1.0 First Light. Independent macOS/Linux App execution
@@ -112,7 +112,7 @@ Detail below and in the version sections.
   playhead. CLI render and sonify plus MCP play and listen accept the same
   bounded input, and all three faces agree on action, goal, status, sound, and
   earned reveal. The real stranger hallway and musician-led listening gates
-  remain open, so the package stays `0.2.0-alpha.3`.
+  remain open, so the package stays `0.2.0-alpha.4`.
 - **Done (Cycle 100 audio-state truth):** the App now owns exactly one explicit
   room-score, Studio, or radio program. Studio keeps formula audio through
   focus returns and radio boundaries, selected radio rejoins live only after
@@ -142,7 +142,7 @@ Detail below and in the version sections.
 - **Done (persistence hardening slice):** malformed Journey and score files now parse defensively: counters saturate, constellation dimensions are capped, `visited` plus `chosen` token sets are bounded and token-sane, duplicate Journey tokens do not consume the unique-token cap, score keys are length-bounded, and score tables cap unique entries. The maintenance posture remains that progress and score files are user-editable local text, so loaders must repair or ignore malformed data rather than panic or allocate without bound.
 - **Done (shared persistence writes):** App, CLI, and MCP now route Journey and score writes through shared core persistence helpers. Writes use a token-owned local lock, PID-aware stale-lock recovery, stale recovery-marker cleanup, merge-before-write behavior, bounded read-before-repair semantics, same-directory temp files with error-path cleanup, flush before commit, atomic Windows replacement retries that never move the destination aside, and a pre-opened parent-directory metadata sync after replace or explicit forget on Unix. The rename remains the commit point: a later sync failure cannot report an uncommitted delta and cause counters to be applied twice. This is an operating-system best-effort durability barrier, not a claim of hardware power-loss immunity. Tests cover concurrent Journey deltas, concurrent score records, a real Windows sharing violation with continuous readers, injected postcommit sync failure, temp and lock cleanup, short held-lock waits under instrumentation, stale deltas after explicit forget, oversized and invalid UTF-8 persistence files preserving the original bytes on write attempts, stale, malformed, and dead-process lock recovery, stale recovery-marker cleanup, current-process lock preservation, and lock drop ownership.
 - **Done (the keystone, the Cairn, and the chaos readouts):** the predict-then-reveal verb (MCP `predict`, Phase A of the Exceptional Path): commit a guess of a room's own status readout at a hidden moment, then meet the truth graded as a gap with a learning-progress band, a self-owned mirror that never posts a score. The graded `challenge` tool in two kinds (touch a target box, or land the readout on a number). The Cairn (MCP `cairn` plus the core `cairn` module and the repo-tracked `data/cairn.txt`): at level 42 a mind leaves one true thing, encoded Arecibo-style into a semiprime a future mind must factor to read. And tactile status readouts across the Chaos & Order flagships (Double Pendulum and Lorenz report the divergence of two nearby starts; the Logistic Map reports its Lyapunov exponent crossing from order into chaos), so eight rooms now pose predictions. See `CHANGELOG.md` for the full detail.
-- **Done (the release front door):** `scripts/install.sh` and `scripts/install.ps1` make setup a single copied command on macOS, Linux, and Windows. The default path selects the latest non-draft GitHub release, downloads a platform archive plus the shared soundtrack, verifies external SHA-256 sidecars and a closed per-file payload manifest, installs the three binaries, and wires `PATH` without requiring Rust or native build tools. `numinous update` stages the same installer, waits for the running CLI to exit, and replaces the managed release while preserving play history and an unchanged verified soundtrack. `--source` remains an explicit current-main fallback. Deterministic archive tests, hostile installer self-tests, four-platform CI packaging, packaged-install smoke and repeat-update checks, and a local full Windows payload with all 42 tracks cover the automation. User-bound install-root identity and link-aware deletion keep uninstall inside the dedicated root; only an exact legacy default-root shape, with or without the old marker and with explicit adoption consent, migrates. The 0.6 portable gate still owns clean physical-machine, device, and signing evidence.
+- **Done (the release front door):** `scripts/install.sh` and `scripts/install.ps1` make setup a single copied command on macOS, Linux, and Windows. The default path selects the latest non-draft GitHub release, downloads a platform archive plus the shared soundtrack, verifies external SHA-256 sidecars and a closed per-file payload manifest, installs the three binaries, and wires `PATH` without requiring Rust or native build tools. `numinous update` stages the same installer, waits for the running CLI to exit, and replaces the managed release while preserving play history. A stable content checksum derived from the verified licensed radio manifest retains an unchanged soundtrack across binary-only releases without another 267 MB download. `--source` remains an explicit current-main fallback. Deterministic archive tests, hostile installer self-tests, four-platform CI packaging, packaged-install smoke and repeat-update checks, and a local full Windows payload with all 42 tracks cover the automation. User-bound install-root identity and link-aware deletion keep uninstall inside the dedicated root; only an exact legacy default-root shape, with or without the old marker and with explicit adoption consent, migrates. The 0.6 portable gate still owns clean physical-machine, device, and signing evidence.
 - **Done (Cycle 98 boundary hardening):** a standard repository-wide security review closed with zero reportable findings under the local single-user threat model, then every reproduced robustness defect was fixed rather than dismissed. MCP request framing and challenge phases, bounded CLI input and plot dimensions, origin-bound music requests and terminal diagnostics, Cairn growth, extreme surface clipping, App save repeats, Studio source growth, radio discovery and resampling, GPU dimensions and readback failures, and installer provenance and deletion boundaries now fail closed through shared enforcement points. Focused regressions, installer self-tests, the exact App matrix, and the complete release gate cover the changes. This is engineering evidence, not a claim that a standard single-pass review proves the absence of vulnerabilities.
 - **Done (Cycle 105 security hardening):** a maintenance security pass under the same local single-user threat model closed residual MCP string-boundary gaps and dual supply-chain coverage. The MCP schema validator enforces JSON Schema `maxLength`; catalog ids, Studio expressions, and Cairn leave/author fields declare matching bounds; `play_room` rejects oversize canvases at the tool body; `sing_expression` notes are schema-capped. CI and local verify now run `cargo-audit` with ignores in `.cargo/audit.toml` aligned to `deny.toml`. ENGINEERING names the local threat model and the deny-plus-audit path. This is not a claim of absence of vulnerabilities.
 - **Done (Cycle 126 security maintenance):** malformed Munch, Munch Arcade, Nim, and Hackenbush requests fail before persistence; untrusted CLI diagnostic values cannot emit terminal controls; APNG loop export retains a constant number of full frames; install-root identity is private to the current user; Windows rejects reparse ancestors and replaces hardlinked destinations by name; POSIX refreshes the installer-owned profile line and verifies the installed command by absolute path. Original reproductions no longer reach their vulnerable outcomes, focused CLI and MCP tests pass, Windows and Windows-hosted POSIX installer self-tests pass, and each platform's native installer test blocks its local gate while CI runs both across the operating-system matrix. Native Linux and macOS GitHub-hosted installer tests now pass. Physical clean-machine execution, cross-principal disposable-host validation, and subjective terminal readability remain explicit evidence limits.
@@ -240,7 +240,7 @@ Detail below and in the version sections.
   invite tokens, Times Tables technical flagship path, Share still PNG and
   short-loop APNG (App L and CLI loop), and local security gates are green on
   this branch. Product 0.2 still requires the stranger hallway and other human
-  evidence listed above; the prerelease label remains `0.2.0-alpha.3`.
+  evidence listed above; the prerelease label remains `0.2.0-alpha.4`.
 - **Done (mouse for every window game):** left-click hits Quiz choices, Munch
   cells, Nim heaps and stones (commit move), Arcade cells (step toward or eat),
   and Gauntlet munch/quiz stages. Keyboard routes remain. Subjective juice and
@@ -363,7 +363,7 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   Wave and classical cards into dynamics, number theory, probability,
   topology, analysis, theory formation, and closing gems. MCP `list_rooms` count is 354; every
   catalog room keeps motif, verb, poke, first-contact status, and reveal.
-  Version remains `0.2.0-alpha.3`; product 0.2 is not claimed complete. See
+  Version remains `0.2.0-alpha.4`; product 0.2 is not claimed complete. See
   `CHANGELOG.md` Unreleased and `ROOMS.md` Built now.
 - **Done (Conjecture Mill, cycle 122):** a deterministic blackboard enumerates
   one complete finite grammar of primitive rational quadratic formulas. Every
@@ -591,7 +591,7 @@ without relying on the founder's machine or undocumented context?"
 ### 0.2 Flagship Proof ("does it slap?")
 
 **Status:** exit met on the agent-and-machine bar (2026-07-24). Package label
-remains `0.2.0-alpha.3` until a deliberate release cut. Human stranger hallway
+remains `0.2.0-alpha.4` until a deliberate release cut. Human stranger hallway
 is **not** part of this exit; it is deferred to 0.8 / 1.0.
 
 **Goal:** Build **one** flagship room (and a second on the same pattern) to
@@ -1049,7 +1049,7 @@ where we stand (next), and the ordered path to 1.0.
 
 ## Where we stand (reviewed 2026-07-26)
 
-The package is **0.2.0-alpha.3**. The 0.1 Public Foundation exit criterion is
+The package is **0.2.0-alpha.4**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS,
 F9 capture, three faces, and green public CI. Human stranger hallway is

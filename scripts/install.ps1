@@ -29,6 +29,7 @@ param(
     [string]$ReleaseChecksum = '',
     [string]$SoundtrackArchive = '',
     [string]$SoundtrackChecksum = '',
+    [string]$SoundtrackContentChecksum = '',
     [string]$ReleaseTag = '',
     [int]$WaitForProcessId = 0,
     [string]$DeleteInstaller = ''
@@ -178,6 +179,18 @@ function Read-ArchiveChecksum([string]$Path, [string]$ArchiveName) {
     return $match.Groups[1].Value
 }
 
+function Read-SoundtrackContentChecksum([string]$Path) {
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+    if ($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
+        $item.Length -gt 128) {
+        Fail 'the soundtrack content checksum is not a small ordinary file.'
+    }
+    $text = [IO.File]::ReadAllText($item.FullName).TrimEnd("`r", "`n")
+    $match = [regex]::Match($text, '^([0-9a-f]{64})  soundtrack-content-v1$')
+    if (-not $match.Success) { Fail 'the soundtrack content checksum is malformed.' }
+    return $match.Groups[1].Value
+}
+
 function Assert-ArchiveChecksum(
     [string]$ArchivePath,
     [string]$ChecksumPath,
@@ -260,6 +273,34 @@ function Assert-PayloadManifest([string]$Root) {
     }
 }
 
+function Get-SoundtrackContentHash([string]$Root) {
+    $manifestPath = Join-Path $Root 'MANIFEST.sha256'
+    $contentLines = New-Object 'Collections.Generic.List[string]'
+    $hasLicense = $false
+    $mp3Count = 0
+    foreach ($line in [IO.File]::ReadAllLines($manifestPath)) {
+        $match = [regex]::Match($line, '^([0-9a-f]{64})  ([A-Za-z0-9._/-]+)$')
+        if (-not $match.Success) { Fail 'the release payload manifest is malformed.' }
+        $relative = $match.Groups[2].Value
+        if (-not $relative.StartsWith('radio/', [StringComparison]::Ordinal)) { continue }
+        $contentLines.Add($line)
+        if ($relative -ceq 'radio/ASSET-LICENSE.txt') { $hasLicense = $true }
+        if ($relative.EndsWith('.mp3', [StringComparison]::Ordinal)) { $mp3Count++ }
+    }
+    if (-not $hasLicense -or $mp3Count -lt 1) {
+        Fail 'the soundtrack manifest does not contain licensed audio content.'
+    }
+    $bytes = [Text.Encoding]::ASCII.GetBytes(
+        ([string]::Join("`n", $contentLines) + "`n"))
+    $hasher = [Security.Cryptography.SHA256]::Create()
+    try {
+        $digest = [BitConverter]::ToString($hasher.ComputeHash($bytes))
+        return $digest.Replace('-', '').ToLowerInvariant()
+    } finally {
+        $hasher.Dispose()
+    }
+}
+
 function Assert-SafeArchiveMembers([string]$ArchivePath, [string]$ExpectedRoot) {
     $members = @(& tar -tzf $ArchivePath)
     if ($LASTEXITCODE -ne 0 -or $members.Count -eq 0) {
@@ -316,7 +357,8 @@ function Install-ReleasePayload(
     [string]$ArchiveHash,
     [string]$ExpectedTag,
     [string]$ExpectedKind,
-    [string]$ExpectedTarget
+    [string]$ExpectedTarget,
+    [string]$ExpectedContentHash = ''
 ) {
     if (-not (Test-InstallMarker $NuminousHome)) {
         Fail 'release installation requires a marked install root.'
@@ -343,6 +385,10 @@ function Install-ReleasePayload(
             $metadata.tag -cne $ExpectedTag -or $metadata.kind -cne $ExpectedKind -or
             $metadata.target -cne $ExpectedTarget) {
             Fail 'the release metadata does not match the requested payload.'
+        }
+        if ($ExpectedContentHash -and
+            (Get-SoundtrackContentHash $newTree) -cne $ExpectedContentHash) {
+            Fail 'the soundtrack content checksum does not match the verified payload.'
         }
         [IO.File]::WriteAllText(
             (Join-Path $newTree '.archive.sha256'),
@@ -797,6 +843,31 @@ function Test-InstallerSafety {
     Protect-InstallDirectory $testBase
     Protect-InstallDirectory $testBase
     try {
+        $contentA = Join-Path $testBase 'content-a'
+        $contentB = Join-Path $testBase 'content-b'
+        New-Item -ItemType Directory -Path $contentA, $contentB | Out-Null
+        $radioLines = @(
+            "$('1' * 64)  radio/ASSET-LICENSE.txt",
+            "$('2' * 64)  radio/test-001.mp3"
+        )
+        [IO.File]::WriteAllLines(
+            (Join-Path $contentA 'MANIFEST.sha256'),
+            @("$('3' * 64)  RELEASE.json") + $radioLines)
+        [IO.File]::WriteAllLines(
+            (Join-Path $contentB 'MANIFEST.sha256'),
+            @("$('4' * 64)  RELEASE.json") + $radioLines)
+        $contentHash = Get-SoundtrackContentHash $contentA
+        if ((Get-SoundtrackContentHash $contentB) -cne $contentHash) {
+            Fail 'soundtrack self-test: release metadata changed the content identity.'
+        }
+        $contentSidecar = Join-Path $testBase 'soundtrack.content.sha256'
+        [IO.File]::WriteAllText(
+            $contentSidecar,
+            "$contentHash  soundtrack-content-v1`r`n")
+        if ((Read-SoundtrackContentChecksum $contentSidecar) -cne $contentHash) {
+            Fail 'soundtrack self-test: the content checksum did not round-trip.'
+        }
+
         $firstRustupStage = New-RustupStage $testBase
         $secondRustupStage = New-RustupStage $testBase
         if ($firstRustupStage -eq $secondRustupStage -or
@@ -1184,7 +1255,7 @@ function Copy-ReleaseFile(
     }
 }
 
-function Test-InstalledSoundtrack([string]$ExpectedHash) {
+function Test-InstalledSoundtrack([string]$ExpectedContentHash) {
     if (-not (Test-Path -LiteralPath $SoundtrackDir -PathType Container)) { return $false }
     $receipt = Join-Path $SoundtrackDir '.archive.sha256'
     $receiptItem = Get-Item -LiteralPath $receipt -Force -ErrorAction SilentlyContinue
@@ -1193,10 +1264,10 @@ function Test-InstalledSoundtrack([string]$ExpectedHash) {
         $receiptItem.Length -gt 128) {
         return $false
     }
-    if ([IO.File]::ReadAllText($receipt).Trim() -cne $ExpectedHash) { return $false }
+    if ([IO.File]::ReadAllText($receipt).Trim() -notmatch '^[0-9a-f]{64}$') { return $false }
     try {
         Assert-PayloadManifest $SoundtrackDir
-        return $true
+        return (Get-SoundtrackContentHash $SoundtrackDir) -ceq $ExpectedContentHash
     } catch {
         return $false
     }
@@ -1208,7 +1279,9 @@ function Install-LatestRelease {
         Fail 'the requested release tag is unsafe.'
     }
     if ([bool]$ReleaseArchive -ne [bool]$ReleaseChecksum -or
-        [bool]$SoundtrackArchive -ne [bool]$SoundtrackChecksum) {
+        (($SoundtrackArchive -or $SoundtrackChecksum -or $SoundtrackContentChecksum) -and
+            (-not $SoundtrackArchive -or -not $SoundtrackChecksum -or
+                -not $SoundtrackContentChecksum))) {
         Fail 'local release fixtures require matching archive and checksum paths.'
     }
     $target = Get-ReleaseTarget
@@ -1216,6 +1289,7 @@ function Install-LatestRelease {
     $payloadName = "$payloadRoot.zip"
     $soundtrackRoot = "numinous-$tag-soundtrack"
     $soundtrackName = "$soundtrackRoot.tar.gz"
+    $soundtrackContentName = "$soundtrackName.content.sha256"
     $downloadStage = Join-Path $NuminousHome ('.download-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $downloadStage | Out-Null
     try {
@@ -1233,12 +1307,17 @@ function Install-LatestRelease {
         Copy-ReleaseFile $SoundtrackChecksum "$releaseBase/$soundtrackName.sha256" `
             $soundtrackChecksumPath 'the soundtrack checksum'
         $soundtrackHash = Read-ArchiveChecksum $soundtrackChecksumPath $soundtrackName
+        $soundtrackContentPath = Join-Path $downloadStage $soundtrackContentName
+        Copy-ReleaseFile $SoundtrackContentChecksum `
+            "$releaseBase/$soundtrackContentName" $soundtrackContentPath `
+            'the soundtrack content checksum'
+        $soundtrackContentHash = Read-SoundtrackContentChecksum $soundtrackContentPath
 
         Remove-DirectoryOrJunction (Join-Path $BinDir 'radio')
         Install-ReleasePayload $payloadPath $SrcDir $payloadRoot $payloadHash `
             $tag 'binaries' $target
 
-        if (Test-InstalledSoundtrack $soundtrackHash) {
+        if (Test-InstalledSoundtrack $soundtrackContentHash) {
             Say 'The verified built-in soundtrack is already current.'
         } else {
             $soundtrackPath = Join-Path $downloadStage $soundtrackName
@@ -1247,7 +1326,7 @@ function Install-LatestRelease {
             [void](Assert-ArchiveChecksum `
                 $soundtrackPath $soundtrackChecksumPath $soundtrackName)
             Install-ReleasePayload $soundtrackPath $SoundtrackDir $soundtrackRoot `
-                $soundtrackHash $tag 'soundtrack' 'all'
+                $soundtrackHash $tag 'soundtrack' 'all' $soundtrackContentHash
         }
     } finally {
         Remove-DirectoryOrJunction $downloadStage
@@ -1374,7 +1453,8 @@ try {
         Uninstall-Numinous
     } else {
         if ($Source -and ($ReleaseArchive -or $ReleaseChecksum -or
-                $SoundtrackArchive -or $SoundtrackChecksum -or $ReleaseTag)) {
+                $SoundtrackArchive -or $SoundtrackChecksum -or
+                $SoundtrackContentChecksum -or $ReleaseTag)) {
             Fail '-Source cannot be combined with release fixture options.'
         }
         if ($WaitForProcessId -lt 0 -or $WaitForProcessId -eq $PID) {

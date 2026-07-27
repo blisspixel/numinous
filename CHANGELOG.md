@@ -5,6 +5,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.2.0-alpha.4] - 2026-07-27
+
+### Fixed
+- Soundtrack retention now uses a stable checksum derived only from the closed
+  manifest's licensed radio files. Binary release metadata can change without
+  forcing another 267 MB soundtrack download. Package tests prove equal content
+  identity across different release versions, both installers recompute the
+  identity from a fully verified installed manifest, and the four-platform
+  repeat-install smoke points at nonexistent soundtrack archives to prove the
+  large download is skipped.
+
 ## [0.2.0-alpha.3] - 2026-07-27
 
 ### Fixed

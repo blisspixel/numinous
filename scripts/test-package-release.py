@@ -66,6 +66,29 @@ class ReleasePackageTests(unittest.TestCase):
             PACKAGE.verify_archive(archive, checksum)
             files = PACKAGE.archive_files(archive)
             self.assertTrue(any(name.endswith("radio/test-001.mp3") for name in files))
+            content_checksum = Path(f"{archive}.content.sha256")
+            self.assertTrue(content_checksum.is_file())
+
+            other_archive, other_checksum = PACKAGE.build_archive(
+                "0.2.0-alpha.999",
+                "all",
+                "soundtrack",
+                None,
+                radio,
+                temp / "other-dist",
+            )
+            PACKAGE.verify_archive(other_archive, other_checksum)
+            self.assertNotEqual(archive.read_bytes(), other_archive.read_bytes())
+            self.assertEqual(
+                content_checksum.read_bytes(),
+                Path(f"{other_archive}.content.sha256").read_bytes(),
+            )
+            content_checksum.write_text(
+                f"{'0' * 64}  {PACKAGE.SOUNDTRACK_CONTENT_LABEL}\n",
+                encoding="ascii",
+            )
+            with self.assertRaisesRegex(ValueError, "content checksum mismatch"):
+                PACKAGE.verify_archive(archive, checksum)
 
     def test_verifier_rejects_a_sidecar_for_another_archive(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
