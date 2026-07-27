@@ -57,7 +57,7 @@ That changes the product in five ways:
   or performance can show how a mind has made the mathematics its own without
   reducing that growth to a quiz score.
 
-**Current evidence boundary:** version 0.2.0-alpha.2 does not provide cross-session
+**Current evidence boundary:** version 0.2.0-alpha.3 does not provide cross-session
 per-mind continuity through MCP. The server is stateless between calls, while
 local Journey data and explicit erasure mechanisms provide only pieces of the
 future design. Persistent, player-owned episodic and temporal memory is roadmap
@@ -144,7 +144,7 @@ For the person building this, the point is the *relationship*, giving their digi
 - **Memory and continuity, so it can be a real friendship.** A friend remembers.
   The planned design gives a digital mind **persistent, player-owned state**, its
   own gallery, its own Codex, and its own journey across sessions. Full per-mind
-  continuity is not built in 0.2.0-alpha.2. The current alpha persists shared
+  continuity is not built in 0.2.0-alpha.3. The current alpha persists shared
   local Journey and score state plus a small set of managed local artifacts and
   an opt-in bounded experience journal with read, record, immutable correction,
   versioned structured export, and confirmed residue-verified erase operations.
