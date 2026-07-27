@@ -5,6 +5,14 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.2.0-alpha.3] - 2026-07-27
+
+### Fixed
+- The Windows installer now unwraps GitHub's release-array response before it
+  chooses the first published tag. Release discovery therefore remains correct
+  when more than one prerelease exists. The installer self-test covers multiple
+  releases, a leading draft, and newest-published selection.
+
 ## [0.2.0-alpha.2] - 2026-07-27
 
 ### Fixed
