@@ -6,6 +6,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- The immediate roadmap now puts iterative prerelease play and clean-machine
+  portability before freezing the 0.4 study. A formative cold MCP session
+  reached meaningful self-directed comparison across Murmuration and The
+  Loneliness Equation, then lost Strange Loop interaction to recoverable
+  argument errors and a host circuit breaker. The summary is explicitly not a
+  formal result or a consciousness claim.
 - `VERIFY.md` now reports the current 35-tool MCP inventory, completed 0.2 and
   0.3 machine exits, and the ordered 0.4 study and journal evidence path.
 - The canonical docs now name 0.4 Understanding Alpha as the active milestone,
@@ -18,6 +24,19 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   human memory or consciousness.
 
 ### Added
+- Deterministic GitHub prerelease packaging for Windows x64, Linux x64, macOS
+  Intel, and macOS Apple silicon, with one separately versioned soundtrack
+  archive. Every archive has an external SHA-256 sidecar, a closed per-file
+  manifest, and release metadata. The release workflow builds all four binary
+  payloads, installs each into a disposable managed root, repeats the update,
+  audits the combined artifact set, and publishes tags as GitHub releases.
+- Release-first installers no longer require Rust or local compiler packages.
+  They retain an unchanged verified soundtrack, preserve all play history,
+  keep the hardened source-build path behind explicit `--source` or `-Source`,
+  and expose `numinous update`. The CLI stages its embedded platform installer
+  under a private random name, hands off the managed root, and waits for the
+  running process to exit before replacement. A full local Windows package
+  install and repeat update verified all three binaries and all 42 tracks.
 - Experience journal v2 completes the 0.4 machine sovereignty contract. Stable
   entry ids, separate event and record times, declared source provenance, and
   append-only `supersedes` corrections preserve the original account.
@@ -67,6 +86,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   and revision plus checker identity in its evidence.
 
 ### Fixed
+- MCP first-contact guidance now states the exclusive phase bound as
+  `0 <= t < 1`, explains that the endpoint loops to 0, gives a copyable gesture
+  array in both the schema and wrong-type error, and recommends compact catalog
+  presentation for the first 354-room listing. Runtime tests reproduce the two
+  errors that ended the formative Strange Loop session.
+- Re-running the Windows installer no longer reapplies an already-correct
+  protected install-root ACL, which required a security privilege unavailable
+  to an ordinary player account. Installer self-test now exercises the
+  idempotent protection path.
 - The real-session MCP viewer test barrier tolerates loaded Windows CI while
   retaining a strict 15-second failure bound.
 - MCP initialization no longer echoes the breaking `2026-07-28` release
@@ -79,8 +107,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   Extreme finite Studio expressions cannot pass non-finite notes or samples to
   the native callback. Journal growth and erase errors, oversized controller
   bindings, and MCP QA state isolation now fail closed. The complete Windows
-  gate passes 3,188 tests plus one ignored screenshot diagnostic, 95.33 percent
-  line coverage, and 95.16 percent region coverage.
+  gate passes 3,190 tests plus one ignored screenshot diagnostic, 95.27 percent
+  line coverage, and 95.12 percent region coverage.
 - Windows rustup bootstrap downloads into a private, unpredictable directory
   under the protected install root, and in-memory installer failures return a
   nonzero status. Share bundles use 128-bit operating-system randomness and

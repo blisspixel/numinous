@@ -9,11 +9,11 @@ built, so an aspiration is never mistaken for a result.
 ## Evidence snapshot, 2026-07-18
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
-  doctests, 3,188 passing all-target test cases plus one ignored screenshot
+  doctests, 3,190 passing all-target test cases plus one ignored screenshot
   diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 95.16%
-  regions and 95.33% lines under the documented exclusions. The consented MCP
+  three-OS test-and-build matrix. The current measured coverage is 95.12%
+  regions and 95.27% lines under the documented exclusions. The consented MCP
   broadcast path has 65 focused shared-crate tests, 107 MCP unit tests, and
   six real stdio tests. Real loopback cases cover pairing, compatibility,
   ordered controls, redaction, disconnect cleanup, private-call silence, exact

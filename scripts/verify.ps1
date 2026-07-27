@@ -44,6 +44,7 @@ Step "documentation" {
 }
 Step "tests"  { cargo test --workspace --all-targets --locked }
 Step "understanding study runner" { python scripts/test-understanding-study.py }
+Step "release packaging" { python scripts/test-package-release.py }
 Step "build"  { cargo build --workspace --locked }
 
 if ($null -ne (Get-Command cargo-llvm-cov -ErrorAction SilentlyContinue)) {

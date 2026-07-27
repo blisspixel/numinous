@@ -3,12 +3,10 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh
 #
-# What it does, in order: checks the tools this machine needs (and says exactly
-# how to get any that are missing), installs Rust through rustup if cargo is
-# absent, fetches a trusted source snapshot into ~/.numinous/src, builds the
-# release binaries, puts numinous,
-# numinous-app, and numinous-mcp in ~/.numinous/bin, links the built-in radio
-# next to them, and adds that directory to PATH.
+# What it does, in order: downloads the latest published release for this
+# machine, verifies both archive checksums and closed payload manifests, puts
+# numinous, numinous-app, and numinous-mcp in ~/.numinous/bin, installs the
+# built-in radio once, and adds that directory to PATH.
 #
 # Re-run it any time to update. Remove everything it installed with:
 #
@@ -17,12 +15,14 @@
 # Uninstalling never touches play history: ~/.numinous-journey,
 # ~/.numinous-scores, and ~/.numinous-cairn stay yours.
 #
-# Options: --uninstall, --no-modify-path, --adopt-legacy, --self-test, --help.
+# Options: --uninstall, --no-modify-path, --adopt-legacy, --source,
+# --self-test, --help.
 # Set NUMINOUS_HOME to install somewhere other than ~/.numinous.
 set -eu
 
 REPO="blisspixel/numinous"
 REPO_URL="https://github.com/${REPO}"
+REPO_API_URL="https://api.github.com/repos/${REPO}"
 SNAPSHOT_URL="https://codeload.github.com/${REPO}/tar.gz/refs/heads/main"
 INSTALL_SH_URL="https://raw.githubusercontent.com/${REPO}/main/scripts/install.sh"
 INSTALL_PS1_URL="https://raw.githubusercontent.com/${REPO}/main/scripts/install.ps1"
@@ -256,6 +256,7 @@ validate_install_root() {
     fi
     SOURCE_PATH="$NUMINOUS_HOME/src"
     BINARY_PATH="$NUMINOUS_HOME/bin"
+    SOUNDTRACK_PATH="$NUMINOUS_HOME/soundtrack"
     INSTALL_MARKER="$NUMINOUS_HOME/.numinous-install-root"
     DEFAULT_HOME="$home_physical/.numinous"
     if [ -e "$NUMINOUS_HOME" ] && [ ! -d "$NUMINOUS_HOME" ]; then
@@ -328,6 +329,260 @@ install_source_archive() (
     fi
     rm -rf -- "$source_dir"
     mv "$new_tree" "$source_dir"
+)
+
+sha256_file() {
+    if have sha256sum; then
+        sha256sum "$1" | awk '{print $1}'
+    elif have shasum; then
+        shasum -a 256 "$1" | awk '{print $1}'
+    elif have openssl; then
+        openssl dgst -sha256 "$1" | awk '{print $NF}'
+    else
+        fail "SHA-256 verification needs sha256sum, shasum, or openssl"
+    fi
+}
+
+read_archive_checksum() (
+    checksum_path="$1"
+    archive_name="$2"
+    [ -f "$checksum_path" ] && [ ! -L "$checksum_path" ] \
+        || fail "the release checksum sidecar is not an ordinary file"
+    [ "$(wc -c <"$checksum_path" | tr -d '[:space:]')" -le 1024 ] \
+        || fail "the release checksum sidecar is too large"
+    line="$(tr -d '\r\n' <"$checksum_path")"
+    hash="${line%%  *}"
+    name="${line#*  }"
+    [ "$line" = "$hash  $name" ] && [ "$name" = "$archive_name" ] \
+        && [ "${#hash}" -eq 64 ] \
+        || fail "the release checksum sidecar is malformed or names another archive"
+    case "$hash" in *[!0-9a-f]*) fail "the release checksum is not lowercase hexadecimal" ;; esac
+    printf '%s' "$hash"
+)
+
+assert_archive_checksum() (
+    archive_path="$1"
+    checksum_path="$2"
+    archive_name="$3"
+    [ -f "$archive_path" ] && [ ! -L "$archive_path" ] \
+        || fail "the release download is not an ordinary archive file"
+    expected="$(read_archive_checksum "$checksum_path" "$archive_name")"
+    actual="$(sha256_file "$archive_path")"
+    [ "$actual" = "$expected" ] \
+        || fail "release archive checksum mismatch for $archive_name"
+    printf '%s' "$expected"
+)
+
+assert_payload_manifest() (
+    root="$1"
+    [ -d "$root" ] && [ ! -L "$root" ] \
+        || fail "the release payload root is not an ordinary directory"
+    manifest="$root/MANIFEST.sha256"
+    [ -f "$manifest" ] && [ ! -L "$manifest" ] \
+        || fail "the release payload manifest is not an ordinary file"
+    [ "$(wc -c <"$manifest" | tr -d '[:space:]')" -le 1048576 ] \
+        || fail "the release payload manifest is too large"
+    linked="$(find "$root" -type l -print -quit)"
+    [ -z "$linked" ] || fail "the release payload contains a symbolic link"
+    special="$(find "$root" ! -type d ! -type f ! -type l -print -quit)"
+    [ -z "$special" ] || fail "the release payload contains a special file"
+    listed_count=0
+    while IFS= read -r line || [ -n "$line" ]; do
+        hash="${line%%  *}"
+        relative="${line#*  }"
+        [ "$line" = "$hash  $relative" ] && [ "${#hash}" -eq 64 ] \
+            || fail "the release payload manifest is malformed"
+        case "$hash" in *[!0-9a-f]*) fail "the payload checksum is malformed" ;; esac
+        case "$relative" in
+            "" | /* | *\\* | *//* | . | .. | ./* | ../* | */. | */.. | */./* | */../*)
+                fail "the release payload manifest contains an unsafe path"
+                ;;
+            *[!A-Za-z0-9._/-]*) fail "the release payload path contains an unsafe byte" ;;
+        esac
+        candidate="$root/$relative"
+        [ -f "$candidate" ] && [ ! -L "$candidate" ] \
+            || fail "release payload entry is not an ordinary file: $relative"
+        actual="$(sha256_file "$candidate")"
+        [ "$actual" = "$hash" ] \
+            || fail "release payload checksum mismatch: $relative"
+        listed_count=$((listed_count + 1))
+    done <"$manifest"
+    [ "$listed_count" -gt 0 ] || fail "the release payload manifest is empty"
+    inventory="$(mktemp "${TMPDIR:-/tmp}/numinous-inventory.XXXXXX")" \
+        || fail "could not stage the release payload inventory"
+    trap 'rm -f -- "$inventory" "$inventory.raw"' EXIT HUP INT TERM
+    raw_inventory="$inventory.raw"
+    find "$root" -type f -print >"$raw_inventory"
+    while IFS= read -r candidate || [ -n "$candidate" ]; do
+        case "$candidate" in
+            "$manifest" | "$root/.archive.sha256") continue ;;
+        esac
+        printf '%s\n' "$candidate" >>"$inventory"
+    done <"$raw_inventory"
+    rm -f -- "$raw_inventory"
+    while IFS= read -r candidate || [ -n "$candidate" ]; do
+        relative="${candidate#"$root"/}"
+        grep -Fqx "$(sha256_file "$candidate")  $relative" "$manifest" \
+            || fail "release payload contains an unlisted or changed file: $relative"
+    done <"$inventory"
+    actual_count="$(wc -l <"$inventory" | tr -d '[:space:]')"
+    [ "$actual_count" -eq "$listed_count" ] \
+        || fail "the release payload inventory differs from its manifest"
+    rm -f -- "$inventory"
+    trap - EXIT HUP INT TERM
+)
+
+assert_safe_tar_members() (
+    archive_path="$1"
+    expected_root="$2"
+    members="$(mktemp "${TMPDIR:-/tmp}/numinous-members.XXXXXX")" \
+        || fail "could not stage the release archive inventory"
+    trap 'rm -f -- "$members"' EXIT HUP INT TERM
+    tar -tzf "$archive_path" >"$members" \
+        || fail "the release tar archive could not be listed"
+    [ -s "$members" ] || fail "the release tar archive is empty"
+    while IFS= read -r member || [ -n "$member" ]; do
+        case "$member" in
+            "$expected_root" | "$expected_root/" | "$expected_root/"*) ;;
+            *) fail "the release tar archive escapes its expected root" ;;
+        esac
+        case "$member" in
+            /* | *\\* | *//* | */../* | ../* | */.. | .. | */./* | ./* | */.)
+                fail "the release tar archive contains an unsafe member path"
+                ;;
+            *[!A-Za-z0-9._/-]*)
+                fail "the release tar archive member contains an unsafe byte"
+                ;;
+        esac
+    done <"$members"
+    rm -f -- "$members"
+    trap - EXIT HUP INT TERM
+)
+
+install_release_payload() (
+    archive_path="$1"
+    destination="$2"
+    expected_root="$3"
+    archive_hash="$4"
+    expected_tag="$5"
+    expected_kind="$6"
+    expected_target="$7"
+    install_marker_is_valid "$NUMINOUS_HOME" \
+        || fail "release installation requires a marked install root"
+    stage="$(mktemp -d "$NUMINOUS_HOME/.release-stage.XXXXXX")" \
+        || fail "could not create a release staging directory"
+    trap 'rm -rf -- "$stage"' EXIT HUP INT TERM
+    assert_safe_tar_members "$archive_path" "$expected_root"
+    tar -xzf "$archive_path" -C "$stage" \
+        || fail "could not extract the release archive"
+    new_tree="$stage/$expected_root"
+    assert_payload_manifest "$new_tree"
+    metadata="$new_tree/RELEASE.json"
+    grep -Fqx '  "schema": "numinous.release",' "$metadata" \
+        && grep -Fqx '  "schemaVersion": 1,' "$metadata" \
+        && grep -Fqx "  \"tag\": \"$expected_tag\"," "$metadata" \
+        && grep -Fqx "  \"kind\": \"$expected_kind\"," "$metadata" \
+        && grep -Fqx "  \"target\": \"$expected_target\"," "$metadata" \
+        || fail "the release metadata does not match the requested payload"
+    printf '%s\n' "$archive_hash" >"$new_tree/.archive.sha256"
+    rm -rf -- "$destination"
+    mv "$new_tree" "$destination"
+)
+
+latest_release_tag() (
+    metadata="$(mktemp "${TMPDIR:-/tmp}/numinous-releases.XXXXXX")" \
+        || fail "could not stage release metadata"
+    trap 'rm -f -- "$metadata"' EXIT HUP INT TERM
+    fetch "$REPO_API_URL/releases?per_page=20" "$metadata"
+    tag="$(sed -n 's/^[[:space:]]*"tag_name": "\(v[0-9][0-9A-Za-z.-]*\)",$/\1/p' "$metadata" | sed -n '1p')"
+    printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' \
+        || fail "no safe published Numinous release is available; use --source to build main"
+    printf '%s' "$tag"
+)
+
+release_target() {
+    machine="$(uname -m)"
+    case "$os:$machine" in
+        linux:x86_64 | linux:amd64) printf '%s' x86_64-unknown-linux-gnu ;;
+        macos:x86_64) printf '%s' x86_64-apple-darwin ;;
+        macos:arm64 | macos:aarch64) printf '%s' aarch64-apple-darwin ;;
+        *) fail "no published release supports $os $machine; re-run with --source" ;;
+    esac
+}
+
+copy_release_file() {
+    provided_path="$1"
+    url="$2"
+    destination="$3"
+    description="$4"
+    if [ -n "$provided_path" ]; then
+        [ -f "$provided_path" ] && [ ! -L "$provided_path" ] \
+            || fail "$description fixture is not an ordinary file"
+        cp "$provided_path" "$destination"
+    else
+        say "Downloading $description"
+        fetch "$url" "$destination"
+    fi
+}
+
+installed_soundtrack_is_current() (
+    expected_hash="$1"
+    [ -d "$SOUNDTRACK_PATH" ] && [ ! -L "$SOUNDTRACK_PATH" ] || return 1
+    receipt="$SOUNDTRACK_PATH/.archive.sha256"
+    [ -f "$receipt" ] && [ ! -L "$receipt" ] || return 1
+    [ "$(tr -d '\r\n' <"$receipt")" = "$expected_hash" ] || return 1
+    assert_payload_manifest "$SOUNDTRACK_PATH" >/dev/null 2>&1
+)
+
+install_latest_release() (
+    if [ -n "$RELEASE_TAG" ]; then tag="$RELEASE_TAG"; else tag="$(latest_release_tag)"; fi
+    printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' \
+        || fail "the requested release tag is unsafe"
+    if { [ -n "$RELEASE_ARCHIVE" ] && [ -z "$RELEASE_CHECKSUM" ]; } \
+        || { [ -z "$RELEASE_ARCHIVE" ] && [ -n "$RELEASE_CHECKSUM" ]; }; then
+        fail "local release fixtures require matching archive and checksum paths"
+    fi
+    if { [ -n "$SOUNDTRACK_ARCHIVE" ] && [ -z "$SOUNDTRACK_CHECKSUM" ]; } \
+        || { [ -z "$SOUNDTRACK_ARCHIVE" ] && [ -n "$SOUNDTRACK_CHECKSUM" ]; }; then
+        fail "local soundtrack fixtures require matching archive and checksum paths"
+    fi
+    target="$(release_target)"
+    payload_root="numinous-$tag-$target"
+    payload_name="$payload_root.tar.gz"
+    soundtrack_root="numinous-$tag-soundtrack"
+    soundtrack_name="$soundtrack_root.tar.gz"
+    stage="$(mktemp -d "$NUMINOUS_HOME/.download.XXXXXX")" \
+        || fail "could not create a release download directory"
+    trap 'rm -rf -- "$stage"' EXIT HUP INT TERM
+    release_base="$REPO_URL/releases/download/$tag"
+    payload_path="$stage/$payload_name"
+    payload_checksum_path="$stage/$payload_name.sha256"
+    copy_release_file "$RELEASE_ARCHIVE" "$release_base/$payload_name" \
+        "$payload_path" "the $os release payload"
+    copy_release_file "$RELEASE_CHECKSUM" "$release_base/$payload_name.sha256" \
+        "$payload_checksum_path" "the $os payload checksum"
+    payload_hash="$(assert_archive_checksum "$payload_path" "$payload_checksum_path" "$payload_name")"
+
+    soundtrack_checksum_path="$stage/$soundtrack_name.sha256"
+    copy_release_file "$SOUNDTRACK_CHECKSUM" "$release_base/$soundtrack_name.sha256" \
+        "$soundtrack_checksum_path" "the soundtrack checksum"
+    soundtrack_hash="$(read_archive_checksum "$soundtrack_checksum_path" "$soundtrack_name")"
+
+    rm -rf -- "$BINARY_PATH/radio"
+    install_release_payload "$payload_path" "$SOURCE_PATH" "$payload_root" \
+        "$payload_hash" "$tag" binaries "$target"
+    if installed_soundtrack_is_current "$soundtrack_hash"; then
+        say "The verified built-in soundtrack is already current."
+    else
+        soundtrack_path="$stage/$soundtrack_name"
+        copy_release_file "$SOUNDTRACK_ARCHIVE" "$release_base/$soundtrack_name" \
+            "$soundtrack_path" "the built-in soundtrack"
+        assert_archive_checksum "$soundtrack_path" "$soundtrack_checksum_path" \
+            "$soundtrack_name" >/dev/null
+        install_release_payload "$soundtrack_path" "$SOUNDTRACK_PATH" \
+            "$soundtrack_root" "$soundtrack_hash" "$tag" soundtrack all
+    fi
+    printf '%s\n' "$tag" >"$NUMINOUS_HOME/.installed-release"
 )
 
 verify_installed_cli() (
@@ -522,6 +777,7 @@ usage() {
     say "  install.sh --uninstall      remove ~/.numinous and the PATH lines it added"
     say "  install.sh --no-modify-path install without editing any shell profile"
     say "  install.sh --adopt-legacy   explicitly migrate an older default-root install"
+    say "  install.sh --source         build the current main branch from source"
     say ""
     say "NUMINOUS_HOME overrides the install root (default ~/.numinous)."
     say "Play history in ~/.numinous-journey and friends is never touched."
@@ -530,13 +786,38 @@ usage() {
 UNINSTALL=0
 MODIFY_PATH=1
 ADOPT_LEGACY=0
+SOURCE_MODE=0
 SELF_TEST=0
+RELEASE_ARCHIVE=''
+RELEASE_CHECKSUM=''
+SOUNDTRACK_ARCHIVE=''
+SOUNDTRACK_CHECKSUM=''
+RELEASE_TAG=''
+WAIT_FOR_PID=0
+DELETE_INSTALLER=''
 while [ $# -gt 0 ]; do
     case "$1" in
         --uninstall) UNINSTALL=1 ;;
         --no-modify-path) MODIFY_PATH=0 ;;
         --adopt-legacy) ADOPT_LEGACY=1 ;;
+        --source) SOURCE_MODE=1 ;;
         --self-test) SELF_TEST=1 ;;
+        --release-archive | --release-checksum | --soundtrack-archive | \
+            --soundtrack-checksum | --release-tag | --wait-for-pid | \
+            --delete-installer)
+            option="$1"
+            shift
+            [ $# -gt 0 ] || fail "$option needs a value"
+            case "$option" in
+                --release-archive) RELEASE_ARCHIVE="$1" ;;
+                --release-checksum) RELEASE_CHECKSUM="$1" ;;
+                --soundtrack-archive) SOUNDTRACK_ARCHIVE="$1" ;;
+                --soundtrack-checksum) SOUNDTRACK_CHECKSUM="$1" ;;
+                --release-tag) RELEASE_TAG="$1" ;;
+                --wait-for-pid) WAIT_FOR_PID="$1" ;;
+                --delete-installer) DELETE_INSTALLER="$1" ;;
+            esac
+            ;;
         -h | --help)
             usage
             exit 0
@@ -550,6 +831,36 @@ if [ "$SELF_TEST" -eq 1 ]; then
     run_self_test
     exit 0
 fi
+
+if [ "$SOURCE_MODE" -eq 1 ] \
+    && { [ -n "$RELEASE_ARCHIVE" ] || [ -n "$RELEASE_CHECKSUM" ] \
+        || [ -n "$SOUNDTRACK_ARCHIVE" ] || [ -n "$SOUNDTRACK_CHECKSUM" ] \
+        || [ -n "$RELEASE_TAG" ]; }; then
+    fail "--source cannot be combined with release fixture options"
+fi
+case "$WAIT_FOR_PID" in
+    '' | *[!0-9]*) fail "--wait-for-pid needs a non-negative process id" ;;
+esac
+[ "$WAIT_FOR_PID" != "$$" ] || fail "the update helper cannot wait for itself"
+if [ "$WAIT_FOR_PID" -gt 0 ]; then
+    say "Waiting for the running Numinous command to close before updating."
+    while kill -0 "$WAIT_FOR_PID" 2>/dev/null; do sleep 1; done
+fi
+
+cleanup_update_installer() {
+    [ -n "$DELETE_INSTALLER" ] || return 0
+    case "$DELETE_INSTALLER" in /*) ;; *) return 0 ;; esac
+    [ -f "$DELETE_INSTALLER" ] && [ ! -L "$DELETE_INSTALLER" ] || return 0
+    delete_parent="$(CDPATH= cd -P "$(dirname "$DELETE_INSTALLER")" 2>/dev/null && pwd)" \
+        || return 0
+    temp_parent="$(CDPATH= cd -P "${TMPDIR:-/tmp}" 2>/dev/null && pwd)" || return 0
+    [ "$delete_parent" = "$temp_parent" ] || return 0
+    delete_name="$(basename "$DELETE_INSTALLER")"
+    printf '%s' "$delete_name" \
+        | grep -Eq '^numinous-update-[0-9a-f]{32}\.sh$' || return 0
+    rm -f -- "$DELETE_INSTALLER"
+}
+trap cleanup_update_installer EXIT HUP INT TERM
 
 validate_install_root
 
@@ -612,90 +923,99 @@ else
     fail "neither curl nor wget is installed; install one and re-run"
 fi
 
-# A C toolchain is needed to link the Rust build. On macOS the cc on PATH is
-# a shim, so ask xcode-select whether the real tools are installed.
-if [ "$os" = macos ]; then
-    if ! xcode-select -p >/dev/null 2>&1; then
-        fail "the Xcode command line tools are not installed. Install them first:
+# Building main from source remains available as an explicit fallback.
+if [ "$SOURCE_MODE" -eq 1 ]; then
+    # A C toolchain is needed to link the Rust build. On macOS the cc on PATH is
+    # a shim, so ask xcode-select whether the real tools are installed.
+    if [ "$os" = macos ]; then
+        if ! xcode-select -p >/dev/null 2>&1; then
+            fail "the Xcode command line tools are not installed. Install them first:
   xcode-select --install
 then re-run this installer"
-    fi
-elif ! have cc && ! have gcc && ! have clang; then
-    fail "no C compiler found. Install one first, then re-run this installer.
+        fi
+    elif ! have cc && ! have gcc && ! have clang; then
+        fail "no C compiler found. Install one first, then re-run this installer.
   Debian/Ubuntu: sudo apt-get install -y build-essential
   Fedora:        sudo dnf install -y gcc
   Arch:          sudo pacman -S --needed base-devel"
-fi
+    fi
 
-# The audio, window, and controller builds need ALSA, xkbcommon, and libudev
-# headers on Linux (the same packages CI installs).
-if [ "$os" = linux ]; then
-    if ! have pkg-config || ! pkg-config --exists alsa xkbcommon libudev 2>/dev/null; then
-        fail "the build needs pkg-config plus the ALSA, xkbcommon, and libudev headers. Install them, then re-run.
+    # The audio, window, and controller builds need ALSA, xkbcommon, and libudev
+    # headers on Linux (the same packages CI installs).
+    if [ "$os" = linux ]; then
+        if ! have pkg-config || ! pkg-config --exists alsa xkbcommon libudev 2>/dev/null; then
+            fail "the build needs pkg-config plus the ALSA, xkbcommon, and libudev headers. Install them, then re-run.
   Debian/Ubuntu: sudo apt-get install -y pkg-config libasound2-dev libxkbcommon-dev libudev-dev
   Fedora:        sudo dnf install -y pkgconf-pkg-config alsa-lib-devel libxkbcommon-devel systemd-devel
   Arch:          sudo pacman -S --needed pkgconf alsa-lib libxkbcommon systemd-libs
   openSUSE:      sudo zypper install pkg-config alsa-devel libxkbcommon-devel libudev-devel"
+        fi
     fi
-fi
 
-# Rust. Prefer rustup, which honors the exact toolchain pinned in
-# rust-toolchain.toml. Reuse an existing ~/.cargo install when present.
-if [ -d "$HOME/.cargo/bin" ]; then
-    PATH="$HOME/.cargo/bin:$PATH"
-fi
-if ! have cargo; then
-    say "Rust is not installed yet. Installing it with rustup (https://rustup.rs)."
-    rustup_init="$(mktemp)"
-    fetch "https://sh.rustup.rs" "$rustup_init"
-    if [ "$MODIFY_PATH" -eq 1 ]; then
-        sh "$rustup_init" -y --default-toolchain none </dev/null
-    else
-        sh "$rustup_init" -y --default-toolchain none --no-modify-path </dev/null
+    # Rust. Prefer rustup, which honors the exact toolchain pinned in
+    # rust-toolchain.toml. Reuse an existing ~/.cargo install when present.
+    if [ -d "$HOME/.cargo/bin" ]; then
+        PATH="$HOME/.cargo/bin:$PATH"
     fi
-    rm -f "$rustup_init"
-    PATH="$HOME/.cargo/bin:$PATH"
-    have cargo || fail "rustup finished but cargo is still missing; open a new shell and re-run"
-fi
-if ! have rustup; then
-    # A distro cargo without rustup cannot honor the pinned toolchain file, so
-    # accept it only if it meets the workspace MSRV in Cargo.toml.
-    cargo_minor="$(cargo --version 2>/dev/null | sed -n 's/^cargo 1\.\([0-9][0-9]*\).*/\1/p')"
-    if [ -z "$cargo_minor" ] || [ "$cargo_minor" -lt 88 ]; then
-        fail "this cargo is older than the minimum supported Rust (1.88) and rustup is absent.
+    if ! have cargo; then
+        say "Rust is not installed yet. Installing it with rustup (https://rustup.rs)."
+        rustup_init="$(mktemp)"
+        fetch "https://sh.rustup.rs" "$rustup_init"
+        if [ "$MODIFY_PATH" -eq 1 ]; then
+            sh "$rustup_init" -y --default-toolchain none </dev/null
+        else
+            sh "$rustup_init" -y --default-toolchain none --no-modify-path </dev/null
+        fi
+        rm -f "$rustup_init"
+        PATH="$HOME/.cargo/bin:$PATH"
+        have cargo || fail "rustup finished but cargo is still missing; open a new shell and re-run"
+    fi
+    if ! have rustup; then
+        # A distro cargo without rustup cannot honor the pinned toolchain file,
+        # so accept it only if it meets the workspace MSRV in Cargo.toml.
+        cargo_minor="$(cargo --version 2>/dev/null | sed -n 's/^cargo 1\.\([0-9][0-9]*\).*/\1/p')"
+        if [ -z "$cargo_minor" ] || [ "$cargo_minor" -lt 88 ]; then
+            fail "this cargo is older than the minimum supported Rust (1.88) and rustup is absent.
 Install rustup from https://rustup.rs and re-run this installer"
+        fi
+        say "note: using the system cargo without rustup; the pinned toolchain file is ignored."
     fi
-    say "note: using the system cargo without rustup; the pinned toolchain file is ignored."
+
+    # Replace the source from the fixed snapshot on every run. Existing
+    # repository configuration, untracked files, and build caches cannot
+    # influence an update.
+    have tar || fail "tar is required to extract the trusted source snapshot"
+    source_archive="$(mktemp "$NUMINOUS_HOME/.source.XXXXXX")" \
+        || fail "could not create a source download file"
+    say "Downloading the trusted source snapshot from $REPO_URL"
+    fetch "$SNAPSHOT_URL" "$source_archive"
+    install_source_archive "$NUMINOUS_HOME" "$SOURCE_PATH" "$BINARY_PATH" "$source_archive"
+    rm -f -- "$source_archive"
+
+    if have rustup; then
+        # Install the pinned toolchain up front so the build step is only a
+        # build. Older rustup releases need the toolchain named; current cargo
+        # installs it on demand anyway, so a failure here is not fatal.
+        (cd "$SRC_DIR" && rustup toolchain install) || true
+    fi
+
+    say "Building the release binaries (the first build takes several minutes)."
+    (cd "$SRC_DIR" && cargo build --release --locked \
+        --bin numinous --bin numinous-app --bin numinous-mcp)
+    BINARY_SOURCE="$SRC_DIR/target/release"
+    RADIO_SOURCE="$SOURCE_PATH/assets/radio"
+else
+    have tar || fail "tar is required to extract verified release archives"
+    install_latest_release
+    BINARY_SOURCE="$SRC_DIR/bin"
+    RADIO_SOURCE="$SOUNDTRACK_PATH/radio"
 fi
-
-# Replace the source from the fixed snapshot on every run. Existing repository
-# configuration, untracked files, and build caches never influence an update.
-have tar || fail "tar is required to extract the trusted source snapshot"
-source_archive="$(mktemp "$NUMINOUS_HOME/.source.XXXXXX")" \
-    || fail "could not create a source download file"
-trap 'rm -f -- "$source_archive"' EXIT HUP INT TERM
-say "Downloading the trusted source snapshot from $REPO_URL"
-fetch "$SNAPSHOT_URL" "$source_archive"
-install_source_archive "$NUMINOUS_HOME" "$SOURCE_PATH" "$BINARY_PATH" "$source_archive"
-rm -f -- "$source_archive"
-trap - EXIT HUP INT TERM
-
-if have rustup; then
-    # Install the pinned toolchain up front so the build step is only a build.
-    # Older rustup releases need the toolchain named; current cargo installs it
-    # on demand anyway, so a failure here is not fatal.
-    (cd "$SRC_DIR" && rustup toolchain install) || true
-fi
-
-say "Building the release binaries (the first build takes several minutes)."
-(cd "$SRC_DIR" && cargo build --release --locked \
-    --bin numinous --bin numinous-app --bin numinous-mcp)
 
 mkdir -p "$BIN_DIR"
 for binary in numinous numinous-app numinous-mcp; do
     binary_stage="$(mktemp "$BIN_DIR/.numinous-$binary.XXXXXX")" \
         || fail "could not create a binary staging file"
-    if install -m 755 "$SRC_DIR/target/release/$binary" "$binary_stage" \
+    if install -m 755 "$BINARY_SOURCE/$binary" "$binary_stage" \
         && mv -f -- "$binary_stage" "$BIN_DIR/$binary"; then
         :
     else
@@ -704,7 +1024,7 @@ for binary in numinous numinous-app numinous-mcp; do
     fi
 done
 # The app finds the built-in radio next to its executable.
-ln -sfn "$SOURCE_PATH/assets/radio" "$BIN_DIR/radio"
+ln -sfn "$RADIO_SOURCE" "$BIN_DIR/radio"
 
 if [ "$MODIFY_PATH" -eq 1 ]; then
     add_path_line "$HOME/.profile" "$path_line"
@@ -750,4 +1070,14 @@ else
 fi
 say ""
 say "Read PLAY.md first if you read anything: $SOURCE_PATH/PLAY.md"
-say "Update any time by re-running this installer. Uninstall with --uninstall."
+if [ "$SOURCE_MODE" -eq 1 ]; then
+    say "This source build follows main. Re-run with --source to update it."
+else
+    installed_release="$(cat "$NUMINOUS_HOME/.installed-release")"
+    say "Installed release: $installed_release"
+    say "Update any time with: numinous update"
+fi
+say "Uninstall with --uninstall."
+
+cleanup_update_installer
+trap - EXIT HUP INT TERM

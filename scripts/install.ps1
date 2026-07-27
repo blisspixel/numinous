@@ -2,12 +2,10 @@
 #
 #   irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex
 #
-# What it does, in order: checks the tools this machine needs (and says exactly
-# how to get any that are missing), installs Rust through rustup if cargo is
-# absent, replaces ~\.numinous\src from a fixed source snapshot, builds the
-# release binaries, puts numinous,
-# numinous-app, and numinous-mcp in ~\.numinous\bin, links the built-in radio
-# next to them, and adds that directory to the user PATH.
+# What it does, in order: downloads the latest published release for this
+# machine, verifies both archive checksums and closed payload manifests, puts
+# numinous, numinous-app, and numinous-mcp in ~\.numinous\bin, installs the
+# built-in radio once, and adds that directory to the user PATH.
 #
 # Re-run it any time to update. Remove everything it installed with:
 #
@@ -18,14 +16,22 @@
 # Uninstalling never touches play history: ~\.numinous-journey,
 # ~\.numinous-scores, and ~\.numinous-cairn stay yours.
 #
-# Options: -Uninstall, -NoModifyPath, -AdoptLegacy, -SelfTest.
+# Options: -Uninstall, -NoModifyPath, -AdoptLegacy, -Source, -SelfTest.
 # Set NUMINOUS_HOME to install somewhere other than ~\.numinous.
 [CmdletBinding()]
 param(
     [switch]$Uninstall,
     [switch]$NoModifyPath,
     [switch]$AdoptLegacy,
-    [switch]$SelfTest
+    [switch]$Source,
+    [switch]$SelfTest,
+    [string]$ReleaseArchive = '',
+    [string]$ReleaseChecksum = '',
+    [string]$SoundtrackArchive = '',
+    [string]$SoundtrackChecksum = '',
+    [string]$ReleaseTag = '',
+    [int]$WaitForProcessId = 0,
+    [string]$DeleteInstaller = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,6 +41,7 @@ $ProgressPreference = 'SilentlyContinue'
 
 $Repo = 'blisspixel/numinous'
 $RepoUrl = "https://github.com/$Repo"
+$RepoApiUrl = "https://api.github.com/repos/$Repo"
 $SnapshotUrl = "https://codeload.github.com/$Repo/tar.gz/refs/heads/main"
 $RequestedNuminousHome = if ($SelfTest) {
     Join-Path $HOME '.numinous'
@@ -112,11 +119,236 @@ function Resolve-InstallRoot([string]$Path, [string]$HomePath) {
 $NuminousHome = Resolve-InstallRoot $RequestedNuminousHome $HOME
 $SrcDir = Join-Path $NuminousHome 'src'
 $BinDir = Join-Path $NuminousHome 'bin'
+$SoundtrackDir = Join-Path $NuminousHome 'soundtrack'
 
 # Run a native command and stop with a clear message if it fails.
 function Invoke-Checked([string]$What, [scriptblock]$Action) {
     & $Action
     if ($LASTEXITCODE -ne 0) { Fail "$What failed; the output above says why." }
+}
+
+function Get-ReleaseTarget {
+    $architecture = if ($env:PROCESSOR_ARCHITEW6432) {
+        $env:PROCESSOR_ARCHITEW6432
+    } else {
+        $env:PROCESSOR_ARCHITECTURE
+    }
+    if ($architecture -ne 'AMD64') {
+        Fail ("published Windows releases currently require x86-64, but this process is " +
+            "'$architecture'. Re-run with -Source to build locally.")
+    }
+    return 'x86_64-pc-windows-msvc'
+}
+
+function Get-LatestReleaseTag {
+    Say "Checking the latest published release at $RepoUrl"
+    $headers = @{
+        Accept = 'application/vnd.github+json'
+        'User-Agent' = 'numinous-installer'
+        'X-GitHub-Api-Version' = '2022-11-28'
+    }
+    $releases = @(Invoke-RestMethod -UseBasicParsing -Headers $headers `
+        -Uri "$RepoApiUrl/releases?per_page=20")
+    $release = @($releases | Where-Object { -not $_.draft } | Select-Object -First 1)
+    if ($release.Count -ne 1) {
+        Fail "no published Numinous release is available yet; use -Source to build main."
+    }
+    $tag = [string]$release[0].tag_name
+    if ($tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$') {
+        Fail "the latest release returned an unsafe tag name."
+    }
+    return $tag
+}
+
+function Read-ArchiveChecksum([string]$Path, [string]$ArchiveName) {
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+    if ($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
+        $item.Length -gt 1024) {
+        Fail 'the release checksum sidecar is not a small ordinary file.'
+    }
+    $text = [IO.File]::ReadAllText($item.FullName).TrimEnd("`r", "`n")
+    $match = [regex]::Match($text, '^([0-9a-f]{64})  ([A-Za-z0-9._-]+)$')
+    if (-not $match.Success -or $match.Groups[2].Value -cne $ArchiveName) {
+        Fail 'the release checksum sidecar is malformed or names another archive.'
+    }
+    return $match.Groups[1].Value
+}
+
+function Assert-ArchiveChecksum(
+    [string]$ArchivePath,
+    [string]$ChecksumPath,
+    [string]$ArchiveName
+) {
+    $archive = Get-Item -LiteralPath $ArchivePath -Force -ErrorAction Stop
+    if ($archive.PSIsContainer -or
+        ($archive.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        Fail 'the release download is not an ordinary archive file.'
+    }
+    $expected = Read-ArchiveChecksum $ChecksumPath $ArchiveName
+    $actual = (Get-FileHash -LiteralPath $ArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actual -cne $expected) {
+        Fail "release archive checksum mismatch for $ArchiveName."
+    }
+    return $expected
+}
+
+function Assert-PayloadManifest([string]$Root) {
+    $rootItem = Get-Item -LiteralPath $Root -Force -ErrorAction Stop
+    if (-not $rootItem.PSIsContainer -or
+        ($rootItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        Fail 'the release payload root is not an ordinary directory.'
+    }
+    $manifestPath = Join-Path $Root 'MANIFEST.sha256'
+    $manifestItem = Get-Item -LiteralPath $manifestPath -Force -ErrorAction Stop
+    if ($manifestItem.PSIsContainer -or
+        ($manifestItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
+        $manifestItem.Length -gt 1024 * 1024) {
+        Fail 'the release payload manifest is not a bounded ordinary file.'
+    }
+    $rootFull = [IO.Path]::GetFullPath($Root).TrimEnd('\')
+    $rootPrefix = "$rootFull\"
+    $listed = @{}
+    foreach ($line in [IO.File]::ReadAllLines($manifestPath)) {
+        $match = [regex]::Match($line, '^([0-9a-f]{64})  ([A-Za-z0-9._/-]+)$')
+        if (-not $match.Success) { Fail 'the release payload manifest is malformed.' }
+        $relative = $match.Groups[2].Value
+        if (@($relative -split '/' | Where-Object { $_ -in @('', '.', '..') }).Count -ne 0 -or
+            $relative.Contains('\')) {
+            Fail 'the release payload manifest contains an unsafe path.'
+        }
+        $candidate = [IO.Path]::GetFullPath((Join-Path $Root ($relative -replace '/', '\')))
+        if (-not $candidate.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            Fail 'the release payload manifest escapes its root.'
+        }
+        if ($listed.ContainsKey($relative)) {
+            Fail 'the release payload manifest contains a duplicate path.'
+        }
+        $item = Get-Item -LiteralPath $candidate -Force -ErrorAction Stop
+        if ($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            Fail "release payload entry is not an ordinary file: $relative"
+        }
+        $actual = (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($actual -cne $match.Groups[1].Value) {
+            Fail "release payload checksum mismatch: $relative"
+        }
+        $listed[$relative] = $true
+    }
+    if ($listed.Count -eq 0) { Fail 'the release payload manifest is empty.' }
+    $allItems = @(Get-ChildItem -LiteralPath $Root -Recurse -Force)
+    if (@($allItems | Where-Object {
+            $_.Attributes -band [IO.FileAttributes]::ReparsePoint
+        }).Count -ne 0) {
+        Fail 'the release payload contains a reparse point.'
+    }
+    $receiptPath = Join-Path $rootFull '.archive.sha256'
+    $actualFiles = @($allItems | Where-Object {
+        -not $_.PSIsContainer -and $_.FullName -cne $manifestItem.FullName -and
+            $_.FullName -cne $receiptPath
+    })
+    foreach ($item in $actualFiles) {
+        $relative = $item.FullName.Substring($rootPrefix.Length).Replace('\', '/')
+        if (-not $listed.ContainsKey($relative)) {
+            Fail "release payload contains an unlisted file: $relative"
+        }
+    }
+    if ($actualFiles.Count -ne $listed.Count) {
+        Fail 'the release payload inventory differs from its manifest.'
+    }
+}
+
+function Assert-SafeArchiveMembers([string]$ArchivePath, [string]$ExpectedRoot) {
+    $members = @(& tar -tzf $ArchivePath)
+    if ($LASTEXITCODE -ne 0 -or $members.Count -eq 0) {
+        Fail 'the release tar archive could not be listed.'
+    }
+    foreach ($member in $members) {
+        if ($member.Contains('\') -or $member.Contains('//') -or
+            @($member -split '/' | Where-Object { $_ -in @('.', '..') }).Count -ne 0 -or
+            -not ($member -ceq $ExpectedRoot -or $member.StartsWith("$ExpectedRoot/"))) {
+            Fail 'the release tar archive contains an unsafe member path.'
+        }
+    }
+}
+
+function Assert-SafeZipMembers([string]$ArchivePath, [string]$ExpectedRoot) {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [IO.Compression.ZipFile]::OpenRead($ArchivePath)
+    try {
+        if ($archive.Entries.Count -eq 0) { Fail 'the release ZIP archive is empty.' }
+        $seen = New-Object 'Collections.Generic.HashSet[string]' `
+            ([StringComparer]::Ordinal)
+        [long]$totalLength = 0
+        foreach ($entry in $archive.Entries) {
+            $name = $entry.FullName
+            if ([string]::IsNullOrEmpty($name) -or $name.Contains('\') -or
+                $name.Contains('//') -or $name -notmatch '^[A-Za-z0-9._/-]+$' -or
+                @($name -split '/' | Where-Object { $_ -in @('.', '..') }).Count -ne 0 -or
+                -not ($name -ceq $ExpectedRoot -or $name.StartsWith("$ExpectedRoot/"))) {
+                Fail 'the release ZIP archive contains an unsafe member path.'
+            }
+            if (-not $seen.Add($name)) {
+                Fail 'the release ZIP archive contains a duplicate member path.'
+            }
+            $unixKind = ($entry.ExternalAttributes -shr 16) -band 0xF000
+            $isDirectory = $name.EndsWith('/')
+            if (($isDirectory -and $unixKind -notin @(0, 0x4000)) -or
+                (-not $isDirectory -and $unixKind -notin @(0, 0x8000))) {
+                Fail 'the release ZIP archive contains a non-file member.'
+            }
+            $totalLength += $entry.Length
+            if ($entry.Length -gt 512MB -or $totalLength -gt 1GB) {
+                Fail 'the release ZIP archive expands beyond its size budget.'
+            }
+        }
+    } finally {
+        $archive.Dispose()
+    }
+}
+
+function Install-ReleasePayload(
+    [string]$ArchivePath,
+    [string]$Destination,
+    [string]$ExpectedRoot,
+    [string]$ArchiveHash,
+    [string]$ExpectedTag,
+    [string]$ExpectedKind,
+    [string]$ExpectedTarget
+) {
+    if (-not (Test-InstallMarker $NuminousHome)) {
+        Fail 'release installation requires a marked install root.'
+    }
+    $stage = Join-Path $NuminousHome ('.release-stage-' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $stage | Out-Null
+    try {
+        if ($ArchivePath.EndsWith('.zip', [StringComparison]::OrdinalIgnoreCase)) {
+            Assert-SafeZipMembers $ArchivePath $ExpectedRoot
+            Expand-Archive -LiteralPath $ArchivePath -DestinationPath $stage
+        } elseif ($ArchivePath.EndsWith('.tar.gz', [StringComparison]::OrdinalIgnoreCase)) {
+            Assert-SafeArchiveMembers $ArchivePath $ExpectedRoot
+            Invoke-Checked 'extracting the release tar archive' {
+                tar -xzf $ArchivePath -C $stage
+            }
+        } else {
+            Fail 'the release archive has an unsupported extension.'
+        }
+        $newTree = Join-Path $stage $ExpectedRoot
+        Assert-PayloadManifest $newTree
+        $metadataPath = Join-Path $newTree 'RELEASE.json'
+        $metadata = Get-Content -Raw -LiteralPath $metadataPath | ConvertFrom-Json
+        if ($metadata.schema -cne 'numinous.release' -or $metadata.schemaVersion -ne 1 -or
+            $metadata.tag -cne $ExpectedTag -or $metadata.kind -cne $ExpectedKind -or
+            $metadata.target -cne $ExpectedTarget) {
+            Fail 'the release metadata does not match the requested payload.'
+        }
+        [IO.File]::WriteAllText(
+            (Join-Path $newTree '.archive.sha256'),
+            "$ArchiveHash`r`n",
+            (New-Object Text.UTF8Encoding($false)))
+        Remove-DirectoryOrJunction $Destination
+        Move-Item -LiteralPath $newTree -Destination $Destination
+    } finally {
+        Remove-DirectoryOrJunction $stage
+    }
 }
 
 # Remove a tree without following any reparse point found inside it.
@@ -146,14 +378,34 @@ function Test-DirectoryEmpty([string]$Path) {
 }
 
 function Protect-InstallDirectory([string]$Path) {
+    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent().User
+    $system = New-Object Security.Principal.SecurityIdentifier('S-1-5-18')
+    $existing = Get-Acl -LiteralPath $Path
+    if ($existing.AreAccessRulesProtected -and
+        $existing.GetOwner([Security.Principal.SecurityIdentifier]).Value -eq
+            $currentUser.Value) {
+        $explicitRules = @($existing.GetAccessRules(
+            $true,
+            $false,
+            [Security.Principal.SecurityIdentifier]))
+        $expectedIdentities = @($currentUser.Value, $system.Value)
+        $safeRules = @($explicitRules | Where-Object {
+            $_.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow -and
+            ($_.FileSystemRights -band [Security.AccessControl.FileSystemRights]::FullControl) -eq
+                [Security.AccessControl.FileSystemRights]::FullControl -and
+            $_.IdentityReference.Value -in $expectedIdentities
+        })
+        if ($explicitRules.Count -eq 2 -and $safeRules.Count -eq 2 -and
+            @($safeRules.IdentityReference.Value | Sort-Object -Unique).Count -eq 2) {
+            return
+        }
+    }
     $acl = New-Object Security.AccessControl.DirectorySecurity
     $acl.SetAccessRuleProtection($true, $false)
     $inheritance = [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor `
         [Security.AccessControl.InheritanceFlags]::ObjectInherit
     $propagation = [Security.AccessControl.PropagationFlags]::None
     $allow = [Security.AccessControl.AccessControlType]::Allow
-    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent().User
-    $system = New-Object Security.Principal.SecurityIdentifier('S-1-5-18')
     foreach ($identity in @($currentUser, $system)) {
         $rule = New-Object Security.AccessControl.FileSystemAccessRule(
             $identity,
@@ -527,8 +779,9 @@ function Test-PathPromotion {
 
 function Test-InstallerSafety {
     if (-not (Have 'tar')) { Fail 'installer safety self-test requires tar.exe.' }
-    $testBase = Join-Path $env:TEMP ('numinous-installer-test-' + [Guid]::NewGuid().ToString('N'))
+        $testBase = Join-Path $env:TEMP ('numinous-installer-test-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $testBase | Out-Null
+    Protect-InstallDirectory $testBase
     Protect-InstallDirectory $testBase
     try {
         $firstRustupStage = New-RustupStage $testBase
@@ -898,11 +1151,123 @@ function Build-Numinous {
     }
 }
 
-function Install-Binaries {
+function Copy-ReleaseFile(
+    [string]$ProvidedPath,
+    [string]$Url,
+    [string]$Destination,
+    [string]$Description
+) {
+    if ($ProvidedPath) {
+        $provided = Get-Item -LiteralPath $ProvidedPath -Force -ErrorAction Stop
+        if ($provided.PSIsContainer -or
+            ($provided.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            Fail "$Description fixture is not an ordinary file."
+        }
+        Copy-Item -LiteralPath $provided.FullName -Destination $Destination
+    } else {
+        Say "Downloading $Description"
+        Invoke-WebRequest -UseBasicParsing -Headers @{ 'User-Agent' = 'numinous-installer' } `
+            -Uri $Url -OutFile $Destination
+    }
+}
+
+function Test-InstalledSoundtrack([string]$ExpectedHash) {
+    if (-not (Test-Path -LiteralPath $SoundtrackDir -PathType Container)) { return $false }
+    $receipt = Join-Path $SoundtrackDir '.archive.sha256'
+    $receiptItem = Get-Item -LiteralPath $receipt -Force -ErrorAction SilentlyContinue
+    if ($null -eq $receiptItem -or $receiptItem.PSIsContainer -or
+        ($receiptItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
+        $receiptItem.Length -gt 128) {
+        return $false
+    }
+    if ([IO.File]::ReadAllText($receipt).Trim() -cne $ExpectedHash) { return $false }
+    try {
+        Assert-PayloadManifest $SoundtrackDir
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Install-LatestRelease {
+    $tag = if ($ReleaseTag) { $ReleaseTag } else { Get-LatestReleaseTag }
+    if ($tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$') {
+        Fail 'the requested release tag is unsafe.'
+    }
+    if ([bool]$ReleaseArchive -ne [bool]$ReleaseChecksum -or
+        [bool]$SoundtrackArchive -ne [bool]$SoundtrackChecksum) {
+        Fail 'local release fixtures require matching archive and checksum paths.'
+    }
+    $target = Get-ReleaseTarget
+    $payloadRoot = "numinous-$tag-$target"
+    $payloadName = "$payloadRoot.zip"
+    $soundtrackRoot = "numinous-$tag-soundtrack"
+    $soundtrackName = "$soundtrackRoot.tar.gz"
+    $downloadStage = Join-Path $NuminousHome ('.download-' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $downloadStage | Out-Null
+    try {
+        $payloadPath = Join-Path $downloadStage $payloadName
+        $payloadChecksumPath = Join-Path $downloadStage "$payloadName.sha256"
+        $releaseBase = "$RepoUrl/releases/download/$tag"
+        Copy-ReleaseFile $ReleaseArchive "$releaseBase/$payloadName" `
+            $payloadPath 'the Windows release payload'
+        Copy-ReleaseFile $ReleaseChecksum "$releaseBase/$payloadName.sha256" `
+            $payloadChecksumPath 'the Windows payload checksum'
+        $payloadHash = Assert-ArchiveChecksum `
+            $payloadPath $payloadChecksumPath $payloadName
+
+        $soundtrackChecksumPath = Join-Path $downloadStage "$soundtrackName.sha256"
+        Copy-ReleaseFile $SoundtrackChecksum "$releaseBase/$soundtrackName.sha256" `
+            $soundtrackChecksumPath 'the soundtrack checksum'
+        $soundtrackHash = Read-ArchiveChecksum $soundtrackChecksumPath $soundtrackName
+
+        Remove-DirectoryOrJunction (Join-Path $BinDir 'radio')
+        Install-ReleasePayload $payloadPath $SrcDir $payloadRoot $payloadHash `
+            $tag 'binaries' $target
+
+        if (Test-InstalledSoundtrack $soundtrackHash) {
+            Say 'The verified built-in soundtrack is already current.'
+        } else {
+            $soundtrackPath = Join-Path $downloadStage $soundtrackName
+            Copy-ReleaseFile $SoundtrackArchive "$releaseBase/$soundtrackName" `
+                $soundtrackPath 'the built-in soundtrack'
+            [void](Assert-ArchiveChecksum `
+                $soundtrackPath $soundtrackChecksumPath $soundtrackName)
+            Install-ReleasePayload $soundtrackPath $SoundtrackDir $soundtrackRoot `
+                $soundtrackHash $tag 'soundtrack' 'all'
+        }
+    } finally {
+        Remove-DirectoryOrJunction $downloadStage
+    }
+    $script:InstalledReleaseTag = $tag
+}
+
+function Assert-BinaryDestinationsReplaceable {
+    foreach ($binary in $Binaries) {
+        $destination = Join-Path $BinDir $binary
+        if (-not (Test-Path -LiteralPath $destination)) { continue }
+        try {
+            $stream = [IO.File]::Open(
+                $destination,
+                [IO.FileMode]::Open,
+                [IO.FileAccess]::ReadWrite,
+                [IO.FileShare]::None)
+            $stream.Dispose()
+        } catch {
+            Fail "cannot update $binary while it is running; close Numinous and try again."
+        }
+    }
+}
+
+function Install-Binaries(
+    [string]$BinarySourceDir = (Join-Path $SrcDir 'target\release'),
+    [string]$RadioSource = (Join-Path $SrcDir 'assets\radio')
+) {
     New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
     Protect-InstallDirectory $BinDir
+    Assert-BinaryDestinationsReplaceable
     foreach ($binary in $Binaries) {
-        $from = Join-Path $SrcDir "target\release\$binary"
+        $from = Join-Path $BinarySourceDir $binary
         try {
             Publish-File $from (Join-Path $BinDir $binary)
         } catch {
@@ -912,12 +1277,11 @@ function Install-Binaries {
     # The app finds the built-in radio next to its executable. A junction
     # avoids duplicating the tracks; fall back to a copy if it is refused.
     $radioLink = Join-Path $BinDir 'radio'
-    $radioSource = Join-Path $SrcDir 'assets\radio'
     Remove-DirectoryOrJunction $radioLink
     try {
-        New-Item -ItemType Junction -Path $radioLink -Target $radioSource | Out-Null
+        New-Item -ItemType Junction -Path $radioLink -Target $RadioSource | Out-Null
     } catch {
-        Copy-Item $radioSource $radioLink -Recurse
+        Copy-Item $RadioSource $radioLink -Recurse
     }
 }
 
@@ -926,11 +1290,16 @@ function Install-Numinous {
         Fail 'this installer needs Windows PowerShell 5.1 or newer.'
     }
     Initialize-InstallRoot
-    Test-BuildTools
-    Install-Rust
-    Get-Source
-    Build-Numinous
-    Install-Binaries
+    if ($Source) {
+        Test-BuildTools
+        Install-Rust
+        Get-Source
+        Build-Numinous
+        Install-Binaries
+    } else {
+        Install-LatestRelease
+        Install-Binaries (Join-Path $SrcDir 'bin') (Join-Path $SoundtrackDir 'radio')
+    }
     $pathChanged = $false
     if (-not $NoModifyPath) {
         $pathChanged = Add-UserPath $BinDir
@@ -973,7 +1342,13 @@ function Install-Numinous {
     Invoke-Checked 'installed CLI version check' { & $resolvedCli --version }
     Say ''
     Say "Read PLAY.md first if you read anything: $SrcDir\PLAY.md"
-    Say 'Update any time by re-running this installer. Uninstall with -Uninstall.'
+    if ($Source) {
+        Say 'This source build follows main. Re-run with -Source to update it.'
+    } else {
+        Say "Installed release: $script:InstalledReleaseTag"
+        Say 'Update any time with: numinous update'
+    }
+    Say 'Uninstall with -Uninstall.'
 }
 
 try {
@@ -985,10 +1360,33 @@ try {
     } elseif ($Uninstall) {
         Uninstall-Numinous
     } else {
+        if ($Source -and ($ReleaseArchive -or $ReleaseChecksum -or
+                $SoundtrackArchive -or $SoundtrackChecksum -or $ReleaseTag)) {
+            Fail '-Source cannot be combined with release fixture options.'
+        }
+        if ($WaitForProcessId -lt 0 -or $WaitForProcessId -eq $PID) {
+            Fail 'the update helper received an invalid parent process id.'
+        }
+        if ($WaitForProcessId -gt 0) {
+            Say 'Waiting for the running Numinous command to close before updating.'
+            Wait-Process -Id $WaitForProcessId -ErrorAction SilentlyContinue
+        }
         Install-Numinous
     }
 } catch {
     Write-Host "numinous install: $($_.Exception.Message)" -ForegroundColor Red
     if ($PSCommandPath) { exit 1 }
     throw
+} finally {
+    if ($DeleteInstaller) {
+        try {
+            $candidate = [IO.Path]::GetFullPath($DeleteInstaller)
+            $temporaryRoot = [IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
+            $name = [IO.Path]::GetFileName($candidate)
+            if ($candidate.StartsWith($temporaryRoot, [StringComparison]::OrdinalIgnoreCase) -and
+                $name -match '^numinous-update-[0-9a-f]{32}\.ps1$') {
+                Remove-Item -LiteralPath $candidate -Force -ErrorAction SilentlyContinue
+            }
+        } catch {}
+    }
 }
