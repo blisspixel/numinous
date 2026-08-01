@@ -5,6 +5,78 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- The MCP stdio face now implements the final stateless 2026-07-28 protocol
+  while retaining 2025-11-25 and 2025-06-18 initialization compatibility.
+  Modern requests carry version and client capabilities independently;
+  optional client information is validated when present but is never an
+  authority boundary.
+  `server/discover` reports identity, capabilities, guidance, supported
+  versions, and public cache hints; successful results carry `resultType` and
+  server identity; `tools/list` is deterministic, publicly cacheable, and
+  explicitly JSON Schema 2020-12. Unsupported versions return the specified
+  structured error, invalid cursors fail clearly, and removed modern methods
+  are not exposed.
+- Modern clients that advertise form elicitation can now run `predict` as a
+  multi round-trip interaction. The server poses the hidden readout, requests a
+  committed guess and optional rate, then grades the retry. The base empty
+  elicitation capability and the explicit form capability are both supported.
+  Decline and cancel record nothing even if direct guess arguments are also
+  present, while clients without elicitation keep the established two-call
+  fallback. Broadcast consent is owned by the concrete stdio connection that
+  presented the pairing capability. Changing optional caller metadata cannot
+  transfer ownership. The bounded fresh-build MCP helper and Understanding
+  Alpha collector now exercise the 2026-07-28 path.
+- Independent pre-collection review now blocks the first Understanding Alpha
+  runner from qualifying use. The protocol and roadmap explicitly require a
+  concealed committed bank, stateful delivery, executable condition fidelity,
+  mediated MCP evidence, calibrated non-ceiling probes, and fresh review before
+  any response can count. No qualifying data has been collected.
+- The replacement Understanding Alpha collector now makes qualifying evidence
+  stateful and receipt-derived. It exposes one current stimulus, mediates fixed
+  calls through isolated MCP processes, validates exact public result
+  projections, stages both sessions until pair aggregation, removes provisional
+  responses on withdrawal or interruption, and settles complete pairs in frozen
+  order through a recoverable atomic ledger and terminal-anchor transaction.
+  Request-bound participant stops, serialized recovery, tail-truncation
+  detection, allocation-bound calibration audits, per-model calibration
+  ceilings, and independent intervention-relevance review now fail closed.
+  Calibration deliveries are sealed before exposure and bound to one response,
+  model-family backend revisions are frozen into allocation, first-arm
+  completion retains a usable pre-aggregation withdrawal credential, and dead
+  calibration or pair-publication transitions recover without duplicating
+  evidence. Protocol v5 gives both arms exactly one participant response per
+  room, accepts participant stop and pair-lifetime withdrawal only through the
+  response channel, and binds calibration plus collection to one clean
+  committed runtime-source tree. Every new calibration delivery and collection
+  start requires a unique independently recorded pre-exposure receipt whose
+  exact commitment is sealed into the evidence. Qualifying MCP builds use a
+  fresh explicit Cargo target, bounded environment inheritance, the exact
+  JSON-reported executable, and a private copy whose build receipt binds source,
+  toolchain, target, and binary. Participant stop erases Formula constructions
+  from both response and derived tool fields while retaining only an explicit
+  erasure marker. The clean-source boundary also rejects untracked worktree
+  files, ignored files, nonordinary Git index flags, redirected repository
+  environments, indirect filesystem paths, and any runtime byte that differs
+  from the committed blob. A complete real-session test
+  proves all 20 public tool calls use the production fresh-process-per-call
+  topology. Runtime-null room goals remain valid, interruption scoring is
+  hypothesis-adverse with a declared ceiling, and CI runs the Python study
+  boundary on all three operating systems.
+  External preregistration, calibration, fresh review, final artifact
+  registration, and allocation commitment still block qualifying collection.
+
+### Fixed
+- Understanding Alpha analysis now balances each model family's ten primary
+  pairs at five condition starts per arm and two first-room starts per flagship,
+  with declared reserve-path imbalance bounds. The inadmissible first runner and
+  its replacement boundary now use atomic
+  no-replace publication, strict bounded event fields, case-insensitive host
+  replacement, obvious identity and credential rejection, exact rational numeric
+  answers, one repair per session, conservative post-exposure interruption
+  scoring, complete delayed within-context aggregation, and a separate
+  publication audit instead of a fabricated completeness criterion.
+
 ## [0.2.0-alpha.4] - 2026-07-27
 
 ### Fixed
@@ -136,8 +208,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   Extreme finite Studio expressions cannot pass non-finite notes or samples to
   the native callback. Journal growth and erase errors, oversized controller
   bindings, and MCP QA state isolation now fail closed. The complete Windows
-  gate passes 3,190 tests plus one ignored screenshot diagnostic, 95.27 percent
-  line coverage, and 95.12 percent region coverage.
+  gate passes 3,199 tests plus one ignored screenshot diagnostic, 95.28 percent
+  line coverage, and 95.13 percent region coverage.
 - Windows rustup bootstrap downloads into a private, unpredictable directory
   under the protected install root, and in-memory installer failures return a
   nonzero status. Share bundles use 128-bit operating-system randomness and

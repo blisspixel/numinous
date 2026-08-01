@@ -13,8 +13,8 @@
 #     full test suite) runs only when this commit actually touches Rust or the
 #     build manifest, so a docs-only commit stays fast while a code commit
 #     cannot land red.
-#   - The frozen 0.4 runner regressions run only when their runner, bank, or
-#     test file changes.
+#   - The 0.4 runner and collector regressions run only when their code,
+#     fixture, encounter specification, or test files change.
 #
 # Deliberately NOT here: coverage, the locked build, and artifact regeneration.
 # Those live in scripts/verify.sh (the release/CI gate); they are too slow to
@@ -46,17 +46,21 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
 fi
 
 if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
-    | grep -zqE '^scripts/(understanding-study\.py|understanding-probes\.json|test-understanding-study\.py)$'; then
+    | grep -zqE '^scripts/(mcp-play\.py|understanding-(study|collect)\.py|understanding-(encounters|probes\.fixture)\.json|test-(mcp-play|understanding-(study|collect))\.py)$'; then
   if command -v python3 >/dev/null 2>&1; then
     study_python=python3
   elif command -v python >/dev/null 2>&1; then
     study_python=python
   else
-    echo "pre-commit: Python 3.11 or newer is required for the 0.4 runner gate" >&2
+    echo "pre-commit: Python 3.11 or newer is required for the 0.4 study gate" >&2
     exit 1
   fi
+  echo "== MCP play driver =="
+  "$study_python" scripts/test-mcp-play.py
   echo "== understanding study runner =="
   "$study_python" scripts/test-understanding-study.py
+  echo "== understanding study collector =="
+  "$study_python" scripts/test-understanding-collect.py
 fi
 
 echo "pre-commit: all checks passed."

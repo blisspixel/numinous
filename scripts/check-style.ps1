@@ -9,7 +9,7 @@ $files = @()
 foreach ($pattern in $patterns) {
     $files += git ls-files -- $pattern
 }
-$files = $files | Sort-Object -Unique
+$files = $files | Sort-Object -Unique | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }
 if ($files.Count -eq 0) {
     exit 0
 }

@@ -229,6 +229,11 @@ modules registered through one registry.
 
 **Headless in production today.** Core rendering and audio synthesis work without
 a window. The CLI, MCP server, exporters, and automated suite all use that seam.
+The MCP stdio boundary is dual-era: legacy initialization and modern
+2026-07-28 per-request metadata dispatch into the same tool functions. Protocol
+discovery, result decoration, caching hints, and multi round-trip input handling
+stay in the face; mathematical poses, grading, rendering, and persistence stay
+in core.
 
 ## Key technical concerns
 

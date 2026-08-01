@@ -35,8 +35,11 @@ jobs:
           cargo test --workspace --doc --locked
       - name: Tests
         run: cargo test --workspace --all-targets --locked
-      - name: Understanding study runner tests
-        run: python3 scripts/test-understanding-study.py
+      - name: MCP driver and Understanding study tests
+        run: |
+          python3 scripts/test-mcp-play.py
+          python3 scripts/test-understanding-study.py
+          python3 scripts/test-understanding-collect.py
       - name: Release packaging tests
         run: python3 scripts/test-package-release.py
 
@@ -114,6 +117,18 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
       - name: Workspace tests
         run: cargo test --workspace --all-targets --locked
+      - name: Windows Understanding collector tests
+        if: runner.os == 'Windows'
+        run: |
+          python scripts/test-mcp-play.py
+          python scripts/test-understanding-study.py
+          python scripts/test-understanding-collect.py
+      - name: POSIX Understanding collector tests
+        if: runner.os != 'Windows'
+        run: |
+          python3 scripts/test-mcp-play.py
+          python3 scripts/test-understanding-study.py
+          python3 scripts/test-understanding-collect.py
       - name: Windows installer safety
         if: runner.os == 'Windows'
         shell: pwsh
