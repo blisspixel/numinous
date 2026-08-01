@@ -178,12 +178,19 @@ long-listening, and broad hardware certification are real gates for **0.8 /
 
 **Current milestone:** 0.4 Understanding Alpha. The 0.3 Tactile Alpha
 agent-and-machine exit is met on the five flagships, including the consented
-Watch Agent path and the declared reference performance budget. The frozen
-0.4 headless runner and held-out probe bank now exist and are CI-gated; no
-qualifying cohort result is claimed. Returning-journal sovereignty now has an
+Watch Agent path and the declared reference performance budget. The 0.4
+deterministic analysis and stateful isolated collector are CI-gated. Calibration
+and collection starts require independently recorded pre-exposure receipts,
+calibrated backend and committed source revisions are bound to allocation, both
+conditions use exactly one participant response per room, and interruption
+scoring cannot favor the generation arm.
+External registration of the protocol, source, and attempt-receipt boundary,
+concealed probe calibration, final fresh independent review, registration of
+the resulting artifacts, and the allocation freeze remain before any
+qualifying collection, and no cohort result is claimed.
+Returning-journal sovereignty now has an
 append-only correction chain, versioned bounded export, and real two-process
-erasure acceptance. Independent pre-collection review and the complete matched
-cohort remain open. Soft-thin
+erasure acceptance. The complete matched cohort remains open. Soft-thin
 densify, bulk rooms, and Phase B glow stay background unless measurement binds.
 Ordered criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md) (**Critical path right now**).
@@ -283,9 +290,16 @@ removes duplicated prose only when the unchanged `structuredContent` already
 carries the complete result. Room renders, notation, simulations, Quiz,
 Gauntlet, catalog, description, and trophy results support the compact path.
 Errors and results whose text carries unique information never lose that text.
+The stdio server is dual-era: it implements stateless MCP 2026-07-28 with
+mandatory discovery, per-request metadata, typed results, public cache hints,
+and explicit JSON Schema 2020-12 tool inputs, while retaining 2025-11-25 and
+2025-06-18 initialization for existing hosts. Modern clients that advertise
+form elicitation can commit a `predict` guess through the protocol's multi
+round-trip result flow without seeing the hidden readout first. Real subprocess
+tests exercise both modern and legacy paths.
 
-The verified July 27, 2026 gate has 3,190 passing all-target test cases plus one
-ignored screenshot diagnostic, 95.12% region coverage and 95.27% line coverage
+The verified July 31, 2026 gate has 3,199 passing all-target test cases plus one
+ignored screenshot diagnostic, 95.13% region coverage and 95.28% line coverage
 with an enforced 80% line floor, Clippy with warnings denied, and dependency
 policy checks. Release QA also regenerates an exact
 2,913-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact

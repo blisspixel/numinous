@@ -160,8 +160,10 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
    Safety remains part of the UX through bounded inputs and explicit limits.
 
 ### What it exposes (shaped by the above)
-- **Current protocol surface:** `initialize`, `tools/list`, `tools/call`, and
-  `ping` over stdio, advertising the tools capability. The 35 tools include
+- **Current protocol surface:** modern clients use `server/discover`,
+  `tools/list`, and `tools/call` over stdio with version and client capability
+  metadata on every request. Legacy 2025-11-25 and 2025-06-18 clients retain
+  `initialize`, `tools/list`, `tools/call`, and `ping`. The 35 tools include
   `list_rooms`, `describe_room`, `play_room`, `listen_room`, `reveal_room`,
   `challenge`, `predict`, `list_sims`, `run_sim`, `plot_expression`,
   `sing_expression`, Journey operations, experience journal operations
@@ -236,10 +238,10 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   `structuredContent` while replacing only redundant text, and only when the
   replacement is shorter. Journey, scores, forget, Cairn, other unique-text
   results, text-only tools, and all errors retain their complete text. This
-  keeps the [MCP 2025-06-18 tools specification](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)
-  requirement for a `content` block and aligns with its structured-result
-  guidance without prematurely migrating to the breaking 2026-07-28 protocol
-  candidate.
+  preserves the legacy
+  [MCP 2025-06-18 tools specification](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)
+  requirement for a `content` block while also serving the implemented modern
+  2026-07-28 stateless protocol described below.
 - **Structured interaction deltas (built):** when `pokes` or a `gesture` are supplied, `play_room` also returns a `delta` in `structuredContent`: the interacted frame diffed against the untouched frame at the same phase, size, and variation, as `cells_changed`, `ink_added`, `ink_removed`, `ink_reshaped`, `total_cells`, and the inclusive `changed_region` bounding box; the text render carries the same count as a `Touch:` line. This is the proof-of-touch half of the challenge/verify loop: the agent gets quantitative, optimizable feedback on how the math answered its hand.
 - **Phase-zero causality (built):** a room that claims retained state must answer
   before animation supplies an incidental difference. Cult of Pi therefore
@@ -442,66 +444,91 @@ acceptance uses the App library only as an MCP development dependency, so it
 exercises both shipped implementations without adding a production edge. The
 CLI remains outside this slice.
 
-### Protocol watch: current MCP and the 2026-07-28 release candidate
+### MCP 2026-07-28 protocol status
 
-As of 2026-07-26, the official versioning page names
-[MCP 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25)
-as current. The stdio face negotiates that revision and retains 2025-06-18 as
-its compatibility default. The official
-[MCP 2026-07-28 release-candidate post](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/)
-is roadmap-relevant but not an immediate blocker for the current stdio face. The
-final specification is scheduled for July 28, 2026. The compatibility pass
-should happen after the final target is selected, not during current
-room-playability work.
+The stdio face implements the final
+[MCP 2026-07-28 specification](https://modelcontextprotocol.io/specification/2026-07-28)
+and retains the 2025-11-25 and 2025-06-18 initialization paths for legacy
+hosts. The modern path is stateless: every request declares its version and
+client capabilities in `_meta`; optional `clientInfo` is shape-checked when
+present but is descriptive metadata, never authorization. `server/discover`
+reports the complete version set, identity, capabilities, instructions, and
+public cache hints; and every
+successful result carries `resultType` plus server identity. `tools/list` is
+deterministic, explicitly publishes JSON Schema 2020-12 inputs, and is publicly
+cacheable for the lifetime of the immutable binary catalog. Unsupported modern
+versions return the specified `-32022` error with the requested and supported
+versions. Modern requests do not expose the removed `ping` method.
 
-Implications to preserve in the MCP design:
-- Keep `play_room` replayable and explicit; the RC favors stateless protocol
-  calls and visible application handles over hidden protocol sessions.
-- Preserve stdio support unless and until a concrete host target requires the
-  new HTTP transport shape.
-- When a final migration is scheduled, check stateless requests, per-request
-  `_meta` client information/capabilities, `server/discover`, `Mcp-Method` and
-  `Mcp-Name` headers, cacheable `tools/list`, JSON Schema 2020-12, Tasks, MCP
-  Apps, authorization hardening, and roots/sampling/logging deprecations.
+The final changelog removes protocol sessions and initialization from the
+modern era, requires cache hints on discovery and list results, moves server
+requests into the multi round-trip result pattern, and removes or deprecates
+several old utilities. Numinous uses that pattern for `predict`: a client that
+advertises elicitation with either the base empty capability object or an
+explicit form capability receives an `input_required` result, presents the
+guess without seeing the truth, and retries the same tool call with
+`inputResponses`. Clients without elicitation support retain the established
+two-call pose and grade flow.
 
-### The MCP creative frontier (not just compatibility)
+This server uses stdio, so Streamable HTTP headers, HTTP authorization, and
+response streams do not apply to its shipped transport. The tool catalog is
+immutable, Numinous exposes neither MCP prompts nor MCP resources today, and it
+emits no protocol logging. It therefore has no list-change subscription to
+offer and does not advertise capabilities it cannot fulfill. The stdio process
+is a transport endpoint, not a player session; continuity remains explicit in
+tool arguments or player-owned local persistence.
 
-The 2026-07-28 RC is not only a migration chore; several of its features are a
-direct invitation to push what an experiential MCP server can be, which is a
-stated goal of this project. In priority of creative payoff:
+The one process-local viewer broadcast is owned by the concrete stdio
+connection object that successfully presented the pairing capability. Changing
+optional caller metadata cannot create, transfer, or revoke that ownership.
+Each shipped process has one stdin and stdout connection, and the control path
+remains serialized with its broadcast lifecycle. A future multiplexed or remote
+transport must instantiate broadcast state per authenticated transport
+principal or per independent server handle; caller-authored metadata is not an
+acceptable authority boundary.
 
-- **MCP Apps (SEP-1865): ship the real room, not its shadow.** MCP Apps let a
-  server hand the host a sandboxed HTML UI rendered in an iframe. This
+### The MCP creative frontier after core compatibility
+
+The final revision and its extension model invite a richer experiential MCP
+surface. The ordered plan is:
+
+- **MCP Apps: ship the real room, not its shadow.** MCP Apps let a server hand
+  a supporting host a sandboxed HTML UI resource. This
   addresses the deepest limitation the text-only reviews kept finding: agents on
   structured-content clients see metadata and ASCII, never the glowing room. On
   a host that supports Apps, `play_room` (and the Studio, and The Show) can hand
   the agent the *actual* rendered, animated, sounding room, the same visual
   substance a human gets. The felt encounter (`VISION.md`, "the same wonder,
   two kinds of mind") stops being a text approximation. This is the single
-  biggest creative opportunity and it must reuse the same safe render pipeline,
-  never arbitrary agent HTML.
-- **Multi round-trip elicitation (SEP-2322): predict-then-reveal, natively.**
-  The keystone (`PEDAGOGY.md`) is pose, elicit a guess, reveal. The RC's
-  elicitation without persistent streams is exactly that shape in one
-  interaction, and it is the honest form of the duet relay and any mid-play
-  choice. Today `predict` is two stateless calls; elicitation makes it one
-  living moment.
-- **Tasks: long watches and generative play.** The Show, a slow procedural
-  generation, or a multi-turn game can run as a task the client drives with
-  `tasks/get`/`tasks/update`, so a mind can lean back and watch the collection
-  unfold rather than polling.
+  biggest creative opportunity. It must reuse bounded core render data, ship a
+  fixed repository-owned UI resource, request no browser privileges, and keep
+  the present text and structured fallback for every host without the
+  extension. This belongs in 0.5 Sensory Alpha.
+- **Multi round-trip elicitation: expand the built keystone carefully.** The
+  first `predict` path is built. After client compatibility evidence, use the
+  same pattern for challenge choices and consent moments only when it removes a
+  real conversational seam. Every flow keeps a direct tool-argument fallback.
+- **Tasks: reserve them for genuinely long work.** The Tasks extension is not
+  core protocol and host support varies. Add durable, bounded task handles only
+  when Show capture, long render, or creator export crosses ordinary request
+  budgets. Instant room and game calls must remain ordinary complete results.
+  Task persistence, expiry, cancellation, polling, restart recovery, and input
+  updates need independent acceptance before the capability is advertised.
 - **The Handle pattern: transparent world-state for co-presence.** Explicit,
   model-visible handles for shared session state fit the co-presence and
   multi-turn designs (`DIGITAL_MINDS.md`) without hidden server sessions,
   matching our stateless-and-replayable law.
-- **We are already stateless.** The RC's largest architectural shift, removing
-  the `initialize` handshake and session pinning, is something Numinous is built
-  for: state lives in files, every tool call is self-contained. So the migration
-  is small and the creative features are the real prize.
+- **Streamable HTTP comes with a real remote product, not before.** If a remote
+  or multiplayer face is authorized later, implement its required headers,
+  subscriptions, authorization, origin checks, and transport tests as one
+  boundary. Do not expose the local persistence surface on a network merely to
+  add another transport.
 
 Testing note: the MCP face must be playtested against the LATEST build, never a
 stale long-running server. `scripts/mcp-play.py` builds a fresh `numinous-mcp`
-and drives it over stdio for exactly this (see `QUALITY.md`).
+and drives the modern stateless path over stdio for exactly this (see
+`QUALITY.md`). Real subprocess tests cover both the modern path and retained
+legacy initialization.
 
 ### Safety
 MCP Studio input currently reaches a bounded expression language with no

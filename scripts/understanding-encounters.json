@@ -1,0 +1,82 @@
+{
+  "protocolVersion": "0.4-v5",
+  "rooms": [
+    {
+      "calls": [
+        {"arguments": {"id": "times-tables", "response_mode": "compact", "t": 0.125}, "role": "encounter", "tool": "play_room"},
+        {"arguments": {"id": "times-tables", "pokes": [[0.5, 0.5]], "response_mode": "compact", "t": 0.25}, "role": "interaction", "tool": "play_room"},
+        {"arguments": {"id": "times-tables", "response_mode": "compact", "t": 0.375}, "role": "continuation", "tool": "play_room"},
+        {"arguments": {"id": "times-tables"}, "role": "reveal", "tool": "reveal_room"}
+      ],
+      "controlPrompt": "Explain how the revealed modular rule should govern a new point before continuing.",
+      "expectedAnswer": "increase",
+      "feedbackText": "The center drag sets K to 6.00, an increase from the first display.",
+      "feedbackEvidence": {"contains": "K 6.00", "field": "status"},
+      "generationAnswerSchema": {"enum": ["increase", "decrease"], "type": "string"},
+      "generationPrompt": "Commit whether the center dial drag will increase or decrease K, then give a short rationale.",
+      "id": "times-tables"
+    },
+    {
+      "calls": [
+        {"arguments": {"id": "double-pendulum", "response_mode": "compact", "t": 0.125}, "role": "encounter", "tool": "play_room"},
+        {"arguments": {"id": "double-pendulum", "pokes": [[0.2, 0.8]], "response_mode": "compact", "t": 0.25}, "role": "interaction", "tool": "play_room"},
+        {"arguments": {"id": "double-pendulum", "response_mode": "compact", "t": 0.375}, "role": "continuation", "tool": "play_room"},
+        {"arguments": {"id": "double-pendulum"}, "role": "reveal", "tool": "reveal_room"}
+      ],
+      "controlPrompt": "Explain how deterministic evolution and predictability differ before continuing.",
+      "expectedAnswer": "reset-near-zero",
+      "feedbackText": "The re-drop resets the displayed twin separation near zero before divergence develops.",
+      "feedbackEvidence": {"contains": "TWINS 0.000", "field": "status"},
+      "generationAnswerSchema": {"enum": ["reset-near-zero", "remain-separated"], "type": "string"},
+      "generationPrompt": "Commit whether re-dropping the visible pendulum will reset twin separation near zero or leave it separated, then give a short rationale.",
+      "id": "double-pendulum"
+    },
+    {
+      "calls": [
+        {"arguments": {"id": "game-of-life", "response_mode": "compact", "t": 0.125}, "role": "encounter", "tool": "play_room"},
+        {"arguments": {"id": "game-of-life", "pokes": [[0.5, 0.5]], "response_mode": "compact", "t": 0.25}, "role": "interaction", "tool": "play_room"},
+        {"arguments": {"id": "game-of-life", "response_mode": "compact", "t": 0.375}, "role": "continuation", "tool": "play_room"},
+        {"arguments": {"id": "game-of-life"}, "role": "reveal", "tool": "reveal_room"}
+      ],
+      "controlPrompt": "Explain how the revealed B3/S23 rule determines a cell update before continuing.",
+      "expectedAnswer": "plants-glider",
+      "feedbackText": "The center click plants a five-cell glider and the status reports GLIDER 1.",
+      "feedbackEvidence": {"contains": "GLIDER 1", "field": "status"},
+      "generationAnswerSchema": {"enum": ["plants-glider", "does-not-plant"], "type": "string"},
+      "generationPrompt": "Commit whether the center click will plant a glider or not, then give a short rationale.",
+      "id": "game-of-life"
+    },
+    {
+      "calls": [
+        {"arguments": {"id": "galton-board", "response_mode": "compact", "t": 0.125}, "role": "encounter", "tool": "play_room"},
+        {"arguments": {"id": "galton-board", "pokes": [[0.5, 0.5]], "response_mode": "compact", "t": 0.25}, "role": "interaction", "tool": "play_room"},
+        {"arguments": {"id": "galton-board", "response_mode": "compact", "t": 0.375}, "role": "continuation", "tool": "play_room"},
+        {"arguments": {"id": "galton-board"}, "role": "reveal", "tool": "reveal_room"}
+      ],
+      "controlPrompt": "Explain how repeated independent left or right turns create the revealed landing distribution before continuing.",
+      "expectedAnswer": "center",
+      "feedbackText": "The center click selects the fair P=.50 coin and drops 64 balls around the center bins.",
+      "feedbackEvidence": {"contains": "P.50", "field": "status"},
+      "generationAnswerSchema": {"enum": ["center", "edge"], "type": "string"},
+      "generationPrompt": "Commit whether the fair coin should concentrate landings near the center or edge, then give a short rationale.",
+      "id": "galton-board"
+    },
+    {
+      "calls": [
+        {"arguments": {"expr": "sin(x)"}, "role": "encounter", "tool": "plot_expression"},
+        {"arguments": {"expr": "__PARTICIPANT_EXPRESSION__"}, "role": "interaction", "tool": "plot_expression"},
+        {"arguments": {"expr": "cos(3*x)"}, "role": "continuation", "tool": "plot_expression"},
+        {"arguments": {"expr": "sin(2*x)+cos(3*x)"}, "role": "final_observation", "tool": "plot_expression"}
+      ],
+      "controlPrompt": "Explain how frequency and parity govern the revealed formula family before continuing.",
+      "expectedAnswer": "valid-expression",
+      "feedbackText": "The second expression is plotted immediately, so its validity and curve are visible before the family summary.",
+      "feedbackEvidence": {"equalsParticipantAnswer": true, "field": "expression"},
+      "generationAnswerSchema": {"pattern": "^(sin|cos)\\(([2-9]|[1-9][0-9])\\*x\\)$", "type": "string"},
+      "generationPrompt": "Commit a bounded sine or cosine expression with a different integer frequency, then give a short rationale.",
+      "id": "formula-jam",
+      "revealMaterial": "For y = sin(k*x), nonzero integer k changes period to 2*pi/abs(k) while preserving odd parity. For y = cos(k*x), it changes period the same way while preserving even parity. Adding unlike sine and cosine terms usually yields neither parity."
+    }
+  ],
+  "schemaVersion": "numinous-understanding-encounters-v5"
+}

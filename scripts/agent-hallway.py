@@ -90,11 +90,16 @@ def initialize_script() -> dict[str, Any]:
         request = {
             "jsonrpc": "2.0",
             "id": 1,
-            "method": "initialize",
+            "method": "server/discover",
             "params": {
-                "protocolVersion": "2025-06-18",
-                "capabilities": {},
-                "clientInfo": {"name": "agent-hallway", "version": "1"},
+                "_meta": {
+                    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                    "io.modelcontextprotocol/clientCapabilities": {},
+                    "io.modelcontextprotocol/clientInfo": {
+                        "name": "agent-hallway",
+                        "version": "1",
+                    },
+                }
             },
         }
         proc = subprocess.run(
