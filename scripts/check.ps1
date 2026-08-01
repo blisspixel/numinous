@@ -32,5 +32,6 @@ Invoke-Step "MCP play driver" { python scripts/test-mcp-play.py }
 Invoke-Step "understanding study runner" { python scripts/test-understanding-study.py }
 Invoke-Step "understanding study collector" { python scripts/test-understanding-collect.py }
 Invoke-Step "release packaging" { python scripts/test-package-release.py }
+Invoke-Step "release engagement contract" { python scripts/test-release-engagement-smoke.py }
 Invoke-Step "house style" { powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1 }
 Write-Host "All checks passed."

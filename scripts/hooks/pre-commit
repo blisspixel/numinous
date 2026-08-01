@@ -15,6 +15,8 @@
 #     cannot land red.
 #   - The 0.4 runner and collector regressions run only when their code,
 #     fixture, encounter specification, or test files change.
+#   - The installed release engagement contract runs when its driver or tests
+#     change.
 #
 # Deliberately NOT here: coverage, the locked build, and artifact regeneration.
 # Those live in scripts/verify.sh (the release/CI gate); they are too slow to
@@ -61,6 +63,20 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
   "$study_python" scripts/test-understanding-study.py
   echo "== understanding study collector =="
   "$study_python" scripts/test-understanding-collect.py
+fi
+
+if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
+    | grep -zqE '^scripts/(release-engagement-smoke|test-release-engagement-smoke)\.py$'; then
+  if command -v python3 >/dev/null 2>&1; then
+    release_python=python3
+  elif command -v python >/dev/null 2>&1; then
+    release_python=python
+  else
+    echo "pre-commit: Python 3.11 or newer is required for the release engagement gate" >&2
+    exit 1
+  fi
+  echo "== release engagement contract =="
+  "$release_python" scripts/test-release-engagement-smoke.py
 fi
 
 echo "pre-commit: all checks passed."
