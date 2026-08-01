@@ -1115,63 +1115,38 @@ mod tests {
         let listener = TcpListener::bind(("127.0.0.1", 0)).expect("bind loopback");
         let client = TcpStream::connect(listener.local_addr().expect("listener address"))
             .expect("connect loopback");
-        let (mut server, _) = listener.accept().expect("accept loopback");
-        server.set_nonblocking(true).expect("nonblocking fill");
-        let padding = [0_u8; 64 * 1_024];
+        let (server, _) = listener.accept().expect("accept loopback");
+        let machine = live();
+        let payload = "x".repeat(crate::MAX_EVENT_BYTES / 2);
         let saturation_deadline = Instant::now() + Duration::from_secs(5);
         loop {
             assert!(
                 Instant::now() < saturation_deadline,
-                "socket backpressure did not begin"
+                "public writes never reached socket backpressure"
             );
-            match server.write(&padding) {
-                Ok(0) => panic!("socket fill made no progress"),
-                Ok(_) => {}
-                Err(error) if error.kind() == io::ErrorKind::WouldBlock => break,
-                Err(error) => panic!("socket fill failed: {error}"),
-            }
-        }
-        server.set_nonblocking(false).expect("blocking deadline");
-        server
-            .set_write_timeout(Some(Duration::from_millis(100)))
-            .expect("saturation timeout");
-        loop {
-            assert!(
-                Instant::now() < saturation_deadline,
-                "socket backpressure did not stabilize"
-            );
-            match server.write_all(&padding) {
-                Ok(()) => {}
-                Err(error)
-                    if matches!(
-                        error.kind(),
-                        io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock
-                    ) =>
-                {
+            let ticket = machine.capture().expect("ticket");
+            machine
+                .commit(ticket, PreparedEvent::new(&payload).expect("prepare"))
+                .expect("commit");
+            let lease = machine.lease().expect("lease result").expect("lease");
+            let started = Instant::now();
+            match lease.write_to_stream_with_timeout(&server, Duration::from_millis(100)) {
+                Ok(()) => continue,
+                Err(WriteError::Io(error)) => {
+                    assert!(
+                        matches!(
+                            error.kind(),
+                            io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock
+                        ),
+                        "unexpected socket failure: {error}"
+                    );
+                    assert!(started.elapsed() < Duration::from_secs(1));
                     break;
                 }
-                Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
-                Err(error) => panic!("socket saturation failed: {error}"),
+                Err(WriteError::Revoked) => panic!("live write was revoked"),
             }
         }
-        server
-            .set_write_timeout(Some(Duration::from_secs(2)))
-            .expect("fallback timeout");
 
-        let machine = live();
-        let ticket = machine.capture().expect("ticket");
-        let payload = "x".repeat(crate::MAX_EVENT_BYTES / 2);
-        machine
-            .commit(ticket, PreparedEvent::new(&payload).expect("prepare"))
-            .expect("commit");
-        let lease = machine.lease().expect("lease result").expect("lease");
-        let started = Instant::now();
-
-        lease
-            .write_to_stream_with_timeout(&server, Duration::from_millis(100))
-            .expect_err("backpressured write must expire");
-
-        assert!(started.elapsed() < Duration::from_secs(1));
         let status = machine.status();
         assert_eq!(status.state, ConsentState::Stopped);
         assert_eq!(status.dropped_public_events, 1);

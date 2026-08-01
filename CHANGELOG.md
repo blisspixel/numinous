@@ -71,11 +71,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   presenting incomplete provenance under the qualifying evidence schema.
 - The pre-commit study gate now runs when the source-integrity verifier itself
   changes, closing a gap in deterministic regression enforcement.
-- The real backpressured-socket deadline regression now requires a timed
-  blocking fill before exercising the bounded public write. This closes macOS
-  and Linux false failures where the kernel moved prefill bytes into the unread
-  peer buffer before the test frame arrived, without changing the production
-  deadline or consent cleanup behavior.
+- The real backpressured-socket deadline regression now sends complete bounded
+  public frames through the deadline path until the unread loopback peer applies
+  backpressure. This closes macOS and Linux false failures caused by prefill
+  bytes moving between kernel buffers, without changing the production deadline
+  or consent cleanup behavior.
 - Understanding Alpha analysis now balances each model family's ten primary
   pairs at five condition starts per arm and two first-room starts per flagship,
   with declared reserve-path imbalance bounds. The inadmissible first runner and
