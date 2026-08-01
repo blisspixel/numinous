@@ -4399,12 +4399,17 @@ fn crack_tool(args: &Value, journey_file: &std::path::Path) -> Value {
 
 fn crack_tool_at_level(args: &Value, level: u32) -> Value {
     let seed = effective_seed(args);
-    let Some(digits) = args
-        .get("digits")
-        .and_then(Value::as_u64)
-        .map_or(Some(4), |value| usize::try_from(value).ok())
-    else {
-        return tool_error("Code length is too large.");
+    let digits = match args.get("digits") {
+        None => 4,
+        Some(value) => {
+            let Some(value) = value.as_u64() else {
+                return tool_error("Code length must be a positive integer.");
+            };
+            let Ok(value) = usize::try_from(value) else {
+                return tool_error("Code length is too large.");
+            };
+            value
+        }
     };
     if !numinous_core::supports_code_length(digits) {
         return tool_error(&format!(
@@ -6788,6 +6793,10 @@ mod tests {
             (numinous_core::MAX_CODE_DIGITS + 1) as u64,
             u64::MAX,
         ] {
+            let result = super::crack_tool_at_level(&json!({"digits": digits}), 5);
+            assert_eq!(result["isError"], true, "accepted {digits} digits");
+        }
+        for digits in [json!(-1), json!(4.0), json!("4"), Value::Null] {
             let result = super::crack_tool_at_level(&json!({"digits": digits}), 5);
             assert_eq!(result["isError"], true, "accepted {digits} digits");
         }
