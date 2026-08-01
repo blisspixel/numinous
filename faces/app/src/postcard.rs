@@ -612,7 +612,8 @@ mod tests {
             .or_else(|| rooms.first())
             .expect("at least one room")
             .as_ref();
-        let dir = std::env::temp_dir().join("numinous_short_loop_test");
+        let dir =
+            std::env::temp_dir().join(format!("numinous_short_loop_test_{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create loop dir");
 

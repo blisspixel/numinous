@@ -62,9 +62,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 3,199 all-target Rust test cases
+Expected right now: **format and clippy clean, 3,210 all-target Rust test cases
 and 105 study runner and collector regressions pass, one screenshot diagnostic is
-ignored, 95.13% region coverage, and 95.28% line coverage**. The `gpu` and
+ignored, 95.14% region coverage, and 95.29% line coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions

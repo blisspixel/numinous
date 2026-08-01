@@ -1383,8 +1383,15 @@ impl App {
     }
 
     fn help_menu_selection(&self) -> Option<usize> {
-        (self.input_mode == input_legend::InputMode::Controller && !self.modal_mode_active())
-            .then_some(self.controller_menu_selection)
+        (!self.modal_mode_active()).then_some(self.controller_menu_selection)
+    }
+
+    fn hover_menu_choice(&mut self, choice: usize) -> bool {
+        if self.controller_menu_selection == choice {
+            return false;
+        }
+        self.controller_menu_selection = choice;
+        true
     }
 
     fn handle_modal_help_key(&mut self, key: &Key) -> bool {
@@ -1670,6 +1677,13 @@ impl App {
         );
     }
 
+    fn normalized_mouse_point(&self) -> Option<(f64, f64)> {
+        self.window.as_ref().and_then(|window| {
+            let size = window.inner_size();
+            mouse_input::normalized_window_point(self.mouse, (size.width, size.height))
+        })
+    }
+
     fn begin_pointer_at(&mut self, point: (f64, f64)) {
         if self.paused {
             return;
@@ -1925,18 +1939,7 @@ impl App {
         if self.show_help && self.modal_mode_active() {
             self.show_help = false;
         } else if self.show_help {
-            self.show_help = false;
-            match input_legend::MenuChoice::at(self.controller_menu_selection) {
-                input_legend::MenuChoice::Quiz => self.quiz_next(),
-                input_legend::MenuChoice::Munch => self.munch_start(),
-                input_legend::MenuChoice::Nim => self.nim_start(),
-                input_legend::MenuChoice::Gauntlet => self.gauntlet_start(),
-                input_legend::MenuChoice::Arcade => self.arcade_start(),
-                input_legend::MenuChoice::Show => self.toggle_show(),
-                input_legend::MenuChoice::Studio => self.enter_studio(),
-                input_legend::MenuChoice::Journey => self.toggle_journey(),
-                input_legend::MenuChoice::WatchAgent => self.open_session_viewer(),
-            }
+            self.activate_menu_choice(input_legend::MenuChoice::at(self.controller_menu_selection));
         } else if let Some(over) = self.arcade.as_ref().map(|play| play.over) {
             if over {
                 self.arcade = None;
@@ -1960,6 +1963,21 @@ impl App {
             self.quiz_answer('A');
         } else if let Some(point) = self.gamepad.cursor() {
             self.begin_pointer_at(point);
+        }
+    }
+
+    fn activate_menu_choice(&mut self, choice: input_legend::MenuChoice) {
+        self.show_help = false;
+        match choice {
+            input_legend::MenuChoice::Quiz => self.quiz_next(),
+            input_legend::MenuChoice::Munch => self.munch_start(),
+            input_legend::MenuChoice::Nim => self.nim_start(),
+            input_legend::MenuChoice::Gauntlet => self.gauntlet_start(),
+            input_legend::MenuChoice::Arcade => self.arcade_start(),
+            input_legend::MenuChoice::Show => self.toggle_show(),
+            input_legend::MenuChoice::Studio => self.enter_studio(),
+            input_legend::MenuChoice::Journey => self.toggle_journey(),
+            input_legend::MenuChoice::WatchAgent => self.open_session_viewer(),
         }
     }
 
@@ -3611,10 +3629,10 @@ impl ApplicationHandler for App {
                         Key::Named(NamedKey::ArrowDown) => {
                             self.session_viewer.scroll_result(1);
                         }
-                        Key::Character(c) if c.as_str() == "a" => {
+                        Key::Character(c) if c.as_str().eq_ignore_ascii_case("a") => {
                             self.session_viewer.pan_result(-4);
                         }
-                        Key::Character(c) if c.as_str() == "d" => {
+                        Key::Character(c) if c.as_str().eq_ignore_ascii_case("d") => {
                             self.session_viewer.pan_result(4);
                         }
                         _ => {}
@@ -3713,6 +3731,7 @@ impl ApplicationHandler for App {
                         _ => {}
                     }
                 } else {
+                    let logical_key = controls::normalized_command_key(&logical_key);
                     match logical_key {
                         // Esc is the menu, like every game since Doom. Quit from
                         // the window's close button.
@@ -3727,10 +3746,18 @@ impl ApplicationHandler for App {
                         // Enter is the front-door start: into The Show (the room
                         // tour). Same toggle as B, including from the open menu.
                         Key::Named(NamedKey::Enter) => {
-                            self.toggle_show();
+                            if self.show_help {
+                                self.activate_menu_choice(input_legend::MenuChoice::Show);
+                            } else {
+                                self.toggle_show();
+                            }
                         }
                         Key::Named(NamedKey::Tab) => {
-                            self.enter_studio();
+                            if self.show_help {
+                                self.activate_menu_choice(input_legend::MenuChoice::Studio);
+                            } else {
+                                self.enter_studio();
+                            }
                         }
                         // A/D strafe between rooms; arrows still work.
                         Key::Named(NamedKey::ArrowRight) => self.switch(1),
@@ -3835,36 +3862,39 @@ impl ApplicationHandler for App {
                         }
                         // G deals the quiz: guess the shape, in the window.
                         Key::Character(c) if c.as_str() == "g" && self.show_help => {
-                            self.show_help = false;
-                            self.quiz_next();
+                            self.activate_menu_choice(input_legend::MenuChoice::Quiz);
                         }
                         // C chomps: today's Munch board, in the window.
                         Key::Character(c) if c.as_str() == "c" && self.show_help => {
-                            self.show_help = false;
-                            self.munch_start();
+                            self.activate_menu_choice(input_legend::MenuChoice::Munch);
                         }
                         // N is nim: three heaps against the Order.
                         Key::Character(c) if c.as_str() == "n" && self.show_help => {
-                            self.show_help = false;
-                            self.nim_start();
+                            self.activate_menu_choice(input_legend::MenuChoice::Nim);
                         }
                         // T runs the Gauntlet: four stages, one number.
                         Key::Character(c) if c.as_str() == "t" && self.show_help => {
-                            self.show_help = false;
-                            self.gauntlet_start();
+                            self.activate_menu_choice(input_legend::MenuChoice::Gauntlet);
                         }
                         // V looses the Vexations: the arcade.
                         Key::Character(c) if c.as_str() == "v" && self.show_help => {
-                            self.show_help = false;
-                            self.arcade_start();
+                            self.activate_menu_choice(input_legend::MenuChoice::Arcade);
                         }
                         // J opens the journey: what the play has made of you.
                         Key::Character(c) if c.as_str() == "j" => {
-                            self.toggle_journey();
+                            if self.show_help {
+                                self.activate_menu_choice(input_legend::MenuChoice::Journey);
+                            } else {
+                                self.toggle_journey();
+                            }
                         }
                         // X opens the explicitly consented local MCP session viewer.
                         Key::Character(c) if c.as_str() == "x" => {
-                            self.open_session_viewer();
+                            if self.show_help {
+                                self.activate_menu_choice(input_legend::MenuChoice::WatchAgent);
+                            } else {
+                                self.open_session_viewer();
+                            }
                         }
                         // Y turns the radio dial: off, then station by station.
                         Key::Character(c) if c.as_str() == "y" && !repeat => {
@@ -3923,7 +3953,11 @@ impl ApplicationHandler for App {
                         }
                         // B for the big show (lean back).
                         Key::Character(c) if c.as_str() == "b" => {
-                            self.toggle_show();
+                            if self.show_help {
+                                self.activate_menu_choice(input_legend::MenuChoice::Show);
+                            } else {
+                                self.toggle_show();
+                            }
                         }
                         // O cycles the visualizer source: room bed, output mix, loopback.
                         Key::Character(c) if c.as_str() == "o" && !repeat => {
@@ -3963,6 +3997,30 @@ impl ApplicationHandler for App {
                 button: MouseButton::Left,
                 ..
             } => {
+                let point = self.normalized_mouse_point();
+                if self.show_help && !self.modal_mode_active() {
+                    self.clear_pointer_state();
+                    let input_mode = self.input_mode;
+                    let selected = self.help_menu_selection();
+                    if state == ElementState::Pressed
+                        && let Some(choice) = point.and_then(|point| {
+                            let window = self.window.as_ref()?;
+                            let size = window.inner_size();
+                            overlays::help_menu_choice_at(
+                                point,
+                                size.width as usize,
+                                size.height as usize,
+                                input_mode,
+                                selected,
+                            )
+                        })
+                    {
+                        self.input_mode = input_legend::InputMode::KeyboardMouse;
+                        self.controller_menu_selection = choice;
+                        self.activate_menu_choice(input_legend::MenuChoice::at(choice));
+                    }
+                    return;
+                }
                 if self.paused {
                     self.clear_pointer_state();
                     return;
@@ -3976,10 +4034,6 @@ impl ApplicationHandler for App {
                     return;
                 }
                 self.input_mode = input_legend::InputMode::KeyboardMouse;
-                let point = self.window.as_ref().and_then(|window| {
-                    let size = window.inner_size();
-                    mouse_input::normalized_window_point(self.mouse, (size.width, size.height))
-                });
                 match (state, point) {
                     (ElementState::Pressed, Some(point)) => self.begin_pointer_at(point),
                     (ElementState::Released, Some(point)) => self.end_pointer_at(point),
@@ -4024,6 +4078,31 @@ impl ApplicationHandler for App {
             }
             WindowEvent::CursorMoved { position, .. } => {
                 self.mouse = (position.x, position.y);
+                if self.show_help && !self.modal_mode_active() {
+                    let input_mode = self.input_mode;
+                    let selected = self.help_menu_selection();
+                    let hovered = self.window.as_ref().and_then(|window| {
+                        let size = window.inner_size();
+                        let point = mouse_input::normalized_window_point(
+                            (position.x, position.y),
+                            (size.width, size.height),
+                        )?;
+                        overlays::help_menu_choice_at(
+                            point,
+                            size.width as usize,
+                            size.height as usize,
+                            input_mode,
+                            selected,
+                        )
+                    });
+                    if let Some(choice) = hovered
+                        && self.hover_menu_choice(choice)
+                        && let Some(window) = &self.window
+                    {
+                        window.request_redraw();
+                    }
+                    return;
+                }
                 self.refresh_pointer_state();
                 if self.poking
                     && let Some(window) = &self.window
@@ -5910,6 +5989,25 @@ mod tests {
             let _ = std::fs::remove_file(&app.journey_file);
             let _ = std::fs::remove_file(&app.scores_file);
         }
+    }
+
+    #[test]
+    fn pointer_hover_keeps_the_visible_controller_menu_layout_stable() {
+        let mut app = headless("controller-menu-pointer-hover");
+        app.input_mode = InputMode::Controller;
+        app.controller_menu_selection = 0;
+
+        assert!(app.hover_menu_choice(1));
+        assert_eq!(app.controller_menu_selection, 1);
+        assert_eq!(
+            app.input_mode,
+            InputMode::Controller,
+            "hover and press must resolve against the same visible layout"
+        );
+        assert!(!app.hover_menu_choice(1));
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
     }
 
     #[test]

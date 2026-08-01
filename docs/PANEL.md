@@ -103,8 +103,9 @@ is absent anymore; everything on this list makes an existing organ stronger.
 6. **Open Problems wing** (Collatz has friends: twin primes, Goldbach).
 7. **Further reading**: one citation per room, unlocked with its deep cut.
 8. **Era grain** (scanlines, bloom, dither), **Show crossfade**, then the
-   **music visualizer**. Standard-controller play is built; remapping, adaptive
-   glyphs, and cross-platform hardware certification remain.
+   **music visualizer**. Standard-controller play, configurable standard-button
+   routing, and adaptive Xbox, PlayStation, or generic face labels are built;
+   cross-platform physical-hardware certification remains.
 9. **Visit-spark cap** per room (anti-grind; play stays the fast path).
 
 Everything above holds the standing laws: rewards stay earned, math is never

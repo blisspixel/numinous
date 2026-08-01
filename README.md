@@ -212,7 +212,9 @@ windowed app, a full CLI, an MCP server, GPU, audio, and local-broadcast
 adapters, 354 catalog
 rooms plus hidden content, games, progression, a Studio foundation, and the
 built-in soundtrack. Mouse, keyboard, and hotplugged controllers share the
-native App, including a controller-driven virtual hand for every room. The
+native App, including all nine clickable launch destinations, case-safe letter
+commands, configurable standard-button routing, and a controller-driven virtual hand for
+every room. The
 visible legends follow the last meaningful keyboard, pointer, or controller
 action across rooms, games, Show, Journey, and Studio. Controller routes cover
 all nine menu destinations, while R3 provides a visible pause that blocks
@@ -298,8 +300,8 @@ form elicitation can commit a `predict` guess through the protocol's multi
 round-trip result flow without seeing the hidden readout first. Real subprocess
 tests exercise both modern and legacy paths.
 
-The verified July 31, 2026 gate has 3,199 passing all-target test cases plus one
-ignored screenshot diagnostic, 95.13% region coverage and 95.28% line coverage
+The verified August 1, 2026 gate has 3,210 passing all-target test cases plus one
+ignored screenshot diagnostic, 95.14% region coverage and 95.29% line coverage
 with an enforced 80% line floor, Clippy with warnings denied, and dependency
 policy checks. Release QA also regenerates an exact
 2,913-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact

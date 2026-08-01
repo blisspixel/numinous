@@ -37,6 +37,68 @@ pub(crate) fn draw_help_overlay(
     draw_centered_lines(raster, &lines, width, height, scale, line_step);
 }
 
+/// Return the launch-menu destination under a normalized pointer position.
+///
+/// Hit testing uses the same wrapped lines, scale, and centering as the drawn
+/// keyboard and mouse overlay. This keeps pointer targets attached to visible
+/// copy at compact and default window sizes.
+pub(crate) fn help_menu_choice_at(
+    point: (f64, f64),
+    width: usize,
+    height: usize,
+    input_mode: InputMode,
+    selected: Option<usize>,
+) -> Option<usize> {
+    if width == 0
+        || height == 0
+        || !point.0.is_finite()
+        || !point.1.is_finite()
+        || !(0.0..=1.0).contains(&point.0)
+        || !(0.0..=1.0).contains(&point.1)
+    {
+        return None;
+    }
+    let compact_controller =
+        input_mode == InputMode::Controller && width <= 420 && height <= 300 && selected.is_some();
+    let semantic = if compact_controller {
+        input_legend::compact_controller_help_lines(selected.unwrap_or(0))
+    } else {
+        input_legend::help_lines(input_mode, selected, false)
+    };
+    let largest = if compact_controller {
+        2
+    } else {
+        (width as i32 / 300).clamp(1, 4)
+    };
+    let (lines, scale, line_step) =
+        overlay_layout_up_to_with_sources(&semantic, width, height, largest);
+    let line_height = line_step * scale;
+    let top = (height as i32 / 2) - (lines.len() as i32 * line_height) / 2;
+    let x = point.0 * width as f64;
+    let y = point.1 * height as f64;
+    if y < f64::from(top) {
+        return None;
+    }
+    let row = ((y - f64::from(top)) / f64::from(line_height)).floor() as usize;
+    let (line, source_index) = lines.get(row)?;
+    let text_width = line.chars().count() as i32 * 6 * scale;
+    let left = ((width as i32 - text_width) / 2).max(10);
+    let padding = 4 * scale;
+    if x < f64::from(left - padding) || x > f64::from(left + text_width + padding) {
+        return None;
+    }
+    if compact_controller {
+        return match source_index {
+            1..=4 => Some((source_index - 1) * 2 + usize::from(x >= width as f64 / 2.0)),
+            9 => Some(8),
+            _ => None,
+        };
+    }
+    (1..=input_legend::MenuChoice::ALL.len())
+        .contains(source_index)
+        .then_some(source_index - 1)
+}
+
 pub(crate) fn journey_lines(
     journey: &Journey,
     board: &Scoreboard,
@@ -180,17 +242,34 @@ fn overlay_layout_up_to<T: AsRef<str>>(
     height: usize,
     largest: i32,
 ) -> (Vec<String>, i32, i32) {
+    let (lines, scale, line_step) =
+        overlay_layout_up_to_with_sources(semantic, width, height, largest);
+    (
+        lines.into_iter().map(|(line, _)| line).collect(),
+        scale,
+        line_step,
+    )
+}
+
+fn overlay_layout_up_to_with_sources<T: AsRef<str>>(
+    semantic: &[T],
+    width: usize,
+    height: usize,
+    largest: i32,
+) -> (Vec<(String, usize)>, i32, i32) {
     for scale in (1..=largest).rev() {
         let columns = ((width as i32 - 20) / (6 * scale)).max(8) as usize;
-        let lines: Vec<String> = semantic
+        let lines: Vec<(String, usize)> = semantic
             .iter()
-            .flat_map(|line| {
+            .enumerate()
+            .flat_map(|(source_index, line)| {
                 let line = line.as_ref();
-                if line.is_empty() {
+                let wrapped = if line.is_empty() {
                     vec![String::new()]
                 } else {
                     numinous_core::wrap_text(line, columns)
-                }
+                };
+                wrapped.into_iter().map(move |line| (line, source_index))
             })
             .collect();
         let line_step = if scale == 1 { 9 } else { 11 };
@@ -202,13 +281,15 @@ fn overlay_layout_up_to<T: AsRef<str>>(
     let columns = ((width as i32 - 20) / 6).max(8) as usize;
     let lines = semantic
         .iter()
-        .flat_map(|line| {
+        .enumerate()
+        .flat_map(|(source_index, line)| {
             let line = line.as_ref();
-            if line.is_empty() {
+            let wrapped = if line.is_empty() {
                 vec![String::new()]
             } else {
                 numinous_core::wrap_text(line, columns)
-            }
+            };
+            wrapped.into_iter().map(move |line| (line, source_index))
         })
         .collect();
     (lines, 1, 9)
@@ -292,6 +373,129 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn keyboard_mouse_help_hit_tests_all_nine_visible_destinations() {
+        for (width, height) in [(900, 700), (360, 240)] {
+            let semantic = input_legend::help_lines(InputMode::KeyboardMouse, None, false);
+            let largest = (width as i32 / 300).clamp(1, 4);
+            let (lines, scale, line_step) =
+                overlay_layout_up_to_with_sources(&semantic, width, height, largest);
+            let line_height = line_step * scale;
+            let top = (height as i32 / 2) - (lines.len() as i32 * line_height) / 2;
+
+            for choice in 0..input_legend::MenuChoice::ALL.len() {
+                let source_index = choice + 1;
+                let (row, (line, _)) = lines
+                    .iter()
+                    .enumerate()
+                    .find(|(_, (_, source))| *source == source_index)
+                    .expect("each menu destination has a rendered row");
+                let text_width = line.chars().count() as i32 * 6 * scale;
+                let left = ((width as i32 - text_width) / 2).max(10);
+                let point = (
+                    f64::from(left + text_width / 2) / width as f64,
+                    f64::from(top + row as i32 * line_height + line_height / 2) / height as f64,
+                );
+                assert_eq!(
+                    help_menu_choice_at(point, width, height, InputMode::KeyboardMouse, None,),
+                    Some(choice),
+                    "choice {choice} at {width} by {height}"
+                );
+            }
+        }
+        assert_eq!(
+            help_menu_choice_at((0.01, 0.01), 900, 700, InputMode::KeyboardMouse, None),
+            None
+        );
+        assert_eq!(
+            help_menu_choice_at((f64::NAN, 0.5), 900, 700, InputMode::KeyboardMouse, None),
+            None
+        );
+        assert_eq!(
+            help_menu_choice_at((0.5, 0.5), 0, 0, InputMode::KeyboardMouse, None),
+            None
+        );
+    }
+
+    #[test]
+    fn controller_help_hit_testing_matches_full_and_compact_visible_layouts() {
+        let (width, height) = (900, 700);
+        let semantic = input_legend::help_lines(InputMode::Controller, Some(0), false);
+        let (lines, scale, line_step) = overlay_layout_up_to_with_sources(
+            &semantic,
+            width,
+            height,
+            (width as i32 / 300).clamp(1, 4),
+        );
+        let line_height = line_step * scale;
+        let top = (height as i32 / 2) - (lines.len() as i32 * line_height) / 2;
+        for choice in 0..input_legend::MenuChoice::ALL.len() {
+            let source_index = choice + 1;
+            let (row, (line, _)) = lines
+                .iter()
+                .enumerate()
+                .find(|(_, (_, source))| *source == source_index)
+                .expect("each full controller destination has a rendered row");
+            let text_width = line.chars().count() as i32 * 6 * scale;
+            let left = ((width as i32 - text_width) / 2).max(10);
+            let point = (
+                f64::from(left + text_width / 2) / width as f64,
+                f64::from(top + row as i32 * line_height + line_height / 2) / height as f64,
+            );
+            assert_eq!(
+                help_menu_choice_at(point, width, height, InputMode::Controller, Some(0)),
+                Some(choice)
+            );
+        }
+
+        let (width, height) = (360, 240);
+        let semantic = input_legend::compact_controller_help_lines(0);
+        let (lines, scale, line_step) =
+            overlay_layout_up_to_with_sources(&semantic, width, height, 2);
+        let line_height = line_step * scale;
+        let top = (height as i32 / 2) - (lines.len() as i32 * line_height) / 2;
+        for pair in 0..4 {
+            let source_index = pair + 1;
+            let (row, (line, _)) = lines
+                .iter()
+                .enumerate()
+                .find(|(_, (_, source))| *source == source_index)
+                .expect("each compact controller pair has a rendered row");
+            let text_width = line.chars().count() as i32 * 6 * scale;
+            let left = ((width as i32 - text_width) / 2).max(10);
+            for side in 0..2 {
+                let x = if side == 0 {
+                    left + text_width / 4
+                } else {
+                    left + text_width * 3 / 4
+                };
+                let point = (
+                    f64::from(x) / width as f64,
+                    f64::from(top + row as i32 * line_height + line_height / 2) / height as f64,
+                );
+                assert_eq!(
+                    help_menu_choice_at(point, width, height, InputMode::Controller, Some(0)),
+                    Some(pair * 2 + side)
+                );
+            }
+        }
+        let (row, (line, _)) = lines
+            .iter()
+            .enumerate()
+            .find(|(_, (_, source))| *source == 9)
+            .expect("Watch Agent has a compact rendered row");
+        let text_width = line.chars().count() as i32 * 6 * scale;
+        let left = ((width as i32 - text_width) / 2).max(10);
+        let point = (
+            f64::from(left + text_width / 2) / width as f64,
+            f64::from(top + row as i32 * line_height + line_height / 2) / height as f64,
+        );
+        assert_eq!(
+            help_menu_choice_at(point, width, height, InputMode::Controller, Some(0)),
+            Some(8)
+        );
     }
 
     #[test]
