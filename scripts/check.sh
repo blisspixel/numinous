@@ -20,6 +20,8 @@ echo "== understanding study collector =="
 python3 scripts/test-understanding-collect.py
 echo "== release packaging =="
 python3 scripts/test-package-release.py
+echo "== release engagement contract =="
+python3 scripts/test-release-engagement-smoke.py
 echo "== house style =="
 bash scripts/check-style.sh
 echo "All checks passed."

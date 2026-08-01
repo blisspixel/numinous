@@ -40,8 +40,10 @@ jobs:
           python3 scripts/test-mcp-play.py
           python3 scripts/test-understanding-study.py
           python3 scripts/test-understanding-collect.py
-      - name: Release packaging tests
-        run: python3 scripts/test-package-release.py
+      - name: Release packaging and engagement tests
+        run: |
+          python3 scripts/test-package-release.py
+          python3 scripts/test-release-engagement-smoke.py
 
   msrv:
     name: MSRV 1.88

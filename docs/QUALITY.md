@@ -13,7 +13,11 @@ built, so an aspiration is never mistaken for a result.
   diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
   three-OS test-and-build matrix. The current measured coverage is 95.14%
-  regions and 95.29% lines under the documented exclusions. The consented MCP
+  regions and 95.29% lines under the documented exclusions. Each of the four
+  packaged release targets installs into a disposable root, renders Times
+  Tables through the installed CLI, and completes modern MCP discovery, the
+  exact 35-tool inventory, and a real `play_room` call from an isolated profile.
+  The consented MCP
   broadcast path has 65 focused shared-crate tests, 121 MCP unit tests, and
   12 real stdio tests. Real loopback cases cover pairing, compatibility,
   ordered controls, redaction, disconnect cleanup, private-call silence, exact

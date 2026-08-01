@@ -70,6 +70,12 @@ loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
 with representative physical controller models remain open.
 
+The four-target release workflow runs `scripts/release-engagement-smoke.py`
+against every disposable packaged install. It requires a substantive Times
+Tables CLI render and modern MCP discovery, the exact 35-tool list, and one
+structured `play_room` result from an isolated temporary profile. Version-only
+execution is not treated as engagement proof.
+
 The release scripts also regenerate `renders/qa-app/`, a 2,913-screen app matrix.
 Every catalog room has deterministic default and compact opening frames,
 arrival cards, immediate pointer responses, and same-phase delayed-gesture

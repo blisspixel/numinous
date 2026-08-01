@@ -5,6 +5,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- Every Windows, Linux, macOS Intel, and macOS Apple silicon release package now
+  passes one shared installed-binary engagement contract. The disposable install
+  must render Times Tables through the CLI, then its MCP binary must complete
+  modern discovery, return the exact unique 35-tool inventory, and produce one
+  validated structured `play_room` response from an isolated temporary profile.
+  Bounded time, output, framing, semantic render, and state-path regressions fail
+  closed locally, in the pre-commit hook, and in CI.
+
 ### Changed
 - The MCP stdio face now implements the final stateless 2026-07-28 protocol
   while retaining 2025-11-25 and 2025-06-18 initialization compatibility.

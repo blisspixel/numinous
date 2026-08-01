@@ -169,7 +169,9 @@ Nothing merges red. On every PR, blocking:
    `cargo build --workspace --locked` on macOS, Linux, and Windows
 12. The native installer safety self-test on macOS, Linux, and Windows
 13. Deterministic release-package regressions, plus four-platform release
-    builds and disposable packaged-install smoke tests in the release workflow
+    builds and disposable packaged-install smoke tests in the release workflow.
+    Every installed package must render Times Tables through the CLI and complete
+    modern MCP discovery, tool listing, and `play_room` from an isolated profile.
 
 Hardening targets not yet enforced in CI: `cargo-auditable` release binaries,
 cryptographic release signing, the visual and audio regression loops, and

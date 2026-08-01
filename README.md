@@ -323,7 +323,9 @@ App, CLI, and MCP parity. It made the actual stable App bed exportable,
 inspectable, bounded, and objectively comparable across faces. The simulated
 reactions and signal features are not participant or pleasantness evidence.
 Public CI passes locked tests, builds, and installer safety checks on Windows,
-macOS, and Ubuntu.
+macOS, and Ubuntu. The four release targets install into disposable roots, then
+prove a real Times Tables CLI render and modern MCP discovery, 35-tool listing,
+and `play_room` response from an isolated profile.
 Stranger playtests, accessibility work, physical clean-machine execution,
 real-controller-model sessions, musician-led long-listening review, deeper
 causal interaction in other rooms, and substantial visual and Studio work
