@@ -4,6 +4,7 @@
 //! and a normalized virtual hand, the same coordinate space used by mouse and
 //! replayable room input.
 
+use std::collections::HashSet;
 use std::time::Instant;
 
 use gilrs::{Axis, Button, EventType, Gilrs};
@@ -45,7 +46,7 @@ struct VirtualHand {
     point: (f64, f64),
     stick: (f64, f64),
     phase_axis: f64,
-    held: bool,
+    held_buttons: HashSet<Button>,
     visible: bool,
     audio_modifier: bool,
     audio_chord_used: bool,
@@ -58,7 +59,7 @@ impl Default for VirtualHand {
             point: (0.5, 0.5),
             stick: (0.0, 0.0),
             phase_axis: 0.0,
-            held: false,
+            held_buttons: HashSet::new(),
             visible: false,
             audio_modifier: false,
             audio_chord_used: false,
@@ -82,7 +83,7 @@ impl VirtualHand {
     }
 
     fn press(&mut self, button: Button, bindings: &crate::bindings::Bindings) -> Option<Command> {
-        if button == Button::North {
+        if button == Button::North && !bindings.gamepad.contains_key(&Button::North) {
             self.visible = true;
             if !self.audio_modifier {
                 self.audio_modifier = true;
@@ -105,29 +106,26 @@ impl VirtualHand {
         }
         let command = pressed_command(button, bindings)?;
         self.visible = true;
-        if button == Button::South {
-            self.held = true;
+        if command == Command::PrimaryDown {
+            let was_released = self.held_buttons.is_empty();
+            let newly_held = self.held_buttons.insert(button);
+            return (was_released && newly_held).then_some(Command::PrimaryDown);
         }
         Some(command)
     }
 
     fn release(&mut self, button: Button) -> Option<Command> {
-        match button {
-            Button::North if self.audio_modifier => {
-                self.audio_modifier = false;
-                let used = std::mem::take(&mut self.audio_chord_used);
-                (!used).then_some(Command::CycleRadio)
-            }
-            Button::South if self.audio_primary => {
-                self.audio_primary = false;
-                None
-            }
-            Button::South if self.held => {
-                self.held = false;
-                Some(Command::PrimaryUp)
-            }
-            _ => None,
+        if button == Button::North && self.audio_modifier {
+            self.audio_modifier = false;
+            let used = std::mem::take(&mut self.audio_chord_used);
+            return (!used).then_some(Command::CycleRadio);
         }
+        if button == Button::South && self.audio_primary {
+            self.audio_primary = false;
+            return None;
+        }
+        let released_primary = self.held_buttons.remove(&button);
+        (released_primary && self.held_buttons.is_empty()).then_some(Command::PrimaryUp)
     }
 
     fn tick(&mut self, seconds: f64) -> Vec<Command> {
@@ -139,7 +137,7 @@ impl VirtualHand {
         if self.point != before {
             commands.push(Command::PointerMoved {
                 point: self.point,
-                held: self.held,
+                held: !self.held_buttons.is_empty(),
             });
         }
         if self.phase_axis != 0.0 {
@@ -154,10 +152,12 @@ impl VirtualHand {
         self.audio_modifier = false;
         self.audio_chord_used = false;
         self.audio_primary = false;
-        self.held.then(|| {
-            self.held = false;
-            Command::CancelPointer
-        })
+        if self.held_buttons.is_empty() {
+            None
+        } else {
+            self.held_buttons.clear();
+            Some(Command::CancelPointer)
+        }
     }
 }
 
@@ -335,10 +335,8 @@ mod tests {
 
     #[test]
     fn held_motion_is_a_drag_and_cancel_closes_it_once() {
-        let mut hand = VirtualHand {
-            held: true,
-            ..VirtualHand::default()
-        };
+        let mut hand = VirtualHand::default();
+        let _ = hand.held_buttons.insert(Button::South);
         hand.set_axis(Axis::LeftStickY, 1.0);
         let commands = hand.tick(0.05);
         assert!(matches!(
@@ -392,7 +390,6 @@ mod tests {
         }
         assert_eq!(pressed_command(Button::North, &bindings), None);
         assert_eq!(pressed_command(Button::Mode, &bindings), None);
-        assert_eq!(pressed_command(Button::Mode, &bindings), None);
     }
 
     #[test]
@@ -408,7 +405,7 @@ mod tests {
             Some(Command::Pause)
         );
         assert!(hand.visible);
-        assert!(!hand.held);
+        assert!(hand.held_buttons.is_empty());
     }
 
     #[test]
@@ -439,7 +436,60 @@ mod tests {
         );
         assert_eq!(hand.release(Button::South), None);
         assert_eq!(hand.release(Button::North), None);
-        assert!(!hand.held);
+        assert!(hand.held_buttons.is_empty());
+    }
+
+    #[test]
+    fn remapped_primary_uses_the_semantic_button_for_hold_and_release() {
+        let mut bindings = crate::bindings::Bindings::default();
+        bindings.gamepad.insert(Button::South, Command::Pause);
+        bindings.gamepad.insert(Button::West, Command::PrimaryDown);
+        let mut hand = VirtualHand::default();
+
+        assert_eq!(hand.press(Button::South, &bindings), Some(Command::Pause));
+        assert_eq!(hand.release(Button::South), None);
+        assert!(hand.held_buttons.is_empty());
+
+        assert_eq!(
+            hand.press(Button::West, &bindings),
+            Some(Command::PrimaryDown)
+        );
+        assert!(hand.held_buttons.contains(&Button::West));
+        assert_eq!(hand.release(Button::West), Some(Command::PrimaryUp));
+        assert!(hand.held_buttons.is_empty());
+    }
+
+    #[test]
+    fn multiple_primary_bindings_release_only_after_the_last_button() {
+        let mut bindings = crate::bindings::Bindings::default();
+        bindings.gamepad.insert(Button::West, Command::PrimaryDown);
+        let mut hand = VirtualHand::default();
+
+        assert_eq!(
+            hand.press(Button::South, &bindings),
+            Some(Command::PrimaryDown)
+        );
+        assert_eq!(
+            hand.press(Button::West, &bindings),
+            None,
+            "a second held binding must not emit another pointer down"
+        );
+        assert_eq!(hand.release(Button::South), None);
+        assert_eq!(hand.release(Button::West), Some(Command::PrimaryUp));
+    }
+
+    #[test]
+    fn explicit_north_binding_replaces_the_default_audio_chord() {
+        let mut bindings = crate::bindings::Bindings::default();
+        bindings.gamepad.insert(Button::North, Command::CycleEra);
+        let mut hand = VirtualHand::default();
+
+        assert_eq!(
+            hand.press(Button::North, &bindings),
+            Some(Command::CycleEra)
+        );
+        assert!(!hand.audio_modifier);
+        assert_eq!(hand.release(Button::North), None);
     }
 
     #[test]
@@ -490,7 +540,7 @@ mod tests {
     fn inactive_input_cancels_motion_and_never_replays_it_on_activation() {
         let mut input = GamepadInput::new();
         input.hand.set_axis(Axis::LeftStickX, 1.0);
-        input.hand.held = true;
+        let _ = input.hand.held_buttons.insert(Button::South);
         assert_eq!(input.deactivate(), Some(Command::CancelPointer));
         assert!(input.poll(Instant::now()).is_empty());
         let point = input.hand.point;

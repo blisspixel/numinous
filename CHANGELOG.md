@@ -67,6 +67,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   registration, and allocation commitment still block qualifying collection.
 
 ### Fixed
+- The App launch menu now gives mouse players the same nine destinations as
+  keyboard and controller players, with shared layout-derived hit targets and
+  visible hover selection at default and compact sizes. Letter commands work
+  with Shift and Caps Lock in rooms, grid games, Nim, and Watch Agent.
+  Controller remapping now follows semantic actions instead of assuming South
+  is always the held primary button: remapped presses release correctly,
+  multiple primary bindings produce one balanced down/up lifecycle, and an
+  explicit North mapping replaces its default audio chord. The binding parser
+  now accepts the complete direct audio-action set. The APNG export regression
+  also owns a per-process temporary directory so concurrent local gates cannot
+  invalidate each other's collision check.
 - Development MCP builds now use a distinct unbound receipt schema instead of
   presenting incomplete provenance under the qualifying evidence schema.
 - The pre-commit study gate now runs when the source-integrity verifier itself
@@ -217,8 +228,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   Extreme finite Studio expressions cannot pass non-finite notes or samples to
   the native callback. Journal growth and erase errors, oversized controller
   bindings, and MCP QA state isolation now fail closed. The complete Windows
-  gate passes 3,199 tests plus one ignored screenshot diagnostic, 95.28 percent
-  line coverage, and 95.13 percent region coverage.
+  gate passes 3,210 tests plus one ignored screenshot diagnostic, 95.29 percent
+  line coverage, and 95.14 percent region coverage.
 - Windows rustup bootstrap downloads into a private, unpredictable directory
   under the protected install root, and in-memory installer failures return a
   nonzero status. Share bundles use 128-bit operating-system randomness and
@@ -501,7 +512,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   exact board-body pixels, private tool silence, and close-time erasure.
 
 ### Added
-- **Configurable Inputs and Controller Certification**: Gamepad button mappings are now fully configurable via a `~/.numinous-bindings.json` file. Support for cross-platform hardware validation is now built-in using SDL's Game Controller DB, ensuring seamless compatibility for thousands of missing or custom controller types across all environments.
+- **Configurable inputs and controller mappings**: supported standard gamepad
+  buttons can be remapped through `.numinous-bindings.json` in the player's
+  home directory. The App embeds the SDL-derived Game Controller DB as a
+  fallback mapping source. Representative physical-controller and multi-OS
+  certification remain separate evidence gates.
 - Source provenance and math review checklists to the Times Tables, Game of Life, Galton Board, and Double Pendulum flagships to anchor 0.4 Understanding Alpha learning claims.
 - An opt-in, player-owned MCP experience journal (`Journal` / `JournalEntry`) tracking room encounters, creations, and connections over time. Fully backed by new `read_journal`, `record_journal`, and `erase_journal` tools to enable continuous MCP return sessions under user control.
 - The local MCP session viewer now has a hardened shared transport foundation,

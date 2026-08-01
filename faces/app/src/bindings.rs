@@ -86,6 +86,10 @@ impl Bindings {
                         "Left" => Command::Left,
                         "Right" => Command::Right,
                         "CycleEra" => Command::CycleEra,
+                        "CycleRadio" => Command::CycleRadio,
+                        "ToggleMute" => Command::ToggleMute,
+                        "VolumeDown" => Command::VolumeDown,
+                        "VolumeUp" => Command::VolumeUp,
                         "Pause" => Command::Pause,
                         _ => continue,
                     };
@@ -138,13 +142,21 @@ mod tests {
         ));
         std::fs::write(
             &path,
-            r#"{"South":"Pause","Mode":"Reset","East":"unknown"}"#,
+            r#"{"South":"Pause","North":"CycleRadio","West":"PrimaryDown","Mode":"Reset","East":"unknown"}"#,
         )
         .expect("bindings fixture");
 
         let bindings = Bindings::load_from(&path);
 
         assert_eq!(bindings.gamepad.get(&Button::South), Some(&Command::Pause));
+        assert_eq!(
+            bindings.gamepad.get(&Button::North),
+            Some(&Command::CycleRadio)
+        );
+        assert_eq!(
+            bindings.gamepad.get(&Button::West),
+            Some(&Command::PrimaryDown)
+        );
         assert_eq!(bindings.gamepad.get(&Button::East), Some(&Command::Back));
         assert!(!bindings.gamepad.contains_key(&Button::Mode));
         std::fs::remove_file(path).expect("cleanup");

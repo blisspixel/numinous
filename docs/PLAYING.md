@@ -68,7 +68,7 @@ your hands already know it:
 | ` or ~ | power-user console: load rooms, set phase, variation, era, mute |
 | Y | the radio dial: off, trance, chill, arcade (42 built-in tracks) |
 | [ / ] | global volume down / up; - / = are aliases outside Studio |
-| mouse | click munch cells and quiz choices directly |
+| mouse | hover or click all nine menu destinations; click every window game |
 | controller left stick / south | move the visible virtual hand / touch or confirm |
 | controller bumpers / D-pad | change rooms / choose and navigate games |
 | controller triggers / right stick | change speed / scrub time |
@@ -92,8 +92,11 @@ and radio boundaries, then rejoins a selected station live when Studio closes.
 A persistent top-right audio badge names the active source, volume level, mute,
 zero-volume, background-silent, or no-device state. A separate `JOURNEY LV`
 label reports accumulated progress in the local profile, not room difficulty.
-Radio stations appear only when compatible local tracks are present. Visible controller legends use generic directional button names, not
-platform-specific glyphs. The Studio can be entered and left with a controller,
+Radio stations appear only when compatible local tracks are present. Visible
+controller legends infer Xbox or PlayStation face names from known product
+names and use generic compass names for unknown pads. Those legends describe
+the default layout; custom button routing is documented in `../PLAY.md` and
+does not rewrite the on-screen copy. The Studio can be entered and left with a controller,
 but formula entry requires a keyboard and the footer states that boundary.
 
 **Power console (` or ~).** For hackery power users, not the first-time path.
@@ -285,8 +288,11 @@ Conventions worth relying on:
   or leave. Selected native room and Formula Jam actions replay bounded
   deterministic local sound. Scrubbing changes the source once; unsupported or
   invalid selections are silent. Closing the viewer clears that ring, restores
-  room or live-radio audio, and persists no transcript. Other native game
-  visuals are not built.
+  room or live-radio audio, and persists no transcript. Munch, Arcade, Quiz,
+  and Gauntlet actions also reconstruct through their live App renderers after
+  exact public argument and result validation. Their supported public states
+  produce deterministic local sound once per selected sequence. Nim remains
+  intentionally silent.
 
 - **Local-state agency.** A plain `forget` call changes nothing. It inventories
   Journey, scores, player-owned local Cairn drafts, generated radio cache, and
@@ -319,8 +325,8 @@ Conventions worth relying on:
   wagers and E; F9 captures hallway notes for human facilitators.
 - **Structured output, and the substance is in it.** Catalog, description,
   reveal, listening, score, memory, game, and Journey results return bounded
-  `structuredContent` alongside prose; parse that, not the sentences. All 31
-  rooms are covered by the discovery contract. The load-bearing content rides
+  `structuredContent` alongside prose; parse that, not the sentences. All 354
+  catalog rooms are covered by the discovery contract. The load-bearing content rides
   there too: `play_room` carries the ASCII `render`, `nim` carries its `secret`
   on a win, `quiz` carries the `why`, `crack` carries per-guess `feedback`, and
   `seti` carries the channel traces. A client that surfaces only

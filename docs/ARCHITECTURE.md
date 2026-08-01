@@ -264,7 +264,7 @@ in core.
 - **Current CI:** house style, dependency policy, coverage, format plus clippy
   plus rustdoc, doctests, all-target tests, and macOS, Ubuntu, and Windows
   builds. There is no automated beauty screenshot job.
-- **Local session broadcast, native room, Studio, Nim, and sound viewer, and subprocess proof built:**
+- **Local session broadcast, native room, Studio, game, and sound viewer, and subprocess proof built:**
   the App and MCP production faces remain independent. The shared broadcast
   crate owns one-use loopback pairing, server-first host proof, strict bounded
   framing, replay compatibility identity, typed public tool events, atomic
@@ -287,20 +287,25 @@ in core.
   MCP integration test opens that exact viewer and drives the actual MCP binary
   through the Times Tables explore, challenge, K5 goal, reveal, and stop path.
   Separate real sessions prove Formula Jam expression delivery, native Nim
-  delivery, and exact local-viewport body pixels. `INTERFACES.md` owns the
-  complete contract and privacy boundary. Strictly accepted native room and
-  Studio selections derive bounded mono sound from their shared core state at a
-  fixed 16 kHz source rate, then the audio adapter resamples to the output
-  device. One public-sequence owner prevents render-loop restarts; unsupported
-  selections publish silence. Mute, volume, focus, scrub, close, room-score
-  restoration, and live-radio restoration remain App-local behavior with no
-  control edge to MCP. Other native game replay remains 0.3 work.
-- **Release path:** packaged artifacts belong to 0.6. The public launch gate is
-  0.9.
+  delivery, Munch, Arcade, Quiz, and Gauntlet delivery, and exact
+  local-viewport body pixels. `INTERFACES.md` owns the complete contract and
+  privacy boundary. Strictly accepted native room, Studio, Munch, Arcade, Quiz,
+  and Gauntlet selections derive bounded mono sound from shared deterministic
+  state at a fixed 16 kHz source rate, then the audio adapter resamples to the
+  output device. Nim remains silent. One public-sequence owner prevents
+  render-loop restarts; unsupported or mismatched selections retain typed text
+  and publish silence. Mute, volume, focus, scrub, close, room-score restoration,
+  and live-radio restoration remain App-local behavior with no control edge to
+  MCP.
+- **Release path:** deterministic Windows, macOS, and Linux archives, closed
+  payload manifests, checksums, installers, updates, and CI self-tests are built.
+  Cryptographic signing, provenance attestations, clean-machine evidence, and
+  broader platform certification remain 0.6 work. The public launch gate is 0.9.
 
 ## Remaining technical decisions
 
-1. Select packaged artifact formats, signing, checksums, and update behavior.
+1. Select signing, provenance, SBOM verification, and platform trust policy for
+   the shipped package formats.
 2. Specify the bounded pattern DSL and its compatibility contract.
 3. Design the audio scheduler and master bus around measured latency.
 4. Define native `.num` associations, URL handling, and loop export.
