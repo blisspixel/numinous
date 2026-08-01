@@ -17,6 +17,10 @@ built. Real cross-process Times Tables, Studio, Nim, and Munch acceptance
 sessions are also built. Selected native room and Studio actions now replay
 bounded deterministic local sound with explicit source ownership, global mute
 and volume, focus silence, scrub replacement, and close-time restoration.
+The stdio face implements stateless MCP 2026-07-28, including discovery,
+per-request metadata, cacheable deterministic tool discovery, typed results,
+and native multi round-trip `predict`, while retaining both legacy protocol
+revisions for existing hosts.
 Watch Agent owns live App audio for retained public room, Studio, and game
 selections. Catalog plate quality (cycles 161 to 168) holds art-first
 interaction with zero phase-thin, zero dead-domain, and zero dead-dial rooms on
@@ -27,10 +31,11 @@ honest but is not the critical path. App Enter starts The Show. Exceptional
 Path Phase A is Built on App and MCP: Times Tables and Buffon five-beat
 engineered ahas, agent hallway cohort PASS, F9 capture. **0.2 Flagship Proof
 is exit-met on the agent-and-machine bar;** human stranger hallway is deferred
-to 0.8 / 1.0. **Critical path now:** build the frozen 0.4 study runner,
-obtain independent pre-collection review, run the frozen cohort, and keep CI
-green. Returning-journal sovereignty is complete on the clean-process machine
-acceptance bar.
+to 0.8 / 1.0. **Critical path now:** calibrate the concealed 0.4 probe bank,
+  obtain two fresh independent passes over the implemented replacement collector,
+  externally register the commitments, freeze the allocation, run the cohort,
+  and keep CI green. Returning-journal
+sovereignty is complete on the clean-process machine acceptance bar.
 Soft-thin densify, bulk new rooms, and Phase B glow are not the high-leverage
 next move. Supply chain is current on public `main` (empty deny/audit ignores,
 weekly Dependabot, pinned CI actions); detail in `ENGINEERING.md`. The six-

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "numinous-understanding-probes-v1",
-  "protocolVersion": "0.4-v1",
+  "protocolVersion": "0.4-v5",
   "distractorSequence": {
     "id": "numinous-understanding-distractor-v1",
     "items": [

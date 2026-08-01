@@ -189,6 +189,86 @@ fn text_of(response: &Value) -> &str {
         .unwrap_or_default()
 }
 
+fn modern_meta(capabilities: Value) -> Value {
+    json!({
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientInfo": {
+            "name": "numinous-stdio-test",
+            "version": "1.0"
+        },
+        "io.modelcontextprotocol/clientCapabilities": capabilities
+    })
+}
+
+#[test]
+fn modern_stateless_discovery_tools_and_prediction_work_over_real_stdio() {
+    let replies = run_session(&[
+        json!({
+            "jsonrpc":"2.0", "id":1, "method":"server/discover",
+            "params":{"_meta":modern_meta(json!({}))}
+        }),
+        json!({
+            "jsonrpc":"2.0", "id":2, "method":"tools/list",
+            "params":{"_meta":{
+                "io.modelcontextprotocol/protocolVersion":"2026-07-28",
+                "io.modelcontextprotocol/clientCapabilities":{}
+            }}
+        }),
+        json!({
+            "jsonrpc":"2.0", "id":3, "method":"tools/call",
+            "params":{
+                "_meta":modern_meta(json!({"elicitation":{"form":{}}})),
+                "name":"predict",
+                "arguments":{"id":"slope-rider","seed":4}
+            }
+        }),
+        json!({
+            "jsonrpc":"2.0", "id":4, "method":"tools/call",
+            "params":{
+                "_meta":modern_meta(json!({"elicitation":{"form":{}}})),
+                "name":"predict",
+                "arguments":{"id":"slope-rider","seed":4},
+                "inputResponses":{
+                    "prediction":{
+                        "action":"accept",
+                        "content":{"guess":0.0}
+                    }
+                }
+            }
+        }),
+        json!({
+            "jsonrpc":"2.0", "id":5, "method":"ping",
+            "params":{"_meta":modern_meta(json!({}))}
+        }),
+    ]);
+    let by_id = |id: u64| -> &Value {
+        replies
+            .iter()
+            .find(|response| response["id"] == id)
+            .unwrap_or_else(|| panic!("no reply with id {id}"))
+    };
+
+    assert_eq!(by_id(1)["result"]["resultType"], "complete");
+    assert_eq!(
+        by_id(1)["result"]["supportedVersions"],
+        json!(["2026-07-28", "2025-11-25", "2025-06-18"])
+    );
+    assert_eq!(by_id(1)["result"]["cacheScope"], "public");
+    assert_eq!(by_id(2)["result"]["resultType"], "complete");
+    assert_eq!(
+        by_id(2)["result"]["tools"].as_array().map(Vec::len),
+        Some(35)
+    );
+    assert_eq!(by_id(3)["result"]["resultType"], "input_required");
+    assert_eq!(
+        by_id(3)["result"]["inputRequests"]["prediction"]["method"],
+        "elicitation/create"
+    );
+    assert_eq!(by_id(4)["result"]["resultType"], "complete");
+    assert_eq!(by_id(4)["result"]["structuredContent"]["game"], "predict");
+    assert_eq!(by_id(5)["error"]["code"], -32601);
+}
+
 #[test]
 fn returning_journal_survives_two_processes_then_leaves_zero_managed_residue() {
     let session = NEXT_SESSION.fetch_add(1, Ordering::Relaxed);

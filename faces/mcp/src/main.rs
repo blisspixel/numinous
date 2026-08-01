@@ -5,20 +5,15 @@
 //! The Numinous MCP server: the face that lets AI agents (and digital minds)
 //! learn and play. See `docs/INTERFACES.md` and `docs/DIGITAL_MINDS.md`.
 //!
-//! Transport: minimal JSON-RPC 2.0 over newline-delimited stdio (the MCP stdio
-//! transport). This first increment implements `initialize`, `tools/list`, and
-//! `tools/call` with three cognitively-ergonomic tools: `list_rooms`,
-//! `describe_room`, and `play_room`. Every `play_room` result is returned as
-//! text (an ASCII render), so a text-only mind still perceives what the math
-//! does; this is the sensory-substitution principle from `docs/INTERFACES.md`.
-//!
-//! The `challenge`/`learn`/`create` tools and richer content join this surface
-//! as those systems come online. When full protocol coverage is needed, this
-//! hand-rolled subset can be swapped for the official MCP Rust SDK.
+//! Transport: JSON-RPC 2.0 over newline-delimited stdio. The server is dual-era:
+//! legacy clients use the initialization handshake from 2025-11-25 and earlier,
+//! while 2026-07-28 clients declare version, identity, and capabilities on each
+//! request. Both paths reach the same deterministic tool catalog and core.
 
 mod broadcast;
 
 use std::io::{self, BufRead, Write};
+use std::sync::{Mutex, MutexGuard};
 
 use broadcast::{SessionBroadcast, SessionSnapshot};
 use numinous_broadcast::{
@@ -27,13 +22,27 @@ use numinous_broadcast::{
 use numinous_core::{Canvas, all_rooms, all_rooms_with, room_by_id};
 use serde_json::{Value, json};
 
-/// Default MCP protocol revision when the client does not name a preference.
-const PROTOCOL_VERSION: &str = "2025-06-18";
+/// Default legacy MCP revision when an initialization request has no preference.
+const LEGACY_PROTOCOL_VERSION: &str = "2025-06-18";
 
-/// Protocol revisions this server accepts on initialize (newest first).
-/// The breaking 2026 revision is intentionally absent until its stateless wire
-/// protocol replaces this legacy initialization path.
-const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &["2025-11-25", "2025-06-18"];
+/// Stateless MCP revision implemented by the per-request metadata path.
+const MODERN_PROTOCOL_VERSION: &str = "2026-07-28";
+
+/// Every MCP revision this dual-era server implements, newest first.
+const SUPPORTED_PROTOCOL_VERSIONS: &[&str] = &[MODERN_PROTOCOL_VERSION, "2025-11-25", "2025-06-18"];
+
+/// Revisions valid inside the legacy initialization handshake.
+const LEGACY_PROTOCOL_VERSIONS: &[&str] = &["2025-11-25", "2025-06-18"];
+
+/// The tool catalog and discovery document are immutable for one binary.
+const DISCOVERY_CACHE_TTL_MS: u64 = 86_400_000;
+const TOOLS_CACHE_TTL_MS: u64 = 86_400_000;
+
+const PROTOCOL_VERSION_META_KEY: &str = "io.modelcontextprotocol/protocolVersion";
+const CLIENT_INFO_META_KEY: &str = "io.modelcontextprotocol/clientInfo";
+const CLIENT_CAPABILITIES_META_KEY: &str = "io.modelcontextprotocol/clientCapabilities";
+const SERVER_INFO_META_KEY: &str = "io.modelcontextprotocol/serverInfo";
+const JSON_SCHEMA_2020_12: &str = "https://json-schema.org/draft/2020-12/schema";
 
 /// Default ASCII canvas size for `play_room`.
 const DEFAULT_WIDTH: u64 = 72;
@@ -63,7 +72,7 @@ fn main() -> io::Result<()> {
     let mut out = stdout.lock();
     let mut reader = stdin.lock();
     let mut line = Vec::new();
-    let broadcast = SessionBroadcast::new();
+    let broadcast = ConnectionBroadcast::new();
 
     while read_bounded_line(&mut reader, &mut line)? {
         let Ok(text) = std::str::from_utf8(&line) else {
@@ -710,59 +719,110 @@ fn handle_request(request: &Value) -> Option<Value> {
 /// [`handle_request`] with an explicit journey file, so tests stay hermetic.
 #[cfg(test)]
 fn handle_request_with(request: &Value, journey_file: &std::path::Path) -> Option<Value> {
-    handle_request_with_session(request, journey_file, &SessionBroadcast::new())
+    handle_request_with_session(request, journey_file, &ConnectionBroadcast::new())
 }
 
 fn handle_request_with_session(
     request: &Value,
     journey_file: &std::path::Path,
-    broadcast: &SessionBroadcast,
+    broadcast: &ConnectionBroadcast,
 ) -> Option<Value> {
+    let id = request.get("id").cloned();
+    if let Err(error) = validate_jsonrpc_envelope(request) {
+        if id.is_none() && request.get("method").and_then(Value::as_str).is_some() {
+            return None;
+        }
+        let response_id = id.filter(valid_request_id).unwrap_or(Value::Null);
+        return Some(protocol_error_response(response_id, &error));
+    }
+    let era = match request_era(request) {
+        Ok(era) => era,
+        Err(error) => {
+            let id = id?;
+            return Some(protocol_error_response(id, &error));
+        }
+    };
     // Validate the public request before daily calls gain their private frozen
     // day field. This keeps the declared schemas authoritative without
     // mistaking server-owned request context for a client argument.
-    let argument_error = if request.get("method").and_then(Value::as_str) == Some("tools/call") {
-        validate_declared_tool_arguments(request.get("params")).err()
+    let initial_argument_error =
+        if request.get("method").and_then(Value::as_str) == Some("tools/call") {
+            validate_declared_tool_arguments(request.get("params")).err()
+        } else {
+            None
+        };
+
+    let (prepared, forced_result) = if initial_argument_error.is_none() {
+        match prepare_prediction_mrtr(request, era) {
+            Ok(prepared) => prepared,
+            Err(error) => {
+                let id = id?;
+                return Some(protocol_error_response(id, &error));
+            }
+        }
     } else {
-        None
+        (request.clone(), None)
     };
+    let result_was_forced = forced_result.is_some();
+
+    let argument_error = initial_argument_error.or_else(|| {
+        if prepared.get("method").and_then(Value::as_str) == Some("tools/call") {
+            validate_declared_tool_arguments(prepared.get("params")).err()
+        } else {
+            None
+        }
+    });
 
     // Freeze the daily day once, at the request boundary, so the reply grading
     // (via call_tool) and the progress recording below share one day count and
     // cannot straddle a midnight tick. Non-daily requests are not cloned.
-    let frozen = freeze_daily_day(request);
+    let frozen = freeze_daily_day(&prepared);
     let request: &Value = &frozen;
 
-    let id = request.get("id").cloned();
     let method = request
         .get("method")
         .and_then(Value::as_str)
         .unwrap_or_default();
 
-    let public_call = if method == "tools/call" && argument_error.is_none() {
-        capture_public_call(request, broadcast)
+    let public_call =
+        if forced_result.is_none() && method == "tools/call" && argument_error.is_none() {
+            capture_public_call(request, broadcast)
+        } else {
+            None
+        };
+
+    let result = if let Some(value) = forced_result {
+        Ok(value)
     } else {
-        None
+        match method {
+            "server/discover" if era == RequestEra::Modern => Ok(discover_result()),
+            "initialize" if era == RequestEra::Legacy => {
+                Ok(initialize_result(request.get("params")))
+            }
+            "tools/list" => validate_tools_cursor(request.get("params"))
+                .map(|()| tools_list_result())
+                .map_err(|message| (-32602_i64, message)),
+            "tools/call" => match argument_error {
+                Some(message) => Ok(tool_error(&message)),
+                None => call_tool(request.get("params"), journey_file, broadcast),
+            },
+            "notifications/cancelled" if era == RequestEra::Modern => Ok(json!({})),
+            "ping" if era == RequestEra::Legacy => Ok(json!({})),
+            other => Err((-32601_i64, format!("Method not found: {other}"))),
+        }
     };
 
-    let result = match method {
-        "initialize" => Ok(initialize_result(request.get("params"))),
-        "tools/list" => Ok(tools_list_result()),
-        "tools/call" => match argument_error {
-            Some(message) => Ok(tool_error(&message)),
-            None => call_tool(request.get("params"), journey_file, broadcast),
-        },
-        "ping" => Ok(json!({})),
-        other => Err((-32601_i64, format!("Method not found: {other}"))),
-    };
-
-    if let (Some(public_call), Ok(value)) = (public_call, &result) {
+    if let (Some(public_call), Ok(value)) = (public_call, &result)
+        && value.get("resultType").and_then(Value::as_str) != Some("input_required")
+    {
         public_call.commit(value);
     }
 
     if method == "tools/call"
+        && !result_was_forced
         && let Ok(value) = &result
         && value.get("isError").and_then(Value::as_bool) != Some(true)
+        && value.get("resultType").and_then(Value::as_str) != Some("input_required")
         && request
             .get("params")
             .and_then(|params| params.get("name"))
@@ -775,9 +835,340 @@ fn handle_request_with_session(
     // Notifications carry no id and get no response.
     let id = id?;
     Some(match result {
-        Ok(value) => success_response(id, value),
+        Ok(value) => success_response(id, result_for_era(value, method, era)),
         Err((code, message)) => error_response(id, code, &message),
     })
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RequestEra {
+    Legacy,
+    Modern,
+}
+
+struct ConnectionBroadcast {
+    session: Mutex<SessionBroadcast>,
+}
+
+impl ConnectionBroadcast {
+    fn new() -> Self {
+        Self {
+            session: Mutex::new(SessionBroadcast::new()),
+        }
+    }
+
+    fn start(&self, pairing_code: &str) -> Result<SessionSnapshot, broadcast::SessionError> {
+        self.lock().start(pairing_code)
+    }
+
+    fn status(&self) -> SessionSnapshot {
+        self.lock().status()
+    }
+
+    fn pause(&self) -> Result<SessionSnapshot, broadcast::SessionError> {
+        self.lock().pause()
+    }
+
+    fn resume(&self) -> Result<SessionSnapshot, broadcast::SessionError> {
+        self.lock().resume()
+    }
+
+    fn stop(&self) -> Result<SessionSnapshot, broadcast::SessionError> {
+        self.lock().stop()
+    }
+
+    fn capture(&self, tool: PublicTool, arguments: &Value) -> Option<broadcast::PublicCall> {
+        self.lock().capture(tool, arguments)
+    }
+
+    fn lock(&self) -> MutexGuard<'_, SessionBroadcast> {
+        self.session
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+}
+
+struct ProtocolError {
+    code: i64,
+    message: &'static str,
+    data: Option<Value>,
+}
+
+fn valid_request_id(id: &Value) -> bool {
+    id.is_string() || id.as_i64().is_some() || id.as_u64().is_some()
+}
+
+fn validate_jsonrpc_envelope(request: &Value) -> Result<(), ProtocolError> {
+    let Some(request) = request.as_object() else {
+        return Err(ProtocolError {
+            code: -32600,
+            message: "Invalid Request",
+            data: None,
+        });
+    };
+    if request.get("jsonrpc").and_then(Value::as_str) != Some("2.0")
+        || !request.get("method").is_some_and(Value::is_string)
+        || request.get("id").is_some_and(|id| !valid_request_id(id))
+        || request
+            .get("params")
+            .is_some_and(|params| !params.is_object())
+    {
+        return Err(ProtocolError {
+            code: -32600,
+            message: "Invalid Request",
+            data: None,
+        });
+    }
+    Ok(())
+}
+
+fn request_era(request: &Value) -> Result<RequestEra, ProtocolError> {
+    let method = request
+        .get("method")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let meta = request.get("params").and_then(|params| params.get("_meta"));
+    let has_modern_marker = method == "server/discover"
+        || meta.is_some_and(|meta| {
+            meta.get(PROTOCOL_VERSION_META_KEY).is_some()
+                || meta.get(CLIENT_CAPABILITIES_META_KEY).is_some()
+        });
+    if !has_modern_marker {
+        return Ok(RequestEra::Legacy);
+    }
+
+    let Some(meta) = meta.and_then(Value::as_object) else {
+        return Err(invalid_params_error(
+            "Modern requests require an object at params._meta",
+        ));
+    };
+    let Some(version) = meta.get(PROTOCOL_VERSION_META_KEY).and_then(Value::as_str) else {
+        return Err(invalid_params_error(
+            "Modern requests require a string protocol version in params._meta",
+        ));
+    };
+    if version != MODERN_PROTOCOL_VERSION {
+        return Err(ProtocolError {
+            code: -32022,
+            message: "Unsupported protocol version",
+            data: Some(json!({
+                "supported": SUPPORTED_PROTOCOL_VERSIONS,
+                "requested": version,
+            })),
+        });
+    }
+    if !meta
+        .get(CLIENT_CAPABILITIES_META_KEY)
+        .is_some_and(Value::is_object)
+    {
+        return Err(invalid_params_error(
+            "Modern requests require client capabilities in params._meta",
+        ));
+    }
+    if meta.get(CLIENT_INFO_META_KEY).is_some_and(|client_info| {
+        !client_info.is_object()
+            || !client_info.get("name").is_some_and(Value::is_string)
+            || !client_info.get("version").is_some_and(Value::is_string)
+    }) {
+        return Err(invalid_params_error(
+            "Modern client info must contain string name and version fields when present",
+        ));
+    }
+    Ok(RequestEra::Modern)
+}
+
+fn invalid_params_error(message: &'static str) -> ProtocolError {
+    ProtocolError {
+        code: -32602,
+        message,
+        data: None,
+    }
+}
+
+fn protocol_error_response(id: Value, error: &ProtocolError) -> Value {
+    let mut response = error_response(id, error.code, error.message);
+    if let Some(data) = &error.data {
+        response["error"]["data"] = data.clone();
+    }
+    response
+}
+
+fn request_supports_form_elicitation(request: &Value) -> bool {
+    let Some(elicitation) = request
+        .get("params")
+        .and_then(|params| params.get("_meta"))
+        .and_then(|meta| meta.get(CLIENT_CAPABILITIES_META_KEY))
+        .and_then(|capabilities| capabilities.get("elicitation"))
+        .and_then(Value::as_object)
+    else {
+        return false;
+    };
+    elicitation.is_empty() || elicitation.get("form").is_some_and(Value::is_object)
+}
+
+fn prepare_prediction_mrtr(
+    request: &Value,
+    era: RequestEra,
+) -> Result<(Value, Option<Value>), ProtocolError> {
+    if era != RequestEra::Modern
+        || request.get("method").and_then(Value::as_str) != Some("tools/call")
+        || request
+            .get("params")
+            .and_then(|params| params.get("name"))
+            .and_then(Value::as_str)
+            != Some("predict")
+    {
+        return Ok((request.clone(), None));
+    }
+
+    let params = request
+        .get("params")
+        .and_then(Value::as_object)
+        .ok_or_else(|| invalid_params_error("tools/call requires object params"))?;
+    let arguments = params
+        .get("arguments")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+
+    if let Some(input_responses) = params.get("inputResponses") {
+        if params.get("requestState").is_some() {
+            return Err(invalid_params_error(
+                "predict does not issue requestState and cannot accept it",
+            ));
+        }
+        let response = input_responses
+            .as_object()
+            .and_then(|responses| {
+                (responses.len() == 1)
+                    .then(|| responses.get("prediction"))
+                    .flatten()
+            })
+            .and_then(Value::as_object)
+            .ok_or_else(|| {
+                invalid_params_error("predict requires one input response named prediction")
+            })?;
+        let action = response
+            .get("action")
+            .and_then(Value::as_str)
+            .ok_or_else(|| invalid_params_error("prediction response requires an action"))?;
+        if matches!(action, "decline" | "cancel") {
+            let text = if action == "decline" {
+                "Prediction declined. Nothing was graded or recorded."
+            } else {
+                "Prediction cancelled. Nothing was graded or recorded."
+            };
+            return Ok((request.clone(), Some(tool_text(text))));
+        }
+        if action != "accept" {
+            return Err(invalid_params_error(
+                "prediction response action must be accept, decline, or cancel",
+            ));
+        }
+        let content = response
+            .get("content")
+            .and_then(Value::as_object)
+            .ok_or_else(|| invalid_params_error("accepted prediction requires form content"))?;
+        if content
+            .keys()
+            .any(|key| !matches!(key.as_str(), "guess" | "rate"))
+        {
+            return Err(invalid_params_error(
+                "prediction form content accepts only guess and rate",
+            ));
+        }
+        let guess = content
+            .get("guess")
+            .and_then(Value::as_f64)
+            .filter(|value| value.is_finite())
+            .ok_or_else(|| invalid_params_error("accepted prediction requires a finite guess"))?;
+        let rate = content
+            .get("rate")
+            .map(|value| {
+                value
+                    .as_f64()
+                    .filter(|number| number.is_finite())
+                    .ok_or_else(|| invalid_params_error("prediction rate must be finite"))
+            })
+            .transpose()?;
+        let mut merged = arguments
+            .as_object()
+            .cloned()
+            .ok_or_else(|| invalid_params_error("predict arguments must be an object"))?;
+        if merged.contains_key("guess") || merged.contains_key("rate") {
+            return Err(invalid_params_error(
+                "predict accepts the guess in arguments or inputResponses, not both",
+            ));
+        }
+        merged.insert("guess".to_string(), json!(guess));
+        if let Some(rate) = rate {
+            merged.insert("rate".to_string(), json!(rate));
+        }
+        let mut prepared = request.clone();
+        prepared["params"]["arguments"] = Value::Object(merged);
+        prepared["params"]
+            .as_object_mut()
+            .expect("validated params object")
+            .remove("inputResponses");
+        return Ok((prepared, None));
+    }
+
+    if arguments.get("guess").is_some() || !request_supports_form_elicitation(request) {
+        return Ok((request.clone(), None));
+    }
+    let pose = predict_tool(&arguments);
+    if pose.get("isError").and_then(Value::as_bool) == Some(true) {
+        return Ok((request.clone(), Some(pose)));
+    }
+    let message = pose
+        .get("structuredContent")
+        .and_then(|structured| structured.get("prompt"))
+        .and_then(Value::as_str)
+        .map(|prompt| format!("{prompt} Commit your guess before seeing the hidden readout."))
+        .unwrap_or_else(|| {
+            "Commit a prediction before seeing the room's hidden readout.".to_string()
+        });
+    Ok((
+        request.clone(),
+        Some(json!({
+            "resultType": "input_required",
+            "inputRequests": {
+                "prediction": {
+                    "method": "elicitation/create",
+                    "params": {
+                        "mode": "form",
+                        "message": message,
+                        "requestedSchema": {
+                            "$schema": JSON_SCHEMA_2020_12,
+                            "type": "object",
+                            "properties": {
+                                "guess": {
+                                    "type": "number",
+                                    "title": "Predicted readout",
+                                    "description": "Your committed value for the hidden readout."
+                                },
+                                "rate": {
+                                    "type": "number",
+                                    "title": "Predicted local rate",
+                                    "description": "Optional slope in readout units per full phase unit."
+                                }
+                            },
+                            "required": ["guess"]
+                        }
+                    }
+                }
+            }
+        })),
+    ))
+}
+
+fn validate_tools_cursor(params: Option<&Value>) -> Result<(), String> {
+    if params.and_then(|params| params.get("cursor")).is_some() {
+        return Err(
+            "Numinous returns its complete tool catalog in one page; cursor is invalid."
+                .to_string(),
+        );
+    }
+    Ok(())
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -801,7 +1192,7 @@ fn viewer_policy(name: &str) -> Option<ViewerPolicy> {
     }
 }
 
-fn capture_public_call(request: &Value, broadcast: &SessionBroadcast) -> Option<ViewerCall> {
+fn capture_public_call(request: &Value, broadcast: &ConnectionBroadcast) -> Option<ViewerCall> {
     let params = request.get("params")?;
     let name = params.get("name")?.as_str()?;
     let ViewerPolicy::Public(tool) = viewer_policy(name)? else {
@@ -875,14 +1266,34 @@ fn negotiate_protocol_version(params: Option<&Value>) -> &'static str {
         .and_then(|p| p.get("protocolVersion"))
         .and_then(Value::as_str);
     if let Some(version) = requested
-        && let Some(supported) = SUPPORTED_PROTOCOL_VERSIONS
+        && let Some(supported) = LEGACY_PROTOCOL_VERSIONS
             .iter()
             .copied()
             .find(|candidate| *candidate == version)
     {
         return supported;
     }
-    PROTOCOL_VERSION
+    LEGACY_PROTOCOL_VERSION
+}
+
+fn server_instructions() -> &'static str {
+    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does before you ask for explanations. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true. Read structuredContent.engineeredAha for beat and earn. describe_room and reveal_room open explanation on purpose and can spoil generation-before-reveal, so prefer play_room first. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
+}
+
+fn server_capabilities() -> Value {
+    json!({ "tools": {} })
+}
+
+fn server_info() -> Value {
+    json!({ "name": "numinous", "version": env!("CARGO_PKG_VERSION") })
+}
+
+fn discover_result() -> Value {
+    json!({
+        "supportedVersions": SUPPORTED_PROTOCOL_VERSIONS,
+        "capabilities": server_capabilities(),
+        "instructions": server_instructions(),
+    })
 }
 
 /// The `initialize` result: who we are and what we support.
@@ -890,20 +1301,9 @@ fn initialize_result(params: Option<&Value>) -> Value {
     let protocol_version = negotiate_protocol_version(params);
     json!({
         "protocolVersion": protocol_version,
-        "capabilities": { "tools": {} },
-        "serverInfo": { "name": "numinous", "version": env!("CARGO_PKG_VERSION") },
-        "instructions": "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and \
-                         see what the math does before you ask for explanations. On Times Tables \
-                         pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true \
-                         for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) \
-                         then aha_summon true. Read structuredContent.engineeredAha for beat and \
-                         earn. describe_room and reveal_room open explanation on purpose and can \
-                         spoil generation-before-reveal, so prefer play_room first. Steer \
-                         simulations with list_sims and run_sim, and play Guess the Shape with \
-                         the quiz tool. If a human offers a local App pairing code, \
-                         broadcast_session lets you consent to, inspect, pause, resume, or stop \
-                         that read-only public view. Further reading lives on reveal_room as \
-                         citation."
+        "capabilities": server_capabilities(),
+        "serverInfo": server_info(),
+        "instructions": server_instructions(),
     })
 }
 
@@ -918,7 +1318,18 @@ fn tools_list_result() -> Value {
 /// each request.
 fn tools_catalog() -> &'static Value {
     static CATALOG: std::sync::OnceLock<Value> = std::sync::OnceLock::new();
-    CATALOG.get_or_init(|| add_response_mode(build_tools_catalog()))
+    CATALOG.get_or_init(|| add_schema_dialects(add_response_mode(build_tools_catalog())))
+}
+
+fn add_schema_dialects(mut catalog: Value) -> Value {
+    if let Some(tools) = catalog.get_mut("tools").and_then(Value::as_array_mut) {
+        for tool in tools {
+            if let Some(schema) = tool.get_mut("inputSchema").and_then(Value::as_object_mut) {
+                schema.insert("$schema".to_string(), json!(JSON_SCHEMA_2020_12));
+            }
+        }
+    }
+    catalog
 }
 
 /// Shared schema fragment for catalog room ids (and the same bound for similar
@@ -1828,7 +2239,7 @@ fn validate_schema_value(
 fn call_tool(
     params: Option<&Value>,
     journey_file: &std::path::Path,
-    broadcast: &SessionBroadcast,
+    broadcast: &ConnectionBroadcast,
 ) -> Result<Value, (i64, String)> {
     let params = params.ok_or_else(|| (-32602_i64, "Missing params".to_string()))?;
     let name = params
@@ -1912,7 +2323,7 @@ fn call_tool(
     Ok(apply_response_mode(name, response_mode, result))
 }
 
-fn broadcast_session_tool(args: &Value, broadcast: &SessionBroadcast) -> Value {
+fn broadcast_session_tool(args: &Value, broadcast: &ConnectionBroadcast) -> Value {
     let Some(action) = args.get("action").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'action'.");
     };
@@ -5411,6 +5822,41 @@ fn success_response(id: Value, result: Value) -> Value {
     json!({ "jsonrpc": "2.0", "id": id, "result": result })
 }
 
+fn result_for_era(mut result: Value, method: &str, era: RequestEra) -> Value {
+    if era != RequestEra::Modern {
+        return result;
+    }
+    let Some(object) = result.as_object_mut() else {
+        return result;
+    };
+    object
+        .entry("resultType".to_string())
+        .or_insert_with(|| json!("complete"));
+    let meta = object
+        .entry("_meta".to_string())
+        .or_insert_with(|| json!({}));
+    if !meta.is_object() {
+        *meta = json!({});
+    }
+    if let Some(meta) = meta.as_object_mut() {
+        meta.insert(SERVER_INFO_META_KEY.to_string(), server_info());
+    }
+    if object.get("resultType").and_then(Value::as_str) == Some("complete") {
+        match method {
+            "server/discover" => {
+                object.insert("ttlMs".to_string(), json!(DISCOVERY_CACHE_TTL_MS));
+                object.insert("cacheScope".to_string(), json!("public"));
+            }
+            "tools/list" => {
+                object.insert("ttlMs".to_string(), json!(TOOLS_CACHE_TTL_MS));
+                object.insert("cacheScope".to_string(), json!("public"));
+            }
+            _ => {}
+        }
+    }
+    result
+}
+
 fn error_response(id: Value, code: i64, message: &str) -> Value {
     json!({ "jsonrpc": "2.0", "id": id, "error": { "code": code, "message": message } })
 }
@@ -5538,6 +5984,291 @@ mod tests {
             unsupported_future["result"]["protocolVersion"],
             "2025-06-18"
         );
+    }
+
+    fn modern_meta(capabilities: Value) -> Value {
+        json!({
+            super::PROTOCOL_VERSION_META_KEY: super::MODERN_PROTOCOL_VERSION,
+            super::CLIENT_INFO_META_KEY: {
+                "name": "numinous-test",
+                "version": "1"
+            },
+            super::CLIENT_CAPABILITIES_META_KEY: capabilities
+        })
+    }
+
+    #[test]
+    fn modern_discovery_advertises_dual_era_support_and_cacheability() {
+        let response = handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": "discover",
+            "method": "server/discover",
+            "params": { "_meta": modern_meta(json!({})) }
+        }))
+        .expect("discovery is a request");
+        let result = &response["result"];
+        assert_eq!(result["resultType"], "complete");
+        assert_eq!(
+            result["supportedVersions"],
+            json!(["2026-07-28", "2025-11-25", "2025-06-18"])
+        );
+        assert!(result["capabilities"]["tools"].is_object());
+        assert_eq!(result["ttlMs"], super::DISCOVERY_CACHE_TTL_MS);
+        assert_eq!(result["cacheScope"], "public");
+        assert_eq!(
+            result["_meta"][super::SERVER_INFO_META_KEY]["name"],
+            "numinous"
+        );
+        assert!(
+            result["instructions"]
+                .as_str()
+                .is_some_and(|instructions| instructions.contains("multi-round-trip"))
+        );
+    }
+
+    #[test]
+    fn modern_requests_require_protocol_metadata_and_accept_optional_client_info() {
+        let missing = handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "server/discover",
+            "params": {}
+        }))
+        .expect("malformed discovery receives an error");
+        assert_eq!(missing["error"]["code"], -32602);
+
+        let unsupported = handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/list",
+            "params": {
+                "_meta": {
+                    super::PROTOCOL_VERSION_META_KEY: "1900-01-01",
+                    super::CLIENT_CAPABILITIES_META_KEY: {}
+                }
+            }
+        }))
+        .expect("unsupported version receives an error");
+        assert_eq!(unsupported["error"]["code"], -32022);
+        assert_eq!(unsupported["error"]["data"]["requested"], "1900-01-01");
+        assert_eq!(
+            unsupported["error"]["data"]["supported"],
+            json!(["2026-07-28", "2025-11-25", "2025-06-18"])
+        );
+
+        let missing_capabilities = handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/list",
+            "params": {
+                "_meta": {
+                    super::PROTOCOL_VERSION_META_KEY: "2026-07-28"
+                }
+            }
+        }))
+        .expect("missing capabilities receives an error");
+        assert_eq!(missing_capabilities["error"]["code"], -32602);
+
+        let missing_identity = handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/list",
+            "params": {
+                "_meta": {
+                    super::PROTOCOL_VERSION_META_KEY: "2026-07-28",
+                    super::CLIENT_CAPABILITIES_META_KEY: {}
+                }
+            }
+        }))
+        .expect("client identity is optional");
+        assert_eq!(missing_identity["result"]["resultType"], "complete");
+
+        let malformed_identity = handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/list",
+            "params": {
+                "_meta": {
+                    super::PROTOCOL_VERSION_META_KEY: "2026-07-28",
+                    super::CLIENT_CAPABILITIES_META_KEY: {},
+                    super::CLIENT_INFO_META_KEY: {"name": "missing-version"}
+                }
+            }
+        }))
+        .expect("malformed optional client identity receives an error");
+        assert_eq!(malformed_identity["error"]["code"], -32602);
+    }
+
+    #[test]
+    fn jsonrpc_envelope_rejects_invalid_versions_ids_params_and_batches() {
+        for request in [
+            json!({"jsonrpc":"1.0","id":1,"method":"tools/list"}),
+            json!({"jsonrpc":"2.0","id":null,"method":"tools/list"}),
+            json!({"jsonrpc":"2.0","id":true,"method":"tools/list"}),
+            json!({"jsonrpc":"2.0","id":1.5,"method":"tools/list"}),
+            json!({"jsonrpc":"2.0","id":1,"method":"tools/list","params":[]}),
+            json!([]),
+        ] {
+            let response = handle_request(&request).expect("invalid request receives an error");
+            assert_eq!(response["error"]["code"], -32600, "request: {request}");
+            assert!(response["id"].is_null() || response["id"] == 1);
+        }
+    }
+
+    #[test]
+    fn modern_tool_catalog_is_cacheable_deterministic_and_explicitly_2020_12() {
+        let request = json!({
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/list",
+            "params": { "_meta": modern_meta(json!({})) }
+        });
+        let first = handle_request(&request).expect("tools/list response");
+        let second = handle_request(&request).expect("repeat tools/list response");
+        assert_eq!(first, second);
+        let result = &first["result"];
+        assert_eq!(result["resultType"], "complete");
+        assert_eq!(result["ttlMs"], super::TOOLS_CACHE_TTL_MS);
+        assert_eq!(result["cacheScope"], "public");
+        let tools = result["tools"].as_array().expect("tool array");
+        assert_eq!(tools.len(), 35);
+        assert!(
+            tools
+                .iter()
+                .all(|tool| { tool["inputSchema"]["$schema"] == super::JSON_SCHEMA_2020_12 })
+        );
+
+        let invalid_cursor = handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/list",
+            "params": {
+                "_meta": modern_meta(json!({})),
+                "cursor": "not-issued-by-numinous"
+            }
+        }))
+        .expect("invalid cursor receives an error");
+        assert_eq!(invalid_cursor["error"]["code"], -32602);
+    }
+
+    #[test]
+    fn modern_tool_results_carry_result_type_and_server_identity() {
+        let response = handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "tools/call",
+            "params": {
+                "_meta": modern_meta(json!({})),
+                "name": "list_rooms",
+                "arguments": { "response_mode": "compact" }
+            }
+        }))
+        .expect("modern tool call response");
+        assert_eq!(response["result"]["resultType"], "complete");
+        assert_eq!(
+            response["result"]["_meta"][super::SERVER_INFO_META_KEY]["name"],
+            "numinous"
+        );
+        assert_eq!(response["result"]["structuredContent"]["count"], 354);
+
+        let retired_ping = handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "ping",
+            "params": { "_meta": modern_meta(json!({})) }
+        }))
+        .expect("modern ping receives an error");
+        assert_eq!(retired_ping["error"]["code"], -32601);
+    }
+
+    #[test]
+    fn modern_predict_uses_form_elicitation_and_grades_the_retry() {
+        let first = handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 8,
+            "method": "tools/call",
+            "params": {
+                "_meta": modern_meta(json!({ "elicitation": {} })),
+                "name": "predict",
+                "arguments": { "id": "slope-rider", "seed": 4 }
+            }
+        }))
+        .expect("prediction pose response");
+        assert_eq!(first["result"]["resultType"], "input_required");
+        let elicitation = &first["result"]["inputRequests"]["prediction"];
+        assert_eq!(elicitation["method"], "elicitation/create");
+        assert_eq!(elicitation["params"]["mode"], "form");
+        assert_eq!(
+            elicitation["params"]["requestedSchema"]["required"],
+            json!(["guess"])
+        );
+        assert!(first["result"].get("ttlMs").is_none());
+
+        let graded = handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 9,
+            "method": "tools/call",
+            "params": {
+                "_meta": modern_meta(json!({ "elicitation": { "form": {} } })),
+                "name": "predict",
+                "arguments": { "id": "slope-rider", "seed": 4 },
+                "inputResponses": {
+                    "prediction": {
+                        "action": "accept",
+                        "content": { "guess": 0.0, "rate": 0.25 }
+                    }
+                }
+            }
+        }))
+        .expect("prediction grade response");
+        assert_eq!(graded["result"]["resultType"], "complete");
+        assert_eq!(graded["result"]["structuredContent"]["game"], "predict");
+        assert_eq!(graded["result"]["structuredContent"]["guess"], 0.0);
+        assert_eq!(graded["result"]["structuredContent"]["rate_guess"], 0.25);
+
+        let fallback = handle_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 10,
+            "method": "tools/call",
+            "params": {
+                "_meta": modern_meta(json!({})),
+                "name": "predict",
+                "arguments": { "id": "slope-rider", "seed": 4 }
+            }
+        }))
+        .expect("prediction fallback response");
+        assert_eq!(fallback["result"]["resultType"], "complete");
+        assert_eq!(fallback["result"]["structuredContent"]["game"], "predict");
+        assert!(fallback["result"].get("inputRequests").is_none());
+    }
+
+    #[test]
+    fn declined_prediction_with_direct_arguments_never_records_progress() {
+        let journey = super::test_state_path("declined-direct-prediction");
+        let response = handle_request_with(
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 11,
+                "method": "tools/call",
+                "params": {
+                    "_meta": modern_meta(json!({ "elicitation": {} })),
+                    "name": "predict",
+                    "arguments": { "id": "slope-rider", "seed": 4, "guess": 0.5 },
+                    "inputResponses": {
+                        "prediction": { "action": "decline" }
+                    }
+                }
+            }),
+            &journey,
+        )
+        .expect("decline response");
+        assert_eq!(response["result"]["isError"], false);
+        assert!(
+            response["result"]["content"][0]["text"]
+                .as_str()
+                .is_some_and(|text| text.contains("Nothing was graded or recorded"))
+        );
+        assert!(!journey.exists());
     }
 
     #[test]
@@ -6026,7 +6757,7 @@ mod tests {
 
     #[test]
     fn broadcast_control_is_redacted_and_never_touches_progress() {
-        let session = super::broadcast::SessionBroadcast::new();
+        let session = super::ConnectionBroadcast::new();
         let journey = super::test_state_path("broadcast-control-journey");
         let response = super::handle_request_with_session(
             &json!({
@@ -6131,20 +6862,46 @@ mod tests {
             event_tx.send(message).expect("send");
         });
 
-        let session = super::broadcast::SessionBroadcast::new();
+        let session = super::ConnectionBroadcast::new();
         let journey = super::test_state_path("broadcast-integration-journey");
         let start = super::handle_request_with_session(
             &json!({
                 "jsonrpc": "2.0",
                 "id": 710,
                 "method": "tools/call",
-                "params": {"name": "broadcast_session", "arguments": {"action": "start", "pairing_code": code}}
+                "params": {
+                    "_meta": modern_meta(json!({})),
+                    "name": "broadcast_session",
+                    "arguments": {"action": "start", "pairing_code": code}
+                }
             }),
             &journey,
             &session,
         )
         .expect("start response");
         assert_eq!(start["result"]["structuredContent"]["state"], "live");
+
+        let mut intruder_meta = modern_meta(json!({}));
+        intruder_meta[super::CLIENT_INFO_META_KEY]["name"] = json!("other-client");
+        let same_connection_status = super::handle_request_with_session(
+            &json!({
+                "jsonrpc": "2.0",
+                "id": 708,
+                "method": "tools/call",
+                "params": {
+                    "_meta": intruder_meta.clone(),
+                    "name": "broadcast_session",
+                    "arguments": {"action": "status"}
+                }
+            }),
+            &journey,
+            &session,
+        )
+        .expect("same-connection status response");
+        assert_eq!(
+            same_connection_status["result"]["structuredContent"]["state"],
+            "live"
+        );
 
         let forged_non_tool = super::handle_request_with_session(
             &json!({
@@ -6177,7 +6934,11 @@ mod tests {
                 "jsonrpc": "2.0",
                 "id": 712,
                 "method": "tools/call",
-                "params": {"name": "play_room", "arguments": {"id": "times-tables", "width": 40, "height": 20, "t": 0.25}}
+                "params": {
+                    "_meta": modern_meta(json!({})),
+                    "name": "play_room",
+                    "arguments": {"id": "times-tables", "width": 40, "height": 20, "t": 0.25}
+                }
             }),
             &journey,
             &session,
@@ -6191,10 +6952,13 @@ mod tests {
         assert_eq!(event.public_sequence, 0);
         assert_eq!(event.event.tool, PublicTool::PlayRoom);
         assert_eq!(event.event.arguments["id"], "times-tables");
-        assert_eq!(
-            event.event.result,
-            public["result"].as_object().unwrap().clone()
-        );
+        let mut expected_public_result = public["result"]
+            .as_object()
+            .expect("tool result object")
+            .clone();
+        expected_public_result.remove("_meta");
+        expected_public_result.remove("resultType");
+        assert_eq!(event.event.result, expected_public_result);
         host.join().expect("host");
     }
 

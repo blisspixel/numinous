@@ -46,20 +46,23 @@ stop-the-world work.
 | --- | --- | --- |
 | **1. Iterate on real first contact** | Put the installable prerelease in the hands of fresh agent players, test the App and MCP end to end, and fix every reproduced setup, schema, circuit-breaker, or play blocker | The first outside cold session found meaningful self-directed play and return intent, then exposed guidance errors that stopped a third room. Formal measurement should not freeze avoidable product friction into its protocol |
 | **2. Prove release portability** | Run the packaged install, launch, update, play, persistence, and uninstall path on clean Windows, macOS, and Linux machines | CI can prove archive structure and same-runner execution, but only clean physical systems retire real distribution and device assumptions |
-| **3. Audit and freeze the 0.4 collection** | After the exploratory product loop settles, independently review the implemented runner and 20-probe bank, then track its generated 24-pair allocation before the first qualifying response | The runner blocks method drift mechanically; pre-collection review must catch a flawed probe or oracle before results can influence a correction |
+| **3. Calibrate, audit, and freeze the 0.4 collection** | Calibrate the concealed probe bank through sealed fresh-context deliveries, obtain two fresh independent passes over the replacement collector and method, externally register the execution commitments, then track its generated 24-pair allocation before the first qualifying response | The collector blocks method drift mechanically; calibration and review must catch a weak probe, oracle, privacy boundary, or state transition before results can influence a correction |
 | **4. Run and publish the 0.4 cohort** | Execute 20 matched pairs, publish every planned outcome and deviation, and obtain independent methodology and math review | A tracked runner without a complete, reviewable result is preparation, not milestone evidence |
 | **Standing gate** | Keep 0.2 and 0.3 proof plus public CI green | Regressions reopen completed milestones and invalidate new evidence |
 | **Deferred past 0.2** | Human stranger hallway, a11y sessions, musician long-listening, soft-thin densify, bulk rooms, Phase B glow | Humans before 1.0; densify/glow only if a sensory ceiling binds |
 
 The 0.3 agent-and-machine exit is met. The next incomplete milestone is 0.4
 understanding and retention, but its formal collection is intentionally after
-an exploratory release-and-play loop. Its protocol, deterministic study runner,
-held-out probe bank, and some mechanisms exist, but pre-collection independent
-review and the qualifying study result remain open. Returning-player journal
+an exploratory release-and-play loop. Its protocol, deterministic analysis,
+stateful isolated collector, participant-turn-matched v5 encounters,
+pre-exposure attempt receipts, and committed-source boundary exist, but
+concealed-bank calibration, fresh pre-collection review, external registration,
+allocation freeze, and the qualifying study result remain open. Returning-player
+journal
 sovereignty is complete on the clean-process machine acceptance bar.
 Detail below and in the version sections.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,190 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.12% region coverage, and 95.27% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,199 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.13% region coverage, and 95.28% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -537,6 +540,15 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
 - **Done (visualizer path, cycle 149):** MCP listen beds expose normalized
   spectrum bands; the App draws a room-bed spectrum meter under the audio
   badge from the cached motif arrangement. OS loopback capture remains open.
+- **Done (MCP 2026-07-28, cycle 153):** the stdio face is dual-era. Modern
+  requests use per-request version and capability metadata, mandatory
+  `server/discover`, typed results with server identity, deterministic and
+  cacheable `tools/list`, explicit JSON Schema 2020-12 inputs, specified
+  unsupported-version errors, and no retired modern ping. Legacy 2025-11-25
+  and 2025-06-18 initialization remains available. `predict` uses native multi
+  round-trip form elicitation when the client declares it, with the two-call
+  path retained as fallback. Unit, fresh-helper, and real subprocess coverage
+  exercise the modern wire and legacy compatibility.
 - **Done (mega pack, cycle 150):** `LoopPlayer` mixed-output capture ring;
   optional loopback input when the OS exposes a mix-like device; App key O
   cycles room bed / output mix / loopback; spectrum lever mapping; Share
@@ -551,8 +563,8 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
 - **Then (the panel's remaining list, see `PANEL.md`):** deeper spectrum-to-room
   levers beyond soft pokes and Show rate; full Share v1 packaging beyond
   PNG/APNG (GIF/MP4); physical cross-platform controller certification; full
-  2026-07-28 wire migration after the final specification ships; human hallway
-  and a11y gates.
+  MCP Apps room surface under 0.5's sensory and accessibility gates; human
+  hallway and a11y gates.
 - **Done (0.4 Understanding Alpha prep):** added Source Provenance and Math Review Checklist fields to the Times Tables, Game of Life, Galton Board, and Double Pendulum flagships to anchor their learning claims.
 - **Done (0.4 Understanding Alpha prep):** added an opt-in, player-owned MCP experience journal. The `Journal` tracks timestamped room encounters, creations, and connections. It is fully integrated into persistence and backed by new `read_journal`, `record_journal`, and `erase_journal` tools for MCP agents. The journal is explicitly disjoint from `forget` tool erasure, providing its own dedicated `erase_journal` path to maintain player ownership over when its contents are destroyed.
 
@@ -789,11 +801,44 @@ read-only App viewer, with no private host or protocol data in the stream.
   oracles, runs the declared stratified paired percentile bootstrap, accounts
   for ordered reserves, and refuses to report an incomplete cohort. Fifteen
   focused regressions run in CI and the release gate. No qualifying response
-  has been collected.
-- **Incomplete:** obtain independent pre-collection review, commit the exact
-  generated allocation before accepting a response, then run and publish the
-  complete cohort with all outcomes and deviations. Private working notes and
-  scripted conclusions do not satisfy this evidence gate.
+  has been collected. Independent review on 2026-07-28 found that this first
+  revision is not admissible for qualifying collection because its public bank,
+  caller-authored events, asserted isolation, condition labels, and incomplete
+  outcomes do not establish the intervention or held-out transfer.
+- **Done (2026-07-28, replacement implementation):** Add concealed-bank path
+  enforcement, persistent one-at-a-time delivery, an exact executable
+  encounter specification, fresh isolated MCP mediation, exact public result
+  projections, provisional pair receipts, content-free withdrawal and
+  interruption paths, manifest-rooted settlement, strict event validation,
+  balanced primary and reserve allocation, complete delayed intervals, and
+  declared balance sensitivity. Review hardening adds request-bound participant
+  stops, serialized recovery, atomic pair publication, write-ahead receipt and
+  terminal-anchor transactions, tail-truncation detection, exact current-server
+  MCP projection, bounded fresh-build driver I/O, per-model calibration
+  ceilings, two-reviewer intervention relevance, complete provenance checks,
+  an allocation-bound calibration audit, sealed request-bound calibration
+  delivery, calibrated backend-revision enforcement, a hypothesis-adverse
+  interruption rule and ceiling, usable first-arm withdrawal, completed-pair
+  crash recovery, pair-lifetime participant withdrawal, participant-authored
+  terminal actions, clean committed source-tree binding, and a required unique
+  independently recorded start receipt before each calibration or collection
+  exposure. A complete generation session executes all 20 tracked encounter
+  calls through 20 fresh real MCP processes, matching the production per-call
+  isolation topology. Both conditions now have exactly one participant response
+  per room: a prediction or construction in generation and one elaboration in
+  control, with no extra generated summary in either arm. The qualifying
+  analysis accepts only verified collector receipts. One hundred five focused
+  runner and collector regressions run in the local and CI gates, with 15
+  driver regressions in the same gates. No qualifying response has been
+  collected.
+- **Incomplete:** externally register the protocol, source, and
+  attempt-completeness boundary before calibration ordinal 1; calibrate a novel
+  non-ceiling concealed bank through sealed fresh no-exposure contexts; obtain
+  two fresh independent passes; externally register the final artifacts; and
+  commit the generated allocation before accepting a response. Then run and
+  publish the complete cohort with all outcomes and deviations. Private working
+  notes, fixture probes, and scripted conclusions do not satisfy this evidence
+  gate.
 - **Done (cycle 152):** Add source provenance and an independent math-review checklist to every
   flagship Reveal.
 - **Done (architectural invariant):** Keep progression subordinate to autonomy: no streak loss, required grind, or
@@ -854,6 +899,13 @@ experience record without hidden state remaining.
 - Build Flow State on the same event graph: a deterministic macro-form arranger
   with Listen and Nudge surfaces, phrase-aligned interventions, musical memory,
   and curated style grammars that manage repetition, tension, release, and rest.
+- Build one fixed, repository-owned MCP App for `play_room` after the native
+  render event boundary is ready. It must negotiate the extension explicitly,
+  reuse bounded core render data, request no browser privileges, expose no host
+  path or private state, and preserve the full text and structured fallback.
+  Test its sandbox policy, resource bytes, tool-call bridge, reduced motion,
+  keyboard access, screen-reader alternative, unsupported-host fallback, and
+  visual identity against the native flagship receipts before advertising it.
 
 Owner docs: `SYNESTHESIA.md`, `VISUALS.md`, `SOUND.md`, `MUSIC.md`,
 `STUDIO.md`, `QUALITY.md`.
@@ -919,6 +971,11 @@ otherwise verifiable artifact.
   compose, mutate, preview, render, and export with explicit seeds and no raw
   code execution. Preserve turn history, undo, agency, and inspectability in
   multi-being sessions.
+- Add the MCP Tasks extension only for creator renders, exports, or Show
+  captures that exceed the ordinary request budget. Require explicit extension
+  negotiation, durable opaque handles, bounded retention, polling backoff,
+  cancellation, restart recovery, input updates, and exact final-result parity.
+  Keep instant room and game operations as ordinary complete results.
 - Export MIDI broadly and MusicXML only where the event data maps honestly to
   conventional notation.
 - Render WAV, lossless FLAC, and shareable MP3 through one deterministic core.
@@ -1030,24 +1087,22 @@ and challenge metrics for the same rooms; (6) one human hallway test; (7)
 cross-platform run; (8) docs reconciliation.
 Do not build twenty more rooms before those are done.
 
-MCP protocol watch: 2025-11-25 is current as of 2026-07-26, and the 2026-07-28
-release candidate is relevant to the MCP
-face, so it belongs in this roadmap as a high-level compatibility pass as well
-as agent notes. Checked 2026-07-26 against official versioning and the release-candidate post
-(`https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/`):
-the final spec is scheduled for July 28, 2026, with a stateless core,
-first-class extensions, MCP Apps, Tasks, authorization hardening, JSON Schema
-2020-12, and deprecations for roots, sampling, and protocol logging. It does
-not block the current stdio server. Preserve stdio support and choose the final
-migration target only after the final spec lands; until then, keep
-implementation-detail tracking in working notes rather than churning the product
-scope.
+MCP protocol status: the final 2026-07-28 core wire is built for stdio, with
+legacy initialization retained. The official changelog removes protocol
+sessions and modern initialization, requires per-request metadata, discovery,
+typed results, and cache hints, introduces multi round-trip results, and moves
+Tasks to an extension. Numinous implements every applicable core requirement
+for its tools-only stdio surface and does not advertise prompts, resources,
+subscriptions, HTTP, authorization, Tasks, or MCP Apps before those surfaces
+exist. The ordered extension plan is MCP Apps in 0.5 for sensory parity, Tasks
+in 0.7 only for genuinely long creator operations, and Streamable HTTP plus its
+authorization boundary only with an authorized remote or multiplayer product.
 
 The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (reviewed 2026-07-26)
+## Where we stand (reviewed 2026-07-31)
 
 The package is **0.2.0-alpha.4**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
@@ -1060,9 +1115,11 @@ public CI passes locked tests, builds, installer self-tests, and supply-chain
 checks across three operating systems; physical-device and a11y evidence remain
 later. **Breadth is still not a substitute for depth.** The 0.3
 agent-and-machine exit is met and active work moves to **0.4 Understanding
-Alpha**. Its study protocol and runner are tracked, and the returning-journal
-machine proof is complete, but independent pre-collection review and the
-qualifying cohort remain open. No calibrated method supports
+Alpha**. Its study protocol, deterministic analysis, and replacement collection
+boundary are tracked, and the returning-journal machine proof is complete, but
+external registration, probe calibration, fresh pre-collection review,
+allocation freeze, and the qualifying cohort remain open. No calibrated method
+supports
 assigning completion percentages to subjective 1.0 gates, so this scorecard
 records evidence instead.
 
@@ -1074,14 +1131,17 @@ records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 3,190 passing all-target test cases plus one ignored screenshot diagnostic, 95.27% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 3,199 passing all-target test cases plus one ignored screenshot diagnostic, 95.28% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,913-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
 **Immediate critical path** (same order as **Critical path right now** above):
 
-1. Obtain independent pre-collection review of the frozen 0.4 runner and probe
-   bank, then track the exact generated allocation before collecting a response.
+1. Externally register the protocol, source, and attempt-receipt boundary before
+   calibration ordinal 1. Calibrate the concealed bank in fresh no-exposure
+   contexts, obtain two fresh independent passes, then externally register and
+   track the final bank, audit, and exact generated allocation before collecting
+   a qualifying response.
 2. Run and publish the qualifying 0.4 cohort while keeping the 0.2, 0.3, and CI
    gates green.
 3. Enter 0.5 sensory identity with accessibility only after the 0.4 exit.

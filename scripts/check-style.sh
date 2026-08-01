@@ -25,6 +25,13 @@ done
 # fails to open and would either be skipped or misreported.
 mapfile -d '' -t files < <(git -c core.quotePath=false ls-files -z \
   '*.rs' '*.md' '*.toml' '*.wgsl' '*.sh' '*.ps1' '*.yml' '*.yaml' '*.py' '*.txt' '*.json')
+existing_files=()
+for file in "${files[@]}"; do
+  if [ -f "$file" ]; then
+    existing_files+=("$file")
+  fi
+done
+files=("${existing_files[@]}")
 if [ ${#files[@]} -eq 0 ]; then
   exit 0
 fi

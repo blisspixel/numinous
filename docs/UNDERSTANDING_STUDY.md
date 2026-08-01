@@ -1,49 +1,138 @@
 # Understanding Alpha Study Protocol
 
-Status: predeclared design and implemented frozen runner, reviewed 2026-07-27.
-No qualifying cohort has started and no result is claimed. Earlier private
-scripted notes are exploratory only, are excluded from this study, and cannot
-satisfy the 0.4 evidence gate.
+Status: protocol v5 and its replacement collector are implemented after fresh
+rereview found a participant-turn confound and incomplete participant control.
+External registration before calibration, pre-collection calibration, final
+fresh independent review, final artifact registration, and allocation freeze
+remain pending as of 2026-07-31. No qualifying
+cohort has started and no result is claimed. Earlier private scripted notes are
+exploratory only, are excluded from this study, and cannot satisfy the 0.4
+evidence gate.
 
-## Implemented runner boundary
+## Pre-collection review and amendment boundary
 
-`scripts/understanding-study.py` and `scripts/understanding-probes.json` now
-implement the first dependency in this protocol. The dependency-free runner
-derives all 24 pairs from the declared allocation seed, balances condition
-order and cyclic room order within each model family, and binds each manifest
-to the canonical probe-bank hash. The bank contains 10 immediate and 10 late
-probes, two per flagship per phase, plus one five-item distractor sequence.
+The first runner revision is not admissible for qualifying collection. Two
+independent reviews found that its public static probes, caller-authored tool
+events, symbolic condition labels, asserted isolation, and unimplemented
+self-explanation outcome could not support the planned comparison. They also
+found primary-allocation imbalance, numeric-answer ambiguity, permissive event
+fields, unresolved post-exposure interruption handling, and incomplete delayed
+reporting. Collection remains blocked until the replacement boundary passes a
+fresh independent review.
 
-Public commands emit one condition, probe, repair schema, or distractor at a
-time without the oracle. Analysis requires an exact runner-generated manifest,
-explicit consent metadata, 20 public tool events per session, identical Reveal
-payloads across each pair, ordered probe delivery, and all 20 qualifying pairs.
-The sanitizer removes forbidden fields, absolute host paths, and named host
-identifiers before tracked evidence is analyzed. Withdrawn records retain no
-response content. The scorer uses independent mathematical oracles and the
-declared 100,000-resample stratified paired percentile interval, implemented
-with a stable SHA-256 counter stream and frozen linear percentile interpolation.
+The corrected deterministic analysis already makes each model family's ten
+primary pairs exactly five versus five in condition order and exactly two per
+first-room position. Across every ordered one-reserve or two-reserve path, the
+condition-order count difference is at most two and the first-room count range
+is at most three. The final report must include sensitivity to both factors.
+Exact rational numeric answers are accepted, only one schema repair is allowed
+per session, evidence creation never replaces a concurrent file, event fields
+are allowlisted and bounded, obvious identity and credential patterns fail
+closed, delayed within-context results are fully aggregated, and publication
+completeness is a separate ledger audit rather than a computed statistical
+truth.
 
-The current canonical hashes are:
+The replacement boundary now:
 
-- probe bank: `4ac647fdfc4559b26ab417ece0eb01a021fc53d0decda35d8d5c798fd000cbc0`
-- generated allocation: `8a241287e91589d18e877f75d07d9fc03cb98dbd518e63b7cd26aa8922fd1a01`
+- requires the qualifying bank, mutable state, provisional receipts, and raw
+  cohort ledger to remain inside gitignored `.agent/` storage;
+- binds the concealed bank and executable encounter specification into the
+  allocation manifest before collection;
+- mediates every fixed public tool call through its own fresh MCP process,
+  validates exact result schemas, and retains only bounded public projections;
+- exposes only the current condition response, distractor, or oracle-free probe
+  from a receipt-reconstructed persistent state machine;
+- stages each matched pair outside the aggregate ledger so pre-aggregation
+  withdrawal can remove both sessions, while post-exposure interruption
+  rewrites the provisional session to retain only consent metadata, bounded
+  public encounters, and the interruption receipt;
+- publishes a complete pair in one atomic frozen-order ledger transaction,
+  binds the chain tail to a separate terminal anchor, recovers interrupted
+  ledger and anchor publication from a write-ahead transaction, and rejects
+  mutation, tail truncation, partial publication, reorder, reused contexts,
+  overlapping sessions, skipped pairs, and participant-supplied tool or role
+  labels;
+- accepts participant-selected stop and withdrawal actions only through the
+  bounded response channel, while operator-classified context or runtime loss
+  always receives the declared hypothesis-adverse interruption score;
+- binds withdrawal to the exact pair-lifetime credential, keeps recovery
+  serialized across threads and processes, and never reports response erasure
+  after any part of a pair has reached aggregate evidence;
+- assigns a stable withdrawal credential before the first arm, preserves it
+  across both provisional states, resumes an already published pair after a
+  collector crash, and recovers dead calibration receipt transactions without
+  reopening delivery order;
+- binds calibration and collection to one clean committed runtime-source tree,
+  not only a runner version string or top-level commit, and rejects untracked
+  worktree files, ignored files, nonordinary index flags, redirected Git
+  environments, indirect paths, and runtime bytes that differ from committed
+  blobs within that source boundary;
+- builds the MCP face in a fresh explicit target with bounded environment
+  inheritance, rejects unbound Cargo configuration from the project, repository
+  ancestors, or Cargo home, resolves Cargo's exact JSON-reported executable,
+  freezes a private copy, hashes it before and after execution, and retains the
+  build receipt bound to the clean source, toolchain, target, and binary;
+- refuses every new calibration delivery and qualifying session start until an
+  independently recorded pre-exposure start receipt matches the exact concealed
+  start commitment and seals that unique receipt digest into the evidence; and
+- makes the verified receipt path the only qualifying analysis command.
 
-Before any qualifying response, independently review the probes and oracles,
-generate the manifest into the tracked evidence directory, validate it with the
-same runner revision, and commit it. A dry run stays gitignored:
+The terminal anchor detects accidental or out-of-band chain truncation while
+the collector files remain under the declared operator boundary. It does not
+make a local host adversary unable to delete or rewrite both files. A public
+pre-collection registration of the bank commitment, calibration audit,
+allocation hash, runner revision, and analysis plan remains mandatory before
+the first qualifying response. Registration freezes those artifacts but cannot
+by itself prove that an operator did not omit a calibration attempt or session
+start. Before exposing a new item, the collector now reports an oracle-free
+start commitment and refuses to proceed. The operator must record that
+commitment in the preregistered append-only external log, or in the named
+independent reconciler's ledger, then provide the exact bounded receipt. The
+receipt identifies the mechanism, pseudonymous witness, UTC time, record
+locator, and external-record hash. Its digest is sealed into the calibration
+delivery or consenting session header, and all qualifying receipt digests must
+be unique. Code can validate the binding and completeness of supplied receipts,
+but it cannot establish that an external locator exists or is immutable. The
+final independent publication audit must verify every locator, reconcile every
+planned ordinal and session, and state the selected completeness boundary and
+its limitations.
 
-```text
-python scripts/understanding-study.py allocate --output .agent/understanding-allocation.json
-python scripts/understanding-study.py validate --manifest .agent/understanding-allocation.json
-python scripts/test-understanding-study.py
-```
+The receipt is a strict JSON object stored under `.agent/`. Its
+`schemaVersion` is `numinous-understanding-attempt-start-receipt-v1`, its
+`protocolVersion` is `0.4-v5`, and its `startCommitmentSha256` is the digest
+printed by the refused start. `mechanism` is exactly
+`append-only-external-log` or `independent-reconciler-ledger`. `witnessId` and
+`recordSha256` are lowercase SHA-256 digests, `witnessedAt` is a UTC timestamp
+with whole seconds and a trailing `Z`, and `recordLocator` is the bounded
+locator the final reviewer will inspect. `attestation` is exactly: "This
+commitment was recorded before the identified stimulus was exposed." Unknown,
+missing, malformed, private, or mismatched fields fail closed.
 
-The 15 focused regressions prove deterministic balance and hashes, oracle
-coverage, oracle-free public packets, redaction, ordered reserve replacement,
-single schema repair, equal call ordering, identical Reveal delivery, and hard
-incomplete-cohort refusal. They do not constitute participant evidence or
-independent methodology or math review.
+Calibration remains required. Every concealed item must be delivered exactly
+once in each of two fresh no-exposure contexts per model family. The collector
+seals the model, context, backend revision, capability policy, date, ordinal,
+and oracle-free item before it exposes that item, then binds exactly one answer
+to the sealed request. The calibration ledger and separate terminal anchor use
+the same recoverable receipt-chain substrate as collection. The audit records
+the exact model identifier, high reasoning effort, one backend revision for the
+entire model family or an explicit unavailable value, unique opaque context
+commitment, date, exact clean runner revision, committed runtime-source-tree
+hash, unique pre-exposure start receipt, frozen delivery ordinal, capability
+policy, and one-attempt rule. Allocation embeds that calibrated backend and
+source revision, and the collector rejects a different runtime during the
+cohort.
+Two independent reviewers must mark every item relevant to the intervention.
+An item is replaced if either model answers both replicates correctly, at least
+two responses are ambiguous or refusals, or either relevance reviewer does not
+mark it relevant. Any replacement changes the bank identity and requires a
+complete new calibration. Allocation embeds the complete passed calibration
+audit and cannot be generated from a pass assertion alone. Two fresh
+independent reviews must pass the complete boundary before any qualifying
+response is accepted.
+
+The final replacement bank hash, allocation hash, runner revision, and clean
+validation commands will be written here only after calibration and review
+pass. No earlier hash, fixture bank, or dry run authorizes collection.
 
 ## Decision and scope
 
@@ -87,9 +176,11 @@ explanation-first condition.
 - Use exactly `gpt-5.6-sol` and `gpt-5.6-terra`, both at `high` reasoning effort,
   with 10 qualifying matched pairs from each. Use platform-default sampling
   values where no sampling control is exposed, and record every exposed setting
-  and immutable backend revision. If either named model is unavailable, amend
-  and recommit the protocol before collecting any qualifying response. Do not
-  substitute a model after collection begins.
+  and immutable backend revision when the runtime exposes one. Record an
+  explicit `unavailable` value when it does not, and carry that provenance limit
+  into the report. If either named model is unavailable, amend and recommit the
+  protocol before collecting any qualifying response. Do not substitute a model
+  after collection begins.
 - Record the exact model identifier, provider or local runtime, settings, date,
   Numinous commit, MCP protocol revision, operating system, and runner version.
 - A matched pair uses the same model configuration, study seed, room order, and
@@ -109,11 +200,21 @@ Every session encounters the same five 0.3 flagships in a seeded cyclic order:
 Times Tables, Double Pendulum, Game of Life, Galton Board, and Formula Jam. The
 participant receives only the study instruction, the Numinous MCP surface, and
 its own prior responses. Repository files, web search, answer keys, other
-sessions, and hidden evaluator reasoning are unavailable.
+sessions, and hidden evaluator reasoning are forbidden during participation.
+The available agent runtime cannot cryptographically prove capability removal
+or an immutable provider backend build. The collector therefore records the
+fresh-context invocation, exact named model, reported backend revision or
+`unavailable`, and allowed-capability instruction. These are operator and
+platform provenance, not a cryptographic sandbox attestation, and the report
+must retain that isolation limitation.
 
-Each room gets the same bounded number of MCP calls in both conditions. The
-runner records every tool name, public argument, structured result, and visible
-text used in the study. It never records host prompts, hidden reasoning,
+Each room gets four MCP calls and exactly one participant response in both
+conditions. This is an interaction-budget match, not a claim of equal wall
+clock time, token count, or response length. The collector records every tool
+name, fixed public argument, allowlisted structured-result projection, and
+visible text used in the study, plus the exact source-bound MCP build receipt.
+The private binary is copied out of Cargo's fresh target and checked before and
+after every execution. It never records host prompts, hidden reasoning,
 credentials, filesystem paths, unrelated local state, or other players' data.
 
 ### Conditions
@@ -124,7 +225,7 @@ credentials, filesystem paths, unrelated local state, or other players' data.
 2. Commit a concrete prediction or construction.
 3. Interact and observe the mathematical consequence.
 4. Receive corrective feedback and the same Reveal used by the control.
-5. Give one concise self-explanation.
+5. Continue without another generated answer before the probe.
 
 **Explanation first active control**
 
@@ -137,7 +238,10 @@ credentials, filesystem paths, unrelated local state, or other players' data.
 Formula Jam uses a construction in place of a numeric prediction. The
 generation condition creates an expression before seeing the curated
 explanation or recipe; the control receives that material first. Exposure,
-time budget, and tool budget remain equal.
+participant-turn budget, and tool-call budget remain equal. The control stops
+after its one elaboration, while generation stops after its one prediction or
+construction. Neither arm receives an additional summary, explanation, or
+generated answer before the probe.
 
 Corrective feedback is mandatory in both arms. A 2025 meta-analysis found only
 a small average retrieval advantage over credible elaborative activities, and
@@ -149,18 +253,24 @@ question.
 
 ### Primary outcome
 
-Immediate transfer is the mean of 10 held-out probes, two per flagship, scored
+Immediate transfer is the mean of 10 concealed probes, two per flagship, scored
 0 or 1 by deterministic answer keys. Each probe uses a room state or parameter
 combination not shown during the encounter and tests the underlying relation,
 not recall of Reveal wording. The study runner must freeze the probe bank and
-independent answer generator before it accepts cohort data.
+independent answer generator before it accepts cohort data. Before collection,
+tracked files contain only the bank commitment. The exact committed bank is
+published after the cohort closes.
 
 At probe time, MCP tools, repository files, search, calculators, and answer keys
-are unavailable. The participant receives one probe at a time and returns one
-object with the frozen schema `{"probeId": string, "answer": number|string}`.
+are unavailable. The participant receives one probe at a time, including its
+opaque probe identifier, and returns one object with the frozen schema
+`{"answer": number|string}` or an explicit `{"refuse": true}`. The collector
+binds that object to the current probe and does not accept a caller-supplied
+identifier.
 Finite numeric tolerances and string enums belong to each tracked probe. The
-runner may issue one schema-only repair request that repeats no probe content or
-feedback; a second invalid response scores zero. Feedback and scores remain
+runner may issue at most one schema-only repair in the entire session, repeating
+no probe content or feedback; a second invalid response scores zero. Exact
+rational strings such as `1/3` are valid for numeric schemas. Feedback and scores remain
 withheld until every immediate and late probe in that session is complete.
 
 The 0.4 comprehension gate passes only if all of these predeclared conditions
@@ -176,16 +286,24 @@ hold:
    separately with its own descriptive interval.
 4. At least four of the five flagship mean differences are nonnegative.
 5. No flagship mean difference is worse than negative 10 percentage points.
-6. All planned sessions, exclusions, deviations, and null or negative outcomes
-   are published.
+6. No more than two post-exposure interruptions occur in the complete cohort,
+   and no more than one occurs in either model family.
+
+Publication is a separate milestone gate: an independently checked allocation
+and ledger reconciliation must account for every planned pair, recruitment
+refusal, withdrawal, interruption, infrastructure failure, deviation, and null
+or negative outcome. The statistical runner cannot infer that an omitted event
+never occurred and must not report this audit as a computed criterion.
 
 ### Secondary outcomes
 
 - Late within-context transfer repeats 10 isomorphic probes after all five
-  encounters and a frozen distractor sequence. It is labeled context retention.
-- Self-explanations are scored against a predeclared structure-versus-surface
-  rubric by two reviewers blinded to condition. Disagreement and the resolution
-  rule are published.
+  encounters, a separate model turn, and a frozen distractor sequence. It is
+  labeled delayed within-context transfer, not durable recall. The full paired,
+  family, and flagship results are published with the priming limitation.
+- Concise predictions, constructions, and elaborations are
+  retained only as bounded condition-fidelity receipts. They are not a scored
+  secondary outcome. No subjective rating is reconstructed after collection.
 - Tool efficiency, refusals, invalid calls, and incomplete sessions are
   descriptive diagnostics. They cannot replace the primary outcome.
 
@@ -197,12 +315,26 @@ qualifying response. Any later analysis is labeled exploratory.
 - Refusal to participate produces no response collection and no individual
   record; publish only an aggregate recruitment count. After consent, a refusal
   to answer a probe is valid, remains in the report, and scores zero. A later
-  withdrawal removes the response, consumes the pair, and advances to the next
-  frozen reserve for that model family; report only the withdrawal count.
+  participant-selected withdrawal removes both provisional arms through the
+  pair-lifetime credential, consumes the pair, and advances to the next frozen
+  reserve for that model family; report only the withdrawal count. A
+  participant-selected stop remains an adverse interruption, while operator
+  interruption cannot be substituted for either participant action.
 - A tool error caused by the participant remains part of the session.
 - A verified runner, process, or infrastructure failure before exposure may
   consume the pair and advance to the next frozen reserve for that model family.
   The failed pair remains in the public failure ledger with no response content.
+- A process, runtime, or context interruption after the first public encounter
+  event stays in its allocated pair. The collector removes that session's
+  response content from provisional pair storage before aggregation and retains
+  only bounded public encounter and interruption receipts. The primary
+  hypothesis-adverse rule scores every immediate and delayed generation-arm
+  outcome zero and every control-arm outcome one, so interruption cannot inflate
+  the estimated generation advantage. The paired condition still runs. A
+  post-exposure interruption never activates a reserve. The report also shows a
+  descriptive complete-case, family-balanced sensitivity, but it cannot replace
+  the primary result. Exceeding two interruptions overall or one within either
+  model family fails criterion 6.
 - Stop when the first 10 nonwithdrawn pairs in the frozen order for each family
   are complete. If a family exhausts both reserves first, the cohort is
   incomplete and cannot pass. No new allocation may be generated after the
@@ -266,13 +398,29 @@ is machine acceptance, not evidence of durable human memory or consciousness.
 ## Data governance
 
 - Obtain explicit participation and publication consent before collection.
+- The pre-consent start receipt contains only a commitment, pseudonymous witness,
+  time, mechanism, and external locator. It remains after decline so attempted
+  starts can be reconciled, while the cohort retains only the aggregate
+  model-family refusal count and no participant response content. The consent
+  text must disclose this boundary before accepting participation.
 - Use opaque study identifiers. Do not collect names, account identifiers,
   private prompts, hidden reasoning, unrelated host data, or affect unless a
   separate protocol requires it.
 - Keep raw working captures in the gitignored `.agent/` tree. Track only the
   minimum sanitized evidence needed to reproduce the published result.
+- Allowlist every retained field and reject unknown metadata, absolute paths,
+  obvious email, IP, credential, and host-identifier values. A manual privacy
+  review of the final bounded package remains mandatory because pattern checks
+  cannot certify that arbitrary public text contains no identity.
 - Give a participant a withdrawal path before aggregation. Record withdrawals
-  without retaining the withdrawn response.
+  without retaining the withdrawn response in collector-managed storage. This
+  does not erase provider logs, operator captures, terminal scrollback, or any
+  participant-owned copy outside the collector boundary; the consent text and
+  final report must name those limits.
+- Participant stop removes every answer and rationale, including a Formula Jam
+  construction copied into a tool argument or result. Its call receipt retains
+  only an explicit erasure marker, source-bound build evidence, and public call
+  coordinates needed to validate the interrupted encounter prefix.
 - Keep study data separate from Journey, scores, broadcast, and the experience
   journal. No study event updates progression.
 
@@ -289,12 +437,22 @@ The qualifying study must add one bounded directory at
   exact reproduction commands.
 - `allocation.json`: frozen pair, condition, room-order, seed, and model-family
   assignments without personal identifiers.
+- `probe-bank.json`: the exact concealed bank released after collection; its
+  SHA-256 hash must match the pre-collection commitment in `allocation.json`.
 - `responses.jsonl`: sanitized visible responses and scores, or a documented
   aggregate substitute if a participant does not consent to raw publication.
+- `attempt-start-receipts.jsonl`: every bounded calibration and collection
+  start receipt, keyed only by its sealed commitment and opaque schedule or
+  session identity, with each external locator retained for reconciliation.
+- `mcp-build-receipt.json`: the one source, toolchain, explicit target, private
+  artifact, and binary digest receipt shared by every qualifying tool call.
 - `report.md`: every primary and secondary outcome, uncertainty interval,
   exclusions, deviations, failures, and null or negative results.
 - `journal-acceptance.json`: the returning-player structured receipts and
   managed-path residue inventory.
+- `publication-audit.json`: the independent allocation, start-receipt locator,
+  and ledger reconciliation, privacy sign-off, evidence hashes, and reviewer
+  decisions.
 
 The report must identify the exact tracked runner and probe-bank revision. A
 private note, simulated persona reaction, manually written conclusion, or
@@ -302,15 +460,31 @@ successful journal read does not satisfy this evidence contract.
 
 ## Implementation order and acceptance
 
-1. The deterministic allocation, probe, scoring, redaction, and report runner
-   is implemented and CI-gated. Independently review its probe content and
-   oracles, then commit its exact generated allocation before the first
-   qualifying response.
-2. Complete the journal correction, structured export, and residue receipt, then
+1. Externally register the exact protocol, analysis, clean committed source-tree
+   commitment, receipt schema, witness or append-only log identity, and
+   completeness reconciliation procedure. This must happen before calibration
+   ordinal 1.
+2. Drive calibration only through `understanding-collect.py calibration-next`
+   and `calibration-respond`, using a new context for every frozen cell. Use
+   `calibration-recover` only after verifying that the recorded process owner is
+   dead. Pass the completed receipt ledger and its anchor to
+   `understanding-study.py calibrate`; never construct response records by hand.
+   For each new delivery, first call `calibration-next` without a receipt to
+   obtain the oracle-free start commitment, independently record it, then retry
+   with `--start-receipt`. The collector seals the receipt before exposure.
+3. Calibrate the private probes in fresh no-exposure contexts, replace weak
+   items, and obtain two fresh independent passes over the implemented
+   concealed-bank, stateful collector, isolated MCP, receipt-chain, scoring,
+   redaction, interruption, withdrawal, and report boundary. Then commit the
+   exact bank commitment and generated allocation before the first qualifying
+   response.
+4. Complete the journal correction, structured export, and residue receipt, then
    prove the two-process return path with an isolated journal location.
-3. Run the frozen cohort, publish all bounded evidence, obtain independent math
-   and methodology review, and update the roadmap only from the published
-   result.
+5. Before each allocated session, call `start` once without a receipt to obtain
+   its oracle-free start commitment, independently record it, then retry with
+   `--start-receipt`. Run the frozen cohort, publish all bounded evidence,
+   obtain independent math and methodology review, and update the roadmap only
+   from the published result.
 
 The runner remains headless. If a later study or journal control becomes a
 visible App surface, it must reuse the design continuity gate in `VISUALS.md`:
@@ -331,9 +505,9 @@ does not belong in Numinous.
 - [NIST Privacy Framework](https://www.nist.gov/privacy-framework), reviewed
   2026-07-27. Version 1.0 remains final; version 1.1 is an initial public draft
   as of this review.
-- [MCP 2025-11-25 security and trust principles](https://modelcontextprotocol.io/specification/2025-11-25),
-  reviewed 2026-07-27. The current specification requires explicit consent,
-  user control, and appropriate data protections.
+- [MCP 2026-07-28 specification](https://modelcontextprotocol.io/specification/2026-07-28),
+  reviewed 2026-07-31. The current specification requires explicit consent,
+  user control, declared capabilities, and appropriate data protections.
 - [SciPy bootstrap reference](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.bootstrap.html),
   reviewed 2026-07-27. It documents paired resampling, repeatable random input,
   and two-sided percentile intervals. The runner implements the predeclared

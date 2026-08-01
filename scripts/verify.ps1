@@ -43,7 +43,9 @@ Step "documentation" {
     }
 }
 Step "tests"  { cargo test --workspace --all-targets --locked }
+Step "MCP play driver" { python scripts/test-mcp-play.py }
 Step "understanding study runner" { python scripts/test-understanding-study.py }
+Step "understanding study collector" { python scripts/test-understanding-collect.py }
 Step "release packaging" { python scripts/test-package-release.py }
 Step "build"  { cargo build --workspace --locked }
 

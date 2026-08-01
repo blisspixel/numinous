@@ -17,7 +17,7 @@ the from-source verification path for contributors and the curious.
   fresh shell does not see `cargo`, add that to `PATH`.
 - Optional, for the local coverage gate: `cargo install cargo-llvm-cov`.
 - Optional, for the local supply-chain gate: `cargo install cargo-deny`.
-- **Python 3.11 or newer**, for the frozen 0.4 study-runner regressions.
+- **Python 3.11 or newer**, for the 0.4 study runner and collector regressions.
 - The Linux build needs the ALSA, xkbcommon, and libudev headers (the packages
   CI installs): `sudo apt-get install -y libasound2-dev libxkbcommon-dev libudev-dev`.
 
@@ -28,8 +28,8 @@ Run the full gate and regenerate every artifact:
 - Windows: `scripts\verify.ps1`
 - macOS / Linux: `bash scripts/verify.sh`
 
-It runs format, clippy and rustdoc with warnings denied, Rust, 0.4 study-runner,
-and deterministic release-packaging tests, locked build,
+It runs format, clippy and rustdoc with warnings denied, Rust, 0.4 study runner
+and collector, and deterministic release-packaging tests, locked build,
 coverage (if `cargo-llvm-cov` is present), supply-chain policy (if `cargo-deny`
 is present), the house-style guard, and the native installer safety self-test,
 then writes images and audio into `renders/`.
@@ -46,6 +46,8 @@ cmd /d /c "set RUSTDOCFLAGS=-D warnings&& cargo doc --workspace --no-deps --lock
 cargo test --workspace --all-targets --locked
 python scripts/test-understanding-study.py          # Windows
 python3 scripts/test-understanding-study.py         # macOS / Linux
+python scripts/test-understanding-collect.py        # Windows
+python3 scripts/test-understanding-collect.py       # macOS / Linux
 python scripts/test-package-release.py              # Windows
 python3 scripts/test-package-release.py             # macOS / Linux
 cargo build --workspace --locked
@@ -60,9 +62,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 3,190 all-target Rust test cases
-and 15 frozen study-runner regressions pass, one screenshot diagnostic is
-ignored, 95.12% region coverage, and 95.27% line coverage**. The `gpu` and
+Expected right now: **format and clippy clean, 3,199 all-target Rust test cases
+and 105 study runner and collector regressions pass, one screenshot diagnostic is
+ignored, 95.13% region coverage, and 95.28% line coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
@@ -266,13 +268,20 @@ cargo run -p numinous-audio --example tone    # prints the device, writes tone.w
 **Agent face (MCP):** drive the JSON-RPC server so an agent can play a room. Feed
 it newline-delimited requests on stdin, for example:
 ```
-{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"manual-check","version":"1.0"}}}
-{"jsonrpc":"2.0","method":"notifications/initialized"}
-{"jsonrpc":"2.0","id":2,"method":"tools/list"}
-{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"play_room","arguments":{"id":"times-tables"}}}
+{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{},"io.modelcontextprotocol/clientInfo":{"name":"manual-check","version":"1.0"}}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{},"io.modelcontextprotocol/clientInfo":{"name":"manual-check","version":"1.0"}}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{},"io.modelcontextprotocol/clientInfo":{"name":"manual-check","version":"1.0"}},"name":"play_room","arguments":{"id":"times-tables"}}}
 ```
 Run `cargo run --bin numinous-mcp` and paste those lines; it replies with the
 tool list and an ASCII render of the room as text.
+
+The real stdio suite also retains a complete 2025-11-25 and 2025-06-18
+initialization path. Modern coverage checks discovery, required request
+metadata, unsupported-version errors, result typing and server identity, cache
+hints, deterministic tool order, explicit JSON Schema 2020-12 inputs, retired
+method handling, base and explicit-form elicitation, optional client metadata
+validation, concrete stdio connection ownership, and the `predict` elicitation
+retry.
 
 Every play-tool schema advertises `response_mode: "full" | "compact"`; the
 `broadcast_session` consent control intentionally does not. Omitted and
@@ -292,8 +301,11 @@ python scripts/mcp-play.py tools
 '{"id":"cult-of-pi"}' | python scripts/mcp-play.py call describe_room -
 ```
 
-Each helper invocation owns and removes a temporary Journey, score table, and
-Cairn, so it cannot change the player's profile or collide with another run.
+Each helper invocation uses MCP 2026-07-28 and owns and removes a temporary
+Journey, score table, Cairn, and journal, so it cannot change the player's
+profile or collide with another run. The helper rejects oversized requests,
+excess request counts, oversized response lines, and excess aggregate output
+before JSON decoding.
 
 ## 5. Where things are
 
@@ -324,10 +336,12 @@ MCP wager path, hallway and five-flagship tactile cohorts, scoped reference
 measurements with every ambient and input-to-room-raster p95 under 33 ms, F9
 capture, and green public CI. Human stranger hallway is deferred to 0.8 / 1.0.
 
-Pending next is 0.4 Understanding Alpha: obtain independent pre-collection
-review of the frozen runner and held-out probe bank from
-`docs/UNDERSTANDING_STUDY.md`, track the exact generated allocation, then run
-and publish the qualifying cohort. Provenance-preserving journal correction,
+Pending next is 0.4 Understanding Alpha: externally register the protocol,
+source, and independent attempt-receipt boundary before calibration ordinal 1;
+calibrate the concealed probe bank; obtain two fresh independent reviews of the
+replacement boundary from `docs/UNDERSTANDING_STUDY.md`; register the final
+frozen commitments; track the exact generated allocation; then run and publish
+the qualifying cohort. Provenance-preserving journal correction,
 export, erasure, and two-process machine evidence are complete. Representative
 physical-controller sessions, musician-led long-listening, accessibility
 review, physical clean-machine cross-platform proof, full Studio save/share

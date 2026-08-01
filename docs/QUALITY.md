@@ -6,15 +6,15 @@ comfort, and voluntary return play. Only part of that system is automated today.
 This document names both the enforced checks and the quality loops still to be
 built, so an aspiration is never mistaken for a result.
 
-## Evidence snapshot, 2026-07-18
+## Evidence snapshot, 2026-07-31
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
-  doctests, 3,190 passing all-target test cases plus one ignored screenshot
+  doctests, 3,199 passing all-target test cases plus one ignored screenshot
   diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 95.12%
-  regions and 95.27% lines under the documented exclusions. The consented MCP
-  broadcast path has 65 focused shared-crate tests, 107 MCP unit tests, and
+  three-OS test-and-build matrix. The current measured coverage is 95.13%
+  regions and 95.28% lines under the documented exclusions. The consented MCP
+  broadcast path has 65 focused shared-crate tests, 121 MCP unit tests, and
   six real stdio tests. Real loopback cases cover pairing, compatibility,
   ordered controls, redaction, disconnect cleanup, private-call silence, exact
   parity for state-independent public results, and Journey noninterference for
@@ -32,6 +32,16 @@ built, so an aspiration is never mistaken for a result.
   complete-result attestation, native body pixel parity, metadata exclusion,
   and close-time erasure. The Times Tables and Studio sessions also compare the
   selected local sound samples with independent shared-core reconstruction.
+  The Understanding Alpha boundary has 105 focused runner and collector tests,
+  including a complete session that executes all 20 tracked encounter calls
+  through 20 fresh real MCP processes, sealed calibration delivery and crash
+  recovery, exact committed-source and independent start-receipt binding,
+  participant-owned stop and pair-lifetime withdrawal, pair-publication
+  recovery, participant-turn matching, Formula-derived content erasure, and
+  adverse missing-data scoring. Fifteen bounded fresh-build driver tests cover
+  protocol framing, source-bound artifact selection, external Cargo-config
+  rejection, ignored source rejection, hidden-index rejection, and replacement
+  detection.
   Catalog-wide sound admission, fixed-rate allocation bounds, semantic source
   replacement, App ownership, global controls, and radio restoration are
   directly tested. Other native game visuals remain future evidence.

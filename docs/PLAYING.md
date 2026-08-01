@@ -213,13 +213,17 @@ or in any MCP client's config (build once with
 }
 ```
 
-Transport is JSON-RPC 2.0 over newline-delimited stdio. The compatibility
-default is 2025-06-18, and initialization also negotiates the current
-2025-11-25 revision. The breaking 2026-07-28 release candidate is unsupported
-until its new wire shape is implemented; hosts must select 2025-11-25 or
-2025-06-18. Thirty-five tools use mostly flat schemas. Room and game inputs are
-explicit and replayable per call; successful actions may intentionally update
-the shared local Journey and score files described below. The bounded
+Transport is JSON-RPC 2.0 over newline-delimited stdio. Modern hosts use the
+stateless MCP 2026-07-28 path: call `server/discover`, then include the protocol
+version and client capabilities in `_meta` on every request. Legacy hosts may
+still initialize with 2025-11-25 or 2025-06-18. Modern discovery and tool lists
+are cacheable, successful results name their result type and server, and all
+tool input schemas explicitly use JSON Schema 2020-12. A client that advertises
+form elicitation can complete `predict` through one multi round-trip request;
+other clients keep the two-call pose and grade flow. Thirty-five tools use
+mostly flat schemas. Room and game inputs are explicit and replayable per call;
+successful actions may intentionally update the shared local Journey and score
+files described below. The bounded
 `play_room` `pokes` tuple array and `gesture` event objects carry replayable hand
 input without hidden session state:
 
