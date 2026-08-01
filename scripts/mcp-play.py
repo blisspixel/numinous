@@ -55,6 +55,7 @@ CLIENT_INFO_META_KEY = "io.modelcontextprotocol/clientInfo"
 CLIENT_CAPABILITIES_META_KEY = "io.modelcontextprotocol/clientCapabilities"
 SERVER_INFO_META_KEY = "io.modelcontextprotocol/serverInfo"
 BUILD_RECEIPT_SCHEMA = "numinous-mcp-build-receipt-v1"
+DEVELOPMENT_BUILD_RECEIPT_SCHEMA = "numinous-mcp-development-build-receipt-v1"
 SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
 COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
 QUALIFYING_SOURCE_PATHS = (
@@ -468,7 +469,9 @@ def _build_artifact(
         assert expected_revision is not None and expected_source_sha256 is not None
         _require_qualifying_source(expected_revision, expected_source_sha256, env)
     receipt = {
-        "schemaVersion": BUILD_RECEIPT_SCHEMA,
+        "schemaVersion": (
+            BUILD_RECEIPT_SCHEMA if qualifying else DEVELOPMENT_BUILD_RECEIPT_SCHEMA
+        ),
         "sourceRevision": revision,
         "studySourceSha256": expected_source_sha256,
         "sourcePolicy": (

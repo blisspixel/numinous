@@ -46,7 +46,7 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
 fi
 
 if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
-    | grep -zqE '^scripts/(mcp-play\.py|understanding-(study|collect)\.py|understanding-(encounters|probes\.fixture)\.json|test-(mcp-play|understanding-(study|collect))\.py)$'; then
+    | grep -zqE '^scripts/(mcp-play\.py|understanding-(source|study|collect)\.py|understanding-(encounters|probes\.fixture)\.json|test-(mcp-play|understanding-(study|collect))\.py)$'; then
   if command -v python3 >/dev/null 2>&1; then
     study_python=python3
   elif command -v python >/dev/null 2>&1; then

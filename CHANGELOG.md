@@ -67,6 +67,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   registration, and allocation commitment still block qualifying collection.
 
 ### Fixed
+- Development MCP builds now use a distinct unbound receipt schema instead of
+  presenting incomplete provenance under the qualifying evidence schema.
+- The pre-commit study gate now runs when the source-integrity verifier itself
+  changes, closing a gap in deterministic regression enforcement.
 - The real backpressured-socket deadline regression now waits for three stable
   nonwritable observations before exercising the bounded public write. This
   closes a macOS false failure where the kernel moved prefill bytes into the

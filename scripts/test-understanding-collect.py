@@ -1873,6 +1873,7 @@ class CollectorTests(unittest.TestCase):
             build_receipt = dict(initialization["binaryBuildReceipt"])
             build_receipt.update(
                 {
+                    "schemaVersion": collector.mcp_play.BUILD_RECEIPT_SCHEMA,
                     "sourceRevision": RUNNER_REVISION,
                     "studySourceSha256": RUNNER_SOURCE_SHA256,
                     "sourcePolicy": "verified-clean-commit-before-and-after",

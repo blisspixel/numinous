@@ -425,6 +425,12 @@ class ProbeBankTests(unittest.TestCase):
             whole_worktree_clean=True,
         )
 
+    def test_qualifying_validator_rejects_a_development_build_receipt(self) -> None:
+        receipt = binary_build_receipt()
+        receipt["schemaVersion"] = "numinous-mcp-development-build-receipt-v1"
+        with self.assertRaisesRegex(study.StudyError, "version differs"):
+            study.validate_mcp_build_receipt(receipt, receipt["binarySha256"])
+
     def test_repository_identity_rejects_a_dirty_tracked_worktree(self) -> None:
         with (
             mock.patch.object(

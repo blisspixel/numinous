@@ -228,8 +228,48 @@ class McpPlayLifecycleTests(unittest.TestCase):
             built_path[0].write_bytes(b"replaced compiler output")
             self.assertEqual(artifact.path.read_bytes(), b"fresh private executable")
             self.assertNotEqual(artifact.path, stale)
+            self.assertEqual(
+                artifact.receipt["schemaVersion"], driver.BUILD_RECEIPT_SCHEMA
+            )
             self.assertEqual(artifact.receipt["sourceRevision"], revision)
             self.assertEqual(artifact.receipt["studySourceSha256"], source_digest)
+            artifact.owner.cleanup()
+
+    def test_development_build_uses_an_explicitly_unbound_receipt_schema(self) -> None:
+        driver = load_driver()
+        revision = "1" * 40
+
+        def build(target_dir: Path, _target: str, _env: dict[str, str]) -> Path:
+            artifact = target_dir / "fixture-target" / "debug" / "numinous-mcp"
+            artifact.parent.mkdir(parents=True)
+            artifact.write_bytes(b"development executable")
+            return artifact
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            with (
+                mock.patch.object(driver, "ROOT", root),
+                mock.patch.object(driver, "_build_environment", return_value={}),
+                mock.patch.object(driver, "_git_output", return_value=revision),
+                mock.patch.object(
+                    driver,
+                    "_toolchain_metadata",
+                    return_value=("cargo fixture", "rustc fixture", "fixture-target"),
+                ),
+                mock.patch.object(driver, "_cargo_artifact", side_effect=build),
+            ):
+                artifact = driver._build_artifact(None, None)
+            self.assertEqual(
+                artifact.receipt["schemaVersion"],
+                driver.DEVELOPMENT_BUILD_RECEIPT_SCHEMA,
+            )
+            self.assertNotEqual(
+                artifact.receipt["schemaVersion"], driver.BUILD_RECEIPT_SCHEMA
+            )
+            self.assertIsNone(artifact.receipt["studySourceSha256"])
+            self.assertEqual(
+                artifact.receipt["sourcePolicy"], "unbound-working-tree"
+            )
             artifact.owner.cleanup()
 
     def test_session_detects_concurrent_private_artifact_replacement(self) -> None:
