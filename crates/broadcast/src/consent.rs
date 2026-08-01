@@ -1119,25 +1119,44 @@ mod tests {
         server.set_nonblocking(true).expect("nonblocking fill");
         let padding = [0_u8; 64 * 1_024];
         let saturation_deadline = Instant::now() + Duration::from_secs(5);
-        let mut quiet_rounds = 0;
-        while quiet_rounds < 3 {
+        loop {
             assert!(
                 Instant::now() < saturation_deadline,
-                "socket backpressure did not stabilize"
+                "socket backpressure did not begin"
             );
             match server.write(&padding) {
                 Ok(0) => panic!("socket fill made no progress"),
-                Ok(_) => quiet_rounds = 0,
-                Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
-                    quiet_rounds += 1;
-                    if quiet_rounds < 3 {
-                        thread::sleep(Duration::from_millis(20));
-                    }
-                }
+                Ok(_) => {}
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => break,
                 Err(error) => panic!("socket fill failed: {error}"),
             }
         }
         server.set_nonblocking(false).expect("blocking deadline");
+        server
+            .set_write_timeout(Some(Duration::from_millis(100)))
+            .expect("saturation timeout");
+        loop {
+            assert!(
+                Instant::now() < saturation_deadline,
+                "socket backpressure did not stabilize"
+            );
+            match server.write_all(&padding) {
+                Ok(()) => {}
+                Err(error)
+                    if matches!(
+                        error.kind(),
+                        io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock
+                    ) =>
+                {
+                    break;
+                }
+                Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
+                Err(error) => panic!("socket saturation failed: {error}"),
+            }
+        }
+        server
+            .set_write_timeout(Some(Duration::from_secs(2)))
+            .expect("fallback timeout");
 
         let machine = live();
         let ticket = machine.capture().expect("ticket");
