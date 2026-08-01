@@ -1118,10 +1118,22 @@ mod tests {
         let (mut server, _) = listener.accept().expect("accept loopback");
         server.set_nonblocking(true).expect("nonblocking fill");
         let padding = [0_u8; 64 * 1_024];
-        loop {
+        let saturation_deadline = Instant::now() + Duration::from_secs(5);
+        let mut quiet_rounds = 0;
+        while quiet_rounds < 3 {
+            assert!(
+                Instant::now() < saturation_deadline,
+                "socket backpressure did not stabilize"
+            );
             match server.write(&padding) {
-                Ok(_) => {}
-                Err(error) if error.kind() == io::ErrorKind::WouldBlock => break,
+                Ok(0) => panic!("socket fill made no progress"),
+                Ok(_) => quiet_rounds = 0,
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
+                    quiet_rounds += 1;
+                    if quiet_rounds < 3 {
+                        thread::sleep(Duration::from_millis(20));
+                    }
+                }
                 Err(error) => panic!("socket fill failed: {error}"),
             }
         }

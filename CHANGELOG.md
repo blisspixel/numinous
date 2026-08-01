@@ -67,6 +67,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   registration, and allocation commitment still block qualifying collection.
 
 ### Fixed
+- The real backpressured-socket deadline regression now waits for three stable
+  nonwritable observations before exercising the bounded public write. This
+  closes a macOS false failure where the kernel moved prefill bytes into the
+  unread peer buffer before the test frame arrived, without changing the
+  production deadline or consent cleanup behavior.
 - Understanding Alpha analysis now balances each model family's ten primary
   pairs at five condition starts per arm and two first-room starts per flagship,
   with declared reserve-path imbalance bounds. The inadmissible first runner and
