@@ -550,8 +550,12 @@ fn record_progress(request: &Value, path: &std::path::Path) {
             {
                 journey.play();
                 let seed = effective_seed(&args);
-                let digits = args.get("digits").and_then(Value::as_u64).unwrap_or(4) as usize;
-                if (2..=8).contains(&digits) {
+                let digits = args.get("digits").map_or(Some(4), |value| {
+                    value.as_u64().and_then(|value| usize::try_from(value).ok())
+                });
+                if let Some(digits) =
+                    digits.filter(|&digits| numinous_core::supports_code_length(digits))
+                {
                     let secret = numinous_core::secret_code(seed, digits);
                     for (i, raw) in list.iter().filter_map(Value::as_str).take(8).enumerate() {
                         let guess: Vec<u8> = raw
@@ -1751,6 +1755,7 @@ fn build_tools_catalog() -> Value {
                         "daily": { "type": "boolean", "description": "Use today's shared seed." },
                         "actions": {
                             "type": "array",
+                            "maxItems": numinous_core::munch_arcade::MAX_REPLAY_ACTIONS,
                             "items": {
                                 "type": "string",
                                 "pattern": "^(?:[Uu][Pp]|[Dd][Oo][Ww][Nn]|[Ll][Ee][Ff][Tt]|[Rr][Ii][Gg][Hh][Tt]|[Ee][Aa][Tt]|[WwAaSsDdEe])$"
@@ -1818,7 +1823,7 @@ fn build_tools_catalog() -> Value {
                     "properties": {
                         "seed": { "type": "integer", "description": "Seed; the same seed hides the same code." },
                         "daily": { "type": "boolean", "description": "Use today\'s shared seed instead; dailies chain into streaks." },
-                        "digits": { "type": "integer", "description": "Code length, default 4 (5+ opens at LV 5)." },
+                        "digits": { "type": "integer", "minimum": numinous_core::MIN_CODE_DIGITS, "maximum": numinous_core::MAX_CODE_DIGITS, "description": "Code length, default 4 (5+ opens at LV 5)." },
                         "guesses": { "type": "array", "items": { "type": "string" }, "description": "Your guesses so far, in order. Omit to see the clue." }
                     },
                     "additionalProperties": false
@@ -4394,9 +4399,19 @@ fn crack_tool(args: &Value, journey_file: &std::path::Path) -> Value {
 
 fn crack_tool_at_level(args: &Value, level: u32) -> Value {
     let seed = effective_seed(args);
-    let digits = args.get("digits").and_then(Value::as_u64).unwrap_or(4) as usize;
-    if !(2..=8).contains(&digits) {
-        return tool_error("Codes run 2 to 8 digits.");
+    let Some(digits) = args
+        .get("digits")
+        .and_then(Value::as_u64)
+        .map_or(Some(4), |value| usize::try_from(value).ok())
+    else {
+        return tool_error("Code length is too large.");
+    };
+    if !numinous_core::supports_code_length(digits) {
+        return tool_error(&format!(
+            "Codes run {} to {} digits.",
+            numinous_core::MIN_CODE_DIGITS,
+            numinous_core::MAX_CODE_DIGITS
+        ));
     }
     if digits > 4 && level < 5 {
         return tool_error("Five-digit codes open at LV 5. Play more; the lock knows.");
@@ -6418,6 +6433,13 @@ mod tests {
         assert!(names.contains(&"correct_journal"));
         assert!(names.contains(&"export_journal"));
         assert!(names.contains(&"erase_journal"));
+        let crack = tools
+            .iter()
+            .find(|tool| tool["name"] == "crack")
+            .expect("crack tool");
+        let crack_digits = &crack["inputSchema"]["properties"]["digits"];
+        assert_eq!(crack_digits["minimum"], numinous_core::MIN_CODE_DIGITS);
+        assert_eq!(crack_digits["maximum"], numinous_core::MAX_CODE_DIGITS);
         let play_room = tools
             .iter()
             .find(|tool| tool["name"] == "play_room")
@@ -6485,6 +6507,10 @@ mod tests {
         assert_eq!(
             arcade["inputSchema"]["properties"]["actions"]["items"]["pattern"],
             "^(?:[Uu][Pp]|[Dd][Oo][Ww][Nn]|[Ll][Ee][Ff][Tt]|[Rr][Ii][Gg][Hh][Tt]|[Ee][Aa][Tt]|[WwAaSsDdEe])$"
+        );
+        assert_eq!(
+            arcade["inputSchema"]["properties"]["actions"]["maxItems"],
+            numinous_core::munch_arcade::MAX_REPLAY_ACTIONS
         );
         let nim = tools
             .iter()
@@ -6752,6 +6778,18 @@ mod tests {
                 "{} projection must be state-independent",
                 tool.name()
             );
+        }
+    }
+
+    #[test]
+    fn crack_rejects_code_lengths_outside_the_shared_contract() {
+        for digits in [
+            (numinous_core::MIN_CODE_DIGITS - 1) as u64,
+            (numinous_core::MAX_CODE_DIGITS + 1) as u64,
+            u64::MAX,
+        ] {
+            let result = super::crack_tool_at_level(&json!({"digits": digits}), 5);
+            assert_eq!(result["isError"], true, "accepted {digits} digits");
         }
     }
 
@@ -8348,6 +8386,11 @@ plays 2
             (410, "hackenbush", json!({"moves":[[]]})),
             (411, "munch", json!({"bites":[0]})),
             (412, "munch", json!({"bites":[-1]})),
+            (
+                413,
+                "crack",
+                json!({"digits": numinous_core::MAX_CODE_DIGITS + 1}),
+            ),
         ] {
             let resp = handle_request_with(
                 &json!({
@@ -8359,6 +8402,24 @@ plays 2
             .expect("tools/call must respond");
             assert_eq!(resp["result"]["isError"], true);
         }
+        let too_many_arcade_actions =
+            vec!["e"; numinous_core::munch_arcade::MAX_REPLAY_ACTIONS + 1];
+        let oversized_arcade = handle_request_with(
+            &json!({
+                "jsonrpc":"2.0","id":414,"method":"tools/call",
+                "params":{
+                    "name":"munch_arcade",
+                    "arguments":{"actions":too_many_arcade_actions}
+                }
+            }),
+            &file,
+        )
+        .expect("oversized arcade replay must respond");
+        assert_eq!(oversized_arcade["result"]["isError"], true);
+        assert!(
+            tool_error_text(&oversized_arcade).contains("at most 4096 items"),
+            "the rejection must name the replay budget"
+        );
         let journey = std::fs::read_to_string(&file)
             .map(|text| numinous_core::Journey::from_text(&text))
             .unwrap_or_default();

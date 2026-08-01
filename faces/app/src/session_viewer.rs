@@ -1053,9 +1053,6 @@ fn only_known_keys(arguments: &Map<String, Value>, allowed: &[&str]) -> bool {
 /// Gauntlet bomb mix matches the MCP face constant.
 const GAUNTLET_BOMB_MIX: u64 = 0x0000_6A17_0000_0B0B;
 
-/// Bound arcade action lists so hostile public events cannot spin forever.
-const MAX_ARCADE_REPLAY_ACTIONS: usize = 4_096;
-
 fn parse_nim_replay(
     arguments: &Map<String, Value>,
     result: &Map<String, Value>,
@@ -1261,7 +1258,7 @@ fn parse_arcade_replay(
     let mut cleared = false;
     if let Some(raw) = arguments.get("actions") {
         let actions = raw.as_array()?;
-        if actions.len() > MAX_ARCADE_REPLAY_ACTIONS {
+        if actions.len() > numinous_core::munch_arcade::MAX_REPLAY_ACTIONS {
             return None;
         }
         for value in actions {

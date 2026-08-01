@@ -11,8 +11,10 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import struct
 import subprocess
 import tarfile
+from typing import BinaryIO
 import zipfile
 
 
@@ -33,6 +35,15 @@ RELEASE_FILES = (
     "scripts/install.sh",
 )
 SOUNDTRACK_CONTENT_LABEL = "soundtrack-content-v1"
+MAX_ARCHIVE_ENTRIES = 256
+MAX_ARCHIVE_MEMBER_BYTES = 256 * 1024 * 1024
+MAX_ARCHIVE_TOTAL_BYTES = 512 * 1024 * 1024
+MAX_ARCHIVE_METADATA_BYTES = 16 * 1024 * 1024
+MAX_TAR_TRAILING_BYTES = 16 * 1024
+ZIP_END_RECORD_SIZE = 22
+ZIP_MAX_COMMENT_BYTES = 65_535
+ZIP_CENTRAL_HEADER_SIZE = 46
+TAR_BLOCK_BYTES = 512
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -262,12 +273,265 @@ def safe_member_name(name: str) -> PurePosixPath:
     return path
 
 
+def admit_archive_entry(entry_count: int) -> int:
+    """Admit one archive entry within the metadata work budget."""
+    if entry_count >= MAX_ARCHIVE_ENTRIES:
+        raise ValueError("release archive contains too many entries")
+    return entry_count + 1
+
+
+def admit_archive_payload(total_bytes: int, declared_size: int) -> int:
+    """Admit one regular member within the expanded payload budget."""
+    if declared_size < 0 or declared_size > MAX_ARCHIVE_MEMBER_BYTES:
+        raise ValueError("release archive member is too large")
+    if total_bytes > MAX_ARCHIVE_TOTAL_BYTES - declared_size:
+        raise ValueError("release archive payload is too large")
+    return total_bytes + declared_size
+
+
+def reject_zip64_extra(extra: bytes) -> None:
+    """Reject ZIP64 and malformed extra fields before archive expansion."""
+    position = 0
+    while position < len(extra):
+        if len(extra) - position < 4:
+            raise ValueError("release ZIP extra metadata is malformed")
+        header_id, field_size = struct.unpack_from("<HH", extra, position)
+        position += 4
+        if position + field_size > len(extra):
+            raise ValueError("release ZIP extra metadata is truncated")
+        if header_id == 0x0001:
+            raise ValueError("ZIP64 release archives are unsupported")
+        position += field_size
+
+
+def zip_archive_entry_count(path: Path) -> int:
+    """Validate and count classic ZIP metadata before ZipFile constructs it."""
+    size = path.stat().st_size
+    tail_size = min(size, ZIP_END_RECORD_SIZE + ZIP_MAX_COMMENT_BYTES)
+    with path.open("rb") as source:
+        source.seek(size - tail_size)
+        tail = source.read(tail_size)
+    offset = tail.rfind(b"PK\x05\x06")
+    if offset < 0 or len(tail) - offset < ZIP_END_RECORD_SIZE:
+        raise ValueError("release ZIP end record is missing")
+    (
+        disk_number,
+        directory_disk,
+        entries_on_disk,
+        entry_count,
+        directory_size,
+        directory_offset,
+        comment_size,
+    ) = struct.unpack_from("<4H2IH", tail, offset + 4)
+    if offset + ZIP_END_RECORD_SIZE + comment_size != len(tail):
+        raise ValueError("release ZIP end record is malformed")
+    end_offset = size - tail_size + offset
+    if end_offset >= 20:
+        with path.open("rb") as source:
+            source.seek(end_offset - 20)
+            if source.read(4) == b"PK\x06\x07":
+                raise ValueError("ZIP64 release archives are unsupported")
+    if disk_number != 0 or directory_disk != 0 or entries_on_disk != entry_count:
+        raise ValueError("multi-disk release ZIP archives are unsupported")
+    if (
+        entry_count == 0xFFFF
+        or directory_size == 0xFFFF_FFFF
+        or directory_offset == 0xFFFF_FFFF
+    ):
+        raise ValueError("ZIP64 release archives are unsupported")
+    if directory_size > MAX_ARCHIVE_METADATA_BYTES:
+        raise ValueError("release ZIP metadata is too large")
+    if directory_offset + directory_size != end_offset:
+        raise ValueError("release ZIP central directory is malformed")
+    with path.open("rb") as source:
+        source.seek(directory_offset)
+        directory = source.read(directory_size)
+    if len(directory) != directory_size:
+        raise ValueError("release ZIP central directory is truncated")
+
+    actual_count = 0
+    position = 0
+    while position < len(directory):
+        if (
+            len(directory) - position < ZIP_CENTRAL_HEADER_SIZE
+            or directory[position : position + 4] != b"PK\x01\x02"
+        ):
+            raise ValueError("release ZIP central directory is malformed")
+        central_flags, central_compression = struct.unpack_from(
+            "<HH", directory, position + 8
+        )
+        compressed_size, uncompressed_size = struct.unpack_from(
+            "<II", directory, position + 20
+        )
+        name_size, extra_size, entry_comment_size = struct.unpack_from(
+            "<HHH", directory, position + 28
+        )
+        disk_start = struct.unpack_from("<H", directory, position + 34)[0]
+        local_header_offset = struct.unpack_from("<I", directory, position + 42)[0]
+        record_size = (
+            ZIP_CENTRAL_HEADER_SIZE + name_size + extra_size + entry_comment_size
+        )
+        if position + record_size > len(directory):
+            raise ValueError("release ZIP central directory is truncated")
+        if (
+            compressed_size == 0xFFFF_FFFF
+            or uncompressed_size == 0xFFFF_FFFF
+            or disk_start == 0xFFFF
+            or local_header_offset == 0xFFFF_FFFF
+        ):
+            raise ValueError("ZIP64 release archives are unsupported")
+        extra_start = position + ZIP_CENTRAL_HEADER_SIZE + name_size
+        extra_end = extra_start + extra_size
+        reject_zip64_extra(directory[extra_start:extra_end])
+        with path.open("rb") as source:
+            if local_header_offset + 30 > directory_offset:
+                raise ValueError("release ZIP local header is malformed")
+            source.seek(local_header_offset)
+            local_header = source.read(30)
+            if len(local_header) != 30 or local_header[:4] != b"PK\x03\x04":
+                raise ValueError("release ZIP local header is malformed")
+            local_flags, local_compression = struct.unpack_from("<HH", local_header, 6)
+            local_compressed_size, local_uncompressed_size = struct.unpack_from(
+                "<II", local_header, 18
+            )
+            local_name_size, local_extra_size = struct.unpack_from(
+                "<HH", local_header, 26
+            )
+            local_metadata_end = (
+                local_header_offset + 30 + local_name_size + local_extra_size
+            )
+            if local_metadata_end > directory_offset:
+                raise ValueError("release ZIP local header is malformed")
+            source.seek(local_header_offset + 30)
+            local_metadata = source.read(local_name_size + local_extra_size)
+        if len(local_metadata) != local_name_size + local_extra_size:
+            raise ValueError("release ZIP local metadata is truncated")
+        central_name = directory[
+            position + ZIP_CENTRAL_HEADER_SIZE :
+            position + ZIP_CENTRAL_HEADER_SIZE + name_size
+        ]
+        local_name = local_metadata[:local_name_size]
+        local_extra = local_metadata[local_name_size:]
+        if (
+            local_name != central_name
+            or local_flags != central_flags
+            or local_compression != central_compression
+            or local_metadata_end + compressed_size > directory_offset
+        ):
+            raise ValueError("release ZIP local header is inconsistent")
+        if (
+            local_compressed_size == 0xFFFF_FFFF
+            or local_uncompressed_size == 0xFFFF_FFFF
+        ):
+            raise ValueError("ZIP64 release archives are unsupported")
+        reject_zip64_extra(local_extra)
+        actual_count = admit_archive_entry(actual_count)
+        position += record_size
+    if actual_count != entry_count:
+        raise ValueError("release ZIP entry count mismatch")
+    return actual_count
+
+
+def parse_tar_number(field: bytes, label: str) -> int:
+    """Parse one canonical octal tar field and reject GNU base-256 values."""
+    if field and field[0] & 0x80:
+        raise ValueError(f"unsupported base-256 tar {label}")
+    text = field.strip(b" \0")
+    if not text:
+        return 0
+    if any(byte < ord("0") or byte > ord("7") for byte in text):
+        raise ValueError(f"malformed tar {label}")
+    return int(text, 8)
+
+
+def read_tar_payload(source: BinaryIO, declared_size: int, member_name: str) -> bytes:
+    """Read one already-admitted tar payload exactly."""
+    try:
+        data = source.read(declared_size)
+    except (EOFError, OSError) as error:
+        raise ValueError(f"unreadable tar member: {member_name}") from error
+    if len(data) != declared_size:
+        raise ValueError(f"archive member size mismatch: {member_name}")
+    return data
+
+
+def tar_files(path: Path) -> dict[str, bytes]:
+    """Read the canonical ustar subset without hidden extension processing."""
+    files: dict[str, bytes] = {}
+    entry_count = 0
+    total_bytes = 0
+    zero_blocks = 0
+    with gzip.open(path, "rb") as source:
+        while zero_blocks < 2:
+            try:
+                header = source.read(TAR_BLOCK_BYTES)
+            except (EOFError, OSError) as error:
+                raise ValueError("release tar stream is unreadable") from error
+            if len(header) != TAR_BLOCK_BYTES:
+                raise ValueError("release tar terminator is missing")
+            if header == bytes(TAR_BLOCK_BYTES):
+                zero_blocks += 1
+                continue
+            if zero_blocks:
+                raise ValueError("release tar contains data after its terminator")
+
+            declared_checksum = parse_tar_number(header[148:156], "checksum")
+            actual_checksum = sum(header[:148]) + 8 * ord(" ") + sum(header[156:])
+            if declared_checksum != actual_checksum:
+                raise ValueError("release tar header checksum mismatch")
+            if header[257:263] != b"ustar\0" or header[263:265] != b"00":
+                raise ValueError("release tar is not canonical ustar")
+            declared_size = parse_tar_number(header[124:136], "member size")
+            raw_name = header[:100].split(b"\0", 1)[0]
+            raw_prefix = header[345:500].split(b"\0", 1)[0]
+            try:
+                name = raw_name.decode("utf-8")
+                prefix = raw_prefix.decode("utf-8")
+            except UnicodeDecodeError as error:
+                raise ValueError("release tar member name is not UTF-8") from error
+            if prefix:
+                name = f"{prefix}/{name}"
+            normalized = safe_member_name(name).as_posix()
+            entry_count = admit_archive_entry(entry_count)
+            entry_type = header[156:157]
+            if entry_type == b"5":
+                if declared_size != 0:
+                    raise ValueError(f"tar directory has a payload: {name}")
+                continue
+            if entry_type not in (b"\0", b"0"):
+                raise ValueError(f"unsupported tar entry type: {entry_type!r}")
+            if normalized in files:
+                raise ValueError(f"duplicate archive member: {normalized}")
+            total_bytes = admit_archive_payload(total_bytes, declared_size)
+            data = read_tar_payload(source, declared_size, name)
+            if len(data) != declared_size:
+                raise ValueError(f"archive member size mismatch: {name}")
+            padding_size = (-declared_size) % TAR_BLOCK_BYTES
+            if padding_size:
+                padding = source.read(padding_size)
+                if len(padding) != padding_size or any(padding):
+                    raise ValueError(f"malformed tar member padding: {name}")
+            files[normalized] = data
+
+        trailing = source.read(MAX_TAR_TRAILING_BYTES + 1)
+        if len(trailing) > MAX_TAR_TRAILING_BYTES or any(trailing):
+            raise ValueError("release tar trailing data is too large or nonzero")
+    return files
+
+
 def archive_files(path: Path) -> dict[str, bytes]:
     files: dict[str, bytes] = {}
+    entry_count = 0
+    total_bytes = 0
     if path.name.endswith(".zip"):
+        declared_entries = zip_archive_entry_count(path)
         with zipfile.ZipFile(path) as archive:
-            for info in archive.infolist():
+            infos = archive.infolist()
+            if len(infos) != declared_entries:
+                raise ValueError("release ZIP entry count mismatch")
+            for info in infos:
                 name = safe_member_name(info.filename)
+                entry_count = admit_archive_entry(entry_count)
                 if info.is_dir():
                     continue
                 mode = (info.external_attr >> 16) & 0o170000
@@ -276,22 +540,13 @@ def archive_files(path: Path) -> dict[str, bytes]:
                 normalized = name.as_posix()
                 if normalized in files:
                     raise ValueError(f"duplicate archive member: {normalized}")
-                files[normalized] = archive.read(info)
+                total_bytes = admit_archive_payload(total_bytes, info.file_size)
+                data = archive.read(info)
+                if len(data) != info.file_size:
+                    raise ValueError(f"archive member size mismatch: {info.filename}")
+                files[normalized] = data
     elif path.name.endswith(".tar.gz"):
-        with tarfile.open(path, "r:gz") as archive:
-            for info in archive.getmembers():
-                name = safe_member_name(info.name)
-                if info.isdir():
-                    continue
-                if not info.isfile():
-                    raise ValueError(f"non-file tar member: {info.name}")
-                source = archive.extractfile(info)
-                if source is None:
-                    raise ValueError(f"unreadable tar member: {info.name}")
-                normalized = name.as_posix()
-                if normalized in files:
-                    raise ValueError(f"duplicate archive member: {normalized}")
-                files[normalized] = source.read()
+        files = tar_files(path)
     else:
         raise ValueError(f"unsupported archive extension: {path.name}")
     return files

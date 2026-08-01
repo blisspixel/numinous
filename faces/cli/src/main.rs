@@ -1820,6 +1820,14 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             digits,
             attempts,
         } => {
+            if !numinous_core::supports_code_length(digits) {
+                eprintln!(
+                    "Codes run {} to {} digits.",
+                    numinous_core::MIN_CODE_DIGITS,
+                    numinous_core::MAX_CODE_DIGITS
+                );
+                return ExitCode::FAILURE;
+            }
             if digits > 4 && still_locked(journey, 5, "crack --digits 5+") {
                 return ExitCode::FAILURE;
             }
@@ -5671,6 +5679,31 @@ mod tests {
             rounds as u64 > numinous_core::FULL_DECK_ROUND,
             "the default session must reach multiple full-deck boards"
         );
+    }
+
+    #[test]
+    fn crack_rejects_unsupported_code_lengths_before_play() {
+        let mut journey = numinous_core::Journey {
+            plays: 100,
+            ..Default::default()
+        };
+        for digits in [
+            numinous_core::MIN_CODE_DIGITS - 1,
+            numinous_core::MAX_CODE_DIGITS + 1,
+        ] {
+            let before = journey.clone();
+            let code = run(
+                Command::Crack {
+                    seed: 1,
+                    daily: false,
+                    digits,
+                    attempts: 1,
+                },
+                &mut journey,
+            );
+            assert_eq!(code, std::process::ExitCode::FAILURE);
+            assert_eq!(journey, before);
+        }
     }
 
     #[test]
