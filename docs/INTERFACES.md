@@ -69,10 +69,13 @@ The full interactive audiovisual experience. The UX is specified in depth across
   Input-aware legends cover rooms, all games, The Show, the Journey, and the
   Studio. The controller opens and closes all nine menu destinations; Studio
   formula entry remains honestly keyboard-required.
-  Focus loss or disconnect cancels a held gesture. Controller bindings load from
-  `~/.numinous-bindings.json` with shipped `gamecontrollerdb.txt` fallback.
-  Touch, pen, MIDI, adaptive glyphs, and broader platform hardware certification
-  remain planned rather than implied.
+  Focus loss or disconnect cancels a held gesture. Controller bindings load
+  from `.numinous-bindings.json` in the player's home directory, with an
+  embedded `gamecontrollerdb.txt` fallback. Known Xbox and PlayStation product
+  names select matching face labels; unknown pads use generic compass labels.
+  Custom routing does not rewrite the default-layout legends. Touch, pen, MIDI,
+  and broader platform hardware certification remain planned rather than
+  implied.
 
 Nothing here is a compromise for the other faces; this is the headline experience. It is simply *one* consumer of the core.
 
@@ -319,10 +322,10 @@ text, forged structured state, and error results all retain the typed fallback.
 A human should be able to open Numinous and watch a consenting digital player
 explore through MCP, like a live Let's Play. This is an observation surface,
 not surveillance and not duet control. The current viewer reconstructs public
-room actions, successful Formula Jam plot actions, and public Nim states, and
-replays local sound for the first two while representing every other public
-action through the typed text timeline. The remaining native presentation
-layer will add the other games. Typed
+room actions, successful Formula Jam plot actions, public Nim states, and valid
+Munch, Arcade, Quiz, and Gauntlet actions. It replays bounded deterministic
+local sound for supported room, Studio, Munch, Arcade, Quiz, and Gauntlet
+selections, while every other public action keeps the typed text timeline. Typed
 actions, status, and state-independent results already
 match the MCP guest except where
 Describe Room, Crack, SETI, or Quiz would reveal private Journey level or boon
@@ -422,8 +425,9 @@ replay now uses the existing deterministic core to reconstruct visuals. Native
 Studio replay uses the same deterministic curve sampler as the live App panel.
 Nim replay uses the same core reducer and bounded board renderer as live play.
 Native room and Studio sound use the same core state through a bounded local
-source and explicit App ownership. Other native game presentation remains
-planned. Tests
+source and explicit App ownership. Munch, Arcade, Quiz, and Gauntlet share
+their live App presentation paths and fail closed on mismatched public state.
+Tests
 prove code parsing and expiry, loopback-only connection, consent-before-content,
 allowlist completeness across every MCP tool, redaction, sequence and gap
 behavior, reconnect refusal after capability use, nonblocking failure, exact

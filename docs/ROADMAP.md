@@ -62,7 +62,7 @@ journal
 sovereignty is complete on the clean-process machine acceptance bar.
 Detail below and in the version sections.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,199 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.13% region coverage, and 95.28% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,210 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.14% region coverage, and 95.29% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -136,10 +136,20 @@ Detail below and in the version sections.
   destinations have
   controller entry and exit routes; paused games reject scoring input. Deadzone,
   curve, elapsed-time motion, boundary, held-drag, focus, and routes through all
-  five games and every Gauntlet stage are pure-tested. Xbox-class Windows
-  hardware is the local target; broader controller and platform certification,
-  and user-facing glyph adaptation remain open.
-- **Done (Cycle 138 gamepad configuration):** `~/.numinous-bindings.json` supports full controller remapping. `gamecontrollerdb.txt` is shipped with the binary as a fallback standard controller mapping.
+  five games and every Gauntlet stage are pure-tested. Known Xbox and
+  PlayStation product names select matching face labels while unknown pads use
+  generic compass labels. Xbox-class Windows hardware is the local target;
+  broader controller and platform certification remains open.
+- **Done (Cycle 138 gamepad configuration):** `.numinous-bindings.json` in the
+  player's home directory remaps every supported standard button to a complete
+  direct semantic-action set. Remapped primary buttons preserve hold and
+  release semantics, an explicit North mapping replaces its default audio
+  chord, and multiple primary mappings release only after the last held button.
+  Stick axes keep their fixed virtual-hand and time-scrub roles. The visible
+  controller legends remain an honest description of the default layout, not a
+  generated view of custom routing.
+  `gamecontrollerdb.txt` is compiled into the App binary as a fallback standard
+  controller mapping.
 - **Done (MCP munch_arcade):** Stateless `munch_arcade` tool for full parity, with replayed action-list scores posted under `arcade seed:N` through the shared progress path.
 - **Done (app hardening slice):** app-local play state plus quiz deal/answer flow now live in `faces/app/src/play.rs`, pure game-screen rendering lives in `faces/app/src/game_draw.rs`, room chrome plus arrival-card hinting live in `faces/app/src/hud.rs`, help, journey, and banner overlays live in `faces/app/src/overlays.rs`, transient feedback banner construction and ticking live in `faces/app/src/feedback.rs`, shared in-window Munch grid, Nim heap/take, and Munch Arcade action controls live in `faces/app/src/controls.rs`, left-mouse mode decisions and pointer-state guards live in `faces/app/src/mouse_input.rs`, room navigation, re-deal, poke-history, drag-trail, and room-card tick helpers live in `faces/app/src/room_input.rs`, Studio text, parse, audio-spec, and curve drawing state live in `faces/app/src/studio_panel.rs`, explicit F9 hallway-test note capture lives in `faces/app/src/playtest.rs`, live-state PNG postcard export lives in `faces/app/src/postcard.rs`, and bounded radio cache discovery, open-handle WAV validation, live-position math, and track loading live in `faces/app/src/radio_cache.rs`. Room action copy is centralized in `numinous-core`: App arrival cards use touch-first fallback copy, while CLI live play and MCP room tools use neutral fallback copy. Tests cover shared game hit-test layout, raster output across quiz, Munch, Munch Arcade, Nim, every live Gauntlet stage, quiz daily seeding, no-repeat quiz history, answer acceptance, action-naming arrival cards, Studio chrome suppression, Studio panel editing and bounded drawing, cross-face action hints, shared Munch/Nim/arcade controls, room-input bounds, modal-safe pointer-state transitions, playtest-critical overlays, feedback banner copy/lifetimes, radio-volume banner retention, GPU/raster banner compositing, local playtest-note reports that align to the hallway-test prompts without collecting personal data, postcard PNGs that include pokes, the selected Visual Era, collision-safe filenames, bounded/sorted station cache discovery, low-sorted corrupt-track handling before the track cap, corrupt-track rejection, open-handle size rechecks, high-rate-device caps, non-wrapping live offsets, and app radio recovery after a bad cached file. The event-loop file is still a hotspot, but game rules remain in `crates/core` and the refactor is moving in small verified modules.
 - **Done (persistence hardening slice):** malformed Journey and score files now parse defensively: counters saturate, constellation dimensions are capped, `visited` plus `chosen` token sets are bounded and token-sane, duplicate Journey tokens do not consume the unique-token cap, score keys are length-bounded, and score tables cap unique entries. The maintenance posture remains that progress and score files are user-editable local text, so loaders must repair or ignore malformed data rather than panic or allocate without bound.
@@ -244,10 +254,12 @@ Detail below and in the version sections.
   short-loop APNG (App L and CLI loop), and local security gates are green on
   this branch. Product 0.2 still requires the stranger hallway and other human
   evidence listed above; the prerelease label remains `0.2.0-alpha.4`.
-- **Done (mouse for every window game):** left-click hits Quiz choices, Munch
-  cells, Nim heaps and stones (commit move), Arcade cells (step toward or eat),
-  and Gauntlet munch/quiz stages. Keyboard routes remain. Subjective juice and
-  physical controller evidence stay open.
+- **Done (mouse for every window game and launch destination):** pointer hover
+  selects and left-click opens all nine launch-menu destinations through the
+  same semantic dispatcher as controller input. Left-click also hits Quiz
+  choices, Munch cells, Nim heaps and stones (commit move), Arcade cells (step
+  toward or eat), and Gauntlet munch/quiz stages. Keyboard routes remain.
+  Subjective juice and physical controller evidence stay open.
 - **Done (0.3 Formula Jam discovery, machine path):** Studio F2 Random, F3 Auto
   (~21s dwell, advance only near 1/8-phase edges), and F1 dismissible Help that
   opens on first entry. Edits pause Auto. Random and Auto recipe changes now
@@ -1102,7 +1114,7 @@ The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (reviewed 2026-07-31)
+## Where we stand (reviewed 2026-08-01)
 
 The package is **0.2.0-alpha.4**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
@@ -1131,7 +1143,7 @@ records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 3,199 passing all-target test cases plus one ignored screenshot diagnostic, 95.28% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 3,210 passing all-target test cases plus one ignored screenshot diagnostic, 95.29% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,913-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 

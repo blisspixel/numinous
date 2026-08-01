@@ -6,16 +6,16 @@ comfort, and voluntary return play. Only part of that system is automated today.
 This document names both the enforced checks and the quality loops still to be
 built, so an aspiration is never mistaken for a result.
 
-## Evidence snapshot, 2026-07-31
+## Evidence snapshot, 2026-08-01
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
-  doctests, 3,199 passing all-target test cases plus one ignored screenshot
+  doctests, 3,210 passing all-target test cases plus one ignored screenshot
   diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 95.13%
-  regions and 95.28% lines under the documented exclusions. The consented MCP
+  three-OS test-and-build matrix. The current measured coverage is 95.14%
+  regions and 95.29% lines under the documented exclusions. The consented MCP
   broadcast path has 65 focused shared-crate tests, 121 MCP unit tests, and
-  six real stdio tests. Real loopback cases cover pairing, compatibility,
+  12 real stdio tests. Real loopback cases cover pairing, compatibility,
   ordered controls, redaction, disconnect cleanup, private-call silence, exact
   parity for state-independent public results, and Journey noninterference for
   the four state-sensitive tools. Shared coordinator and queue tests separately
@@ -32,6 +32,10 @@ built, so an aspiration is never mistaken for a result.
   complete-result attestation, native body pixel parity, metadata exclusion,
   and close-time erasure. The Times Tables and Studio sessions also compare the
   selected local sound samples with independent shared-core reconstruction.
+  Four further real sessions prove native Munch, Arcade, Quiz, and Gauntlet
+  delivery through the live App renderers with exact board-body pixels,
+  fail-closed argument and result validation, and bounded deterministic sound
+  where supported.
   The Understanding Alpha boundary has 105 focused runner and collector tests,
   including a complete session that executes all 20 tracked encounter calls
   through 20 fresh real MCP processes, sealed calibration delivery and crash
@@ -44,7 +48,8 @@ built, so an aspiration is never mistaken for a result.
   detection.
   Catalog-wide sound admission, fixed-rate allocation bounds, semantic source
   replacement, App ownership, global controls, and radio restoration are
-  directly tested. Other native game visuals remain future evidence.
+  directly tested. Unsupported or mismatched replay remains typed text and is
+  silent rather than manufacturing native state.
 - **Implemented but not yet validated with strangers:** the native app, local
   playtest-note capture, deterministic room rendering, audio generation, all
   three faces, and a release-generated 2,913-screen visual QA matrix. Every room

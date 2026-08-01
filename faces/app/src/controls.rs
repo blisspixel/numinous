@@ -14,8 +14,16 @@ enum GridControl {
     Up,
 }
 
-fn grid_control(key: &Key) -> Option<GridControl> {
+/// Normalize command letters without changing text-entry behavior elsewhere.
+pub fn normalized_command_key(key: &Key) -> Key {
     match key {
+        Key::Character(text) => Key::Character(text.to_ascii_lowercase().into()),
+        _ => key.clone(),
+    }
+}
+
+fn grid_control(key: &Key) -> Option<GridControl> {
+    match &normalized_command_key(key) {
         Key::Named(NamedKey::Space) => Some(GridControl::Primary),
         Key::Named(NamedKey::ArrowRight) => Some(GridControl::Right),
         Key::Named(NamedKey::ArrowLeft) => Some(GridControl::Left),
@@ -71,7 +79,7 @@ enum NimControl {
 }
 
 fn nim_control(key: &Key) -> Option<NimControl> {
-    match key {
+    match &normalized_command_key(key) {
         Key::Named(NamedKey::ArrowUp) => Some(NimControl::PreviousHeap),
         Key::Named(NamedKey::ArrowDown) => Some(NimControl::NextHeap),
         Key::Named(NamedKey::ArrowRight) => Some(NimControl::IncreaseTake),
@@ -199,6 +207,11 @@ mod tests {
             Some(Action::Eat)
         );
         assert_eq!(arcade_action_for_key(&Key::Character("x".into())), None);
+        assert_eq!(
+            arcade_action_for_key(&Key::Character("W".into())),
+            Some(Action::Up),
+            "Shift and Caps Lock must not disable movement"
+        );
     }
 
     #[test]
@@ -242,6 +255,8 @@ mod tests {
         ));
         assert_eq!(play.take, 1);
         assert!(!apply_nim_control(&mut play, &Key::Named(NamedKey::Enter)));
+        assert!(apply_nim_control(&mut play, &Key::Character("D".into())));
+        assert_eq!(play.take, 2);
     }
 
     #[test]

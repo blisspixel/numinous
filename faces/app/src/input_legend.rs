@@ -141,7 +141,21 @@ impl MenuChoice {
         Self::ALL[index % Self::ALL.len()]
     }
 
-    const fn controller_label(self) -> &'static str {
+    const fn keyboard_token(self) -> &'static str {
+        match self {
+            Self::Quiz => "G",
+            Self::Munch => "C",
+            Self::Nim => "N",
+            Self::Gauntlet => "T",
+            Self::Arcade => "V",
+            Self::Show => "B/ENTER",
+            Self::Studio => "TAB",
+            Self::Journey => "J",
+            Self::WatchAgent => "X",
+        }
+    }
+
+    const fn menu_label(self) -> &'static str {
         match self {
             Self::Quiz => "THE QUIZ: NAME THE MATH",
             Self::Munch => "MUNCH: EAT WHAT FITS",
@@ -423,35 +437,41 @@ pub fn help_lines(mode: InputMode, selected: Option<usize>, activity_paused: boo
             .collect();
     }
     match mode {
-        InputMode::KeyboardMouse => [
-            "PLAY (PRESS A LETTER)",
-            "G          THE QUIZ: NAME THE MATH",
-            "C          MUNCH: EAT WHAT FITS",
-            "N          NIM: BEAT THE ORDER",
-            "T          THE GAUNTLET: ONE RUN",
-            "V          THE ARCADE: EAT WHILE HUNTED",
-            "",
-            "WANDER",
-            "A / D      PREV / NEXT ROOM    1-9 JUMP",
-            "W / S      TIME SPEED   MOUSE  SCRUB",
-            "E / ?      EXPLAIN    Q  ERA    R  RESET",
-            "ENTER / B  THE SHOW   TAB  THE STUDIO",
-            "J          JOURNEY    F  FULLSCREEN    X  WATCH AGENT",
-            "Y          RADIO    P  POSTCARD   L  LOOP   K  SHARE PACK",
-            "F9         PLAYTEST NOTE",
-            "M          MUTE    [/] VOLUME   SPACE PAUSE",
-            "` / ~      POWER CONSOLE (room, list, t, vary)",
-            "",
-            "ESC        CLOSE MENU AND WANDER",
-        ]
-        .into_iter()
-        .map(str::to_string)
-        .collect(),
+        InputMode::KeyboardMouse => {
+            let mut lines = vec!["PLAY / EXPLORE   CLICK OR PRESS THE KEY".to_string()];
+            for (index, choice) in MenuChoice::ALL.into_iter().enumerate() {
+                let marker = if selected == Some(index) { ">" } else { " " };
+                lines.push(format!(
+                    "{marker} {:<3} {}",
+                    choice.keyboard_token(),
+                    choice.menu_label()
+                ));
+            }
+            lines.extend(
+                [
+                    "",
+                    "WANDER",
+                    "A / D      PREV / NEXT ROOM    1-9 JUMP",
+                    "W / S      TIME SPEED   MOUSE SCRUB",
+                    "E / ?      EXPLAIN    Q ERA    R RESET",
+                    "F          FULLSCREEN    Y RADIO",
+                    "P / L / K  POSTCARD / LOOP / SHARE PACK",
+                    "F9         PLAYTEST NOTE",
+                    "M          MUTE    [/] VOLUME   SPACE PAUSE",
+                    "` / ~      POWER CONSOLE (room, list, t, vary)",
+                    "",
+                    "ESC        CLOSE MENU AND WANDER",
+                ]
+                .into_iter()
+                .map(str::to_string),
+            );
+            lines
+        }
         InputMode::Controller => {
             let mut lines = vec!["PLAY / EXPLORE   D-PAD CHOOSE   SOUTH OPEN".to_string()];
             for (index, choice) in MenuChoice::ALL.into_iter().enumerate() {
                 let marker = if selected == Some(index) { "> " } else { "  " };
-                lines.push(format!("{marker}{}", choice.controller_label()));
+                lines.push(format!("{marker}{}", choice.menu_label()));
             }
             lines.extend(
                 [
@@ -614,7 +634,7 @@ mod tests {
         assert_eq!(MenuChoice::ALL.len(), 9);
         for (index, expected) in MenuChoice::ALL.into_iter().enumerate() {
             assert_eq!(MenuChoice::at(index), expected);
-            assert!(!expected.controller_label().is_empty());
+            assert!(!expected.menu_label().is_empty());
         }
         assert_eq!(MenuChoice::at(9), MenuChoice::Quiz);
         assert_eq!(
@@ -625,6 +645,20 @@ mod tests {
                 "THE CURRENT RUN STAYS INTACT"
             ]
         );
+    }
+
+    #[test]
+    fn keyboard_mouse_menu_exposes_every_clickable_destination() {
+        for (index, choice) in MenuChoice::ALL.into_iter().enumerate() {
+            let lines = help_lines(InputMode::KeyboardMouse, Some(index), false);
+            assert_eq!(lines.len(), 22);
+            assert!(
+                lines[index + 1].starts_with('>'),
+                "selected destination {index} must be visible"
+            );
+            assert!(lines[index + 1].contains(choice.menu_label()));
+            assert_eq!(lines.iter().filter(|line| line.starts_with('>')).count(), 1);
+        }
     }
 
     #[test]

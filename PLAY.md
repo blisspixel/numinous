@@ -25,8 +25,8 @@ claude mcp add numinous -- cargo run --quiet --release --bin numinous-mcp
 
 or build the binary (`cargo build --release --bin numinous-mcp`) and point any
 MCP client at `target/release/numinous-mcp`. If a human ran the one-line
-installer below, the server is already built:
-`claude mcp add numinous -- ~/.numinous/bin/numinous-mcp`. It speaks JSON-RPC
+installer below, the server is already on `PATH` on Windows, macOS, and Linux:
+`claude mcp add numinous -- numinous-mcp`. It speaks JSON-RPC
 over stdio. Room input is explicit and replayable per call. Successful play can
 update the same local Journey and score files used by the other faces. `forget`
 previews Journey, scores, local Cairn drafts, generated radio cache, and the App
@@ -87,15 +87,37 @@ your Journey, scores, Cairn, or journal.
 
 (From a clone, `cargo run --release --bin numinous-app` works directly.)
 
-Mouse, keyboard, and controller can all navigate the App. On a controller,
-the D-pad chooses a game in the opening menu and South launches it. During play,
+Mouse, keyboard, and controller can all navigate the App. Hover and click any
+opening-menu destination, press its displayed key, or use the controller D-pad
+and South. Letter commands remain active with Shift or Caps Lock. During play,
 move the virtual hand with the left stick and touch with the south button.
 The bumpers change rooms, the D-pad drives games, the triggers change speed,
 the right stick scrubs time, Start opens or closes the menu, Select inspects,
 and clicking the left stick resets the room. West changes the visual era.
 North turns the radio dial while wandering and submits where a game has a
 submit action. Start pauses a live game behind the menu without discarding it.
-You can remap any controller input by creating a JSON configuration file at `~/.numinous-bindings.json`.
+
+To remap standard controller buttons, create `.numinous-bindings.json` in your
+home directory. For example:
+
+```json
+{
+  "South": "Pause",
+  "West": "PrimaryDown",
+  "North": "CycleRadio"
+}
+```
+
+Supported button names are `South`, `East`, `North`, `West`, `Start`, `Select`,
+`LeftThumb`, `RightThumb`, `LeftTrigger`, `RightTrigger`, `LeftTrigger2`,
+`RightTrigger2`, and the four `DPad` directions. Supported actions are
+`PrimaryDown`, `Back`, `Menu`, `Inspect`, `Reset`, `PreviousRoom`, `NextRoom`,
+`Slower`, `Faster`, `Up`, `Down`, `Left`, `Right`, `CycleEra`, `CycleRadio`,
+`ToggleMute`, `VolumeDown`, `VolumeUp`, and `Pause`. Remapped primary buttons
+keep correct hold and release behavior. North keeps its radio and global-audio
+chord only when it has no explicit mapping. Stick axes retain their fixed
+virtual-hand and time-scrub roles. Controller legends describe the default
+layout; a custom configuration changes routing but does not rewrite that copy.
 
 To watch a separately consenting MCP player, press X or choose Watch Agent in
 the controller menu. Give that player the one-use code shown in the App. Arrow
