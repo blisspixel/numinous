@@ -7,8 +7,11 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import signal
+import subprocess
 import sys
 import tempfile
+import time
 from typing import Any
 import unittest
 from unittest import mock
@@ -22,6 +25,23 @@ SPEC = importlib.util.spec_from_file_location(
 assert SPEC is not None and SPEC.loader is not None
 SMOKE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(SMOKE)
+
+
+def terminate_process(process_id: int) -> None:
+    """Terminate one regression-test descendant without leaving temp locks."""
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/PID", str(process_id), "/T", "/F"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+            check=False,
+        )
+        return
+    try:
+        os.kill(process_id, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
 
 
 def valid_render() -> str:
@@ -200,6 +220,49 @@ class ReleaseEngagementSmokeTests(unittest.TestCase):
                         cwd=root,
                         environment=dict(os.environ),
                     )
+            with mock.patch.object(SMOKE, "MAX_OUTPUT_BYTES", 4_096):
+                with self.assertRaisesRegex(SMOKE.SmokeError, "output limit"):
+                    SMOKE.run_process(
+                        [
+                            sys.executable,
+                            "-u",
+                            "-c",
+                            (
+                                "import os,sys\n"
+                                "chunk=b'x'*65536\n"
+                                "while True: os.write(sys.stdout.fileno(),chunk)"
+                            ),
+                        ],
+                        cwd=root,
+                        environment=dict(os.environ),
+                    )
+
+    def test_timeout_is_bounded_when_a_descendant_holds_output_pipes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            child_pid_path = root / "child.pid"
+            program = (
+                "import pathlib,subprocess,sys,tempfile,time\n"
+                "child=subprocess.Popen([sys.executable,'-c',"
+                "'import time;time.sleep(10)'],cwd=tempfile.gettempdir())\n"
+                f"pathlib.Path({str(child_pid_path)!r}).write_text(str(child.pid))\n"
+                "time.sleep(10)"
+            )
+            started = time.monotonic()
+            try:
+                with mock.patch.object(SMOKE, "PROCESS_TIMEOUT_SECONDS", 2):
+                    with self.assertRaisesRegex(SMOKE.SmokeError, "exceeded"):
+                        SMOKE.run_process(
+                            [sys.executable, "-c", program],
+                            cwd=root,
+                            environment=dict(os.environ),
+                        )
+                self.assertTrue(child_pid_path.exists())
+                self.assertLess(time.monotonic() - started, 4.5)
+            finally:
+                if child_pid_path.exists():
+                    child_pid = int(child_pid_path.read_text())
+                    terminate_process(child_pid)
 
     def test_isolated_environment_confines_all_player_state(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

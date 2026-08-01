@@ -11,8 +11,9 @@ import re
 import subprocess
 import sys
 import tempfile
+import threading
 import time
-from typing import Any
+from typing import Any, BinaryIO
 
 
 PROTOCOL_VERSION = "2026-07-28"
@@ -57,6 +58,7 @@ EXPECTED_TOOL_NAMES = frozenset(
 )
 EXPECTED_TOOL_COUNT = len(EXPECTED_TOOL_NAMES)
 PROCESS_TIMEOUT_SECONDS = 20
+READER_SHUTDOWN_TIMEOUT_SECONDS = 1
 MAX_OUTPUT_BYTES = 1_048_576
 VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$")
 
@@ -117,11 +119,7 @@ def run_process(
 ) -> str:
     """Run one release binary with bounded time and output."""
     executable = Path(command[0]).name
-    with (
-        tempfile.TemporaryFile() as standard_input,
-        tempfile.TemporaryFile() as standard_output,
-        tempfile.TemporaryFile() as standard_error,
-    ):
+    with tempfile.TemporaryFile() as standard_input:
         if input_text is not None:
             standard_input.write(input_text.encode("utf-8"))
         standard_input.seek(0)
@@ -130,16 +128,37 @@ def run_process(
             cwd=cwd,
             env=environment,
             stdin=standard_input,
-            stdout=standard_output,
-            stderr=standard_error,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
+        standard_output = process.stdout
+        standard_error = process.stderr
+        if standard_output is None or standard_error is None:
+            process.kill()
+            process.wait()
+            raise SmokeError(f"{executable} did not expose output pipes")
+        output = bytearray()
+        error_output = bytearray()
+        output_exceeded = threading.Event()
+        stream_failed = threading.Event()
+        readers = (
+            threading.Thread(
+                target=read_bounded_stream,
+                args=(standard_output, output, output_exceeded, stream_failed),
+                daemon=True,
+            ),
+            threading.Thread(
+                target=read_bounded_stream,
+                args=(standard_error, error_output, output_exceeded, stream_failed),
+                daemon=True,
+            ),
+        )
+        for reader in readers:
+            reader.start()
         deadline = time.monotonic() + PROCESS_TIMEOUT_SECONDS
         failure: str | None = None
         while process.poll() is None:
-            if (
-                os.fstat(standard_output.fileno()).st_size > MAX_OUTPUT_BYTES
-                or os.fstat(standard_error.fileno()).st_size > MAX_OUTPUT_BYTES
-            ):
+            if output_exceeded.is_set():
                 failure = f"{executable} exceeded the output limit"
                 break
             if time.monotonic() >= deadline:
@@ -150,25 +169,47 @@ def run_process(
             time.sleep(0.01)
         if failure is not None:
             process.kill()
-            process.wait()
-            raise SmokeError(failure)
         return_code = process.wait()
-        if (
-            os.fstat(standard_output.fileno()).st_size > MAX_OUTPUT_BYTES
-            or os.fstat(standard_error.fileno()).st_size > MAX_OUTPUT_BYTES
-        ):
-            raise SmokeError(f"{executable} exceeded the output limit")
-        standard_output.seek(0)
-        standard_error.seek(0)
-        output = standard_output.read().decode("utf-8", errors="strict")
-        error_output = standard_error.read().decode("utf-8", errors="strict")
+        reader_deadline = time.monotonic() + READER_SHUTDOWN_TIMEOUT_SECONDS
+        for reader in readers:
+            reader.join(timeout=max(0.0, reader_deadline - time.monotonic()))
+        if failure is not None or output_exceeded.is_set():
+            raise SmokeError(failure or f"{executable} exceeded the output limit")
+        if any(reader.is_alive() for reader in readers):
+            raise SmokeError(f"{executable} did not close its output streams")
+        if stream_failed.is_set():
+            raise SmokeError(f"{executable} output could not be read")
+        decoded_output = output.decode("utf-8", errors="strict")
+        decoded_error = error_output.decode("utf-8", errors="strict")
     if return_code != 0:
         raise SmokeError(
             f"{executable} exited with status {return_code}"
         )
-    if error_output.strip():
+    if decoded_error.strip():
         raise SmokeError(f"{executable} wrote unexpected stderr")
-    return output
+    return decoded_output
+
+
+def read_bounded_stream(
+    stream: BinaryIO,
+    destination: bytearray,
+    output_exceeded: threading.Event,
+    stream_failed: threading.Event,
+) -> None:
+    """Drain one child pipe without retaining bytes beyond the output cap."""
+    try:
+        while chunk := stream.read(65_536):
+            remaining = MAX_OUTPUT_BYTES - len(destination)
+            if len(chunk) > remaining:
+                if remaining > 0:
+                    destination.extend(chunk[:remaining])
+                output_exceeded.set()
+                return
+            destination.extend(chunk)
+    except OSError:
+        stream_failed.set()
+    finally:
+        stream.close()
 
 
 def validate_render_body(render: str) -> None:
@@ -177,7 +218,7 @@ def validate_render_body(render: str) -> None:
         raise SmokeError("Times Tables render is empty")
     if len(render.encode("utf-8")) > MAX_OUTPUT_BYTES:
         raise SmokeError("Times Tables render exceeded the output limit")
-    if render.count("\n") < 18:
+    if len(render.splitlines()) < 20:
         raise SmokeError("Times Tables render has too few rows")
     if "*" not in render or "#" not in render:
         raise SmokeError("Times Tables render has no characteristic ink")
