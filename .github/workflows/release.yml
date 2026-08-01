@@ -70,8 +70,8 @@ jobs:
             --soundtrack-archive "$soundtrack" --soundtrack-checksum "$soundtrack.sha256" \
             --soundtrack-content-checksum "$soundtrack_content" \
             --release-tag "v${version}"
-          "$NUMINOUS_HOME/bin/numinous" --version
           "$NUMINOUS_HOME/bin/numinous" --help | grep -q '^  update'
+          python3 scripts/release-engagement-smoke.py --bin-dir "$NUMINOUS_HOME/bin"
           printf '%064d\n' 0 >"$NUMINOUS_HOME/soundtrack/.archive.sha256"
           bash scripts/install.sh --no-modify-path \
             --release-archive "$payload" --release-checksum "$payload.sha256" \
@@ -97,10 +97,10 @@ jobs:
             -SoundtrackArchive $soundtrack -SoundtrackChecksum "$soundtrack.sha256" `
             -SoundtrackContentChecksum $soundtrackContent `
             -ReleaseTag "v$version"
-          & "$env:NUMINOUS_HOME/bin/numinous.exe" --version
           if (-not (& "$env:NUMINOUS_HOME/bin/numinous.exe" --help | Select-String '^  update')) {
             throw 'the installed CLI does not expose numinous update'
           }
+          python scripts/release-engagement-smoke.py --bin-dir "$env:NUMINOUS_HOME/bin"
           [IO.File]::WriteAllText(
             "$env:NUMINOUS_HOME/soundtrack/.archive.sha256", ('0' * 64) + "`r`n")
           ./scripts/install.ps1 -NoModifyPath `
