@@ -76,7 +76,9 @@ pub use chiptune::{
     munch_crunch, pitch, quantize_pcm16, stereo_signal_metrics,
 };
 pub use citations::{for_room as room_citation, for_room_unlocked as room_citation_unlocked};
-pub use codebreaker::{Feedback, grade, hint, secret_code};
+pub use codebreaker::{
+    Feedback, MAX_CODE_DIGITS, MIN_CODE_DIGITS, grade, hint, secret_code, supports_code_length,
+};
 pub use concepts::{concept, explain_text};
 pub use era::Era;
 pub use font::{draw_text, text_width, wrap_text};

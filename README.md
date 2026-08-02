@@ -300,8 +300,8 @@ form elicitation can commit a `predict` guess through the protocol's multi
 round-trip result flow without seeing the hidden readout first. Real subprocess
 tests exercise both modern and legacy paths.
 
-The verified August 1, 2026 gate has 3,210 passing all-target test cases plus one
-ignored screenshot diagnostic, 95.14% region coverage and 95.29% line coverage
+The verified August 1, 2026 gate has 3,213 passing all-target test cases plus one
+ignored screenshot diagnostic, 95.15% region coverage and 95.30% line coverage
 with an enforced 80% line floor, Clippy with warnings denied, and dependency
 policy checks. Release QA also regenerates an exact
 2,913-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact

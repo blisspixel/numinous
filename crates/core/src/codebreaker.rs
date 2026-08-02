@@ -11,6 +11,18 @@ use crate::rng::SplitMix64;
 /// Decorrelates the code seed from other seeded systems.
 const CODE_MIX: u64 = 0xB055_C0DE_1234_5678;
 
+/// Smallest playable Crack the Code secret.
+pub const MIN_CODE_DIGITS: usize = 2;
+
+/// Largest playable Crack the Code secret.
+pub const MAX_CODE_DIGITS: usize = 8;
+
+/// Whether `digits` is a supported playable code length.
+#[must_use]
+pub fn supports_code_length(digits: usize) -> bool {
+    (MIN_CODE_DIGITS..=MAX_CODE_DIGITS).contains(&digits)
+}
+
 /// The result of grading a guess against the secret code.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Feedback {
@@ -60,7 +72,15 @@ pub fn hint(secret: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{grade, hint, secret_code};
+    use super::{MAX_CODE_DIGITS, MIN_CODE_DIGITS, grade, hint, secret_code, supports_code_length};
+
+    #[test]
+    fn supported_code_lengths_match_the_playable_contract() {
+        assert!(!supports_code_length(MIN_CODE_DIGITS - 1));
+        assert!(supports_code_length(MIN_CODE_DIGITS));
+        assert!(supports_code_length(MAX_CODE_DIGITS));
+        assert!(!supports_code_length(MAX_CODE_DIGITS + 1));
+    }
 
     #[test]
     fn secret_is_deterministic_and_in_range() {

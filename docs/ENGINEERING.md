@@ -149,7 +149,9 @@ the play history. Hostile JSON on the MCP stdio boundary, oversized CLI input,
 path and install provenance, and untrusted media decode are in scope. Remote
 unauthenticated network MCP, multi-tenant OAuth, and cloud multi-player are
 out of scope for this version unless productized later; claims about security
-must name that boundary.
+must name that boundary. Device-reported audio configuration is also treated as
+untrusted: the output path rejects zero rates, zero channels, and sample rates
+above 384 kHz before device-scaled rendering or mixer setup.
 
 ## CI gates (the merge bar)
 
@@ -172,6 +174,13 @@ Nothing merges red. On every PR, blocking:
     builds and disposable packaged-install smoke tests in the release workflow.
     Every installed package must render Times Tables through the CLI and complete
     modern MCP discovery, tool listing, and `play_room` from an isolated profile.
+    Archive verification admits at most 256 entries, 256 MiB for any one
+    regular member, and 512 MiB in total expanded payload before retaining
+    member bytes. Classic ZIP central-directory metadata is parsed under a
+    16 MiB budget before the standard reader is constructed, with ZIP64 and
+    multi-disk forms rejected. Tar verification accepts the deterministic ustar
+    directory and regular-file subset and rejects hidden PAX or GNU extension
+    records before their bodies are expanded.
 
 Hardening targets not yet enforced in CI: `cargo-auditable` release binaries,
 cryptographic release signing, the visual and audio regression loops, and
