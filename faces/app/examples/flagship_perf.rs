@@ -28,7 +28,7 @@ mod room_phase;
 #[path = "../src/studio_panel.rs"]
 mod studio_panel;
 
-use input_legend::InputMode;
+use input_legend::{ControllerFace, InputMode};
 use room_phase::effective_room_phase;
 use studio_panel::StudioPanel;
 
@@ -428,9 +428,10 @@ fn studio_measurements(config: Config) -> Result<[Measurement; 2], String> {
     let baseline = StudioPanel::default();
     let studio_raster = |panel: &StudioPanel| {
         let mut raster = Raster::with_accent(config.width, config.height, [120, 220, 190]);
-        panel.draw(
+        panel.draw_with_controller(
             &mut raster,
             InputMode::KeyboardMouse,
+            ControllerFace::Generic.into(),
             config.width,
             config.height,
             0.45,

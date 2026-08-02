@@ -585,6 +585,18 @@ def main() -> int:
 
     summary_path = OUT / "SUMMARY.md"
     summary_path.write_text("\n".join(summary_lines), encoding="utf-8")
+    suite_summary = {
+        "suite": "agent-tactile",
+        "passed": failed == 0,
+        "passed_count": passed,
+        "failed_count": failed,
+        "probe_count": len(results),
+        "revision": revision,
+        "checker_sha256": checker_sha256,
+        "tracked_worktree_dirty": tracked_dirty,
+        "failed_slugs": [item["slug"] for item in results if not item["pass"]],
+        "evidence_class": "agent-mcp-machine",
+    }
     raw_path = OUT / "results.json"
     raw_path.write_text(
         json.dumps(
@@ -592,21 +604,27 @@ def main() -> int:
                 "revision": revision,
                 "checker_sha256": checker_sha256,
                 "tracked_worktree_dirty": tracked_dirty,
+                "summary": suite_summary,
                 "results": results,
             },
             indent=2,
         ),
         encoding="utf-8",
     )
+    compact_path = OUT / "summary.json"
+    compact_path.write_text(json.dumps(suite_summary, indent=2) + "\n", encoding="utf-8")
 
     print(f"wrote {summary_path}")
     print(f"wrote {raw_path}")
+    print(f"wrote {compact_path}")
     print(f"{passed}/{len(results)} PASS")
     for item in results:
         mark = "PASS" if item["pass"] else "FAIL"
         print(f"  {mark}  {item['slug']}")
         for defect in item["defects"]:
             print(f"        {defect}")
+    print("--- summary.json ---")
+    print(json.dumps(suite_summary, sort_keys=True))
 
     return 0 if failed == 0 else 1
 

@@ -94,6 +94,11 @@ built, so an aspiration is never mistaken for a result.
   coarse renderer-path checks, not certification of subjective visual quality.
   Production input routing has separate unit tests; native operating system
   event dispatch is not claimed as automated end-to-end evidence.
+  Controller-copy regressions derive Xbox, PlayStation, and generic labels from
+  the effective routing table, cover remapped, multiply routed, unbound,
+  directional, audio-chord, and direct-audio actions, and propagate the same
+  immutable value through every App surface. Compact custom mappings retain the
+  two-times small-window layout while keyboard and mouse copy remains unchanged.
 - **Catalog plate quality (cycles 161 to 168, machine path):** full-catalog
   scans hold (1) zero phase-thin frames (worst t among 0, 0.25, 0.5, 0.75, 1.0
   has under 80 ink on 120x70), (2) zero dead-domain rooms (base raster equals

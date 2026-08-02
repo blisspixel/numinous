@@ -283,10 +283,30 @@ impl StudioPanel {
     }
 
     /// Draw the Studio panel into the raster.
+    #[cfg(test)]
     pub(crate) fn draw(
         &self,
         raster: &mut Raster,
         mode: InputMode,
+        width: usize,
+        height: usize,
+        t: f64,
+    ) {
+        self.draw_with_controller(
+            raster,
+            mode,
+            crate::input_legend::ControllerFace::Generic.into(),
+            width,
+            height,
+            t,
+        );
+    }
+
+    pub(crate) fn draw_with_controller(
+        &self,
+        raster: &mut Raster,
+        mode: InputMode,
+        copy: crate::input_legend::ControllerCopy,
         width: usize,
         height: usize,
         t: f64,
@@ -330,7 +350,7 @@ impl StudioPanel {
             }
         }
         if height >= 20 {
-            let footer = input_legend::studio_controls(mode);
+            let footer = input_legend::studio_controls_with_controller(mode, copy);
             raster.clear_rows(height as i32 - 16 * scale, height as i32);
             numinous_core::draw_text(raster, &footer, 10, height as i32 - 11 * scale, scale, '#');
         }

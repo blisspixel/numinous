@@ -44,6 +44,16 @@ Step "documentation" {
 }
 Step "tests"  { cargo test --workspace --all-targets --locked }
 Step "MCP play driver" { python scripts/test-mcp-play.py }
+Step "agent cohort contracts" { python scripts/test-agent-cohort.py }
+Step "agent hallway cohort" { python scripts/agent-hallway.py }
+Step "agent tactile cohort" { python scripts/agent-tactile.py }
+Step "agent first-contact suite" { python scripts/agent-first-contact.py }
+Step "flagship visual and audio goldens" { python scripts/flagship-goldens.py }
+Step "creator roundtrip" { python scripts/creator-roundtrip.py }
+Step "am soak" { python scripts/am-soak.py }
+Step "catalog scorecard" { python scripts/catalog-scorecard.py }
+Step "understanding am dry-run" { python scripts/test-understanding-am.py }
+Step "understanding am registration audit" { python scripts/understanding-am-pipeline.py --check-only docs/evidence/understanding-0.4/registration-dry-run.json }
 Step "understanding study runner" { python scripts/test-understanding-study.py }
 Step "understanding study collector" { python scripts/test-understanding-collect.py }
 Step "release packaging" { python scripts/test-package-release.py }

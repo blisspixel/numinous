@@ -1,9 +1,12 @@
 use numinous_core::{Raster, Room, Surface};
 
 use crate::{
-    input_legend::{self, ControllerFace, InputMode},
+    input_legend::{self, ControllerCopy, InputMode},
     play::{ArcadePlay, GauntletPlay, MunchPlay, NimPlay, QuizPlay, gauntlet_total},
 };
+
+#[cfg(test)]
+use crate::input_legend::ControllerFace;
 
 fn game_scale(width: usize) -> i32 {
     (width as i32 / 400).clamp(1, 3)
@@ -118,24 +121,24 @@ fn control_lines(copy: &str, width: usize, scale: i32, left: i32) -> Vec<String>
     numinous_core::wrap_text(copy, munch_columns(width, scale, left))
 }
 
-fn munch_control_lines(
+fn munch_control_lines<C: Into<ControllerCopy> + Copy>(
     mode: InputMode,
-    face: ControllerFace,
+    face: C,
     width: usize,
     scale: i32,
 ) -> Vec<String> {
     control_lines(
-        &input_legend::munch_live_with_face(mode, face),
+        &input_legend::munch_live_with_controller(mode, face.into()),
         width,
         scale,
         10,
     )
 }
 
-fn munch_result_lines(
+fn munch_result_lines<C: Into<ControllerCopy> + Copy>(
     outcome: &numinous_core::Munched,
     mode: InputMode,
-    face: ControllerFace,
+    face: C,
     width: usize,
     scale: i32,
 ) -> Vec<String> {
@@ -160,7 +163,10 @@ fn munch_result_lines(
             semantic.push("ONE AWAY. THE BOARD REMEMBERS.".to_string());
         }
     }
-    semantic.push(input_legend::munch_result_with_face(mode, face));
+    semantic.push(input_legend::munch_result_with_controller(
+        mode,
+        face.into(),
+    ));
 
     let columns = munch_columns(width, scale, width as i32 / 8);
     semantic
@@ -210,7 +216,7 @@ impl QuizResultLayout {
         quiz: &QuizPlay,
         correct: bool,
         mode: InputMode,
-        face: ControllerFace,
+        face: impl Into<ControllerCopy> + Copy,
         width: usize,
         height: usize,
     ) -> Self {
@@ -232,7 +238,7 @@ impl QuizResultLayout {
                 verdict_scale,
             )
         };
-        let controls = input_legend::quiz_result_with_face(mode, face);
+        let controls = input_legend::quiz_result_with_controller(mode, face.into());
 
         let reveal_y = margin + FONT_PIXEL_HEIGHT * verdict_scale + line_height;
         let controls_y = height as i32 - FONT_PIXEL_HEIGHT * body_scale - margin;
@@ -303,10 +309,10 @@ fn gauntlet_header_height(message_lines: usize, scale: i32) -> i32 {
     18 * scale + message_lines as i32 * 9 * scale
 }
 
-fn gauntlet_result_lines(
+fn gauntlet_result_lines<C: Into<ControllerCopy> + Copy>(
     run: &GauntletPlay,
     mode: InputMode,
-    face: ControllerFace,
+    face: C,
     width: usize,
     scale: i32,
 ) -> Vec<String> {
@@ -324,7 +330,10 @@ fn gauntlet_result_lines(
         combo = if clean { combo + 1 } else { 1 };
     }
     semantic.push(format!("TOTAL {total}  GAUNTLET SEED {}", run.seed));
-    semantic.push(input_legend::gauntlet_done_with_face(mode, face));
+    semantic.push(input_legend::gauntlet_done_with_controller(
+        mode,
+        face.into(),
+    ));
     let columns = ((width as i32 - 20) / (6 * scale)).max(8) as usize;
     semantic
         .into_iter()
@@ -338,7 +347,7 @@ pub fn draw_quiz(
     rooms: &[Box<dyn Room>],
     quiz: &QuizPlay,
     mode: InputMode,
-    face: ControllerFace,
+    face: impl Into<ControllerCopy> + Copy,
     width: usize,
     height: usize,
 ) -> Raster {
@@ -366,7 +375,7 @@ pub fn draw_quiz(
             numinous_core::draw_text(&mut raster, "WHICH MATH MADE THIS?", 10, 10, scale + 1, '#');
             raster.dim_rows(layout.base - 6, height as i32, 40);
             for (i, choice) in quiz.round.choices.iter().enumerate() {
-                let direction = input_legend::quiz_direction(mode, i);
+                let direction = input_legend::quiz_direction_with_controller(mode, i, face.into());
                 let line = if direction.is_empty() {
                     format!("{}  {}", choice.letter, choice.title.to_uppercase())
                 } else {
@@ -425,7 +434,7 @@ pub fn draw_munch(
     play: &MunchPlay,
     frame: u64,
     mode: InputMode,
-    face: ControllerFace,
+    face: impl Into<ControllerCopy> + Copy,
     width: usize,
     height: usize,
 ) -> Raster {
@@ -524,7 +533,7 @@ pub fn draw_munch(
 pub fn draw_arcade(
     play: &ArcadePlay,
     mode: InputMode,
-    face: ControllerFace,
+    face: impl Into<ControllerCopy> + Copy,
     width: usize,
     height: usize,
 ) -> Raster {
@@ -636,7 +645,7 @@ pub fn draw_arcade(
         let lines = [
             "THE SPIRITS SEND REGARDS".to_string(),
             format!("LEVEL {}  SCORE {}", run.level, run.score),
-            input_legend::arcade_over_with_face(mode, face),
+            input_legend::arcade_over_with_controller(mode, face.into()),
         ];
         let ls = (width as i32 / 300).clamp(2, 4);
         let top = height as i32 / 2 - 18 * ls;
@@ -653,7 +662,7 @@ pub fn draw_arcade(
     }
     if !play.over {
         let controls = control_lines(
-            &input_legend::arcade_live_with_face(mode, face),
+            &input_legend::arcade_live_with_controller(mode, face.into()),
             width,
             scale,
             10,
@@ -670,7 +679,7 @@ pub fn draw_arcade(
 pub fn draw_nim(
     play: &NimPlay,
     mode: InputMode,
-    face: ControllerFace,
+    face: impl Into<ControllerCopy> + Copy,
     width: usize,
     height: usize,
 ) -> Raster {
@@ -694,7 +703,7 @@ pub fn draw_nim(
             '#',
         );
         let controls = control_lines(
-            &input_legend::nim_live_with_face(mode, play.take, face),
+            &input_legend::nim_live_with_controller(mode, play.take, face.into()),
             width,
             scale,
             10,
@@ -713,7 +722,7 @@ pub fn draw_nim(
             &numinous_core::nim_secret().to_uppercase(),
             columns,
         ));
-        lines.push(input_legend::nim_result_with_face(mode, face));
+        lines.push(input_legend::nim_result_with_controller(mode, face.into()));
         let lh = 10 * ls;
         let ttop = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
         for (i, line) in lines.iter().enumerate() {
@@ -728,7 +737,7 @@ pub fn draw_nim(
             "AT XOR 0, EVERY MOVE OPENS A REPLY. BREAK THAT LOOP ON THE NEXT RUN.",
             columns,
         ));
-        lines.push(input_legend::nim_result_with_face(mode, face));
+        lines.push(input_legend::nim_result_with_controller(mode, face.into()));
         let lh = 10 * ls;
         let ttop = (height as i32 / 2) - (lines.len() as i32 * lh) / 2;
         for (i, line) in lines.iter().enumerate() {
@@ -744,7 +753,7 @@ pub fn draw_gauntlet(
     run: &GauntletPlay,
     frame: u64,
     mode: InputMode,
-    face: ControllerFace,
+    face: impl Into<ControllerCopy> + Copy,
     width: usize,
     height: usize,
 ) -> Raster {
@@ -827,7 +836,7 @@ pub fn draw_gauntlet(
             }
             numinous_core::draw_text(
                 &mut raster,
-                &input_legend::gauntlet_choice(mode),
+                &input_legend::gauntlet_choice_with_controller(mode, face.into()),
                 10,
                 content_height as i32 - 22 * scale,
                 scale,
@@ -874,7 +883,7 @@ pub fn draw_gauntlet(
             );
             numinous_core::draw_text(
                 &mut raster,
-                &input_legend::gauntlet_bomb_with_face(mode, face),
+                &input_legend::gauntlet_bomb_with_controller(mode, face.into()),
                 10,
                 content_height as i32 - 22 * scale,
                 scale,

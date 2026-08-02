@@ -106,6 +106,71 @@ impl Bindings {
             .map(|h| PathBuf::from(h).join(".numinous-bindings.json"))
             .ok()
     }
+
+    pub(crate) fn controller_copy(
+        &self,
+        face: crate::input_legend::ControllerFace,
+    ) -> crate::input_legend::ControllerCopy {
+        if self.gamepad == Self::default().gamepad {
+            return face.into();
+        }
+
+        use crate::input_legend::{ControllerAction, ControllerButton, ControllerCopy};
+
+        let mut copy = ControllerCopy::empty(face);
+        for (button, display) in [
+            (Button::South, ControllerButton::South),
+            (Button::East, ControllerButton::East),
+            (Button::North, ControllerButton::North),
+            (Button::West, ControllerButton::West),
+            (Button::Start, ControllerButton::Start),
+            (Button::Select, ControllerButton::Select),
+            (Button::LeftThumb, ControllerButton::LeftThumb),
+            (Button::RightThumb, ControllerButton::RightThumb),
+            (Button::LeftTrigger, ControllerButton::LeftTrigger),
+            (Button::RightTrigger, ControllerButton::RightTrigger),
+            (Button::LeftTrigger2, ControllerButton::LeftTrigger2),
+            (Button::RightTrigger2, ControllerButton::RightTrigger2),
+            (Button::DPadUp, ControllerButton::DPadUp),
+            (Button::DPadDown, ControllerButton::DPadDown),
+            (Button::DPadLeft, ControllerButton::DPadLeft),
+            (Button::DPadRight, ControllerButton::DPadRight),
+        ] {
+            let Some(command) = self.gamepad.get(&button).copied() else {
+                continue;
+            };
+            let action = match command {
+                Command::PrimaryDown => ControllerAction::Primary,
+                Command::Back => ControllerAction::Back,
+                Command::Menu => ControllerAction::Menu,
+                Command::Inspect => ControllerAction::Inspect,
+                Command::Reset => ControllerAction::Reset,
+                Command::PreviousRoom => ControllerAction::PreviousRoom,
+                Command::NextRoom => ControllerAction::NextRoom,
+                Command::Slower => ControllerAction::Slower,
+                Command::Faster => ControllerAction::Faster,
+                Command::Up => ControllerAction::Up,
+                Command::Down => ControllerAction::Down,
+                Command::Left => ControllerAction::Left,
+                Command::Right => ControllerAction::Right,
+                Command::CycleEra => ControllerAction::CycleEra,
+                Command::CycleRadio => ControllerAction::CycleRadio,
+                Command::ToggleMute => ControllerAction::ToggleMute,
+                Command::VolumeDown => ControllerAction::VolumeDown,
+                Command::VolumeUp => ControllerAction::VolumeUp,
+                Command::Pause => ControllerAction::Pause,
+                Command::PrimaryUp
+                | Command::PointerMoved { .. }
+                | Command::PhaseDelta(_)
+                | Command::CancelPointer => continue,
+            };
+            copy.bind(action, display);
+        }
+        if !self.gamepad.contains_key(&Button::North) {
+            copy.enable_default_audio_chord();
+        }
+        copy
+    }
 }
 
 #[cfg(test)]
@@ -160,5 +225,38 @@ mod tests {
         assert_eq!(bindings.gamepad.get(&Button::East), Some(&Command::Back));
         assert!(!bindings.gamepad.contains_key(&Button::Mode));
         std::fs::remove_file(path).expect("cleanup");
+    }
+
+    #[test]
+    fn controller_copy_is_derived_from_the_effective_routing_table() {
+        use crate::input_legend::{Control, ControllerAction, ControllerFace};
+
+        let mut bindings = Bindings::default();
+        bindings.gamepad.insert(Button::South, Command::Pause);
+        bindings.gamepad.insert(Button::West, Command::PrimaryDown);
+        bindings.gamepad.insert(Button::North, Command::CycleEra);
+
+        let copy = bindings.controller_copy(ControllerFace::Xbox);
+
+        assert_eq!(copy.token(Control::Primary), "X");
+        assert_eq!(copy.token(Control::Pause), "A/+1");
+        assert_eq!(copy.token(Control::Submit), "UNBOUND");
+        assert_eq!(copy.action_token(ControllerAction::CycleEra), "Y");
+        assert!(!copy.uses_default_audio_chord());
+    }
+
+    #[test]
+    fn default_audio_chord_is_present_only_while_north_is_unbound() {
+        use crate::input_legend::{Control, ControllerFace};
+
+        let default_copy = Bindings::default().controller_copy(ControllerFace::PlayStation);
+        assert_eq!(default_copy.token(Control::Submit), "TRIANGLE");
+        assert!(default_copy.uses_default_audio_chord());
+
+        let mut remapped = Bindings::default();
+        remapped.gamepad.insert(Button::North, Command::Reset);
+        let copy = remapped.controller_copy(ControllerFace::PlayStation);
+        assert_eq!(copy.token(Control::Submit), "UNBOUND");
+        assert!(!copy.uses_default_audio_chord());
     }
 }

@@ -377,8 +377,8 @@ def write_synthesis(
         "## Evidence boundary",
         "",
         "Agent-cohort MCP scripts only. Not participant human hallway evidence.",
-        "Use this to harden digital-mind and CLI/MCP discoverability while human",
-        "sessions are arranged. Product 0.2 still names stranger humans as exit.",
+        "This suite is a required CI gate on the agent-and-machine track to 1.0.",
+        "Optional human stranger panels remain a parallel claim, not an am-exit.",
         "",
         f"## Machine script: {'PASS' if all_pass else 'FAIL'}",
         "",
@@ -411,6 +411,30 @@ def write_synthesis(
     return path
 
 
+def cohort_summary(
+    initialize: dict[str, Any],
+    times_score: dict[str, Any],
+    buffon_score: dict[str, Any],
+) -> dict[str, Any]:
+    """Return a machine-readable pass/fail summary for CI and audits."""
+    passed = bool(
+        initialize.get("ok") and times_score.get("passed") and buffon_score.get("passed")
+    )
+    findings = list(times_score.get("findings") or []) + list(
+        buffon_score.get("findings") or []
+    )
+    return {
+        "suite": "agent-hallway",
+        "passed": passed,
+        "initialize_ok": bool(initialize.get("ok")),
+        "times_tables_passed": bool(times_score.get("passed")),
+        "buffon_passed": bool(buffon_score.get("passed")),
+        "findings": findings,
+        "personas": len(PERSONAS),
+        "evidence_class": "agent-mcp-machine",
+    }
+
+
 def main() -> int:
     results: list[tuple[Persona, dict[str, Any], dict[str, Any]]] = []
     # One shared script per room; personas re-score the same machine evidence
@@ -424,7 +448,12 @@ def main() -> int:
         write_persona_note(persona, times_score, buffon_score, times_steps, buffon_steps)
         results.append((persona, times_score, buffon_score))
     synthesis = write_synthesis(results, initialize)
+    summary = cohort_summary(initialize, times_score, buffon_score)
+    summary_path = OUT / "summary.json"
+    OUT.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {len(PERSONAS)} persona notes and {synthesis}")
+    print(f"wrote {summary_path}")
     print(
         "initialize",
         initialize.get("ok"),
@@ -435,11 +464,9 @@ def main() -> int:
         "findings",
         times_score["findings"] + buffon_score["findings"],
     )
-    return (
-        0
-        if initialize.get("ok") and times_score["passed"] and buffon_score["passed"]
-        else 1
-    )
+    print("--- summary.json ---")
+    print(json.dumps(summary, sort_keys=True))
+    return 0 if summary["passed"] else 1
 
 
 if __name__ == "__main__":
