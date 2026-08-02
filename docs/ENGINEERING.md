@@ -6,7 +6,7 @@ perfection. This document separates gates enforced today from hardening work
 that still has to earn its place. The automated enforcement that exists lives
 in `QUALITY.md` and `.github/workflows/ci.yml`.
 
-## Toolchain and versions (verified 2026-07-24)
+## Toolchain and versions (verified 2026-08-01)
 
 The current baseline is deliberate and green. A newer major release is a review
 candidate, not an automatic upgrade. Compatible patch and minor lockfile
@@ -35,9 +35,11 @@ availability majors. Compatible transitive packages were refreshed on
 former temporary RUSTSEC ignores). Dependabot watches Cargo and GitHub Actions
 weekly (`.github/dependabot.yml`) without migration-era ignore rules.
 
-**CI action pins (current):** `actions/checkout` v7.0.1, `taiki-e/install-action`
-v2.85.0, `EmbarkStudios/cargo-deny-action` v2.1.1, `dtolnay/rust-toolchain`
-pinned to the 1.97.1 and 1.88.0 channel commits named in `.github/workflows/ci.yml`.
+**CI action pins (current):** `actions/checkout` v7.0.1,
+`actions/upload-artifact` v7.0.1, `actions/download-artifact` v8.0.1,
+`actions/attest` v4.1.1, `taiki-e/install-action` v2.85.2,
+`EmbarkStudios/cargo-deny-action` v2.1.1, and `dtolnay/rust-toolchain` pinned to
+the 1.97.1 and 1.88.0 channel commits named in the workflows.
 Bump pins through review when Dependabot or a manual check shows a newer
 release.
 
@@ -187,6 +189,12 @@ Nothing merges red. On every PR, blocking:
     positive XP value compared exactly across restart, content addressing, and
     a single-release four-target plus three-controller-profile matrix over at
     least three distinct models. CI tests the contract, not physical input.
+15. Eight release workflow contract regressions pin the official provenance
+    action, grant OIDC and attestation write authority only to the tag-only
+    attestation job, accept subjects only from the audited release-set artifact,
+    retain the signed JSONL bundle, and make publication depend on both audit and
+    attestation. Pull requests test the workflow contract without minting an
+    attestation or publishing a release.
 
 Hardening targets not yet enforced in CI: `cargo-auditable` release binaries,
 cryptographic release signing, the visual and audio regression loops, and
@@ -210,8 +218,9 @@ denied, plus doctests and the full test suite) only when the commit touches
 Rust, `Cargo.*`, or a shader, so a docs-only commit stays fast. Changes to the
 0.4 study runner, collector, fixture bank, encounter specification, MCP
 mediator, or their test files run the focused Python regressions. The installed
-release packaging, installed engagement, and physical input session regressions
-likewise run whenever their drivers or tests change. Coverage, the locked build, and artifact
+release packaging, installed engagement, physical input session, and tag
+provenance workflow regressions likewise run whenever their drivers, tests, or
+the release workflow change. Coverage, the locked build, and artifact
 regeneration stay in
 `scripts/verify.sh` (the release gate); they are too slow for every commit.
 Emergency bypass is `git commit --no-verify`, after which you must run
