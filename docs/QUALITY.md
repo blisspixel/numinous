@@ -170,7 +170,9 @@ built, so an aspiration is never mistaken for a result.
   latency, and human perception. Those native and sensory intervals remain open
   hardware evidence.
 - **Not yet evidenced:** a completed stranger hallway test, accessibility review
-  with disabled players, representative physical-controller sessions,
+  with disabled players, completed representative physical-controller session
+  receipts across the enforced single-release four-target and three-profile
+  matrix,
   musician-led long-listening review, real execution on macOS and Linux,
   nightly hardware soak, perceptual visual or audio regression, opt-in
   telemetry, and independent mathematical sign-off of every reveal.

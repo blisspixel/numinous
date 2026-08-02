@@ -53,6 +53,20 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertEqual(first_archive.read_bytes(), second_archive.read_bytes())
             self.assertEqual(first_checksum.read_text(), second_checksum.read_text())
             PACKAGE.verify_archive(first_archive, first_checksum)
+            files = PACKAGE.archive_files(first_archive)
+            relative_files = {
+                name.split("/", maxsplit=1)[1]
+                for name in files
+                if "/" in name
+            }
+            self.assertTrue(
+                {
+                    "VERIFY.md",
+                    "scripts/input-hardware-session.py",
+                    "scripts/package-release.py",
+                    "scripts/release-engagement-smoke.py",
+                }.issubset(relative_files)
+            )
 
     def test_soundtrack_archive_has_a_closed_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

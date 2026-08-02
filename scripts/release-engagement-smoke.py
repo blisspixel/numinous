@@ -411,8 +411,8 @@ def mcp_requests() -> str:
     )
 
 
-def run_engagement_smoke(bin_dir: Path) -> None:
-    """Exercise installed CLI and MCP binaries from a disposable profile."""
+def run_engagement_smoke(bin_dir: Path) -> str:
+    """Exercise installed CLI and MCP binaries and return their shared version."""
     cli = installed_binary(bin_dir, "numinous")
     mcp = installed_binary(bin_dir, "numinous-mcp")
     with tempfile.TemporaryDirectory(prefix="numinous-release-engagement-") as temporary:
@@ -448,6 +448,7 @@ def run_engagement_smoke(bin_dir: Path) -> None:
             input_text=mcp_requests(),
         )
         validate_mcp_responses(parse_mcp_output(output), version)
+    return version
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
