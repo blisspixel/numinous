@@ -11,15 +11,18 @@ import unittest
 ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "release.yml"
 CONTRACT_COMMAND = "scripts/test-release-workflow.py"
-ATTEST_ACTION = (
-    "actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1"
+SBOM_CONTRACT_COMMAND = "scripts/test-release-sbom.py"
+ATTEST_ACTION = "actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1"
+RUST_TOOLCHAIN_ACTION = (
+    "dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1"
 )
 HOOK_TRIGGER = (
     "'^(\\.github/workflows/(ci|release)\\.yml|"
     "scripts/(check|verify)\\.(ps1|sh)|scripts/hooks/pre-commit|"
     "scripts/(package-release|test-package-release|release-engagement-smoke|"
     "test-release-engagement-smoke|input-hardware-session|"
-    "test-input-hardware-session|test-release-workflow)\\.py)$'"
+    "test-input-hardware-session|release-sbom|test-release-sbom|"
+    "test-release-workflow)\\.py)$'"
 )
 
 
@@ -41,14 +44,17 @@ class ReleaseWorkflowTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
         cls.header = cls.workflow.split("\njobs:\n", maxsplit=1)[0]
+        cls.audit = job_block(cls.workflow, "audit-artifacts")
         cls.attest = job_block(cls.workflow, "attest-artifacts")
         cls.publish = job_block(cls.workflow, "publish")
 
-    def test_attestation_action_is_immutable_and_unique(self) -> None:
-        self.assertEqual(self.workflow.count(ATTEST_ACTION), 1)
-        self.assertEqual(self.workflow.count("uses: actions/attest@"), 1)
+    def test_attestation_actions_are_current_immutable_and_exact(self) -> None:
+        self.assertEqual(self.workflow.count(ATTEST_ACTION), 2)
+        self.assertEqual(self.workflow.count("uses: actions/attest@"), 2)
         self.assertNotIn("actions/attest-build-provenance@", self.workflow)
-        self.assertIn(f"uses: {ATTEST_ACTION}", self.attest)
+        self.assertEqual(self.attest.count(f"uses: {ATTEST_ACTION}"), 2)
+        self.assertEqual(self.attest.count("      - id: attest-build\n"), 1)
+        self.assertEqual(self.attest.count("      - id: attest-sbom\n"), 1)
         self.assertNotRegex(
             self.workflow,
             r"actions/attest@(v|main|master)",
@@ -88,20 +94,65 @@ class ReleaseWorkflowTests(unittest.TestCase):
 
     def test_only_verified_archives_are_attestation_subjects(self) -> None:
         self.assertIn("          name: verified-release-set\n", self.attest)
-        subjects = re.search(
+        subjects = re.findall(
             r"(?ms)^          subject-path: \|\n(?P<body>(?:^            [^\n]+\n)+)",
             self.attest,
         )
-        self.assertIsNotNone(subjects)
+        self.assertEqual(len(subjects), 2)
+        for subject in subjects:
+            self.assertEqual(
+                subject.splitlines(),
+                ["            dist/*.tar.gz", "            dist/*.zip"],
+            )
+
+    def test_sbom_is_generated_verified_and_attested_as_spdx(self) -> None:
+        self.assertEqual(self.audit.count(f"uses: {RUST_TOOLCHAIN_ACTION}"), 1)
+        self.assertEqual(self.audit.count("scripts/release-sbom.py generate"), 1)
+        self.assertEqual(self.audit.count("scripts/release-sbom.py verify"), 1)
+        self.assertIn('sbom="dist/numinous-v${version}-sbom.spdx.json"', self.audit)
+        self.assertLess(
+            self.audit.index("scripts/release-sbom.py generate"),
+            self.audit.index("scripts/release-sbom.py verify"),
+        )
+        self.assertLess(
+            self.audit.index("scripts/release-sbom.py verify"),
+            self.audit.index("          name: verified-release-set"),
+        )
+        self.assertEqual(self.audit.count('--release-version "$version"'), 2)
+        self.assertEqual(self.audit.count('--source-revision "$revision"'), 2)
         self.assertEqual(
-            subjects.group("body").splitlines(),
-            ["            dist/*.tar.gz", "            dist/*.zip"],
+            self.audit.count('--source-date-epoch "$source_date_epoch"'), 2
+        )
+        self.assertIn(
+            'revision="$(git rev-parse "${GITHUB_SHA}^{commit}")"', self.audit
+        )
+        self.assertEqual(
+            self.attest.count("          predicate-type: https://spdx.dev/Document\n"),
+            1,
+        )
+        self.assertEqual(
+            self.attest.count(
+                "          predicate-path: "
+                "dist/numinous-${{ github.ref_name }}-sbom.spdx.json\n"
+            ),
+            1,
         )
 
     def test_provenance_bundle_is_a_required_release_artifact(self) -> None:
-        self.assertIn("${{ steps.attest.outputs.bundle-path }}", self.attest)
+        self.assertIn("${{ steps.attest-build.outputs.bundle-path }}", self.attest)
+        self.assertIn("${{ steps.attest-sbom.outputs.bundle-path }}", self.attest)
         self.assertIn("name: release-provenance", self.attest)
-        self.assertIn("path: dist/*-provenance.jsonl", self.attest)
+        self.assertIn("            dist/*-provenance.jsonl", self.attest)
+        self.assertIn("dist/*-sbom-attestation.jsonl", self.attest)
+        self.assertEqual(self.attest.count('test -s "$bundle"'), 2)
+        self.assertIn(
+            'test -s "dist/numinous-${GITHUB_REF_NAME}-provenance.jsonl"',
+            self.attest,
+        )
+        self.assertIn(
+            'test -s "dist/numinous-${GITHUB_REF_NAME}-sbom-attestation.jsonl"',
+            self.attest,
+        )
         self.assertIn("if-no-files-found: error", self.attest)
 
     def test_publication_cannot_bypass_audit_or_attestation(self) -> None:
@@ -109,6 +160,15 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("if: startsWith(github.ref, 'refs/tags/')", self.publish)
         self.assertEqual(self.publish.count("name: verified-release-set"), 1)
         self.assertEqual(self.publish.count("name: release-provenance"), 1)
+        for suffix in (
+            "sbom.spdx.json",
+            "provenance.jsonl",
+            "sbom-attestation.jsonl",
+        ):
+            self.assertIn(
+                f'test -s "dist/numinous-${{GITHUB_REF_NAME}}-{suffix}"',
+                self.publish,
+            )
         self.assertIn('gh release create "${GITHUB_REF_NAME}" dist/*', self.publish)
 
     def test_contract_is_wired_into_every_local_and_ci_gate(self) -> None:
@@ -124,9 +184,8 @@ class ReleaseWorkflowTests(unittest.TestCase):
             with self.subTest(path=path.relative_to(ROOT)):
                 source = path.read_text(encoding="utf-8")
                 self.assertEqual(source.count(CONTRACT_COMMAND), expected)
-        hook = (ROOT / "scripts" / "hooks" / "pre-commit").read_text(
-            encoding="utf-8"
-        )
+                self.assertEqual(source.count(SBOM_CONTRACT_COMMAND), expected)
+        hook = (ROOT / "scripts" / "hooks" / "pre-commit").read_text(encoding="utf-8")
         self.assertIn(HOOK_TRIGGER, hook)
 
 

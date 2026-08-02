@@ -49,6 +49,7 @@ Step "understanding study collector" { python scripts/test-understanding-collect
 Step "release packaging" { python scripts/test-package-release.py }
 Step "release engagement contract" { python scripts/test-release-engagement-smoke.py }
 Step "physical input session contract" { python scripts/test-input-hardware-session.py }
+Step "release SBOM contract" { python scripts/test-release-sbom.py }
 Step "release workflow contract" { python scripts/test-release-workflow.py }
 Step "build"  { cargo build --workspace --locked }
 

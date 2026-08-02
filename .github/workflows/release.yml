@@ -141,6 +141,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: release-*
@@ -160,6 +161,23 @@ jobs:
           soundtrack_count="$(find dist -maxdepth 1 -type f -name '*-soundtrack.tar.gz' | wc -l)"
           content_count="$(find dist -maxdepth 1 -type f -name '*.content.sha256' | wc -l)"
           test "$content_count" -eq "$soundtrack_count"
+      - name: Generate and verify release SBOM
+        shell: bash
+        run: |
+          version="$(python3 scripts/package-release.py --print-version)"
+          revision="$(git rev-parse "${GITHUB_SHA}^{commit}")"
+          source_date_epoch="$(git show -s --format=%ct "$revision")"
+          sbom="dist/numinous-v${version}-sbom.spdx.json"
+          python3 scripts/release-sbom.py generate \
+            --sbom "$sbom" \
+            --release-version "$version" \
+            --source-revision "$revision" \
+            --source-date-epoch "$source_date_epoch"
+          python3 scripts/release-sbom.py verify \
+            --sbom "$sbom" \
+            --release-version "$version" \
+            --source-revision "$revision" \
+            --source-date-epoch "$source_date_epoch"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: verified-release-set
@@ -181,7 +199,7 @@ jobs:
         with:
           name: verified-release-set
           path: dist
-      - id: attest
+      - id: attest-build
         uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
         with:
           subject-path: |
@@ -190,13 +208,31 @@ jobs:
       - name: Stage provenance bundle
         shell: bash
         run: |
-          bundle='${{ steps.attest.outputs.bundle-path }}'
-          test -f "$bundle"
+          bundle='${{ steps.attest-build.outputs.bundle-path }}'
+          test -s "$bundle"
           cp -- "$bundle" "dist/numinous-${GITHUB_REF_NAME}-provenance.jsonl"
+          test -s "dist/numinous-${GITHUB_REF_NAME}-provenance.jsonl"
+      - id: attest-sbom
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+          predicate-type: https://spdx.dev/Document
+          predicate-path: dist/numinous-${{ github.ref_name }}-sbom.spdx.json
+      - name: Stage SBOM attestation bundle
+        shell: bash
+        run: |
+          bundle='${{ steps.attest-sbom.outputs.bundle-path }}'
+          test -s "$bundle"
+          cp -- "$bundle" "dist/numinous-${GITHUB_REF_NAME}-sbom-attestation.jsonl"
+          test -s "dist/numinous-${GITHUB_REF_NAME}-sbom-attestation.jsonl"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-provenance
-          path: dist/*-provenance.jsonl
+          path: |
+            dist/*-provenance.jsonl
+            dist/*-sbom-attestation.jsonl
           if-no-files-found: error
           retention-days: 7
 
@@ -217,6 +253,12 @@ jobs:
         with:
           name: release-provenance
           path: dist
+      - name: Verify release evidence assets
+        shell: bash
+        run: |
+          test -s "dist/numinous-${GITHUB_REF_NAME}-sbom.spdx.json"
+          test -s "dist/numinous-${GITHUB_REF_NAME}-provenance.jsonl"
+          test -s "dist/numinous-${GITHUB_REF_NAME}-sbom-attestation.jsonl"
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
