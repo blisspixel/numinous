@@ -31,6 +31,9 @@ FLAGSHIPS = (
     "galton-board",
     "buffon-needle",
 )
+# Times Tables only: era matrix proves palette identity without exploding the set.
+ERA_PROBE_ROOM = "times-tables"
+ERAS = ("modern", "phosphor", "8bit", "vector")
 SIGNAL_RE = re.compile(
     r"peak\s+(?P<peak>[-+0-9.eE]+),\s+RMS\s+(?P<rms>[-+0-9.eE]+)",
     re.IGNORECASE,
@@ -93,9 +96,11 @@ def run_capture(command: list[str]) -> str:
     return process.stdout + process.stderr
 
 
-def capture_room(cli: list[str], room_id: str, work: Path) -> dict[str, Any]:
-    png = work / f"{room_id}.png"
-    wav = work / f"{room_id}.wav"
+def capture_room(
+    cli: list[str], room_id: str, work: Path, *, era: str = "modern", audio: bool = True
+) -> dict[str, Any]:
+    suffix = "" if era == "modern" else f"-{era}"
+    png = work / f"{room_id}{suffix}.png"
     render_out = run_capture(
         [
             *cli,
@@ -105,45 +110,51 @@ def capture_room(cli: list[str], room_id: str, work: Path) -> dict[str, Any]:
             str(WIDTH),
             "--height",
             str(HEIGHT),
+            "--era",
+            era,
             "--out",
             str(png),
         ]
     )
-    sonify_out = run_capture(
-        [
-            *cli,
-            "sonify",
-            room_id,
-            "--layer",
-            "room-bed",
-            "--out",
-            str(wav),
-        ]
-    )
-    if not png.is_file() or not wav.is_file():
-        raise RuntimeError(f"missing artifacts for {room_id}")
-    match = SIGNAL_RE.search(sonify_out)
-    if match is None:
-        raise RuntimeError(f"missing signal line for {room_id}: {sonify_out[-400:]}")
-    peak = float(match.group("peak"))
-    rms = float(match.group("rms"))
+    if not png.is_file():
+        raise RuntimeError(f"missing PNG for {room_id} era {era}")
     visual = png_metrics(png)
-    return {
+    entry: dict[str, Any] = {
         "id": room_id,
+        "era": era,
         "width": WIDTH,
         "height": HEIGHT,
         "png_sha256": sha256_file(png),
-        "wav_sha256": sha256_file(wav),
         "png_bytes": int(visual["bytes"]),
         "png_mean_byte": visual["mean_byte"],
-        "wav_bytes": wav.stat().st_size,
-        "audio_peak": peak,
-        "audio_rms": rms,
         "render_status_line": next(
             (line for line in render_out.splitlines() if line.startswith("Status:")),
             "",
         ),
     }
+    if audio:
+        wav = work / f"{room_id}.wav"
+        sonify_out = run_capture(
+            [
+                *cli,
+                "sonify",
+                room_id,
+                "--layer",
+                "room-bed",
+                "--out",
+                str(wav),
+            ]
+        )
+        if not wav.is_file():
+            raise RuntimeError(f"missing artifacts for {room_id}")
+        match = SIGNAL_RE.search(sonify_out)
+        if match is None:
+            raise RuntimeError(f"missing signal line for {room_id}: {sonify_out[-400:]}")
+        entry["wav_sha256"] = sha256_file(wav)
+        entry["wav_bytes"] = wav.stat().st_size
+        entry["audio_peak"] = float(match.group("peak"))
+        entry["audio_rms"] = float(match.group("rms"))
+    return entry
 
 
 def load_manifest() -> dict[str, Any]:
@@ -154,16 +165,27 @@ def load_manifest() -> dict[str, Any]:
 
 def compare_entry(expected: dict[str, Any], actual: dict[str, Any]) -> list[str]:
     defects: list[str] = []
-    for key in ("png_sha256", "wav_sha256", "width", "height", "png_bytes", "wav_bytes"):
+    keys = ["png_sha256", "width", "height", "png_bytes"]
+    if "wav_sha256" in expected:
+        keys.extend(["wav_sha256", "wav_bytes"])
+    for key in keys:
         if expected.get(key) != actual.get(key):
             defects.append(f"{key}: expected {expected.get(key)!r} got {actual.get(key)!r}")
     # Tiny float guards for metric drift while hashes remain authoritative.
-    for key, tol in (("png_mean_byte", 1e-6), ("audio_peak", 1e-9), ("audio_rms", 1e-9)):
+    float_keys = [("png_mean_byte", 1e-6)]
+    if "audio_peak" in expected:
+        float_keys.extend([("audio_peak", 1e-9), ("audio_rms", 1e-9)])
+    for key, tol in float_keys:
         exp = float(expected[key])
         got = float(actual[key])
         if abs(exp - got) > tol * max(1.0, abs(exp)):
             defects.append(f"{key}: expected {exp} got {got}")
     return defects
+
+
+def entry_key(entry: dict[str, Any]) -> str:
+    era = entry.get("era") or "modern"
+    return f"{entry['id']}@{era}"
 
 
 def update_goldens(cli: list[str]) -> dict[str, Any]:
@@ -172,17 +194,33 @@ def update_goldens(cli: list[str]) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="numinous-goldens-") as tmp:
         work = Path(tmp)
         for room_id in FLAGSHIPS:
-            entry = capture_room(cli, room_id, work)
-            # Persist compact PNG plates for offline visual review. WAV bytes stay
-            # out of the repository; the manifest binds exact content hashes.
+            entry = capture_room(cli, room_id, work, era="modern", audio=True)
             (GOLDEN_DIR / f"{room_id}.png").write_bytes((work / f"{room_id}.png").read_bytes())
             rooms.append(entry)
+        for era in ERAS:
+            if era == "modern":
+                continue
+            entry = capture_room(
+                cli, ERA_PROBE_ROOM, work, era=era, audio=False
+            )
+            src = work / f"{ERA_PROBE_ROOM}-{era}.png"
+            (GOLDEN_DIR / f"{ERA_PROBE_ROOM}-{era}.png").write_bytes(src.read_bytes())
+            rooms.append(entry)
+    # Eras must not collapse to the same plate for Times Tables.
+    era_hashes = {
+        entry["era"]: entry["png_sha256"]
+        for entry in rooms
+        if entry["id"] == ERA_PROBE_ROOM
+    }
+    if len(set(era_hashes.values())) != len(era_hashes):
+        raise RuntimeError(f"era plates are not distinct: {era_hashes}")
     manifest = {
-        "schemaVersion": "numinous-flagship-goldens-v1",
+        "schemaVersion": "numinous-flagship-goldens-v2",
         "evidenceClass": "agent-machine-regression",
         "width": WIDTH,
         "height": HEIGHT,
         "layer": "room-bed",
+        "eras": list(ERAS),
         "rooms": rooms,
     }
     MANIFEST.parent.mkdir(parents=True, exist_ok=True)
@@ -192,25 +230,37 @@ def update_goldens(cli: list[str]) -> dict[str, Any]:
 
 def verify_goldens(cli: list[str]) -> dict[str, Any]:
     manifest = load_manifest()
-    expected_rooms = {room["id"]: room for room in manifest["rooms"]}
+    expected_rooms = {entry_key(room): room for room in manifest["rooms"]}
     defects: list[dict[str, Any]] = []
     actual_rooms: list[dict[str, Any]] = []
     with tempfile.TemporaryDirectory(prefix="numinous-goldens-verify-") as tmp:
         work = Path(tmp)
         for room_id in FLAGSHIPS:
-            actual = capture_room(cli, room_id, work)
+            actual = capture_room(cli, room_id, work, era="modern", audio=True)
             actual_rooms.append(actual)
-            expected = expected_rooms.get(room_id)
+            expected = expected_rooms.get(entry_key(actual))
             if expected is None:
-                defects.append({"id": room_id, "defects": ["missing from manifest"]})
+                defects.append({"id": entry_key(actual), "defects": ["missing from manifest"]})
                 continue
             room_defects = compare_entry(expected, actual)
             if room_defects:
-                defects.append({"id": room_id, "defects": room_defects})
+                defects.append({"id": entry_key(actual), "defects": room_defects})
+        for era in ERAS:
+            if era == "modern":
+                continue
+            actual = capture_room(cli, ERA_PROBE_ROOM, work, era=era, audio=False)
+            actual_rooms.append(actual)
+            expected = expected_rooms.get(entry_key(actual))
+            if expected is None:
+                defects.append({"id": entry_key(actual), "defects": ["missing from manifest"]})
+                continue
+            room_defects = compare_entry(expected, actual)
+            if room_defects:
+                defects.append({"id": entry_key(actual), "defects": room_defects})
     return {
         "suite": "flagship-goldens",
         "passed": not defects,
-        "room_count": len(FLAGSHIPS),
+        "room_count": len(actual_rooms),
         "defects": defects,
         "rooms": actual_rooms,
         "evidence_class": "agent-machine-regression",
@@ -231,10 +281,11 @@ def main(argv: list[str] | None = None) -> int:
             manifest = update_goldens(cli)
             print(f"updated {MANIFEST} with {len(manifest['rooms'])} rooms")
             for room in manifest["rooms"]:
-                print(
-                    f"  {room['id']}: png={room['png_sha256'][:12]} "
-                    f"wav={room['wav_sha256'][:12]} peak={room['audio_peak']}"
-                )
+                era = room.get("era", "modern")
+                line = f"  {room['id']}@{era}: png={room['png_sha256'][:12]}"
+                if "wav_sha256" in room:
+                    line += f" wav={room['wav_sha256'][:12]} peak={room['audio_peak']}"
+                print(line)
             return 0
         summary = verify_goldens(cli)
     except RuntimeError as error:
@@ -244,10 +295,11 @@ def main(argv: list[str] | None = None) -> int:
         f"{summary['room_count'] - len(summary['defects'])}/{summary['room_count']} PASS"
     )
     for room in summary["rooms"]:
-        print(
-            f"  {room['id']}: png={room['png_sha256'][:12]} "
-            f"wav={room['wav_sha256'][:12]} peak={room['audio_peak']}"
-        )
+        era = room.get("era", "modern")
+        line = f"  {room['id']}@{era}: png={room['png_sha256'][:12]}"
+        if "wav_sha256" in room:
+            line += f" wav={room['wav_sha256'][:12]} peak={room['audio_peak']}"
+        print(line)
     for item in summary["defects"]:
         print(f"  FAIL  {item['id']}")
         for defect in item["defects"]:

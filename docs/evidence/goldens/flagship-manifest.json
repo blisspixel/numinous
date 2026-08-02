@@ -1,74 +1,115 @@
 {
-  "schemaVersion": "numinous-flagship-goldens-v1",
+  "schemaVersion": "numinous-flagship-goldens-v2",
   "evidenceClass": "agent-machine-regression",
   "width": 64,
   "height": 40,
   "layer": "room-bed",
+  "eras": [
+    "modern",
+    "phosphor",
+    "8bit",
+    "vector"
+  ],
   "rooms": [
     {
       "id": "times-tables",
+      "era": "modern",
       "width": 64,
       "height": 40,
       "png_sha256": "1c06b46e95920dbf76d93a638017bb127c050a3506f68e9d167995a8f780657e",
-      "wav_sha256": "608d9d2ce69e35393aef6a215413741e18824edc58af21d3c9a4a4c40bf67c02",
       "png_bytes": 1376,
       "png_mean_byte": 118.180959,
+      "render_status_line": "Status: DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4",
+      "wav_sha256": "608d9d2ce69e35393aef6a215413741e18824edc58af21d3c9a4a4c40bf67c02",
       "wav_bytes": 2560044,
       "audio_peak": 0.13463,
-      "audio_rms": 0.04209,
-      "render_status_line": "Status: DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4"
+      "audio_rms": 0.04209
     },
     {
       "id": "double-pendulum",
+      "era": "modern",
       "width": 64,
       "height": 40,
       "png_sha256": "e86de0483fe7ee04316b2404ed939ff22ca3fec34f890a3df93f8e09a6577436",
-      "wav_sha256": "4c2f17dc6c6fa7231a3697c37aa05a5775e4104fbbf975dd8e01696d2c27bdfd",
       "png_bytes": 291,
       "png_mean_byte": 109.360825,
+      "render_status_line": "Status: CLICK:RE-DROP  TWINS 0.000",
+      "wav_sha256": "4c2f17dc6c6fa7231a3697c37aa05a5775e4104fbbf975dd8e01696d2c27bdfd",
       "wav_bytes": 2792768,
       "audio_peak": 0.12246,
-      "audio_rms": 0.0431,
-      "render_status_line": "Status: CLICK:RE-DROP  TWINS 0.000"
+      "audio_rms": 0.0431
     },
     {
       "id": "game-of-life",
+      "era": "modern",
       "width": 64,
       "height": 40,
       "png_sha256": "655c774b18c9b9045595b81c01a3800f0e9b7869fc3bcf96bb432747c76c16fd",
-      "wav_sha256": "da45b0432fb9734446fb41decdba3bb7e786ceb6e4ad72428e96e2547e266f5c",
       "png_bytes": 863,
       "png_mean_byte": 119.442642,
+      "render_status_line": "Status: CLICK:GLIDER  GEN 0  LIVE 1874",
+      "wav_sha256": "da45b0432fb9734446fb41decdba3bb7e786ceb6e4ad72428e96e2547e266f5c",
       "wav_bytes": 2194328,
       "audio_peak": 0.13337,
-      "audio_rms": 0.03123,
-      "render_status_line": "Status: CLICK:GLIDER  GEN 0  LIVE 1874"
+      "audio_rms": 0.03123
     },
     {
       "id": "galton-board",
+      "era": "modern",
       "width": 64,
       "height": 40,
       "png_sha256": "19e0985f4bcf2db10482c0acec2b9ceeed33c426895b06155609a113946d62f7",
-      "wav_sha256": "289d528c8e6fa5d8441f0c894096dc66006320170ab361dc6b497eed9d38fb3f",
       "png_bytes": 444,
       "png_mean_byte": 111.601351,
+      "render_status_line": "Status: CLICK:DROP 64  PICK COIN  MOVE:BET",
+      "wav_sha256": "289d528c8e6fa5d8441f0c894096dc66006320170ab361dc6b497eed9d38fb3f",
       "wav_bytes": 2048044,
       "audio_peak": 0.13337,
-      "audio_rms": 0.03118,
-      "render_status_line": "Status: CLICK:DROP 64  PICK COIN  MOVE:BET"
+      "audio_rms": 0.03118
     },
     {
       "id": "buffon-needle",
+      "era": "modern",
       "width": 64,
       "height": 40,
       "png_sha256": "f00cc0732efd6295cd229f466ed7739f79d6c4fc341b6592c9a10841ee2b5bfd",
-      "wav_sha256": "325114df4da1c1fe44ccb5d354a96b0b39e7dfe6c74cd63b67cf436ee677cec6",
       "png_bytes": 1407,
       "png_mean_byte": 123.943141,
+      "render_status_line": "Status: L/D 1.00   CROSS CHANCE 0.637   CLICK: THROW",
+      "wav_sha256": "325114df4da1c1fe44ccb5d354a96b0b39e7dfe6c74cd63b67cf436ee677cec6",
       "wav_bytes": 3233728,
       "audio_peak": 0.13395,
-      "audio_rms": 0.03359,
-      "render_status_line": "Status: L/D 1.00   CROSS CHANCE 0.637   CLICK: THROW"
+      "audio_rms": 0.03359
+    },
+    {
+      "id": "times-tables",
+      "era": "phosphor",
+      "width": 64,
+      "height": 40,
+      "png_sha256": "f7dc4251a0dcd22460bbc8c408e7518ed8ba70fa34514906f77d1d8cc684a1e6",
+      "png_bytes": 2896,
+      "png_mean_byte": 124.681285,
+      "render_status_line": "Status: DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4"
+    },
+    {
+      "id": "times-tables",
+      "era": "8bit",
+      "width": 64,
+      "height": 40,
+      "png_sha256": "ed569a24cab66496d58d1e7b3e8c60151c6c127875fce4db8d45f0a8ca004e08",
+      "png_bytes": 742,
+      "png_mean_byte": 120.161725,
+      "render_status_line": "Status: DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4"
+    },
+    {
+      "id": "times-tables",
+      "era": "vector",
+      "width": 64,
+      "height": 40,
+      "png_sha256": "63641d3453850a766385ff9105a5dd9d13519c608c71b7bfa619b6b99cc674e3",
+      "png_bytes": 2386,
+      "png_mean_byte": 124.895641,
+      "render_status_line": "Status: DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4"
     }
   ]
 }
