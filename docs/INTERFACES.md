@@ -76,6 +76,14 @@ The full interactive audiovisual experience. The UX is specified in depth across
   Custom routing does not rewrite the default-layout legends. Touch, pen, MIDI,
   and broader platform hardware certification remain planned rather than
   implied.
+  `scripts/input-hardware-session.py` now makes that evidence boundary
+  executable: a receipt is release-bound, covers keyboard, mouse/pointer, controller,
+  reconnect, game, pause, audio, clean exit, and positive-XP restart
+  observations, and says explicitly that operator attestation is not native
+  event capture. A complete matrix requires one version and commit across all
+  four release targets and at least three distinct models mapped consistently
+  across Xbox, PlayStation, and generic legend profiles. No physical session is
+  claimed until such a receipt exists.
 
 Nothing here is a compromise for the other faces; this is the headline experience. It is simply *one* consumer of the core.
 

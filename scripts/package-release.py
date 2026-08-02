@@ -31,8 +31,12 @@ RELEASE_FILES = (
     "LICENSE",
     "PLAY.md",
     "README.md",
+    "VERIFY.md",
+    "scripts/input-hardware-session.py",
     "scripts/install.ps1",
     "scripts/install.sh",
+    "scripts/package-release.py",
+    "scripts/release-engagement-smoke.py",
 )
 SOUNDTRACK_CONTENT_LABEL = "soundtrack-content-v1"
 MAX_ARCHIVE_ENTRIES = 256
@@ -587,7 +591,8 @@ def parse_manifest(data: bytes) -> dict[str, str]:
     return entries
 
 
-def verify_archive(path: Path, checksum_path: Path) -> None:
+def verify_archive(path: Path, checksum_path: Path) -> dict[str, bytes]:
+    """Verify one closed archive and return the exact admitted member snapshot."""
     expected_archive_hash = parse_checksum(checksum_path, path.name)
     if sha256_file(path) != expected_archive_hash:
         raise ValueError(f"archive checksum mismatch: {path.name}")
@@ -631,6 +636,9 @@ def verify_archive(path: Path, checksum_path: Path) -> None:
             raise ValueError("soundtrack content checksum mismatch")
     else:
         raise ValueError("release metadata kind is unsupported")
+    if sha256_file(path) != expected_archive_hash:
+        raise ValueError("release archive changed during verification")
+    return files
 
 
 def parse_args() -> argparse.Namespace:

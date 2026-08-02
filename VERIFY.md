@@ -18,6 +18,8 @@ the from-source verification path for contributors and the curious.
 - Optional, for the local coverage gate: `cargo install cargo-llvm-cov`.
 - Optional, for the local supply-chain gate: `cargo install cargo-deny`.
 - **Python 3.11 or newer**, for the 0.4 study runner and collector regressions.
+  The same dependency runs release engagement and physical input receipt
+  contract tests.
 - The Linux build needs the ALSA, xkbcommon, and libudev headers (the packages
   CI installs): `sudo apt-get install -y libasound2-dev libxkbcommon-dev libudev-dev`.
 
@@ -50,6 +52,10 @@ python scripts/test-understanding-collect.py        # Windows
 python3 scripts/test-understanding-collect.py       # macOS / Linux
 python scripts/test-package-release.py              # Windows
 python3 scripts/test-package-release.py             # macOS / Linux
+python scripts/test-release-engagement-smoke.py     # Windows
+python3 scripts/test-release-engagement-smoke.py    # macOS / Linux
+python scripts/test-input-hardware-session.py       # Windows
+python3 scripts/test-input-hardware-session.py      # macOS / Linux
 cargo build --workspace --locked
 cargo +1.88.0 check --workspace --all-targets --locked
 cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'
@@ -62,9 +68,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 3,213 all-target Rust test cases
-and 105 study runner and collector regressions pass, one screenshot diagnostic is
-ignored, 95.15% region coverage, and 95.30% line coverage**. The `gpu` and
+Expected right now: **format and clippy clean, 3,213 all-target Rust test cases,
+105 study runner and collector regressions, and 15 physical input contract
+regressions pass, one screenshot diagnostic is ignored, 95.15% region coverage,
+and 95.30% line coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
@@ -75,6 +82,52 @@ against every disposable packaged install. It requires a substantive Times
 Tables CLI render and modern MCP discovery, the exact 35-tool list, and one
 structured `play_room` result from an isolated temporary profile. Version-only
 execution is not treated as engagement proof.
+
+## 2a. Record physical input evidence
+
+Run this only on a physical clean-machine release candidate with a real mouse,
+keyboard, controller, display, and audio output. Keep the downloaded release
+archive beside its `.sha256` sidecar. The runner defaults to the installed
+`~/.numinous/bin` directory, or `$NUMINOUS_HOME/bin` when that variable is set.
+The release archive contains this guide, the runner, and its two verification
+dependencies under `scripts/`, so a source checkout is not required after the
+archive is extracted.
+It first verifies the release archive and proves that `numinous`,
+`numinous-app`, and `numinous-mcp` match it byte for byte. It then runs the
+installed CLI and MCP engagement contract before launching the App twice from
+one isolated temporary profile.
+
+On Windows PowerShell:
+
+```
+$archive = (Get-ChildItem downloads/numinous-v*-x86_64-pc-windows-msvc.zip | Select-Object -Last 1).FullName
+python scripts/input-hardware-session.py run --release-archive $archive --controller-name "Xbox Wireless Controller" --controller-connection wireless --controller-profile xbox
+```
+
+On macOS or Linux:
+
+```
+archive="$(find downloads -maxdepth 1 -type f -name 'numinous-v*-*.tar.gz' | sort | tail -n 1)"
+python3 scripts/input-hardware-session.py run --release-archive "$archive" --controller-name "DualSense Wireless Controller" --controller-connection bluetooth --controller-profile playstation
+```
+
+Each checkpoint requires an explicit `PASS` or `FAIL` and a bounded observation.
+Receipts are written exclusively beneath ignored `logs/input-sessions/`; a
+failed receipt is retained but the command exits nonzero. Validate one receipt
+with `input-hardware-session.py validate RECEIPT`. After collecting sessions,
+validate the release matrix with `input-hardware-session.py matrix RECEIPT...`.
+The matrix passes only with unique successful receipts for one release version
+and commit across Windows x64, Linux x64, macOS Intel, and macOS Apple silicon.
+It also requires all Xbox, PlayStation, and generic legend profiles across at
+least three distinctly named models, with one consistent profile per model.
+
+This is structured operator-attested evidence. The runner does not intercept
+native input events and cannot establish comfort, accessibility, fun, or
+compatibility beyond the exact host and controller named in a receipt. Physical
+sessions still have to be performed by people on the named hardware. The
+content identifier detects a change only until someone deliberately recomputes
+it. It is not a signature or evidence of external custody; release decisions
+that need that property must register or sign the receipt outside this runner.
 
 The release scripts also regenerate `renders/qa-app/`, a 2,913-screen app matrix.
 Every catalog room has deterministic default and compact opening frames,
@@ -114,7 +167,7 @@ of native operating-system event automation or subjective visual quality. `MANIF
 remains the review inventory, and a human or a clearly labeled simulated
 player-profile review still judges clarity and fun.
 
-## 2a. Run the five-flagship reference performance gate
+## 2b. Run the five-flagship reference performance gate
 
 Use a release build on declared reference hardware. The wrappers run the same
 locked command and fail if any ambient or accepted-input-to-room-raster p95

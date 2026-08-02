@@ -1292,3 +1292,46 @@ Musician-led long listening on representative devices remains the authority for
 those questions. A tolerant per-room spectral and temporal golden manifest also
 remains a separate engineering follow-up; exact sample hashes will not replace
 it.
+
+---
+
+# The fifteenth evidence round (August 1, 2026): physical input receipts
+
+The existing App tests and screenshot matrix establish deterministic input
+routing and visible consequences, but they cannot prove that native operating
+system events from a real mouse, keyboard, or controller reached the App. The
+release workflow likewise proves installed CLI and MCP engagement without
+opening a physical window. No controller was attached to the development host
+for this round, so no physical result is claimed.
+
+The new physical input session runner turns the remaining boundary into a
+repeatable release procedure. It verifies the downloaded archive and sidecar,
+matches every installed App, CLI, and MCP binary byte for byte, runs real CLI
+and MCP engagement from an isolated profile, and then launches the installed
+App twice. The release archive itself carries the procedure, its verifier
+dependencies, and the verification guide. The first launch asks for explicit observations of keyboard and
+pointer navigation, room gestures, controller discovery and reconnect, virtual
+hand, room and game routes, pause isolation, and audio controls. Before closing,
+the operator must earn positive XP and record the exact Journey level and XP.
+The second launch must reproduce those exact values from the same isolated
+profile. Both launches must close normally.
+
+Each receipt has an exact ordered checkpoint inventory, bounded printable
+notes, archive and binary hashes, a release target, a named physical controller,
+clean lifecycle codes, four fixed evidence limitations, and a deterministic
+content identifier. Failed observations produce failed receipts and a nonzero
+command result. Missing, duplicated, reordered, unknown, oversized, or
+aggregate-inconsistent evidence is rejected. A changed receipt fails until its
+content identifier is recomputed, but that identifier is not a signature or
+external custody proof. The matrix gate accepts only unique passed receipts for
+one version and commit across Windows x64, Linux x64, macOS Intel, macOS Apple
+silicon, and at least three distinct models mapped consistently across the Xbox,
+PlayStation, and generic legend paths.
+
+Fifteen focused regressions exercise pinned archive and installed-binary
+matching, content identity, strict types, exact persistence, checkpoint and
+aggregate truth, process cleanup on interrupted observation, link-aware output
+confinement, and matrix completeness. They run across all
+three CI operating systems. This proves the evidence procedure is portable. It
+does not replace the unperformed physical sessions, accessibility panels,
+comfort observation, native latency measurement, or judgments of fun.
