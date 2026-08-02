@@ -18,10 +18,17 @@ pub use capture::{CaptureRing, InputCapture, looks_like_loopback_name};
 
 /// A gentle amplitude so a test tone is never harsh.
 const AMPLITUDE: f32 = 0.2;
+/// Upper device-rate boundary accepted by the real-time audio path.
+const MAX_DEVICE_SAMPLE_RATE: u32 = 384_000;
 
 fn validate_output_dimensions(sample_rate: u32, channels: u16) -> Result<(), String> {
     if sample_rate == 0 {
         return Err("output device reported a zero sample rate".to_string());
+    }
+    if sample_rate > MAX_DEVICE_SAMPLE_RATE {
+        return Err(format!(
+            "output device sample rate exceeds {MAX_DEVICE_SAMPLE_RATE} Hz"
+        ));
     }
     if channels == 0 {
         return Err("output device reported zero channels".to_string());
@@ -1198,8 +1205,9 @@ mod tests {
     use std::sync::Arc;
 
     use super::{
-        AMPLITUDE, LoopBuffer, MixerState, OneshotPlay, PARAMETER_MAX_GAIN, crossfade_frame_count,
-        device_channel_sample, fill_tone_samples, synthesize_sine, validate_output_dimensions,
+        AMPLITUDE, LoopBuffer, MAX_DEVICE_SAMPLE_RATE, MixerState, OneshotPlay, PARAMETER_MAX_GAIN,
+        crossfade_frame_count, device_channel_sample, fill_tone_samples, synthesize_sine,
+        validate_output_dimensions,
     };
 
     #[test]
@@ -1212,6 +1220,12 @@ mod tests {
         assert_eq!(
             validate_output_dimensions(44_100, 0).expect_err("zero channels must fail"),
             "output device reported zero channels"
+        );
+        assert!(validate_output_dimensions(MAX_DEVICE_SAMPLE_RATE, 2).is_ok());
+        assert_eq!(
+            validate_output_dimensions(MAX_DEVICE_SAMPLE_RATE + 1, 2)
+                .expect_err("oversized rate must fail"),
+            format!("output device sample rate exceeds {MAX_DEVICE_SAMPLE_RATE} Hz")
         );
     }
 

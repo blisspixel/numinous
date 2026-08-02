@@ -13,6 +13,8 @@ use crate::rng::SplitMix64;
 const ARCADE_MIX: u64 = 0xA5CA_DE00_0000_0007;
 /// Lives at the start of a run.
 pub const LIVES: u32 = 3;
+/// Maximum stateless action history accepted by any replaying face.
+pub const MAX_REPLAY_ACTIONS: usize = 4_096;
 const CELLS: usize = ROWS * COLS;
 
 /// A Vexation's mind: one behavior each, one line of math each.

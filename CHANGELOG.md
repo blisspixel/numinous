@@ -15,6 +15,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   closed locally, in the pre-commit hook, and in CI.
 
 ### Changed
+- Runtime and release validation now pass 3,213 all-target Rust tests plus one
+  ignored screenshot diagnostic, with 95.15 percent region coverage and 95.30
+  percent line coverage under the documented exclusions.
 - The MCP stdio face now implements the final stateless 2026-07-28 protocol
   while retaining 2025-11-25 and 2025-06-18 initialization compatibility.
   Modern requests carry version and client capabilities independently;
@@ -76,6 +79,24 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   registration, and allocation commitment still block qualifying collection.
 
 ### Fixed
+- CLI and MCP Crack the Code now share one core 2 through 8 digit contract.
+  The CLI rejects an unsupported length before unlock checks or secret
+  allocation, while MCP declares the same schema bounds and rejects oversized
+  integers without recording progress. MCP Munch Arcade replay is likewise
+  capped at the App's shared 4,096 action budget before either replay pass.
+- The native audio boundary now rejects output devices that report sample rates
+  above 384 kHz before a device-scaled sound render can allocate from that
+  value. Zero rates and channels remain rejected, and focused boundary tests
+  cover the largest accepted rate and the first rejected rate.
+- Release archive verification now rejects more than 256 entries, any regular
+  member larger than 256 MiB, or more than 512 MiB of expanded payload before
+  retaining the rejected member. Classic ZIP central-directory metadata is
+  parsed under a 16 MiB budget before the standard reader is constructed;
+  forged counts, multi-disk archives, and ZIP64 are rejected. The tar path
+  accepts only the canonical ustar directory and regular-file subset, so PAX
+  and GNU extension bodies cannot expand invisibly. Both paths verify declared
+  and actual sizes and have direct adversarial regressions. The canonical
+  42-track soundtrack remains inside the budget.
 - The App launch menu now gives mouse players the same nine destinations as
   keyboard and controller players, with shared layout-derived hit targets and
   visible hover selection at default and compact sizes. Letter commands work

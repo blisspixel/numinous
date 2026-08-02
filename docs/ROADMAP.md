@@ -62,7 +62,7 @@ journal
 sovereignty is complete on the clean-process machine acceptance bar.
 Detail below and in the version sections.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,210 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.14% region coverage, and 95.29% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,213 passing all-target test cases plus one ignored screenshot diagnostic, locked build, Windows release gate, 95.15% region coverage, and 95.30% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -959,6 +959,18 @@ peak energy.
   A local Windows full-payload install and repeat update verified all three
   binaries and all 42 tracks. GitHub artifacts are not cryptographically signed,
   and same-runner smoke is not clean-machine evidence.
+- **Done (August 1, 2026):** release archive verification now fails closed before
+  retaining an expanded member when an archive exceeds 256 entries, 256 MiB
+  for one regular member, or 512 MiB total. A 16 MiB classic ZIP metadata
+  preflight rejects forged counts, ZIP64, and multi-disk forms before reader
+  construction. The canonical ustar verifier rejects hidden PAX and GNU
+  extension records before expansion. Adversarial regressions enforce the
+  budgets, and the canonical 42-track soundtrack passes them.
+- **Done (Cycle 14 security maintenance, August 1, 2026):** native output
+  devices cannot amplify sound-render allocation through a reported rate above
+  384 kHz. CLI and MCP Crack the Code share one core 2 through 8 digit boundary,
+  and MCP Munch Arcade shares the App's 4,096 action replay budget. Focused
+  regressions exercise every repaired boundary before progress mutation.
 - **Open:** record comparable before-and-after GPU, audio, App startup, and CLI
   request performance evidence for the July 2026 dependency migration. Future
   major updates require both migration notes and comparable performance evidence.
@@ -1143,7 +1155,7 @@ records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 3,210 passing all-target test cases plus one ignored screenshot diagnostic, 95.29% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 3,213 passing all-target test cases plus one ignored screenshot diagnostic, 95.30% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,913-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 

@@ -26,9 +26,11 @@ until it closes, at which point a selected station rejoins live. A shared
 master level and mute work in every App mode through keyboard and controller
 routes. A persistent badge names the active source, numeric level, and
 effective mute, zero-volume, background-silent, or missing-device state. The
-audio source is no longer rebuilt from render-loop cadence. Native device rates from 44.1 through 192 kHz
-are covered by pitch and duration tests. Built-in radio remains the sole source
-while tuned.
+audio source is no longer rebuilt from render-loop cadence. Native device rates
+from 44.1 through 192 kHz are covered by pitch and duration tests. The real-time
+output boundary accepts at most 384 kHz and rejects larger device reports before
+device-scaled sound allocation. Built-in radio remains the sole source while
+tuned.
 
 Watch Agent is an explicit fourth App audio owner. A strictly accepted native
 room selection calls the same core `sound_input` state used by CLI and MCP; a
