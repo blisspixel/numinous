@@ -56,6 +56,8 @@ python scripts/test-release-engagement-smoke.py     # Windows
 python3 scripts/test-release-engagement-smoke.py    # macOS / Linux
 python scripts/test-input-hardware-session.py       # Windows
 python3 scripts/test-input-hardware-session.py      # macOS / Linux
+python scripts/test-release-workflow.py             # Windows
+python3 scripts/test-release-workflow.py            # macOS / Linux
 cargo build --workspace --locked
 cargo +1.88.0 check --workspace --all-targets --locked
 cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\/](gpu|audio)[\\/]|faces[\\/]app[\\/]src[\\/]main\.rs)'
@@ -70,8 +72,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 
 Expected right now: **format and clippy clean, 3,213 all-target Rust test cases,
 105 study runner and collector regressions, and 15 physical input contract
-regressions pass, one screenshot diagnostic is ignored, 95.15% region coverage,
-and 95.30% line coverage**. The `gpu` and
+regressions plus eight release workflow regressions pass, one screenshot
+diagnostic is ignored, 95.15% region coverage, and 95.30% line coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
@@ -83,7 +85,47 @@ Tables CLI render and modern MCP discovery, the exact 35-tool list, and one
 structured `play_room` result from an isolated temporary profile. Version-only
 execution is not treated as engagement proof.
 
-## 2a. Record physical input evidence
+## 2a. Verify tagged release provenance
+
+Tagged releases created after this gate was introduced publish one GitHub
+keyless SLSA build-provenance attestation whose subject set contains every
+binary and soundtrack archive. The attestation job downloads only the closed set admitted by the
+release audit, and publication cannot run unless attestation succeeds. Verify
+an archive against the repository and the exact signer workflow:
+
+```
+gh attestation verify PATH_TO_ARCHIVE --repo blisspixel/numinous --signer-workflow blisspixel/numinous/.github/workflows/release.yml
+```
+
+Each such release also includes `numinous-TAG-provenance.jsonl`. To prepare for
+fully offline verification, acquire the current trusted root through a trusted
+connection before disconnecting. From Windows PowerShell 5.1, delegate the
+redirection to `cmd` so the JSONL file is not rewritten as UTF-16LE:
+
+```
+cmd /d /c "gh attestation trusted-root > trusted_root.jsonl"
+```
+
+From macOS, Linux, or another POSIX shell:
+
+```
+gh attestation trusted-root > trusted_root.jsonl
+```
+
+Then verify from the downloaded bundle without fetching attestations or trust
+metadata from GitHub:
+
+```
+gh attestation verify PATH_TO_ARCHIVE --bundle PATH_TO_PROVENANCE_JSONL --custom-trusted-root trusted_root.jsonl --repo blisspixel/numinous --signer-workflow blisspixel/numinous/.github/workflows/release.yml
+```
+
+The command must fail for a changed archive, a bundle from another release, or
+an attestation signed by another repository or workflow. Historic releases do
+not acquire attestations retroactively. Build provenance is not Windows code
+signing, Apple notarization, an SBOM, clean-machine execution, or evidence about
+physical input and audio behavior.
+
+## 2b. Record physical input evidence
 
 Run this only on a physical clean-machine release candidate with a real mouse,
 keyboard, controller, display, and audio output. Keep the downloaded release
@@ -167,7 +209,7 @@ of native operating-system event automation or subjective visual quality. `MANIF
 remains the review inventory, and a human or a clearly labeled simulated
 player-profile review still judges clarity and fun.
 
-## 2b. Run the five-flagship reference performance gate
+## 2c. Run the five-flagship reference performance gate
 
 Use a release build on declared reference hardware. The wrappers run the same
 locked command and fail if any ambient or accepted-input-to-room-raster p95
@@ -197,7 +239,7 @@ mass-first audio energy, stereo bias, supported-rate signal safety, and bounded
 event admission. These checks establish deterministic structure and signal
 safety, not listening quality or physical-device timing.
 
-## 2b. Put `numinous` on your PATH (once)
+## 2d. Put `numinous` on your PATH (once)
 
 ```
 cargo install --path faces/cli --force

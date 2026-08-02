@@ -66,7 +66,7 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
 fi
 
 if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
-    | grep -zqE '^scripts/(package-release|test-package-release|release-engagement-smoke|test-release-engagement-smoke|input-hardware-session|test-input-hardware-session)\.py$'; then
+    | grep -zqE '^(\.github/workflows/(ci|release)\.yml|scripts/(check|verify)\.(ps1|sh)|scripts/hooks/pre-commit|scripts/(package-release|test-package-release|release-engagement-smoke|test-release-engagement-smoke|input-hardware-session|test-input-hardware-session|test-release-workflow)\.py)$'; then
   if command -v python3 >/dev/null 2>&1; then
     release_python=python3
   elif command -v python >/dev/null 2>&1; then
@@ -81,6 +81,8 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
   "$release_python" scripts/test-release-engagement-smoke.py
   echo "== physical input session contract =="
   "$release_python" scripts/test-input-hardware-session.py
+  echo "== release workflow contract =="
+  "$release_python" scripts/test-release-workflow.py
 fi
 
 echo "pre-commit: all checks passed."
