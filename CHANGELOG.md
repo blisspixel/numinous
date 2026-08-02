@@ -40,11 +40,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 - Flagship visual PNG and room-bed audio goldens for Times Tables, Double
   Pendulum, Game of Life, Galton Board, and Buffon Needle are committed under
   `docs/evidence/goldens/` and verified by `scripts/flagship-goldens.py` in CI.
-  Exact content hashes bind the plates and bed WAVs; compact PNG plates are
-  retained for review while WAV bytes stay out of the tree. Times Tables also
-  binds phosphor, 8-bit, and vector era plates as distinct identities. Intentional
-  product changes update the manifest with `--update`. This is machine regression
-  evidence, not human sensory judgment.
+  Exact PNG content hashes bind the plates across OS targets. Room-bed audio
+  gates on peak, RMS, and size band; WAV SHA-256 is stored as a host reference
+  only because float paths can differ across toolchains. Compact PNG plates are
+  retained for review while WAV files stay out of the tree. Times Tables also
+  binds phosphor, 8-bit, and vector era plates as distinct identities.
+  Intentional product changes update the manifest with `--update`. This is
+  machine regression evidence, not human sensory judgment.
 - Controller legends now follow the effective `.numinous-bindings.json`
   routing table instead of silently describing only the default layout. One
   immutable Xbox, PlayStation, or generic vocabulary feeds room chrome, full

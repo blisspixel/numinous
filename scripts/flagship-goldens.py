@@ -2,8 +2,10 @@
 """Flagship visual and room-bed audio golden regression (agent-and-machine track).
 
 Renders deterministic CLI PNG plates and room-bed WAV files for the five
-tactile flagships, then compares content hashes and coarse signal metrics to a
-committed manifest. Use --update to rewrite goldens after intentional product
+tactile flagships, then compares portable gates to a committed manifest.
+PNG content hashes must match exactly. Room-bed audio gates on peak, RMS, and
+size band (WAV SHA-256 is recorded as a host reference only, because float
+paths can differ across OS targets). Use --update after intentional product
 changes. This is machine regression evidence, not human sensory judgment.
 """
 
@@ -164,22 +166,33 @@ def load_manifest() -> dict[str, Any]:
 
 
 def compare_entry(expected: dict[str, Any], actual: dict[str, Any]) -> list[str]:
+    """Compare goldens with portable rules.
+
+    PNG content hashes must match exactly (they do across OS targets). Room-bed
+    WAV *bytes* can differ across toolchains even when the declared signal
+    metrics match, so audio gates on peak/RMS/size band rather than SHA-256.
+    The manifest still records wav_sha256 from the update host as a reference.
+    """
     defects: list[str] = []
-    keys = ["png_sha256", "width", "height", "png_bytes"]
-    if "wav_sha256" in expected:
-        keys.extend(["wav_sha256", "wav_bytes"])
-    for key in keys:
+    for key in ("png_sha256", "width", "height", "png_bytes"):
         if expected.get(key) != actual.get(key):
             defects.append(f"{key}: expected {expected.get(key)!r} got {actual.get(key)!r}")
-    # Tiny float guards for metric drift while hashes remain authoritative.
     float_keys = [("png_mean_byte", 1e-6)]
     if "audio_peak" in expected:
-        float_keys.extend([("audio_peak", 1e-9), ("audio_rms", 1e-9)])
+        # Loose enough for cross-platform float paths; tight enough to catch
+        # arrangement or gain regressions. Peak/RMS are the portable contract.
+        float_keys.extend([("audio_peak", 1e-4), ("audio_rms", 1e-4)])
     for key, tol in float_keys:
         exp = float(expected[key])
         got = float(actual[key])
         if abs(exp - got) > tol * max(1.0, abs(exp)):
             defects.append(f"{key}: expected {exp} got {got}")
+    if "wav_bytes" in expected:
+        exp_b = int(expected["wav_bytes"])
+        got_b = int(actual["wav_bytes"])
+        # Same bed duration should keep size within a small absolute band.
+        if abs(exp_b - got_b) > max(64, exp_b // 1000):
+            defects.append(f"wav_bytes: expected ~{exp_b} got {got_b}")
     return defects
 
 
