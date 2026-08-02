@@ -1030,9 +1030,19 @@ peak energy.
   release set. The evidence does not claim runtime-resolved library versions,
   transitive system dependencies, reachable linked code, soundtrack analysis,
   signing, notarization, or physical execution. No tag or release was created.
-- **Open:** record comparable before-and-after GPU, audio, App startup, and CLI
-  request performance evidence for the July 2026 dependency migration. Future
-  major updates require both migration notes and comparable performance evidence.
+- **Done (Cycle 19 migration performance, August 2, 2026):** one exact
+  adjacent-revision runner builds `b47303d` and `301eac6` with their locked
+  release dependencies, then alternates three warmups and twenty retained
+  samples for a byte-identical CLI render, complete GPU postcard, default audio
+  device discovery, and muted App visible-window startup. On the declared
+  Windows reference machine, the after medians are 17.640, 636.489, 17.530,
+  and 45.171 ms. CLI and App remain flat, GPU is 1.167x, and audio discovery
+  adds 7.117 ms; all pass the declared relative plus absolute guards. Eighteen
+  focused regressions and the CI verifier recompute the canonical raw receipt
+  and bind its runner by SHA256. This is historical one-machine migration
+  evidence, not current-main, cross-platform, callback-latency, or first-paint
+  evidence. Future major updates require both migration notes and a comparable
+  retained receipt.
 
 Owner docs: `ARCHITECTURE.md`, `ENGINEERING.md`, `INTERFACES.md`, `MUSIC.md`,
 `VERIFY.md`.

@@ -36,5 +36,7 @@ Invoke-Step "release engagement contract" { python scripts/test-release-engageme
 Invoke-Step "physical input session contract" { python scripts/test-input-hardware-session.py }
 Invoke-Step "release SBOM contract" { python scripts/test-release-sbom.py }
 Invoke-Step "release workflow contract" { python scripts/test-release-workflow.py }
+Invoke-Step "dependency migration performance contract" { python scripts/test-dependency-migration-performance.py }
+Invoke-Step "dependency migration performance receipt" { python scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json }
 Invoke-Step "house style" { powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-style.ps1 }
 Write-Host "All checks passed."

@@ -51,6 +51,8 @@ Step "release engagement contract" { python scripts/test-release-engagement-smok
 Step "physical input session contract" { python scripts/test-input-hardware-session.py }
 Step "release SBOM contract" { python scripts/test-release-sbom.py }
 Step "release workflow contract" { python scripts/test-release-workflow.py }
+Step "dependency migration performance contract" { python scripts/test-dependency-migration-performance.py }
+Step "dependency migration performance receipt" { python scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json }
 Step "build"  { cargo build --workspace --locked }
 
 if ($null -ne (Get-Command cargo-llvm-cov -ErrorAction SilentlyContinue)) {

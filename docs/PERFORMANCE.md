@@ -1,0 +1,120 @@
+# Performance Evidence
+
+Performance claims in Numinous are attached to a named workload, machine,
+revision, and measurement boundary. A dependency update is not called neutral
+because it compiles. Comparable evidence must exercise the exact revisions on
+one machine and retain the raw samples.
+
+## July 2026 dependency migration
+
+The migration is the adjacent revision pair below. The after revision includes
+the dependency updates and the compatibility changes required by those updates,
+so this evidence measures the complete migration commit. It does not isolate a
+single library as the cause of a timing change.
+
+- Before: `b47303d742c795540eb08a9c0e70a7e391a47978`
+- After: `301eac6943fb44ff00316c7b0994e8d8cc505455`
+- Machine: AMD Ryzen 7 7840U class Windows laptop, 64 GiB, AC power
+- GPU path: AMD Radeon 780M through Vulkan
+- Audio path: Realtek stereo output at 48 kHz
+- Build: each revision's locked dependencies and pinned Rust toolchain, release
+  profile, incremental compilation disabled
+- Sampling: three warmups and twenty retained samples per revision, in
+  alternating AB and BA order
+
+The full canonical receipt is
+[`evidence/dependency-migration-2026-08-02.json`](evidence/dependency-migration-2026-08-02.json).
+It retains every sample, binary digest, output identity, environment field,
+threshold, and recomputed verdict. The receipt also binds the exact recorder and
+verifier source by SHA256.
+
+| Workload | Before p50 / p95 ms | After p50 / p95 ms | Median change | Result |
+| --- | ---: | ---: | ---: | --- |
+| CLI request | 17.240 / 21.839 | 17.640 / 28.052 | +0.400 ms, 1.023x | Pass |
+| GPU postcard | 545.612 / 633.035 | 636.489 / 813.576 | +90.876 ms, 1.167x | Pass |
+| Audio device discovery | 10.413 / 12.289 | 17.530 / 20.456 | +7.117 ms, 1.683x | Pass |
+| App visible window | 46.689 / 86.706 | 45.171 / 65.609 | -1.518 ms, 0.967x | Pass |
+
+The comparison uses median gates because desktop scheduling produced isolated
+tail outliers that are visible in the retained p95 and maximum samples. A
+workload fails only when its after median exceeds both its relative guard and
+its small absolute guard. This prevents a few milliseconds of fixed device
+discovery cost from masquerading as a product-scale regression while still
+blocking material slowdowns.
+
+| Workload | Relative guard | Absolute guard |
+| --- | ---: | ---: |
+| CLI request | 1.25x | +5 ms |
+| GPU postcard | 1.25x | +50 ms |
+| Audio device discovery | 1.50x | +10 ms |
+| App visible window | 1.35x | +20 ms |
+
+The GPU migration added 16.7 percent to this complete one-shot postcard path,
+which remains inside the declared 25 percent comparison guard. Audio device
+discovery added 7.1 ms. The muted App process-to-visible-window boundary
+remained flat, as did the byte-identical CLI render. The window appears before
+the App initializes audio and later subsystems, so these measurements do not
+establish the migration's effect on end-to-end App readiness.
+
+## Verification and reproduction
+
+Receipt verification is fast, deterministic, cross-platform, and runs in the
+local and CI gates:
+
+```
+python scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
+```
+
+Recording new historical evidence requires a Windows desktop, default audio
+output, working GPU adapter, AC power, Git, Python 3.11 or newer, and both
+commits' Rust toolchains. All temporary checkouts, targets, profiles, and output
+stay under the ignored `.agent/` directory:
+
+```
+python scripts/dependency-migration-performance.py --record .agent/dependency-migration-performance.json --work-dir .agent/dependency-migration-performance --warmup 3 --samples 20
+```
+
+Generation checks out the two exact commits as detached worktrees, injects one
+identical audio discovery probe, builds four locked release targets per
+revision, alternates executions, closes each App window cleanly, writes the
+receipt outside cleanup-owned scratch, and removes only its marked worktrees.
+The verifier requires the exact three-warmup, twenty-sample Windows reference
+contract, strict per-workload fields, pinned machine, toolchain, output, and
+device identities, well-formed retained binary digests, and the exact runner
+bytes. It recomputes every summary, guard, and verdict from the retained samples.
+
+## Evidence limits
+
+This is one Windows reference-machine comparison, not a cross-platform or
+population benchmark. The GPU path includes process startup, adapter discovery,
+dispatch, readback, and PNG encoding, not steady-state frame pacing. The audio
+path stops after default output configuration discovery and does not measure
+stream startup, callback latency, drift, glitches, or listening quality. The App
+boundary stops when its native top-level window becomes visible, before audio
+initialization, and does not claim end-to-end readiness, first paint, display
+scan-out, sound, input latency, or human perception. The CLI boundary includes
+process startup and one deterministic render.
+
+The receipt is tracked evidence, not a signed laboratory attestation. Its
+verifier detects malformed structure, pinned environment or output identity
+drift, and inconsistent derived results. It cannot independently prove that a
+coherent set of timing samples or binary digests was observed rather than
+replaced. Review and Git history provide the durable integrity record. A
+stronger provenance claim requires an external signed timestamp or measurement
+witness.
+
+Current `main` contains substantial work after the measured migration commit,
+so these numbers close the historical migration evidence item rather than
+describing current release performance. Current flagship raster evidence lives
+in `QUALITY.md`. Physical Windows, macOS, and Linux performance, device soak,
+and sensory latency remain separate roadmap work.
+
+## Standing migration rule
+
+Every future direct major dependency update must name adjacent before and after
+revisions, preserve equivalent workloads and outputs, use release builds with
+locked dependencies, alternate enough samples on one declared machine, retain
+raw samples and binary identities, explain every material change, and keep the
+receipt verifier in CI. Platform-specific dependencies additionally require
+the appropriate native hardware run before a release claim expands to that
+platform.
