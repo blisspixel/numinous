@@ -89,9 +89,10 @@ execution is not treated as engagement proof.
 
 Tagged releases created after this gate was introduced publish one GitHub
 keyless SLSA build-provenance attestation whose subject set contains every
-binary and soundtrack archive. The attestation job downloads only the closed set admitted by the
-release audit, and publication cannot run unless attestation succeeds. Verify
-an archive against the repository and the exact signer workflow:
+binary and soundtrack archive. The attestation job downloads only the closed
+set admitted by the release audit, and publication cannot run unless attestation
+succeeds. Verify an archive against the repository and the exact signer
+workflow:
 
 ```
 gh attestation verify PATH_TO_ARCHIVE --repo blisspixel/numinous --signer-workflow blisspixel/numinous/.github/workflows/release.yml
