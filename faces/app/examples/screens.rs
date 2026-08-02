@@ -1098,7 +1098,7 @@ fn room_screen_with_mode(
             muted: false,
             level,
             input_mode,
-            controller_face: input_legend::ControllerFace::Generic,
+            controller_face: input_legend::ControllerFace::Generic.into(),
         },
         inputs,
         None,
@@ -1134,7 +1134,7 @@ fn room_screen_with_banner(
             muted: false,
             level,
             input_mode: input_legend::InputMode::KeyboardMouse,
-            controller_face: input_legend::ControllerFace::Generic,
+            controller_face: input_legend::ControllerFace::Generic.into(),
         },
         &[],
         None,
@@ -1205,7 +1205,7 @@ fn life_session_screen(
             muted: false,
             level: 7,
             input_mode,
-            controller_face: input_legend::ControllerFace::Generic,
+            controller_face: input_legend::ControllerFace::Generic.into(),
         },
         &[],
         Some(&status),
@@ -1253,7 +1253,7 @@ fn show_screen_with_mode(
             muted: false,
             level: 7,
             input_mode,
-            controller_face: input_legend::ControllerFace::Generic,
+            controller_face: input_legend::ControllerFace::Generic.into(),
         },
         &[],
         None,
@@ -1287,7 +1287,14 @@ fn studio_screen_with_mode(
     input_mode: input_legend::InputMode,
 ) -> Raster {
     let mut raster = Raster::with_accent(width, height, [120, 220, 190]);
-    studio_panel::StudioPanel::default().draw(&mut raster, input_mode, width, height, 0.35);
+    studio_panel::StudioPanel::default().draw_with_controller(
+        &mut raster,
+        input_mode,
+        input_legend::ControllerFace::Generic.into(),
+        width,
+        height,
+        0.35,
+    );
     raster
 }
 
@@ -1297,9 +1304,10 @@ fn studio_morph_screen(width: usize, height: usize) -> Raster {
     assert!(panel.load_random_recipe().is_some());
     panel.advance_morph(studio_panel::RECIPE_MORPH_SECONDS / 2.0);
     let mut raster = Raster::with_accent(width, height, [120, 220, 190]);
-    panel.draw(
+    panel.draw_with_controller(
         &mut raster,
         input_legend::InputMode::KeyboardMouse,
+        input_legend::ControllerFace::Generic.into(),
         width,
         height,
         0.35,
@@ -1715,13 +1723,14 @@ fn main() {
     for (label, size) in [("default", DEFAULT_SIZE), ("small", SMALL_SIZE)] {
         let (width, height) = size;
         let mut help = room_screen(launch, 0.12, &[], size, 0, false, 1);
-        overlays::draw_help_overlay(
+        overlays::draw_help_overlay_with_controller(
             &mut help,
             width,
             height,
             None,
             input_legend::InputMode::KeyboardMouse,
             false,
+            input_legend::ControllerFace::Generic.into(),
         );
         save(
             &help,
@@ -1736,14 +1745,14 @@ fn main() {
         );
 
         let mut journey_screen = room_screen(golden, 0.0, &[], size, 0, false, 42);
-        overlays::draw_journey_overlay(
+        overlays::draw_journey_overlay_with_controller(
             &mut journey_screen,
             &journey,
             &Scoreboard::default(),
             rooms.len(),
-            width,
-            height,
+            (width, height),
             input_legend::InputMode::KeyboardMouse,
+            input_legend::ControllerFace::Generic.into(),
         );
         save(
             &journey_screen,
@@ -2153,13 +2162,14 @@ fn main() {
 
     let mut controller_help =
         room_screen_with_mode(launch, 0.12, &[], SMALL_SIZE, 0, false, 1, controller);
-    overlays::draw_help_overlay(
+    overlays::draw_help_overlay_with_controller(
         &mut controller_help,
         SMALL_SIZE.0,
         SMALL_SIZE.1,
         Some(5),
         controller,
         false,
+        input_legend::ControllerFace::Generic.into(),
     );
     save(
         &controller_help,
@@ -2168,11 +2178,12 @@ fn main() {
     );
 
     let mut keyboard_paused = room_screen(golden, 0.42, &[], SMALL_SIZE, 0, false, 7);
-    overlays::draw_pause_overlay(
+    overlays::draw_pause_overlay_with_controller(
         &mut keyboard_paused,
         SMALL_SIZE.0,
         SMALL_SIZE.1,
         input_legend::InputMode::KeyboardMouse,
+        input_legend::ControllerFace::Generic.into(),
     );
     save(
         &keyboard_paused,
@@ -2181,11 +2192,12 @@ fn main() {
     );
     let mut controller_paused =
         room_screen_with_mode(golden, 0.42, &[], SMALL_SIZE, 0, false, 7, controller);
-    overlays::draw_pause_overlay(
+    overlays::draw_pause_overlay_with_controller(
         &mut controller_paused,
         SMALL_SIZE.0,
         SMALL_SIZE.1,
         controller,
+        input_legend::ControllerFace::Generic.into(),
     );
     save(
         &controller_paused,
@@ -2200,14 +2212,14 @@ fn main() {
 
     let mut controller_journey =
         room_screen_with_mode(golden, 0.0, &[], SMALL_SIZE, 0, false, 42, controller);
-    overlays::draw_journey_overlay(
+    overlays::draw_journey_overlay_with_controller(
         &mut controller_journey,
         &journey,
         &Scoreboard::default(),
         rooms.len(),
-        SMALL_SIZE.0,
-        SMALL_SIZE.1,
+        SMALL_SIZE,
         controller,
+        input_legend::ControllerFace::Generic.into(),
     );
     save(
         &controller_journey,

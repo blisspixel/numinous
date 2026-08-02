@@ -1,6 +1,9 @@
 use numinous_core::{Raster, Room, RoomInput, Surface};
 
-use crate::input_legend::{self, ControllerFace, InputMode};
+use crate::input_legend::{self, ControllerCopy, InputMode};
+
+#[cfg(test)]
+use crate::input_legend::ControllerFace;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum AudioSource {
@@ -107,15 +110,19 @@ pub(crate) struct RoomChrome {
     pub(crate) muted: bool,
     pub(crate) level: u32,
     pub(crate) input_mode: InputMode,
-    pub(crate) controller_face: ControllerFace,
+    pub(crate) controller_face: ControllerCopy,
 }
 
 pub(crate) fn room_action(room: &dyn Room) -> &'static str {
     numinous_core::room_touch_action(room)
 }
 
-fn displayed_room_action(room: &dyn Room, input_mode: InputMode, face: ControllerFace) -> String {
-    input_legend::room_action_with_face(input_mode, room_action(room), face)
+fn displayed_room_action(
+    room: &dyn Room,
+    input_mode: InputMode,
+    copy: impl Into<ControllerCopy> + Copy,
+) -> String {
+    input_legend::room_action_with_controller(input_mode, room_action(room), copy.into())
 }
 
 fn journey_level_label(level: u32) -> String {
@@ -126,9 +133,9 @@ fn arrival_lines(
     room: &dyn Room,
     columns: usize,
     input_mode: InputMode,
-    face: ControllerFace,
+    copy: impl Into<ControllerCopy> + Copy,
 ) -> Vec<String> {
-    let mut lines = vec![displayed_room_action(room, input_mode, face)];
+    let mut lines = vec![displayed_room_action(room, input_mode, copy)];
     if let Some(goal) = room.goal() {
         lines.push(format!("GOAL: {goal}"));
     }
@@ -172,24 +179,25 @@ fn footer_copy(
     inputs: &[RoomInput],
     muted: bool,
     input_mode: InputMode,
-    face: ControllerFace,
+    copy: impl Into<ControllerCopy> + Copy,
     status_override: Option<&str>,
 ) -> FooterCopy {
     let status = status_override.map_or_else(
         || {
-            room.status_input(t, inputs)
-                .unwrap_or_else(|| input_legend::room_inspect_with_face(input_mode, face))
+            room.status_input(t, inputs).unwrap_or_else(|| {
+                input_legend::room_inspect_with_controller(input_mode, copy.into())
+            })
         },
         str::to_owned,
     );
     FooterCopy {
-        action: displayed_room_action(room, input_mode, face),
+        action: displayed_room_action(room, input_mode, copy),
         status: if muted {
             format!("{status}   MUTED")
         } else {
             status
         },
-        controls: input_legend::room_controls_with_face(input_mode, face),
+        controls: input_legend::room_controls_with_controller(input_mode, copy.into()),
     }
 }
 
@@ -290,7 +298,7 @@ pub(crate) fn draw_room_chrome(
             '-',
         );
         let controls = fit_footer_text(
-            &input_legend::show_controls_with_face(state.input_mode, state.controller_face),
+            &input_legend::show_controls_with_controller(state.input_mode, state.controller_face),
             width as i32 - 20,
             scale,
         );
@@ -625,6 +633,31 @@ mod tests {
         );
         assert_eq!(controller.controls, "L3 RESET ROOM   START MENU");
         assert!(controller.controls.chars().count() * 6 <= 360 - 20);
+
+        let mut remapped = crate::input_legend::ControllerCopy::empty(ControllerFace::Xbox);
+        remapped.bind(
+            crate::input_legend::ControllerAction::Primary,
+            crate::input_legend::ControllerButton::West,
+        );
+        remapped.bind(
+            crate::input_legend::ControllerAction::Reset,
+            crate::input_legend::ControllerButton::North,
+        );
+        remapped.bind(
+            crate::input_legend::ControllerAction::Menu,
+            crate::input_legend::ControllerButton::Select,
+        );
+        let remapped = footer_copy(
+            room.as_ref(),
+            0.0,
+            &[],
+            false,
+            InputMode::Controller,
+            remapped,
+            None,
+        );
+        assert_eq!(remapped.action, "X: PLANT A SEED");
+        assert_eq!(remapped.controls, "Y RESET ROOM   SELECT MENU");
     }
 
     #[test]
@@ -790,7 +823,7 @@ mod tests {
                 muted: false,
                 level: 3,
                 input_mode: InputMode::KeyboardMouse,
-                controller_face: ControllerFace::Generic,
+                controller_face: ControllerFace::Generic.into(),
             },
             &[],
             None,
@@ -822,7 +855,7 @@ mod tests {
                 muted: true,
                 level: 3,
                 input_mode: InputMode::KeyboardMouse,
-                controller_face: ControllerFace::Generic,
+                controller_face: ControllerFace::Generic.into(),
             },
             &[],
             None,
@@ -854,7 +887,7 @@ mod tests {
                     muted: false,
                     level: 1,
                     input_mode: InputMode::KeyboardMouse,
-                    controller_face: ControllerFace::Generic,
+                    controller_face: ControllerFace::Generic.into(),
                 },
                 &[],
                 None,
@@ -895,7 +928,7 @@ mod tests {
                     muted: false,
                     level: 1,
                     input_mode,
-                    controller_face: ControllerFace::Generic,
+                    controller_face: ControllerFace::Generic.into(),
                 },
                 &[],
                 None,
@@ -943,7 +976,7 @@ mod tests {
                 muted: false,
                 level: 1,
                 input_mode: InputMode::KeyboardMouse,
-                controller_face: ControllerFace::Generic,
+                controller_face: ControllerFace::Generic.into(),
             },
             &[],
             None,

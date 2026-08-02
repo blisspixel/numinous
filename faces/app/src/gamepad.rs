@@ -179,6 +179,7 @@ pub(crate) struct GamepadInput {
     active: bool,
     /// Adaptive face-button vocabulary inferred from the last active pad name.
     face: crate::input_legend::ControllerFace,
+    controller_copy: crate::input_legend::ControllerCopy,
 }
 
 impl GamepadInput {
@@ -192,20 +193,31 @@ impl GamepadInput {
             .add_mappings(include_str!("../../../assets/gamecontrollerdb.txt"))
             .build()
             .ok();
+        let face = crate::input_legend::ControllerFace::Generic;
+        let bindings = crate::bindings::Bindings::load();
+        let controller_copy = bindings.controller_copy(face);
         Self {
             gilrs,
-            bindings: crate::bindings::Bindings::load(),
+            bindings,
             hand: VirtualHand::default(),
             last_tick: Instant::now(),
             active: true,
-            face: crate::input_legend::ControllerFace::Generic,
+            face,
+            controller_copy,
         }
     }
 
     /// Face-button vocabulary for HUD copy (Xbox / PlayStation / generic).
     #[must_use]
+    #[cfg(test)]
     pub(crate) fn face(&self) -> crate::input_legend::ControllerFace {
         self.face
+    }
+
+    /// Player-visible controller copy for the active face and loaded mapping.
+    #[must_use]
+    pub(crate) fn controller_copy(&self) -> crate::input_legend::ControllerCopy {
+        self.controller_copy
     }
 
     pub(crate) fn poll(&mut self, now: Instant) -> Vec<Command> {
@@ -218,7 +230,11 @@ impl GamepadInput {
         if let Some(gilrs) = &mut self.gilrs {
             while let Some(event) = gilrs.next_event() {
                 if let Some(pad) = gilrs.connected_gamepad(event.id) {
-                    self.face = crate::input_legend::ControllerFace::from_name(pad.name());
+                    let face = crate::input_legend::ControllerFace::from_name(pad.name());
+                    if face != self.face {
+                        self.face = face;
+                        self.controller_copy = self.bindings.controller_copy(face);
+                    }
                 }
                 match event.event {
                     EventType::ButtonPressed(button, _) => {
@@ -318,6 +334,28 @@ mod tests {
     fn default_controller_face_is_generic_until_a_pad_speaks() {
         let input = GamepadInput::new();
         assert_eq!(input.face(), crate::input_legend::ControllerFace::Generic);
+        assert_eq!(
+            input.controller_copy(),
+            crate::input_legend::ControllerFace::Generic.into()
+        );
+    }
+
+    #[test]
+    fn controller_copy_tracks_the_loaded_mapping_and_active_face() {
+        use crate::input_legend::{Control, ControllerFace};
+
+        let mut input = GamepadInput::new();
+        input.face = ControllerFace::Xbox;
+        input.bindings.gamepad.insert(Button::South, Command::Pause);
+        input
+            .bindings
+            .gamepad
+            .insert(Button::West, Command::PrimaryDown);
+        input.controller_copy = input.bindings.controller_copy(input.face);
+
+        let copy = input.controller_copy();
+        assert_eq!(copy.token(Control::Primary), "X");
+        assert_eq!(copy.token(Control::Pause), "A/+1");
     }
 
     #[test]

@@ -3120,20 +3120,26 @@ impl App {
     }
 
     fn draw_studio(&self, raster: &mut Raster, width: usize, height: usize) {
-        self.studio_panel
-            .draw(raster, self.input_mode, width, height, self.t);
+        self.studio_panel.draw_with_controller(
+            raster,
+            self.input_mode,
+            self.gamepad.controller_copy(),
+            width,
+            height,
+            self.t,
+        );
     }
 
     fn modal_frame(&self, width: usize, height: usize) -> Option<Raster> {
         if self.show_help && self.modal_mode_active() {
             return None;
         }
-        let face = self.gamepad.face();
+        let copy = self.gamepad.controller_copy();
         if let Some(play) = &self.arcade {
             Some(game_draw::draw_arcade(
                 play,
                 self.input_mode,
-                face,
+                copy,
                 width,
                 height,
             ))
@@ -3143,7 +3149,7 @@ impl App {
                 run,
                 self.frame,
                 self.input_mode,
-                face,
+                copy,
                 width,
                 height,
             ))
@@ -3152,7 +3158,7 @@ impl App {
                 play,
                 self.frame,
                 self.input_mode,
-                face,
+                copy,
                 width,
                 height,
             ))
@@ -3160,13 +3166,13 @@ impl App {
             Some(game_draw::draw_nim(
                 play,
                 self.input_mode,
-                face,
+                copy,
                 width,
                 height,
             ))
         } else {
             self.quiz.as_ref().map(|quiz| {
-                game_draw::draw_quiz(&self.rooms, quiz, self.input_mode, face, width, height)
+                game_draw::draw_quiz(&self.rooms, quiz, self.input_mode, copy, width, height)
             })
         }
     }
@@ -3187,7 +3193,9 @@ impl App {
         if self.session_viewer.is_open() {
             let viewer_input_mode = match self.input_mode {
                 input_legend::InputMode::KeyboardMouse => ViewerInputMode::KeyboardMouse,
-                input_legend::InputMode::Controller => ViewerInputMode::Controller,
+                input_legend::InputMode::Controller => {
+                    ViewerInputMode::MappedController(self.gamepad.controller_copy())
+                }
             };
             let raster = self.session_viewer.draw(width, height, viewer_input_mode);
             // Cache is warm after draw; publish sequence-owned sound once.
@@ -3330,7 +3338,7 @@ impl App {
                 muted: self.muted,
                 level: self.journey.level(),
                 input_mode: self.input_mode,
-                controller_face: self.gamepad.face(),
+                controller_face: self.gamepad.controller_copy(),
             },
             inputs,
             status_override.as_deref(),
@@ -3339,26 +3347,27 @@ impl App {
         );
 
         if self.show_help && !self.the_show {
-            overlays::draw_help_overlay(
+            overlays::draw_help_overlay_with_controller(
                 raster,
                 width,
                 height,
                 self.help_menu_selection(),
                 self.input_mode,
                 self.modal_mode_active(),
+                self.gamepad.controller_copy(),
             );
         }
 
         if self.show_journey && !self.the_show {
             let board = numinous_core::load_scoreboard_file(&self.scores_file);
-            overlays::draw_journey_overlay(
+            overlays::draw_journey_overlay_with_controller(
                 raster,
                 &self.journey,
                 &board,
                 self.rooms.len(),
-                width,
-                height,
+                (width, height),
                 self.input_mode,
+                self.gamepad.controller_copy(),
             );
         }
 
@@ -3375,7 +3384,13 @@ impl App {
 
     fn present_raster(&mut self, mut raster: Raster, width: usize, height: usize) {
         if self.paused {
-            overlays::draw_pause_overlay(&mut raster, width, height, self.input_mode);
+            overlays::draw_pause_overlay_with_controller(
+                &mut raster,
+                width,
+                height,
+                self.input_mode,
+                self.gamepad.controller_copy(),
+            );
         }
         self.draw_banner_on_raster(&mut raster, width, height);
         hud::draw_audio_state(&mut raster, &self.audio_state(), width);
@@ -4002,16 +4017,18 @@ impl ApplicationHandler for App {
                     self.clear_pointer_state();
                     let input_mode = self.input_mode;
                     let selected = self.help_menu_selection();
+                    let controller_copy = self.gamepad.controller_copy();
                     if state == ElementState::Pressed
                         && let Some(choice) = point.and_then(|point| {
                             let window = self.window.as_ref()?;
                             let size = window.inner_size();
-                            overlays::help_menu_choice_at(
+                            overlays::help_menu_choice_at_with_controller(
                                 point,
                                 size.width as usize,
                                 size.height as usize,
                                 input_mode,
                                 selected,
+                                controller_copy,
                             )
                         })
                     {
@@ -4081,18 +4098,20 @@ impl ApplicationHandler for App {
                 if self.show_help && !self.modal_mode_active() {
                     let input_mode = self.input_mode;
                     let selected = self.help_menu_selection();
+                    let controller_copy = self.gamepad.controller_copy();
                     let hovered = self.window.as_ref().and_then(|window| {
                         let size = window.inner_size();
                         let point = mouse_input::normalized_window_point(
                             (position.x, position.y),
                             (size.width, size.height),
                         )?;
-                        overlays::help_menu_choice_at(
+                        overlays::help_menu_choice_at_with_controller(
                             point,
                             size.width as usize,
                             size.height as usize,
                             input_mode,
                             selected,
+                            controller_copy,
                         )
                     });
                     if let Some(choice) = hovered

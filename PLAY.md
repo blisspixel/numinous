@@ -116,16 +116,20 @@ Supported button names are `South`, `East`, `North`, `West`, `Start`, `Select`,
 `ToggleMute`, `VolumeDown`, `VolumeUp`, and `Pause`. Remapped primary buttons
 keep correct hold and release behavior. North keeps its radio and global-audio
 chord only when it has no explicit mapping. Stick axes retain their fixed
-virtual-hand and time-scrub roles. Controller legends describe the default
-layout; a custom configuration changes routing but does not rewrite that copy.
+virtual-hand and time-scrub roles. Controller legends are derived from the
+effective routing table at App startup and use the active Xbox, PlayStation, or
+generic button names. An action with no route says `UNBOUND`; when several
+buttons route the same action, compact copy names the first stable button and
+the number of additional routes.
 
 To watch a separately consenting MCP player, press X or choose Watch Agent in
 the controller menu. Give that player the one-use code shown in the App. Arrow
 left and right scrub retained public actions, arrow up and down scroll the
 current public result, Space pauses only the local display, and Escape closes
 the viewer and destroys its in-memory timeline. A and D pan fixed-width result
-text horizontally. On a controller, use the D-pad, LB and RB, R3, and East for
-those actions. M, or North held with South, controls global sound. Watch Agent
+text horizontally. On a controller, the viewer names the effective event,
+result, pan, pause, and close buttons; the default layout uses the D-pad, LB and
+RB, R3, and East. M, or North held with South, controls global sound. Watch Agent
 cannot send a tool call or change the MCP player's state. When the selected
 action is `play_room`, Watch Agent reconstructs that
 exact public room state as a native frame. A successful `plot_expression`

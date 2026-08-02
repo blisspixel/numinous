@@ -49,7 +49,7 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
 fi
 
 if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
-    | grep -zqE '^scripts/(mcp-play\.py|understanding-(source|study|collect)\.py|understanding-(encounters|probes\.fixture)\.json|test-(mcp-play|understanding-(study|collect))\.py)$'; then
+    | grep -zqE '^scripts/(mcp-play\.py|agent-(hallway|tactile|first-contact)\.py|flagship-goldens\.py|understanding-(source|study|collect)\.py|understanding-(encounters|probes\.fixture)\.json|test-(mcp-play|agent-cohort|understanding-(study|collect))\.py)$|^docs/evidence/goldens/'; then
   if command -v python3 >/dev/null 2>&1; then
     study_python=python3
   elif command -v python >/dev/null 2>&1; then
@@ -60,6 +60,13 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
   fi
   echo "== MCP play driver =="
   "$study_python" scripts/test-mcp-play.py
+  echo "== agent cohort contracts =="
+  "$study_python" scripts/test-agent-cohort.py
+  if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
+      | grep -zqE '^scripts/flagship-goldens\.py$|^docs/evidence/goldens/'; then
+    echo "== flagship visual and audio goldens =="
+    "$study_python" scripts/flagship-goldens.py
+  fi
   echo "== understanding study runner =="
   "$study_python" scripts/test-understanding-study.py
   echo "== understanding study collector =="

@@ -5,7 +5,60 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- The root README is a short front door again: install, a ten-panel gallery of
+  App-era room plates, three-face overview, and status with links into
+  `docs/` for vision, roadmap, study, engineering, and verification. Long
+  engineering narratives no longer live in README.
+
 ### Added
+- Nightly agent-and-machine QA workflow (`.github/workflows/nightly.yml`) re-runs
+  agent cohorts, flagship goldens, creator roundtrip, multi-room soak, and the
+  Understanding Alpha am-track dual auditors on a schedule.
+- CLI creator roundtrip gate (`scripts/creator-roundtrip.py`): save `.num`,
+  reopen with `open-studio`, and require byte-identical rewrites for four
+  expressions plus the curated recipe list.
+- Multi-room soak gate (`scripts/am-soak.py`): twelve stratified rooms render
+  and room-bed sonify, non-interactive CLI surfaces, forget preview, under an
+  isolated profile.
+- Catalog scorecard (`scripts/catalog-scorecard.py`): samples three rooms per
+  wing plus flagships across the 354-room catalog, requiring render status and
+  describe output. Engineering keep/cut signal for the am-track only.
+- Understanding Alpha am-track method dry-run: registration artifact under
+  `docs/evidence/understanding-0.4/`, dual automated auditors A/B
+  (`scripts/understanding-am-auditor.py`), pipeline driver, and focused
+  regressions. Explicitly not a calibrated bank or completed cohort result.
+- Additional `assets/screens/` plates for Times Tables, Mandelbrot, Game of
+  Life, Galton Board, Buffon's Needle, Lorenz, Double Pendulum, and Lissajous
+  (900 by 900 deterministic CLI renders) for the README gallery.
+- Agent hallway (Times Tables and Buffon engineered ahas), agent tactile
+  (five-flagship hand and sonic consequence), and agent first-contact (35-tool
+  inventory, multi-wing play, munch open, journal read, broadcast status) are
+  required CI, check, and verify gates. Each emits a machine-readable
+  `summary.json` pass/fail record. Focused pure scoring contracts live in
+  `scripts/test-agent-cohort.py` so grader regressions fail closed without a
+  live MCP spawn. This locks the 0.2 and 0.3 agent-and-machine exits and cold
+  first contact into every push; optional human panels are not required for the
+  am-track.
+- Flagship visual PNG and room-bed audio goldens for Times Tables, Double
+  Pendulum, Game of Life, Galton Board, and Buffon Needle are committed under
+  `docs/evidence/goldens/` and verified by `scripts/flagship-goldens.py` in CI.
+  Exact PNG content hashes bind the plates across OS targets. Room-bed audio
+  gates on peak, RMS, and size band; WAV SHA-256 is stored as a host reference
+  only because float paths can differ across toolchains. Compact PNG plates are
+  retained for review while WAV files stay out of the tree. Times Tables also
+  binds phosphor, 8-bit, and vector era plates as distinct identities.
+  Intentional product changes update the manifest with `--update`. This is
+  machine regression evidence, not human sensory judgment.
+- Controller legends now follow the effective `.numinous-bindings.json`
+  routing table instead of silently describing only the default layout. One
+  immutable Xbox, PlayStation, or generic vocabulary feeds room chrome, full
+  and compact help, every game, Show, Journey, Studio, pause, and Watch Agent.
+  Remapped and unbound actions are explicit, multiple routes are reported in
+  bounded copy, the default North audio chord remains conditional on North
+  being unbound, and custom compact layouts retain the two-times small-window
+  scale. Keyboard and mouse copy is unchanged; this is deterministic routing
+  and render evidence, not representative physical-controller certification.
 - The July 2026 dependency migration now has a reproducible adjacent-revision
   performance contract and canonical raw receipt. One bounded Python 3.11
   runner builds the exact before and after commits with locked release

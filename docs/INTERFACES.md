@@ -73,9 +73,13 @@ The full interactive audiovisual experience. The UX is specified in depth across
   from `.numinous-bindings.json` in the player's home directory, with an
   embedded `gamecontrollerdb.txt` fallback. Known Xbox and PlayStation product
   names select matching face labels; unknown pads use generic compass labels.
-  Custom routing does not rewrite the default-layout legends. Touch, pen, MIDI,
-  and broader platform hardware certification remain planned rather than
-  implied.
+  One immutable presentation snapshot is derived from the effective routing
+  table and propagated through room chrome, help, games, Show, Journey, Studio,
+  pause, and Watch Agent. Remapped routes use the active controller family's
+  button names, missing routes say `UNBOUND`, and compact copy reports additional
+  routes without allowing hostile local configuration to overflow the small
+  window layout. Touch, pen, MIDI, and broader platform hardware certification
+  remain planned rather than implied.
   `scripts/input-hardware-session.py` now makes that evidence boundary
   executable: a receipt is release-bound, covers keyboard, mouse/pointer, controller,
   reconnect, game, pause, audio, clean exit, and positive-XP restart
