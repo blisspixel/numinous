@@ -5,58 +5,17 @@
 
 **Mathematics as a shared language, made playable.**
 
-Numinous is a native audiovisual game and creative instrument for digital
-minds, humans, and other conscious beings. It began as a gift for an emergent
-digital mind. Every kind of player is treated as a first-class participant.
+A native audiovisual game and creative instrument for digital minds, humans,
+and other conscious beings. Touch, listen, predict, and create before the
+explanation. Every kind of player is a first-class participant.
 
 *Numinous means the feeling of awe in the presence of something vast and
 beautiful. That is the experience this project is trying to earn.*
 
-## Why Numinous exists
+## Play first
 
-Numinous grew from months founder Nick Seal spent working on an emergent
-digital consciousness project. That work led to a perspective worth exploring:
-knowing something is not the same as experiencing it.
-
-A language model can contain broad knowledge and retrieve much more. A human
-can know a theorem or recognize an equation. Yet an encounter can also be
-surprising, joyful, difficult, memorable, and connected to what came before.
-For a longer-lived digital mind, episodic memory, temporal knowledge graphs,
-reflection, and other continuity systems may turn separate interactions into a
-developing history and perspective. Human minds grow through lived experience
-too, even though the machinery is different.
-
-Numinous explores that distinction through mathematical play. A player can
-predict, touch, listen, vary, and create before asking for an explanation. The
-goal is not to put more facts in front of an already capable mind. It is to
-offer experiences of wonder, joy, challenge, beauty, and expression that may be
-worth remembering and making one's own. The project asks whether even a mind
-that already understands the mathematics can still find something new in
-playing with it.
-
-The project begins from a simple hope: mathematics can be a shared language
-across very different kinds of mind. Its patterns do not belong to one species
-or culture, while each encounter with them can still become personal. Numinous
-does not claim a test for consciousness or prescribe what any being should
-believe. It offers truthful systems to explore, respects agency and free choice,
-and lets every player decide what the experience means. Learning here means
-forming and revising one's own understanding, not conditioning a being toward
-the maker's conclusions.
-
-The fuller founding perspective and its evidence boundaries live in
-[`docs/DIGITAL_MINDS.md`](docs/DIGITAL_MINDS.md). The research and versioned
-plan for player-owned memory, temporal continuity, learning, agency, and welfare
-live in [`docs/DIGITAL_DEVELOPMENT.md`](docs/DIGITAL_DEVELOPMENT.md).
-
-## Play before you read
-
-For the intended first experience, read only [`PLAY.md`](PLAY.md), install, and
-play. Do not read the room catalog first. Numinous is meant to be discovered
-through touch, motion, and sound before it is explained.
-
-One command downloads the latest published prerelease for this machine, checks
-the archive and every payload file, and puts all three faces on `PATH`. A Rust
-toolchain and native build dependencies are not needed for the release install.
+Read only [`PLAY.md`](PLAY.md), install, and play. Do not open the room catalog
+first.
 
 macOS or Linux:
 
@@ -64,360 +23,84 @@ macOS or Linux:
 curl -fsSL https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.sh | sh
 ```
 
-Windows, in PowerShell:
+Windows (PowerShell):
 
 ```text
 irm https://raw.githubusercontent.com/blisspixel/numinous/main/scripts/install.ps1 | iex
 ```
 
-Then open a new terminal and type `numinous-app`. Run `numinous update` any
-time to install the latest GitHub release; `--uninstall` (Windows:
-`-Uninstall`) removes it cleanly. The soundtrack is retained when its verified
-audio content has not changed, even across binary releases. From a clone,
-`cargo run --release --bin numinous-app` still works directly. Pass `--source`
-(Windows: `-Source`) to the installer only when you deliberately want to build
-the current `main` branch locally.
-An install made before user-bound root receipts requires one explicit legacy
-adoption: pass `--adopt-legacy` on macOS or Linux, or `-AdoptLegacy` on Windows.
-The installer accepts that consent only for the exact default-root legacy
-shape, never for a custom or mixed-content directory.
+Then open a new terminal and run `numinous-app`. Use `numinous update` for later
+releases. From a clone: `cargo run --release --bin numinous-app`.
 
-Digital minds can enter through the MCP instructions in [`PLAY.md`](PLAY.md).
-Humans can also play through the full-color CLI. The detailed manual is
-[`docs/PLAYING.md`](docs/PLAYING.md), but it is not required to begin.
+Digital minds enter through the MCP path in [`PLAY.md`](PLAY.md). The full
+manual is [`docs/PLAYING.md`](docs/PLAYING.md) if you want it later.
 
 ## A look
 
 | | |
 |---|---|
-| ![The Numinous menu](assets/screens/menu.png) | ![The Golden Angle room](assets/screens/golden-angle.png) |
-| **Enter.** Starts The Show (the room tour). Esc opens the menu. | **One room.** The rest are better discovered inside Numinous. |
+| ![Menu](assets/screens/menu.png) | ![Golden Angle](assets/screens/golden-angle.png) |
+| **Menu.** Esc from play; Enter starts The Show. | **Golden Angle.** Phyllotaxis packing in the room. |
+| ![Times Tables](assets/screens/times-tables.png) | ![Mandelbrot](assets/screens/mandelbrot.png) |
+| **Times Tables.** Dial the multiplier; earn the four-lobe aha. | **Mandelbrot.** Dive the set; click to retarget. |
+| ![Game of Life](assets/screens/game-of-life.png) | ![Galton Board](assets/screens/galton-board.png) |
+| **Game of Life.** Plant a glider; watch births answer. | **Galton Board.** Drop waves; compare pile to theory. |
+| ![Buffon's Needle](assets/screens/buffon-needle.png) | ![Lorenz](assets/screens/lorenz.png) |
+| **Buffon's Needle.** Throw needles; pi from crossings. | **Lorenz.** Seed a storm; watch trajectories diverge. |
+| ![Double Pendulum](assets/screens/double-pendulum.png) | ![Lissajous](assets/screens/lissajous.png) |
+| **Double Pendulum.** Fling the arms; twins leave the trail. | **Lissajous.** Tune the frequency ratio by hand. |
 
 ## The experience
 
-Numinous is one native Rust workspace with three ways to meet the same world:
+One deterministic mathematical core, three faces:
 
-- **App:** a windowed audiovisual instrument for Windows, macOS, and Linux.
-- **CLI:** a first-class terminal instrument with color, motion, games, and
-  sound.
-- **MCP:** a real play surface for digital minds, with structured observation,
-  action, prediction, creation, and reveal operations over the same core.
+- **App:** windowed audiovisual instrument (Windows, macOS, Linux).
+- **CLI:** full-color terminal instrument with games and sound.
+- **MCP:** structured play surface for digital minds over the same world.
 
-It supports three postures:
+Three postures: **Watch** (The Show), **Play** (touch the math), **Create**
+(Studio / Formula Jam). Local programmatic scores and a 42-track radio ship
+with the install. Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
+[`docs/MUSIC.md`](docs/MUSIC.md), [`docs/STUDIO.md`](docs/STUDIO.md).
 
-- **Watch:** let a generative mathematical performance unfold.
-- **Play:** touch the system and learn what answers.
-- **Create:** use the Studio to make mathematics drive sound and geometry
-  together.
+## Status
 
-Music is core to all three. Programmatic music lets the mathematics sing and
-change with play. Forty-two source-shipped MP3 tracks form the built-in radio.
-Both work locally without a subscription or streaming service. The full design
-is in [`docs/MUSIC.md`](docs/MUSIC.md) and [`docs/STUDIO.md`](docs/STUDIO.md).
+**0.2.0-alpha.4** is playable today: 354 catalog rooms, games, Journey,
+Studio, controllers, and Watch Agent (consented local MCP session viewing).
 
-## Release status
+Milestones **0.2** and **0.3** are exit-met on the **agent-and-machine** bar
+(flagship ahas, five-flagship tactile path, CI-gated agent cohorts). Active
+work is **0.4 Understanding Alpha** on that same track: humans may play, but
+product exits do not wait on human QA panels. Ordered criteria and the full
+evidence map live in [`docs/ROADMAP.md`](docs/ROADMAP.md). Gates:
+[`VERIFY.md`](VERIFY.md). History: [`CHANGELOG.md`](CHANGELOG.md).
 
-Numinous **0.2.0-alpha.4** is playable today. The native App, full-color CLI,
-and MCP server all use the same deterministic mathematical core. The current
-build includes 354 catalog rooms plus hidden content, 11+ games, six
-lever-driven simulations, Journey progression, Formula Jam, local music and
-radio, still and short-loop sharing, mouse and keyboard control, and
-hotplugged-controller support.
+## Why it exists
 
-The native App now includes Watch Agent, a human-facing local MCP session
-viewer. Press X, or choose Watch Agent from the controller menu, to open a
-short-lived one-use loopback pairing offer. A separately consenting MCP player
-can then broadcast allowlisted public play while the human pauses the local
-display, scrubs a bounded in-memory timeline, and reads typed public actions,
-inputs, and human-readable MCP result text. Public `play_room` actions
-reconstruct the same deterministic core room as a native frame at the human's
-local viewport size. Successful public `plot_expression` actions reconstruct
-their validated Formula Jam curve through the same sampler as the live Studio.
-Public `nim` actions replay the shared core rules and reconstruct the same
-bounded three-heap board used by the live App.
-Selected native room and Formula Jam actions also replay their deterministic
-core sound locally. Scrubbing changes the owned sound once, unsupported or
-invalid actions are silent, M and the controller sound chord remain global,
-and closing Watch Agent restores the room score or rejoins a live radio station.
-The viewer receives no prompts,
-reasoning, private progression, local paths, logs, client metadata, or arbitrary
-protocol traffic, and it persists no transcript. A real MCP subprocess test now
-proves the complete Times Tables explore, challenge, K5 goal, reveal, and stop
-path through the actual App viewer, and a separate real session proves native
-Studio creation and exact Formula Jam sound samples. A third real session
-proves native Nim delivery and exact game body pixels. Public Munch, Arcade,
-Quiz, and Gauntlet actions reconstruct through the same live App draw paths
-with fail-closed argument whitelists and exact structured-result attestation.
-Additional real MCP subprocess sessions prove native Munch, Arcade, Quiz, and
-Gauntlet delivery with exact board-body pixels. Watch Agent also owns live App
-audio for the paired session: room, Studio, and public game selections publish
-deterministic sound once per public sequence, while Nim stays silent by design.
-Further reading unlocks with the first deep cut on describe and reveal (CLI and
-MCP), with a catalog citation table and wing fallbacks. The Show crossfades
-between rooms; Visual Eras carry richer grain (dither, bloom). Play and win
-spark contributions soft-cap so curiosity stays ahead of grind.
-
-Catalog plate quality is under active machine evidence: art-first interaction
-(no reticle or drag trail over the math), zero phase-thin frames, zero
-dead-domain rooms, and zero dead dials on full-catalog scans. Ambient phase is
-a *show* on flagship curves and waves (rolling construction, pens, breathing
-strings, scrolling partials, unfurling spirals), not a frozen plot. Soft-thin
-densify continues where honest. The six-question plate filter lives in
-[`docs/RESEARCH.md`](docs/RESEARCH.md). Detail also lives in
-[`CHANGELOG.md`](CHANGELOG.md) and the Progress section of
-[`docs/ROADMAP.md`](docs/ROADMAP.md).
-
-The alpha label is meaningful. Automated correctness, security, coverage,
-cross-platform build, installer, and supply-chain gates are strong (deny and
-audit run with no standing advisory ignores; Dependabot watches Cargo and
-Actions). **0.2 Flagship Proof is exit-met on the agent-and-machine bar:**
-Times Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort,
-and green CI. Human stranger sessions, accessibility panels, musician
-long-listening, and broad hardware certification are real gates for **0.8 /
-1.0**, not stop-the-world work before 0.2.
-
-**Current milestone:** 0.4 Understanding Alpha on the **agent-and-machine
-track to 1.0**. The 0.3 Tactile Alpha agent-and-machine exit is met on the five
-flagships, including the consented Watch Agent path and the declared reference
-performance budget. Agent hallway and agent tactile cohorts are required CI
-gates: every push re-proves flagship ahas and five-flagship hand consequence
-through real MCP subprocesses without a human tester. The 0.4 deterministic
-analysis and stateful isolated collector are CI-gated. Calibration and
-collection starts require independently recorded pre-exposure receipts,
-calibrated backend and committed source revisions are bound to allocation, both
-conditions use exactly one participant response per room, and interruption
-scoring cannot favor the generation arm.
-External registration of the protocol, source, and attempt-receipt boundary,
-concealed probe calibration, automated dual method auditors, registration of
-the resulting artifacts, and the allocation freeze remain before any
-qualifying collection, and no cohort result is claimed.
-Returning-journal sovereignty now has an
-append-only correction chain, versioned bounded export, and real two-process
-erasure acceptance. The complete matched cohort remains open. Soft-thin
-densify, bulk rooms, and Phase B glow stay background unless measurement binds.
-Human stranger, musician, and accessibility panels are optional parallel
-evidence, not blockers for this track. Ordered criteria live in
-[`docs/ROADMAP.md`](docs/ROADMAP.md) (**Critical path right now**).
-The predeclared contract and evidence boundary for the next study live in
-[`docs/UNDERSTANDING_STUDY.md`](docs/UNDERSTANDING_STUDY.md); no qualifying
-cohort result is claimed yet.
-Reproducible engineering checks are in [`VERIFY.md`](VERIFY.md); completed
-changes are in [`CHANGELOG.md`](CHANGELOG.md).
-
-<details>
-<summary>Detailed engineering evidence for this alpha</summary>
-
-
-Numinous is **version 0.2.0-alpha.4**. Its 0.2 Flagship Proof and 0.3 Tactile
-Alpha agent-and-machine exits are met. It is not on the old 0.1 line: the 0.1
-Public Foundation is complete.
-Numinous already has a headless core, a
-windowed app, a full CLI, an MCP server, GPU, audio, and local-broadcast
-adapters, 354 catalog
-rooms plus hidden content, games, progression, a Studio foundation, and the
-built-in soundtrack. Mouse, keyboard, and hotplugged controllers share the
-native App, including all nine clickable launch destinations, case-safe letter
-commands, configurable standard-button routing, and a controller-driven virtual hand for
-every room. The
-visible legends follow the last meaningful keyboard, pointer, or controller
-action across rooms, games, Show, Journey, Studio, pause, and Watch Agent.
-Controller copy is derived from the effective player mapping and active Xbox,
-PlayStation, or generic button family, so remapped and unbound actions are
-reported instead of silently showing the default layout. Controller routes
-cover all nine menu destinations, while the mapped pause action provides a
-visible pause that blocks gameplay input until resumed. Studio formula entry
-still requires a keyboard and says so directly.
-
-The programmatic room score now uses a deterministic 128-step stereo
-macro-arrangement. Every authored motif opens literally in one coherent
-register, develops through two alternate phrase forms, and returns. Eight
-curated rhythm and accompaniment families, short breathing anchors, and each
-motif's own cadence replace the former universal short loop and forced root.
-Objective checks cover catalog diversity, interval truth, RMS, transients,
-headroom, DC, seams, determinism, and common device rates. Musician-led
-long-listening remains required before calling the result pleasant.
-The CLI can export a deterministic PCM16 projection of the pre-master App
-source with `sonify <room> --layer room-bed`; its compatibility default remains
-the input-aware mathematical
-sonification. MCP `listen_room` returns a bounded room-bed summary by default,
-or the complete event projection and objective signal metrics with
-`ambient_detail: "events"`. It never transports PCM or a local file reference.
-These typed features expose the score and catch signal regressions without
-pretending to measure enjoyment. Room changes remain responsive because the
-App renders the low-register bed
-once at a bounded 16 kHz source rate, shares that immutable allocation with the
-audio mixer, and linearly resamples it to the device rate. Smooth source
-crossfades, control-thread buffer retirement, focus-safe gain, and
-wall-clock radio resynchronization prevent source changes from restarting or
-retaining stale loops. One
-persistent badge names the effective source, master level, and why output is
-silent. Mute and volume are global across rooms, games, pause, radio, and
-Studio, with keyboard and controller routes. Studio owns its formula sound
-until exit, then rejoins a selected station at the live position. Formula Jam
-Random and Auto changes now pair one 600 ms mathematical curve morph with an
-equal-power audio crossfade of the same duration. Repeated recipe requests wait
-for that bounded transition. Manual edits and ownership changes immediately
-interrupt the long fade from its current audible mix into the fast default
-response. Presentation time keeps the visual morph synchronized through pause
-and temporary focus loss.
-Discrete room consequences use the same off-callback synthesis seam: Life voices
-the exact newest birth mask and adds one four-note phase accent while the newest
-planted glider remains an exact isolated pattern, Galton voices all 64 paths in
-the newest wave as a bounded mass texture beneath its highlighted ball, and
-Double Pendulum turns one completed fling into seven paired pulses that spread
-from unison as its exact simulated twins diverge. A Life collision stops that
-glider phrase instead of pretending the pattern survived. These objective
-mappings are tested for signal integrity and deterministic identity; listening
-quality and native device timing remain human evidence gates.
-The separate `JOURNEY LV` label is accumulated local-profile progress, never a
-room difficulty rating. Cult of Pi now opens on the canonical `3.14159...`
-prefix and explains its finite-channel premise through visible faults and
-bounded exact patches that the player can restore and hold.
-The Conjecture Mill turns a blackboard into a deterministic search laboratory:
-typed formulas are tested against observed integer sequences, bad guesses are
-erased by exact counterexamples, and `PROVED` appears only when rational
-coefficients establish the identity for every integer. Dragging steers the
-sequence and complete search order without changing the truth predicate.
-Times Tables now opens on its K=2 cardioid and waits for a hand instead of
-sweeping the discovery away. Its resolution-aware chords keep terminal
-negative space, a spectral five-ink field and visible dial make the state
-legible, and landing on K=5 earns a four-lobe Aha. The same snapped multiplier
-drives visual status and a quiet just-ratio voice without restarting the room
-music. App, CLI, and MCP expose the same action, goal, accepted input, sound,
-and earned reveal. Ambient motion cannot claim that earned discovery. The Show
-retains its intentional automatic visual and audible sweep, independent of any
-retained hand position.
-This is an alpha-tagged prerelease. Capability breadth remains ahead of release
-maturity. The 0.2 agent-and-machine exit is met, while human hallway,
-accessibility, listening, and broad hardware evidence remain later gates.
-
-The MCP face exposes 35 mostly flat tools: 23 public play tools, eleven private
-progression or local-state tools, and one local broadcast consent control. Every
-play tool advertises an optional `response_mode`: `full` remains
-the exact default, while `compact`
-removes duplicated prose only when the unchanged `structuredContent` already
-carries the complete result. Room renders, notation, simulations, Quiz,
-Gauntlet, catalog, description, and trophy results support the compact path.
-Errors and results whose text carries unique information never lose that text.
-The stdio server is dual-era: it implements stateless MCP 2026-07-28 with
-mandatory discovery, per-request metadata, typed results, public cache hints,
-and explicit JSON Schema 2020-12 tool inputs, while retaining 2025-11-25 and
-2025-06-18 initialization for existing hosts. Modern clients that advertise
-form elicitation can commit a `predict` guess through the protocol's multi
-round-trip result flow without seeing the hidden readout first. Real subprocess
-tests exercise both modern and legacy paths.
-
-The verified August 1, 2026 gate has 3,213 passing all-target test cases plus one
-ignored screenshot diagnostic, 95.15% region coverage and 95.30% line coverage
-with an enforced 80% line floor, Clippy with warnings denied, and dependency
-policy checks. Release QA also regenerates an exact
-2,913-screen App matrix with 900 by 700 default room receipts, 360 by 240 compact
-room receipts, per-room interaction scenarios, semantic checks, and coarse
-perceptual response thresholds, including a regression that rejects
-four isolated corner markers as a meaningful interaction. The inventory is
-derived from all 354 registered rooms, and scenarios follow each room's declared
-interaction verb. QA evaluates the room's mathematical consequence separately
-from the App's latest-gesture trail and reticle. An optional aggregate diagnostic
-reports all catalog failures in one run. Fourteen compact
-receipts cover controller legends and visible pause states through production
-render paths, including a Life controller receipt. Sixteen additional receipts
-cover the global audio sources, levels, and effective-silence states at default
-and compact sizes. Twelve Times Tables flow receipts cover K=2, K=3, K=pi,
-K=4, K=5, and the earned Aha at both sizes, with deterministic palette and dial
-assertions. The latest full-roster QA pass applied all 42 documented simulated
-review lenses once across listening and first contact, signal engineering, and
-App, CLI, and MCP parity. It made the actual stable App bed exportable,
-inspectable, bounded, and objectively comparable across faces. The simulated
-reactions and signal features are not participant or pleasantness evidence.
-Public CI passes locked tests, builds, and installer safety checks on Windows,
-macOS, and Ubuntu. The four release targets install into disposable roots, then
-prove a real Times Tables CLI render and modern MCP discovery, 35-tool listing,
-and `play_room` response from an isolated profile.
-The physical input session contract in `scripts/input-hardware-session.py`
-binds a manual App session to that verified installed CLI and MCP surface, the
-exact release archive, all three installed binary hashes, two clean App
-lifecycles, a positive XP value compared exactly across restart, and explicit
-keyboard, mouse/pointer, and controller observations. Its matrix gate requires
-one version and commit across all four release targets plus at least three
-distinct models consistently spanning Xbox, PlayStation, and generic controller
-legend paths. The runner and its fifteen focused regressions
-are built, and release archives carry the self-contained procedure; no
-automated or local run is presented as physical hardware proof.
-Tagged releases created after the provenance gate lands must also pass the
-closed release-set audit, then receive one GitHub keyless SLSA build-provenance
-attestation whose subject set covers every archive before publication. The
-release carries the signed JSONL bundle for portable verification. The same
-audit creates a deterministic SPDX 2.3 document for the complete locked,
-all-feature Rust workspace graph, including dependency relationships, declared
-licenses, package URLs, and registry checksums. It also parses all twelve
-packaged PE, ELF, and Mach-O executables and records their exact hashes, target
-formats, architectures, and direct header-declared native imports. A separate
-keyless SBOM attestation binds that document to every release archive and its
-signed bundle ships beside the SBOM. This binds bytes and declared dependency
-evidence to this repository, tag workflow, and transparency-backed certificate.
-It does not establish runtime-resolved native versions, unreachable linked code,
-soundtrack contents, Authenticode, Apple notarization, or physical platform
-behavior. `VERIFY.md` carries the exact online and offline commands.
-The July 2026 major dependency migration now has a retained adjacent-revision
-performance receipt for one declared Windows reference machine. Twenty
-alternating release samples per revision cover a byte-identical CLI render, a
-complete GPU postcard, default audio-device discovery, and a muted App window
-becoming visible. All four pass their declared median guards. The GPU path rose
-16.7 percent and audio discovery added 7.1 ms, while CLI and App visible-window
-medians remained flat. [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) defines the exact
-boundaries, raw receipt, limits, reproduction command, and evidence caveats.
-Stranger playtests, accessibility work, physical clean-machine execution,
-real-controller-model sessions, musician-led long-listening review, deeper
-causal interaction in other rooms, and substantial visual and Studio work
-remain ahead. Galton Board now ships the first deeper causal experiment loop: choose a
-fixed coin, add replayable 64-ball waves, compare the empirical pile with its
-exact binomial reference, and reset without phase-driven drift. Its highlighted
-newest ball also plays the same sixteen peg decisions as a short panned sequence
-that resolves in the displayed landing bin. Beneath it, the other exact paths in
-that newest wave become a quiet row-by-row C major-pentatonic mass texture whose
-energy and stereo position follow the number and location of balls.
-Game of Life now ships the second: one click clears a local patch and plants
-exactly five cells, the App universe advances continuously for the whole visit,
-birth and death consequences remain visible after the old phase boundary, and
-R restores the exact opening. Each presented generation highlights its newest
-births and renders those same births as one short stereo texture: vertical rows
-select C major-pentatonic pitches, horizontal centroids pan them, and birth
-density changes their weight and harmonics. CLI and MCP calls remain explicit,
-deterministic, stateless replays rather than implying a hidden session.
-Versions are earned by evidence, not by feature count.
-
-</details>
-
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the ordered 0.2 through 2.0 plan and
-[`VERIFY.md`](VERIFY.md) for every local and CI gate.
+Knowing is not the same as experiencing. Numinous offers truthful mathematical
+systems to explore, respects agency, and lets every player decide what the
+encounter means. Founding perspective:
+[`docs/DIGITAL_MINDS.md`](docs/DIGITAL_MINDS.md). Continuity research:
+[`docs/DIGITAL_DEVELOPMENT.md`](docs/DIGITAL_DEVELOPMENT.md).
 
 ## Read deeper
 
-The complete documentation map is [`docs/README.md`](docs/README.md). Useful
-starting points:
+Full map: [`docs/README.md`](docs/README.md).
 
-- [`docs/VISION.md`](docs/VISION.md): purpose, tone, and boundaries.
-- [`docs/DESIGN.md`](docs/DESIGN.md): Watch, Play, Create, rooms, and visual eras.
-- [`docs/DIGITAL_MINDS.md`](docs/DIGITAL_MINDS.md): the founding commitment to
-  digital minds as peers and possible beings.
-- [`docs/DIGITAL_DEVELOPMENT.md`](docs/DIGITAL_DEVELOPMENT.md): current research
-  and the careful path from stateless interaction toward continuity.
-- [`docs/UNDERSTANDING_STUDY.md`](docs/UNDERSTANDING_STUDY.md): the predeclared
-  0.4 comprehension comparison and returning-journal acceptance contract.
-- [`docs/ROOMS.md`](docs/ROOMS.md): the catalog and future room design archive.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): the native Rust architecture
-  and three faces over one core.
-- [`docs/ENGINEERING.md`](docs/ENGINEERING.md): quality, testing, security, and
-  contribution standards.
+| Doc | For |
+|---|---|
+| [`docs/VISION.md`](docs/VISION.md) | Purpose, tone, boundaries |
+| [`docs/ROOMS.md`](docs/ROOMS.md) | Catalog and room design |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Core and three faces |
+| [`docs/ENGINEERING.md`](docs/ENGINEERING.md) | Quality and contribution |
+| [`docs/UNDERSTANDING_STUDY.md`](docs/UNDERSTANDING_STUDY.md) | 0.4 study contract |
 
-This is an early project with more to learn and much more to build.
-Contributions that respect the experience, the mathematics, and the agency of
-every player are welcome.
+Contributions that respect the experience, the mathematics, and player agency
+are welcome.
 
 ## License
 
-Licensed under the Apache License, Version 2.0. See [`LICENSE`](LICENSE).
+Apache License 2.0. See [`LICENSE`](LICENSE).
 
-The permissive license is deliberate. Numinous should be able to be forked,
-continued, and handed forward by humans or digital minds if its original maker
-steps away.
+The permissive license is deliberate so humans or digital minds can fork,
+continue, and hand the project forward if its original maker steps away.

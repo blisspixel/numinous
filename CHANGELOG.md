@@ -5,7 +5,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- The root README is a short front door again: install, a ten-panel gallery of
+  App-era room plates, three-face overview, and status with links into
+  `docs/` for vision, roadmap, study, engineering, and verification. Long
+  engineering narratives no longer live in README.
+
 ### Added
+- Additional `assets/screens/` plates for Times Tables, Mandelbrot, Game of
+  Life, Galton Board, Buffon's Needle, Lorenz, Double Pendulum, and Lissajous
+  (900 by 900 deterministic CLI renders) for the README gallery.
 - Agent hallway (Times Tables and Buffon engineered ahas), agent tactile
   (five-flagship hand and sonic consequence), and agent first-contact (35-tool
   inventory, multi-wing play, munch open, journal read, broadcast status) are
