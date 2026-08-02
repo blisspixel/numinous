@@ -359,6 +359,9 @@ def release_install_evidence(
                 "sha256": installed_hash,
             }
 
+        files.clear()
+        del payload
+
         yield (
             {
                 "archive": archive_name,
