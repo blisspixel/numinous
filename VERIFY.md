@@ -267,7 +267,30 @@ mass-first audio energy, stereo bias, supported-rate signal safety, and bounded
 event admission. These checks establish deterministic structure and signal
 safety, not listening quality or physical-device timing.
 
-## 2d. Put `numinous` on your PATH (once)
+## 2d. Verify the dependency migration performance receipt
+
+The retained July 2026 adjacent-revision receipt is verified without rerunning
+hardware measurements. On Windows:
+
+```
+python scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
+```
+
+On macOS or Linux:
+
+```
+python3 scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
+```
+
+The verifier requires the exact reference contract, pinned machine, toolchain,
+workload-output and device identities, well-formed retained binary digests, and
+the exact recorder source. It then recomputes every statistic, threshold result,
+and verdict. The raw Windows reference-machine evidence and its integrity limits
+live in `docs/PERFORMANCE.md`.
+Recording a replacement requires the Windows desktop and hardware named there;
+all scratch state must remain in `.agent/`.
+
+## 2e. Put `numinous` on your PATH (once)
 
 ```
 cargo install --path faces/cli --force

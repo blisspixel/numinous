@@ -6,6 +6,21 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The July 2026 dependency migration now has a reproducible adjacent-revision
+  performance contract and canonical raw receipt. One bounded Python 3.11
+  runner builds the exact before and after commits with locked release
+  dependencies, injects an identical default-audio discovery probe, alternates
+  three warmups and twenty retained samples, and measures a byte-identical CLI
+  render, complete GPU postcard, muted App visible-window startup, and audio
+  device discovery on one declared AC-powered Windows machine. CLI and App
+  medians remain flat, the GPU path is 1.167x, and audio discovery adds 7.117
+  ms; all pass declared relative plus absolute guards. Eighteen focused
+  regressions and cross-platform CI verification require exact schemas, pinned
+  environment and output identities, and well-formed binary digests, then
+  recompute summaries, thresholds, verdicts, and the exact runner SHA256. The
+  evidence is a historical one-machine comparison, not a current-main,
+  cross-platform, end-to-end App readiness, first-paint, callback-latency, or
+  sensory claim.
 - The release SBOM now inventories every packaged executable, not only the
   source dependency graph. Bounded 64-bit PE, ELF, and Mach-O parsers bind all
   twelve binary hashes, formats, target architectures, and unique direct

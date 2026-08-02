@@ -47,6 +47,8 @@ jobs:
           python3 scripts/test-input-hardware-session.py
           python3 scripts/test-release-sbom.py
           python3 scripts/test-release-workflow.py
+          python3 scripts/test-dependency-migration-performance.py
+          python3 scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
 
   msrv:
     name: MSRV 1.88
@@ -131,6 +133,8 @@ jobs:
           python scripts/test-input-hardware-session.py
           python scripts/test-release-sbom.py
           python scripts/test-release-workflow.py
+          python scripts/test-dependency-migration-performance.py
+          python scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
       - name: POSIX Python contract tests
         if: runner.os != 'Windows'
         run: |
@@ -140,6 +144,8 @@ jobs:
           python3 scripts/test-input-hardware-session.py
           python3 scripts/test-release-sbom.py
           python3 scripts/test-release-workflow.py
+          python3 scripts/test-dependency-migration-performance.py
+          python3 scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
       - name: Windows installer safety
         if: runner.os == 'Windows'
         shell: pwsh

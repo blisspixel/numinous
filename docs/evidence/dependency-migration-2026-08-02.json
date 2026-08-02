@@ -1,0 +1,341 @@
+{
+  "configuration": {
+    "locked": true,
+    "measuredSamplesPerRevision": 20,
+    "order": "alternating-ab-ba",
+    "profile": "release",
+    "warmupSamplesPerRevision": 3
+  },
+  "generatedAt": "2026-08-02T10:39:52Z",
+  "machine": {
+    "acPower": true,
+    "architecture": "AMD64",
+    "cpu": "AMD64 Family 25 Model 116 Stepping 1, AuthenticAMD",
+    "logicalCpus": 16,
+    "memoryBytes": 66367377408,
+    "os": "Windows",
+    "osRelease": "10.0.26200"
+  },
+  "measurements": [
+    {
+      "after": {
+        "binarySha256": "afcf582d2aae94d569f3f9ffc664e6766c8296c5731102e6cf811a36a2a4688d",
+        "outputSha256": "a64c231d39e7ec47821034b7e5250b2bedc9bdc47018627323b4e21795777f29",
+        "samplesMs": [
+          14.8792,
+          17.7644,
+          21.1383,
+          25.9746,
+          15.6365,
+          30.6205,
+          18.544,
+          19.2533,
+          18.3207,
+          28.0519,
+          17.2729,
+          16.7514,
+          15.8266,
+          16.7554,
+          20.0709,
+          16.8427,
+          17.6401,
+          23.6844,
+          15.7366,
+          15.4239
+        ],
+        "stats": {
+          "maxMs": 30.6205,
+          "p50Ms": 17.6401,
+          "p95Ms": 28.0519
+        }
+      },
+      "allowedMedianDeltaMs": 5.0,
+      "allowedMedianRatio": 1.25,
+      "before": {
+        "binarySha256": "ed2c1dbbc48de14cc3dc41ec4894aaa9a5c1c4216dede63f94afe65295e7f1ef",
+        "outputSha256": "a64c231d39e7ec47821034b7e5250b2bedc9bdc47018627323b4e21795777f29",
+        "samplesMs": [
+          23.105,
+          18.196,
+          17.24,
+          20.6165,
+          20.7315,
+          17.4709,
+          21.002,
+          16.919,
+          15.5789,
+          16.8981,
+          15.4932,
+          19.9281,
+          16.542,
+          19.231,
+          21.8385,
+          16.5788,
+          17.469,
+          15.3824,
+          16.4465,
+          16.2717
+        ],
+        "stats": {
+          "maxMs": 23.105,
+          "p50Ms": 17.24,
+          "p95Ms": 21.8385
+        }
+      },
+      "boundary": "fresh process start through a complete deterministic 80 by 30 Times Tables terminal render captured from stdout",
+      "medianDeltaMs": 0.4001,
+      "medianRatio": 1.023208,
+      "name": "cliRequest",
+      "passed": true
+    },
+    {
+      "after": {
+        "adapter": "AMD Radeon(TM) 780M",
+        "backend": "Vulkan",
+        "binarySha256": "3c29b184a5251c57c2d9fcd934d147d1afda80951505eedbca58d33f6b95ca81",
+        "outputDimensions": [
+          1200,
+          900
+        ],
+        "outputSha256": "a0880f5b650c92e8733bb6bb6a0527209656292abc5cf4403418a3bd84cab2e1",
+        "samplesMs": [
+          625.1145,
+          684.856,
+          665.9772,
+          654.3485,
+          813.5764,
+          1171.5901,
+          658.4574,
+          640.3281,
+          622.5542,
+          684.8132,
+          603.5358,
+          633.3422,
+          642.206,
+          621.2174,
+          591.6684,
+          683.968,
+          623.3786,
+          636.2026,
+          603.3912,
+          636.4885
+        ],
+        "stats": {
+          "maxMs": 1171.5901,
+          "p50Ms": 636.4885,
+          "p95Ms": 813.5764
+        }
+      },
+      "allowedMedianDeltaMs": 50.0,
+      "allowedMedianRatio": 1.25,
+      "before": {
+        "adapter": "AMD Radeon(TM) 780M",
+        "backend": "Vulkan",
+        "binarySha256": "7680014983cbf7cd72977247f7bde1e85d77ffadb969f874ab6df5dc0fb72b4c",
+        "outputDimensions": [
+          1200,
+          900
+        ],
+        "outputSha256": "9341b0d8fddfb5f2eb243df28b9ccaaa1b1c5eb6788c2f4a9a0c639c4d75cc87",
+        "samplesMs": [
+          558.2376,
+          575.0232,
+          562.0676,
+          567.8844,
+          688.1829,
+          575.0508,
+          543.1747,
+          540.1268,
+          546.043,
+          545.6125,
+          508.9964,
+          546.3603,
+          527.8316,
+          573.6186,
+          515.8051,
+          542.8958,
+          508.4416,
+          514.2293,
+          633.0351,
+          510.6286
+        ],
+        "stats": {
+          "maxMs": 688.1829,
+          "p50Ms": 545.6125,
+          "p95Ms": 633.0351
+        }
+      },
+      "boundary": "fresh process start through adapter acquisition, one 1200 by 900 300-iteration Mandelbrot dispatch, readback, and PNG completion",
+      "medianDeltaMs": 90.876,
+      "medianRatio": 1.166558,
+      "name": "gpuPostcard",
+      "passed": true
+    },
+    {
+      "after": {
+        "binarySha256": "4acd2eaac1f60c2a12cfc1eb03c62a0964a99e6359363a12d6bad5a329c8169d",
+        "channels": 2,
+        "device": "Speakers (Realtek(R) Audio)",
+        "sampleRate": 48000,
+        "samplesMs": [
+          19.2864,
+          17.7952,
+          18.3607,
+          20.4564,
+          17.8692,
+          21.0895,
+          17.6611,
+          15.6082,
+          18.6738,
+          17.5297,
+          19.6648,
+          14.8713,
+          17.5852,
+          16.7996,
+          15.6022,
+          15.3754,
+          16.3441,
+          14.4203,
+          14.9979,
+          15.9816
+        ],
+        "stats": {
+          "maxMs": 21.0895,
+          "p50Ms": 17.5297,
+          "p95Ms": 20.4564
+        }
+      },
+      "allowedMedianDeltaMs": 10.0,
+      "allowedMedianRatio": 1.5,
+      "before": {
+        "binarySha256": "8f0d2e46977a140ed86e6ae449279cfb3f7e46596d8404e0a1aeba466958a403",
+        "channels": 2,
+        "device": "Speakers (Realtek(R) Audio)",
+        "sampleRate": 48000,
+        "samplesMs": [
+          13.8387,
+          11.9364,
+          9.7984,
+          11.4529,
+          11.1503,
+          11.5092,
+          12.2889,
+          10.1621,
+          8.5967,
+          8.9908,
+          10.9519,
+          10.4833,
+          11.979,
+          11.783,
+          9.3831,
+          8.4773,
+          9.9284,
+          9.6259,
+          9.4916,
+          10.4129
+        ],
+        "stats": {
+          "maxMs": 13.8387,
+          "p50Ms": 10.4129,
+          "p95Ms": 12.2889
+        }
+      },
+      "boundary": "inside one fresh process, from default-host creation through default output-device and output-configuration acquisition",
+      "medianDeltaMs": 7.1168,
+      "medianRatio": 1.68346,
+      "name": "audioDeviceInit",
+      "passed": true
+    },
+    {
+      "after": {
+        "binarySha256": "9c366d65e48d4c8328b5033ede844bd5ff2aeaf80e07dd9bc29f9aa23d934de9",
+        "samplesMs": [
+          44.7931,
+          37.2333,
+          44.9319,
+          44.2269,
+          47.626,
+          45.1712,
+          46.3208,
+          42.7113,
+          55.3764,
+          44.7963,
+          65.609,
+          43.5361,
+          46.3615,
+          48.1905,
+          47.0512,
+          44.8144,
+          49.153,
+          58.7983,
+          78.1637,
+          41.7253
+        ],
+        "stats": {
+          "maxMs": 78.1637,
+          "p50Ms": 45.1712,
+          "p95Ms": 65.609
+        }
+      },
+      "allowedMedianDeltaMs": 20.0,
+      "allowedMedianRatio": 1.35,
+      "before": {
+        "binarySha256": "c9d22235e6d29a74a9389f4af70d8001f868a853e18176c0d7d7f99e90142d46",
+        "samplesMs": [
+          48.1454,
+          46.6049,
+          44.2853,
+          43.0622,
+          47.1986,
+          48.4187,
+          52.1962,
+          47.9086,
+          44.888,
+          44.8223,
+          46.689,
+          51.893,
+          44.4632,
+          45.4957,
+          45.2469,
+          52.8406,
+          64.0006,
+          88.0605,
+          86.7059,
+          45.7239
+        ],
+        "stats": {
+          "maxMs": 88.0605,
+          "p50Ms": 46.689,
+          "p95Ms": 86.7059
+        }
+      },
+      "boundary": "fresh muted App process start through discovery of its visible native top-level Numinous window, before display scan-out or human perception",
+      "medianDeltaMs": -1.5178,
+      "medianRatio": 0.967491,
+      "name": "appVisibleWindow",
+      "passed": true,
+      "probe": "win32-visible-top-level-window-v1"
+    }
+  ],
+  "repository": {
+    "runnerSourceSha256": "93983ada90c0d7f0af9e88be97d48caf27950f6dd9a41ff3c088cbb9ea0580db",
+    "url": "https://github.com/blisspixel/numinous"
+  },
+  "revisions": {
+    "after": {
+      "cargoVersion": "cargo 1.97.1 (c980f4866 2026-06-30)",
+      "commit": "301eac6943fb44ff00316c7b0994e8d8cc505455",
+      "rustcVersion": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+    },
+    "before": {
+      "cargoVersion": "cargo 1.96.0 (30a34c682 2026-05-25)",
+      "commit": "b47303d742c795540eb08a9c0e70a7e391a47978",
+      "rustcVersion": "rustc 1.96.0 (ac68faa20 2026-05-25)"
+    }
+  },
+  "schemaVersion": "numinous-dependency-migration-performance-v1",
+  "verdict": {
+    "failedMeasurements": [],
+    "passed": true
+  }
+}

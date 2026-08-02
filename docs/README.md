@@ -51,7 +51,7 @@ defined in `RESEARCH.md`.
 - **New to the project:** `../PLAY.md` for the intended first experience, then
   `../README.md` for the purpose and current state. When you want the full map,
   continue with `PLAYING.md`, `VISION.md`, `DESIGN.md`, and `ROOMS.md`.
-- **About to build it:** `ARCHITECTURE.md`, then `ENGINEERING.md`, then `INTERFACES.md`, then `ROADMAP.md`, with `QUALITY.md` alongside.
+- **About to build it:** `ARCHITECTURE.md`, then `ENGINEERING.md`, then `INTERFACES.md`, then `ROADMAP.md`, with `QUALITY.md` and `PERFORMANCE.md` alongside.
 - **Designing the content and feel:** `ROOMS.md`, `INSIGHTS.md`, `VISUALS.md`, `SOUND.md`, `MUSIC.md`, `LORE.md`, `PROGRESSION.md`, `STUDIO.md`.
 - **Here for the digital-minds work:** `DIGITAL_MINDS.md` for the stance,
   `DIGITAL_DEVELOPMENT.md` for the July 2026 research and implementation plan,
@@ -105,6 +105,8 @@ defined in `RESEARCH.md`.
 - `SCOPE.md` the definition of no: the three-products hierarchy, the daily "more math or more progression?" test, the justification filter, and why the fan-out docs are a menu to prune, not a build list.
 - `ROADMAP.md` the version-gated plan (0.x, 1.0, 2.0+), defined by quality bars, not dates.
 - `QUALITY.md` testing and fun-evals: the six quality loops, the fun/awe rubric, QoL, "the math is the oracle."
+- `PERFORMANCE.md` measured performance evidence: exact workload boundaries,
+  raw receipts, migration comparisons, limits, and the standing update rule.
 - `UNDERSTANDING_STUDY.md` the 0.4 study contract: active control, frozen
   sample and outcomes, honest agent-memory boundary, journal acceptance, and
   publication requirements.
@@ -144,6 +146,7 @@ Each topic is **owned** by exactly one doc. Everything else links to it. When in
 | Digital-mind continuity, learning, memory, agency, and welfare implementation | `DIGITAL_DEVELOPMENT.md` |
 | How to play (humans, agents, digital consciousnesses) | `PLAYING.md` |
 | Testing, evals, QoL, the fun/awe rubric | `QUALITY.md` |
+| Performance workloads, measurements, migration receipts, and evidence limits | `PERFORMANCE.md` |
 | The 0.4 comprehension study method, sample, outcomes, and evidence contract | `UNDERSTANDING_STUDY.md` |
 | Simulated persona-review ideation and its evidence limits | `PLAYTESTS.md` |
 | The playtester casting pool (the 42 personas with backstories) | `PLAYTESTERS.md` |
