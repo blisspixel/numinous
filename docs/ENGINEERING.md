@@ -181,6 +181,12 @@ Nothing merges red. On every PR, blocking:
     multi-disk forms rejected. Tar verification accepts the deterministic ustar
     directory and regular-file subset and rejects hidden PAX or GNU extension
     records before their bodies are expanded.
+14. The physical input receipt contract is regression-tested on Windows,
+    Linux, and macOS. It verifies archive and installed-binary identity,
+    installed CLI and MCP engagement, complete ordered App observations, a
+    positive XP value compared exactly across restart, content addressing, and
+    a single-release four-target plus three-controller-profile matrix over at
+    least three distinct models. CI tests the contract, not physical input.
 
 Hardening targets not yet enforced in CI: `cargo-auditable` release binaries,
 cryptographic release signing, the visual and audio regression loops, and
@@ -203,8 +209,10 @@ as much as code), and the cargo gate (fmt, Clippy and rustdoc with warnings
 denied, plus doctests and the full test suite) only when the commit touches
 Rust, `Cargo.*`, or a shader, so a docs-only commit stays fast. Changes to the
 0.4 study runner, collector, fixture bank, encounter specification, MCP
-mediator, or their test files run the focused Python regressions. Coverage, the
-locked build, and artifact regeneration stay in
+mediator, or their test files run the focused Python regressions. The installed
+release packaging, installed engagement, and physical input session regressions
+likewise run whenever their drivers or tests change. Coverage, the locked build, and artifact
+regeneration stay in
 `scripts/verify.sh` (the release gate); they are too slow for every commit.
 Emergency bypass is `git commit --no-verify`, after which you must run
 `scripts/verify.sh` before pushing.

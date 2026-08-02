@@ -140,6 +140,19 @@ Detail below and in the version sections.
   PlayStation product names select matching face labels while unknown pads use
   generic compass labels. Xbox-class Windows hardware is the local target;
   broader controller and platform certification remains open.
+- **Done (Cycle 15 physical input evidence contract, August 1, 2026):** one
+  portable runner binds an operator-observed App session to a verified release
+  archive, exact installed App, CLI, and MCP binary hashes, automated installed
+  CLI and MCP engagement, two clean App lifecycles with a positive XP value
+  compared exactly across restart over one isolated profile,
+  and ordered keyboard, mouse/pointer, controller, reconnect, game, pause, and audio
+  observations. Content-addressed receipts stay in ignored `logs/`. The matrix
+  validator requires unique passed receipts for one version and commit on all
+  four release targets and at least three distinct models mapped consistently
+  across Xbox, PlayStation, and generic controller legend profiles. Fifteen
+  focused regressions run on Windows, Linux, and macOS CI. The contract is
+  built and ships with the release archive, but representative physical
+  sessions have not yet been performed and broader certification remains open.
 - **Done (Cycle 138 gamepad configuration):** `.numinous-bindings.json` in the
   player's home directory remaps every supported standard button to a complete
   direct semantic-action set. Remapped primary buttons preserve hold and
@@ -971,6 +984,16 @@ peak energy.
   384 kHz. CLI and MCP Crack the Code share one core 2 through 8 digit boundary,
   and MCP Munch Arcade shares the App's 4,096 action replay budget. Focused
   regressions exercise every repaired boundary before progress mutation.
+- **Done (Cycle 15 physical input evidence contract, August 1, 2026):** the
+  clean-machine gate now has an executable receipt contract for the verified
+  artifact, byte-identical installed App, CLI, and MCP faces, operator-observed
+  keyboard, mouse/pointer, and controller behavior, clean close, and exact
+  positive-XP restart comparison. Aggregate validation requires one version and
+  commit across all four release targets and at least three distinct models
+  mapped consistently across Xbox, PlayStation, and generic controller paths.
+  The archive carries the self-contained procedure. CI proves the
+  contract on all three operating systems, not the unperformed physical
+  sessions.
 - **Open:** record comparable before-and-after GPU, audio, App startup, and CLI
   request performance evidence for the July 2026 dependency migration. Future
   major updates require both migration notes and comparable performance evidence.

@@ -6,6 +6,26 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- A cross-platform physical input session runner now binds each observed App
+  session to a checksum-verified release archive and byte-matching installed
+  App, CLI, and MCP binaries. It automatically exercises installed CLI render
+  and MCP discovery, inventory, and play before guiding explicit keyboard,
+  mouse/pointer, controller, disconnect, audio, game, pause, clean-exit, and restart
+  observations against one isolated profile. Content-addressed receipts are
+  written only under ignored `logs/`, retain an explicit manual-evidence
+  limitation, and fail closed on missing, reordered, malformed, or inconsistent
+  claims. The content identifier detects changes that were not reidentified;
+  it is explicitly not a signature or external custody proof. Matrix validation
+  requires passed unique receipts for one release version and commit across all
+  four release targets, with one consistent legend profile per model and at
+  least three distinct models spanning Xbox, PlayStation, and generic paths.
+  Fifteen focused contract regressions run locally, in the pre-commit hook, and
+  across Windows, Linux, and macOS CI. No physical receipt has been recorded by
+  automation. Binary release archives carry the runner, its two verification
+  dependencies, and `VERIFY.md`, so the procedure does not require a source
+  checkout. Archive and installed executable bytes are pinned in private
+  snapshots before verification and execution, so path replacement cannot
+  change the release under observation.
 - Every Windows, Linux, macOS Intel, and macOS Apple silicon release package now
   passes one shared installed-binary engagement contract. The disposable install
   must render Times Tables through the CLI, then its MCP binary must complete

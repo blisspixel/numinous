@@ -48,6 +48,7 @@ Step "understanding study runner" { python scripts/test-understanding-study.py }
 Step "understanding study collector" { python scripts/test-understanding-collect.py }
 Step "release packaging" { python scripts/test-package-release.py }
 Step "release engagement contract" { python scripts/test-release-engagement-smoke.py }
+Step "physical input session contract" { python scripts/test-input-hardware-session.py }
 Step "build"  { cargo build --workspace --locked }
 
 if ($null -ne (Get-Command cargo-llvm-cov -ErrorAction SilentlyContinue)) {

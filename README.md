@@ -326,6 +326,16 @@ Public CI passes locked tests, builds, and installer safety checks on Windows,
 macOS, and Ubuntu. The four release targets install into disposable roots, then
 prove a real Times Tables CLI render and modern MCP discovery, 35-tool listing,
 and `play_room` response from an isolated profile.
+The physical input session contract in `scripts/input-hardware-session.py`
+binds a manual App session to that verified installed CLI and MCP surface, the
+exact release archive, all three installed binary hashes, two clean App
+lifecycles, a positive XP value compared exactly across restart, and explicit
+keyboard, mouse/pointer, and controller observations. Its matrix gate requires
+one version and commit across all four release targets plus at least three
+distinct models consistently spanning Xbox, PlayStation, and generic controller
+legend paths. The runner and its fifteen focused regressions
+are built, and release archives carry the self-contained procedure; no
+automated or local run is presented as physical hardware proof.
 Stranger playtests, accessibility work, physical clean-machine execution,
 real-controller-model sessions, musician-led long-listening review, deeper
 causal interaction in other rooms, and substantial visual and Studio work
