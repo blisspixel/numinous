@@ -299,13 +299,16 @@ in core.
   MCP.
 - **Release path:** deterministic Windows, macOS, and Linux archives, closed
   payload manifests, checksums, installers, updates, and CI self-tests are built.
-  Cryptographic signing, provenance attestations, clean-machine evidence, and
-  broader platform certification remain 0.6 work. The public launch gate is 0.9.
+  Tagged publication is now ordered after a closed-set audit and GitHub keyless
+  SLSA build-provenance attestation whose subject set covers every archive, with
+  the signed JSONL bundle attached to the release. Platform code signing, notarization, SBOM
+  policy, clean-machine evidence, and broader platform certification remain 0.6
+  work. The public launch gate is 0.9.
 
 ## Remaining technical decisions
 
-1. Select signing, provenance, SBOM verification, and platform trust policy for
-   the shipped package formats.
+1. Select platform signing, notarization, SBOM verification, and trust policy
+   beyond the repository and workflow identity supplied by build provenance.
 2. Specify the bounded pattern DSL and its compatibility contract.
 3. Design the audio scheduler and master bus around measured latency.
 4. Define native `.num` associations, URL handling, and loop export.

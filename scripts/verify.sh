@@ -30,6 +30,8 @@ echo "== release engagement contract =="
 python3 scripts/test-release-engagement-smoke.py
 echo "== physical input session contract =="
 python3 scripts/test-input-hardware-session.py
+echo "== release workflow contract =="
+python3 scripts/test-release-workflow.py
 echo "== build =="
 cargo build --workspace --locked
 

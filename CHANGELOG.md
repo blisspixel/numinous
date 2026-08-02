@@ -6,6 +6,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Tagged release publication now requires one GitHub keyless SLSA
+  build-provenance attestation whose subject set covers every archive admitted
+  by the closed release-set audit. The
+  official provenance action is pinned to an immutable v4.1.1 commit in a
+  tag-only job with only contents-read, OIDC, and attestation-write authority.
+  Publication depends on both audit and attestation, and each release carries
+  the signed JSONL bundle. Eight focused workflow regressions enforce the action
+  identity, permission and subject scope, tag boundary, bundle retention, and
+  publication order. No historic release, platform signature, notarization,
+  SBOM, or clean-machine evidence is implied.
 - A cross-platform physical input session runner now binds each observed App
   session to a checksum-verified release archive and byte-matching installed
   App, CLI, and MCP binaries. It automatically exercises installed CLI render

@@ -17,6 +17,11 @@ built, so an aspiration is never mistaken for a result.
   packaged release targets installs into a disposable root, renders Times
   Tables through the installed CLI, and completes modern MCP discovery, the
   exact 35-tool inventory, and a real `play_room` call from an isolated profile.
+  Eight release-workflow contract regressions require tag-only least-privilege
+  keyless provenance, archive-only subjects from the audited release set, a
+  retained signed bundle, and publication ordered after both audit and
+  attestation. Pull-request runs do not mint attestations, and no historic
+  release is represented as retroactively attested.
   The consented MCP
   broadcast path has 65 focused shared-crate tests, 121 MCP unit tests, and
   12 real stdio tests. Real loopback cases cover pairing, compatibility,
@@ -175,7 +180,8 @@ built, so an aspiration is never mistaken for a result.
   matrix,
   musician-led long-listening review, real execution on macOS and Linux,
   nightly hardware soak, perceptual visual or audio regression, opt-in
-  telemetry, and independent mathematical sign-off of every reveal.
+  telemetry, platform code signing and notarization, SBOM policy, and independent
+  mathematical sign-off of every reveal.
 - **Rule:** `RESEARCH.md` defines Built, Measured, Observed, Designed, and
   Hypothesis. Every release decision uses those labels.
 

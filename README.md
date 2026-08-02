@@ -336,6 +336,13 @@ distinct models consistently spanning Xbox, PlayStation, and generic controller
 legend paths. The runner and its fifteen focused regressions
 are built, and release archives carry the self-contained procedure; no
 automated or local run is presented as physical hardware proof.
+Tagged releases created after the provenance gate lands must also pass the
+closed release-set audit, then receive one GitHub keyless SLSA build-provenance
+attestation whose subject set covers every archive before publication. The
+release carries the signed JSONL bundle for portable verification.
+This binds bytes to this repository, tag workflow, and transparency-backed
+certificate. It is not Authenticode, Apple notarization, an SBOM, or physical
+platform evidence. `VERIFY.md` carries the exact online and bundle commands.
 Stranger playtests, accessibility work, physical clean-machine execution,
 real-controller-model sessions, musician-led long-listening review, deeper
 causal interaction in other rooms, and substantial visual and Studio work

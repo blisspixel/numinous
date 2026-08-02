@@ -994,6 +994,17 @@ peak energy.
   The archive carries the self-contained procedure. CI proves the
   contract on all three operating systems, not the unperformed physical
   sessions.
+- **Done (Cycle 16 release provenance gate, August 1, 2026):** tagged
+  publication now depends on the closed release-set audit and a separate
+  tag-only least-privilege job that creates one GitHub keyless SLSA
+  build-provenance attestation whose subject set covers every binary and soundtrack archive. The
+  official action is pinned to an immutable v4.1.1 commit, its signed JSONL
+  bundle is a required release asset, and eight focused workflow regressions
+  enforce action identity, subject scope, permission scope, tag-only behavior,
+  bundle retention, and publication ordering. Pull requests test the contract
+  without minting attestations or publishing a release. This is repository and
+  workflow provenance, not platform code signing, notarization, SBOM evidence,
+  or clean-machine proof.
 - **Open:** record comparable before-and-after GPU, audio, App startup, and CLI
   request performance evidence for the July 2026 dependency migration. Future
   major updates require both migration notes and comparable performance evidence.
@@ -1178,7 +1189,7 @@ records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 3,213 passing all-target test cases plus one ignored screenshot diagnostic, 95.30% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, and supply-chain CI | Independent math review, accessibility, real-hardware soak, and artifact provenance |
+| Rigor and care are provable | 3,213 passing all-target test cases plus one ignored screenshot diagnostic, 95.30% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, and a tagged build-provenance gate | Independent math review, accessibility, real-hardware soak, platform signing, and SBOM policy |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,913-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
