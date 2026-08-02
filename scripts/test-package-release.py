@@ -534,6 +534,18 @@ class ReleasePackageTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "schema is unsupported"):
             PACKAGE.parse_release_metadata(boolean_schema_version)
+        for field, original, replacement in (
+            ("kind", b'"kind": "binaries"', b'"kind": []'),
+            (
+                "target",
+                b'"target": "x86_64-pc-windows-msvc"',
+                b'"target": {}',
+            ),
+        ):
+            malformed_type = exact.replace(original, replacement)
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(ValueError, "kind or target is malformed"):
+                    PACKAGE.parse_release_metadata(malformed_type)
 
     def test_archive_expansion_budget_fails_before_member_read(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

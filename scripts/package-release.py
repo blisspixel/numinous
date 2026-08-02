@@ -172,6 +172,15 @@ def parse_release_metadata(data: bytes) -> dict[str, object]:
     revision = metadata["commit"]
     if not isinstance(revision, str) or re.fullmatch(r"[0-9a-f]{40}", revision) is None:
         raise ValueError("release metadata commit is malformed")
+    kind = metadata["kind"]
+    target = metadata["target"]
+    if (
+        not isinstance(kind, str)
+        or not 0 < len(kind) <= 32
+        or not isinstance(target, str)
+        or not 0 < len(target) <= 128
+    ):
+        raise ValueError("release metadata kind or target is malformed")
     if metadata["signed"] is not False or metadata["tag"] != f"v{version}":
         raise ValueError("release metadata identity is inconsistent")
     return metadata
