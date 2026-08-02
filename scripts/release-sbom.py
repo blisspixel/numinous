@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -19,10 +20,19 @@ from urllib.parse import quote
 
 
 ROOT = Path(__file__).resolve().parent.parent
+PACKAGE_SCRIPT = ROOT / "scripts" / "package-release.py"
+PACKAGE_SPEC = importlib.util.spec_from_file_location(
+    "numinous_package_release_for_sbom", PACKAGE_SCRIPT
+)
+if PACKAGE_SPEC is None or PACKAGE_SPEC.loader is None:
+    raise RuntimeError("cannot load release package verifier")
+PACKAGE = importlib.util.module_from_spec(PACKAGE_SPEC)
+PACKAGE_SPEC.loader.exec_module(PACKAGE)
 MAX_INPUT_BYTES = 32 * 1024 * 1024
 MAX_PACKAGES = 10_000
 METADATA_TIMEOUT_SECONDS = 90
 SHA256_HEX = re.compile(r"[0-9a-f]{64}")
+SHA1_HEX = re.compile(r"[0-9a-f]{40}")
 COMMIT_SHA = re.compile(r"[0-9a-f]{40}")
 RELEASE_VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?")
 PACKAGE_NAME = re.compile(r"[0-9A-Za-z_-]+")
@@ -272,14 +282,143 @@ def normalize_license_expression(value: Any, cargo_id: str) -> str:
     return " ".join(tokens).replace("( ", "(").replace(" )", ")")
 
 
+def load_native_inventory(
+    directory: Path, release_version: str
+) -> list[dict[str, Any]]:
+    """Load all four verified binary archives through the shared package verifier."""
+    try:
+        directory_stat = directory.lstat()
+    except OSError as error:
+        fail(f"cannot inspect release directory {directory}: {error}")
+    if not stat.S_ISDIR(directory_stat.st_mode):
+        fail(f"release directory is not an ordinary directory: {directory}")
+    inventory: list[dict[str, Any]] = []
+    for target in sorted(PACKAGE.NATIVE_TARGETS):
+        archive_format = PACKAGE.TARGETS[target][1]
+        archive = directory / f"numinous-v{release_version}-{target}.{archive_format}"
+        checksum = Path(f"{archive}.sha256")
+        try:
+            records = PACKAGE.native_archive_inventory(archive, checksum)
+        except (KeyError, OSError, TypeError, UnicodeError, ValueError) as error:
+            fail(f"native inventory failed for {target}: {error}")
+        if not isinstance(records, list):
+            fail(f"native inventory for {target} is not a list")
+        inventory.extend(records)
+    return inventory
+
+
+def native_spdx_id(prefix: str, *identity: str) -> str:
+    encoded = json.dumps(identity, ensure_ascii=True, separators=(",", ":")).encode()
+    return f"SPDXRef-{prefix}-{hashlib.sha256(encoded).hexdigest()}"
+
+
+def validate_native_inventory(
+    raw_inventory: Any, release_version: str, source_revision: str
+) -> tuple[list[dict[str, Any]], str]:
+    if not isinstance(raw_inventory, list):
+        fail("native binary inventory is not a list")
+    expected_count = len(PACKAGE.NATIVE_TARGETS) * len(PACKAGE.BINARIES)
+    if len(raw_inventory) != expected_count:
+        fail("native binary inventory does not cover every release executable")
+    expected_keys = {
+        "architecture",
+        "fileName",
+        "format",
+        "imports",
+        "sha1",
+        "sha256",
+        "sourceRevision",
+        "target",
+        "version",
+    }
+    records: list[dict[str, Any]] = []
+    identities: set[tuple[str, str]] = set()
+    for raw in raw_inventory:
+        if not isinstance(raw, dict) or set(raw) != expected_keys:
+            fail("native binary inventory record shape is not exact")
+        target = require_string(raw["target"], "native target", 128)
+        expected_native = PACKAGE.NATIVE_TARGETS.get(target)
+        if expected_native is None:
+            fail(f"native binary inventory names an unsupported target: {target}")
+        binary_format = require_string(raw["format"], f"format for {target}", 32)
+        architecture = require_string(
+            raw["architecture"], f"architecture for {target}", 32
+        )
+        if (binary_format, architecture) != expected_native:
+            fail(f"native binary format or architecture does not match {target}")
+        version = require_string(raw["version"], f"version for {target}", 128)
+        revision = require_string(
+            raw["sourceRevision"], f"source revision for {target}", 40
+        )
+        if version != release_version or revision != source_revision:
+            fail(f"native binary release identity does not match {target}")
+        file_name = require_string(raw["fileName"], f"file name for {target}", 256)
+        suffix = PACKAGE.TARGETS[target][0]
+        expected_names = {f"bin/{binary}{suffix}" for binary in PACKAGE.BINARIES}
+        if file_name not in expected_names:
+            fail(f"native binary file name does not match {target}")
+        identity = (target, file_name)
+        if identity in identities:
+            fail(f"native binary inventory repeats {target} {file_name}")
+        identities.add(identity)
+        sha1 = require_string(raw["sha1"], f"SHA1 for {identity}", 40)
+        sha256 = require_string(raw["sha256"], f"SHA256 for {identity}", 64)
+        if SHA1_HEX.fullmatch(sha1) is None or SHA256_HEX.fullmatch(sha256) is None:
+            fail(f"native binary checksum is invalid for {target} {file_name}")
+        raw_imports = raw["imports"]
+        if (
+            not isinstance(raw_imports, list)
+            or not raw_imports
+            or len(raw_imports) > PACKAGE.MAX_NATIVE_IMPORTS
+        ):
+            fail(f"native import inventory is missing or unbounded for {identity}")
+        imports = [
+            require_string(item, f"native import for {identity}", 4096)
+            for item in raw_imports
+        ]
+        if any(
+            any(ord(character) < 0x21 or ord(character) > 0x7E for character in item)
+            for item in imports
+        ):
+            fail(f"native imports are not printable ASCII for {identity}")
+        if imports != sorted(imports) or len(imports) != len(set(imports)):
+            fail(f"native imports are not unique and sorted for {identity}")
+        records.append(
+            {
+                "architecture": architecture,
+                "fileName": file_name,
+                "format": binary_format,
+                "imports": imports,
+                "sha1": sha1,
+                "sha256": sha256,
+                "sourceRevision": revision,
+                "target": target,
+                "version": version,
+            }
+        )
+    expected_identities = {
+        (target, f"bin/{binary}{PACKAGE.TARGETS[target][0]}")
+        for target in PACKAGE.NATIVE_TARGETS
+        for binary in PACKAGE.BINARIES
+    }
+    if identities != expected_identities:
+        fail("native binary inventory target and executable set is incomplete")
+    records.sort(key=lambda item: (item["target"], item["fileName"]))
+    canonical = json.dumps(
+        records, ensure_ascii=True, separators=(",", ":"), sort_keys=True
+    ).encode()
+    return records, hashlib.sha256(canonical).hexdigest()
+
+
 def build_sbom(
     metadata: dict[str, Any],
     lock_data: bytes,
     release_version: str,
     source_revision: str,
     source_date_epoch: int,
+    native_inventory: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Build one canonical SPDX 2.3 document from locked Cargo evidence."""
+    """Build canonical SPDX 2.3 evidence from Cargo and packaged binaries."""
     if RELEASE_VERSION.fullmatch(release_version) is None:
         fail("release version is invalid")
     if COMMIT_SHA.fullmatch(source_revision) is None:
@@ -397,14 +536,29 @@ def build_sbom(
     if set(dependencies) != package_ids:
         fail("cargo metadata resolve nodes do not match the package inventory")
 
+    native_records: list[dict[str, Any]] = []
+    native_digest = hashlib.sha256(b"[]").hexdigest()
+    if native_inventory is not None:
+        native_records, native_digest = validate_native_inventory(
+            native_inventory, release_version, source_revision
+        )
+
     release_id = "SPDXRef-Package-numinous-release"
+    release_comment = (
+        "This inventory covers the locked all-feature Rust workspace graph. "
+        "No packaged executable inventory was supplied."
+    )
+    if native_records:
+        release_comment = (
+            "This inventory covers the locked all-feature Rust workspace graph "
+            "and exact packaged executable hashes, formats, architectures, and "
+            "header-declared native imports for all release targets. Native "
+            "import versions and runtime resolution, unreachable linked code, "
+            "and bundled soundtrack contents are not established."
+        )
     release_package = {
         "SPDXID": release_id,
-        "comment": (
-            "This source-derived inventory covers the locked all-feature Rust "
-            "workspace graph. It does not inspect platform-native libraries, "
-            "emitted binaries, or bundled soundtrack files."
-        ),
+        "comment": release_comment,
         "copyrightText": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
         "externalRefs": [
@@ -446,6 +600,102 @@ def build_sbom(
                     "spdxElementId": packages_by_id[cargo_id]["SPDXID"],
                 }
             )
+
+    native_packages: dict[tuple[str, str], dict[str, Any]] = {}
+    artifact_packages: list[dict[str, Any]] = []
+    binary_files: list[dict[str, Any]] = []
+    for record in native_records:
+        target = record["target"]
+        file_name = record["fileName"]
+        sha1 = record["sha1"]
+        sha256 = record["sha256"]
+        file_id = native_spdx_id("Binary", target, file_name, sha256)
+        artifact_id = native_spdx_id("ArtifactPackage", target, file_name, sha256)
+        binary_files.append(
+            {
+                "SPDXID": file_id,
+                "checksums": [
+                    {"algorithm": "SHA1", "checksumValue": sha1},
+                    {"algorithm": "SHA256", "checksumValue": sha256},
+                ],
+                "comment": (
+                    f"Exact {record['format']} {record['architecture']} executable "
+                    f"from the {target} release archive."
+                ),
+                "copyrightText": "NOASSERTION",
+                "fileName": f"./artifacts/{target}/{file_name}",
+                "fileTypes": ["BINARY"],
+                "licenseConcluded": "NOASSERTION",
+                "licenseInfoInFiles": ["NOASSERTION"],
+            }
+        )
+        artifact_packages.append(
+            {
+                "SPDXID": artifact_id,
+                "checksums": [
+                    {"algorithm": "SHA1", "checksumValue": sha1},
+                    {"algorithm": "SHA256", "checksumValue": sha256},
+                ],
+                "comment": (
+                    f"One verified {record['format']} {record['architecture']} "
+                    f"executable from the {target} release archive."
+                ),
+                "copyrightText": "NOASSERTION",
+                "downloadLocation": "NOASSERTION",
+                "filesAnalyzed": True,
+                "licenseConcluded": "NOASSERTION",
+                "licenseDeclared": "NOASSERTION",
+                "licenseInfoFromFiles": ["NOASSERTION"],
+                "name": f"numinous-{Path(file_name).name}-{target}",
+                "packageVerificationCode": {
+                    "packageVerificationCodeValue": hashlib.sha1(
+                        sha1.encode("ascii"), usedforsecurity=False
+                    ).hexdigest()
+                },
+                "primaryPackagePurpose": "APPLICATION",
+                "versionInfo": release_version,
+            }
+        )
+        relationships.append(
+            {
+                "relatedSpdxElement": artifact_id,
+                "relationshipType": "CONTAINS",
+                "spdxElementId": release_id,
+            }
+        )
+        relationships.append(
+            {
+                "relatedSpdxElement": file_id,
+                "relationshipType": "CONTAINS",
+                "spdxElementId": artifact_id,
+            }
+        )
+        for imported_name in record["imports"]:
+            key = (target, imported_name)
+            package = native_packages.get(key)
+            if package is None:
+                package = {
+                    "SPDXID": native_spdx_id("NativeImport", target, imported_name),
+                    "comment": (
+                        f"Header-declared runtime import for {target}. The artifact "
+                        "does not establish the resolved runtime version."
+                    ),
+                    "copyrightText": "NOASSERTION",
+                    "downloadLocation": "NOASSERTION",
+                    "filesAnalyzed": False,
+                    "licenseConcluded": "NOASSERTION",
+                    "licenseDeclared": "NOASSERTION",
+                    "name": imported_name,
+                    "primaryPackagePurpose": "LIBRARY",
+                }
+                native_packages[key] = package
+            relationships.append(
+                {
+                    "relatedSpdxElement": package["SPDXID"],
+                    "relationshipType": "DEPENDS_ON",
+                    "spdxElementId": file_id,
+                }
+            )
     relationships.sort(
         key=lambda item: (
             item["spdxElementId"],
@@ -457,7 +707,8 @@ def build_sbom(
     return {
         "SPDXID": "SPDXRef-DOCUMENT",
         "comment": (
-            f"Cargo.lock SHA256: {lock_sha256}. Source revision: {source_revision}."
+            f"Cargo.lock SHA256: {lock_sha256}. Source revision: {source_revision}. "
+            f"Native inventory SHA256: {native_digest}."
         ),
         "creationInfo": {
             "created": created,
@@ -467,13 +718,23 @@ def build_sbom(
         "documentDescribes": [release_id],
         "documentNamespace": (
             "https://github.com/blisspixel/numinous/sbom/"
-            f"{quote(release_version, safe='')}/{source_revision}/{lock_sha256}"
+            f"{quote(release_version, safe='')}/{source_revision}/{lock_sha256}/"
+            f"{native_digest}"
         ),
         "name": f"numinous-v{release_version}-release-sbom",
+        "files": sorted(binary_files, key=lambda item: item["fileName"]),
         "packages": [release_package]
         + sorted(
-            packages_by_id.values(),
-            key=lambda item: (item["name"], item["versionInfo"], item["SPDXID"]),
+            [
+                *packages_by_id.values(),
+                *artifact_packages,
+                *native_packages.values(),
+            ],
+            key=lambda item: (
+                item["name"],
+                item.get("versionInfo", ""),
+                item["SPDXID"],
+            ),
         ),
         "relationships": relationships,
         "spdxVersion": "SPDX-2.3",
@@ -503,12 +764,15 @@ def write_exclusive(path: Path, data: bytes) -> None:
 def verify_file(path: Path, expected: bytes) -> None:
     actual = read_regular_file(path)
     if actual != expected:
-        fail(f"SBOM does not match the locked source graph: {path}")
+        fail(f"SBOM does not match the locked source and binary evidence: {path}")
 
 
 def build_expected(args: argparse.Namespace) -> bytes:
     metadata = load_cargo_metadata()
     lock_data = read_regular_file(ROOT / "Cargo.lock")
+    native_inventory = load_native_inventory(
+        args.release_directory, args.release_version
+    )
     return render_sbom(
         build_sbom(
             metadata,
@@ -516,6 +780,7 @@ def build_expected(args: argparse.Namespace) -> bytes:
             args.release_version,
             args.source_revision,
             args.source_date_epoch,
+            native_inventory,
         )
     )
 
@@ -529,6 +794,7 @@ def parser() -> argparse.ArgumentParser:
         subparser.add_argument("--release-version", required=True)
         subparser.add_argument("--source-revision", required=True)
         subparser.add_argument("--source-date-epoch", type=int, required=True)
+        subparser.add_argument("--release-directory", type=Path, required=True)
     return result
 
 

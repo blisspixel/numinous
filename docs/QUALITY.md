@@ -17,14 +17,17 @@ built, so an aspiration is never mistaken for a result.
   packaged release targets installs into a disposable root, renders Times
   Tables through the installed CLI, and completes modern MCP discovery, the
   exact 35-tool inventory, and a real `play_room` call from an isolated profile.
-  Fourteen SBOM regressions require a deterministic SPDX 2.3 inventory of the exact
-  locked all-feature Rust graph, including dependency edges, declared licenses,
-  package URLs, and registry checksums. Nine release-workflow regressions require
-  tag-only least-privilege keyless build and SBOM attestations, archive-only
-  subjects from the audited release set, both retained signed bundles, and
-  publication ordered after audit and attestation. Pull-request runs do not mint
-  attestations, and no historic release is represented as retroactively
-  attested.
+  Sixteen SBOM regressions require a deterministic SPDX 2.3 inventory of the
+  exact locked all-feature Rust graph, including dependency edges, declared
+  licenses, package URLs, and registry checksums. Fifteen release-package
+  regressions parse all packaged 64-bit PE, ELF, and Mach-O executables and bind
+  exact hashes, formats, architectures, and unique direct header imports into
+  that inventory. Ten release-workflow regressions require an exact audited
+  artifact allowlist with no additional files, tag-only least-privilege keyless
+  build and SBOM attestations, archive-only subjects from the audited release
+  set, both retained signed bundles, and publication ordered after audit and
+  attestation. Pull-request runs do not mint attestations, and no historic
+  release is represented as retroactively attested.
   The consented MCP
   broadcast path has 65 focused shared-crate tests, 121 MCP unit tests, and
   12 real stdio tests. Real loopback cases cover pairing, compatibility,
@@ -183,9 +186,9 @@ built, so an aspiration is never mistaken for a result.
   matrix,
   musician-led long-listening review, real execution on macOS and Linux,
   nightly hardware soak, perceptual visual or audio regression, opt-in
-  telemetry, platform code signing and notarization, binary-native dependency
-  inventory beyond the source-derived Rust SBOM, and independent mathematical
-  sign-off of every reveal.
+  telemetry, platform code signing and notarization, runtime-resolved native
+  dependency versions, embedded per-binary Rust reachability, and independent
+  mathematical sign-off of every reveal.
 - **Rule:** `RESEARCH.md` defines Built, Measured, Observed, Designed, and
   Hypothesis. Every release decision uses those labels.
 

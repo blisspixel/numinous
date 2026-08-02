@@ -24,7 +24,7 @@ automatic merges.
 | `png`, `pollster`, `ureq` | **0.18.1, 1.0.1, 3.3.0** | Current image, blocking-future, and synchronous HTTP baselines. HTTP redirects remain disabled for the credentialed music request and error bodies remain bounded. |
 | `gilrs` | **0.11.2** | Current cross-platform gamepad input. Linux CI installs `libudev-dev`. |
 | Test runner | **cargo test** | Enforced today. `cargo-nextest` is a possible speed improvement, not a current dependency. |
-| Supply chain | **cargo-deny**, **cargo-audit**, and SPDX 2.3 | Deny and audit are enforced in CI. Tagged releases add a locked all-feature Rust dependency SBOM with a separate keyless attestation. `cargo-auditable` release binaries remain planned hardening. |
+| Supply chain | **cargo-deny**, **cargo-audit**, and SPDX 2.3 | Deny and audit are enforced in CI. Tagged releases add a locked all-feature Rust graph plus exact packaged executable hashes and header-declared PE, ELF, and Mach-O imports, with a separate keyless attestation. Embedded per-binary Rust reachability remains planned hardening. |
 | Coverage | **cargo-llvm-cov** | Tracked, not fetishized (see Testing). |
 
 **Version hygiene:** commit `Cargo.lock`, build with `--locked` in CI,
@@ -192,18 +192,23 @@ Nothing merges red. On every PR, blocking:
     positive XP value compared exactly across restart, content addressing, and
     a single-release four-target plus three-controller-profile matrix over at
     least three distinct models. CI tests the contract, not physical input.
-15. Fourteen deterministic SBOM regressions require exact lock and resolved-graph
+15. Sixteen deterministic SBOM regressions require exact lock and resolved-graph
     agreement, registry checksums, stable package identities and relationships,
-    revision and lockfile binding, bounded ordinary inputs, exclusive evidence
-    creation, exact verification, and a complete current-workspace integration.
-16. Nine release workflow contract regressions pin both invocations of the
+    revision, lockfile, and native-inventory binding, bounded ordinary inputs,
+    exclusive evidence creation, exact verification, and a complete
+    current-workspace integration. Fifteen release-package regressions also
+    parse bounded 64-bit PE, ELF, and Mach-O headers, require the exact three
+    binaries on each of four targets, bind executable hashes and architectures,
+    and retain unique direct native imports.
+16. Ten release workflow contract regressions pin both invocations of the
     official attestation action, grant OIDC and attestation write authority only
     to the tag-only attestation job, accept subjects only from the audited
-    release-set artifact, require the SPDX predicate and both signed bundles,
-    and make publication depend on audit and attestation. Pull requests test the
-    workflow contract without minting an attestation or publishing a release.
+    release-set artifact, require an exact allowlist with no additional files,
+    require the SPDX predicate and both signed bundles, and make publication
+    depend on audit and attestation. Pull requests test the workflow contract
+    without minting an attestation or publishing a release.
 
-Hardening targets not yet enforced in CI: `cargo-auditable` release binaries,
+Hardening targets not yet enforced in CI: embedded per-binary Rust reachability,
 cryptographic release signing, the visual and audio regression loops, and
 real-hardware soak and performance jobs.
 
