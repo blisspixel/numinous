@@ -45,6 +45,7 @@ jobs:
           python3 scripts/test-package-release.py
           python3 scripts/test-release-engagement-smoke.py
           python3 scripts/test-input-hardware-session.py
+          python3 scripts/test-release-sbom.py
           python3 scripts/test-release-workflow.py
 
   msrv:
@@ -128,6 +129,7 @@ jobs:
           python scripts/test-understanding-study.py
           python scripts/test-understanding-collect.py
           python scripts/test-input-hardware-session.py
+          python scripts/test-release-sbom.py
           python scripts/test-release-workflow.py
       - name: POSIX Python contract tests
         if: runner.os != 'Windows'
@@ -136,6 +138,7 @@ jobs:
           python3 scripts/test-understanding-study.py
           python3 scripts/test-understanding-collect.py
           python3 scripts/test-input-hardware-session.py
+          python3 scripts/test-release-sbom.py
           python3 scripts/test-release-workflow.py
       - name: Windows installer safety
         if: runner.os == 'Windows'

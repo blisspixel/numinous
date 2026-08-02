@@ -56,6 +56,8 @@ python scripts/test-release-engagement-smoke.py     # Windows
 python3 scripts/test-release-engagement-smoke.py    # macOS / Linux
 python scripts/test-input-hardware-session.py       # Windows
 python3 scripts/test-input-hardware-session.py      # macOS / Linux
+python scripts/test-release-sbom.py                  # Windows
+python3 scripts/test-release-sbom.py                 # macOS / Linux
 python scripts/test-release-workflow.py             # Windows
 python3 scripts/test-release-workflow.py            # macOS / Linux
 cargo build --workspace --locked
@@ -72,8 +74,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 
 Expected right now: **format and clippy clean, 3,213 all-target Rust test cases,
 105 study runner and collector regressions, and 15 physical input contract
-regressions plus eight release workflow regressions pass, one screenshot
-diagnostic is ignored, 95.15% region coverage, and 95.30% line coverage**. The `gpu` and
+regressions plus fourteen SBOM and nine release workflow regressions pass,
+one screenshot diagnostic is ignored, 95.15% region coverage, and 95.30% line
+coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
@@ -89,19 +92,32 @@ execution is not treated as engagement proof.
 
 Tagged releases created after this gate was introduced publish one GitHub
 keyless SLSA build-provenance attestation whose subject set contains every
-binary and soundtrack archive. The attestation job downloads only the closed
-set admitted by the release audit, and publication cannot run unless attestation
-succeeds. Verify an archive against the repository and the exact signer
-workflow:
+binary and soundtrack archive. The release audit also creates one deterministic
+SPDX 2.3 document from the complete locked, all-feature Cargo graph. It records
+workspace and dependency relationships, declared licenses, package URLs, and
+Cargo registry checksums. A separate keyless SBOM attestation uses that document
+as its predicate for the same archive subject set. The attestation job downloads
+only the closed set admitted by the release audit, and publication cannot run
+unless both attestations succeed.
+
+Verify build provenance against the repository and exact signer workflow:
 
 ```
-gh attestation verify PATH_TO_ARCHIVE --repo blisspixel/numinous --signer-workflow blisspixel/numinous/.github/workflows/release.yml
+gh attestation verify PATH_TO_ARCHIVE --predicate-type https://slsa.dev/provenance/v1 --repo blisspixel/numinous --signer-workflow blisspixel/numinous/.github/workflows/release.yml
 ```
 
-Each such release also includes `numinous-TAG-provenance.jsonl`. To prepare for
-fully offline verification, acquire the current trusted root through a trusted
-connection before disconnecting. From Windows PowerShell 5.1, delegate the
-redirection to `cmd` so the JSONL file is not rewritten as UTF-16LE:
+Verify the SBOM attestation separately:
+
+```
+gh attestation verify PATH_TO_ARCHIVE --predicate-type https://spdx.dev/Document --repo blisspixel/numinous --signer-workflow blisspixel/numinous/.github/workflows/release.yml
+```
+
+Each such release includes `numinous-TAG-sbom.spdx.json`,
+`numinous-TAG-provenance.jsonl`, and
+`numinous-TAG-sbom-attestation.jsonl`. To prepare for fully offline
+verification, acquire the current trusted root through a trusted connection
+before disconnecting. From Windows PowerShell 5.1, delegate the redirection to
+`cmd` so the JSONL file is not rewritten as UTF-16LE:
 
 ```
 cmd /d /c "gh attestation trusted-root > trusted_root.jsonl"
@@ -114,17 +130,22 @@ gh attestation trusted-root > trusted_root.jsonl
 ```
 
 Then verify from the downloaded bundle without fetching attestations or trust
-metadata from GitHub:
+metadata from GitHub. Use the build-provenance bundle for the first command and
+the SBOM-attestation bundle for the second:
 
 ```
-gh attestation verify PATH_TO_ARCHIVE --bundle PATH_TO_PROVENANCE_JSONL --custom-trusted-root trusted_root.jsonl --repo blisspixel/numinous --signer-workflow blisspixel/numinous/.github/workflows/release.yml
+gh attestation verify PATH_TO_ARCHIVE --bundle PATH_TO_PROVENANCE_JSONL --predicate-type https://slsa.dev/provenance/v1 --custom-trusted-root trusted_root.jsonl --repo blisspixel/numinous --signer-workflow blisspixel/numinous/.github/workflows/release.yml
+gh attestation verify PATH_TO_ARCHIVE --bundle PATH_TO_SBOM_ATTESTATION_JSONL --predicate-type https://spdx.dev/Document --custom-trusted-root trusted_root.jsonl --repo blisspixel/numinous --signer-workflow blisspixel/numinous/.github/workflows/release.yml
 ```
 
-The command must fail for a changed archive, a bundle from another release, or
-an attestation signed by another repository or workflow. Historic releases do
-not acquire attestations retroactively. Build provenance is not Windows code
-signing, Apple notarization, an SBOM, clean-machine execution, or evidence about
-physical input and audio behavior.
+The commands must fail for a changed archive, a bundle from another release, a
+predicate of the wrong type, or an attestation signed by another repository or
+workflow. Historic releases do not acquire attestations retroactively. The SBOM
+is a source-derived Rust dependency inventory. It does not inspect emitted
+binaries, platform-native dynamic libraries, or soundtrack contents, and its
+license fields report dependency declarations rather than legal conclusions.
+Neither attestation is Windows code signing, Apple notarization, clean-machine
+execution, or evidence about physical input and audio behavior.
 
 ## 2b. Record physical input evidence
 
