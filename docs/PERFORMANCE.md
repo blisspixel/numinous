@@ -59,10 +59,16 @@ establish the migration's effect on end-to-end App readiness.
 ## Verification and reproduction
 
 Receipt verification is fast, deterministic, cross-platform, and runs in the
-local and CI gates:
+local and CI gates. On Windows:
 
 ```
 python scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
+```
+
+On macOS or Linux:
+
+```
+python3 scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
 ```
 
 Recording new historical evidence requires a Windows desktop, default audio

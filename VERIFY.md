@@ -270,10 +270,16 @@ safety, not listening quality or physical-device timing.
 ## 2d. Verify the dependency migration performance receipt
 
 The retained July 2026 adjacent-revision receipt is verified without rerunning
-hardware measurements:
+hardware measurements. On Windows:
 
 ```
 python scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
+```
+
+On macOS or Linux:
+
+```
+python3 scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
 ```
 
 The verifier requires the exact reference contract, pinned machine, toolchain,
