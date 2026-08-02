@@ -24,7 +24,7 @@ automatic merges.
 | `png`, `pollster`, `ureq` | **0.18.1, 1.0.1, 3.3.0** | Current image, blocking-future, and synchronous HTTP baselines. HTTP redirects remain disabled for the credentialed music request and error bodies remain bounded. |
 | `gilrs` | **0.11.2** | Current cross-platform gamepad input. Linux CI installs `libudev-dev`. |
 | Test runner | **cargo test** | Enforced today. `cargo-nextest` is a possible speed improvement, not a current dependency. |
-| Supply chain | **cargo-deny** and **cargo-audit** | Both enforced in CI. Deny covers advisories, licenses, bans, and sources; audit is the independent RustSec path. Advisory ignore lists are currently empty. `cargo-auditable` release binaries remain planned hardening. |
+| Supply chain | **cargo-deny**, **cargo-audit**, and SPDX 2.3 | Deny and audit are enforced in CI. Tagged releases add a locked all-feature Rust dependency SBOM with a separate keyless attestation. `cargo-auditable` release binaries remain planned hardening. |
 | Coverage | **cargo-llvm-cov** | Tracked, not fetishized (see Testing). |
 
 **Version hygiene:** commit `Cargo.lock`, build with `--locked` in CI,
@@ -133,8 +133,11 @@ and the published crate records for
   (`.github/dependabot.yml`, limit five open PRs per ecosystem). Compatible
   updates merge after the full CI gate. Breaking major bumps stay deliberate
   reviews, not automatic landings.
-- **Current posture (2026-07-24):** public `main` is green on deny and audit
-  with empty ignore lists; lockfile and action pins are refreshed as above.
+- **Current posture (2026-08-01):** public `main` is green on deny and audit
+  with empty ignore lists. The release audit creates and verifies a deterministic
+  SPDX 2.3 inventory from exact `Cargo.lock` and `cargo metadata --locked
+  --all-features`; a separate keyless statement binds it to every tagged archive.
+  The inventory is source-derived and does not claim binary-native analysis.
   Standing Dependabot security alerts should stay at zero; if an alert appears,
   fix or document a temporary ignore with an exit condition before claiming a
   clean supply chain.
@@ -189,12 +192,16 @@ Nothing merges red. On every PR, blocking:
     positive XP value compared exactly across restart, content addressing, and
     a single-release four-target plus three-controller-profile matrix over at
     least three distinct models. CI tests the contract, not physical input.
-15. Eight release workflow contract regressions pin the official provenance
-    action, grant OIDC and attestation write authority only to the tag-only
-    attestation job, accept subjects only from the audited release-set artifact,
-    retain the signed JSONL bundle, and make publication depend on both audit and
-    attestation. Pull requests test the workflow contract without minting an
-    attestation or publishing a release.
+15. Fourteen deterministic SBOM regressions require exact lock and resolved-graph
+    agreement, registry checksums, stable package identities and relationships,
+    revision and lockfile binding, bounded ordinary inputs, exclusive evidence
+    creation, exact verification, and a complete current-workspace integration.
+16. Nine release workflow contract regressions pin both invocations of the
+    official attestation action, grant OIDC and attestation write authority only
+    to the tag-only attestation job, accept subjects only from the audited
+    release-set artifact, require the SPDX predicate and both signed bundles,
+    and make publication depend on audit and attestation. Pull requests test the
+    workflow contract without minting an attestation or publishing a release.
 
 Hardening targets not yet enforced in CI: `cargo-auditable` release binaries,
 cryptographic release signing, the visual and audio regression loops, and
@@ -219,8 +226,9 @@ Rust, `Cargo.*`, or a shader, so a docs-only commit stays fast. Changes to the
 0.4 study runner, collector, fixture bank, encounter specification, MCP
 mediator, or their test files run the focused Python regressions. The installed
 release packaging, installed engagement, physical input session, and tag
-provenance workflow regressions likewise run whenever their drivers, tests, or
-the release workflow change. Coverage, the locked build, and artifact
+provenance workflow regressions, including SBOM generation and verification,
+likewise run whenever their drivers, tests, or the release workflow change.
+Coverage, the locked build, and artifact
 regeneration stay in
 `scripts/verify.sh` (the release gate); they are too slow for every commit.
 Emergency bypass is `git commit --no-verify`, after which you must run

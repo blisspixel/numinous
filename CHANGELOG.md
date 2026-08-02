@@ -6,16 +6,27 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The closed release audit now generates and exactly re-verifies one
+  deterministic SPDX 2.3 document from `Cargo.lock` and the complete locked
+  all-feature Cargo resolve graph. It records workspace containment, dependency
+  relationships, declared licenses, package URLs, and registry checksums, with
+  identity bound to the release version, source commit, and lockfile digest. A
+  separate keyless SBOM attestation binds that document to every audited archive
+  before publication, and releases retain both the SBOM and its signed JSONL
+  bundle. Fourteen SBOM and nine workflow regressions cover graph and lock drift,
+  bounded inputs, exclusive generation, exact verification, immutable action
+  pins, least privilege, archive-only subjects, and publication ordering. The
+  source-derived inventory is not binary-native analysis or a legal conclusion.
 - Tagged release publication now requires one GitHub keyless SLSA
   build-provenance attestation whose subject set covers every archive admitted
   by the closed release-set audit. The
   official provenance action is pinned to an immutable v4.1.1 commit in a
   tag-only job with only contents-read, OIDC, and attestation-write authority.
   Publication depends on both audit and attestation, and each release carries
-  the signed JSONL bundle. Eight focused workflow regressions enforce the action
-  identity, permission and subject scope, tag boundary, bundle retention, and
-  publication order. No historic release, platform signature, notarization,
-  SBOM, or clean-machine evidence is implied.
+  the signed build-provenance JSONL bundle. Focused workflow regressions enforce
+  the action identity, permission and subject scope, tag boundary, bundle retention, and
+  publication order. No historic release, platform signature, notarization, or
+  clean-machine evidence is implied.
 - A cross-platform physical input session runner now binds each observed App
   session to a checksum-verified release archive and byte-matching installed
   App, CLI, and MCP binaries. It automatically exercises installed CLI render

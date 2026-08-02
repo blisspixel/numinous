@@ -301,14 +301,17 @@ in core.
   payload manifests, checksums, installers, updates, and CI self-tests are built.
   Tagged publication is now ordered after a closed-set audit and GitHub keyless
   SLSA build-provenance attestation whose subject set covers every archive, with
-  the signed JSONL bundle attached to the release. Platform code signing, notarization, SBOM
-  policy, clean-machine evidence, and broader platform certification remain 0.6
-  work. The public launch gate is 0.9.
+  the signed JSONL bundle attached to the release. The same audit generates a
+  deterministic SPDX 2.3 inventory of the locked all-feature Rust graph, and a
+  separate keyless SBOM attestation binds it to every archive. Platform code
+  signing, notarization, binary-native component inventory, clean-machine
+  evidence, and broader platform certification remain 0.6 work. The public
+  launch gate is 0.9.
 
 ## Remaining technical decisions
 
-1. Select platform signing, notarization, SBOM verification, and trust policy
-   beyond the repository and workflow identity supplied by build provenance.
+1. Select platform signing, notarization, and any binary-native inventory policy
+   beyond the repository, workflow, and source-derived SBOM evidence now built.
 2. Specify the bounded pattern DSL and its compatibility contract.
 3. Design the audio scheduler and master bus around measured latency.
 4. Define native `.num` associations, URL handling, and loop export.
