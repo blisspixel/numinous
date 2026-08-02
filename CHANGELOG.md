@@ -12,6 +12,19 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   engineering narratives no longer live in README.
 
 ### Added
+- Nightly agent-and-machine QA workflow (`.github/workflows/nightly.yml`) re-runs
+  agent cohorts, flagship goldens, creator roundtrip, multi-room soak, and the
+  Understanding Alpha am-track dual auditors on a schedule.
+- CLI creator roundtrip gate (`scripts/creator-roundtrip.py`): save `.num`,
+  reopen with `open-studio`, and require byte-identical rewrites for four
+  expressions plus the curated recipe list.
+- Multi-room soak gate (`scripts/am-soak.py`): twelve stratified rooms render
+  and room-bed sonify, three games open, forget preview, under an isolated
+  profile.
+- Understanding Alpha am-track method dry-run: registration artifact under
+  `docs/evidence/understanding-0.4/`, dual automated auditors A/B
+  (`scripts/understanding-am-auditor.py`), pipeline driver, and focused
+  regressions. Explicitly not a calibrated bank or completed cohort result.
 - Additional `assets/screens/` plates for Times Tables, Mandelbrot, Game of
   Life, Galton Board, Buffon's Needle, Lorenz, Double Pendulum, and Lissajous
   (900 by 900 deterministic CLI renders) for the README gallery.

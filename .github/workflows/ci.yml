@@ -50,6 +50,14 @@ jobs:
         run: |
           cargo build --locked --bin numinous
           python3 scripts/flagship-goldens.py
+      - name: Creator roundtrip and multi-room soak
+        run: |
+          python3 scripts/creator-roundtrip.py
+          python3 scripts/am-soak.py
+      - name: Understanding am-track dry-run auditors
+        run: |
+          python3 scripts/test-understanding-am.py
+          python3 scripts/understanding-am-pipeline.py --check-only docs/evidence/understanding-0.4/registration-dry-run.json
       - name: Release and input contract tests
         run: |
           python3 scripts/test-package-release.py

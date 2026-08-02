@@ -1064,6 +1064,11 @@ peak energy.
   read, and broadcast status. `flagship-goldens.py` binds five-flagship PNG and
   room-bed WAV content hashes under `docs/evidence/goldens/` as a CI gate.
   Human sensory panels remain optional parallel evidence.
+- **Done (Cycle 22 am-track automation pack, August 2, 2026):** nightly
+  workflow, CLI creator save/reopen gate, twelve-room soak, and Understanding
+  Alpha am-track registration dry-run with dual automated auditors A/B under
+  `docs/evidence/understanding-0.4/`. Qualifying 0.4 cohort (concealed bank,
+  calibration, 20 pairs) remains open; dry-run is method prep only.
 
 Owner docs: `ARCHITECTURE.md`, `ENGINEERING.md`, `INTERFACES.md`, `MUSIC.md`,
 `VERIFY.md`.
@@ -1250,19 +1255,30 @@ subjective human taste gates, so this scorecard records evidence instead.
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,913-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
+### Agent-and-machine track scorecard (August 2, 2026)
+
+| Am milestone | Status | Automated evidence now |
+|---|---|---|
+| 0.2 Flagship | Met + CI-locked | agent-hallway, ahas, goldens |
+| 0.3 Tactile | Met + CI-locked | agent-tactile, first-contact |
+| 0.4 Understanding | Method prep only | dual auditors A/B, dry-run registration; cohort open |
+| 0.5 Sensory | Partial | flagship visual/audio goldens; no full HDR/a11y stack yet |
+| 0.6 Portable | Partial | release packaging, engagement smoke, provenance/SBOM |
+| 0.7 Creator | Partial | CLI save/reopen `.num` gate; App/MCP gallery open |
+| 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
+| 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
+
+Package label remains **0.2.0-alpha.4** until deliberate cut. Am-track
+capability is ahead of that label; do not read the package version as the
+am-track position.
+
 **Immediate critical path** (same order as **Critical path right now** above):
 
-1. Keep agent hallway and tactile CI gates green; expand first-contact and
-   perceptual/spectral golden automation so humans are never the QA path.
-2. Externally register the protocol, source, and attempt-receipt boundary before
-   calibration ordinal 1. Calibrate the concealed bank in fresh no-exposure
-   contexts, run automated dual method auditors, then register and track the
-   final bank, audit, and exact generated allocation before collecting a
-   qualifying agent response.
-3. Run and publish the qualifying 0.4-am cohort while keeping the 0.2, 0.3, and
-   CI gates green.
-4. Enter 0.5-am sensory identity with machine accessibility checks after the
-   0.4-am exit. Optional human panels never block the am-track.
+1. Keep all am CI gates green (cohorts, goldens, soak, creator, auditors).
+2. Close 0.4-am: concealed bank, calibration, dual auditors on live ledger,
+   freeze allocation, run and publish 20 pairs.
+3. Expand 0.5-am sensory automation (reduced-motion, mono, era goldens).
+4. Expand 0.6-am install roundtrips and 0.7-am App/MCP creator parity.
 
 **Not on this list as next work:** soft-thin densify grind, bulk new rooms, or
 Phase B glow unless measurement shows a binding sensory ceiling.

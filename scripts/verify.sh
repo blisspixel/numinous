@@ -30,6 +30,14 @@ echo "== agent first-contact suite =="
 python3 scripts/agent-first-contact.py
 echo "== flagship visual and audio goldens =="
 python3 scripts/flagship-goldens.py
+echo "== creator roundtrip =="
+python3 scripts/creator-roundtrip.py
+echo "== am soak =="
+python3 scripts/am-soak.py
+echo "== understanding am dry-run =="
+python3 scripts/test-understanding-am.py
+echo "== understanding am registration audit =="
+python3 scripts/understanding-am-pipeline.py --check-only docs/evidence/understanding-0.4/registration-dry-run.json
 echo "== understanding study runner =="
 python3 scripts/test-understanding-study.py
 echo "== understanding study collector =="

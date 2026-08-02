@@ -68,12 +68,15 @@ with the install. Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 **0.2.0-alpha.4** is playable today: 354 catalog rooms, games, Journey,
 Studio, controllers, and Watch Agent (consented local MCP session viewing).
 
-Milestones **0.2** and **0.3** are exit-met on the **agent-and-machine** bar
-(flagship ahas, five-flagship tactile path, CI-gated agent cohorts). Active
-work is **0.4 Understanding Alpha** on that same track: humans may play, but
-product exits do not wait on human QA panels. Ordered criteria and the full
-evidence map live in [`docs/ROADMAP.md`](docs/ROADMAP.md). Gates:
-[`VERIFY.md`](VERIFY.md). History: [`CHANGELOG.md`](CHANGELOG.md).
+Package version stays alpha until the am-track exits land; capability is
+already past early 0.2 on that track. **0.2** and **0.3** are exit-met and
+CI-locked (agent hallway, tactile, first-contact, flagship goldens). Active
+product work is **0.4 Understanding Alpha** (method dry-run and dual automated
+auditors are in CI; calibrated cohort not run). Creator save/reopen and
+multi-room soak are automated. Nightly am-QA re-runs the full agent suite.
+Humans may play; product exits do not wait on human QA panels. Map:
+[`docs/ROADMAP.md`](docs/ROADMAP.md). Gates: [`VERIFY.md`](VERIFY.md). History:
+[`CHANGELOG.md`](CHANGELOG.md).
 
 ## Why it exists
 

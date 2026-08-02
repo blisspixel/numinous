@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "numinous-understanding-registration-v1",
+  "protocolVersion": "0.4-v5",
+  "track": "agent-and-machine",
+  "runnerVersion": "numinous-understanding-runner-v5",
+  "bankCommitmentSha256": "a29796f54f82c3044b2771c2f6e30a19f88ed1b5027cc33a7892b6bf8dc68b55",
+  "bankKind": "public-fixture-dry-run",
+  "allocationSeed": "numinous-understanding-alpha-v1",
+  "plannedPrimaryPairs": 20,
+  "plannedReservePairs": 4,
+  "isolation": "fresh-mcp-process-per-public-call",
+  "privacyBoundary": [
+    "no-hidden-reasoning",
+    "no-host-paths",
+    "no-private-progression",
+    "bounded-public-mcp-projections-only"
+  ],
+  "automatedReviewers": [
+    "A",
+    "B"
+  ],
+  "humanPanelRequired": false,
+  "qualifyingCohortComplete": false,
+  "registeredAt": "2026-08-02T00:00:00Z",
+  "attestation": "This method commitment was recorded before any qualifying stimulus exposure on the agent-and-machine track.",
+  "limitations": [
+    "Dry-run uses the public fixture bank, which cannot authorize qualifying collection.",
+    "Calibration deliveries and real model-family sessions remain open.",
+    "Dual automated auditors replace human dual-review only on the am-track."
+  ]
+}

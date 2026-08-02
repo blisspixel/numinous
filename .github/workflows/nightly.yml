@@ -1,0 +1,41 @@
+name: Nightly agent-and-machine QA
+
+on:
+  schedule:
+    # 06:17 UTC daily; odd minute reduces thundering herds with other repos.
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-am-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  am-qa:
+    name: agent-and-machine soak
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - name: Install Linux audio and input development libraries
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libxkbcommon-dev
+      - name: Build CLI and MCP faces
+        run: cargo build --locked --bin numinous --bin numinous-mcp
+      - name: Agent cohorts
+        run: |
+          python3 scripts/agent-hallway.py
+          python3 scripts/agent-tactile.py
+          python3 scripts/agent-first-contact.py
+      - name: Flagship goldens
+        run: python3 scripts/flagship-goldens.py
+      - name: Creator roundtrip
+        run: python3 scripts/creator-roundtrip.py
+      - name: Multi-room soak
+        run: python3 scripts/am-soak.py
+      - name: Understanding am dry-run auditors
+        run: |
+          python3 scripts/test-understanding-am.py
+          python3 scripts/understanding-am-pipeline.py --check-only docs/evidence/understanding-0.4/registration-dry-run.json
