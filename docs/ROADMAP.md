@@ -1018,6 +1018,18 @@ peak energy.
   subject expansion, missing bundles, and bypassable publication. This is
   source-derived Rust evidence, not binary-native analysis or a legal license
   conclusion. No tag or release was created while implementing the gate.
+- **Done (Cycle 18 native executable inventory, August 1, 2026):** the audited
+  SPDX document now also covers all twelve packaged executables. Bounded 64-bit
+  PE, ELF, and Mach-O parsers verify each target architecture, hash each exact
+  binary, and report its unique direct header-declared native imports. The
+  document namespace binds the complete native inventory, and release
+  verification rejects a missing target, binary, malformed table, architecture
+  mismatch, checksum drift, release identity mismatch, or extra manifested
+  binary payload. Fifteen release-package, sixteen SBOM, and ten workflow
+  regressions pass, along with generation against the real four-target PR 124
+  release set. The evidence does not claim runtime-resolved library versions,
+  transitive system dependencies, reachable linked code, soundtrack analysis,
+  signing, notarization, or physical execution. No tag or release was created.
 - **Open:** record comparable before-and-after GPU, audio, App startup, and CLI
   request performance evidence for the July 2026 dependency migration. Future
   major updates require both migration notes and comparable performance evidence.
@@ -1202,7 +1214,7 @@ records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization, links, plotting, animation, and singing exist | App reopen, local gallery, fork/remix, safe share preview, and clean-install round trip |
-| Rigor and care are provable | 3,213 passing all-target test cases plus one ignored screenshot diagnostic, 95.30% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a separately attested SPDX Rust SBOM | Independent math review, accessibility, real-hardware soak, platform signing, and binary-native inventory |
+| Rigor and care are provable | 3,213 passing all-target test cases plus one ignored screenshot diagnostic, 95.30% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a separately attested SPDX Rust plus packaged-native SBOM | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,913-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 

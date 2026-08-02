@@ -74,7 +74,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 
 Expected right now: **format and clippy clean, 3,213 all-target Rust test cases,
 105 study runner and collector regressions, and 15 physical input contract
-regressions plus fourteen SBOM and nine release workflow regressions pass,
+regressions plus fifteen release-package, sixteen SBOM, and ten release
+workflow regressions pass,
 one screenshot diagnostic is ignored, 95.15% region coverage, and 95.30% line
 coverage**. The `gpu` and
 `audio` crates plus the app event
@@ -93,12 +94,14 @@ execution is not treated as engagement proof.
 Tagged releases created after this gate was introduced publish one GitHub
 keyless SLSA build-provenance attestation whose subject set contains every
 binary and soundtrack archive. The release audit also creates one deterministic
-SPDX 2.3 document from the complete locked, all-feature Cargo graph. It records
-workspace and dependency relationships, declared licenses, package URLs, and
-Cargo registry checksums. A separate keyless SBOM attestation uses that document
-as its predicate for the same archive subject set. The attestation job downloads
-only the closed set admitted by the release audit, and publication cannot run
-unless both attestations succeed.
+SPDX 2.3 document from the complete locked, all-feature Cargo graph and all
+twelve packaged executables. It records workspace and dependency relationships,
+declared licenses, package URLs, Cargo registry checksums, exact executable
+hashes, PE, ELF, or Mach-O format, target architecture, and direct
+header-declared native imports. A separate keyless SBOM attestation uses that
+document as its predicate for the same archive subject set. The attestation job
+downloads only the closed set admitted by the release audit, and publication
+cannot run unless both attestations succeed.
 
 Verify build provenance against the repository and exact signer workflow:
 
@@ -141,9 +144,12 @@ gh attestation verify PATH_TO_ARCHIVE --bundle PATH_TO_SBOM_ATTESTATION_JSONL --
 The commands must fail for a changed archive, a bundle from another release, a
 predicate of the wrong type, or an attestation signed by another repository or
 workflow. Historic releases do not acquire attestations retroactively. The SBOM
-is a source-derived Rust dependency inventory. It does not inspect emitted
-binaries, platform-native dynamic libraries, or soundtrack contents, and its
-license fields report dependency declarations rather than legal conclusions.
+inspects the exact emitted executables and reports direct imports declared in
+their PE, ELF, or Mach-O headers. It does not establish the versions or bytes
+resolved on a player's system, transitive runtime dependencies, reachability of
+linked code, static native components not identifiable from those headers, or
+soundtrack contents. License fields report dependency declarations rather than
+legal conclusions.
 Neither attestation is Windows code signing, Apple notarization, clean-machine
 execution, or evidence about physical input and audio behavior.
 

@@ -257,7 +257,11 @@ in core.
   separate stable soundtrack content checksum covers only the licensed radio
   files, so binary-only releases do not force another large audio download.
   `numinous update` stages the matching installer, waits for the running CLI to
-  exit, and installs the latest published release. Artifacts are not yet signed.
+  exit, and installs the latest published release. The release SBOM joins the
+  exact locked Rust graph with hashes, formats, architectures, and direct
+  header-declared imports from all twelve packaged PE, ELF, and Mach-O
+  executables. Runtime-resolved native versions and soundtrack contents remain
+  outside that inventory. Artifacts are not yet platform-signed.
 - **Current sharing:** PNG postcards, short-loop APNG bundles, `.num` Studio
   files and links, and WAV audio export. Longer video export and
   operating-system URL associations are future work.
@@ -302,16 +306,18 @@ in core.
   Tagged publication is now ordered after a closed-set audit and GitHub keyless
   SLSA build-provenance attestation whose subject set covers every archive, with
   the signed JSONL bundle attached to the release. The same audit generates a
-  deterministic SPDX 2.3 inventory of the locked all-feature Rust graph, and a
-  separate keyless SBOM attestation binds it to every archive. Platform code
-  signing, notarization, binary-native component inventory, clean-machine
-  evidence, and broader platform certification remain 0.6 work. The public
-  launch gate is 0.9.
+  deterministic SPDX 2.3 inventory of the locked all-feature Rust graph plus
+  exact hashes, formats, architectures, and direct header-declared imports for
+  every packaged executable. A separate keyless SBOM attestation binds it to
+  every archive. Platform code signing, notarization, runtime-resolved native
+  versions, embedded per-binary Rust reachability, clean-machine evidence, and
+  broader platform certification remain 0.6 work. The public launch gate is
+  0.9.
 
 ## Remaining technical decisions
 
-1. Select platform signing, notarization, and any binary-native inventory policy
-   beyond the repository, workflow, and source-derived SBOM evidence now built.
+1. Select platform signing, notarization, runtime-native resolution evidence,
+   and embedded per-binary Rust reachability policy beyond the current SBOM.
 2. Specify the bounded pattern DSL and its compatibility contract.
 3. Design the audio scheduler and master bus around measured latency.
 4. Define native `.num` associations, URL handling, and loop export.

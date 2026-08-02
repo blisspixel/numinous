@@ -6,6 +6,24 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The release SBOM now inventories every packaged executable, not only the
+  source dependency graph. Bounded 64-bit PE, ELF, and Mach-O parsers bind all
+  twelve binary hashes, formats, target architectures, and unique direct
+  header-declared native imports into the SPDX document and its namespace.
+  Verification requires the exact three-binary payload on all four targets and
+  rejects extra manifested payload, malformed headers, ambiguous address maps,
+  architecture drift, release identity drift, and incomplete inventories.
+  The release audit also rejects every file outside the exact binary and
+  optional soundtrack allowlist. Each archive is hashed and parsed from one
+  bounded immutable snapshot, with its filename, root, version, commit, and all
+  admitted directories bound to the expected release identity. Portable path,
+  file type, and hierarchy checks prevent platform-dependent extraction
+  aliases. Fifteen release-package, sixteen SBOM, and ten workflow regressions
+  cover the boundary, and the generator passes against the real four-target PR
+  124 release set. Native
+  runtime versions, transitive system dependencies, static reachability,
+  soundtrack content, platform signing, and physical execution remain separate
+  evidence.
 - The closed release audit now generates and exactly re-verifies one
   deterministic SPDX 2.3 document from `Cargo.lock` and the complete locked
   all-feature Cargo resolve graph. It records workspace containment, dependency
@@ -16,7 +34,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   bundle. Fourteen SBOM and nine workflow regressions cover graph and lock drift,
   bounded inputs, exclusive generation, exact verification, immutable action
   pins, least privilege, archive-only subjects, and publication ordering. The
-  source-derived inventory is not binary-native analysis or a legal conclusion.
+  dependency license fields report declarations rather than legal conclusions.
 - Tagged release publication now requires one GitHub keyless SLSA
   build-provenance attestation whose subject set covers every archive admitted
   by the closed release-set audit. The

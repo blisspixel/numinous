@@ -87,6 +87,35 @@ def fixture_document() -> dict[str, object]:
     return sbom.build_sbom(fixture_metadata(), fixture_lock(), VERSION, REVISION, EPOCH)
 
 
+def fixture_native_inventory() -> list[dict[str, object]]:
+    records = []
+    for target, (binary_format, architecture) in sorted(
+        sbom.PACKAGE.NATIVE_TARGETS.items()
+    ):
+        suffix = sbom.PACKAGE.TARGETS[target][0]
+        imported = {
+            "aarch64-apple-darwin": "/usr/lib/libSystem.B.dylib",
+            "x86_64-apple-darwin": "/usr/lib/libSystem.B.dylib",
+            "x86_64-pc-windows-msvc": "kernel32.dll",
+            "x86_64-unknown-linux-gnu": "libc.so.6",
+        }[target]
+        for index, binary in enumerate(sbom.PACKAGE.BINARIES):
+            records.append(
+                {
+                    "architecture": architecture,
+                    "fileName": f"bin/{binary}{suffix}",
+                    "format": binary_format,
+                    "imports": [imported],
+                    "sha1": f"{index + len(records):040x}"[-40:],
+                    "sha256": f"{index + len(records):064x}"[-64:],
+                    "sourceRevision": REVISION,
+                    "target": target,
+                    "version": VERSION,
+                }
+            )
+    return records
+
+
 class ReleaseSbomTests(unittest.TestCase):
     """Keep the release inventory deterministic, complete, and fail-closed."""
 
@@ -196,9 +225,10 @@ class ReleaseSbomTests(unittest.TestCase):
     def test_namespace_binds_version_revision_and_exact_lockfile(self) -> None:
         document = fixture_document()
         lock_digest = sbom.hashlib.sha256(fixture_lock()).hexdigest()
+        native_digest = sbom.hashlib.sha256(b"[]").hexdigest()
         self.assertEqual(
             document["documentNamespace"],
-            f"https://github.com/blisspixel/numinous/sbom/{VERSION}/{REVISION}/{lock_digest}",
+            f"https://github.com/blisspixel/numinous/sbom/{VERSION}/{REVISION}/{lock_digest}/{native_digest}",
         )
         release = next(
             item for item in document["packages"] if item["name"] == "numinous-release"
@@ -212,6 +242,133 @@ class ReleaseSbomTests(unittest.TestCase):
             fixture_metadata(), changed_lock, VERSION, REVISION, EPOCH
         )
         self.assertNotEqual(document["documentNamespace"], changed["documentNamespace"])
+
+    def test_native_inventory_describes_every_binary_and_header_import(self) -> None:
+        inventory = fixture_native_inventory()
+        document = sbom.build_sbom(
+            fixture_metadata(), fixture_lock(), VERSION, REVISION, EPOCH, inventory
+        )
+        reordered = sbom.build_sbom(
+            fixture_metadata(),
+            fixture_lock(),
+            VERSION,
+            REVISION,
+            EPOCH,
+            list(reversed(inventory)),
+        )
+        self.assertEqual(sbom.render_sbom(document), sbom.render_sbom(reordered))
+        self.assertEqual(len(document["files"]), 12)
+        self.assertEqual(len(document["packages"]), 20)
+        release = next(
+            package
+            for package in document["packages"]
+            if package["name"] == "numinous-release"
+        )
+        self.assertIn("exact packaged executable hashes", release["comment"])
+        file_ids = {item["SPDXID"] for item in document["files"]}
+        native_ids = {
+            package["SPDXID"]
+            for package in document["packages"]
+            if package.get("primaryPackagePurpose") == "LIBRARY"
+        }
+        artifacts = {
+            package["SPDXID"]: package
+            for package in document["packages"]
+            if package.get("primaryPackagePurpose") == "APPLICATION"
+        }
+        self.assertEqual(len(artifacts), 12)
+        relationships = {
+            (
+                item["spdxElementId"],
+                item["relationshipType"],
+                item["relatedSpdxElement"],
+            )
+            for item in document["relationships"]
+        }
+        self.assertTrue(
+            all(
+                (release["SPDXID"], "CONTAINS", artifact_id) in relationships
+                for artifact_id in artifacts
+            )
+        )
+        self.assertTrue(
+            all(
+                any(
+                    (artifact_id, "CONTAINS", file_id) in relationships
+                    for artifact_id in artifacts
+                )
+                for file_id in file_ids
+            )
+        )
+        self.assertTrue(all(package["filesAnalyzed"] for package in artifacts.values()))
+        self.assertTrue(
+            all("packageVerificationCode" in package for package in artifacts.values())
+        )
+        self.assertTrue(
+            all(
+                any(
+                    (file_id, "DEPENDS_ON", native_id) in relationships
+                    for native_id in native_ids
+                )
+                for file_id in file_ids
+            )
+        )
+        changed_inventory = deepcopy(inventory)
+        changed_inventory[0]["sha256"] = "f" * 64
+        changed = sbom.build_sbom(
+            fixture_metadata(),
+            fixture_lock(),
+            VERSION,
+            REVISION,
+            EPOCH,
+            changed_inventory,
+        )
+        self.assertNotEqual(document["documentNamespace"], changed["documentNamespace"])
+        changed_sha1 = deepcopy(inventory)
+        changed_sha1[0]["sha1"] = "e" * 40
+        changed = sbom.build_sbom(
+            fixture_metadata(),
+            fixture_lock(),
+            VERSION,
+            REVISION,
+            EPOCH,
+            changed_sha1,
+        )
+        self.assertNotEqual(document["documentNamespace"], changed["documentNamespace"])
+
+    def test_native_inventory_identity_and_shape_fail_closed(self) -> None:
+        cases: list[tuple[str, list[dict[str, object]], str]] = []
+        incomplete = fixture_native_inventory()[:-1]
+        cases.append(("incomplete", incomplete, "every release executable"))
+        repeated = fixture_native_inventory()
+        repeated[-1] = deepcopy(repeated[0])
+        cases.append(("repeated", repeated, "repeats"))
+        wrong_version = fixture_native_inventory()
+        wrong_version[0]["version"] = "9.9.9"
+        cases.append(("version", wrong_version, "release identity"))
+        wrong_checksum = fixture_native_inventory()
+        wrong_checksum[0]["sha256"] = "A" * 64
+        cases.append(("checksum", wrong_checksum, "checksum is invalid"))
+        wrong_sha1 = fixture_native_inventory()
+        wrong_sha1[0]["sha1"] = "A" * 40
+        cases.append(("sha1", wrong_sha1, "checksum is invalid"))
+        wrong_format = fixture_native_inventory()
+        wrong_format[0]["format"] = "PE"
+        cases.append(("format", wrong_format, "does not match"))
+        repeated_import = fixture_native_inventory()
+        repeated_import[0]["imports"] = ["z.so", "z.so"]
+        cases.append(("imports", repeated_import, "not unique and sorted"))
+        for label, inventory, message in cases:
+            with self.subTest(label=label):
+                with self.assertRaisesRegex(sbom.SbomError, message):
+                    sbom.build_sbom(
+                        fixture_metadata(),
+                        fixture_lock(),
+                        VERSION,
+                        REVISION,
+                        EPOCH,
+                        inventory,
+                    )
 
     def test_missing_lock_entry_and_registry_checksum_fail_closed(self) -> None:
         missing = fixture_lock().split(b'[[package]]\nname = "serde"', maxsplit=1)[0]

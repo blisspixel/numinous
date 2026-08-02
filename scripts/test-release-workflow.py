@@ -77,6 +77,30 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("    if: startsWith(github.ref, 'refs/tags/')\n", self.attest)
         self.assertNotIn("github.event_name == 'workflow_dispatch'", self.attest)
 
+    def test_audit_requires_the_exact_release_artifact_set(self) -> None:
+        self.assertIn(
+            "          SOUNDTRACK_RESULT: ${{ needs.package-soundtrack.result }}\n",
+            self.audit,
+        )
+        for target, extension in (
+            ("aarch64-apple-darwin", "tar.gz"),
+            ("x86_64-apple-darwin", "tar.gz"),
+            ("x86_64-pc-windows-msvc", "zip"),
+            ("x86_64-unknown-linux-gnu", "tar.gz"),
+        ):
+            archive = f'"dist/numinous-v${{version}}-{target}.{extension}"'
+            self.assertEqual(self.audit.count(archive), 1)
+        self.assertEqual(
+            self.audit.count('"dist/numinous-v${version}-soundtrack.tar.gz"'), 1
+        )
+        self.assertIn("find dist -mindepth 1 -maxdepth 1", self.audit)
+        self.assertIn('test "${#actual[@]}" -eq "${#allowed[@]}"', self.audit)
+        self.assertIn('test "${actual[$index]}" = "${allowed[$index]}"', self.audit)
+        self.assertIn('test "$SOUNDTRACK_RESULT" = skipped', self.audit)
+        self.assertIn('--expected-version "$version"', self.audit)
+        self.assertIn('--expected-revision "$revision"', self.audit)
+        self.assertNotRegex(self.audit, r'test "\$count" -ge|wc -l')
+
     def test_attestation_has_only_required_job_permissions(self) -> None:
         permissions = re.search(
             r"(?ms)^    permissions:\n(?P<body>(?:^      [^\n]+\n)+)",
@@ -122,6 +146,11 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertEqual(self.audit.count('--source-revision "$revision"'), 2)
         self.assertEqual(
             self.audit.count('--source-date-epoch "$source_date_epoch"'), 2
+        )
+        self.assertEqual(self.audit.count("--release-directory dist"), 2)
+        self.assertLess(
+            self.audit.index('--verify-archive "$archive"'),
+            self.audit.index("scripts/release-sbom.py generate"),
         )
         self.assertIn(
             'revision="$(git rev-parse "${GITHUB_SHA}^{commit}")"', self.audit
