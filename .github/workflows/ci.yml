@@ -38,8 +38,18 @@ jobs:
       - name: MCP driver and Understanding study tests
         run: |
           python3 scripts/test-mcp-play.py
+          python3 scripts/test-agent-cohort.py
           python3 scripts/test-understanding-study.py
           python3 scripts/test-understanding-collect.py
+      - name: Agent hallway, tactile, and first-contact cohorts
+        run: |
+          python3 scripts/agent-hallway.py
+          python3 scripts/agent-tactile.py
+          python3 scripts/agent-first-contact.py
+      - name: Flagship visual and room-bed audio goldens
+        run: |
+          cargo build --locked --bin numinous
+          python3 scripts/flagship-goldens.py
       - name: Release and input contract tests
         run: |
           python3 scripts/test-package-release.py

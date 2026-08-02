@@ -14,6 +14,16 @@ echo "== test =="
 cargo test --workspace --all-targets --locked
 echo "== MCP play driver =="
 python3 scripts/test-mcp-play.py
+echo "== agent cohort contracts =="
+python3 scripts/test-agent-cohort.py
+echo "== agent hallway cohort =="
+python3 scripts/agent-hallway.py
+echo "== agent tactile cohort =="
+python3 scripts/agent-tactile.py
+echo "== agent first-contact suite =="
+python3 scripts/agent-first-contact.py
+echo "== flagship visual and audio goldens =="
+python3 scripts/flagship-goldens.py
 echo "== understanding study runner =="
 python3 scripts/test-understanding-study.py
 echo "== understanding study collector =="

@@ -176,23 +176,27 @@ and green CI. Human stranger sessions, accessibility panels, musician
 long-listening, and broad hardware certification are real gates for **0.8 /
 1.0**, not stop-the-world work before 0.2.
 
-**Current milestone:** 0.4 Understanding Alpha. The 0.3 Tactile Alpha
-agent-and-machine exit is met on the five flagships, including the consented
-Watch Agent path and the declared reference performance budget. The 0.4
-deterministic analysis and stateful isolated collector are CI-gated. Calibration
-and collection starts require independently recorded pre-exposure receipts,
+**Current milestone:** 0.4 Understanding Alpha on the **agent-and-machine
+track to 1.0**. The 0.3 Tactile Alpha agent-and-machine exit is met on the five
+flagships, including the consented Watch Agent path and the declared reference
+performance budget. Agent hallway and agent tactile cohorts are required CI
+gates: every push re-proves flagship ahas and five-flagship hand consequence
+through real MCP subprocesses without a human tester. The 0.4 deterministic
+analysis and stateful isolated collector are CI-gated. Calibration and
+collection starts require independently recorded pre-exposure receipts,
 calibrated backend and committed source revisions are bound to allocation, both
 conditions use exactly one participant response per room, and interruption
 scoring cannot favor the generation arm.
 External registration of the protocol, source, and attempt-receipt boundary,
-concealed probe calibration, final fresh independent review, registration of
+concealed probe calibration, automated dual method auditors, registration of
 the resulting artifacts, and the allocation freeze remain before any
 qualifying collection, and no cohort result is claimed.
 Returning-journal sovereignty now has an
 append-only correction chain, versioned bounded export, and real two-process
 erasure acceptance. The complete matched cohort remains open. Soft-thin
 densify, bulk rooms, and Phase B glow stay background unless measurement binds.
-Ordered criteria live in
+Human stranger, musician, and accessibility panels are optional parallel
+evidence, not blockers for this track. Ordered criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md) (**Critical path right now**).
 The predeclared contract and evidence boundary for the next study live in
 [`docs/UNDERSTANDING_STUDY.md`](docs/UNDERSTANDING_STUDY.md); no qualifying
@@ -216,10 +220,13 @@ native App, including all nine clickable launch destinations, case-safe letter
 commands, configurable standard-button routing, and a controller-driven virtual hand for
 every room. The
 visible legends follow the last meaningful keyboard, pointer, or controller
-action across rooms, games, Show, Journey, and Studio. Controller routes cover
-all nine menu destinations, while R3 provides a visible pause that blocks
-gameplay input until resumed. Studio formula entry still requires a keyboard
-and says so directly.
+action across rooms, games, Show, Journey, Studio, pause, and Watch Agent.
+Controller copy is derived from the effective player mapping and active Xbox,
+PlayStation, or generic button family, so remapped and unbound actions are
+reported instead of silently showing the default layout. Controller routes
+cover all nine menu destinations, while the mapped pause action provides a
+visible pause that blocks gameplay input until resumed. Studio formula entry
+still requires a keyboard and says so directly.
 
 The programmatic room score now uses a deterministic 128-step stereo
 macro-arrangement. Every authored motif opens literally in one coherent

@@ -1,7 +1,11 @@
 use numinous_core::{Journey, Raster, Scoreboard, Surface};
 
-use crate::input_legend::{self, InputMode};
+use crate::input_legend::{self, ControllerCopy, InputMode};
 
+#[cfg(test)]
+use crate::input_legend::ControllerFace;
+
+#[cfg(test)]
 pub(crate) fn draw_help_overlay(
     raster: &mut Raster,
     width: usize,
@@ -9,6 +13,26 @@ pub(crate) fn draw_help_overlay(
     selected_game: Option<usize>,
     input_mode: InputMode,
     activity_paused: bool,
+) {
+    draw_help_overlay_with_controller(
+        raster,
+        width,
+        height,
+        selected_game,
+        input_mode,
+        activity_paused,
+        ControllerFace::Generic.into(),
+    );
+}
+
+pub(crate) fn draw_help_overlay_with_controller(
+    raster: &mut Raster,
+    width: usize,
+    height: usize,
+    selected_game: Option<usize>,
+    input_mode: InputMode,
+    activity_paused: bool,
+    copy: ControllerCopy,
 ) {
     raster.clear_rows(0, height as i32);
     raster.line(0, 0, width.saturating_sub(1) as i32, 0, '-');
@@ -25,9 +49,12 @@ pub(crate) fn draw_help_overlay(
         && height <= 300
         && selected_game.is_some();
     let semantic = if compact_controller {
-        input_legend::compact_controller_help_lines(selected_game.unwrap_or(0))
+        input_legend::compact_controller_help_lines_with_controller(
+            selected_game.unwrap_or(0),
+            copy,
+        )
     } else {
-        input_legend::help_lines(input_mode, selected_game, activity_paused)
+        input_legend::help_lines_with_controller(input_mode, selected_game, activity_paused, copy)
     };
     let (lines, scale, line_step) = if compact_controller {
         overlay_layout_up_to(&semantic, width, height, 2)
@@ -42,12 +69,31 @@ pub(crate) fn draw_help_overlay(
 /// Hit testing uses the same wrapped lines, scale, and centering as the drawn
 /// keyboard and mouse overlay. This keeps pointer targets attached to visible
 /// copy at compact and default window sizes.
+#[cfg(test)]
 pub(crate) fn help_menu_choice_at(
     point: (f64, f64),
     width: usize,
     height: usize,
     input_mode: InputMode,
     selected: Option<usize>,
+) -> Option<usize> {
+    help_menu_choice_at_with_controller(
+        point,
+        width,
+        height,
+        input_mode,
+        selected,
+        ControllerFace::Generic.into(),
+    )
+}
+
+pub(crate) fn help_menu_choice_at_with_controller(
+    point: (f64, f64),
+    width: usize,
+    height: usize,
+    input_mode: InputMode,
+    selected: Option<usize>,
+    copy: ControllerCopy,
 ) -> Option<usize> {
     if width == 0
         || height == 0
@@ -61,9 +107,9 @@ pub(crate) fn help_menu_choice_at(
     let compact_controller =
         input_mode == InputMode::Controller && width <= 420 && height <= 300 && selected.is_some();
     let semantic = if compact_controller {
-        input_legend::compact_controller_help_lines(selected.unwrap_or(0))
+        input_legend::compact_controller_help_lines_with_controller(selected.unwrap_or(0), copy)
     } else {
-        input_legend::help_lines(input_mode, selected, false)
+        input_legend::help_lines_with_controller(input_mode, selected, false, copy)
     };
     let largest = if compact_controller {
         2
@@ -99,11 +145,28 @@ pub(crate) fn help_menu_choice_at(
         .then_some(source_index - 1)
 }
 
+#[cfg(test)]
 pub(crate) fn journey_lines(
     journey: &Journey,
     board: &Scoreboard,
     room_count: usize,
     input_mode: InputMode,
+) -> Vec<String> {
+    journey_lines_with_controller(
+        journey,
+        board,
+        room_count,
+        input_mode,
+        ControllerFace::Generic.into(),
+    )
+}
+
+pub(crate) fn journey_lines_with_controller(
+    journey: &Journey,
+    board: &Scoreboard,
+    room_count: usize,
+    input_mode: InputMode,
+    copy: ControllerCopy,
 ) -> Vec<String> {
     let mut lines = vec![
         format!(
@@ -143,19 +206,22 @@ pub(crate) fn journey_lines(
     if lit > 0 {
         lines.push(format!("RESONANCES {lit}"));
     }
-    lines.push(input_legend::journey_close(input_mode));
+    lines.push(input_legend::journey_close_with_controller(
+        input_mode, copy,
+    ));
     lines
 }
 
-pub(crate) fn draw_journey_overlay(
+pub(crate) fn draw_journey_overlay_with_controller(
     raster: &mut Raster,
     journey: &Journey,
     board: &Scoreboard,
     room_count: usize,
-    width: usize,
-    height: usize,
+    size: (usize, usize),
     input_mode: InputMode,
+    copy: ControllerCopy,
 ) {
+    let (width, height) = size;
     raster.clear_rows(0, height as i32);
     raster.line(0, 0, width.saturating_sub(1) as i32, 0, '-');
     raster.line(
@@ -165,13 +231,21 @@ pub(crate) fn draw_journey_overlay(
         height.saturating_sub(1) as i32,
         '-',
     );
-    let semantic = journey_lines(journey, board, room_count, input_mode);
+    let semantic = journey_lines_with_controller(journey, board, room_count, input_mode, copy);
     let (lines, scale, line_step) = overlay_layout(&semantic, width, height);
     draw_centered_lines(raster, &lines, width, height, scale, line_step);
 }
 
+#[cfg(test)]
 fn pause_lines(input_mode: InputMode) -> Vec<String> {
-    vec!["PAUSED".to_string(), input_legend::pause_resume(input_mode)]
+    pause_lines_with_controller(input_mode, ControllerFace::Generic.into())
+}
+
+fn pause_lines_with_controller(input_mode: InputMode, copy: ControllerCopy) -> Vec<String> {
+    vec![
+        "PAUSED".to_string(),
+        input_legend::pause_resume_with_controller(input_mode, copy),
+    ]
 }
 
 fn pause_band_bounds(line_count: usize, scale: i32, line_step: i32, height: usize) -> (i32, i32) {
@@ -183,13 +257,30 @@ fn pause_band_bounds(line_count: usize, scale: i32, line_step: i32, height: usiz
     )
 }
 
+#[cfg(test)]
 pub(crate) fn draw_pause_overlay(
     raster: &mut Raster,
     width: usize,
     height: usize,
     input_mode: InputMode,
 ) {
-    let semantic = pause_lines(input_mode);
+    draw_pause_overlay_with_controller(
+        raster,
+        width,
+        height,
+        input_mode,
+        ControllerFace::Generic.into(),
+    );
+}
+
+pub(crate) fn draw_pause_overlay_with_controller(
+    raster: &mut Raster,
+    width: usize,
+    height: usize,
+    input_mode: InputMode,
+    copy: ControllerCopy,
+) {
+    let semantic = pause_lines_with_controller(input_mode, copy);
     let (lines, scale, line_step) = overlay_layout(&semantic, width, height);
     let (band_top, band_bottom) = pause_band_bounds(lines.len(), scale, line_step, height);
     raster.clear_rows(band_top, band_bottom);
@@ -373,6 +464,43 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn compact_remapped_controller_help_stays_bounded() {
+        use crate::input_legend::{ControllerAction, ControllerButton};
+
+        let mut copy = ControllerCopy::empty(ControllerFace::PlayStation);
+        for (action, button) in [
+            (ControllerAction::Primary, ControllerButton::West),
+            (ControllerAction::Back, ControllerButton::South),
+            (ControllerAction::Menu, ControllerButton::Select),
+            (ControllerAction::Inspect, ControllerButton::Start),
+            (ControllerAction::Reset, ControllerButton::RightThumb),
+            (ControllerAction::Pause, ControllerButton::East),
+            (
+                ControllerAction::PreviousRoom,
+                ControllerButton::LeftTrigger2,
+            ),
+            (ControllerAction::NextRoom, ControllerButton::RightTrigger2),
+            (ControllerAction::Slower, ControllerButton::LeftTrigger),
+            (ControllerAction::Faster, ControllerButton::RightTrigger),
+            (ControllerAction::Up, ControllerButton::North),
+            (ControllerAction::Right, ControllerButton::East),
+            (ControllerAction::Down, ControllerButton::South),
+            (ControllerAction::Left, ControllerButton::West),
+            (ControllerAction::VolumeDown, ControllerButton::DPadDown),
+            (ControllerAction::VolumeUp, ControllerButton::DPadUp),
+            (ControllerAction::ToggleMute, ControllerButton::DPadLeft),
+        ] {
+            copy.bind(action, button);
+        }
+        let semantic = input_legend::compact_controller_help_lines_with_controller(4, copy);
+        let (lines, scale, line_step) = overlay_layout_up_to(&semantic, 360, 240, 2);
+
+        assert!(lines.len() as i32 * line_step * scale <= 240);
+        assert!(lines.iter().all(|line| line_fits(line, 360, scale)));
+        assert_eq!(scale, 2, "{}", semantic.join("\n"));
     }
 
     #[test]

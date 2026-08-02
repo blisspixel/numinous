@@ -6,6 +6,31 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Agent hallway (Times Tables and Buffon engineered ahas), agent tactile
+  (five-flagship hand and sonic consequence), and agent first-contact (35-tool
+  inventory, multi-wing play, munch open, journal read, broadcast status) are
+  required CI, check, and verify gates. Each emits a machine-readable
+  `summary.json` pass/fail record. Focused pure scoring contracts live in
+  `scripts/test-agent-cohort.py` so grader regressions fail closed without a
+  live MCP spawn. This locks the 0.2 and 0.3 agent-and-machine exits and cold
+  first contact into every push; optional human panels are not required for the
+  am-track.
+- Flagship visual PNG and room-bed audio goldens for Times Tables, Double
+  Pendulum, Game of Life, Galton Board, and Buffon Needle are committed under
+  `docs/evidence/goldens/` and verified by `scripts/flagship-goldens.py` in CI.
+  Exact content hashes bind the plates and bed WAVs; compact PNG plates are
+  retained for review while WAV bytes stay out of the tree. Intentional product
+  changes update the manifest with `--update`. This is machine regression
+  evidence, not human sensory judgment.
+- Controller legends now follow the effective `.numinous-bindings.json`
+  routing table instead of silently describing only the default layout. One
+  immutable Xbox, PlayStation, or generic vocabulary feeds room chrome, full
+  and compact help, every game, Show, Journey, Studio, pause, and Watch Agent.
+  Remapped and unbound actions are explicit, multiple routes are reported in
+  bounded copy, the default North audio chord remains conditional on North
+  being unbound, and custom compact layouts retain the two-times small-window
+  scale. Keyboard and mouse copy is unchanged; this is deterministic routing
+  and render evidence, not representative physical-controller certification.
 - The July 2026 dependency migration now has a reproducible adjacent-revision
   performance contract and canonical raw receipt. One bounded Python 3.11
   runner builds the exact before and after commits with locked release

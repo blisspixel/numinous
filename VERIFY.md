@@ -46,6 +46,18 @@ RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked  # macOS / L
 RUSTDOCFLAGS="-D warnings" cargo test --workspace --doc --locked     # macOS / Linux
 cmd /d /c "set RUSTDOCFLAGS=-D warnings&& cargo doc --workspace --no-deps --locked && cargo test --workspace --doc --locked"  # Windows
 cargo test --workspace --all-targets --locked
+python scripts/test-mcp-play.py                     # Windows
+python3 scripts/test-mcp-play.py                    # macOS / Linux
+python scripts/test-agent-cohort.py                 # Windows
+python3 scripts/test-agent-cohort.py                # macOS / Linux
+python scripts/agent-hallway.py                     # Windows (live MCP flagship aha)
+python3 scripts/agent-hallway.py                    # macOS / Linux
+python scripts/agent-tactile.py                     # Windows (live MCP five-flagship tactile)
+python3 scripts/agent-tactile.py                    # macOS / Linux
+python scripts/agent-first-contact.py               # Windows (cold multi-wing MCP)
+python3 scripts/agent-first-contact.py              # macOS / Linux
+python scripts/flagship-goldens.py                  # Windows (visual + room-bed hashes)
+python3 scripts/flagship-goldens.py                 # macOS / Linux
 python scripts/test-understanding-study.py          # Windows
 python3 scripts/test-understanding-study.py         # macOS / Linux
 python scripts/test-understanding-collect.py        # Windows
@@ -73,15 +85,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 
 
 Expected right now: **format and clippy clean, 3,213 all-target Rust test cases,
-105 study runner and collector regressions, and 15 physical input contract
-regressions plus fifteen release-package, sixteen SBOM, and ten release
-workflow regressions pass,
-one screenshot diagnostic is ignored, 95.15% region coverage, and 95.30% line
-coverage**. The `gpu` and
+agent hallway, tactile, and first-contact live MCP cohorts PASS as CI gates,
+flagship visual and room-bed audio goldens PASS, agent cohort contract unit
+tests pass, 105 study runner and collector regressions, and 15
+physical input contract regressions plus fifteen release-package, sixteen SBOM,
+and ten release workflow regressions pass, one screenshot diagnostic is
+ignored, 95.15% region coverage, and 95.30% line coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
-evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Sessions
-with representative physical controller models remain open.
+evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Physical
+controller feel remains optional bonus evidence on the agent-and-machine track;
+contract tests and mapping-aware legends remain the CI authority.
 
 The four-target release workflow runs `scripts/release-engagement-smoke.py`
 against every disposable packaged install. It requires a substantive Times

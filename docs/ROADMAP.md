@@ -37,19 +37,22 @@ sessions and accessibility review remain later gates, not 0.2 blockers.
 
 ### Critical path right now (read this first)
 
-**Do not stall 0.2 on humans.** Founder policy (2026-07-24): agent faces and
-machine evidence carry Flagship Proof. Human strangers, a11y panels, and
-musician sessions are real later gates (0.5 through 1.0), not pre-0.2
-stop-the-world work.
+**Agent-and-machine track to 1.0 (founder policy, 2026-08-02).** Product
+milestones advance on automated and agent evidence only. Humans may play, but
+no human is required to test or validate for the **1.0 Agent-and-Machine First
+Light** track. Human stranger hallway, musician long-listening panels, and
+accessibility sessions with disabled players remain an optional parallel track
+and must not block am-track exits. Claims those panels would support stay
+unclaimed until run.
 
 | Priority | What | Why |
 | --- | --- | --- |
-| **1. Iterate on real first contact** | Put the installable prerelease in the hands of fresh agent players, test the App and MCP end to end, and fix every reproduced setup, schema, circuit-breaker, or play blocker | The first outside cold session found meaningful self-directed play and return intent, then exposed guidance errors that stopped a third room. Formal measurement should not freeze avoidable product friction into its protocol |
-| **2. Prove release portability** | Run the packaged install, launch, update, play, persistence, and uninstall path on clean Windows, macOS, and Linux machines | CI can prove archive structure and same-runner execution, but only clean physical systems retire real distribution and device assumptions |
-| **3. Calibrate, audit, and freeze the 0.4 collection** | Calibrate the concealed probe bank through sealed fresh-context deliveries, obtain two fresh independent passes over the replacement collector and method, externally register the execution commitments, then track its generated 24-pair allocation before the first qualifying response | The collector blocks method drift mechanically; calibration and review must catch a weak probe, oracle, privacy boundary, or state transition before results can influence a correction |
-| **4. Run and publish the 0.4 cohort** | Execute 20 matched pairs, publish every planned outcome and deviation, and obtain independent methodology and math review | A tracked runner without a complete, reviewable result is preparation, not milestone evidence |
-| **Standing gate** | Keep 0.2 and 0.3 proof plus public CI green | Regressions reopen completed milestones and invalidate new evidence |
-| **Deferred past 0.2** | Human stranger hallway, a11y sessions, musician long-listening, soft-thin densify, bulk rooms, Phase B glow | Humans before 1.0; densify/glow only if a sensory ceiling binds |
+| **1. Keep agent first contact CI-green** | Agent hallway (Times Tables + Buffon ahas) and agent tactile (five flagships) run as required CI steps with machine-readable summaries | Local-only cohort scripts cannot guard regressions; every PR must re-prove 0.2 and 0.3 |
+| **2. Expand automated QA** | Flagship perceptual visual goldens, spectral audio goldens, nightly soak, and broader cold-start first-contact suites | Sensory and return-play progress must not depend on a person staring at a window |
+| **3. Close 0.4-am Understanding** | Register, calibrate, and run the matched agent cohort through the sealed collector; publish under `docs/evidence/understanding-0.4/` with automated dual auditors | Next incomplete product milestone; method is built, evidence is not |
+| **4. Portable and creator am-exits** | Automated install/play/uninstall on three OS runners; creator save/reopen/export roundtrip scripts | Distribution and Studio must be headlessly observable |
+| **Standing gate** | Keep 0.2 and 0.3 proof, coverage, supply chain, and public CI green | Regressions reopen completed milestones and invalidate new evidence |
+| **Optional parallel (not am-blockers)** | Human stranger hallway, a11y player panels, musician long-listening, soft-thin densify, bulk rooms, Phase B glow | Human taste and disability usability remain valuable later claims; densify/glow only if a sensory ceiling binds |
 
 The 0.3 agent-and-machine exit is met. The next incomplete milestone is 0.4
 understanding and retention, but its formal collection is intentionally after
@@ -158,11 +161,18 @@ Detail below and in the version sections.
   direct semantic-action set. Remapped primary buttons preserve hold and
   release semantics, an explicit North mapping replaces its default audio
   chord, and multiple primary mappings release only after the last held button.
-  Stick axes keep their fixed virtual-hand and time-scrub roles. The visible
-  controller legends remain an honest description of the default layout, not a
-  generated view of custom routing.
+  Stick axes keep their fixed virtual-hand and time-scrub roles.
   `gamecontrollerdb.txt` is compiled into the App binary as a fallback standard
   controller mapping.
+- **Done (Cycle 20 mapping-aware controller copy, August 2, 2026):** one
+  immutable controller presentation snapshot is derived from the effective
+  routing table and active Xbox, PlayStation, or generic face family. Room
+  chrome, full and compact help, all five games, Show, Journey, Studio, pause,
+  and Watch Agent consume that same value. Remapped, multiply routed, and
+  unbound actions remain truthful without changing keyboard or mouse copy;
+  compact-layout and routing regressions cover the supported small window.
+  Native event delivery and representative physical-device evidence remain
+  separate gates.
 - **Done (MCP munch_arcade):** Stateless `munch_arcade` tool for full parity, with replayed action-list scores posted under `arcade seed:N` through the shared progress path.
 - **Done (app hardening slice):** app-local play state plus quiz deal/answer flow now live in `faces/app/src/play.rs`, pure game-screen rendering lives in `faces/app/src/game_draw.rs`, room chrome plus arrival-card hinting live in `faces/app/src/hud.rs`, help, journey, and banner overlays live in `faces/app/src/overlays.rs`, transient feedback banner construction and ticking live in `faces/app/src/feedback.rs`, shared in-window Munch grid, Nim heap/take, and Munch Arcade action controls live in `faces/app/src/controls.rs`, left-mouse mode decisions and pointer-state guards live in `faces/app/src/mouse_input.rs`, room navigation, re-deal, poke-history, drag-trail, and room-card tick helpers live in `faces/app/src/room_input.rs`, Studio text, parse, audio-spec, and curve drawing state live in `faces/app/src/studio_panel.rs`, explicit F9 hallway-test note capture lives in `faces/app/src/playtest.rs`, live-state PNG postcard export lives in `faces/app/src/postcard.rs`, and bounded radio cache discovery, open-handle WAV validation, live-position math, and track loading live in `faces/app/src/radio_cache.rs`. Room action copy is centralized in `numinous-core`: App arrival cards use touch-first fallback copy, while CLI live play and MCP room tools use neutral fallback copy. Tests cover shared game hit-test layout, raster output across quiz, Munch, Munch Arcade, Nim, every live Gauntlet stage, quiz daily seeding, no-repeat quiz history, answer acceptance, action-naming arrival cards, Studio chrome suppression, Studio panel editing and bounded drawing, cross-face action hints, shared Munch/Nim/arcade controls, room-input bounds, modal-safe pointer-state transitions, playtest-critical overlays, feedback banner copy/lifetimes, radio-volume banner retention, GPU/raster banner compositing, local playtest-note reports that align to the hallway-test prompts without collecting personal data, postcard PNGs that include pokes, the selected Visual Era, collision-safe filenames, bounded/sorted station cache discovery, low-sorted corrupt-track handling before the track cap, corrupt-track rejection, open-handle size rechecks, high-rate-device caps, non-wrapping live offsets, and app radio recovery after a bad cached file. The event-loop file is still a hotspot, but game rules remain in `crates/core` and the refactor is moving in small verified modules.
 - **Done (persistence hardening slice):** malformed Journey and score files now parse defensively: counters saturate, constellation dimensions are capped, `visited` plus `chosen` token sets are bounded and token-sane, duplicate Journey tokens do not consume the unique-token cap, score keys are length-bounded, and score tables cap unique entries. The maintenance posture remains that progress and score files are user-editable local text, so loaders must repair or ignore malformed data rather than panic or allocate without bound.
@@ -334,9 +344,10 @@ Detail below and in the version sections.
   stays Rust 1.97.1 with MSRV 1.88.0; `cargo deny` and `cargo audit` run with
   empty advisory ignore lists; Dependabot remains weekly on Cargo and GitHub
   Actions. See `ENGINEERING.md`.
-- **Immediate next (product, after 0.2 agent-and-machine exit):** 0.3 Tactile
-  Alpha on the five flagships; keep agent-hallway and CI green. Human stranger
-  hallway is deferred to 0.8 / 1.0. See **Critical path right now** above.
+- **Immediate next (product, after 0.3 agent-and-machine exit):** 0.4-am
+  Understanding Alpha cohort plus permanent CI locks on agent hallway and
+  tactile. Optional human panels do not block the am-track. See **Critical
+  path right now** above.
 - **Background engineering (not the critical path):** soft-thin densify where
   structure supports it; more live-motion pens on remaining static classical
   curves; more causal held loops modeled on Galton and Life; Phase B glow only
@@ -1043,6 +1054,16 @@ peak energy.
   evidence, not current-main, cross-platform, callback-latency, or first-paint
   evidence. Future major updates require both migration notes and a comparable
   retained receipt.
+- **Done (Cycle 21 agent cohort CI lock, August 2, 2026):** `agent-hallway.py`
+  and `agent-tactile.py` emit machine-readable summaries and are required steps
+  in CI, check, and verify. Pure scoring contracts live in
+  `test-agent-cohort.py`. The 0.2 and 0.3 agent-and-machine exits can no longer
+  regress outside a red pipeline. Optional human panels remain parallel only.
+- **Done (Cycle 21 first-contact and flagship goldens, August 2, 2026):**
+  `agent-first-contact.py` cold-starts 35 tools, multi-wing play, munch, journal
+  read, and broadcast status. `flagship-goldens.py` binds five-flagship PNG and
+  room-bed WAV content hashes under `docs/evidence/goldens/` as a CI gate.
+  Human sensory panels remain optional parallel evidence.
 
 Owner docs: `ARCHITECTURE.md`, `ENGINEERING.md`, `INTERFACES.md`, `MUSIC.md`,
 `VERIFY.md`.
@@ -1195,26 +1216,27 @@ The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (reviewed 2026-08-01)
+## Where we stand (reviewed 2026-08-02)
 
 The package is **0.2.0-alpha.4**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
-Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS,
-F9 capture, three faces, and green public CI. Human stranger hallway is
-**deferred to 0.8 / 1.0** by founder policy: do not stall pre-0.2 work on
-recruited humans. Current breadth is 354 catalog rooms, 11+ games, six sims,
-three faces, 35 MCP tools, deterministic creation and persistence. Required
-public CI passes locked tests, builds, installer self-tests, and supply-chain
-checks across three operating systems; physical-device and a11y evidence remain
-later. **Breadth is still not a substitute for depth.** The 0.3
-agent-and-machine exit is met and active work moves to **0.4 Understanding
-Alpha**. Its study protocol, deterministic analysis, and replacement collection
-boundary are tracked, and the returning-journal machine proof is complete, but
-external registration, probe calibration, fresh pre-collection review,
-allocation freeze, and the qualifying cohort remain open. No calibrated method
-supports
-assigning completion percentages to subjective 1.0 gates, so this scorecard
-records evidence instead.
+Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
+a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
+Alpha is exit-met** on the same bar, and agent tactile is also a required CI
+gate. Human stranger hallway, musician panels, and accessibility player
+sessions are an **optional parallel track**, not am-track blockers for 1.0
+Agent-and-Machine First Light. Current breadth is 354 catalog rooms, 11+ games,
+six sims, three faces, 35 MCP tools, deterministic creation and persistence.
+Required public CI passes locked tests, builds, installer self-tests,
+supply-chain checks, and live agent cohorts across three operating systems.
+**Breadth is still not a substitute for depth.** Active work moves to **0.4-am
+Understanding Alpha**, then automated sensory goldens, portable install
+proofs, and creator roundtrips. The 0.4 study protocol, deterministic analysis,
+and replacement collection boundary are tracked, and the returning-journal
+machine proof is complete, but external registration, probe calibration,
+automated dual auditors, allocation freeze, and the qualifying cohort remain
+open. No calibrated method supports assigning completion percentages to
+subjective human taste gates, so this scorecard records evidence instead.
 
 | 1.0 gate | Evidence today | Missing evidence or work |
 |---|---|---|
@@ -1230,16 +1252,17 @@ records evidence instead.
 
 **Immediate critical path** (same order as **Critical path right now** above):
 
-1. Externally register the protocol, source, and attempt-receipt boundary before
+1. Keep agent hallway and tactile CI gates green; expand first-contact and
+   perceptual/spectral golden automation so humans are never the QA path.
+2. Externally register the protocol, source, and attempt-receipt boundary before
    calibration ordinal 1. Calibrate the concealed bank in fresh no-exposure
-   contexts, obtain two fresh independent passes, then externally register and
-   track the final bank, audit, and exact generated allocation before collecting
-   a qualifying response.
-2. Run and publish the qualifying 0.4 cohort while keeping the 0.2, 0.3, and CI
-   gates green.
-3. Enter 0.5 sensory identity with accessibility only after the 0.4 exit.
-4. Schedule human stranger and a11y sessions for **0.8 / 1.0**, not as a 0.2
-   stop-the-world gate.
+   contexts, run automated dual method auditors, then register and track the
+   final bank, audit, and exact generated allocation before collecting a
+   qualifying agent response.
+3. Run and publish the qualifying 0.4-am cohort while keeping the 0.2, 0.3, and
+   CI gates green.
+4. Enter 0.5-am sensory identity with machine accessibility checks after the
+   0.4-am exit. Optional human panels never block the am-track.
 
 **Not on this list as next work:** soft-thin densify grind, bulk new rooms, or
 Phase B glow unless measurement shows a binding sensory ceiling.

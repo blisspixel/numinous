@@ -13,6 +13,8 @@ use numinous_broadcast::{
 };
 use numinous_core::{Expr, Raster, Room, RoomInput, Surface};
 use serde_json::{Map, Value};
+
+use crate::input_legend::{Control, ControllerAction, ControllerCopy, ControllerFace};
 #[cfg(test)]
 use std::cell::Cell;
 use std::collections::VecDeque;
@@ -38,6 +40,18 @@ pub enum ViewerInputMode {
     KeyboardMouse,
     /// Game-controller labels.
     Controller,
+    /// Game-controller labels derived from the player's effective mapping.
+    MappedController(ControllerCopy),
+}
+
+impl ViewerInputMode {
+    fn controller_copy(self) -> Option<ControllerCopy> {
+        match self {
+            Self::KeyboardMouse => None,
+            Self::Controller => Some(ControllerFace::Generic.into()),
+            Self::MappedController(copy) => Some(copy),
+        }
+    }
 }
 
 /// The current local viewer connection state.
@@ -1869,17 +1883,22 @@ fn draw_native_replay_chrome(
         1,
         '#',
     );
-    let controls = match input_mode {
-        ViewerInputMode::KeyboardMouse => {
-            "LEFT/RIGHT EVENT   SPACE PAUSE   ESC CLOSE   TEXT EVENTS USE UP/DOWN AND A/D"
-        }
-        ViewerInputMode::Controller => {
-            "D-PAD EVENT   R3 PAUSE DISPLAY   EAST CLOSE   TEXT EVENTS USE D-PAD AND LB/RB"
-        }
+    let controls = match input_mode.controller_copy() {
+        None => "LEFT/RIGHT EVENT   SPACE PAUSE   ESC CLOSE   TEXT EVENTS USE UP/DOWN AND A/D"
+            .to_string(),
+        Some(copy) => format!(
+            "{} EVENT   {} PAUSE DISPLAY   {} CLOSE   TEXT USE {} AND {}/{}",
+            copy.direction_summary(),
+            copy.token(Control::Pause),
+            copy.token(Control::Back),
+            copy.direction_summary(),
+            copy.action_token(ControllerAction::PreviousRoom),
+            copy.action_token(ControllerAction::NextRoom)
+        ),
     };
     numinous_core::draw_text(
         raster,
-        controls,
+        &controls,
         6,
         footer_top.saturating_add(3) as i32,
         1,
@@ -2242,15 +2261,18 @@ fn semantic_lines(
         });
     }
 
-    let controls = match input_mode {
-        ViewerInputMode::KeyboardMouse => {
-            "LEFT/RIGHT EVENT   UP/DOWN RESULT   A/D PAN   SPACE PAUSE   ESC CLOSE"
-        }
-        ViewerInputMode::Controller => {
-            "D-PAD EVENT/RESULT   LB/RB PAN   R3 PAUSE DISPLAY   EAST CLOSE"
-        }
+    let controls = match input_mode.controller_copy() {
+        None => "LEFT/RIGHT EVENT   UP/DOWN RESULT   A/D PAN   SPACE PAUSE   ESC CLOSE".to_string(),
+        Some(copy) => format!(
+            "{} EVENT/RESULT   {}/{} PAN   {} PAUSE DISPLAY   {} CLOSE",
+            copy.direction_summary(),
+            copy.action_token(ControllerAction::PreviousRoom),
+            copy.action_token(ControllerAction::NextRoom),
+            copy.token(Control::Pause),
+            copy.token(Control::Back)
+        ),
     };
-    let footer = vec![String::new(), controls.to_string()];
+    let footer = vec![String::new(), controls];
     let body_width = body
         .iter()
         .map(|line| line.chars().count())
@@ -3698,5 +3720,56 @@ mod tests {
         for forbidden in ["CALL TOOL", "SEND", "SUBMIT", "CONTROL MCP"] {
             assert!(!copy.contains(forbidden), "viewer offered {forbidden}");
         }
+
+        let mut controller = ControllerCopy::empty(ControllerFace::Xbox);
+        for (action, button) in [
+            (
+                ControllerAction::Up,
+                crate::input_legend::ControllerButton::North,
+            ),
+            (
+                ControllerAction::Right,
+                crate::input_legend::ControllerButton::East,
+            ),
+            (
+                ControllerAction::Down,
+                crate::input_legend::ControllerButton::South,
+            ),
+            (
+                ControllerAction::Left,
+                crate::input_legend::ControllerButton::West,
+            ),
+            (
+                ControllerAction::PreviousRoom,
+                crate::input_legend::ControllerButton::LeftTrigger2,
+            ),
+            (
+                ControllerAction::NextRoom,
+                crate::input_legend::ControllerButton::RightTrigger2,
+            ),
+            (
+                ControllerAction::Pause,
+                crate::input_legend::ControllerButton::South,
+            ),
+            (
+                ControllerAction::Back,
+                crate::input_legend::ControllerButton::North,
+            ),
+        ] {
+            controller.bind(action, button);
+        }
+        let mapped = semantic_lines(
+            &snapshot,
+            ViewerInputMode::MappedController(controller),
+            100,
+            40,
+            0,
+            0,
+        )
+        .join("\n");
+        assert!(mapped.contains("U:Y R:B D:A L:X EVENT/RESULT"), "{mapped}");
+        assert!(mapped.contains("LT/RT PAN"), "{mapped}");
+        assert!(mapped.contains("A PAUSE DISPLAY"), "{mapped}");
+        assert!(mapped.contains("Y CLOSE"), "{mapped}");
     }
 }
