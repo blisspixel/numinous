@@ -100,7 +100,9 @@ and the published crate records for
   measured CI time justifies another tool.
 - **Layers enforced now:** unit and integration tests, deterministic fixtures,
   direct invariants, hostile-input tests, end-to-end stdio coverage, and one
-  release-profile performance harness for the five 0.3 flagships. Broader
+  release-profile performance harness for the five 0.3 flagships, plus one
+  exact adjacent-revision dependency-migration receipt whose verifier runs in
+  CI. Broader
   property-test, snapshot, GPU-golden, and nightly benchmark systems remain
   roadmap work until their dependencies and workflows exist in the repository.
 - **Determinism is mandatory:** seeded RNG only, never ambient randomness or wall-clock time in logic; same seed, same result (so shares and tests reproduce exactly).
@@ -207,6 +209,13 @@ Nothing merges red. On every PR, blocking:
     require the SPDX predicate and both signed bundles, and make publication
     depend on audit and attestation. Pull requests test the workflow contract
     without minting an attestation or publishing a release.
+17. Eighteen dependency-migration performance contract regressions plus exact
+    receipt verification run on every PR and all three build operating systems.
+    The retained Windows receipt binds adjacent commits, locked release builds,
+    raw alternating CLI, GPU, audio discovery, and App visible-window samples,
+    output and binary identities, machine details, guards, and the exact runner
+    source. CI verifies the evidence structure and conclusions; it does not
+    rerun the physical Windows measurement.
 
 Hardening targets not yet enforced in CI: embedded per-binary Rust reachability,
 cryptographic release signing, the visual and audio regression loops, and
@@ -230,9 +239,10 @@ denied, plus doctests and the full test suite) only when the commit touches
 Rust, `Cargo.*`, or a shader, so a docs-only commit stays fast. Changes to the
 0.4 study runner, collector, fixture bank, encounter specification, MCP
 mediator, or their test files run the focused Python regressions. The installed
-release packaging, installed engagement, physical input session, and tag
-provenance workflow regressions, including SBOM generation and verification,
-likewise run whenever their drivers, tests, or the release workflow change.
+release packaging, installed engagement, physical input session, tag
+provenance workflow regressions, and dependency-migration performance receipt,
+including SBOM generation and verification, likewise run whenever their
+drivers, tests, evidence, or the release workflow change.
 Coverage, the locked build, and artifact
 regeneration stay in
 `scripts/verify.sh` (the release gate); they are too slow for every commit.

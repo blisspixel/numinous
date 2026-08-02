@@ -267,7 +267,9 @@ in core.
   operating-system URL associations are future work.
 - **Current CI:** house style, dependency policy, coverage, format plus clippy
   plus rustdoc, doctests, all-target tests, and macOS, Ubuntu, and Windows
-  builds. There is no automated beauty screenshot job.
+  builds. The exact historical dependency-migration receipt is also verified
+  on every PR; `PERFORMANCE.md` owns its workload boundaries and evidence
+  limits. There is no automated beauty screenshot job.
 - **Local session broadcast, native room, Studio, game, and sound viewer, and subprocess proof built:**
   the App and MCP production faces remain independent. The shared broadcast
   crate owns one-use loopback pairing, server-first host proof, strict bounded

@@ -12,17 +12,24 @@ ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "release.yml"
 CONTRACT_COMMAND = "scripts/test-release-workflow.py"
 SBOM_CONTRACT_COMMAND = "scripts/test-release-sbom.py"
+PERFORMANCE_CONTRACT_COMMAND = "scripts/test-dependency-migration-performance.py"
+PERFORMANCE_RECEIPT_COMMAND = (
+    "scripts/dependency-migration-performance.py --verify-receipt "
+    "docs/evidence/dependency-migration-2026-08-02.json"
+)
 ATTEST_ACTION = "actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1"
 RUST_TOOLCHAIN_ACTION = (
     "dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1"
 )
 HOOK_TRIGGER = (
     "'^(\\.github/workflows/(ci|release)\\.yml|"
+    "docs/evidence/dependency-migration-[0-9-]+\\.json|"
     "scripts/(check|verify)\\.(ps1|sh)|scripts/hooks/pre-commit|"
     "scripts/(package-release|test-package-release|release-engagement-smoke|"
     "test-release-engagement-smoke|input-hardware-session|"
     "test-input-hardware-session|release-sbom|test-release-sbom|"
-    "test-release-workflow)\\.py)$'"
+    "test-release-workflow|dependency-migration-performance|"
+    "test-dependency-migration-performance)\\.py)$'"
 )
 
 
@@ -214,6 +221,8 @@ class ReleaseWorkflowTests(unittest.TestCase):
                 source = path.read_text(encoding="utf-8")
                 self.assertEqual(source.count(CONTRACT_COMMAND), expected)
                 self.assertEqual(source.count(SBOM_CONTRACT_COMMAND), expected)
+                self.assertEqual(source.count(PERFORMANCE_CONTRACT_COMMAND), expected)
+                self.assertEqual(source.count(PERFORMANCE_RECEIPT_COMMAND), expected)
         hook = (ROOT / "scripts" / "hooks" / "pre-commit").read_text(encoding="utf-8")
         self.assertIn(HOOK_TRIGGER, hook)
 

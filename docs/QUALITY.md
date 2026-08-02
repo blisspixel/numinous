@@ -180,6 +180,18 @@ built, so an aspiration is never mistaken for a result.
   storage, window presentation, display scan-out, audio submission and callback
   latency, and human perception. Those native and sensory intervals remain open
   hardware evidence.
+- **Measured historical migration:** `PERFORMANCE.md` and the canonical
+  `evidence/dependency-migration-2026-08-02.json` receipt compare the exact
+  adjacent revisions around the July dependency migration on one AC-powered
+  Windows reference machine. Three warmups and twenty alternating release
+  samples per revision cover a byte-identical CLI render, GPU adapter through
+  PNG completion, default audio-device discovery, and a muted App window
+  becoming visible. The after medians are 17.640, 636.489, 17.530, and 45.171
+  ms. The GPU path is 1.167x and audio discovery adds 7.117 ms, while CLI and
+  App visible-window medians remain flat. All pass the declared dual guards. The raw samples,
+  p95 tails, binary and output digests, exact revisions, machine, and verifier
+  source identity are retained and checked in CI. This closes one historical
+  migration evidence item; it is not current-main or cross-platform evidence.
 - **Not yet evidenced:** a completed stranger hallway test, accessibility review
   with disabled players, completed representative physical-controller session
   receipts across the enforced single-release four-target and three-profile

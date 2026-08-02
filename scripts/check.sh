@@ -28,6 +28,10 @@ echo "== release SBOM contract =="
 python3 scripts/test-release-sbom.py
 echo "== release workflow contract =="
 python3 scripts/test-release-workflow.py
+echo "== dependency migration performance contract =="
+python3 scripts/test-dependency-migration-performance.py
+echo "== dependency migration performance receipt =="
+python3 scripts/dependency-migration-performance.py --verify-receipt docs/evidence/dependency-migration-2026-08-02.json
 echo "== house style =="
 bash scripts/check-style.sh
 echo "All checks passed."

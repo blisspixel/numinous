@@ -351,6 +351,14 @@ evidence to this repository, tag workflow, and transparency-backed certificate.
 It does not establish runtime-resolved native versions, unreachable linked code,
 soundtrack contents, Authenticode, Apple notarization, or physical platform
 behavior. `VERIFY.md` carries the exact online and offline commands.
+The July 2026 major dependency migration now has a retained adjacent-revision
+performance receipt for one declared Windows reference machine. Twenty
+alternating release samples per revision cover a byte-identical CLI render, a
+complete GPU postcard, default audio-device discovery, and a muted App window
+becoming visible. All four pass their declared median guards. The GPU path rose
+16.7 percent and audio discovery added 7.1 ms, while CLI and App visible-window
+medians remained flat. [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) defines the exact
+boundaries, raw receipt, limits, reproduction command, and evidence caveats.
 Stranger playtests, accessibility work, physical clean-machine execution,
 real-controller-model sessions, musician-led long-listening review, deeper
 causal interaction in other rooms, and substantial visual and Studio work
