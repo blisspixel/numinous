@@ -34,6 +34,8 @@ echo "== creator roundtrip =="
 python3 scripts/creator-roundtrip.py
 echo "== am soak =="
 python3 scripts/am-soak.py
+echo "== catalog scorecard =="
+python3 scripts/catalog-scorecard.py
 echo "== understanding am dry-run =="
 python3 scripts/test-understanding-am.py
 echo "== understanding am registration audit =="

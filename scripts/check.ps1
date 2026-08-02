@@ -36,6 +36,7 @@ Invoke-Step "agent first-contact suite" { python scripts/agent-first-contact.py 
 Invoke-Step "flagship visual and audio goldens" { python scripts/flagship-goldens.py }
 Invoke-Step "creator roundtrip" { python scripts/creator-roundtrip.py }
 Invoke-Step "am soak" { python scripts/am-soak.py }
+Invoke-Step "catalog scorecard" { python scripts/catalog-scorecard.py }
 Invoke-Step "understanding am dry-run" { python scripts/test-understanding-am.py }
 Invoke-Step "understanding am registration audit" { python scripts/understanding-am-pipeline.py --check-only docs/evidence/understanding-0.4/registration-dry-run.json }
 Invoke-Step "understanding study runner" { python scripts/test-understanding-study.py }

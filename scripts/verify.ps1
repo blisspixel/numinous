@@ -51,6 +51,7 @@ Step "agent first-contact suite" { python scripts/agent-first-contact.py }
 Step "flagship visual and audio goldens" { python scripts/flagship-goldens.py }
 Step "creator roundtrip" { python scripts/creator-roundtrip.py }
 Step "am soak" { python scripts/am-soak.py }
+Step "catalog scorecard" { python scripts/catalog-scorecard.py }
 Step "understanding am dry-run" { python scripts/test-understanding-am.py }
 Step "understanding am registration audit" { python scripts/understanding-am-pipeline.py --check-only docs/evidence/understanding-0.4/registration-dry-run.json }
 Step "understanding study runner" { python scripts/test-understanding-study.py }

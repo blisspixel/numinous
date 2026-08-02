@@ -50,10 +50,11 @@ jobs:
         run: |
           cargo build --locked --bin numinous
           python3 scripts/flagship-goldens.py
-      - name: Creator roundtrip and multi-room soak
+      - name: Creator roundtrip, soak, and catalog scorecard
         run: |
           python3 scripts/creator-roundtrip.py
           python3 scripts/am-soak.py
+          python3 scripts/catalog-scorecard.py
       - name: Understanding am-track dry-run auditors
         run: |
           python3 scripts/test-understanding-am.py

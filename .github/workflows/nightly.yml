@@ -33,8 +33,10 @@ jobs:
         run: python3 scripts/flagship-goldens.py
       - name: Creator roundtrip
         run: python3 scripts/creator-roundtrip.py
-      - name: Multi-room soak
-        run: python3 scripts/am-soak.py
+      - name: Multi-room soak and catalog scorecard
+        run: |
+          python3 scripts/am-soak.py
+          python3 scripts/catalog-scorecard.py
       - name: Understanding am dry-run auditors
         run: |
           python3 scripts/test-understanding-am.py

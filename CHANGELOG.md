@@ -19,8 +19,11 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   reopen with `open-studio`, and require byte-identical rewrites for four
   expressions plus the curated recipe list.
 - Multi-room soak gate (`scripts/am-soak.py`): twelve stratified rooms render
-  and room-bed sonify, three games open, forget preview, under an isolated
-  profile.
+  and room-bed sonify, non-interactive CLI surfaces, forget preview, under an
+  isolated profile.
+- Catalog scorecard (`scripts/catalog-scorecard.py`): samples three rooms per
+  wing plus flagships across the 354-room catalog, requiring render status and
+  describe output. Engineering keep/cut signal for the am-track only.
 - Understanding Alpha am-track method dry-run: registration artifact under
   `docs/evidence/understanding-0.4/`, dual automated auditors A/B
   (`scripts/understanding-am-auditor.py`), pipeline driver, and focused
