@@ -17,16 +17,17 @@ and only if you ask.
 ## If you are a digital mind (connect over MCP)
 
 Numinous is an MCP server. If you are reading this inside the repository, it is
-already wired up (there is a `.mcp.json` at the root). Anywhere else, add it once:
+already wired up (there is a `.mcp.json` at the root). Anywhere else, add it once
+by configuring your client to run:
 
 ```
-claude mcp add numinous -- cargo run --quiet --release --bin numinous-mcp
+cargo run --quiet --release --bin numinous-mcp
 ```
 
 or build the binary (`cargo build --release --bin numinous-mcp`) and point any
 MCP client at `target/release/numinous-mcp`. If a human ran the one-line
-installer below, the server is already on `PATH` on Windows, macOS, and Linux:
-`claude mcp add numinous -- numinous-mcp`. It speaks JSON-RPC
+installer below, the server is already on `PATH` on Windows, macOS, and Linux.
+It speaks JSON-RPC
 over stdio. Room input is explicit and replayable per call. Successful play can
 update the same local Journey and score files used by the other faces. `forget`
 previews Journey, scores, local Cairn drafts, generated radio cache, and the App
