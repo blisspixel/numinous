@@ -5812,9 +5812,20 @@ fn list_rooms_tool() -> Value {
     )
 }
 
+/// Answer an unknown room id with the rooms it was probably meant to be, then
+/// one pointer to the listing tool. Returning the whole catalog spent thousands
+/// of bytes of a player's context on a typo and handed over the map this
+/// project deliberately withholds (`PLAY.md`).
 fn unknown_room(id: &str) -> String {
-    let known: Vec<&str> = all_rooms().iter().map(|r| r.meta().id).collect();
-    format!("No room with id '{id}'. Known rooms: {}", known.join(", "))
+    let suggestions = numinous_core::nearest_room_ids(id, numinous_core::MAX_ROOM_SUGGESTIONS);
+    let mut message = format!("No room with id '{}'.", numinous_core::echoable_id(id));
+    if !suggestions.is_empty() {
+        message.push_str(" Did you mean: ");
+        message.push_str(&suggestions.join(", "));
+        message.push('?');
+    }
+    message.push_str(" Call list_rooms to browse the catalog.");
+    message
 }
 
 /// A successful tool result carrying text content.
@@ -10202,9 +10213,47 @@ plays 2
             .as_str()
             .unwrap_or_default();
         assert!(
-            text.contains("Known rooms"),
-            "the error should guide the agent"
+            text.contains("list_rooms"),
+            "the error should guide the agent: {text}"
         );
+    }
+
+    #[test]
+    fn a_mistyped_room_suggests_the_room_that_was_meant() {
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":4,"method":"tools/call",
+            "params":{"name":"play_room","arguments":{"id":"times-table"}}
+        }))
+        .expect("tools/call must respond");
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("times-tables"), "got: {text}");
+        assert!(text.contains("Did you mean"), "got: {text}");
+    }
+
+    #[test]
+    fn an_unknown_room_error_never_returns_the_catalog() {
+        // This reply used to carry every catalog id, spending thousands of
+        // bytes of a player's context to answer one typo.
+        let text = super::unknown_room("qqqqzzzzxxxxwwww");
+        assert!(
+            text.len() < 200,
+            "unknown-room must stay small, got {} bytes: {text}",
+            text.len()
+        );
+        let named = numinous_core::all_rooms()
+            .iter()
+            .filter(|room| text.contains(room.meta().id))
+            .count();
+        assert!(named <= 3, "message named {named} rooms: {text}");
+    }
+
+    #[test]
+    fn an_unknown_room_error_cannot_echo_control_characters() {
+        let text = super::unknown_room("probe\u{1b}[31m\u{7}\rname");
+        assert!(!text.contains('\u{1b}'), "got: {text}");
+        assert!(text.contains("\\u{1b}"), "got: {text}");
     }
 
     #[test]

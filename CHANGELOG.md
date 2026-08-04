@@ -5,6 +5,29 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+- An unknown room id no longer answers with the entire catalog. A typo now
+  returns the rooms it was probably meant to be, then one pointer to the
+  browse surface: `numinous rooms` on the CLI, `list_rooms` over MCP.
+  Matching is shared in `numinous-core` (`nearest_room_ids`), so both faces
+  agree by construction, and it ranks containment ahead of edit distance, so
+  `mandel` reaches Mandelbrot and `game-of-live` reaches Game of Life.
+  Unrelated input suggests nothing rather than pointing somewhere wrong, and
+  a hidden room id still returns an ordinary miss with no suggestion that
+  would confirm it exists. The old reply grew with the catalog: at 354 rooms
+  a single mistyped character cost an MCP player a 4,283-byte result, which
+  is now 97 bytes. It also contradicted the project's own doctrine that the
+  catalog is discovered by playing, not read as a list.
+- The rejected id echoed in that message is now escaped and length-bounded in
+  the shared path, so neither face can emit terminal control characters into
+  a session transcript or inflate the message with a hostile id. The CLI
+  already escaped; MCP interpolated the raw value.
+- Studio expression failures on `numinous plot` and `numinous sing` now end
+  their line. They were the only CLI diagnostics that did not, so a parse
+  error left the next shell prompt stranded mid-row. A regression now covers
+  every CLI diagnostic path for exactly one trailing newline.
+- Removed AI tool attribution from `PLAY.md`, `docs/PLAYING.md`, and the changelog itself to enforce the strict "no AI attribution" house rule.
+
 ### Changed
 - The root README is a short front door again: install, a ten-panel gallery of
   App-era room plates, three-face overview, and status with links into
@@ -2332,9 +2355,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   seti, aliens, the gauntlet, choose, trophies), 22 in all, each stateless
   and two-phase (call to see, call again to answer), each recording plays,
   wins, and scores exactly as the CLI does, and choose spends boons for
-  agents at last. A `.mcp.json` at the repo root connects Claude Code
-  automatically; the manual gains a real connection quick-start (claude mcp
-  add, or a config pointing at the built binary) and a playtester protocol:
+  agents at last. A `.mcp.json` at the repo root connects an MCP client
+  automatically; the manual gains a real connection quick-start (a config pointing at the built binary) and a playtester protocol:
   what feedback helps, in what shape, and the standing note that scores and
   memory are the player's own.
 - The app is the game (v1): the chiptune scores the window, each room gets
