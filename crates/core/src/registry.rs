@@ -417,6 +417,95 @@ pub fn room_by_id(id: &str) -> Option<Box<dyn Room>> {
     all_rooms().into_iter().find(|room| room.meta().id == id)
 }
 
+/// The longest rejected id a not-found message will echo back. Beyond this the
+/// tail is dropped, so a hostile or accidental megabyte cannot become the
+/// message.
+pub const MAX_ECHOED_ID: usize = 48;
+
+/// The most candidates a not-found message offers. Small on purpose: the
+/// catalog is discovered by playing, not by reading a list (see `PLAY.md`).
+pub const MAX_ROOM_SUGGESTIONS: usize = 3;
+
+/// Catalog ids closest to `id`, nearest first.
+///
+/// Returns nothing when nothing is genuinely close, so a wrong guess stays
+/// silent rather than pointing somewhere misleading. The result never grows
+/// with the catalog, which keeps a not-found message a fixed size no matter
+/// how many rooms ship.
+#[must_use]
+pub fn nearest_room_ids(id: &str, limit: usize) -> Vec<&'static str> {
+    let query = id.trim().to_ascii_lowercase();
+    if query.is_empty() || limit == 0 {
+        return Vec::new();
+    }
+    let rooms = all_rooms();
+    let mut scored: Vec<(usize, usize, &'static str)> = rooms
+        .iter()
+        .filter_map(|room| {
+            let candidate = room.meta().id;
+            let lowered = candidate.to_ascii_lowercase();
+            let distance = edit_distance(&query, &lowered);
+            // Containment ranks ahead of any edit distance: someone who typed
+            // "mandel" wants "mandelbrot", however many edits separate them.
+            let contained = lowered.contains(&query) || query.contains(&lowered);
+            if !contained && distance > close_enough(query.chars().count()) {
+                return None;
+            }
+            Some((usize::from(!contained), distance, candidate))
+        })
+        .collect();
+    // Rank, then distance, then catalog id: a total order, so equal candidates
+    // resolve the same way on every run and every platform.
+    scored.sort_unstable_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(b.2)));
+    scored
+        .into_iter()
+        .take(limit)
+        .map(|(_, _, id)| id)
+        .collect()
+}
+
+/// How far a typo may stray and still count as the same word. One edit for a
+/// short id, growing slowly with length, so long ids tolerate a slip without
+/// nonsense matching everything.
+fn close_enough(length: usize) -> usize {
+    (length / 4).clamp(1, 3)
+}
+
+/// Levenshtein distance over characters, computed in one rolling row.
+fn edit_distance(a: &str, b: &str) -> usize {
+    let b_chars: Vec<char> = b.chars().collect();
+    let mut previous: Vec<usize> = (0..=b_chars.len()).collect();
+    let mut current = vec![0usize; b_chars.len() + 1];
+    for (i, a_char) in a.chars().enumerate() {
+        current[0] = i + 1;
+        for (j, &b_char) in b_chars.iter().enumerate() {
+            let substitution = previous[j] + usize::from(a_char != b_char);
+            current[j + 1] = substitution.min(previous[j + 1] + 1).min(current[j] + 1);
+        }
+        std::mem::swap(&mut previous, &mut current);
+    }
+    previous[b_chars.len()]
+}
+
+/// A rejected id rendered safe to echo: control characters escaped and the
+/// length bounded, so untrusted input cannot corrupt a terminal or a client
+/// transcript and cannot inflate the message it appears in.
+#[must_use]
+pub fn echoable_id(id: &str) -> String {
+    let mut safe = String::with_capacity(id.len().min(MAX_ECHOED_ID));
+    for character in id.chars().take(MAX_ECHOED_ID) {
+        if character.is_control() {
+            safe.extend(character.escape_default());
+        } else {
+            safe.push(character);
+        }
+    }
+    if id.chars().count() > MAX_ECHOED_ID {
+        safe.push_str("...");
+    }
+    safe
+}
+
 /// The rooms that are not in the catalog. Never listed, never announced; the
 /// faces decide who may enter (by rank, see `crate::journey`). Calling this a
 /// registry function is already saying too much.
@@ -430,7 +519,9 @@ pub fn hidden_room_by_id(id: &str) -> Option<Box<dyn Room>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{all_rooms, room_by_id};
+    use super::{
+        MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, all_rooms, echoable_id, nearest_room_ids, room_by_id,
+    };
     use crate::canvas::Canvas;
     use crate::room::Room;
 
@@ -457,6 +548,82 @@ mod tests {
     #[test]
     fn registry_is_non_empty() {
         assert!(!all_rooms().is_empty());
+    }
+
+    #[test]
+    fn a_near_miss_id_suggests_the_room_that_was_meant() {
+        // The typos a 354-room hyphenated catalog actually produces.
+        for (typo, intended) in [
+            ("times-table", "times-tables"),
+            ("mandelbrott", "mandelbrot"),
+            ("game-of-live", "game-of-life"),
+            ("lorenzo", "lorenz"),
+            ("galtonboard", "galton-board"),
+        ] {
+            let suggestions = nearest_room_ids(typo, MAX_ROOM_SUGGESTIONS);
+            assert!(
+                suggestions.contains(&intended),
+                "{typo} should suggest {intended}, got {suggestions:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_partial_id_suggests_the_rooms_containing_it() {
+        let suggestions = nearest_room_ids("mandel", MAX_ROOM_SUGGESTIONS);
+        assert!(
+            suggestions.contains(&"mandelbrot"),
+            "a prefix should reach the room it names, got {suggestions:?}"
+        );
+    }
+
+    #[test]
+    fn suggestions_are_capped_and_never_list_the_catalog() {
+        // The bound is the point: this message must not grow with the catalog.
+        assert!(nearest_room_ids("a", 3).len() <= 3);
+        assert!(nearest_room_ids("mandel", 2).len() <= 2);
+        assert!(nearest_room_ids("times-tables", 0).is_empty());
+        assert!(nearest_room_ids("", MAX_ROOM_SUGGESTIONS).is_empty());
+        assert!(nearest_room_ids("   ", MAX_ROOM_SUGGESTIONS).is_empty());
+    }
+
+    #[test]
+    fn nonsense_suggests_nothing_rather_than_misleading() {
+        let suggestions = nearest_room_ids("qqqqzzzzxxxxwwww", MAX_ROOM_SUGGESTIONS);
+        assert!(
+            suggestions.is_empty(),
+            "unrelated input should stay silent, got {suggestions:?}"
+        );
+    }
+
+    #[test]
+    fn suggestions_are_deterministic() {
+        let first = nearest_room_ids("mandel", MAX_ROOM_SUGGESTIONS);
+        let second = nearest_room_ids("mandel", MAX_ROOM_SUGGESTIONS);
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn suggestion_matching_ignores_case() {
+        assert_eq!(
+            nearest_room_ids("TIMES-TABLES", MAX_ROOM_SUGGESTIONS)
+                .first()
+                .copied(),
+            Some("times-tables")
+        );
+    }
+
+    #[test]
+    fn an_echoed_id_is_escaped_and_bounded() {
+        assert_eq!(echoable_id("times-table"), "times-table");
+        assert_eq!(echoable_id("a\nb\tc"), "a\\nb\\tc");
+        let long = "z".repeat(MAX_ECHOED_ID * 4);
+        let echoed = echoable_id(&long);
+        assert!(echoed.ends_with("..."));
+        assert_eq!(echoed.chars().count(), MAX_ECHOED_ID + 3);
+        // A hostile id cannot smuggle an escape sequence into a terminal or a
+        // client transcript.
+        assert!(!echoable_id("\u{1b}[2J\u{1b}[H").contains('\u{1b}'));
     }
 
     #[test]

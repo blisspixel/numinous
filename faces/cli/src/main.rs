@@ -2331,7 +2331,8 @@ fn sing_wav(
     notes: usize,
     path: &Path,
 ) -> Result<String, String> {
-    let expr = numinous_core::parse(source).map_err(|error| terminal_safe(&error))?;
+    let expr =
+        numinous_core::parse(source).map_err(|error| format!("{}\n", terminal_safe(&error)))?;
     if xmax <= xmin {
         return Err("need xmax > xmin\n".to_string());
     }
@@ -2388,7 +2389,8 @@ fn plot_report(
     if width < 2 || height < 2 || xmax <= xmin {
         return Err("need width >= 2, height >= 2, and xmax > xmin\n".to_string());
     }
-    let expr = numinous_core::parse(source).map_err(|error| terminal_safe(&error))?;
+    let expr =
+        numinous_core::parse(source).map_err(|error| format!("{}\n", terminal_safe(&error)))?;
     let samples: Vec<(f64, f64)> = (0..width)
         .map(|i| {
             let x = xmin + (xmax - xmin) * i as f64 / (width as f64 - 1.0);
@@ -4822,13 +4824,20 @@ fn play(
     }
 }
 
+/// Answer an unknown room id with the rooms it was probably meant to be, then
+/// one pointer to the browse command. Listing the whole catalog would both bury
+/// the answer and hand over the map this project deliberately withholds
+/// (`PLAY.md`: finding your own way is the point).
 fn not_found_message(id: &str) -> String {
-    let known: Vec<&str> = all_rooms().iter().map(|r| r.meta().id).collect();
-    format!(
-        "No room with id '{}'. Known rooms: {}\n",
-        terminal_safe(id),
-        known.join(", ")
-    )
+    let suggestions = numinous_core::nearest_room_ids(id, numinous_core::MAX_ROOM_SUGGESTIONS);
+    let mut message = format!("No room with id '{}'.", numinous_core::echoable_id(id));
+    if !suggestions.is_empty() {
+        message.push_str(" Did you mean: ");
+        message.push_str(&suggestions.join(", "));
+        message.push('?');
+    }
+    message.push_str(" Run 'numinous rooms' to browse the catalog.\n");
+    message
 }
 
 fn meta_json(m: &RoomMeta) -> serde_json::Value {
@@ -5476,7 +5485,7 @@ mod tests {
             &numinous_core::Journey::default(),
         )
         .expect_err("unknown room");
-        assert!(err.contains("Known rooms"));
+        assert!(err.contains("numinous rooms"), "{err}");
     }
 
     #[test]
@@ -5873,8 +5882,61 @@ mod tests {
     }
 
     #[test]
-    fn not_found_message_lists_known_rooms() {
-        assert!(not_found_message("x").contains("times-tables"));
+    fn every_cli_diagnostic_terminates_its_line() {
+        // A message that does not end the line leaves the next shell prompt
+        // stranded mid-row. Studio parse failures used to do exactly that.
+        let unused_wav = std::env::temp_dir().join("numinous_unterminated_check.wav");
+        let diagnostics = [
+            not_found_message("no-such-room"),
+            super::plot_report("sin(x", -1.0, 1.0, 0.0, 40, 20).expect_err("unbalanced plot"),
+            super::plot_report("", -1.0, 1.0, 0.0, 40, 20).expect_err("empty plot"),
+            super::plot_report("x @ 2", -1.0, 1.0, 0.0, 40, 20).expect_err("bad plot token"),
+            super::sing_wav("sin(x", -1.0, 1.0, 8, &unused_wav).expect_err("unbalanced song"),
+            super::validate_render_request(0, 10, 0.0).expect_err("zero width"),
+            super::validate_render_request(10, 10, 5.0).expect_err("out of range t"),
+        ];
+        for diagnostic in diagnostics {
+            assert!(
+                diagnostic.ends_with('\n'),
+                "diagnostic must end its line: {diagnostic:?}"
+            );
+            assert!(
+                !diagnostic.ends_with("\n\n"),
+                "diagnostic must end with exactly one newline: {diagnostic:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn not_found_message_suggests_the_room_and_points_at_the_catalog() {
+        let message = not_found_message("times-table");
+        assert!(message.contains("times-tables"), "{message:?}");
+        assert!(message.contains("Did you mean"), "{message:?}");
+        assert!(message.contains("numinous rooms"), "{message:?}");
+        assert!(message.ends_with('\n'), "{message:?}");
+    }
+
+    #[test]
+    fn not_found_message_never_dumps_the_catalog() {
+        // The failure this replaced answered a typo with every id in the
+        // catalog, so the message grew with the product. Keep it bounded.
+        let rooms = numinous_core::all_rooms();
+        let message = not_found_message("qqqqzzzzxxxxwwww");
+        assert!(
+            message.len() < 200,
+            "not-found must stay small, got {} bytes: {message:?}",
+            message.len()
+        );
+        let named = rooms
+            .iter()
+            .filter(|room| message.contains(room.meta().id))
+            .count();
+        assert!(
+            named <= numinous_core::MAX_ROOM_SUGGESTIONS,
+            "message named {named} rooms: {message:?}"
+        );
+        assert!(message.contains("numinous rooms"), "{message:?}");
+        assert!(message.ends_with('\n'), "{message:?}");
     }
 
     #[test]
@@ -6593,8 +6655,14 @@ mod tests {
         // The unready get the ordinary not-found, no special acknowledgment.
         let err = super::render_report("tetractys", 10, 10, 0.0, false, RoomRenderInput::plain())
             .unwrap_err();
-        assert!(err.contains("Known rooms"), "an ordinary miss: {err}");
+        assert!(err.contains("numinous rooms"), "an ordinary miss: {err}");
         assert!(!err.contains("Order"), "nothing is given away");
+        // Echoing the id back is fine: the player typed it. Offering it as a
+        // suggestion would confirm the room exists, so nothing may be offered.
+        assert!(
+            !err.contains("Did you mean"),
+            "a suggestion must never confirm the hidden room exists: {err}"
+        );
         // The ready see the figure.
         let ok = super::render_report("tetractys", 30, 20, 0.0, true, RoomRenderInput::plain())
             .expect("the figure");
