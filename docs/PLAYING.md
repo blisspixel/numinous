@@ -196,11 +196,12 @@ should happen only by the player's explicit choice.
 
 ## For agents
 
-Numinous is an MCP server. From this repository, Claude Code picks it up
-automatically (there is a `.mcp.json` at the root). To add it anywhere else:
+Numinous is an MCP server. From this repository, an MCP client picks it up
+automatically (there is a `.mcp.json` at the root). To add it anywhere else,
+configure your client to run:
 
 ```
-claude mcp add numinous -- cargo run --quiet --release --bin numinous-mcp
+cargo run --quiet --release --bin numinous-mcp
 ```
 
 or in any MCP client's config (build once with
