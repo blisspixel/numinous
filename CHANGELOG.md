@@ -5,6 +5,28 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Added
+- The CLI honors `NO_COLOR` (0.5-am accessibility, machine path). Color was
+  previously unconditional on a terminal: the only escape was to pipe the
+  output, which also gave up live play. Setting `NO_COLOR` to any non-empty
+  value now renders through a new color-free path, following the
+  no-color.org convention that presence decides, not value, so `NO_COLOR=0`
+  turns color off exactly as `NO_COLOR=1` does.
+  The renderer behind it, `numinous_core::to_mono`, encodes a raster with the
+  four half-block characters instead of truecolor pairs. It keeps `to_ansi`'s
+  exact geometry, one output row per two pixel rows and one character per
+  column, so a screen laid out for one renders identically under the other and
+  nothing reflows. Both halves of every cell stay independent, so vertical
+  position inside a cell survives and rooms remain recognizable rather than
+  collapsing to a silhouette. It emits no escape sequences at all; the live
+  `watch` loop keeps only its screen-clear and cursor-home, which are cursor
+  control rather than color.
+  One function, `numinous_core::to_terminal`, now owns the choice for every
+  call site, so a face cannot honor the preference on one screen and forget it
+  on the next. This is machine evidence for color independence in the terminal
+  face only. The App's color-independent cues, mono audio, and reduced motion
+  remain open, and no human accessibility session is claimed.
+
 ### Fixed
 - Untrusted text echoed back to a player is now escaped against the characters
   that lie about a line, not only the ones that can drive a terminal. The

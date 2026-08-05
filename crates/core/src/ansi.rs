@@ -15,6 +15,20 @@ const HALF_BLOCK: char = '\u{2580}';
 /// An RGB color.
 type Rgb = (u8, u8, u8);
 
+/// Encode a raster for a terminal, in color or not.
+///
+/// The single place that decides between [`to_ansi`] and [`to_mono`], so a
+/// caller cannot honor a player's preference on one screen and forget it on
+/// the next.
+#[must_use]
+pub fn to_terminal(raster: &Raster, color: bool) -> String {
+    if color {
+        to_ansi(raster)
+    } else {
+        to_mono(raster)
+    }
+}
+
 /// Encode a raster as truecolor ANSI, two pixels per character cell.
 ///
 /// Each output row covers two pixel rows (the last row pairs with black when the
@@ -54,11 +68,114 @@ pub fn to_ansi(raster: &Raster) -> String {
     out
 }
 
+/// The four block characters that encode which halves of a cell are lit:
+/// neither, upper only, lower only, both.
+const BLOCKS: [char; 4] = [' ', '\u{2580}', '\u{2584}', '\u{2588}'];
+
+/// A pixel counts as lit above this luminance. The stage is near-black and
+/// strokes glow, so the floor only has to clear the unlit background.
+const LIT_FLOOR: u32 = 24;
+
+/// Rec. 601 luma, integer arithmetic so the result cannot drift by platform.
+fn luminance((r, g, b): Rgb) -> u32 {
+    (u32::from(r) * 299 + u32::from(g) * 587 + u32::from(b) * 114) / 1000
+}
+
+/// Encode a raster using block characters alone, adding no color.
+///
+/// Same geometry as [`to_ansi`]: one output row per two pixel rows, one
+/// character per column, so a layout built for one renders identically under
+/// the other. Structure survives because each character still carries both of
+/// its half-pixels; only the hue is gone.
+///
+/// This is what `NO_COLOR` selects, and what any surface that must not depend
+/// on color should use. It emits no escape sequences at all.
+#[must_use]
+pub fn to_mono(raster: &Raster) -> String {
+    let width = raster.width();
+    let height = raster.height();
+    let rgba = raster.to_rgba();
+    let lit = |x: usize, y: usize| -> bool {
+        if y >= height {
+            return false;
+        }
+        let o = (y * width + x) * 4;
+        luminance((rgba[o], rgba[o + 1], rgba[o + 2])) >= LIT_FLOOR
+    };
+
+    let mut out = String::with_capacity(width.saturating_add(1) * height.div_ceil(2));
+    for row in 0..height.div_ceil(2) {
+        let (top_y, bottom_y) = (row * 2, row * 2 + 1);
+        for x in 0..width {
+            let index = usize::from(lit(x, top_y)) | (usize::from(lit(x, bottom_y)) << 1);
+            out.push(BLOCKS[index]);
+        }
+        out.push('\n');
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
-    use super::to_ansi;
+    use super::{to_ansi, to_mono};
     use crate::raster::Raster;
     use crate::surface::Surface;
+
+    #[test]
+    fn mono_matches_the_color_geometry_exactly() {
+        // A layout built for one must render identically under the other, or
+        // switching renderers would reflow every screen.
+        for (w, h) in [(8, 6), (8, 5), (1, 1), (40, 21)] {
+            let mut raster = Raster::new(w, h);
+            raster.plot(0, 0, '#');
+            let color = to_ansi(&raster);
+            let mono = to_mono(&raster);
+            assert_eq!(
+                mono.lines().count(),
+                color.lines().count(),
+                "{w}x{h} row count"
+            );
+            for line in mono.lines() {
+                assert_eq!(line.chars().count(), w, "{w}x{h} column count");
+            }
+        }
+    }
+
+    #[test]
+    fn mono_adds_no_color_and_no_escapes_at_all() {
+        let mut raster = Raster::new(12, 8);
+        raster.plot(3, 3, '#');
+        raster.plot(4, 4, '#');
+        let mono = to_mono(&raster);
+        assert!(!mono.contains('\u{1b}'), "escape sequence in {mono:?}");
+        assert!(!mono.contains("38;2;"), "color in {mono:?}");
+    }
+
+    #[test]
+    fn mono_keeps_the_structure_the_color_path_shows() {
+        // Both halves of a cell stay independent, so a lit pixel is visible
+        // and its vertical position within the cell is preserved.
+        let mut top = Raster::new(2, 2);
+        top.plot(0, 0, '#');
+        let mut bottom = Raster::new(2, 2);
+        bottom.plot(0, 1, '#');
+        let blank = to_mono(&Raster::new(2, 2));
+        assert_ne!(to_mono(&top), blank, "a lit pixel must show");
+        assert_ne!(
+            to_mono(&top),
+            to_mono(&bottom),
+            "which half is lit must survive"
+        );
+    }
+
+    #[test]
+    fn mono_is_deterministic() {
+        let mut a = Raster::new(10, 10);
+        let mut b = Raster::new(10, 10);
+        a.plot(3, 3, '#');
+        b.plot(3, 3, '#');
+        assert_eq!(to_mono(&a), to_mono(&b));
+    }
 
     #[test]
     fn output_has_one_line_per_two_pixel_rows() {
