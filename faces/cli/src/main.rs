@@ -721,11 +721,14 @@ fn update_installation() -> ExitCode {
 /// The front door: what `numinous`, alone, opens onto. Today's room in full
 /// color, who you are, and the handful of verbs that matter.
 fn home(journey: &Journey) -> ExitCode {
-    print!("{}", home_report(journey, std::io::stdout().is_terminal()));
+    print!(
+        "{}",
+        home_report(journey, std::io::stdout().is_terminal(), color_allowed())
+    );
     ExitCode::SUCCESS
 }
 
-fn home_report(journey: &Journey, stdout_is_terminal: bool) -> String {
+fn home_report(journey: &Journey, stdout_is_terminal: bool, color: bool) -> String {
     let rooms = all_rooms();
     let day = pick_day();
     let room = &rooms[(day as usize) % rooms.len()];
@@ -755,7 +758,9 @@ fn home_report(journey: &Journey, stdout_is_terminal: bool) -> String {
     room.render(&mut raster, room.postcard_t());
     format!(
         concat!(
-            "{}\x1b[0m{}  ({})\n",
+            // No reset after the frame: a colored one already ends every line
+            // with one, and a mono one must stay free of escapes.
+            "{}{}  ({})\n",
             "\n",
             ". . . {}\n",
             "\n",
@@ -771,7 +776,7 @@ fn home_report(journey: &Journey, stdout_is_terminal: bool) -> String {
             "\n",
             "Everything answers --help. The window version is numinous-app.\n",
         ),
-        numinous_core::to_terminal(&raster, color_allowed()),
+        numinous_core::to_terminal(&raster, color),
         room.meta().title,
         room.meta().wing,
         numinous_core::insight(day + u64::from(journey.plays)),
@@ -1544,9 +1549,18 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             };
             let report = match out {
                 Some(path) => render_png(&id, width, height, t, &path, allow_hidden, era, input),
-                None if color => {
-                    render_color_report(&id, width, height, t, allow_hidden, era, input)
-                }
+                None if color => render_color_report(
+                    &id,
+                    width,
+                    height,
+                    t,
+                    allow_hidden,
+                    TerminalStyle {
+                        era,
+                        color: color_allowed(),
+                    },
+                    input,
+                ),
                 None => render_report(&id, width, height, t, allow_hidden, input),
             };
             if report.is_ok() && find_room(&id, allow_hidden).is_some() {
@@ -2755,7 +2769,7 @@ fn render_color_report(
     height: usize,
     t: f64,
     allow_hidden: bool,
-    era: numinous_core::Era,
+    style: TerminalStyle,
     input: RoomRenderInput<'_>,
 ) -> Result<String, String> {
     let room = find_room_with_variation(id, allow_hidden, input.variation)
@@ -2769,20 +2783,29 @@ fn render_color_report(
         let events = numinous_core::inputs_from_pokes(input.pokes, t);
         room.render_input(&mut raster, t, &events);
     }
-    let mut report = ansi_in_era(&raster, era);
-    report.push_str("\x1b[0m");
+    // No trailing reset: a colored frame already ends every line with one, and
+    // a mono frame must stay free of escapes entirely.
+    let mut report = ansi_in_era(&raster, style.era, style.color);
     report.push_str(&render_guidance(room.as_ref(), t, input));
     Ok(report)
 }
 
-/// Encode a raster as truecolor ANSI after applying a visual era.
-fn ansi_in_era(raster: &Raster, era: numinous_core::Era) -> String {
+/// How a room is presented in the terminal: which visual era, and whether
+/// color may be added at all. Both are presentation, so they travel together.
+#[derive(Clone, Copy)]
+struct TerminalStyle {
+    era: numinous_core::Era,
+    color: bool,
+}
+
+/// Encode a raster for the terminal after applying a visual era.
+fn ansi_in_era(raster: &Raster, era: numinous_core::Era, color: bool) -> String {
     let (w, h) = (raster.width(), raster.height());
     let mut rgba = raster.to_rgba();
     era.apply(&mut rgba, w, h);
     let mut styled = Raster::new(w, h);
     styled.set_rgba(&rgba);
-    numinous_core::to_terminal(&styled, color_allowed())
+    numinous_core::to_terminal(&styled, color)
 }
 
 /// One truecolor frame of a room with a status line, for the watch loop.
@@ -2791,7 +2814,7 @@ fn watch_frame(
     t: f64,
     width: usize,
     height: usize,
-    era: numinous_core::Era,
+    style: TerminalStyle,
 ) -> String {
     let mut raster = Raster::with_accent(width, height, room.meta().accent);
     room.render(&mut raster, t);
@@ -2800,8 +2823,10 @@ fn watch_frame(
         .map(|line| format!("   {line}"))
         .unwrap_or_default();
     format!(
-        "\x1b[H{}\x1b[0m{}  t = {t:.2}{readout}   (Ctrl+C to stop)\x1b[K\n",
-        ansi_in_era(&raster, era),
+        // Cursor home and erase-line are cursor control, not color, so they
+        // stay in both modes. The reset does not: the frame already ended one.
+        "\x1b[H{}{}  t = {t:.2}{readout}   (Ctrl+C to stop)\x1b[K\n",
+        ansi_in_era(&raster, style.era, style.color),
         room.meta().title
     )
 }
@@ -2838,7 +2863,16 @@ fn watch(
         let _ = write!(
             stdout,
             "{}[J",
-            watch_frame(room.as_ref(), t, width, height, era)
+            watch_frame(
+                room.as_ref(),
+                t,
+                width,
+                height,
+                TerminalStyle {
+                    era,
+                    color: color_allowed()
+                },
+            )
         );
         let _ = stdout.flush();
         if let Some(player) = &player {
@@ -2885,7 +2919,16 @@ fn tour(
             journey.visit(room.meta().id);
             for frame in 0..frames_per_room {
                 let t = frame as f64 / frames_per_room as f64;
-                let mut screen = watch_frame(room.as_ref(), t, width, height, era);
+                let mut screen = watch_frame(
+                    room.as_ref(),
+                    t,
+                    width,
+                    height,
+                    TerminalStyle {
+                        era,
+                        color: color_allowed(),
+                    },
+                );
                 // The title card: the room announces itself, then bows out.
                 if t < 0.18 {
                     screen.push_str(&format!(
@@ -4890,10 +4933,10 @@ fn to_pretty(value: &serde_json::Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        Cli, Command, RoomRenderInput, SonifyLayer, bounded_response_detail, describe_report,
-        load_studio_creation, max_track_bytes, meta_json, not_found_message, open_studio_report,
-        parse_gesture_arg, parse_poke_arg, parse_pokes, read_bounded, render_report, rooms_report,
-        run, save_studio_creation, validate_pcm_body,
+        Cli, Command, RoomRenderInput, SonifyLayer, TerminalStyle, bounded_response_detail,
+        describe_report, load_studio_creation, max_track_bytes, meta_json, not_found_message,
+        open_studio_report, parse_gesture_arg, parse_poke_arg, parse_pokes, read_bounded,
+        render_report, rooms_report, run, save_studio_creation, validate_pcm_body,
     };
 
     #[test]
@@ -4983,7 +5026,7 @@ mod tests {
 
     #[test]
     fn redirected_home_report_is_plain_and_useful() {
-        let report = super::home_report(&numinous_core::Journey::default(), false);
+        let report = super::home_report(&numinous_core::Journey::default(), false, true);
         assert!(
             !report.contains('\x1b'),
             "redirected output must not contain ANSI"
@@ -5003,7 +5046,7 @@ mod tests {
             streak: 3,
             ..Default::default()
         };
-        let report = super::home_report(&journey, true);
+        let report = super::home_report(&journey, true, true);
         assert!(
             report.starts_with("\x1b[38;2;"),
             "cabinet starts in truecolor"
@@ -5913,7 +5956,91 @@ mod tests {
     }
 
     #[test]
-    fn no_color_is_honored_by_presence_not_by_value() {
+    fn every_composed_screen_is_escape_free_without_color() {
+        // Rendering escape-free is not enough on its own: the frame gets
+        // composed into a larger report, and a hardcoded reset sitting next to
+        // it puts the escapes straight back. Assert on the composed output,
+        // which is what a player actually receives.
+        let room = numinous_core::room_by_id("times-tables").expect("room");
+        let mut raster = numinous_core::Raster::with_accent(24, 16, room.meta().accent);
+        room.render(&mut raster, 0.4);
+
+        let mono_report = super::render_color_report(
+            "times-tables",
+            24,
+            16,
+            0.4,
+            false,
+            TerminalStyle {
+                era: numinous_core::Era::Modern,
+                color: false,
+            },
+            RoomRenderInput::plain(),
+        )
+        .expect("known room");
+        let mono_home = super::home_report(&numinous_core::Journey::default(), true, false);
+        let mono_era = super::ansi_in_era(&raster, numinous_core::Era::Phosphor, false);
+
+        for (name, screen) in [
+            ("render report", mono_report),
+            ("home screen", mono_home),
+            ("era frame", mono_era),
+        ] {
+            assert!(
+                !screen.contains('\u{1b}'),
+                "{name} still emits an escape without color: {:?}",
+                screen
+                    .split('\u{1b}')
+                    .nth(1)
+                    .map(|tail| tail.chars().take(12).collect::<String>())
+            );
+        }
+
+        // The watch frame is the one exception, and only for cursor control:
+        // it must still home the cursor and erase the line, or the live loop
+        // cannot paint in place. It must carry no color.
+        let watch = super::watch_frame(
+            room.as_ref(),
+            0.4,
+            24,
+            16,
+            TerminalStyle {
+                era: numinous_core::Era::Modern,
+                color: false,
+            },
+        );
+        assert!(!watch.contains("38;2;"), "watch frame colored: {watch:?}");
+        assert!(!watch.contains("\u{1b}[0m"), "watch frame reset: {watch:?}");
+        for sequence in watch.split('\u{1b}').skip(1) {
+            assert!(
+                sequence.starts_with('[') && matches!(sequence.chars().nth(1), Some('H' | 'K')),
+                "only cursor control may survive, got {sequence:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn color_is_still_color_when_it_is_allowed() {
+        // The counterpart: turning the switch on must still produce truecolor,
+        // so an over-eager escape purge cannot pass the test above.
+        let report = super::render_color_report(
+            "times-tables",
+            24,
+            16,
+            0.4,
+            false,
+            TerminalStyle {
+                era: numinous_core::Era::Modern,
+                color: true,
+            },
+            RoomRenderInput::plain(),
+        )
+        .expect("known room");
+        assert!(report.contains("\u{1b}[38;2;"), "color mode lost its color");
+    }
+
+    #[test]
+    fn no_color_is_honored_when_present_and_not_empty() {
         // The no-color.org convention is about presence. A player who sets
         // NO_COLOR=0 still set it, and still meant it, so truthiness must not
         // enter into it.
@@ -7080,7 +7207,10 @@ mod tests {
             20,
             0.0,
             false,
-            numinous_core::Era::Modern,
+            TerminalStyle {
+                era: numinous_core::Era::Modern,
+                color: true,
+            },
             RoomRenderInput::plain(),
         )
         .expect("color render");
@@ -7092,7 +7222,10 @@ mod tests {
                 20,
                 0.0,
                 false,
-                numinous_core::Era::Modern,
+                TerminalStyle {
+                    era: numinous_core::Era::Modern,
+                    color: true,
+                },
                 RoomRenderInput::plain(),
             )
             .is_err()
@@ -7107,7 +7240,10 @@ mod tests {
             20,
             0.0,
             false,
-            numinous_core::Era::Modern,
+            TerminalStyle {
+                era: numinous_core::Era::Modern,
+                color: true,
+            },
             RoomRenderInput::plain(),
         )
         .expect("render");
@@ -7117,7 +7253,10 @@ mod tests {
             20,
             0.0,
             false,
-            numinous_core::Era::Phosphor,
+            TerminalStyle {
+                era: numinous_core::Era::Phosphor,
+                color: true,
+            },
             RoomRenderInput::plain(),
         )
         .expect("render");
@@ -7127,7 +7266,16 @@ mod tests {
     #[test]
     fn watch_frame_paints_in_place_with_a_status_line() {
         let room = numinous_core::room_by_id("chaos-game").expect("room");
-        let frame = super::watch_frame(room.as_ref(), 0.5, 24, 16, numinous_core::Era::Modern);
+        let frame = super::watch_frame(
+            room.as_ref(),
+            0.5,
+            24,
+            16,
+            TerminalStyle {
+                era: numinous_core::Era::Modern,
+                color: true,
+            },
+        );
         assert!(
             frame.starts_with("\x1b[H"),
             "repaints from home, no flicker"

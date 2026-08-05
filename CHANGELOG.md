@@ -18,12 +18,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   column, so a screen laid out for one renders identically under the other and
   nothing reflows. Both halves of every cell stay independent, so vertical
   position inside a cell survives and rooms remain recognizable rather than
-  collapsing to a silhouette. It emits no escape sequences at all; the live
-  `watch` loop keeps only its screen-clear and cursor-home, which are cursor
-  control rather than color.
+  collapsing to a silhouette. It emits no escape sequences at all. The live
+  `watch` loop keeps only screen-clear, cursor-home, erase-line, and
+  erase-to-end, which are cursor control rather than color, and a plain
+  `render --color` under `NO_COLOR` emits no escape bytes whatsoever.
   One function, `numinous_core::to_terminal`, now owns the choice for every
   call site, so a face cannot honor the preference on one screen and forget it
-  on the next. This is machine evidence for color independence in the terminal
+  on the next. Four separate places also appended a hardcoded color reset
+  after a frame, which would have put escapes straight back under `NO_COLOR`;
+  all four are gone, and they were redundant in color mode too, since a
+  colored frame already ends every line with a reset. A regression now asserts
+  on the composed screen a player actually receives rather than on the
+  renderer in isolation, which is what caught three of the four. This is machine evidence for color independence in the terminal
   face only. The App's color-independent cues, mono audio, and reduced motion
   remain open, and no human accessibility session is claimed.
 
