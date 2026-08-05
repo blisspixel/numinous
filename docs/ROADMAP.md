@@ -1262,7 +1262,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.2 Flagship | Met + CI-locked | agent-hallway, ahas, goldens |
 | 0.3 Tactile | Met + CI-locked | agent-tactile, first-contact |
 | 0.4 Understanding | Method prep only | dual auditors A/B, dry-run registration; cohort open |
-| 0.5 Sensory | Partial | flagship visual/audio goldens; reduced motion and NO_COLOR locked in CI for the terminal face; WCAG 2.3.1 flash budget measured across all 354 rooms, with three known violations tracked; mono audio selectable with a non-clipping downmix; no full HDR/a11y stack yet |
+| 0.5 Sensory | Partial | flagship visual/audio goldens; reduced motion and NO_COLOR locked in CI for the terminal face; WCAG 2.3.1 flash budget measured across all 354 rooms, with three known violations tracked; mono audio selectable with a non-clipping downmix; color-independence of touch response audited across all 354 rooms with 21 known failures tracked; no full HDR/a11y stack yet |
 | 0.6 Portable | Partial | release packaging, engagement smoke, provenance/SBOM |
 | 0.7 Creator | Partial | CLI save/reopen `.num` gate; App/MCP gallery open |
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
@@ -1288,7 +1288,13 @@ am-track position.
    shrink-only exception set so the budget is enforced everywhere else while
    they are redesigned. Redesigning them is open work: each is a chaotic map
    whose density changes sharply with phase, so the fix changes what the room
-   draws. App motion also remains; mono audio is done and its downmix no longer clips centered material.
+   draws. App motion also remains; mono audio is done and its downmix no longer clips
+   centered material. A color-independence audit now checks that every room's
+   touch response survives the color-free renderer, and found 21 rooms whose
+   response does not: they answer in luminance detail that the one-bit
+   `to_mono` quantizer discards, so a `NO_COLOR` player sees nothing move when
+   they touch them. Widening that renderer beyond one bit is the open follow-up
+   and changes what `NO_COLOR` already ships, so it is its own piece of work.
 4. Expand 0.6-am install roundtrips and 0.7-am App/MCP creator parity.
 
 **Not on this list as next work:** soft-thin densify grind, bulk new rooms, or
