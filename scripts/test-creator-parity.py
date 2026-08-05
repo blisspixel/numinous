@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""Focused regressions for the creator parity contract.
+
+These cover the judgement without spawning either face, so a mistake in what
+counts as agreement is caught even when nothing is built. The live comparison
+is `creator-parity.py`, which CI runs against real binaries.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+SPEC = importlib.util.spec_from_file_location(
+    "creator_parity", ROOT / "scripts" / "creator-parity.py"
+)
+assert SPEC is not None and SPEC.loader is not None
+MODULE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MODULE)
+
+
+class PlotBodyTests(unittest.TestCase):
+    def test_each_face_may_keep_its_own_voice(self) -> None:
+        # The CLI prints a header; MCP prints a header and a discovery line.
+        # Requiring those to match would require the faces to be one thing
+        # rather than to agree about the mathematics.
+        cli = "y = sin(x)    x in [-6.283, 6.283]\n\n  ##  \n ####\n"
+        mcp = "y = sin(x)    x in [-6.283, 6.283]\nDiscovery: manual\n\n  ##  \n ####\n"
+        self.assertEqual(MODULE.plot_body(cli), MODULE.plot_body(mcp))
+
+    def test_a_different_drawing_is_not_equal(self) -> None:
+        self.assertNotEqual(
+            MODULE.plot_body("y = a\n\n ## \n"),
+            MODULE.plot_body("y = a\n\n #  \n"),
+        )
+
+    def test_trailing_whitespace_is_not_a_disagreement(self) -> None:
+        # Two faces padding a row differently is not a difference in the plot.
+        self.assertEqual(
+            MODULE.plot_body("y = a\n\n ## \n"),
+            MODULE.plot_body("y = a\n\n ##\n"),
+        )
+
+    def test_an_empty_render_collapses_to_nothing(self) -> None:
+        self.assertEqual(MODULE.plot_body("y = a\nDiscovery: manual\n\n"), "")
+
+
+class CaseTableTests(unittest.TestCase):
+    def test_every_case_drives_both_faces(self) -> None:
+        for label, mcp_args, cli_args in MODULE.CASES:
+            self.assertTrue(mcp_args, f"{label} sends MCP nothing")
+            self.assertTrue(cli_args, f"{label} sends the CLI nothing")
+
+    def test_labels_are_unique_so_a_failure_names_one_case(self) -> None:
+        labels = [label for label, _, _ in MODULE.CASES]
+        self.assertEqual(len(labels), len(set(labels)))
+
+    def test_the_table_covers_every_discovery_path(self) -> None:
+        # Expression, recipe, and seed are the three ways into a creation, and
+        # the knob and range are what a player changes once inside one. A gate
+        # that only covered expressions would miss a whole face of the surface.
+        keys = {key for _, mcp_args, _ in MODULE.CASES for key in mcp_args}
+        for required in ("expr", "recipe", "seed", "a", "xmin", "xmax"):
+            self.assertIn(required, keys, f"no case exercises {required}")
+
+    def test_range_cases_avoid_the_bare_negative_trap(self) -> None:
+        # A bare -2 is read as a flag, not a value, so a case written that way
+        # would fail for a reason that has nothing to do with parity.
+        for label, _, cli_args in MODULE.CASES:
+            for index, argument in enumerate(cli_args):
+                if argument in ("--xmin", "--xmax", "--a"):
+                    following = cli_args[index + 1] if index + 1 < len(cli_args) else ""
+                    self.assertFalse(
+                        following.startswith("-"),
+                        f"{label} passes {argument} a bare negative; use {argument}=value",
+                    )
+
+
+if __name__ == "__main__":
+    unittest.main()

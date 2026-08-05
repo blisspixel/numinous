@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+"""Machine acceptance for creator parity between the CLI and MCP (0.7-am).
+
+The 0.7 exit asks that the same creation produce event-identical output through
+every face. `creator-roundtrip.py` already proves the CLI can save a `.num` and
+reopen it byte-identically. Nothing checked that a second face draws the same
+picture from the same inputs, so the two could drift apart and every existing
+gate would stay green.
+
+Both faces are driven here with the same expression, recipe, seed, knob, and
+range, and their plots must match exactly. Only the plot body is compared:
+headers and discovery chrome are each face speaking in its own voice, and
+requiring those to match would be requiring the faces to be the same thing
+rather than to agree about the mathematics.
+
+This is machine evidence for two faces. The App's Studio panel is the third and
+is not covered here. Neither is `sing`, whose two faces return a WAV and a note
+list rather than one comparable artifact.
+
+Known gap this gate cannot close, recorded rather than worked around: MCP has no
+way to open a saved `.num` document at all. A human can save a creation and an
+MCP peer cannot read it, so the "remix the same musical document" half of the
+0.7 exit is not merely untested, it is unbuilt. Adding a tool for it changes the
+pinned tool inventory and is a product decision.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parent.parent
+OUT = ROOT / ".agent" / "tester-cohort" / "creator-parity"
+
+PROTOCOL_VERSION = "2026-07-28"
+META = {
+    "io.modelcontextprotocol/protocolVersion": PROTOCOL_VERSION,
+    "io.modelcontextprotocol/clientCapabilities": {},
+    "io.modelcontextprotocol/clientInfo": {"name": "creator-parity", "version": "1"},
+}
+
+# Each case: a label, the MCP arguments, and the CLI arguments that mean the
+# same thing. Ranges use --flag=value because a bare -2 is read as a flag.
+CASES: tuple[tuple[str, dict[str, Any], list[str]], ...] = (
+    ("expression", {"expr": "sin(x)"}, ["sin(x)"]),
+    ("harmonic", {"expr": "sin(2*x)"}, ["sin(2*x)"]),
+    ("parabola", {"expr": "x*x"}, ["x*x"]),
+    ("singularity", {"expr": "1/x"}, ["1/x"]),
+    ("knob", {"expr": "sin(a*x)", "a": 2.5}, ["sin(a*x)", "--a=2.5"]),
+    ("negative knob", {"expr": "sin(a*x)", "a": -3}, ["sin(a*x)", "--a=-3"]),
+    ("range", {"expr": "x*x", "xmin": -2, "xmax": 2}, ["x*x", "--xmin=-2", "--xmax=2"]),
+    ("offset range", {"expr": "sin(x)", "xmin": 0, "xmax": 10},
+     ["sin(x)", "--xmin=0", "--xmax=10"]),
+    ("recipe", {"recipe": 0}, ["--recipe=0"]),
+    ("later recipe", {"recipe": 3}, ["--recipe=3"]),
+    ("seed", {"seed": 7}, ["--seed=7"]),
+    ("later seed", {"seed": 42}, ["--seed=42"]),
+)
+
+
+class ParityError(RuntimeError):
+    """A face could not be driven."""
+
+
+def build_faces() -> tuple[str, str]:
+    """Build both faces, then return the binaries that build produced.
+
+    This compares live behaviour, so it has to compare the behaviour of the
+    current source. Picking up whichever binary happened to be on disk would
+    let a stale artifact answer for code that no longer exists, and the gate
+    would agree with itself about a version nobody is running. Cargo is
+    incremental, so this costs almost nothing on an already-built tree.
+    """
+    build = subprocess.run(
+        ["cargo", "build", "--quiet", "--bin", "numinous", "--bin", "numinous-mcp"],
+        cwd=ROOT, capture_output=True, text=True,
+    )
+    if build.returncode != 0:
+        raise ParityError("cannot build the faces under test:\n" + build.stderr)
+    # CARGO_TARGET_DIR redirects where cargo writes, and several CI layouts set
+    # it, so a build that succeeded could still look missing under ROOT/target.
+    target = Path(os.environ.get("CARGO_TARGET_DIR") or (ROOT / "target")) / "debug"
+    found = []
+    for name in ("numinous", "numinous-mcp"):
+        for candidate in (target / f"{name}.exe", target / name):
+            if candidate.is_file():
+                found.append(str(candidate))
+                break
+        else:
+            raise ParityError(f"cargo build succeeded but {name} is not under {target}")
+    return found[0], found[1]
+
+
+def plot_body(text: str) -> str:
+    """The plot itself, without either face's chrome.
+
+    The header and the discovery line are how each face introduces the result
+    in its own voice. What has to agree is the drawing.
+    """
+    return "\n".join(
+        line.rstrip()
+        for line in text.split("\n")
+        if line.strip()
+        and not line.startswith("y = ")
+        and not line.startswith("Discovery:")
+    )
+
+
+def mcp_plot(mcp: str, arguments: dict[str, Any]) -> str:
+    request = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {"_meta": META, "name": "plot_expression", "arguments": arguments},
+    }
+    result = subprocess.run(
+        [mcp], input=json.dumps(request) + "\n",
+        capture_output=True, text=True, encoding="utf-8", timeout=120,
+    )
+    for line in result.stdout.splitlines():
+        try:
+            message = json.loads(line)
+        except ValueError:
+            continue
+        if message.get("id") != 1:
+            continue
+        payload = message.get("result")
+        if payload is None:
+            raise ParityError(f"MCP returned no result for {arguments}: {message}")
+        if payload.get("isError"):
+            raise ParityError(
+                f"MCP rejected {arguments}: {payload['content'][0]['text']}"
+            )
+        return payload["content"][0]["text"]
+    raise ParityError(f"MCP produced no reply for {arguments}: {result.stderr[-400:]}")
+
+
+def cli_plot(cli: str, arguments: list[str], width: int, height: int) -> str:
+    result = subprocess.run(
+        [cli, "plot", *arguments, "--width", str(width), "--height", str(height)],
+        capture_output=True, text=True, encoding="utf-8", timeout=120,
+    )
+    if result.returncode != 0:
+        raise ParityError(
+            f"CLI rejected {arguments}: exit {result.returncode}, {result.stderr[-400:]}"
+        )
+    return result.stdout
+
+
+def check(cli: str, mcp: str, label: str, mcp_args: dict[str, Any], cli_args: list[str]) -> dict[str, Any]:
+    try:
+        drawn = plot_body(mcp_plot(mcp, mcp_args))
+        if not drawn:
+            return {"name": label, "passed": False, "detail": "MCP drew nothing to compare"}
+        rows = drawn.split("\n")
+        # Drive the CLI at whatever geometry MCP chose, since MCP takes no
+        # width or height of its own.
+        height = len(rows)
+        width = max(len(row) for row in rows)
+        mirrored = plot_body(cli_plot(cli, cli_args, width, height))
+    except ParityError as error:
+        return {"name": label, "passed": False, "detail": str(error)}
+
+    if drawn == mirrored:
+        return {
+            "name": label,
+            "passed": True,
+            "detail": f"both faces drew the same {width} by {height} plot",
+        }
+    first = next(
+        (
+            index
+            for index, (a, b) in enumerate(zip(mirrored.split("\n"), rows))
+            if a != b
+        ),
+        None,
+    )
+    where = f"row {first}" if first is not None else "line count"
+    return {
+        "name": label,
+        "passed": False,
+        "detail": f"the faces disagree at {where} for {width} by {height}",
+    }
+
+
+def main() -> int:
+    OUT.mkdir(parents=True, exist_ok=True)
+    try:
+        cli, mcp = build_faces()
+    except ParityError as error:
+        results = [{"name": "build", "passed": False, "detail": str(error)}]
+    else:
+        results = [
+            check(cli, mcp, label, mcp_args, cli_args) for label, mcp_args, cli_args in CASES
+        ]
+    failed = [item for item in results if not item["passed"]]
+    summary = {
+        "suite": "creator-parity",
+        "passed": not failed,
+        "check_count": len(results),
+        "failed_count": len(failed),
+        "results": results,
+        "evidence_class": "agent-machine",
+    }
+    path = OUT / "summary.json"
+    path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {path}")
+    print(f"{summary['check_count'] - summary['failed_count']}/{summary['check_count']} PASS")
+    for item in results:
+        print(f"  {'PASS' if item['passed'] else 'FAIL'}  {item['name']}: {item['detail']}")
+    print("--- summary.json ---")
+    print(json.dumps(
+        {k: summary[k] for k in ("suite", "passed", "check_count", "failed_count")},
+        sort_keys=True,
+    ))
+    return 0 if summary["passed"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -6,6 +6,32 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- A creator parity gate between the CLI and MCP (0.7-am creator, machine path).
+  The 0.7 exit asks that the same creation produce event-identical output
+  through every face. `creator-roundtrip.py` already proved the CLI can save a
+  `.num` and reopen it byte-identically, but nothing checked that a second face
+  draws the same picture from the same inputs, so the two could have drifted
+  apart with every existing gate staying green.
+  `scripts/creator-parity.py` drives both faces with the same expression,
+  recipe, seed, knob, and range across twelve cases and requires the plots to
+  match exactly. They do today, on every case, which is what makes locking it
+  worth doing now rather than after a divergence.
+  Only the plot body is compared. Headers and the discovery line are each face
+  speaking in its own voice, and requiring those to match would be requiring
+  the faces to be the same thing rather than to agree about the mathematics.
+  The gate builds both binaries rather than using whichever happened to be on
+  disk, so a stale artifact cannot answer for source nobody is running.
+  Verified by mismatching one case on purpose: it fails that case, names the
+  row where the drawings diverge, and exits nonzero.
+
+### Known gaps
+- MCP cannot open a saved `.num` creation. There is no tool for it, so a human
+  can save a piece and an MCP peer cannot read it. The "an MCP peer and a human
+  can independently make and then transparently remix the same musical
+  document" half of the 0.7 exit is therefore not merely untested, it is
+  unbuilt. Adding a tool changes the pinned tool inventory, which is a product
+  decision rather than a gap to close inside a parity cycle, so it is recorded
+  here and in `docs/ROADMAP.md` instead.
 - An install, play, uninstall roundtrip gate (0.6-am portable, machine path).
   The release workflow already installed a packaged archive, played through the
   installed CLI, and reinstalled over the top. It never uninstalled, so the last
