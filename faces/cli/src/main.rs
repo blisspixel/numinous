@@ -2307,7 +2307,7 @@ fn terminal_safe(text: &str) -> String {
 /// Split from [`color_allowed`] so the rule can be tested exhaustively
 /// without mutating process-wide environment from a test thread.
 fn color_allowed_for(no_color: Option<&std::ffi::OsStr>) -> bool {
-    !no_color.is_some_and(|value| !value.is_empty())
+    !numinous_core::setting_is_on(no_color)
 }
 
 /// Whether this run may add color to its output.
@@ -2854,6 +2854,7 @@ fn watch(
         numinous_audio::LoopPlayer::new().ok()
     };
     let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
+    let motion = numinous_core::Motion::from_env();
     let mut stdout = std::io::stdout();
     // Clear once; frames then repaint in place (no flicker).
     let _ = write!(stdout, "\x1b[2J");
@@ -2886,7 +2887,9 @@ fn watch(
             player.set_samples(spec.render(player.sample_rate()));
         }
         std::thread::sleep(frame_time);
-        t = if t + 0.005 >= 1.0 { 0.0 } else { t + 0.005 };
+        // Reduced motion holds the phase, so the loop keeps drawing and
+        // keeps responding; only the movement stops.
+        t = motion.next_phase(t, 0.005);
         frame += 1;
     }
 }
@@ -2910,6 +2913,7 @@ fn tour(
         numinous_audio::LoopPlayer::new().ok()
     };
     let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
+    let motion = numinous_core::Motion::from_env();
     let frames_per_room = (seconds.max(2.0) * fps.max(1.0)) as u64;
     let mut stdout = std::io::stdout();
     let _ = write!(stdout, "\x1b[2J");
@@ -2918,7 +2922,10 @@ fn tour(
         for room in &rooms {
             journey.visit(room.meta().id);
             for frame in 0..frames_per_room {
-                let t = frame as f64 / frames_per_room as f64;
+                let sweeping = frame as f64 / frames_per_room as f64;
+                // Held still, the gallery shows each room at its postcard
+                // phase, the one the room itself considers its best face.
+                let t = motion.phase(sweeping, room.postcard_t());
                 let mut screen = watch_frame(
                     room.as_ref(),
                     t,
@@ -4888,13 +4895,14 @@ fn play(
         return ExitCode::FAILURE;
     };
     let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
+    let motion = numinous_core::Motion::from_env();
     let mut stdout = std::io::stdout();
     let mut t = 0.0f64;
     loop {
         let _ = write!(stdout, "{}", play_frame(room.as_ref(), t, width, height));
         let _ = stdout.flush();
         std::thread::sleep(frame_time);
-        t = if t + 0.01 >= 1.0 { 0.0 } else { t + 0.01 };
+        t = motion.next_phase(t, 0.01);
     }
 }
 

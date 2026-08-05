@@ -33,6 +33,9 @@ jobs:
         run: python3 scripts/flagship-goldens.py
       - name: Creator roundtrip
         run: python3 scripts/creator-roundtrip.py
+
+      - name: Reduced motion (terminal face)
+        run: python3 scripts/reduced-motion.py
       - name: Multi-room soak and catalog scorecard
         run: |
           python3 scripts/am-soak.py
