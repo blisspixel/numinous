@@ -36,9 +36,55 @@ fn validate_output_dimensions(sample_rate: u32, channels: u16) -> Result<(), Str
     Ok(())
 }
 
-fn device_channel_sample(frame: (f32, f32), channels: usize, channel: usize) -> f32 {
-    if channels == 1 {
-        ((frame.0 + frame.1) * std::f32::consts::FRAC_1_SQRT_2).clamp(-1.0, 1.0)
+/// Whether a player has asked for mono, from the environment.
+///
+/// Present and not empty, the same rule `NO_COLOR` and
+/// `NUMINOUS_REDUCED_MOTION` use, so a player learns one convention for every
+/// accessibility switch. The variable is `NUMINOUS_MONO_AUDIO`.
+#[must_use]
+pub fn mono_requested() -> bool {
+    std::env::var_os("NUMINOUS_MONO_AUDIO").is_some_and(|value| !value.is_empty())
+}
+
+/// Collapse one stereo frame to a single sample.
+///
+/// Averaging, deliberately. It cannot exceed the louder of its two inputs, so
+/// it cannot clip, and a centered frame (`left == right`) passes through
+/// exactly unchanged. Numinous room beds are substantially centered, so that
+/// exact case is the common one.
+///
+/// The alternative, scaling the sum by `1/sqrt(2)`, holds total power constant
+/// for two *uncorrelated* signals. It is wrong here because it overshoots on
+/// correlated ones: two centered samples at 0.8 sum to 1.13, which has to be
+/// clamped, and clamping is nonlinear distortion rather than a change in level.
+/// That is what this replaced, and it meant a centered signal above about 0.707
+/// distorted on every mono device.
+///
+/// The trade is stated rather than papered over: averaging costs up to 3 dB on
+/// hard-panned uncorrelated material, and in exchange it never distorts. On a
+/// path a listener chose for accessibility, quiet is a better failure than
+/// crunchy.
+///
+/// Non-finite input resolves to silence rather than travelling into a device
+/// buffer.
+#[must_use]
+pub fn downmix_to_mono(left: f32, right: f32) -> f32 {
+    if !left.is_finite() || !right.is_finite() {
+        return 0.0;
+    }
+    (left + right) * 0.5
+}
+
+/// Which sample a given device channel receives from one stereo frame.
+///
+/// A one-channel device must be downmixed. A player who asked for mono gets
+/// the same downmix on every channel of a multi-channel device, so nothing is
+/// panned to a side they cannot hear.
+///
+/// See [`downmix_to_mono`] for why it averages.
+fn device_channel_sample(frame: (f32, f32), channels: usize, channel: usize, mono: bool) -> f32 {
+    if channels == 1 || mono {
+        downmix_to_mono(frame.0, frame.1)
     } else if channel.is_multiple_of(2) {
         frame.0
     } else {
@@ -872,6 +918,7 @@ fn build_loop_stream<T>(
     config: cpal::StreamConfig,
     channels: usize,
     state: Arc<Mutex<MixerState>>,
+    mono: bool,
 ) -> Result<cpal::Stream, cpal::Error>
 where
     T: cpal::SizedSample + cpal::FromSample<f32>,
@@ -883,7 +930,8 @@ where
                 for frame in data.chunks_mut(channels) {
                     let mixed = state.next_frame();
                     for (channel, output) in frame.iter_mut().enumerate() {
-                        *output = T::from_sample(device_channel_sample(mixed, channels, channel));
+                        *output =
+                            T::from_sample(device_channel_sample(mixed, channels, channel, mono));
                     }
                 }
             } else {
@@ -912,9 +960,21 @@ pub struct LoopPlayer {
 impl LoopPlayer {
     /// Open the default device and start a silent looping stream.
     ///
+    /// Honours the player's mono preference from the environment. Use
+    /// [`LoopPlayer::new_with_mono`] to decide it explicitly.
+    ///
     /// # Errors
     /// Returns an error string if the device or stream cannot be set up.
     pub fn new() -> Result<Self, String> {
+        Self::new_with_mono(mono_requested())
+    }
+
+    /// Open the default device with the mono preference supplied rather than
+    /// read, so a caller can decide it and a test can pin it.
+    ///
+    /// # Errors
+    /// Returns an error string if the device or stream cannot be set up.
+    pub fn new_with_mono(mono: bool) -> Result<Self, String> {
         let context = AudioContext::new()?;
         let sample_rate = context.sample_rate();
         let channel_count = context.channels();
@@ -928,40 +988,48 @@ impl LoopPlayer {
 
         let stream = match context.config.sample_format() {
             cpal::SampleFormat::I8 => {
-                build_loop_stream::<i8>(&context.device, config, channels, state.clone())
+                build_loop_stream::<i8>(&context.device, config, channels, state.clone(), mono)
             }
             cpal::SampleFormat::I16 => {
-                build_loop_stream::<i16>(&context.device, config, channels, state.clone())
+                build_loop_stream::<i16>(&context.device, config, channels, state.clone(), mono)
             }
-            cpal::SampleFormat::I24 => {
-                build_loop_stream::<cpal::I24>(&context.device, config, channels, state.clone())
-            }
+            cpal::SampleFormat::I24 => build_loop_stream::<cpal::I24>(
+                &context.device,
+                config,
+                channels,
+                state.clone(),
+                mono,
+            ),
             cpal::SampleFormat::I32 => {
-                build_loop_stream::<i32>(&context.device, config, channels, state.clone())
+                build_loop_stream::<i32>(&context.device, config, channels, state.clone(), mono)
             }
             cpal::SampleFormat::I64 => {
-                build_loop_stream::<i64>(&context.device, config, channels, state.clone())
+                build_loop_stream::<i64>(&context.device, config, channels, state.clone(), mono)
             }
             cpal::SampleFormat::U8 => {
-                build_loop_stream::<u8>(&context.device, config, channels, state.clone())
+                build_loop_stream::<u8>(&context.device, config, channels, state.clone(), mono)
             }
             cpal::SampleFormat::U16 => {
-                build_loop_stream::<u16>(&context.device, config, channels, state.clone())
+                build_loop_stream::<u16>(&context.device, config, channels, state.clone(), mono)
             }
-            cpal::SampleFormat::U24 => {
-                build_loop_stream::<cpal::U24>(&context.device, config, channels, state.clone())
-            }
+            cpal::SampleFormat::U24 => build_loop_stream::<cpal::U24>(
+                &context.device,
+                config,
+                channels,
+                state.clone(),
+                mono,
+            ),
             cpal::SampleFormat::U32 => {
-                build_loop_stream::<u32>(&context.device, config, channels, state.clone())
+                build_loop_stream::<u32>(&context.device, config, channels, state.clone(), mono)
             }
             cpal::SampleFormat::U64 => {
-                build_loop_stream::<u64>(&context.device, config, channels, state.clone())
+                build_loop_stream::<u64>(&context.device, config, channels, state.clone(), mono)
             }
             cpal::SampleFormat::F32 => {
-                build_loop_stream::<f32>(&context.device, config, channels, state.clone())
+                build_loop_stream::<f32>(&context.device, config, channels, state.clone(), mono)
             }
             cpal::SampleFormat::F64 => {
-                build_loop_stream::<f64>(&context.device, config, channels, state.clone())
+                build_loop_stream::<f64>(&context.device, config, channels, state.clone(), mono)
             }
             other => return Err(format!("unsupported sample format: {other:?}")),
         }
@@ -1206,8 +1274,8 @@ mod tests {
 
     use super::{
         AMPLITUDE, LoopBuffer, MAX_DEVICE_SAMPLE_RATE, MixerState, OneshotPlay, PARAMETER_MAX_GAIN,
-        crossfade_frame_count, device_channel_sample, fill_tone_samples, synthesize_sine,
-        validate_output_dimensions,
+        crossfade_frame_count, device_channel_sample, downmix_to_mono, fill_tone_samples,
+        synthesize_sine, validate_output_dimensions,
     };
 
     #[test]
@@ -1232,15 +1300,83 @@ mod tests {
     #[test]
     fn device_channel_projection_downmixes_mono_and_preserves_stereo() {
         let frame = (0.6, 0.2);
-        assert!(
-            (device_channel_sample(frame, 1, 0) - 0.8 * std::f32::consts::FRAC_1_SQRT_2).abs()
-                < 1.0e-6
-        );
-        assert_eq!(device_channel_sample(frame, 2, 0), 0.6);
-        assert_eq!(device_channel_sample(frame, 2, 1), 0.2);
-        assert_eq!(device_channel_sample(frame, 4, 2), 0.6);
-        assert_eq!(device_channel_sample(frame, 4, 3), 0.2);
-        assert_eq!(device_channel_sample((1.0, 1.0), 1, 0), 1.0);
+        assert!((device_channel_sample(frame, 1, 0, false) - 0.4).abs() < 1.0e-6);
+        assert_eq!(device_channel_sample(frame, 2, 0, false), 0.6);
+        assert_eq!(device_channel_sample(frame, 2, 1, false), 0.2);
+        assert_eq!(device_channel_sample(frame, 4, 2, false), 0.6);
+        assert_eq!(device_channel_sample(frame, 4, 3, false), 0.2);
+    }
+
+    #[test]
+    fn a_centered_frame_reaches_a_mono_device_undistorted() {
+        // This is the regression. The previous downmix scaled the sum by
+        // 1/sqrt(2) and clamped, so a centered signal above about 0.707
+        // flattened against the ceiling on every mono device. The old test
+        // asserted the clamped value and so recorded the defect as correct.
+        for level in [0.5f32, 0.707, 0.8, 1.0, -0.9] {
+            assert_eq!(
+                device_channel_sample((level, level), 1, 0, false),
+                level,
+                "centered {level} must arrive intact"
+            );
+        }
+    }
+
+    #[test]
+    fn a_requested_mono_mix_reaches_every_channel_of_a_stereo_device() {
+        // What a listener on one ear needs: nothing panned to a side they
+        // cannot hear.
+        let frame = (0.9, -0.1);
+        let expected = downmix_to_mono(frame.0, frame.1);
+        for channel in 0..4 {
+            assert_eq!(
+                device_channel_sample(frame, 4, channel, true),
+                expected,
+                "channel {channel}"
+            );
+        }
+        // Without the request, the same frame keeps its sides.
+        assert_eq!(device_channel_sample(frame, 2, 0, false), 0.9);
+        assert_eq!(device_channel_sample(frame, 2, 1, false), -0.1);
+    }
+
+    #[test]
+    fn the_downmix_can_never_clip() {
+        // Exhaustive over a fine grid of the legal input square: the result
+        // never leaves [-1, 1] and never exceeds the louder of its inputs, so
+        // no clamp is needed anywhere.
+        let steps = 201;
+        for l in 0..steps {
+            for r in 0..steps {
+                let left = -1.0 + 2.0 * l as f32 / (steps - 1) as f32;
+                let right = -1.0 + 2.0 * r as f32 / (steps - 1) as f32;
+                let out = downmix_to_mono(left, right);
+                assert!((-1.0..=1.0).contains(&out), "{left} {right} -> {out}");
+                assert!(
+                    out.abs() <= left.abs().max(right.abs()) + 1e-6,
+                    "{left} {right} -> {out} is louder than both"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_cost_of_the_trade_is_pinned() {
+        // Hard-panned content arrives at half level. Recorded as a test so it
+        // cannot drift silently into something louder that clips.
+        assert_eq!(downmix_to_mono(1.0, 0.0), 0.5);
+        assert_eq!(downmix_to_mono(0.0, -1.0), -0.5);
+        // Antiphase genuinely cancels; a one-speaker listener would have heard
+        // only one side of it anyway.
+        assert_eq!(downmix_to_mono(0.7, -0.7), 0.0);
+    }
+
+    #[test]
+    fn non_finite_samples_become_silence_not_a_device_hazard() {
+        for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            assert_eq!(downmix_to_mono(bad, 0.5), 0.0);
+            assert_eq!(downmix_to_mono(0.5, bad), 0.0);
+        }
     }
 
     #[test]

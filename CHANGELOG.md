@@ -6,6 +6,28 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Mono audio (0.5-am accessibility, machine path), and a downmix fix it
+  uncovered. `NUMINOUS_MONO_AUDIO` puts the same signal on every channel of a
+  stereo device, so a listener hearing from one ear loses nothing panned to the
+  other, and stereo movement stops for anyone who finds it disorienting. Same
+  present-and-not-empty rule as `NO_COLOR` and `NUMINOUS_REDUCED_MOTION`.
+  The fix underneath it: the existing mono-device downmix scaled the summed
+  frame by `1/sqrt(2)` and clamped the result, so any centered signal above
+  about 0.707 flattened against the ceiling. Numinous room beds are
+  substantially centered, so that was ordinary material distorting on every
+  one-channel device, and the old test asserted the clamped value, recording the
+  defect as correct. The downmix now averages: it cannot exceed the louder
+  input, so it cannot clip, and a centered frame passes through exactly
+  unchanged.
+  The trade is stated rather than papered over. Averaging costs up to 3 dB on
+  hard-panned uncorrelated material, and a test pins that cost so it cannot
+  drift into something louder that clips. On a path a listener chose for
+  accessibility, quiet is a better failure than crunchy.
+  The arithmetic lives in `crates/audio`, which is a hardware adapter and
+  deliberately does not depend on `numinous-core`; core owns only the name of
+  the convention, and a face reads the preference and passes it down. Covered by
+  an exhaustive grid over the legal input square proving no clipping is
+  possible, plus centered, hard-panned, antiphase, and non-finite cases.
 - Photosensitivity budget measurement (0.5-am accessibility, machine path), and
   the finding it produced. `numinous_core::photosensitivity` implements WCAG
   2.3.1, Three Flashes or Below Threshold, rather than approximating it: a
