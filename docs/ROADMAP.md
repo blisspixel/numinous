@@ -1262,7 +1262,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.2 Flagship | Met + CI-locked | agent-hallway, ahas, goldens |
 | 0.3 Tactile | Met + CI-locked | agent-tactile, first-contact |
 | 0.4 Understanding | Method prep only | dual auditors A/B, dry-run registration; cohort open |
-| 0.5 Sensory | Partial | flagship visual/audio goldens; no full HDR/a11y stack yet |
+| 0.5 Sensory | Partial | flagship visual/audio goldens; reduced motion and NO_COLOR locked in CI for the terminal face; no full HDR/a11y stack yet |
 | 0.6 Portable | Partial | release packaging, engagement smoke, provenance/SBOM |
 | 0.7 Creator | Partial | CLI save/reopen `.num` gate; App/MCP gallery open |
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
@@ -1278,6 +1278,9 @@ am-track position.
 2. Close 0.4-am: concealed bank, calibration, dual auditors on live ledger,
    freeze allocation, run and publish 20 pairs.
 3. Expand 0.5-am sensory automation (reduced-motion, mono, era goldens).
+   Terminal face done: `NUMINOUS_REDUCED_MOTION` and `NO_COLOR` are honored and
+   locked by `scripts/reduced-motion.py` plus focused core tests. App motion,
+   photosensitivity budgets, and mono audio remain.
 4. Expand 0.6-am install roundtrips and 0.7-am App/MCP creator parity.
 
 **Not on this list as next work:** soft-thin densify grind, bulk new rooms, or

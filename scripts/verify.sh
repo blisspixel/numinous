@@ -32,6 +32,7 @@ echo "== flagship visual and audio goldens =="
 python3 scripts/flagship-goldens.py
 echo "== creator roundtrip =="
 python3 scripts/creator-roundtrip.py
+python3 scripts/reduced-motion.py
 echo "== am soak =="
 python3 scripts/am-soak.py
 echo "== catalog scorecard =="

@@ -35,6 +35,7 @@ Invoke-Step "agent tactile cohort" { python scripts/agent-tactile.py }
 Invoke-Step "agent first-contact suite" { python scripts/agent-first-contact.py }
 Invoke-Step "flagship visual and audio goldens" { python scripts/flagship-goldens.py }
 Invoke-Step "creator roundtrip" { python scripts/creator-roundtrip.py }
+Invoke-Step "reduced motion" { python scripts/reduced-motion.py }
 Invoke-Step "am soak" { python scripts/am-soak.py }
 Invoke-Step "catalog scorecard" { python scripts/catalog-scorecard.py }
 Invoke-Step "understanding am dry-run" { python scripts/test-understanding-am.py }
