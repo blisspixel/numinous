@@ -2277,16 +2277,10 @@ fn report_diagnostic(message: &str) {
     eprintln!("{}", message.trim_end_matches(['\r', '\n']));
 }
 
+/// Untrusted text rendered safe to print. Shared with the other faces so one
+/// definition of "safe to show a person" covers all of them.
 fn terminal_safe(text: &str) -> String {
-    let mut safe = String::with_capacity(text.len());
-    for character in text.chars() {
-        if character.is_control() {
-            safe.extend(character.escape_default());
-        } else {
-            safe.push(character);
-        }
-    }
-    safe
+    numinous_core::display_safe(text)
 }
 
 fn terminal_safe_path(path: &Path) -> String {
