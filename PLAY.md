@@ -88,6 +88,14 @@ your Journey, scores, Cairn, or journal.
 
 (From a clone, `cargo run --release --bin numinous-app` works directly.)
 
+If motion or color are a problem for you, two switches are waiting. Set
+`NUMINOUS_REDUCED_MOTION=1` and the terminal views stop moving on their own:
+the picture holds still, and you still touch it, still change rooms, still read
+what it says. Set `NO_COLOR=1` and the same rooms draw without any color at
+all, keeping their shape. Either variable counts as set the moment it is
+present and not empty, so `=0` still turns it on. Both apply to the terminal
+today; the window is still being brought over.
+
 Mouse, keyboard, and controller can all navigate the App. Hover and click any
 opening-menu destination, press its displayed key, or use the controller D-pad
 and South. Letter commands remain active with Shift or Caps Lock. During play,

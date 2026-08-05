@@ -6,6 +6,28 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Reduced motion in the terminal face (0.5-am accessibility, machine path).
+  `NUMINOUS_REDUCED_MOTION` holds the picture still: `watch`, `play`, and the
+  `tour` gallery stop advancing their phase on their own. Nothing else changes.
+  The player still touches the room, still changes rooms, still reads the
+  status, because taking away the motion should not take away the agency.
+  Held still, `tour` shows each room at its postcard phase, the phase the room
+  itself nominates as its best face, rather than freezing it mid-sweep.
+  The policy lives in `numinous_core::motion` so the faces cannot disagree
+  about what reduced motion means, and `Motion::next_phase` also refuses to let
+  a non-finite phase poison the rest of the cycle. The switch reads present and
+  not empty, the same rule `NO_COLOR` uses, so a player learns one convention
+  rather than one per setting; both now share a single implementation.
+  `scripts/reduced-motion.py` locks it in CI, the nightly am-QA suite, and both
+  local gates. It runs each live loop twice against a binary it builds itself,
+  and requires two things of every probe: that ordinary mode really animates,
+  and that reduced mode emits exactly one distinct frame. A gate that only
+  checked stillness would pass on a view that had stopped working entirely.
+  Verified by deliberately breaking the feature: the gate goes to 0 of 3 and
+  exits nonzero, then back to 3 of 3 when restored.
+  This is machine evidence for the terminal face only. The App's own motion,
+  photosensitivity budgets, mono audio, and any human accessibility session
+  remain open and are not claimed.
 - The CLI honors `NO_COLOR` (0.5-am accessibility, machine path). Color was
   previously unconditional on a terminal: the only escape was to pipe the
   output, which also gave up live play. Setting `NO_COLOR` to any non-empty

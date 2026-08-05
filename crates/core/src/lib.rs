@@ -34,6 +34,7 @@ pub mod journal;
 pub mod journey;
 pub mod life_sound;
 pub mod motifs;
+pub mod motion;
 pub mod munch_arcade;
 pub mod munchers;
 pub mod nim;
@@ -93,6 +94,7 @@ pub use journey::{
     Boon, CUT_LEVELS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options, constellation, level_lore,
 };
 pub use motifs::{MAX_ROOM_BED_EVENTS, Motif, ROOM_BED_SOURCE_RATE};
+pub use motion::{Motion, REDUCED_MOTION_VAR, setting_is_on};
 pub use munchers::{
     Board, FULL_DECK_ROUND, Munched, board_text, build_board, grade as grade_munch,
 };
