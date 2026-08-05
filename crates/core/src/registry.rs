@@ -1056,7 +1056,7 @@ mod tests {
         use crate::ansi::{to_ansi, to_mono};
         const SIZE: (usize, usize) = (120, 70);
 
-        let mut color_only = Vec::new();
+        let mut invisible_without_color = Vec::new();
         let mut unmoved = Vec::new();
         for room in all_rooms() {
             let id = room.meta().id;
@@ -1068,15 +1068,15 @@ mod tests {
             if to_ansi(&base) == to_ansi(&poked) {
                 unmoved.push(id);
             } else if to_mono(&base) == to_mono(&poked) {
-                color_only.push(id);
+                invisible_without_color.push(id);
             }
         }
 
         for (measured, known, label) in [
             (
-                &color_only,
+                &invisible_without_color,
                 &RESPONSE_INVISIBLE_WITHOUT_COLOR[..],
-                "answer only in color",
+                "answer in a way the color-free renderer cannot show",
             ),
             (
                 &unmoved,
