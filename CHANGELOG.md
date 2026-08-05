@@ -6,6 +6,35 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- An install, play, uninstall roundtrip gate (0.6-am portable, machine path).
+  The release workflow already installed a packaged archive, played through the
+  installed CLI, and reinstalled over the top. It never uninstalled, so the last
+  clause of the 0.6 exit had no evidence behind it.
+  `scripts/uninstall-roundtrip.py` closes that. It installs a real packaged
+  archive into an isolated root with an isolated player profile, plays a
+  flagship so there is state worth keeping, hashes every player-owned file,
+  uninstalls, and then requires two things: that the install root is gone, and
+  that every player file is still present and byte-identical.
+  The second is the one that had never been checked. The uninstaller prints
+  "Your play history stays" as it finishes, which is a promise made to someone
+  deciding whether it is safe to remove this, and until now it was only a
+  sentence. Hashing rather than checking presence matters here: an uninstall
+  that rewrote a player's history would leave a file behind, and presence alone
+  would call that a pass.
+  The gate is hermetic. It packages a one-track soundtrack locally, the way the
+  release smoke does, so the install needs no network and does not depend on a
+  published release. It runs in the release workflow on all four native targets
+  and its focused regressions run in ordinary CI, including a drift check that
+  both installers still name every file the gate claims they keep.
+
+### Fixed
+- Both installers printed a specific tool's command line when telling a player
+  how to connect over MCP. That is tool attribution in shipped output, the same
+  thing removed from `PLAY.md` and `docs/PLAYING.md` earlier in this cycle, and
+  the installers were missed because the house-style guard matches attribution
+  phrasing rather than a bare command that happens to name a product. They now
+  print the path to the MCP binary and leave the client to the player, which is
+  also what the manual says.
 - Reduced motion in the App (0.5-am accessibility, machine path), completing
   the switch across every face that animates. `NUMINOUS_REDUCED_MOTION` now
   hands the ambient world zero seconds per tick, which stops the room phase,
