@@ -34,6 +34,9 @@ jobs:
       - name: Creator roundtrip
         run: python3 scripts/creator-roundtrip.py
 
+      - name: Creator parity across the CLI and MCP
+        run: python3 scripts/creator-parity.py
+
       - name: Reduced motion (terminal face)
         run: python3 scripts/reduced-motion.py
 

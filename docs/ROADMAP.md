@@ -1264,7 +1264,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.4 Understanding | Method prep only | dual auditors A/B, dry-run registration; cohort open |
 | 0.5 Sensory | Partial | flagship visual/audio goldens; reduced motion locked in CI across the terminal and the App; NO_COLOR locked for the terminal face; WCAG 2.3.1 flash budget measured across all 354 rooms, with three known violations tracked; mono audio selectable with a non-clipping downmix; color-independence of touch response audited across all 354 rooms with 21 known failures tracked; no full HDR/a11y stack yet |
 | 0.6 Portable | Partial | release packaging, engagement smoke, provenance/SBOM, install/play/uninstall roundtrip with player state preserved |
-| 0.7 Creator | Partial | CLI save/reopen `.num` gate; App/MCP gallery open |
+| 0.7 Creator | Partial | CLI save/reopen `.num` gate; CLI and MCP plot parity locked across 12 cases; MCP cannot open a `.num` at all; App gallery open |
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
@@ -1297,6 +1297,12 @@ am-track position.
    they touch them. Widening that renderer beyond one bit is the open follow-up
    and changes what `NO_COLOR` already ships, so it is its own piece of work.
 4. Expand 0.6-am install roundtrips and 0.7-am App/MCP creator parity.
+   Creator parity between the CLI and MCP is locked by
+   `scripts/creator-parity.py` across expression, recipe, seed, knob, and
+   range. One blocker sits behind the rest of 0.7 and needs a product
+   decision: MCP has no tool that opens a saved `.num`, so a human can save a
+   creation and an MCP peer cannot read it. Remix parity cannot be tested
+   until that exists, and adding it changes the pinned tool inventory.
    The uninstall half is done: `scripts/uninstall-roundtrip.py` proves that an
    uninstall removes the program and leaves the player's history byte-identical,
    on all four native targets in the release workflow. Clean-machine execution,
