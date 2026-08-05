@@ -9,6 +9,7 @@ roundtrip itself is exercised by `uninstall-roundtrip.py` in the release gate.
 from __future__ import annotations
 
 import importlib.util
+import os
 import platform
 import tempfile
 import unittest
@@ -103,8 +104,13 @@ class NativeToolEnvTests(unittest.TestCase):
     def test_windows_puts_system32_first(self) -> None:
         patched = MODULE.native_tool_env({"PATH": "/usr/bin"})
         if platform.system() == "Windows":
-            self.assertTrue(patched["PATH"].lower().startswith("c:\\"))
-            self.assertIn("System32".lower(), patched["PATH"].lower())
+            # Not every Windows installs on C:, so assert the shape rather than
+            # the drive letter.
+            first = patched["PATH"].split(os.pathsep)[0]
+            self.assertTrue(
+                first.lower().endswith(os.sep + "system32"),
+                f"first PATH entry was {first}",
+            )
             self.assertIn("/usr/bin", patched["PATH"])
         else:
             self.assertEqual(patched, {"PATH": "/usr/bin"})
