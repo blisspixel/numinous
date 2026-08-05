@@ -6,6 +6,23 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Fixed
+- Untrusted text echoed back to a player is now escaped against the characters
+  that lie about a line, not only the ones that can drive a terminal. The
+  previous guard used `char::is_control`, which covers the C0 and C1 control
+  codes and nothing else, so the Unicode bidirectional formatting characters
+  passed through every diagnostic verbatim: a room id or Studio expression
+  carrying U+202E RIGHT-TO-LEFT OVERRIDE could make an error message display
+  as something other than what it said. Reproduced on the CLI not-found path,
+  the CLI Studio parse path, and in MCP result text, where JSON encoding
+  neutralizes control bytes but passes format characters through untouched.
+  Fourteen vectors are now covered: the bidi overrides, embeddings, isolates,
+  and marks, plus the zero-width and invisible characters. One definition,
+  `numinous_core::display_safe`, backs all three faces.
+  This also fixes a confusing failure that had nothing to do with security: an
+  id pasted with an invisible character in it now reports
+  `times-tables\u{200b}` and suggests `times-tables`, where before it reported
+  `times-tables` and looked like the tool refusing a room it plainly has.
+  Ordinary text, including non-English text, is unchanged.
 - A rejected MCP argument name now suggests the argument that was meant, so a
   caller who writes `expression` for `expr`, or `widht` for `width`, is told so
   instead of having to re-read the schema. Unrelated names are still rejected

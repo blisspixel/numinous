@@ -524,14 +524,53 @@ fn edit_distance(a: &str, b: &str) -> usize {
     previous[b_chars.len()]
 }
 
-/// A rejected id rendered safe to echo: control characters escaped and the
-/// length bounded, so untrusted input cannot corrupt a terminal or a client
+/// Whether a character must be escaped before it is echoed back to a person.
+///
+/// Three families qualify. C0 and C1 controls, which can drive a terminal.
+/// The bidirectional formatting characters, which reorder how a line displays
+/// without changing what it contains, so a diagnostic can be made to read as
+/// something other than what it says (the Trojan Source problem). And the
+/// zero-width characters, which are the reason an id that looks exactly like
+/// `times-tables` can fail to match it: escaping them turns a baffling
+/// rejection into a visible cause.
+#[must_use]
+pub fn must_escape_for_display(character: char) -> bool {
+    character.is_control()
+        || matches!(character,
+            '\u{00AD}'                 // soft hyphen
+            | '\u{061C}'               // Arabic letter mark
+            | '\u{200B}'..='\u{200F}'  // zero-width space through RTL mark
+            | '\u{202A}'..='\u{202E}'  // bidi embeddings and overrides
+            | '\u{2060}'..='\u{2064}'  // word joiner and invisible operators
+            | '\u{2066}'..='\u{2069}'  // bidi isolates
+            | '\u{FEFF}'               // zero-width no-break space
+        )
+}
+
+/// Text rendered safe to show a person: every character that could drive a
+/// terminal, reorder the line, or hide inside it is escaped to its printable
+/// form. Length is not bounded here; see [`echoable_id`] for that.
+#[must_use]
+pub fn display_safe(text: &str) -> String {
+    let mut safe = String::with_capacity(text.len());
+    for character in text.chars() {
+        if must_escape_for_display(character) {
+            safe.extend(character.escape_default());
+        } else {
+            safe.push(character);
+        }
+    }
+    safe
+}
+
+/// A rejected id rendered safe to echo: escaped for display and length
+/// bounded, so untrusted input cannot corrupt a terminal or a client
 /// transcript and cannot inflate the message it appears in.
 #[must_use]
 pub fn echoable_id(id: &str) -> String {
     let mut safe = String::with_capacity(id.len().min(MAX_ECHOED_ID));
     for character in id.chars().take(MAX_ECHOED_ID) {
-        if character.is_control() {
+        if must_escape_for_display(character) {
             safe.extend(character.escape_default());
         } else {
             safe.push(character);
@@ -560,8 +599,8 @@ pub fn hidden_room_by_id(id: &str) -> Option<Box<dyn Room>> {
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, all_rooms, echoable_id, nearest_names,
-        nearest_room_ids, room_by_id,
+        MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, all_rooms, display_safe, echoable_id,
+        must_escape_for_display, nearest_names, nearest_room_ids, room_by_id,
     };
     use crate::canvas::Canvas;
     use crate::room::Room;
@@ -681,6 +720,68 @@ mod tests {
                 .copied(),
             Some("times-tables")
         );
+    }
+
+    #[test]
+    fn text_shown_to_a_person_cannot_reorder_or_hide_itself() {
+        // A bidirectional override reorders how the rest of the line displays
+        // without changing what it contains, so a diagnostic can be made to
+        // read as something other than what it says. is_control() does not
+        // cover these: they are format characters, not control characters.
+        for (name, hostile) in [
+            ("right-to-left override", "safe\u{202e}dnammoc"),
+            ("left-to-right override", "a\u{202d}b"),
+            ("first strong isolate", "a\u{2068}b"),
+            ("pop directional isolate", "a\u{2069}b"),
+            ("left-to-right mark", "a\u{200e}b"),
+            ("right-to-left mark", "a\u{200f}b"),
+            ("zero width space", "times\u{200b}tables"),
+            ("zero width joiner", "a\u{200d}b"),
+            ("word joiner", "a\u{2060}b"),
+            ("soft hyphen", "times\u{00ad}tables"),
+            ("byte order mark", "a\u{feff}b"),
+            ("Arabic letter mark", "a\u{061c}b"),
+            ("escape", "a\u{1b}[2Jb"),
+            ("bell", "a\u{7}b"),
+        ] {
+            let shown = display_safe(hostile);
+            assert!(
+                !shown.chars().any(must_escape_for_display),
+                "{name} survived display_safe: {shown:?}"
+            );
+            assert!(
+                echoable_id(hostile)
+                    .chars()
+                    .all(|c| !must_escape_for_display(c)),
+                "{name} survived echoable_id"
+            );
+        }
+    }
+
+    #[test]
+    fn escaping_leaves_ordinary_text_alone() {
+        // Including text that is not English. Escaping is about characters
+        // that lie about the line, not about characters that are unfamiliar.
+        for ordinary in [
+            "times-tables",
+            "Times Tables",
+            "salle des maths",
+            "数学の部屋",
+            "комната",
+            "غرفة",
+            "y = sin(a*x) + 1",
+        ] {
+            assert_eq!(display_safe(ordinary), ordinary, "{ordinary} was altered");
+        }
+    }
+
+    #[test]
+    fn an_invisible_character_makes_a_lookalike_id_visibly_different() {
+        // The player's complaint this answers: "I typed times-tables and it
+        // says there is no such room." The message now shows why.
+        let lookalike = "times-tables\u{200b}";
+        assert_ne!(echoable_id(lookalike), "times-tables");
+        assert!(echoable_id(lookalike).contains("\\u{200b}"));
     }
 
     #[test]
