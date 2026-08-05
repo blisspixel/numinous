@@ -1404,8 +1404,8 @@ function Install-Numinous {
     Say '  numinous-app     the window: rooms, sound, games, the radio'
     Say '  numinous         the same world, live in the terminal'
     Say ''
-    Say 'Digital minds connect over MCP:'
-    Say "  claude mcp add numinous -- $BinDir\numinous-mcp.exe"
+    Say 'Digital minds connect over MCP. Point your client at:'
+    Say "  $BinDir\numinous-mcp.exe"
     Say ''
     if ($NoModifyPath) {
         Say "PATH was not modified. Run the binaries by full path from $BinDir,"
