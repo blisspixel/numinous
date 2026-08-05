@@ -15,9 +15,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   as something other than what it said. Reproduced on the CLI not-found path,
   the CLI Studio parse path, and in MCP result text, where JSON encoding
   neutralizes control bytes but passes format characters through untouched.
-  Fourteen vectors are now covered: the bidi overrides, embeddings, isolates,
-  and marks, plus the zero-width and invisible characters. One definition,
-  `numinous_core::display_safe`, backs all three faces.
+  Seventeen vectors are now covered: the bidi overrides, embeddings, isolates,
+  and marks; the zero-width and invisible characters; and U+2028 and U+2029,
+  which are separators rather than controls but which enough renderers break
+  lines on that untrusted input could otherwise forge an extra line into a
+  diagnostic or a transcript. One definition, `numinous_core::display_safe`,
+  backs all three faces.
   This also fixes a confusing failure that had nothing to do with security: an
   id pasted with an invisible character in it now reports
   `times-tables\u{200b}` and suggests `times-tables`, where before it reported

@@ -526,19 +526,29 @@ fn edit_distance(a: &str, b: &str) -> usize {
 
 /// Whether a character must be escaped before it is echoed back to a person.
 ///
-/// Three families qualify. C0 and C1 controls, which can drive a terminal.
-/// The bidirectional formatting characters, which reorder how a line displays
-/// without changing what it contains, so a diagnostic can be made to read as
-/// something other than what it says (the Trojan Source problem). And the
-/// zero-width characters, which are the reason an id that looks exactly like
-/// `times-tables` can fail to match it: escaping them turns a baffling
-/// rejection into a visible cause.
+/// Four families qualify, and none of them are what `char::is_control` alone
+/// would catch:
+///
+/// - C0 and C1 controls, which can drive a terminal.
+/// - The bidirectional formatting characters, which reorder how a line
+///   displays without changing what it contains, so a diagnostic can be made
+///   to read as something other than what it says (the Trojan Source problem).
+/// - The line and paragraph separators, which are not control characters but
+///   which many renderers break lines on, so untrusted input could otherwise
+///   forge extra lines in a diagnostic or a transcript.
+/// - The zero-width characters, which are the reason an id that looks exactly
+///   like `times-tables` can fail to match it: escaping them turns a baffling
+///   rejection into a visible cause.
 #[must_use]
 pub fn must_escape_for_display(character: char) -> bool {
     character.is_control()
+        // Zl and Zp: line and paragraph separators. Not controls, but treated
+        // as hard breaks by enough renderers to be a forgery risk.
+        || matches!(character, '\u{2028}' | '\u{2029}')
         || matches!(character,
             '\u{00AD}'                 // soft hyphen
             | '\u{061C}'               // Arabic letter mark
+            | '\u{180E}'               // Mongolian vowel separator
             | '\u{200B}'..='\u{200F}'  // zero-width space through RTL mark
             | '\u{202A}'..='\u{202E}'  // bidi embeddings and overrides
             | '\u{2060}'..='\u{2064}'  // word joiner and invisible operators
@@ -743,6 +753,9 @@ mod tests {
             ("Arabic letter mark", "a\u{061c}b"),
             ("escape", "a\u{1b}[2Jb"),
             ("bell", "a\u{7}b"),
+            ("line separator", "a\u{2028}b"),
+            ("paragraph separator", "a\u{2029}b"),
+            ("Mongolian vowel separator", "a\u{180e}b"),
         ] {
             let shown = display_safe(hostile);
             assert!(
@@ -755,6 +768,21 @@ mod tests {
                     .all(|c| !must_escape_for_display(c)),
                 "{name} survived echoable_id"
             );
+        }
+    }
+
+    #[test]
+    fn a_diagnostic_cannot_be_forged_into_extra_lines() {
+        // U+2028 and U+2029 are not control characters, so is_control misses
+        // them, but enough renderers break lines on them that untrusted input
+        // could otherwise append a convincing second line to a message.
+        for forgery in [
+            "room\u{2028}Everything is fine.",
+            "room\u{2029}Everything is fine.",
+        ] {
+            let shown = display_safe(forgery);
+            assert_eq!(shown.lines().count(), 1, "forged a line break: {shown:?}");
+            assert!(!shown.contains('\u{2028}') && !shown.contains('\u{2029}'));
         }
     }
 
