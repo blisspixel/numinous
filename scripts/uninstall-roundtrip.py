@@ -106,13 +106,19 @@ def build_local_soundtrack(output_dir: Path) -> tuple[Path, Path, Path]:
     if not tracks:
         raise RoundtripError("no radio track to package under assets/radio")
     shutil.copy2(tracks[0], radio)
-    subprocess.run(
+    run(
         [sys.executable, str(ROOT / "scripts" / "package-release.py"),
          "--kind", "soundtrack", "--target", "all",
          "--radio-dir", str(radio), "--output-dir", str(output_dir)],
-        cwd=ROOT, capture_output=True, text=True, check=True,
+        dict(os.environ),
+        "package the local soundtrack",
     )
-    archive = next(output_dir.glob("numinous-v*-soundtrack.tar.gz"))
+    try:
+        archive = next(output_dir.glob("numinous-v*-soundtrack.tar.gz"))
+    except StopIteration:
+        raise RoundtripError(
+            f"packaging reported success but wrote no soundtrack under {output_dir}"
+        ) from None
     return archive, Path(f"{archive}.sha256"), Path(f"{archive}.content.sha256")
 
 
@@ -258,16 +264,19 @@ def main(argv: list[str] | None = None) -> int:
 
     archive = args.release_archive
     checksum = args.release_checksum or Path(str(archive) + ".sha256")
-    tag = args.release_tag
-    if tag is None:
-        version = subprocess.run(
-            [sys.executable, str(ROOT / "scripts" / "package-release.py"), "--print-version"],
-            capture_output=True, text=True, cwd=ROOT, check=True,
-        ).stdout.strip()
-        tag = f"v{version}"
-
     OUT.mkdir(parents=True, exist_ok=True)
+    # Everything that can fail runs inside this, so a failure always leaves the
+    # structured record behind rather than a traceback and no evidence.
     try:
+        tag = args.release_tag
+        if tag is None:
+            version = run(
+                [sys.executable, str(ROOT / "scripts" / "package-release.py"),
+                 "--print-version"],
+                dict(os.environ),
+                "read the packaged version",
+            ).strip()
+            tag = f"v{version}"
         checks = roundtrip(archive, checksum, tag)
     except RoundtripError as error:
         checks = [{"name": "roundtrip", "passed": False, "detail": str(error)}]
