@@ -36,14 +36,28 @@ fn validate_output_dimensions(sample_rate: u32, channels: u16) -> Result<(), Str
     Ok(())
 }
 
-/// Whether a player has asked for mono, from the environment.
+/// The environment variable a player sets to collapse audio to one signal.
+pub const MONO_AUDIO_VAR: &str = "NUMINOUS_MONO_AUDIO";
+
+/// Whether a player has asked for mono, from a raw setting value.
 ///
 /// Present and not empty, the same rule `NO_COLOR` and
 /// `NUMINOUS_REDUCED_MOTION` use, so a player learns one convention for every
-/// accessibility switch. The variable is `NUMINOUS_MONO_AUDIO`.
+/// accessibility switch rather than one per switch. Truthiness deliberately
+/// does not enter into it: someone who wrote `=0` still wrote it.
+///
+/// This crate owns the whole mono convention, name included, because it is a
+/// hardware adapter that deliberately does not depend on `numinous-core`, and
+/// splitting the name from the behaviour would put the same rule in two places.
+#[must_use]
+pub fn mono_requested_for(value: Option<&std::ffi::OsStr>) -> bool {
+    value.is_some_and(|value| !value.is_empty())
+}
+
+/// Whether a player has asked for mono, from the environment.
 #[must_use]
 pub fn mono_requested() -> bool {
-    std::env::var_os("NUMINOUS_MONO_AUDIO").is_some_and(|value| !value.is_empty())
+    mono_requested_for(std::env::var_os(MONO_AUDIO_VAR).as_deref())
 }
 
 /// Collapse one stereo frame to a single sample.
@@ -67,6 +81,12 @@ pub fn mono_requested() -> bool {
 ///
 /// Non-finite input resolves to silence rather than travelling into a device
 /// buffer.
+///
+/// The no-clipping guarantee is about the mix, not about rescuing bad input:
+/// it says the result never exceeds the louder of the two samples, so a frame
+/// already inside `[-1, 1]` stays inside it. Two samples at 2.0 average to 2.0.
+/// The device path feeds this frames that `finite_output_sample` has already
+/// bounded, so the precondition holds there.
 #[must_use]
 pub fn downmix_to_mono(left: f32, right: f32) -> f32 {
     if !left.is_finite() || !right.is_finite() {
@@ -1273,9 +1293,9 @@ mod tests {
     use std::sync::Arc;
 
     use super::{
-        AMPLITUDE, LoopBuffer, MAX_DEVICE_SAMPLE_RATE, MixerState, OneshotPlay, PARAMETER_MAX_GAIN,
-        crossfade_frame_count, device_channel_sample, downmix_to_mono, fill_tone_samples,
-        synthesize_sine, validate_output_dimensions,
+        AMPLITUDE, LoopBuffer, MAX_DEVICE_SAMPLE_RATE, MONO_AUDIO_VAR, MixerState, OneshotPlay,
+        PARAMETER_MAX_GAIN, crossfade_frame_count, device_channel_sample, downmix_to_mono,
+        fill_tone_samples, mono_requested_for, synthesize_sine, validate_output_dimensions,
     };
 
     #[test]
@@ -1358,6 +1378,32 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn the_switch_reads_presence_not_truthiness() {
+        for (value, on) in [
+            (None, false),
+            (Some(""), false),
+            (Some("1"), true),
+            (Some("0"), true),
+            (Some("false"), true),
+        ] {
+            assert_eq!(
+                mono_requested_for(value.map(std::ffi::OsStr::new)),
+                on,
+                "{value:?}"
+            );
+        }
+        assert_eq!(MONO_AUDIO_VAR, "NUMINOUS_MONO_AUDIO");
+    }
+
+    #[test]
+    fn the_downmix_bounds_the_mix_not_the_input() {
+        // Stated so the guarantee is not read as wider than it is: out-of-range
+        // input stays out of range, it just never gets louder than it was.
+        assert_eq!(downmix_to_mono(2.0, 2.0), 2.0);
+        assert_eq!(downmix_to_mono(2.0, 0.0), 1.0);
     }
 
     #[test]
