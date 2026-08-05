@@ -6,6 +6,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- The window is now held to the same curve framing as the other two faces
+  (0.7-am creator, machine path). The App draws pixels while the CLI and MCP
+  draw characters, so their pictures cannot be compared byte for byte. What can
+  be, and what the 0.7 exit actually asks for, is that all three agree about the
+  curve: the same samples, the same discards, and the same vertical framing.
+  That agreement was structural but unguarded. `faces/app` samples and
+  auto-scales in its own `sample_curve`, and `numinous_core::plot_text` does it
+  again for the other two faces. Two implementations of one rule stay in step
+  only while something checks. A test now pins the framing across six
+  expressions and three widths, including `1/x`, where both sides have to
+  discard the same undefined point rather than one of them framing around an
+  infinity.
+  Verified by skewing the App's sampler off by one column and watching the test
+  fail with the exact expression, knob, range, and width named.
 - A creator parity gate between the CLI and MCP (0.7-am creator, machine path).
   The 0.7 exit asks that the same creation produce event-identical output
   through every face. `creator-roundtrip.py` already proved the CLI can save a
