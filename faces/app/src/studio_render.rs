@@ -114,6 +114,55 @@ mod tests {
     }
 
     #[test]
+    fn the_window_frames_a_curve_exactly_as_the_other_faces_do() {
+        // The App draws pixels and the CLI and MCP draw characters, so their
+        // pictures cannot be compared byte for byte. What can, and what 0.7
+        // actually asks for, is that all three agree about the curve: the same
+        // samples, the same discards, and the same vertical framing.
+        //
+        // This crate samples and auto-scales in `sample_curve`; the core does
+        // it again inside `plot_text`. Two implementations of one rule stay in
+        // step only while something checks, and `scripts/creator-parity.py`
+        // already holds the other two faces together.
+        for (source, xmin, xmax, a) in [
+            ("sin(x)", -std::f64::consts::TAU, std::f64::consts::TAU, 1.0),
+            ("x*x", -2.0, 2.0, 1.0),
+            (
+                "sin(a*x)",
+                -std::f64::consts::TAU,
+                std::f64::consts::TAU,
+                2.5,
+            ),
+            (
+                "sin(a*x)",
+                -std::f64::consts::TAU,
+                std::f64::consts::TAU,
+                -3.0,
+            ),
+            ("sin(x)", 0.0, 10.0, 1.0),
+            // Undefined at x = 0, so both sides must discard the same point
+            // rather than one of them framing around an infinity.
+            ("1/x", -std::f64::consts::TAU, std::f64::consts::TAU, 1.0),
+        ] {
+            let expr = numinous_core::parse(source).expect("parses");
+            for width in [40usize, 72, 200] {
+                let (_, core_min, core_max) =
+                    numinous_core::plot_text(source, xmin, xmax, a, width, 24)
+                        .expect("core plots it");
+                let (window_min, window_max) = curve_range(width, xmin, xmax, |x| {
+                    Some(numinous_core::eval(&expr, x, a))
+                })
+                .expect("the window frames it");
+                assert_eq!(
+                    (window_min, window_max),
+                    (core_min, core_max),
+                    "{source} at a={a} over [{xmin}, {xmax}] at width {width}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn curve_sampling_and_drawing_share_the_exact_range() {
         let range = curve_range(64, -1.0, 1.0, |x| Some(x * x)).expect("finite range");
         let mut raster = Raster::new(64, 80);
