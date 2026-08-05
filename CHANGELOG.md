@@ -20,7 +20,13 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   speaking in its own voice, and requiring those to match would be requiring
   the faces to be the same thing rather than to agree about the mathematics.
   The gate builds both binaries rather than using whichever happened to be on
-  disk, so a stale artifact cannot answer for source nobody is running.
+  disk, so a stale artifact cannot answer for source nobody is running, and it
+  gives every case its own player profile so no case can change what another
+  sees. It reads back exactly the geometry it asked for, because the CLI is a
+  player-facing face and prints LEVEL UP, BOON BANKED, and UNLOCKED lines under
+  a plot that earned them. Those are the Journey speaking rather than the
+  mathematics, and comparing them made the result depend on how much play a
+  profile had behind it.
   Verified by mismatching one case on purpose: it fails that case, names the
   row where the drawings diverge, and exits nonzero.
 
