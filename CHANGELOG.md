@@ -6,6 +6,25 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Reduced motion in the App (0.5-am accessibility, machine path), completing
+  the switch across every face that animates. `NUMINOUS_REDUCED_MOTION` now
+  hands the ambient world zero seconds per tick, which stops the room phase,
+  The Show's drift into the next room, the Mandelbrot camera, and the Game of
+  Life cadence together. They are all driven by that one budget, so none of
+  them needed a separate guard, and The Show stops because a held phase can
+  never complete the sweep that advances it.
+  The player's own input is untouched and the tick still runs, so the window
+  keeps drawing, keeps responding, and keeps accepting touches. Removing the
+  motion must not remove the agency.
+  The two engineered aha morphs deliberately keep their real elapsed time. They
+  are short, bounded, and the direct completion of an act the player just
+  performed, so freezing them would strand someone mid-aha with no way to
+  finish rather than calm anything down. That choice is recorded in the code
+  rather than left to be rediscovered.
+  Covered by three tests: the budget itself across four tick lengths, the phase
+  holding without ever wrapping into the next room, and the Life universe not
+  stepping across twenty cadences. Each also asserts the counterpart with
+  motion allowed, so none of them can pass because the mechanism died.
 - A color-independence audit for touch response (0.5-am accessibility, machine
   path), and the defect it found. The check is mechanical rather than a matter
   of taste: render each catalog room before and after a center poke, strip the

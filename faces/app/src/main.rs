@@ -188,6 +188,22 @@ fn bounded_tick_seconds(elapsed: Duration) -> f64 {
     elapsed.as_secs_f64().clamp(0.0, MAX_TICK_SECONDS)
 }
 
+/// How much of this tick the ambient world may consume.
+///
+/// Reduced motion hands the world zero seconds, so everything that advances on
+/// its own stops: the room phase, The Show's drift into the next room (which
+/// only happens when a phase sweep completes), the Mandelbrot camera, and the
+/// Life cadence. The player's own input is untouched, and the tick still runs,
+/// so the App keeps drawing and keeps responding.
+///
+/// The two engineered aha morphs deliberately keep their real elapsed time.
+/// They are short, bounded, and the direct completion of an act the player just
+/// performed; freezing them would strand someone mid-aha with no way to finish
+/// rather than calm anything down.
+fn ambient_tick_seconds(elapsed: f64, motion: numinous_core::Motion) -> f64 {
+    if motion.animates() { elapsed } else { 0.0 }
+}
+
 fn advance_gallery_phase(
     phase: f64,
     elapsed: f64,
@@ -275,6 +291,9 @@ fn selected_room_interaction_audio(
 
 /// The application state driven by the winit event loop.
 struct App {
+    /// How much the world may move on its own. Read once at construction, so
+    /// every tick answers the same way and a test can pin it.
+    motion: numinous_core::Motion,
     window: Option<Rc<Window>>,
     surface: Option<softbuffer::Surface<Rc<Window>, Rc<Window>>>,
     player: Option<numinous_audio::LoopPlayer>,
@@ -466,6 +485,7 @@ impl App {
             show_help: true,
             start_fullscreen: false,
             frame: 0,
+            motion: numinous_core::Motion::from_env(),
             last_tick: Instant::now(),
             window_active: true,
             inactive_since: None,
@@ -4171,15 +4191,16 @@ impl ApplicationHandler for App {
         }
         self.refresh_pointer_state();
         let first_contact_obscured = self.banner.is_some() && self.room_card > 0;
+        let ambient = ambient_tick_seconds(elapsed, self.motion);
         if !first_contact_obscured {
-            self.advance_life_if_active(elapsed);
+            self.advance_life_if_active(ambient);
             self.advance_times_tables_morph(elapsed);
             self.advance_buffon_morph(elapsed);
         }
         if !(self.paused || self.dragging || self.show_help && self.modal_mode_active()) {
             let motion = self.time_scale * self.visualizer_scale;
             if !first_contact_obscured && self.rooms[self.current].meta().id == "mandelbrot" {
-                self.mandelbrot_camera.advance(elapsed * motion);
+                self.mandelbrot_camera.advance(ambient * motion);
             }
             let show_active = self.show_mode_active();
             // When the visualizer is driving, mid energy quickens The Show's
@@ -4190,7 +4211,7 @@ impl ApplicationHandler for App {
                 T_RATE
             };
             let (next_phase, wrapped) =
-                advance_gallery_phase(self.t, elapsed, motion, rate, first_contact_obscured);
+                advance_gallery_phase(self.t, ambient, motion, rate, first_contact_obscured);
             self.t = next_phase;
             if wrapped {
                 // In The Show, a finished sweep drifts into the next room.
@@ -5636,6 +5657,69 @@ mod tests {
             clears_before_reset + 1,
             "reset retires audio from the discarded Life generation"
         );
+        let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn reduced_motion_hands_the_ambient_world_no_time() {
+        // The whole mechanism, in one function: everything that advances on
+        // its own is driven by this budget, so zeroing it stops the room
+        // phase, The Show's drift into the next room, the Mandelbrot camera,
+        // and the Life cadence together.
+        for elapsed in [0.0, 1.0 / 60.0, 0.5, super::MAX_TICK_SECONDS] {
+            assert_eq!(
+                super::ambient_tick_seconds(elapsed, numinous_core::Motion::Full),
+                elapsed,
+                "full motion must not alter the tick"
+            );
+            assert_eq!(
+                super::ambient_tick_seconds(elapsed, numinous_core::Motion::Reduced),
+                0.0,
+                "reduced motion must spend no ambient time"
+            );
+        }
+    }
+
+    #[test]
+    fn a_zero_ambient_tick_holds_the_phase_and_never_wraps() {
+        // What the App does with that budget. A held phase cannot complete a
+        // sweep, and it is the completed sweep that moves The Show to the next
+        // room, so the gallery stops advancing without a separate guard.
+        for phase in [0.0, 0.25, 0.5, 0.999] {
+            let (next, wrapped) = super::advance_gallery_phase(phase, 0.0, 1.0, 0.24, false);
+            assert_eq!(next, phase, "phase moved on a zero tick");
+            assert!(!wrapped, "a held phase must not wrap into the next room");
+        }
+        // The counterpart: given real time, it still advances, so the test
+        // above cannot pass because the mechanism broke.
+        let (next, _) = super::advance_gallery_phase(0.5, 1.0 / 60.0, 1.0, 0.24, false);
+        assert!(next > 0.5, "full motion must still advance");
+    }
+
+    #[test]
+    fn reduced_motion_leaves_the_life_universe_untouched() {
+        let mut app = headless("numinous_app_test_reduced_motion_life.txt");
+        select_life(&mut app);
+        app.record_room_touch((0.5, 0.5));
+        let generation = app.life_session.generation();
+        // Enough time for many steps at the normal cadence.
+        let held = app.advance_life_if_active(super::ambient_tick_seconds(
+            super::LIFE_STEP_SECONDS * 20.0,
+            numinous_core::Motion::Reduced,
+        ));
+        assert_eq!(held, 0, "reduced motion stepped the universe");
+        assert_eq!(
+            app.life_session.generation(),
+            generation,
+            "reduced motion advanced Life"
+        );
+        // And the same span with motion allowed does step it, so the
+        // assertion above is about the preference rather than a dead path.
+        let moved = app.advance_life_if_active(super::ambient_tick_seconds(
+            super::LIFE_STEP_SECONDS * 20.0,
+            numinous_core::Motion::Full,
+        ));
+        assert!(moved > 0, "full motion must still step Life");
         let _ = std::fs::remove_file(&app.journey_file);
     }
 
