@@ -33,6 +33,7 @@ python3 scripts/flagship-goldens.py
 echo "== creator roundtrip =="
 python3 scripts/creator-roundtrip.py
 python3 scripts/reduced-motion.py
+cargo test -p numinous-core --release --lib -- --ignored --exact registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget
 echo "== am soak =="
 python3 scripts/am-soak.py
 echo "== catalog scorecard =="

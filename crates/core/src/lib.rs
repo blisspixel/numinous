@@ -40,6 +40,7 @@ pub mod munchers;
 pub mod nim;
 pub mod party;
 pub mod persistence;
+pub mod photosensitivity;
 pub mod predict;
 pub mod quiz;
 pub mod radio;
@@ -109,6 +110,10 @@ pub use persistence::{
     inspect_journal_file, inspect_local_state, load_journal_file, load_journey_file,
     load_scoreboard_file, lock_local_state, persist_journey_delta, record_journal_file,
     record_score_file, remove_persisted_file, try_load_journal_file,
+};
+pub use photosensitivity::{
+    DARK_CEILING, GENERAL_FLASH_DELTA, MAX_FLASHES_PER_SECOND, count_flashes, flashes_per_second,
+    frame_luminance, peak_flashes_per_second, relative_luminance, within_budget,
 };
 pub use predict::{
     Band, Prediction, PredictionCurveError, PredictionCurveGrade, PredictionCurveSample,

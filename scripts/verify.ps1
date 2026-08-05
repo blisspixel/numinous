@@ -51,6 +51,7 @@ Step "agent first-contact suite" { python scripts/agent-first-contact.py }
 Step "flagship visual and audio goldens" { python scripts/flagship-goldens.py }
 Step "creator roundtrip" { python scripts/creator-roundtrip.py }
 Step "reduced motion" { python scripts/reduced-motion.py }
+Step "photosensitivity budget" { cargo test -p numinous-core --release --lib -- --ignored --exact registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget }
 Step "am soak" { python scripts/am-soak.py }
 Step "catalog scorecard" { python scripts/catalog-scorecard.py }
 Step "understanding am dry-run" { python scripts/test-understanding-am.py }
