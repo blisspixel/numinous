@@ -30,7 +30,14 @@ OUT = ROOT / ".agent" / "tester-cohort" / "reduced-motion"
 
 # Enough bytes to hold many frames of the widest supported view.
 READ_LIMIT = 400_000
-CHUNK = 8192
+# These loops never exit on their own, so the probe ends on a deadline. Long
+# enough for a slow machine to emit dozens of frames, short enough that a
+# stalled child cannot hold CI open.
+DEADLINE_SECONDS = 6.0
+# Every probe needs at least this many complete frames before its result means
+# anything. Below it the run is inconclusive, which is a different failure from
+# the feature being broken, and the report must not confuse the two.
+MIN_FRAMES = 4
 
 # Each probe: a label, the argv after the binary, and the marker that starts a
 # frame in that loop's output.
@@ -58,15 +65,26 @@ def resolve_cli() -> list[str]:
     )
     if build.returncode != 0:
         raise SystemExit("cannot build the CLI under test:\n" + build.stderr)
+    # CARGO_TARGET_DIR redirects where cargo writes, and several CI layouts set
+    # it. Looking only under ROOT/target would fail a build that succeeded.
+    target_dir = Path(os.environ.get("CARGO_TARGET_DIR") or (ROOT / "target"))
     for name in ("numinous.exe", "numinous"):
-        path = ROOT / "target" / "debug" / name
+        path = target_dir / "debug" / name
         if path.is_file():
             return [str(path)]
-    raise SystemExit("cargo build reported success but produced no numinous binary")
+    raise SystemExit(
+        "cargo build reported success but no numinous binary is under "
+        f"{target_dir / 'debug'}"
+    )
 
 
 def whole_frames(cli: list[str], args: list[str], reduced: bool, marker: str) -> list[str]:
-    """Complete frames emitted by one live loop, bounded in time and bytes."""
+    """Complete frames emitted by one live loop, bounded in time and in bytes.
+
+    The loops under test never exit, so the probe always ends by deadline. A
+    plain read loop would block forever on a child that stalls without closing
+    its pipe, which would hang the gate rather than fail it.
+    """
     env = dict(os.environ)
     env.pop("NUMINOUS_REDUCED_MOTION", None)
     # Colour is irrelevant here and only makes frames larger to compare.
@@ -79,18 +97,14 @@ def whole_frames(cli: list[str], args: list[str], reduced: bool, marker: str) ->
         stderr=subprocess.DEVNULL,
         env=env,
     )
-    data = b""
     try:
-        assert proc.stdout is not None
-        while len(data) < READ_LIMIT:
-            chunk = proc.stdout.read(CHUNK)
-            if not chunk:
-                break
-            data += chunk
-    finally:
+        data, _ = proc.communicate(timeout=DEADLINE_SECONDS)
+    except subprocess.TimeoutExpired:
+        # Expected: these loops run until stopped. Kill, then collect what the
+        # pipe already holds.
         proc.kill()
-        proc.wait()
-    parts = data.decode("utf-8", "replace").split(marker)
+        data, _ = proc.communicate()
+    parts = data[:READ_LIMIT].decode("utf-8", "replace").split(marker)
     if len(parts) <= 2:
         return []
     # Adjacent markers can yield empty splits; those are not frames.
@@ -103,17 +117,30 @@ def check(cli: list[str], label: str, args: list[str], marker: str) -> dict[str,
     moving_distinct = len(set(moving))
     held_distinct = len(set(held))
 
+    # Capture failures and behaviour failures are different problems, and a
+    # report that blurs them sends the reader to the wrong place. Only judge
+    # behaviour once there is enough evidence to judge it on.
     reasons = []
-    if len(moving) < 2:
-        reasons.append(f"captured only {len(moving)} ordinary frames, need at least 2")
-    if len(held) < 2:
-        reasons.append(f"captured only {len(held)} reduced frames, need at least 2")
-    if moving_distinct < 2:
-        reasons.append("ordinary motion did not animate, so the comparison proves nothing")
-    if held_distinct != 1:
-        reasons.append(f"reduced motion still changed: {held_distinct} distinct frames")
-    if held and not held[0].strip():
-        reasons.append("reduced motion held a blank frame rather than the picture")
+    captured = True
+    if len(moving) < MIN_FRAMES:
+        reasons.append(
+            f"captured only {len(moving)} ordinary frames, need {MIN_FRAMES}; "
+            "the run is inconclusive rather than failing"
+        )
+        captured = False
+    if len(held) < MIN_FRAMES:
+        reasons.append(
+            f"captured only {len(held)} reduced frames, need {MIN_FRAMES}; "
+            "the run is inconclusive rather than failing"
+        )
+        captured = False
+    if captured:
+        if moving_distinct < 2:
+            reasons.append("ordinary motion did not animate, so the comparison proves nothing")
+        if held_distinct != 1:
+            reasons.append(f"reduced motion still changed: {held_distinct} distinct frames")
+        if not held[0].strip():
+            reasons.append("reduced motion held a blank frame rather than the picture")
 
     return {
         "name": label,
