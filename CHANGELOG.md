@@ -6,6 +6,30 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- A color-independence audit for touch response (0.5-am accessibility, machine
+  path), and the defect it found. The check is mechanical rather than a matter
+  of taste: render each catalog room before and after a center poke, strip the
+  color with `ansi::to_mono`, the same renderer `NO_COLOR` selects, and require
+  the two to differ. A cue that survives that is not carried by color.
+  **Twenty-one of the 354 rooms fail it.** `burning-ship`, `ford-circles`,
+  `function-painter`, `gradient-valley`, `hilbert`, `interference`, `ising`,
+  `julia`, `lambda-map`, `magnet-fractal`, `menger-sponge`, `multibrot`,
+  `newton`, `newton-cubic`, `nova`, `percolation`, `phoenix`, `rule-110`,
+  `the-magnet`, `tricorn`, and `wireworld` all change their colored picture and
+  their status line when touched, but not their color-free picture. A player
+  who set `NO_COLOR` can touch them and see nothing move.
+  The cause is shared, and the measurement says so rather than blaming the
+  rooms. Every one of them does change luminance, from 0.000066 for
+  `percolation` to 0.250 for `lambda-map`. They are invisible because `to_mono`
+  quantizes each half-pixel to lit or unlit, and one bit throws that detail
+  away. Widening it is a change to what `NO_COLOR` already ships and is tracked
+  as its own work rather than rushed here.
+  A second list records seven rooms whose picture does not move under a center
+  poke at all: `brusselator`, `cesaro`, `koch-snowflake`, `laplace-clock`,
+  `slingshot`, `sylvester`, and `the-lens`. They still answer on the status
+  line, which an existing invariant enforces.
+  Both lists are shrink-only. The test fails if either grows, if a room outside
+  them regresses, or if a listed room starts responding and is not removed.
 - Mono audio (0.5-am accessibility, machine path), and a downmix fix it
   uncovered. `NUMINOUS_MONO_AUDIO` puts the same signal on every channel of a
   stereo device, so a listener hearing from one ear loses nothing panned to the

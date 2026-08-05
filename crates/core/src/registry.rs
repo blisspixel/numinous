@@ -990,6 +990,126 @@ mod tests {
         );
     }
 
+    /// Rooms whose touch response is invisible in the color-free renderer,
+    /// measured 2026-08-05 at 120 by 70.
+    ///
+    /// These are not silent and not broken: every one changes its status line,
+    /// and every one changes the colored picture. What they do not do is change
+    /// `ansi::to_mono`, which quantizes each half-pixel to lit or unlit. Their
+    /// response lives in luminance detail that a single bit throws away, and
+    /// the measured change spans four orders of magnitude, from 0.000066 for
+    /// `percolation` to 0.250 for `lambda-map`. So the cause is shared: the
+    /// renderer is one bit deep, and these rooms answer in shading.
+    ///
+    /// That matters because `NO_COLOR` selects exactly that renderer. A player
+    /// using it can touch these rooms and see nothing move.
+    ///
+    /// The list is a record of a real defect, not a permission slip. The test
+    /// below fails if it grows, if an entry starts responding and is not
+    /// removed, or if a room outside it goes color-only. Tracked in
+    /// `docs/ROADMAP.md` under 0.5 Sensory.
+    const RESPONSE_INVISIBLE_WITHOUT_COLOR: [&str; 21] = [
+        "burning-ship",
+        "ford-circles",
+        "function-painter",
+        "gradient-valley",
+        "hilbert",
+        "interference",
+        "ising",
+        "julia",
+        "lambda-map",
+        "magnet-fractal",
+        "menger-sponge",
+        "multibrot",
+        "newton",
+        "newton-cubic",
+        "nova",
+        "percolation",
+        "phoenix",
+        "rule-110",
+        "the-magnet",
+        "tricorn",
+        "wireworld",
+    ];
+
+    /// Rooms whose picture does not change at all under a center poke,
+    /// measured 2026-08-05 at 120 by 70. They still answer on the status line,
+    /// which `poke_changes_status_for_every_catalog_room` enforces, but the
+    /// plate itself is unmoved. Same shrink-only contract as above.
+    const NO_VISUAL_RESPONSE_TO_A_POKE: [&str; 7] = [
+        "brusselator",
+        "cesaro",
+        "koch-snowflake",
+        "laplace-clock",
+        "slingshot",
+        "sylvester",
+        "the-lens",
+    ];
+
+    #[test]
+    fn a_touch_answers_without_relying_on_color() {
+        // A player who cannot use color, or who set NO_COLOR, must still see
+        // that the room heard them. The check is mechanical rather than a
+        // matter of taste: render the room before and after a center poke,
+        // strip the color with the same renderer NO_COLOR selects, and require
+        // the two to differ.
+        use crate::ansi::{to_ansi, to_mono};
+        const SIZE: (usize, usize) = (120, 70);
+
+        let mut color_only = Vec::new();
+        let mut unmoved = Vec::new();
+        for room in all_rooms() {
+            let id = room.meta().id;
+            let mut base = crate::raster::Raster::with_accent(SIZE.0, SIZE.1, room.meta().accent);
+            room.render(&mut base, 0.35);
+            let mut poked = crate::raster::Raster::with_accent(SIZE.0, SIZE.1, room.meta().accent);
+            room.render_poked(&mut poked, 0.35, &[(0.5, 0.5)]);
+
+            if to_ansi(&base) == to_ansi(&poked) {
+                unmoved.push(id);
+            } else if to_mono(&base) == to_mono(&poked) {
+                color_only.push(id);
+            }
+        }
+
+        for (measured, known, label) in [
+            (
+                &color_only,
+                &RESPONSE_INVISIBLE_WITHOUT_COLOR[..],
+                "answer only in color",
+            ),
+            (
+                &unmoved,
+                &NO_VISUAL_RESPONSE_TO_A_POKE[..],
+                "do not change their picture at all",
+            ),
+        ] {
+            let mut fresh: Vec<&str> = measured
+                .iter()
+                .copied()
+                .filter(|id| !known.contains(id))
+                .collect();
+            fresh.sort_unstable();
+            assert!(
+                fresh.is_empty(),
+                "rooms that newly {label}: {}",
+                fresh.join(", ")
+            );
+
+            let mut fixed: Vec<&str> = known
+                .iter()
+                .copied()
+                .filter(|id| !measured.contains(id))
+                .collect();
+            fixed.sort_unstable();
+            assert!(
+                fixed.is_empty(),
+                "these no longer {label} and must leave their list: {}",
+                fixed.join(", ")
+            );
+        }
+    }
+
     #[test]
     fn poke_changes_status_for_every_catalog_room() {
         // Every catalog room must speak after a center poke: first contact and
