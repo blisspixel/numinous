@@ -30,5 +30,9 @@ __pycache__/
 .idea/
 .vscode/
 
+# Tool caches. Ruff writes its own .gitignore inside this directory, so the
+# tree looks clean until that file goes missing; own the rule here instead.
+.ruff_cache/
+
 # Secrets (never tracked).
 .env
