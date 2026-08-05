@@ -2272,8 +2272,9 @@ fn read_bounded(mut reader: impl std::io::Read, limit: usize) -> std::io::Result
 /// them here rather than trusting every author to remember a trailing newline
 /// means a new message cannot strand the next shell prompt mid-row.
 fn report_diagnostic(message: &str) {
-    let message = message.strip_suffix('\n').unwrap_or(message);
-    eprintln!("{message}");
+    // Strip every trailing line ending, not just one, so a message that
+    // accumulated two newlines or arrived with CRLF still prints as one line.
+    eprintln!("{}", message.trim_end_matches(['\r', '\n']));
 }
 
 fn terminal_safe(text: &str) -> String {
@@ -5888,6 +5889,28 @@ mod tests {
         let value = meta_json(&room.meta());
         for key in ["id", "title", "wing", "blurb"] {
             assert!(value.get(key).is_some(), "missing key {key}");
+        }
+    }
+
+    #[test]
+    fn a_diagnostic_prints_one_line_however_it_was_terminated() {
+        // report_diagnostic is the single guarantee point, so it has to hold
+        // for messages that carry no newline, one, several, or a CRLF pair.
+        for raw in [
+            "no newline",
+            "one\n",
+            "two\n\n",
+            "crlf\r\n",
+            "mixed\r\n\r\n",
+        ] {
+            let printed = format!("{}\n", raw.trim_end_matches(['\r', '\n']));
+            assert!(printed.ends_with('\n'), "{raw:?} -> {printed:?}");
+            assert_eq!(
+                printed.matches('\n').count(),
+                1,
+                "{raw:?} must print exactly one line: {printed:?}"
+            );
+            assert!(!printed.contains('\r'), "{raw:?} -> {printed:?}");
         }
     }
 
