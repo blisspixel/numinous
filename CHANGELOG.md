@@ -5,6 +5,30 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Changed
+- The color-free renderer now shades a cell whose halves are both lit, and
+  fifteen rooms answer a touch again because of it (0.5-am accessibility,
+  machine path). `to_mono` encoded each half-pixel as lit or unlit, which is
+  the right answer when exactly one half is lit, because the shape carries the
+  meaning. When both are lit there is no shape left to carry anything, and a
+  dense plate whose whole field shifted from dim to bright still came out as
+  the same slab of solid blocks.
+  That was the cause of a defect recorded in the previous cycle: an audit of
+  all 354 rooms found 21 whose response to a touch vanished under `NO_COLOR`.
+  Four shade characters for the both-lit case restore fifteen of them. The
+  known-failure list shrinks from 21 to 6, and the six that remain do not
+  change the color-free picture at all, so their answer is somewhere a wider
+  ramp cannot reach.
+  Nothing was traded for it. The geometry is unchanged, one output row per two
+  pixel rows and one character per column, so no layout reflows; a cell with
+  one half lit keeps its half block; no escape sequence is emitted; and the
+  thresholds are fixed rather than derived from the frame, because an adaptive
+  threshold would let a still picture change as its neighbours changed.
+  This was previously recorded as needing a product decision, on the belief
+  that more luminance meant giving up the two-pixels-per-cell geometry. That
+  was wrong: the two cases do not compete, because shading only replaces the
+  encoding of cells that had no shape left to lose.
+
 ### Added
 - The window is now held to the same curve framing as the other two faces
   (0.7-am creator, machine path). The App draws pixels while the CLI and MCP

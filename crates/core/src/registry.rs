@@ -990,45 +990,26 @@ mod tests {
         );
     }
 
-    /// Rooms whose touch response is invisible in the color-free renderer,
-    /// measured 2026-08-05 at 120 by 70.
+    /// Rooms whose touch response is still invisible in the color-free
+    /// renderer, remeasured 2026-08-05 at 120 by 70 after `to_mono` learned to
+    /// shade a cell whose halves are both lit.
     ///
-    /// These are not silent and not broken: every one changes its status line,
-    /// and every one changes the colored picture. What they do not do is change
-    /// `ansi::to_mono`, which quantizes each half-pixel to lit or unlit. Their
-    /// response lives in luminance detail that a single bit throws away, and
-    /// the measured change spans four orders of magnitude, from 0.000066 for
-    /// `percolation` to 0.250 for `lambda-map`. So the cause is shared: the
-    /// renderer is one bit deep, and these rooms answer in shading.
-    ///
-    /// That matters because `NO_COLOR` selects exactly that renderer. A player
-    /// using it can touch these rooms and see nothing move.
+    /// This list was 21. Shading recovered 15 of them: their fields were
+    /// already solid, so the old one-bit encoding rendered every brightness as
+    /// the same block and the answer disappeared. These six still do not
+    /// change the color-free picture at all, so their response is somewhere a
+    /// wider ramp cannot reach.
     ///
     /// The list is a record of a real defect, not a permission slip. The test
     /// below fails if it grows, if an entry starts responding and is not
-    /// removed, or if a room outside it goes color-only. Tracked in
+    /// removed, or if a room outside it goes quiet. Tracked in
     /// `docs/ROADMAP.md` under 0.5 Sensory.
-    const RESPONSE_INVISIBLE_WITHOUT_COLOR: [&str; 21] = [
-        "burning-ship",
-        "ford-circles",
-        "function-painter",
-        "gradient-valley",
+    const RESPONSE_INVISIBLE_WITHOUT_COLOR: [&str; 6] = [
         "hilbert",
-        "interference",
-        "ising",
-        "julia",
-        "lambda-map",
         "magnet-fractal",
-        "menger-sponge",
-        "multibrot",
-        "newton",
-        "newton-cubic",
         "nova",
         "percolation",
-        "phoenix",
         "rule-110",
-        "the-magnet",
-        "tricorn",
         "wireworld",
     ];
 
