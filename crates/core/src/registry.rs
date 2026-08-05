@@ -851,7 +851,7 @@ mod tests {
     const KNOWN_OVER_FLASH_BUDGET: [&str; 3] = ["coupled-tent", "gauss-map", "ricker"];
 
     #[test]
-    #[ignore = "full-catalog sweep: 35,400 renders. Run in the nightly and release gates,                 not on every push. Invoke with --ignored."]
+    #[ignore = "full-catalog sweep of 35,400 renders; run by the nightly and release gates"]
     fn no_catalog_room_flashes_past_the_photosensitivity_budget() {
         // WCAG 2.3.1: no more than three flashes in any one-second window. The
         // terminal loops step phase by 0.01 per frame at 30 frames per second,
@@ -870,7 +870,11 @@ mod tests {
         let frames = (1.0 / STEP).round() as usize;
 
         let mut over = Vec::new();
-        let mut moved = false;
+        // Widest luminance swing seen anywhere in the catalog. This proves the
+        // sweep measured something. Counting flashes instead would be wrong:
+        // a catalog of gentle fades produces no qualifying flashes at all, and
+        // that is a pass, not an empty measurement.
+        let mut widest_swing = 0.0f64;
         for room in all_rooms() {
             let series: Vec<f64> = (0..frames)
                 .map(|frame| {
@@ -883,10 +887,10 @@ mod tests {
                     crate::photosensitivity::frame_luminance(&raster.to_rgba())
                 })
                 .collect();
+            let low = series.iter().copied().fold(f64::MAX, f64::min);
+            let high = series.iter().copied().fold(f64::MIN, f64::max);
+            widest_swing = widest_swing.max(high - low);
             let peak = crate::photosensitivity::peak_flashes_per_second(&series, FPS);
-            if peak > 0.0 {
-                moved = true;
-            }
             if peak > crate::photosensitivity::MAX_FLASHES_PER_SECOND {
                 over.push((room.meta().id, peak));
             }
@@ -894,7 +898,10 @@ mod tests {
 
         // A catalog whose luminance never changed would pass every assertion
         // below while measuring nothing at all.
-        assert!(moved, "no room changed luminance, so nothing was measured");
+        assert!(
+            widest_swing > 0.01,
+            "no room's luminance varied by more than {widest_swing:.4} across a              full cycle, so the sweep measured nothing"
+        );
 
         let mut unexpected: Vec<String> = over
             .iter()
