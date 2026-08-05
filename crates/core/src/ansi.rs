@@ -1,10 +1,15 @@
-//! Truecolor terminal rendering: the terminal as a framebuffer.
+//! Terminal rendering: the terminal as a framebuffer, with or without color.
 //!
 //! Modern terminals (Windows Terminal, iTerm2, kitty, most Linux emulators)
 //! support 24-bit color. Pairing that with the upper-half-block character, whose
 //! foreground paints the top half of a cell and background paints the bottom,
 //! gives two full-color pixels per character cell. A [`Raster`] becomes a real
 //! color image in the terminal, no window required. See `docs/INTERFACES.md`.
+//!
+//! [`to_mono`] renders the same geometry without color, for `NO_COLOR` and for
+//! any surface that must not depend on hue. [`to_terminal`] picks between them
+//! so a caller cannot honor a player's preference on one screen and forget it
+//! on the next.
 
 use crate::raster::Raster;
 use crate::surface::Surface;
