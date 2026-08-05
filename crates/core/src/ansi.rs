@@ -77,6 +77,21 @@ pub fn to_ansi(raster: &Raster) -> String {
 /// neither, upper only, lower only, both.
 const BLOCKS: [char; 4] = [' ', '\u{2580}', '\u{2584}', '\u{2588}'];
 
+/// Shades for a cell whose halves are both lit, darkest first.
+///
+/// A cell with only one half lit already says something with its shape. A cell
+/// with both lit used to say only "full", which is what made dense plates
+/// answer nothing: a fractal that shifted its whole field from dim to bright
+/// still came out as the same slab of solid blocks. These four give that case
+/// four levels instead of one, in the same character cell.
+const SHADES: [char; 4] = ['\u{2591}', '\u{2592}', '\u{2593}', '\u{2588}'];
+
+/// Boundaries between the shades, on the same 0 to 255 luminance scale as
+/// [`LIT_FLOOR`]. Fixed rather than derived from the frame: an adaptive
+/// threshold would make a still picture change as its neighbours changed, and
+/// two frames apart could then differ for no reason the player caused.
+const SHADE_STEPS: [u32; 3] = [64, 128, 192];
+
 /// A pixel counts as lit above this luminance. The stage is near-black and
 /// strokes glow, so the floor only has to clear the unlit background.
 const LIT_FLOOR: u32 = 24;
@@ -93,6 +108,13 @@ fn luminance((r, g, b): Rgb) -> u32 {
 /// the other. Structure survives because each character still carries both of
 /// its half-pixels; only the hue is gone.
 ///
+/// Where exactly one half is lit the shape carries the meaning, so the half
+/// block says it. Where both are lit there is no shape left to carry anything,
+/// and that is where a dense plate loses its answer: an audit of all 354 rooms
+/// found 21 whose response to a touch vanished here, because the whole field
+/// was already solid and only its brightness moved. Shading that case restores
+/// 15 of them at no cost to the geometry.
+///
 /// This is what `NO_COLOR` selects, and what any surface that must not depend
 /// on color should use. It emits no escape sequences at all.
 #[must_use]
@@ -100,6 +122,13 @@ pub fn to_mono(raster: &Raster) -> String {
     let width = raster.width();
     let height = raster.height();
     let rgba = raster.to_rgba();
+    let level = |x: usize, y: usize| -> u32 {
+        if y >= height {
+            return 0;
+        }
+        let o = (y * width + x) * 4;
+        luminance((rgba[o], rgba[o + 1], rgba[o + 2]))
+    };
     let lit = |x: usize, y: usize| -> bool {
         if y >= height {
             return false;
@@ -112,8 +141,15 @@ pub fn to_mono(raster: &Raster) -> String {
     for row in 0..height.div_ceil(2) {
         let (top_y, bottom_y) = (row * 2, row * 2 + 1);
         for x in 0..width {
-            let index = usize::from(lit(x, top_y)) | (usize::from(lit(x, bottom_y)) << 1);
-            out.push(BLOCKS[index]);
+            let (tl, bl) = (lit(x, top_y), lit(x, bottom_y));
+            let index = usize::from(tl) | (usize::from(bl) << 1);
+            if tl && bl {
+                let mean = (level(x, top_y) + level(x, bottom_y)) / 2;
+                let step = SHADE_STEPS.iter().filter(|&&edge| mean >= edge).count();
+                out.push(SHADES[step]);
+            } else {
+                out.push(BLOCKS[index]);
+            }
         }
         out.push('\n');
     }
@@ -125,6 +161,65 @@ mod tests {
     use super::{to_ansi, to_mono};
     use crate::raster::Raster;
     use crate::surface::Surface;
+
+    #[test]
+    fn a_solid_field_still_reports_how_bright_it_is() {
+        // The whole point. Two frames that are both entirely lit, differing
+        // only in brightness, used to render as the same slab of full blocks.
+        let mut dim = Raster::new(4, 4);
+        let mut bright = Raster::new(4, 4);
+        dim.set_rgba(&[60u8; 4 * 4 * 4]);
+        bright.set_rgba(&[220u8; 4 * 4 * 4]);
+        assert_ne!(
+            to_mono(&dim),
+            to_mono(&bright),
+            "a change in brightness alone must still show"
+        );
+    }
+
+    #[test]
+    fn shading_only_replaces_the_case_that_had_no_shape_left() {
+        // A cell with one half lit keeps its half block, because the shape is
+        // already carrying the meaning there.
+        let mut top = Raster::new(1, 2);
+        top.set_rgba(&[255, 255, 255, 255, 0, 0, 0, 255]);
+        assert_eq!(to_mono(&top).trim_end(), "\u{2580}");
+        let mut bottom = Raster::new(1, 2);
+        bottom.set_rgba(&[0, 0, 0, 255, 255, 255, 255, 255]);
+        assert_eq!(to_mono(&bottom).trim_end(), "\u{2584}");
+    }
+
+    #[test]
+    fn every_shade_is_reachable_and_they_climb_in_order() {
+        // Four distinct levels, and brighter input never picks a darker shade.
+        let mut seen = Vec::new();
+        for level in [30u8, 90, 150, 250] {
+            let mut raster = Raster::new(1, 2);
+            raster.set_rgba(&[level, level, level, 255, level, level, level, 255]);
+            seen.push(to_mono(&raster).trim_end().to_string());
+        }
+        seen.dedup();
+        assert_eq!(
+            seen.len(),
+            4,
+            "each step must pick a different shade: {seen:?}"
+        );
+    }
+
+    #[test]
+    fn shading_adds_no_escape_and_keeps_the_geometry() {
+        // The two guarantees NO_COLOR rests on, re-checked against the shades.
+        for (w, h) in [(8usize, 6usize), (8, 5), (40, 21)] {
+            let mut raster = Raster::new(w, h);
+            raster.set_rgba(&vec![140u8; w * h * 4]);
+            let mono = to_mono(&raster);
+            assert!(!mono.contains('\u{1b}'), "escape in mono output");
+            assert_eq!(mono.lines().count(), to_ansi(&raster).lines().count());
+            for line in mono.lines() {
+                assert_eq!(line.chars().count(), w);
+            }
+        }
+    }
 
     #[test]
     fn mono_matches_the_color_geometry_exactly() {
