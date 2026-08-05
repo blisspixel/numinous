@@ -6,6 +6,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Fixed
+- A rejected MCP argument name now suggests the argument that was meant, so a
+  caller who writes `expression` for `expr`, or `widht` for `width`, is told so
+  instead of having to re-read the schema. Unrelated names are still rejected
+  without a guess. The matcher behind it moved to `numinous_core::nearest_names`
+  and gained two corrections found by extending it beyond room ids: it now
+  counts an adjacent transposition as one slip rather than two, which is what
+  puts `widht` within reach of `width`, and it requires a fragment of at least
+  three characters before containment counts, so short argument names like `id`
+  and `t` no longer match any word that happens to spell them.
+- Every CLI diagnostic now ends its line exactly once. The guarantee moved to
+  the single function that writes them, because messages are built in dozens of
+  places and roughly a third of them (the file-write failures behind
+  `contact-sheet`, `share`, `gallery`, and the PNG and WAV writers) carried no
+  trailing newline and stranded the next shell prompt mid-row.
 - An unknown room id no longer answers with the entire catalog. A typo now
   returns the rooms it was probably meant to be, then one pointer to the
   browse surface: `numinous rooms` on the CLI, `list_rooms` over MCP.
