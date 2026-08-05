@@ -438,6 +438,9 @@ pub fn nearest_room_ids(id: &str, limit: usize) -> Vec<&'static str> {
     if query.is_empty() || limit == 0 {
         return Vec::new();
     }
+    // Measured once: inside the loop this would be recomputed per room, and
+    // the loop runs the length of the catalog.
+    let tolerance = close_enough(query.chars().count());
     let rooms = all_rooms();
     let mut scored: Vec<(usize, usize, &'static str)> = rooms
         .iter()
@@ -448,7 +451,7 @@ pub fn nearest_room_ids(id: &str, limit: usize) -> Vec<&'static str> {
             // Containment ranks ahead of any edit distance: someone who typed
             // "mandel" wants "mandelbrot", however many edits separate them.
             let contained = lowered.contains(&query) || query.contains(&lowered);
-            if !contained && distance > close_enough(query.chars().count()) {
+            if !contained && distance > tolerance {
                 return None;
             }
             Some((usize::from(!contained), distance, candidate))
@@ -500,7 +503,10 @@ pub fn echoable_id(id: &str) -> String {
             safe.push(character);
         }
     }
-    if id.chars().count() > MAX_ECHOED_ID {
+    // Ask only whether a character exists past the bound, never how many do:
+    // counting would scan the whole input, which is the cost this bound exists
+    // to avoid.
+    if id.chars().nth(MAX_ECHOED_ID).is_some() {
         safe.push_str("...");
     }
     safe
