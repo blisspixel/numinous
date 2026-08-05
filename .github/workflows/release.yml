@@ -72,6 +72,7 @@ jobs:
             --release-tag "v${version}"
           "$NUMINOUS_HOME/bin/numinous" --help | grep -q '^  update'
           python3 scripts/release-engagement-smoke.py --bin-dir "$NUMINOUS_HOME/bin"
+          python3 scripts/uninstall-roundtrip.py --release-archive "$payload" --release-checksum "$payload.sha256" --release-tag "v${version}"
           printf '%064d\n' 0 >"$NUMINOUS_HOME/soundtrack/.archive.sha256"
           bash scripts/install.sh --no-modify-path \
             --release-archive "$payload" --release-checksum "$payload.sha256" \
@@ -101,6 +102,7 @@ jobs:
             throw 'the installed CLI does not expose numinous update'
           }
           python scripts/release-engagement-smoke.py --bin-dir "$env:NUMINOUS_HOME/bin"
+          python scripts/uninstall-roundtrip.py --release-archive $payload --release-checksum "$payload.sha256" --release-tag "v$version"
           [IO.File]::WriteAllText(
             "$env:NUMINOUS_HOME/soundtrack/.archive.sha256", ('0' * 64) + "`r`n")
           ./scripts/install.ps1 -NoModifyPath `
