@@ -190,16 +190,30 @@ fn bounded_tick_seconds(elapsed: Duration) -> f64 {
 
 /// How much of this tick the ambient world may consume.
 ///
-/// Reduced motion hands the world zero seconds, so everything that advances on
-/// its own stops: the room phase, The Show's drift into the next room (which
-/// only happens when a phase sweep completes), the Mandelbrot camera, and the
-/// Life cadence. The player's own input is untouched, and the tick still runs,
-/// so the App keeps drawing and keeps responding.
+/// Reduced motion hands it zero seconds, so everything that moves whether or
+/// not the player engages stops: the room phase, The Show's drift into the next
+/// room (which only happens when a phase sweep completes), the Mandelbrot
+/// camera, and the Life cadence. The player's own input is untouched, and the
+/// tick still runs, so the App keeps drawing and keeps responding.
 ///
-/// The two engineered aha morphs deliberately keep their real elapsed time.
-/// They are short, bounded, and the direct completion of an act the player just
-/// performed; freezing them would strand someone mid-aha with no way to finish
-/// rather than calm anything down.
+/// # What this deliberately does not stop
+///
+/// The boundary is ambient motion, not all motion, and saying otherwise would
+/// overstate what the setting does. Three things keep their real time:
+///
+/// - The two engineered aha morphs. Short, bounded, and the direct completion
+///   of an act the player just performed. Freezing them strands someone mid-aha
+///   with no way to finish, which breaks a feature rather than calming one.
+/// - Transient feedback: the arrival card countdown, bite and flash timers,
+///   banner lifetimes. Each is a brief acknowledgement of something the player
+///   did and ends on its own.
+/// - The Munch Arcade beat, which steps the Vexations. That motion is the game.
+///   A player has to choose to enter the Arcade, and freezing its hunters would
+///   not calm the room, it would remove the thing being played.
+///
+/// If that boundary is ever judged wrong, the Arcade is the case to revisit
+/// first: it is the only one of the three that runs for as long as the player
+/// stays, rather than ending by itself.
 fn ambient_tick_seconds(elapsed: f64, motion: numinous_core::Motion) -> f64 {
     if motion.animates() { elapsed } else { 0.0 }
 }
