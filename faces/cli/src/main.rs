@@ -771,7 +771,7 @@ fn home_report(journey: &Journey, stdout_is_terminal: bool) -> String {
             "\n",
             "Everything answers --help. The window version is numinous-app.\n",
         ),
-        numinous_core::to_ansi(&raster),
+        numinous_core::to_terminal(&raster, color_allowed()),
         room.meta().title,
         room.meta().wing,
         numinous_core::insight(day + u64::from(journey.plays)),
@@ -2283,6 +2283,24 @@ fn terminal_safe(text: &str) -> String {
     numinous_core::display_safe(text)
 }
 
+/// Whether color is allowed, given whatever `NO_COLOR` was set to.
+///
+/// Follows the `NO_COLOR` convention (no-color.org): if the variable is
+/// present and not empty, color is off, whatever its value happens to be.
+/// `NO_COLOR=0` still means no color, because the convention is about
+/// presence, not truthiness, and a player who set it meant it.
+///
+/// Split from [`color_allowed`] so the rule can be tested exhaustively
+/// without mutating process-wide environment from a test thread.
+fn color_allowed_for(no_color: Option<&std::ffi::OsStr>) -> bool {
+    !no_color.is_some_and(|value| !value.is_empty())
+}
+
+/// Whether this run may add color to its output.
+fn color_allowed() -> bool {
+    color_allowed_for(std::env::var_os("NO_COLOR").as_deref())
+}
+
 fn terminal_safe_path(path: &Path) -> String {
     terminal_safe(&path.to_string_lossy())
 }
@@ -2764,7 +2782,7 @@ fn ansi_in_era(raster: &Raster, era: numinous_core::Era) -> String {
     era.apply(&mut rgba, w, h);
     let mut styled = Raster::new(w, h);
     styled.set_rgba(&rgba);
-    numinous_core::to_ansi(&styled)
+    numinous_core::to_terminal(&styled, color_allowed())
 }
 
 /// One truecolor frame of a room with a status line, for the watch loop.
@@ -3645,7 +3663,15 @@ fn word_in_lights(word: &str, accent: [u8; 3], frames: usize) {
         let tx = (w as i32 - word.len() as i32 * 6 * scale) / 2;
         let ty = (h as i32 - 7 * scale) / 2;
         numinous_core::draw_text(&mut raster, word, tx, ty, scale, '#');
-        let _ = write!(stdout, "{}\x1b[0m\x1b[J", numinous_core::to_ansi(&raster));
+        // The reset only has something to reset when color was emitted. The
+        // erase is cursor control, not color, so it stays either way.
+        let color = color_allowed();
+        let reset = if color { "\x1b[0m" } else { "" };
+        let _ = write!(
+            stdout,
+            "{}{reset}\x1b[J",
+            numinous_core::to_terminal(&raster, color)
+        );
         let _ = stdout.flush();
         std::thread::sleep(Duration::from_millis(if frame + 1 == frames {
             350
@@ -5883,6 +5909,28 @@ mod tests {
         let value = meta_json(&room.meta());
         for key in ["id", "title", "wing", "blurb"] {
             assert!(value.get(key).is_some(), "missing key {key}");
+        }
+    }
+
+    #[test]
+    fn no_color_is_honored_by_presence_not_by_value() {
+        // The no-color.org convention is about presence. A player who sets
+        // NO_COLOR=0 still set it, and still meant it, so truthiness must not
+        // enter into it.
+        for (value, expected_color) in [
+            (None, true),
+            (Some(""), true),
+            (Some("1"), false),
+            (Some("0"), false),
+            (Some("false"), false),
+            (Some("no"), false),
+            (Some(" "), false),
+        ] {
+            let observed = super::color_allowed_for(value.map(std::ffi::OsStr::new));
+            assert_eq!(
+                observed, expected_color,
+                "NO_COLOR={value:?} should give color={expected_color}"
+            );
         }
     }
 
