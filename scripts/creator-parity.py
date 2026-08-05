@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -65,6 +66,25 @@ class ParityError(RuntimeError):
     """A face could not be driven."""
 
 
+def isolated_env() -> dict[str, str]:
+    """An environment whose player state cannot reach the person running this.
+
+    `plot_expression` is a tool call, and tool calls can persist journey and
+    score deltas. Without this, running the gate from `scripts/check` would
+    write into a developer's own play history.
+    """
+    env = dict(os.environ)
+    home = Path(tempfile.mkdtemp(prefix="numinous-creator-parity-"))
+    env["HOME"] = str(home)
+    env["USERPROFILE"] = str(home)
+    env["NUMINOUS_HOME"] = str(home / "install")
+    env["NUMINOUS_JOURNEY"] = str(home / "journey")
+    env["NUMINOUS_SCORES"] = str(home / "scores")
+    env["NUMINOUS_JOURNAL"] = str(home / "journal")
+    env["NUMINOUS_CAIRN"] = str(home / "cairn")
+    return env
+
+
 def build_faces() -> tuple[str, str]:
     """Build both faces, then return the binaries that build produced.
 
@@ -82,7 +102,14 @@ def build_faces() -> tuple[str, str]:
         raise ParityError("cannot build the faces under test:\n" + build.stderr)
     # CARGO_TARGET_DIR redirects where cargo writes, and several CI layouts set
     # it, so a build that succeeded could still look missing under ROOT/target.
-    target = Path(os.environ.get("CARGO_TARGET_DIR") or (ROOT / "target")) / "debug"
+    # A relative CARGO_TARGET_DIR is resolved by cargo against its own working
+    # directory, which is ROOT here. Resolving it against this process's
+    # directory instead would look in the wrong place after a good build.
+    configured = os.environ.get("CARGO_TARGET_DIR")
+    target_root = Path(configured) if configured else ROOT / "target"
+    if not target_root.is_absolute():
+        target_root = ROOT / target_root
+    target = target_root / "debug"
     found = []
     for name in ("numinous", "numinous-mcp"):
         for candidate in (target / f"{name}.exe", target / name):
@@ -99,27 +126,57 @@ def plot_body(text: str) -> str:
 
     The header and the discovery line are how each face introduces the result
     in its own voice. What has to agree is the drawing.
+
+    The block is taken by position, not by looking for ink. Both faces print
+    their chrome, one blank separator, then exactly the rows they were asked
+    for. Trimming blank rows instead would make the height depend on where the
+    ink happened to land, and an earlier version did that: it derived the CLI's
+    requested height from the trimmed count, so a plot whose top row was empty
+    asked the CLI for a shorter plot than MCP had drawn and the two could never
+    agree. It passed on Windows and failed on Linux, because which rows come
+    out blank moves with the floating point.
     """
-    return "\n".join(
+    rows = [
         line.rstrip()
         for line in text.split("\n")
-        if line.strip()
-        and not line.startswith("y = ")
-        and not line.startswith("Discovery:")
-    )
+        if not line.startswith("y = ") and not line.startswith("Discovery:")
+    ]
+    # The single separator between the chrome and the drawing.
+    if rows and not rows[0]:
+        rows.pop(0)
+    # The empty string left by the final newline, and nothing more.
+    if rows and not rows[-1]:
+        rows.pop()
+    return "\n".join(rows)
 
 
-def mcp_plot(mcp: str, arguments: dict[str, Any]) -> str:
+def plot_rows(text: str, expected: int) -> str:
+    """Exactly `expected` drawing rows, and nothing that follows them.
+
+    The CLI is a player-facing face: a plot that earns enough experience prints
+    LEVEL UP, BOON BANKED, and UNLOCKED lines underneath the drawing. Those are
+    the Journey speaking, not the mathematics, and an earlier version compared
+    them too. It failed on whichever case happened to cross a level, which is
+    why the same twelve cases passed here and failed in CI: the two profiles
+    had different amounts of play behind them.
+    """
+    return "\n".join(plot_body(text).split("\n")[:expected])
+
+
+def mcp_plot(mcp: str, arguments: dict[str, Any], env: dict[str, str]) -> str:
     request = {
         "jsonrpc": "2.0",
         "id": 1,
         "method": "tools/call",
         "params": {"_meta": META, "name": "plot_expression", "arguments": arguments},
     }
-    result = subprocess.run(
-        [mcp], input=json.dumps(request) + "\n",
-        capture_output=True, text=True, encoding="utf-8", timeout=120,
-    )
+    try:
+        result = subprocess.run(
+            [mcp], input=json.dumps(request) + "\n", env=env,
+            capture_output=True, text=True, encoding="utf-8", timeout=120,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise ParityError(f"MCP did not answer {arguments} within its budget") from error
     for line in result.stdout.splitlines():
         try:
             message = json.loads(line)
@@ -138,11 +195,16 @@ def mcp_plot(mcp: str, arguments: dict[str, Any]) -> str:
     raise ParityError(f"MCP produced no reply for {arguments}: {result.stderr[-400:]}")
 
 
-def cli_plot(cli: str, arguments: list[str], width: int, height: int) -> str:
-    result = subprocess.run(
-        [cli, "plot", *arguments, "--width", str(width), "--height", str(height)],
-        capture_output=True, text=True, encoding="utf-8", timeout=120,
-    )
+def cli_plot(
+    cli: str, arguments: list[str], width: int, height: int, env: dict[str, str]
+) -> str:
+    try:
+        result = subprocess.run(
+            [cli, "plot", *arguments, "--width", str(width), "--height", str(height)],
+            env=env, capture_output=True, text=True, encoding="utf-8", timeout=120,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise ParityError(f"the CLI did not answer {arguments} within its budget") from error
     if result.returncode != 0:
         raise ParityError(
             f"CLI rejected {arguments}: exit {result.returncode}, {result.stderr[-400:]}"
@@ -150,9 +212,16 @@ def cli_plot(cli: str, arguments: list[str], width: int, height: int) -> str:
     return result.stdout
 
 
-def check(cli: str, mcp: str, label: str, mcp_args: dict[str, Any], cli_args: list[str]) -> dict[str, Any]:
+def check(
+    cli: str,
+    mcp: str,
+    label: str,
+    mcp_args: dict[str, Any],
+    cli_args: list[str],
+    env: dict[str, str],
+) -> dict[str, Any]:
     try:
-        drawn = plot_body(mcp_plot(mcp, mcp_args))
+        drawn = plot_body(mcp_plot(mcp, mcp_args, env))
         if not drawn:
             return {"name": label, "passed": False, "detail": "MCP drew nothing to compare"}
         rows = drawn.split("\n")
@@ -160,7 +229,9 @@ def check(cli: str, mcp: str, label: str, mcp_args: dict[str, Any], cli_args: li
         # width or height of its own.
         height = len(rows)
         width = max(len(row) for row in rows)
-        mirrored = plot_body(cli_plot(cli, cli_args, width, height))
+        # Read back exactly the geometry that was asked for, so anything the
+        # face prints under the drawing cannot enter the comparison.
+        mirrored = plot_rows(cli_plot(cli, cli_args, width, height, env), height)
     except ParityError as error:
         return {"name": label, "passed": False, "detail": str(error)}
 
@@ -193,8 +264,10 @@ def main() -> int:
     except ParityError as error:
         results = [{"name": "build", "passed": False, "detail": str(error)}]
     else:
+        # A fresh profile per case, so no case can change what another sees.
         results = [
-            check(cli, mcp, label, mcp_args, cli_args) for label, mcp_args, cli_args in CASES
+            check(cli, mcp, label, mcp_args, cli_args, isolated_env())
+            for label, mcp_args, cli_args in CASES
         ]
     failed = [item for item in results if not item["passed"]]
     summary = {
