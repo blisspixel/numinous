@@ -835,6 +835,93 @@ mod tests {
         assert_eq!(unique, ids.len(), "room ids must be unique");
     }
 
+    /// Rooms measured over the WCAG 2.3.1 flash budget on 2026-08-05, at the
+    /// declared reference size below.
+    ///
+    /// This list is a record of a real defect, not a permission slip. It exists
+    /// so the budget can be enforced on the other 351 rooms today instead of
+    /// waiting for these to be redesigned, and the test below fails if the list
+    /// grows, if an entry stops violating and is not removed, or if a room
+    /// outside it starts flashing.
+    ///
+    /// Each of these renders a chaotic map whose point density changes sharply
+    /// with phase. Fixing them means changing what they draw, which is a
+    /// mathematical-truth decision and not something to rush inside an
+    /// accessibility cycle. Tracked in `docs/ROADMAP.md` under 0.5 Sensory.
+    const KNOWN_OVER_FLASH_BUDGET: [&str; 3] = ["coupled-tent", "gauss-map", "ricker"];
+
+    #[test]
+    #[ignore = "full-catalog sweep: 35,400 renders. Run in the nightly and release gates,                 not on every push. Invoke with --ignored."]
+    fn no_catalog_room_flashes_past_the_photosensitivity_budget() {
+        // WCAG 2.3.1: no more than three flashes in any one-second window. The
+        // terminal loops step phase by 0.01 per frame at 30 frames per second,
+        // so a full cycle is 100 frames and that is the fastest a shipped face
+        // advances a room. The worst window is what the standard bounds, not
+        // the average, so a room that strobes for half a second still fails.
+        //
+        // Measured at a declared reference size. Mean whole-frame luminance is
+        // a proxy: this does not implement the flashing-area rule, and at very
+        // small rasters a dense plot saturates the frame and reads as brighter
+        // than it would on screen. Smaller sizes therefore report more
+        // violations than this, which is recorded rather than hidden.
+        const FPS: f64 = 30.0;
+        const STEP: f64 = 0.01;
+        const REFERENCE: (usize, usize) = (240, 140);
+        let frames = (1.0 / STEP).round() as usize;
+
+        let mut over = Vec::new();
+        let mut moved = false;
+        for room in all_rooms() {
+            let series: Vec<f64> = (0..frames)
+                .map(|frame| {
+                    let mut raster = crate::raster::Raster::with_accent(
+                        REFERENCE.0,
+                        REFERENCE.1,
+                        room.meta().accent,
+                    );
+                    room.render(&mut raster, frame as f64 * STEP);
+                    crate::photosensitivity::frame_luminance(&raster.to_rgba())
+                })
+                .collect();
+            let peak = crate::photosensitivity::peak_flashes_per_second(&series, FPS);
+            if peak > 0.0 {
+                moved = true;
+            }
+            if peak > crate::photosensitivity::MAX_FLASHES_PER_SECOND {
+                over.push((room.meta().id, peak));
+            }
+        }
+
+        // A catalog whose luminance never changed would pass every assertion
+        // below while measuring nothing at all.
+        assert!(moved, "no room changed luminance, so nothing was measured");
+
+        let mut unexpected: Vec<String> = over
+            .iter()
+            .filter(|(id, _)| !KNOWN_OVER_FLASH_BUDGET.contains(id))
+            .map(|(id, peak)| format!("{id} at {peak:.2}/s"))
+            .collect();
+        unexpected.sort();
+        assert!(
+            unexpected.is_empty(),
+            "rooms newly over the {:.0} flash per second budget: {}",
+            crate::photosensitivity::MAX_FLASHES_PER_SECOND,
+            unexpected.join(", ")
+        );
+
+        let mut fixed: Vec<&str> = KNOWN_OVER_FLASH_BUDGET
+            .iter()
+            .filter(|id| !over.iter().any(|(over_id, _)| over_id == *id))
+            .copied()
+            .collect();
+        fixed.sort_unstable();
+        assert!(
+            fixed.is_empty(),
+            "these no longer exceed the budget and must leave KNOWN_OVER_FLASH_BUDGET: {}",
+            fixed.join(", ")
+        );
+    }
+
     #[test]
     fn every_room_postcard_has_ink() {
         // The beauty-QA invariant: no room may present an empty postcard.

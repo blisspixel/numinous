@@ -1262,7 +1262,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.2 Flagship | Met + CI-locked | agent-hallway, ahas, goldens |
 | 0.3 Tactile | Met + CI-locked | agent-tactile, first-contact |
 | 0.4 Understanding | Method prep only | dual auditors A/B, dry-run registration; cohort open |
-| 0.5 Sensory | Partial | flagship visual/audio goldens; reduced motion and NO_COLOR locked in CI for the terminal face; no full HDR/a11y stack yet |
+| 0.5 Sensory | Partial | flagship visual/audio goldens; reduced motion and NO_COLOR locked in CI for the terminal face; WCAG 2.3.1 flash budget measured across all 354 rooms, with three known violations tracked; no full HDR/a11y stack yet |
 | 0.6 Portable | Partial | release packaging, engagement smoke, provenance/SBOM |
 | 0.7 Creator | Partial | CLI save/reopen `.num` gate; App/MCP gallery open |
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
@@ -1279,8 +1279,16 @@ am-track position.
    freeze allocation, run and publish 20 pairs.
 3. Expand 0.5-am sensory automation (reduced-motion, mono, era goldens).
    Terminal face done: `NUMINOUS_REDUCED_MOTION` and `NO_COLOR` are honored and
-   locked by `scripts/reduced-motion.py` plus focused core tests. App motion,
-   photosensitivity budgets, and mono audio remain.
+   locked by `scripts/reduced-motion.py` plus focused core tests. The WCAG
+   2.3.1 flash budget is implemented in `numinous_core::photosensitivity` and
+   swept across all 354 rooms in the nightly and release gates. That sweep
+   found three rooms over budget at the reference size (`coupled-tent` 5.00,
+   `gauss-map` 7.00, `ricker` 4.00 flashes per second; `coupled-tent` still
+   over at 480 by 280, so it is not a sampling artifact). They are held in a
+   shrink-only exception set so the budget is enforced everywhere else while
+   they are redesigned. Redesigning them is open work: each is a chaotic map
+   whose density changes sharply with phase, so the fix changes what the room
+   draws. App motion and mono audio also remain.
 4. Expand 0.6-am install roundtrips and 0.7-am App/MCP creator parity.
 
 **Not on this list as next work:** soft-thin densify grind, bulk new rooms, or

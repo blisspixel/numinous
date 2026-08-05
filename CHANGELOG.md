@@ -6,6 +6,35 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Added
+- Photosensitivity budget measurement (0.5-am accessibility, machine path), and
+  the finding it produced. `numinous_core::photosensitivity` implements WCAG
+  2.3.1, Three Flashes or Below Threshold, rather than approximating it: a
+  flash is a *pair of opposing* transitions in relative luminance, so a long
+  fade is not a flash; a transition counts only when the change is at least 10
+  percent of maximum relative luminance **and** the darker of the two images is
+  below 0.80, which is the condition most often dropped; luminance is
+  sRGB-linearized, not the Rec. 601 luma used by `to_mono`, which answers a
+  different question; and the limit is three flashes in any one-second window,
+  judged on the worst window rather than the average, so a half-second strobe
+  cannot hide behind quiet neighbours.
+  A full-catalog sweep now measures all 354 rooms across a whole phase cycle at
+  a declared 240 by 140 reference size. **It found real flashing.** Three rooms
+  exceed the budget at that size: `coupled-tent` at 5.00 flashes per second,
+  `gauss-map` at 7.00, and `ricker` at 4.00. `coupled-tent` still exceeds it at
+  480 by 280, so it is a genuine flash rather than a sampling artifact. At the
+  CLI default of 100 by 62, `ikeda`, `hopalong`, and `gumowski-mira` join them,
+  because a dense plot saturates a small raster.
+  These are recorded in a named, shrink-only exception set in the test itself,
+  not silenced. The sweep fails if a room outside that set starts flashing, if
+  the set grows, or if a listed room stops violating and is not removed. Each
+  is a chaotic map whose point density changes sharply with phase, so fixing
+  them changes what they draw, which is a mathematical-truth decision and is
+  tracked as open rather than rushed.
+  The sweep is 35,400 renders, so it runs in the nightly and release gates
+  rather than on every push. Two parts of 2.3.1 are deliberately not
+  implemented and are named in the module: the stricter red-flash test, and the
+  flashing-area rule. No conformance claim is made, and no human review is
+  claimed.
 - Reduced motion in the terminal face (0.5-am accessibility, machine path).
   `NUMINOUS_REDUCED_MOTION` holds the picture still: `watch`, `play`, and the
   `tour` gallery stop advancing their phase on their own. Nothing else changes.

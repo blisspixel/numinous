@@ -36,6 +36,9 @@ jobs:
 
       - name: Reduced motion (terminal face)
         run: python3 scripts/reduced-motion.py
+
+      - name: Photosensitivity budget across the whole catalog
+        run: cargo test -p numinous-core --release --lib -- --ignored --exact registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget
       - name: Multi-room soak and catalog scorecard
         run: |
           python3 scripts/am-soak.py
