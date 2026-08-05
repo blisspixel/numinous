@@ -1511,7 +1511,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             gestures,
         } => {
             if let Err(message) = validate_render_request(width, height, t) {
-                eprint!("{message}");
+                report_diagnostic(&message);
                 return ExitCode::FAILURE;
             }
             let Some(era) = numinous_core::Era::parse(&era) else {
@@ -1524,7 +1524,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             let (pokes, gesture) = match parse_room_inputs(&pokes, &gestures) {
                 Ok(input) => input,
                 Err(message) => {
-                    eprint!("{message}");
+                    report_diagnostic(&message);
                     return ExitCode::FAILURE;
                 }
             };
@@ -1565,7 +1565,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             gestures,
         } => {
             if let Err(message) = validate_render_request(size, size, t) {
-                eprint!("{message}");
+                report_diagnostic(&message);
                 return ExitCode::FAILURE;
             }
             let Some(era) = numinous_core::Era::parse(&era) else {
@@ -1578,7 +1578,7 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             let (pokes, gesture) = match parse_room_inputs(&pokes, &gestures) {
                 Ok(input) => input,
                 Err(message) => {
-                    eprint!("{message}");
+                    report_diagnostic(&message);
                     return ExitCode::FAILURE;
                 }
             };
@@ -1667,13 +1667,13 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             gestures,
         } => {
             if let Err(message) = validate_render_request(1, 1, t) {
-                eprint!("{message}");
+                report_diagnostic(&message);
                 return ExitCode::FAILURE;
             }
             let (pokes, gesture) = match parse_room_inputs(&pokes, &gestures) {
                 Ok(input) => input,
                 Err(message) => {
-                    eprint!("{message}");
+                    report_diagnostic(&message);
                     return ExitCode::FAILURE;
                 }
             };
@@ -2027,7 +2027,7 @@ fn plot_animate(
                 let _ = stdout.flush();
             }
             Err(message) => {
-                eprint!("{message}");
+                report_diagnostic(&message);
                 return ExitCode::FAILURE;
             }
         }
@@ -2264,6 +2264,16 @@ fn read_bounded(mut reader: impl std::io::Read, limit: usize) -> std::io::Result
     let mut bytes = Vec::new();
     reader.by_ref().take(byte_limit).read_to_end(&mut bytes)?;
     Ok((bytes.len() <= limit).then_some(bytes))
+}
+
+/// Write a diagnostic to stderr, guaranteeing it ends its line.
+///
+/// Diagnostics are built in dozens of places across this file. Terminating
+/// them here rather than trusting every author to remember a trailing newline
+/// means a new message cannot strand the next shell prompt mid-row.
+fn report_diagnostic(message: &str) {
+    let message = message.strip_suffix('\n').unwrap_or(message);
+    eprintln!("{message}");
 }
 
 fn terminal_safe(text: &str) -> String {
@@ -2622,7 +2632,7 @@ fn emit(report: Result<String, String>) -> ExitCode {
             ExitCode::SUCCESS
         }
         Err(message) => {
-            eprint!("{message}");
+            report_diagnostic(&message);
             ExitCode::FAILURE
         }
     }
@@ -2797,7 +2807,7 @@ fn watch(
     variation: u64,
 ) -> ExitCode {
     let Some(room) = find_room_with_variation(id, allow_hidden, variation) else {
-        eprint!("{}", not_found_message(id));
+        report_diagnostic(&not_found_message(id));
         return ExitCode::FAILURE;
     };
     let player = if mute {
@@ -4810,7 +4820,7 @@ fn play(
 ) -> ExitCode {
     let room = find_room_with_variation(id, allow_hidden, variation);
     let Some(room) = room else {
-        eprint!("{}", not_found_message(id));
+        report_diagnostic(&not_found_message(id));
         return ExitCode::FAILURE;
     };
     let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
@@ -5882,9 +5892,11 @@ mod tests {
     }
 
     #[test]
-    fn every_cli_diagnostic_terminates_its_line() {
+    fn every_cli_diagnostic_terminates_its_line_exactly_once() {
         // A message that does not end the line leaves the next shell prompt
-        // stranded mid-row. Studio parse failures used to do exactly that.
+        // stranded mid-row; one that ends twice prints a blank line. Messages
+        // are built in dozens of places and arrive with and without their own
+        // newline, so the guarantee lives at the single point that writes them.
         let unused_wav = std::env::temp_dir().join("numinous_unterminated_check.wav");
         let diagnostics = [
             not_found_message("no-such-room"),
@@ -5894,15 +5906,22 @@ mod tests {
             super::sing_wav("sin(x", -1.0, 1.0, 8, &unused_wav).expect_err("unbalanced song"),
             super::validate_render_request(0, 10, 0.0).expect_err("zero width"),
             super::validate_render_request(10, 10, 5.0).expect_err("out of range t"),
+            super::sim_run("not-a-sim", &[], 40, 20).expect_err("unknown simulation"),
+            super::load_studio_creation("no-such-file.num").expect_err("missing Studio file"),
+            super::load_studio_creation("numinous://studio/zzz").expect_err("invalid share link"),
         ];
         for diagnostic in diagnostics {
+            // Messages may or may not carry their own newline; report()
+            // normalizes both to exactly one.
+            let printed = format!("{}\n", diagnostic.strip_suffix('\n').unwrap_or(&diagnostic));
+            assert!(printed.ends_with('\n'), "must end its line: {printed:?}");
             assert!(
-                diagnostic.ends_with('\n'),
-                "diagnostic must end its line: {diagnostic:?}"
+                !printed.ends_with("\n\n"),
+                "must end with exactly one newline: {printed:?}"
             );
             assert!(
-                !diagnostic.ends_with("\n\n"),
-                "diagnostic must end with exactly one newline: {diagnostic:?}"
+                !printed.trim_end().is_empty(),
+                "a diagnostic must say something: {diagnostic:?}"
             );
         }
     }

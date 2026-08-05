@@ -118,7 +118,7 @@ pub use radio::{STATIONS, Station, brief_for, length_for, station};
 pub use raster::Raster;
 pub use registry::{
     MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, all_rooms, all_rooms_with, echoable_id, hidden_room_by_id,
-    nearest_room_ids, room_by_id,
+    nearest_names, nearest_room_ids, room_by_id,
 };
 pub use resonance::{Resonance, resonances};
 pub use rng::SplitMix64;

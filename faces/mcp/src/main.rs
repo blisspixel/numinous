@@ -20,7 +20,7 @@ use numinous_broadcast::{
     PLAY_ROOM_MAX_HEIGHT as MAX_TOOL_HEIGHT, PLAY_ROOM_MAX_WIDTH as MAX_TOOL_WIDTH, PublicTool,
 };
 use numinous_core::{Canvas, all_rooms, all_rooms_with, room_by_id};
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 
 /// Default legacy MCP revision when an initialization request has no preference.
 const LEGACY_PROTOCOL_VERSION: &str = "2025-06-18";
@@ -1986,6 +1986,10 @@ fn build_tools_catalog() -> Value {
 
 const MAX_SCHEMA_VALIDATION_DEPTH: usize = 16;
 
+/// The most argument names a rejection will offer. A caller needs a nudge, not
+/// the schema pasted back at them.
+const MAX_ARGUMENT_SUGGESTIONS: usize = 2;
+
 /// Validate the argument object against the bounded JSON Schema subset used by
 /// this server. The catalog is the contract: clients that do not pre-validate
 /// receive the same guiding errors as clients that do.
@@ -2174,12 +2178,17 @@ fn validate_schema_value(
         if schema.get("additionalProperties").and_then(Value::as_bool) == Some(false) {
             for property in object.keys() {
                 if properties.is_none_or(|known| !known.contains_key(property)) {
+                    let hint = nearest_argument_hint(property, properties);
                     if path.is_empty() {
-                        return Err(format!("Unexpected argument '{property}'."));
+                        return Err(format!(
+                            "Unexpected argument '{}'.{hint}",
+                            numinous_core::echoable_id(property)
+                        ));
                     }
                     return Err(format!(
-                        "{} has an unexpected field '{property}'.",
-                        argument_subject(path)
+                        "{} has an unexpected field '{}'.{hint}",
+                        argument_subject(path),
+                        numinous_core::echoable_id(property)
                     ));
                 }
             }
@@ -5816,6 +5825,21 @@ fn list_rooms_tool() -> Value {
 /// one pointer to the listing tool. Returning the whole catalog spent thousands
 /// of bytes of a player's context on a typo and handed over the map this
 /// project deliberately withholds (`PLAY.md`).
+/// A " Did you mean: ..." clause for an argument name the schema rejected, or
+/// an empty string when nothing in the schema is close. A caller that misspells
+/// `expr` as `expression` should not have to re-read the schema to find out.
+fn nearest_argument_hint(property: &str, properties: Option<&Map<String, Value>>) -> String {
+    let Some(known) = properties else {
+        return String::new();
+    };
+    let names: Vec<&str> = known.keys().map(String::as_str).collect();
+    let suggestions = numinous_core::nearest_names(property, names, MAX_ARGUMENT_SUGGESTIONS);
+    if suggestions.is_empty() {
+        return String::new();
+    }
+    format!(" Did you mean: {}?", suggestions.join(", "))
+}
+
 fn unknown_room(id: &str) -> String {
     let suggestions = numinous_core::nearest_room_ids(id, numinous_core::MAX_ROOM_SUGGESTIONS);
     let mut message = format!("No room with id '{}'.", numinous_core::echoable_id(id));
@@ -10216,6 +10240,57 @@ plays 2
             text.contains("list_rooms"),
             "the error should guide the agent: {text}"
         );
+    }
+
+    #[test]
+    fn a_mistyped_argument_suggests_the_argument_that_was_meant() {
+        // An agent that writes 'expression' for 'expr' should not have to
+        // re-read the schema to find that out.
+        for (tool, arguments, expected) in [
+            (
+                "plot_expression",
+                json!({"expression":"sin(x)"}),
+                "Did you mean: expr?",
+            ),
+            ("play_room", json!({"id":"lorenz","widht":7}), "width"),
+        ] {
+            let resp = handle_request(&json!({
+                "jsonrpc":"2.0","id":9,"method":"tools/call",
+                "params":{"name":tool,"arguments":arguments}
+            }))
+            .expect("tools/call must respond");
+            let text = resp["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default();
+            assert!(text.contains(expected), "{tool}: {text}");
+        }
+    }
+
+    #[test]
+    fn an_unrelated_argument_is_rejected_without_a_misleading_guess() {
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":9,"method":"tools/call",
+            "params":{"name":"list_rooms","arguments":{"qqqqzzzzwwww":1}}
+        }))
+        .expect("tools/call must respond");
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("Unexpected argument"), "{text}");
+        assert!(!text.contains("Did you mean"), "{text}");
+    }
+
+    #[test]
+    fn a_hostile_argument_name_cannot_escape_into_the_transcript() {
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":9,"method":"tools/call",
+            "params":{"name":"list_rooms","arguments":{"a\u{1b}[2Jb":1}}
+        }))
+        .expect("tools/call must respond");
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(!text.contains('\u{1b}'), "{text}");
     }
 
     #[test]

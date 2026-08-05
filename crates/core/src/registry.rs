@@ -426,65 +426,97 @@ pub const MAX_ECHOED_ID: usize = 48;
 /// catalog is discovered by playing, not by reading a list (see `PLAY.md`).
 pub const MAX_ROOM_SUGGESTIONS: usize = 3;
 
-/// Catalog ids closest to `id`, nearest first.
+/// Names from `candidates` closest to `query`, nearest first.
 ///
 /// Returns nothing when nothing is genuinely close, so a wrong guess stays
-/// silent rather than pointing somewhere misleading. The result never grows
-/// with the catalog, which keeps a not-found message a fixed size no matter
-/// how many rooms ship.
+/// silent rather than pointing somewhere misleading. Used wherever a face has
+/// to reject a name it recognizes the shape of: a room id, a tool argument.
 #[must_use]
-pub fn nearest_room_ids(id: &str, limit: usize) -> Vec<&'static str> {
-    let query = id.trim().to_ascii_lowercase();
+pub fn nearest_names<'a, I>(query: &str, candidates: I, limit: usize) -> Vec<&'a str>
+where
+    I: IntoIterator<Item = &'a str>,
+{
+    let query = query.trim().to_ascii_lowercase();
     if query.is_empty() || limit == 0 {
         return Vec::new();
     }
-    // Measured once: inside the loop this would be recomputed per room, and
-    // the loop runs the length of the catalog.
-    let tolerance = close_enough(query.chars().count());
-    let rooms = all_rooms();
-    let mut scored: Vec<(usize, usize, &'static str)> = rooms
-        .iter()
-        .filter_map(|room| {
-            let candidate = room.meta().id;
+    // Measured once: inside the loop these would be recomputed for every
+    // candidate, and the loop runs the length of the catalog.
+    let query_chars = query.chars().count();
+    let tolerance = close_enough(query_chars);
+    let mut scored: Vec<(usize, usize, &'a str)> = candidates
+        .into_iter()
+        .filter_map(|candidate| {
             let lowered = candidate.to_ascii_lowercase();
             let distance = edit_distance(&query, &lowered);
             // Containment ranks ahead of any edit distance: someone who typed
             // "mandel" wants "mandelbrot", however many edits separate them.
-            let contained = lowered.contains(&query) || query.contains(&lowered);
+            // It takes a real fragment to count, or short names like "id" and
+            // "t" would match any word that happens to spell them.
+            let contained = (lowered.contains(&query) || query.contains(&lowered))
+                && query_chars.min(lowered.chars().count()) >= MIN_CONTAINED_CHARS;
             if !contained && distance > tolerance {
                 return None;
             }
             Some((usize::from(!contained), distance, candidate))
         })
         .collect();
-    // Rank, then distance, then catalog id: a total order, so equal candidates
+    // Rank, then distance, then name: a total order, so equal candidates
     // resolve the same way on every run and every platform.
     scored.sort_unstable_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(b.2)));
     scored
         .into_iter()
         .take(limit)
-        .map(|(_, _, id)| id)
+        .map(|(_, _, name)| name)
         .collect()
 }
 
+/// Catalog ids closest to `id`, nearest first.
+///
+/// The result never grows with the catalog, which keeps a not-found message a
+/// fixed size no matter how many rooms ship.
+#[must_use]
+pub fn nearest_room_ids(id: &str, limit: usize) -> Vec<&'static str> {
+    let ids: Vec<&'static str> = all_rooms().iter().map(|room| room.meta().id).collect();
+    nearest_names(id, ids, limit)
+}
+
+/// The shortest fragment that may stand in for a whole name. Below this,
+/// containment stops meaning anything: "id" and "t" are spelled inside a great
+/// many words that have nothing to do with them.
+const MIN_CONTAINED_CHARS: usize = 3;
+
 /// How far a typo may stray and still count as the same word. One edit for a
-/// short id, growing slowly with length, so long ids tolerate a slip without
+/// short name, growing slowly with length, so long ids tolerate a slip without
 /// nonsense matching everything.
 fn close_enough(length: usize) -> usize {
     (length / 4).clamp(1, 3)
 }
 
-/// Levenshtein distance over characters, computed in one rolling row.
+/// Optimal string alignment distance: Levenshtein plus adjacent transposition.
+///
+/// Transposing two characters is the most common typing slip there is, and
+/// plain Levenshtein charges two edits for it, which puts "widht" further from
+/// "width" than a threshold this tight will allow. Counting it as one edit is
+/// what makes the suggestion useful on short names.
 fn edit_distance(a: &str, b: &str) -> usize {
+    let a_chars: Vec<char> = a.chars().collect();
     let b_chars: Vec<char> = b.chars().collect();
+    // Three rolling rows: the transposition case needs the row before last.
+    let mut before_previous = vec![0usize; b_chars.len() + 1];
     let mut previous: Vec<usize> = (0..=b_chars.len()).collect();
     let mut current = vec![0usize; b_chars.len() + 1];
-    for (i, a_char) in a.chars().enumerate() {
+    for (i, &a_char) in a_chars.iter().enumerate() {
         current[0] = i + 1;
         for (j, &b_char) in b_chars.iter().enumerate() {
             let substitution = previous[j] + usize::from(a_char != b_char);
-            current[j + 1] = substitution.min(previous[j + 1] + 1).min(current[j] + 1);
+            let mut best = substitution.min(previous[j + 1] + 1).min(current[j] + 1);
+            if i > 0 && j > 0 && a_char == b_chars[j - 1] && a_chars[i - 1] == b_char {
+                best = best.min(before_previous[j - 1] + 1);
+            }
+            current[j + 1] = best;
         }
+        std::mem::swap(&mut before_previous, &mut previous);
         std::mem::swap(&mut previous, &mut current);
     }
     previous[b_chars.len()]
@@ -526,7 +558,8 @@ pub fn hidden_room_by_id(id: &str) -> Option<Box<dyn Room>> {
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, all_rooms, echoable_id, nearest_room_ids, room_by_id,
+        MAX_ECHOED_ID, MAX_ROOM_SUGGESTIONS, all_rooms, echoable_id, nearest_names,
+        nearest_room_ids, room_by_id,
     };
     use crate::canvas::Canvas;
     use crate::room::Room;
@@ -591,6 +624,35 @@ mod tests {
         assert!(nearest_room_ids("times-tables", 0).is_empty());
         assert!(nearest_room_ids("", MAX_ROOM_SUGGESTIONS).is_empty());
         assert!(nearest_room_ids("   ", MAX_ROOM_SUGGESTIONS).is_empty());
+    }
+
+    #[test]
+    fn a_transposition_counts_as_one_slip() {
+        // The most common typo there is. Plain Levenshtein charges two for it,
+        // which would put a short name out of reach of its own correction.
+        assert_eq!(
+            nearest_names("widht", ["width", "height", "id", "t"], 2)
+                .first()
+                .copied(),
+            Some("width")
+        );
+    }
+
+    #[test]
+    fn a_short_name_is_not_matched_by_merely_being_spelled_inside_a_word() {
+        // "widht" spells both "id" and "t"; neither is what was meant.
+        let suggestions = nearest_names("widht", ["id", "t"], 2);
+        assert!(suggestions.is_empty(), "got {suggestions:?}");
+    }
+
+    #[test]
+    fn a_real_fragment_still_reaches_the_name_it_names() {
+        assert_eq!(
+            nearest_names("expression", ["expr", "recipe", "seed"], 1)
+                .first()
+                .copied(),
+            Some("expr")
+        );
     }
 
     #[test]
