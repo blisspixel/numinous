@@ -16,11 +16,15 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   The player's own input is untouched and the tick still runs, so the window
   keeps drawing, keeps responding, and keeps accepting touches. Removing the
   motion must not remove the agency.
-  The two engineered aha morphs deliberately keep their real elapsed time. They
-  are short, bounded, and the direct completion of an act the player just
-  performed, so freezing them would strand someone mid-aha with no way to
-  finish rather than calm anything down. That choice is recorded in the code
-  rather than left to be rediscovered.
+  The boundary is ambient motion, not all motion, and the code says so rather
+  than implying more. Three things keep their real time: the two engineered aha
+  morphs, which are the bounded completion of an act the player just performed
+  and would strand someone mid-aha if frozen; transient feedback such as the
+  arrival card countdown, bite and flash timers, and banner lifetimes, each of
+  which ends on its own; and the Munch Arcade beat that steps the Vexations,
+  because that motion is the game and a player has to choose to enter it.
+  The Arcade is named as the case to revisit first if that boundary is judged
+  wrong, since it is the only one that runs for as long as the player stays.
   Covered by three tests: the budget itself across four tick lengths, the phase
   holding without ever wrapping into the next room, and the Life universe not
   stepping across twenty cadences. Each also asserts the counterpart with
