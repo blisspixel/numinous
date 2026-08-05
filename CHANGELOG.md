@@ -23,9 +23,10 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   hard-panned uncorrelated material, and a test pins that cost so it cannot
   drift into something louder that clips. On a path a listener chose for
   accessibility, quiet is a better failure than crunchy.
-  The arithmetic lives in `crates/audio`, which is a hardware adapter and
-  deliberately does not depend on `numinous-core`; core owns only the name of
-  the convention, and a face reads the preference and passes it down. Covered by
+  The whole convention, variable name included, lives in `crates/audio`, which
+  is a hardware adapter that deliberately does not depend on `numinous-core`.
+  Splitting the name from the behaviour would have put one rule in two crates.
+  `LoopPlayer::new_with_mono` lets a caller decide it explicitly. Covered by
   an exhaustive grid over the legal input square proving no clipping is
   possible, plus centered, hard-panned, antiphase, and non-finite cases.
 - Photosensitivity budget measurement (0.5-am accessibility, machine path), and
