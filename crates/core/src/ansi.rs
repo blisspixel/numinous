@@ -122,6 +122,9 @@ pub fn to_mono(raster: &Raster) -> String {
     let width = raster.width();
     let height = raster.height();
     let rgba = raster.to_rgba();
+    // Once per half-pixel. Both the lit decision and the shading mean come
+    // from the same number, because the shading path is busiest on exactly the
+    // dense plates where every cell would otherwise be measured twice over.
     let level = |x: usize, y: usize| -> u32 {
         if y >= height {
             return 0;
@@ -129,26 +132,19 @@ pub fn to_mono(raster: &Raster) -> String {
         let o = (y * width + x) * 4;
         luminance((rgba[o], rgba[o + 1], rgba[o + 2]))
     };
-    let lit = |x: usize, y: usize| -> bool {
-        if y >= height {
-            return false;
-        }
-        let o = (y * width + x) * 4;
-        luminance((rgba[o], rgba[o + 1], rgba[o + 2])) >= LIT_FLOOR
-    };
 
     let mut out = String::with_capacity(width.saturating_add(1) * height.div_ceil(2));
     for row in 0..height.div_ceil(2) {
         let (top_y, bottom_y) = (row * 2, row * 2 + 1);
         for x in 0..width {
-            let (tl, bl) = (lit(x, top_y), lit(x, bottom_y));
-            let index = usize::from(tl) | (usize::from(bl) << 1);
+            let (top, bottom) = (level(x, top_y), level(x, bottom_y));
+            let (tl, bl) = (top >= LIT_FLOOR, bottom >= LIT_FLOOR);
             if tl && bl {
-                let mean = (level(x, top_y) + level(x, bottom_y)) / 2;
+                let mean = (top + bottom) / 2;
                 let step = SHADE_STEPS.iter().filter(|&&edge| mean >= edge).count();
                 out.push(SHADES[step]);
             } else {
-                out.push(BLOCKS[index]);
+                out.push(BLOCKS[usize::from(tl) | (usize::from(bl) << 1)]);
             }
         }
         out.push('\n');
