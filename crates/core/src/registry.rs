@@ -477,8 +477,10 @@ where
 /// fixed size no matter how many rooms ship.
 #[must_use]
 pub fn nearest_room_ids(id: &str, limit: usize) -> Vec<&'static str> {
-    let ids: Vec<&'static str> = all_rooms().iter().map(|room| room.meta().id).collect();
-    nearest_names(id, ids, limit)
+    // Ids are 'static, so they outlive the rooms borrowed to read them and no
+    // intermediate collection is needed.
+    let rooms = all_rooms();
+    nearest_names(id, rooms.iter().map(|room| room.meta().id), limit)
 }
 
 /// The shortest fragment that may stand in for a whole name. Below this,
