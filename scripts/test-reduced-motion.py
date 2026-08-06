@@ -100,11 +100,34 @@ class ShowJudgementTests(unittest.TestCase):
 
     def test_drawing_nothing_is_not_holding_still(self) -> None:
         # The counterpart of the frame probes' blank-frame check: a Show that
-        # emits only its prompt has stopped dead rather than held a picture.
+        # emits no picture has stopped dead rather than held one.
         ordinary, _, asked = healthy()
-        blank = run(ended=True, rooms=1, output="   \n  \n")
-        reasons = MODULE.judge_show(ordinary, blank, asked)
-        self.assertTrue(any("drew nothing" in reason for reason in reasons))
+        for empty in (
+            "   \n  \n",
+            # Only the prompt. This is the case a bare strip() would pass,
+            # because the prompt is non-whitespace and looks like a drawing to
+            # anything that merely asks whether the output was blank.
+            MODULE.SHOW_PROMPT + "\n",
+            # Only cursor moves and clears, which are also non-whitespace.
+            "\x1b[H\x1b[2J\x1b[K",
+            # Both together, which is exactly what a Show drawing nothing at
+            # all would still emit.
+            "\x1b[H" + MODULE.SHOW_PROMPT + "\x1b[K\n",
+        ):
+            reasons = MODULE.judge_show(ordinary, run(ended=True, rooms=1, output=empty), asked)
+            self.assertTrue(
+                any("drew nothing" in reason for reason in reasons),
+                f"{empty!r} should not count as a picture",
+            )
+
+    def test_visible_keeps_the_picture_and_drops_the_furniture(self) -> None:
+        # The instrument the check above measures with. One that stripped too
+        # much would call every room blank, which fails loudly; one that
+        # stripped too little passes a Show that drew nothing, which does not.
+        self.assertEqual(MODULE.visible("\x1b[H##\x1b[K").strip(), "##")
+        self.assertEqual(MODULE.visible(MODULE.SHOW_PROMPT).strip(), "")
+        self.assertEqual(MODULE.visible("\x1b[38;2;1;2;3m##\x1b[0m").strip(), "##")
+        self.assertEqual(MODULE.visible("plain").strip(), "plain")
 
 
 class ProbeTableTests(unittest.TestCase):
