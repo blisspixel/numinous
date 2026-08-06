@@ -870,13 +870,23 @@ mod tests {
         let frames = (1.0 / STEP).round() as usize;
 
         let mut over = Vec::new();
+        let mut over_red = Vec::new();
         // Widest luminance swing seen anywhere in the catalog. This proves the
         // sweep measured something. Counting flashes instead would be wrong:
         // a catalog of gentle fades produces no qualifying flashes at all, and
         // that is a pass, not an empty measurement.
         let mut widest_swing = 0.0f64;
+        // Whether any room is ever a saturated red state at all. The red
+        // assertions below pass trivially on a catalog that never goes red, and
+        // "no room flashes red" would then be a claim about nothing.
+        let mut reddest = 0.0f64;
         for room in all_rooms() {
-            let series: Vec<f64> = (0..frames)
+            // Both measurements come off the same renders. They are different
+            // questions, luminance against chromaticity, but rendering the
+            // catalog twice to ask them separately would double the most
+            // expensive part of the sweep for nothing.
+            let (series, red_series): (Vec<f64>, Vec<crate::photosensitivity::RedState>) = (0
+                ..frames)
                 .map(|frame| {
                     let mut raster = crate::raster::Raster::with_accent(
                         REFERENCE.0,
@@ -884,15 +894,40 @@ mod tests {
                         room.meta().accent,
                     );
                     room.render(&mut raster, frame as f64 * STEP);
-                    crate::photosensitivity::frame_luminance(&raster.to_rgba())
+                    let rgba = raster.to_rgba();
+                    (
+                        crate::photosensitivity::frame_luminance(&rgba),
+                        crate::photosensitivity::frame_red_state(&rgba),
+                    )
                 })
-                .collect();
+                .unzip();
             let low = series.iter().copied().fold(f64::MAX, f64::min);
             let high = series.iter().copied().fold(f64::MIN, f64::max);
             widest_swing = widest_swing.max(high - low);
             let peak = crate::photosensitivity::peak_flashes_per_second(&series, FPS);
             if peak > crate::photosensitivity::MAX_FLASHES_PER_SECOND {
                 over.push((room.meta().id, peak));
+            }
+
+            reddest = red_series
+                .iter()
+                .fold(reddest, |worst, state| worst.max(state.saturation));
+            let room_max = red_series
+                .iter()
+                .fold(0.0f64, |worst, state| worst.max(state.saturation));
+            let ever_red = red_series
+                .iter()
+                .any(crate::photosensitivity::RedState::is_saturated_red);
+            let transitions = crate::photosensitivity::qualifying_red_transitions(&red_series);
+            if ever_red || room_max > 0.6 || transitions > 0 {
+                eprintln!(
+                    "SCRATCH {} max_sat={room_max:.4} ever_red={ever_red} transitions={transitions}",
+                    room.meta().id
+                );
+            }
+            let red_peak = crate::photosensitivity::peak_red_flashes_per_second(&red_series, FPS);
+            if red_peak > crate::photosensitivity::MAX_FLASHES_PER_SECOND {
+                over_red.push((room.meta().id, red_peak));
             }
         }
 
@@ -926,6 +961,39 @@ mod tests {
             fixed.is_empty(),
             "these no longer exceed the budget and must leave KNOWN_OVER_FLASH_BUDGET: {}",
             fixed.join(", ")
+        );
+
+        // What the red half of this sweep actually found, stated plainly
+        // because it is easy to mistake for a stronger claim than it is: no
+        // room in the catalog ever reaches the saturated-red ratio at all. The
+        // reddest whole-frame mean anywhere is burning-ship at 0.658, against a
+        // threshold of 0.80, with ising next at 0.617. So the budget assertion
+        // below passes with room to spare rather than by a narrow margin, and
+        // the flash-counting itself is proven by the unit tests in
+        // `crate::photosensitivity` rather than by this catalog.
+        //
+        // This guard is the red counterpart of the luminance one above. A
+        // catalog rendered entirely in greys would satisfy the budget assertion
+        // while the red path never ran, and that would be an empty measurement
+        // reported as a pass. The bar sits below the measured 0.658 so that
+        // ordinary drift does not trip it, and far enough above zero that a
+        // catalog which stopped drawing warm colors would.
+        assert!(
+            reddest > 0.5,
+            "the reddest frame in the catalog measured {reddest:.4}, so the red sweep did not              look at anything meaningfully red"
+        );
+
+        let mut red_offenders: Vec<String> = over_red
+            .iter()
+            .map(|(id, peak)| format!("{id} at {peak:.2}/s"))
+            .collect();
+        red_offenders.sort();
+        assert!(
+            red_offenders.is_empty(),
+            "rooms over the {:.0} red flash per second budget (reddest frame measured              {reddest:.4} against a {:.2} ratio): {}",
+            crate::photosensitivity::MAX_FLASHES_PER_SECOND,
+            crate::photosensitivity::RED_SATURATION,
+            red_offenders.join(", ")
         );
     }
 
