@@ -12,6 +12,13 @@ now it was only a sentence. Here it is checked: every player-owned file is
 hashed before the uninstall and must still be present and byte-identical after,
 while the install root must be gone.
 
+All three of the files the promise names must be there before the uninstall
+runs, not merely one of them. Playing a room writes the journey and nothing
+else, so for a long time this proved a third of the promise and reported it as
+the whole thing. A scored game now writes the scoreboard too, and the Cairn
+drafts are seeded directly, since the tool that writes them opens at journey
+level 42 and a roundtrip cannot play that far.
+
 Run from a clone with a packaged archive:
 
     python scripts/uninstall-roundtrip.py \\
@@ -81,9 +88,10 @@ def native_tool_env(env: dict[str, str]) -> dict[str, str]:
     return patched
 
 
-def run(command: list[str], env: dict[str, str], step: str) -> str:
+def run(command: list[str], env: dict[str, str], step: str, stdin: bytes = b"") -> str:
     result = subprocess.run(
         command,
+        input=stdin.decode("utf-8"),
         env=native_tool_env(env),
         capture_output=True,
         text=True,
@@ -182,6 +190,25 @@ def player_state(profile: Path) -> dict[str, str]:
     }
 
 
+def seed_unearnable_state(profile: Path) -> None:
+    """Write the one player file no amount of play can produce here.
+
+    The uninstaller promises to keep three files. Two are earned above by
+    playing. The third, the Cairn drafts, is written only by the MCP `cairn`
+    tool with `leave` set, and that opens at journey level 42, which is the cap.
+    A roundtrip cannot play 42 levels.
+
+    Writing it directly is the right substitute rather than a shortcut, because
+    what is under test is the uninstaller, not how the file came to exist. The
+    uninstaller looks at a path and decides whether to delete it; it neither
+    knows nor cares which face wrote it. The line matches the tab-separated
+    author and message shape the Cairn uses.
+    """
+    draft = profile / ".numinous-cairn"
+    if not draft.exists():
+        draft.write_text("a visitor\tthe proof was the program\n", encoding="utf-8")
+
+
 def installed_cli(install_root: Path) -> Path:
     for name in ("numinous.exe", "numinous"):
         candidate = install_root / "bin" / name
@@ -221,11 +248,25 @@ def roundtrip(archive: Path, checksum: Path, tag: str) -> list[dict[str, Any]]:
 
         cli = installed_cli(install_root)
         run([str(cli), "render", PLAY_ROOM, "--width", "40", "--height", "20"], env, "play")
+        # A scored game as well as a room, because a room only writes the
+        # journey. Munch writes the journey and the scoreboard, which is two of
+        # the three files the uninstaller promises to keep. It reads a line at a
+        # time and leaves on end of input, so a closed stdin plays and stops.
+        run([str(cli), "munch"], env, "play a scored game", stdin=b"\n\n\n")
+        seed_unearnable_state(profile)
+
         before = player_state(profile)
+        expected = set(PLAYER_STATE)
+        absent = sorted(expected - set(before))
         checks.append({
             "name": "play saves state",
-            "passed": bool(before),
-            "detail": f"player files after play: {sorted(before) or 'none, so nothing was saved'}",
+            "passed": not absent,
+            "detail": (
+                f"nothing wrote {', '.join(absent)}, so the promise about "
+                "them would go unchecked"
+                if absent
+                else f"all {len(before)} player files present: {sorted(before)}"
+            ),
         })
 
         run(
