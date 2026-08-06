@@ -5,6 +5,40 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Photosensitivity: the red-flash half of WCAG 2.3.1 is now implemented rather
+  than declared out of scope. The module had said in as many words that it made
+  "no statement at all about red", which left a documented hole in an
+  accessibility gate.
+
+  Red is a different measurement, not the same one on the red channel. WCAG 2.2
+  defines a red flash as a pair of opposing transitions where one transition is
+  to or from a state whose `R/(R+G+B)` is at least 0.8, and where the two states
+  differ by more than 0.2 in the CIE 1976 UCS chromaticity diagram. Both
+  conditions are implemented. Two details are easy to get backwards and are
+  pinned by tests: the ratio is read off displayed values, since only relative
+  luminance is linearized, while the chromaticity is read off linear light,
+  since that is the only scale on which averaging a picture names a color the
+  picture contains. The transform is checked against the published sRGB
+  primaries rather than against itself, so an error in it cannot agree with a
+  matching error in the test.
+
+  A gradual slide into red is measured by where it arrives rather than by how
+  small each step was, since a ramp crossing the diagram over half a second is
+  well inside flashing speed and comparing adjacent frames would miss it.
+
+  Measured across all 354 rooms in the same render pass as the general-flash
+  sweep, so the catalog is not rendered twice: no room exceeds the red budget,
+  and in fact no room ever reaches the saturated-red ratio at all. The reddest
+  whole-frame mean anywhere is burning-ship at 0.658, then ising at 0.617,
+  against a threshold of 0.80. The sweep asserts that figure stayed above 0.5,
+  so a catalog that stopped drawing warm colors could not pass the red budget by
+  never having been red.
+
+  The flashing-area rule remains unimplemented and is now stated once for both
+  measurements rather than only for the general one. Whole-frame measurement
+  cannot understate a full-screen flash, but it cannot see a small patch
+  strobing inside an otherwise steady picture.
+
 ### Changed
 - The color-free renderer's shade thresholds are now the catalog's measured
   quartiles rather than round numbers, and two more rooms answer a touch
