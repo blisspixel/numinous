@@ -62,7 +62,7 @@ PROBES: tuple[tuple[str, list[str], str], ...] = (
 SHOW_PROMPT = "Enter for the next room, q to leave."
 
 # Two Enters and a quit. Named rather than written inline so the count the
-# judgement expects and the keys actually sent cannot drift apart.
+# judgment expects and the keys actually sent cannot drift apart.
 ASKED_TWICE = b"\n\nq\n"
 ASKED_TWICE_ROOMS = 3
 
@@ -220,9 +220,9 @@ class ShowRun(NamedTuple):
 def judge_show(ordinary: ShowRun, eof: ShowRun, asked: ShowRun) -> list[str]:
     """Every way these three runs can fail, as reasons, or nothing if they pass.
 
-    Separated from running the binary so the judgement itself can be tested,
+    Separated from running the binary so the judgment itself can be tested,
     the same way `creator-parity.py` splits what counts as agreement from the
-    machinery that produces it. A gate whose judgement is never exercised can
+    machinery that produces it. A gate whose judgment is never exercised can
     be wrong in exactly the direction that makes it pass.
     """
     reasons = []

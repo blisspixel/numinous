@@ -277,7 +277,7 @@ def check(cli: str, probe: Probe) -> dict[str, Any]:
 def judge_coverage(advertised: set[str], driven: set[str], skipped: set[str]) -> list[str]:
     """Why this sweep does not cover the binary, or nothing if it does.
 
-    Separated from reading the binary's help so the judgement can be tested on
+    Separated from reading the binary's help so the judgment can be tested on
     its own. This is the part that keeps the sweep a sweep, so it is the part
     most worth being sure about.
     """
