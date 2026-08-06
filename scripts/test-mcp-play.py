@@ -33,6 +33,32 @@ def load_driver():
     return module
 
 
+def hermetic_git_env() -> dict[str, str]:
+    """An environment in which git can only see the directory it is pointed at.
+
+    Git exports its own variables to hooks, and `GIT_INDEX_FILE`, `GIT_DIR` and
+    `GIT_WORK_TREE` all name the repository the hook is running for. A fixture
+    that inherits them stops being a fixture: `cwd` no longer decides which
+    repository it touches, and every command below reaches the caller's one
+    instead.
+
+    That is not theoretical. Run from a pre-commit hook, these tests failed with
+    `invalid object ... for 'Cargo.toml'`, because `git commit` was reading the
+    real repository's index. Worse than the failure is what a passing version
+    would have meant: `git init` under an inherited `GIT_DIR` rewrites the
+    caller's `core.worktree` to point at the temporary directory, which leaves
+    the real checkout unusable until someone unsets it by hand.
+
+    So the fixture keeps only what it needs to run git at all, and nothing that
+    could tell git where to look.
+    """
+    return {
+        name: value
+        for name, value in os.environ.items()
+        if not name.startswith("GIT_")
+    }
+
+
 def initialize_repository(root: Path) -> str:
     """Create one committed source fixture and return its full revision."""
     (root / "Cargo.toml").write_text("[workspace]\n", encoding="utf-8")
@@ -51,14 +77,16 @@ def initialize_repository(root: Path) -> str:
             "Initialize fixture",
         ],
     )
+    env = hermetic_git_env()
     for command in commands:
-        subprocess.run(command, cwd=root, check=True, capture_output=True)
+        subprocess.run(command, cwd=root, check=True, capture_output=True, env=env)
     return subprocess.run(
         ["git", "rev-parse", "HEAD"],
         cwd=root,
         check=True,
         capture_output=True,
         text=True,
+        env=env,
     ).stdout.strip()
 
 
@@ -141,6 +169,7 @@ class McpPlayLifecycleTests(unittest.TestCase):
                     cwd=repository,
                     check=True,
                     capture_output=True,
+                    env=hermetic_git_env(),
                 )
                 (repository / "Cargo.toml").write_text(
                     "[workspace]\nmembers = []\n", encoding="utf-8"
@@ -444,6 +473,65 @@ class McpPlayCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("totals.", result.stdout)
         self.assertIn("35 tools.", result.stdout)
+
+
+class FixtureIsolationTests(unittest.TestCase):
+    """The fixture must not be able to reach the repository it runs inside."""
+
+    def test_the_fixture_ignores_the_git_environment_a_hook_exports(self) -> None:
+        # These tests are wired into the pre-commit hook, and git exports its
+        # own variables to hooks. Inheriting them made `cwd` stop deciding which
+        # repository the fixture touched: it failed with "invalid object ... for
+        # 'Cargo.toml'" because `git commit` was reading the real index.
+        #
+        # The failure was the good outcome. `git init` under an inherited
+        # GIT_DIR rewrites the caller's core.worktree to the temporary
+        # directory, which leaves the real checkout unusable until somebody
+        # unsets it by hand.
+        here = str(ROOT)
+        hooklike = {
+            "GIT_INDEX_FILE": here + "/.git/index",
+            "GIT_DIR": here + "/.git",
+            "GIT_WORK_TREE": here,
+        }
+        previous = {name: os.environ.get(name) for name in hooklike}
+        os.environ.update(hooklike)
+        try:
+            self.assertEqual(
+                [name for name in hermetic_git_env() if name.startswith("GIT_")],
+                [],
+                "the fixture environment still names a repository for git to find",
+            )
+            with tempfile.TemporaryDirectory() as temporary:
+                repository = Path(temporary)
+                revision = initialize_repository(repository)
+                self.assertRegex(revision, r"^[0-9a-f]{40}$")
+                # The commit landed in the temporary repository and nowhere
+                # else, which is the whole property being claimed.
+                self.assertTrue((repository / ".git").is_dir())
+        finally:
+            for name, value in previous.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
+
+    def test_the_repository_this_runs_in_never_gains_a_worktree_override(self) -> None:
+        # The specific damage an inherited GIT_DIR causes, asserted against the
+        # real checkout so a future fixture cannot leave it behind unnoticed.
+        result = subprocess.run(
+            ["git", "config", "--local", "--get", "core.worktree"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            env=hermetic_git_env(),
+        )
+        self.assertEqual(
+            result.stdout.strip(),
+            "",
+            "this checkout has core.worktree set, which points git at somewhere "
+            "other than the files you are looking at",
+        )
 
 
 if __name__ == "__main__":
