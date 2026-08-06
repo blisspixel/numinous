@@ -1292,10 +1292,18 @@ am-track position.
    draws. App motion also remains; mono audio is done and its downmix no longer clips
    centered material. A color-independence audit now checks that every room's
    touch response survives the color-free renderer, and found 21 rooms whose
-   response does not: they answer in luminance detail that the one-bit
-   `to_mono` quantizer discards, so a `NO_COLOR` player sees nothing move when
-   they touch them. Widening that renderer beyond one bit is the open follow-up
-   and changes what `NO_COLOR` already ships, so it is its own piece of work.
+   response did not: they answered in luminance detail that the one-bit
+   `to_mono` quantizer discarded, so a `NO_COLOR` player saw nothing move when
+   they touched them. Shading a cell whose halves are both lit recovered 15 of
+   them, and moving the shade thresholds onto the catalog's measured quartiles
+   recovered two more, both at no cost to the geometry.
+   Four remain, and the cause is now measured per cell rather than guessed.
+   Three of them answer only in cells with one half unlit, where the glyph
+   encodes which half is lit rather than how brightly, so even a 77-point
+   change keeps the same character and no threshold is consulted at all. The
+   fourth moves less than the widest band. The first three need those rooms to
+   answer with shape rather than brightness, which changes what they draw and
+   is an owner decision rather than a renderer one.
 4. Expand 0.6-am install roundtrips and 0.7-am App/MCP creator parity.
    Creator parity between the CLI and MCP is locked by
    `scripts/creator-parity.py` across expression, recipe, seed, knob, and
