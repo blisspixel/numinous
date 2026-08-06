@@ -2371,8 +2371,10 @@ fn access_settings(
 fn access_report(settings: &[AccessSetting]) -> String {
     let mut out = String::from(
         "ACCESSIBILITY. Each switch below is an environment variable.\n\
-         Set it to anything at all to turn it on, unset it to turn it off.\n\
-         Writing =0 still turns it on, because you still wrote it.\n\n",
+         Give it any value at all to turn it on. Writing =0 turns it on too,\n\
+         because zero is still a value you wrote.\n\
+         To turn it off, unset it. Setting it to an empty value counts as off,\n\
+         not on, so =\"\" leaves the switch alone.\n\n",
     );
     for setting in settings {
         out.push_str(&format!(
@@ -7673,6 +7675,23 @@ mod tests {
         let no_color_only = super::access_settings(None, None, Some(std::ffi::OsStr::new("1")));
         assert!(no_color_only[2].on, "NO_COLOR=1 must read as switched on");
         assert!(!no_color_only[0].on && !no_color_only[1].on);
+
+        // Both surfaces must explain the empty case, because it is the one a
+        // player can get wrong while believing they got it right: `NO_COLOR=""`
+        // looks set and is not. The report said "anything at all turns it on",
+        // which contradicted the assertions just below and would have left
+        // someone with a switch they thought they had thrown.
+        const PLAYING: &str = include_str!("../../../docs/PLAYING.md");
+        for (surface, text) in [("the report", off.as_str()), ("PLAYING.md", PLAYING)] {
+            assert!(
+                text.contains("empty"),
+                "{surface} never mentions that an empty value counts as off"
+            );
+            assert!(
+                text.contains("=0"),
+                "{surface} never mentions that =0 counts as on"
+            );
+        }
 
         // Empty is not set, for all three, which is the shared convention.
         let empty = super::access_settings(

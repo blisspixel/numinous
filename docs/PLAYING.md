@@ -194,10 +194,12 @@ should happen only by the player's explicit choice.
 
 ### Accessibility
 
-Three switches, each an environment variable. Set one to anything at all to
-turn it on, unset it to turn it off. Writing `=0` still turns it on, because
-you still wrote it. `numinous access` prints this list and shows which of them
-are on right now.
+Three switches, each an environment variable. Give one any value at all to
+turn it on; `=0` turns it on too, because zero is still a value you wrote. To
+turn it off, unset it. Setting it to an empty value counts as off rather than
+on, so `NO_COLOR=""` leaves the switch alone. `numinous access` prints this
+list and shows which of them are on right now, which is the quickest way to
+check that a switch took.
 
 ```
 NUMINOUS_REDUCED_MOTION   Nothing moves unless you move it. Rooms hold a still
