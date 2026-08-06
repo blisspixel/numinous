@@ -5,6 +5,39 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The reduced-motion gate now covers The Show, which it did not. Three cycles
+  ago The Show stopped auto-advancing in the terminal when reduced motion is
+  set, and the end-to-end gate that exists to prove reduced motion works never
+  looked at it. Rust tests covered the decision; nothing checked the real binary
+  reading the real setting from the real environment.
+
+  It could not simply be added to the existing probes, because reduced motion
+  changes what The Show does rather than only how fast it does it. The other
+  loops animate faster or slower and are compared frame against frame. The Show
+  either changes rooms by itself or waits for the player, so it is counted
+  directly, using the prompt the held gallery prints once per room. Three runs:
+  ordinary motion must never ask and never end on its own, a held gallery given
+  a closed stdin must show one room and stop, and a held gallery given two
+  Enters and a q must show exactly three.
+
+  The middle one matters most. A gallery that blocks on the player would redraw
+  forever against a pipe nobody is holding, and that is the failure the gate now
+  catches: with end-of-input handling removed it draws 975 rooms into a closed
+  stdin rather than one.
+
+- `scripts/test-reduced-motion.py` is new, and gives that gate the test twin the
+  creator-parity and uninstall-roundtrip gates already had. The judgement is
+  split from the machinery that runs the binary, so what counts as reduced
+  motion working is now checked without building anything. A gate can be wrong
+  in two directions and only one of them is loud: failing a working feature is
+  noticed within the hour, and passing a broken one is noticed when a player
+  writes in.
+
+  Each probe also reports numbers that mean what their headings say. The Show
+  counts rooms, not frames, and reusing the frame fields had it reporting
+  "ordinary 1 distinct of 0", which is how a report starts lying to whoever
+  reads it.
+
 - The accessibility switches are now discoverable. All three were honored
   everywhere and written down nowhere a player would look: `NO_COLOR`,
   `NUMINOUS_REDUCED_MOTION` and `NUMINOUS_MONO_AUDIO` appeared in

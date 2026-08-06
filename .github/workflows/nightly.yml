@@ -38,7 +38,9 @@ jobs:
         run: python3 scripts/creator-parity.py
 
       - name: Reduced motion (terminal face)
-        run: python3 scripts/reduced-motion.py
+        run: |
+          python3 scripts/test-reduced-motion.py
+          python3 scripts/reduced-motion.py
 
       - name: Photosensitivity budget across the whole catalog (general and red flashes)
         run: cargo test -p numinous-core --release --lib -- --ignored --exact registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget

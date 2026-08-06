@@ -55,6 +55,7 @@ jobs:
           python3 scripts/creator-roundtrip.py
           python3 scripts/test-creator-parity.py
           python3 scripts/creator-parity.py
+          python3 scripts/test-reduced-motion.py
           python3 scripts/reduced-motion.py
           python3 scripts/am-soak.py
           python3 scripts/catalog-scorecard.py

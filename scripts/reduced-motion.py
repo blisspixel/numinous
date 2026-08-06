@@ -12,6 +12,13 @@ with NUMINOUS_REDUCED_MOTION set, and the emitted frames are compared. A frame
 is whatever sits between two cursor-home markers, so the leading screen-clear
 and the truncated tail are excluded by construction rather than by guesswork.
 
+The Show is checked differently, because reduced motion changes what it does
+rather than only how fast it does it. Ordinarily it changes rooms on a timer.
+Held, it rests on one room and waits for the player, so there is no pair of
+frame streams to compare: there is a gallery that advances by itself and a
+gallery that advances only when asked. That is counted directly, from the
+prompt the held gallery prints once per room.
+
 This is machine evidence for the CLI only. The App and MCP faces, mono audio,
 photosensitivity budgets, and any human accessibility session remain separate
 and open.
@@ -23,7 +30,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / ".agent" / "tester-cohort" / "reduced-motion"
@@ -46,6 +53,33 @@ PROBES: tuple[tuple[str, list[str], str], ...] = (
     ("watch-times-tables", ["watch", "times-tables"], "\x1b[H"),
     ("play", ["play", "lorenz"], "\x1b[2J\x1b[H"),
 )
+
+# The line the held gallery prints beneath each room. It appears exactly once
+# per room shown, which makes it an exact count of how far The Show advanced,
+# and it never appears under ordinary motion. If the CLI's wording changes and
+# this does not, every Show probe below fails rather than quietly counting zero.
+SHOW_PROMPT = "Enter for the next room, q to leave."
+
+# Two Enters and a quit. Named rather than written inline so the count the
+# judgement expects and the keys actually sent cannot drift apart.
+ASKED_TWICE = b"\n\nq\n"
+ASKED_TWICE_ROOMS = 3
+
+# Small and fast, so ordinary motion advances inside the deadline and the
+# pictures stay cheap to render. The Show's own defaults are built for watching,
+# not for measuring.
+SHOW_ARGS = [
+    "tour",
+    "--mute",
+    "--width",
+    "24",
+    "--height",
+    "12",
+    "--seconds",
+    "1",
+    "--fps",
+    "5",
+]
 
 
 def resolve_cli() -> list[str]:
@@ -150,7 +184,118 @@ def check(cli: list[str], label: str, args: list[str], marker: str) -> dict[str,
         "ordinary_distinct": moving_distinct,
         "reduced_frames": len(held),
         "reduced_distinct": held_distinct,
+        "measured": (
+            f"ordinary {moving_distinct} distinct of {len(moving)}, "
+            f"reduced {held_distinct} of {len(held)}"
+        ),
         "detail": "; ".join(reasons) if reasons else "ordinary animates, reduced holds still",
+    }
+
+
+class ShowRun(NamedTuple):
+    """One run of The Show: whether it ended by itself, and what it drew."""
+
+    ended: bool
+    rooms: int
+    output: str
+
+
+def judge_show(ordinary: ShowRun, eof: ShowRun, asked: ShowRun) -> list[str]:
+    """Every way these three runs can fail, as reasons, or nothing if they pass.
+
+    Separated from running the binary so the judgement itself can be tested,
+    the same way `creator-parity.py` splits what counts as agreement from the
+    machinery that produces it. A gate whose judgement is never exercised can
+    be wrong in exactly the direction that makes it pass.
+    """
+    reasons = []
+    if ordinary.rooms:
+        reasons.append(f"ordinary motion asked the player to advance {ordinary.rooms} times")
+    if ordinary.ended:
+        reasons.append("ordinary motion ended on its own, so it was not running the gallery")
+    if not eof.ended:
+        reasons.append("held, a closed stdin did not end The Show; it would redraw forever")
+    if eof.rooms != 1:
+        reasons.append(f"held with no input, {eof.rooms} rooms were shown rather than 1")
+    if not asked.ended:
+        reasons.append("held, q did not leave The Show")
+    if asked.rooms != ASKED_TWICE_ROOMS:
+        reasons.append(
+            f"held, two Enters and a q showed {asked.rooms} rooms "
+            f"rather than {ASKED_TWICE_ROOMS}"
+        )
+    if not eof.output.strip():
+        reasons.append("held, The Show drew nothing at all")
+    return reasons
+
+
+def run_show(cli: list[str], reduced: bool, keys: bytes) -> ShowRun:
+    """Run The Show with `keys` on its stdin.
+
+    Returns whether it ended on its own and what it wrote. Ending on its own
+    matters as much as the output: held, The Show blocks on the player, so a
+    closed stdin that did not end it would mean a gallery redrawing forever
+    against a pipe nobody is holding.
+    """
+    env = dict(os.environ)
+    env.pop("NUMINOUS_REDUCED_MOTION", None)
+    env["NO_COLOR"] = "1"
+    if reduced:
+        env["NUMINOUS_REDUCED_MOTION"] = "1"
+    proc = subprocess.Popen(
+        cli + SHOW_ARGS,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        env=env,
+    )
+    finished = True
+    try:
+        data, _ = proc.communicate(input=keys, timeout=DEADLINE_SECONDS)
+    except subprocess.TimeoutExpired:
+        finished = False
+        proc.kill()
+        data, _ = proc.communicate()
+    output = data[:READ_LIMIT].decode("utf-8", "replace")
+    return ShowRun(ended=finished, rooms=output.count(SHOW_PROMPT), output=output)
+
+
+def check_show(cli: list[str]) -> dict[str, Any]:
+    """The Show advances by itself ordinarily, and only when asked when held.
+
+    Both halves are required. A gallery that never advances under either
+    setting is broken rather than considerate, and a gallery that advances
+    under both has simply ignored the player.
+    """
+    # Ordinarily nothing is asked of anyone and the loop does not end. Held with
+    # nobody there, one room and a clean stop. Held with a player, exactly as
+    # many rooms as were asked for, which is the whole point and the evidence.
+    ordinary = run_show(cli, reduced=False, keys=b"")
+    eof = run_show(cli, reduced=True, keys=b"")
+    asked = run_show(cli, reduced=True, keys=ASKED_TWICE)
+    reasons = judge_show(ordinary, eof, asked)
+
+    return {
+        "name": "tour",
+        "args": SHOW_ARGS,
+        "passed": not reasons,
+        # This probe counts rooms, not frames, so it reports rooms. Reusing the
+        # frame fields would put numbers under headings that do not describe
+        # them, which is how a report starts lying to whoever reads it.
+        "ordinary_prompts": ordinary.rooms,
+        "ordinary_ended": ordinary.ended,
+        "rooms_on_closed_stdin": eof.rooms,
+        "rooms_when_asked_twice": asked.rooms,
+        "measured": (
+            f"ordinary asked {ordinary.rooms} times and kept running, "
+            f"held showed {eof.rooms} room on a closed stdin "
+            f"and {asked.rooms} when asked twice"
+        ),
+        "detail": (
+            "; ".join(reasons)
+            if reasons
+            else "ordinary advances on its own, held advances only when asked"
+        ),
     }
 
 
@@ -158,6 +303,7 @@ def main() -> int:
     cli = resolve_cli()
     OUT.mkdir(parents=True, exist_ok=True)
     results = [check(cli, label, args, marker) for label, args, marker in PROBES]
+    results.append(check_show(cli))
     failed = [item for item in results if not item["passed"]]
     summary = {
         "suite": "reduced-motion",
@@ -173,11 +319,7 @@ def main() -> int:
     print(f"{summary['check_count'] - summary['failed_count']}/{summary['check_count']} PASS")
     for item in results:
         mark = "PASS" if item["passed"] else "FAIL"
-        print(
-            f"  {mark}  {item['name']}: ordinary {item['ordinary_distinct']} distinct "
-            f"of {item['ordinary_frames']}, reduced {item['reduced_distinct']} "
-            f"of {item['reduced_frames']}. {item['detail']}"
-        )
+        print(f"  {mark}  {item['name']}: {item['measured']}. {item['detail']}")
     print("--- summary.json ---")
     print(
         json.dumps(
