@@ -29,12 +29,18 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / ".agent" / "tester-cohort" / "creator-parity"
+
+# The gates share one way of getting the binaries they test; see gate_cli.py
+# for why there is only one copy of it.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gate_cli import GateError, build_and_locate  # noqa: E402
 
 PROTOCOL_VERSION = "2026-07-28"
 META = {
@@ -85,42 +91,6 @@ def isolated_env(home: Path) -> dict[str, str]:
     env["NUMINOUS_JOURNAL"] = str(home / "journal")
     env["NUMINOUS_CAIRN"] = str(home / "cairn")
     return env
-
-
-def build_faces() -> tuple[str, str]:
-    """Build both faces, then return the binaries that build produced.
-
-    This compares live behaviour, so it has to compare the behaviour of the
-    current source. Picking up whichever binary happened to be on disk would
-    let a stale artifact answer for code that no longer exists, and the gate
-    would agree with itself about a version nobody is running. Cargo is
-    incremental, so this costs almost nothing on an already-built tree.
-    """
-    build = subprocess.run(
-        ["cargo", "build", "--quiet", "--bin", "numinous", "--bin", "numinous-mcp"],
-        cwd=ROOT, capture_output=True, text=True,
-    )
-    if build.returncode != 0:
-        raise ParityError("cannot build the faces under test:\n" + build.stderr)
-    # CARGO_TARGET_DIR redirects where cargo writes, and several CI layouts set
-    # it, so a build that succeeded could still look missing under ROOT/target.
-    # A relative CARGO_TARGET_DIR is resolved by cargo against its own working
-    # directory, which is ROOT here. Resolving it against this process's
-    # directory instead would look in the wrong place after a good build.
-    configured = os.environ.get("CARGO_TARGET_DIR")
-    target_root = Path(configured) if configured else ROOT / "target"
-    if not target_root.is_absolute():
-        target_root = ROOT / target_root
-    target = target_root / "debug"
-    found = []
-    for name in ("numinous", "numinous-mcp"):
-        for candidate in (target / f"{name}.exe", target / name):
-            if candidate.is_file():
-                found.append(str(candidate))
-                break
-        else:
-            raise ParityError(f"cargo build succeeded but {name} is not under {target}")
-    return found[0], found[1]
 
 
 def plot_body(text: str) -> str:
@@ -262,8 +232,9 @@ def check(
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     try:
-        cli, mcp = build_faces()
-    except ParityError as error:
+        built = build_and_locate(("numinous", "numinous-mcp"))
+        cli, mcp = str(built[0]), str(built[1])
+    except (ParityError, GateError) as error:
         results = [{"name": "build", "passed": False, "detail": str(error)}]
     else:
         # A fresh profile per case, so no case can change what another sees,
