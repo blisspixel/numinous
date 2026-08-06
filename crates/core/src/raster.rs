@@ -346,6 +346,69 @@ mod tests {
         }
     }
 
+    /// Every room, with its accent and the marks its source draws.
+    ///
+    /// The pair-wise scan below answers "which rooms draw both of these". This
+    /// answers "what does each room draw", which is what an audit needs: a
+    /// record built from pair queries could only list the pairs somebody
+    /// thought to ask for, and would call the catalog covered on that basis.
+    fn room_palettes() -> Vec<(String, [u8; 3], Vec<char>)> {
+        const CANDIDATES: [char; 9] = ['#', '!', '@', '%', '&', '~', '*', '+', '.'];
+        let mut pending = vec![std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/rooms")];
+        let mut found: Vec<(String, [u8; 3], Vec<char>)> = Vec::new();
+        while let Some(dir) = pending.pop() {
+            for entry in std::fs::read_dir(&dir).expect("the rooms directory is readable") {
+                let path = entry.expect("a readable directory entry").path();
+                if path.is_dir() {
+                    pending.push(path);
+                    continue;
+                }
+                if path.extension().is_none_or(|extension| extension != "rs") {
+                    continue;
+                }
+                let source = std::fs::read_to_string(&path).expect("a readable room source");
+                let marks: Vec<char> = CANDIDATES
+                    .into_iter()
+                    .filter(|mark| source.contains(&format!("'{mark}'")))
+                    .collect();
+                if marks.is_empty() {
+                    continue;
+                }
+                let stem = path
+                    .file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .expect("a room source has a readable name");
+                let Some(id) = source
+                    .split_once("id: \"")
+                    .and_then(|(_, rest)| rest.split_once('"'))
+                    .map(|(id, _)| id)
+                    .or_else(|| helper_parent(stem))
+                else {
+                    continue;
+                };
+                let Some(room) = crate::registry::room_by_id(id) else {
+                    continue;
+                };
+                // A helper draws on its parent's raster, so its marks belong to
+                // the parent rather than to a room of its own.
+                if let Some(slot) = found.iter_mut().find(|(seen, _, _)| seen == id) {
+                    for mark in marks {
+                        if !slot.2.contains(&mark) {
+                            slot.2.push(mark);
+                        }
+                    }
+                } else {
+                    found.push((id.to_string(), room.meta().accent, marks));
+                }
+            }
+        }
+        for (_, _, marks) in &mut found {
+            marks.sort_unstable();
+        }
+        found.sort();
+        found
+    }
+
     /// Every room whose source draws with all of `marks`, as `(id, accent)`.
     ///
     /// Same scan, same refusal to pass over what it cannot read. Asking for
@@ -638,6 +701,138 @@ mod tests {
             fixed.is_empty(),
             "these no longer collapse and must leave \
              SPECTRAL_INKS_COLLAPSE_FOR_A_DICHROMAT: {fixed:?}"
+        );
+    }
+
+    /// Rooms whose two accent-derived levels fold together for a dichromat.
+    ///
+    /// The same defect [`MARK_LEVELS_COLLAPSE_WITHOUT_COLOR`] records, measured
+    /// through a different eye. That list is what a player with no color at all
+    /// loses; this is what a player who has color and fewer distinctions loses,
+    /// and the two sets do not overlap at all, so neither stands in for the
+    /// other.
+    ///
+    /// Tracked under the same owner decision, because the answer is the same
+    /// one: whether the ink scale or the shade thresholds should change, which
+    /// changes what all 354 rooms look like.
+    const LEVELS_FOLD_FOR_A_DICHROMAT: [&str; 7] = [
+        "buddhabrot",
+        "julia",
+        "kaprekar",
+        "landauer",
+        "logistic-cobweb",
+        "phantom-jam",
+        "van-der-pol",
+    ];
+
+    #[test]
+    fn every_room_the_audit_flags_is_tracked_somewhere() {
+        // The audit measures more than any one sweep guards. Without this, a
+        // room could start losing a cue, be written faithfully into the
+        // evidence file, and be held by no list at all: the evidence would
+        // record the defect and nothing would object to it.
+        let palettes = room_palettes();
+        let flagged: Vec<String> = palettes
+            .iter()
+            .map(|(id, accent, marks)| crate::dichromacy::audit::audit_room(id, *accent, marks))
+            .filter(|audit| !audit.color_alone_pairs.is_empty())
+            .map(|audit| audit.id)
+            .collect();
+        assert!(
+            !flagged.is_empty(),
+            "the audit flags nothing, so this checks nothing"
+        );
+
+        let mut tracked: Vec<&str> = Vec::new();
+        tracked.extend(
+            SPECTRAL_INKS_COLLAPSE_FOR_A_DICHROMAT
+                .iter()
+                .map(|(id, _, _)| *id),
+        );
+        tracked.extend(MEANING_LOST_TO_COLOR_BLINDNESS.iter().map(|(id, _)| *id));
+        tracked.extend(LEVELS_FOLD_FOR_A_DICHROMAT);
+
+        let untracked: Vec<&String> = flagged
+            .iter()
+            .filter(|id| !tracked.contains(&id.as_str()))
+            .collect();
+        assert!(
+            untracked.is_empty(),
+            "these rooms lose a cue for a color-blind player and no list holds \
+             them: {untracked:?}"
+        );
+        let stale: Vec<&&str> = tracked
+            .iter()
+            .filter(|id| !flagged.contains(&(*id).to_string()))
+            .collect();
+        assert!(
+            stale.is_empty(),
+            "these are tracked but the audit no longer flags them: {stale:?}"
+        );
+    }
+
+    #[test]
+    fn the_rooms_whose_levels_fold_are_named_where_the_owner_reads() {
+        let section = crate::roadmap_decisions();
+        assert!(
+            !LEVELS_FOLD_FOR_A_DICHROMAT.is_empty(),
+            "an empty list checks nothing"
+        );
+        for room in LEVELS_FOLD_FOR_A_DICHROMAT {
+            assert!(
+                section.contains(&format!("`{room}`")),
+                "{room} folds its two levels for a color-blind player and is not \
+                 named in the roadmap's decisions section"
+            );
+        }
+    }
+
+    #[test]
+    fn color_independence_audit_matches_the_committed_evidence() {
+        // The sweeps decide whether the catalog regressed. They cannot show a
+        // reader WHAT was covered, and a passing test looks the same whether it
+        // measured 355 rooms or none. This writes the measurement out so the
+        // coverage claim is checkable and the margins are visible.
+        let palettes = room_palettes();
+        assert!(
+            palettes.len() > 300,
+            "only {} rooms scanned, so the audit is broken rather than the catalog small",
+            palettes.len()
+        );
+        let audits: Vec<_> = palettes
+            .iter()
+            .map(|(id, accent, marks)| crate::dichromacy::audit::audit_room(id, *accent, marks))
+            .collect();
+        let generated = crate::dichromacy::audit::to_json(&audits);
+
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../docs/evidence/color-independence.json");
+        if std::env::var_os("NUMINOUS_UPDATE_EVIDENCE").is_some() {
+            std::fs::write(&path, &generated).expect("the evidence file is writable");
+            return;
+        }
+        let committed = std::fs::read_to_string(&path).unwrap_or_else(|error| {
+            panic!(
+                "{path:?} is missing ({error}). Regenerate with \
+                 NUMINOUS_UPDATE_EVIDENCE=1 cargo test -p numinous-core --lib \
+                 color_independence_audit"
+            )
+        });
+        // Compare on lines so a failure names the room that moved rather than
+        // reporting that two long strings differ.
+        for (number, (want, got)) in committed.lines().zip(generated.lines()).enumerate() {
+            assert_eq!(
+                want.trim_end(),
+                got.trim_end(),
+                "the committed audit and the measurement differ at line {}. \
+                 Regenerate with NUMINOUS_UPDATE_EVIDENCE=1 if the change was intended",
+                number + 1
+            );
+        }
+        assert_eq!(
+            committed.lines().count(),
+            generated.lines().count(),
+            "the committed audit has a different number of lines than the measurement"
         );
     }
 
