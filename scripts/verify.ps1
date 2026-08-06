@@ -53,6 +53,8 @@ Step "creator roundtrip" { python scripts/creator-roundtrip.py }
 Step "creator parity" { python scripts/creator-parity.py }
 Step "reduced motion contract" { python scripts/test-reduced-motion.py }
 Step "reduced motion" { python scripts/reduced-motion.py }
+Step "no color contract" { python scripts/test-no-color.py }
+Step "no color across every terminal surface" { python scripts/no-color.py }
 Step "photosensitivity budget, general and red flashes" { cargo test -p numinous-core --release --lib -- --ignored --exact registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget }
 Step "am soak" { python scripts/am-soak.py }
 Step "catalog scorecard" { python scripts/catalog-scorecard.py }

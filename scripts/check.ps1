@@ -38,6 +38,8 @@ Invoke-Step "creator roundtrip" { python scripts/creator-roundtrip.py }
 Invoke-Step "creator parity" { python scripts/creator-parity.py }
 Invoke-Step "reduced motion contract" { python scripts/test-reduced-motion.py }
 Invoke-Step "reduced motion" { python scripts/reduced-motion.py }
+Invoke-Step "no color contract" { python scripts/test-no-color.py }
+Invoke-Step "no color" { python scripts/no-color.py }
 Invoke-Step "am soak" { python scripts/am-soak.py }
 Invoke-Step "catalog scorecard" { python scripts/catalog-scorecard.py }
 Invoke-Step "understanding am dry-run" { python scripts/test-understanding-am.py }
