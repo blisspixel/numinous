@@ -7462,22 +7462,53 @@ mod tests {
     /// Only SGR is collected. Cursor control is not color: `\x1b[H`, `\x1b[J`
     /// and `\x1b[K` position and clear, and a `NO_COLOR` surface is still
     /// allowed to paint in place.
-    fn sgr_codes(text: &str) -> Vec<String> {
-        let mut found = Vec::new();
+    /// Walk `text` once, returning its SGR codes and the text without them.
+    ///
+    /// One walk rather than two, so the list of codes and the stripped text can
+    /// never disagree about what counted as color.
+    fn scan_sgr(text: &str) -> (Vec<String>, String) {
+        let mut codes = Vec::new();
+        let mut plain = String::new();
         let mut rest = text;
         while let Some(start) = rest.find("\x1b[") {
+            plain.push_str(&rest[..start]);
             let tail = &rest[start + 2..];
-            let end = tail.find(|c: char| !c.is_ascii_digit() && c != ';');
-            match end {
-                Some(index) if tail.as_bytes()[index] == b'm' => {
-                    found.push(tail[..index].to_string());
-                    rest = &tail[index + 1..];
-                }
-                Some(index) => rest = &tail[index + 1..],
-                None => break,
+            let Some(index) = tail.find(|c: char| !c.is_ascii_digit() && c != ';') else {
+                // A truncated escape: nothing terminates it, so there is no
+                // color here and no more to find.
+                plain.push_str(&rest[start..]);
+                return (codes, plain);
+            };
+            // `index` is a byte offset at a character boundary, and the
+            // character there may be several bytes wide. Stepping one byte past
+            // it would split that character and panic, which hostile input
+            // could reach on purpose.
+            let terminator = tail[index..]
+                .chars()
+                .next()
+                .expect("find returned a character boundary");
+            let after = index + terminator.len_utf8();
+            if terminator == 'm' {
+                codes.push(tail[..index].to_string());
+            } else {
+                // Not color. Cursor control and friends survive stripping,
+                // because a NO_COLOR surface may still paint in place.
+                plain.push_str(&rest[start..start + 2 + after]);
             }
+            rest = &tail[after..];
         }
-        found
+        plain.push_str(rest);
+        (codes, plain)
+    }
+
+    /// Every SGR escape in `text`, as the bodies between `\x1b[` and `m`.
+    fn sgr_codes(text: &str) -> Vec<String> {
+        scan_sgr(text).0
+    }
+
+    /// `text` with every SGR escape removed and everything else left alone.
+    fn strip_sgr(text: &str) -> String {
+        scan_sgr(text).1
     }
 
     #[test]
@@ -7492,6 +7523,29 @@ mod tests {
         // A truncated escape must not be read as a color, and must not spin.
         assert!(sgr_codes("\x1b[").is_empty());
         assert!(sgr_codes("\x1b[12").is_empty());
+        // Compound and unusual codes count too, so the boards are not held to a
+        // list of the colors they happen to use today.
+        assert_eq!(sgr_codes("\x1b[1;91mx\x1b[0m"), vec!["1;91", "0"]);
+        assert_eq!(sgr_codes("\x1b[97mx"), vec!["97"]);
+
+        // Stripping removes exactly the color and nothing else.
+        assert_eq!(strip_sgr("\x1b[91mR\x1b[0m"), "R");
+        assert_eq!(strip_sgr("\x1b[1;91mR\x1b[0m"), "R");
+        assert_eq!(
+            strip_sgr("\x1b[H\x1b[2Jkeep\x1b[K"),
+            "\x1b[H\x1b[2Jkeep\x1b[K"
+        );
+        assert_eq!(strip_sgr("plain"), "plain");
+        assert_eq!(strip_sgr("\x1b[12"), "\x1b[12");
+
+        // A multi-byte character where the terminator belongs must not split a
+        // character and panic. This is reachable by hostile input, and a test
+        // that panics instead of failing is a test that stops the suite.
+        for hostile in ["\x1b[\u{00e9}m", "\x1b[1\u{4e2d}", "\x1b[\u{1f600}0m"] {
+            let (codes, plain) = scan_sgr(hostile);
+            assert!(codes.is_empty(), "{hostile:?} yielded {codes:?}");
+            assert_eq!(plain, hostile, "hostile input must survive unchanged");
+        }
     }
 
     #[test]
@@ -7571,15 +7625,15 @@ mod tests {
                 );
             }
             // Same board either way: stripping the color must leave exactly the
-            // uncolored drawing, not a differently shaped one.
-            let stripped = colored
-                .replace("\x1b[91m", "")
-                .replace("\x1b[93m", "")
-                .replace("\x1b[94m", "")
-                .replace("\x1b[95m", "")
-                .replace("\x1b[96m", "")
-                .replace("\x1b[0m", "");
-            assert_eq!(stripped, plain, "{name} draws a different board per mode");
+            // uncolored drawing, not a differently shaped one. Stripped
+            // generically rather than against a list of the codes these boards
+            // happen to use today, so a board that later reaches for 92, 97 or
+            // a compound 1;91 is still compared rather than failed.
+            assert_eq!(
+                strip_sgr(&colored),
+                plain,
+                "{name} draws a different board per mode"
+            );
         }
     }
 
