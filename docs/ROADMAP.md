@@ -615,7 +615,7 @@ because this file is the one somebody reads.
 
 Each entry says what was measured, what is guarded today, and what changes
 depending on the answer. Entry 1 names no rooms because it is about money
-rather than the catalog. Entries 2, 3, 4 and 11 name rooms, and those names are
+rather than the catalog. Entries 2, 3, 4, 11 and 12 name rooms, and those names are
 not written by hand: each list lives in the code as a shrink-only known-failure
 list, and a test requires every room on it to appear in this section, so this
 cannot fall behind what the catalog actually does. The remaining entries are
@@ -709,6 +709,31 @@ looks like to everybody, so it is a decision about the product. Note the
 neighbouring case that is deliberately not on this list: `phantom-jam` separates
 the same pair by only 34 even for ordinary vision, which is a contrast problem
 rather than a color-blindness one.
+
+**12. Ten rooms lose a spectral distinction for a color-blind player, and
+whether that matters differs per room.** The catalog has four spectral inks that
+rooms combine for prismatic light. Sixteen pairs across ten rooms are clear for
+ordinary vision and folded for at least one dichromat: `bayes-update`,
+`buffon-needle`, `circle-map`, `function-painter`, `josephus`, `message-heals`,
+`murmuration`, `newton`, `riemann-sphere`, `times-tables`. The largest collapse
+in the whole catalog is here: `times-tables` separates `'@'` from its accent by
+95 for ordinary vision and by under 1 for a deuteranope, which is gone rather
+than dimmed.
+
+The measurement is mechanical and locked. **What it cannot decide is which of
+the ten matter**, because whether a room is saying something with an ink is a
+question about the room. Two were read, and they answer it opposite ways. In
+`bayes-update` the inks separate the prior, the likelihood and the posterior, so
+a reader who cannot tell two of them apart cannot read the picture, and that is
+a defect. In `times-tables` the ink is chosen by where a chord starts around the
+circle, so it bands the drawing and carries no information, and that is a
+preference. The other eight have not been read, and guessing would be worse than
+saying so.
+
+So this entry asks for two things, not one: a ruling on whether the spectral
+palette should be picked for dichromat separation at all, and, if not, which
+rooms use it to say something. Changing the palette changes every room that
+draws with it.
 
 ### 0.1 Public Foundation
 
