@@ -63,6 +63,7 @@ jobs:
         run: cargo test -p numinous-core --release --lib -- --ignored --exact registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget
       - name: Multi-room soak and catalog scorecard
         run: |
+          python3 scripts/test-gate-cli.py
           python3 scripts/test-am-soak.py
           python3 scripts/am-soak.py
           python3 scripts/catalog-scorecard.py

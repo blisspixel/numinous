@@ -17,6 +17,11 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
+
+# The gates share one way of getting the binaries they test; see gate_cli.py
+# for why there is only one copy of it.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gate_cli import build_and_locate  # noqa: E402
 DRIVER = ROOT / "scripts" / "mcp-play.py"
 OUT = ROOT / ".agent" / "tester-cohort" / "round-07-flagship-aha"
 
@@ -75,9 +80,10 @@ def initialize_script() -> dict[str, Any]:
         cwd=ROOT,
         check=True,
     )
-    binary = ROOT / "target" / "debug" / "numinous-mcp"
-    windows_binary = binary.with_suffix(".exe")
-    path = str(windows_binary if windows_binary.exists() else binary)
+    # One shared resolver rather than a hand-built path: this one ignored
+    # CARGO_TARGET_DIR, so it looked in the wrong place on any layout that
+    # sets it. See gate_cli.py for why there is only one copy.
+    path = str(build_and_locate(("numinous-mcp",))[0])
     with tempfile.TemporaryDirectory(prefix="numinous-mcp-play-") as state_dir:
         env = dict(os.environ)
         env.update(

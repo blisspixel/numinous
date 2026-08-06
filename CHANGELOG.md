@@ -5,6 +5,30 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Two more gates were finding their own binaries, and one of them was the gate
+  that guards the flagship regression evidence. `flagship-goldens.py` preferred
+  whatever was in `target/`, with a `cargo run` fallback, so with `rooms` made
+  to print nothing and the binary left alone it reported 8 of 8 against golden
+  hashes that no longer described the source. `agent-hallway.py` did build
+  first, but assembled its own path and ignored `CARGO_TARGET_DIR`, so it looked
+  in the wrong place on any layout that sets it.
+
+  The previous sweep found six and stopped there. This is the same lesson
+  arriving twice, which is the argument for the next part.
+
+- `scripts/test-gate-cli.py` makes the rule enforceable rather than written
+  down. It fails if any script builds a path into this repository's cargo
+  layout, or keeps a `cargo run` fallback, and separately requires each of the
+  eight gates that drive the product to import the shared resolver by name.
+  Writing a note about a mistake has not stopped it recurring; a check has.
+
+  The patterns are calibrated against the exact shapes the defect took, and
+  against the things that legitimately mention a target: a release triple, a
+  packaging argument, and a stale binary deliberately built under a temporary
+  directory by the test that proves stale binaries are rejected. That last one
+  the rule found on its first run, and flagging it would have meant flagging
+  the check for this very defect.
+
 - Three gates were testing whichever binary happened to be lying on disk. The
   soak, the creator roundtrip and the catalog scorecard each preferred
   `target/debug`, then `target/release`, and fell back to `cargo run`. So a

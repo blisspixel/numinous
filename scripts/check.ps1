@@ -40,6 +40,7 @@ Invoke-Step "reduced motion contract" { python scripts/test-reduced-motion.py }
 Invoke-Step "reduced motion" { python scripts/reduced-motion.py }
 Invoke-Step "no color contract" { python scripts/test-no-color.py }
 Invoke-Step "no color" { python scripts/no-color.py }
+Invoke-Step "one gate resolver" { python scripts/test-gate-cli.py }
 Invoke-Step "am soak contract" { python scripts/test-am-soak.py }
 Invoke-Step "am soak" { python scripts/am-soak.py }
 Invoke-Step "catalog scorecard" { python scripts/catalog-scorecard.py }
