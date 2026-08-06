@@ -5,6 +5,32 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Reduced motion now stops The Show in the terminal, which it did not before.
+  Each room was already held at its postcard phase, so the picture stopped
+  moving, and then the gallery advanced to the next room anyway on a frame
+  count that never consulted the setting. The App has always been right here:
+  reduced motion zeroes its ambient tick, the sweep never completes, and it is
+  the completed sweep that carries the gallery onward. Two faces disagreeing
+  about one preference is worse than either answer alone, because a player who
+  sets it once cannot tell which face will honor it.
+
+  Held, The Show rests each room on its postcard phase and moves on when the
+  player asks, with `q` to leave. End of input leaves too, rather than spinning:
+  a gallery that blocks on a player would otherwise redraw forever against a
+  closed or piped stdin, which is a worse failure than stopping. Tests drive the
+  held gallery over scripted input and assert it shows exactly as many rooms as
+  it was asked for, comes back around past the end of the catalog, and returns
+  rather than cycling on an empty one.
+
+- The Show's title card now honors `NO_COLOR`. The picture underneath already
+  did, but the card written over it carried a hardcoded bold and reset, so a
+  `NO_COLOR` player got a color-free room with two escape sequences on top. This
+  is the same class of defect as the four hardcoded resets removed earlier, and
+  it was found the same way: by asserting on the composed screen rather than on
+  the renderer alone. The test also checks that the card is still bold when
+  color is on, so it measures the setting rather than a card that lost its
+  emphasis everywhere.
+
 - Photosensitivity: the red-flash half of WCAG 2.3.1 is now implemented rather
   than declared out of scope. The module had said in as many words that it made
   "no statement at all about red", which left a documented hole in an
