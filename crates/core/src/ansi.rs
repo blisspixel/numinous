@@ -184,8 +184,11 @@ mod tests {
         //
         // Encoding brightness here would need a glyph meaning a dim lower
         // half. The block characters do not have one. The nearest candidates
-        // say how much of the cell is filled, which would report the ink as
-        // occupying less space than it does.
+        // are the shades, and they describe the whole cell rather than a half
+        // of it: a shade would draw this cell as filled edge to edge at
+        // reduced density, when the ink actually fills half the cell solidly.
+        // That moves where the picture says the ink is, which is a worse
+        // answer than saying nothing about how bright it is.
         let glyph_for = |lit: u8| {
             let mut raster = Raster::new(1, 2);
             raster.set_rgba(&[0, 0, 0, 255, lit, lit, lit, 255]);
