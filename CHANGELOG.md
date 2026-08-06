@@ -34,10 +34,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   the same slab of solid blocks.
   That was the cause of a defect recorded in the previous cycle: an audit of
   all 354 rooms found 21 whose response to a touch vanished under `NO_COLOR`.
-  Four shade characters for the both-lit case restore fifteen of them. The
-  known-failure list shrinks from 21 to 6, and the six that remain do not
-  change the color-free picture at all, so their answer is somewhere a wider
-  ramp cannot reach.
+  Four shade characters for the both-lit case restore fifteen of them, and the
+  threshold work described above accounts for two more, taking the
+  known-failure list from 21 to 4.
   Nothing was traded for it. The geometry is unchanged, one output row per two
   pixel rows and one character per column, so no layout reflows; a cell with
   one half lit keeps its half block; no escape sequence is emitted; and the

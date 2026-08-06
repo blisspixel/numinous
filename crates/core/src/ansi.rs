@@ -126,8 +126,9 @@ fn luminance((r, g, b): Rgb) -> u32 {
 /// block says it. Where both are lit there is no shape left to carry anything,
 /// and that is where a dense plate loses its answer: an audit of all 354 rooms
 /// found 21 whose response to a touch vanished here, because the whole field
-/// was already solid and only its brightness moved. Shading that case restores
-/// 15 of them at no cost to the geometry.
+/// was already solid and only its brightness moved. Shading that case, with
+/// the thresholds on the catalog's measured quartiles, restores 17 of them at
+/// no cost to the geometry.
 ///
 /// This is what `NO_COLOR` selects, and what any surface that must not depend
 /// on color should use. It emits no escape sequences at all.
@@ -199,7 +200,7 @@ mod tests {
             let share = 100.0 * *count as f64 / total as f64;
             assert!(
                 share >= 10.0,
-                "shade {index} carries only {share:.1} percent of the ink, so it is \n                 nearly wasted; the thresholds no longer match what is drawn"
+                "shade {index} carries only {share:.1} percent of the ink, so the thresholds no longer match what is drawn"
             );
         }
     }
@@ -241,17 +242,24 @@ mod tests {
         // catalog's measured ink, and this test caught that as a collision.
         let mut probes: Vec<u8> = vec![LIT_FLOOR as u8];
         probes.extend(SHADE_STEPS.iter().map(|edge| *edge as u8));
-        let mut seen = Vec::new();
+        let mut chosen = Vec::new();
         for level in probes {
             let mut raster = Raster::new(1, 2);
             raster.set_rgba(&[level, level, level, 255, level, level, level, 255]);
-            seen.push(to_mono(&raster).trim_end().to_string());
+            let glyph = to_mono(&raster).trim_end().chars().next().expect("a glyph");
+            let index = SHADES
+                .iter()
+                .position(|shade| *shade == glyph)
+                .unwrap_or_else(|| panic!("{level} picked {glyph:?}, which is not a shade"));
+            chosen.push(index);
         }
-        seen.dedup();
+        // Distinct is not enough, and the name of this test promises more than
+        // that: a mapping that jumbled the order would still produce four
+        // different glyphs. Brighter input has to pick a lighter shade.
         assert_eq!(
-            seen.len(),
-            4,
-            "each step must pick a different shade: {seen:?}"
+            chosen,
+            vec![0, 1, 2, 3],
+            "shades must climb with brightness"
         );
     }
 
