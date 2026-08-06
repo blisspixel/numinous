@@ -111,7 +111,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   draw in color at all would satisfy every other check. Five do today: the color
   renderer, the Munch arcade, the Hackenbush garden, `watch`, and The Show.
 
-- `scripts/test-no-color.py` covers the sweep's judgement without spawning
+- `scripts/test-no-color.py` covers the sweep's judgment without spawning
   anything, on the same pattern as the reduced-motion and creator-parity twins.
   Coverage is the part worth testing hardest, because whether one surface emits
   an escape fails loudly, while whether the sweep still covers the binary is a
@@ -138,7 +138,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   stdin rather than one.
 
 - `scripts/test-reduced-motion.py` is new, and gives that gate the test twin the
-  creator-parity and uninstall-roundtrip gates already had. The judgement is
+  creator-parity and uninstall-roundtrip gates already had. The judgment is
   split from the machinery that runs the binary, so what counts as reduced
   motion working is now checked without building anything. A gate can be wrong
   in two directions and only one of them is loud: failing a working feature is

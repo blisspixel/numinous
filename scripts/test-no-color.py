@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Focused regressions for the NO_COLOR sweep.
 
-These cover the judgement without spawning the CLI, so a mistake in what counts
+These cover the judgment without spawning the CLI, so a mistake in what counts
 as covered is caught even when nothing is built. The live sweep is
 `no-color.py`, which CI runs against a real binary.
 
@@ -27,7 +27,7 @@ SPEC.loader.exec_module(MODULE)
 
 class CoverageJudgementTests(unittest.TestCase):
     def test_a_covered_binary_is_judged_to_pass(self) -> None:
-        # Without this, every assertion below could be met by a judgement that
+        # Without this, every assertion below could be met by a judgment that
         # objects to everything.
         self.assertEqual(
             MODULE.judge_coverage({"rooms", "update"}, {"rooms"}, {"update"}), []
