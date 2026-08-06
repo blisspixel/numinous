@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -173,7 +174,7 @@ def check(cli: list[str], label: str, args: list[str], marker: str) -> dict[str,
             reasons.append("ordinary motion did not animate, so the comparison proves nothing")
         if held_distinct != 1:
             reasons.append(f"reduced motion still changed: {held_distinct} distinct frames")
-        if not held[0].strip():
+        if not visible(held[0]).strip():
             reasons.append("reduced motion held a blank frame rather than the picture")
 
     return {
@@ -185,11 +186,27 @@ def check(cli: list[str], label: str, args: list[str], marker: str) -> dict[str,
         "reduced_frames": len(held),
         "reduced_distinct": held_distinct,
         "measured": (
-            f"ordinary {moving_distinct} distinct of {len(moving)}, "
-            f"reduced {held_distinct} of {len(held)}"
+            f"ordinary {moving_distinct} distinct of {len(moving)} frames, "
+            f"reduced {held_distinct} distinct of {len(held)} frames"
         ),
         "detail": "; ".join(reasons) if reasons else "ordinary animates, reduced holds still",
     }
+
+
+def rooms_said(count: int) -> str:
+    """`count` rooms, in English, because these strings are read on a failure."""
+    return f"{count} room" if count == 1 else f"{count} rooms"
+
+
+def visible(text: str) -> str:
+    """`text` with terminal escapes removed, so what is left is what was drawn.
+
+    A bare `strip()` is not enough to tell a picture from an empty screen. Both
+    the escapes that position the cursor and the prompt beneath each room are
+    non-whitespace, so output consisting only of those would look like a drawing
+    to anything that just asked whether the string was blank.
+    """
+    return re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", text).replace(SHOW_PROMPT, "")
 
 
 class ShowRun(NamedTuple):
@@ -216,16 +233,18 @@ def judge_show(ordinary: ShowRun, eof: ShowRun, asked: ShowRun) -> list[str]:
     if not eof.ended:
         reasons.append("held, a closed stdin did not end The Show; it would redraw forever")
     if eof.rooms != 1:
-        reasons.append(f"held with no input, {eof.rooms} rooms were shown rather than 1")
+        reasons.append(
+            f"held with no input, {rooms_said(eof.rooms)} shown rather than 1 room"
+        )
     if not asked.ended:
         reasons.append("held, q did not leave The Show")
     if asked.rooms != ASKED_TWICE_ROOMS:
         reasons.append(
-            f"held, two Enters and a q showed {asked.rooms} rooms "
+            f"held, two Enters and a q showed {rooms_said(asked.rooms)} "
             f"rather than {ASKED_TWICE_ROOMS}"
         )
-    if not eof.output.strip():
-        reasons.append("held, The Show drew nothing at all")
+    if not visible(eof.output).strip():
+        reasons.append("held, The Show drew nothing but its own prompt and cursor moves")
     return reasons
 
 
@@ -288,8 +307,8 @@ def check_show(cli: list[str]) -> dict[str, Any]:
         "rooms_when_asked_twice": asked.rooms,
         "measured": (
             f"ordinary asked {ordinary.rooms} times and kept running, "
-            f"held showed {eof.rooms} room on a closed stdin "
-            f"and {asked.rooms} when asked twice"
+            f"held showed {rooms_said(eof.rooms)} on a closed stdin "
+            f"and {rooms_said(asked.rooms)} when asked twice"
         ),
         "detail": (
             "; ".join(reasons)

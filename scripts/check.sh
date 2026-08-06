@@ -28,7 +28,9 @@ echo "== creator roundtrip =="
 python3 scripts/creator-roundtrip.py
 echo "== creator parity =="
 python3 scripts/creator-parity.py
+echo "== reduced motion contract =="
 python3 scripts/test-reduced-motion.py
+echo "== reduced motion =="
 python3 scripts/reduced-motion.py
 echo "== am soak =="
 python3 scripts/am-soak.py
