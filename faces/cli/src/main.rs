@@ -532,6 +532,14 @@ enum Command {
         /// Number of notes.
         #[arg(long, default_value_t = 48)]
         notes: usize,
+        /// Value of the parameter a, as `plot` uses it.
+        ///
+        /// This was fixed at 0 and unreachable, which silenced every
+        /// expression that depends on `a`: `sin(a*x)` sang a flat line here
+        /// while the same request over MCP sang `sin(x)`. Both faces use 1
+        /// for `plot`, so 1 is what the knob means.
+        #[arg(long, default_value_t = 1.0)]
+        a: f64,
         /// Write a WAV audio file to this path.
         #[arg(long)]
         out: PathBuf,
@@ -2022,10 +2030,11 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             xmin,
             xmax,
             notes,
+            a,
             out,
         } => {
             journey.play();
-            emit(sing_wav(&expr, xmin, xmax, notes, &out))
+            emit(sing_wav(&expr, xmin, xmax, notes, a, &out))
         }
     }
 }
@@ -2465,6 +2474,7 @@ fn sing_wav(
     xmin: f64,
     xmax: f64,
     notes: usize,
+    a: f64,
     path: &Path,
 ) -> Result<String, String> {
     let expr =
@@ -2473,7 +2483,7 @@ fn sing_wav(
         return Err("need xmax > xmin\n".to_string());
     }
     let sample_rate = 44_100u32;
-    let spec = numinous_core::to_melody(&expr, xmin, xmax, notes, 0.0);
+    let spec = numinous_core::to_melody(&expr, xmin, xmax, notes, a);
     write_wav(path, &spec.render(sample_rate), sample_rate, 1)?;
     Ok(format!(
         "wrote {} ({:.1}s, {} notes) from y = {}\n",
@@ -5629,7 +5639,7 @@ mod tests {
             load_studio_creation(hostile).expect_err("missing Studio path"),
             super::plot_report(hostile, -1.0, 1.0, 0.0, 40, 20)
                 .expect_err("invalid plot expression"),
-            super::sing_wav(hostile, -1.0, 1.0, 8, &unused_wav)
+            super::sing_wav(hostile, -1.0, 1.0, 8, 1.0, &unused_wav)
                 .expect_err("invalid song expression"),
         ];
         for diagnostic in diagnostics {
@@ -6388,7 +6398,7 @@ mod tests {
             super::plot_report("sin(x", -1.0, 1.0, 0.0, 40, 20).expect_err("unbalanced plot"),
             super::plot_report("", -1.0, 1.0, 0.0, 40, 20).expect_err("empty plot"),
             super::plot_report("x @ 2", -1.0, 1.0, 0.0, 40, 20).expect_err("bad plot token"),
-            super::sing_wav("sin(x", -1.0, 1.0, 8, &unused_wav).expect_err("unbalanced song"),
+            super::sing_wav("sin(x", -1.0, 1.0, 8, 1.0, &unused_wav).expect_err("unbalanced song"),
             super::validate_render_request(0, 10, 0.0).expect_err("zero width"),
             super::validate_render_request(10, 10, 5.0).expect_err("out of range t"),
             super::sim_run("not-a-sim", &[], 40, 20).expect_err("unknown simulation"),
@@ -8491,7 +8501,7 @@ mod tests {
     #[test]
     fn sing_wav_writes_a_melody() {
         let path = std::env::temp_dir().join("numinous_sing_test.wav");
-        let message = super::sing_wav("sin(x)", -3.0, 3.0, 16, &path).expect("sing");
+        let message = super::sing_wav("sin(x)", -3.0, 3.0, 16, 1.0, &path).expect("sing");
         assert!(message.contains("wrote"));
         assert!(std::fs::metadata(&path).expect("file").len() > 0);
         let _ = std::fs::remove_file(&path);
@@ -8500,7 +8510,7 @@ mod tests {
     #[test]
     fn sing_wav_rejects_a_bad_expression() {
         let path = std::env::temp_dir().join("numinous_sing_bad.wav");
-        assert!(super::sing_wav("nope(", -1.0, 1.0, 8, &path).is_err());
+        assert!(super::sing_wav("nope(", -1.0, 1.0, 8, 1.0, &path).is_err());
     }
 
     #[test]
