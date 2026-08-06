@@ -65,16 +65,45 @@ ROOMS = (
 
 
 def resolve_cli() -> list[str]:
-    candidates = [
-        ROOT / "target" / "debug" / "numinous.exe",
-        ROOT / "target" / "debug" / "numinous",
-        ROOT / "target" / "release" / "numinous.exe",
-        ROOT / "target" / "release" / "numinous",
-    ]
-    for path in candidates:
-        if path.is_file():
-            return [str(path)]
-    return ["cargo", "run", "--quiet", "--locked", "--bin", "numinous", "--"]
+    """Build the CLI, then return the binary that build produced.
+
+    This walks live behaviour, so it has to walk the behaviour of the current
+    source. Picking up whichever binary happened to be on disk lets a stale
+    artifact answer for code that no longer exists, and the walk passes while
+    the thing is broken. Demonstrated rather than assumed: with `rooms` made to
+    print nothing and the binary left alone, this reported 30 of 30 including
+    the check that requires the catalog to contain times-tables.
+
+    Cargo is incremental, so on an already-built tree this costs almost nothing.
+    """
+    build = subprocess.run(
+        ["cargo", "build", "--quiet", "--locked", "--bin", "numinous"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if build.returncode != 0:
+        raise SystemExit("cannot build the CLI under test:\n" + build.stderr)
+    return [str(built_cli())]
+
+
+def built_cli() -> Path:
+    """The debug binary cargo just wrote, wherever it was told to write it."""
+    # CARGO_TARGET_DIR redirects where cargo writes and several CI layouts set
+    # it, so a build that succeeded could still look missing under ROOT/target.
+    # A relative value is resolved by cargo against its own working directory,
+    # which is ROOT here.
+    configured = os.environ.get("CARGO_TARGET_DIR")
+    target_root = Path(configured) if configured else ROOT / "target"
+    if not target_root.is_absolute():
+        target_root = ROOT / target_root
+    for name in ("numinous.exe", "numinous"):
+        candidate = target_root / "debug" / name
+        if candidate.is_file():
+            return candidate
+    raise SystemExit(
+        f"cargo build reported success but no numinous binary is under {target_root / 'debug'}"
+    )
 
 
 def run_cli(cli: list[str], args: list[str], env: dict[str, str]) -> tuple[int, str, str]:
@@ -175,11 +204,21 @@ def main() -> int:
             }
         )
         code, stdout, stderr = run_cli(cli, ["rooms"], env)
+        # The detail used to read "catalog listed" whenever the command exited
+        # zero, so a listing that came back empty reported the success sentence
+        # while failing. A failure has to say what went wrong or it sends the
+        # reader looking in the wrong place.
+        if code != 0:
+            listing = f"rooms exited {code}: {(stderr or stdout)[:200]}"
+        elif "times-tables" not in (stdout + stderr):
+            listing = f"the catalog listing did not contain times-tables: {stdout[:200]!r}"
+        else:
+            listing = "catalog listed"
         checks.append(
             {
                 "name": "rooms_list",
-                "passed": code == 0 and "times-tables" in (stdout + stderr),
-                "detail": "catalog listed" if code == 0 else (stderr or stdout)[:200],
+                "passed": listing == "catalog listed",
+                "detail": listing,
             }
         )
         for room_id in ROOMS:

@@ -5,6 +5,32 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Three gates were testing whichever binary happened to be lying on disk. The
+  soak, the creator roundtrip and the catalog scorecard each preferred
+  `target/debug`, then `target/release`, and fell back to `cargo run`. So a
+  stale artifact could answer for code that no longer existed.
+
+  This is the defect found in the reduced-motion gate long ago and fixed only
+  there. Its resolver has carried the reason in a comment ever since, and three
+  other gates went on doing the thing the comment warns about.
+
+  Demonstrated rather than asserted. With `rooms` changed to print nothing and
+  the binary deliberately not rebuilt, all three reported a full pass: the soak
+  30 of 30, including the check that requires the catalog listing to contain
+  times-tables; the scorecard 41 of 41; the roundtrip 6 of 6. After the fix, and
+  with the same break still in place, the soak fails on `rooms_list` and the
+  scorecard fails with "catalog too small: 0 rows". The roundtrip still passes,
+  honestly, because that break is not on its path; its resolver is corrected
+  all the same.
+
+  All three now build first and use what the build produced, the way the other
+  three gates already did. Cargo is incremental, so on an already-built tree it
+  costs almost nothing.
+
+- The soak's catalog check reported "catalog listed" whenever the command exited
+  zero, so an empty listing printed the success sentence while failing. It now
+  says which of the two things went wrong.
+
 - The soak now judges its outputs by what is in them. It accepted a picture for
   existing and a room bed for being over a thousand bytes.
 
