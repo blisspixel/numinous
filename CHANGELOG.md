@@ -5,6 +5,26 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The uninstall roundtrip now checks the whole promise instead of a third of it.
+  The uninstaller says your play history stays, and names three files: the
+  journey, the scoreboard, and the Cairn drafts. The gate hashed every player
+  file that existed and passed if any survived. Playing a room writes the
+  journey and nothing else, so two of the three were never created, never
+  hashed, and never checked, while the report read as though the promise had
+  been kept in full.
+
+  A scored game is now played as well as a room, which writes the scoreboard.
+  The Cairn drafts are seeded directly, because the tool that writes them opens
+  at journey level 42 and a roundtrip cannot play that far; what is under test
+  is the uninstaller, which looks at a path and neither knows nor cares which
+  face wrote it.
+
+  All three must be present before the uninstall runs, so the coverage cannot
+  quietly shrink again: if something stops writing one, the gate says which file
+  went unwritten rather than passing on the rest. Both halves were confirmed by
+  breaking them, one by skipping the seed and one by deleting the scoreboard
+  between the uninstall and the check.
+
 - The install, play, uninstall roundtrip now runs nightly, not only on a tag.
   It needs a packaged archive, so it had only ever run inside the release
   workflow. That made it the least exercised gate in the repository: a change
