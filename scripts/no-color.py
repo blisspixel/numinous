@@ -31,12 +31,18 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any, NamedTuple
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / ".agent" / "tester-cohort" / "no-color"
+
+# The gates share one way of getting the binaries they test; see gate_cli.py
+# for why there is only one copy of it.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gate_cli import GateError, build_and_locate  # noqa: E402
 
 # Select Graphic Rendition: the escapes that set color, weight and so on. A
 # sequence ending in any other letter moves or clears the cursor and is allowed.
@@ -135,34 +141,6 @@ SKIPPED: dict[str, str] = {
 
 class SweepError(RuntimeError):
     """The CLI could not be driven."""
-
-
-def resolve_cli() -> str:
-    """Build the CLI, then return the binary that build produced.
-
-    This observes live behaviour, so it has to observe the behaviour of the
-    current source. Picking up whichever binary happened to be on disk would
-    let a stale artifact answer for code that no longer exists.
-    """
-    build = subprocess.run(
-        ["cargo", "build", "--quiet", "--bin", "numinous"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-    )
-    if build.returncode != 0:
-        raise SweepError("cannot build the CLI under test:\n" + build.stderr)
-    configured = os.environ.get("CARGO_TARGET_DIR")
-    target_root = Path(configured) if configured else ROOT / "target"
-    if not target_root.is_absolute():
-        target_root = ROOT / target_root
-    for name in ("numinous.exe", "numinous"):
-        candidate = target_root / "debug" / name
-        if candidate.is_file():
-            return str(candidate)
-    raise SweepError(
-        f"cargo build reported success but no numinous binary is under {target_root / 'debug'}"
-    )
 
 
 def isolated_env(home: Path, no_color: bool) -> dict[str, str]:
@@ -324,8 +302,8 @@ def coverage(cli: str) -> dict[str, Any]:
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     try:
-        cli = resolve_cli()
-    except SweepError as error:
+        cli = str(build_and_locate(("numinous",))[0])
+    except (SweepError, GateError) as error:
         results = [{"name": "build", "passed": False, "colorful": False, "detail": str(error)}]
     else:
         results = [coverage(cli)] + [check(cli, probe) for probe in PROBES]

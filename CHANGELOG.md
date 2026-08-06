@@ -23,9 +23,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   honestly, because that break is not on its path; its resolver is corrected
   all the same.
 
-  All three now build first and use what the build produced, the way the other
-  three gates already did. Cargo is incremental, so on an already-built tree it
-  costs almost nothing.
+  All six gates now share one resolver, `scripts/gate_cli.py`. Propagating the
+  fixed copy into three more files would have left six copies free to drift
+  apart again, which is the same failure in slower motion.
+
+- The soak could hang rather than fail, depending on how it was started. Its
+  probes inherited stdin, and `bench` plays gauntlets that read a line, so
+  against a pipe nobody writes to it blocked until the timeout. Under a closed
+  stdin, which is what CI gives it, the same command finishes in under a second.
+  A gate whose result depends on the caller's terminal is not a gate. Every
+  non-interactive probe now has its input closed.
 
 - The soak's catalog check reported "catalog listed" whenever the command exited
   zero, so an empty listing printed the success sentence while failing. It now
