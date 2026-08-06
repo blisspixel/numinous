@@ -996,10 +996,24 @@ mod tests {
     ///
     /// This list was 21. Shading a both-lit cell recovered 15 of them, and
     /// moving the shade thresholds onto the catalog's measured ink recovered
-    /// two more. These four change so few pixels, or by so little, that no
-    /// four-level ramp reaches them: `percolation` moves two pixels out of
-    /// 8,400 and `hilbert` eleven. Their answer needs the room to say it
-    /// differently, not the renderer to look harder.
+    /// two more. These four fail for two different reasons, measured at the
+    /// level of individual cells rather than guessed at:
+    ///
+    /// `hilbert`, `percolation` and `wireworld` change only cells with one
+    /// half below the lit floor `crate::ansi` uses. Such a cell renders as a half
+    /// block, which says which half is lit and nothing about how brightly.
+    /// The change can be large and still invisible: one `hilbert` cell moves
+    /// its lit half from 174 to 251 and keeps the same glyph. No threshold
+    /// helps, because no threshold is consulted.
+    ///
+    /// `magnet-fractal` does change both-lit cells, but by about 22 luminance
+    /// inside the widest band, which spans the floor up to 128.
+    ///
+    /// So the first three need the room to answer with shape rather than only
+    /// brightness. Encoding brightness into a half-lit cell would need a glyph
+    /// that means "lower half, dimly", and the block characters do not have
+    /// one; the nearest candidates encode how much of the cell is filled,
+    /// which would say something false about where the ink is.
     ///
     /// The list is a record of a real defect, not a permission slip. The test
     /// below fails if it grows, if an entry starts responding and is not

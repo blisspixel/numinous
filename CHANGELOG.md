@@ -19,10 +19,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   and the range where the drawing actually lives was starved. Two rooms failed
   for exactly that reason: `nova` and `rule-110` moved thousands of pixels by
   up to 55 luminance without a single one crossing a band.
-  The known-failure list falls from 6 to 4. The four that remain change so
-  little that no four-level ramp reaches them; `percolation` moves two pixels
-  out of 8,400 and `hilbert` eleven, so their answer needs the room to say it
-  differently rather than the renderer to look harder.
+  The known-failure list falls from 6 to 4, and why those four fail is now
+  measured at the level of individual cells rather than guessed at. Three of
+  them, `hilbert`, `percolation` and `wireworld`, change only cells with one
+  half below the lit floor. Such a cell renders as a half block, which says
+  which half is lit and nothing about how brightly, so the change can be large
+  and still invisible: one `hilbert` cell moves its lit half from 174 to 251
+  and keeps the same glyph. No threshold helps there, because no threshold is
+  consulted. The fourth, `magnet-fractal`, does change both-lit cells, but by
+  about 22 luminance inside the widest band. A test records the half-lit limit
+  directly, since it is a property of the encoding rather than of those rooms,
+  and the block characters have no glyph meaning a dim lower half.
   A regression samples the catalog and fails if any shade falls under a tenth
   of the ink, which is the shape of the defect that was there.
 - The color-free renderer now shades a cell whose halves are both lit, and
