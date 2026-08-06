@@ -226,6 +226,31 @@ class ReleaseWorkflowTests(unittest.TestCase):
         hook = (ROOT / "scripts" / "hooks" / "pre-commit").read_text(encoding="utf-8")
         self.assertIn(HOOK_TRIGGER, hook)
 
+    def test_the_live_uninstall_roundtrip_runs_more_often_than_releases(self) -> None:
+        # The roundtrip needs a packaged archive, so for a long time it ran only
+        # on a tag. That made it the least exercised gate in the repository: a
+        # change that broke uninstalling would sit in main until someone cut a
+        # release. Nightly now packages an archive of its own and runs it, so
+        # this asserts both halves are there rather than only the invocation,
+        # which would pass against a step that had nothing to run against.
+        nightly = (ROOT / ".github" / "workflows" / "nightly.yml").read_text(encoding="utf-8")
+        for needed in (
+            "cargo build --release --locked --bin numinous",
+            "scripts/package-release.py --target x86_64-unknown-linux-gnu",
+            "scripts/uninstall-roundtrip.py",
+            "--release-archive",
+        ):
+            self.assertIn(needed, nightly, f"nightly no longer {needed!r}")
+        # And the judgement it depends on, which is cheap and has no excuse to
+        # be absent from the same run.
+        self.assertIn("scripts/test-uninstall-roundtrip.py", nightly)
+
+        # Still on the release path too. Nightly is an addition, not a move: a
+        # tag must not be able to publish without the roundtrip having run
+        # against the artifact it is actually publishing.
+        release = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+        self.assertIn("scripts/uninstall-roundtrip.py", release)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

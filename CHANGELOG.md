@@ -5,6 +5,25 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The install, play, uninstall roundtrip now runs nightly, not only on a tag.
+  It needs a packaged archive, so it had only ever run inside the release
+  workflow. That made it the least exercised gate in the repository: a change
+  that broke uninstalling would sit in main until somebody cut a release, and
+  the promise it guards, that removing the program keeps the player's history,
+  is one of the few a person cannot take back if it turns out to be false.
+
+  Nightly now builds the three binaries in release, packages a Linux archive
+  from them, and runs the roundtrip against it. Verified locally end to end
+  first, from a plain release build through packaging to the roundtrip, which
+  passed all four checks. The release workflow still runs it against the
+  artifact it is about to publish, since that is the only run that proves the
+  shipped thing; nightly is an addition rather than a move, and a test asserts
+  both.
+
+  That test checks the packaging and the build as well as the invocation. An
+  assertion that nightly merely mentions the script would pass against a step
+  with no archive to run against.
+
 - Eighteen rooms draw two levels that become one without color, and that is now
   measured and tracked. `'#'` is the accent at 1.7 and every other ordinary mark
   is the accent itself, so a room drawing both is drawing two brightnesses.
