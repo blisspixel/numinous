@@ -70,11 +70,21 @@ jobs:
             color_access::the_apps_own_marks_stay_apart_for_a_color_blind_player
           python3 scripts/run-exact-test.py --package numinous-mcp --bin numinous-mcp \
             tests::no_mcp_response_ever_carries_a_color_a_peer_might_not_see
+      - name: Catalog visual contract across every room
+        # This existed as an ignored test labelled a release matrix diagnostic
+        # and was named by no workflow and no script, so it had never run
+        # anywhere. It passes, so nothing had rotted, but an ignored test that
+        # nothing names reads like a gate while checking nothing.
+        run: |
+          python3 scripts/run-exact-test.py \
+            --package numinous-app --example screens --ignored \
+            tests::catalog_visual_contract_report
       - name: Multi-room soak and catalog scorecard
         run: |
           python3 scripts/test-gate-cli.py
           python3 scripts/test-run-exact-test.py
           python3 scripts/test-workflow-pins.py
+          python3 scripts/test-ignored-tests-run-somewhere.py
           python3 scripts/test-am-soak.py
           python3 scripts/am-soak.py
           python3 scripts/catalog-scorecard.py
@@ -132,6 +142,19 @@ jobs:
             --release-archive "$payload" \
             --release-checksum "${payload}.sha256" \
             --release-tag "v${version}"
+      - name: Every bundled track decodes to real audio
+        # 0.6-am asks for all 42 tracks tested on each operating system. The
+        # pull-request suite decodes the first track of each station, three of
+        # forty-two, and checks the rest against a header duration that a
+        # truncated or silent body still satisfies. Decoding all 42 takes about
+        # three quarters of a minute in release, which is too slow for every
+        # pull request and fine once a night, so the test is ignored by default
+        # and named here. This job already runs on the three platforms.
+        shell: bash
+        run: |
+          python3 scripts/run-exact-test.py \
+            --package numinous-app --bin numinous-app --ignored \
+            radio_cache::tests::every_bundled_track_decodes_to_real_audio
       - name: Keep the per-platform evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

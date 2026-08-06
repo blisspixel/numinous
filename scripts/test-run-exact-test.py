@@ -102,7 +102,7 @@ class WiringTests(unittest.TestCase):
                 self.fail(f"nightly pins a test without the helper: {stripped}")
 
     def test_the_helper_refuses_to_sweep_every_target(self):
-        # Without --lib or --bin, cargo would run every target and the count
+        # Without a target, cargo would run every one of them and the count
         # check would mean nothing.
         finished = subprocess.run(
             ["python", str(ROOT / "scripts" / "run-exact-test.py"), "--package", "x", "a::b"],
@@ -110,7 +110,15 @@ class WiringTests(unittest.TestCase):
             text=True,
         )
         self.assertNotEqual(finished.returncode, 0)
-        self.assertIn("--lib or --bin", finished.stdout + finished.stderr)
+        self.assertIn("--lib, --bin or --example", finished.stdout + finished.stderr)
+
+    def test_every_target_kind_the_repository_uses_can_be_named(self):
+        # An ignored sweep lives in an example, so a helper that only knew
+        # --lib and --bin could not run it, and the gate that requires every
+        # ignored test to be wired would have no way to satisfy itself.
+        helper = (ROOT / "scripts" / "run-exact-test.py").read_text(encoding="utf-8")
+        for flag in ("--lib", "--bin", "--example"):
+            self.assertIn(f'"{flag}"', helper, f"the helper cannot target {flag}")
 
 
 if __name__ == "__main__":
