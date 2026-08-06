@@ -5,6 +5,26 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The creator roundtrip now checks that a creation comes back as itself, not as
+  the default view of itself. It proved a `.num` saves, reopens, and rewrites
+  byte-identically, and it checked that the reopened output mentions the
+  expression. A creation is more than its expression: a player who narrowed the
+  range or turned the knob made those part of what they saved.
+
+  Three documents are now saved that differ only in range or knob. Each must
+  record its settings, report them on reopen, and reopen to a different drawing
+  from the others. Comparing drawings rather than whole outputs is the point: a
+  reopen that echoed the saved numbers and then drew the default curve would
+  pass every other check in the file, and that is exactly the break used to
+  confirm this one works. The metadata assertions alone did not catch it; only
+  the drawing comparison did.
+
+  Measured first rather than assumed: saving preserves the expression, range and
+  knob today, reopening restores all three and draws the curve, and recipe and
+  seed documents resolve to a concrete expression at save time so they roundtrip
+  as expressions do. Nothing needed fixing. What was missing was anything that
+  would notice if it stopped being true.
+
 - The uninstall roundtrip now checks the whole promise instead of a third of it.
   The uninstaller says your play history stays, and names three files: the
   journey, the scoreboard, and the Cairn drafts. The gate hashed every player

@@ -2,8 +2,18 @@
 """Machine acceptance for the local Studio make / save / reopen loop (CLI).
 
 Creates a .num document, reopens it, and checks deterministic identity of the
-saved document and reopened expression text. App gallery and MCP artifact
-delivery remain separate gates. Not a human creator usability claim.
+saved document and reopened expression text.
+
+A creation is more than its expression. A player who narrowed the range or
+turned the knob made those part of what they saved, so the range and the knob
+are checked too: saved into the document, reported on reopen, and actually
+changing the drawing. That last part is the one worth having. A reopen that
+echoed the saved numbers and then drew the default curve would satisfy every
+other check in this file, which is why the drawings are compared rather than
+the whole output.
+
+App gallery and MCP artifact delivery remain separate gates. Not a human
+creator usability claim.
 """
 
 from __future__ import annotations
@@ -127,6 +137,87 @@ def check_expression(cli: list[str], expr: str, work: Path, env: dict[str, str])
     }
 
 
+def drawing(reopened: str) -> str:
+    """The picture a reopen produced, without the metadata printed above it.
+
+    `open-studio` prints what it restored and then draws it. Comparing whole
+    outputs would let a reopen that echoes the saved numbers and then draws the
+    default curve look correct, since the echo alone would differ.
+    """
+    lines = reopened.splitlines()
+    body = [
+        line
+        for line in lines
+        if line
+        and not line.startswith(("Studio creation", "expr=", "xmin=", "xmax=", "a=", "link=", "y = "))
+    ]
+    return "\n".join(line.rstrip() for line in body)
+
+
+def check_settings_survive(cli: list[str], work: Path, env: dict[str, str]) -> dict[str, Any]:
+    """A saved creation comes back as itself, not as the default view of itself.
+
+    The expression checks above prove a document saves and reopens. They say
+    nothing about the rest of the creation: a player who narrowed the range and
+    turned the knob has made those part of what they saved. A reopen that
+    restored the expression and then drew the default picture would satisfy
+    every other check in this file.
+
+    Two documents that differ only in range must reopen to different drawings,
+    and likewise for the knob. Comparing the drawings rather than the whole
+    output matters, because the metadata echo would differ on its own even if
+    the curve never changed.
+    """
+    made: dict[str, tuple[str, str]] = {}
+    for label, args in (
+        ("wide", ["sin(a*x)", "--xmin=-6.2831853", "--xmax=6.2831853", "--a=1"]),
+        ("narrow", ["sin(a*x)", "--xmin=-0.5", "--xmax=0.5", "--a=1"]),
+        ("knob", ["sin(a*x)", "--xmin=-6.2831853", "--xmax=6.2831853", "--a=7"]),
+    ):
+        path = work / f"settings-{label}.num"
+        code, stdout, stderr = run_cli(cli, ["plot", *args, "--save", str(path)], env)
+        if code != 0 or not path.is_file():
+            return {
+                "name": "settings survive",
+                "passed": False,
+                "detail": f"{label} save failed: {(stderr or stdout)[:300]}",
+            }
+        code2, stdout2, stderr2 = run_cli(cli, ["open-studio", str(path)], env)
+        if code2 != 0:
+            return {
+                "name": "settings survive",
+                "passed": False,
+                "detail": f"{label} reopen failed: {(stderr2 or stdout2)[:300]}",
+            }
+        made[label] = (path.read_text(encoding="utf-8"), stdout2)
+
+    reasons = []
+    for label, wanted in (
+        ("narrow", ("xmin=-0.5", "xmax=0.5")),
+        ("knob", ("a=7",)),
+    ):
+        document, reopened = made[label]
+        for setting in wanted:
+            if setting not in document:
+                reasons.append(f"{label} did not save {setting}")
+            if setting not in reopened:
+                reasons.append(f"{label} did not report {setting} on reopen")
+
+    if drawing(made["wide"][1]) == drawing(made["narrow"][1]):
+        reasons.append("a narrowed range reopened to the same drawing as the wide one")
+    if drawing(made["wide"][1]) == drawing(made["knob"][1]):
+        reasons.append("a turned knob reopened to the same drawing as the untouched one")
+    if not drawing(made["wide"][1]).strip():
+        reasons.append("reopening drew nothing, so the comparisons prove nothing")
+
+    return {
+        "name": "settings survive",
+        "passed": not reasons,
+        "detail": "; ".join(reasons)
+        or "range and knob are saved, reported on reopen, and change the drawing",
+    }
+
+
 def check_recipe_bank(cli: list[str], env: dict[str, str]) -> dict[str, Any]:
     code, stdout, stderr = run_cli(cli, ["plot", "--list-recipes"], env)
     if code != 0:
@@ -155,6 +246,7 @@ def main() -> int:
         profile.mkdir()
         env = isolated_env(profile)
         results.append(check_recipe_bank(cli, env))
+        results.append(check_settings_survive(cli, work, env))
         for expr in EXPRESSIONS:
             results.append(check_expression(cli, expr, work, env))
     failed = [item for item in results if not item.get("passed")]
