@@ -216,11 +216,17 @@ def cli_plot(
 # `sin(a*x)` is first on purpose. It is the case that found the defect: the CLI
 # fixed the knob at 0 and offered no way to set it, so it sang a flat line while
 # MCP sang `sin(x)`, and this gate used to skip `sing` entirely.
-SING_CASES: tuple[tuple[str, str, int, float], ...] = (
+SING_CASES: tuple[tuple[str, str, int, float | None], ...] = (
     ("knob expression", "sin(a*x)", 24, 1.0),
     ("plain expression", "sin(x)", 24, 1.0),
     ("knob at another value", "sin(a*x)", 16, 2.5),
     ("knob that flattens it", "sin(a*x)", 16, 0.0),
+    # A knob of None asks both faces without naming one, so the two DEFAULTS
+    # have to agree. Every case above passes the knob explicitly, which means
+    # they would all still pass if one face's default drifted, and a player who
+    # never names the knob is the common case rather than the rare one.
+    ("neither face is told the knob", "sin(a*x)", 24, None),
+    ("neither face is told the knob, plain", "sin(x)", 24, None),
 )
 
 # note  1:   440.0 Hz ( A4)  at  0.00s
@@ -277,19 +283,31 @@ def wav_note_frequencies(path: Path, onsets: list[float]) -> list[float]:
 
 
 def check_sing(
-    cli: str, mcp: str, label: str, source: str, notes: int, knob: float, env: dict[str, str]
+    cli: str,
+    mcp: str,
+    label: str,
+    source: str,
+    notes: int,
+    knob: float | None,
+    env: dict[str, str],
 ) -> dict[str, Any]:
     """One face's audio must hold the pitches the other face names."""
-    name = f"sing {label}: {source} a={knob} notes={notes}"
+    name = f"sing {label}: {source} a={'default' if knob is None else knob} notes={notes}"
     try:
-        reported = mcp_sing(mcp, {"expr": source, "notes": notes, "a": knob}, env)
+        arguments: dict[str, Any] = {"expr": source, "notes": notes}
+        if knob is not None:
+            arguments["a"] = knob
+        reported = mcp_sing(mcp, arguments, env)
         with tempfile.TemporaryDirectory(
             prefix="numinous-sing-parity-", ignore_cleanup_errors=True
         ) as workspace:
             wav = Path(workspace) / "sung.wav"
+            command = [cli, "sing", source, "--notes", str(notes)]
+            if knob is not None:
+                command += ["--a", str(knob)]
+            command += ["--out", str(wav)]
             result = subprocess.run(
-                [cli, "sing", source, "--notes", str(notes), "--a", str(knob),
-                 "--out", str(wav)],
+                command,
                 env=env, capture_output=True, text=True, encoding="utf-8", timeout=120,
             )
             if result.returncode != 0:
