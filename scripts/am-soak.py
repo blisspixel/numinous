@@ -47,6 +47,11 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / ".agent" / "tester-cohort" / "am-soak"
 
+# The gates share one way of getting the binaries they test; see gate_cli.py
+# for why there is only one copy of it.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gate_cli import resolve_cli  # noqa: E402
+
 # Stratified sample across wings and the five tactile flagships.
 ROOMS = (
     "times-tables",
@@ -64,51 +69,19 @@ ROOMS = (
 )
 
 
-def resolve_cli() -> list[str]:
-    """Build the CLI, then return the binary that build produced.
-
-    This walks live behaviour, so it has to walk the behaviour of the current
-    source. Picking up whichever binary happened to be on disk lets a stale
-    artifact answer for code that no longer exists, and the walk passes while
-    the thing is broken. Demonstrated rather than assumed: with `rooms` made to
-    print nothing and the binary left alone, this reported 30 of 30 including
-    the check that requires the catalog to contain times-tables.
-
-    Cargo is incremental, so on an already-built tree this costs almost nothing.
-    """
-    build = subprocess.run(
-        ["cargo", "build", "--quiet", "--locked", "--bin", "numinous"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-    )
-    if build.returncode != 0:
-        raise SystemExit("cannot build the CLI under test:\n" + build.stderr)
-    return [str(built_cli())]
-
-
-def built_cli() -> Path:
-    """The debug binary cargo just wrote, wherever it was told to write it."""
-    # CARGO_TARGET_DIR redirects where cargo writes and several CI layouts set
-    # it, so a build that succeeded could still look missing under ROOT/target.
-    # A relative value is resolved by cargo against its own working directory,
-    # which is ROOT here.
-    configured = os.environ.get("CARGO_TARGET_DIR")
-    target_root = Path(configured) if configured else ROOT / "target"
-    if not target_root.is_absolute():
-        target_root = ROOT / target_root
-    for name in ("numinous.exe", "numinous"):
-        candidate = target_root / "debug" / name
-        if candidate.is_file():
-            return candidate
-    raise SystemExit(
-        f"cargo build reported success but no numinous binary is under {target_root / 'debug'}"
-    )
-
-
 def run_cli(cli: list[str], args: list[str], env: dict[str, str]) -> tuple[int, str, str]:
+    """Run one probe with its input already closed.
+
+    Every command here is meant to be non-interactive, and a probe that
+    inherits an open stdin can wait on it forever: `bench` plays gauntlets that
+    read a line, so against a pipe nobody writes to it blocks until the timeout
+    and the gate reports a hang instead of a result. That made this depend on
+    how the caller was started, passing under a closed stdin and failing under
+    an open one, which is the worst kind of gate to own.
+    """
     process = subprocess.run(
         [*cli, *args],
+        input="",
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -211,7 +184,11 @@ def main() -> int:
         if code != 0:
             listing = f"rooms exited {code}: {(stderr or stdout)[:200]}"
         elif "times-tables" not in (stdout + stderr):
-            listing = f"the catalog listing did not contain times-tables: {stdout[:200]!r}"
+            combined = (stdout + stderr).strip()
+            listing = (
+                "the catalog listing did not contain times-tables: "
+                f"{combined[:200]!r}"
+            )
         else:
             listing = "catalog listed"
         checks.append(

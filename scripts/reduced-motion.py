@@ -30,11 +30,17 @@ import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any, NamedTuple
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / ".agent" / "tester-cohort" / "reduced-motion"
+
+# The gates share one way of getting the binaries they test; see gate_cli.py
+# for why there is only one copy of it.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gate_cli import resolve_cli  # noqa: E402
 
 # Enough bytes to hold many frames of the widest supported view.
 READ_LIMIT = 400_000
@@ -81,36 +87,6 @@ SHOW_ARGS = [
     "--fps",
     "5",
 ]
-
-
-def resolve_cli() -> list[str]:
-    """Build the CLI, then return the binary that build produced.
-
-    This gate observes live behaviour, so it must observe the behaviour of the
-    current source. Picking whichever binary happens to be on disk would let a
-    stale artifact answer for code that no longer exists, and the gate would
-    pass while the feature was broken. Cargo is incremental, so this costs
-    almost nothing when the tree is already built.
-    """
-    build = subprocess.run(
-        ["cargo", "build", "--quiet", "--bin", "numinous"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-    )
-    if build.returncode != 0:
-        raise SystemExit("cannot build the CLI under test:\n" + build.stderr)
-    # CARGO_TARGET_DIR redirects where cargo writes, and several CI layouts set
-    # it. Looking only under ROOT/target would fail a build that succeeded.
-    target_dir = Path(os.environ.get("CARGO_TARGET_DIR") or (ROOT / "target"))
-    for name in ("numinous.exe", "numinous"):
-        path = target_dir / "debug" / name
-        if path.is_file():
-            return [str(path)]
-    raise SystemExit(
-        "cargo build reported success but no numinous binary is under "
-        f"{target_dir / 'debug'}"
-    )
 
 
 def whole_frames(cli: list[str], args: list[str], reduced: bool, marker: str) -> list[str]:
