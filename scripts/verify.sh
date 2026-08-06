@@ -35,6 +35,7 @@ python3 scripts/creator-roundtrip.py
 echo "== creator parity =="
 python3 scripts/creator-parity.py
 echo "== reduced motion =="
+python3 scripts/test-reduced-motion.py
 python3 scripts/reduced-motion.py
 echo "== photosensitivity budget, general and red flashes (full catalog) =="
 cargo test -p numinous-core --release --lib -- --ignored --exact registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget
