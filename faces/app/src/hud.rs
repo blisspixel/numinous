@@ -397,6 +397,54 @@ mod tests {
             .expect("room exists")
     }
 
+    #[test]
+    fn the_footer_keeps_its_words_at_every_width_the_window_can_take() {
+        // The footer carries what the player has to read to act: the status and
+        // what the hand is for. The App opens at 900 and sets no minimum size,
+        // so it can be dragged to any width, and the text is fitted by cutting
+        // it. Nothing checked what survives that cut.
+        //
+        // Measured before writing this: a full status holds whole down to 280
+        // pixels and then loses its tail to an ellipsis, which is a degradation
+        // a player can work with. What would not be is the branch below three
+        // columns, which returns dots and says nothing at all. That branch is
+        // out of reach at any width a window can sensibly have, and this is
+        // what keeps it out of reach.
+        let status = "DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4";
+
+        for width in [1280i32, 900, 720, 640, 480, 360, 280] {
+            let scale = if width >= 720 { 2 } else { 1 };
+            let fitted = fit_footer_text(status, width - 20, scale);
+            assert_eq!(
+                fitted, status,
+                "at {width} pixels the footer already cut the status"
+            );
+        }
+
+        // Narrower than that it must still say something a person can read:
+        // the beginning of the status, marked as continuing.
+        for width in [200i32, 120, 80] {
+            let fitted = fit_footer_text(status, width - 20, 1);
+            assert!(
+                fitted.ends_with("..."),
+                "at {width} pixels the cut is not marked: {fitted:?}"
+            );
+            let kept = fitted.trim_end_matches('.');
+            assert!(
+                kept.len() >= 4 && status.starts_with(kept),
+                "at {width} pixels the footer kept {kept:?}, which is not the start of the status"
+            );
+        }
+
+        // And the floor: even given almost nothing, it must not answer with a
+        // row of dots, which is indistinguishable from a bug.
+        let smallest = fit_footer_text(status, 6 * 4, 1);
+        assert!(
+            smallest.chars().any(|ch| ch != '.'),
+            "the footer degraded to dots at a width the window can reach: {smallest:?}"
+        );
+    }
+
     /// A verbless room: every catalog room answers the hand now, so the
     /// default-action fallback is proven against a synthetic room, the same
     /// shape any future room has on the day it is born.
