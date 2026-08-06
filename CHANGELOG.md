@@ -5,6 +5,32 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The warning ink is now held to being legible without color, not merely to
+  being a different color. `'!'` is the one ink that carries meaning rather than
+  beauty: it says this cell is wrong. The test guarding it asserted that its RGB
+  triple differs from the accent's, against a single hardcoded accent.
+
+  Different color is not the same as different to look at. Accents vary per
+  room, and 81 of the 354 sit within 12 luminance of the warning ink, five of
+  them exactly on it. So "distinct color" can quite comfortably mean "identical
+  grey", and the test named `semantic_warning_ink_is_distinct_from_accent` would
+  have said nothing about it.
+
+  The question is now put to `to_mono` itself: render a warning cell and an
+  ordinary cell, and compare the block characters a `NO_COLOR` player is
+  actually shown. Asked of the renderer rather than worked out from its
+  thresholds, so the check cannot drift away from what is on screen.
+
+  Measured across the four rooms that draw with the warning ink: they sit 24,
+  26, 27 and 63 luminance from it, so all four are legible today. What was
+  missing was anything that would notice if a fifth room adopted the ink with an
+  accent from the colliding 23 percent.
+
+  The list of rooms to check is read from the room sources rather than written
+  down beside them, so a room that starts using the warning ink is picked up
+  automatically. A second test proves the check can fail, by giving a room an
+  accent equal to the warning ink and confirming the comparison catches it.
+
 - Cult of Pi shows no fault marks at all on a character terminal, and now says
   so. The room corrupts digits of pi and asks the player to click and hold a
   patch exact. `glyph_for` marks a corrupted digit `!` and an exact one `.`, and
