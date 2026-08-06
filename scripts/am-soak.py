@@ -18,6 +18,7 @@ asked for, which its header states.
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import struct
@@ -101,13 +102,21 @@ def png_complaint(path: Path, width: int, height: int) -> str | None:
     """
     if not path.is_file():
         return "no file was written"
-    header = path.read_bytes()[:24]
+    # Twenty four bytes off the handle, not the whole file. A render that went
+    # wrong can leave something large behind, and there is no reason for a
+    # check on the first two fields to read any of it.
+    with path.open("rb") as handle:
+        header = handle.read(24)
     if len(header) < 24 or not header.startswith(PNG_SIGNATURE):
         return f"not a PNG: first bytes were {header[:8]!r}"
-    # Bytes 8 to 16 are the IHDR chunk header; its first two fields are the
-    # dimensions, big-endian.
-    if header[12:16] != b"IHDR":
-        return f"PNG did not open with IHDR: {header[12:16]!r}"
+    # Bytes 8 to 16 are the IHDR chunk header: a four byte length, then the
+    # type. A real IHDR is always exactly 13 bytes long, so a different length
+    # means these are not the dimensions and should not be read as them.
+    length, kind = struct.unpack(">I4s", header[8:16])
+    if kind != b"IHDR":
+        return f"PNG did not open with IHDR: {kind!r}"
+    if length != 13:
+        return f"IHDR declares {length} bytes, not 13, so its fields cannot be trusted"
     actual = struct.unpack(">II", header[16:24])
     if actual != (width, height):
         return f"PNG says it is {actual[0]}x{actual[1]}, not {width}x{height}"
@@ -128,8 +137,21 @@ def bed_complaint(path: Path, report: str) -> str | None:
     match = SIGNAL_RE.search(report)
     if match is None:
         return f"the export reported no signal line to judge: {report[:200]!r}"
-    peak = float(match.group("peak"))
-    rms = float(match.group("rms"))
+    # A floor only rejects numbers. Anything that is not one has to be caught
+    # before the comparison, because the comparison would wave it through: an
+    # exponent the pattern happily matches, like 1e999, becomes infinity, and
+    # every "less than the floor" test on infinity or a NaN is false. That is
+    # a check that cannot fail, which is the one kind not worth having.
+    try:
+        peak = float(match.group("peak"))
+        rms = float(match.group("rms"))
+    except ValueError:
+        return (
+            f"the signal line did not carry numbers: peak {match.group('peak')!r}, "
+            f"RMS {match.group('rms')!r}"
+        )
+    if not (math.isfinite(peak) and math.isfinite(rms)):
+        return f"the signal line was not finite: peak {peak}, RMS {rms}"
     if peak < MIN_PEAK or rms < MIN_RMS:
         return f"the bed is effectively silent: peak {peak}, RMS {rms}"
     return None
