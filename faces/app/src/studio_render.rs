@@ -113,6 +113,61 @@ mod tests {
         assert!(curve_range(8, -1.0, 1.0, |_| None).is_none());
     }
 
+    /// The columns the core's character plot puts a mark in.
+    ///
+    /// Lines are trimmed of trailing space, so a column is marked when some row
+    /// is long enough to reach it and holds a non-space there.
+    fn marked_columns(text: &str) -> Vec<usize> {
+        let mut columns: Vec<usize> = Vec::new();
+        for line in text.lines() {
+            for (column, glyph) in line.chars().enumerate() {
+                if glyph != ' ' && !columns.contains(&column) {
+                    columns.push(column);
+                }
+            }
+        }
+        columns.sort_unstable();
+        columns
+    }
+
+    /// The columns the App's raster ends up with ink in, for the same curve.
+    ///
+    /// Drawn rather than sampled, because the core's plot joins its samples
+    /// with a line and so marks the columns between two distant points too.
+    /// Comparing the App's raw sample columns against that would report a
+    /// difference that is only the two faces filling a gap the same way.
+    fn drawn_columns(
+        width: usize,
+        xmin: f64,
+        xmax: f64,
+        value_at: impl FnMut(f64) -> Option<f64>,
+    ) -> Vec<usize> {
+        let mut raster = Raster::new(width, 24);
+        let layout = CurveLayout {
+            width,
+            height: 24,
+            top: 0.0,
+            // One row of margin, so the lowest sample maps to the last row
+            // rather than one past it. Without this the bottom-most point is
+            // clipped away and a column whose only pixel is that point reads
+            // as unmarked, which looks exactly like the two faces disagreeing.
+            bottom_margin: 1.0,
+        };
+        draw_curve(&mut raster, layout, xmin, xmax, value_at).expect("the window draws it");
+        let rgba = raster.to_rgba();
+        let mut columns = Vec::new();
+        for column in 0..width {
+            let lit = (0..24).any(|row| {
+                let at = (row * width + column) * 4;
+                rgba[at..at + 3] != [10, 11, 15]
+            });
+            if lit {
+                columns.push(column);
+            }
+        }
+        columns
+    }
+
     #[test]
     fn the_window_frames_a_curve_exactly_as_the_other_faces_do() {
         // The App draws pixels and the CLI and MCP draw characters, so their
@@ -154,7 +209,7 @@ mod tests {
             let expr = numinous_core::parse(source).expect("parses");
             let mut discarded_somewhere = false;
             for width in [40usize, 41, 72, 73, 200, 201] {
-                let (_, core_min, core_max) =
+                let (core_text, core_min, core_max) =
                     numinous_core::plot_text(source, xmin, xmax, a, width, 24)
                         .expect("core plots it");
                 let samples = sample_curve(width, xmin, xmax, |x| {
@@ -166,6 +221,22 @@ mod tests {
                     (samples.ymin, samples.ymax),
                     (core_min, core_max),
                     "{source} at a={a} over [{xmin}, {xmax}] at width {width}"
+                );
+
+                // The framing alone is too weak to say the two agree about
+                // samples. Dropping the App's last column changes neither the
+                // minimum nor the maximum for any of these functions, so an
+                // off-by-one in the sample grid passed this test until the
+                // columns themselves were compared. Both faces put a mark in
+                // the same columns, so compare which columns those are.
+                let core_columns = marked_columns(&core_text);
+                let window_columns = drawn_columns(width, xmin, xmax, |x| {
+                    Some(numinous_core::eval(&expr, x, a))
+                });
+                assert_eq!(
+                    window_columns, core_columns,
+                    "{source} at a={a} over [{xmin}, {xmax}] at width {width}: the two \
+                     faces draw the curve across different columns"
                 );
             }
             // A case whose whole point is the discard must actually discard.
