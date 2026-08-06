@@ -39,16 +39,37 @@ EXPRESSIONS = (
 
 
 def resolve_cli() -> list[str]:
-    candidates = [
-        ROOT / "target" / "debug" / "numinous.exe",
-        ROOT / "target" / "debug" / "numinous",
-        ROOT / "target" / "release" / "numinous.exe",
-        ROOT / "target" / "release" / "numinous",
-    ]
-    for path in candidates:
-        if path.is_file():
-            return [str(path)]
-    return ["cargo", "run", "--quiet", "--locked", "--bin", "numinous", "--"]
+    """Build the CLI, then return the binary that build produced.
+
+    This exercises live behaviour, so it has to exercise the behaviour of the
+    current source. Picking up whichever binary happened to be on disk lets a
+    stale artifact answer for code that no longer exists, and the gate passes
+    while the thing is broken. Demonstrated rather than assumed: with `rooms`
+    made to print nothing and the binary left alone, this reported a full pass.
+
+    Cargo is incremental, so on an already-built tree this costs almost nothing.
+    """
+    build = subprocess.run(
+        ["cargo", "build", "--quiet", "--locked", "--bin", "numinous"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if build.returncode != 0:
+        raise SystemExit("cannot build the CLI under test:\n" + build.stderr)
+    # CARGO_TARGET_DIR redirects where cargo writes and several CI layouts set
+    # it, so a build that succeeded could still look missing under ROOT/target.
+    configured = os.environ.get("CARGO_TARGET_DIR")
+    target_root = Path(configured) if configured else ROOT / "target"
+    if not target_root.is_absolute():
+        target_root = ROOT / target_root
+    for name in ("numinous.exe", "numinous"):
+        candidate = target_root / "debug" / name
+        if candidate.is_file():
+            return [str(candidate)]
+    raise SystemExit(
+        f"cargo build reported success but no numinous binary is under {target_root / 'debug'}"
+    )
 
 
 def run_cli(cli: list[str], args: list[str], env: dict[str, str]) -> tuple[int, str, str]:
