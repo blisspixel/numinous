@@ -5,6 +5,30 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The MCP face is now held to emitting no color at all, which completes the
+  color-independence sweep across all three faces. The terminal face has
+  `NO_COLOR` and the App has been swept for color blindness. This face had
+  neither, because it has never emitted color: it renders through `Canvas`,
+  which is characters. That was a coincidence nobody was holding, and an MCP
+  peer is the reader most likely to have no color at all.
+
+  Every tool is called, with the list read from the binary rather than written
+  into the test, so a new tool cannot ship unchecked. Empty arguments make most
+  of them refuse, which is the point: a refusal is a response a peer reads too.
+  Three tools are then called properly, and the test requires those to have
+  succeeded, because a mistyped argument would turn them into two more refusals
+  and quietly leave the render path unswept. That guard caught its own case
+  immediately: `play_room` takes `id`, not `room`.
+
+- A nightly gate can no longer pass by checking nothing.
+  `cargo test -- --exact a::name::that::is::gone` runs nothing and exits 0, so
+  a workflow step that pins a test by name keeps reporting success after the
+  test is renamed. Both nightly steps that pin tests, the photosensitivity
+  catalog sweep and the new color-independence step, now go through
+  `scripts/run-exact-test.py`, which requires exactly one test to have run.
+  It has a test twin covering the cases where cargo itself succeeds, plus a
+  check that no workflow step pins a test without it.
+
 - The color-independence audit is now committed as evidence rather than only
   asserted inside tests. The sweeps decide whether the catalog has regressed,
   but they cannot show a reader what was covered: a passing test looks identical
