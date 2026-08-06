@@ -5,6 +5,33 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Eighteen rooms draw two levels that become one without color, and that is now
+  measured and tracked. `'#'` is the accent at 1.7 and every other ordinary mark
+  is the accent itself, so a room drawing both is drawing two brightnesses.
+  Rooms use that as depth: in `burning-ship` `'#'` is the interior of the set
+  and `'*'` a point that escaped late, and in `josephus` it is how far through
+  the elimination a seat was. That is the picture's own information.
+
+  It survives `to_mono` in most rooms and not in 39 accents, for two reasons
+  that pull opposite ways. A bright accent multiplied by 1.7 clamps, so both
+  levels arrive at full and read as one solid block. A dark accent multiplied by
+  1.7 is still dark, so both land in the faintest shade. Of the rooms whose
+  accent collapses that way, 18 actually draw both marks.
+
+  Tracked in a shrink-only list, on the same terms as the flash budget: the test
+  fails if the list grows, if an entry stops colliding and is not removed, or if
+  a room outside it starts colliding. Both directions were confirmed by breaking
+  them. Fixing it means changing the ink scale or the shade thresholds, and both
+  change what all 354 rooms look like, so it is a decision about the product
+  rather than a defect to patch.
+
+- The aha overlay modules are now scanned with the rooms they paint on. They
+  declare no room id, because they are not rooms; they draw over one in that
+  room's accent. The scan added last cycle refused to pass over them, which is
+  what it was for, and it fired the first time a second mark was scanned. They
+  are now bound to their parent rooms explicitly, and a test fails if a helper
+  names a room that does not exist or a file that is no longer there.
+
 - The warning ink is now held to being legible without color, not merely to
   being a different color. `'!'` is the one ink that carries meaning rather than
   beauty: it says this cell is wrong. The test guarding it asserted that its RGB

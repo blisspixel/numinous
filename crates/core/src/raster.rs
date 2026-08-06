@@ -297,7 +297,55 @@ mod tests {
     /// exact shape of hole the scan exists to close: a room could start using
     /// the ink, go unparsed, and the catalog would still look clean.
     fn rooms_drawing_with(mark: char) -> Vec<(String, [u8; 3])> {
-        let literal = format!("'{mark}'");
+        rooms_drawing_with_all(&[mark])
+    }
+
+    /// Sources that draw on another room's raster, and the room they draw on.
+    ///
+    /// These are the engineered-aha overlays. They declare no id of their own
+    /// because they are not rooms; they paint over one, in that room's accent,
+    /// so that is the accent their marks have to be legible against.
+    ///
+    /// Written down rather than guessed from the file name, and checked below:
+    /// an entry naming a room that does not exist fails, and a new helper that
+    /// reaches for a mark fails the scan until it is listed here.
+    const HELPER_ROOMS: [(&str, &str); 2] = [
+        ("buffon_aha", "buffon-needle"),
+        ("times_tables_aha", "times-tables"),
+    ];
+
+    fn helper_parent(stem: &str) -> Option<&'static str> {
+        HELPER_ROOMS
+            .iter()
+            .find(|(helper, _)| *helper == stem)
+            .map(|(_, room)| *room)
+    }
+
+    #[test]
+    fn every_helper_names_a_room_that_exists() {
+        for (helper, room) in HELPER_ROOMS {
+            assert!(
+                crate::registry::room_by_id(room).is_some(),
+                "{helper} is recorded as drawing on {room}, which is not a room"
+            );
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("src/rooms")
+                .join(format!("{helper}.rs"));
+            assert!(
+                path.is_file(),
+                "{helper} is listed but {path:?} does not exist"
+            );
+        }
+    }
+
+    /// Every room whose source draws with all of `marks`, as `(id, accent)`.
+    ///
+    /// Same scan, same refusal to pass over what it cannot read. Asking for
+    /// several marks at once answers the question that matters for a ramp:
+    /// which rooms draw two levels that a player has to tell apart.
+    fn rooms_drawing_with_all(marks: &[char]) -> Vec<(String, [u8; 3])> {
+        let literals: Vec<String> = marks.iter().map(|mark| format!("'{mark}'")).collect();
+        let literal = literals.join(" and ");
         let mut pending = vec![std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/rooms")];
         let mut found = Vec::new();
         while let Some(dir) = pending.pop() {
@@ -313,21 +361,26 @@ mod tests {
                     continue;
                 }
                 let source = std::fs::read_to_string(&path).expect("a readable room source");
-                if !source.contains(&literal) {
+                if !literals.iter().all(|wanted| source.contains(wanted)) {
                     continue;
                 }
                 // The id the room declares, so the mapping never depends on a
                 // file name happening to match it.
+                let stem = path
+                    .file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .expect("a room source has a readable name");
                 let id = source
                     .split_once("id: \"")
                     .and_then(|(_, rest)| rest.split_once('"'))
                     .map(|(id, _)| id)
+                    .or_else(|| helper_parent(stem))
                     .unwrap_or_else(|| {
                         panic!(
                             "{path:?} draws with {literal} and declares no room id, so this scan \
-                             cannot tell which accent it is drawn against. If it is a helper \
-                             drawing on behalf of another room, it needs checking against that \
-                             room's accent rather than being passed over."
+                             cannot tell which accent it is drawn against. If it draws on behalf \
+                             of another room, add it to HELPER_ROOMS naming that room; if it \
+                             draws nowhere, it should not be reaching for a mark."
                         )
                     });
                 let room = crate::registry::room_by_id(id)
@@ -372,6 +425,88 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// Rooms that draw both `'#'` and `'*'` and whose accent makes the two the
+    /// same character once color is gone.
+    ///
+    /// `'#'` is the accent at 1.7, and every other ordinary mark is the accent
+    /// itself, so a room drawing both is drawing two levels. Rooms use that as
+    /// a depth: in `burning-ship` `'#'` is the interior of the set and `'*'` is
+    /// a point that escaped late, and in `josephus` it is how far through the
+    /// elimination a seat was. That is the picture's own information, not
+    /// decoration.
+    ///
+    /// It survives `to_mono` in most rooms and not in these, for two reasons
+    /// that pull in opposite directions. A bright accent multiplied by 1.7
+    /// clamps, so both levels arrive at full and both read as a solid block. A
+    /// dark accent multiplied by 1.7 is still dark, so both land in the
+    /// faintest shade. Either way a player without color sees one level where
+    /// the room drew two.
+    ///
+    /// This is a record of a real limitation, not a permission slip. The test
+    /// below fails if the list grows, if an entry stops colliding and is not
+    /// removed, or if a room outside it starts colliding. Fixing it means
+    /// changing either the ink scale or the shade thresholds, and both change
+    /// what all 354 rooms look like, so it is a decision about the product
+    /// rather than a defect to patch. Tracked in `docs/ROADMAP.md` under 0.5
+    /// Sensory.
+    const MARK_LEVELS_COLLAPSE_WITHOUT_COLOR: [&str; 18] = [
+        "attention",
+        "burning-ship",
+        "dla-frost",
+        "gamblers-ruin",
+        "goldbach",
+        "henon-heiles",
+        "hofstadter-q",
+        "josephus",
+        "kepler-laws",
+        "liouville",
+        "magnet-fractal",
+        "moser-debruijn",
+        "rabi",
+        "ruler-function",
+        "seifert",
+        "sinai-billiard",
+        "twin-primes",
+        "zipf",
+    ];
+
+    #[test]
+    fn two_drawn_levels_stay_two_levels_without_color_outside_the_known_list() {
+        let mut colliding: Vec<String> = rooms_drawing_with_all(&['#', '*'])
+            .into_iter()
+            .filter(|(_, accent)| {
+                let raster = Raster::with_accent(1, 1, *accent);
+                mono_glyph(raster.ink('#')) == mono_glyph(raster.ink('*'))
+            })
+            .map(|(id, _)| id)
+            .collect();
+        colliding.sort();
+
+        // Proof the scan looked at something. A scan that found no room drawing
+        // both marks would report a clean catalog by never having looked.
+        let drawing_both = rooms_drawing_with_all(&['#', '*']).len();
+        assert!(
+            drawing_both > 50,
+            "only {drawing_both} rooms found drawing both marks, so the scan is broken \
+             rather than the catalog being simple"
+        );
+
+        let known: Vec<String> = MARK_LEVELS_COLLAPSE_WITHOUT_COLOR
+            .iter()
+            .map(|id| (*id).to_string())
+            .collect();
+        let newly: Vec<&String> = colliding.iter().filter(|id| !known.contains(id)).collect();
+        assert!(
+            newly.is_empty(),
+            "these rooms newly lose a level without color and must be fixed or tracked: {newly:?}"
+        );
+        let fixed: Vec<&String> = known.iter().filter(|id| !colliding.contains(id)).collect();
+        assert!(
+            fixed.is_empty(),
+            "these no longer collide and must leave MARK_LEVELS_COLLAPSE_WITHOUT_COLOR: {fixed:?}"
+        );
     }
 
     #[test]
