@@ -6437,6 +6437,92 @@ mod tests {
         }
     }
 
+    /// Every byte an MCP peer can be handed, for one tool call.
+    ///
+    /// Walks the whole JSON rather than reading one text field: a colour code
+    /// hidden in a nested value would be just as unreadable to a peer that
+    /// cannot see colour, and checking only `content[0].text` would miss it.
+    fn every_string_in(value: &Value, into: &mut Vec<String>) {
+        match value {
+            Value::String(text) => into.push(text.clone()),
+            Value::Array(items) => items.iter().for_each(|item| every_string_in(item, into)),
+            Value::Object(fields) => {
+                fields
+                    .values()
+                    .for_each(|field| every_string_in(field, into));
+            }
+            _ => {}
+        }
+    }
+
+    #[test]
+    fn no_mcp_response_ever_carries_a_color_a_peer_might_not_see() {
+        // The terminal face has NO_COLOR and the App has been swept for colour
+        // blindness. This face has neither, because it has never emitted colour
+        // at all: it renders through `Canvas`, which is characters. That is a
+        // property worth holding rather than a coincidence worth assuming, and
+        // an MCP peer is exactly the reader most likely to have no colour.
+        //
+        // Every tool is called, with the list read from the binary rather than
+        // written here, so a new tool cannot ship unchecked. Empty arguments
+        // make most of them answer with an error, which is the point: an error
+        // is a response a peer reads too, and it must be plain as well.
+        let listed = handle_request(&json!({"jsonrpc":"2.0","id":1,"method":"tools/list"}))
+            .expect("tools/list must respond");
+        let names: Vec<String> = listed["result"]["tools"]
+            .as_array()
+            .expect("tools is an array")
+            .iter()
+            .filter_map(|tool| tool["name"].as_str().map(str::to_string))
+            .collect();
+        assert!(
+            names.len() >= 30,
+            "only {} tools listed, so this sweep is broken rather than the face being small",
+            names.len()
+        );
+
+        let mut responses = vec![listed.clone()];
+        for name in &names {
+            responses.push(call(name, json!({})));
+        }
+        // Real calls too, so the sweep covers actual pictures rather than only
+        // the refusals that empty arguments produce. Each is checked for having
+        // succeeded: a typo in a tool name would turn these into two more
+        // refusals and quietly leave the render path unswept.
+        for (name, arguments) in [
+            (
+                "play_room",
+                json!({"id": "times-tables", "width": 40, "height": 20}),
+            ),
+            ("describe_room", json!({"id": "cult-of-pi"})),
+            ("list_rooms", json!({})),
+        ] {
+            let response = call(name, arguments);
+            assert_ne!(
+                response["result"]["isError"],
+                json!(true),
+                "{name} refused, so this sweep never reached a real answer: {response}"
+            );
+            responses.push(response);
+        }
+
+        for response in &responses {
+            let mut strings = Vec::new();
+            every_string_in(response, &mut strings);
+            assert!(
+                !strings.is_empty(),
+                "a response carried no text at all, so this checks nothing"
+            );
+            for text in strings {
+                assert!(
+                    !text.contains('\u{1b}'),
+                    "an MCP response carries an escape sequence, so a peer that cannot \
+                     see colour would read control bytes as content: {text:?}"
+                );
+            }
+        }
+    }
+
     #[test]
     fn tools_list_has_the_expected_tools() {
         let resp = handle_request(&json!({"jsonrpc":"2.0","id":2,"method":"tools/list"}))
