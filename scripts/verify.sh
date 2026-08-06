@@ -42,6 +42,8 @@ python3 scripts/test-no-color.py
 python3 scripts/no-color.py
 echo "== photosensitivity budget, general and red flashes (full catalog) =="
 cargo test -p numinous-core --release --lib -- --ignored --exact registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget
+echo "== am soak contract =="
+python3 scripts/test-am-soak.py
 echo "== am soak =="
 python3 scripts/am-soak.py
 echo "== catalog scorecard =="
