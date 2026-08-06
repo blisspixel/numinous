@@ -5,6 +5,29 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The terminal games now honor `NO_COLOR`, which none of them did. The room
+  pictures had honored it for several releases while the Munch arcade, the
+  Hackenbush garden and the Party handshake matrix all wrote SGR escapes inline
+  and never consulted the setting, so one session could hold a color-free room
+  and a full-color game at the same time. Every board now paints through a
+  single helper that takes the setting, so there is no longer anywhere for a new
+  board to forget it. The Party matrix was written straight to stdout and could
+  not be looked at by a test at all; it is now a function that returns a string,
+  which is why it was the last one still wrong.
+
+- The Muncher can be found without color. Standing on an uneaten cell it drew
+  its digits in yellow inside ordinary brackets, so the cell read `[30]` in
+  color and `[30]` without, identical to every other cell on the board: a
+  player with `NO_COLOR` set, or who cannot pick yellow out, could not see where
+  they were standing. It now draws `>30<`, keeping the digits, which is worth
+  keeping since you should see what you are about to eat, and adding a mark that
+  survives without color. Both bracket forms are four columns wide, and a test
+  checks every row still measures the same, so the grid cannot shear.
+
+  The App was already right here, as it was for reduced motion: it rings the
+  Muncher and draws a selection frame, both shapes rather than hues. The
+  terminal was the face carrying the meaning in color alone.
+
 - Reduced motion now stops The Show in the terminal, which it did not before.
   Each room was already held at its postcard phase, so the picture stopped
   moving, and then the gallery advanced to the next room anyway on a frame
