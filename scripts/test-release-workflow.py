@@ -236,11 +236,27 @@ class ReleaseWorkflowTests(unittest.TestCase):
         nightly = (ROOT / ".github" / "workflows" / "nightly.yml").read_text(encoding="utf-8")
         for needed in (
             "cargo build --release --locked --bin numinous",
-            "scripts/package-release.py --target x86_64-unknown-linux-gnu",
+            "scripts/package-release.py",
             "scripts/uninstall-roundtrip.py",
             "--release-archive",
         ):
             self.assertIn(needed, nightly, f"nightly no longer {needed!r}")
+        # The target used to be spelled out here as x86_64-unknown-linux-gnu,
+        # because the roundtrip ran on Linux and nowhere else. It is a matrix
+        # now, so pinning one triple would have meant either deleting this
+        # check or keeping a Linux-shaped claim about a three-platform gate.
+        # Name all three instead: this test got stronger, not looser.
+        for target in (
+            "x86_64-unknown-linux-gnu",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc",
+        ):
+            self.assertIn(
+                f"target: {target}",
+                nightly,
+                f"the nightly roundtrip no longer packages for {target}, so 0.6-am's "
+                f"three-platform claim would be short by one",
+            )
         # And the judgment it depends on, which is cheap and has no excuse to
         # be absent from the same run.
         self.assertIn("scripts/test-uninstall-roundtrip.py", nightly)

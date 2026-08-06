@@ -2,6 +2,11 @@
 /target
 **/*.rs.bk
 
+# Packaged release archives. Both the nightly roundtrip and the release
+# workflow write here, and a local run of either leaves a multi-megabyte
+# archive in the tree that a wide `git add` would otherwise commit.
+/dist/
+
 # Agent working files and local logs (never tracked).
 /.agent/
 /logs/
