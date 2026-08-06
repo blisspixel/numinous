@@ -192,15 +192,22 @@ mod tests {
         let glyph_for = |lit: u8| {
             let mut raster = Raster::new(1, 2);
             raster.set_rgba(&[0, 0, 0, 255, lit, lit, lit, 255]);
-            to_mono(&raster).trim_end().to_string()
+            // Only the line ending comes off. Trimming whitespace generally
+            // would erase the difference between an unlit cell, which is a
+            // space, and no output at all, and the last assertion below turns
+            // on exactly that difference.
+            to_mono(&raster).trim_end_matches(['\r', '\n']).to_string()
         };
         // A large brightness change in the lit half, and the same glyph.
         assert_eq!(glyph_for(174), glyph_for(251));
         assert_eq!(glyph_for(174), BLOCKS[2].to_string());
         // Crossing the floor is the one change a half-lit cell does report,
-        // because that is a change of shape rather than of brightness.
+        // because that is a change of shape rather than of brightness. The
+        // unlit side is named rather than merely shown to differ, so that a
+        // cell going missing entirely cannot pass as a cell going dark.
         let floor = u8::try_from(LIT_FLOOR).expect("floor fits a channel");
-        assert_ne!(glyph_for(floor), glyph_for(floor - 1));
+        assert_eq!(glyph_for(floor), BLOCKS[2].to_string());
+        assert_eq!(glyph_for(floor - 1), BLOCKS[0].to_string());
     }
 
     #[test]
