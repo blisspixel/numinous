@@ -448,8 +448,13 @@ mod tests {
     /// means changing an ink or an accent, which changes what the room looks
     /// like to everyone, so it is a decision about the product rather than a
     /// defect to patch. Tracked in `docs/ROADMAP.md` under 0.5 Sensory.
+    /// Each entry is the room and the ordinary mark the warning is lost
+    /// against, so a later fix that separates it from one level and not the
+    /// other cannot be mistaken for a clean room. Measured against both `'*'`
+    /// and `'#'`: the warning stays clear of the brighter level everywhere,
+    /// which is why every entry here names the plain accent.
     const MEANING_LOST_TO_COLOR_BLINDNESS: [(&str, char); 2] =
-        [("cult-of-pi", '!'), ("laplace-clock", '!')];
+        [("cult-of-pi", '*'), ("laplace-clock", '*')];
 
     #[test]
     fn a_mark_that_means_something_stays_apart_for_a_color_blind_player() {
@@ -467,12 +472,18 @@ mod tests {
             rooms.len()
         );
 
+        // Against both ordinary levels, the same pair the color-free check
+        // uses. A room draws the accent and the accent at 1.7, and a warning
+        // that stays clear of one can still be lost against the other, so
+        // checking only the plain accent would leave half the question unasked.
         let warning = Raster::new(1, 1).ink('!');
         let mut lost = Vec::new();
         for (id, accent) in rooms {
-            let ordinary = Raster::with_accent(1, 1, accent).ink('*');
-            if dichromacy::color_alone(warning, ordinary) {
-                lost.push((id, '!'));
+            let raster = Raster::with_accent(1, 1, accent);
+            for ordinary in ['*', '#'] {
+                if dichromacy::color_alone(warning, raster.ink(ordinary)) {
+                    lost.push((id.clone(), ordinary));
+                }
             }
         }
         lost.sort();
