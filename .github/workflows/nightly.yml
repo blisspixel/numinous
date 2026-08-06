@@ -60,10 +60,33 @@ jobs:
             --release-tag "v${version}"
 
       - name: Photosensitivity budget across the whole catalog (general and red flashes)
-        run: cargo test -p numinous-core --release --lib -- --ignored --exact registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget
+        # Run through the helper for the same reason as the step below: naming a
+        # test that no longer exists makes cargo run nothing and exit 0, so a
+        # rename would turn this gate into a no-op that reports success.
+        run: |
+          python3 scripts/run-exact-test.py \
+            --package numinous-core --lib --ignored \
+            registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget
+      - name: Color independence across the catalog and all three faces
+        # These also run on every pull request, in the required test job. They
+        # are here because the nightly is where the accessibility evidence is
+        # produced together, and because a drift in the committed audit should
+        # be reported once a night rather than only when somebody happens to
+        # touch a room.
+        run: |
+          python3 scripts/run-exact-test.py --package numinous-core --lib \
+            raster::tests::color_independence_audit_matches_the_committed_evidence \
+            raster::tests::every_room_the_audit_flags_is_tracked_somewhere \
+            raster::tests::the_spectral_inks_stay_apart_for_a_color_blind_player_outside_the_known_list \
+            raster::tests::a_mark_that_means_something_stays_apart_for_a_color_blind_player
+          python3 scripts/run-exact-test.py --package numinous-app --lib \
+            color_access::the_apps_own_marks_stay_apart_for_a_color_blind_player
+          python3 scripts/run-exact-test.py --package numinous-mcp --bin numinous-mcp \
+            tests::no_mcp_response_ever_carries_a_color_a_peer_might_not_see
       - name: Multi-room soak and catalog scorecard
         run: |
           python3 scripts/test-gate-cli.py
+          python3 scripts/test-run-exact-test.py
           python3 scripts/test-am-soak.py
           python3 scripts/am-soak.py
           python3 scripts/catalog-scorecard.py

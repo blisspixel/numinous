@@ -60,6 +60,7 @@ jobs:
           python3 scripts/reduced-motion.py
           python3 scripts/no-color.py
           python3 scripts/test-gate-cli.py
+          python3 scripts/test-run-exact-test.py
           python3 scripts/test-am-soak.py
           python3 scripts/am-soak.py
           python3 scripts/catalog-scorecard.py
