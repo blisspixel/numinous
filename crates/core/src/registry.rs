@@ -912,19 +912,6 @@ mod tests {
             reddest = red_series
                 .iter()
                 .fold(reddest, |worst, state| worst.max(state.saturation));
-            let room_max = red_series
-                .iter()
-                .fold(0.0f64, |worst, state| worst.max(state.saturation));
-            let ever_red = red_series
-                .iter()
-                .any(crate::photosensitivity::RedState::is_saturated_red);
-            let transitions = crate::photosensitivity::qualifying_red_transitions(&red_series);
-            if ever_red || room_max > 0.6 || transitions > 0 {
-                eprintln!(
-                    "SCRATCH {} max_sat={room_max:.4} ever_red={ever_red} transitions={transitions}",
-                    room.meta().id
-                );
-            }
             let red_peak = crate::photosensitivity::peak_red_flashes_per_second(&red_series, FPS);
             if red_peak > crate::photosensitivity::MAX_FLASHES_PER_SECOND {
                 over_red.push((room.meta().id, red_peak));
@@ -935,7 +922,8 @@ mod tests {
         // below while measuring nothing at all.
         assert!(
             widest_swing > 0.01,
-            "no room's luminance varied by more than {widest_swing:.4} across a              full cycle, so the sweep measured nothing"
+            "no room's luminance varied by more than {widest_swing:.4} across a full \
+             cycle, so the sweep measured nothing"
         );
 
         let mut unexpected: Vec<String> = over
@@ -980,7 +968,8 @@ mod tests {
         // catalog which stopped drawing warm colors would.
         assert!(
             reddest > 0.5,
-            "the reddest frame in the catalog measured {reddest:.4}, so the red sweep did not              look at anything meaningfully red"
+            "the reddest frame in the catalog measured {reddest:.4}, so the red sweep did \
+             not look at anything meaningfully red"
         );
 
         let mut red_offenders: Vec<String> = over_red
@@ -990,7 +979,8 @@ mod tests {
         red_offenders.sort();
         assert!(
             red_offenders.is_empty(),
-            "rooms over the {:.0} red flash per second budget (reddest frame measured              {reddest:.4} against a {:.2} ratio): {}",
+            "rooms over the {:.0} red flash per second budget (reddest frame measured \
+             {reddest:.4} against a {:.2} ratio): {}",
             crate::photosensitivity::MAX_FLASHES_PER_SECOND,
             crate::photosensitivity::RED_SATURATION,
             red_offenders.join(", ")
