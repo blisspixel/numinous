@@ -4,17 +4,44 @@
 Renders, sonifies room beds, runs a short game open, and exercises forget
 preview without erasing anything outside the temp profile. Exit non-zero on any
 failure. Not a performance benchmark and not a human long-session claim.
+
+The outputs are judged on what is in them, not on their size. A room bed is
+uncompressed PCM, so its length depends on how long it plays and not at all on
+whether it makes a sound: forty seconds of silence weighs the same two and a
+half megabytes as forty seconds of music, and would have satisfied a check that
+the file was over a thousand bytes. The peak and RMS the CLI already prints are
+read instead, so the measurement is the product's own rather than a second one
+written here. A picture is checked for being a real PNG of the size that was
+asked for, which its header states.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
+import struct
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from typing import Any
+
+# The signal line the CLI prints beneath a room-bed export, in the same shape
+# `flagship-goldens.py` reads it.
+SIGNAL_RE = re.compile(
+    r"peak\s+(?P<peak>[-+0-9.eE]+),\s+RMS\s+(?P<rms>[-+0-9.eE]+)",
+    re.IGNORECASE,
+)
+
+# Floors for a bed that is actually playing. Measured across the soak's own
+# rooms, whose quietest sits at peak 0.133 and RMS 0.031, so these sit an order
+# of magnitude below the real thing: they separate sound from silence, and are
+# not a judgement about how a bed should be mixed.
+MIN_PEAK = 0.01
+MIN_RMS = 0.001
+
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / ".agent" / "tester-cohort" / "am-soak"
@@ -62,6 +89,52 @@ def run_cli(cli: list[str], args: list[str], env: dict[str, str]) -> tuple[int, 
     return process.returncode, process.stdout, process.stderr
 
 
+def png_complaint(path: Path, width: int, height: int) -> str | None:
+    """Why this is not the picture that was asked for, or None if it is.
+
+    Only the header is read. That is enough to tell a real PNG of the right
+    size from a truncated write or an empty file, and it needs no decoder, so
+    this cannot become a second and disagreeing implementation of how Numinous
+    encodes an image. What the pixels contain is covered elsewhere: every room
+    is checked for ink before encoding by `every_room_postcard_has_ink`, and
+    the encoder itself by the committed flagship goldens.
+    """
+    if not path.is_file():
+        return "no file was written"
+    header = path.read_bytes()[:24]
+    if len(header) < 24 or not header.startswith(PNG_SIGNATURE):
+        return f"not a PNG: first bytes were {header[:8]!r}"
+    # Bytes 8 to 16 are the IHDR chunk header; its first two fields are the
+    # dimensions, big-endian.
+    if header[12:16] != b"IHDR":
+        return f"PNG did not open with IHDR: {header[12:16]!r}"
+    actual = struct.unpack(">II", header[16:24])
+    if actual != (width, height):
+        return f"PNG says it is {actual[0]}x{actual[1]}, not {width}x{height}"
+    return None
+
+
+def bed_complaint(path: Path, report: str) -> str | None:
+    """Why this room bed is not audible, or None if it is.
+
+    Size proves nothing here. A room bed is uncompressed PCM, so its length is
+    set by how long it plays; silence and music of the same duration weigh the
+    same. The CLI measures the signal itself and prints it, so that measurement
+    is read rather than recomputed, which also means this cannot drift away from
+    what the product reports.
+    """
+    if not path.is_file():
+        return "no file was written"
+    match = SIGNAL_RE.search(report)
+    if match is None:
+        return f"the export reported no signal line to judge: {report[:200]!r}"
+    peak = float(match.group("peak"))
+    rms = float(match.group("rms"))
+    if peak < MIN_PEAK or rms < MIN_RMS:
+        return f"the bed is effectively silent: peak {peak}, RMS {rms}"
+    return None
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     cli = resolve_cli()
@@ -104,12 +177,16 @@ def main() -> int:
                 ],
                 env,
             )
-            ok_r = code_r == 0 and png.is_file() and png.stat().st_size > 0
+            png_reason = (
+                f"render exited {code_r}: {(err_r or out_r)[:200]}"
+                if code_r != 0
+                else png_complaint(png, 120, 80)
+            )
             checks.append(
                 {
                     "name": f"render:{room_id}",
-                    "passed": ok_r,
-                    "detail": "png ok" if ok_r else (err_r or out_r)[:200],
+                    "passed": png_reason is None,
+                    "detail": png_reason or "png ok, 120x80 by its own header",
                 }
             )
             code_s, out_s, err_s = run_cli(
@@ -117,12 +194,16 @@ def main() -> int:
                 ["sonify", room_id, "--layer", "room-bed", "--out", str(wav)],
                 env,
             )
-            ok_s = code_s == 0 and wav.is_file() and wav.stat().st_size > 1000
+            wav_reason = (
+                f"sonify exited {code_s}: {(err_s or out_s)[:200]}"
+                if code_s != 0
+                else bed_complaint(wav, out_s)
+            )
             checks.append(
                 {
                     "name": f"sonify:{room_id}",
-                    "passed": ok_s,
-                    "detail": "wav ok" if ok_s else (err_s or out_s)[:200],
+                    "passed": wav_reason is None,
+                    "detail": wav_reason or "wav ok and the bed is audible",
                 }
             )
         # Prefer non-interactive surfaces. Games that wait on stdin are covered

@@ -5,6 +5,31 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The soak now judges its outputs by what is in them. It accepted a picture for
+  existing and a room bed for being over a thousand bytes.
+
+  Size proves nothing about a bed. It is uncompressed PCM, so its length is set
+  by how long it plays and not at all by whether it makes a sound: forty seconds
+  of silence weighs the same two and a half megabytes as forty seconds of music,
+  and sailed past a thousand-byte floor. The gate would have reported a pass on
+  a catalog that had gone completely quiet. The peak and RMS the CLI already
+  prints beneath each export are read instead, so the measurement is the
+  product's own rather than a second one written beside it, and the floors sit
+  an order of magnitude below the quietest real bed.
+
+  A picture is now checked for being a real PNG of the size that was asked for,
+  which its own header states. Only the header is read, so this cannot become a
+  disagreeing implementation of how Numinous encodes an image; what the pixels
+  contain is already covered, by an ink check on every one of the 354 rooms
+  before encoding and by the committed flagship goldens after it.
+
+- `scripts/test-am-soak.py` is new, and gives the soak the test twin the other
+  gates already had. It covers the judgement in a tenth of a second, where the
+  soak itself walks a dozen rooms through render and sonify and takes minutes.
+  The case that matters most builds a full-size silent bed and asserts it is
+  rejected: the file on disk is the whole two and a half megabytes, so every
+  size-based check passes it.
+
 - The creator roundtrip now checks that a creation comes back as itself, not as
   the default view of itself. It proved a `.num` saves, reopens, and rewrites
   byte-identically, and it checked that the reopened output mentions the
