@@ -5,6 +5,30 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The accessibility switches are now discoverable. All three were honored
+  everywhere and written down nowhere a player would look: `NO_COLOR`,
+  `NUMINOUS_REDUCED_MOTION` and `NUMINOUS_MONO_AUDIO` appeared in
+  `docs/ROADMAP.md`, which is a planning document, and in Rust doc comments,
+  which are for whoever is editing the code. `docs/PLAYING.md`, the page a
+  player actually reads, did not mention accessibility at all. A switch nobody
+  can find is not a switch that shipped, whatever the tests say about it.
+
+  `numinous access` prints the three, says in the player's own terms what each
+  one does, and shows which are on in this run. It fits eighty columns and emits
+  no color of its own, since one of the three switches turns color off and a
+  report that ignored that would be a poor advertisement. `docs/PLAYING.md`
+  gains the same list.
+
+  The list lives in one place in the code, and a test reads `docs/PLAYING.md`
+  and asserts every entry in that list appears there. The expectations come from
+  the code rather than from a second list kept alongside it, so a fourth switch
+  cannot be added and left undocumented: it fails the moment it exists.
+
+  Both the report and the docs say plainly what is still wrong, rather than
+  leaving a player to find out by running into it: three rooms flash faster than
+  the WCAG 2.3.1 budget allows, and three answer a touch in a way the color-free
+  renderer cannot show, so under `NO_COLOR` they look like they ignored you.
+
 - The terminal games now honor `NO_COLOR`, which none of them did. The room
   pictures had honored it for several releases while the Munch arcade, the
   Hackenbush garden and the Party handshake matrix all wrote SGR escapes inline
