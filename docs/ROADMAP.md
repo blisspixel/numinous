@@ -1262,7 +1262,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.2 Flagship | Met + CI-locked | agent-hallway, ahas, goldens |
 | 0.3 Tactile | Met + CI-locked | agent-tactile, first-contact |
 | 0.4 Understanding | Method prep only | dual auditors A/B, dry-run registration; cohort open |
-| 0.5 Sensory | Partial | flagship visual/audio goldens; reduced motion locked in CI across the terminal and the App; NO_COLOR locked for the terminal face; WCAG 2.3.1 flash budget measured across all 354 rooms, with three known violations tracked; mono audio selectable with a non-clipping downmix; color-independence of touch response audited across all 354 rooms, 15 of 21 failures fixed by shading the color-free renderer, 6 tracked; no full HDR/a11y stack yet |
+| 0.5 Sensory | Partial | flagship visual/audio goldens; reduced motion locked in CI across the terminal and the App; NO_COLOR locked for the terminal face; WCAG 2.3.1 flash budget measured across all 354 rooms, with three known violations tracked; mono audio selectable with a non-clipping downmix; color-independence of touch response audited across all 354 rooms, 17 of 21 failures fixed by shading the color-free renderer and measuring its thresholds, 4 tracked; no full HDR/a11y stack yet |
 | 0.6 Portable | Partial | release packaging, engagement smoke, provenance/SBOM, install/play/uninstall roundtrip with player state preserved |
 | 0.7 Creator | Partial | CLI save/reopen `.num` gate; CLI and MCP plot parity locked across 12 cases; App curve framing pinned to the same core rule; MCP cannot open a `.num` at all; App gallery open |
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |

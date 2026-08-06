@@ -6,6 +6,25 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 ### Changed
+- The color-free renderer's shade thresholds are now the catalog's measured
+  quartiles rather than round numbers, and two more rooms answer a touch
+  because of it (0.5-am accessibility, machine path). The median both-lit cell
+  across all 354 rooms sits at luminance 152, with quarters at 128 and 203.
+  Splitting there gives each shade about a quarter of the ink: 24.3, 24.8,
+  25.0 and 26.0 percent.
+  Even thirds of the range, which is what was shipped first, were much worse
+  than they looked. They put the lightest shade below 64, where almost nothing
+  is drawn, so it carried 1.4 percent of the ink while another band carried
+  45.4 percent. One of four available characters was spent on almost nothing,
+  and the range where the drawing actually lives was starved. Two rooms failed
+  for exactly that reason: `nova` and `rule-110` moved thousands of pixels by
+  up to 55 luminance without a single one crossing a band.
+  The known-failure list falls from 6 to 4. The four that remain change so
+  little that no four-level ramp reaches them; `percolation` moves two pixels
+  out of 8,400 and `hilbert` eleven, so their answer needs the room to say it
+  differently rather than the renderer to look harder.
+  A regression samples the catalog and fails if any shade falls under a tenth
+  of the ink, which is the shape of the defect that was there.
 - The color-free renderer now shades a cell whose halves are both lit, and
   fifteen rooms answer a touch again because of it (0.5-am accessibility,
   machine path). `to_mono` encoded each half-pixel as lit or unlit, which is

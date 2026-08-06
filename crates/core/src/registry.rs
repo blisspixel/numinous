@@ -994,24 +994,19 @@ mod tests {
     /// renderer, remeasured 2026-08-05 at 120 by 70 after `to_mono` learned to
     /// shade a cell whose halves are both lit.
     ///
-    /// This list was 21. Shading recovered 15 of them: their fields were
-    /// already solid, so the old one-bit encoding rendered every brightness as
-    /// the same block and the answer disappeared. These six still do not
-    /// change the color-free picture at all, so their response is somewhere a
-    /// wider ramp cannot reach.
+    /// This list was 21. Shading a both-lit cell recovered 15 of them, and
+    /// moving the shade thresholds onto the catalog's measured ink recovered
+    /// two more. These four change so few pixels, or by so little, that no
+    /// four-level ramp reaches them: `percolation` moves two pixels out of
+    /// 8,400 and `hilbert` eleven. Their answer needs the room to say it
+    /// differently, not the renderer to look harder.
     ///
     /// The list is a record of a real defect, not a permission slip. The test
     /// below fails if it grows, if an entry starts responding and is not
     /// removed, or if a room outside it goes quiet. Tracked in
     /// `docs/ROADMAP.md` under 0.5 Sensory.
-    const RESPONSE_INVISIBLE_WITHOUT_COLOR: [&str; 6] = [
-        "hilbert",
-        "magnet-fractal",
-        "nova",
-        "percolation",
-        "rule-110",
-        "wireworld",
-    ];
+    const RESPONSE_INVISIBLE_WITHOUT_COLOR: [&str; 4] =
+        ["hilbert", "magnet-fractal", "percolation", "wireworld"];
 
     /// Rooms whose picture does not change at all under a center poke,
     /// measured 2026-08-05 at 120 by 70. They still answer on the status line,
