@@ -5,6 +5,31 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Cult of Pi shows no fault marks at all on a character terminal, and now says
+  so. The room corrupts digits of pi and asks the player to click and hold a
+  patch exact. `glyph_for` marks a corrupted digit `!` and an exact one `.`, and
+  the pixel path draws the digit in that ink, so on the App the faults are red.
+  The character path takes the mark and drops it:
+
+      surface.plot(x as i32, y as i32, glyph)
+
+  So a corrupted digit and an exact one are the same character in the same ink.
+  A corrupted cell does show a different digit, but nobody knows pi by heart, so
+  a wrong digit is not a visible wrong digit. Measured at one phase: 462 of
+  1,280 cells are faulted and the terminal marks none of them.
+
+  The room's own test asserted that "faults must look different from exact
+  holds" while checking the value `glyph_for` returns, which the drawing code
+  then throws away. That assertion now says what it actually pins, and a new
+  test measures what the terminal really draws. It fails if the limitation is
+  ever fixed, so the fix cannot land without the note being corrected.
+
+  Whether the terminal ought to mark faults is left open rather than patched.
+  The room's reveal is that the display faults are ours rather than pi's, so a
+  face that hides them may be making the point rather than missing it, and a
+  character cell has no spare column to put a marker in. That is a decision
+  about what the room says. Tracked in `docs/ROADMAP.md` under 0.5 Sensory.
+
 - `NO_COLOR` is now swept across the whole terminal face rather than checked
   surface by surface. Every surface had a Rust test; nothing tested the binary
   as a whole, so a new subcommand could emit color and every existing test would
