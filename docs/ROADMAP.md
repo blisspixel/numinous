@@ -614,9 +614,12 @@ the am-track cannot make it. They are listed here rather than in a working note
 because this file is the one somebody reads.
 
 Each entry says what was measured, what is guarded today, and what changes
-depending on the answer. The room names in the first three come from
-shrink-only lists in the code, and a test requires every one of them to appear
-here, so this section cannot fall behind what the catalog actually does.
+depending on the answer. Entry 1 names no rooms because it is about money
+rather than the catalog. Entries 2, 3 and 4 name rooms, and those names are not
+written by hand: each list lives in the code as a shrink-only known-failure
+list, and a test requires every room on it to appear in this section, so this
+cannot fall behind what the catalog actually does. The remaining entries are
+about a single surface each and name it in the text.
 
 **1. The 0.4 Understanding cohort needs budget and an external registration.**
 The single milestone gating 1.0-am. The contract in `docs/UNDERSTANDING_STUDY.md`

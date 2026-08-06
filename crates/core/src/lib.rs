@@ -14,6 +14,36 @@
 // documentation bar (see docs/ENGINEERING.md).
 #![deny(missing_docs)]
 
+/// The tracked roadmap, for the tests that require a measured limitation to be
+/// named where somebody reads it.
+///
+/// Anchored on the crate root rather than on the position of the file that
+/// includes it, so moving a source file cannot quietly break the path. Held in
+/// one place rather than in each test for the same reason a shrink-only list is
+/// held in one place: two copies of a path are two things that can drift, and a
+/// test that fails to find the roadmap would be reporting on nothing.
+#[cfg(test)]
+pub(crate) const ROADMAP: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../docs/ROADMAP.md"
+));
+
+/// The part of the roadmap that lists what the am-track cannot decide for
+/// itself, as the locks that read it need it.
+///
+/// Panics if the section is gone, which is the point: a lock whose section has
+/// been renamed away must fail loudly rather than silently check an empty
+/// string.
+#[cfg(test)]
+pub(crate) fn roadmap_decisions() -> &'static str {
+    ROADMAP
+        .split_once("### Decisions the am-track is waiting on")
+        .map(|(_, rest)| rest)
+        .and_then(|rest| rest.split_once("\n### "))
+        .map(|(section, _)| section)
+        .expect("the roadmap has a decisions section for the am-track")
+}
+
 pub mod aliens;
 pub mod ansi;
 pub mod cairn;

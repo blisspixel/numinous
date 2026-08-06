@@ -478,13 +478,7 @@ mod tests {
         // a decision about the ink scale or the shade thresholds, and a
         // decision nobody can see is not waiting on anyone.
         // Matched inside backticks: a bare substring would accept `zipff`.
-        const ROADMAP: &str = include_str!("../../../docs/ROADMAP.md");
-        let section = ROADMAP
-            .split_once("### Decisions the am-track is waiting on")
-            .map(|(_, rest)| rest)
-            .and_then(|rest| rest.split_once("\n### "))
-            .map(|(section, _)| section)
-            .expect("the roadmap has a decisions section for the am-track");
+        let section = crate::roadmap_decisions();
         for room in MARK_LEVELS_COLLAPSE_WITHOUT_COLOR {
             assert!(
                 section.contains(&format!("`{room}`")),

@@ -865,13 +865,7 @@ mod tests {
         // Matched inside backticks, as the section writes them. A bare
         // substring would accept `zipff` for `zipf`, which is the same hole a
         // reviewer found in an earlier rule of mine.
-        const ROADMAP: &str = include_str!("../../../docs/ROADMAP.md");
-        let section = ROADMAP
-            .split_once("### Decisions the am-track is waiting on")
-            .map(|(_, rest)| rest)
-            .and_then(|rest| rest.split_once("\n### "))
-            .map(|(section, _)| section)
-            .expect("the roadmap has a decisions section for the am-track");
+        let section = crate::roadmap_decisions();
 
         for (list, rooms) in [
             ("KNOWN_OVER_FLASH_BUDGET", &KNOWN_OVER_FLASH_BUDGET[..]),
