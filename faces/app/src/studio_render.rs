@@ -142,21 +142,40 @@ mod tests {
             ("sin(x)", 0.0, 10.0, 1.0),
             // Undefined at x = 0, so both sides must discard the same point
             // rather than one of them framing around an infinity.
+            //
+            // The widths below matter for this case and are the reason odd ones
+            // are here. A column lands on x = 0 only when (width - 1) / 2 is a
+            // whole number, so at an even width the grid straddles the
+            // singularity and nothing is discarded at all. This case ran at 40,
+            // 72 and 200 for a long time and never once exercised the discard
+            // it exists for.
             ("1/x", -std::f64::consts::TAU, std::f64::consts::TAU, 1.0),
         ] {
             let expr = numinous_core::parse(source).expect("parses");
-            for width in [40usize, 72, 200] {
+            let mut discarded_somewhere = false;
+            for width in [40usize, 41, 72, 73, 200, 201] {
                 let (_, core_min, core_max) =
                     numinous_core::plot_text(source, xmin, xmax, a, width, 24)
                         .expect("core plots it");
-                let (window_min, window_max) = curve_range(width, xmin, xmax, |x| {
+                let samples = sample_curve(width, xmin, xmax, |x| {
                     Some(numinous_core::eval(&expr, x, a))
                 })
-                .expect("the window frames it");
+                .expect("the window samples it");
+                discarded_somewhere |= samples.points.len() < width;
                 assert_eq!(
-                    (window_min, window_max),
+                    (samples.ymin, samples.ymax),
                     (core_min, core_max),
                     "{source} at a={a} over [{xmin}, {xmax}] at width {width}"
+                );
+            }
+            // A case whose whole point is the discard must actually discard.
+            // Without this the widths could drift back to all-even and the
+            // case would go quietly inert again, passing either way.
+            if source == "1/x" {
+                assert!(
+                    discarded_somewhere,
+                    "no width put a column on the singularity, so the discard path \
+                     was never taken and this case proves nothing"
                 );
             }
         }
