@@ -17,6 +17,11 @@ Run from a clone with a packaged archive:
     python scripts/uninstall-roundtrip.py \\
         --release-archive dist/numinous-v0.2.0-alpha.4-<target>.zip
 
+Nightly packages an archive of its own and runs this against it, so a change
+that breaks uninstalling is caught the next morning rather than at the next
+tag. The release workflow still runs it too, against the artifact it is
+actually about to publish, which is the only run that proves the shipped thing.
+
 This is machine evidence for one platform per run, the one it executes on. It
 says nothing about a genuinely clean machine, about signing, or about the
 window opening, which are separate 0.6 gates.
