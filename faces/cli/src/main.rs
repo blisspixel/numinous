@@ -47,6 +47,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Show the accessibility switches and which of them are on right now.
+    Access,
     /// Install the latest verified GitHub release without touching play history.
     Update,
     /// List all rooms in the catalog.
@@ -591,13 +593,13 @@ fn managed_install_root(executable: &Path) -> Result<PathBuf, String> {
     } else {
         "numinous"
     };
-    if executable.file_name() != Some(OsStr::new(expected_name)) {
+    if executable.file_name() != Some(std::ffi::OsStr::new(expected_name)) {
         return Err("The running command is not the managed Numinous CLI.".to_string());
     }
     let Some(binary_dir) = executable.parent() else {
         return Err("The running command has no installation directory.".to_string());
     };
-    if binary_dir.file_name() != Some(OsStr::new("bin")) {
+    if binary_dir.file_name() != Some(std::ffi::OsStr::new("bin")) {
         return Err("The running command is outside a managed Numinous bin directory.".to_string());
     }
     let Some(root) = binary_dir.parent() else {
@@ -1489,6 +1491,17 @@ fn find_room_with_variation(id: &str, allow_hidden: bool, variation: u64) -> Opt
 fn run(command: Command, journey: &mut Journey) -> ExitCode {
     let allow_hidden = journey.rank() >= Rank::Mathematikos;
     match command {
+        Command::Access => {
+            print!(
+                "{}",
+                access_report(&access_settings(
+                    std::env::var_os(numinous_core::REDUCED_MOTION_VAR).as_deref(),
+                    std::env::var_os(numinous_audio::MONO_AUDIO_VAR).as_deref(),
+                    std::env::var_os("NO_COLOR").as_deref(),
+                ))
+            );
+            ExitCode::SUCCESS
+        }
         Command::Update => update_installation(),
         Command::Rooms { json } => {
             print!("{}", rooms_report(json));
@@ -2295,6 +2308,90 @@ fn report_diagnostic(message: &str) {
 /// definition of "safe to show a person" covers all of them.
 fn terminal_safe(text: &str) -> String {
     numinous_core::display_safe(text)
+}
+
+/// One switch a player can turn on, and whether it is on right now.
+struct AccessSetting {
+    /// The environment variable that turns it on.
+    variable: &'static str,
+    /// What it does, in the player's terms, already wrapped.
+    ///
+    /// Wrapped here rather than at print time because these lines are fixed
+    /// text: a wrapping routine would be a moving part with nothing to decide.
+    what: &'static [&'static str],
+    /// Whether it is switched on in this run.
+    on: bool,
+}
+
+/// Every accessibility switch Numinous honors, read from raw settings.
+///
+/// The values are passed in rather than read here so this can be tested without
+/// touching the environment of a process that is running other tests beside it.
+///
+/// One list, and it is the only list. The report below prints it and a test
+/// checks `docs/PLAYING.md` documents every entry, so a switch cannot ship that
+/// a player has no way to find out about. That was the state of all three of
+/// these until now: honored everywhere, written down nowhere a player looks.
+fn access_settings(
+    reduced_motion: Option<&OsStr>,
+    mono_audio: Option<&OsStr>,
+    no_color: Option<&OsStr>,
+) -> [AccessSetting; 3] {
+    [
+        AccessSetting {
+            variable: numinous_core::REDUCED_MOTION_VAR,
+            what: &[
+                "Nothing moves unless you move it. Rooms hold a still frame",
+                "rather than stopping dead, and The Show waits for you instead",
+                "of changing rooms on a timer.",
+            ],
+            on: numinous_core::setting_is_on(reduced_motion),
+        },
+        AccessSetting {
+            variable: numinous_audio::MONO_AUDIO_VAR,
+            what: &[
+                "Both channels carry the same sound, so nothing is lost on one",
+                "ear or one speaker.",
+            ],
+            on: numinous_audio::mono_requested_for(mono_audio),
+        },
+        AccessSetting {
+            variable: "NO_COLOR",
+            what: &[
+                "No color anywhere: rooms, chrome and games alike. Shapes and",
+                "letters carry the meaning instead. This is the shared",
+                "convention from no-color.org, not one of ours.",
+            ],
+            on: !color_allowed_for(no_color),
+        },
+    ]
+}
+
+/// The accessibility report: what can be switched on, and what is on now.
+fn access_report(settings: &[AccessSetting]) -> String {
+    let mut out = String::from(
+        "ACCESSIBILITY. Each switch below is an environment variable.\n\
+         Set it to anything at all to turn it on, unset it to turn it off.\n\
+         Writing =0 still turns it on, because you still wrote it.\n\n",
+    );
+    for setting in settings {
+        out.push_str(&format!(
+            "  {:<24} {}\n",
+            setting.variable,
+            if setting.on { "ON" } else { "off" },
+        ));
+        for line in setting.what {
+            out.push_str(&format!("    {line}\n"));
+        }
+        out.push('\n');
+    }
+    out.push_str(
+        "Known and not yet fixed, so you can decide for yourself:\n\
+         three rooms flash faster than the WCAG budget allows, and three answer\n\
+         a touch in a way the color-free renderer cannot show. All six are\n\
+         named in docs/ROADMAP.md under 0.5 Sensory.\n",
+    );
+    out
 }
 
 /// Whether color is allowed, given whatever `NO_COLOR` was set to.
@@ -7509,6 +7606,112 @@ mod tests {
     /// `text` with every SGR escape removed and everything else left alone.
     fn strip_sgr(text: &str) -> String {
         scan_sgr(text).1
+    }
+
+    #[test]
+    fn every_accessibility_switch_is_written_down_where_a_player_looks() {
+        // The gap this closes: all three switches were honored everywhere and
+        // documented nowhere a player would find them. They appeared in the
+        // roadmap, which is a planning document, and in Rust doc comments,
+        // which are for whoever is editing the code. A switch a player cannot
+        // discover is not a switch that shipped.
+        //
+        // The expectations come from the code's own list rather than from a
+        // second list written here, so a fourth switch cannot be added and left
+        // undocumented: it would fail this the moment it exists.
+        const PLAYING: &str = include_str!("../../../docs/PLAYING.md");
+        let settings = super::access_settings(None, None, None);
+        assert_eq!(settings.len(), 3, "a switch was added or removed");
+        for setting in &settings {
+            assert!(
+                PLAYING.contains(setting.variable),
+                "docs/PLAYING.md never mentions {}",
+                setting.variable
+            );
+            assert!(
+                !setting.what.is_empty(),
+                "{} is listed with no explanation",
+                setting.variable
+            );
+        }
+        // The command that prints them has to be findable too.
+        assert!(
+            PLAYING.contains("numinous access"),
+            "the docs never tell a player the access command exists"
+        );
+    }
+
+    #[test]
+    fn the_accessibility_report_says_which_switches_are_on() {
+        // Matched on the whole status line rather than on the word alone. The
+        // prose says "turn it off", so searching for "off" anywhere finds the
+        // instructions and reports every switch as off no matter what it is.
+        let status_line = |variable: &str, status: &str| format!("  {variable:<24} {status}\n");
+
+        let off = super::access_report(&super::access_settings(None, None, None));
+        for variable in ["NUMINOUS_REDUCED_MOTION", "NUMINOUS_MONO_AUDIO", "NO_COLOR"] {
+            assert!(off.contains(variable), "{variable} missing from the report");
+            assert!(
+                off.contains(&status_line(variable, "off")),
+                "{variable} does not read as off:\n{off}"
+            );
+        }
+
+        let value = Some(std::ffi::OsStr::new("1"));
+        let all_on = super::access_report(&super::access_settings(value, value, value));
+        for variable in ["NUMINOUS_REDUCED_MOTION", "NUMINOUS_MONO_AUDIO", "NO_COLOR"] {
+            assert!(
+                all_on.contains(&status_line(variable, "ON")),
+                "{variable} does not read as on:\n{all_on}"
+            );
+            assert!(!all_on.contains(&status_line(variable, "off")));
+        }
+
+        // The one that is easy to get backwards. NO_COLOR is present-means-off
+        // for color, so the switch is ON. Reporting it the other way round
+        // would tell a player color is off when it is on.
+        let no_color_only = super::access_settings(None, None, Some(std::ffi::OsStr::new("1")));
+        assert!(no_color_only[2].on, "NO_COLOR=1 must read as switched on");
+        assert!(!no_color_only[0].on && !no_color_only[1].on);
+
+        // Empty is not set, for all three, which is the shared convention.
+        let empty = super::access_settings(
+            Some(std::ffi::OsStr::new("")),
+            Some(std::ffi::OsStr::new("")),
+            Some(std::ffi::OsStr::new("")),
+        );
+        assert!(empty.iter().all(|setting| !setting.on));
+
+        // And =0 is set, for all three, because you still wrote it.
+        let zero = super::access_settings(
+            Some(std::ffi::OsStr::new("0")),
+            Some(std::ffi::OsStr::new("0")),
+            Some(std::ffi::OsStr::new("0")),
+        );
+        assert!(zero.iter().all(|setting| setting.on));
+    }
+
+    #[test]
+    fn the_accessibility_report_fits_an_eighty_column_terminal() {
+        // It is read by whoever most needs it to be readable, and a report that
+        // wraps at random is a poor way to explain that the display is
+        // configurable.
+        let value = Some(std::ffi::OsStr::new("1"));
+        for report in [
+            super::access_report(&super::access_settings(None, None, None)),
+            super::access_report(&super::access_settings(value, value, value)),
+        ] {
+            for line in report.lines() {
+                assert!(
+                    line.chars().count() <= 80,
+                    "{} columns: {line}",
+                    line.chars().count()
+                );
+            }
+            // No color of its own, since one of the three switches turns color
+            // off and a report that ignored that would be a poor advertisement.
+            assert!(sgr_codes(&report).is_empty());
+        }
     }
 
     #[test]
