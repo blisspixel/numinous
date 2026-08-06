@@ -5,6 +5,29 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The App-to-core curve parity test now checks what it claimed. It said the
+  three faces must agree about "the same samples, the same discards, and the
+  same vertical framing", and asserted only the framing. Two things were wrong
+  underneath that.
+
+  The `1/x` case exists to prove both sides discard the singularity, and it
+  never discarded anything. A column lands on x = 0 only when `(width - 1) / 2`
+  is a whole number, and all three widths were even, so the sample grid
+  straddled the singularity every time. Odd widths now run that path, both
+  faces agree across it, and the case fails if the widths ever drift back to
+  all-even rather than going quietly inert again.
+
+  Framing alone was also too weak to speak for the samples. Dropping the App's
+  last sample column changes neither the minimum nor the maximum for any curve
+  in the set, so an off-by-one in the sample grid passed. The columns each face
+  draws in are compared now, and five mutations are caught where four were
+  before, including that one.
+
+  A first attempt at the column check reported a disagreement that was not
+  real: the test harness gave the curve no bottom margin, so the lowest sample
+  mapped one row past the raster and clipped, which looks exactly like the two
+  faces differing. The harness was the bug, and the note is in the test.
+
 - Every bundled track is now decoded, not three of forty-two. 0.6-am asks for
   all 42 tracks tested on each operating system, and the existing check decoded
   the first track of each station and checked the other thirty-nine against a
