@@ -75,14 +75,10 @@ def initialize_script() -> dict[str, Any]:
     import os
     import tempfile
 
-    subprocess.run(
-        ["cargo", "build", "--quiet", "--bin", "numinous-mcp"],
-        cwd=ROOT,
-        check=True,
-    )
-    # One shared resolver rather than a hand-built path: this one ignored
-    # CARGO_TARGET_DIR, so it looked in the wrong place on any layout that
-    # sets it. See gate_cli.py for why there is only one copy.
+    # Builds and locates in one step. This used to build here and then assemble
+    # its own path, which built twice, did the first build without --locked,
+    # and ignored CARGO_TARGET_DIR so it looked in the wrong place on any
+    # layout that sets one. See gate_cli.py for why there is only one copy.
     path = str(build_and_locate(("numinous-mcp",))[0])
     with tempfile.TemporaryDirectory(prefix="numinous-mcp-play-") as state_dir:
         env = dict(os.environ)
