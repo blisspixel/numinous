@@ -10,10 +10,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   "no statement at all about red", which left a documented hole in an
   accessibility gate.
 
-  Red is a different measurement, not the same one on the red channel. WCAG 2.2
-  defines a red flash as a pair of opposing transitions where one transition is
-  to or from a state whose `R/(R+G+B)` is at least 0.8, and where the two states
-  differ by more than 0.2 in the CIE 1976 UCS chromaticity diagram. Both
+  Red is a different measurement, not the same one on the red channel. It is the
+  same success criterion: 2.3.1 covers general and red flashing together, and
+  the WCAG 2.2 glossary states the red half as a pair of opposing transitions
+  where one transition is to or from a state whose `R/(R+G+B)` is at least 0.8,
+  and where the two states differ by more than 0.2 in the CIE 1976 UCS
+  chromaticity diagram. Both
   conditions are implemented. Two details are easy to get backwards and are
   pinned by tests: the ratio is read off displayed values, since only relative
   luminance is linearized, while the chromaticity is read off linear light,
