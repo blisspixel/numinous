@@ -271,6 +271,107 @@ mod tests {
         assert_ne!(raster.ink('!'), raster.ink('#'));
     }
 
+    /// The block character `to_mono` gives a cell filled with one flat color.
+    ///
+    /// Asked of the renderer rather than worked out from its thresholds, so
+    /// this cannot drift away from what a `NO_COLOR` player is actually shown.
+    fn mono_glyph(color: [u8; 3]) -> char {
+        let mut raster = Raster::new(1, 2);
+        raster.set_rgba(&[
+            color[0], color[1], color[2], 255, color[0], color[1], color[2], 255,
+        ]);
+        crate::ansi::to_mono(&raster)
+            .chars()
+            .next()
+            .expect("to_mono draws at least one cell")
+    }
+
+    /// Every room whose source draws with a given mark, as `(id, accent)`.
+    ///
+    /// Read from the room sources rather than kept as a list here. A list would
+    /// be a second copy of something the code already knows, and second copies
+    /// drift: a room could start using the warning ink and this check would go
+    /// on testing the four rooms that used it when the list was written.
+    fn rooms_drawing_with(mark: char) -> Vec<(String, [u8; 3])> {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/rooms");
+        let mut found = Vec::new();
+        for entry in std::fs::read_dir(&dir).expect("the rooms directory is readable") {
+            let path = entry.expect("a readable directory entry").path();
+            if path.extension().is_none_or(|extension| extension != "rs") {
+                continue;
+            }
+            let source = std::fs::read_to_string(&path).expect("a readable room source");
+            if !source.contains(&format!("'{mark}'")) {
+                continue;
+            }
+            // The id the room declares, so the mapping never depends on the
+            // file name matching it.
+            let Some(rest) = source.split_once("id: \"").map(|(_, rest)| rest) else {
+                continue;
+            };
+            let Some((id, _)) = rest.split_once('"') else {
+                continue;
+            };
+            let room = crate::registry::room_by_id(id)
+                .unwrap_or_else(|| panic!("{id} is declared in {path:?} but not in the registry"));
+            found.push((id.to_string(), room.meta().accent));
+        }
+        found.sort();
+        found
+    }
+
+    #[test]
+    fn the_warning_ink_survives_the_color_free_renderer_in_every_room_that_uses_it() {
+        // `'!'` is the one ink that carries meaning rather than beauty: it says
+        // this cell is wrong. The test above proves it is a different color
+        // from the accent, which is not the same as being a different thing to
+        // look at. Accents vary per room, and 81 of the 354 sit within 12
+        // luminance of the warning ink, so "distinct color" can quite easily
+        // mean "identical grey".
+        //
+        // What has to hold is that a player who cannot use color still sees the
+        // warning, and the renderer that player is given is `to_mono`. So the
+        // question is put to `to_mono` directly: does the warning cell come out
+        // as a different block character than the ordinary one?
+        let rooms = rooms_drawing_with('!');
+        assert!(
+            rooms.len() >= 4,
+            "only {} rooms found drawing with the warning ink, so the scan is broken \
+             rather than the catalog being clean",
+            rooms.len()
+        );
+
+        let warning = mono_glyph(Raster::new(1, 1).ink('!'));
+        for (id, accent) in rooms {
+            let raster = Raster::with_accent(1, 1, accent);
+            for ordinary in ['.', '#'] {
+                let against = mono_glyph(raster.ink(ordinary));
+                assert_ne!(
+                    warning, against,
+                    "in {id} a warning cell and an ordinary {ordinary:?} cell are the same \
+                     character without color, so the warning is carried by hue alone"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn an_accent_can_collide_with_the_warning_ink_and_the_check_would_catch_it() {
+        // Proof that the check above can fail. Without this it might be passing
+        // because `mono_glyph` returns the same character for everything, and a
+        // check that cannot fail is not a check.
+        let warning = mono_glyph(Raster::new(1, 1).ink('!'));
+        let colliding = Raster::with_accent(1, 1, [230, 72, 72]);
+        assert_eq!(
+            warning,
+            mono_glyph(colliding.ink('.')),
+            "an accent equal to the warning ink must be indistinguishable from it"
+        );
+        // And that it is not returning one character for every input.
+        assert_ne!(warning, mono_glyph([255, 255, 255]));
+        assert_ne!(warning, mono_glyph([0, 0, 0]));
+    }
+
     #[test]
     fn spectral_inks_are_distinct_and_preserve_semantic_marks() {
         let raster = Raster::with_accent(4, 4, [40, 210, 90]);
