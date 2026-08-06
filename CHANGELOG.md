@@ -5,6 +5,42 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The install, play and uninstall roundtrip now runs on three operating
+  systems instead of one. 0.6-am asks for exactly that, and the gate has only
+  ever run on Linux, so two thirds of the claim rested on nothing. The gate
+  itself already chose its installer by platform, PowerShell on Windows and a
+  shell script everywhere else; what was missing was somewhere for the other
+  two to run.
+
+  Verified on Windows locally before wiring anything: 4 of 4, with the install
+  root removed and all three player-owned files surviving byte-identical. That
+  had never been checked on Windows by anything.
+
+  It is a matrix job of its own with `fail-fast: false`, because this is
+  per-platform evidence and a green Linux leg says nothing about Windows. Each
+  platform packages its own archive format and uploads its summary, so a
+  failure names the platform rather than the suite.
+
+  The existing release-workflow lock caught the change, since it pinned the
+  literal Linux target. It now names all three targets rather than being
+  relaxed: the check got stronger, not looser.
+
+- Workflow actions are now checked for being pinned, and pinned consistently.
+  `scripts/test-workflow-pins.py` requires every `uses:` to name a
+  40-character commit with a version comment, requires each action to resolve
+  to one commit across every workflow, and requires a commit never to carry two
+  different version labels. `dtolnay/rust-toolchain` is the one declared
+  exception, because the MSRV job must pin the oldest supported compiler.
+
+  This exists because of a mistake made while writing the job above: an
+  `upload-artifact` commit written from memory rather than copied from a
+  working pin. On a nightly that fails at the point of use and nobody sees it
+  until morning.
+
+- `dist/` is now ignored. Both the nightly roundtrip and the release workflow
+  write packaged archives there, and a local run left a multi-megabyte archive
+  that a wide `git add` would have committed.
+
 - The MCP face is now held to emitting no color at all, which completes the
   color-independence sweep across all three faces. The terminal face has
   `NO_COLOR` and the App has been swept for color blindness. This face had
