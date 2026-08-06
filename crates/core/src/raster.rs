@@ -79,7 +79,15 @@ impl Raster {
 
     /// The color added for a mark: semantic interface colors plus four
     /// spectral inks that rooms can combine additively for prismatic light.
-    fn ink(&self, mark: char) -> [u8; 3] {
+    ///
+    /// Public so a surface can ask what its own marks will look like. The App
+    /// draws its chrome and games with the same marks rooms use, against its
+    /// own accents, and the accessibility sweeps that measure whether two marks
+    /// stay apart for a color-blind player need the answer for both faces. The
+    /// alternative was a second copy of this table in the App, which is the
+    /// kind of second copy that drifts.
+    #[must_use]
+    pub fn ink(&self, mark: char) -> [u8; 3] {
         match mark {
             '#' => scale(self.accent, 1.7),
             '!' => [230, 72, 72],
