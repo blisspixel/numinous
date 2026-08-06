@@ -50,11 +50,14 @@ jobs:
         run: |
           set -eu
           cargo build --release --locked --bin numinous --bin numinous-app --bin numinous-mcp
-          python3 scripts/package-release.py --target x86_64-unknown-linux-gnu             --binary-dir target/release --output-dir dist
+          python3 scripts/package-release.py --target x86_64-unknown-linux-gnu --binary-dir target/release --output-dir dist
           version="$(python3 scripts/package-release.py --print-version)"
           payload="dist/numinous-v${version}-x86_64-unknown-linux-gnu.tar.gz"
           python3 scripts/test-uninstall-roundtrip.py
-          python3 scripts/uninstall-roundtrip.py             --release-archive "$payload" --release-checksum "$payload.sha256"             --release-tag "v${version}"
+          python3 scripts/uninstall-roundtrip.py \
+            --release-archive "$payload" \
+            --release-checksum "${payload}.sha256" \
+            --release-tag "v${version}"
 
       - name: Photosensitivity budget across the whole catalog (general and red flashes)
         run: cargo test -p numinous-core --release --lib -- --ignored --exact registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget

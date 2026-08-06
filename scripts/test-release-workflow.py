@@ -241,7 +241,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
             "--release-archive",
         ):
             self.assertIn(needed, nightly, f"nightly no longer {needed!r}")
-        # And the judgement it depends on, which is cheap and has no excuse to
+        # And the judgment it depends on, which is cheap and has no excuse to
         # be absent from the same run.
         self.assertIn("scripts/test-uninstall-roundtrip.py", nightly)
 
