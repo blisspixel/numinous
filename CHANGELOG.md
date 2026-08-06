@@ -5,6 +5,28 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Everything the am-track is waiting on is now written where somebody reads it.
+  Ten decisions had accumulated over as many cycles, each one measured and each
+  one a choice about what Numinous should be rather than unfinished automation.
+  They lived in a working note under `.agent/`, which is not committed, so a
+  person reading the repository saw a scattering of room names in prose and no
+  single place saying what the track cannot decide for itself. Two of the ten
+  appeared nowhere in the tracked documentation at all.
+
+  `docs/ROADMAP.md` now carries them together, directly after the critical path:
+  the 0.4 cohort budget that gates 1.0-am on its own, three rooms over the flash
+  budget, three whose touch answer needs shape rather than brightness, eighteen
+  that lose a drawn level without color, and the questions about Cult of Pi's
+  fault marks, mono exports, opening a `.num` over MCP, the footer that shows
+  less as the window grows, unbuilt text scaling and volume controls, and
+  clean-machine evidence. Each says what was measured, what a test guards today,
+  and what changes depending on the answer.
+
+  Two tests keep it honest: every room held on a shrink-only known-failure list
+  in the code must be named in that section, matched inside backticks rather
+  than as a bare substring, so a list that grows without the roadmap following
+  fails rather than leaving a decision recorded nowhere.
+
 - Widening the App window can show less of the status, and that is now measured
   and pinned. The status does not get the window: it gets what the controls
   label leaves, and both grow with the footer's scale, so each character costs

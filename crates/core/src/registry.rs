@@ -851,6 +851,47 @@ mod tests {
     const KNOWN_OVER_FLASH_BUDGET: [&str; 3] = ["coupled-tent", "gauss-map", "ricker"];
 
     #[test]
+    fn every_room_waiting_on_a_decision_is_named_where_the_owner_reads() {
+        // These lists are the am-track's record of what it cannot decide, and
+        // for a long time that record lived only in a working note that is not
+        // committed. Somebody reading the repository saw a scattering of room
+        // names in prose and no single place saying what the track is waiting
+        // on.
+        //
+        // The roadmap now has that place, and this keeps it honest: every room
+        // the code holds on a known-failure list has to be named there. A list
+        // that grows without the roadmap following would otherwise leave a
+        // decision recorded nowhere a person looks.
+        // Matched inside backticks, as the section writes them. A bare
+        // substring would accept `zipff` for `zipf`, which is the same hole a
+        // reviewer found in an earlier rule of mine.
+        const ROADMAP: &str = include_str!("../../../docs/ROADMAP.md");
+        let section = ROADMAP
+            .split_once("### Decisions the am-track is waiting on")
+            .map(|(_, rest)| rest)
+            .and_then(|rest| rest.split_once("\n### "))
+            .map(|(section, _)| section)
+            .expect("the roadmap has a decisions section for the am-track");
+
+        for (list, rooms) in [
+            ("KNOWN_OVER_FLASH_BUDGET", &KNOWN_OVER_FLASH_BUDGET[..]),
+            (
+                "RESPONSE_INVISIBLE_WITHOUT_COLOR",
+                &RESPONSE_INVISIBLE_WITHOUT_COLOR[..],
+            ),
+        ] {
+            assert!(!rooms.is_empty(), "{list} is empty, so this checks nothing");
+            for room in rooms {
+                assert!(
+                    section.contains(&format!("`{room}`")),
+                    "{room} is on {list} but is not named in the roadmap's decisions \
+                     section, so nobody reading the repository knows it is waiting"
+                );
+            }
+        }
+    }
+
+    #[test]
     #[ignore = "full-catalog sweep of 35,400 renders; run by the nightly and release gates"]
     fn no_catalog_room_flashes_past_the_photosensitivity_budget() {
         // WCAG 2.3.1: no more than three flashes in any one-second window. The

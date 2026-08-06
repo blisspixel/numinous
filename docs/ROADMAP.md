@@ -606,6 +606,92 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
 
 ## Pre-1.0 (the 0.x line): earning the right to 1.0
 
+### Decisions the am-track is waiting on (read this second)
+
+Everything below has been measured and locked by a test. None of it is
+unfinished automation: each one is a choice about what Numinous should be, and
+the am-track cannot make it. They are listed here rather than in a working note
+because this file is the one somebody reads.
+
+Each entry says what was measured, what is guarded today, and what changes
+depending on the answer. The room names in the first three come from
+shrink-only lists in the code, and a test requires every one of them to appear
+here, so this section cannot fall behind what the catalog actually does.
+
+**1. The 0.4 Understanding cohort needs budget and an external registration.**
+The single milestone gating 1.0-am. The contract in `docs/UNDERSTANDING_STUDY.md`
+requires live model participants through sealed fresh no-exposure contexts, with
+per-model calibration ceilings and registration before calibration ordinal 1.
+Fixtures cannot satisfy it and the contract rejects scripted conclusions. Every
+other item on this list could be answered and 1.0-am would still wait on this
+one. Recorded as OPTIONAL PAID VALIDATION and not run.
+
+**2. Three rooms flash faster than WCAG 2.3.1 allows: `coupled-tent`,
+`gauss-map`, `ricker`.** Measured across all 354 rooms at a declared reference
+size, on the worst one-second window rather than the average. Each renders a
+chaotic map whose point density changes sharply with phase, so fixing them means
+changing what the mathematics draws. Tracked shrink-only by
+`no_catalog_room_flashes_past_the_photosensitivity_budget`, which fails if the
+list grows or if an entry stops violating and is not removed.
+
+**3. Three rooms cannot show their touch response without color: `hilbert`,
+`percolation`, `wireworld`.** The cells they change are half-lit, one half below
+the lit floor, and a half block encodes which half is lit rather than how
+brightly. `hilbert` moves a cell from 174 to 251, a change of 77 out of 255, and
+the glyph does not move. No choice of thresholds reaches them because no
+threshold is consulted. Showing their answer means having them answer with shape
+rather than brightness. A fourth room, `magnet-fractal`, is in the same list for
+a different reason: it moves both-lit cells by about 22 luminance inside the
+widest band.
+
+**4. Eighteen rooms lose one of their two drawn brightness levels without
+color.** `'#'` is the accent at 1.7 and every other ordinary mark is the accent
+itself, so a room drawing both is drawing two levels, and rooms use that as
+depth: in `burning-ship` `'#'` is the interior of the set. In 39 of 354 accents
+the two collapse to one glyph, and 18 of those rooms draw both marks:
+`attention`, `burning-ship`, `dla-frost`, `gamblers-ruin`, `goldbach`,
+`henon-heiles`, `hofstadter-q`, `josephus`, `kepler-laws`, `liouville`,
+`magnet-fractal`, `moser-debruijn`, `rabi`, `ruler-function`, `seifert`,
+`sinai-billiard`, `twin-primes`, `zipf`. The two causes pull opposite ways: a
+bright accent times 1.7 clamps, a dark one stays dark. So there is no single
+fix, and changing either the ink scale or the shade thresholds changes what all
+354 rooms look like.
+
+**5. Should Cult of Pi mark faults on a character terminal?** It computes a
+fault mark and the character path drops it: 462 of 1,280 cells are faulted at
+one measured phase and the terminal marks none of them. The pixel path draws
+them red. Its reveal says the display faults are ours rather than pi's, so a
+face that hides them may be making the point rather than missing it, and at one
+character per cell a marker column would halve the field.
+
+**6. Should a mono preference change what `sonify --layer room-bed` exports?**
+It writes stereo unconditionally while every other layer writes mono. The export
+declares itself a stable pre-master bed, and its stereo metrics (balance, width)
+are degenerate in mono, so honoring the preference changes an artifact's
+contract. The radio cache is correctly stereo and must stay so: it caches
+licensed source.
+
+**7. Should MCP be able to open a saved `.num`?** A person can save a creation
+and an MCP peer cannot read it, so the remix half of the 0.7 exit is unbuilt
+rather than untested. Adding a tool changes the pinned 35-tool inventory.
+
+**8. Should the App footer stop showing less of the status as the window
+grows?** Measured: 720 pixels shows the whole status, 900 truncates it, and 900
+is the size the window opens at. Each character costs six pixels times the
+footer scale while the budget grows only with width. Fixing it changes how the
+footer chooses its scale or divides its row, which changes every screen.
+
+**9. Should player-set text scaling and separate music, effect and room volume
+be built?** Both are named 0.5 deliverables and neither exists. The 0.5 row has
+never claimed them. Text scale is threaded through dozens of call sites and the
+interface fits text by truncation, so a player-set scale reshapes every screen
+and interacts with every fitting rule.
+
+**10. Clean-machine execution, App and device evidence, and code signing.**
+Needs real machines, at least two GPU vendors, and certificates. The physical
+input session contract is executable and waiting for a run; nothing about it is
+automatable from here.
+
 ### 0.1 Public Foundation
 
 **Status:** complete. The exit criterion passed on the public `main` branch;

@@ -473,6 +473,28 @@ mod tests {
     ];
 
     #[test]
+    fn the_rooms_that_lose_a_level_are_named_where_the_owner_reads() {
+        // The companion of the check in `registry.rs`. Eighteen room names are
+        // a decision about the ink scale or the shade thresholds, and a
+        // decision nobody can see is not waiting on anyone.
+        // Matched inside backticks: a bare substring would accept `zipff`.
+        const ROADMAP: &str = include_str!("../../../docs/ROADMAP.md");
+        let section = ROADMAP
+            .split_once("### Decisions the am-track is waiting on")
+            .map(|(_, rest)| rest)
+            .and_then(|rest| rest.split_once("\n### "))
+            .map(|(section, _)| section)
+            .expect("the roadmap has a decisions section for the am-track");
+        for room in MARK_LEVELS_COLLAPSE_WITHOUT_COLOR {
+            assert!(
+                section.contains(&format!("`{room}`")),
+                "{room} loses a level without color and is not named in the \
+                 roadmap's decisions section"
+            );
+        }
+    }
+
+    #[test]
     fn two_drawn_levels_stay_two_levels_without_color_outside_the_known_list() {
         // Scanned once and used twice. Reading the sources again for the count
         // would be the same question asked of the disk a second time, and two
