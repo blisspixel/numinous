@@ -66,15 +66,17 @@ class ParityError(RuntimeError):
     """A face could not be driven."""
 
 
-def isolated_env() -> dict[str, str]:
+def isolated_env(home: Path) -> dict[str, str]:
     """An environment whose player state cannot reach the person running this.
 
     `plot_expression` is a tool call, and tool calls can persist journey and
     score deltas. Without this, running the gate from `scripts/check` would
     write into a developer's own play history.
+
+    The caller owns `home` and is expected to remove it. This used to make its
+    own directory and never delete it, leaving one behind per case on every run.
     """
     env = dict(os.environ)
-    home = Path(tempfile.mkdtemp(prefix="numinous-creator-parity-"))
     env["HOME"] = str(home)
     env["USERPROFILE"] = str(home)
     env["NUMINOUS_HOME"] = str(home / "install")
@@ -264,11 +266,16 @@ def main() -> int:
     except ParityError as error:
         results = [{"name": "build", "passed": False, "detail": str(error)}]
     else:
-        # A fresh profile per case, so no case can change what another sees.
-        results = [
-            check(cli, mcp, label, mcp_args, cli_args, isolated_env())
-            for label, mcp_args, cli_args in CASES
-        ]
+        # A fresh profile per case, so no case can change what another sees,
+        # and each one is removed once its case is done.
+        results = []
+        for label, mcp_args, cli_args in CASES:
+            with tempfile.TemporaryDirectory(
+                prefix="numinous-creator-parity-", ignore_cleanup_errors=True
+            ) as home:
+                results.append(
+                    check(cli, mcp, label, mcp_args, cli_args, isolated_env(Path(home)))
+                )
     failed = [item for item in results if not item["passed"]]
     summary = {
         "suite": "creator-parity",

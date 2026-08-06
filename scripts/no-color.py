@@ -165,15 +165,18 @@ def resolve_cli() -> str:
     )
 
 
-def isolated_env(no_color: bool) -> dict[str, str]:
+def isolated_env(home: Path, no_color: bool) -> dict[str, str]:
     """An environment whose play history cannot reach the person running this.
 
     Several probes are games, and games record scores and journey progress.
     Without this, running the gate would write into a developer's own history.
+
+    The caller owns `home` and is expected to remove it. This used to make its
+    own directory and never delete it, which left two behind per probe, sixty
+    six per sweep, in everybody's temp directory forever.
     """
     env = dict(os.environ)
     env.pop("NO_COLOR", None)
-    home = Path(tempfile.mkdtemp(prefix="numinous-no-color-"))
     env["HOME"] = str(home)
     env["USERPROFILE"] = str(home)
     env["NUMINOUS_HOME"] = str(home / "install")
@@ -216,25 +219,33 @@ def advertised_subcommands(cli: str) -> set[str]:
 
 def sgr_count(cli: str, probe: Probe, no_color: bool) -> int:
     """How many SGR escapes this probe emits under the given setting."""
-    proc = subprocess.Popen(
-        [cli, *probe.argv],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        env=isolated_env(no_color),
-    )
-    try:
-        data, _ = proc.communicate(
-            input=b"", timeout=probe.deadline or ONE_SHOT_TIMEOUT_SECONDS
+    # The profile lives exactly as long as the run that needs it. Cleanup
+    # errors are ignored because the live loops are killed rather than asked to
+    # stop, and a killed process on Windows can still be holding a file open;
+    # failing the sweep over a leftover temporary file would report a colour
+    # defect that does not exist.
+    with tempfile.TemporaryDirectory(
+        prefix="numinous-no-color-", ignore_cleanup_errors=True
+    ) as home:
+        proc = subprocess.Popen(
+            [cli, *probe.argv],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            env=isolated_env(Path(home), no_color),
         )
-    except subprocess.TimeoutExpired:
-        if probe.deadline is None:
+        try:
+            data, _ = proc.communicate(
+                input=b"", timeout=probe.deadline or ONE_SHOT_TIMEOUT_SECONDS
+            )
+        except subprocess.TimeoutExpired:
+            if probe.deadline is None:
+                proc.kill()
+                proc.communicate()
+                raise SweepError(f"{probe.label} never answered") from None
+            # Expected for the live loops: kill, then read what the pipe holds.
             proc.kill()
-            proc.communicate()
-            raise SweepError(f"{probe.label} never answered") from None
-        # Expected for the live loops: kill, then read what the pipe holds.
-        proc.kill()
-        data, _ = proc.communicate()
+            data, _ = proc.communicate()
     return len(SGR.findall(data[:READ_LIMIT].decode("utf-8", "replace")))
 
 
