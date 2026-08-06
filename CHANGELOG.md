@@ -5,22 +5,28 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
-- The App's footer is now held to keeping its words. It carries what a player
-  has to read to act, the status and what the hand is for, and the window opens
-  at 900 pixels with no minimum size, so it can be dragged to any width and the
-  text is fitted by cutting it. Nothing checked what survives that cut.
+- Widening the App window can show less of the status, and that is now measured
+  and pinned. The status does not get the window: it gets what the controls
+  label leaves, and both grow with the footer's scale, so each character costs
+  six pixels times the scale while the budget grows only with width.
 
-  Measured first: a full status holds whole down to 280 pixels, then loses its
-  tail to an ellipsis, which is a degradation a player can work with. Below
-  three columns the fitting returns a row of dots and says nothing at all, which
-  is indistinguishable from a bug. That branch is out of reach at any width a
-  window can sensibly have, and a test now keeps it out of reach, along with the
-  guarantee that a cut is always marked and always keeps the start of the status.
+      720 px, scale 1  ->  the whole status
+      900 px, scale 2  ->  cut, and 900 is the size the window opens at
 
-  Nothing needed fixing. Both halves were confirmed by breaking them: cutting
-  twice as early fails at 900 pixels, and letting the dots branch reach further
-  fails the floor.
+  So the default window truncates, and making it narrower can show more. Fixing
+  it means changing how the footer chooses its scale or divides its row, which
+  changes what every screen looks like, so it is tracked rather than patched.
+  The test pins the shape so it cannot worsen quietly, and fails the day it is
+  fixed, which is when its note should be rewritten.
 
+  It also holds what must be true at every width: whatever is shown is the start
+  of the status, a cut is always marked, and it is never a row of dots, which is
+  what the fitting returns below three columns and says nothing at all.
+
+  The first version of this measured the wrong thing. It worked out the budget
+  itself and landed on the one the action gets, which is the whole width, and so
+  reported a guarantee that was not there. The footer's budget now lives in one
+  function that both the chrome and the test use.
 - A test fixture could reach the repository it was running inside. `test-mcp-play.py`
   builds a throwaway git repository in a temporary directory, and these tests are
   wired into the pre-commit hook. Git exports `GIT_INDEX_FILE`, `GIT_DIR` and
