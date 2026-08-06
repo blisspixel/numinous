@@ -192,6 +192,36 @@ NUMINOUS_JOURNEY="$HOME/.numinous-journey-try" NUMINOUS_SCORES="$HOME/.numinous-
 Removing or replacing an existing profile is never part of an update and
 should happen only by the player's explicit choice.
 
+### Accessibility
+
+Three switches, each an environment variable. Set one to anything at all to
+turn it on, unset it to turn it off. Writing `=0` still turns it on, because
+you still wrote it. `numinous access` prints this list and shows which of them
+are on right now.
+
+```
+NUMINOUS_REDUCED_MOTION   Nothing moves unless you move it. Rooms hold a still
+                          frame rather than stopping dead, and The Show waits
+                          for you instead of changing rooms on a timer.
+
+NUMINOUS_MONO_AUDIO       Both channels carry the same sound, so nothing is
+                          lost on one ear or one speaker.
+
+NO_COLOR                  No color anywhere: rooms, chrome and games alike.
+                          Shapes and letters carry the meaning instead. This is
+                          the shared convention from no-color.org, not ours.
+```
+
+```
+NUMINOUS_REDUCED_MOTION=1 NO_COLOR=1 numinous show
+```
+
+Two things are known to be wrong and are not fixed yet, so you can decide for
+yourself rather than find out the hard way. Three rooms flash faster than the
+WCAG 2.3.1 budget allows. Three more answer a touch in a way the color-free
+renderer cannot show, so under `NO_COLOR` they look like they ignored you. All
+six are named in `docs/ROADMAP.md` under 0.5 Sensory.
+
 ---
 
 ## For agents
