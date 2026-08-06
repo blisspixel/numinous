@@ -5,6 +5,30 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The two faces now sing the same music. `sing` had a parameter defect on both
+  sides at once, and the parity gate could not see it because the gate had
+  excused `sing` from being checked.
+
+  The terminal face fixed the knob `a` at 0 and offered no flag to set it, so
+  `sin(a*x)` sang a flat line. The MCP face fixed it at 1 and rejected the
+  argument outright, so it could only ever sing `sin(x)`. Both faces plot with a
+  settable knob defaulting to 1, and neither could sing with one, so the same
+  request produced different music depending on which face heard it. `numinous
+  sing` takes `--a` now and MCP's `sing_expression` takes `a`, both defaulting
+  to 1 as `plot` already did.
+
+  The gate's own note said `sing` could not be checked because one face returns
+  a WAV and the other a note list, so there was no single artifact to compare.
+  That was the wrong conclusion from a true observation: the two describe the
+  same melody. `creator-parity.py` now measures the pitch the WAV actually
+  holds at each onset and checks it against the frequency the other face names.
+  A duration and a note count would not have caught this, since both are
+  identical whether the knob is 0 or 1.
+
+  Six sing cases, and two of them name no knob at all, because every other case
+  passes one explicitly and would keep passing if a single face's default
+  drifted. Both defaults are broken independently to prove that.
+
 - The App-to-core curve parity test now checks what it claimed. It said the
   three faces must agree about "the same samples, the same discards, and the
   same vertical framing", and asserted only the framing. Two things were wrong
