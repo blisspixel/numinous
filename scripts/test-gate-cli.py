@@ -86,6 +86,16 @@ class OnlyOneResolverTests(unittest.TestCase):
         for sample in ('["cargo", "run", "--quiet"]', "['cargo','run']"):
             with self.subTest(sample=sample):
                 self.assertIsNotNone(CARGO_RUN.search(sample))
+        # The import rule reads a real statement and not a mention of one.
+        importing = re.compile(r"(?m)^from gate_cli import\s+\w")
+        self.assertIsNotNone(importing.search("from gate_cli import resolve_cli\n"))
+        for mention in (
+            "# see gate_cli.py, and from gate_cli import resolve_cli\n",
+            '"""a gate should use: from gate_cli import resolve_cli"""\n',
+            "    from gate_cli import resolve_cli  # indented, inside a branch\n",
+        ):
+            with self.subTest(mention=mention.strip()):
+                self.assertIsNone(importing.search(mention))
         # And that it does not fire on the things that legitimately say target,
         # such as a release triple or a packaging argument.
         for innocent in (
@@ -114,7 +124,10 @@ class OnlyOneResolverTests(unittest.TestCase):
         ):
             with self.subTest(gate=name):
                 source = (SCRIPTS / name).read_text("utf-8")
-                self.assertIn("from gate_cli import", source)
+                # Anchored to the start of a line, so the words appearing in a
+                # comment or a string do not satisfy it. A gate that only talks
+                # about the shared resolver is not using it.
+                self.assertRegex(source, r"(?m)^from gate_cli import\s+\w")
 
 
 class ResolverTests(unittest.TestCase):
