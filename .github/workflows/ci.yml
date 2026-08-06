@@ -59,6 +59,7 @@ jobs:
           python3 scripts/test-no-color.py
           python3 scripts/reduced-motion.py
           python3 scripts/no-color.py
+          python3 scripts/test-am-soak.py
           python3 scripts/am-soak.py
           python3 scripts/catalog-scorecard.py
       - name: Understanding am-track dry-run auditors
