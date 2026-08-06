@@ -4209,11 +4209,38 @@ fn quiz_remark(score: usize, rounds: usize) -> &'static str {
     }
 }
 
+/// Wrap `text` in an SGR color, or leave it alone when color is off.
+///
+/// Every game board goes through here rather than writing escapes inline. The
+/// boards used to write them inline, and every one of them ignored `NO_COLOR`
+/// as a result: the pictures honored the setting while the games painted over
+/// it. One helper means the next board cannot forget, because there is nowhere
+/// left to forget it.
+fn painted(color: bool, sgr: &str, text: &str) -> String {
+    if color {
+        format!("\x1b[{sgr}m{text}\x1b[0m")
+    } else {
+        text.to_string()
+    }
+}
+
 /// Draw the arcade board: the Muncher, the spirits, the numbers.
 ///
 /// The Muncher is yellow. On an uneaten cell it keeps the digits so you can
 /// see what you are about to eat; only empty cells show the bare `@`.
-fn arcade_text(run: &numinous_core::munch_arcade::Arcade) -> String {
+///
+/// Every mark is legible without its color. The spirits are `d`, `T` and `e`,
+/// and the Muncher's cell is the one in angle brackets, `>30<` rather than
+/// `[30]`.
+///
+/// Those brackets are load bearing. The Muncher used to be yellow digits inside
+/// ordinary brackets, so on an uneaten cell it was `[30]` in color and `[30]`
+/// without, identical to every other cell: a `NO_COLOR` player, or one who
+/// cannot pick yellow out, could not see where they were standing. Keeping the
+/// digits was the right call, since you should see what you are about to eat.
+/// Keeping them and nothing else was not. Both bracket forms are four columns
+/// wide, so the grid still lines up.
+fn arcade_text(run: &numinous_core::munch_arcade::Arcade, color: bool) -> String {
     use numinous_core::munch_arcade::Mind;
     use numinous_core::munchers::{COLS, ROWS};
     let mut out = String::new();
@@ -4221,19 +4248,21 @@ fn arcade_text(run: &numinous_core::munch_arcade::Arcade) -> String {
         for col in 0..COLS {
             let cell = row * COLS + col;
             if cell == run.muncher {
-                if run.eaten[cell] {
-                    out.push_str("\x1b[93m[ @]\x1b[0m");
+                let standing = if run.eaten[cell] {
+                    "> @<".to_string()
                 } else {
-                    // Yellow digits: you stand here; the value stays legible.
-                    out.push_str(&format!("\x1b[93m[{:>2}]\x1b[0m", run.board.numbers[cell]));
-                }
-            } else if let Some(v) = run.vexations.iter().find(|v| v.cell == cell) {
-                let mark = match v.mind {
-                    Mind::Drifter => "\x1b[95m[ d]\x1b[0m",
-                    Mind::Tracker => "\x1b[91m[ T]\x1b[0m",
-                    Mind::Editor => "\x1b[96m[ e]\x1b[0m",
+                    // The value stays legible: you should see what you are
+                    // about to eat, and the brackets say you are on it.
+                    format!(">{:>2}<", run.board.numbers[cell])
                 };
-                out.push_str(mark);
+                out.push_str(&painted(color, "93", &standing));
+            } else if let Some(v) = run.vexations.iter().find(|v| v.cell == cell) {
+                let (sgr, mark) = match v.mind {
+                    Mind::Drifter => ("95", "[ d]"),
+                    Mind::Tracker => ("91", "[ T]"),
+                    Mind::Editor => ("96", "[ e]"),
+                };
+                out.push_str(&painted(color, sgr, mark));
             } else if run.eaten[cell] {
                 out.push_str("[  ]");
             } else {
@@ -4267,7 +4296,7 @@ fn arcade_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRead)
             run.score,
             run.board.rule.describe()
         );
-        print!("{}", arcade_text(&run));
+        print!("{}", arcade_text(&run, color_allowed()));
         let Some(line) = read_game_line(input, "move > ") else {
             break;
         };
@@ -4325,8 +4354,11 @@ fn arcade_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRead)
     ExitCode::SUCCESS
 }
 
-/// Draw the garden: stalks as columns, red and blue in truecolor.
-fn garden_text(stalks: &numinous_core::hackenbush::Stalks) -> String {
+/// Draw the garden: stalks as columns, red and blue.
+///
+/// `R` and `B` are the answer; the color repeats it. A player who cannot tell
+/// red from blue, or who has turned color off, still reads the garden.
+fn garden_text(stalks: &numinous_core::hackenbush::Stalks, color: bool) -> String {
     use numinous_core::hackenbush::Color;
     let tallest = stalks.iter().map(Vec::len).max().unwrap_or(0);
     let mut out = String::new();
@@ -4334,8 +4366,8 @@ fn garden_text(stalks: &numinous_core::hackenbush::Stalks) -> String {
         out.push_str("   ");
         for stalk in stalks {
             match stalk.get(row) {
-                Some(Color::Red) => out.push_str("\x1b[91m R \x1b[0m"),
-                Some(Color::Blue) => out.push_str("\x1b[94m B \x1b[0m"),
+                Some(Color::Red) => out.push_str(&painted(color, "91", " R ")),
+                Some(Color::Blue) => out.push_str(&painted(color, "94", " B ")),
                 None => out.push_str("   "),
             }
             out.push(' ');
@@ -4365,7 +4397,7 @@ fn hackenbush_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufR
     println!("The Order cuts blue. Whoever cannot cut, loses. Answer: stalk height");
     println!("(1 1 cuts stalk 1 at the ground). This garden is winnable. (? explains)");
     loop {
-        println!("\n{}", garden_text(&stalks));
+        println!("\n{}", garden_text(&stalks, color_allowed()));
         if !hb::can_move(&stalks, hb::Color::Red) {
             println!("No red left to cut. The Order takes the garden. (It was arithmetic.)");
             return ExitCode::SUCCESS;
@@ -4413,6 +4445,38 @@ fn party(journey: &mut Journey) -> ExitCode {
     party_with_input(journey, &mut input)
 }
 
+/// Draw the handshake matrix: who has shaken whom, and in which shade.
+///
+/// `R` and `B` carry the shade; the color repeats it, and a dot is an unshaken
+/// pair. Pulled out of the game loop so it can be looked at by a test at all:
+/// it used to be written straight to stdout, which is why it was the last of
+/// the three boards still ignoring `NO_COLOR`.
+fn party_board_text(p: &numinous_core::party::Party, guests: usize, color: bool) -> String {
+    use numinous_core::party::Shade;
+    let mut out = String::from("     ");
+    for b in 1..=guests {
+        out.push_str(&format!(" {b}"));
+    }
+    out.push('\n');
+    for a in 0..guests {
+        out.push_str(&format!("   {} ", a + 1));
+        for b in 0..guests {
+            if b <= a {
+                out.push_str("  ");
+                continue;
+            }
+            let mark = match numinous_core::party::edge_index(guests, a, b).map(|i| p.edges[i]) {
+                Some(Shade::Red) => painted(color, "91", "R"),
+                Some(Shade::Blue) => painted(color, "94", "B"),
+                _ => ".".to_string(),
+            };
+            out.push_str(&format!(" {mark}"));
+        }
+        out.push('\n');
+    }
+    out
+}
+
 fn party_with_input(journey: &mut Journey, input: &mut impl BufRead) -> ExitCode {
     use numinous_core::party::{Party, Shade};
     println!("THE PARTY PROBLEM. Shade every handshake red or blue WITHOUT making");
@@ -4427,28 +4491,7 @@ fn party_with_input(journey: &mut Journey, input: &mut impl BufRead) -> ExitCode
         );
         loop {
             // The matrix of handshakes so far.
-            print!("     ");
-            for b in 1..=guests {
-                print!(" {b}");
-            }
-            println!();
-            for a in 0..guests {
-                print!("   {} ", a + 1);
-                for b in 0..guests {
-                    if b <= a {
-                        print!("  ");
-                        continue;
-                    }
-                    let mark =
-                        match numinous_core::party::edge_index(guests, a, b).map(|i| p.edges[i]) {
-                            Some(Shade::Red) => "\x1b[91mR\x1b[0m",
-                            Some(Shade::Blue) => "\x1b[94mB\x1b[0m",
-                            _ => ".",
-                        };
-                    print!(" {mark}");
-                }
-                println!();
-            }
+            print!("{}", party_board_text(&p, guests, color_allowed()));
             let Some(line) = read_game_line(input, "handshake > ") else {
                 return ExitCode::SUCCESS;
             };
@@ -7412,6 +7455,191 @@ mod tests {
         )
         .expect("render");
         assert_ne!(modern, phosphor);
+    }
+
+    /// Every SGR escape in `text`, as the bodies between `\x1b[` and `m`.
+    ///
+    /// Only SGR is collected. Cursor control is not color: `\x1b[H`, `\x1b[J`
+    /// and `\x1b[K` position and clear, and a `NO_COLOR` surface is still
+    /// allowed to paint in place.
+    fn sgr_codes(text: &str) -> Vec<String> {
+        let mut found = Vec::new();
+        let mut rest = text;
+        while let Some(start) = rest.find("\x1b[") {
+            let tail = &rest[start + 2..];
+            let end = tail.find(|c: char| !c.is_ascii_digit() && c != ';');
+            match end {
+                Some(index) if tail.as_bytes()[index] == b'm' => {
+                    found.push(tail[..index].to_string());
+                    rest = &tail[index + 1..];
+                }
+                Some(index) => rest = &tail[index + 1..],
+                None => break,
+            }
+        }
+        found
+    }
+
+    #[test]
+    fn the_escape_scanner_finds_color_and_ignores_cursor_control() {
+        // This scanner is the instrument the next test measures with, so it is
+        // calibrated first. An instrument that found nothing would report every
+        // surface as clean.
+        assert_eq!(sgr_codes("\x1b[91mR\x1b[0m"), vec!["91", "0"]);
+        assert_eq!(sgr_codes("\x1b[38;2;1;2;3mx"), vec!["38;2;1;2;3"]);
+        assert!(sgr_codes("\x1b[H\x1b[2J\x1b[Kplain").is_empty());
+        assert!(sgr_codes("no escapes here").is_empty());
+        // A truncated escape must not be read as a color, and must not spin.
+        assert!(sgr_codes("\x1b[").is_empty());
+        assert!(sgr_codes("\x1b[12").is_empty());
+    }
+
+    #[test]
+    fn every_game_board_honors_no_color_and_still_says_which_is_which() {
+        // The pictures honored NO_COLOR and the games painted over it. All
+        // three boards wrote escapes inline and none of them consulted the
+        // setting, so a NO_COLOR player got a color-free room and a colored
+        // game in the same session.
+        //
+        // Each board is checked twice over. With color off it must emit no SGR
+        // at all, and with color on it must emit some, so this measures the
+        // setting rather than boards that lost their color everywhere. The
+        // marks that carry the meaning are asserted in BOTH modes, which is the
+        // color-independence half: the color may repeat the answer, never own
+        // it.
+        let arcade = numinous_core::munch_arcade::Arcade::new(7);
+        let stalks = numinous_core::hackenbush::Stalks::from(vec![
+            vec![
+                numinous_core::hackenbush::Color::Red,
+                numinous_core::hackenbush::Color::Blue,
+            ],
+            vec![numinous_core::hackenbush::Color::Blue],
+        ]);
+        let mut party = numinous_core::party::Party::new(5);
+        if let Some(index) = numinous_core::party::edge_index(5, 0, 1) {
+            party.edges[index] = numinous_core::party::Shade::Red;
+        }
+        if let Some(index) = numinous_core::party::edge_index(5, 0, 2) {
+            party.edges[index] = numinous_core::party::Shade::Blue;
+        }
+
+        /// One board under test: what to call it, how to draw it at a given
+        /// color setting, and the marks that must survive without color.
+        type BoardCase = (&'static str, Box<dyn Fn(bool) -> String>, Vec<&'static str>);
+
+        let boards: [BoardCase; 3] = [
+            (
+                "arcade",
+                Box::new(move |color| super::arcade_text(&arcade, color)),
+                // Not "@": a fresh board has the Muncher on an uneaten cell,
+                // which keeps its digits. The angle brackets are what says
+                // where it is standing, and they are there in both states.
+                vec![">", "<"],
+            ),
+            (
+                "garden",
+                Box::new(move |color| super::garden_text(&stalks, color)),
+                vec!["R", "B"],
+            ),
+            (
+                "party",
+                Box::new(move |color| super::party_board_text(&party, 5, color)),
+                vec!["R", "B", "."],
+            ),
+        ];
+
+        for (name, draw, marks) in boards {
+            let plain = draw(false);
+            assert!(
+                sgr_codes(&plain).is_empty(),
+                "{name} still emits {:?} with color off",
+                sgr_codes(&plain)
+            );
+            let colored = draw(true);
+            assert!(
+                !sgr_codes(&colored).is_empty(),
+                "{name} emits no color with color on, so the check above proves nothing"
+            );
+            for mark in marks {
+                assert!(
+                    plain.contains(mark),
+                    "{name} loses the mark {mark:?} without color:\n{plain}"
+                );
+                assert!(
+                    colored.contains(mark),
+                    "{name} loses the mark {mark:?} with color:\n{colored}"
+                );
+            }
+            // Same board either way: stripping the color must leave exactly the
+            // uncolored drawing, not a differently shaped one.
+            let stripped = colored
+                .replace("\x1b[91m", "")
+                .replace("\x1b[93m", "")
+                .replace("\x1b[94m", "")
+                .replace("\x1b[95m", "")
+                .replace("\x1b[96m", "")
+                .replace("\x1b[0m", "");
+            assert_eq!(stripped, plain, "{name} draws a different board per mode");
+        }
+    }
+
+    #[test]
+    fn the_muncher_is_findable_on_an_uneaten_cell_without_color() {
+        // The defect this pins: the Muncher used to be yellow digits in
+        // ordinary brackets, so on an uneaten cell it drew `[30]` and every
+        // other cell drew `[30]` too. Without color you could not see where you
+        // were standing, and a fresh board is exactly that case.
+        let mut run = numinous_core::munch_arcade::Arcade::new(7);
+        assert!(
+            !run.eaten[run.muncher],
+            "a fresh board should have the Muncher on an uneaten cell"
+        );
+        let plain = super::arcade_text(&run, false);
+        let standing = format!(">{:>2}<", run.board.numbers[run.muncher]);
+        assert!(
+            plain.contains(&standing),
+            "the Muncher is not marked at {standing}:\n{plain}"
+        );
+        // Exactly one cell claims to be the Muncher, or the mark says nothing.
+        assert_eq!(
+            plain.matches('>').count(),
+            1,
+            "more than one cell is marked as the Muncher:\n{plain}"
+        );
+        // The digits are still readable, which was the reason for the old
+        // behaviour and is worth keeping.
+        assert!(plain.contains(&format!("{:>2}", run.board.numbers[run.muncher])));
+
+        // And once the cell is eaten it still marks the same way.
+        run.eaten[run.muncher] = true;
+        let eaten = super::arcade_text(&run, false);
+        assert!(eaten.contains("> @<"), "eaten Muncher unmarked:\n{eaten}");
+        assert_eq!(eaten.matches('>').count(), 1);
+
+        // Every row is the same width in both states, so the grid still lines
+        // up. A four column cell replaced by a three or five column one would
+        // shear the board.
+        for board in [&plain, &eaten] {
+            let widths: Vec<usize> = board
+                .lines()
+                .filter(|line| !line.is_empty())
+                .map(str::chars)
+                .map(Iterator::count)
+                .collect();
+            assert!(
+                widths.windows(2).all(|pair| pair[0] == pair[1]),
+                "rows are not all the same width: {widths:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn painting_is_the_only_place_a_board_can_add_color() {
+        assert_eq!(super::painted(true, "91", "R"), "\x1b[91mR\x1b[0m");
+        assert_eq!(super::painted(false, "91", "R"), "R");
+        // Color off must not leave a bare reset behind, which is the exact
+        // shape of the defect removed from the NO_COLOR work earlier.
+        assert!(sgr_codes(&super::painted(false, "91", "R")).is_empty());
     }
 
     #[test]
