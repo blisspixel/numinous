@@ -427,6 +427,98 @@ mod tests {
         }
     }
 
+    /// Rooms where a mark that carries meaning is told apart from the room's
+    /// ordinary ink by hue alone, so a color-blind player loses it.
+    ///
+    /// A different question from the two lists around it, and the reason it
+    /// needs its own. `to_mono` asks what a player with no color at all sees,
+    /// which is the right question for a terminal and the wrong one for the
+    /// App: there the picture is pixels, the player has color, and they simply
+    /// have fewer distinctions than the palette assumes. Roughly one man in
+    /// twelve is in that position.
+    ///
+    /// Each entry is measured by `crate::dichromacy`, and both halves of its
+    /// rule have to hold: ordinary vision separates the pair comfortably and at
+    /// least one dichromacy folds it together. A pair that is close for
+    /// everyone is a contrast defect and belongs to
+    /// [`MARK_LEVELS_COLLAPSE_WITHOUT_COLOR`], not here.
+    ///
+    /// Shrink-only, like its neighbours: the test below fails if the list grows,
+    /// and fails if an entry stops colliding and is not removed. Fixing an entry
+    /// means changing an ink or an accent, which changes what the room looks
+    /// like to everyone, so it is a decision about the product rather than a
+    /// defect to patch. Tracked in `docs/ROADMAP.md` under 0.5 Sensory.
+    const MEANING_LOST_TO_COLOR_BLINDNESS: [(&str, char); 2] =
+        [("cult-of-pi", '!'), ("laplace-clock", '!')];
+
+    #[test]
+    fn a_mark_that_means_something_stays_apart_for_a_color_blind_player() {
+        use crate::dichromacy;
+
+        // The warning ink is the one mark that carries meaning rather than
+        // beauty: it says this cell is wrong. The test above proves it survives
+        // the color-free renderer. That is not the same as surviving a player
+        // who has color and fewer distinctions, and this is the second half.
+        let rooms = rooms_drawing_with('!');
+        assert!(
+            rooms.len() >= 4,
+            "only {} rooms found drawing with the warning ink, so the scan is broken \
+             rather than the catalog being clean",
+            rooms.len()
+        );
+
+        let warning = Raster::new(1, 1).ink('!');
+        let mut lost = Vec::new();
+        for (id, accent) in rooms {
+            let ordinary = Raster::with_accent(1, 1, accent).ink('*');
+            if dichromacy::color_alone(warning, ordinary) {
+                lost.push((id, '!'));
+            }
+        }
+        lost.sort();
+
+        let known: Vec<(String, char)> = MEANING_LOST_TO_COLOR_BLINDNESS
+            .iter()
+            .map(|(id, mark)| ((*id).to_string(), *mark))
+            .collect();
+        let newly: Vec<&(String, char)> = lost.iter().filter(|it| !known.contains(it)).collect();
+        assert!(
+            newly.is_empty(),
+            "these rooms newly hide a meaning-carrying mark from a color-blind player \
+             and must be fixed or tracked: {newly:?}"
+        );
+        let fixed: Vec<&(String, char)> = known.iter().filter(|it| !lost.contains(it)).collect();
+        assert!(
+            fixed.is_empty(),
+            "these no longer collide and must leave MEANING_LOST_TO_COLOR_BLINDNESS: {fixed:?}"
+        );
+    }
+
+    #[test]
+    fn the_rooms_a_color_blind_player_loses_are_named_where_the_owner_reads() {
+        // Same companion lock the other two lists carry. Matched inside
+        // backticks, because a bare substring would accept a longer name that
+        // merely starts the same way.
+        const ROADMAP: &str = include_str!("../../../docs/ROADMAP.md");
+        let section = ROADMAP
+            .split_once("### Decisions the am-track is waiting on")
+            .map(|(_, rest)| rest)
+            .and_then(|rest| rest.split_once("\n### "))
+            .map(|(section, _)| section)
+            .expect("the roadmap has a decisions section for the am-track");
+        assert!(
+            !MEANING_LOST_TO_COLOR_BLINDNESS.is_empty(),
+            "an empty list checks nothing"
+        );
+        for (room, _) in MEANING_LOST_TO_COLOR_BLINDNESS {
+            assert!(
+                section.contains(&format!("`{room}`")),
+                "{room} hides a meaning-carrying mark from a color-blind player and is \
+                 not named in the roadmap's decisions section"
+            );
+        }
+    }
+
     /// Rooms that draw both `'#'` and `'*'` and whose accent makes the two the
     /// same character once color is gone.
     ///

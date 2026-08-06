@@ -58,7 +58,12 @@ pub fn relative_luminance(red: u8, green: u8, blue: u8) -> f64 {
 /// the alternative is three `powf` calls per pixel: measuring a full catalog
 /// sweep that way spends minutes inside the exponential rather than doing the
 /// work. This is exact, not an approximation.
-fn linear_channel_table() -> &'static [f64; 256] {
+///
+/// Shared with `crate::dichromacy` rather than copied into it. Two copies of
+/// the same curve are two things that can drift, and a linearization that
+/// differs between two accessibility measurements would make their numbers
+/// quietly incomparable.
+pub(crate) fn linear_channel_table() -> &'static [f64; 256] {
     static TABLE: std::sync::OnceLock<[f64; 256]> = std::sync::OnceLock::new();
     TABLE.get_or_init(|| {
         let mut table = [0.0f64; 256];

@@ -695,6 +695,21 @@ Needs real machines, at least two GPU vendors, and certificates. The physical
 input session contract is executable and waiting for a run; nothing about it is
 automatable from here.
 
+**11. Two rooms hide their fault marks from a color-blind player: `cult-of-pi`
+and `laplace-clock`.** A different question from the color-free renderer, which
+both already pass. That one asks what a player with no color sees; this asks
+what a player who has color but fewer distinctions sees, which is roughly one
+man in twelve. The warning ink means this cell is wrong, and against these two
+accents it is told apart from ordinary ink by hue alone: `cult-of-pi` separates
+them by 129 for ordinary vision and under 14 for a deuteranope, `laplace-clock`
+by 61 and under 13 for a tritanope. Measured by `crate::dichromacy` using the
+Vienot, Brettel and Mollon 1999 simulation and CIELAB, and tracked shrink-only.
+Fixing either means changing an ink or an accent, which changes what the room
+looks like to everybody, so it is a decision about the product. Note the
+neighbouring case that is deliberately not on this list: `phantom-jam` separates
+the same pair by only 34 even for ordinary vision, which is a contrast problem
+rather than a color-blindness one.
+
 ### 0.1 Public Foundation
 
 **Status:** complete. The exit criterion passed on the public `main` branch;
