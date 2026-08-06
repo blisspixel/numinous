@@ -40,6 +40,18 @@ SILENT = (
 FULL_SIZE_BED = 2_560_000
 
 
+def temporary_directory(case: unittest.TestCase, prefix: str) -> Path:
+    """A scratch directory that goes away when the case does.
+
+    `mkdtemp` would leave one behind per case per run, which is how a machine
+    ends up with hundreds of them. The gates were fixed for exactly this
+    earlier; a test that leaks is no tidier than a gate that does.
+    """
+    handle = tempfile.TemporaryDirectory(prefix=prefix, ignore_cleanup_errors=True)
+    case.addCleanup(handle.cleanup)
+    return Path(handle.name)
+
+
 def png_header(width: int, height: int, signature: bytes | None = None) -> bytes:
     return (
         (MODULE.PNG_SIGNATURE if signature is None else signature)
@@ -51,7 +63,7 @@ def png_header(width: int, height: int, signature: bytes | None = None) -> bytes
 
 class BedJudgementTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.work = Path(tempfile.mkdtemp(prefix="am-soak-contract-"))
+        self.work = temporary_directory(self, "am-soak-contract-")
         self.bed = self.work / "a.wav"
         self.bed.write_bytes(b"\0" * FULL_SIZE_BED)
 
@@ -78,6 +90,29 @@ class BedJudgementTests(unittest.TestCase):
     def test_a_missing_bed_is_rejected(self) -> None:
         self.assertIsNotNone(MODULE.bed_complaint(self.work / "absent.wav", AUDIBLE))
 
+    def test_a_metric_that_is_not_a_finite_number_is_rejected(self) -> None:
+        # A floor only rejects numbers. The pattern matches digits, dots and
+        # exponents, so 1e999 gets through it and becomes infinity, and every
+        # "less than the floor" comparison on infinity is false. Without this
+        # the check would pass on a signal line that means nothing.
+        for peak, rms in (
+            ("1e999", "1e999"),
+            ("0.13463", "1e999"),
+            ("-1e999", "0.04209"),
+        ):
+            with self.subTest(peak=peak, rms=rms):
+                report = f"Signal: peak {peak}, RMS {rms}, crest 10.10 dB"
+                complaint = MODULE.bed_complaint(self.bed, report)
+                self.assertIsNotNone(complaint, f"peak {peak} RMS {rms} was accepted")
+
+    def test_a_metric_that_does_not_parse_is_rejected_rather_than_raising(self) -> None:
+        # The pattern can match something float() will not take, and a gate
+        # that raises reads as a broken gate rather than a failed check.
+        for peak in (".", "e", "1e", "+"):
+            with self.subTest(peak=peak):
+                report = f"Signal: peak {peak}, RMS 0.04209, crest 10.10 dB"
+                self.assertIsNotNone(MODULE.bed_complaint(self.bed, report))
+
     def test_the_floors_sit_well_below_a_real_bed(self) -> None:
         # The quietest bed in the soak measures peak 0.133 and RMS 0.031. The
         # floors separate sound from silence; they are not a mixing opinion, and
@@ -90,7 +125,7 @@ class BedJudgementTests(unittest.TestCase):
 
 class PictureJudgementTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.work = Path(tempfile.mkdtemp(prefix="am-soak-png-"))
+        self.work = temporary_directory(self, "am-soak-png-")
 
     def write(self, name: str, payload: bytes) -> Path:
         path = self.work / name
@@ -122,6 +157,19 @@ class PictureJudgementTests(unittest.TestCase):
         complaint = MODULE.png_complaint(path, 120, 80)
         self.assertIsNotNone(complaint)
         self.assertIn("not a PNG", complaint)
+
+    def test_an_ihdr_of_the_wrong_length_is_rejected(self) -> None:
+        # A real IHDR is always 13 bytes. A different length means the two
+        # fields read as dimensions are not the dimensions.
+        payload = (
+            MODULE.PNG_SIGNATURE
+            + struct.pack(">I", 9)
+            + b"IHDR"
+            + struct.pack(">II", 120, 80)
+        )
+        complaint = MODULE.png_complaint(self.write("shortihdr.png", payload), 120, 80)
+        self.assertIsNotNone(complaint)
+        self.assertIn("13", complaint)
 
     def test_a_png_that_does_not_open_with_ihdr_is_rejected(self) -> None:
         # The standard requires IHDR first. A file that opens otherwise is not
