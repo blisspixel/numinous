@@ -510,13 +510,7 @@ mod tests {
         // Same companion lock the other two lists carry. Matched inside
         // backticks, because a bare substring would accept a longer name that
         // merely starts the same way.
-        const ROADMAP: &str = include_str!("../../../docs/ROADMAP.md");
-        let section = ROADMAP
-            .split_once("### Decisions the am-track is waiting on")
-            .map(|(_, rest)| rest)
-            .and_then(|rest| rest.split_once("\n### "))
-            .map(|(section, _)| section)
-            .expect("the roadmap has a decisions section for the am-track");
+        let section = crate::roadmap_decisions();
         assert!(
             !MEANING_LOST_TO_COLOR_BLINDNESS.is_empty(),
             "an empty list checks nothing"

@@ -615,8 +615,8 @@ because this file is the one somebody reads.
 
 Each entry says what was measured, what is guarded today, and what changes
 depending on the answer. Entry 1 names no rooms because it is about money
-rather than the catalog. Entries 2, 3 and 4 name rooms, and those names are not
-written by hand: each list lives in the code as a shrink-only known-failure
+rather than the catalog. Entries 2, 3, 4 and 11 name rooms, and those names are
+not written by hand: each list lives in the code as a shrink-only known-failure
 list, and a test requires every room on it to appear in this section, so this
 cannot fall behind what the catalog actually does. The remaining entries are
 about a single surface each and name it in the text.
