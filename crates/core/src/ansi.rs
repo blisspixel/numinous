@@ -169,9 +169,36 @@ pub fn to_mono(raster: &Raster) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{LIT_FLOOR, SHADE_STEPS, SHADES, to_ansi, to_mono};
+    use super::{BLOCKS, LIT_FLOOR, SHADE_STEPS, SHADES, to_ansi, to_mono};
     use crate::raster::Raster;
     use crate::surface::Surface;
+
+    #[test]
+    fn a_half_lit_cell_says_which_half_and_not_how_brightly() {
+        // A known and deliberate limit, written down so nobody assumes
+        // otherwise. When one half is below the floor, the glyph is a half
+        // block, and a half block has no room left to carry brightness. Three
+        // catalog rooms answer a touch only in cells of this shape and so stay
+        // invisible without color however large the change is; they are named
+        // in the registry's RESPONSE_INVISIBLE_WITHOUT_COLOR list.
+        //
+        // Encoding brightness here would need a glyph meaning a dim lower
+        // half. The block characters do not have one. The nearest candidates
+        // say how much of the cell is filled, which would report the ink as
+        // occupying less space than it does.
+        let glyph_for = |lit: u8| {
+            let mut raster = Raster::new(1, 2);
+            raster.set_rgba(&[0, 0, 0, 255, lit, lit, lit, 255]);
+            to_mono(&raster).trim_end().to_string()
+        };
+        // A large brightness change in the lit half, and the same glyph.
+        assert_eq!(glyph_for(174), glyph_for(251));
+        assert_eq!(glyph_for(174), BLOCKS[2].to_string());
+        // Crossing the floor is the one change a half-lit cell does report,
+        // because that is a change of shape rather than of brightness.
+        let floor = u8::try_from(LIT_FLOOR).expect("floor fits a channel");
+        assert_ne!(glyph_for(floor), glyph_for(floor - 1));
+    }
 
     #[test]
     fn every_shade_carries_a_real_share_of_the_ink() {
