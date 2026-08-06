@@ -717,6 +717,49 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "decodes all 42 bundled tracks; run by the nightly on each operating system"]
+    fn every_bundled_track_decodes_to_real_audio() {
+        // The test above decodes the FIRST track of each station, three of
+        // forty-two. The other thirty-nine are checked only for a duration,
+        // which comes from the header, so a track whose body is truncated or
+        // silent passes it and fails on the day a player reaches it.
+        //
+        // 0.6-am asks for all 42 tested on each operating system. Decoding is
+        // too slow for every pull request, so it is ignored here and run by the
+        // nightly, which runs it on all three.
+        let dir = bundled_radio_dir();
+        let mut checked = 0;
+        let mut silent = Vec::new();
+        let mut undecodable = Vec::new();
+        for station in ["trance", "chill", "arcade"] {
+            for path in station_tracks(&dir, station) {
+                checked += 1;
+                let Some(loaded) = load_track(&path, 0.0, 44_100) else {
+                    undecodable.push(path.display().to_string());
+                    continue;
+                };
+                // Real audio, not a file that decodes to a run of zeroes.
+                let peak = loaded
+                    .stereo
+                    .iter()
+                    .fold(0.0f32, |peak, sample| peak.max(sample.abs()));
+                if peak <= 0.01 {
+                    silent.push(format!("{} (peak {peak:.4})", path.display()));
+                }
+            }
+        }
+        assert_eq!(checked, 42, "expected 42 bundled tracks, decoded {checked}");
+        assert!(
+            undecodable.is_empty(),
+            "tracks that do not decode: {undecodable:?}"
+        );
+        assert!(
+            silent.is_empty(),
+            "tracks that decode to near silence: {silent:?}"
+        );
+    }
+
+    #[test]
     fn station_tracks_are_sorted_before_the_track_cap() {
         let dir = isolated_path("sorted-cap");
         let _ = std::fs::remove_dir_all(&dir);
