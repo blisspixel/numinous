@@ -5,6 +5,34 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Every bundled track is now decoded, not three of forty-two. 0.6-am asks for
+  all 42 tracks tested on each operating system, and the existing check decoded
+  the first track of each station and checked the other thirty-nine against a
+  header duration, which a truncated or silent body satisfies just as well. A
+  track could have shipped broken and failed on the day a player reached it.
+
+  All 42 now decode and are required to carry real audio rather than a run of
+  zeroes. Every one passes, which nothing had established. Decoding takes about
+  three quarters of a minute in release, too slow for every pull request and
+  fine once a night, so it is ignored by default and named by the nightly
+  roundtrip job, which already runs on all three platforms.
+
+- An ignored test that no workflow names never runs anywhere. It reads like a
+  gate, counts as code, checks nothing, and rots quietly, so the day somebody
+  runs it they find a failure of unknown age.
+  `scripts/test-ignored-tests-run-somewhere.py` now requires every `#[ignore]`d
+  test to be named by a workflow or a gate script, with any deliberate
+  exception carrying a written reason and naming a test that still exists.
+
+  It found one immediately: `catalog_visual_contract_report`, labelled a
+  release matrix diagnostic and named in no workflow and no script. It checks
+  the visual contract of every room at two sizes, across immediate and delayed
+  input. It passes, so nothing had rotted, and the nightly runs it now.
+
+  `scripts/run-exact-test.py` grew `--example` for it, since the sweep lives in
+  an example target and a helper that only knew `--lib` and `--bin` could not
+  have run it.
+
 - The install, play and uninstall roundtrip now runs on three operating
   systems instead of one. 0.6-am asks for exactly that, and the gate has only
   ever run on Linux, so two thirds of the claim rested on nothing. The gate
