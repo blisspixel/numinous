@@ -5,6 +5,35 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The color-independence audit is now committed as evidence rather than only
+  asserted inside tests. The sweeps decide whether the catalog has regressed,
+  but they cannot show a reader what was covered: a passing test looks identical
+  whether it measured 354 rooms or none, and the coverage had to be taken on
+  trust. `docs/evidence/color-independence.json` now records the measurement,
+  every room with the marks it draws, its closest pair, how far apart that pair
+  is for ordinary vision and for the dichromat who sees it worst, and which
+  pairs are carried by color alone. Margins are visible, not just failures.
+
+  The file is generated, never hand-edited, and a test compares it line by line
+  so a failure names the room that moved. Regenerate with
+  `NUMINOUS_UPDATE_EVIDENCE=1` after an intentional change. Distances are
+  rounded to one decimal before formatting, because committing full `f64`
+  precision would make the file a record of the host's floating point rather
+  than of the catalog.
+
+  Measured: 354 rooms, 19 with a pair a color-blind player cannot separate. That
+  total reconciles exactly with the three groups already tracked, ten spectral,
+  two warning ink, and seven that fold their two drawn levels.
+
+  Those last seven were the hole this found. They were measured, they were real,
+  and no list held them, so a new one could have appeared, been written
+  faithfully into the evidence, and had nothing object to it. They are now
+  tracked and named under the same owner decision as the eighteen rooms that
+  lose the same two levels without color, which they do not overlap with at all:
+  eighteen is what a player with no color loses, seven is what a player who has
+  color and fewer distinctions loses, and neither list stands in for the other.
+  A new lock requires every room the audit flags to be held somewhere.
+
 - The App's own surfaces are now swept for color blindness, and they come out
   clean. The catalog sweeps measure rooms and stop there, which left the face
   where the question bites hardest unmeasured: a terminal player can set
