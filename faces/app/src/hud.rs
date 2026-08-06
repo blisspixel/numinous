@@ -159,6 +159,35 @@ struct FooterCopy {
     controls: String,
 }
 
+/// How much room each footer field has at a given window width.
+///
+/// One copy, because a test that works these out for itself is measuring its
+/// own arithmetic. The status is the narrow one: the controls label sits to its
+/// right, so it gets whatever is left rather than the whole width.
+struct FooterBudget {
+    scale: i32,
+    action: i32,
+    status: i32,
+    controls_x: i32,
+}
+
+fn footer_budget(width: usize, controls: &str) -> FooterBudget {
+    let scale = footer_scale(width);
+    let controls_width = controls.chars().count() as i32 * 6 * scale;
+    let controls_x = width as i32 - controls_width - 10;
+    FooterBudget {
+        scale,
+        action: width as i32 - 20,
+        status: controls_x - 20,
+        controls_x,
+    }
+}
+
+/// The size the room chrome draws its footer at.
+fn footer_scale(width: usize) -> i32 {
+    (width as i32 / 400).clamp(1, 4)
+}
+
 fn fit_footer_text(text: &str, pixel_budget: i32, scale: i32) -> String {
     let columns = (pixel_budget / (6 * scale.max(1))).max(0) as usize;
     let length = text.chars().count();
@@ -214,7 +243,7 @@ pub(crate) fn draw_room_chrome(
     width: usize,
     height: usize,
 ) {
-    let scale = (width as i32 / 400).clamp(1, 4);
+    let scale = footer_scale(width);
     let reveal_lines = if state.show_info && !state.the_show && !state.studio {
         let columns = ((width as i32 / (6 * scale)) - 4).max(12) as usize;
         // Optional concept first, then the room reveal: both only on EXPLAIN.
@@ -366,10 +395,10 @@ pub(crate) fn draw_room_chrome(
             state.controller_face,
             status_override,
         );
-        let controls_width = footer.controls.chars().count() as i32 * 6 * scale;
-        let controls_x = width as i32 - controls_width - 10;
-        let action = fit_footer_text(&footer.action, width as i32 - 20, scale);
-        let status = fit_footer_text(&footer.status, controls_x - 20, scale);
+        let budget = footer_budget(width, &footer.controls);
+        let controls_x = budget.controls_x;
+        let action = fit_footer_text(&footer.action, budget.action, budget.scale);
+        let status = fit_footer_text(&footer.status, budget.status, budget.scale);
         if state.room_card == 0 || state.show_info || state.banner_active {
             numinous_core::draw_text(raster, &action, 10, height as i32 - 19 * scale, scale, '.');
         }
@@ -398,53 +427,72 @@ mod tests {
     }
 
     #[test]
-    fn the_footer_keeps_its_words_at_every_width_the_window_can_take() {
-        // The footer carries what the player has to read to act: the status and
-        // what the hand is for. The App opens at 900 and sets no minimum size,
-        // so it can be dragged to any width, and the text is fitted by cutting
-        // it. Nothing checked what survives that cut.
+    fn a_wider_window_never_shows_less_of_the_status() {
+        // Measured with the footer's own budget, which is the point: the status
+        // does not get the window, it gets what the controls label leaves, and
+        // both it and the label grow with `footer_scale`. Working the numbers
+        // out separately is how the first version of this test came to describe
+        // the action's budget instead and report a guarantee that was not there.
         //
-        // Measured before writing this: a full status holds whole down to 280
-        // pixels and then loses its tail to an ellipsis, which is a degradation
-        // a player can work with. What would not be is the branch below three
-        // columns, which returns dots and says nothing at all. That branch is
-        // out of reach at any width a window can sensibly have, and this is
-        // what keeps it out of reach.
+        // What the real budget shows is a defect. Widening the window can show
+        // LESS of the status, because each character costs 6 * scale pixels
+        // while the budget grows only with width:
+        //
+        //   720 px, scale 1  ->  the whole status
+        //   900 px, scale 2  ->  cut, and 900 is the size the window opens at
+        //
+        // Fixing it means changing how the footer chooses its scale or divides
+        // its row, which changes what every screen looks like, so it is tracked
+        // rather than patched here. This pins the shape so it cannot worsen
+        // quietly, and fails the day it is fixed, which is when this note
+        // should be rewritten.
+        let controls = "MOVE WASD   INSPECT E   BACK Q";
         let status = "DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4";
+        let shown = |width: usize| {
+            let budget = footer_budget(width, controls);
+            fit_footer_text(status, budget.status, budget.scale)
+        };
 
-        for width in [1280i32, 900, 720, 640, 480, 360, 280] {
-            let scale = if width >= 720 { 2 } else { 1 };
-            let fitted = fit_footer_text(status, width - 20, scale);
+        // The band that shows everything, and the default window which does not.
+        for width in [480usize, 640, 720] {
             assert_eq!(
-                fitted, status,
-                "at {width} pixels the footer already cut the status"
+                shown(width),
+                status,
+                "{width} px should show the status whole"
             );
         }
-
-        // Narrower than that it must still say something a person can read:
-        // the beginning of the status, marked as continuing.
-        for width in [200i32, 120, 80] {
-            let fitted = fit_footer_text(status, width - 20, 1);
-            assert!(
-                fitted.ends_with("..."),
-                "at {width} pixels the cut is not marked: {fitted:?}"
-            );
-            let kept = fitted.trim_end_matches('.');
-            assert!(
-                kept.len() >= 4 && status.starts_with(kept),
-                "at {width} pixels the footer kept {kept:?}, which is not the start of the status"
-            );
-        }
-
-        // And the floor: even given almost nothing, it must not answer with a
-        // row of dots, which is indistinguishable from a bug.
-        let smallest = fit_footer_text(status, 6 * 4, 1);
-        assert!(
-            smallest.chars().any(|ch| ch != '.'),
-            "the footer degraded to dots at a width the window can reach: {smallest:?}"
+        assert_ne!(
+            shown(900),
+            status,
+            "900 px now shows the whole status; the defect below is fixed and this test              should be rewritten to require it at every width instead"
         );
-    }
 
+        // The inversion itself, stated as a measurement rather than a guess.
+        assert!(
+            shown(720).chars().count() > shown(900).chars().count(),
+            "720 px shows {} characters and 900 px shows {}",
+            shown(720).chars().count(),
+            shown(900).chars().count()
+        );
+
+        // Whatever is shown must still be usable: the start of the status, and
+        // a marked cut. Never a row of dots, which says nothing at all.
+        for width in [280usize, 360, 400, 800, 900, 1280, 1600] {
+            let fitted = shown(width);
+            assert!(
+                fitted.chars().any(|ch| ch != '.'),
+                "{width} px degraded the status to dots: {fitted:?}"
+            );
+            if fitted != status {
+                assert!(fitted.ends_with("..."), "{width} px cut without marking it");
+                let kept = fitted.trim_end_matches('.');
+                assert!(
+                    kept.len() >= 4 && status.starts_with(kept),
+                    "{width} px kept {kept:?}, which is not the start of the status"
+                );
+            }
+        }
+    }
     /// A verbless room: every catalog room answers the hand now, so the
     /// default-action fallback is proven against a synthetic room, the same
     /// shape any future room has on the day it is born.
