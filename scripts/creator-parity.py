@@ -229,6 +229,14 @@ SING_CASES: tuple[tuple[str, str, int, float | None], ...] = (
     ("neither face is told the knob, plain", "sin(x)", 24, None),
 )
 
+# Ranges, which this face could not vary at all until now: it sang one window
+# and a person could ask for any span. Each entry is a label and the window.
+SING_RANGES: tuple[tuple[str, float, float], ...] = (
+    ("narrow window", -1.0, 1.0),
+    ("offset window", 0.0, 10.0),
+    ("wide window", -20.0, 20.0),
+)
+
 # note  1:   440.0 Hz ( A4)  at  0.00s
 MCP_NOTE = re.compile(r"note\s+(\d+):\s+([\d.]+) Hz.*?at\s+([\d.]+)s")
 
@@ -290,13 +298,22 @@ def check_sing(
     notes: int,
     knob: float | None,
     env: dict[str, str],
+    xmin: float | None = None,
+    xmax: float | None = None,
 ) -> dict[str, Any]:
     """One face's audio must hold the pitches the other face names."""
-    name = f"sing {label}: {source} a={'default' if knob is None else knob} notes={notes}"
+    window = "" if xmin is None else f" over [{xmin}, {xmax}]"
+    name = (
+        f"sing {label}: {source} a={'default' if knob is None else knob} "
+        f"notes={notes}{window}"
+    )
     try:
         arguments: dict[str, Any] = {"expr": source, "notes": notes}
         if knob is not None:
             arguments["a"] = knob
+        if xmin is not None:
+            arguments["xmin"] = xmin
+            arguments["xmax"] = xmax
         reported = mcp_sing(mcp, arguments, env)
         with tempfile.TemporaryDirectory(
             prefix="numinous-sing-parity-", ignore_cleanup_errors=True
@@ -304,7 +321,9 @@ def check_sing(
             wav = Path(workspace) / "sung.wav"
             command = [cli, "sing", source, "--notes", str(notes)]
             if knob is not None:
-                command += ["--a", str(knob)]
+                command += [f"--a={knob}"]
+            if xmin is not None:
+                command += [f"--xmin={xmin}", f"--xmax={xmax}"]
             command += ["--out", str(wav)]
             result = subprocess.run(
                 command,
@@ -411,6 +430,16 @@ def main() -> int:
                 results.append(
                     check_sing(
                         cli, mcp, label, source, notes, knob, isolated_env(Path(home))
+                    )
+                )
+        for label, xmin, xmax in SING_RANGES:
+            with tempfile.TemporaryDirectory(
+                prefix="numinous-creator-parity-", ignore_cleanup_errors=True
+            ) as home:
+                results.append(
+                    check_sing(
+                        cli, mcp, label, "sin(a*x)", 16, 1.5,
+                        isolated_env(Path(home)), xmin=xmin, xmax=xmax,
                     )
                 )
     failed = [item for item in results if not item["passed"]]
