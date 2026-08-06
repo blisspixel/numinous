@@ -5,6 +5,22 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The App's footer is now held to keeping its words. It carries what a player
+  has to read to act, the status and what the hand is for, and the window opens
+  at 900 pixels with no minimum size, so it can be dragged to any width and the
+  text is fitted by cutting it. Nothing checked what survives that cut.
+
+  Measured first: a full status holds whole down to 280 pixels, then loses its
+  tail to an ellipsis, which is a degradation a player can work with. Below
+  three columns the fitting returns a row of dots and says nothing at all, which
+  is indistinguishable from a bug. That branch is out of reach at any width a
+  window can sensibly have, and a test now keeps it out of reach, along with the
+  guarantee that a cut is always marked and always keeps the start of the status.
+
+  Nothing needed fixing. Both halves were confirmed by breaking them: cutting
+  twice as early fails at 900 pixels, and letting the dots branch reach further
+  fails the floor.
+
 - A test fixture could reach the repository it was running inside. `test-mcp-play.py`
   builds a throwaway git repository in a temporary directory, and these tests are
   wired into the pre-commit hook. Git exports `GIT_INDEX_FILE`, `GIT_DIR` and
