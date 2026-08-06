@@ -292,29 +292,48 @@ mod tests {
     /// be a second copy of something the code already knows, and second copies
     /// drift: a room could start using the warning ink and this check would go
     /// on testing the four rooms that used it when the list was written.
+    /// A source that draws with the mark but yields no room id is a failure of
+    /// this scan, not a file to pass over. Skipping it quietly would be the
+    /// exact shape of hole the scan exists to close: a room could start using
+    /// the ink, go unparsed, and the catalog would still look clean.
     fn rooms_drawing_with(mark: char) -> Vec<(String, [u8; 3])> {
-        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/rooms");
+        let literal = format!("'{mark}'");
+        let mut pending = vec![std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/rooms")];
         let mut found = Vec::new();
-        for entry in std::fs::read_dir(&dir).expect("the rooms directory is readable") {
-            let path = entry.expect("a readable directory entry").path();
-            if path.extension().is_none_or(|extension| extension != "rs") {
-                continue;
+        while let Some(dir) = pending.pop() {
+            for entry in std::fs::read_dir(&dir).expect("the rooms directory is readable") {
+                let path = entry.expect("a readable directory entry").path();
+                // Rooms with several files keep them in a subdirectory. Walking
+                // only the top level would leave those permanently unchecked.
+                if path.is_dir() {
+                    pending.push(path);
+                    continue;
+                }
+                if path.extension().is_none_or(|extension| extension != "rs") {
+                    continue;
+                }
+                let source = std::fs::read_to_string(&path).expect("a readable room source");
+                if !source.contains(&literal) {
+                    continue;
+                }
+                // The id the room declares, so the mapping never depends on a
+                // file name happening to match it.
+                let id = source
+                    .split_once("id: \"")
+                    .and_then(|(_, rest)| rest.split_once('"'))
+                    .map(|(id, _)| id)
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "{path:?} draws with {literal} and declares no room id, so this scan \
+                             cannot tell which accent it is drawn against. If it is a helper \
+                             drawing on behalf of another room, it needs checking against that \
+                             room's accent rather than being passed over."
+                        )
+                    });
+                let room = crate::registry::room_by_id(id)
+                    .unwrap_or_else(|| panic!("{id} is declared in {path:?} but not registered"));
+                found.push((id.to_string(), room.meta().accent));
             }
-            let source = std::fs::read_to_string(&path).expect("a readable room source");
-            if !source.contains(&format!("'{mark}'")) {
-                continue;
-            }
-            // The id the room declares, so the mapping never depends on the
-            // file name matching it.
-            let Some(rest) = source.split_once("id: \"").map(|(_, rest)| rest) else {
-                continue;
-            };
-            let Some((id, _)) = rest.split_once('"') else {
-                continue;
-            };
-            let room = crate::registry::room_by_id(id)
-                .unwrap_or_else(|| panic!("{id} is declared in {path:?} but not in the registry"));
-            found.push((id.to_string(), room.meta().accent));
         }
         found.sort();
         found
