@@ -456,8 +456,8 @@ impl Room for CultOfPi {
 #[cfg(test)]
 mod tests {
     use super::{
-        CultOfPi, MAX_FIELD_CELLS, PI_HEADER, digits, generate_pi_digits, glyph_for, layout,
-        near_repair, newest_patch_decision,
+        CultOfPi, MAX_FIELD_CELLS, PHASE_TICKS, PI_HEADER, cell_hash, digits, generate_pi_digits,
+        glyph_for, layout, near_repair, newest_patch_decision,
     };
     use crate::MAX_ROOM_POKES;
     use crate::canvas::Canvas;
@@ -506,7 +506,10 @@ mod tests {
             .expect("a deterministic corrupted digit");
         let (wrong, mark) = glyph_for(3, 9, 10, hash, 1.0, false).expect("corrupted glyph");
         assert_ne!(wrong, '3');
-        assert_eq!(mark, '!', "faults must look different from exact holds");
+        // What this pins is the mark `glyph_for` returns, not what any surface
+        // does with it. Whether a fault is visible depends on the surface, and
+        // on a character terminal it is not: see the test below.
+        assert_eq!(mark, '!', "a fault must be reported as a fault");
         assert_eq!(glyph_for(3, 9, 10, hash, 1.0, true), Some(('3', '#')));
 
         let canvas = Canvas::new(60, 30);
@@ -520,6 +523,73 @@ mod tests {
         );
         assert!(near_repair(column, row, field, &[hand]));
         assert!(!near_repair(0, 0, field, &[hand]));
+    }
+
+    #[test]
+    fn a_character_terminal_shows_no_fault_marks_at_all() {
+        // A measured limitation, written down because the room reads as though
+        // it had no such limitation. `glyph_for` marks a corrupted digit '!'
+        // and an exact one '.', and the pixel path draws the digit in that ink,
+        // so on a screen with square-ish characters the faults are red. On a
+        // character terminal the drawing path takes the mark and drops it:
+        //
+        //     surface.plot(x as i32, y as i32, glyph)
+        //
+        // The mark never reaches the surface, so a corrupted digit and an exact
+        // one are the same character in the same ink. A corrupted cell does
+        // show a different digit, but nobody knows pi by heart, so a wrong
+        // digit is not a visible wrong digit.
+        //
+        // This is measured rather than argued: 462 of 1,280 cells are faulted
+        // at this phase and the terminal draws no mark for any of them.
+        // One phase, named once and used for the render and the count alike,
+        // so the two cannot describe different frames.
+        const PHASE: f64 = 0.9;
+        let room = CultOfPi { seed: 7 };
+        let mut canvas = Canvas::new(80, 24);
+        assert!(
+            canvas.safe_char_aspect() < 0.75,
+            "this test is about the character path, and this canvas is not on it"
+        );
+        room.render(&mut canvas, PHASE);
+        let drawn = canvas.to_text();
+
+        // Counted exactly as `render_field` counts, or the number would
+        // describe a frame that was never drawn. The tick comes from the phase
+        // and PHASE_TICKS, not from the phase scaled by anything convenient,
+        // and the loop runs over every cell rather than over the digits.
+        let field = layout(&canvas).expect("field");
+        let total = field.cells();
+        let tick = (PHASE.clamp(0.0, 1.0) * (PHASE_TICKS - 1) as f64).floor() as usize;
+        let faults = (0..total)
+            .filter(|&index| {
+                glyph_for(
+                    digits()[index],
+                    index,
+                    total,
+                    cell_hash(7, tick, index),
+                    PHASE,
+                    false,
+                )
+                .is_some_and(|(_, mark)| mark == '!')
+            })
+            .count();
+        assert!(
+            faults > 0,
+            "the room reported no faults at all, so this measures nothing"
+        );
+        assert_eq!(
+            drawn.matches('!').count(),
+            0,
+            "{faults} cells are faulted and the terminal marks none of them; if that has \
+             changed, this limitation is fixed and the test should say so"
+        );
+
+        // Whether the terminal ought to mark them is a question about what the
+        // room says, not a defect to quietly patch. Its reveal is that the
+        // faults are ours rather than pi's, so a face that hides them may be
+        // making the point rather than missing it. Tracked in docs/ROADMAP.md
+        // under 0.5 Sensory as an owner decision.
     }
 
     #[test]
