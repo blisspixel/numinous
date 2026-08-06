@@ -36,6 +36,8 @@ echo "== no color contract =="
 python3 scripts/test-no-color.py
 echo "== no color =="
 python3 scripts/no-color.py
+echo "== one gate resolver =="
+python3 scripts/test-gate-cli.py
 echo "== am soak contract =="
 python3 scripts/test-am-soak.py
 echo "== am soak =="

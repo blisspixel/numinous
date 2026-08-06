@@ -22,6 +22,12 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
+
+# The gates share one way of getting the binaries they test; see gate_cli.py
+# for why there is only one copy of it.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gate_cli import resolve_cli  # noqa: E402
+
 MANIFEST = ROOT / "docs" / "evidence" / "goldens" / "flagship-manifest.json"
 GOLDEN_DIR = ROOT / "docs" / "evidence" / "goldens" / "flagship"
 WIDTH = 64
@@ -42,26 +48,6 @@ SIGNAL_RE = re.compile(
 )
 
 
-def resolve_cli() -> list[str]:
-    """Prefer a built binary; fall back to cargo run."""
-    candidates = [
-        ROOT / "target" / "debug" / "numinous.exe",
-        ROOT / "target" / "debug" / "numinous",
-        ROOT / "target" / "release" / "numinous.exe",
-        ROOT / "target" / "release" / "numinous",
-    ]
-    for path in candidates:
-        if path.is_file():
-            return [str(path)]
-    return [
-        "cargo",
-        "run",
-        "--quiet",
-        "--locked",
-        "--bin",
-        "numinous",
-        "--",
-    ]
 
 
 def sha256_file(path: Path) -> str:
