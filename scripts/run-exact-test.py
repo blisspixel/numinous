@@ -59,6 +59,7 @@ def main() -> int:
     parser.add_argument("--package", required=True)
     parser.add_argument("--lib", action="store_true")
     parser.add_argument("--bin")
+    parser.add_argument("--example")
     parser.add_argument("--ignored", action="store_true")
     parser.add_argument("names", nargs="+")
     args = parser.parse_args()
@@ -68,8 +69,13 @@ def main() -> int:
         target.append("--lib")
     if args.bin:
         target.extend(["--bin", args.bin])
+    if args.example:
+        target.extend(["--example", args.example])
     if not target:
-        print("give --lib or --bin so cargo does not sweep every target", file=sys.stderr)
+        print(
+            "give --lib, --bin or --example so cargo does not sweep every target",
+            file=sys.stderr,
+        )
         return 2
 
     complaints = [
