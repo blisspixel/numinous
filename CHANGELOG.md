@@ -5,6 +5,32 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The App's own surfaces are now swept for color blindness, and they come out
+  clean. The catalog sweeps measure rooms and stop there, which left the face
+  where the question bites hardest unmeasured: a terminal player can set
+  `NO_COLOR` and get a picture built from block characters, while the App is
+  pixels and a player with a color deficiency has no such switch.
+
+  The App draws its chrome and its games with the same marks rooms use, against
+  ten accents of its own. Both are read from the sources rather than listed, so
+  a new accent or a newly drawn mark is picked up instead of going unchecked.
+  One pair collapses: on the gauntlet's bomb stage the heading is drawn with
+  `'#'` over body text drawn with `'*'`, 49 apart for ordinary vision and 23 for
+  a tritanope. That is text hierarchy rather than information, since the words
+  say what they say, and it is recorded as measured and benign rather than
+  quietly dropped.
+
+  `Raster::ink` is public so a surface can ask what its own marks will look
+  like, rather than the App keeping a second copy of the palette table.
+
+  The first version of this sweep reported 77 collapsing pairs and was wrong.
+  It matched a mark literal anywhere in a file, so it counted a keystroke and a
+  test reading text as ink and then paired marks no surface draws together. The
+  scan now balances parentheses from a drawing call's own bracket and reads only
+  its argument list. Two of the six checks on this test add a non-ink literal
+  and require the lock to stay quiet, because a lock that fires on a keystroke
+  is the wrong lock.
+
 - The spectral palette is now measured for color blindness too, and it is where
   the largest collapse in the catalog turns out to be. The warning ink was one
   mark; rooms combine four spectral inks for prismatic light, and no existing
