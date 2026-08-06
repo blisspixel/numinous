@@ -5,6 +5,45 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Numinous now measures what a color-blind player sees, which nothing in the
+  workspace previously asked. The accessibility work so far answered a
+  different question: `NO_COLOR` and `to_mono` cover a player with no color at
+  all, which is the right question for a terminal and the wrong one for the
+  App, where the picture is pixels and the player has color but fewer
+  distinctions than the palette assumes. Roughly one man in twelve is in that
+  position, so the gap was larger than the one already closed.
+
+  `numinous_core::dichromacy` simulates protanopia, deuteranopia and
+  tritanopia using Vienot, Brettel and Mollon 1999, and compares colors in
+  CIELAB rather than in raw channel values, which say nothing about whether an
+  eye can tell two things apart. The simulation is held to four properties it
+  must satisfy rather than to its own output: grey survives unchanged, the
+  transform is idempotent because it is a projection, blue survives a red-green
+  deficiency, and red against green folds together for a deuteranope and for
+  nobody else. The sRGB linearization is shared with the photosensitivity
+  module rather than copied, so two accessibility measurements cannot drift
+  onto different curves.
+
+  The rule it applies has two halves, and both matter: a cue is carried by
+  color alone when ordinary vision separates it comfortably and at least one
+  dichromacy folds it together. Without the first half the measurement also
+  catches pairs that are nearly identical for everybody, which is a contrast
+  problem tracked separately, and 122 pairs bury the 21 that are real.
+
+  Measured across the catalog: two rooms hide their fault marks from a
+  color-blind player. `cult-of-pi` separates the warning ink from ordinary ink
+  by 129 for ordinary vision and under 14 for a deuteranope; `laplace-clock` by
+  61 and under 13 for a tritanope. Both already pass the color-free renderer,
+  which is what made this invisible. Tracked shrink-only and named in the
+  roadmap's decisions section, because fixing either means changing an ink or
+  an accent and that changes what the room looks like to everybody.
+
+  One case is deliberately excluded and said so rather than left to be found:
+  `phantom-jam` separates the same pair by only 34 even for ordinary vision,
+  which is a contrast defect rather than a color-blindness one. Anomalous
+  trichromacy, which is more common than the dichromacies simulated here, is
+  not modelled, and the module says so instead of implying it is covered.
+
 - Everything the am-track is waiting on is now written where somebody reads it.
   Ten decisions had accumulated over as many cycles, each one measured and each
   one a choice about what Numinous should be rather than unfinished automation.
