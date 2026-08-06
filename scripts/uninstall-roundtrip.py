@@ -88,15 +88,26 @@ def native_tool_env(env: dict[str, str]) -> dict[str, str]:
     return patched
 
 
-def run(command: list[str], env: dict[str, str], step: str, stdin: bytes = b"") -> str:
+def run(
+    command: list[str], env: dict[str, str], step: str, stdin: str | None = None
+) -> str:
+    """Run one step, giving it keystrokes only when it is meant to read any.
+
+    `stdin` is passed through only when a caller asks for it. Handing every step
+    a pipe that closes immediately would change what the installers see: a
+    program that asks whether its input is a terminal gets a different answer,
+    and the installers do ask, so a step that reads nothing must keep inheriting
+    the stdin it would have had.
+    """
+    extra: dict[str, Any] = {} if stdin is None else {"input": stdin}
     result = subprocess.run(
         command,
-        input=stdin.decode("utf-8"),
         env=native_tool_env(env),
         capture_output=True,
         text=True,
         cwd=ROOT,
         timeout=900,
+        **extra,
     )
     if result.returncode != 0:
         raise RoundtripError(
@@ -252,7 +263,7 @@ def roundtrip(archive: Path, checksum: Path, tag: str) -> list[dict[str, Any]]:
         # journey. Munch writes the journey and the scoreboard, which is two of
         # the three files the uninstaller promises to keep. It reads a line at a
         # time and leaves on end of input, so a closed stdin plays and stops.
-        run([str(cli), "munch"], env, "play a scored game", stdin=b"\n\n\n")
+        run([str(cli), "munch"], env, "play a scored game", stdin="\n\n\n")
         seed_unearnable_state(profile)
 
         before = player_state(profile)
