@@ -317,3 +317,144 @@ mod tests {
         );
     }
 }
+
+/// The room-by-room color-independence audit, written where a person can read
+/// it rather than only asserted inside a test.
+///
+/// The sweeps in `raster.rs` and `registry.rs` decide whether the catalog has
+/// regressed. They cannot show what was covered or by how much: a reader has to
+/// take the coverage on trust, and a passing test looks identical whether it
+/// measured 355 rooms or none. This module writes the measurement out, so the
+/// claim is checkable and the margins are visible, not just the failures.
+///
+/// The file is `docs/evidence/color-independence.json` and it is generated,
+/// never hand-edited. Regenerate with `NUMINOUS_UPDATE_EVIDENCE=1 cargo test -p
+/// numinous-core --lib color_independence_audit` after an intentional change.
+#[cfg(test)]
+pub(crate) mod audit {
+    use super::{Dichromacy, color_alone, distance, worst_case};
+
+    /// Every mark that paints something other than the plain accent, plus the
+    /// one representative for the marks that do paint it.
+    const INK_MARKS: [char; 6] = ['#', '!', '@', '%', '&', '~'];
+
+    /// Marks that all paint the plain accent. Recorded as `'*'` whichever one a
+    /// room happens to use.
+    const ORDINARY: [char; 3] = ['*', '+', '.'];
+
+    /// One room's measured worst pair.
+    pub(crate) struct RoomAudit {
+        pub id: String,
+        pub marks: Vec<char>,
+        pub worst: Option<(char, char, f64, f64, Dichromacy)>,
+        pub color_alone_pairs: Vec<(char, char)>,
+    }
+
+    /// Measure one room's palette: every pair of marks it draws, and which is
+    /// closest for a dichromat.
+    pub(crate) fn audit_room(id: &str, accent: [u8; 3], drawn: &[char]) -> RoomAudit {
+        let raster = crate::raster::Raster::with_accent(1, 1, accent);
+        // Collapse the accent-painting marks to one name: a room drawing '*'
+        // and '.' is drawing one color, and pairing them with each other would
+        // record a distinction the room never made.
+        let mut marks: Vec<char> = Vec::new();
+        for &mark in drawn {
+            let name = if ORDINARY.contains(&mark) { '*' } else { mark };
+            if (INK_MARKS.contains(&name) || name == '*') && !marks.contains(&name) {
+                marks.push(name);
+            }
+        }
+        marks.sort_unstable();
+
+        let mut worst: Option<(char, char, f64, f64, Dichromacy)> = None;
+        let mut color_alone_pairs = Vec::new();
+        for (index, &first) in marks.iter().enumerate() {
+            for &second in marks.iter().skip(index + 1) {
+                let (a, b) = (raster.ink(first), raster.ink(second));
+                if a == b {
+                    continue;
+                }
+                let normal = distance(a, b);
+                let (kind, folded) = worst_case(a, b);
+                if worst.is_none_or(|(_, _, _, seen, _)| folded < seen) {
+                    worst = Some((first, second, normal, folded, kind));
+                }
+                if color_alone(a, b) {
+                    color_alone_pairs.push((first, second));
+                }
+            }
+        }
+        RoomAudit {
+            id: id.to_string(),
+            marks,
+            worst,
+            color_alone_pairs,
+        }
+    }
+
+    /// The audit as JSON, formatted deterministically.
+    ///
+    /// Distances are rounded to one decimal before formatting. They are `f64`
+    /// derived from a cube root and a square root, and committing full
+    /// precision would make the file a record of the host's floating point
+    /// rather than of the catalog. One decimal is far finer than any threshold
+    /// this module uses.
+    pub(crate) fn to_json(rooms: &[RoomAudit]) -> String {
+        let mut out = String::new();
+        out.push_str("{\n");
+        out.push_str("  \"schemaVersion\": \"numinous-color-independence-v1\",\n");
+        out.push_str("  \"evidenceClass\": \"agent-machine-regression\",\n");
+        out.push_str("  \"method\": {\n");
+        out.push_str("    \"simulation\": \"Vienot Brettel Mollon 1999\",\n");
+        out.push_str("    \"distance\": \"CIELAB delta-E 1976\",\n");
+        out.push_str(&format!(
+            "    \"separateNormally\": {:.1},\n",
+            super::SEPARATE_NORMALLY
+        ));
+        out.push_str(&format!("    \"tooClose\": {:.1},\n", super::TOO_CLOSE));
+        out.push_str("    \"notModelled\": [\n");
+        out.push_str("      \"anomalous trichromacy, which is more common than dichromacy\",\n");
+        out.push_str("      \"the WCAG 2.3.1 flashing area rule, measured whole-frame instead\"\n");
+        out.push_str("    ]\n");
+        out.push_str("  },\n");
+        out.push_str(&format!("  \"roomsAudited\": {},\n", rooms.len()));
+        out.push_str(&format!(
+            "  \"roomsWithAColorAlonePair\": {},\n",
+            rooms
+                .iter()
+                .filter(|r| !r.color_alone_pairs.is_empty())
+                .count()
+        ));
+        out.push_str("  \"rooms\": [\n");
+        for (index, room) in rooms.iter().enumerate() {
+            let marks: String = room.marks.iter().collect();
+            out.push_str("    {");
+            out.push_str(&format!("\"id\": \"{}\", ", room.id));
+            out.push_str(&format!("\"marks\": \"{marks}\", "));
+            match room.worst {
+                Some((a, b, normal, folded, kind)) => {
+                    out.push_str(&format!(
+                        "\"closestPair\": \"{a}{b}\", \"normal\": {normal:.1}, \
+                         \"folded\": {folded:.1}, \"dichromacy\": \"{}\", ",
+                        kind.name()
+                    ));
+                }
+                None => out.push_str("\"closestPair\": null, "),
+            }
+            let flagged: Vec<String> = room
+                .color_alone_pairs
+                .iter()
+                .map(|(a, b)| format!("\"{a}{b}\""))
+                .collect();
+            out.push_str(&format!("\"colorAlone\": [{}]", flagged.join(", ")));
+            out.push('}');
+            if index + 1 < rooms.len() {
+                out.push(',');
+            }
+            out.push('\n');
+        }
+        out.push_str("  ]\n");
+        out.push_str("}\n");
+        out
+    }
+}
