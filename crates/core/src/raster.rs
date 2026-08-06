@@ -505,6 +505,150 @@ mod tests {
         );
     }
 
+    /// The four spectral inks, which rooms combine additively for prismatic
+    /// light. Fixed colors rather than accent-derived, so a collision here is a
+    /// property of the palette meeting one room's accent.
+    const SPECTRAL_INKS: [char; 4] = ['@', '%', '&', '~'];
+
+    /// Marks that all paint the plain accent. Normalised to `'*'` when a pair
+    /// is recorded, because a room drawing `'@'` beside `'+'` and a room
+    /// drawing `'@'` beside `'.'` have the same defect, and counting them
+    /// separately would report one collision three times.
+    const ORDINARY_MARKS: [char; 3] = ['*', '+', '.'];
+
+    /// Every spectral pair a color-blind player cannot separate, as
+    /// `(room, first mark, second mark)` with the pair in character order.
+    ///
+    /// The third list of its kind and the one the other two do not reach.
+    /// [`MARK_LEVELS_COLLAPSE_WITHOUT_COLOR`] is about the two accent-derived
+    /// levels and is measured without color at all;
+    /// [`MEANING_LOST_TO_COLOR_BLINDNESS`] is about the warning ink. Neither
+    /// looks at the spectral inks, and those are where the largest collapse in
+    /// the catalog turns out to be: `times-tables` separates `'@'` from its
+    /// accent by 95 for ordinary vision and by under 1 for a deuteranope.
+    ///
+    /// **What this list does not say is which entries matter.** The measurement
+    /// is mechanical; whether a room is saying something with an ink is not. Two
+    /// were read to check the question is real, and they answer it opposite
+    /// ways. In `bayes-update` the inks separate the prior, the likelihood and
+    /// the posterior, so a reader who cannot tell two of them apart cannot read
+    /// the picture. In `times-tables` the ink is chosen by where a chord starts
+    /// around the circle, so it bands the drawing and carries nothing. The rest
+    /// have not been read, and guessing would be worse than saying so.
+    ///
+    /// Shrink-only, like its neighbours. Tracked in `docs/ROADMAP.md` under 0.5
+    /// Sensory.
+    const SPECTRAL_INKS_COLLAPSE_FOR_A_DICHROMAT: [(&str, char, char); 16] = [
+        ("bayes-update", '#', '@'),
+        ("buffon-needle", '#', '@'),
+        ("buffon-needle", '*', '@'),
+        ("circle-map", '#', '@'),
+        ("circle-map", '*', '@'),
+        ("function-painter", '*', '@'),
+        ("josephus", '#', '@'),
+        ("josephus", '*', '@'),
+        ("message-heals", '*', '~'),
+        ("murmuration", '#', '@'),
+        ("murmuration", '*', '@'),
+        ("newton", '*', '@'),
+        ("riemann-sphere", '*', '@'),
+        ("times-tables", '#', '%'),
+        ("times-tables", '&', '@'),
+        ("times-tables", '*', '@'),
+    ];
+
+    #[test]
+    fn the_spectral_inks_stay_apart_for_a_color_blind_player_outside_the_known_list() {
+        use crate::dichromacy;
+
+        // Every pair a spectral ink can form: with another spectral ink, with
+        // the accent at 1.7, and with the plain accent. Scanning one pairing
+        // and not the others would report a clean palette by not having looked.
+        let mut pairs: Vec<(char, char)> = Vec::new();
+        for (index, &spectral) in SPECTRAL_INKS.iter().enumerate() {
+            for &other in SPECTRAL_INKS.iter().skip(index + 1) {
+                pairs.push((spectral, other));
+            }
+            pairs.push((spectral, '#'));
+            for &ordinary in &ORDINARY_MARKS {
+                pairs.push((spectral, ordinary));
+            }
+        }
+
+        let mut collapsing: Vec<(String, char, char)> = Vec::new();
+        let mut rooms_seen = 0usize;
+        for (a, b) in pairs {
+            for (id, accent) in rooms_drawing_with_all(&[a, b]) {
+                rooms_seen += 1;
+                let raster = Raster::with_accent(1, 1, accent);
+                if !dichromacy::color_alone(raster.ink(a), raster.ink(b)) {
+                    continue;
+                }
+                // Every ordinary mark paints the accent, so record one name for
+                // all three rather than the same defect three times.
+                let normalise = |mark: char| {
+                    if ORDINARY_MARKS.contains(&mark) {
+                        '*'
+                    } else {
+                        mark
+                    }
+                };
+                let (mut first, mut second) = (normalise(a), normalise(b));
+                if first > second {
+                    std::mem::swap(&mut first, &mut second);
+                }
+                let entry = (id, first, second);
+                if !collapsing.contains(&entry) {
+                    collapsing.push(entry);
+                }
+            }
+        }
+        collapsing.sort();
+
+        // Proof the sweep looked at something. A scan that matched no room
+        // would report a clean catalog by never having read one.
+        assert!(
+            rooms_seen > 50,
+            "only {rooms_seen} room-and-pair matches found, so the sweep is broken \
+             rather than the palette being safe"
+        );
+
+        let known: Vec<(String, char, char)> = SPECTRAL_INKS_COLLAPSE_FOR_A_DICHROMAT
+            .iter()
+            .map(|(id, a, b)| ((*id).to_string(), *a, *b))
+            .collect();
+        let newly: Vec<&(String, char, char)> =
+            collapsing.iter().filter(|it| !known.contains(it)).collect();
+        assert!(
+            newly.is_empty(),
+            "these spectral pairs newly collapse for a color-blind player and must be \
+             fixed or tracked: {newly:?}"
+        );
+        let fixed: Vec<&(String, char, char)> =
+            known.iter().filter(|it| !collapsing.contains(it)).collect();
+        assert!(
+            fixed.is_empty(),
+            "these no longer collapse and must leave \
+             SPECTRAL_INKS_COLLAPSE_FOR_A_DICHROMAT: {fixed:?}"
+        );
+    }
+
+    #[test]
+    fn the_rooms_whose_spectral_inks_collapse_are_named_where_the_owner_reads() {
+        let section = crate::roadmap_decisions();
+        assert!(
+            !SPECTRAL_INKS_COLLAPSE_FOR_A_DICHROMAT.is_empty(),
+            "an empty list checks nothing"
+        );
+        for (room, _, _) in SPECTRAL_INKS_COLLAPSE_FOR_A_DICHROMAT {
+            assert!(
+                section.contains(&format!("`{room}`")),
+                "{room} loses a spectral distinction for a color-blind player and is \
+                 not named in the roadmap's decisions section"
+            );
+        }
+    }
+
     #[test]
     fn the_rooms_a_color_blind_player_loses_are_named_where_the_owner_reads() {
         // Same companion lock the other two lists carry. Matched inside
