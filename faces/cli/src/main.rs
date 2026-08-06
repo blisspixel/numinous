@@ -2894,9 +2894,151 @@ fn watch(
     }
 }
 
+/// How The Show leaves one room for the next.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Advance {
+    /// Animate the room, then move on after this many frames.
+    Timer(u64),
+    /// Hold the room still and move on when the player asks for it.
+    Player,
+}
+
+/// What moves The Show along, given the player's motion setting.
+///
+/// The App already decides this, by different means: reduced motion zeroes its
+/// ambient tick, so the sweep never completes, and it is the completed sweep
+/// that carries the gallery into the next room. The terminal had no equivalent.
+/// It held each room's phase still, which stopped the picture moving, and then
+/// advanced anyway on a frame count that never consulted the setting. Two faces
+/// disagreeing about one preference is worse than either answer alone, because
+/// a player who sets it once cannot tell which face will honor it.
+fn show_advance(motion: numinous_core::Motion, seconds: f64, fps: f64) -> Advance {
+    match motion {
+        numinous_core::Motion::Reduced => Advance::Player,
+        numinous_core::Motion::Full => Advance::Timer((seconds.max(2.0) * fps.max(1.0)) as u64),
+    }
+}
+
+/// What the player asked for at a held room.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ShowStep {
+    /// Move to the next room.
+    Next,
+    /// Leave The Show.
+    Quit,
+}
+
+/// Read one instruction from a held room.
+///
+/// End of input is a quit and not a repeat. A held gallery blocks on the
+/// player, so a closed or piped stdin would otherwise turn waiting into a loop
+/// that draws forever and never yields, which is a worse failure than stopping.
+fn show_step(line: Option<&str>) -> ShowStep {
+    match line.map(str::trim) {
+        None => ShowStep::Quit,
+        Some(text) if text.eq_ignore_ascii_case("q") || text.eq_ignore_ascii_case("quit") => {
+            ShowStep::Quit
+        }
+        Some(_) => ShowStep::Next,
+    }
+}
+
+/// One room's screen in The Show: the picture, then its title card or reveal.
+///
+/// The chrome is gated on the same `color` decision as the picture. It used to
+/// be written with a hardcoded bold and reset, so a `NO_COLOR` player got a
+/// color-free picture underneath two escape sequences.
+fn tour_screen(
+    room: &dyn Room,
+    t: f64,
+    width: usize,
+    height: usize,
+    style: TerminalStyle,
+) -> String {
+    let mut screen = watch_frame(room, t, width, height, style);
+    let meta = room.meta();
+    if t < 0.18 {
+        if style.color {
+            screen.push_str(&format!(
+                "\x1b[1m{}\x1b[0m  ({})\x1b[K\n",
+                meta.title, meta.wing
+            ));
+        } else {
+            screen.push_str(&format!("{}  ({})\x1b[K\n", meta.title, meta.wing));
+        }
+    } else if t > 0.86 {
+        screen.push_str(&format!("{}\x1b[K\n", room.reveal()));
+    } else {
+        screen.push_str("\x1b[K\n");
+    }
+    screen
+}
+
+/// The size and styling one room of The Show is drawn at.
+#[derive(Clone, Copy)]
+struct TourFrame {
+    width: usize,
+    height: usize,
+    style: TerminalStyle,
+}
+
+/// The Show held still: one room at a time, at rest, until the player asks for
+/// the next one.
+///
+/// Returns the rooms shown, in order, so a test can prove that nothing advanced
+/// on its own and that the gallery stopped when the input did.
+fn tour_held(
+    rooms: &[Box<dyn Room>],
+    journey: &mut Journey,
+    frame: TourFrame,
+    player: Option<&numinous_audio::LoopPlayer>,
+    input: &mut impl BufRead,
+    out: &mut impl Write,
+) -> Vec<&'static str> {
+    let TourFrame {
+        width,
+        height,
+        style,
+    } = frame;
+    let mut shown = Vec::new();
+    if rooms.is_empty() {
+        return shown;
+    }
+    for room in rooms.iter().cycle() {
+        let meta = room.meta();
+        journey.visit(meta.id);
+        shown.push(meta.id);
+        // The postcard phase: the frame the room itself considers its best
+        // face. A held room rests on a chosen picture rather than on whichever
+        // frame the clock happened to stop at.
+        let t = room.postcard_t();
+        let screen = tour_screen(room.as_ref(), t, width, height, style);
+        let _ = write!(out, "{screen}\x1b[J");
+        let _ = writeln!(out, "Enter for the next room, q to leave.\x1b[K");
+        let _ = out.flush();
+        if let Some(player) = player {
+            player.set_samples(room.sound(t).render(player.sample_rate()));
+            player.service();
+        }
+        let mut line = String::new();
+        let read = input.read_line(&mut line).unwrap_or(0);
+        let answer = if read == 0 { None } else { Some(line.as_str()) };
+        if let Some(player) = player {
+            player.service();
+        }
+        if show_step(answer) == ShowStep::Quit {
+            break;
+        }
+    }
+    shown
+}
+
 /// The Show, in the terminal: every room takes the stage in turn, full color
 /// and sound, with a title card and its reveal as the curtain line. Ctrl+C
 /// whenever you have had enough; it comes back around forever.
+///
+/// Under reduced motion it does not come around by itself: each room is held at
+/// its postcard phase and the player says when to move on.
 #[allow(clippy::too_many_arguments)]
 fn tour(
     fps: f64,
@@ -2914,40 +3056,41 @@ fn tour(
     };
     let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
     let motion = numinous_core::Motion::from_env();
-    let frames_per_room = (seconds.max(2.0) * fps.max(1.0)) as u64;
+    let style = TerminalStyle {
+        era,
+        color: color_allowed(),
+    };
     let mut stdout = std::io::stdout();
     let _ = write!(stdout, "\x1b[2J");
     let rooms = all_rooms();
+
+    let frames_per_room = match show_advance(motion, seconds, fps) {
+        Advance::Player => {
+            let stdin = std::io::stdin();
+            let mut input = stdin.lock();
+            tour_held(
+                &rooms,
+                journey,
+                TourFrame {
+                    width,
+                    height,
+                    style,
+                },
+                player.as_ref(),
+                &mut input,
+                &mut stdout,
+            );
+            return ExitCode::SUCCESS;
+        }
+        Advance::Timer(frames) => frames,
+    };
+
     loop {
         for room in &rooms {
             journey.visit(room.meta().id);
             for frame in 0..frames_per_room {
-                let sweeping = frame as f64 / frames_per_room as f64;
-                // Held still, the gallery shows each room at its postcard
-                // phase, the one the room itself considers its best face.
-                let t = motion.phase(sweeping, room.postcard_t());
-                let mut screen = watch_frame(
-                    room.as_ref(),
-                    t,
-                    width,
-                    height,
-                    TerminalStyle {
-                        era,
-                        color: color_allowed(),
-                    },
-                );
-                // The title card: the room announces itself, then bows out.
-                if t < 0.18 {
-                    screen.push_str(&format!(
-                        "\x1b[1m{}\x1b[0m  ({})\x1b[K\n",
-                        room.meta().title,
-                        room.meta().wing
-                    ));
-                } else if t > 0.86 {
-                    screen.push_str(&format!("{}\x1b[K\n", room.reveal()));
-                } else {
-                    screen.push_str("\x1b[K\n");
-                }
+                let t = frame as f64 / frames_per_room as f64;
+                let screen = tour_screen(room.as_ref(), t, width, height, style);
                 let _ = write!(stdout, "{screen}\x1b[J");
                 let _ = stdout.flush();
                 if let Some(player) = &player {
@@ -7269,6 +7412,206 @@ mod tests {
         )
         .expect("render");
         assert_ne!(modern, phosphor);
+    }
+
+    #[test]
+    fn reduced_motion_stops_the_show_advancing_by_itself() {
+        // The setting's whole point. Full motion moves the gallery on a frame
+        // count; reduced motion hands that decision to the player, which is how
+        // the App already behaves because its held phase never completes the
+        // sweep that carries it into the next room.
+        assert_eq!(
+            super::show_advance(numinous_core::Motion::Reduced, 6.0, 30.0),
+            super::Advance::Player
+        );
+        assert_eq!(
+            super::show_advance(numinous_core::Motion::Full, 6.0, 30.0),
+            super::Advance::Timer(180)
+        );
+        // A room must never be given zero frames, or full motion would advance
+        // instantly and read as no gallery at all.
+        for (seconds, fps) in [(0.0, 0.0), (-5.0, -1.0), (0.001, 0.001)] {
+            let super::Advance::Timer(frames) =
+                super::show_advance(numinous_core::Motion::Full, seconds, fps)
+            else {
+                panic!("full motion must advance on a timer at {seconds} seconds and {fps} fps");
+            };
+            assert!(frames >= 2, "{seconds}s at {fps}fps gave {frames} frames");
+        }
+    }
+
+    #[test]
+    fn a_held_show_advances_only_as_far_as_the_player_asks() {
+        let rooms = numinous_core::all_rooms()
+            .into_iter()
+            .take(3)
+            .collect::<Vec<_>>();
+        let style = TerminalStyle {
+            era: numinous_core::Era::Modern,
+            color: true,
+        };
+        let expected: Vec<&str> = rooms.iter().map(|room| room.meta().id).collect();
+
+        // Two blank lines then a quit: three rooms seen, and the third only
+        // because the player was still there to see it.
+        let mut journey = numinous_core::Journey::default();
+        let mut out = Vec::new();
+        let shown = super::tour_held(
+            &rooms,
+            &mut journey,
+            super::TourFrame {
+                width: 24,
+                height: 16,
+                style,
+            },
+            None,
+            &mut std::io::Cursor::new(b"\n\nq\n".to_vec()),
+            &mut out,
+        );
+        assert_eq!(shown, expected);
+
+        // One room per answer, and no answers means one room. If this ever
+        // returns more than the input allows, something is advancing on its
+        // own, which is the defect this whole change exists to remove.
+        for (input, wanted) in [
+            (&b""[..], 1),
+            (&b"\n"[..], 2),
+            (&b"q\n"[..], 1),
+            (&b"QUIT\n"[..], 1),
+            // Past the end of the room list, so the gallery must come back
+            // around rather than stop early.
+            (&b"\n\n\n\n"[..], 5),
+        ] {
+            let mut journey = numinous_core::Journey::default();
+            let mut out = Vec::new();
+            let shown = super::tour_held(
+                &rooms,
+                &mut journey,
+                super::TourFrame {
+                    width: 24,
+                    height: 16,
+                    style,
+                },
+                None,
+                &mut std::io::Cursor::new(input.to_vec()),
+                &mut out,
+            );
+            assert_eq!(
+                shown.len(),
+                wanted,
+                "input {:?} showed {shown:?}",
+                String::from_utf8_lossy(input)
+            );
+        }
+
+        // An empty catalog must return rather than cycle forever on nothing.
+        let mut journey = numinous_core::Journey::default();
+        let mut out = Vec::new();
+        assert!(
+            super::tour_held(
+                &[],
+                &mut journey,
+                super::TourFrame {
+                    width: 24,
+                    height: 16,
+                    style,
+                },
+                None,
+                &mut std::io::Cursor::new(b"\n\n\n".to_vec()),
+                &mut out,
+            )
+            .is_empty()
+        );
+    }
+
+    #[test]
+    fn a_held_room_rests_on_its_postcard_and_says_how_to_move_on() {
+        let rooms = numinous_core::all_rooms()
+            .into_iter()
+            .take(1)
+            .collect::<Vec<_>>();
+        let mut journey = numinous_core::Journey::default();
+        let mut out = Vec::new();
+        super::tour_held(
+            &rooms,
+            &mut journey,
+            super::TourFrame {
+                width: 24,
+                height: 16,
+                style: TerminalStyle {
+                    era: numinous_core::Era::Modern,
+                    color: true,
+                },
+            },
+            None,
+            &mut std::io::Cursor::new(b"q\n".to_vec()),
+            &mut out,
+        );
+        let screen = String::from_utf8(out).expect("utf-8");
+        // A held gallery that does not say how to leave it is a trap.
+        assert!(
+            screen.contains("Enter for the next room, q to leave."),
+            "no way out offered: {screen}"
+        );
+        // Resting on the postcard phase rather than on frame zero.
+        let room = rooms.first().expect("one room");
+        assert!(
+            screen.contains(&super::tour_screen(
+                room.as_ref(),
+                room.postcard_t(),
+                24,
+                16,
+                TerminalStyle {
+                    era: numinous_core::Era::Modern,
+                    color: true,
+                },
+            )),
+            "the held frame is not the postcard frame"
+        );
+    }
+
+    #[test]
+    fn the_shows_title_card_carries_no_color_when_color_is_off() {
+        // The picture already honored NO_COLOR; the chrome written over it did
+        // not, so a NO_COLOR player got a color-free room under a bold escape
+        // and a reset. Asserted on the composed screen, because that is where
+        // the defect lived and the renderer alone looked clean.
+        let room = numinous_core::room_by_id("chaos-game").expect("room");
+        let plain = super::tour_screen(
+            room.as_ref(),
+            0.0,
+            24,
+            16,
+            TerminalStyle {
+                era: numinous_core::Era::Modern,
+                color: false,
+            },
+        );
+        assert!(
+            plain.contains("Chaos Game"),
+            "the title card is still there"
+        );
+        for escape in ["\x1b[1m", "\x1b[0m", "\x1b[38;2;", "\x1b[48;2;"] {
+            assert!(
+                !plain.contains(escape),
+                "title card frame still emits {}",
+                escape.escape_debug()
+            );
+        }
+        // The same frame in color still says it in bold, so the check above is
+        // measuring the setting and not a title card that lost its emphasis
+        // everywhere.
+        let colored = super::tour_screen(
+            room.as_ref(),
+            0.0,
+            24,
+            16,
+            TerminalStyle {
+                era: numinous_core::Era::Modern,
+                color: true,
+            },
+        );
+        assert!(colored.contains("\x1b[1m"));
     }
 
     #[test]
