@@ -660,6 +660,15 @@ bright accent times 1.7 clamps, a dark one stays dark. So there is no single
 fix, and changing either the ink scale or the shade thresholds changes what all
 354 rooms look like.
 
+Seven more rooms lose the same two levels through a different eye, and the two
+sets do not overlap at all: `buddhabrot`, `julia`, `kaprekar`, `landauer`,
+`logistic-cobweb`, `phantom-jam`, `van-der-pol`. Those eighteen are what a
+player with no color loses; these seven are what a player who has color and
+fewer distinctions loses, measured with the same dichromacy simulation as
+entries 11 and 12. Neither list stands in for the other, so a fix aimed at one
+should be checked against both. It is the same decision, with more evidence
+behind it than when it was written.
+
 **5. Should Cult of Pi mark faults on a character terminal?** It computes a
 fault mark and the character path drops it: 462 of 1,280 cells are faulted at
 one measured phase and the terminal marks none of them. The pixel path draws
