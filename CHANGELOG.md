@@ -5,6 +5,29 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The spectral palette is now measured for color blindness too, and it is where
+  the largest collapse in the catalog turns out to be. The warning ink was one
+  mark; rooms combine four spectral inks for prismatic light, and no existing
+  list looked at them. Sixteen pairs across ten rooms are clear for ordinary
+  vision and folded for at least one dichromat. `times-tables` separates `'@'`
+  from its accent by 95 for ordinary vision and by under 1 for a deuteranope,
+  which is gone rather than dimmed.
+
+  The sweep covers every pairing a spectral ink can form, with another spectral
+  ink, with the accent at 1.7, and with the plain accent, because scanning one
+  pairing and not the others would report a clean palette by not having looked.
+  All three marks that paint the plain accent are recorded under one name, so a
+  single defect is not counted three times.
+
+  What the measurement deliberately does not claim is which of the ten matter.
+  That is a question about the rooms rather than the palette, and two were read
+  to check it is a real question: in `bayes-update` the inks separate the prior,
+  the likelihood and the posterior, so losing one loses the picture, while in
+  `times-tables` the ink is chosen by where a chord starts around the circle and
+  carries nothing. The other eight are recorded as unread rather than guessed
+  at, and the roadmap entry asks for a ruling on the palette and on which rooms
+  speak with it.
+
 - Numinous now measures what a color-blind player sees, which nothing in the
   workspace previously asked. The accessibility work so far answered a
   different question: `NO_COLOR` and `to_mono` cover a player with no color at
