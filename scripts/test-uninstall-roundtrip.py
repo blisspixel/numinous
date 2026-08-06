@@ -2,7 +2,7 @@
 """Focused regressions for the uninstall roundtrip contract.
 
 These cover the parts that decide pass or fail without needing an install, so a
-mistake in the judgement is caught even when no packaged archive is around. The
+mistake in the judgment is caught even when no packaged archive is around. The
 roundtrip itself is exercised by `uninstall-roundtrip.py` in the release gate.
 """
 

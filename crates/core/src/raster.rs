@@ -474,7 +474,21 @@ mod tests {
 
     #[test]
     fn two_drawn_levels_stay_two_levels_without_color_outside_the_known_list() {
-        let mut colliding: Vec<String> = rooms_drawing_with_all(&['#', '*'])
+        // Scanned once and used twice. Reading the sources again for the count
+        // would be the same question asked of the disk a second time, and two
+        // answers that are meant to agree are two answers that can differ.
+        let drawing_both = rooms_drawing_with_all(&['#', '*']);
+
+        // Proof the scan looked at something. A scan that found no room drawing
+        // both marks would report a clean catalog by never having looked.
+        assert!(
+            drawing_both.len() > 50,
+            "only {} rooms found drawing both marks, so the scan is broken \
+             rather than the catalog being simple",
+            drawing_both.len()
+        );
+
+        let mut colliding: Vec<String> = drawing_both
             .into_iter()
             .filter(|(_, accent)| {
                 let raster = Raster::with_accent(1, 1, *accent);
@@ -483,15 +497,6 @@ mod tests {
             .map(|(id, _)| id)
             .collect();
         colliding.sort();
-
-        // Proof the scan looked at something. A scan that found no room drawing
-        // both marks would report a clean catalog by never having looked.
-        let drawing_both = rooms_drawing_with_all(&['#', '*']).len();
-        assert!(
-            drawing_both > 50,
-            "only {drawing_both} rooms found drawing both marks, so the scan is broken \
-             rather than the catalog being simple"
-        );
 
         let known: Vec<String> = MARK_LEVELS_COLLAPSE_WITHOUT_COLOR
             .iter()

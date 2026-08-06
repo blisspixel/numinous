@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Focused regressions for the creator parity contract.
 
-These cover the judgement without spawning either face, so a mistake in what
+These cover the judgment without spawning either face, so a mistake in what
 counts as agreement is caught even when nothing is built. The live comparison
 is `creator-parity.py`, which CI runs against real binaries.
 """

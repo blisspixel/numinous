@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Focused regressions for the reduced-motion contract.
 
-These cover the judgement without spawning the CLI, so a mistake in what counts
+These cover the judgment without spawning the CLI, so a mistake in what counts
 as reduced motion working is caught even when nothing is built. The live probes
 are `reduced-motion.py`, which CI runs against a real binary.
 
-The judgement is the part worth testing on its own. A gate can be wrong in two
+The judgment is the part worth testing on its own. A gate can be wrong in two
 directions and only one of them is loud: a gate that fails a working feature is
 noticed within the hour, and a gate that passes a broken one is noticed when a
 player writes in. Every case below is a way for The Show to be broken, and each
-asserts the judgement says so.
+asserts the judgment says so.
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ def healthy() -> tuple["MODULE.ShowRun", "MODULE.ShowRun", "MODULE.ShowRun"]:
 
 class ShowJudgementTests(unittest.TestCase):
     def test_a_working_show_is_judged_to_pass(self) -> None:
-        # Without this, every assertion below could be satisfied by a judgement
+        # Without this, every assertion below could be satisfied by a judgment
         # that fails everything.
         self.assertEqual(MODULE.judge_show(*healthy()), [])
 
