@@ -13,8 +13,9 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   Different color is not the same as different to look at. Accents vary per
   room, and 81 of the 354 sit within 12 luminance of the warning ink, five of
   them exactly on it. So "distinct color" can quite comfortably mean "identical
-  grey", and the test named `semantic_warning_ink_is_distinct_from_accent` would
-  have said nothing about it.
+  grey", and the test named
+  `semantic_warning_ink_is_distinct_from_structure_and_accent` would have said
+  nothing about it.
 
   The question is now put to `to_mono` itself: render a warning cell and an
   ordinary cell, and compare the block characters a `NO_COLOR` player is
@@ -28,8 +29,12 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
   The list of rooms to check is read from the room sources rather than written
   down beside them, so a room that starts using the warning ink is picked up
-  automatically. A second test proves the check can fail, by giving a room an
-  accent equal to the warning ink and confirming the comparison catches it.
+  automatically. The scan walks subdirectories, since rooms with several files
+  keep them in one, and a source that draws with the ink but declares no room id
+  fails the scan by name rather than being passed over: a quiet skip there would
+  be the same hole the scan exists to close. A second test proves the check can
+  fail, by giving a room an accent equal to the warning ink and confirming the
+  comparison catches it.
 
 - Cult of Pi shows no fault marks at all on a character terminal, and now says
   so. The room corrupts digits of pi and asks the player to click and hold a
