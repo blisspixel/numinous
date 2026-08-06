@@ -5,6 +5,26 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- A test fixture could reach the repository it was running inside. `test-mcp-play.py`
+  builds a throwaway git repository in a temporary directory, and these tests are
+  wired into the pre-commit hook. Git exports `GIT_INDEX_FILE`, `GIT_DIR` and
+  `GIT_WORK_TREE` to hooks, all naming the repository the hook is running for,
+  and the fixture inherited them. So `cwd` stopped deciding which repository it
+  touched.
+
+  Run from the hook it failed with `invalid object ... for 'Cargo.toml'`, because
+  `git commit` was reading the real index, and that blocked every commit touching
+  a watched script. The failure was the good outcome: `git init` under an
+  inherited `GIT_DIR` rewrites the caller's `core.worktree` to point at the
+  temporary directory, which leaves the real checkout unusable until somebody
+  unsets it by hand.
+
+  The fixture now runs git with every `GIT_` variable stripped, so nothing can
+  tell git where to look except the directory it is pointed at. Two regressions
+  hold it: one runs the fixture with a hook's environment set and checks the
+  commit lands in the temporary repository, and one asserts this checkout has no
+  `core.worktree`, so a future fixture cannot leave that behind unnoticed.
+
 - Two more gates were finding their own binaries, and one of them was the gate
   that guards the flagship regression evidence. `flagship-goldens.py` preferred
   whatever was in `target/`, with a `cargo run` fallback, so with `rooms` made
