@@ -14,8 +14,22 @@ requiring those to match would be requiring the faces to be the same thing
 rather than to agree about the mathematics.
 
 This is machine evidence for two faces. The App's Studio panel is the third and
-is not covered here. Neither is `sing`, whose two faces return a WAV and a note
-list rather than one comparable artifact.
+is not covered here; its curve sampling, discards and framing are held to the
+same core rule by `numinous_app::studio_render`'s own tests.
+
+`sing` is covered now, and the sentence that used to sit here said it could not
+be: one face returns a WAV and the other a note list, so there was no single
+artifact to compare. That was the wrong conclusion from a true observation. The
+two describe the same melody, so the WAV is measured for the pitch it actually
+holds at each onset and checked against the frequency the other face names.
+
+Skipping it had hidden a real defect in both faces at once. The terminal face
+fixed the knob at 0 and offered no way to set it, so `sin(a*x)` sang a flat
+line; this face fixed it at 1 and rejected the argument, so it could only ever
+sing `sin(x)`. Both faces plot with a settable knob defaulting to 1, and
+neither could sing with one. Note that a duration and a note count would not
+have caught it: those are identical either way, so a gate built on what the CLI
+prints would have watched it go past.
 
 Known gap this gate cannot close, recorded rather than worked around: MCP has no
 way to open a saved `.num` document at all. A human can save a creation and an
@@ -28,9 +42,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import struct
 import subprocess
 import sys
 import tempfile
+import wave
 from pathlib import Path
 from typing import Any
 
@@ -136,11 +153,22 @@ def plot_rows(text: str, expected: int) -> str:
 
 
 def mcp_plot(mcp: str, arguments: dict[str, Any], env: dict[str, str]) -> str:
+    return mcp_tool(mcp, "plot_expression", arguments, env)
+
+
+def mcp_tool(
+    mcp: str, tool: str, arguments: dict[str, Any], env: dict[str, str]
+) -> str:
+    """Call one MCP tool and return its text, or raise with the reason.
+
+    The plumbing lives here rather than in each caller so a second tool cannot
+    end up with its own slightly different idea of what an error looks like.
+    """
     request = {
         "jsonrpc": "2.0",
         "id": 1,
         "method": "tools/call",
-        "params": {"_meta": META, "name": "plot_expression", "arguments": arguments},
+        "params": {"_meta": META, "name": tool, "arguments": arguments},
     }
     try:
         result = subprocess.run(
@@ -182,6 +210,117 @@ def cli_plot(
             f"CLI rejected {arguments}: exit {result.returncode}, {result.stderr[-400:]}"
         )
     return result.stdout
+
+
+# Sing cases: the same expression, note count and knob through both faces.
+# `sin(a*x)` is first on purpose. It is the case that found the defect: the CLI
+# fixed the knob at 0 and offered no way to set it, so it sang a flat line while
+# MCP sang `sin(x)`, and this gate used to skip `sing` entirely.
+SING_CASES: tuple[tuple[str, str, int, float], ...] = (
+    ("knob expression", "sin(a*x)", 24, 1.0),
+    ("plain expression", "sin(x)", 24, 1.0),
+    ("knob at another value", "sin(a*x)", 16, 2.5),
+    ("knob that flattens it", "sin(a*x)", 16, 0.0),
+)
+
+# note  1:   440.0 Hz ( A4)  at  0.00s
+MCP_NOTE = re.compile(r"note\s+(\d+):\s+([\d.]+) Hz.*?at\s+([\d.]+)s")
+
+
+def mcp_sing(mcp: str, arguments: dict[str, Any], env: dict[str, str]) -> list[tuple[float, float]]:
+    """The frequency and onset of every note MCP reports."""
+    text = mcp_tool(mcp, "sing_expression", arguments, env)
+    notes = [(float(hz), float(at)) for _, hz, at in MCP_NOTE.findall(text)]
+    if not notes:
+        raise ParityError(f"MCP reported no notes for {arguments}: {text[:300]}")
+    return notes
+
+
+def wav_note_frequencies(path: Path, onsets: list[float]) -> list[float]:
+    """The dominant frequency the WAV actually holds at each onset.
+
+    Read from the audio rather than from anything the CLI says about it. The
+    CLI prints a duration and a note count, and those two are identical whether
+    the knob is 0 or 1, so a gate built on them would have watched this defect
+    go by. The notes are pure tones, so counting zero crossings inside a window
+    is enough and needs no dependency.
+    """
+    with wave.open(str(path), "rb") as handle:
+        if handle.getsampwidth() != 2:
+            raise ParityError(f"{path} is not 16-bit PCM")
+        rate = handle.getframerate()
+        channels = handle.getnchannels()
+        frames = handle.readframes(handle.getnframes())
+    samples = struct.unpack(f"<{len(frames) // 2}h", frames)
+    if channels > 1:
+        samples = samples[::channels]
+
+    measured = []
+    for index, onset in enumerate(onsets):
+        end = onsets[index + 1] if index + 1 < len(onsets) else onset + (onsets[1] - onsets[0])
+        # Trim both edges: the envelope's attack and release cross zero in ways
+        # that have nothing to do with pitch.
+        span = end - onset
+        start_frame = int((onset + span * 0.25) * rate)
+        stop_frame = int((onset + span * 0.75) * rate)
+        window = samples[start_frame:stop_frame]
+        if len(window) < 8:
+            raise ParityError(f"{path} has no audio for the note at {onset}s")
+        crossings = sum(
+            1
+            for first, second in zip(window, window[1:])
+            if (first < 0) != (second < 0)
+        )
+        seconds = len(window) / rate
+        measured.append(crossings / (2.0 * seconds))
+    return measured
+
+
+def check_sing(
+    cli: str, mcp: str, label: str, source: str, notes: int, knob: float, env: dict[str, str]
+) -> dict[str, Any]:
+    """One face's audio must hold the pitches the other face names."""
+    name = f"sing {label}: {source} a={knob} notes={notes}"
+    try:
+        reported = mcp_sing(mcp, {"expr": source, "notes": notes, "a": knob}, env)
+        with tempfile.TemporaryDirectory(
+            prefix="numinous-sing-parity-", ignore_cleanup_errors=True
+        ) as workspace:
+            wav = Path(workspace) / "sung.wav"
+            result = subprocess.run(
+                [cli, "sing", source, "--notes", str(notes), "--a", str(knob),
+                 "--out", str(wav)],
+                env=env, capture_output=True, text=True, encoding="utf-8", timeout=120,
+            )
+            if result.returncode != 0:
+                raise ParityError(f"the CLI rejected it: {result.stderr[-300:]}")
+            measured = wav_note_frequencies(wav, [onset for _, onset in reported])
+
+        if len(measured) != len(reported):
+            raise ParityError(
+                f"MCP named {len(reported)} notes and the WAV held {len(measured)}"
+            )
+        worst = 0.0
+        worst_note = 0
+        for index, ((expected, _), actual) in enumerate(zip(reported, measured), start=1):
+            error = abs(actual - expected) / max(expected, 1.0)
+            if error > worst:
+                worst, worst_note = error, index
+        # Zero-crossing counting over a short window is coarse; 6 percent is
+        # far tighter than the gap this catches, where a silenced knob moves
+        # every note to one pitch.
+        if worst > 0.06:
+            raise ParityError(
+                f"note {worst_note} is {worst * 100:.1f} percent away from the "
+                f"frequency MCP named"
+            )
+    except ParityError as error:
+        return {"name": name, "passed": False, "detail": str(error)}
+    return {
+        "name": name,
+        "passed": True,
+        "detail": f"{len(reported)} notes, worst pitch error {worst * 100:.1f} percent",
+    }
 
 
 def check(
@@ -246,6 +385,15 @@ def main() -> int:
             ) as home:
                 results.append(
                     check(cli, mcp, label, mcp_args, cli_args, isolated_env(Path(home)))
+                )
+        for label, source, notes, knob in SING_CASES:
+            with tempfile.TemporaryDirectory(
+                prefix="numinous-creator-parity-", ignore_cleanup_errors=True
+            ) as home:
+                results.append(
+                    check_sing(
+                        cli, mcp, label, source, notes, knob, isolated_env(Path(home))
+                    )
                 )
     failed = [item for item in results if not item["passed"]]
     summary = {

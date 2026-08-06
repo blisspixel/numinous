@@ -1714,6 +1714,10 @@ fn build_tools_catalog() -> Value {
                             "minimum": 1,
                             "maximum": 64,
                             "description": "Number of notes (default 24, at most 64)."
+                        },
+                        "a": {
+                            "type": "number",
+                            "description": "Value of the parameter a (default 1), as plot_expression uses it."
                         }
                     },
                     "required": ["expr"],
@@ -5744,7 +5748,15 @@ fn sing_expression_tool(args: &Value) -> Value {
         Ok(expr) => expr,
         Err(message) => return tool_error(&message),
     };
-    let spec = numinous_core::to_melody(&expr, -TAU, TAU, notes.clamp(1, 64), 1.0);
+    // The knob, as `plot_expression` has always had it. Without it this face
+    // could only ever sing `a = 1`, and the terminal face could only ever sing
+    // `a = 0`, so the two sang different music for the same expression and no
+    // caller could ask either of them for the other.
+    let a = args.get("a").and_then(Value::as_f64).unwrap_or(1.0);
+    if !a.is_finite() {
+        return tool_error("Argument 'a' must be a finite number.");
+    }
+    let spec = numinous_core::to_melody(&expr, -TAU, TAU, notes.clamp(1, 64), a);
     let mut lines = vec![format!(
         "y = {source} as a melody: {:.1}s, {} notes.",
         spec.duration,
