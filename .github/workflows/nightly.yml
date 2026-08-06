@@ -41,6 +41,10 @@ jobs:
         run: |
           python3 scripts/test-reduced-motion.py
           python3 scripts/reduced-motion.py
+      - name: NO_COLOR across every terminal surface
+        run: |
+          python3 scripts/test-no-color.py
+          python3 scripts/no-color.py
 
       - name: Photosensitivity budget across the whole catalog (general and red flashes)
         run: cargo test -p numinous-core --release --lib -- --ignored --exact registry::tests::no_catalog_room_flashes_past_the_photosensitivity_budget
