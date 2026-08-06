@@ -15,7 +15,10 @@ while the install root must be gone.
 Run from a clone with a packaged archive:
 
     python scripts/uninstall-roundtrip.py \\
-        --release-archive dist/numinous-v0.2.0-alpha.4-<target>.zip
+        --release-archive dist/numinous-v0.2.0-alpha.4-x86_64-unknown-linux-gnu.tar.gz
+
+Linux and macOS archives are `.tar.gz`; Windows ones are `.zip`. Either works,
+since the platform decides which installer runs.
 
 Nightly packages an archive of its own and runs this against it, so a change
 that breaks uninstalling is caught the next morning rather than at the next
