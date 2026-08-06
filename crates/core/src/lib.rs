@@ -53,6 +53,7 @@ pub mod chiptune;
 pub mod citations;
 pub mod codebreaker;
 pub mod concepts;
+pub mod dichromacy;
 pub mod era;
 pub mod fifteen;
 pub mod font;
