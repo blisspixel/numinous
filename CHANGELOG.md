@@ -5,6 +5,35 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- `NO_COLOR` is now swept across the whole terminal face rather than checked
+  surface by surface. Every surface had a Rust test; nothing tested the binary
+  as a whole, so a new subcommand could emit color and every existing test would
+  stay green, because none of them knew it existed. That is not hypothetical:
+  the room pictures honored the setting for several releases while three games
+  did not, and each was found by hand rather than by a gate.
+
+  `scripts/no-color.py` drives 33 probes across 32 subcommands, twice each. With
+  `NO_COLOR` set none may emit an SGR escape. Cursor control is not color, so
+  positioning and clearing are still allowed, exactly as the CLI's own tests
+  treat it.
+
+  The part that keeps it a sweep: the subcommand list is read from the binary's
+  own help, and every advertised subcommand must be either driven or named in a
+  skip list with a reason. A new subcommand fails the gate until somebody
+  decides which it is. Skips for subcommands that no longer exist fail too, so
+  the list cannot quietly stop describing the thing it was written for.
+
+  It also refuses to pass on an absence of evidence. At least three probes must
+  emit color when color is allowed, or a binary that had lost the ability to
+  draw in color at all would satisfy every other check. Five do today: the color
+  renderer, the Munch arcade, the Hackenbush garden, `watch`, and The Show.
+
+- `scripts/test-no-color.py` covers the sweep's judgement without spawning
+  anything, on the same pattern as the reduced-motion and creator-parity twins.
+  Coverage is the part worth testing hardest, because whether one surface emits
+  an escape fails loudly, while whether the sweep still covers the binary is a
+  claim about a list.
+
 - The reduced-motion gate now covers The Show, which it did not. Three cycles
   ago The Show stopped auto-advancing in the terminal when reduced motion is
   set, and the end-to-end gate that exists to prove reduced motion works never
