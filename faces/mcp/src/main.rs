@@ -1718,6 +1718,14 @@ fn build_tools_catalog() -> Value {
                         "a": {
                             "type": "number",
                             "description": "Value of the parameter a (default 1), as plot_expression uses it."
+                        },
+                        "xmin": {
+                            "type": "number",
+                            "description": "Left edge of x (default -tau), as plot_expression uses it."
+                        },
+                        "xmax": {
+                            "type": "number",
+                            "description": "Right edge of x (default tau), as plot_expression uses it."
                         }
                     },
                     "required": ["expr"],
@@ -5756,7 +5764,20 @@ fn sing_expression_tool(args: &Value) -> Value {
     if !a.is_finite() {
         return tool_error("Argument 'a' must be a finite number.");
     }
-    let spec = numinous_core::to_melody(&expr, -TAU, TAU, notes.clamp(1, 64), a);
+    // The range, as `plot_expression` and the terminal face both have it. This
+    // face could only ever sing one window, so a peer could hear a curve over
+    // -tau to tau and nowhere else while a person could ask for any span.
+    // The defaults are the same window it always sang, so nothing a caller
+    // already asked for changes answer.
+    let xmin = args.get("xmin").and_then(Value::as_f64).unwrap_or(-TAU);
+    let xmax = args.get("xmax").and_then(Value::as_f64).unwrap_or(TAU);
+    if !xmin.is_finite() || !xmax.is_finite() {
+        return tool_error("Arguments 'xmin' and 'xmax' must be finite numbers.");
+    }
+    if xmax <= xmin {
+        return tool_error("Need xmax greater than xmin.");
+    }
+    let spec = numinous_core::to_melody(&expr, xmin, xmax, notes.clamp(1, 64), a);
     let mut lines = vec![format!(
         "y = {source} as a melody: {:.1}s, {} notes.",
         spec.duration,
