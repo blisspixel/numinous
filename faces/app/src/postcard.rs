@@ -169,10 +169,12 @@ pub(crate) fn write_room_share_bundle(
 /// Studio share bundle: the trio from one action. `creation.num` reopens the
 /// creation exactly, the README carries the `numinous://` link, and the
 /// postcard is the object that escapes the app.
+///
+/// All or nothing: a failure part way through discards the fresh bundle
+/// folder rather than leaving a half-written trio that looks shareable.
 pub(crate) fn write_studio_share_bundle(
     creation: &numinous_core::StudioCreation,
     postcard_rgba: &[u8],
-    era: Era,
     parent: &Path,
 ) -> std::io::Result<PathBuf> {
     std::fs::create_dir_all(parent)?;
@@ -183,7 +185,22 @@ pub(crate) fn write_studio_share_bundle(
     let mut nonce = [0_u8; 16];
     getrandom::fill(&mut nonce).map_err(std::io::Error::other)?;
     let dir = numinous_core::create_share_bundle_dir(parent, "studio", stamp, nonce)?;
+    match fill_studio_share_bundle(&dir, creation, postcard_rgba) {
+        Ok(()) => Ok(dir),
+        Err(error) => {
+            // The folder above was created fresh with an unpredictable name,
+            // so discarding it discards only what this call wrote.
+            let _ = std::fs::remove_dir_all(&dir);
+            Err(error)
+        }
+    }
+}
 
+fn fill_studio_share_bundle(
+    dir: &Path,
+    creation: &numinous_core::StudioCreation,
+    postcard_rgba: &[u8],
+) -> std::io::Result<()> {
     let num_path = dir.join("creation.num");
     let mut num_file = OpenOptions::new()
         .write(true)
@@ -191,25 +208,21 @@ pub(crate) fn write_studio_share_bundle(
         .open(&num_path)?;
     num_file.write_all(creation.to_num_file().as_bytes())?;
 
+    // No room sidecar here: a sidecar's room id names a catalog room, the
+    // Studio is not one, and the bundle README already names everything.
     let postcard_path = dir.join("postcard.png");
     let encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, postcard_rgba)?;
     write_png_file(&postcard_path, &encoded)?;
-    write_share_note(
-        &postcard_path,
-        "studio",
-        era,
-        numinous_core::ShareKind::Postcard,
-    );
 
     numinous_core::write_studio_share_readme(
-        &dir,
+        dir,
         &numinous_core::StudioShareMeta {
             expression: creation.source().to_string(),
             link: creation.to_link(),
             version: env!("CARGO_PKG_VERSION").to_string(),
         },
     )?;
-    Ok(dir)
+    Ok(())
 }
 
 /// Life share bundle: current generation still + advancing loop + README.
@@ -500,6 +513,32 @@ mod tests {
         assert_eq!(phase_code(f64::NAN), 0);
         assert_eq!(phase_code(f64::INFINITY), 0);
         assert_eq!(phase_code(100.0), 999);
+    }
+
+    #[test]
+    fn a_failed_studio_bundle_discards_its_own_folder() {
+        // A half-written trio looks shareable and is not. The bad postcard
+        // buffer fails after creation.num has landed, which is exactly the
+        // partial state the cleanup exists to remove.
+        let parent = std::env::temp_dir().join(format!(
+            "numinous-studio-bundle-cleanup-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&parent);
+        let creation =
+            numinous_core::StudioCreation::new("sin(x)", -1.0, 1.0, 0.0).expect("creation");
+
+        let _error = write_studio_share_bundle(&creation, &[0_u8; 4], &parent)
+            .expect_err("a short postcard buffer cannot encode");
+        let leftovers: Vec<_> = std::fs::read_dir(&parent)
+            .expect("parent listing")
+            .flatten()
+            .collect();
+        assert!(
+            leftovers.is_empty(),
+            "a failed bundle must not leave a folder behind: {leftovers:?}"
+        );
+        let _ = std::fs::remove_dir_all(&parent);
     }
 
     #[test]

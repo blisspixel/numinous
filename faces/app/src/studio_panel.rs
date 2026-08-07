@@ -346,6 +346,26 @@ impl StudioPanel {
         self.source.len()
     }
 
+    /// The window and knob the panel is presenting at moment `t`: a reopened
+    /// pin's own saved values, or the ambient default window with the knob as
+    /// time.
+    ///
+    /// One helper for the screen, the share, and the postcard, because three
+    /// copies of this expression is how the share stops being the curve on
+    /// screen. The moment is deliberately not normalized: the console can
+    /// park the phase at exactly 1.0, where a wrap would hand the share
+    /// `a = 0` while the screen draws `a = tau`. Only a non-finite moment
+    /// falls back, to zero, on every surface alike.
+    fn window_and_knob(&self, t: f64) -> (f64, f64, f64) {
+        match &self.opened {
+            Some(opened) => (opened.xmin, opened.xmax, opened.a),
+            None => {
+                let a = if t.is_finite() { t * TAU } else { 0.0 };
+                (-TAU, TAU, a)
+            }
+        }
+    }
+
     /// The current Studio state as a shareable creation, or `None` while the
     /// typed source does not parse: an unparsed edit has no curve to promise,
     /// so it is refused rather than shared as whatever last happened to work.
@@ -358,17 +378,7 @@ impl StudioPanel {
         if self.error.is_some() || self.expr.is_none() {
             return None;
         }
-        let (xmin, xmax, a) = match &self.opened {
-            Some(opened) => (opened.xmin, opened.xmax, opened.a),
-            None => {
-                let phase = if t.is_finite() {
-                    t.rem_euclid(1.0)
-                } else {
-                    0.0
-                };
-                (-TAU, TAU, phase * TAU)
-            }
-        };
+        let (xmin, xmax, a) = self.window_and_knob(t);
         StudioCreation::new(self.source.clone(), xmin, xmax, a).ok()
     }
 
@@ -384,17 +394,7 @@ impl StudioPanel {
         let typed = format!("Y = {}", self.source.to_uppercase());
         numinous_core::draw_text(&mut raster, &typed, 10, 10 + 12 * scale, scale + 1, '#');
         if self.expr.is_some() {
-            let (xmin, xmax, a) = match &self.opened {
-                Some(opened) => (opened.xmin, opened.xmax, opened.a),
-                None => {
-                    let phase = if t.is_finite() {
-                        t.rem_euclid(1.0)
-                    } else {
-                        0.0
-                    };
-                    (-TAU, TAU, phase * TAU)
-                }
-            };
+            let (xmin, xmax, a) = self.window_and_knob(t);
             let _ = numinous_app::studio_render::draw_curve(
                 &mut raster,
                 numinous_app::studio_render::CurveLayout {
@@ -544,11 +544,10 @@ impl StudioPanel {
             return;
         }
         // A reopened creation draws its saved window at its saved knob; the
-        // ambient Studio draws the default window with the knob as time.
-        let (xmin, xmax, a) = match &self.opened {
-            Some(opened) => (opened.xmin, opened.xmax, opened.a),
-            None => (-TAU, TAU, t * TAU),
-        };
+        // ambient Studio draws the default window with the knob as time. The
+        // same helper feeds the share and the postcard, so what is saved is
+        // what is on screen by construction.
+        let (xmin, xmax, a) = self.window_and_knob(t);
         let top = (60 * scale) as f64;
         let _ = numinous_app::studio_render::draw_curve(
             raster,
@@ -895,6 +894,11 @@ mod tests {
         assert!((creation.xmin() + TAU).abs() < 1e-12);
         assert!((creation.xmax() - TAU).abs() < 1e-12);
         assert!((creation.a() - 0.25 * TAU).abs() < 1e-12);
+
+        // The console can park the phase at exactly 1.0. The screen draws
+        // a = tau there, so the share must save a = tau, not wrap to zero.
+        let parked = panel.current_creation(1.0).expect("parked");
+        assert!((parked.a() - TAU).abs() < 1e-12);
 
         // A reopened pin shares its own saved window and knob.
         let saved = numinous_core::StudioCreation::new("sin(a*x)", 0.0, 2.0, 0.5).expect("saved");
