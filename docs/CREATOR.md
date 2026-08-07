@@ -36,7 +36,10 @@ hand-written strict parser and the per-field caps. This is the floor everything
 stands on; nothing else works without reopen. The v1 expression-capsule reopen
 is built: a launch argument or a dropped `.num` opens a paused exact preview
 that Enter starts singing, and the first edit hands the creation to the player.
-The manifest growth above remains open.
+The manifest's first growth ring is built too: version 2 carries a capped
+title, author, Era, and a validated `descends` parent link, written only when
+present so plain shares stay version 1. Sliders and multiple expressions
+remain open.
 
 **2. The one-button share bundle.** On any Studio state, one action emits the
 trio: the `.num` file, the `numinous://` link, and the PNG postcard. The link
@@ -55,10 +58,9 @@ ships before any server exists. Fork must be as cheap as play; the remixers are
 the engine of a creative community (the Scratch research is explicit on this).
 The local wall is built for expression capsules: F5 in the Studio discovers
 the folder the share keys write into, draws each creation's exact curve
-newest first, and Enter opens one paused. Opening already hands an editable
-copy to the Studio; fork as a lineage-recording operation waits on the
-manifest capsule from item 1, because the v1 file has nowhere to record
-descent and pretending otherwise would be worse than waiting.
+newest first, and Enter opens one paused. F forks the chosen creation:
+editable and singing at once, in the creation's own era, with the parent's
+link remembered so the next share records the descent.
 
 **4. Lineage that credits generously.** Every fork records "descends from,"
 building a visible remix tree, but avoid the failure Scratch's own researchers
@@ -66,7 +68,9 @@ documented (automatic attribution falls short and demotivates original authors).
 Make credit generous and human-legible: an ancestry chain, a "remixed N times"
 badge that is a point of pride for the parent, and prose credit the forker can
 edit. Credit flows up the tree by construction, so remixing feels like honoring,
-not stealing.
+not stealing. The record now exists: every fork's share carries a `descends`
+parent link, validated by reopening it, and the bundle README names the
+parent. The visible tree, the badge, and editable prose credit remain open.
 
 That is the loop: reopen, share-bundle, gallery, fork, lineage. A non-programmer
 types `y = sin(a*x)`, drags `a` until it is beautiful, picks the 8-bit Era, names

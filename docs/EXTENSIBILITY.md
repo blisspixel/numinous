@@ -26,7 +26,13 @@ strict parser, no code. It grows from "one expression plus range parameters"
 into a **room manifest**: one or more expressions, named sliders with ranges,
 a palette and Era choice, sound parameters drawn from fixed enums, and
 metadata (title, author). Trusted engine code interprets everything; content
-can only recombine primitives we already ship. This is the Baba Is You and
+can only recombine primitives we already ship. The first growth ring is
+built: `NUMINOUS_STUDIO 2` carries an optional capped printable-ASCII title
+and author, an Era from the fixed set, and a `descends` parent link that is
+validated by reopening it. Serialization writes the lowest header that
+carries the content, links never carry `descends` so the handoff format
+cannot nest itself, and sliders plus multiple expressions remain the next
+rings. This is the Baba Is You and
 Doom-WAD model, and its safety record is perfect for a structural reason:
 there is no code to escape with.
 

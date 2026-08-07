@@ -220,6 +220,9 @@ fn fill_studio_share_bundle(
             expression: creation.source().to_string(),
             link: creation.to_link(),
             version: env!("CARGO_PKG_VERSION").to_string(),
+            title: creation.title().map(str::to_string),
+            author: creation.author().map(str::to_string),
+            descends: creation.descends().map(str::to_string),
         },
     )?;
     Ok(())
