@@ -1185,6 +1185,45 @@ impl App {
         )
     }
 
+    /// The Studio share trio on one key: `creation.num`, the link in the
+    /// README, and the postcard, into one fresh share folder.
+    fn share_studio_creation(&mut self) {
+        match self.share_studio_creation_to(&postcard::default_postcard_dir()) {
+            Ok(Some(dir)) => {
+                if let Some(window) = &self.window {
+                    window.set_title(&format!("Numinous  |  studio share: {}", dir.display()));
+                }
+                self.banner = Some(feedback::Banner::status("SHARED  .NUM + LINK + PNG", 90));
+            }
+            Ok(None) => {
+                // An unparsed edit has no curve to promise; the refusal names
+                // the way forward instead of silently sharing the last-good.
+                self.banner = Some(feedback::Banner::status("FIX THE FORMULA TO SHARE", 90));
+            }
+            Err(_) => {
+                self.banner = Some(feedback::Banner::status(
+                    "SHARE FAILED  NOTHING WRITTEN",
+                    90,
+                ));
+            }
+        }
+    }
+
+    /// Testable body: `Ok(None)` is a refusal (no parseable creation), and
+    /// `Ok(Some(dir))` is the written bundle folder.
+    fn share_studio_creation_to(
+        &self,
+        parent: &std::path::Path,
+    ) -> std::io::Result<Option<std::path::PathBuf>> {
+        let Some(creation) = self.studio_panel.current_creation(self.t) else {
+            return Ok(None);
+        };
+        let rgba =
+            self.studio_panel
+                .postcard_rgba(self.t, postcard::POSTCARD_SIZE as usize, self.era);
+        postcard::write_studio_share_bundle(&creation, &rgba, self.era, parent).map(Some)
+    }
+
     /// Soft juice when the player bites a number that does not fit the rule.
     fn munch_wrong_bite_juice(&mut self, seed: u64) {
         self.screen_shake = self.screen_shake.max(6);
@@ -3864,6 +3903,16 @@ impl ApplicationHandler for App {
                         Key::Named(NamedKey::F3) => {
                             // Formula Jam Auto: calm recipe set; F3 resumes after edit.
                             self.studio_panel.toggle_auto();
+                        }
+                        Key::Named(NamedKey::F4) => {
+                            // One action, the whole trio: .num, link, postcard.
+                            if self.save_gate.admit(
+                                save_gate::SaveKind::StudioShare,
+                                Instant::now(),
+                                repeat,
+                            ) {
+                                self.share_studio_creation();
+                            }
                         }
                         Key::Named(NamedKey::Backspace) => {
                             let spec = self.studio_panel.backspace();
@@ -6849,6 +6898,53 @@ mod tests {
         bad.open_start_input("numinous://studio?expr=x&xmin=-1&xmax=1&a=%");
         assert!(!bad.studio, "an invalid link opens nothing");
         assert!(bad.banner.is_some(), "the refusal says why");
+    }
+
+    #[test]
+    fn one_action_shares_the_studio_trio_or_refuses_with_a_reason() {
+        let app = headless("numinous_app_test_studio_share.txt");
+        let parent =
+            std::env::temp_dir().join(format!("numinous-studio-share-app-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&parent);
+
+        let dir = app
+            .share_studio_creation_to(&parent)
+            .expect("share io")
+            .expect("default formula parses, so the trio writes");
+        let num_path = dir.join("creation.num");
+        let reopened =
+            numinous_core::StudioCreation::from_num_path(&num_path).expect("creation.num reopens");
+        assert_eq!(
+            reopened,
+            app.studio_panel
+                .current_creation(app.t)
+                .expect("the panel's own creation"),
+            "the bundle reopens to exactly the shared state"
+        );
+        assert!(dir.join("postcard.png").is_file());
+        let readme = std::fs::read_to_string(dir.join("README.share.txt")).expect("bundle readme");
+        assert!(
+            readme.contains(&reopened.to_link()),
+            "the link is the handoff"
+        );
+
+        // An unparsed formula is refused, and nothing lands on disk for it.
+        let mut broken = headless("numinous_app_test_studio_share_broken.txt");
+        assert!(broken.studio_panel.push_text("(").is_none());
+        let before: Vec<_> = std::fs::read_dir(&parent)
+            .expect("parent listing")
+            .collect();
+        assert!(
+            broken
+                .share_studio_creation_to(&parent)
+                .expect("refusal is not an io error")
+                .is_none()
+        );
+        let after: Vec<_> = std::fs::read_dir(&parent)
+            .expect("parent listing")
+            .collect();
+        assert_eq!(before.len(), after.len(), "a refusal writes nothing");
+        let _ = std::fs::remove_dir_all(&parent);
     }
 
     #[test]

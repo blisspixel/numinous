@@ -5,6 +5,22 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- One press shares the whole Studio trio. F4 writes `creation.num`, a
+  `postcard.png`, and a README carrying the `numinous://` link into one fresh
+  exclusively created folder in the home directory, which is the second rung
+  of the 0.7 creator loop: the postcard is the picture that travels, the
+  capsule reopens exactly, and the link is the frictionless handoff.
+
+  What is shared is the exact curve on screen at that moment. A reopened pin
+  shares its saved window and knob; the ambient Studio freezes the knob at the
+  press instead of always writing `a = 1`, so the file reopens to the curve
+  the player was hearing. The postcard draws the same window the capsule
+  promises, held by a test that compares postcard pixels across two saved
+  windows, and the README's link is checked against the reopened file. A
+  formula that does not parse is refused with a named reason, a refusal
+  writes nothing, and the key sits behind the same save gate that bounds the
+  other file-producing shortcuts.
+
 - A saved creation reopens in the App, exactly and paused. This is the floor
   of the 0.7 creator loop: until now a `.num` could be saved and rendered from
   the terminal but never opened back into the instrument that made it.

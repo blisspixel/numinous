@@ -166,6 +166,52 @@ pub(crate) fn write_room_share_bundle(
     Ok(dir)
 }
 
+/// Studio share bundle: the trio from one action. `creation.num` reopens the
+/// creation exactly, the README carries the `numinous://` link, and the
+/// postcard is the object that escapes the app.
+pub(crate) fn write_studio_share_bundle(
+    creation: &numinous_core::StudioCreation,
+    postcard_rgba: &[u8],
+    era: Era,
+    parent: &Path,
+) -> std::io::Result<PathBuf> {
+    std::fs::create_dir_all(parent)?;
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let mut nonce = [0_u8; 16];
+    getrandom::fill(&mut nonce).map_err(std::io::Error::other)?;
+    let dir = numinous_core::create_share_bundle_dir(parent, "studio", stamp, nonce)?;
+
+    let num_path = dir.join("creation.num");
+    let mut num_file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&num_path)?;
+    num_file.write_all(creation.to_num_file().as_bytes())?;
+
+    let postcard_path = dir.join("postcard.png");
+    let encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, postcard_rgba)?;
+    write_png_file(&postcard_path, &encoded)?;
+    write_share_note(
+        &postcard_path,
+        "studio",
+        era,
+        numinous_core::ShareKind::Postcard,
+    );
+
+    numinous_core::write_studio_share_readme(
+        &dir,
+        &numinous_core::StudioShareMeta {
+            expression: creation.source().to_string(),
+            link: creation.to_link(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+        },
+    )?;
+    Ok(dir)
+}
+
 /// Life share bundle: current generation still + advancing loop + README.
 pub(crate) fn write_life_share_bundle(
     room_id: &str,

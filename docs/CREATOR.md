@@ -44,6 +44,9 @@ opens into a paused preview until confirmed (the hostile-input rule from
 `EXTENSIBILITY.md`). The PNG is the viral object that escapes the app; the `.num`
 reopens it exactly; the link is the frictionless handoff. This is PICO-8's growth
 property: the cart is simultaneously the screenshot, the playable, and the source.
+Built for expression creations: F4 in the Studio writes `creation.num`,
+`postcard.png`, and a README carrying the link into one fresh folder, refusing
+an unparsed formula, and both link and file open into the paused preview.
 
 **3. The local Gallery plus Fork.** A wall of creations you can play in place and
 fork with one keystroke. Fork opens a copy in the Studio with lineage recorded.

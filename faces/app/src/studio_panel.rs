@@ -34,6 +34,7 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "TYPE: BUILD A CURVE  (Y = ...)",
     "F2: RANDOM RECIPE FROM THE BANK",
     "F3: AUTO SET  (~21S, PHRASE SAFE)",
+    "F4: SHARE  .NUM + LINK + PNG",
     "F1: TOGGLE THIS HELP",
     "TAB / ESC: CLOSE STUDIO",
     "A IN A FORMULA IS TIME",
@@ -343,6 +344,73 @@ impl StudioPanel {
     /// Current UTF-8 byte length, used only to detect an admitted native edit.
     pub(crate) fn source_len(&self) -> usize {
         self.source.len()
+    }
+
+    /// The current Studio state as a shareable creation, or `None` while the
+    /// typed source does not parse: an unparsed edit has no curve to promise,
+    /// so it is refused rather than shared as whatever last happened to work.
+    ///
+    /// A reopened pin shares its saved window and knob. The ambient Studio
+    /// shares the default window with the knob frozen at this moment's phase,
+    /// so the shared creation is the exact curve on screen when the player
+    /// pressed the key, not a moving target.
+    pub(crate) fn current_creation(&self, t: f64) -> Option<StudioCreation> {
+        if self.error.is_some() || self.expr.is_none() {
+            return None;
+        }
+        let (xmin, xmax, a) = match &self.opened {
+            Some(opened) => (opened.xmin, opened.xmax, opened.a),
+            None => {
+                let phase = if t.is_finite() {
+                    t.rem_euclid(1.0)
+                } else {
+                    0.0
+                };
+                (-TAU, TAU, phase * TAU)
+            }
+        };
+        StudioCreation::new(self.source.clone(), xmin, xmax, a).ok()
+    }
+
+    /// Render the current curve as a square postcard frame: title, formula,
+    /// and the curve over the same window and knob a share would save.
+    ///
+    /// No footer, help, or cursor: a postcard is the creation, not the
+    /// editing session around it.
+    pub(crate) fn postcard_rgba(&self, t: f64, size: usize, era: numinous_core::Era) -> Vec<u8> {
+        let mut raster = Raster::new(size, size);
+        let scale = studio_scale(size).max(2);
+        numinous_core::draw_text(&mut raster, "NUMINOUS STUDIO", 10, 10, scale, '#');
+        let typed = format!("Y = {}", self.source.to_uppercase());
+        numinous_core::draw_text(&mut raster, &typed, 10, 10 + 12 * scale, scale + 1, '#');
+        if self.expr.is_some() {
+            let (xmin, xmax, a) = match &self.opened {
+                Some(opened) => (opened.xmin, opened.xmax, opened.a),
+                None => {
+                    let phase = if t.is_finite() {
+                        t.rem_euclid(1.0)
+                    } else {
+                        0.0
+                    };
+                    (-TAU, TAU, phase * TAU)
+                }
+            };
+            let _ = numinous_app::studio_render::draw_curve(
+                &mut raster,
+                numinous_app::studio_render::CurveLayout {
+                    width: size,
+                    height: size,
+                    top: f64::from(60 * scale),
+                    bottom_margin: f64::from(24 * scale),
+                },
+                xmin,
+                xmax,
+                |x| self.curve_value(x, a),
+            );
+        }
+        let mut rgba = raster.to_rgba();
+        era.apply(&mut rgba, size, size);
+        rgba
     }
 
     pub(crate) fn advance_morph(&mut self, dt: f64) {
@@ -814,6 +882,54 @@ mod tests {
             raster.to_rgba()[200 * 4 * 70..200 * 4 * 120].to_vec()
         };
         assert_ne!(curve_band(&narrow), curve_band(&wide));
+    }
+
+    #[test]
+    fn the_shared_creation_is_the_curve_on_screen() {
+        use std::f64::consts::TAU;
+        // Ambient Studio: the knob freezes at this moment's phase, so the
+        // share is the exact curve the player was hearing, not a=1.0 always.
+        let panel = StudioPanel::new("sin(a*x)").expect("panel");
+        let creation = panel.current_creation(0.25).expect("creation");
+        assert_eq!(creation.source(), "sin(a*x)");
+        assert!((creation.xmin() + TAU).abs() < 1e-12);
+        assert!((creation.xmax() - TAU).abs() < 1e-12);
+        assert!((creation.a() - 0.25 * TAU).abs() < 1e-12);
+
+        // A reopened pin shares its own saved window and knob.
+        let saved = numinous_core::StudioCreation::new("sin(a*x)", 0.0, 2.0, 0.5).expect("saved");
+        let mut reopened = StudioPanel::default();
+        reopened.open_creation(&saved);
+        let shared = reopened.current_creation(0.75).expect("shared");
+        assert_eq!(shared, saved);
+
+        // An unparsed edit has no curve to promise.
+        let mut broken = StudioPanel::new("sin(a*x)").expect("panel");
+        assert!(broken.push_text("(").is_none());
+        assert!(broken.current_creation(0.25).is_none());
+
+        // A non-finite moment falls back to phase zero rather than a NaN knob.
+        assert!(panel.current_creation(f64::NAN).is_some());
+    }
+
+    #[test]
+    fn the_postcard_draws_the_shared_window() {
+        // Two saved windows, one source: the postcards must differ, or the
+        // postcard would be drawing some other window than the one the
+        // bundle's creation.num promises to reopen.
+        let narrow = numinous_core::StudioCreation::new("sin(x)", 0.0, 1.0, 1.0).expect("narrow");
+        let wide = numinous_core::StudioCreation::new("sin(x)", -6.0, 6.0, 1.0).expect("wide");
+        let postcard = |creation: &numinous_core::StudioCreation| {
+            let mut panel = StudioPanel::default();
+            panel.open_creation(creation);
+            panel.postcard_rgba(0.25, 300, numinous_core::Era::Modern)
+        };
+        let narrow_rgba = postcard(&narrow);
+        assert!(
+            narrow_rgba.iter().any(|&byte| byte > 32),
+            "a postcard has ink"
+        );
+        assert_ne!(narrow_rgba, postcard(&wide));
     }
 
     #[test]
