@@ -169,8 +169,8 @@ pub use scores::Scoreboard;
 pub use secret::{akousma, deep_akousma};
 pub use seti::{SetiChannel, SetiScan, build_scan};
 pub use share::{
-    ShareBundleMeta, ShareKind, ShareMeta, create_share_bundle_dir, sidecar_path,
-    write_share_bundle_readme, write_share_sidecar,
+    ShareBundleMeta, ShareKind, ShareMeta, StudioShareMeta, create_share_bundle_dir, sidecar_path,
+    write_share_bundle_readme, write_share_sidecar, write_studio_share_readme,
 };
 pub use sim::{Lever, Sim, SimMeta, default_params, lever_value};
 pub use sims::{all_sims, sim_by_id};

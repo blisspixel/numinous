@@ -118,6 +118,60 @@ impl ShareBundleMeta {
     }
 }
 
+/// A Studio share bundle: the creation, its link, and a postcard, together.
+///
+/// The trio exists because each piece does a different job: the PNG is the
+/// object that escapes the app, the `.num` reopens the creation exactly, and
+/// the link is the frictionless handoff. One README names all three so a
+/// stranger holding the folder knows what they have and how to open it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StudioShareMeta {
+    /// The shared expression source, exactly as saved.
+    pub expression: String,
+    /// The native link that reopens the creation exactly.
+    pub link: String,
+    /// Package version string.
+    pub version: String,
+}
+
+impl StudioShareMeta {
+    /// Manifest body for `README.share.txt` inside a Studio share folder.
+    #[must_use]
+    pub fn readme_text(&self) -> String {
+        [
+            "numinous-studio-share 1".to_string(),
+            format!("expression {}", self.expression),
+            format!("version {}", self.version),
+            String::new(),
+            "Contents:".to_string(),
+            "- creation.num      the creation itself; reopens exactly".to_string(),
+            "- postcard.png      still frame of the curve".to_string(),
+            "- README.share.txt  this note".to_string(),
+            String::new(),
+            "Reopen it: drop creation.num on the Numinous window, pass it as a".to_string(),
+            "launch argument, or run numinous open-studio creation.num.".to_string(),
+            "This link reopens the same creation, paused until confirmed:".to_string(),
+            self.link.clone(),
+        ]
+        .join("\n")
+            + "\n"
+    }
+}
+
+/// Write the Studio bundle README into an existing share directory.
+///
+/// # Errors
+/// Propagates filesystem errors; refuses an existing file.
+pub fn write_studio_share_readme(dir: &Path, meta: &StudioShareMeta) -> std::io::Result<PathBuf> {
+    let path = dir.join("README.share.txt");
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)?;
+    file.write_all(meta.readme_text().as_bytes())?;
+    Ok(path)
+}
+
 fn share_bundle_dir(parent: &Path, room_id: &str, stamp: u64, nonce: [u8; 16]) -> PathBuf {
     let safe: String = room_id
         .chars()
@@ -265,6 +319,33 @@ mod tests {
 
         assert!(write_share_sidecar(&share, &meta).is_err());
         assert_eq!(std::fs::read(&sidecar).expect("sentinel"), b"sentinel");
+        std::fs::remove_dir_all(dir).expect("cleanup");
+    }
+
+    #[test]
+    fn studio_readme_names_the_trio_and_the_link() {
+        let meta = super::StudioShareMeta {
+            expression: "sin(a*x)".into(),
+            link: "numinous://studio?expr=sin%28a%2Ax%29&xmin=-2&xmax=2&a=0.5".into(),
+            version: "0.2.0-alpha.4".into(),
+        };
+        let text = meta.readme_text();
+        assert!(text.contains("creation.num"));
+        assert!(text.contains("postcard.png"));
+        assert!(text.contains("expression sin(a*x)"));
+        assert!(text.contains("numinous://studio?"));
+        assert!(text.contains("paused until confirmed"));
+
+        let dir =
+            std::env::temp_dir().join(format!("numinous-studio-share-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir(&dir).expect("parent");
+        let readme = super::write_studio_share_readme(&dir, &meta).expect("readme");
+        assert_eq!(std::fs::read_to_string(readme).expect("read"), text);
+        assert!(
+            super::write_studio_share_readme(&dir, &meta).is_err(),
+            "an existing README is refused, never overwritten"
+        );
         std::fs::remove_dir_all(dir).expect("cleanup");
     }
 

@@ -13,6 +13,8 @@ pub(crate) enum SaveKind {
     Postcard,
     ShortLoop,
     ShareBundle,
+    /// The Studio trio: creation, link, and postcard in one folder.
+    StudioShare,
 }
 
 #[derive(Default)]
@@ -21,6 +23,7 @@ pub(crate) struct SaveGate {
     postcard: Option<Instant>,
     short_loop: Option<Instant>,
     share_bundle: Option<Instant>,
+    studio_share: Option<Instant>,
 }
 
 impl SaveGate {
@@ -36,6 +39,7 @@ impl SaveGate {
             SaveKind::Postcard => (&mut self.postcard, MIN_SAVE_INTERVAL),
             SaveKind::ShortLoop => (&mut self.short_loop, MIN_LOOP_INTERVAL),
             SaveKind::ShareBundle => (&mut self.share_bundle, MIN_BUNDLE_INTERVAL),
+            SaveKind::StudioShare => (&mut self.studio_share, MIN_SAVE_INTERVAL),
         };
         if let Some(elapsed) = previous.and_then(|last| now.checked_duration_since(last)) {
             if elapsed < min_interval {
@@ -77,10 +81,12 @@ mod tests {
         assert!(gate.admit(SaveKind::Postcard, start, false));
         assert!(gate.admit(SaveKind::ShortLoop, start, false));
         assert!(gate.admit(SaveKind::ShareBundle, start, false));
+        assert!(gate.admit(SaveKind::StudioShare, start, false));
         assert!(!gate.admit(SaveKind::PlaytestNote, start, true));
         assert!(!gate.admit(SaveKind::Postcard, start, true));
         assert!(!gate.admit(SaveKind::ShortLoop, start, true));
         assert!(!gate.admit(SaveKind::ShareBundle, start, true));
+        assert!(!gate.admit(SaveKind::StudioShare, start, true));
     }
 
     #[test]

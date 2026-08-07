@@ -107,6 +107,13 @@ window and all. Save one from the terminal with `numinous plot "sin(a*x)"
 --save mine.num`. A drop never abandons a game in progress, and files that are
 not valid creations are refused with a reason, never half-opened.
 
+F4 in the Studio shares the whole trio in one press: a fresh folder in your
+home directory holding `creation.num` (reopens exactly), `postcard.png` (the
+picture that travels), and a README carrying the `numinous://` link. What is
+shared is the exact curve on screen at that moment, knob and all. A formula
+that does not parse is refused with FIX THE FORMULA TO SHARE rather than
+shared as whatever last worked.
+
 **Power console (` or ~).** For hackery power users, not the first-time path.
 Press backtick or tilde to open a bottom command line (Esc or the same key
 closes it). Useful commands:
