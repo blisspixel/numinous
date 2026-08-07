@@ -1325,7 +1325,7 @@ impl App {
     /// fully guarantee.
     fn share_studio_creation(&mut self) {
         match self.share_studio_creation_to(&postcard::default_postcard_dir()) {
-            Ok(Some(dir)) => {
+            Ok(Ok(dir)) => {
                 self.report_export_outcome(
                     "studio share",
                     "SHARE FAILED  SEE .NUMINOUS-CRASH.LOG",
@@ -1333,10 +1333,19 @@ impl App {
                 );
                 self.banner = Some(feedback::Banner::status("SHARED  .NUM + LINK + PNG", 90));
             }
-            Ok(None) => {
+            Ok(Err(studio_panel::ShareRefusal::UnparsedFormula)) => {
                 // An unparsed edit has no curve to promise; the refusal names
                 // the way forward instead of silently sharing the last-good.
                 self.banner = Some(feedback::Banner::status("FIX THE FORMULA TO SHARE", 90));
+            }
+            Ok(Err(studio_panel::ShareRefusal::LineageTooLarge)) => {
+                // A different refusal deserves a different sentence: telling
+                // the player to fix a formula that parses fine points them
+                // at the wrong cause.
+                self.banner = Some(feedback::Banner::status(
+                    "FORK LINEAGE TOO LARGE TO SHARE",
+                    90,
+                ));
             }
             Err(error) => {
                 self.report_export_outcome(
@@ -1348,14 +1357,15 @@ impl App {
         }
     }
 
-    /// Testable body: `Ok(None)` is a refusal (no parseable creation), and
-    /// `Ok(Some(dir))` is the written bundle folder.
+    /// Testable body: the outer result is the write, the inner one the
+    /// panel's refusal to produce a creation at all.
     fn share_studio_creation_to(
         &self,
         parent: &std::path::Path,
-    ) -> std::io::Result<Option<std::path::PathBuf>> {
-        let Some(creation) = self.studio_panel.current_creation(self.t) else {
-            return Ok(None);
+    ) -> std::io::Result<Result<std::path::PathBuf, studio_panel::ShareRefusal>> {
+        let creation = match self.studio_panel.current_creation(self.t) {
+            Ok(creation) => creation,
+            Err(refusal) => return Ok(Err(refusal)),
         };
         // Record the era only when it says something: Modern is the default
         // look, and omitting it keeps a plain share a version 1 capsule that
@@ -1368,7 +1378,7 @@ impl App {
         let rgba =
             self.studio_panel
                 .postcard_rgba(self.t, postcard::POSTCARD_SIZE as usize, self.era);
-        postcard::write_studio_share_bundle(&creation, &rgba, parent).map(Some)
+        postcard::write_studio_share_bundle(&creation, &rgba, parent).map(Ok)
     }
 
     /// Move the Gallery cursor by whole tiles.
@@ -4106,7 +4116,11 @@ impl ApplicationHandler for App {
                             self.gallery = None;
                         }
                         Key::Named(NamedKey::Enter) => self.gallery_open_selected(),
-                        Key::Character(c) if c.as_str() == "f" => self.gallery_fork_selected(),
+                        // Case-insensitive: the footer advertises F, and a
+                        // held Shift or Caps Lock must not unplug it.
+                        Key::Character(c) if c.as_str().eq_ignore_ascii_case("f") => {
+                            self.gallery_fork_selected();
+                        }
                         Key::Named(NamedKey::ArrowLeft) => self.gallery_move(-1, 0),
                         Key::Named(NamedKey::ArrowRight) => self.gallery_move(1, 0),
                         Key::Named(NamedKey::ArrowUp) => self.gallery_move(0, -1),
@@ -7381,11 +7395,12 @@ mod tests {
         let before: Vec<_> = std::fs::read_dir(&parent)
             .expect("parent listing")
             .collect();
-        assert!(
+        assert_eq!(
             broken
                 .share_studio_creation_to(&parent)
-                .expect("refusal is not an io error")
-                .is_none()
+                .expect("refusal is not an io error"),
+            Err(crate::studio_panel::ShareRefusal::UnparsedFormula),
+            "an unparsed formula is its own refusal, named as such"
         );
         let after: Vec<_> = std::fs::read_dir(&parent)
             .expect("parent listing")
