@@ -133,20 +133,27 @@ impl StudioPanel {
         self.source = creation.source().to_string();
         // Parse directly rather than through reparse, which is the edit door
         // and releases the pin this method exists to set. A validated
-        // creation always parses; the match is the seatbelt, not the plan.
+        // creation always parses; if this seatbelt branch ever fires anyway,
+        // the panel refuses the pin and keeps nothing of the previous curve,
+        // so an error and a pin still cannot coexist and a stale expression
+        // cannot draw under a window that was never its own.
         match numinous_core::parse(&self.source) {
             Ok(expr) => {
                 self.expr = Some(expr);
                 self.error = None;
+                self.opened = Some(OpenedCreation {
+                    xmin: creation.xmin(),
+                    xmax: creation.xmax(),
+                    a: creation.a(),
+                    paused: true,
+                });
             }
-            Err(message) => self.error = Some(message),
+            Err(message) => {
+                self.expr = None;
+                self.error = Some(message);
+                self.opened = None;
+            }
         }
-        self.opened = Some(OpenedCreation {
-            xmin: creation.xmin(),
-            xmax: creation.xmax(),
-            a: creation.a(),
-            paused: true,
-        });
     }
 
     /// Whether a reopened creation is waiting in its paused preview.
