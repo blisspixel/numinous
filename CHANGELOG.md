@@ -5,6 +5,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- `sing` refuses what it cannot sing, on both faces. A NaN window passed the
+  `xmax <= xmin` door because NaN compares false, and an expression undefined
+  across the whole window melted to zero notes, so the terminal face wrote a
+  silent WAV and reported success while the MCP face named a 0.1 second melody
+  with no notes in it. Both now refuse: the terminal face requires a finite
+  window and knob and answers "nothing to sing" where the plot path answers
+  "nothing to plot", and the MCP face, which already required finite bounds,
+  refuses the empty melody the same way. A refused song leaves no WAV behind.
+  Found by review on the pull request rather than by the parity gate, which
+  compares what both faces sing and not what both faces refuse.
+
 - The eight spectral-ink rooms recorded as unread are now read, so the owner
   ruling the roadmap asks for rests on all ten rooms rather than on two and an
   apology. Each reading is of the room's own draw code: what the ink draws,
