@@ -35,6 +35,7 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "F2: RANDOM RECIPE FROM THE BANK",
     "F3: AUTO SET  (~21S, PHRASE SAFE)",
     "F4: SHARE  .NUM + LINK + PNG",
+    "F5: GALLERY  THE SAVED WALL",
     "F1: TOGGLE THIS HELP",
     "TAB / ESC: CLOSE STUDIO",
     "A IN A FORMULA IS TIME",
