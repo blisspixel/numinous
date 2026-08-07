@@ -42,21 +42,33 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "EDITING PAUSES AUTO",
 ];
 
-/// A reopened `.num` creation: the saved window and knob, held exactly until
-/// the player takes over.
+/// A reopened `.num` creation, held whole until the player takes over.
 ///
 /// While this is present the panel draws the saved window instead of the
 /// ambient one and pins `a` to the saved value instead of the gallery phase,
-/// which is what makes a reopen exact rather than approximate. It opens in a
-/// paused preview, the hostile-input posture for shared content: the curve is
-/// drawn, the voice waits for the player. Any edit releases the pin, because
-/// from the first keystroke the creation is theirs, not the file's.
+/// which is what makes a reopen exact rather than approximate. The complete
+/// capsule is kept, not just its numbers: an untouched reopen must re-share
+/// with its title, author, and lineage intact, and rebuilding from the
+/// window alone would silently strip them. It opens in a paused preview, the
+/// hostile-input posture for shared content: the curve is drawn, the voice
+/// waits for the player. Any edit releases the pin, because from the first
+/// keystroke the creation is theirs, not the file's.
 #[derive(Debug, Clone)]
 struct OpenedCreation {
-    xmin: f64,
-    xmax: f64,
-    a: f64,
+    creation: StudioCreation,
     paused: bool,
+}
+
+/// Why the Studio has nothing to share right now. Two different problems
+/// must not wear one banner: telling a player to fix a formula that parses
+/// fine points them at the wrong cause.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ShareRefusal {
+    /// The typed source does not parse; there is no curve to promise.
+    UnparsedFormula,
+    /// The formula is fine, but the recorded parent link cannot ride in a
+    /// capsule's descends field.
+    LineageTooLarge,
 }
 
 #[derive(Debug, Clone)]
@@ -152,9 +164,7 @@ impl StudioPanel {
                 self.expr = Some(expr);
                 self.error = None;
                 self.opened = Some(OpenedCreation {
-                    xmin: creation.xmin(),
-                    xmax: creation.xmax(),
-                    a: creation.a(),
+                    creation: creation.clone(),
                     paused: true,
                 });
             }
@@ -180,6 +190,14 @@ impl StudioPanel {
     #[cfg(test)]
     pub(crate) fn opened_active(&self) -> bool {
         self.opened.is_some()
+    }
+
+    /// Test-only: inject a parent link the production fork path cannot make,
+    /// so the refusal for an unshareable lineage stays proven even while no
+    /// real `to_link` can exceed the descends cap.
+    #[cfg(test)]
+    pub(crate) fn force_fork_of(&mut self, link: String) {
+        self.fork_of = Some(link);
     }
 
     /// Fork a creation: open it as the player's own, editable and singing,
@@ -360,10 +378,10 @@ impl StudioPanel {
         if let Some(opened) = &self.opened {
             return Some(numinous_core::to_melody(
                 expr,
-                opened.xmin,
-                opened.xmax,
+                opened.creation.xmin(),
+                opened.creation.xmax(),
                 32,
-                opened.a,
+                opened.creation.a(),
             ));
         }
         Some(sound_for_expression(expr))
@@ -386,7 +404,11 @@ impl StudioPanel {
     /// falls back, to zero, on every surface alike.
     fn window_and_knob(&self, t: f64) -> (f64, f64, f64) {
         match &self.opened {
-            Some(opened) => (opened.xmin, opened.xmax, opened.a),
+            Some(opened) => (
+                opened.creation.xmin(),
+                opened.creation.xmax(),
+                opened.creation.a(),
+            ),
             None => {
                 let a = if t.is_finite() { t * TAU } else { 0.0 };
                 (-TAU, TAU, a)
@@ -402,20 +424,32 @@ impl StudioPanel {
     /// shares the default window with the knob frozen at this moment's phase,
     /// so the shared creation is the exact curve on screen when the player
     /// pressed the key, not a moving target.
-    pub(crate) fn current_creation(&self, t: f64) -> Option<StudioCreation> {
+    pub(crate) fn current_creation(&self, t: f64) -> Result<StudioCreation, ShareRefusal> {
         if self.error.is_some() || self.expr.is_none() {
-            return None;
+            return Err(ShareRefusal::UnparsedFormula);
+        }
+        // An untouched reopen shares the very capsule that was opened,
+        // identity and all: rebuilding it from the window alone would
+        // silently strip the title, author, and lineage the format exists
+        // to preserve. A fork deliberately does not take this path, because
+        // a fork is a new creation descending from the parent, not the
+        // parent wearing its own name.
+        if self.fork_of.is_none()
+            && let Some(opened) = &self.opened
+        {
+            return Ok(opened.creation.clone());
         }
         let (xmin, xmax, a) = self.window_and_knob(t);
-        let mut creation = StudioCreation::new(self.source.clone(), xmin, xmax, a).ok()?;
+        let mut creation = StudioCreation::new(self.source.clone(), xmin, xmax, a)
+            .map_err(|_| ShareRefusal::UnparsedFormula)?;
         if let Some(parent) = &self.fork_of {
-            // A fork shares its descent. The parent link came from a valid
-            // creation's own to_link, so a refusal here would mean the panel
-            // is holding something it should not; refusing the share is the
-            // fail-closed answer.
-            creation = creation.with_descends(parent).ok()?;
+            // A fork shares its descent, and a lineage that cannot ride is
+            // its own refusal rather than a claim that the formula broke.
+            creation = creation
+                .with_descends(parent)
+                .map_err(|_| ShareRefusal::LineageTooLarge)?;
         }
-        Some(creation)
+        Ok(creation)
     }
 
     /// Render the current curve as a square postcard frame: title, formula,
@@ -429,8 +463,14 @@ impl StudioPanel {
         numinous_core::draw_text(&mut raster, "NUMINOUS STUDIO", 10, 10, scale, '#');
         let typed = format!("Y = {}", self.source.to_uppercase());
         numinous_core::draw_text(&mut raster, &typed, 10, 10 + 12 * scale, scale + 1, '#');
-        if self.expr.is_some() {
+        if let Some(expr) = &self.expr {
             let (xmin, xmax, a) = self.window_and_knob(t);
+            // The postcard must match what creation.num reopens, so it
+            // evaluates the settled expression directly rather than through
+            // curve_value, whose recipe-morph blend is a 600 ms presentation
+            // effect the capsule does not record. A share taken mid-morph
+            // stays self-consistent instead of shipping a picture no reopen
+            // can reproduce.
             let _ = numinous_app::studio_render::draw_curve(
                 &mut raster,
                 numinous_app::studio_render::CurveLayout {
@@ -441,7 +481,10 @@ impl StudioPanel {
                 },
                 xmin,
                 xmax,
-                |x| self.curve_value(x, a),
+                |x| {
+                    let value = numinous_core::eval(expr, x, a);
+                    value.is_finite().then_some(value)
+                },
             );
         }
         let mut rgba = raster.to_rgba();
@@ -540,16 +583,15 @@ impl StudioPanel {
         } else if let Some(opened) = &self.opened {
             // The pin and the error share a row because they cannot coexist:
             // editing releases the pin before it can produce a parse error.
+            let (xmin, xmax, a) = (
+                opened.creation.xmin(),
+                opened.creation.xmax(),
+                opened.creation.a(),
+            );
             let line = if opened.paused {
-                format!(
-                    "REOPENED  X {:.1} TO {:.1}  A {:.2}  ENTER: PLAY",
-                    opened.xmin, opened.xmax, opened.a
-                )
+                format!("REOPENED  X {xmin:.1} TO {xmax:.1}  A {a:.2}  ENTER: PLAY")
             } else {
-                format!(
-                    "REOPENED  X {:.1} TO {:.1}  A {:.2}  TYPE: TAKE OVER",
-                    opened.xmin, opened.xmax, opened.a
-                )
+                format!("REOPENED  X {xmin:.1} TO {xmax:.1}  A {a:.2}  TYPE: TAKE OVER")
             };
             numinous_core::draw_text(raster, &line, 10, 10 + 34 * scale, scale, '*');
         }
@@ -946,10 +988,13 @@ mod tests {
         // An unparsed edit has no curve to promise.
         let mut broken = StudioPanel::new("sin(a*x)").expect("panel");
         assert!(broken.push_text("(").is_none());
-        assert!(broken.current_creation(0.25).is_none());
+        assert_eq!(
+            broken.current_creation(0.25),
+            Err(super::ShareRefusal::UnparsedFormula)
+        );
 
         // A non-finite moment falls back to phase zero rather than a NaN knob.
-        assert!(panel.current_creation(f64::NAN).is_some());
+        assert!(panel.current_creation(f64::NAN).is_ok());
     }
 
     #[test]
@@ -988,6 +1033,93 @@ mod tests {
         assert_eq!(
             panel.current_creation(0.25).expect("opened").descends(),
             None
+        );
+    }
+
+    #[test]
+    fn an_untouched_reopen_reshares_its_whole_identity() {
+        // The capsule format exists to carry title, author, and lineage;
+        // re-sharing an unedited reopen must not silently strip them by
+        // rebuilding the creation from its numbers alone.
+        let grandparent =
+            numinous_core::StudioCreation::new("sin(x)", -1.0, 1.0, 0.0).expect("grandparent");
+        let full = numinous_core::StudioCreation::new("sin(a*x)", 0.0, 2.0, 0.5)
+            .expect("creation")
+            .with_title("Slow Waves")
+            .expect("title")
+            .with_author("A Curious Mind")
+            .expect("author")
+            .with_descends(&grandparent.to_link())
+            .expect("descends");
+        let mut panel = StudioPanel::default();
+        panel.open_creation(&full);
+        assert_eq!(
+            panel.current_creation(0.25).expect("reshared"),
+            full,
+            "identity and lineage survive an untouched re-share"
+        );
+
+        // The first edit makes it the player's: identity intentionally
+        // drops with the pin, and the descent does not follow an open.
+        assert!(panel.push_text("+0").is_some());
+        let taken_over = panel.current_creation(0.25).expect("taken over");
+        assert_eq!(taken_over.title(), None);
+        assert_eq!(taken_over.descends(), None);
+    }
+
+    #[test]
+    fn a_fork_descends_from_its_parent_but_does_not_wear_its_name() {
+        let parent = numinous_core::StudioCreation::new("sin(a*x)", 0.0, 2.0, 0.5)
+            .expect("parent")
+            .with_title("Parent Wave")
+            .expect("title");
+        let mut panel = StudioPanel::default();
+        assert!(panel.fork_creation(&parent).is_some());
+        let fork = panel.current_creation(0.25).expect("fork");
+        assert_eq!(fork.descends(), Some(parent.to_link().as_str()));
+        assert_eq!(
+            fork.title(),
+            None,
+            "a fork is a new creation descending from the parent, not the \
+             parent wearing its own name"
+        );
+    }
+
+    #[test]
+    fn an_unshareable_lineage_is_named_not_blamed_on_the_formula() {
+        let mut panel = StudioPanel::default();
+        // No real to_link can exceed the descends cap today, so the panel is
+        // handed an oversized parent directly: the refusal path must stay
+        // honest even for states nothing currently produces.
+        panel.force_fork_of(format!(
+            "numinous://studio?expr=x&xmin=-1&xmax=1&a=0{}",
+            "&".repeat(5000)
+        ));
+        assert_eq!(
+            panel.current_creation(0.25),
+            Err(super::ShareRefusal::LineageTooLarge),
+            "a lineage that cannot ride is its own refusal"
+        );
+    }
+
+    #[test]
+    fn a_mid_morph_postcard_matches_the_capsule_not_the_blend() {
+        // The bundle's promise is that postcard.png shows what creation.num
+        // reopens. A recipe morph is a 600 ms presentation blend the capsule
+        // does not record, so the postcard must ignore it.
+        let mut morphing = StudioPanel::default();
+        assert!(morphing.load_random_recipe().is_some());
+        let mid_morph = morphing.postcard_rgba(0.25, 240, numinous_core::Era::Modern);
+
+        let mut settled = StudioPanel::default();
+        assert!(settled.load_random_recipe().is_some());
+        settled.advance_morph(RECIPE_MORPH_SECONDS);
+        let after = settled.postcard_rgba(0.25, 240, numinous_core::Era::Modern);
+
+        assert_eq!(
+            mid_morph, after,
+            "the postcard is the settled curve whether or not a morph is \
+             mid-flight on screen"
         );
     }
 

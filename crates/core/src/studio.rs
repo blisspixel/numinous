@@ -147,6 +147,13 @@ impl StudioCreation {
                 "Studio descends link is too large; limit is {MAX_DESCENDS_BYTES} bytes"
             ));
         }
+        // The link text itself must be line-safe: the file format is one
+        // field per line, and a control byte the link parser happens to
+        // tolerate would split the written line and make the saved capsule
+        // unreadable by every reopen path.
+        if link.chars().any(char::is_control) {
+            return Err("Studio descends link cannot contain control characters".to_string());
+        }
         Self::from_link(link)
             .map_err(|error| format!("Studio descends link does not reopen: {error}"))?;
         self.descends = Some(link.to_string());
@@ -1463,6 +1470,16 @@ mod tests {
         assert!(
             base().with_descends(&giant).is_err(),
             "an oversized parent link is refused"
+        );
+
+        // A control byte inside the link text would split the written
+        // descends line and make the saved capsule unreadable, so it is
+        // refused at the door even when the link parser tolerates it.
+        assert!(
+            base()
+                .with_descends("numinous://studio?expr=x\n&xmin=-1&xmax=1&a=0")
+                .is_err(),
+            "a line break cannot ride inside a recorded parent link"
         );
     }
 
