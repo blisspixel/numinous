@@ -50,11 +50,15 @@ fn entry_at(path: PathBuf) -> Option<GalleryEntry> {
 /// Bounded discovery below one parent folder: top-level `*.num` files plus
 /// `creation.num` inside `numinous-share-studio-*` bundle folders. One level,
 /// no symlinks, newest first, capped at [`MAX_GALLERY_ENTRIES`].
-pub(crate) fn discover(parent: &Path) -> Vec<GalleryEntry> {
+///
+/// Returns `None` when the folder itself cannot be read: an unreadable wall
+/// is a fact to report, not an empty one, and the caller must not tell the
+/// player their creations do not exist. Individual entries that fail to read
+/// mid-scan are still skipped one by one, so a single broken file cannot
+/// hide the rest of the wall.
+pub(crate) fn discover(parent: &Path) -> Option<Vec<GalleryEntry>> {
     let mut entries: Vec<GalleryEntry> = Vec::new();
-    let Ok(dir) = std::fs::read_dir(parent) else {
-        return entries;
-    };
+    let dir = std::fs::read_dir(parent).ok()?;
     for item in dir.flatten() {
         // `file_type` on the entry does not follow links, so a link that
         // points outside the folder is skipped rather than followed.
@@ -73,9 +77,17 @@ pub(crate) fn discover(parent: &Path) -> Vec<GalleryEntry> {
                 .file_name()
                 .to_str()
                 .is_some_and(|name| name.starts_with("numinous-share-studio-"))
-            && let Some(entry) = entry_at(path.join("creation.num"))
         {
-            entries.push(entry);
+            // The capsule inside the bundle must be a regular file too:
+            // `symlink_metadata` does not follow links, so a planted link
+            // cannot walk the wall outside the folder it claims to scan.
+            let capsule = path.join("creation.num");
+            let is_regular_file = std::fs::symlink_metadata(&capsule)
+                .map(|metadata| metadata.file_type().is_file())
+                .unwrap_or(false);
+            if is_regular_file && let Some(entry) = entry_at(capsule) {
+                entries.push(entry);
+            }
         }
     }
     // Newest first; the path breaks timestamp ties so the order is stable.
@@ -85,20 +97,25 @@ pub(crate) fn discover(parent: &Path) -> Vec<GalleryEntry> {
             .then_with(|| a.path.cmp(&b.path))
     });
     entries.truncate(MAX_GALLERY_ENTRIES);
-    entries
+    Some(entries)
 }
 
 /// The wall itself: discovered entries and one selection.
 pub(crate) struct GalleryPanel {
     entries: Vec<GalleryEntry>,
     selected: usize,
+    /// Whether the folder could be read at all. An unreadable folder must
+    /// not wear the empty wall's copy: NOTHING SAVED YET is a claim.
+    readable: bool,
 }
 
 impl GalleryPanel {
     /// Discover the wall below `parent`.
     pub(crate) fn open(parent: &Path) -> Self {
+        let discovered = discover(parent);
         Self {
-            entries: discover(parent),
+            readable: discovered.is_some(),
+            entries: discovered.unwrap_or_default(),
             selected: 0,
         }
     }
@@ -117,14 +134,28 @@ impl GalleryPanel {
 
     /// Move the selection by whole tiles; the grid edge clamps rather than
     /// wraps, so holding a key parks the cursor instead of spinning it.
+    ///
+    /// Each axis clamps inside the grid, not the flat index: a horizontal
+    /// move at a row edge parks in place rather than snaking into the next
+    /// row, and a vertical move keeps its column as far as the last,
+    /// possibly partial, row allows.
     pub(crate) fn move_selection(&mut self, dx: i32, dy: i32) {
         if self.entries.is_empty() {
             return;
         }
         let columns = COLUMNS as i32;
-        let current = self.selected as i32;
-        let moved = current + dx + dy * columns;
-        self.selected = moved.clamp(0, self.entries.len() as i32 - 1) as usize;
+        let last = self.entries.len() as i32 - 1;
+        let row = self.selected as i32 / columns;
+        let column = self.selected as i32 % columns;
+        let last_row = last / columns;
+        let target_row = (row + dy).clamp(0, last_row);
+        let row_last_column = if target_row == last_row {
+            last - last_row * columns
+        } else {
+            columns - 1
+        };
+        let target_column = (column + dx).clamp(0, row_last_column);
+        self.selected = (target_row * columns + target_column) as usize;
     }
 
     /// Draw the wall: a titled grid of exact thumbnails with one selection.
@@ -147,6 +178,28 @@ impl GalleryPanel {
             scale,
             '#',
         );
+        if !self.readable {
+            // An unreadable folder is a fact, not an empty wall: claiming
+            // NOTHING SAVED YET here would tell the player their creations
+            // do not exist when the folder simply refused to answer.
+            numinous_core::draw_text(
+                raster,
+                "THE FOLDER COULD NOT BE READ",
+                10,
+                10 + 24 * scale,
+                scale + 1,
+                '*',
+            );
+            numinous_core::draw_text(
+                raster,
+                "YOUR CREATIONS MAY STILL EXIST  CHECK ITS PERMISSIONS",
+                10,
+                10 + 44 * scale,
+                scale,
+                '*',
+            );
+            return;
+        }
         if self.entries.is_empty() {
             numinous_core::draw_text(
                 raster,
@@ -172,6 +225,29 @@ impl GalleryPanel {
         let rows = self.entries.len().div_ceil(COLUMNS).max(1);
         let tile_width = width / COLUMNS;
         let tile_height = (wall_height / rows).max(1);
+        if tile_height.saturating_sub(4) < 24 || tile_width.saturating_sub(8) < 12 {
+            // Too short for thumbnails. A blank wall with a live, invisible
+            // cursor would let Enter open whichever unseen creation it lands
+            // on, so the selection is named instead of drawn.
+            numinous_core::draw_text(
+                raster,
+                "WINDOW TOO SHORT FOR THUMBNAILS",
+                10,
+                wall_top,
+                scale,
+                '*',
+            );
+            if let Some(entry) = self.entries.get(self.selected) {
+                let label = format!(
+                    "CHOSEN {} OF {}: {}",
+                    self.selected + 1,
+                    self.entries.len(),
+                    tile_label(entry, width.saturating_sub(20))
+                );
+                numinous_core::draw_text(raster, &label, 10, wall_top + 14 * scale, scale, '#');
+            }
+            return;
+        }
         for (index, entry) in self.entries.iter().enumerate() {
             let column = index % COLUMNS;
             let row = index / COLUMNS;
@@ -324,8 +400,12 @@ mod tests {
         let plain = dir.join("plain-folder");
         std::fs::create_dir(&plain).expect("plain dir");
         save(&plain, "creation.num", "sin(x)+1");
+        // A bundle whose capsule is not a regular file is skipped: the same
+        // guard that refuses to follow a planted link out of the folder.
+        let odd_bundle = dir.join("numinous-share-studio-43-bb");
+        std::fs::create_dir_all(odd_bundle.join("creation.num")).expect("capsule as dir");
 
-        let entries = discover(&dir);
+        let entries = discover(&dir).expect("a readable folder discovers");
         let sources: Vec<&str> = entries
             .iter()
             .map(|entry| entry.creation.source())
@@ -343,7 +423,7 @@ mod tests {
         for index in 0..MAX_GALLERY_ENTRIES + 3 {
             save(&dir, &format!("c{index:03}.num",), "sin(x)");
         }
-        let entries = discover(&dir);
+        let entries = discover(&dir).expect("a readable folder discovers");
         assert_eq!(entries.len(), MAX_GALLERY_ENTRIES, "the wall is capped");
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -369,6 +449,63 @@ mod tests {
     }
 
     #[test]
+    fn a_horizontal_move_parks_at_the_row_edge_instead_of_wrapping() {
+        let dir = scratch("park");
+        // Distinct knobs so two adjacent tiles can never hold equal
+        // creations: if the cursor wrapped, the selection would change.
+        for index in 0..8 {
+            let creation =
+                StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.1 * index as f64).expect("creation");
+            std::fs::write(dir.join(format!("c{index}.num")), creation.to_num_file())
+                .expect("write");
+        }
+        let mut panel = GalleryPanel::open(&dir);
+        assert_eq!(panel.len(), 8);
+        // Park at the right edge of the top row, then push further right.
+        panel.move_selection(9, 0);
+        let edge = panel.selected_creation().expect("edge tile").clone();
+        panel.move_selection(1, 0);
+        assert_eq!(
+            panel.selected_creation().expect("still the edge tile"),
+            &edge,
+            "a horizontal move at the row edge parks instead of snaking into \
+             the next row"
+        );
+        // And the left edge of the second row does not snake back up.
+        panel.move_selection(0, 1);
+        panel.move_selection(-9, 0);
+        let left = panel.selected_creation().expect("row start").clone();
+        panel.move_selection(-1, 0);
+        assert_eq!(panel.selected_creation().expect("parked"), &left);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_unreadable_folder_is_a_fact_not_an_empty_wall() {
+        // A file where the folder should be: read_dir refuses.
+        let blocked = std::env::temp_dir().join(format!(
+            "numinous-gallery-unreadable-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&blocked);
+        let _ = std::fs::remove_file(&blocked);
+        std::fs::write(&blocked, "a file where a folder must go").expect("blocker");
+
+        assert!(
+            discover(&blocked).is_none(),
+            "an unreadable folder is not an empty one"
+        );
+        let panel = GalleryPanel::open(&blocked);
+        let mut wall = Raster::new(600, 400);
+        panel.draw(&mut wall, 600, 400);
+        assert!(
+            wall.lit_count() > 50,
+            "the unreadable wall says so instead of claiming NOTHING SAVED"
+        );
+        let _ = std::fs::remove_file(&blocked);
+    }
+
+    #[test]
     fn a_full_wall_survives_every_short_window() {
         // A full wall at a short window drives the per-tile height through
         // the band where the caption's 14 reserved rows once underflowed the
@@ -379,11 +516,26 @@ mod tests {
         for index in 0..MAX_GALLERY_ENTRIES {
             save(&dir, &format!("c{index:02}.num"), "sin(x)");
         }
-        let panel = GalleryPanel::open(&dir);
+        let mut panel = GalleryPanel::open(&dir);
         for height in 40..=220 {
             let mut wall = Raster::new(600, height);
             panel.draw(&mut wall, 600, height);
         }
+
+        // Too short for thumbnails must not mean a blank wall with a live,
+        // invisible cursor: the named selection makes choosing sighted, so
+        // moving the cursor visibly changes the frame.
+        let mut before = Raster::new(600, 150);
+        panel.draw(&mut before, 600, 150);
+        assert!(before.lit_count() > 50, "the short wall still speaks");
+        panel.move_selection(1, 0);
+        let mut after = Raster::new(600, 150);
+        panel.draw(&mut after, 600, 150);
+        assert_ne!(
+            before.to_rgba(),
+            after.to_rgba(),
+            "the selection stays visible when tiles cannot draw"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 

@@ -5,6 +5,34 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- A second adversarial round read the whole creator arc as one system and
+  found ten more defects; all are fixed. The worst were quiet losses on the
+  share path. Re-sharing an untouched reopen rebuilt the capsule from its
+  numbers and silently stripped its title, author, and lineage; the pin now
+  holds the whole capsule, an untouched reopen re-shares its full identity,
+  and a fork still deliberately does not wear its parent's name. A share
+  taken during the 600 millisecond recipe morph wrote a postcard of the
+  blended curve that no reopen could reproduce; the postcard now draws the
+  settled expression the capsule actually records. The room and Life share
+  bundles could leave a half-written folder behind on failure; all three
+  bundle writers now share one all-or-nothing door.
+
+  The rest were wall and capsule robustness. The Gallery cursor wrapped
+  into the next row at a row edge instead of parking; it clamps per axis
+  now. A planted symlink named creation.num inside a bundle folder could
+  walk the wall outside the folder it claims to scan; the capsule must now
+  be a regular file. An unreadable home folder wore the empty wall's
+  NOTHING SAVED YET copy, telling the player their creations do not exist;
+  an unreadable folder now says so. A wall too short for thumbnails drew
+  nothing while keeping a live, invisible cursor that Enter still opened;
+  it now names the chosen creation so choosing stays sighted. A descends
+  link carrying a raw line break serialized a capsule no reopen could ever
+  read; link text is now held to line-safe characters at the door. A
+  lineage that cannot ride in a capsule was misreported as a broken
+  formula; it now carries its own refusal and its own banner. And the
+  wall's advertised F: FORK ignored Shift and Caps Lock; it no longer cares
+  about case.
+
 - Silent failures learned to speak, on all three faces. A hunt for errors
   that fail without saying so found one family everywhere it looked: the
   outcome the player sees did not depend on whether the work actually

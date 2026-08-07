@@ -112,6 +112,33 @@ pub(crate) fn write_life_loop(
     Ok(path)
 }
 
+/// Create a fresh exclusive bundle folder below `parent` and fill it, or
+/// discard it whole. Shared by every bundle writer, because a half-written
+/// share folder looks shareable and is not, whichever face wrote it.
+fn write_bundle_all_or_nothing(
+    parent: &Path,
+    room_id: &str,
+    fill: impl FnOnce(&Path) -> std::io::Result<()>,
+) -> std::io::Result<PathBuf> {
+    std::fs::create_dir_all(parent)?;
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let mut nonce = [0_u8; 16];
+    getrandom::fill(&mut nonce).map_err(std::io::Error::other)?;
+    let dir = numinous_core::create_share_bundle_dir(parent, room_id, stamp, nonce)?;
+    match fill(&dir) {
+        Ok(()) => Ok(dir),
+        Err(error) => {
+            // The folder above was created fresh with an unpredictable name,
+            // so discarding it discards only what this call wrote.
+            let _ = std::fs::remove_dir_all(&dir);
+            Err(error)
+        }
+    }
+}
+
 /// Package still + short loop + README into one share folder (CLI parity).
 pub(crate) fn write_room_share_bundle(
     room: &dyn Room,
@@ -121,49 +148,42 @@ pub(crate) fn write_room_share_bundle(
     variation: u64,
     parent: &Path,
 ) -> std::io::Result<PathBuf> {
-    std::fs::create_dir_all(parent)?;
-    let stamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    let mut nonce = [0_u8; 16];
-    getrandom::fill(&mut nonce).map_err(std::io::Error::other)?;
-    let dir = numinous_core::create_share_bundle_dir(parent, room.meta().id, stamp, nonce)?;
+    write_bundle_all_or_nothing(parent, room.meta().id, |dir| {
+        let postcard_path = dir.join("postcard.png");
+        let loop_path = dir.join("loop.png");
+        let postcard_rgba = render_room_postcard_rgba(room, phase, inputs, era);
+        let postcard_encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, &postcard_rgba)?;
+        write_png_file(&postcard_path, &postcard_encoded)?;
+        write_share_note(
+            &postcard_path,
+            room.meta().id,
+            era,
+            numinous_core::ShareKind::Postcard,
+        );
 
-    let postcard_path = dir.join("postcard.png");
-    let loop_path = dir.join("loop.png");
-    let postcard_rgba = render_room_postcard_rgba(room, phase, inputs, era);
-    let postcard_encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, &postcard_rgba)?;
-    write_png_file(&postcard_path, &postcard_encoded)?;
-    write_share_note(
-        &postcard_path,
-        room.meta().id,
-        era,
-        numinous_core::ShareKind::Postcard,
-    );
+        let frames = render_room_loop_frames(room, phase, inputs, era);
+        let loop_encoded = encode_rgba_apng(LOOP_SIZE, LOOP_SIZE, &frames)?;
+        write_png_file(&loop_path, &loop_encoded)?;
+        write_share_note(
+            &loop_path,
+            room.meta().id,
+            era,
+            numinous_core::ShareKind::Loop,
+        );
 
-    let frames = render_room_loop_frames(room, phase, inputs, era);
-    let loop_encoded = encode_rgba_apng(LOOP_SIZE, LOOP_SIZE, &frames)?;
-    write_png_file(&loop_path, &loop_encoded)?;
-    write_share_note(
-        &loop_path,
-        room.meta().id,
-        era,
-        numinous_core::ShareKind::Loop,
-    );
-
-    numinous_core::write_share_bundle_readme(
-        &dir,
-        &numinous_core::ShareBundleMeta {
-            room_id: room.meta().id.to_string(),
-            era: era.name().to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            variation,
-        },
-        true,
-        true,
-    )?;
-    Ok(dir)
+        numinous_core::write_share_bundle_readme(
+            dir,
+            &numinous_core::ShareBundleMeta {
+                room_id: room.meta().id.to_string(),
+                era: era.name().to_string(),
+                version: env!("CARGO_PKG_VERSION").to_string(),
+                variation,
+            },
+            true,
+            true,
+        )?;
+        Ok(())
+    })
 }
 
 /// Studio share bundle: the trio from one action. `creation.num` reopens the
@@ -177,23 +197,9 @@ pub(crate) fn write_studio_share_bundle(
     postcard_rgba: &[u8],
     parent: &Path,
 ) -> std::io::Result<PathBuf> {
-    std::fs::create_dir_all(parent)?;
-    let stamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    let mut nonce = [0_u8; 16];
-    getrandom::fill(&mut nonce).map_err(std::io::Error::other)?;
-    let dir = numinous_core::create_share_bundle_dir(parent, "studio", stamp, nonce)?;
-    match fill_studio_share_bundle(&dir, creation, postcard_rgba) {
-        Ok(()) => Ok(dir),
-        Err(error) => {
-            // The folder above was created fresh with an unpredictable name,
-            // so discarding it discards only what this call wrote.
-            let _ = std::fs::remove_dir_all(&dir);
-            Err(error)
-        }
-    }
+    write_bundle_all_or_nothing(parent, "studio", |dir| {
+        fill_studio_share_bundle(dir, creation, postcard_rgba)
+    })
 }
 
 fn fill_studio_share_bundle(
@@ -237,48 +243,41 @@ pub(crate) fn write_life_share_bundle(
     variation: u64,
     parent: &Path,
 ) -> std::io::Result<PathBuf> {
-    std::fs::create_dir_all(parent)?;
-    let stamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    let mut nonce = [0_u8; 16];
-    getrandom::fill(&mut nonce).map_err(std::io::Error::other)?;
-    let dir = numinous_core::create_share_bundle_dir(parent, room_id, stamp, nonce)?;
+    write_bundle_all_or_nothing(parent, room_id, |dir| {
+        let size = POSTCARD_SIZE as usize;
+        let mut raster = Raster::with_accent(size, size, accent);
+        session.render(&mut raster);
+        let mut rgba = raster.to_rgba();
+        era.apply(&mut rgba, size, size);
+        let postcard_path = dir.join("postcard.png");
+        let postcard_encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, &rgba)?;
+        write_png_file(&postcard_path, &postcard_encoded)?;
+        write_share_note(
+            &postcard_path,
+            room_id,
+            era,
+            numinous_core::ShareKind::Postcard,
+        );
 
-    let size = POSTCARD_SIZE as usize;
-    let mut raster = Raster::with_accent(size, size, accent);
-    session.render(&mut raster);
-    let mut rgba = raster.to_rgba();
-    era.apply(&mut rgba, size, size);
-    let postcard_path = dir.join("postcard.png");
-    let postcard_encoded = encode_rgba_png(POSTCARD_SIZE, POSTCARD_SIZE, &rgba)?;
-    write_png_file(&postcard_path, &postcard_encoded)?;
-    write_share_note(
-        &postcard_path,
-        room_id,
-        era,
-        numinous_core::ShareKind::Postcard,
-    );
+        let frames = render_life_loop_frames(session, accent, era);
+        let loop_path = dir.join("loop.png");
+        let loop_encoded = encode_rgba_apng(LOOP_SIZE, LOOP_SIZE, &frames)?;
+        write_png_file(&loop_path, &loop_encoded)?;
+        write_share_note(&loop_path, room_id, era, numinous_core::ShareKind::Loop);
 
-    let frames = render_life_loop_frames(session, accent, era);
-    let loop_path = dir.join("loop.png");
-    let loop_encoded = encode_rgba_apng(LOOP_SIZE, LOOP_SIZE, &frames)?;
-    write_png_file(&loop_path, &loop_encoded)?;
-    write_share_note(&loop_path, room_id, era, numinous_core::ShareKind::Loop);
-
-    numinous_core::write_share_bundle_readme(
-        &dir,
-        &numinous_core::ShareBundleMeta {
-            room_id: room_id.to_string(),
-            era: era.name().to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            variation,
-        },
-        true,
-        true,
-    )?;
-    Ok(dir)
+        numinous_core::write_share_bundle_readme(
+            dir,
+            &numinous_core::ShareBundleMeta {
+                room_id: room_id.to_string(),
+                era: era.name().to_string(),
+                version: env!("CARGO_PKG_VERSION").to_string(),
+                variation,
+            },
+            true,
+            true,
+        )?;
+        Ok(())
+    })
 }
 
 pub(crate) fn write_rendered_loop(
