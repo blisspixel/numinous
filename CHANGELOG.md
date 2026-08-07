@@ -5,6 +5,26 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The Gallery: a wall of saved creations, one keystroke from the Studio. F5
+  discovers the home folder and its share bundles, top-level `.num` files
+  plus each bundle's `creation.num`, one directory level deep with symlinks
+  skipped, every file through the same bounded core loader as the other
+  import doors, newest first and capped at 24 so the wall stays recent while
+  the folder stays the archive.
+
+  Every thumbnail is the creation's own curve over its own saved window at
+  its own saved knob, parsed once at discovery rather than per frame. A wall
+  that drew some other window would be advertising files it cannot deliver.
+  Arrows move a clamped tile cursor, Enter opens the chosen creation into the
+  Studio paused, through the same exact-reopen door as a dropped file or a
+  launch argument, and Esc steps back to the Studio underneath. Invalid,
+  oversized, and misnamed files are skipped rather than shown broken, and the
+  empty wall says how to fill it: F4 in the Studio shares a creation here.
+
+  Fork as a lineage-recording operation deliberately waits on the manifest
+  capsule, which is where descent can be recorded honestly; opening already
+  hands an editable copy to the Studio.
+
 - One press shares the whole Studio trio. F4 writes `creation.num`, a
   `postcard.png`, and a README carrying the `numinous://` link into one fresh
   exclusively created folder in the home directory, which is the second rung
