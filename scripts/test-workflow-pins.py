@@ -133,5 +133,82 @@ class RoundtripJobTests(unittest.TestCase):
         self.assertLess(twin, real)
 
 
+
+class MelodyDefaultTests(unittest.TestCase):
+    """The three faces disagree about a default melody length, on purpose.
+
+    Recorded so it cannot drift silently while an owner decides. Each face's
+    default is read from its own source, so this fails when a face changes and
+    the record does not follow, and it fails when a face is added without one.
+    """
+
+    CORE = ROOT / "crates" / "core" / "src" / "studio.rs"
+
+    def recorded(self) -> dict[str, int]:
+        text = self.CORE.read_text(encoding="utf-8")
+        block = re.search(
+            r"DEFAULT_MELODY_NOTES_PER_FACE:.*?=\s*\[(.*?)\];", text, re.S
+        )
+        self.assertIsNotNone(block, "the record is gone from studio.rs")
+        return {
+            name: int(count)
+            for name, count in re.findall(r'\("([a-z-]+)",\s*(\d+)\)', block.group(1))
+        }
+
+    def measured(self) -> dict[str, int]:
+        app = (ROOT / "faces" / "app" / "src" / "studio_panel.rs").read_text(encoding="utf-8")
+        cli = (ROOT / "faces" / "cli" / "src" / "main.rs").read_text(encoding="utf-8")
+        mcp = (ROOT / "faces" / "mcp" / "src" / "main.rs").read_text(encoding="utf-8")
+
+        app_notes = re.search(r"to_melody\(expr,\s*-TAU,\s*TAU,\s*(\d+),", app)
+        self.assertIsNotNone(app_notes, "the App Studio panel no longer sings a fixed count")
+
+        # The `notes` default sits in the Sing command block, not anywhere else
+        # in a file this large.
+        sing = re.search(r"Sing \{(.*?)\n    \},", cli, re.S)
+        self.assertIsNotNone(sing, "the CLI Sing command block moved")
+        cli_notes = re.search(
+            r"Number of notes\.\s*\n\s*#\[arg\(long, default_value_t = (\d+)\)\]", sing.group(1)
+        )
+        self.assertIsNotNone(cli_notes, "the CLI sing note default moved")
+
+        mcp_notes = re.search(
+            r'let notes = args\.get\("notes"\)\.and_then\(Value::as_u64\)\.unwrap_or\((\d+)\)',
+            mcp,
+        )
+        self.assertIsNotNone(mcp_notes, "the MCP sing note default moved")
+        return {
+            "app-studio-panel": int(app_notes.group(1)),
+            "cli-sing": int(cli_notes.group(1)),
+            "mcp-sing-expression": int(mcp_notes.group(1)),
+        }
+
+    def test_the_record_matches_what_each_face_actually_does(self):
+        self.assertEqual(self.recorded(), self.measured())
+
+    def test_the_record_is_deleted_once_the_faces_agree(self):
+        values = set(self.measured().values())
+        self.assertGreater(
+            len(values),
+            1,
+            "every face now sings the same default length, so delete "
+            "DEFAULT_MELODY_NOTES_PER_FACE and this test rather than keeping a "
+            "record of a disagreement that is over",
+        )
+
+    def test_the_disagreement_is_named_where_the_owner_reads(self):
+        section = (ROOT / "docs" / "ROADMAP.md").read_text(encoding="utf-8")
+        start = section.find("### Decisions the am-track is waiting on")
+        self.assertNotEqual(start, -1, "the roadmap has no decisions section")
+        end = section.find("\n### ", start + 10)
+        decisions = section[start:end]
+        for face in self.recorded():
+            self.assertIn(
+                face,
+                decisions,
+                f"{face} sings its own default length and is not named in the "
+                f"roadmap's decisions section",
+            )
+
 if __name__ == "__main__":
     unittest.main()
