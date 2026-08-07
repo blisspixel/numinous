@@ -21,7 +21,6 @@ use numinous_core::{
     draw_text, hidden_room_by_id, room_by_id,
 };
 
-const MAX_STUDIO_IMPORT_BYTES: u64 = 8 * 1024;
 const MAX_ENV_FILE_BYTES: u64 = 16 * 1024;
 const MAX_CLI_RENDER_WIDTH: usize = 4096;
 const MAX_CLI_RENDER_HEIGHT: usize = 4096;
@@ -2609,37 +2608,21 @@ fn load_studio_creation(input: &str) -> Result<numinous_core::StudioCreation, St
             .map_err(|_| "invalid Numinous Studio link\n".to_string());
     }
     let path = Path::new(input);
-    let file = File::open(path).map_err(|e| {
-        format!(
+    // The bounded read lives in the core loader every face shares; this face
+    // only owns how each refusal is spoken to a terminal.
+    numinous_core::StudioCreation::from_num_path(path).map_err(|error| match error {
+        numinous_core::NumFileError::Io(e) => format!(
             "could not read Studio .num file '{}': {e}\n",
             terminal_safe_path(path)
-        )
-    })?;
-    if file
-        .metadata()
-        .map(|metadata| metadata.len() > MAX_STUDIO_IMPORT_BYTES)
-        .unwrap_or(false)
-    {
-        return Err(format!(
-            "Studio .num file is too large; limit is {MAX_STUDIO_IMPORT_BYTES} bytes\n"
-        ));
-    }
-    let mut text = String::new();
-    file.take(MAX_STUDIO_IMPORT_BYTES + 1)
-        .read_to_string(&mut text)
-        .map_err(|e| {
-            format!(
-                "could not read Studio .num file '{}': {e}\n",
-                terminal_safe_path(path)
-            )
-        })?;
-    if text.len() as u64 > MAX_STUDIO_IMPORT_BYTES {
-        return Err(format!(
-            "Studio .num file is too large; limit is {MAX_STUDIO_IMPORT_BYTES} bytes\n"
-        ));
-    }
-    numinous_core::StudioCreation::from_num_file(&text)
-        .map_err(|_| "invalid Numinous Studio .num file\n".to_string())
+        ),
+        numinous_core::NumFileError::TooLarge => format!(
+            "Studio .num file is too large; limit is {} bytes\n",
+            numinous_core::MAX_SHARE_INPUT_BYTES
+        ),
+        numinous_core::NumFileError::Invalid(_) => {
+            "invalid Numinous Studio .num file\n".to_string()
+        }
+    })
 }
 
 fn open_studio_report(input: &str, width: usize, height: usize) -> Result<String, String> {
@@ -8480,11 +8463,8 @@ mod tests {
             "NUMINOUS_STUDIO 1\nexpr=x\u{1b}[31m\nxmin=-1\nxmax=1\na=1\n",
         )
         .expect("bad file");
-        std::fs::write(
-            &huge,
-            "x".repeat(super::MAX_STUDIO_IMPORT_BYTES as usize + 1),
-        )
-        .expect("huge file");
+        std::fs::write(&huge, "x".repeat(numinous_core::MAX_SHARE_INPUT_BYTES + 1))
+            .expect("huge file");
 
         let bad_err = load_studio_creation(bad.to_str().expect("utf8 path"))
             .expect_err("bad import rejected");
