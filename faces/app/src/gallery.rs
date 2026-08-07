@@ -174,7 +174,12 @@ impl GalleryPanel {
             let y0 = wall_top + (row * tile_height) as i32 + 2;
             let inner_width = tile_width.saturating_sub(8);
             let inner_height = tile_height.saturating_sub(4);
-            if inner_width < 12 || inner_height < 12 {
+            // The curve band gives up 14 rows to the caption below it, so a
+            // tile shorter than that would underflow the subtraction rather
+            // than merely draw badly. The saturating subtraction below is the
+            // belt; this guard is the suspenders that keep a drawn tile tall
+            // enough to mean something.
+            if inner_width < 12 || inner_height < 24 {
                 continue;
             }
             if index == self.selected {
@@ -189,8 +194,8 @@ impl GalleryPanel {
                 raster,
                 x0 + 2,
                 y0 + 2,
-                inner_width - 4,
-                inner_height - 14,
+                inner_width.saturating_sub(4),
+                inner_height.saturating_sub(14),
                 entry,
             );
             let label = tile_label(entry, inner_width);
@@ -350,6 +355,25 @@ mod tests {
         panel.move_selection(0, 9);
         panel.move_selection(9, 0);
         assert!(panel.selected_creation().is_some(), "edges clamp");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_full_wall_survives_every_short_window() {
+        // A full wall at a short window drives the per-tile height through
+        // the band where the caption's 14 reserved rows once underflowed the
+        // subtraction. Sweep the whole range, because the panicking height
+        // depends on the row count and picking one lucky value would prove
+        // nothing next time the layout changes.
+        let dir = scratch("short");
+        for index in 0..MAX_GALLERY_ENTRIES {
+            save(&dir, &format!("c{index:02}.num"), "sin(x)");
+        }
+        let panel = GalleryPanel::open(&dir);
+        for height in 40..=220 {
+            let mut wall = Raster::new(600, height);
+            panel.draw(&mut wall, 600, height);
+        }
         let _ = std::fs::remove_dir_all(&dir);
     }
 
