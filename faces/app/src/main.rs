@@ -25,6 +25,7 @@ mod audio_state;
 mod bindings;
 mod console;
 mod feedback;
+mod gallery;
 mod gamepad;
 mod hud;
 mod input_feedback;
@@ -351,6 +352,8 @@ struct App {
     studio: bool,
     /// The typed Studio expression and its last-good parse state.
     studio_panel: studio_panel::StudioPanel,
+    /// The Gallery wall over the Studio, while the player is browsing it.
+    gallery: Option<gallery::GalleryPanel>,
     /// Human-owned, read-only view of one explicitly paired MCP session.
     session_viewer: SessionViewer,
     /// Publishes each retained public sequence's sound at most once.
@@ -491,6 +494,7 @@ impl App {
             show_crossfade_frames: 0,
             studio: false,
             studio_panel: studio_panel::StudioPanel::default(),
+            gallery: None,
             session_viewer: SessionViewer::default(),
             session_audio: SessionAudio::default(),
             gpu: None,
@@ -1222,6 +1226,29 @@ impl App {
             self.studio_panel
                 .postcard_rgba(self.t, postcard::POSTCARD_SIZE as usize, self.era);
         postcard::write_studio_share_bundle(&creation, &rgba, parent).map(Some)
+    }
+
+    /// Move the Gallery cursor by whole tiles.
+    fn gallery_move(&mut self, dx: i32, dy: i32) {
+        if let Some(gallery) = &mut self.gallery {
+            gallery.move_selection(dx, dy);
+        }
+    }
+
+    /// Open the creation under the Gallery cursor: the wall closes and the
+    /// Studio holds the exact reopened state, paused like any other open.
+    fn gallery_open_selected(&mut self) {
+        let Some(creation) = self
+            .gallery
+            .as_ref()
+            .and_then(|gallery| gallery.selected_creation())
+            .cloned()
+        else {
+            return;
+        };
+        self.gallery = None;
+        self.open_studio_creation(&creation);
+        self.banner = Some(feedback::Banner::status("REOPENED  ENTER: PLAY", 90));
     }
 
     /// Soft juice when the player bites a number that does not fit the rule.
@@ -2553,6 +2580,9 @@ impl App {
 
     fn exit_studio(&mut self) {
         self.studio = false;
+        // Any route out of the Studio also leaves the Gallery, so a menu exit
+        // cannot strand the wall over a room.
+        self.gallery = None;
         if self.radio.is_none() || !self.sync_radio_to_wall_clock() {
             self.update_audio();
         }
@@ -3289,6 +3319,10 @@ impl App {
     }
 
     fn draw_studio(&self, raster: &mut Raster, width: usize, height: usize) {
+        if let Some(gallery) = &self.gallery {
+            gallery.draw(raster, width, height);
+            return;
+        }
         self.studio_panel.draw_with_controller(
             raster,
             self.input_mode,
@@ -3881,6 +3915,22 @@ impl ApplicationHandler for App {
                         }
                         _ => {}
                     }
+                } else if self.studio && self.gallery.is_some() {
+                    // The Gallery wall owns the keys while it is up: browse,
+                    // open, or step back to the Studio underneath.
+                    match logical_key {
+                        Key::Named(NamedKey::Escape)
+                        | Key::Named(NamedKey::Tab)
+                        | Key::Named(NamedKey::F5) => {
+                            self.gallery = None;
+                        }
+                        Key::Named(NamedKey::Enter) => self.gallery_open_selected(),
+                        Key::Named(NamedKey::ArrowLeft) => self.gallery_move(-1, 0),
+                        Key::Named(NamedKey::ArrowRight) => self.gallery_move(1, 0),
+                        Key::Named(NamedKey::ArrowUp) => self.gallery_move(0, -1),
+                        Key::Named(NamedKey::ArrowDown) => self.gallery_move(0, 1),
+                        _ => {}
+                    }
                 } else if self.studio {
                     // Studio mode: the keyboard is a math keyboard.
                     match logical_key {
@@ -3894,6 +3944,14 @@ impl ApplicationHandler for App {
                         }
                         Key::Named(NamedKey::F1) => {
                             self.studio_panel.toggle_help();
+                        }
+                        Key::Named(NamedKey::F5) => {
+                            // The wall of saved creations, discovered fresh on
+                            // every open so a new share appears without a
+                            // restart.
+                            self.gallery = Some(gallery::GalleryPanel::open(
+                                &postcard::default_postcard_dir(),
+                            ));
                         }
                         Key::Named(NamedKey::F2) => {
                             // Formula Jam Random: draw a curated, tested recipe.
@@ -6898,6 +6956,52 @@ mod tests {
         bad.open_start_input("numinous://studio?expr=x&xmin=-1&xmax=1&a=%");
         assert!(!bad.studio, "an invalid link opens nothing");
         assert!(bad.banner.is_some(), "the refusal says why");
+    }
+
+    #[test]
+    fn the_gallery_wall_opens_a_saved_creation_paused() {
+        let mut app = headless("numinous_app_test_gallery.txt");
+        let parent =
+            std::env::temp_dir().join(format!("numinous-gallery-open-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&parent);
+        std::fs::create_dir_all(&parent).expect("parent");
+        let creation =
+            numinous_core::StudioCreation::new("sin(a*x)", 0.0, 2.0, 0.5).expect("creation");
+        std::fs::write(parent.join("mine.num"), creation.to_num_file()).expect("write");
+
+        app.enter_studio();
+        app.gallery = Some(crate::gallery::GalleryPanel::open(&parent));
+        assert_eq!(
+            app.gallery.as_ref().map(crate::gallery::GalleryPanel::len),
+            Some(1)
+        );
+
+        app.gallery_open_selected();
+        assert!(app.gallery.is_none(), "opening closes the wall");
+        assert!(app.studio, "the opened creation lands in the Studio");
+        assert!(
+            app.studio_panel.opened_paused(),
+            "opened like any other open"
+        );
+        assert_eq!(app.studio_panel.source_for_test(), "sin(a*x)");
+
+        // Leaving the Studio also leaves the wall.
+        app.gallery = Some(crate::gallery::GalleryPanel::open(&parent));
+        app.exit_studio();
+        assert!(app.gallery.is_none());
+
+        // An empty wall opens nothing and stays up.
+        let empty_parent =
+            std::env::temp_dir().join(format!("numinous-gallery-empty-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&empty_parent);
+        std::fs::create_dir_all(&empty_parent).expect("empty parent");
+        app.enter_studio();
+        app.gallery = Some(crate::gallery::GalleryPanel::open(&empty_parent));
+        app.gallery_open_selected();
+        assert!(app.gallery.is_some(), "nothing to open leaves the wall up");
+
+        let _ = std::fs::remove_dir_all(&parent);
+        let _ = std::fs::remove_dir_all(&empty_parent);
     }
 
     #[test]

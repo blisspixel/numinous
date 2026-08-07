@@ -114,6 +114,12 @@ shared is the exact curve on screen at that moment, knob and all. A formula
 that does not parse is refused with FIX THE FORMULA TO SHARE rather than
 shared as whatever last worked.
 
+F5 opens the Gallery: a wall of saved creations discovered from the same home
+folder and its share bundles, newest first, each drawn as its own exact curve
+over its own saved window. Arrows choose a tile, Enter opens it paused into
+the Studio like any other reopen, and Esc steps back. The wall is discovered
+fresh each time it opens, so a new share appears without a restart.
+
 **Power console (` or ~).** For hackery power users, not the first-time path.
 Press backtick or tilde to open a bottom command line (Esc or the same key
 closes it). Useful commands:

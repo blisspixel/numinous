@@ -53,6 +53,12 @@ fork with one keystroke. Fork opens a copy in the Studio with lineage recorded.
 Start local-first (a folder of `.num` files rendered as live thumbnails) so it
 ships before any server exists. Fork must be as cheap as play; the remixers are
 the engine of a creative community (the Scratch research is explicit on this).
+The local wall is built for expression capsules: F5 in the Studio discovers
+the folder the share keys write into, draws each creation's exact curve
+newest first, and Enter opens one paused. Opening already hands an editable
+copy to the Studio; fork as a lineage-recording operation waits on the
+manifest capsule from item 1, because the v1 file has nowhere to record
+descent and pretending otherwise would be worse than waiting.
 
 **4. Lineage that credits generously.** Every fork records "descends from,"
 building a visible remix tree, but avoid the failure Scratch's own researchers
