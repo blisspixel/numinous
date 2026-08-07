@@ -371,6 +371,9 @@ struct App {
     show_help: bool,
     /// Start in fullscreen (from --fullscreen / -f arg or env). Supports user's request for full screen view.
     start_fullscreen: bool,
+    /// A `.num` path or `numinous://` link from the launch arguments, opened
+    /// into the Studio once the window exists. The file is a front door.
+    start_open: Option<String>,
     /// Presentation frame counter for animation and game cadence.
     frame: u64,
     /// Elapsed-time anchor, so motion does not depend on event-loop load.
@@ -498,6 +501,7 @@ impl App {
             audio_program: AudioProgram::RoomScore,
             show_help: true,
             start_fullscreen: false,
+            start_open: None,
             frame: 0,
             motion: numinous_core::Motion::from_env(),
             last_tick: Instant::now(),
@@ -1288,6 +1292,13 @@ impl App {
     }
 
     fn enter_studio(&mut self) {
+        self.enter_studio_shell();
+        self.studio_reparse();
+    }
+
+    /// Enter Studio mode without touching the panel's formula or voice, so a
+    /// reopened creation is not resung by the entry itself.
+    fn enter_studio_shell(&mut self) {
         self.the_show = false;
         self.paused = false;
         self.show_help = false;
@@ -1297,10 +1308,95 @@ impl App {
         if let Some(player) = &self.player {
             player.clear_oneshot();
         }
-        self.studio_reparse();
         if let Some(window) = &self.window {
             window.set_title(&self.title());
         }
+    }
+
+    /// Reopen a saved creation in the Studio, exactly and paused.
+    ///
+    /// The panel pins the saved window and knob; the entry submits silence so
+    /// whatever program was playing does not keep sounding under a preview
+    /// that has deliberately not started singing yet.
+    fn open_studio_creation(&mut self, creation: &numinous_core::StudioCreation) {
+        // A quiz is stateless and would otherwise keep owning the keyboard
+        // over the newly opened Studio; scored runs are guarded at the door
+        // in open_dropped_file instead of being silently abandoned here.
+        self.quiz = None;
+        self.studio_panel.open_creation(creation);
+        self.enter_studio_shell();
+        self.set_studio_sound(Some(numinous_core::SoundSpec {
+            duration: 0.12,
+            notes: Vec::new(),
+        }));
+    }
+
+    /// Enter confirms a paused reopened preview: the creation starts singing.
+    fn studio_confirm_opened(&mut self) {
+        if let Some(spec) = self.studio_panel.confirm_opened() {
+            self.set_studio_sound(Some(spec));
+        }
+    }
+
+    /// Open a `.num` file from disk into the Studio, or say briefly why not.
+    fn open_num_file(&mut self, path: &std::path::Path) {
+        match numinous_core::StudioCreation::from_num_path(path) {
+            Ok(creation) => {
+                self.open_studio_creation(&creation);
+                self.banner = Some(feedback::Banner::status("REOPENED  ENTER: PLAY", 90));
+            }
+            Err(error) => {
+                let line = match error {
+                    numinous_core::NumFileError::Io(_) => "COULD NOT READ THE .NUM FILE",
+                    numinous_core::NumFileError::TooLarge => "THE .NUM FILE IS TOO LARGE",
+                    numinous_core::NumFileError::Invalid(_) => "NOT A VALID .NUM CREATION",
+                };
+                self.banner = Some(feedback::Banner::status(line, 90));
+            }
+        }
+    }
+
+    /// A file dropped on the window: only a `.num` creation opens here.
+    fn open_dropped_file(&mut self, path: &std::path::Path) {
+        // A scored run in progress is not abandoned by a stray drop; the
+        // player finishes or leaves it themselves, then drops again.
+        if self.gauntlet.is_some()
+            || self.munch.is_some()
+            || self.nim.is_some()
+            || self.arcade.is_some()
+            || self.session_viewer.is_open()
+        {
+            self.banner = Some(feedback::Banner::status("FINISH THE GAME FIRST", 90));
+            return;
+        }
+        let is_num = path
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("num"));
+        if !is_num {
+            self.banner = Some(feedback::Banner::status(
+                "ONLY .NUM CREATIONS OPEN HERE",
+                90,
+            ));
+            return;
+        }
+        self.open_num_file(path);
+    }
+
+    /// The launch-argument front door: a `.num` path or a `numinous://` link.
+    fn open_start_input(&mut self, input: &str) {
+        if input.starts_with("numinous://") {
+            match numinous_core::StudioCreation::from_link(input) {
+                Ok(creation) => {
+                    self.open_studio_creation(&creation);
+                    self.banner = Some(feedback::Banner::status("REOPENED  ENTER: PLAY", 90));
+                }
+                Err(_) => {
+                    self.banner = Some(feedback::Banner::status("NOT A VALID NUMINOUS LINK", 90));
+                }
+            }
+            return;
+        }
+        self.open_num_file(std::path::Path::new(input));
     }
 
     fn open_session_viewer(&mut self) {
@@ -3600,6 +3696,9 @@ impl ApplicationHandler for App {
         self.level_seen = self.journey.level();
         self.visit_current();
         self.update_audio();
+        if let Some(input) = self.start_open.take() {
+            self.open_start_input(&input);
+        }
     }
 
     fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
@@ -3748,6 +3847,11 @@ impl ApplicationHandler for App {
                     match logical_key {
                         Key::Named(NamedKey::Escape) | Key::Named(NamedKey::Tab) => {
                             self.exit_studio();
+                        }
+                        Key::Named(NamedKey::Enter) => {
+                            // A reopened creation waits in a paused preview;
+                            // Enter is the consent that starts it singing.
+                            self.studio_confirm_opened();
                         }
                         Key::Named(NamedKey::F1) => {
                             self.studio_panel.toggle_help();
@@ -4093,6 +4197,9 @@ impl ApplicationHandler for App {
                         self.set_pointer_state(mouse_input::pointer_state_after_left_release());
                     }
                 }
+            }
+            WindowEvent::DroppedFile(path) => {
+                self.open_dropped_file(&path);
             }
             WindowEvent::Focused(false) => {
                 self.suspend_presentation_clock(Instant::now());
@@ -4447,6 +4554,16 @@ fn main() {
         .iter()
         .any(|a| a == "--fullscreen" || a == "-f" || a == "-F")
         || env_full;
+    // A `.num` path or `numinous://` link opens straight into the Studio,
+    // reopened exactly and paused. The capsule file is a front door: opening
+    // it should feel like inserting a cart, not importing a document.
+    app.start_open = args
+        .iter()
+        .skip(1)
+        .find(|argument| {
+            argument.starts_with("numinous://") || argument.to_ascii_lowercase().ends_with(".num")
+        })
+        .cloned();
     event_loop.run_app(&mut app).expect("run the app");
 }
 
@@ -6675,6 +6792,63 @@ mod tests {
         assert!(app.radio_until.is_some());
         assert!(app.title().contains("radio:"));
         let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn a_dropped_num_creation_reopens_exactly_paused_then_enter_sings() {
+        let mut app = headless("numinous_app_test_reopen.txt");
+        let path = std::env::temp_dir().join("numinous_app_reopen_test.num");
+        let creation =
+            numinous_core::StudioCreation::new("sin(a*x)", 0.0, 2.0, 0.5).expect("creation");
+        std::fs::write(&path, creation.to_num_file()).expect("write");
+
+        app.open_dropped_file(&path);
+        assert!(app.studio, "a dropped creation opens the Studio");
+        assert_eq!(app.audio_program, AudioProgram::Studio);
+        assert!(
+            app.studio_panel.opened_paused(),
+            "the preview waits for consent before singing"
+        );
+        assert_eq!(app.studio_panel.source_for_test(), "sin(a*x)");
+
+        app.studio_confirm_opened();
+        assert!(
+            !app.studio_panel.opened_paused(),
+            "Enter starts the singing"
+        );
+        assert_eq!(app.audio_program, AudioProgram::Studio);
+
+        // A non-num drop is refused without touching the Studio.
+        let mut fresh = headless("numinous_app_test_reopen_refuse.txt");
+        let stray = std::env::temp_dir().join("numinous_app_reopen_stray.txt");
+        std::fs::write(&stray, "not a capsule").expect("write");
+        fresh.open_dropped_file(&stray);
+        assert!(!fresh.studio, "only .num creations open here");
+        assert!(fresh.banner.is_some(), "the refusal says why");
+        let _ = std::fs::remove_file(&stray);
+
+        // A scored run in progress is never abandoned by a stray drop.
+        let mut playing = headless("numinous_app_test_reopen_midgame.txt");
+        playing.nim_start();
+        playing.open_dropped_file(&path);
+        assert!(!playing.studio, "a run in progress holds the door");
+        assert!(playing.nim.is_some(), "the run survives the drop");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn the_launch_argument_front_door_opens_files_and_links() {
+        let mut app = headless("numinous_app_test_start_open.txt");
+        let creation = numinous_core::StudioCreation::new("x*x", -1.0, 1.0, 0.0).expect("creation");
+        app.open_start_input(&creation.to_link());
+        assert!(app.studio, "a link argument opens the Studio");
+        assert!(app.studio_panel.opened_paused());
+        assert_eq!(app.studio_panel.source_for_test(), "x*x");
+
+        let mut bad = headless("numinous_app_test_start_open_bad.txt");
+        bad.open_start_input("numinous://studio?expr=x&xmin=-1&xmax=1&a=%");
+        assert!(!bad.studio, "an invalid link opens nothing");
+        assert!(bad.banner.is_some(), "the refusal says why");
     }
 
     #[test]

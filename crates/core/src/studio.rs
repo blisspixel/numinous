@@ -157,6 +157,29 @@ impl StudioCreation {
         )
     }
 
+    /// Load a `.num` file from disk without trusting its size.
+    ///
+    /// Reads at most one byte past [`MAX_SHARE_INPUT_BYTES`] so a huge file
+    /// cannot drive a huge allocation, then hands the text to
+    /// [`Self::from_num_file`], which re-checks the same bound at its own
+    /// door; a parser must not trust its caller.
+    ///
+    /// # Errors
+    /// Returns a [`NumFileError`] naming which door refused: the read, the
+    /// byte cap, or the format.
+    pub fn from_num_path(path: &std::path::Path) -> Result<Self, NumFileError> {
+        use std::io::Read;
+        let file = std::fs::File::open(path).map_err(NumFileError::Io)?;
+        let mut text = String::new();
+        file.take(MAX_SHARE_INPUT_BYTES as u64 + 1)
+            .read_to_string(&mut text)
+            .map_err(NumFileError::Io)?;
+        if text.len() > MAX_SHARE_INPUT_BYTES {
+            return Err(NumFileError::TooLarge);
+        }
+        Self::from_num_file(&text).map_err(NumFileError::Invalid)
+    }
+
     /// Produce a native `numinous://` Studio link for this creation.
     #[must_use]
     pub fn to_link(&self) -> String {
@@ -215,8 +238,27 @@ impl StudioCreation {
 /// fields, one a 512-char expression, need only a few hundred bytes; this cap
 /// is generous headroom. A hostile input parser must bound its own byte count
 /// rather than trust its caller, so this check lives at the door of both
-/// import paths, not only in the faces that happen to read files.
-const MAX_SHARE_INPUT_BYTES: usize = 8 * 1024;
+/// import paths, not only in the faces that happen to read files. Public so a
+/// face that reads a `.num` from disk can name the same number in its own
+/// error copy instead of keeping a twin constant that drifts.
+pub const MAX_SHARE_INPUT_BYTES: usize = 8 * 1024;
+
+/// Why a `.num` file failed to load from disk.
+///
+/// Typed rather than a message because the faces speak differently about the
+/// same refusal: the terminal face prints the path and the io error, the App
+/// shows one short footer line. One loader with named reasons keeps the byte
+/// cap and the read order in one place instead of one bounded reader per face,
+/// which is the kind of second copy that drifts.
+#[derive(Debug)]
+pub enum NumFileError {
+    /// The file could not be opened or read as UTF-8 text.
+    Io(std::io::Error),
+    /// The file holds more than [`MAX_SHARE_INPUT_BYTES`] bytes.
+    TooLarge,
+    /// The bytes read do not describe a valid Studio creation.
+    Invalid(String),
+}
 
 /// The widest a share's x-range or parameter may reach. Well past any real
 /// plot, and far below the point where the f64-to-pixel casts would matter,
@@ -1088,6 +1130,53 @@ mod tests {
         // Absurd magnitudes are refused even when finite.
         assert!(StudioCreation::new("x".to_string(), -1e300, 1e300, 1.0).is_err());
         assert!(StudioCreation::new("x".to_string(), -1.0, 1.0, 1e300).is_err());
+    }
+
+    #[test]
+    fn num_files_load_from_disk_through_one_bounded_door() {
+        // Every face that reads a `.num` from disk goes through this loader,
+        // so the byte cap, the read order, and the refusal reasons are proved
+        // once here rather than once per face.
+        let dir = std::env::temp_dir();
+
+        let good = dir.join("numinous_core_from_num_path_good.num");
+        let creation = StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.5).expect("creation");
+        std::fs::write(&good, creation.to_num_file()).expect("write good");
+        let reopened = StudioCreation::from_num_path(&good).expect("reopen");
+        assert_eq!(reopened, creation, "a reopen is exact, not approximate");
+        let _ = std::fs::remove_file(&good);
+
+        let missing = dir.join("numinous_core_from_num_path_missing.num");
+        let _ = std::fs::remove_file(&missing);
+        assert!(matches!(
+            StudioCreation::from_num_path(&missing),
+            Err(super::NumFileError::Io(_))
+        ));
+
+        let huge = dir.join("numinous_core_from_num_path_huge.num");
+        std::fs::write(&huge, "x".repeat(super::MAX_SHARE_INPUT_BYTES + 1)).expect("write huge");
+        assert!(matches!(
+            StudioCreation::from_num_path(&huge),
+            Err(super::NumFileError::TooLarge)
+        ));
+        let _ = std::fs::remove_file(&huge);
+
+        let invalid = dir.join("numinous_core_from_num_path_invalid.num");
+        std::fs::write(&invalid, "not a studio file\n").expect("write invalid");
+        assert!(matches!(
+            StudioCreation::from_num_path(&invalid),
+            Err(super::NumFileError::Invalid(_))
+        ));
+        let _ = std::fs::remove_file(&invalid);
+
+        // Bytes that are not UTF-8 are a read refusal, never a panic.
+        let binary = dir.join("numinous_core_from_num_path_binary.num");
+        std::fs::write(&binary, [0xFFu8, 0xFE, 0x00, 0x01]).expect("write binary");
+        assert!(matches!(
+            StudioCreation::from_num_path(&binary),
+            Err(super::NumFileError::Io(_))
+        ));
+        let _ = std::fs::remove_file(&binary);
     }
 
     // A seeded totality harness for the untrusted-input surface. EXTENSIBILITY.md
