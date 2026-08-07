@@ -33,7 +33,12 @@ fn entry_at(path: PathBuf) -> Option<GalleryEntry> {
     // shown as a broken tile. Symlinks were already skipped by the caller.
     let creation = StudioCreation::from_num_path(&path).ok()?;
     let expr = numinous_core::parse(creation.source()).ok()?;
-    let modified = std::fs::metadata(&path).ok()?.modified().ok()?;
+    // A filesystem that cannot answer for the timestamp must not hide the
+    // creation itself: the file opened and parsed, so it belongs on the
+    // wall, merely sorted as oldest.
+    let modified = std::fs::metadata(&path)
+        .and_then(|metadata| metadata.modified())
+        .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
     Some(GalleryEntry {
         path,
         creation,

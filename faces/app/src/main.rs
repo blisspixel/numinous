@@ -304,6 +304,14 @@ fn selected_room_interaction_audio(
         .filter(|samples| !samples.is_empty())
 }
 
+/// Which local store had save trouble. The journey and the scores fail
+/// independently, so each carries its own once-per-spell warning latch.
+#[derive(Clone, Copy)]
+enum SaveStore {
+    Journey,
+    Scores,
+}
+
 /// The application state driven by the winit event loop.
 struct App {
     /// How much the world may move on its own. Read once at construction, so
@@ -374,6 +382,16 @@ struct App {
     show_help: bool,
     /// Start in fullscreen (from --fullscreen / -f arg or env). Supports user's request for full screen view.
     start_fullscreen: bool,
+    /// Whether the player has already been told the journey file is failing,
+    /// so one trouble spell warns once instead of on every play.
+    journey_save_warned: bool,
+    /// The same spell for the scores file, held separately: the two stores
+    /// fail independently, so one must not speak for the other.
+    score_save_warned: bool,
+    /// Where this App writes its diagnostics. The real crash log in the
+    /// player's home by default; headless tests point it at scratch so a
+    /// test failure cannot append to a real player's file.
+    crash_log: std::path::PathBuf,
     /// A `.num` path or `numinous://` link from the launch arguments, opened
     /// into the Studio once the window exists. The file is a front door.
     start_open: Option<String>,
@@ -505,6 +523,9 @@ impl App {
             audio_program: AudioProgram::RoomScore,
             show_help: true,
             start_fullscreen: false,
+            journey_save_warned: false,
+            score_save_warned: false,
+            crash_log: crash_log_path(),
             start_open: None,
             frame: 0,
             motion: numinous_core::Motion::from_env(),
@@ -549,18 +570,62 @@ impl App {
         }
     }
 
+    /// Say once, on screen and in the crash log, that a local save is
+    /// failing. This method persists nothing itself; it only reports.
+    ///
+    /// Progress files are the player's own history: a write that fails
+    /// silently lets a whole session evaporate at exit with nothing ever
+    /// said. Each store carries its own trouble spell, so one failing file
+    /// cannot nag through the other's successes and one healthy file cannot
+    /// silence the other's warning. Every failure is logged; the banner
+    /// shows once per spell, and returns true when it was raised so the
+    /// caller can keep a celebration from painting over it.
+    fn report_save_trouble(
+        &mut self,
+        store: SaveStore,
+        what: &str,
+        error: &dyn std::fmt::Display,
+    ) -> bool {
+        let _ = append_crash_log_at(&self.crash_log, &format!("{what} failed: {error}\n"));
+        let (warned, line) = match store {
+            SaveStore::Journey => (
+                &mut self.journey_save_warned,
+                "PROGRESS IS NOT SAVING  SEE .NUMINOUS-CRASH.LOG",
+            ),
+            SaveStore::Scores => (
+                &mut self.score_save_warned,
+                "SCORES ARE NOT SAVING  SEE .NUMINOUS-CRASH.LOG",
+            ),
+        };
+        if *warned {
+            return false;
+        }
+        *warned = true;
+        self.banner = Some(feedback::Banner::status(line, 180));
+        true
+    }
+
     /// Persist the journey and raise the Journey banner when the level moves.
+    ///
+    /// A save-trouble warning outranks the celebration: a level-up banner
+    /// painted over the one warning of a trouble spell would restore the
+    /// exact silence the warning exists to break.
     fn journey_changed(&mut self) {
-        if let Ok(saved) = numinous_core::persist_journey_delta(
+        let warned_now = match numinous_core::persist_journey_delta(
             &self.journey_file,
             &self.journey_saved,
             &self.journey,
         ) {
-            self.journey = saved.clone();
-            self.journey_saved = saved;
-        }
+            Ok(saved) => {
+                self.journey = saved.clone();
+                self.journey_saved = saved;
+                self.journey_save_warned = false;
+                false
+            }
+            Err(error) => self.report_save_trouble(SaveStore::Journey, "journey save", &error),
+        };
         let level = self.journey.level();
-        if level > self.level_seen {
+        if level > self.level_seen && !warned_now {
             self.banner = Some(feedback::level_up(level, self.journey.boons_available()));
         }
         self.level_seen = level;
@@ -606,8 +671,19 @@ impl App {
     }
 
     /// Post a score to the shared table (the CLI's file and rules).
-    fn post_score(&self, key: &str, score: i64) -> bool {
-        numinous_core::record_score_file(&self.scores_file, key, score).unwrap_or(false)
+    fn post_score(&mut self, key: &str, score: i64) -> bool {
+        // A write failure must not wear the same face as "not a new best":
+        // that costume hides both the lost score and the reason it was lost.
+        match numinous_core::record_score_file(&self.scores_file, key, score) {
+            Ok(best) => {
+                self.score_save_warned = false;
+                best
+            }
+            Err(error) => {
+                self.report_save_trouble(SaveStore::Scores, "score save", &error);
+                false
+            }
+        }
     }
 
     /// Deal a Munch board (today's).
@@ -1103,11 +1179,30 @@ impl App {
         }
     }
 
-    /// Write the current room's frame to a PNG next to the save files: the
-    /// postcard key. Returns the path it wrote.
-    fn save_postcard(&self) -> Option<std::path::PathBuf> {
-        self.save_postcard_to(&postcard::default_postcard_dir())
-            .ok()
+    /// Report a file-producing key's outcome. Success names the path in the
+    /// window title as always; failure says so on screen and in the crash
+    /// log, because a save key that fails silently looks exactly like a save
+    /// key that worked.
+    fn report_export_outcome(
+        &mut self,
+        success_label: &str,
+        failure_line: &'static str,
+        outcome: std::io::Result<std::path::PathBuf>,
+    ) {
+        match outcome {
+            Ok(path) => {
+                if let Some(window) = &self.window {
+                    window.set_title(&format!("Numinous  |  {success_label}: {}", path.display()));
+                }
+            }
+            Err(error) => {
+                let _ = append_crash_log_at(
+                    &self.crash_log,
+                    &format!("{success_label} failed: {error}\n"),
+                );
+                self.banner = Some(feedback::Banner::status(failure_line, 90));
+            }
+        }
     }
 
     fn save_postcard_to(&self, dir: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
@@ -1136,9 +1231,13 @@ impl App {
 
     /// Write a short looping APNG of the current visit: one phase cycle, or
     /// advancing Life generations for the persistent Game of Life session.
-    fn save_short_loop(&self) -> Option<std::path::PathBuf> {
-        self.save_short_loop_to(&postcard::default_postcard_dir())
-            .ok()
+    fn save_short_loop(&mut self) {
+        let outcome = self.save_short_loop_to(&postcard::default_postcard_dir());
+        self.report_export_outcome(
+            "loop saved",
+            "LOOP SAVE FAILED  SEE .NUMINOUS-CRASH.LOG",
+            outcome,
+        );
     }
 
     fn save_short_loop_to(&self, dir: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
@@ -1162,9 +1261,23 @@ impl App {
     }
 
     /// Package postcard + loop + README into one share folder (CLI parity).
-    fn save_share_bundle(&self) -> Option<std::path::PathBuf> {
-        self.save_share_bundle_to(&postcard::default_postcard_dir())
-            .ok()
+    fn save_share_bundle(&mut self) {
+        let outcome = self.save_share_bundle_to(&postcard::default_postcard_dir());
+        self.report_export_outcome(
+            "share pack",
+            "SHARE PACK FAILED  SEE .NUMINOUS-CRASH.LOG",
+            outcome,
+        );
+    }
+
+    /// Write the current room's postcard PNG: the P key.
+    fn save_postcard(&mut self) {
+        let outcome = self.save_postcard_to(&postcard::default_postcard_dir());
+        self.report_export_outcome(
+            "postcard saved",
+            "POSTCARD FAILED  SEE .NUMINOUS-CRASH.LOG",
+            outcome,
+        );
     }
 
     fn save_share_bundle_to(&self, dir: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
@@ -1191,12 +1304,19 @@ impl App {
 
     /// The Studio share trio on one key: `creation.num`, the link in the
     /// README, and the postcard, into one fresh share folder.
+    ///
+    /// Success and failure both speak through the shared export reporter;
+    /// the writer discards its own partial folder on failure, so the failure
+    /// line stays short rather than promising a cleanup state it cannot
+    /// fully guarantee.
     fn share_studio_creation(&mut self) {
         match self.share_studio_creation_to(&postcard::default_postcard_dir()) {
             Ok(Some(dir)) => {
-                if let Some(window) = &self.window {
-                    window.set_title(&format!("Numinous  |  studio share: {}", dir.display()));
-                }
+                self.report_export_outcome(
+                    "studio share",
+                    "SHARE FAILED  SEE .NUMINOUS-CRASH.LOG",
+                    Ok(dir),
+                );
                 self.banner = Some(feedback::Banner::status("SHARED  .NUM + LINK + PNG", 90));
             }
             Ok(None) => {
@@ -1204,11 +1324,12 @@ impl App {
                 // the way forward instead of silently sharing the last-good.
                 self.banner = Some(feedback::Banner::status("FIX THE FORMULA TO SHARE", 90));
             }
-            Err(_) => {
-                // The writer discards its own partial folder on failure, so
-                // this stays short rather than promising a cleanup state it
-                // cannot fully guarantee.
-                self.banner = Some(feedback::Banner::status("SHARE FAILED", 90));
+            Err(error) => {
+                self.report_export_outcome(
+                    "studio share",
+                    "SHARE FAILED  SEE .NUMINOUS-CRASH.LOG",
+                    Err(error),
+                );
             }
         }
     }
@@ -3796,8 +3917,8 @@ impl ApplicationHandler for App {
                 // Silence must never be a mystery: say it on screen and in
                 // the crash log, then keep running visual-only.
                 self.banner = Some(feedback::sound_device_unavailable(&error));
-                let path = crash_log_path();
-                let _ = append_crash_log_at(&path, &format!("audio open failed: {error}\n"));
+                let _ =
+                    append_crash_log_at(&self.crash_log, &format!("audio open failed: {error}\n"));
                 None
             }
         };
@@ -3828,11 +3949,18 @@ impl ApplicationHandler for App {
         match event {
             WindowEvent::CloseRequested => {
                 self.session_viewer.close();
-                let _ = numinous_core::persist_journey_delta(
+                // The window is closing, so a banner has nowhere to live; the
+                // crash log is the one place this failure can still speak.
+                if let Err(error) = numinous_core::persist_journey_delta(
                     &self.journey_file,
                     &self.journey_saved,
                     &self.journey,
-                );
+                ) {
+                    let _ = append_crash_log_at(
+                        &self.crash_log,
+                        &format!("journey save at exit failed: {error}\n"),
+                    );
+                }
                 event_loop.exit();
             }
             WindowEvent::RedrawRequested => self.draw(),
@@ -4212,13 +4340,8 @@ impl ApplicationHandler for App {
                                 save_gate::SaveKind::Postcard,
                                 Instant::now(),
                                 repeat,
-                            ) && let Some(path) = self.save_postcard()
-                                && let Some(window) = &self.window
-                            {
-                                window.set_title(&format!(
-                                    "Numinous  |  postcard saved: {}",
-                                    path.display()
-                                ));
+                            ) {
+                                self.save_postcard();
                             }
                         }
                         // L keeps the motion: a short looping APNG of this visit.
@@ -4227,13 +4350,8 @@ impl ApplicationHandler for App {
                                 save_gate::SaveKind::ShortLoop,
                                 Instant::now(),
                                 repeat,
-                            ) && let Some(path) = self.save_short_loop()
-                                && let Some(window) = &self.window
-                            {
-                                window.set_title(&format!(
-                                    "Numinous  |  loop saved: {}",
-                                    path.display()
-                                ));
+                            ) {
+                                self.save_short_loop();
                             }
                         }
                         // K packs still + loop + README into one share folder.
@@ -4242,13 +4360,8 @@ impl ApplicationHandler for App {
                                 save_gate::SaveKind::ShareBundle,
                                 Instant::now(),
                                 repeat,
-                            ) && let Some(path) = self.save_share_bundle()
-                                && let Some(window) = &self.window
-                            {
-                                window.set_title(&format!(
-                                    "Numinous  |  share pack: {}",
-                                    path.display()
-                                ));
+                            ) {
+                                self.save_share_bundle();
                             }
                         }
                         // B for the big show (lean back).
@@ -4736,8 +4849,12 @@ mod tests {
         app.journey_saved = app.journey.clone();
         app.journey_file = super::test_state_path(name);
         app.scores_file = app.journey_file.with_extension("scores");
+        // Diagnostics stay in scratch too: a test must never append to a
+        // real player's crash log.
+        app.crash_log = app.journey_file.with_extension("crash.log");
         let _ = std::fs::remove_file(&app.journey_file);
         let _ = std::fs::remove_file(&app.scores_file);
+        let _ = std::fs::remove_file(&app.crash_log);
         app.level_seen = 1;
         app
     }
@@ -7042,6 +7159,102 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&parent);
         let _ = std::fs::remove_dir_all(&empty_parent);
+    }
+
+    #[test]
+    fn a_failing_export_key_says_so_instead_of_doing_nothing() {
+        // A file where the export wants a directory: every write path fails.
+        let mut app = headless("numinous_app_test_export_says.txt");
+        let blocked =
+            std::env::temp_dir().join(format!("numinous-export-blocked-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&blocked);
+        let _ = std::fs::remove_file(&blocked);
+        std::fs::write(&blocked, "a file where a folder must go").expect("blocker");
+
+        let outcome = app.save_postcard_to(&blocked.join("nested"));
+        assert!(outcome.is_err(), "the fixture must actually fail");
+        app.report_export_outcome(
+            "postcard saved",
+            "POSTCARD FAILED  SEE .NUMINOUS-CRASH.LOG",
+            outcome,
+        );
+        assert!(
+            app.banner.is_some(),
+            "a failed export key must say so, not do nothing"
+        );
+        let _ = std::fs::remove_file(&blocked);
+    }
+
+    #[test]
+    fn a_failing_progress_save_warns_once_per_trouble_spell() {
+        let mut app = headless("numinous_app_test_save_trouble.txt");
+        // Point the journey file somewhere no file can be created.
+        let blocked =
+            std::env::temp_dir().join(format!("numinous-journey-blocked-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&blocked);
+        std::fs::write(&blocked, "a file where a folder must go").expect("blocker");
+        app.journey_file = blocked.join("nested").join("journey.txt");
+
+        app.journey.play();
+        app.journey_changed();
+        // The text matters: the first play also levels the fresh journey, so
+        // a bare is_some would be satisfied by the level-up celebration even
+        // if the warning never showed. The warning must outrank it.
+        let warning = app.banner.as_ref().expect("the first failure warns");
+        assert!(
+            warning.lines().join(" ").contains("PROGRESS IS NOT SAVING"),
+            "the warning outranks the level-up banner: {:?}",
+            warning.lines()
+        );
+        assert!(app.journey_save_warned);
+
+        // A second failure in the same spell stays quiet on screen while the
+        // crash log keeps the full record.
+        app.banner = None;
+        app.journey.play();
+        app.journey_changed();
+        assert!(app.banner.is_none(), "one warning per trouble spell");
+        let log = std::fs::read_to_string(&app.crash_log).expect("scratch crash log");
+        assert_eq!(
+            log.matches("journey save failed").count(),
+            2,
+            "every failure is logged even when the banner stays quiet: {log}"
+        );
+
+        // A recovered save resets the spell, so a relapse warns again.
+        app.journey_file = super::test_state_path("numinous_app_test_save_trouble_ok.txt");
+        let _ = std::fs::remove_file(&app.journey_file);
+        app.journey.play();
+        app.journey_changed();
+        assert!(!app.journey_save_warned, "success clears the trouble spell");
+
+        // The score store carries its own spell: a healthy journey must not
+        // silence it, and its recovery must not silence the journey's.
+        app.scores_file = blocked.join("nested").join("scores.txt");
+        app.banner = None;
+        assert!(
+            !app.post_score("munch seed:1", 5),
+            "a failed post is not a best"
+        );
+        let warning = app.banner.as_ref().expect("a failing score save warns");
+        assert!(
+            warning.lines().join(" ").contains("SCORES ARE NOT SAVING"),
+            "the score warning names the score store: {:?}",
+            warning.lines()
+        );
+        assert!(app.score_save_warned);
+        // The journey succeeding again does not reset the score spell into a
+        // nag: the next failing post stays quiet on screen.
+        app.journey.play();
+        app.journey_changed();
+        app.banner = None;
+        assert!(!app.post_score("munch seed:1", 6));
+        assert!(
+            app.banner.is_none(),
+            "one healthy store must not turn the other's spell into a nag"
+        );
+        let _ = std::fs::remove_file(&blocked);
+        let _ = std::fs::remove_file(&app.journey_file);
     }
 
     #[test]

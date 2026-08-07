@@ -232,9 +232,69 @@ fn scores_path() -> std::path::PathBuf {
     }
 }
 
+std::thread_local! {
+    /// Whether a local save failed while handling the current request. The
+    /// stdio server answers one request at a time, so a request-scoped flag
+    /// is exactly a thread-local the dispatcher drains per response.
+    static SAVE_TROUBLE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Append the save-trouble note to a response when this request lost a
+/// write. The mind playing this face never sees the server's stderr, so the
+/// response text is the only channel that reaches the one party who lost
+/// something. Additive, and only on the requests where a write failed.
+fn note_save_trouble(mut result: Value) -> Value {
+    if !SAVE_TROUBLE.with(|flag| flag.replace(false)) {
+        return result;
+    }
+    if let Some(text) = result
+        .get_mut("content")
+        .and_then(|content| content.get_mut(0))
+        .and_then(|entry| entry.get_mut("text"))
+        && let Some(existing) = text.as_str()
+    {
+        *text = Value::String(format!(
+            "{existing}\nNOTE: a local save failed; this result counted in memory but the \
+             file refused the write. Progress rides in memory until a later save lands."
+        ));
+    }
+    result
+}
+
 /// Record a score at `path`, keeping the best. Returns true on a new record.
 fn post_score(path: &std::path::Path, key: &str, score: i64) -> bool {
-    numinous_core::record_score_file(path, key, score).unwrap_or(false)
+    // A write failure must not wear the same face as "not a new best".
+    match numinous_core::record_score_file(path, key, score) {
+        Ok(best) => best,
+        Err(error) => {
+            eprintln!("numinous-mcp: score could not be saved: {error}");
+            SAVE_TROUBLE.with(|flag| flag.set(true));
+            false
+        }
+    }
+}
+
+/// Persist a progress delta, and say so on stderr when the ledger refuses.
+///
+/// The stdio protocol owns stdout, so stderr is the one channel where a
+/// failing save can speak without corrupting a response; hosts surface it in
+/// the server log. The delta keeps riding in memory, so a later successful
+/// save still lands the full difference. Returns whether the write landed,
+/// so a tool that claims a durable state change can refuse the claim when
+/// the state did not actually change.
+fn persist_progress(
+    path: &std::path::Path,
+    before: &numinous_core::Journey,
+    journey: &numinous_core::Journey,
+) -> bool {
+    match numinous_core::persist_journey_delta(path, before, journey) {
+        Ok(_) => true,
+        Err(error) => {
+            eprintln!("numinous-mcp: progress could not be saved: {error}");
+            SAVE_TROUBLE.with(|flag| flag.set(true));
+            false
+        }
+    }
 }
 
 /// Where the cairn lives (shared with the CLI face): the local pile of
@@ -703,7 +763,10 @@ fn record_progress(request: &Value, path: &std::path::Path) {
         let _ = journey.record_daily(request_day(&args));
     }
     if journey != before {
-        let _ = numinous_core::persist_journey_delta(path, &before, &journey);
+        // XP and visit deltas keep riding in memory, so a refused write here
+        // self-heals on a later success; the durable-claim tools check the
+        // returned flag themselves.
+        let _ = persist_progress(path, &before, &journey);
     }
 }
 
@@ -2346,7 +2409,12 @@ fn call_tool(
         "broadcast_session" => broadcast_session_tool(&domain_args, broadcast),
         other => return Err((-32602_i64, format!("Unknown tool: {other}"))),
     };
-    Ok(apply_response_mode(name, response_mode, result))
+    // After the mode projection, so the note survives compact responses too.
+    Ok(note_save_trouble(apply_response_mode(
+        name,
+        response_mode,
+        result,
+    )))
 }
 
 fn broadcast_session_tool(args: &Value, broadcast: &ConnectionBroadcast) -> Value {
@@ -4812,7 +4880,15 @@ fn choose_tool(args: &Value, journey_file: &std::path::Path) -> Value {
             };
             let before = journey.clone();
             journey.chosen.insert(boon.id.clone());
-            let _ = numinous_core::persist_journey_delta(journey_file, &before, &journey);
+            // A boon choice is a durable claim: telling the mind CHOSEN when
+            // the write failed would hand back a choice that evaporates on
+            // the next server start. The boon stays banked instead.
+            if !persist_progress(journey_file, &before, &journey) {
+                return tool_error(
+                    "The choice could not be recorded: the local journey file refused \
+                     the write. The boon stays banked; fix the file and choose again.",
+                );
+            }
             let room = boon.id.split(':').nth(1).unwrap_or("").to_string();
             tool_structured(
                 &format!("CHOSEN. {}\nRead it now: describe_room {room}", boon.label),
@@ -5984,6 +6060,34 @@ mod tests {
         response["result"]["content"][0]["text"]
             .as_str()
             .expect("tool error text")
+    }
+
+    #[test]
+    fn a_lost_write_reaches_the_response_not_only_stderr() {
+        // The playing mind never sees the server's stderr, so a failed save
+        // must ride the response text of the request that lost it.
+        let blocked =
+            std::env::temp_dir().join(format!("numinous-mcp-save-trouble-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&blocked);
+        let _ = std::fs::remove_file(&blocked);
+        std::fs::write(&blocked, "a file where a folder must go").expect("blocker");
+
+        assert!(
+            !super::post_score(&blocked.join("nested"), "munch seed:1", 5),
+            "the blocked path must actually fail"
+        );
+        let noted = super::note_save_trouble(super::tool_text("WIN."));
+        let text = noted["content"][0]["text"].as_str().expect("text");
+        assert!(
+            text.contains("NOTE: a local save failed"),
+            "the note rides the response: {text}"
+        );
+
+        // Drained: the next response stays clean, so the note names exactly
+        // the request that lost something.
+        let clean = super::note_save_trouble(super::tool_text("WIN."));
+        assert_eq!(clean["content"][0]["text"], "WIN.");
+        let _ = std::fs::remove_file(&blocked);
     }
 
     #[test]
