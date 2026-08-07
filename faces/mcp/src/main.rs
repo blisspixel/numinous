@@ -5778,6 +5778,12 @@ fn sing_expression_tool(args: &Value) -> Value {
         return tool_error("Need xmax greater than xmin.");
     }
     let spec = numinous_core::to_melody(&expr, xmin, xmax, notes.clamp(1, 64), a);
+    // An expression undefined across the whole window melts to zero notes.
+    // Reporting that as a successful 0.1 second melody would be the singing
+    // twin of the plot path's "nothing to plot", so it refuses the same way.
+    if spec.notes.is_empty() {
+        return tool_error("Nothing to sing: the function is undefined across this range.");
+    }
     let mut lines = vec![format!(
         "y = {source} as a melody: {:.1}s, {} notes.",
         spec.duration,
@@ -8087,6 +8093,23 @@ plays 2
             .unwrap_or_default();
         assert!(text.contains("8 notes"), "got: {text}");
         assert!(text.contains("Hz"));
+    }
+
+    #[test]
+    fn a_function_with_no_finite_samples_is_refused_not_sung_as_silence() {
+        // Zero notes reported as a successful 0.1 second melody is the singing
+        // twin of "nothing to plot". The terminal face refuses it; this face
+        // must refuse it the same way rather than sing silence.
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":43,"method":"tools/call",
+            "params":{"name":"sing_expression","arguments":{"expr":"sqrt(0-1)","notes":8}}
+        }))
+        .expect("tools/call must respond");
+        assert_eq!(resp["result"]["isError"], true);
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("Nothing to sing"), "got: {text}");
     }
 
     #[test]

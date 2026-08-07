@@ -2479,11 +2479,22 @@ fn sing_wav(
 ) -> Result<String, String> {
     let expr =
         numinous_core::parse(source).map_err(|error| format!("{}\n", terminal_safe(&error)))?;
+    // A non-finite bound passes `xmax <= xmin` because NaN compares false, so
+    // the finiteness check has to be its own door rather than a comparison.
+    if !xmin.is_finite() || !xmax.is_finite() {
+        return Err("need finite xmin and xmax\n".to_string());
+    }
+    if !a.is_finite() {
+        return Err("need finite a\n".to_string());
+    }
     if xmax <= xmin {
         return Err("need xmax > xmin\n".to_string());
     }
     let sample_rate = 44_100u32;
     let spec = numinous_core::to_melody(&expr, xmin, xmax, notes, a);
+    if spec.notes.is_empty() {
+        return Err("nothing to sing: the function is undefined across this range\n".to_string());
+    }
     write_wav(path, &spec.render(sample_rate), sample_rate, 1)?;
     Ok(format!(
         "wrote {} ({:.1}s, {} notes) from y = {}\n",
@@ -8511,6 +8522,43 @@ mod tests {
     fn sing_wav_rejects_a_bad_expression() {
         let path = std::env::temp_dir().join("numinous_sing_bad.wav");
         assert!(super::sing_wav("nope(", -1.0, 1.0, 8, 1.0, &path).is_err());
+    }
+
+    #[test]
+    fn sing_wav_rejects_non_finite_bounds_and_knob() {
+        // NaN passes `xmax <= xmin` because NaN compares false, so without its
+        // own door a NaN window sang a silent WAV and reported success.
+        let path = std::env::temp_dir().join("numinous_sing_nonfinite.wav");
+        let _ = std::fs::remove_file(&path);
+        let bounds = super::sing_wav("sin(x)", f64::NAN, f64::NAN, 8, 1.0, &path)
+            .expect_err("a NaN window must be refused");
+        assert_eq!(bounds, "need finite xmin and xmax\n");
+        let knob = super::sing_wav("sin(a*x)", -1.0, 1.0, 8, f64::NAN, &path)
+            .expect_err("a NaN knob melts every sample and must be refused");
+        assert_eq!(knob, "need finite a\n");
+        assert!(
+            std::fs::metadata(&path).is_err(),
+            "a refused song must not leave a WAV behind"
+        );
+    }
+
+    #[test]
+    fn sing_wav_refuses_a_function_with_nothing_to_sing() {
+        // The singing twin of the plot path's "nothing to plot": an expression
+        // undefined across the whole window melts to zero notes, and writing
+        // that as a successful WAV is silence sold as music.
+        let path = std::env::temp_dir().join("numinous_sing_undefined.wav");
+        let _ = std::fs::remove_file(&path);
+        let message = super::sing_wav("sqrt(0-1)", -1.0, 1.0, 8, 1.0, &path)
+            .expect_err("an everywhere-undefined function must be refused");
+        assert_eq!(
+            message,
+            "nothing to sing: the function is undefined across this range\n"
+        );
+        assert!(
+            std::fs::metadata(&path).is_err(),
+            "a refused song must not leave a WAV behind"
+        );
     }
 
     #[test]
