@@ -99,6 +99,14 @@ the default layout; custom button routing is documented in `../PLAY.md` and
 does not rewrite the on-screen copy. The Studio can be entered and left with a controller,
 but formula entry requires a keyboard and the footer states that boundary.
 
+A saved creation reopens exactly. Launch the App with a `.num` path or a
+`numinous://studio` link, or drop a `.num` file on the window, and the Studio
+opens with the saved formula, window, and knob pinned, paused: the exact curve
+is drawn, and Enter starts it singing. The first edit makes it yours again,
+window and all. Save one from the terminal with `numinous plot "sin(a*x)"
+--save mine.num`. A drop never abandons a game in progress, and files that are
+not valid creations are refused with a reason, never half-opened.
+
 **Power console (` or ~).** For hackery power users, not the first-time path.
 Press backtick or tilde to open a bottom command line (Esc or the same key
 closes it). Useful commands:

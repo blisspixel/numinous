@@ -37,7 +37,7 @@ listening tests, not claimed from the design alone.
   rooms are native Rust today. A bounded pattern language can become a second
   authoring path only after it satisfies the safety and compatibility contracts
   in `EXTENSIBILITY.md`.
-- It is **infinitely replayable and endlessly shareable**: every creation is text plus deterministic parameters, so it exports as a clip and a `.num` file / `numinous://` link (native, no browser, see `ARCHITECTURE.md`). The first CLI `.num` save/open slice exists for expression plots; exact app reopening, gallery, and fork/remix remain roadmap work.
+- It is **infinitely replayable and endlessly shareable**: every creation is text plus deterministic parameters, so it exports as a clip and a `.num` file / `numinous://` link (native, no browser, see `ARCHITECTURE.md`). The first CLI `.num` save/open slice exists for expression plots, and the App reopens a saved capsule exactly, from a launch argument or a dropped file, paused until confirmed; gallery and fork/remix remain roadmap work.
 
 ## The core idea: one expression, two senses
 
@@ -344,7 +344,7 @@ proven by the future pattern implementation, not assumed from the design.
 
 ## Sharing and safety
 
-- **Native sharing:** a creation is text plus deterministic parameters, exported as a clip and a `.num` file / `numinous://` link that reopens it exactly in the app. The first CLI `.num` file/link save and `open-studio` path now exists for expression plots; app reopening, clips, and gallery flow still need to land before this promise is complete (see `ARCHITECTURE.md`, `ROADMAP.md`).
+- **Native sharing:** a creation is text plus deterministic parameters, exported as a clip and a `.num` file / `numinous://` link that reopens it exactly in the app. The first CLI `.num` file/link save and `open-studio` path now exists for expression plots, and the app reopens a capsule exactly from a `.num` file or link; clips and gallery flow still need to land before this promise is complete (see `ARCHITECTURE.md`, `ROADMAP.md`).
 - **Sandboxing (important):** community Studio code is untrusted and must run sandboxed, no filesystem, no network, resource/time limits, GPU work through the safe pipeline only. This is a hard requirement for the mod SDK and a `QUALITY.md` concern (fault injection and fuzzing of untrusted patterns).
 
 ## Roadmap position

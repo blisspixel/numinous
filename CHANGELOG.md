@@ -5,6 +5,30 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- A saved creation reopens in the App, exactly and paused. This is the floor
+  of the 0.7 creator loop: until now a `.num` could be saved and rendered from
+  the terminal but never opened back into the instrument that made it.
+
+  A `.num` path or `numinous://` link passed as a launch argument, or a `.num`
+  file dropped on the window, opens the Studio with the saved source, window,
+  and knob pinned. Exact means exact: the panel draws the saved window at the
+  saved knob instead of the ambient window with the knob as time, and the
+  melody is sampled over that same window. It opens as a paused preview, the
+  hostile-input posture for shared content: the curve draws, the voice waits,
+  and Enter is the consent that starts it singing. The first edit releases the
+  pin, because from the first keystroke the creation is the player's, and the
+  footer line says which state it is in.
+
+  The bounded file loader moved into the core as
+  `StudioCreation::from_num_path` with a typed refusal, reading at most one
+  byte past the share cap, and the CLI import path now rides the same door
+  with its own terminal wording, so no face keeps a twin byte cap that can
+  drift. A drop never abandons a scored run in progress, files that are not
+  capsules are refused with a reason, and an invalid launch argument opens
+  nothing rather than something else. Panel, App, core, and CLI regressions
+  cover the pin lifecycle, the paused preview, both entry doors, and the cap
+  refusals. Gallery, fork, lineage, and the manifest capsule remain open.
+
 - `sing` refuses what it cannot sing, on both faces. A NaN window passed the
   `xmax <= xmin` door because NaN compares false, and an expression undefined
   across the whole window melted to zero notes, so the terminal face wrote a
