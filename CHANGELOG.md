@@ -5,6 +5,54 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Silent failures learned to speak, on all three faces. A hunt for errors
+  that fail without saying so found one family everywhere it looked: the
+  outcome the player sees did not depend on whether the work actually
+  happened.
+
+  In the App, the postcard, loop, and share pack keys did nothing visible
+  when their write failed: no banner, no log, no title change, a working key
+  indistinguishable from a broken one. All three now report on screen and
+  record the reason in the crash log, the posture the audio device path has
+  always had. A failing journey save was worse: play advanced in memory,
+  banners celebrated levels, and a whole session could evaporate at exit
+  with nothing ever said. The App now warns once per trouble spell, logging
+  every failure while the delta model keeps unsaved progress riding until a
+  later write lands, and a save at exit that fails writes its reason to the
+  crash log, the one place that can still speak at that moment. A failed
+  score write wore the same face as "not a new best"; it warns the same way
+  now.
+
+  The terminal face swallowed the same save failure and then printed
+  level-up banners for progress the disk never received; it now says
+  "progress could not be saved" on stderr, as do the three commands that
+  persist before entering a loop that never returns, and a sound device
+  that will not open is named once instead of playing silent with no
+  explanation. The MCP face, whose stdout belongs to the protocol, reports
+  failing journey and score saves on stderr, where hosts surface server
+  logs. The Gallery no longer hides a creation whose filesystem cannot
+  answer for its timestamp: the file opened and parsed, so it belongs on
+  the wall, merely sorted oldest. And App diagnostics stopped being global:
+  the crash log path is owned by the App instance, so a headless test can
+  never append to a real player's file.
+
+  An adversarial review of the fix itself then found the fix's own holes,
+  and they are closed too. The App's level-up banner could paint over the
+  one save-trouble warning of a spell, restoring the exact silence the
+  warning exists to break: the warning now outranks the celebration, and
+  the test that pins it checks the banner's words rather than its
+  existence. The journey and score stores each carry their own warning
+  spell, so one failing file cannot nag through the other's successes. The
+  CLI's own post_score had the same swallowed write the other faces just
+  fixed; it speaks now, and the four copies of the persist-and-warn block
+  collapsed into shared helpers. On the MCP face, choose no longer answers
+  CHOSEN when the write failed, since a choice that evaporates on the next
+  server start was never chosen: the boon stays banked and the error says
+  so. And because the mind playing that face never sees the server's
+  stderr, a request that loses a write now carries a NOTE line in its own
+  response, drained per request so it names exactly the play that lost
+  something.
+
 - The capsule learns who it is, and forks remember where they came from. The
   `.num` format grows to `NUMINOUS_STUDIO 2` with four optional fields under
   the same Tier 1 hardening as everything else in it: a title and author

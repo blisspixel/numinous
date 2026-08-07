@@ -1369,10 +1369,31 @@ fn load_scores() -> numinous_core::Scoreboard {
     numinous_core::load_scoreboard_file(&scores_path())
 }
 
-/// Record a score; announce and persist when a record falls.
+/// Warn on stderr that a progress write failed. The play still happened and
+/// the delta keeps riding in memory, but silence here would let banners
+/// celebrate progress the disk never received.
+fn warn_progress_unsaved(what: &str, error: &std::io::Error) {
+    eprintln!(
+        "{}",
+        terminal_safe(&format!("{what} could not be saved: {error}"))
+    );
+}
+
+/// Persist a journey delta and say so on stderr when the ledger refuses.
+/// The one shared door for the commands that persist and keep going.
+fn persist_progress_or_warn(before: &Journey, journey: &Journey) {
+    if let Err(error) = numinous_core::persist_journey_delta(&journey_path(), before, journey) {
+        warn_progress_unsaved("progress", &error);
+    }
+}
+
+/// Record a score; announce when a record falls, and say so when the write
+/// fails rather than wearing the "not a new best" costume.
 fn post_score(key: &str, score: i64) {
-    if numinous_core::record_score_file(&scores_path(), key, score).unwrap_or(false) {
-        println!("NEW BEST: {key} = {score}");
+    match numinous_core::record_score_file(&scores_path(), key, score) {
+        Ok(true) => println!("NEW BEST: {key} = {score}"),
+        Ok(false) => {}
+        Err(error) => warn_progress_unsaved("score", &error),
     }
 }
 
@@ -1460,8 +1481,15 @@ fn finish_journey(
     if before == after {
         return;
     }
-    let saved = numinous_core::persist_journey_delta(&journey_path(), before, after)
-        .unwrap_or_else(|_| after.clone());
+    // The play still happened; if the ledger refuses, say so rather than
+    // letting the banners below celebrate progress the disk never received.
+    let saved = match numinous_core::persist_journey_delta(&journey_path(), before, after) {
+        Ok(saved) => saved,
+        Err(error) => {
+            warn_progress_unsaved("progress", &error);
+            after.clone()
+        }
+    };
     for ping in trophy_pings(earned_before, &saved, &load_scores()) {
         println!(
             "
@@ -1684,8 +1712,9 @@ fn run(command: Command, journey: &mut Journey) -> ExitCode {
             if find_room(&id, allow_hidden).is_some() {
                 let before = journey.clone();
                 journey.visit(&id);
-                // The loop never returns; persist the visit before it starts.
-                let _ = numinous_core::persist_journey_delta(&journey_path(), &before, journey);
+                // The loop never returns; persist the visit before it starts,
+                // and say so if the ledger refuses, since no exit will.
+                persist_progress_or_warn(&before, journey);
             }
             let Some(era) = numinous_core::Era::parse(&era) else {
                 eprintln!(
@@ -1783,8 +1812,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                     if find_room(&id, allow_hidden).is_some() {
                         let before = journey.clone();
                         journey.visit(&id);
-                        let _ =
-                            numinous_core::persist_journey_delta(&journey_path(), &before, journey);
+                        persist_progress_or_warn(&before, journey);
                     }
                     let variation = if vary { fresh_variation_seed() } else { 0 };
                     play(&id, fps, width, height, allow_hidden, variation)
@@ -1966,8 +1994,9 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                 }
                 let before = journey.clone();
                 journey.play();
-                // The loop never returns; persist the play before it starts.
-                let _ = numinous_core::persist_journey_delta(&journey_path(), &before, journey);
+                // The loop never returns; persist the play before it starts,
+                // and say so if the ledger refuses, since no exit will.
+                persist_progress_or_warn(&before, journey);
                 plot_animate(&expr, xmin, xmax, amin, amax, width, height)
             } else {
                 let report = match plot_report(&expr, xmin, xmax, a, width, height) {
@@ -2994,7 +3023,18 @@ fn watch(
     let player = if mute {
         None
     } else {
-        numinous_audio::LoopPlayer::new().ok()
+        // Silence must never be a mystery: a device that will not open is
+        // named once on stderr, then the room plays visual-only.
+        match numinous_audio::LoopPlayer::new() {
+            Ok(player) => Some(player),
+            Err(error) => {
+                eprintln!(
+                    "{}",
+                    terminal_safe(&format!("sound unavailable, playing silent: {error}"))
+                );
+                None
+            }
+        }
     };
     let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
     let motion = numinous_core::Motion::from_env();
@@ -3195,7 +3235,18 @@ fn tour(
     let player = if mute {
         None
     } else {
-        numinous_audio::LoopPlayer::new().ok()
+        // Silence must never be a mystery: a device that will not open is
+        // named once on stderr, then the room plays visual-only.
+        match numinous_audio::LoopPlayer::new() {
+            Ok(player) => Some(player),
+            Err(error) => {
+                eprintln!(
+                    "{}",
+                    terminal_safe(&format!("sound unavailable, playing silent: {error}"))
+                );
+                None
+            }
+        }
     };
     let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
     let motion = numinous_core::Motion::from_env();
