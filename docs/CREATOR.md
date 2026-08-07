@@ -15,8 +15,9 @@ determinism is the validator) and the trust model (curate for beauty, sign for
 provenance, sandbox regardless). That is a decade of hard-won lessons pre-paid.
 
 The gap is not safety or format. It is that **the creative loop does not close
-yet.** Today you can `plot --save` a `.num`, but you cannot open one back into the
-app, browse a gallery, or fork someone's creation. Every thriving creator
+yet.** Today you can `plot --save` a `.num` and open it back into the app
+exactly, paused until confirmed, but you cannot browse a gallery or fork
+someone's creation. Every thriving creator
 community (Scratch, PICO-8, Observable, Desmos, Baba Is You) is fundamentally a
 **fork loop with a taste layer**, and the fork loop comes first: make, share,
 others open and study and remix, make again. Numinous has the substrate and not
@@ -32,7 +33,10 @@ of determinism-as-safety.**
 and Visual Era, sound parameters from fixed enums, and metadata (title, author).
 Add app-side reopen so a capsule reopens exactly, live and singing. Keep the
 hand-written strict parser and the per-field caps. This is the floor everything
-stands on; nothing else works without reopen.
+stands on; nothing else works without reopen. The v1 expression-capsule reopen
+is built: a launch argument or a dropped `.num` opens a paused exact preview
+that Enter starts singing, and the first edit hands the creation to the player.
+The manifest growth above remains open.
 
 **2. The one-button share bundle.** On any Studio state, one action emits the
 trio: the `.num` file, the `numinous://` link, and the PNG postcard. The link
