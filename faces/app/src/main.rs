@@ -312,6 +312,11 @@ enum SaveStore {
     Scores,
 }
 
+/// The two save-trouble warning lines, named so the level-up celebration can
+/// recognize a warning on screen and decline to paint over it.
+const JOURNEY_SAVE_WARNING: &str = "PROGRESS IS NOT SAVING  SEE .NUMINOUS-CRASH.LOG";
+const SCORE_SAVE_WARNING: &str = "SCORES ARE NOT SAVING  SEE .NUMINOUS-CRASH.LOG";
+
 /// The application state driven by the winit event loop.
 struct App {
     /// How much the world may move on its own. Read once at construction, so
@@ -588,14 +593,8 @@ impl App {
     ) -> bool {
         let _ = append_crash_log_at(&self.crash_log, &format!("{what} failed: {error}\n"));
         let (warned, line) = match store {
-            SaveStore::Journey => (
-                &mut self.journey_save_warned,
-                "PROGRESS IS NOT SAVING  SEE .NUMINOUS-CRASH.LOG",
-            ),
-            SaveStore::Scores => (
-                &mut self.score_save_warned,
-                "SCORES ARE NOT SAVING  SEE .NUMINOUS-CRASH.LOG",
-            ),
+            SaveStore::Journey => (&mut self.journey_save_warned, JOURNEY_SAVE_WARNING),
+            SaveStore::Scores => (&mut self.score_save_warned, SCORE_SAVE_WARNING),
         };
         if *warned {
             return false;
@@ -605,13 +604,27 @@ impl App {
         true
     }
 
+    /// Whether a save-trouble warning is on screen right now. A game flow
+    /// can post a failing score and then level the journey in the same
+    /// tick, so the celebration check cannot rely only on what this one
+    /// call raised.
+    fn save_warning_showing(&self) -> bool {
+        self.banner.as_ref().is_some_and(|banner| {
+            banner
+                .lines()
+                .first()
+                .is_some_and(|line| line == JOURNEY_SAVE_WARNING || line == SCORE_SAVE_WARNING)
+        })
+    }
+
     /// Persist the journey and raise the Journey banner when the level moves.
     ///
-    /// A save-trouble warning outranks the celebration: a level-up banner
-    /// painted over the one warning of a trouble spell would restore the
-    /// exact silence the warning exists to break.
+    /// A save-trouble warning outranks the celebration, whether this call
+    /// raised it or a failing score post did moments earlier: a level-up
+    /// banner painted over the one warning of a trouble spell would restore
+    /// the exact silence the warning exists to break.
     fn journey_changed(&mut self) {
-        let warned_now = match numinous_core::persist_journey_delta(
+        match numinous_core::persist_journey_delta(
             &self.journey_file,
             &self.journey_saved,
             &self.journey,
@@ -620,12 +633,13 @@ impl App {
                 self.journey = saved.clone();
                 self.journey_saved = saved;
                 self.journey_save_warned = false;
-                false
             }
-            Err(error) => self.report_save_trouble(SaveStore::Journey, "journey save", &error),
-        };
+            Err(error) => {
+                self.report_save_trouble(SaveStore::Journey, "journey save", &error);
+            }
+        }
         let level = self.journey.level();
-        if level > self.level_seen && !warned_now {
+        if level > self.level_seen && !self.save_warning_showing() {
             self.banner = Some(feedback::level_up(level, self.journey.boons_available()));
         }
         self.level_seen = level;
@@ -7243,6 +7257,18 @@ mod tests {
             warning.lines()
         );
         assert!(app.score_save_warned);
+        // A level-up from a later journey_changed in the same tick must not
+        // paint over the fresh warning: game flows post a score and then
+        // level the journey back to back.
+        app.level_seen = 0;
+        app.journey.play();
+        app.journey_changed();
+        let held = app.banner.as_ref().expect("a banner is still up");
+        assert!(
+            held.lines().join(" ").contains("SCORES ARE NOT SAVING"),
+            "the celebration must not overwrite a warning raised across calls: {:?}",
+            held.lines()
+        );
         // The journey succeeding again does not reset the score spell into a
         // nag: the next failing post stays quiet on screen.
         app.journey.play();
