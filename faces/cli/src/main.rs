@@ -477,6 +477,12 @@ enum Command {
         /// Save this Studio expression as a portable .num file and print its link.
         #[arg(long)]
         save: Option<PathBuf>,
+        /// With --save: name the creation (printable ASCII, 64 characters).
+        #[arg(long)]
+        title: Option<String>,
+        /// With --save: credit the creation (printable ASCII, 64 characters).
+        #[arg(long)]
+        author: Option<String>,
     },
     /// Open a Studio .num file or numinous://studio link and render it.
     #[command(name = "open-studio")]
@@ -1925,6 +1931,8 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             width,
             height,
             save,
+            title,
+            author,
         } => {
             if list_recipes {
                 let mut lines = vec![format!(
@@ -1947,6 +1955,11 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                         .to_string(),
                 ));
             }
+            if save.is_none() && (title.is_some() || author.is_some()) {
+                return emit(Err(
+                    "--title and --author name a saved creation; add --save\n".to_string(),
+                ));
+            }
             if animate {
                 if let Err(message) = plot_report(&expr, xmin, xmax, amin, width, height) {
                     return emit(Err(message));
@@ -1962,7 +1975,15 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                     Err(message) => return emit(Err(message)),
                 };
                 if let Some(path) = save.as_deref() {
-                    match save_studio_creation(&expr, xmin, xmax, a, path) {
+                    match save_studio_creation(
+                        &expr,
+                        xmin,
+                        xmax,
+                        a,
+                        title.as_deref(),
+                        author.as_deref(),
+                        path,
+                    ) {
                         Ok(message) => print!("{message}"),
                         Err(message) => return emit(Err(message)),
                     }
@@ -2585,15 +2606,24 @@ fn plot_report(
     ))
 }
 
-/// Save a Studio creation as a first-version `.num` file and return the share link.
+/// Save a Studio creation as a `.num` file and return the share link. The
+/// file stays version 1 unless a title or author asks for version 2.
 fn save_studio_creation(
     source: &str,
     xmin: f64,
     xmax: f64,
     a: f64,
+    title: Option<&str>,
+    author: Option<&str>,
     path: &Path,
 ) -> Result<String, String> {
-    let creation = numinous_core::StudioCreation::new(source, xmin, xmax, a)?;
+    let mut creation = numinous_core::StudioCreation::new(source, xmin, xmax, a)?;
+    if let Some(title) = title {
+        creation = creation.with_title(title).map_err(|e| format!("{e}\n"))?;
+    }
+    if let Some(author) = author {
+        creation = creation.with_author(author).map_err(|e| format!("{e}\n"))?;
+    }
     write_create_new(path, creation.to_num_file().as_bytes())?;
     Ok(format!(
         "saved Studio creation: {}\nlink: {}\n",
@@ -2635,15 +2665,25 @@ fn open_studio_report(input: &str, width: usize, height: usize) -> Result<String
         width,
         height,
     )?;
-    Ok(format!(
-        "Studio creation\nexpr={}\nxmin={}\nxmax={}\na={}\nlink={}\n\n{}",
-        terminal_safe(creation.source()),
-        creation.xmin(),
-        creation.xmax(),
-        creation.a(),
-        creation.to_link(),
-        report
-    ))
+    let mut lines = vec!["Studio creation".to_string()];
+    if let Some(title) = creation.title() {
+        lines.push(format!("title={}", terminal_safe(title)));
+    }
+    if let Some(author) = creation.author() {
+        lines.push(format!("author={}", terminal_safe(author)));
+    }
+    lines.push(format!("expr={}", terminal_safe(creation.source())));
+    lines.push(format!("xmin={}", creation.xmin()));
+    lines.push(format!("xmax={}", creation.xmax()));
+    lines.push(format!("a={}", creation.a()));
+    if let Some(era) = creation.era() {
+        lines.push(format!("era={}", era.name()));
+    }
+    if let Some(descends) = creation.descends() {
+        lines.push(format!("descends={}", terminal_safe(descends)));
+    }
+    lines.push(format!("link={}", creation.to_link()));
+    Ok(format!("{}\n\n{}", lines.join("\n"), report))
 }
 
 fn write_create_new(path: &Path, bytes: &[u8]) -> Result<(), String> {
@@ -8176,6 +8216,8 @@ mod tests {
                 width: 24,
                 height: 8,
                 save: None,
+                title: None,
+                author: None,
             },
             &mut journey,
         );
@@ -8223,7 +8265,8 @@ mod tests {
     fn plot_save_writes_a_portable_studio_file() {
         let path = std::env::temp_dir().join("numinous_cli_studio_save_test.num");
         let _ = std::fs::remove_file(&path);
-        let message = save_studio_creation("sin(a*x)", -2.0, 2.0, 0.5, &path).expect("studio save");
+        let message = save_studio_creation("sin(a*x)", -2.0, 2.0, 0.5, None, None, &path)
+            .expect("studio save");
         assert!(message.contains("numinous://studio?"));
         let text = std::fs::read_to_string(&path).expect("saved file");
         let creation = numinous_core::StudioCreation::from_num_file(&text).expect("round trip");
@@ -8232,10 +8275,43 @@ mod tests {
         assert_eq!(creation.xmax(), 2.0);
         assert_eq!(creation.a(), 0.5);
         assert!(
-            save_studio_creation("sin(a*x)", -2.0, 2.0, 0.5, &path).is_err(),
+            save_studio_creation("sin(a*x)", -2.0, 2.0, 0.5, None, None, &path).is_err(),
             "save should not overwrite an existing share file"
         );
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn a_titled_save_round_trips_and_the_report_names_it() {
+        let path = std::env::temp_dir().join("numinous_cli_titled_save_test.num");
+        let _ = std::fs::remove_file(&path);
+        let message = save_studio_creation(
+            "sin(a*x)",
+            -2.0,
+            2.0,
+            0.5,
+            Some("Slow Waves"),
+            Some("A Curious Mind"),
+            &path,
+        )
+        .expect("titled save");
+        assert!(message.contains("link: numinous://studio?"));
+
+        let report =
+            super::open_studio_report(path.to_str().expect("utf8 path"), 24, 8).expect("report");
+        assert!(report.contains("title=Slow Waves"), "{report}");
+        assert!(report.contains("author=A Curious Mind"), "{report}");
+        assert!(
+            report.contains("title=Slow%20Waves"),
+            "the link carries the identity too: {report}"
+        );
+        let _ = std::fs::remove_file(&path);
+
+        // A name that could steer a terminal never reaches the file.
+        assert!(
+            save_studio_creation("x", -1.0, 1.0, 0.0, Some("bad\u{7}title"), None, &path).is_err()
+        );
+        assert!(!path.exists(), "a refused save writes nothing");
     }
 
     #[test]
@@ -8259,6 +8335,8 @@ mod tests {
                 width: 24,
                 height: 8,
                 save: Some(path.clone()),
+                title: None,
+                author: None,
             },
             &mut journey,
         );
@@ -8286,6 +8364,8 @@ mod tests {
                 width: 4097,
                 height: 8,
                 save: None,
+                title: None,
+                author: None,
             },
             &mut journey,
         );
@@ -8315,6 +8395,8 @@ mod tests {
                 width: 1,
                 height: 8,
                 save: Some(path.clone()),
+                title: None,
+                author: None,
             },
             &mut journey,
         );
@@ -8344,6 +8426,8 @@ mod tests {
                 width: 24,
                 height: 8,
                 save: Some(path.clone()),
+                title: None,
+                author: None,
             },
             &mut journey,
         );
@@ -8373,6 +8457,8 @@ mod tests {
                 width: 24,
                 height: 8,
                 save: Some(path.clone()),
+                title: None,
+                author: None,
             },
             &mut journey,
         );
@@ -8390,7 +8476,7 @@ mod tests {
     fn open_studio_renders_saved_file_and_link() {
         let path = std::env::temp_dir().join("numinous_cli_studio_open_test.num");
         let _ = std::fs::remove_file(&path);
-        save_studio_creation("sin(a*x)", -2.0, 2.0, 0.5, &path).expect("studio save");
+        save_studio_creation("sin(a*x)", -2.0, 2.0, 0.5, None, None, &path).expect("studio save");
 
         let from_file =
             open_studio_report(path.to_str().expect("utf8 path"), 32, 10).expect("open saved file");
@@ -8414,7 +8500,7 @@ mod tests {
     fn open_studio_subcommand_parses_and_records_success() {
         let path = std::env::temp_dir().join("numinous_cli_studio_run_open_test.num");
         let _ = std::fs::remove_file(&path);
-        save_studio_creation("x", -1.0, 1.0, 0.0, &path).expect("studio save");
+        save_studio_creation("x", -1.0, 1.0, 0.0, None, None, &path).expect("studio save");
 
         let cli = Cli::try_parse_from([
             "numinous",

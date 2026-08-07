@@ -132,16 +132,28 @@ pub struct StudioShareMeta {
     pub link: String,
     /// Package version string.
     pub version: String,
+    /// The creation's name, when it has one.
+    pub title: Option<String>,
+    /// The creation's author, when recorded.
+    pub author: Option<String>,
+    /// The parent creation's link, when this one is a fork.
+    pub descends: Option<String>,
 }
 
 impl StudioShareMeta {
     /// Manifest body for `README.share.txt` inside a Studio share folder.
     #[must_use]
     pub fn readme_text(&self) -> String {
-        [
-            "numinous-studio-share 1".to_string(),
-            format!("expression {}", self.expression),
-            format!("version {}", self.version),
+        let mut lines = vec!["numinous-studio-share 1".to_string()];
+        if let Some(title) = &self.title {
+            lines.push(format!("title {title}"));
+        }
+        if let Some(author) = &self.author {
+            lines.push(format!("author {author}"));
+        }
+        lines.push(format!("expression {}", self.expression));
+        lines.push(format!("version {}", self.version));
+        lines.extend([
             String::new(),
             "Contents:".to_string(),
             "- creation.num      the creation itself; reopens exactly".to_string(),
@@ -152,9 +164,13 @@ impl StudioShareMeta {
             "launch argument, or run numinous open-studio creation.num.".to_string(),
             "This link reopens the same creation, paused until confirmed:".to_string(),
             self.link.clone(),
-        ]
-        .join("\n")
-            + "\n"
+        ]);
+        if let Some(descends) = &self.descends {
+            lines.push(String::new());
+            lines.push("It descends from this creation:".to_string());
+            lines.push(descends.clone());
+        }
+        lines.join("\n") + "\n"
     }
 }
 
@@ -328,6 +344,9 @@ mod tests {
             expression: "sin(a*x)".into(),
             link: "numinous://studio?expr=sin%28a%2Ax%29&xmin=-2&xmax=2&a=0.5".into(),
             version: "0.2.0-alpha.4".into(),
+            title: Some("Slow Waves".into()),
+            author: None,
+            descends: Some("numinous://studio?expr=x&xmin=-1&xmax=1&a=0".into()),
         };
         let text = meta.readme_text();
         assert!(text.contains("creation.num"));
@@ -335,6 +354,9 @@ mod tests {
         assert!(text.contains("expression sin(a*x)"));
         assert!(text.contains("numinous://studio?"));
         assert!(text.contains("paused until confirmed"));
+        assert!(text.contains("title Slow Waves"));
+        assert!(!text.contains("author "), "an absent author writes no line");
+        assert!(text.contains("It descends from this creation:"));
 
         let dir =
             std::env::temp_dir().join(format!("numinous-studio-share-{}", std::process::id()));
