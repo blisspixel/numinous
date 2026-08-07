@@ -5,6 +5,39 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The eight spectral-ink rooms recorded as unread are now read, so the owner
+  ruling the roadmap asks for rests on all ten rooms rather than on two and an
+  apology. Each reading is of the room's own draw code: what the ink draws,
+  and whether hue alone separates something a player has to tell apart.
+
+  Four speak with the ink. `circle-map` paints the last 19 of 120 orbit points
+  with it, which is where the orbit settles as against where it merely passed,
+  and that settling is the mode locking the room exists to show. `josephus`
+  paints the survivor's seat, the answer the room poses, told apart from the
+  late-elimination seats around it by hue alone. `newton` paints basins with
+  it, so ink identity is which root each seed falls to, and a fold merges two
+  basins. They join `bayes-update`, whose inks separate the prior, the
+  likelihood and the posterior.
+
+  Six decorate. `buffon-needle` switches its aha circle to the spectral ink
+  past 55 percent growth while the radius and the CIRCLE percent status carry
+  the progress, with one honest cost recorded: for a deuteranope the climax
+  dims instead of blooming. `function-painter` marks the hand's own reticle
+  over a plate whose mathematics is carried by eight glyph families.
+  `message-heals` squiggles the noisy wire whose story the row layout already
+  tells. `murmuration` blots the falcon under the player's own held hand.
+  `riemann-sphere` brightens a pole the INF status tag already announces. They
+  join `times-tables`, which bands chords by where they start.
+
+  The readings live in `SPECTRAL_INK_READINGS` beside the collapse list, and
+  the lock is coverage and placement rather than judgment: a room cannot join
+  the collapse list without a reading, a fixed room's verdict must leave, and
+  the roadmap's decisions section must file every room under the verdict its
+  reading gives. The ruling the entry asks for is one instead of two: repick
+  the spectral palette for dichromat separation, which changes every room
+  drawing with it, or give the four speaking rooms a second channel each,
+  which changes what those four draw.
+
 - The two faces now sing the same music. `sing` had a parameter defect on both
   sides at once, and the parity gate could not see it because the gate had
   excused `sing` from being checked.

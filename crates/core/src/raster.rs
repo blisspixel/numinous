@@ -704,6 +704,179 @@ mod tests {
         );
     }
 
+    /// What each collapsing room says with its spectral ink, read from its own
+    /// draw code rather than guessed from the measurement.
+    ///
+    /// [`SPECTRAL_INKS_COLLAPSE_FOR_A_DICHROMAT`] records which pairs fold;
+    /// this records whether losing each pair loses information. `true` means
+    /// the room speaks with the ink: hue alone separates things a player has
+    /// to tell apart, so the fold is a defect. `false` means the ink
+    /// decorates: what it marks is carried elsewhere too (by shape, by
+    /// position, by the status line, or by the player's own hand), so the
+    /// fold is a taste question.
+    ///
+    /// The verdict is a reading of the room, not a measurement, which is why
+    /// each entry says what the ink draws: when a room's draw code changes,
+    /// the sentence beside it either still describes the room or visibly does
+    /// not. What IS locked is coverage and placement. The test below fails if
+    /// a room collapses without a reading, if a reading outlives its
+    /// collapse, and if the roadmap's decisions section files any room under
+    /// the wrong verdict.
+    const SPECTRAL_INK_READINGS: [(&str, bool, &str); 10] = [
+        (
+            "bayes-update",
+            true,
+            "the inks separate the prior, the likelihood and the posterior; a \
+             reader who cannot tell two of them apart cannot read the picture",
+        ),
+        (
+            "buffon-needle",
+            false,
+            "the aha circle switches from the bright accent to the spectral ink \
+             past 55 percent growth; the radius and the CIRCLE percent status \
+             already carry the progress, and the unbroken curve over scattered \
+             sticks carries the circle, so the switch is ceremony. For a \
+             deuteranope the climax dims instead of blooming, which is a cost \
+             in feel rather than in information",
+        ),
+        (
+            "circle-map",
+            true,
+            "the last 19 of 120 orbit points are the spectral ink and the rest \
+             the accent, so hue alone separates where the orbit settles from \
+             where it merely passed; that settling is the mode locking the \
+             room exists to show",
+        ),
+        (
+            "function-painter",
+            false,
+            "the spectral ink is only the hand reticle; the mathematics is \
+             painted by eight distinct glyph families for phase, and the \
+             reticle marks where the player's own hand already is",
+        ),
+        (
+            "josephus",
+            true,
+            "the spectral ink is the survivor's seat, the answer the room \
+             poses, and it sits among late-elimination seats it is told apart \
+             from by hue alone",
+        ),
+        (
+            "message-heals",
+            false,
+            "the spectral ink is the noisy bus wire between the sent and \
+             received rows; the wounds themselves are marked by their own \
+             glyphs on the received row, so the wire label repeats what the \
+             row layout says",
+        ),
+        (
+            "murmuration",
+            false,
+            "the spectral ink is the falcon, a solid three by three blot under \
+             the player's own held hand, and the flock parting around it is \
+             the answer; its position is self-owned rather than something the \
+             picture must disclose",
+        ),
+        (
+            "newton",
+            true,
+            "the spectral inks are two of the basin colors, so ink identity is \
+             the mathematics itself: which root each seed falls to. Folding \
+             one into the accent merges two basins",
+        ),
+        (
+            "riemann-sphere",
+            false,
+            "the spectral ink brightens the north pole at the moment the bead \
+             reaches infinity; the INF status tag and the teaching ray \
+             collapsing to the pole say the same thing",
+        ),
+        (
+            "times-tables",
+            false,
+            "the ink is chosen by where a chord starts around the circle, so \
+             it bands the drawing and carries nothing",
+        ),
+    ];
+
+    #[test]
+    fn every_collapsing_room_has_a_reading_and_no_reading_is_stale() {
+        // The collapse list says which rooms lose a pair; the readings say
+        // whether that loss matters. Holding them to the same set of rooms is
+        // what turns "the rest have not been read" from a standing apology
+        // into a state that cannot recur: a room cannot join the collapse
+        // list without a reading, and a fixed room cannot leave a stale
+        // verdict behind.
+        let collapsing: Vec<&str> = SPECTRAL_INKS_COLLAPSE_FOR_A_DICHROMAT
+            .iter()
+            .map(|(id, _, _)| *id)
+            .collect();
+        let read: Vec<&str> = SPECTRAL_INK_READINGS.iter().map(|(id, _, _)| *id).collect();
+
+        for (index, room) in read.iter().enumerate() {
+            assert!(
+                !read[..index].contains(room),
+                "{room} is read twice; one room gets one verdict"
+            );
+        }
+        let unread: Vec<&&str> = collapsing
+            .iter()
+            .filter(|room| !read.contains(room))
+            .collect();
+        assert!(
+            unread.is_empty(),
+            "these rooms lose a spectral pair for a color-blind player and \
+             have no reading: read their draw code and record whether the ink \
+             says something in SPECTRAL_INK_READINGS: {unread:?}"
+        );
+        let stale: Vec<&&str> = read
+            .iter()
+            .filter(|room| !collapsing.contains(room))
+            .collect();
+        assert!(
+            stale.is_empty(),
+            "these no longer collapse, so their readings must leave \
+             SPECTRAL_INK_READINGS: {stale:?}"
+        );
+    }
+
+    #[test]
+    fn every_reading_is_filed_under_its_verdict_where_the_owner_reads() {
+        // The decisions section separates the rooms that speak with the ink
+        // from the rooms that decorate. If a verdict here flips without the
+        // roadmap's sentence moving the room, the owner reads a ruling
+        // request that no longer matches the evidence.
+        let section = crate::roadmap_decisions();
+        let sentence_after = |marker: &str| -> &str {
+            let start = section
+                .find(marker)
+                .unwrap_or_else(|| panic!("the decisions section lost '{marker}'"));
+            let rest = &section[start + marker.len()..];
+            let end = rest.find('.').expect("the verdict sentence ends");
+            &rest[..end]
+        };
+        let speaking = sentence_after("speak with the ink:");
+        let decorating = sentence_after("decorate:");
+        for (room, speaks, _) in SPECTRAL_INK_READINGS {
+            let name = format!("`{room}`");
+            let (own, other, verdict) = if speaks {
+                (speaking, decorating, "speaks")
+            } else {
+                (decorating, speaking, "decorates")
+            };
+            assert!(
+                own.contains(&name),
+                "{room} {verdict} with its spectral ink and is not filed under \
+                 that verdict in the roadmap's decisions section"
+            );
+            assert!(
+                !other.contains(&name),
+                "{room} is filed under both verdicts in the roadmap's \
+                 decisions section"
+            );
+        }
+    }
+
     /// Rooms whose two accent-derived levels fold together for a dichromat.
     ///
     /// The same defect [`MARK_LEVELS_COLLAPSE_WITHOUT_COLOR`] records, measured
