@@ -1957,7 +1957,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             }
             if save.is_none() && (title.is_some() || author.is_some()) {
                 return emit(Err(
-                    "--title and --author name a saved creation; add --save\n".to_string(),
+                    "a title or author names a saved creation; add --save\n".to_string(),
                 ));
             }
             if animate {
@@ -8312,6 +8312,34 @@ mod tests {
             save_studio_creation("x", -1.0, 1.0, 0.0, Some("bad\u{7}title"), None, &path).is_err()
         );
         assert!(!path.exists(), "a refused save writes nothing");
+    }
+
+    #[test]
+    fn a_title_without_save_is_refused_before_progress() {
+        let mut journey = numinous_core::Journey::default();
+        let code = run(
+            Command::Plot {
+                expr: Some("x".to_string()),
+                recipe: None,
+                seed: None,
+                auto_step: 0,
+                list_recipes: false,
+                xmin: -1.0,
+                xmax: 1.0,
+                a: 1.0,
+                animate: false,
+                amin: 0.0,
+                amax: 1.0,
+                width: 24,
+                height: 8,
+                save: None,
+                title: Some("Slow Waves".to_string()),
+                author: None,
+            },
+            &mut journey,
+        );
+        assert_eq!(code, std::process::ExitCode::FAILURE);
+        assert_eq!(journey.plays, 0, "a refused plot is not a play");
     }
 
     #[test]
