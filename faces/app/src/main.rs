@@ -1201,10 +1201,10 @@ impl App {
                 self.banner = Some(feedback::Banner::status("FIX THE FORMULA TO SHARE", 90));
             }
             Err(_) => {
-                self.banner = Some(feedback::Banner::status(
-                    "SHARE FAILED  NOTHING WRITTEN",
-                    90,
-                ));
+                // The writer discards its own partial folder on failure, so
+                // this stays short rather than promising a cleanup state it
+                // cannot fully guarantee.
+                self.banner = Some(feedback::Banner::status("SHARE FAILED", 90));
             }
         }
     }
@@ -1221,7 +1221,7 @@ impl App {
         let rgba =
             self.studio_panel
                 .postcard_rgba(self.t, postcard::POSTCARD_SIZE as usize, self.era);
-        postcard::write_studio_share_bundle(&creation, &rgba, self.era, parent).map(Some)
+        postcard::write_studio_share_bundle(&creation, &rgba, parent).map(Some)
     }
 
     /// Soft juice when the player bites a number that does not fit the rule.
