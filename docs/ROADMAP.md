@@ -744,6 +744,24 @@ palette should be picked for dichromat separation at all, and, if not, which
 rooms use it to say something. Changing the palette changes every room that
 draws with it.
 
+**13. Three faces sing three different default melodies.** Ask each to sing the
+same expression without naming a note count and they answer differently:
+`app-studio-panel` uses 32 notes, `cli-sing` 48, `mcp-sing-expression` 24.
+Measured from the built binaries, not read off the source: the terminal face
+writes 6.1 seconds of audio and the MCP face names 3.2 seconds of notes for the
+same request.
+
+This is here rather than fixed because nothing breaks the tie. The knob that sat
+beside it did have a majority, since `plot` uses 1 on both faces and the App
+agrees, so making `sing` match was alignment and it has been done. Here 24, 32
+and 48 are three opinions about how long a default melody should be, and picking
+any one of them changes what a player hears on at least two faces.
+
+Recorded in `numinous_core::DEFAULT_MELODY_NOTES_PER_FACE` and locked: each
+face's default is read from its own source, so the record cannot fall behind,
+and the lock fails once the three agree, asking for itself to be deleted rather
+than kept as a monument to a settled argument.
+
 ### 0.1 Public Foundation
 
 **Status:** complete. The exit criterion passed on the public `main` branch;

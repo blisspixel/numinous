@@ -414,6 +414,30 @@ pub fn eval(expr: &Expr, x: f64, a: f64) -> f64 {
     }
 }
 
+/// How many notes each face sings when nobody says.
+///
+/// Three faces, three answers, and that is the whole finding: asking each of
+/// them to sing the same expression without naming a note count produces three
+/// different pieces of music. The terminal face writes 48 notes over 6.1
+/// seconds and the MCP face names 24 over 3.2, measured from the built
+/// binaries rather than read off the source.
+///
+/// This is recorded rather than fixed. The knob had a majority to align to,
+/// since `plot` uses 1 on both faces and the App's Studio panel agrees, so
+/// making `sing` match it was alignment. Nothing breaks this tie: 24, 32 and
+/// 48 are three opinions about how long a default melody should be, and
+/// picking one changes what a player hears on at least two faces. Tracked in
+/// `docs/ROADMAP.md` as an owner decision.
+///
+/// Shrink-only: `scripts/test-workflow-pins.py` fails if a face changes its
+/// default without this list following, and if the three ever agree, at which
+/// point this list should be deleted rather than kept as a monument.
+pub const DEFAULT_MELODY_NOTES_PER_FACE: [(&str, usize); 3] = [
+    ("app-studio-panel", 32),
+    ("cli-sing", 48),
+    ("mcp-sing-expression", 24),
+];
+
 /// The most notes a melody may hold. Each note is a fixed slice of time and a
 /// sample buffer, so an unbounded count (a hostile `--notes`) would drive an
 /// unbounded allocation; this bounds it to a couple of minutes of audio while
