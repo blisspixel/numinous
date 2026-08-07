@@ -1369,9 +1369,10 @@ fn load_scores() -> numinous_core::Scoreboard {
     numinous_core::load_scoreboard_file(&scores_path())
 }
 
-/// Warn on stderr that a progress write failed. The play still happened and
-/// the delta keeps riding in memory, but silence here would let banners
-/// celebrate progress the disk never received.
+/// Warn on stderr that a local write failed, naming what was lost: journey
+/// progress or a score. The play still happened and the delta keeps riding
+/// in memory, but silence here would let output celebrate what the disk
+/// never received.
 fn warn_progress_unsaved(what: &str, error: &std::io::Error) {
     eprintln!(
         "{}",
