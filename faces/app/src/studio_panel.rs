@@ -90,6 +90,10 @@ pub struct StudioPanel {
     show_help: bool,
     /// A reopened creation's saved window and knob, until the player edits.
     opened: Option<OpenedCreation>,
+    /// The parent link while this Studio session is a fork. Edits keep it,
+    /// because edits are the remix; a fresh open or a recipe draw clears it,
+    /// because those are a different creation, not a descent.
+    fork_of: Option<String>,
 }
 
 impl Default for StudioPanel {
@@ -118,6 +122,7 @@ impl StudioPanel {
             // First contact shows Help once; F1 recalls it after dismiss.
             show_help: true,
             opened: None,
+            fork_of: None,
         };
         let _ = panel.reparse();
         Ok(panel)
@@ -132,6 +137,9 @@ impl StudioPanel {
         self.pause_auto();
         self.morph = None;
         self.show_help = false;
+        // Opening a creation is a fresh start, not a descent; the fork path
+        // below sets its own parent after this clears.
+        self.fork_of = None;
         self.source = creation.source().to_string();
         // Parse directly rather than through reparse, which is the edit door
         // and releases the pin this method exists to set. A validated
@@ -172,6 +180,22 @@ impl StudioPanel {
     #[cfg(test)]
     pub(crate) fn opened_active(&self) -> bool {
         self.opened.is_some()
+    }
+
+    /// Fork a creation: open it as the player's own, editable and singing,
+    /// and remember whose it was.
+    ///
+    /// No paused preview here: the player browsed the wall and chose the
+    /// fork gesture, and fork must be as cheap as play. The descent rides
+    /// every share until the Studio moves to a wholly different creation;
+    /// edits keep it, because edits are the remix.
+    pub fn fork_creation(&mut self, creation: &StudioCreation) -> Option<SoundSpec> {
+        self.open_creation(creation);
+        self.fork_of = Some(creation.to_link());
+        if let Some(opened) = self.opened.as_mut() {
+            opened.paused = false;
+        }
+        self.current_sound()
     }
 
     /// Confirm the paused preview: the creation starts singing.
@@ -230,6 +254,9 @@ impl StudioPanel {
         let len = STUDIO_RECIPES.len() as u64;
         let index = (self.recipe_cursor % len) as usize;
         self.recipe_cursor = self.recipe_cursor.saturating_add(1);
+        // A recipe draw replaces the whole creation, so any fork descent
+        // ends here: the bank's curve does not descend from the wall's.
+        self.fork_of = None;
         self.source = STUDIO_RECIPES[index].to_string();
         self.auto_elapsed = 0.0;
         let spec = self.reparse();
@@ -380,7 +407,15 @@ impl StudioPanel {
             return None;
         }
         let (xmin, xmax, a) = self.window_and_knob(t);
-        StudioCreation::new(self.source.clone(), xmin, xmax, a).ok()
+        let mut creation = StudioCreation::new(self.source.clone(), xmin, xmax, a).ok()?;
+        if let Some(parent) = &self.fork_of {
+            // A fork shares its descent. The parent link came from a valid
+            // creation's own to_link, so a refusal here would mean the panel
+            // is holding something it should not; refusing the share is the
+            // fail-closed answer.
+            creation = creation.with_descends(parent).ok()?;
+        }
+        Some(creation)
     }
 
     /// Render the current curve as a square postcard frame: title, formula,
@@ -915,6 +950,45 @@ mod tests {
 
         // A non-finite moment falls back to phase zero rather than a NaN knob.
         assert!(panel.current_creation(f64::NAN).is_some());
+    }
+
+    #[test]
+    fn a_fork_sings_at_once_and_its_shares_record_the_descent() {
+        let parent = numinous_core::StudioCreation::new("sin(a*x)", 0.0, 2.0, 0.5)
+            .expect("parent")
+            .with_title("Parent Wave")
+            .expect("title");
+        let mut panel = StudioPanel::default();
+
+        let spec = panel.fork_creation(&parent);
+        assert!(spec.is_some(), "a chosen fork sings without a preview");
+        assert!(!panel.opened_paused());
+        assert!(
+            panel.opened_active(),
+            "the parent window and knob still pin"
+        );
+
+        let shared = panel.current_creation(0.25).expect("shared");
+        assert_eq!(shared.descends(), Some(parent.to_link().as_str()));
+
+        // Edits keep the descent, because edits are the remix.
+        assert!(panel.push_text("+0").is_some());
+        let edited = panel.current_creation(0.25).expect("edited");
+        assert_eq!(edited.descends(), Some(parent.to_link().as_str()));
+
+        // A recipe draw is a different creation, not a descent.
+        assert!(panel.load_random_recipe().is_some());
+        let drawn = panel.current_creation(0.25).expect("recipe");
+        assert_eq!(drawn.descends(), None);
+
+        // So is opening something else.
+        assert!(panel.fork_creation(&parent).is_some());
+        let other = numinous_core::StudioCreation::new("x*x", -1.0, 1.0, 0.0).expect("other");
+        panel.open_creation(&other);
+        assert_eq!(
+            panel.current_creation(0.25).expect("opened").descends(),
+            None
+        );
     }
 
     #[test]

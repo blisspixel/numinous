@@ -117,8 +117,15 @@ shared as whatever last worked.
 F5 opens the Gallery: a wall of saved creations discovered from the same home
 folder and its share bundles, newest first, each drawn as its own exact curve
 over its own saved window. Arrows choose a tile, Enter opens it paused into
-the Studio like any other reopen, and Esc steps back. The wall is discovered
-fresh each time it opens, so a new share appears without a restart.
+the Studio like any other reopen, F forks it, and Esc steps back. The wall is
+discovered fresh each time it opens, so a new share appears without a restart.
+
+A fork is yours immediately: it opens editable and singing, in the creation's
+own Visual Era, and every share you make from it records the parent's link as
+its descent, which the bundle README names. A creation saved with a title
+shows that title on its tile, a saved era travels with the file and is
+restored on reopen, and the terminal can name creations too:
+`numinous plot "sin(a*x)" --save mine.num --title "Slow Waves"`.
 
 **Power console (` or ~).** For hackery power users, not the first-time path.
 Press backtick or tilde to open a bottom command line (Esc or the same key

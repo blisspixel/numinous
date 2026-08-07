@@ -5,6 +5,37 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The capsule learns who it is, and forks remember where they came from. The
+  `.num` format grows to `NUMINOUS_STUDIO 2` with four optional fields under
+  the same Tier 1 hardening as everything else in it: a title and author
+  capped at 64 printable-ASCII characters so a name cannot steer a terminal
+  or smuggle a line break, an era from the fixed Visual Era set, and a
+  `descends` parent link that is validated by reopening it, because a parent
+  that cannot be reopened is decoration, not lineage.
+
+  Compatibility is a one-way ratchet in the right direction. Serialization
+  writes the lowest header that carries the content, so a share without
+  metadata stays a version 1 file that older builds keep opening. The
+  version 1 parser rejects the new fields rather than ignoring them, so a
+  file cannot claim the old header while smuggling new content, and a header
+  past 2 is refused by name rather than guessed at. Links carry title,
+  author, and era but never `descends`: lineage nests links inside links,
+  and a handoff format that can nest itself is a growth format, so lineage
+  lives in files where the byte cap bounds it flat.
+
+  F in the Gallery forks the chosen creation. A fork is the player's
+  immediately, editable and singing with no paused preview, in the
+  creation's own era, and every share made from it records the parent's link
+  with the bundle README naming the parent. Edits keep the descent, because
+  edits are the remix; a recipe draw or a fresh open ends it, because those
+  are a different creation. Reopening any capsule with a recorded era
+  restores that era, the era is only recorded when it is not the Modern
+  default, gallery tiles show titles when creations have them, and the
+  terminal saves and reports the identity fields with `--title` and
+  `--author`. One test walks the entire loop: fork from the wall, share, and
+  a second profile's drop that arrives paused, in the right era, with the
+  lineage intact.
+
 - The Gallery: a wall of saved creations, one keystroke from the Studio. F5
   discovers the home folder and its share bundles, top-level `.num` files
   plus each bundle's `creation.num`, one directory level deep with symlinks

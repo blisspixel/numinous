@@ -1222,6 +1222,14 @@ impl App {
         let Some(creation) = self.studio_panel.current_creation(self.t) else {
             return Ok(None);
         };
+        // Record the era only when it says something: Modern is the default
+        // look, and omitting it keeps a plain share a version 1 capsule that
+        // older builds still open.
+        let creation = if self.era == numinous_core::Era::Modern {
+            creation
+        } else {
+            creation.with_era(self.era)
+        };
         let rgba =
             self.studio_panel
                 .postcard_rgba(self.t, postcard::POSTCARD_SIZE as usize, self.era);
@@ -1233,6 +1241,32 @@ impl App {
         if let Some(gallery) = &mut self.gallery {
             gallery.move_selection(dx, dy);
         }
+    }
+
+    /// Fork the creation under the Gallery cursor: the wall closes and the
+    /// Studio holds an editable, singing copy that remembers its parent, so
+    /// the next share records the descent.
+    ///
+    /// No paused preview: the player browsed the wall and chose the fork
+    /// gesture themselves, and fork must be as cheap as play.
+    fn gallery_fork_selected(&mut self) {
+        let Some(creation) = self
+            .gallery
+            .as_ref()
+            .and_then(|gallery| gallery.selected_creation())
+            .cloned()
+        else {
+            return;
+        };
+        self.gallery = None;
+        self.quiz = None;
+        if let Some(era) = creation.era() {
+            self.era = era;
+        }
+        let spec = self.studio_panel.fork_creation(&creation);
+        self.enter_studio_shell();
+        self.set_studio_sound(spec);
+        self.banner = Some(feedback::Banner::status("FORKED  IT IS YOURS NOW", 90));
     }
 
     /// Open the creation under the Gallery cursor: the wall closes and the
@@ -1389,6 +1423,11 @@ impl App {
         // over the newly opened Studio; scored runs are guarded at the door
         // in open_dropped_file instead of being silently abandoned here.
         self.quiz = None;
+        // A capsule that recorded its Visual Era reopens in that era: the
+        // look is part of what was saved.
+        if let Some(era) = creation.era() {
+            self.era = era;
+        }
         self.studio_panel.open_creation(creation);
         self.enter_studio_shell();
         self.set_studio_sound(Some(numinous_core::SoundSpec {
@@ -3925,6 +3964,7 @@ impl ApplicationHandler for App {
                             self.gallery = None;
                         }
                         Key::Named(NamedKey::Enter) => self.gallery_open_selected(),
+                        Key::Character(c) if c.as_str() == "f" => self.gallery_fork_selected(),
                         Key::Named(NamedKey::ArrowLeft) => self.gallery_move(-1, 0),
                         Key::Named(NamedKey::ArrowRight) => self.gallery_move(1, 0),
                         Key::Named(NamedKey::ArrowUp) => self.gallery_move(0, -1),
@@ -7002,6 +7042,70 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&parent);
         let _ = std::fs::remove_dir_all(&empty_parent);
+    }
+
+    #[test]
+    fn fork_share_and_reopen_carry_lineage_and_era_around_the_whole_loop() {
+        let mut app = headless("numinous_app_test_fork_loop.txt");
+        let wall =
+            std::env::temp_dir().join(format!("numinous-fork-loop-wall-{}", std::process::id()));
+        let shares =
+            std::env::temp_dir().join(format!("numinous-fork-loop-shares-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&wall);
+        let _ = std::fs::remove_dir_all(&shares);
+        std::fs::create_dir_all(&wall).expect("wall dir");
+        let parent = numinous_core::StudioCreation::new("sin(a*x)", 0.0, 2.0, 0.5)
+            .expect("parent")
+            .with_title("Parent Wave")
+            .expect("title")
+            .with_era(numinous_core::Era::Phosphor);
+        std::fs::write(wall.join("parent.num"), parent.to_num_file()).expect("write parent");
+
+        // Fork from the wall: editable, singing, and in the parent's era.
+        app.enter_studio();
+        app.gallery = Some(crate::gallery::GalleryPanel::open(&wall));
+        app.gallery_fork_selected();
+        assert!(app.gallery.is_none());
+        assert!(app.studio);
+        assert_eq!(
+            app.era,
+            numinous_core::Era::Phosphor,
+            "the fork adopts the era"
+        );
+        assert!(!app.studio_panel.opened_paused(), "a fork sings at once");
+
+        // The next share records the descent and the non-default era.
+        let bundle = app
+            .share_studio_creation_to(&shares)
+            .expect("share io")
+            .expect("the fork parses, so the trio writes");
+        let saved = numinous_core::StudioCreation::from_num_path(&bundle.join("creation.num"))
+            .expect("the shared capsule reopens");
+        assert_eq!(saved.descends(), Some(parent.to_link().as_str()));
+        assert_eq!(saved.era(), Some(numinous_core::Era::Phosphor));
+        let readme = std::fs::read_to_string(bundle.join("README.share.txt")).expect("readme");
+        assert!(
+            readme.contains("It descends from this creation:"),
+            "{readme}"
+        );
+
+        // A stranger dropping the shared capsule gets the era and the record.
+        let mut stranger = headless("numinous_app_test_fork_loop_stranger.txt");
+        assert_eq!(stranger.era, numinous_core::Era::Modern);
+        stranger.open_dropped_file(&bundle.join("creation.num"));
+        assert!(stranger.studio);
+        assert_eq!(
+            stranger.era,
+            numinous_core::Era::Phosphor,
+            "a reopened capsule restores its recorded era"
+        );
+        assert!(
+            stranger.studio_panel.opened_paused(),
+            "a drop still previews paused"
+        );
+
+        let _ = std::fs::remove_dir_all(&wall);
+        let _ = std::fs::remove_dir_all(&shares);
     }
 
     #[test]

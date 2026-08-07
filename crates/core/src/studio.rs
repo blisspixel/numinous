@@ -51,13 +51,31 @@ pub fn studio_auto_recipe(seed: u64, step: u64) -> &'static str {
     studio_recipe(seed.wrapping_add(step))
 }
 
-/// A shareable Studio expression plus its viewing parameters.
+/// The most characters a capsule title or author may hold.
+pub const MAX_META_TEXT_CHARS: usize = 64;
+/// The most bytes a recorded parent link may hold. Well under the whole-file
+/// cap so a capsule with lineage still has room for its own expression.
+const MAX_DESCENDS_BYTES: usize = 4096;
+
+/// A shareable Studio expression plus its viewing parameters, and since the
+/// second capsule version, its identity: an optional title, author, Visual
+/// Era, and the link of the creation it descends from.
+///
+/// The metadata is data-only, per `docs/EXTENSIBILITY.md` Tier 1: every field
+/// is capped, character-whitelisted, and interpreted by trusted engine code.
+/// Serialization writes the lowest header version that carries the content,
+/// so a capsule without metadata stays a `NUMINOUS_STUDIO 1` file that older
+/// builds keep opening.
 #[derive(Debug, Clone, PartialEq)]
 pub struct StudioCreation {
     source: String,
     xmin: f64,
     xmax: f64,
     a: f64,
+    title: Option<String>,
+    author: Option<String>,
+    era: Option<crate::era::Era>,
+    descends: Option<String>,
 }
 
 impl StudioCreation {
@@ -76,7 +94,63 @@ impl StudioCreation {
             xmin,
             xmax,
             a,
+            title: None,
+            author: None,
+            era: None,
+            descends: None,
         })
+    }
+
+    /// Name the creation.
+    ///
+    /// # Errors
+    /// Returns a message when the title is empty, longer than
+    /// [`MAX_META_TEXT_CHARS`], or holds anything outside printable ASCII.
+    pub fn with_title(mut self, title: &str) -> Result<Self, String> {
+        let title = title.trim();
+        validate_meta_text("title", title)?;
+        self.title = Some(title.to_string());
+        Ok(self)
+    }
+
+    /// Credit the creation.
+    ///
+    /// # Errors
+    /// The same bounds as [`Self::with_title`].
+    pub fn with_author(mut self, author: &str) -> Result<Self, String> {
+        let author = author.trim();
+        validate_meta_text("author", author)?;
+        self.author = Some(author.to_string());
+        Ok(self)
+    }
+
+    /// Record the Visual Era the creation was made in.
+    #[must_use]
+    pub fn with_era(mut self, era: crate::era::Era) -> Self {
+        self.era = Some(era);
+        self
+    }
+
+    /// Record the creation this one descends from, as its native link.
+    ///
+    /// The link is validated by opening it: a parent that cannot be reopened
+    /// is not lineage, it is decoration. Links themselves never carry
+    /// `descends` (see [`Self::to_link`]), so validation cannot recurse.
+    ///
+    /// # Errors
+    /// Returns a message when the link is oversized or does not describe a
+    /// valid creation.
+    pub fn with_descends(mut self, link: &str) -> Result<Self, String> {
+        let link = link.trim();
+        if link.len() > MAX_DESCENDS_BYTES {
+            return Err(format!(
+                "Studio descends link is too large; limit is {MAX_DESCENDS_BYTES} bytes"
+            ));
+        }
+        Self::from_link(link)
+            .map_err(|error| format!("Studio descends link does not reopen: {error}"))?;
+        self.descends = Some(link.to_string());
+        Ok(self)
     }
 
     /// The Studio expression source.
@@ -103,19 +177,71 @@ impl StudioCreation {
         self.a
     }
 
-    /// Serialize to the first `.num` Studio file format.
+    /// The creation's name, when it has one.
+    #[must_use]
+    pub fn title(&self) -> Option<&str> {
+        self.title.as_deref()
+    }
+
+    /// The creation's author, when recorded.
+    #[must_use]
+    pub fn author(&self) -> Option<&str> {
+        self.author.as_deref()
+    }
+
+    /// The Visual Era the creation was made in, when recorded.
+    #[must_use]
+    pub fn era(&self) -> Option<crate::era::Era> {
+        self.era
+    }
+
+    /// The link of the creation this one descends from, when recorded.
+    #[must_use]
+    pub fn descends(&self) -> Option<&str> {
+        self.descends.as_deref()
+    }
+
+    fn has_meta(&self) -> bool {
+        self.title.is_some()
+            || self.author.is_some()
+            || self.era.is_some()
+            || self.descends.is_some()
+    }
+
+    /// Serialize to a `.num` Studio file, in the lowest format version that
+    /// carries the content: a capsule without metadata stays a version 1
+    /// file, so builds that predate version 2 keep opening it.
     #[must_use]
     pub fn to_num_file(&self) -> String {
-        format!(
-            "NUMINOUS_STUDIO 1\nexpr={}\nxmin={}\nxmax={}\na={}\n",
+        let version = if self.has_meta() { 2 } else { 1 };
+        let mut out = format!(
+            "NUMINOUS_STUDIO {version}\nexpr={}\nxmin={}\nxmax={}\na={}\n",
             self.source,
             format_share_number(self.xmin),
             format_share_number(self.xmax),
             format_share_number(self.a)
-        )
+        );
+        if let Some(title) = &self.title {
+            out.push_str(&format!("title={title}\n"));
+        }
+        if let Some(author) = &self.author {
+            out.push_str(&format!("author={author}\n"));
+        }
+        if let Some(era) = self.era {
+            out.push_str(&format!("era={}\n", era.name()));
+        }
+        if let Some(descends) = &self.descends {
+            out.push_str(&format!("descends={descends}\n"));
+        }
+        out
     }
 
-    /// Parse a `.num` Studio file.
+    /// Parse a `.num` Studio file, version 1 or 2.
+    ///
+    /// Version 1 rejects the metadata fields rather than ignoring them, so a
+    /// file cannot claim the old header while smuggling new content. A header
+    /// past version 2 is refused by name: a future capsule is a fact to
+    /// report, not a guess to parse.
     ///
     /// # Errors
     /// Returns a message if the file is malformed or describes an invalid
@@ -123,14 +249,24 @@ impl StudioCreation {
     pub fn from_num_file(text: &str) -> Result<Self, String> {
         reject_oversized_share(text)?;
         let mut lines = text.lines();
-        match lines.next() {
-            Some("NUMINOUS_STUDIO 1") => {}
+        let version = match lines.next() {
+            Some("NUMINOUS_STUDIO 1") => 1,
+            Some("NUMINOUS_STUDIO 2") => 2,
+            Some(header) if header.starts_with("NUMINOUS_STUDIO ") => {
+                return Err(
+                    "this Studio .num file is from a newer Numinous; update to open it".to_string(),
+                );
+            }
             _ => return Err("not a Numinous Studio .num file".to_string()),
-        }
+        };
         let mut source: Option<String> = None;
         let mut xmin: Option<f64> = None;
         let mut xmax: Option<f64> = None;
         let mut a: Option<f64> = None;
+        let mut title: Option<String> = None;
+        let mut author: Option<String> = None;
+        let mut era: Option<crate::era::Era> = None;
+        let mut descends: Option<String> = None;
         for line in lines {
             if line.trim().is_empty() {
                 continue;
@@ -143,18 +279,45 @@ impl StudioCreation {
                 "xmin" if xmin.is_none() => xmin = Some(parse_share_number("xmin", value)?),
                 "xmax" if xmax.is_none() => xmax = Some(parse_share_number("xmax", value)?),
                 "a" if a.is_none() => a = Some(parse_share_number("a", value)?),
-                "expr" | "xmin" | "xmax" | "a" => {
+                "title" | "author" | "era" | "descends" if version < 2 => {
+                    return Err(format!(
+                        "Studio .num field '{key}' needs a NUMINOUS_STUDIO 2 header"
+                    ));
+                }
+                "title" if title.is_none() => title = Some(value.to_string()),
+                "author" if author.is_none() => author = Some(value.to_string()),
+                "era" if era.is_none() => {
+                    era = Some(
+                        crate::era::Era::parse(value)
+                            .ok_or_else(|| format!("unknown Studio era '{value}'"))?,
+                    );
+                }
+                "descends" if descends.is_none() => descends = Some(value.to_string()),
+                "expr" | "xmin" | "xmax" | "a" | "title" | "author" | "era" | "descends" => {
                     return Err(format!("duplicate Studio .num field '{key}'"));
                 }
                 other => return Err(format!("unknown Studio .num field '{other}'")),
             }
         }
-        Self::new(
+        let mut creation = Self::new(
             source.ok_or_else(|| "missing Studio expression".to_string())?,
             xmin.ok_or_else(|| "missing xmin".to_string())?,
             xmax.ok_or_else(|| "missing xmax".to_string())?,
             a.ok_or_else(|| "missing a".to_string())?,
-        )
+        )?;
+        if let Some(title) = title {
+            creation = creation.with_title(&title)?;
+        }
+        if let Some(author) = author {
+            creation = creation.with_author(&author)?;
+        }
+        if let Some(era) = era {
+            creation = creation.with_era(era);
+        }
+        if let Some(descends) = descends {
+            creation = creation.with_descends(&descends)?;
+        }
+        Ok(creation)
     }
 
     /// Load a `.num` file from disk without trusting its size.
@@ -181,22 +344,38 @@ impl StudioCreation {
     }
 
     /// Produce a native `numinous://` Studio link for this creation.
+    ///
+    /// A link carries the creation and its identity (title, author, era) but
+    /// never `descends`: lineage nests links inside links, and a handoff
+    /// format that can nest itself is a growth format. Lineage lives in
+    /// `.num` files, where the byte cap bounds it flat.
     #[must_use]
     pub fn to_link(&self) -> String {
-        format!(
+        let mut link = format!(
             "numinous://studio?expr={}&xmin={}&xmax={}&a={}",
             percent_encode(&self.source),
             format_share_number(self.xmin),
             format_share_number(self.xmax),
             format_share_number(self.a)
-        )
+        );
+        if let Some(title) = &self.title {
+            link.push_str(&format!("&title={}", percent_encode(title)));
+        }
+        if let Some(author) = &self.author {
+            link.push_str(&format!("&author={}", percent_encode(author)));
+        }
+        if let Some(era) = self.era {
+            link.push_str(&format!("&era={}", percent_encode(era.name())));
+        }
+        link
     }
 
     /// Parse a native `numinous://` Studio link.
     ///
     /// # Errors
     /// Returns a message if the link is malformed or describes an invalid
-    /// Studio expression.
+    /// Studio expression. A `descends` parameter is refused as unknown:
+    /// links never carry lineage (see [`Self::to_link`]).
     pub fn from_link(link: &str) -> Result<Self, String> {
         reject_oversized_share(link)?;
         let query = link
@@ -207,6 +386,9 @@ impl StudioCreation {
         let mut xmin: Option<f64> = None;
         let mut xmax: Option<f64> = None;
         let mut a: Option<f64> = None;
+        let mut title: Option<String> = None;
+        let mut author: Option<String> = None;
+        let mut era: Option<crate::era::Era> = None;
         for pair in query.split('&') {
             if pair.is_empty() {
                 continue;
@@ -219,18 +401,37 @@ impl StudioCreation {
                 "xmin" if xmin.is_none() => xmin = Some(parse_share_number("xmin", value)?),
                 "xmax" if xmax.is_none() => xmax = Some(parse_share_number("xmax", value)?),
                 "a" if a.is_none() => a = Some(parse_share_number("a", value)?),
-                "expr" | "xmin" | "xmax" | "a" => {
+                "title" if title.is_none() => title = Some(percent_decode(value)?),
+                "author" if author.is_none() => author = Some(percent_decode(value)?),
+                "era" if era.is_none() => {
+                    let decoded = percent_decode(value)?;
+                    era = Some(
+                        crate::era::Era::parse(&decoded)
+                            .ok_or_else(|| format!("unknown Studio era '{decoded}'"))?,
+                    );
+                }
+                "expr" | "xmin" | "xmax" | "a" | "title" | "author" | "era" => {
                     return Err(format!("duplicate Studio link field '{key}'"));
                 }
                 other => return Err(format!("unknown Studio link field '{other}'")),
             }
         }
-        Self::new(
+        let mut creation = Self::new(
             source.ok_or_else(|| "missing Studio expression".to_string())?,
             xmin.ok_or_else(|| "missing xmin".to_string())?,
             xmax.ok_or_else(|| "missing xmax".to_string())?,
             a.ok_or_else(|| "missing a".to_string())?,
-        )
+        )?;
+        if let Some(title) = title {
+            creation = creation.with_title(&title)?;
+        }
+        if let Some(author) = author {
+            creation = creation.with_author(&author)?;
+        }
+        if let Some(era) = era {
+            creation = creation.with_era(era);
+        }
+        Ok(creation)
     }
 }
 
@@ -285,6 +486,24 @@ fn validate_share_source(source: &str) -> Result<(), String> {
     }
     if source.chars().any(char::is_control) {
         return Err("Studio expression cannot contain control characters".to_string());
+    }
+    Ok(())
+}
+
+/// Bound a capsule title or author: short, printable ASCII only, so a name
+/// cannot steer a terminal, hide a control byte, or smuggle a line break
+/// past the line-oriented file format.
+fn validate_meta_text(name: &str, value: &str) -> Result<(), String> {
+    if value.is_empty() {
+        return Err(format!("Studio {name} is empty"));
+    }
+    if value.chars().count() > MAX_META_TEXT_CHARS {
+        return Err(format!(
+            "Studio {name} is too long; limit is {MAX_META_TEXT_CHARS} characters"
+        ));
+    }
+    if !value.chars().all(|c| (' '..='~').contains(&c)) {
+        return Err(format!("Studio {name} may hold only printable ASCII"));
     }
     Ok(())
 }
@@ -874,9 +1093,9 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_EXPR_TOKENS, MAX_MELODY_NOTES, MAX_PARSE_DEPTH, MAX_STUDIO_SOURCE_CHARS,
-        STUDIO_RECIPES, StudioCreation, eval, parse, studio_auto_recipe, studio_recipe,
-        studio_recipe_count, to_melody,
+        MAX_EXPR_TOKENS, MAX_MELODY_NOTES, MAX_META_TEXT_CHARS, MAX_PARSE_DEPTH,
+        MAX_STUDIO_SOURCE_CHARS, STUDIO_RECIPES, StudioCreation, eval, parse, studio_auto_recipe,
+        studio_recipe, studio_recipe_count, to_melody,
     };
 
     #[test]
@@ -1130,6 +1349,121 @@ mod tests {
         // Absurd magnitudes are refused even when finite.
         assert!(StudioCreation::new("x".to_string(), -1e300, 1e300, 1.0).is_err());
         assert!(StudioCreation::new("x".to_string(), -1.0, 1.0, 1e300).is_err());
+    }
+
+    #[test]
+    fn a_capsule_without_metadata_stays_a_version_one_file() {
+        // Older builds parse only NUMINOUS_STUDIO 1, so the lowest-version
+        // rule is what keeps a plain share openable by the release before
+        // this format existed.
+        let plain = StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.5).expect("plain");
+        let text = plain.to_num_file();
+        assert!(text.starts_with("NUMINOUS_STUDIO 1\n"), "{text}");
+        assert_eq!(StudioCreation::from_num_file(&text).expect("reopen"), plain);
+    }
+
+    #[test]
+    fn a_capsule_with_metadata_round_trips_as_version_two() {
+        let parent = StudioCreation::new("sin(x)", -1.0, 1.0, 0.0).expect("parent");
+        let full = StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.5)
+            .expect("creation")
+            .with_title("Slow Waves")
+            .expect("title")
+            .with_author("A Curious Mind")
+            .expect("author")
+            .with_era(crate::era::Era::Phosphor)
+            .with_descends(&parent.to_link())
+            .expect("descends");
+        let text = full.to_num_file();
+        assert!(text.starts_with("NUMINOUS_STUDIO 2\n"), "{text}");
+        let reopened = StudioCreation::from_num_file(&text).expect("reopen");
+        assert_eq!(reopened, full);
+        assert_eq!(reopened.title(), Some("Slow Waves"));
+        assert_eq!(reopened.author(), Some("A Curious Mind"));
+        assert_eq!(reopened.era(), Some(crate::era::Era::Phosphor));
+        assert_eq!(reopened.descends(), Some(parent.to_link().as_str()));
+    }
+
+    #[test]
+    fn links_carry_identity_but_never_lineage() {
+        let parent = StudioCreation::new("sin(x)", -1.0, 1.0, 0.0).expect("parent");
+        let full = StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.5)
+            .expect("creation")
+            .with_title("Slow Waves")
+            .expect("title")
+            .with_era(crate::era::Era::Vector)
+            .with_descends(&parent.to_link())
+            .expect("descends");
+        let link = full.to_link();
+        assert!(link.contains("title=Slow%20Waves"), "{link}");
+        assert!(link.contains("era=Vector"), "{link}");
+        assert!(
+            !link.contains("descends"),
+            "a link that nests links is a growth format: {link}"
+        );
+        let reopened = StudioCreation::from_link(&link).expect("reopen");
+        assert_eq!(reopened.title(), Some("Slow Waves"));
+        assert_eq!(reopened.era(), Some(crate::era::Era::Vector));
+        assert_eq!(reopened.descends(), None);
+        assert!(
+            StudioCreation::from_link(
+                "numinous://studio?expr=x&xmin=-1&xmax=1&a=0&descends=numinous"
+            )
+            .is_err(),
+            "a descends parameter in a link is refused as unknown"
+        );
+    }
+
+    #[test]
+    fn the_old_header_rejects_the_new_fields_and_newer_headers_are_named() {
+        // Version 1 cannot smuggle version 2 content.
+        let smuggled = "NUMINOUS_STUDIO 1\nexpr=x\nxmin=-1\nxmax=1\na=0\ntitle=Sneak\n";
+        let err = StudioCreation::from_num_file(smuggled).expect_err("smuggling refused");
+        assert!(err.contains("NUMINOUS_STUDIO 2"), "{err}");
+        // A future version is a fact to report, not a guess to parse.
+        let future = "NUMINOUS_STUDIO 3\nexpr=x\nxmin=-1\nxmax=1\na=0\n";
+        let err = StudioCreation::from_num_file(future).expect_err("future refused");
+        assert!(err.contains("newer Numinous"), "{err}");
+    }
+
+    #[test]
+    fn capsule_metadata_is_capped_and_printable_only() {
+        let base = || StudioCreation::new("x", -1.0, 1.0, 0.0).expect("base");
+        assert!(base().with_title("").is_err(), "empty is not a name");
+        assert!(base().with_title("   ").is_err(), "spaces are not a name");
+        assert!(
+            base()
+                .with_title(&"x".repeat(MAX_META_TEXT_CHARS + 1))
+                .is_err(),
+            "the cap bites"
+        );
+        assert!(
+            base().with_title("line\u{1b}[31mbreak").is_err(),
+            "a control byte cannot ride in a title"
+        );
+        assert!(
+            base().with_author("newline\nauthor").is_err(),
+            "a line break cannot fork the line format"
+        );
+        assert!(
+            base().with_title("Prismatic Chord No. 7").is_ok(),
+            "an ordinary name passes"
+        );
+
+        // Lineage must reopen or it is not lineage.
+        assert!(base().with_descends("not a link").is_err());
+        assert!(
+            base()
+                .with_descends("numinous://studio?expr=x&xmin=-1&xmax=1&a=%")
+                .is_err(),
+            "a broken parent link is refused"
+        );
+        let mut giant = String::from("numinous://studio?expr=x&xmin=-1&xmax=1&a=0");
+        giant.push_str(&"&".repeat(5000));
+        assert!(
+            base().with_descends(&giant).is_err(),
+            "an oversized parent link is refused"
+        );
     }
 
     #[test]

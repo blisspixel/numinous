@@ -182,9 +182,9 @@ pub use spectrum::{
     spectrum_time_scale,
 };
 pub use studio::{
-    Expr, MAX_SHARE_INPUT_BYTES, MAX_STUDIO_SOURCE_CHARS, NumFileError, STUDIO_RECIPES,
-    StudioCreation, eval, parse, plot_text, studio_auto_recipe, studio_recipe, studio_recipe_count,
-    to_melody,
+    Expr, MAX_META_TEXT_CHARS, MAX_SHARE_INPUT_BYTES, MAX_STUDIO_SOURCE_CHARS, NumFileError,
+    STUDIO_RECIPES, StudioCreation, eval, parse, plot_text, studio_auto_recipe, studio_recipe,
+    studio_recipe_count, to_melody,
 };
 pub use surface::Surface;
 pub use trophies::{Trophy, trophies};

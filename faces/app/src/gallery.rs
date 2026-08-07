@@ -136,7 +136,7 @@ impl GalleryPanel {
         raster.clear_rows(footer_top, height as i32);
         numinous_core::draw_text(
             raster,
-            "ARROWS: CHOOSE   ENTER: OPEN PAUSED   ESC: BACK",
+            "ARROWS: CHOOSE   ENTER: OPEN PAUSED   F: FORK   ESC: BACK",
             10,
             height as i32 - 11 * scale,
             scale,
@@ -211,9 +211,14 @@ impl GalleryPanel {
     }
 }
 
-/// The tile caption: the expression, truncated to what the tile can hold.
+/// The tile caption: the creation's title when it has one, its expression
+/// otherwise, truncated to what the tile can hold.
 fn tile_label(entry: &GalleryEntry, inner_width: usize) -> String {
-    let source = entry.creation.source().to_uppercase();
+    let source = entry
+        .creation
+        .title()
+        .unwrap_or(entry.creation.source())
+        .to_uppercase();
     // The shared 6-pixel glyph advance at scale 1.
     let fits = (inner_width.saturating_sub(4)) / 6;
     if source.chars().count() <= fits {
