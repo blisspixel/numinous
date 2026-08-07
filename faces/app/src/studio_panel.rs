@@ -2,7 +2,7 @@
 
 use std::f64::consts::TAU;
 
-use numinous_core::{Expr, MAX_STUDIO_SOURCE_CHARS, Raster, SoundSpec, Surface};
+use numinous_core::{Expr, MAX_STUDIO_SOURCE_CHARS, Raster, SoundSpec, StudioCreation, Surface};
 
 use crate::input_legend::{self, InputMode};
 
@@ -40,6 +40,23 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "EDITING PAUSES AUTO",
 ];
 
+/// A reopened `.num` creation: the saved window and knob, held exactly until
+/// the player takes over.
+///
+/// While this is present the panel draws the saved window instead of the
+/// ambient one and pins `a` to the saved value instead of the gallery phase,
+/// which is what makes a reopen exact rather than approximate. It opens in a
+/// paused preview, the hostile-input posture for shared content: the curve is
+/// drawn, the voice waits for the player. Any edit releases the pin, because
+/// from the first keystroke the creation is theirs, not the file's.
+#[derive(Debug, Clone)]
+struct OpenedCreation {
+    xmin: f64,
+    xmax: f64,
+    a: f64,
+    paused: bool,
+}
+
 #[derive(Debug, Clone)]
 struct CurveMorph {
     from: Expr,
@@ -69,6 +86,8 @@ pub struct StudioPanel {
     morph: Option<CurveMorph>,
     /// Dismissible help overlay; open by default on first Studio entry.
     show_help: bool,
+    /// A reopened creation's saved window and knob, until the player edits.
+    opened: Option<OpenedCreation>,
 }
 
 impl Default for StudioPanel {
@@ -96,9 +115,67 @@ impl StudioPanel {
             morph: None,
             // First contact shows Help once; F1 recalls it after dismiss.
             show_help: true,
+            opened: None,
         };
         let _ = panel.reparse();
         Ok(panel)
+    }
+
+    /// Reopen a saved creation exactly: its source, window, and knob.
+    ///
+    /// Opens as a paused preview. The curve draws over the saved window at the
+    /// saved `a`; the voice waits for [`Self::confirm_opened`]. Help closes so
+    /// the creation is what the player sees.
+    pub fn open_creation(&mut self, creation: &StudioCreation) {
+        self.pause_auto();
+        self.morph = None;
+        self.show_help = false;
+        self.source = creation.source().to_string();
+        // Parse directly rather than through reparse, which is the edit door
+        // and releases the pin this method exists to set. A validated
+        // creation always parses; the match is the seatbelt, not the plan.
+        match numinous_core::parse(&self.source) {
+            Ok(expr) => {
+                self.expr = Some(expr);
+                self.error = None;
+            }
+            Err(message) => self.error = Some(message),
+        }
+        self.opened = Some(OpenedCreation {
+            xmin: creation.xmin(),
+            xmax: creation.xmax(),
+            a: creation.a(),
+            paused: true,
+        });
+    }
+
+    /// Whether a reopened creation is waiting in its paused preview.
+    ///
+    /// The run path reads the pin through the panel's own drawing and through
+    /// [`Self::confirm_opened`]; these observers exist for the tests that
+    /// prove the pin's lifecycle.
+    #[cfg(test)]
+    pub(crate) fn opened_paused(&self) -> bool {
+        self.opened.as_ref().is_some_and(|opened| opened.paused)
+    }
+
+    /// Whether a reopened creation still pins the window and knob.
+    #[cfg(test)]
+    pub(crate) fn opened_active(&self) -> bool {
+        self.opened.is_some()
+    }
+
+    /// Confirm the paused preview: the creation starts singing.
+    ///
+    /// Returns the melody over the saved window at the saved knob, or `None`
+    /// when nothing is waiting to be confirmed.
+    pub fn confirm_opened(&mut self) -> Option<SoundSpec> {
+        let opened = self.opened.as_mut()?;
+        if !opened.paused {
+            return None;
+        }
+        opened.paused = false;
+        self.current_sound()
     }
 
     /// Whether Auto is rotating the recipe bank.
@@ -187,8 +264,12 @@ impl StudioPanel {
     }
 
     /// Re-parse the Studio text, keeping the last good curve alive on errors.
+    ///
+    /// This is the edit door, so it releases a reopened creation's pin: from
+    /// the first keystroke the window and knob are the player's again.
     pub fn reparse(&mut self) -> Option<SoundSpec> {
         self.morph = None;
+        self.opened = None;
         match numinous_core::parse(&self.source) {
             Ok(expr) => {
                 let spec = sound_for_expression(&expr);
@@ -227,6 +308,7 @@ impl StudioPanel {
         if self.can_append(" ") {
             self.pause_auto();
             self.morph = None;
+            self.opened = None;
             self.source.push(' ');
             return true;
         }
@@ -234,8 +316,21 @@ impl StudioPanel {
     }
 
     /// Render the last-good expression into the same deterministic Studio voice.
+    ///
+    /// A reopened creation sings its own saved window at its saved knob;
+    /// everything else sings the ambient default.
     pub(crate) fn current_sound(&self) -> Option<SoundSpec> {
-        self.expr.as_ref().map(sound_for_expression)
+        let expr = self.expr.as_ref()?;
+        if let Some(opened) = &self.opened {
+            return Some(numinous_core::to_melody(
+                expr,
+                opened.xmin,
+                opened.xmax,
+                32,
+                opened.a,
+            ));
+        }
+        Some(sound_for_expression(expr))
     }
 
     /// Current UTF-8 byte length, used only to detect an admitted native edit.
@@ -331,6 +426,21 @@ impl StudioPanel {
                 scale,
                 '-',
             );
+        } else if let Some(opened) = &self.opened {
+            // The pin and the error share a row because they cannot coexist:
+            // editing releases the pin before it can produce a parse error.
+            let line = if opened.paused {
+                format!(
+                    "REOPENED  X {:.1} TO {:.1}  A {:.2}  ENTER: PLAY",
+                    opened.xmin, opened.xmax, opened.a
+                )
+            } else {
+                format!(
+                    "REOPENED  X {:.1} TO {:.1}  A {:.2}  TYPE: TAKE OVER",
+                    opened.xmin, opened.xmax, opened.a
+                )
+            };
+            numinous_core::draw_text(raster, &line, 10, 10 + 34 * scale, scale, '*');
         }
         if self.help_visible() && height > 40 {
             let help_top = 10 + 48 * scale;
@@ -358,8 +468,12 @@ impl StudioPanel {
         if self.expr.is_none() {
             return;
         }
-        let a = t * TAU;
-        let (xmin, xmax) = (-TAU, TAU);
+        // A reopened creation draws its saved window at its saved knob; the
+        // ambient Studio draws the default window with the knob as time.
+        let (xmin, xmax, a) = match &self.opened {
+            Some(opened) => (opened.xmin, opened.xmax, opened.a),
+            None => (-TAU, TAU, t * TAU),
+        };
         let top = (60 * scale) as f64;
         let _ = numinous_app::studio_render::draw_curve(
             raster,
@@ -610,6 +724,89 @@ mod tests {
         assert!(panel.auto_active());
         let _ = panel.backspace();
         assert!(!panel.auto_active());
+    }
+
+    #[test]
+    fn a_reopened_creation_pins_window_and_knob_and_waits_paused() {
+        use std::f64::consts::TAU;
+        let creation =
+            numinous_core::StudioCreation::new("sin(a*x)", 0.0, 1.0, 0.25).expect("creation");
+        let mut panel = StudioPanel::default();
+        panel.toggle_auto();
+        assert!(panel.auto_active());
+
+        panel.open_creation(&creation);
+        assert!(!panel.auto_active(), "a reopen pauses Auto");
+        assert!(
+            !panel.help_visible(),
+            "the creation is what the player sees"
+        );
+        assert!(panel.opened_active());
+        assert!(panel.opened_paused());
+        assert_eq!(panel.source_for_test(), "sin(a*x)");
+
+        // Exact: the voice is the saved window at the saved knob, not the
+        // ambient default of either.
+        let expr = numinous_core::parse("sin(a*x)").expect("expr");
+        let exact = numinous_core::to_melody(&expr, 0.0, 1.0, 32, 0.25);
+        assert_ne!(
+            exact,
+            numinous_core::to_melody(&expr, -TAU, TAU, 32, 1.0),
+            "fixture must expose the pin"
+        );
+        assert_eq!(panel.current_sound().expect("voice"), exact);
+
+        // Confirm starts the singing once; a second confirm has nothing left.
+        assert_eq!(panel.confirm_opened().expect("confirmed melody"), exact);
+        assert!(!panel.opened_paused());
+        assert!(panel.opened_active(), "confirming does not release the pin");
+        assert!(panel.confirm_opened().is_none());
+    }
+
+    #[test]
+    fn an_edit_releases_the_reopened_pin() {
+        use std::f64::consts::TAU;
+        let creation =
+            numinous_core::StudioCreation::new("sin(a*x)", 0.0, 1.0, 0.25).expect("creation");
+        let mut panel = StudioPanel::default();
+        panel.open_creation(&creation);
+        assert!(panel.confirm_opened().is_some());
+
+        // From the first keystroke the window and knob are the player's.
+        let spec = panel.push_text("+0").expect("still parses");
+        assert!(!panel.opened_active());
+        let expr = numinous_core::parse("sin(a*x)+0").expect("expr");
+        assert_eq!(spec, numinous_core::to_melody(&expr, -TAU, TAU, 32, 1.0));
+
+        // A space is an edit too, even though it keeps the parse state.
+        panel.open_creation(&creation);
+        assert!(panel.opened_paused());
+        assert!(panel.push_space());
+        assert!(!panel.opened_active());
+
+        // So is a recipe draw: the bank replaces the reopened source.
+        panel.open_creation(&creation);
+        assert!(panel.load_random_recipe().is_some());
+        assert!(!panel.opened_active());
+    }
+
+    #[test]
+    fn the_reopened_window_is_the_window_the_curve_draws() {
+        // Same source, two saved windows: the curve band must differ, or the
+        // reopen would only be echoing the numbers while drawing the ambient
+        // window anyway.
+        let narrow = numinous_core::StudioCreation::new("sin(x)", 0.0, 1.0, 1.0).expect("narrow");
+        let wide = numinous_core::StudioCreation::new("sin(x)", -6.0, 6.0, 1.0).expect("wide");
+        let curve_band = |creation: &numinous_core::StudioCreation| {
+            let mut panel = StudioPanel::default();
+            panel.open_creation(creation);
+            let mut raster = Raster::new(200, 150);
+            panel.draw(&mut raster, InputMode::KeyboardMouse, 200, 150, 0.25);
+            // Rows inside the curve area only, clear of chrome and footer,
+            // so the difference cannot come from the reopened status line.
+            raster.to_rgba()[200 * 4 * 70..200 * 4 * 120].to_vec()
+        };
+        assert_ne!(curve_band(&narrow), curve_band(&wide));
     }
 
     #[test]
