@@ -143,7 +143,7 @@ impl Room for Astroid {
             id: "astroid",
             title: "Astroid",
             wing: "Shape & Space",
-            blurb: "Four-cusped star from a rolling circle. t and DRAG: TUNE SCALE.",
+            blurb: "Four-cusped star from a rolling circle.",
             accent: [200, 160, 40],
         }
     }

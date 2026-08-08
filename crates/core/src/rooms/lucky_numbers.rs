@@ -121,7 +121,7 @@ impl Room for LuckyNumbers {
             id: "lucky-numbers",
             title: "Lucky Numbers",
             wing: "Number & Pattern",
-            blurb: "Sieve by counting seats, not multiples. t and DRAG: TUNE N.",
+            blurb: "Sieve by counting seats, not multiples.",
             accent: [90, 140, 70],
         }
     }

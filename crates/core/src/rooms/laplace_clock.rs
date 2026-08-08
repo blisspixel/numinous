@@ -1,7 +1,7 @@
 //! Laplace's Clockwork: Io-Europa-Ganymede 1:2:4 and the forbidden triple.
 //!
 //! Three moons on resonant orbits. When mean motions lock 1:2:4, a triple
-//! conjunction is avoided: Laplace resonance. DRAG: DETUNE A MOON. See
+//! conjunction is avoided: Laplace resonance. See
 //! `docs/ROOMS.md`.
 
 use std::f64::consts::TAU;
@@ -155,7 +155,7 @@ impl Room for LaplaceClock {
             title: "Laplace's Clockwork",
             wing: "Motion & Dynamics",
             blurb: "Io, Europa, Ganymede lock 1:2:4; the Laplace angle avoids the triple \
-                    conjunction. t turns the clock; DRAG: DETUNE A MOON and watch lock break.",
+                    conjunction. t turns the clock.",
             accent: [220, 180, 100],
         }
     }

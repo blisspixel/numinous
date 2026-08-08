@@ -2,7 +2,7 @@
 //!
 //! Cars on a ring follow a simple follow-the-leader rule. A single slowdown
 //! nucleates a dense cluster that propagates upstream against the traffic: the
-//! phantom jam (Sugiyama 2008). HOLD: BRAKE plants the seed; `t` runs the ring.
+//! phantom jam (Sugiyama 2008).
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -177,7 +177,7 @@ impl Room for PhantomJam {
             wing: "Emergence",
             blurb: "One brake on a ring of cars births a dense jam that rolls backward against \
                     traffic. No accident, no bottleneck: just follow-the-leader (Sugiyama 2008). \
-                    t runs the ring; HOLD: BRAKE plants the seed.",
+                    t runs the ring.",
             accent: [230, 120, 40],
         }
     }

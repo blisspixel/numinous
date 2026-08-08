@@ -129,7 +129,7 @@ impl Room for Chebyshev {
             id: "chebyshev",
             title: "Chebyshev Nodes",
             wing: "Number & Pattern",
-            blurb: "Min-max nodes tame Runge edges. t and DRAG: TUNE DEGREE.",
+            blurb: "Min-max nodes tame Runge edges.",
             accent: [40, 140, 80],
         }
     }

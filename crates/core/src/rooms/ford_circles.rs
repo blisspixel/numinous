@@ -292,7 +292,7 @@ impl Room for FordCircles {
             wing: "Number & Pattern",
             blurb: "Every reduced fraction p/q owns a circle of radius 1/(2q^2). Circles never \
                     overlap; they kiss exactly for Farey neighbors. t deepens denominators; \
-                    CLICK: BIRTH THE MEDIANT fills the gap under the hand.",
+                    a click births the mediant that fills the gap under the hand.",
             accent: [180, 140, 220],
         }
     }

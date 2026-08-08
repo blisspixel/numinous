@@ -414,19 +414,18 @@ impl Room for GaltonBoard {
         Self::draw_board(canvas, BOARD_ROWS, &[], 2);
     }
 
+    // Provenance: probability theory, the binomial distribution; mass
+    // function boundaries checked, binomial coefficients verified, empirical
+    // convergence bounded. The player-facing source rides
+    // `citations::for_room("galton-board")`; the reveal ends on the idea,
+    // never on checkbox homework.
     fn reveal(&self) -> &'static str {
         "The coin probability alone does not determine the next landing. With one \
          probability fixed, the number of right turns in a 16-flip landing follows \
          exactly Binomial(16, p), and repeated waves make the empirical pile estimate \
          that discrete distribution. With many rows and a coin away from either \
          extreme, a normal curve can approximate the binomial, the direction formalized \
-         by the Central Limit Theorem. This board displays the finite binomial itself.\n\n\
-         ---\n\
-         **Source Provenance:** Probability Theory (Binomial Distribution)\n\
-         **Math Review Checklist:**\n\
-         - [x] Probability mass function boundaries checked\n\
-         - [x] Binomial coefficient calculation verified\n\
-         - [x] Empirical convergence bounded mathematically"
+         by the Central Limit Theorem. This board displays the finite binomial itself."
     }
 
     fn motif(&self) -> Option<crate::motifs::Motif> {

@@ -96,7 +96,7 @@ impl Room for CrossCap {
             id: "cross-cap",
             title: "Cross-Cap",
             wing: "Shape & Space",
-            blurb: "RP2 immersion: a cap that crosses itself. t and DRAG: TUNE A.",
+            blurb: "RP2 immersion: a cap that crosses itself.",
             accent: [100, 60, 80],
         }
     }

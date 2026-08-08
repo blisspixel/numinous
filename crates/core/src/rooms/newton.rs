@@ -1,7 +1,7 @@
 //! Newton fractal: basins of attraction for root-finding.
 //!
 //! Newton iteration on p(z)=z^3-1 (or z^n-1) paints which root each seed
-//! finds. The boundaries are fractal. DRAG: RAISE THE DEGREE. See
+//! finds. The boundaries are fractal. See
 //! `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -136,7 +136,7 @@ impl Room for Newton {
             title: "Newton's Basins",
             wing: "Fractals",
             blurb: "Newton's method on z^n-1 paints which root each seed finds. Basin boundaries \
-                    are fractal. t and DRAG: RAISE THE DEGREE.",
+                    are fractal.",
             accent: [255, 100, 80],
         }
     }

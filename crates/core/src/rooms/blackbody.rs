@@ -116,7 +116,7 @@ impl Room for Blackbody {
             id: "blackbody",
             title: "Blackbody Spectrum",
             wing: "Waves & Sound",
-            blurb: "Planck curve and Wien peak shift with T. t and DRAG: TUNE TEMP.",
+            blurb: "Planck curve and Wien peak shift with T.",
             accent: [180, 80, 30],
         }
     }

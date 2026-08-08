@@ -133,7 +133,7 @@ impl Room for Pursuit {
             title: "The Chase",
             wing: "Motion & Dynamics",
             blurb: "Four bugs each walk toward the next: a logarithmic whirlpool where every path \
-                    has the same length. t sets speed; DRAG: REHOME A BUG.",
+                    has the same length. t sets speed.",
             accent: [220, 120, 90],
         }
     }

@@ -92,7 +92,7 @@ impl Room for Beatty {
             id: "beatty",
             title: "Beatty Sequence",
             wing: "Number & Pattern",
-            blurb: "floor(n r) and floor(n s) partition N. t and DRAG: TUNE R.",
+            blurb: "floor(n r) and floor(n s) partition N.",
             accent: [100, 60, 120],
         }
     }

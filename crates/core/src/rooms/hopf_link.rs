@@ -123,7 +123,7 @@ impl Room for HopfLink {
             id: "hopf-link",
             title: "Hopf Link",
             wing: "Shape & Space",
-            blurb: "Two circles, each through the other once. t and DRAG: TUNE PHI.",
+            blurb: "Two circles, each through the other once.",
             accent: [90, 70, 100],
         }
     }

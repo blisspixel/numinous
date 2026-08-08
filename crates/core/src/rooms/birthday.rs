@@ -101,7 +101,7 @@ impl Room for Birthday {
             id: "birthday",
             title: "Birthday Paradox",
             wing: "Chance & Order",
-            blurb: "Shared birthday odds grow faster than intuition. t and DRAG: TUNE N.",
+            blurb: "Shared birthday odds grow faster than intuition.",
             accent: [160, 60, 80],
         }
     }

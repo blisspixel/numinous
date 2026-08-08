@@ -128,7 +128,7 @@ impl Room for Menagerie {
             title: "The Menagerie",
             wing: "Fractals",
             blurb: "Clifford attractor: four numbers and a long orbit condense a luminous alien. \
-                    t drifts constants; DRAG: TUNE THE FOUR.",
+                    t drifts constants.",
             accent: [180, 90, 140],
         }
     }

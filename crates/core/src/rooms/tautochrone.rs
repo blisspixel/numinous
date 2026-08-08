@@ -113,7 +113,7 @@ impl Room for Tautochrone {
             id: "tautochrone",
             title: "Tautochrone",
             wing: "Motion & Dynamics",
-            blurb: "Beads on a cycloid finish together. t and DRAG: TUNE STARTS.",
+            blurb: "Beads on a cycloid finish together.",
             accent: [70, 110, 180],
         }
     }

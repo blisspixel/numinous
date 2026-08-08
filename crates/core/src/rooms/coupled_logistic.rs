@@ -104,7 +104,7 @@ impl Room for CoupledLogistic {
             id: "coupled-logistic",
             title: "Coupled Logistic",
             wing: "Motion & Dynamics",
-            blurb: "Two logistic maps cross-talk into sync or chaos. t and DRAG: TUNE COUPLING.",
+            blurb: "Two logistic maps cross-talk into sync or chaos.",
             accent: [200, 120, 40],
         }
     }

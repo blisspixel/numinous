@@ -3,7 +3,7 @@
 //! Philip H. Smith's 1930s chart folds the infinite normalized-impedance plane
 //! into the unit disk of the reflection coefficient Gamma. Constant resistance
 //! and reactance become families of circles; moving along a lossless line is a
-//! pure rotation around constant |Gamma|. DRAG: PLACE LOAD. Phase sweeps
+//! pure rotation around constant |Gamma|. Phase sweeps
 //! electrical length (one full chart lap equals half a wavelength). See
 //! `docs/ROOMS.md`.
 
@@ -293,7 +293,7 @@ impl Room for SmithChart {
             title: "The Scariest Chart",
             wing: "Waves & Sound",
             blurb: "Smith chart: the infinite impedance plane folded into a unit \
-                    circle of reflection. Phase walks the line; DRAG: PLACE LOAD.",
+                    circle of reflection. Phase walks the line.",
             accent: [60, 200, 180],
         }
     }

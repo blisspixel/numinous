@@ -2,7 +2,7 @@
 //!
 //! Start with a triangle; replace every edge's middle third with two sides of
 //! an equilateral bump. Iterate. Perimeter grows without bound while area
-//! converges. DRAG: ADD A GENERATION. See `docs/ROOMS.md`.
+//! converges. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -116,7 +116,7 @@ impl Room for Koch {
             title: "The Infinite Coast",
             wing: "Fractals",
             blurb: "Koch snowflake: every generation multiplies the coast by 4/3. Perimeter runs \
-                    away; area stays finite. t and DRAG: ADD A GENERATION.",
+                    away; area stays finite.",
             accent: [140, 200, 255],
         }
     }

@@ -1,6 +1,6 @@
 //! Lozi map: piecewise-linear Henon cousin.
 //!
-//! (x,y) -> (1 - a |x| + y, b x). DRAG: TUNE A AND B. See `docs/ROOMS.md`.
+//! (x,y) -> (1 - a |x| + y, b x). See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -117,8 +117,7 @@ impl Room for Lozi {
             id: "lozi",
             title: "The Lozi Map",
             wing: "Motion & Dynamics",
-            blurb: "Piecewise-linear Henon: absolute value folds the plane. t and DRAG: TUNE A AND \
-                    B.",
+            blurb: "Piecewise-linear Henon: absolute value folds the plane.",
             accent: [200, 80, 60],
         }
     }

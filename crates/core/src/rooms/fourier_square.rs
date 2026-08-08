@@ -1,6 +1,6 @@
 //! Fourier square wave: partial sums and the Gibbs overshoot.
 //!
-//! Sum of odd harmonics toward a square wave. DRAG: SET THE TERM COUNT.
+//! Sum of odd harmonics toward a square wave.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -108,8 +108,7 @@ impl Room for FourierSquare {
             id: "fourier-square",
             title: "Gibbs Overshoot",
             wing: "Waves & Sound",
-            blurb: "Odd-harmonic Fourier sums toward a square wave; ringing refuses to die. t and \
-                    DRAG: SET THE TERM COUNT.",
+            blurb: "Odd-harmonic Fourier sums toward a square wave; ringing refuses to die.",
             accent: [40, 100, 220],
         }
     }

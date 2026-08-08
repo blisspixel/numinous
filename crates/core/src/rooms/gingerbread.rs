@@ -1,6 +1,6 @@
 //! Gingerbreadman map: piecewise linear chaos with a cookie silhouette.
 //!
-//! x' = 1 - y + |x|; y' = x. DRAG: SET THE START. See `docs/ROOMS.md`.
+//! x' = 1 - y + |x|; y' = x. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -128,8 +128,7 @@ impl Room for Gingerbread {
             id: "gingerbread",
             title: "Gingerbreadman Map",
             wing: "Motion & Dynamics",
-            blurb: "Piecewise-linear map whose orbit sketches a cookie silhouette. t and DRAG: SET \
-                    THE START.",
+            blurb: "Piecewise-linear map whose orbit sketches a cookie silhouette.",
             accent: [180, 100, 40],
         }
     }

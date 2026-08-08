@@ -131,7 +131,7 @@ impl Room for Clothoid {
             id: "clothoid",
             title: "Clothoid",
             wing: "Shape & Space",
-            blurb: "Euler spiral: curvature grows with arc length. t and DRAG: TUNE SCALE.",
+            blurb: "Euler spiral: curvature grows with arc length.",
             accent: [60, 100, 180],
         }
     }

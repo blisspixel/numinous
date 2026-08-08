@@ -1,7 +1,7 @@
 //! The Soft Proof: homotopy as continuous deform without tear.
 //!
 //! A path between two points morphs through a family; if endpoints stay fixed
-//! and the strip never tears, the paths are homotopic. DRAG: DEFORM WITHOUT TEAR.
+//! and the strip never tears, the paths are homotopic.
 //! See `docs/ROOMS.md`.
 
 use std::f64::consts::PI;
@@ -113,7 +113,7 @@ impl Room for SoftProof {
             title: "The Soft Proof",
             wing: "Shape & Space",
             blurb: "Homotopy: continuously deform a path without tearing endpoints free. t sets \
-                    the stage; DRAG: DEFORM WITHOUT TEAR.",
+                    the stage.",
             accent: [200, 160, 220],
         }
     }

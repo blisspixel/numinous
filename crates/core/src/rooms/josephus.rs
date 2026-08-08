@@ -1,6 +1,6 @@
 //! Josephus circle: every k-th person is removed until one remains.
 //!
-//! Classic counting-out on a circle. DRAG: SET N AND K. See `docs/ROOMS.md`.
+//! Classic counting-out on a circle. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -129,7 +129,7 @@ impl Room for Josephus {
             id: "josephus",
             title: "Josephus Circle",
             wing: "Number & Pattern",
-            blurb: "Every k-th seat is removed until one remains. t and DRAG: SET N AND K.",
+            blurb: "Every k-th seat is removed until one remains.",
             accent: [160, 40, 40],
         }
     }

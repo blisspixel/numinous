@@ -115,7 +115,7 @@ impl Room for FigureEightKnot {
             id: "figure-eight-knot",
             title: "Figure-Eight Knot",
             wing: "Shape & Space",
-            blurb: "Second simplest prime knot. t and DRAG: TUNE PHASE.",
+            blurb: "Second simplest prime knot.",
             accent: [100, 70, 40],
         }
     }

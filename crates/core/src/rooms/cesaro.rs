@@ -106,7 +106,7 @@ impl Room for Cesaro {
             id: "cesaro",
             title: "Cesaro Fractal",
             wing: "Fractals",
-            blurb: "Torn square: Koch rewrite with right angles. t and DRAG: SET THE ORDER.",
+            blurb: "Torn square: Koch rewrite with right angles.",
             accent: [180, 100, 60],
         }
     }

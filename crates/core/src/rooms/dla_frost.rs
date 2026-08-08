@@ -1,7 +1,7 @@
 //! Diffusion-Limited Aggregation: the frost that grows from random walkers.
 //!
 //! Walkers freeze on contact and build lightning, coral, and frost. The
-//! sibling Random Walk is begging for. CLICK: PLANT A SEED. See `docs/ROOMS.md`.
+//! sibling Random Walk is begging for. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -143,7 +143,7 @@ impl Room for DlaFrost {
             title: "The Frost",
             wing: "Emergence",
             blurb: "Diffusion-limited aggregation: random walkers freeze on contact and grow \
-                    lightning and coral. t grows the swarm; CLICK: PLANT A SEED.",
+                    lightning and coral. t grows the swarm.",
             accent: [180, 220, 255],
         }
     }

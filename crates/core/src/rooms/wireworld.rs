@@ -1,7 +1,7 @@
 //! Wireworld: the visible computer (four-state cellular automaton).
 //!
 //! Empty, conductor, electron head, electron tail. Electrons race the wires;
-//! gates are patterns. CLICK: FIRE AN ELECTRON. See `docs/ROOMS.md`.
+//! gates are patterns. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -192,7 +192,7 @@ impl Room for Wireworld {
             title: "The Visible Computer",
             wing: "Emergence",
             blurb: "Wireworld: four states, electrons on copper, gates you can watch. t steps the \
-                    clock; CLICK: FIRE AN ELECTRON.",
+                    clock.",
             accent: [255, 200, 40],
         }
     }

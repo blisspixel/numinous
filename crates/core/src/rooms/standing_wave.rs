@@ -137,7 +137,7 @@ impl Room for StandingWave {
             id: "standing-wave",
             title: "Standing Wave",
             wing: "Waves & Sound",
-            blurb: "Fixed-end string modes that breathe. Watch the antinodes; DRAG: SET MODE.",
+            blurb: "Fixed-end string modes that breathe. Watch the antinodes.",
             accent: [40, 100, 200],
         }
     }

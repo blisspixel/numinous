@@ -125,7 +125,7 @@ impl Room for Chua {
             id: "chua",
             title: "Chua Circuit",
             wing: "Motion & Dynamics",
-            blurb: "Double-scroll chaos from a nonlinear diode circuit. t and DRAG: TUNE ALPHA.",
+            blurb: "Double-scroll chaos from a nonlinear diode circuit.",
             accent: [200, 60, 80],
         }
     }

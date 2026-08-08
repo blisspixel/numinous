@@ -1,6 +1,6 @@
 //! Butterfly curve: polar r = e^{cos th} - 2 cos(4 th) + sin^5(th/12).
 //!
-//! Ambient phase draws the Temple-Fay wings with a pen. DRAG: TUNE SPIN.
+//! Ambient phase draws the Temple-Fay wings with a pen.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -126,7 +126,7 @@ impl Room for ButterflyCurve {
             id: "butterfly-curve",
             title: "Butterfly Curve",
             wing: "Shape & Space",
-            blurb: "Temple-Fay wings draw themselves. Watch the pen; DRAG: TUNE SPIN.",
+            blurb: "Temple-Fay wings draw themselves. Watch the pen.",
             accent: [160, 50, 100],
         }
     }

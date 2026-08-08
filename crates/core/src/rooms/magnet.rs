@@ -1,6 +1,6 @@
 //! Magnet fractal (type I toy): rational map escape portrait.
 //!
-//! z -> ((z^2+c-1)/(2z+c-2))^2. DRAG: AIM C. See `docs/ROOMS.md`.
+//! z -> ((z^2+c-1)/(2z+c-2))^2. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -123,7 +123,7 @@ impl Room for MagnetFractal {
             id: "magnet-fractal",
             title: "Magnet Fractal",
             wing: "Fractals",
-            blurb: "Type-I magnet set: rational map escape portrait. t and DRAG: AIM C.",
+            blurb: "Type-I magnet set: rational map escape portrait.",
             accent: [80, 40, 160],
         }
     }

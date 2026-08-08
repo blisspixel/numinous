@@ -94,7 +94,7 @@ impl Room for AmModulation {
             id: "am-modulation",
             title: "AM Modulation",
             wing: "Waves & Sound",
-            blurb: "Carrier times slow envelope: radio AM. t and DRAG: TUNE MOD INDEX.",
+            blurb: "Carrier times slow envelope: radio AM.",
             accent: [80, 160, 40],
         }
     }

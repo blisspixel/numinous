@@ -1,6 +1,6 @@
 //! Lambda map / logistic in multiplicative form: z -> lambda z (1-z).
 //!
-//! Complex lambda Julia-style escape for fixed lambda. DRAG: TUNE LAMBDA.
+//! Complex lambda Julia-style escape for fixed lambda.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -122,8 +122,7 @@ impl Room for LambdaMap {
             id: "lambda-map",
             title: "Lambda Map",
             wing: "Fractals",
-            blurb: "Complex logistic z -> lambda z(1-z) as Julia portrait. t and DRAG: TUNE \
-                    LAMBDA.",
+            blurb: "Complex logistic z -> lambda z(1-z) as Julia portrait.",
             accent: [40, 140, 200],
         }
     }

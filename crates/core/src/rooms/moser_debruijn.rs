@@ -96,7 +96,7 @@ impl Room for MoserDebruijn {
             id: "moser-debruijn",
             title: "Moser-de Bruijn",
             wing: "Number & Pattern",
-            blurb: "Sums of distinct powers of 4. t and DRAG: TUNE N.",
+            blurb: "Sums of distinct powers of 4.",
             accent: [90, 50, 90],
         }
     }

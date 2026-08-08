@@ -98,7 +98,7 @@ impl Room for ShannonEntropy {
             id: "shannon-entropy",
             title: "Shannon Entropy",
             wing: "Chance & Noise",
-            blurb: "H(p) for a biased coin. t and DRAG: TUNE P.",
+            blurb: "H(p) for a biased coin.",
             accent: [50, 100, 140],
         }
     }

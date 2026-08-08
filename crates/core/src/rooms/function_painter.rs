@@ -2,7 +2,7 @@
 //!
 //! Phase paints the symbol (ASCII stand-in for hue); magnitude paints density.
 //! A rack of classic maps (z^2, z^2+c, 1/z, sin z, ...) turns the plate into a
-//! museum of the complex plane. DRAG: PICK A MAP / TUNE C. See `docs/ROOMS.md`.
+//! museum of the complex plane. See `docs/ROOMS.md`.
 
 use std::f64::consts::PI;
 

@@ -91,7 +91,7 @@ impl Room for Wythoff {
             id: "wythoff",
             title: "Wythoff Array",
             wing: "Number & Pattern",
-            blurb: "Golden Beatty pairs A_k, B_k. t and DRAG: TUNE ROWS.",
+            blurb: "Golden Beatty pairs A_k, B_k.",
             accent: [160, 120, 40],
         }
     }

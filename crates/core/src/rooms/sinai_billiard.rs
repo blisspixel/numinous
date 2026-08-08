@@ -1,6 +1,6 @@
 //! Sinai billiard: square table with a circular scatterer (toy).
 //!
-//! Hard-disk billiard chaos in a box. DRAG: SET THE LAUNCH. See `docs/ROOMS.md`.
+//! Hard-disk billiard chaos in a box. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -161,8 +161,7 @@ impl Room for SinaiBilliard {
             id: "sinai-billiard",
             title: "Sinai Billiard",
             wing: "Shape & Space",
-            blurb: "Square table with a circular scatterer: hard chaos. t and DRAG: SET THE \
-                    LAUNCH.",
+            blurb: "Square table with a circular scatterer: hard chaos.",
             accent: [100, 60, 40],
         }
     }

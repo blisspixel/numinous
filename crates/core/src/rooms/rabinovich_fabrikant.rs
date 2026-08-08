@@ -1,6 +1,6 @@
 //! Rabinovich-Fabrikant equations: continuous chaos with cubic terms.
 //!
-//! Projected to xy. DRAG: TUNE GAMMA. See `docs/ROOMS.md`.
+//! Projected to xy. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -130,7 +130,7 @@ impl Room for RabinovichFabrikant {
             id: "rabinovich-fabrikant",
             title: "Rabinovich-Fabrikant",
             wing: "Motion & Dynamics",
-            blurb: "Cubic continuous chaos from plasma physics. t and DRAG: TUNE GAMMA.",
+            blurb: "Cubic continuous chaos from plasma physics.",
             accent: [180, 60, 140],
         }
     }

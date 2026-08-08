@@ -3,7 +3,7 @@
 //! Light leaves a source on the rim of a circular cup. Every ray reflects once
 //! with equal angle of incidence and reflection, then is drawn a short way past
 //! the bounce. The bright envelope of those reflected rays is a cardioid that
-//! kisses the rim at the source. `t` walks the ambient sun; DRAG: SWING THE SUN.
+//! kisses the rim at the source. `t` walks the ambient sun.
 //! Closes the cardioid triangle with Times Tables and Mandelbrot. See
 //! `docs/ROOMS.md`.
 
@@ -232,7 +232,7 @@ impl Room for CoffeeCup {
             title: "The Coffee Cup",
             wing: "Shape & Space",
             blurb: "Rays bounce once in a circle and condense into a cardioid. t walks the sun on \
-                    the rim; DRAG: SWING THE SUN. Same cardioid curve as Times Tables and the \
+                    the rim. Same cardioid curve as Times Tables and the \
                     Mandelbrot main bulb.",
             accent: [230, 150, 90],
         }

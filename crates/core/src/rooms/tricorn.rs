@@ -1,6 +1,6 @@
 //! Tricorn (Mandelbar): Mandelbrot with conjugate squaring.
 //!
-//! z -> conjugate(z)^2 + c. DRAG: AIM THE WINDOW. See `docs/ROOMS.md`.
+//! z -> conjugate(z)^2 + c. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -111,8 +111,7 @@ impl Room for Tricorn {
             id: "tricorn",
             title: "Tricorn",
             wing: "Fractals",
-            blurb: "Mandelbar set: conjugate squaring, three-lobed body. t and DRAG: AIM THE \
-                    WINDOW.",
+            blurb: "Mandelbar set: conjugate squaring, three-lobed body.",
             accent: [120, 60, 200],
         }
     }

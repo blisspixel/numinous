@@ -113,7 +113,7 @@ impl Room for Trefoil {
             id: "trefoil",
             title: "Trefoil Knot",
             wing: "Shape & Space",
-            blurb: "Simplest nontrivial knot. t and DRAG: TUNE PHASE.",
+            blurb: "Simplest nontrivial knot.",
             accent: [140, 50, 80],
         }
     }

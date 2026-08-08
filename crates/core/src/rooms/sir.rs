@@ -108,7 +108,7 @@ impl Room for Sir {
             id: "sir",
             title: "SIR Epidemic",
             wing: "Chance & Order",
-            blurb: "Susceptible, infected, recovered curves. t and DRAG: TUNE R0.",
+            blurb: "Susceptible, infected, recovered curves.",
             accent: [180, 40, 60],
         }
     }

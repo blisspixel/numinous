@@ -116,7 +116,7 @@ impl Room for Hermite {
             id: "hermite",
             title: "Hermite Wave",
             wing: "Waves & Sound",
-            blurb: "Harmonic oscillator Hermite modes. t and DRAG: TUNE N.",
+            blurb: "Harmonic oscillator Hermite modes.",
             accent: [90, 40, 140],
         }
     }

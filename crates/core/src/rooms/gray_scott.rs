@@ -165,7 +165,7 @@ impl Room for GrayScott {
             title: "The Chemical Garden",
             wing: "Emergence",
             blurb: "Gray-Scott reaction-diffusion: two chemicals paint spots, stripes, and coral. \
-                    t drifts feed/kill; DRAG: TUNE FEED/KILL; clicks seed blobs.",
+                    t drifts feed/kill.",
             accent: [80, 200, 160],
         }
     }

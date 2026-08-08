@@ -1,6 +1,6 @@
 //! Cassini ovals: product of distances to two foci is constant.
 //!
-//! Ambient phase draws the ovals with a pen. DRAG: TUNE B.
+//! Ambient phase draws the ovals with a pen.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -181,7 +181,7 @@ impl Room for Cassini {
             id: "cassini",
             title: "Cassini Ovals",
             wing: "Shape & Space",
-            blurb: "Two-foci product curves draw themselves. Watch the pen; DRAG: TUNE B.",
+            blurb: "Two-foci product curves draw themselves. Watch the pen.",
             accent: [140, 60, 120],
         }
     }

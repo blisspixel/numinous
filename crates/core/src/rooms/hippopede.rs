@@ -1,6 +1,6 @@
 //! Hippopede of Proclus: figure-eight from intersecting sphere and cylinder.
 //!
-//! Ambient phase walks a pen along the fetter. DRAG: TUNE ECC.
+//! Ambient phase walks a pen along the fetter.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -134,7 +134,7 @@ impl Room for Hippopede {
             id: "hippopede",
             title: "Hippopede",
             wing: "Shape & Space",
-            blurb: "Proclus horse-fetter draws itself. Watch the pen; DRAG: TUNE ECC.",
+            blurb: "Proclus horse-fetter draws itself. Watch the pen.",
             accent: [100, 70, 50],
         }
     }

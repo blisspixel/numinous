@@ -109,7 +109,7 @@ impl Room for DampedSine {
             id: "damped-sine",
             title: "Damped Sine",
             wing: "Waves & Sound",
-            blurb: "Exponential envelope on a pure oscillation. t and DRAG: TUNE DECAY.",
+            blurb: "Exponential envelope on a pure oscillation.",
             accent: [40, 160, 180],
         }
     }

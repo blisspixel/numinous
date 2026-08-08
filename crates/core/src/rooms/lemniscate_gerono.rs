@@ -1,6 +1,6 @@
 //! Lemniscate of Gerono: figure-eight algebraic curve (distinct from Bernoulli).
 //!
-//! x^4 = a^2 (x^2 - y^2). DRAG: TUNE SCALE. See `docs/ROOMS.md`.
+//! x^4 = a^2 (x^2 - y^2). See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -91,7 +91,7 @@ impl Room for LemniscateGerono {
             id: "gerono",
             title: "Gerono Eight",
             wing: "Shape & Space",
-            blurb: "Figure-eight from x = a cos t, y = a sin t cos t. t and DRAG: TUNE SCALE.",
+            blurb: "Figure-eight from x = a cos t, y = a sin t cos t.",
             accent: [180, 60, 140],
         }
     }

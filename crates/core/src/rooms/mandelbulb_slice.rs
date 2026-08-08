@@ -1,6 +1,6 @@
 //! Mandelbulb Slice: a 2D cut through the classic 3D bulb (power 8 toy).
 //!
-//! Iterate z^n + c in cylindrical form on a plane. DRAG: AIM THE SLICE.
+//! Iterate z^n + c in cylindrical form on a plane.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -122,8 +122,7 @@ impl Room for MandelbulbSlice {
             id: "mandelbulb-slice",
             title: "Mandelbulb Slice",
             wing: "Fractals",
-            blurb: "A plane cut through the power-8 Mandelbulb. t and DRAG: AIM THE SLICE through \
-                    the bulb.",
+            blurb: "A plane cut through the power-8 Mandelbulb.",
             accent: [160, 80, 220],
         }
     }

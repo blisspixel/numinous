@@ -126,7 +126,7 @@ impl Room for WattCurve {
             id: "watt-curve",
             title: "Watt Curve",
             wing: "Shape & Space",
-            blurb: "Midpoint of a two-bar linkage. t and DRAG: TUNE LENGTH.",
+            blurb: "Midpoint of a two-bar linkage.",
             accent: [90, 90, 40],
         }
     }

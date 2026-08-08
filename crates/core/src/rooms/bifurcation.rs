@@ -94,8 +94,7 @@ impl Room for Bifurcation {
             id: "bifurcation",
             title: "Bifurcation Weather",
             wing: "Motion & Dynamics",
-            blurb: "Logistic map long-term x as r sweeps: period doubling into chaos. t and DRAG: \
-                    SET R WINDOW.",
+            blurb: "Logistic map long-term x as r sweeps: period doubling into chaos.",
             accent: [200, 40, 80],
         }
     }

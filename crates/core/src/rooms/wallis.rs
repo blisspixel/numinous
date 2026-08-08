@@ -96,7 +96,7 @@ impl Room for Wallis {
             id: "wallis",
             title: "Wallis Product",
             wing: "Number & Pattern",
-            blurb: "Product (4k^2)/(4k^2-1) -> pi/2. t and DRAG: TUNE N.",
+            blurb: "Product (4k^2)/(4k^2-1) -> pi/2.",
             accent: [100, 50, 80],
         }
     }

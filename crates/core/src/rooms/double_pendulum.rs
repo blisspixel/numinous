@@ -543,18 +543,17 @@ impl Room for DoublePendulum {
         );
     }
 
+    // Provenance: classical mechanics and chaos theory; Runge-Kutta
+    // integration bounded and verified, energy conservation limits tested,
+    // sensitive dependence demonstrated. The player-facing source rides
+    // `citations::for_room("double-pendulum")`; the reveal ends on the idea,
+    // never on checkbox homework.
     fn reveal(&self) -> &'static str {
         "Both pendulums follow the same deterministic numerical model; nothing \
          here is random. \
          The shadow started one ten-thousandth of a radian away and ended \
          somewhere else entirely. Determinism and predictability are different \
-         things, and this machine lets you watch that distinction unfold.\n\n\
-         ---\n\
-         **Source Provenance:** Classical Mechanics and Chaos Theory\n\
-         **Math Review Checklist:**\n\
-         - [x] Runge-Kutta integration bounded and verified\n\
-         - [x] Energy conservation limits tested\n\
-         - [x] Sensitive dependence mathematically demonstrated"
+         things, and this machine lets you watch that distinction unfold."
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {

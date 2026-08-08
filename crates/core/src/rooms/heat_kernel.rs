@@ -113,7 +113,7 @@ impl Room for HeatKernel {
             id: "heat-kernel",
             title: "Heat Kernel",
             wing: "Change",
-            blurb: "Gaussian spreads as sqrt(t). t and DRAG: TUNE TIME.",
+            blurb: "Gaussian spreads as sqrt(t).",
             accent: [200, 80, 30],
         }
     }

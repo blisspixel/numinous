@@ -1,6 +1,6 @@
 //! The Sieve of Eratosthenes: primes fall out of a grid of naturals.
 //!
-//! Cross out multiples; what remains is prime. DRAG: SET THE CEILING.
+//! Cross out multiples; what remains is prime.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -108,7 +108,7 @@ impl Room for Sieve {
             id: "sieve",
             title: "The Sieve",
             wing: "Number & Pattern",
-            blurb: "Eratosthenes: cross out multiples, primes remain. t and DRAG: SET THE CEILING. \
+            blurb: "Eratosthenes: cross out multiples, primes remain. \
                     Variation shifts the strike animation seed.",
             accent: [220, 180, 60],
         }

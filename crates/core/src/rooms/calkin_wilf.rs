@@ -118,8 +118,7 @@ impl Room for CalkinWilf {
             id: "calkin-wilf",
             title: "Calkin-Wilf Tree",
             wing: "Number & Pattern",
-            blurb: "Every positive rational once via left a/(a+b) and right (a+b)/b. t and DRAG: \
-                    SET THE DEPTH.",
+            blurb: "Every positive rational once via left a/(a+b) and right (a+b)/b.",
             accent: [40, 160, 140],
         }
     }

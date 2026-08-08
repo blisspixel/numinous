@@ -1,6 +1,6 @@
 //! Attention as Soft Light: one query lights a few keys; the rest go dim.
 //!
-//! Softmax over dot products of a query with key vectors. DRAG: MOVE THE QUERY.
+//! Softmax over dot products of a query with key vectors.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -140,7 +140,7 @@ impl Room for Attention {
             title: "Attention as Soft Light",
             wing: "Number & Pattern",
             blurb: "One query lights a few keys; the rest go dim. Softmax weights are the story. t \
-                    warms temperature; DRAG: MOVE THE QUERY.",
+                    warms temperature.",
             accent: [255, 220, 100],
         }
     }

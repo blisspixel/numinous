@@ -164,8 +164,7 @@ impl Room for Tinkerbell {
             id: "tinkerbell",
             title: "Tinkerbell Map",
             wing: "Motion & Dynamics",
-            blurb: "Quadratic planar map with a butterfly-shaped attractor. t and DRAG: TUNE A AND \
-                    C.",
+            blurb: "Quadratic planar map with a butterfly-shaped attractor.",
             accent: [220, 120, 180],
         }
     }

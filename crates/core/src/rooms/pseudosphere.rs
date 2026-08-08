@@ -123,7 +123,7 @@ impl Room for Pseudosphere {
             id: "pseudosphere",
             title: "Pseudosphere",
             wing: "Shape & Space",
-            blurb: "Constant K=-1 from a spun tractrix. t and DRAG: TUNE FLARE.",
+            blurb: "Constant K=-1 from a spun tractrix.",
             accent: [120, 50, 140],
         }
     }

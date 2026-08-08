@@ -1,8 +1,7 @@
 //! Truchet tiles / 10 PRINT: one tile, two rotations, endless weave.
 //!
 //! Each cell flips a coin and draws one of two diagonal arcs (or lines). Bias
-//! the coin and mazes become loops, or loops become mazes. DRAG: PAINT THE
-//! BIAS. See `docs/ROOMS.md`.
+//! the coin and mazes become loops, or loops become mazes. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -88,7 +87,7 @@ impl Room for Truchet {
             title: "The Weave",
             wing: "Emergence",
             blurb: "One tile, two rotations, a coin flip per cell: Truchet and 10 PRINT mazes from \
-                    nothing. t drifts bias; DRAG: PAINT THE BIAS.",
+                    nothing. t drifts bias.",
             accent: [100, 180, 160],
         }
     }

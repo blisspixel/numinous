@@ -115,7 +115,7 @@ impl Room for MackeyGlass {
             id: "mackey-glass",
             title: "Mackey-Glass",
             wing: "Motion & Dynamics",
-            blurb: "Delayed feedback births a strange attractor. t and DRAG: TUNE DELAY.",
+            blurb: "Delayed feedback births a strange attractor.",
             accent: [40, 140, 120],
         }
     }

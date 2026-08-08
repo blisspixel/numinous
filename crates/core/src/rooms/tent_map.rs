@@ -1,6 +1,6 @@
 //! Tent map: the simplest piecewise-linear chaos map on `[0, 1]`.
 //!
-//! T_mu(x) = mu min(x, 1-x). Orbit cobweb and density. DRAG: TUNE MU.
+//! T_mu(x) = mu min(x, 1-x). Orbit cobweb and density.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -142,7 +142,7 @@ impl Room for TentMap {
             id: "tent-map",
             title: "The Tent Map",
             wing: "Motion & Dynamics",
-            blurb: "Piecewise-linear map on [0,1]: cobweb and density. t and DRAG: TUNE MU.",
+            blurb: "Piecewise-linear map on [0,1]: cobweb and density.",
             accent: [40, 160, 80],
         }
     }

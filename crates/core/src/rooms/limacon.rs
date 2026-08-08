@@ -120,7 +120,7 @@ impl Room for Limacon {
             id: "limacon",
             title: "Limacon",
             wing: "Shape & Space",
-            blurb: "Pascal's snail draws itself: dimple, heart, or loop. DRAG: TUNE RATIO.",
+            blurb: "Pascal's snail draws itself: dimple, heart, or loop.",
             accent: [200, 80, 60],
         }
     }

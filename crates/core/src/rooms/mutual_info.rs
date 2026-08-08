@@ -137,7 +137,7 @@ impl Room for MutualInfo {
             id: "mutual-info",
             title: "Mutual Information",
             wing: "Chance & Noise",
-            blurb: "How much X tells you about Y. t and DRAG: TUNE R.",
+            blurb: "How much X tells you about Y.",
             accent: [110, 90, 50],
         }
     }

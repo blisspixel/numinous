@@ -130,8 +130,7 @@ impl Room for Snell {
             id: "snell",
             title: "Snell's Law",
             wing: "Waves & Sound",
-            blurb: "Rays bend at an interface; total reflection past critical. t and DRAG: TUNE \
-                    INCIDENCE.",
+            blurb: "Rays bend at an interface; total reflection past critical.",
             accent: [40, 140, 200],
         }
     }

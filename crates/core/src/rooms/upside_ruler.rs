@@ -167,7 +167,7 @@ impl Room for UpsideRuler {
             title: "The Upside-Down Ruler",
             wing: "Number & Pattern",
             blurb: "In the 10-adics, ...999999 + 1 = 0, so ...999999 = -1. A tower of nines waits \
-                    for the carry that only resolves at infinity. t grows the tower; CLICK: ADD ONE.",
+                    for the carry that only resolves at infinity. t grows the tower.",
             accent: [200, 160, 80],
         }
     }

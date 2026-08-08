@@ -103,7 +103,7 @@ impl Room for Rabi {
             id: "rabi",
             title: "Rabi Flopping",
             wing: "Waves & Sound",
-            blurb: "Two-level drive: detune slows full flips. t and DRAG: TUNE DETUNE.",
+            blurb: "Two-level drive: detune slows full flips.",
             accent: [80, 40, 160],
         }
     }

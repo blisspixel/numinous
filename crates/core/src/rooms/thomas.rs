@@ -122,7 +122,7 @@ impl Room for Thomas {
             id: "thomas",
             title: "Thomas Attractor",
             wing: "Motion & Dynamics",
-            blurb: "Cyclically symmetric continuous chaos. t and DRAG: TUNE B.",
+            blurb: "Cyclically symmetric continuous chaos.",
             accent: [80, 200, 120],
         }
     }

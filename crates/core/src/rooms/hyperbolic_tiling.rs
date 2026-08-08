@@ -102,7 +102,7 @@ impl Room for HyperbolicTiling {
             id: "hyperbolic-tiling",
             title: "Hyperbolic Tiling",
             wing: "Shape & Space",
-            blurb: "{7,3}-style lattice in the Poincare disc. t and DRAG: SET THE DEPTH.",
+            blurb: "{7,3}-style lattice in the Poincare disc.",
             accent: [120, 40, 160],
         }
     }

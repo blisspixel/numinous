@@ -122,7 +122,7 @@ impl Room for Brewster {
             id: "brewster",
             title: "Brewster Angle",
             wing: "Waves & Sound",
-            blurb: "Fresnel reflectance dips at tan i = n2/n1. t and DRAG: TUNE ANGLE.",
+            blurb: "Fresnel reflectance dips at tan i = n2/n1.",
             accent: [160, 120, 40],
         }
     }

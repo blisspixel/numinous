@@ -93,7 +93,7 @@ impl Room for Basel {
             id: "basel",
             title: "Basel Problem",
             wing: "Number & Pattern",
-            blurb: "sum 1/n^2 climbs to pi^2/6. t and DRAG: TUNE N.",
+            blurb: "sum 1/n^2 climbs to pi^2/6.",
             accent: [120, 40, 100],
         }
     }

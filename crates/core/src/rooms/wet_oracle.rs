@@ -1,7 +1,7 @@
 //! The Wet Oracle: slime mold races you to the shortest path (and wins).
 //!
 //! A simple Physarum-inspired agent deposits chemoattractant and follows
-//! gradients between food crumbs (Tero 2010 vibe). DRAG: SMEAR THE FOOD.
+//! gradients between food crumbs (Tero 2010 vibe).
 //! See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
@@ -172,8 +172,7 @@ impl Room for WetOracle {
             title: "The Wet Oracle",
             wing: "Emergence",
             blurb: "A slime of agents deposits scent and climbs gradients between foods. Race it \
-                    to the shortest path and lose (Tero 2010 Physarum). t grows the network; DRAG: \
-                    SMEAR THE FOOD.",
+                    to the shortest path and lose (Tero 2010 Physarum). t grows the network.",
             accent: [120, 180, 90],
         }
     }

@@ -111,7 +111,7 @@ impl Room for TriangleWave {
             id: "triangle-wave",
             title: "Triangle Wave",
             wing: "Waves & Sound",
-            blurb: "Odd harmonics with 1/k squared: soft corners. t and DRAG: SET HARMONICS.",
+            blurb: "Odd harmonics with 1/k squared: soft corners.",
             accent: [60, 140, 160],
         }
     }

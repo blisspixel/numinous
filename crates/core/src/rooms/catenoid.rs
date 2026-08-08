@@ -117,7 +117,7 @@ impl Room for Catenoid {
             id: "catenoid",
             title: "Catenoid",
             wing: "Shape & Space",
-            blurb: "Minimal surface: revolve a catenary. t and DRAG: TUNE NECK.",
+            blurb: "Minimal surface: revolve a catenary.",
             accent: [160, 100, 60],
         }
     }

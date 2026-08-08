@@ -1,7 +1,7 @@
 //! The Concentration Bell: random points in high D sit near one radius.
 //!
 //! Sample unit-cube (or Gaussian) vectors; their norms concentrate. Extremes
-//! die. CLICK: DRAW A SAMPLE. See `docs/ROOMS.md`.
+//! die. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -121,7 +121,7 @@ impl Room for Concentration {
             title: "The Concentration Bell",
             wing: "Number & Pattern",
             blurb: "Random points in high dimension all sit near the same radius; extremes die. t \
-                    raises d; CLICK: DRAW A SAMPLE.",
+                    raises d.",
             accent: [100, 180, 255],
         }
     }

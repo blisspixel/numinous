@@ -1,6 +1,6 @@
 //! Right strophoid: classical cubic with a loop and asymptote.
 //!
-//! Ambient phase walks a pen along the loop and arms. DRAG: TUNE SCALE.
+//! Ambient phase walks a pen along the loop and arms.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -137,7 +137,7 @@ impl Room for Strophoid {
             id: "strophoid",
             title: "Strophoid",
             wing: "Shape & Space",
-            blurb: "Twisted belt draws its loop and asymptote. Watch the pen; DRAG: TUNE SCALE.",
+            blurb: "Twisted belt draws its loop and asymptote. Watch the pen.",
             accent: [160, 100, 40],
         }
     }

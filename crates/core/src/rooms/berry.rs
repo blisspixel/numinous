@@ -134,7 +134,7 @@ impl Room for Berry {
             id: "berry",
             title: "Berry Phase",
             wing: "Waves & Sound",
-            blurb: "Holonomy after a closed parameter loop. t and DRAG: TUNE LOOP.",
+            blurb: "Holonomy after a closed parameter loop.",
             accent: [160, 80, 180],
         }
     }

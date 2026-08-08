@@ -120,8 +120,7 @@ impl Room for HilbertHotel {
             id: "hilbert-hotel",
             title: "Hilbert's Hotel",
             wing: "Number & Pattern",
-            blurb: "Full hotel, room for one more bus, until the reals check in. t and DRAG: ADMIT \
-                    THE NEXT GUEST.",
+            blurb: "Full hotel, room for one more bus, until the reals check in.",
             accent: [160, 120, 200],
         }
     }

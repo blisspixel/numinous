@@ -1,6 +1,6 @@
 //! Menger sponge slice: open middle-square recursion on a 2D face.
 //!
-//! At each step, remove the center of each 3x3. DRAG: SET THE DEPTH.
+//! At each step, remove the center of each 3x3.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -95,8 +95,7 @@ impl Room for MengerSlice {
             id: "menger-slice",
             title: "Menger Face",
             wing: "Fractals",
-            blurb: "Face of the Menger sponge: remove center squares forever. t and DRAG: SET THE \
-                    DEPTH.",
+            blurb: "Face of the Menger sponge: remove center squares forever.",
             accent: [100, 100, 160],
         }
     }

@@ -1,6 +1,6 @@
 //! Henon-Heiles system: galactic dynamics chaos (toy continuous flow).
 //!
-//! Contour energy orbits in the famous potential. DRAG: TUNE ENERGY.
+//! Contour energy orbits in the famous potential.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -128,8 +128,7 @@ impl Room for HenonHeiles {
             id: "henon-heiles",
             title: "Henon-Heiles",
             wing: "Motion & Dynamics",
-            blurb: "Galactic potential toy: energy steers order into chaos. t and DRAG: TUNE \
-                    ENERGY.",
+            blurb: "Galactic potential toy: energy steers order into chaos.",
             accent: [80, 40, 180],
         }
     }

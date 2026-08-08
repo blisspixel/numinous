@@ -142,8 +142,7 @@ impl Room for NewtonCubic {
             id: "newton-cubic",
             title: "Cubic Newton",
             wing: "Fractals",
-            blurb: "Newton basins for z^3+c: three attractors paint a cubic portrait. t and DRAG: \
-                    TUNE C.",
+            blurb: "Newton basins for z^3+c: three attractors paint a cubic portrait.",
             accent: [255, 90, 120],
         }
     }

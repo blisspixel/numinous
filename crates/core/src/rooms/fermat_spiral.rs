@@ -1,6 +1,6 @@
 //! Fermat (parabolic) spiral: r^2 = a^2 theta.
 //!
-//! Ambient phase unfurls both equal-area arms. DRAG: TUNE TURNS.
+//! Ambient phase unfurls both equal-area arms.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -149,7 +149,7 @@ impl Room for FermatSpiral {
             id: "fermat-spiral",
             title: "Fermat Spiral",
             wing: "Shape & Space",
-            blurb: "Equal-area arms unfurl together. Watch the tips; DRAG: TUNE TURNS.",
+            blurb: "Equal-area arms unfurl together. Watch the tips.",
             accent: [200, 160, 40],
         }
     }

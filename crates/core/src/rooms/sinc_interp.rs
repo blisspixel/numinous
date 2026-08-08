@@ -126,7 +126,7 @@ impl Room for SincInterp {
             id: "sinc-interp",
             title: "Sinc Interpolation",
             wing: "Analysis",
-            blurb: "Whittaker-Shannon reconstruction from samples. t and DRAG: TUNE B.",
+            blurb: "Whittaker-Shannon reconstruction from samples.",
             accent: [50, 90, 110],
         }
     }

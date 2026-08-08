@@ -147,7 +147,7 @@ impl Room for GradientValley {
             title: "The Gradient Valley",
             wing: "Number & Pattern",
             blurb: "Descent finds a basin; a ridge blocks another. The landscape lies to the \
-                    seeker. t drifts start; CLICK: DROP A SEEKER.",
+                    seeker. t drifts start.",
             accent: [80, 160, 120],
         }
     }

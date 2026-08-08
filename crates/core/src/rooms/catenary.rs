@@ -110,7 +110,7 @@ impl Room for Catenary {
             id: "catenary",
             title: "Catenary",
             wing: "Shape & Space",
-            blurb: "The hanging chain: a cosh curve under gravity. t and DRAG: TUNE A.",
+            blurb: "The hanging chain: a cosh curve under gravity.",
             accent: [140, 100, 40],
         }
     }

@@ -206,7 +206,7 @@ impl Room for Napoleon {
             id: "napoleon",
             title: "Napoleon Theorem",
             wing: "Shape & Space",
-            blurb: "Equilateral flaps make a new equilateral. t and DRAG: TUNE T.",
+            blurb: "Equilateral flaps make a new equilateral.",
             accent: [70, 80, 100],
         }
     }

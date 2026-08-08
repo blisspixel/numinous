@@ -1,7 +1,7 @@
 //! The Curse of Dimension: almost all ball volume sits in a thin shell.
 //!
 //! In high dimension the "middle" of a unit ball empties; mass crowds the
-//! surface. DRAG: RAISE DIMENSION. See `docs/ROOMS.md`.
+//! surface. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -115,8 +115,7 @@ impl Room for CurseDimension {
             id: "curse-dimension",
             title: "The Curse of Dimension",
             wing: "Shape & Space",
-            blurb: "Almost all volume of a high-D ball sits in a thin shell; the middle empties. t \
-                    and DRAG: RAISE DIMENSION.",
+            blurb: "Almost all volume of a high-D ball sits in a thin shell; the middle empties.",
             accent: [200, 100, 220],
         }
     }

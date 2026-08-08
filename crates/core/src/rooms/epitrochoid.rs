@@ -1,6 +1,6 @@
 //! Epitrochoid: roulette of a circle rolling outside a fixed circle.
 //!
-//! Ambient phase draws the roulette with a pen. DRAG: TUNE RATIO.
+//! Ambient phase draws the roulette with a pen.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -128,7 +128,7 @@ impl Room for Epitrochoid {
             id: "epitrochoid",
             title: "Epitrochoid",
             wing: "Shape & Space",
-            blurb: "Outer rolling roulette draws itself. Watch the pen; DRAG: TUNE RATIO.",
+            blurb: "Outer rolling roulette draws itself. Watch the pen.",
             accent: [80, 60, 180],
         }
     }

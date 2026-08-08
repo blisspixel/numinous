@@ -137,7 +137,7 @@ impl Room for MinkowskiQm {
             id: "minkowski-qm",
             title: "Minkowski Question Mark",
             wing: "Number & Pattern",
-            blurb: "?(x) maps CF to dyadics, flattens jumps. t and DRAG: TUNE X.",
+            blurb: "?(x) maps CF to dyadics, flattens jumps.",
             accent: [60, 40, 140],
         }
     }

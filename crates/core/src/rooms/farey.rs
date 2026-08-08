@@ -118,7 +118,7 @@ impl Room for Farey {
             id: "farey",
             title: "Farey Sequence",
             wing: "Number & Pattern",
-            blurb: "All reduced fractions up to denominator Q as a comb. t and DRAG: SET Q.",
+            blurb: "All reduced fractions up to denominator Q as a comb.",
             accent: [100, 120, 220],
         }
     }

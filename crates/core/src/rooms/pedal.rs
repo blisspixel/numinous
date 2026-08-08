@@ -105,8 +105,7 @@ impl Room for Pedal {
             id: "pedal",
             title: "Pedal Curve",
             wing: "Shape & Space",
-            blurb: "Feet of perpendiculars from a focus to circle tangents. t and DRAG: TUNE \
-                    FOCUS.",
+            blurb: "Feet of perpendiculars from a focus to circle tangents.",
             accent: [160, 80, 120],
         }
     }

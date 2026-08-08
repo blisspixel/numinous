@@ -157,7 +157,7 @@ impl Room for Kappa {
             id: "kappa",
             title: "Kappa Curve",
             wing: "Shape & Space",
-            blurb: "Classical kappa: r = a cot theta. t and DRAG: TUNE SCALE.",
+            blurb: "Classical kappa: r = a cot theta.",
             accent: [120, 80, 160],
         }
     }

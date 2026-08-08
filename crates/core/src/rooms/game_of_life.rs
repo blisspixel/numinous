@@ -412,16 +412,15 @@ impl Room for GameOfLife {
         0.35
     }
 
+    // Provenance: cellular automata, Conway's Game of Life; neighborhood
+    // transitions verified, Turing-completeness foundation tested, bounded
+    // grid behavior confirmed. The player-facing source rides
+    // `citations::for_room("game-of-life")`; the reveal ends on the idea,
+    // never on checkbox homework.
     fn reveal(&self) -> &'static str {
         "Those four rules are enough to build a working computer. People have \
          built Tetris, and the Game of Life itself, running inside the Game of \
-         Life. It is not a toy, it is a universe.\n\n\
-         ---\n\
-         **Source Provenance:** Cellular Automata (Conway's Game of Life)\n\
-         **Math Review Checklist:**\n\
-         - [x] Neighborhood transitions verified\n\
-         - [x] Turing completeness foundation tested\n\
-         - [x] Finite bounded grid behavior confirmed"
+         Life. It is not a toy, it is a universe."
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {

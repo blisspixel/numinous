@@ -146,7 +146,7 @@ impl Room for Cycloid {
             id: "cycloid",
             title: "Cycloid",
             wing: "Shape & Space",
-            blurb: "A rim point lays cups as a wheel rolls. Watch it roll; DRAG: TUNE CUPS.",
+            blurb: "A rim point lays cups as a wheel rolls. Watch it roll.",
             accent: [200, 140, 40],
         }
     }

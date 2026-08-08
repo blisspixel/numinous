@@ -1,6 +1,6 @@
 //! Trochoid: path of a point fixed to a rolling circle (roulette family).
 //!
-//! Ambient phase draws the path with a pen. DRAG: TUNE RATIO.
+//! Ambient phase draws the path with a pen.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -129,7 +129,7 @@ impl Room for Trochoid {
             id: "trochoid",
             title: "Trochoid",
             wing: "Shape & Space",
-            blurb: "Rolling-circle cups draw themselves. Watch the pen; DRAG: TUNE RATIO.",
+            blurb: "Rolling-circle cups draw themselves. Watch the pen.",
             accent: [160, 100, 40],
         }
     }

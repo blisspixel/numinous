@@ -1,8 +1,6 @@
 //! Tilt the Cone: boost the frame; simultaneity trades places.
 //!
-//! A light-cone diagram in 1+1 dimensions. DRAG: BOOST THE FRAME applies a
-//! Lorentz boost so planes of simultaneity tip while the light lines stay at
-//! 45 degrees. Causality refuses to break. See `docs/ROOMS.md`.
+//! A light-cone diagram in 1+1 dimensions. Causality refuses to break. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -114,7 +112,7 @@ impl Room for TiltCone {
             title: "Tilt the Cone",
             wing: "Shape & Space",
             blurb: "Boost the frame: planes of simultaneity tip, light stays at 45 degrees, \
-                    causality holds. t and DRAG: BOOST THE FRAME set beta. Lorentz pair with Starbow.",
+                    causality holds. Lorentz pair with Starbow.",
             accent: [100, 180, 220],
         }
     }

@@ -1,8 +1,7 @@
 //! Hilbert curve: a continuous path that fills the square.
 //!
 //! The limit of recursive U-turns visits every point of the unit square. Finite
-//! generations approximate space-filling without crossings. DRAG: DEEPEN THE
-//! FOLD. See `docs/ROOMS.md`.
+//! generations approximate space-filling without crossings. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -115,7 +114,7 @@ impl Room for Hilbert {
             title: "The Space-Filling Path",
             wing: "Shape & Space",
             blurb: "Hilbert curve: a continuous path that fills the square in the limit. Finite \
-                    folds approximate without crossing. t and DRAG: DEEPEN THE FOLD.",
+                    folds approximate without crossing.",
             accent: [180, 140, 255],
         }
     }

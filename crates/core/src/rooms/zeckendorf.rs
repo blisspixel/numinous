@@ -127,7 +127,7 @@ impl Room for Zeckendorf {
             id: "zeckendorf",
             title: "Zeckendorf",
             wing: "Number & Pattern",
-            blurb: "Unique Fibonacci base, no adjacent 1s. t and DRAG: TUNE N.",
+            blurb: "Unique Fibonacci base, no adjacent 1s.",
             accent: [100, 70, 130],
         }
     }

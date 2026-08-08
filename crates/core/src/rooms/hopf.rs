@@ -116,7 +116,7 @@ impl Room for Hopf {
             title: "The Linked Rings",
             wing: "Shape & Space",
             blurb: "Hopf fibration: space filled with circles all linked, none touching. The \
-                    shadow of S^3 and a picture of a qubit. t grows fibers; DRAG: SPIN THE FIBER.",
+                    shadow of S^3 and a picture of a qubit. t grows fibers.",
             accent: [180, 120, 200],
         }
     }

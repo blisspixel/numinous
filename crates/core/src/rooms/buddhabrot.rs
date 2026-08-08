@@ -1,7 +1,7 @@
 //! Buddhabrot: the ghost in the Mandelbrot set.
 //!
 //! Trace orbits of points that escape the Mandelbrot iteration; density of
-//! visited cells paints a meditating figure in the fog. DRAG: AIM THE GHOST.
+//! visited cells paints a meditating figure in the fog.
 //! See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
@@ -129,7 +129,7 @@ impl Room for Buddhabrot {
             title: "The Ghost in the Set",
             wing: "Fractals",
             blurb: "Buddhabrot: density of escaping Mandelbrot orbits paints a ghostly figure. t \
-                    deepens iterations; DRAG: AIM THE GHOST.",
+                    deepens iterations.",
             accent: [200, 180, 255],
         }
     }

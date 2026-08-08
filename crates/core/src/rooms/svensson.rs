@@ -103,7 +103,7 @@ impl Room for Svensson {
             id: "svensson",
             title: "Svensson Map",
             wing: "Motion & Dynamics",
-            blurb: "Trigonometric map with dense attractor clouds. t and DRAG: TUNE A AND B.",
+            blurb: "Trigonometric map with dense attractor clouds.",
             accent: [160, 80, 200],
         }
     }

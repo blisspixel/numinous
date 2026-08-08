@@ -110,7 +110,7 @@ impl Room for Wolfram110 {
             id: "rule-110",
             title: "Rule 110",
             wing: "Emergence",
-            blurb: "Wolfram's Turing-complete elementary CA. t and DRAG: SET THE SEED ROW.",
+            blurb: "Wolfram's Turing-complete elementary CA.",
             accent: [40, 200, 80],
         }
     }

@@ -124,7 +124,7 @@ impl Room for Runge {
             id: "runge",
             title: "Runge Phenomenon",
             wing: "Number & Pattern",
-            blurb: "Equispaced high-degree fit oscillates. t and DRAG: TUNE DEGREE.",
+            blurb: "Equispaced high-degree fit oscillates.",
             accent: [180, 50, 50],
         }
     }

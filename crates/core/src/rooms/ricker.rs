@@ -1,6 +1,6 @@
 //! Ricker map: discrete population model with boom and bust.
 //!
-//! x' = x exp(r (1 - x)). DRAG: TUNE R. See `docs/ROOMS.md`.
+//! x' = x exp(r (1 - x)). See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -118,7 +118,7 @@ impl Room for Ricker {
             id: "ricker",
             title: "Ricker Map",
             wing: "Motion & Dynamics",
-            blurb: "Population boom-bust: x exp(r(1-x)). t and DRAG: TUNE R.",
+            blurb: "Population boom-bust: x exp(r(1-x)).",
             accent: [40, 160, 80],
         }
     }

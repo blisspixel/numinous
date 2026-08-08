@@ -109,7 +109,7 @@ impl Room for Steiner {
             title: "The Ring That Always Closes",
             wing: "Shape & Space",
             blurb: "A Steiner chain of circles fits between two boundaries and closes from every \
-                    angle. t sets count; DRAG: SPIN THE CHAIN.",
+                    angle. t sets count.",
             accent: [160, 200, 180],
         }
     }

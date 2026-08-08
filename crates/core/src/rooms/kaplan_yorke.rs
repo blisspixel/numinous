@@ -1,6 +1,6 @@
 //! Kaplan-Yorke map: a classic 2D map with a fractal attractor dimension.
 //!
-//! x' = 2x mod 1; y' = lambda y + cos(4 pi x). DRAG: TUNE LAMBDA.
+//! x' = 2x mod 1; y' = lambda y + cos(4 pi x).
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -94,7 +94,7 @@ impl Room for KaplanYorke {
             id: "kaplan-yorke",
             title: "Kaplan-Yorke Map",
             wing: "Motion & Dynamics",
-            blurb: "Doubling in x, damped drive in y: fractal attractor. t and DRAG: TUNE LAMBDA.",
+            blurb: "Doubling in x, damped drive in y: fractal attractor.",
             accent: [80, 160, 200],
         }
     }

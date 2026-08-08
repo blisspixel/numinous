@@ -173,7 +173,7 @@ impl Room for EuclidAlgorithm {
             id: "euclid",
             title: "Euclid Algorithm",
             wing: "Number & Pattern",
-            blurb: "Square-cutting dance that finds gcd. t and DRAG: SET THE PAIR.",
+            blurb: "Square-cutting dance that finds gcd.",
             accent: [80, 80, 180],
         }
     }

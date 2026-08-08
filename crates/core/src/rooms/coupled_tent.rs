@@ -101,8 +101,7 @@ impl Room for CoupledTent {
             id: "coupled-tent",
             title: "Coupled Tents",
             wing: "Motion & Dynamics",
-            blurb: "Two tent maps with coupling: sync or independent chaos. t and DRAG: TUNE \
-                    COUPLING.",
+            blurb: "Two tent maps with coupling: sync or independent chaos.",
             accent: [40, 160, 120],
         }
     }

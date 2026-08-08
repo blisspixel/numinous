@@ -113,7 +113,7 @@ impl Room for CentralLimit {
             id: "central-limit",
             title: "Central Limit",
             wing: "Chance & Order",
-            blurb: "Means of uniforms become a bell as n grows. t and DRAG: TUNE N.",
+            blurb: "Means of uniforms become a bell as n grows.",
             accent: [60, 100, 60],
         }
     }

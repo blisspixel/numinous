@@ -1,6 +1,6 @@
 //! Beverton-Holt map: discrete population with saturating recruitment.
 //!
-//! x -> r x / (1 + x). DRAG: TUNE R. See `docs/ROOMS.md`.
+//! x -> r x / (1 + x). See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -107,7 +107,7 @@ impl Room for BevertonHolt {
             id: "beverton-holt",
             title: "Beverton-Holt",
             wing: "Motion & Dynamics",
-            blurb: "Saturating recruitment map for a fishery. t and DRAG: TUNE R.",
+            blurb: "Saturating recruitment map for a fishery.",
             accent: [40, 140, 100],
         }
     }

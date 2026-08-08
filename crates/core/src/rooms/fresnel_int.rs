@@ -109,7 +109,7 @@ impl Room for FresnelInt {
             id: "fresnel-int",
             title: "Fresnel Integrals",
             wing: "Analysis",
-            blurb: "C(t), S(t) clothoid spiral to (1/2,1/2). t and DRAG: TUNE T.",
+            blurb: "C(t), S(t) clothoid spiral to (1/2,1/2).",
             accent: [80, 90, 120],
         }
     }

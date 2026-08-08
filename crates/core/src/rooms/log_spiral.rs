@@ -116,7 +116,7 @@ impl Room for LogSpiral {
             id: "log-spiral",
             title: "Logarithmic Spiral",
             wing: "Shape & Space",
-            blurb: "Equiangular growth r = a e^{b theta}. t and DRAG: TUNE GROWTH.",
+            blurb: "Equiangular growth r = a e^{b theta}.",
             accent: [40, 140, 160],
         }
     }

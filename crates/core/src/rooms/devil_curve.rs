@@ -111,7 +111,7 @@ impl Room for DevilCurve {
             id: "devil-curve",
             title: "Devil Curve",
             wing: "Shape & Space",
-            blurb: "Quartic figure-eight of Gabriele. t and DRAG: TUNE RATIO.",
+            blurb: "Quartic figure-eight of Gabriele.",
             accent: [120, 30, 30],
         }
     }

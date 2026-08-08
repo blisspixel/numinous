@@ -103,8 +103,7 @@ impl Room for DoublingMap {
             id: "doubling-map",
             title: "Angle Doubling",
             wing: "Motion & Dynamics",
-            blurb: "Bernoulli shift theta -> 2 theta mod 1: expanding chaos. t and DRAG: SET THE \
-                    SEED AND STEPS.",
+            blurb: "Bernoulli shift theta -> 2 theta mod 1: expanding chaos.",
             accent: [40, 180, 160],
         }
     }

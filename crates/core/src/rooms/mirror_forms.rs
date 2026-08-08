@@ -136,7 +136,7 @@ impl Room for MirrorForms {
             title: "The Mirror of Forms",
             wing: "Shape & Space",
             blurb: "Objects and arrows; compose two maps into one path. Category-lite without a \
-                    jargon wall. t and DRAG: SNAP ARROW TO ARROW.",
+                    jargon wall.",
             accent: [200, 180, 100],
         }
     }

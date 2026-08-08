@@ -1,6 +1,6 @@
 //! Aizawa attractor: a 3D continuous system with a ring-like strange attractor.
 //!
-//! Projected to xy. DRAG: TUNE EPSILON. See `docs/ROOMS.md`.
+//! Projected to xy. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -130,8 +130,7 @@ impl Room for Aizawa {
             id: "aizawa",
             title: "Aizawa Ring",
             wing: "Motion & Dynamics",
-            blurb: "Continuous 3D chaos with a ring-like attractor, projected. t and DRAG: TUNE \
-                    EPSILON.",
+            blurb: "Continuous 3D chaos with a ring-like attractor, projected.",
             accent: [60, 140, 200],
         }
     }

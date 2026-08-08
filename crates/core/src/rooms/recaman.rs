@@ -2,7 +2,7 @@
 //!
 //! a(0)=0; a(n)=a(n-1)-n if positive and unused, else a(n-1)+n. Drawn as nested
 //! semicircle arcs: a hypnotic harp that hides open questions (852655 never
-//! appears in the first 10^230 terms). DRAG: SET THE STRIDE. See `docs/ROOMS.md`.
+//! appears in the first 10^230 terms). See `docs/ROOMS.md`.
 
 use std::collections::HashSet;
 
@@ -118,7 +118,7 @@ impl Room for Recaman {
             title: "The Jumper",
             wing: "Number & Pattern",
             blurb: "Recaman's sequence: jump back by n if free, else forward. Nested arcs hide an \
-                    open seat (852655). t grows terms; DRAG: SET THE STRIDE.",
+                    open seat (852655). t grows terms.",
             accent: [200, 170, 90],
         }
     }

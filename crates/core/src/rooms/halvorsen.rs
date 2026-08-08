@@ -1,6 +1,6 @@
 //! Halvorsen attractor: another continuous 3D chaos system.
 //!
-//! x' = -a x - 4 y - 4 z - y^2 (cyclic). DRAG: TUNE A. See `docs/ROOMS.md`.
+//! x' = -a x - 4 y - 4 z - y^2 (cyclic). See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -121,7 +121,7 @@ impl Room for Halvorsen {
             id: "halvorsen",
             title: "Halvorsen Attractor",
             wing: "Motion & Dynamics",
-            blurb: "Continuous cyclic chaos with quadratic folds. t and DRAG: TUNE A.",
+            blurb: "Continuous cyclic chaos with quadratic folds.",
             accent: [200, 80, 100],
         }
     }

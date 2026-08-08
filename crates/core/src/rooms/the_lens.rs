@@ -1,7 +1,7 @@
 //! The Lens: Einstein rings from a mass you never see.
 //!
 //! A dark mass on the plate bends light from a background source into arcs
-//! and rings (thin-lens gravitational lensing toy). DRAG: MOVE THE DARK MASS.
+//! and rings (thin-lens gravitational lensing toy).
 //! See `docs/ROOMS.md`.
 
 use std::f64::consts::TAU;
@@ -106,7 +106,7 @@ impl Room for TheLens {
             title: "The Lens",
             wing: "Shape & Space",
             blurb: "A mass you never see bends background light into Einstein rings and arcs. t \
-                    grows the mass; DRAG: MOVE THE DARK MASS.",
+                    grows the mass.",
             accent: [160, 140, 200],
         }
     }

@@ -109,7 +109,7 @@ impl Room for EulerTotient {
             id: "euler-totient",
             title: "Euler Totient",
             wing: "Number & Pattern",
-            blurb: "phi(n): count of units mod n. t and DRAG: TUNE N.",
+            blurb: "phi(n): count of units mod n.",
             accent: [40, 110, 80],
         }
     }

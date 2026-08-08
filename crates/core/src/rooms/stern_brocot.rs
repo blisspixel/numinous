@@ -1,6 +1,6 @@
 //! Stern-Brocot tree: every positive rational appears once.
 //!
-//! Mediant walk from 0/1 and 1/0. DRAG: WALK THE TREE. See `docs/ROOMS.md`.
+//! Mediant walk from 0/1 and 1/0. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -162,8 +162,7 @@ impl Room for SternBrocot {
             id: "stern-brocot",
             title: "Stern-Brocot Tree",
             wing: "Number & Pattern",
-            blurb: "Every positive rational once, via mediants of 0/1 and 1/0. t and DRAG: WALK \
-                    THE TREE.",
+            blurb: "Every positive rational once, via mediants of 0/1 and 1/0.",
             accent: [80, 140, 200],
         }
     }

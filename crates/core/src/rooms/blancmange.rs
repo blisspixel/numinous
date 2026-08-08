@@ -108,7 +108,7 @@ impl Room for Blancmange {
             id: "blancmange",
             title: "Blancmange Curve",
             wing: "Fractals",
-            blurb: "Takagi's continuous graph with no tangent anywhere. t and DRAG: SET THE DEPTH.",
+            blurb: "Takagi's continuous graph with no tangent anywhere.",
             accent: [220, 180, 200],
         }
     }

@@ -119,7 +119,7 @@ impl Room for Mertens {
             id: "mertens",
             title: "Mertens Function",
             wing: "Number & Pattern",
-            blurb: "M(n) = sum mu(k): Mobius partial sums. t and DRAG: TUNE N.",
+            blurb: "M(n) = sum mu(k): Mobius partial sums.",
             accent: [70, 50, 130],
         }
     }

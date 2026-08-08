@@ -1,6 +1,6 @@
 //! Phoenix fractal: Mandelbrot with a memory term of the previous z.
 //!
-//! z_{n+1} = z_n^2 + c + p * z_{n-1}. DRAG: TUNE P. See `docs/ROOMS.md`.
+//! z_{n+1} = z_n^2 + c + p * z_{n-1}. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -118,7 +118,7 @@ impl Room for Phoenix {
             id: "phoenix",
             title: "Phoenix Fractal",
             wing: "Fractals",
-            blurb: "Escape set with a one-step memory of z. t and DRAG: TUNE P.",
+            blurb: "Escape set with a one-step memory of z.",
             accent: [220, 120, 40],
         }
     }

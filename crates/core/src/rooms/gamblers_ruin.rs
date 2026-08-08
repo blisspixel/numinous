@@ -130,7 +130,7 @@ impl Room for GamblersRuin {
             id: "gamblers-ruin",
             title: "Gamblers Ruin",
             wing: "Chance & Order",
-            blurb: "Random walk absorbed at 0 or N. t and DRAG: TUNE P.",
+            blurb: "Random walk absorbed at 0 or N.",
             accent: [130, 40, 40],
         }
     }

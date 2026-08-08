@@ -541,12 +541,7 @@ enum Command {
         /// Number of notes.
         #[arg(long, default_value_t = 48)]
         notes: usize,
-        /// Value of the parameter a, as `plot` uses it.
-        ///
-        /// This was fixed at 0 and unreachable, which silenced every
-        /// expression that depends on `a`: `sin(a*x)` sang a flat line here
-        /// while the same request over MCP sang `sin(x)`. Both faces use 1
-        /// for `plot`, so 1 is what the knob means.
+        /// Value of the parameter a, matching what `plot` uses (default 1).
         #[arg(long, default_value_t = 1.0)]
         a: f64,
         /// Write a WAV audio file to this path.

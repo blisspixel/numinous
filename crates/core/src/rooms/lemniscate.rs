@@ -1,6 +1,6 @@
 //! Bernoulli lemniscate: figure-eight algebraic curve (infinity symbol).
 //!
-//! Ambient phase walks a pen along both lobes. DRAG: TUNE SCALE.
+//! Ambient phase walks a pen along both lobes.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -129,7 +129,7 @@ impl Room for Lemniscate {
             id: "lemniscate",
             title: "Lemniscate",
             wing: "Shape & Space",
-            blurb: "Bernoulli infinity draws both lobes. Watch the pen; DRAG: TUNE SCALE.",
+            blurb: "Bernoulli infinity draws both lobes. Watch the pen.",
             accent: [160, 40, 120],
         }
     }

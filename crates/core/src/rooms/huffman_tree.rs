@@ -160,7 +160,7 @@ impl Room for HuffmanTree {
             id: "huffman-tree",
             title: "Huffman Tree",
             wing: "Chance & Noise",
-            blurb: "Optimal prefix codes from frequencies. t and DRAG: TUNE S.",
+            blurb: "Optimal prefix codes from frequencies.",
             accent: [70, 120, 90],
         }
     }

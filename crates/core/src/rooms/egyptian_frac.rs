@@ -118,7 +118,7 @@ impl Room for EgyptianFrac {
             id: "egyptian-frac",
             title: "Egyptian Fractions",
             wing: "Number & Pattern",
-            blurb: "Greedy unit fractions for p/q. t and DRAG: TUNE Q.",
+            blurb: "Greedy unit fractions for p/q.",
             accent: [150, 110, 50],
         }
     }

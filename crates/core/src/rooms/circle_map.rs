@@ -1,6 +1,6 @@
 //! Arnold circle map: mode locking and devil's staircase of winding numbers.
 //!
-//! theta' = theta + omega - (K/2pi) sin(2pi theta). DRAG: TUNE K AND OMEGA.
+//! theta' = theta + omega - (K/2pi) sin(2pi theta).
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -142,8 +142,7 @@ impl Room for CircleMap {
             id: "circle-map",
             title: "Arnold Circle Map",
             wing: "Motion & Dynamics",
-            blurb: "Mode locking and winding-number staircase on the circle. t and DRAG: TUNE K \
-                    AND OMEGA.",
+            blurb: "Mode locking and winding-number staircase on the circle.",
             accent: [80, 100, 220],
         }
     }

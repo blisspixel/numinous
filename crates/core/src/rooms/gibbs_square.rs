@@ -105,7 +105,7 @@ impl Room for GibbsSquare {
             id: "gibbs-square",
             title: "Gibbs Square",
             wing: "Waves & Sound",
-            blurb: "Fourier square partials overshoot at jumps. t and DRAG: SET HARMONICS.",
+            blurb: "Fourier square partials overshoot at jumps.",
             accent: [200, 80, 40],
         }
     }

@@ -5,6 +5,26 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The reveal is the payload again. The four flagship rooms (Times Tables,
+  Game of Life, Galton Board, Double Pendulum) ended their reveals with a
+  QA block: a horizontal rule, a Source Provenance line, and a checkbox
+  Math Review Checklist. That is the textbook feel the vision bans, so
+  the chrome moved out of the player's text: the provenance and checklist
+  now live as code comments beside each reveal and the player-facing
+  source remains the room's `citations` entry. A registry sweep locks
+  every reveal in the catalog free of internal QA tokens. The
+  `sing --help` text for `--a` also stopped narrating the history of a
+  bug it once had; it now just says what the knob means.
+
+  The same pass rewrote the catalog's template blurbs. Two hundred and
+  forty odd rooms described themselves and then trailed off into a lever
+  note (". t and DRAG: TUNE X.") that read as broken copy to any
+  stranger, including on the front door's featured room. The blurb now
+  describes the mathematics and stops; the touch verb lives in `verb()`,
+  which every face already renders as its own Action line. Hand-written
+  prose lever notes (Morley's "t wobbles vertices", the four hybrid
+  rooms) were converted to sentences instead of deleted, and a second
+  registry sweep bans colon-caps lever fragments from every blurb.
 - Seven independent critics read the product whole, and the polish wave
   they set is now a tracked goal with its evidence committed at
   `docs/evidence/polish-critique-2026-08.json`. Its first workstream, the

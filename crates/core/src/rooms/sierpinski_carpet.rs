@@ -95,7 +95,7 @@ impl Room for SierpinskiCarpet {
             title: "The Carpet",
             wing: "Fractals",
             blurb: "Sierpinski carpet: punch the middle ninth, forever. Area vanishes; dimension \
-                    stays between 1 and 2. t and DRAG: DEEPEN THE CUT.",
+                    stays between 1 and 2.",
             accent: [200, 100, 140],
         }
     }

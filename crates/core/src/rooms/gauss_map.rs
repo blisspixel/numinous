@@ -1,6 +1,6 @@
 //! Gauss map (mouse map): iterated modular inverse-like chaos on the line.
 //!
-//! x' = frac(1/x) for x!=0, with a soft escape. DRAG: SET THE SEED.
+//! x' = frac(1/x) for x!=0, with a soft escape.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -115,7 +115,7 @@ impl Room for GaussMap {
             id: "gauss-map",
             title: "Gauss Map",
             wing: "Number & Pattern",
-            blurb: "Continued-fraction engine: x -> frac(1/x). t and DRAG: SET THE SEED.",
+            blurb: "Continued-fraction engine: x -> frac(1/x).",
             accent: [120, 80, 200],
         }
     }

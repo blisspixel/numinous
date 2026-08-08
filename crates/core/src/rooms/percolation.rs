@@ -146,7 +146,7 @@ impl Room for Percolation {
             id: "percolation",
             title: "Percolation",
             wing: "Chance & Order",
-            blurb: "Open sites on a grid until a path crosses. t and DRAG: TUNE OPEN PROB.",
+            blurb: "Open sites on a grid until a path crosses.",
             accent: [40, 120, 180],
         }
     }

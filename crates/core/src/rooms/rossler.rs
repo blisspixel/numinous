@@ -1,6 +1,6 @@
 //! Rossler attractor: one-scroll chaos in 3D, drawn as a projection.
 //!
-//! x' = -y - z, y' = x + a y, z' = b + z(x - c). DRAG: TUNE A AND C.
+//! x' = -y - z, y' = x + a y, z' = b + z(x - c).
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -132,8 +132,7 @@ impl Room for Rossler {
             id: "rossler",
             title: "The Rossler Scroll",
             wing: "Motion & Dynamics",
-            blurb: "One-scroll chaotic attractor in three dimensions, projected. t and DRAG: TUNE \
-                    A AND C.",
+            blurb: "One-scroll chaotic attractor in three dimensions, projected.",
             accent: [200, 100, 40],
         }
     }

@@ -93,7 +93,7 @@ impl Room for JuliaFilled {
             id: "julia-filled",
             title: "Filled Julia",
             wing: "Fractals",
-            blurb: "Filled set for z^2+c. t and DRAG: TUNE C.",
+            blurb: "Filled set for z^2+c.",
             accent: [20, 100, 140],
         }
     }

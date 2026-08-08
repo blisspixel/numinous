@@ -99,7 +99,7 @@ impl Room for Tractrix {
             id: "tractrix",
             title: "Tractrix",
             wing: "Shape & Space",
-            blurb: "The path of a pulled dog: constant tangent length. t and DRAG: TUNE LENGTH.",
+            blurb: "The path of a pulled dog: constant tangent length.",
             accent: [100, 120, 40],
         }
     }

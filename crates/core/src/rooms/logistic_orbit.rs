@@ -1,6 +1,6 @@
 //! Logistic orbit cobweb: distinct from logistic-map and logistic-cobweb.
 //!
-//! Long orbit trail with return map. DRAG: TUNE R AND X0. See `docs/ROOMS.md`.
+//! Long orbit trail with return map. See `docs/ROOMS.md`.
 //!
 //! Note: logistic-map and logistic-cobweb already exist; this room is a pure
 //! return-map portrait with measured period readout.
@@ -134,8 +134,7 @@ impl Room for LogisticOrbit {
             id: "logistic-orbit",
             title: "Logistic Orbit",
             wing: "Motion & Dynamics",
-            blurb: "Return-map cobweb of the logistic map with period guess. t and DRAG: TUNE R \
-                    AND X0.",
+            blurb: "Return-map cobweb of the logistic map with period guess.",
             accent: [220, 60, 100],
         }
     }

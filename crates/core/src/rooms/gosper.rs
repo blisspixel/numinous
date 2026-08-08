@@ -1,6 +1,6 @@
 //! Gosper curve (flowsnake): space-filling heptagonal path.
 //!
-//! L-system with 60-degree turns. DRAG: SET THE ORDER. See `docs/ROOMS.md`.
+//! L-system with 60-degree turns. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -169,8 +169,7 @@ impl Room for Gosper {
             id: "gosper",
             title: "Gosper Curve",
             wing: "Fractals",
-            blurb: "Flowsnake: space-filling path on a hexagonal lattice. t and DRAG: SET THE \
-                    ORDER.",
+            blurb: "Flowsnake: space-filling path on a hexagonal lattice.",
             accent: [60, 180, 100],
         }
     }

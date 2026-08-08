@@ -123,7 +123,7 @@ impl Room for Polarization {
             id: "polarization",
             title: "Polarization",
             wing: "Waves & Sound",
-            blurb: "Malus: intensity falls as cos squared of angle. t and DRAG: TUNE ANGLE.",
+            blurb: "Malus: intensity falls as cos squared of angle.",
             accent: [180, 40, 140],
         }
     }

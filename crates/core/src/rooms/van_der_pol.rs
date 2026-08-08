@@ -1,6 +1,6 @@
 //! Van der Pol oscillator: nonlinear damping, stable limit cycle.
 //!
-//! x'' - mu (1 - x^2) x' + x = 0. DRAG: TUNE MU. See `docs/ROOMS.md`.
+//! x'' - mu (1 - x^2) x' + x = 0. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -127,7 +127,7 @@ impl Room for VanDerPol {
             id: "van-der-pol",
             title: "Van der Pol Cycle",
             wing: "Motion & Dynamics",
-            blurb: "Nonlinear damping births a stable limit cycle. t and DRAG: TUNE MU.",
+            blurb: "Nonlinear damping births a stable limit cycle.",
             accent: [220, 160, 40],
         }
     }

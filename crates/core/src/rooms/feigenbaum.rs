@@ -110,8 +110,7 @@ impl Room for Feigenbaum {
             id: "feigenbaum",
             title: "Feigenbaum Ladder",
             wing: "Motion & Dynamics",
-            blurb: "Period-doubling cascade of the logistic map, marked. t and DRAG: SET THE \
-                    GENERATION.",
+            blurb: "Period-doubling cascade of the logistic map, marked.",
             accent: [220, 100, 40],
         }
     }

@@ -120,7 +120,7 @@ impl Room for Airy {
             id: "airy",
             title: "Airy Disk",
             wing: "Waves & Sound",
-            blurb: "Circular aperture diffraction rings. t and DRAG: TUNE SCALE.",
+            blurb: "Circular aperture diffraction rings.",
             accent: [200, 180, 40],
         }
     }

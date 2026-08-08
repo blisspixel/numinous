@@ -137,7 +137,7 @@ impl Room for ThreeGap {
             title: "The Spinner",
             wing: "Number & Pattern",
             blurb: "Points at n*theta on a circle show at most three gap sizes; the largest is the \
-                    sum of the other two. t grows n; DRAG: TURN THE ANGLE.",
+                    sum of the other two. t grows n.",
             accent: [120, 180, 200],
         }
     }
