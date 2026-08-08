@@ -229,7 +229,7 @@ def validate_cli_render(render: str) -> None:
     validate_render_body(render)
     required = (
         "Status:",
-        "Action: DRAG: TURN THE DIAL",
+        "Action: TURN THE DIAL (the hand here: numinous room times-tables --poke x,y)",
         "Goal: LAND ON EXACTLY 4 LOBES",
     )
     missing = [marker for marker in required if marker not in render]

@@ -97,7 +97,11 @@ The workstreams, in landing order:
    per face; the MCP face stops telling minds to press keys. Ctrl+C from
    watch and tour earns a two-line epilogue that finishes the staircase to
    the reveal. `numinous mandelbrot` answers in the house voice instead of
-   a stock parser error.
+   a stock parser error. Landed: live frames scrub gesture fragments and
+   translate the Action line to the --poke route, the interrupt epilogue
+   teases the reveal and routes to describe, the room-as-command bridge
+   speaks house voice, and the MCP aha chrome speaks aha_summon and
+   place_wager; catalog-wide sweeps lock all of it.
 4. **The creator loop keeps its thread.** The bundle README stops routing
    recipients down the one path that loses lineage; the postcard carries
    title and author; naming happens in the instrument, not only in flags;
