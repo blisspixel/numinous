@@ -5,6 +5,19 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The remix tree is visible where creations live. The Gallery wall now
+  resolves the lineage its capsules record: each entry's `descends` link is
+  matched against every other entry's canonical link at discovery, so an
+  edited and re-shared parent is a different creation, never a false
+  ancestor. A creation that others on the wall descend from wears a REMIXED
+  count on its tile, the parent's point of pride; a selected fork names its
+  parent in a lineage line above the footer; and D walks the cursor one
+  step up the tree. When D cannot walk it says exactly why, because
+  descending from nothing and descending from a creation that is not on
+  this wall are different answers, and a key that silently does nothing
+  teaches players it is broken. Editable prose credit waits on its own
+  capsule field rather than being faked out of a title.
+
 - A second adversarial round read the whole creator arc as one system and
   found ten more defects; all are fixed. The worst were quiet losses on the
   share path. Re-sharing an untouched reopen rebuilt the capsule from its
