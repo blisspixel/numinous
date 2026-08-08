@@ -1,0 +1,134 @@
+{
+  "schemaVersion": "numinous-math-creativity-v1",
+  "evidenceClass": "agent-machine-research",
+  "collected": "2026-08-08",
+  "method": "Four independent researchers, spawned after the polish wave closed, each with one lens on a single question: judged as mathematics and as a creative instrument, what is Numinous missing and what might be refined? Each verified claims against the repository, the docs, or the running binaries. Findings condensed here; the synthesis lives in docs/ROADMAP.md under The Mathematical Soul.",
+  "researchers": [
+    {
+      "lens": "the mathematician",
+      "verdict": "The catalog is superb on curves, chaos, waves, and probability, and it is honest. Three pillars are near-absent, a tail of rooms sells index cards, and the deepest connections between rooms go unexposed.",
+      "findings": [
+        {
+          "rank": 1,
+          "title": "Three pillars near-absent: symmetry, graphs, knots-as-equivalence",
+          "evidence": "Zero built group theory rooms (Braid, wallpaper, eigenvectors all still queued in ROOMS.md); erdos_renyi is a picture, nothing playable; trefoil, figure-eight, Borromean are static parametric displays with no moves and no invariant.",
+          "commissioned": [
+            "The Braid: drag strands over and under; the same two crossings in the other order give a visibly different tangle, and the only way home is undoing your own history in reverse; noncommutativity and inverses live in the hand.",
+            "The Calm Axes (eigenvectors): shear a live grid of compass needles; two needles refuse to turn, only stretch; push until they merge and vanish and the plane starts to swirl.",
+            "The Seventeen Stamps: keep trying to invent an eighteenth wallpaper and the room keeps folding you back into one of seventeen; running out is the theorem.",
+            "The Seven Bridges: walk Konigsberg with a finger, fail honestly, delete one bridge, succeed; parity discovered in the legs.",
+            "Noether's Mirror: an orbit runs while energy and momentum meters sit frozen; tilt the arena and the exact meter matching the symmetry you broke starts to drift."
+          ]
+        },
+        {
+          "rank": 2,
+          "title": "Truth debts and undersells in the shipped mathematics",
+          "evidence": "Basel credits pi^2/6 to Fourier series of x^2, historically wrong for Euler (1735, sine product), and omits that 6/pi^2 is the chance two random integers are coprime. Euler Totient calls (p-1)(q-1) the RSA key size; it is phi(pq), the exponent modulus. Cat Map says eventually periodic; on a finite grid the map is a bijection, so exactly periodic. Mertens misses the conjecture-proved-false story (Odlyzko and te Riele 1985). Gamma omits Gamma(1/2) = sqrt(pi). Partition omits Ramanujan's p(5n+4) congruence the room could show by coloring. The ROOMS.md checklist marks Bayes, Birthday, Benford, Markov unbuilt though their files exist."
+        },
+        {
+          "rank": 3,
+          "title": "The dial trap: levers not aimed at the concept",
+          "evidence": "Cat Map's lever sets iterations; the insight is the recurrence period jumping erratically with grid size N. Hopf Fibration tunes one fiber; one fiber cannot show linking, the lever should place a second fiber with LINK = 1 unchanging. Klein Bottle's lever is a view knob; the proven verb is sending a painter along the surface who returns mirrored. Basel watches partial sums; the deep version is raining lattice points lighting up when coprime, the fraction homing to 6/pi^2."
+        },
+        {
+          "rank": 4,
+          "title": "Unexposed connections, verified absent from player-visible text",
+          "evidence": "Galton's pegboard is Pascal's triangle (bell curve and Sierpinski as one triangle read by size versus parity, tying in Chaos Game); Golden Angle is the three-gap theorem at phi; Gauss's AGM(1, sqrt 2) computes the lemniscate's perimeter; Barbier's theorem crosses every constant-width shape over Buffon's lines like a circle; a Lissajous figure read as a graph is a Chebyshev polynomial."
+        }
+      ]
+    },
+    {
+      "lens": "the instrument designer",
+      "verdict": "The Studio's vocabulary ceiling is one parser change away, its generative loop exhausts in four minutes, its promised musicality is unbuilt, and a digital mind can sketch but cannot make the durable named object.",
+      "findings": [
+        {
+          "rank": 1,
+          "title": "MCP creation parity is the pride gap",
+          "evidence": "The MCP face exposes plot_expression and sing_expression only; no StudioCreation, no save, no fork, no gallery. A text-native mind cannot make a titled, signed, lineage-carrying object. Every validator already lives in core; save_creation, open_creation, fork_creation over MCP return the .num text and link. The journal already names creation as an entry kind, so a capsule link can be a journal subject and a mind can record its creative arc."
+        },
+        {
+          "rank": 2,
+          "title": "The vocabulary ceiling lifts with a parametric pair and four primitives",
+          "evidence": "The parser admits one expression in x, knob a, pi and e, and seven functions. A parametric x(t), y(t) pair (capsule version 3, the roadmapped multi-expression ring) unlocks closed curves, roses, spirals, epicycles at near-zero parser cost. floor, mod, min, max add steps, gates, and de facto piecewise. A second knob b separates character from animation time."
+        },
+        {
+          "rank": 3,
+          "title": "The promised musicality is unbuilt, and one capsule sings three songs",
+          "evidence": "to_melody maps normalized y to continuous frequency with fixed step, duration, and amplitude; STUDIO.md and MUSIC.md promise scale quantization that does not exist, and renormalization makes 2*f(x) sing identically to f(x). DEFAULT_MELODY_NOTES_PER_FACE is 32/48/24, so the same capsule sings differently per face. Smallest steps: quantize to a capsule-stored scale enum; derive note duration from slope so steep sings fast; unify the default note count."
+        },
+        {
+          "rank": 4,
+          "title": "The generative loop exhausts in four minutes",
+          "evidence": "STUDIO_RECIPES is 12 fixed strings; Auto's index walk exhausts the bank in about four minutes and Random never varies a or the window despite STUDIO.md's stated intent. A Daily Seed (recipe plus deterministic jitter of a and the window, same for every human and agent) is one shared provocation per day. The App's shipped morph machinery pointed at two Gallery capsules makes blend-mine-into-yours a creative verb for free."
+        },
+        {
+          "rank": 5,
+          "title": "The postcard does not carry its own way back in",
+          "evidence": "The postcard renders one static frame; the link lives only in the README. Printing the numinous:// link on the postcard gives the PNG the PICO-8 cart property. The missing social object is the exhibition: a bounded .num list of links the wall renders as a themed shelf, the taste layer with no server."
+        }
+      ]
+    },
+    {
+      "lens": "the experiential pedagogue",
+      "verdict": "The pedagogy delivers exactly where the five-beat wager machine runs, which is two rooms; the theater is everywhere the punchline ships ungated; the second session is the emptiest room in the building; and the universal mechanic is already built but wired to one face.",
+      "findings": [
+        {
+          "rank": 1,
+          "title": "The reveal leaks by contract on four doors",
+          "evidence": "The App gates the reveal card on allow_reveal_text for exactly two rooms and toggles it freely for 352. MCP play_room genuinely withholds, but describe_room and reveal_room print every reveal ungated, and a test asserts that bypass. The CLI describe leaks identically. PLAYING.md asks agents to please play first: etiquette where a mechanism belongs. Honest policy: a spoilers flag defaulting to false on describe_room and reveal_room, answering with the wager invite instead."
+        },
+        {
+          "rank": 2,
+          "title": "The second session changes nothing",
+          "evidence": "No per-room record exists; the graded wager string is display-only and never persisted; both aha machines reset on every entry; levels gate text only. Resonances light an overlay after the fact and never suggest. PEDAGOGY.md already specifies the missing mechanism. Smallest grind-free step: persist one line per aha (room, wager, band); on entering a resonance partner room, light the edge in-room and offer one tighter-band wager instead of the primer."
+        },
+        {
+          "rank": 3,
+          "title": "Prediction is the universal mechanic, built and wired to one face",
+          "evidence": "pose_prediction and its band grading work for any room with a numeric readout, and 356 of 358 rooms have status(). Callers exist only in the MCP face; the CLI has zero and the App none. One App keybinding that poses the current room's prediction, takes a drag along the readout span as the guess, and speaks the band makes every readout room a wager room through one shared mechanism."
+        },
+        {
+          "rank": 4,
+          "title": "The five rooms with the highest latent aha",
+          "evidence": "Galton Board (wager the peak and width, truth is the binomial outline; the toy layer is already built), Double Pendulum (together or apart), Kepler (faster, slower, or same near the sun), Parrondo (two losing games alternated), Nontransitive dice (pick the strongest die). Smallest step: clone the Buffon aha machine for Galton."
+        },
+        {
+          "rank": 5,
+          "title": "Only four rooms have goals, three grade dexterity",
+          "evidence": "goal() is implemented by exactly four rooms; Smith Chart and Bloch Sphere are tolerance landings, and Times Tables' LAND ON EXACTLY 4 LOBES can be scrubbed to without forming the lobes = K-1 rule. Mathematical rewordings exist for each; Times Tables' aha plumbing already grades commitments."
+        }
+      ]
+    },
+    {
+      "lens": "the connective tissue",
+      "verdict": "354 patches with one real quilt square: 71 to 80 percent of rooms reference no other room, one 23-room supercluster proves the pattern works, the thread mechanism is half-built and refuses to speak before the fact, and the myth and the math are parallel rather than one thing.",
+      "findings": [
+        {
+          "rank": 1,
+          "title": "The graph, measured",
+          "evidence": "About 53 real directed edges across 353 rooms; 12 to 29 percent of rooms touched depending on match strictness. One supercluster of 23 rooms fuses the cardioid and chaos families through Mandelbrot, whose reveal names sibling rooms explicitly; the golden family is mathematically ten rooms with one product edge. Smallest step: adopt the Mandelbrot reveal pattern as a per-wing quota."
+        },
+        {
+          "rank": 2,
+          "title": "Ten missing edges, written and placed",
+          "evidence": "bloch-sphere and hopf-fibration (a qubit's state space is the fibration you already flew); agm-mean and lemniscate (Gauss's diary); the logistic, tent, doubling conjugacy (chaos is a bit shift); fermat-spiral and golden-angle; evolute and cycloid (Huygens hung a clock on it); basel and zeta-walk; galton-board and pascal-mod; birthday and coupon; catenary and catenoid (spin the chain, get the soap film); stern-brocot, farey, calkin-wilf (three enumerations of the rationals, one mediant)."
+        },
+        {
+          "rank": 3,
+          "title": "The thread mechanism is half-built and mute",
+          "evidence": "resonance.rs holds six hand-written edges with earned lore, computed from the record, but retrospective, invisible on the MCP face, and never suggesting the second half. The constellation hashes star positions from room ids, encoding zero structure by design. The Strange Loop chain promised as a walkable path for digital minds shipped as unlinked rooms. Smallest step: give Resonance an other-half field and print one SEE ALSO line in describe when one half is done."
+        },
+        {
+          "rank": 4,
+          "title": "The myth and the math are parallel, one line from union",
+          "evidence": "The cairn's semiprime bitmap is exactly the Arecibo construction (23 by 73), which the arecibo room teaches, and no player-visible text connects them. No saying names a catalog room. One refinement: when a cairn stone is factored, say: In 1974 we did this to a star. The room arecibo remembers."
+        },
+        {
+          "rank": 5,
+          "title": "The translator lacks reachable shared nouns",
+          "evidence": "Stable room ids and identical reveals exist on all faces, but the motif's encodes clause ships only on MCP listen_room and never prints on the CLI; resonances are human-face only; ideas have no ids, only rooms do, so a human and a mind can both say times-tables but not the cardioid idea. Smallest steps: print encodes on the CLI and add resonances to the MCP journey surface."
+        }
+      ]
+    }
+  ]
+}

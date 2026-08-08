@@ -206,6 +206,64 @@ judged at their best, not at the old ceiling. 0.4-am stays owner-blocked and
 the critical-path table now says so plainly instead of carrying it as a
 priority nobody can schedule.
 
+### The Mathematical Soul (August 2026): what the rooms ask
+
+A second fan-out, after the polish wave closed, asked a different question:
+judged as mathematics and as a creative instrument, what is missing and what
+might be refined? Four researchers (a mathematician, an instrument designer,
+an experiential pedagogue, a connective-tissue surveyor) answered with
+verified findings, condensed at `docs/evidence/math-creativity-2026-08.json`.
+The synthesis sharpens the Three Ceilings rather than replacing them: the
+sensory lift changes how the rooms look and sound; this work changes what
+they ask of you.
+
+**The convergence.** All four lenses point at the same center: the
+wager-truth-grade arc is the product's soul and it exists exactly twice,
+while the universal mechanic that would carry it everywhere (`predict.rs`,
+deterministic, banded, honest) is already built and wired to one face. The
+catalog is 71 to 80 percent islands while its one 23-room supercluster
+proves connection works. The Studio's ceiling is one parser change away,
+and a digital mind still cannot make a titled, signed, lineage-carrying
+object over MCP.
+
+**Folded into the rocks:**
+
+1. **Truth debts in the mathematics, fixed first** (they are the honesty
+   bar, not a rock): Basel's wrong history and missing coprimality gem, the
+   Totient RSA confusion, Cat Map's "eventually" periodic, the Mertens and
+   Gamma and Partition undersells, one capsule singing three different
+   songs across the faces, and the stale ROOMS.md checklist.
+2. **The Wager Wave rides with the arc (rock 3).** One App keybinding poses
+   any room's prediction through `predict.rs`; the Galton aha machine
+   (whose wager PEDAGOGY.md already names and whose toy layer is done)
+   becomes the third flagship, then Double Pendulum, Kepler, Parrondo, and
+   the nontransitive dice; the three dexterity goals become mathematical
+   predictions; one persisted line per aha (room, wager, band) gives the
+   second session a memory, grind-free. The reveal-leak policy (describe
+   and reveal print every punchline ungated, asserted by test) is a named
+   product decision: a spoilers flag defaulting to closed, entered in the
+   decisions section when ruled.
+3. **The edges pass rides with time-and-company (rock 2).** The fifteen
+   verified missing edges land as reveal lines and deep cuts (the
+   Mandelbrot reveal pattern as a per-wing quota); Resonance learns to
+   name its other half before the fact (one SEE ALSO line in describe);
+   the motif's encodes clause prints on the CLI and resonances reach the
+   MCP journey surface; the factored cairn stone names the arecibo room,
+   making the myth and the math one object. MCP creation parity
+   (save, open, fork over MCP; a capsule link as a journal subject) joins
+   this rock: the pride gap is a time-and-company gap.
+4. **The instrument rungs sharpen (rock 6 in the table).** The parametric
+   pair is the already-planned multi-expression ring and goes first, with
+   floor, mod, min, and max beside it; scale quantization lands with it
+   because the docs already promise it; the Daily Seed (one deterministic
+   provocation per day, the same for every human and agent) doubles as the
+   generative loop and a return hook; the postcard prints its own link;
+   the morph machinery points at two Gallery capsules.
+5. **New rooms wait for the keep-or-cut wave**, then the commissioned five
+   lead the next cohort: the Braid, the Calm Axes, the Seventeen Stamps,
+   the Seven Bridges, and Noether's Mirror, each carrying a wager-shaped
+   aha designed before a line of rendering.
+
 The 0.3 agent-and-machine exit is met. The next incomplete milestone is 0.4
 understanding and retention, but its formal collection is intentionally after
 an exploratory release-and-play loop. Its protocol, deterministic analysis,
