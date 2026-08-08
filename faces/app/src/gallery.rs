@@ -17,7 +17,8 @@ pub(crate) const MAX_GALLERY_ENTRIES: usize = 24;
 /// Fixed columns keep tiles readable at the default window width.
 const COLUMNS: usize = 4;
 
-/// One discovered creation: where it lives and what it is.
+/// One discovered creation: where it lives, what it is, and where it sits in
+/// the wall's own remix tree.
 pub(crate) struct GalleryEntry {
     /// The `.num` file this tile reopens.
     pub path: PathBuf,
@@ -26,6 +27,25 @@ pub(crate) struct GalleryEntry {
     /// Parsed once at discovery so a wall of tiles does not reparse per frame.
     expr: Expr,
     modified: std::time::SystemTime,
+    /// The wall index of the creation this one descends from, when that
+    /// exact creation is on the wall too. Matched by canonical link, so a
+    /// parent that was edited and re-shared is a different creation, not a
+    /// false ancestor.
+    parent: Option<usize>,
+    /// How many creations on this wall descend from this one.
+    remixes: usize,
+}
+
+/// Where the selected creation's parent is, for keys and copy that must not
+/// blur three different answers into one silent nothing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ParentStatus {
+    /// The creation records no descent at all.
+    NoLineage,
+    /// It descends from a creation that is not on this wall.
+    Absent,
+    /// Its parent is the wall entry at this index.
+    Local(usize),
 }
 
 fn entry_at(path: PathBuf) -> Option<GalleryEntry> {
@@ -44,7 +64,29 @@ fn entry_at(path: PathBuf) -> Option<GalleryEntry> {
         creation,
         expr,
         modified,
+        parent: None,
+        remixes: 0,
     })
+}
+
+/// Resolve the wall's own remix tree: each entry's recorded parent link is
+/// matched against every other entry's canonical link, in place, after the
+/// sort has settled the indices.
+fn resolve_lineage(entries: &mut [GalleryEntry]) {
+    let links: Vec<String> = entries
+        .iter()
+        .map(|entry| entry.creation.to_link())
+        .collect();
+    for index in 0..entries.len() {
+        let Some(descends) = entries[index].creation.descends() else {
+            continue;
+        };
+        let parent = links.iter().position(|link| link == descends);
+        entries[index].parent = parent;
+        if let Some(parent_index) = parent {
+            entries[parent_index].remixes += 1;
+        }
+    }
 }
 
 /// Bounded discovery below one parent folder: top-level `*.num` files plus
@@ -97,6 +139,7 @@ pub(crate) fn discover(parent: &Path) -> Option<Vec<GalleryEntry>> {
             .then_with(|| a.path.cmp(&b.path))
     });
     entries.truncate(MAX_GALLERY_ENTRIES);
+    resolve_lineage(&mut entries);
     Some(entries)
 }
 
@@ -130,6 +173,30 @@ impl GalleryPanel {
     /// The creation under the cursor, if the wall is not empty.
     pub(crate) fn selected_creation(&self) -> Option<&StudioCreation> {
         self.entries.get(self.selected).map(|entry| &entry.creation)
+    }
+
+    /// Where the selected creation's parent is.
+    pub(crate) fn parent_status(&self) -> ParentStatus {
+        let Some(entry) = self.entries.get(self.selected) else {
+            return ParentStatus::NoLineage;
+        };
+        match (entry.creation.descends(), entry.parent) {
+            (None, _) => ParentStatus::NoLineage,
+            (Some(_), None) => ParentStatus::Absent,
+            (Some(_), Some(parent)) => ParentStatus::Local(parent),
+        }
+    }
+
+    /// Walk one step up the remix tree: move the cursor to the selected
+    /// creation's parent when that parent is on the wall. Returns whether
+    /// the cursor moved, so the caller can say why it did not.
+    pub(crate) fn select_parent(&mut self) -> bool {
+        if let ParentStatus::Local(parent) = self.parent_status() {
+            self.selected = parent;
+            true
+        } else {
+            false
+        }
     }
 
     /// Move the selection by whole tiles; the grid edge clamps rather than
@@ -172,7 +239,7 @@ impl GalleryPanel {
         raster.clear_rows(footer_top, height as i32);
         numinous_core::draw_text(
             raster,
-            "ARROWS: CHOOSE   ENTER: OPEN PAUSED   F: FORK   ESC: BACK",
+            "ARROWS: CHOOSE   ENTER: OPEN PAUSED   F: FORK   D: PARENT   ESC: BACK",
             10,
             height as i32 - 11 * scale,
             scale,
@@ -220,8 +287,25 @@ impl GalleryPanel {
             return;
         }
 
+        // One line above the footer belongs to the selected tile's lineage,
+        // so walking the tree reads as a sentence, not a guess.
+        let lineage_top = footer_top - 12 * scale;
+        let lineage = match self.parent_status() {
+            ParentStatus::NoLineage => None,
+            ParentStatus::Absent => Some("DESCENDS FROM A CREATION NOT ON THIS WALL".to_string()),
+            ParentStatus::Local(parent) => self.entries.get(parent).map(|entry| {
+                format!(
+                    "DESCENDS FROM {}  D: GO THERE",
+                    tile_label(entry, width.saturating_sub(180))
+                )
+            }),
+        };
+        if let Some(line) = &lineage {
+            numinous_core::draw_text(raster, line, 10, lineage_top, scale, '*');
+        }
+
         let wall_top = 10 + 24 * scale;
-        let wall_height = (footer_top - wall_top - 4).max(0) as usize;
+        let wall_height = (lineage_top - 4 - wall_top).max(0) as usize;
         let rows = self.entries.len().div_ceil(COLUMNS).max(1);
         let tile_width = width / COLUMNS;
         let tile_height = (wall_height / rows).max(1);
@@ -288,6 +372,13 @@ impl GalleryPanel {
                 1,
                 '*',
             );
+            if entry.remixes > 0 {
+                // The badge is the parent's point of pride: remixing is
+                // honoring, and the wall says so where the tree is visible.
+                let badge = format!("R{}", entry.remixes);
+                let badge_x = x0 + inner_width as i32 - numinous_core::text_width(&badge, 1) - 3;
+                numinous_core::draw_text(raster, &badge, badge_x, y0 + 3, 1, '#');
+            }
         }
     }
 }
@@ -445,6 +536,95 @@ mod tests {
         panel.move_selection(0, 9);
         panel.move_selection(9, 0);
         assert!(panel.selected_creation().is_some(), "edges clamp");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_wall_resolves_its_own_remix_tree() {
+        use super::ParentStatus;
+        let dir = scratch("tree");
+        let parent = StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.5)
+            .expect("parent")
+            .with_title("Parent Wave")
+            .expect("title");
+        std::fs::write(dir.join("parent.num"), parent.to_num_file()).expect("parent file");
+        // Two forks of the parent, and one creation descending from a
+        // parent that is not on this wall.
+        for (name, a) in [("fork-one.num", 0.1), ("fork-two.num", 0.2)] {
+            let fork = StudioCreation::new("sin(a*x)+0", -2.0, 2.0, a)
+                .expect("fork")
+                .with_descends(&parent.to_link())
+                .expect("descends");
+            std::fs::write(dir.join(name), fork.to_num_file()).expect("fork file");
+        }
+        let elsewhere = StudioCreation::new("cos(x)", -1.0, 1.0, 0.0).expect("far parent");
+        let orphan = StudioCreation::new("cos(x)+0", -1.0, 1.0, 0.0)
+            .expect("orphan")
+            .with_descends(&elsewhere.to_link())
+            .expect("descends");
+        std::fs::write(dir.join("orphan.num"), orphan.to_num_file()).expect("orphan file");
+
+        let mut panel = GalleryPanel::open(&dir);
+        assert_eq!(panel.len(), 4);
+
+        // Find each entry by walking the selection over the whole wall.
+        let mut statuses = Vec::new();
+        for index in 0..4 {
+            panel.move_selection(-9, 0);
+            panel.move_selection(-9, -9);
+            panel.move_selection(index, 0);
+            let source = panel
+                .selected_creation()
+                .expect("selection")
+                .source()
+                .to_string();
+            statuses.push((source, panel.parent_status()));
+        }
+        let fork_status = statuses
+            .iter()
+            .find(|(source, _)| source == "sin(a*x)+0")
+            .expect("a fork on the wall");
+        assert!(
+            matches!(fork_status.1, ParentStatus::Local(_)),
+            "a fork resolves its local parent: {statuses:?}"
+        );
+        let orphan_status = statuses
+            .iter()
+            .find(|(source, _)| source == "cos(x)+0")
+            .expect("the orphan on the wall");
+        assert_eq!(
+            orphan_status.1,
+            ParentStatus::Absent,
+            "an absent parent is not the same answer as no lineage"
+        );
+        let parent_status = statuses
+            .iter()
+            .find(|(source, _)| source == "sin(a*x)")
+            .expect("the parent on the wall");
+        assert_eq!(parent_status.1, ParentStatus::NoLineage);
+
+        // D walks up: select a fork, step to the parent.
+        for index in 0..4 {
+            panel.move_selection(-9, -9);
+            panel.move_selection(index, 0);
+            if panel.selected_creation().expect("selection").source() == "sin(a*x)+0" {
+                break;
+            }
+        }
+        assert!(panel.select_parent(), "the cursor walks up the tree");
+        assert_eq!(
+            panel.selected_creation().expect("parent tile").title(),
+            Some("Parent Wave")
+        );
+        assert!(
+            !panel.select_parent(),
+            "the root has no parent to walk to, and says so by refusing"
+        );
+
+        // The parent's tile carries the remix count for both forks.
+        let mut wall = Raster::new(600, 400);
+        panel.draw(&mut wall, 600, 400);
+        assert!(wall.lit_count() > 100);
         let _ = std::fs::remove_dir_all(&dir);
     }
 
