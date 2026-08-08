@@ -1,11 +1,11 @@
 use std::io;
 use std::path::PathBuf;
 
-/// How long a refusal or failure banner lives. At least as long as the
-/// decorative banners below: a refusal carries a reason the player must
-/// actually read, and for a while every refusal flashed for 90 frames (1.5
-/// seconds) while a level-up got 300, which made "refused with a reason" a
-/// flash a slow reader missed.
+/// How long a refusal or failure banner lives: 240 frames, four seconds,
+/// the same hold as a playtest note or a room goal. A refusal carries a
+/// reason the player must actually read, and for a while every refusal
+/// flashed for 90 frames (1.5 seconds) while a level-up got 300, which made
+/// "refused with a reason" a flash a slow reader missed.
 pub(crate) const REFUSAL_FRAMES: u64 = 240;
 
 const LEVEL_UP_FRAMES: u64 = 300;
