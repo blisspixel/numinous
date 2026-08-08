@@ -173,9 +173,26 @@ impl Room for Mertens {
     }
 
     fn reveal(&self) -> &'static str {
-        "The Mertens function M(n) is the sum of the Mobius function up to n. Its \
-         size is tightly tied to the Riemann hypothesis: if M(n) stays smaller \
-         than about sqrt(n) for large n, RH holds in a strong form."
+        "The Mertens function M(n) is the sum of the Mobius function up to n, \
+         and its size is tied to the Riemann hypothesis. For a century the \
+         Mertens conjecture said M(n) never exceeds sqrt(n), and every \
+         computation ever run agreed. In 1985 Odlyzko and te Riele proved it \
+         false anyway, without finding a single counterexample; to this day \
+         nobody has seen one. All the evidence in the world agreed, and the \
+         evidence was wrong."
+    }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "The first crossing is known to exist below 10^(6.91 * 10^39), a \
+             bound so large that no computer will ever walk to it. The proof \
+             works through the zeta function's zeros, not through search: the \
+             zeros conspire, eventually, to push M past the line.",
+            "Had the conjecture been true, the Riemann hypothesis would have \
+             followed. The disproof did not break RH; it broke the hope of \
+             reaching it by this road, and it is the standing warning against \
+             trusting numerical evidence in the critical strip.",
+        ]
     }
 }
 

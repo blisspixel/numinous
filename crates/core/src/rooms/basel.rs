@@ -149,9 +149,24 @@ impl Room for Basel {
     }
 
     fn reveal(&self) -> &'static str {
-        "The Basel problem asked for the exact sum of 1/n^2. Euler found pi^2/6, \
-         linking primes-free squares to the circle constant through Fourier series \
-         of x^2 on [-pi, pi]."
+        "The Basel problem asked for the exact sum of 1/n^2, and Euler found \
+         pi^2/6 in 1735 by daring to treat sin(x)/x as an infinite product over \
+         its roots. The circle constant was hiding inside the plain whole \
+         numbers. Flip the sum over and it says something you can feel: pick \
+         two integers at random, and the chance they share no common factor is \
+         6/pi^2, a little under two in three."
+    }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Euler's product trick was unjustified at the time: sin has \
+             infinitely many roots, and treating it like a polynomial begged a \
+             theorem nobody had. Weierstrass supplied the rigor a century \
+             later; the answer was right all along.",
+            "The sum of 1/n^2 is the zeta function at 2. The same function's \
+             walk through the complex plane lives in the Zeta Walk room, and \
+             its zeros carry the deepest open question in mathematics.",
+        ]
     }
 }
 

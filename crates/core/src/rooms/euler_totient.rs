@@ -164,8 +164,11 @@ impl Room for EulerTotient {
 
     fn reveal(&self) -> &'static str {
         "Euler's totient phi(n) counts integers in 1..n coprime to n. It is \
-         multiplicative, appears in Euler's theorem a^{phi(n)} = 1 mod n when \
-         gcd(a,n)=1, and underpins RSA key size as (p-1)(q-1)."
+         multiplicative, and Euler's theorem says a^phi(n) = 1 mod n whenever \
+         gcd(a,n) = 1. That single congruence is why RSA works: for n = pq the \
+         totient is (p-1)(q-1), and the secret exponent is chosen against \
+         exactly that modulus. Anyone who could count the coprimes could crack \
+         the code; the counting is the lock."
     }
 }
 

@@ -176,10 +176,24 @@ impl Room for GammaFunc {
     }
 
     fn reveal(&self) -> &'static str {
-        "The Gamma function extends the factorial: Gamma(n)=(n-1)! for positive \
-         integers. It has simple poles at non-positive integers. Stirling's series \
-         approximates log Gamma for large positive arguments; the reflection \
-         formula relates Gamma(z) to Gamma(1-z)."
+        "The Gamma function extends the factorial: Gamma(n) = (n-1)! for \
+         positive integers, with simple poles at zero and the negatives. And \
+         between the whole numbers it hides a jewel: Gamma(1/2) = sqrt(pi). \
+         The factorial of one half knows the circle. Ask how to multiply half \
+         a number of things together and the answer comes back wearing pi."
+    }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "Gamma(1/2) is the Gaussian integral in disguise: substitute and \
+             the half-factorial becomes the area under e^(-x^2), which is \
+             sqrt(pi). The bell curve, the circle, and the factorial are one \
+             braid.",
+            "The reflection formula Gamma(z) Gamma(1-z) = pi / sin(pi z) ties \
+             every value to its mirror across one half, and reading it at \
+             z = 1/2 gives the jewel again: the formula cannot help saying \
+             sqrt(pi).",
+        ]
     }
 }
 
