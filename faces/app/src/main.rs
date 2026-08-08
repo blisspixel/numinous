@@ -1392,24 +1392,31 @@ impl App {
     /// stayed: no lineage and an absent parent are different answers, and
     /// a key that silently does nothing teaches players it is broken.
     fn gallery_select_parent(&mut self) {
+        const NO_LINEAGE: &str = "THIS ONE DESCENDS FROM NOTHING";
+        const PARENT_ABSENT: &str = "ITS PARENT IS NOT ON THIS WALL";
         let Some(gallery) = &mut self.gallery else {
             return;
         };
         match gallery.parent_status() {
             crate::gallery::ParentStatus::Local(_) => {
                 let _ = gallery.select_parent();
+                // A successful walk retires an earlier refusal, so a stale
+                // DESCENDS FROM NOTHING cannot linger over a cursor that
+                // just moved; unrelated banners are left alone.
+                if self.banner.as_ref().is_some_and(|banner| {
+                    banner
+                        .lines()
+                        .first()
+                        .is_some_and(|line| line == NO_LINEAGE || line == PARENT_ABSENT)
+                }) {
+                    self.banner = None;
+                }
             }
             crate::gallery::ParentStatus::NoLineage => {
-                self.banner = Some(feedback::Banner::status(
-                    "THIS ONE DESCENDS FROM NOTHING",
-                    90,
-                ));
+                self.banner = Some(feedback::Banner::status(NO_LINEAGE, 90));
             }
             crate::gallery::ParentStatus::Absent => {
-                self.banner = Some(feedback::Banner::status(
-                    "ITS PARENT IS NOT ON THIS WALL",
-                    90,
-                ));
+                self.banner = Some(feedback::Banner::status(PARENT_ABSENT, 90));
             }
         }
     }

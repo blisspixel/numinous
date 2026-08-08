@@ -81,7 +81,14 @@ fn resolve_lineage(entries: &mut [GalleryEntry]) {
         let Some(descends) = entries[index].creation.descends() else {
             continue;
         };
-        let parent = links.iter().position(|link| link == descends);
+        // Never match an entry to itself: an unedited fork of an untitled
+        // creation carries its parent's exact canonical link as its own, and
+        // a self-parent would credit the remix to the wrong tile and give D
+        // a step that goes nowhere.
+        let parent = links
+            .iter()
+            .enumerate()
+            .position(|(candidate, link)| candidate != index && link == descends);
         entries[index].parent = parent;
         if let Some(parent_index) = parent {
             entries[parent_index].remixes += 1;
@@ -621,10 +628,60 @@ mod tests {
             "the root has no parent to walk to, and says so by refusing"
         );
 
-        // The parent's tile carries the remix count for both forks.
+        // The parent's tile carries the remix count for both forks, asserted
+        // on the resolved entries rather than inferred from lit pixels.
+        let parent_entry = panel
+            .entries
+            .iter()
+            .find(|entry| entry.creation.source() == "sin(a*x)")
+            .expect("the parent entry");
+        assert_eq!(parent_entry.remixes, 2, "both forks credit the parent");
+        for entry in &panel.entries {
+            if entry.creation.source() == "sin(a*x)+0" {
+                assert!(entry.parent.is_some(), "forks resolve their parent");
+                assert_eq!(entry.remixes, 0);
+            }
+        }
         let mut wall = Raster::new(600, 400);
         panel.draw(&mut wall, 600, 400);
         assert!(wall.lit_count() > 100);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_unedited_fork_of_an_untitled_parent_cannot_become_its_own_ancestor() {
+        // An untitled creation's canonical link excludes lineage, so a fork
+        // shared without edits carries its parent's exact link as its own.
+        // Matching must skip the entry itself or the fork self-parents, the
+        // remix credits the wrong tile, and D steps in place.
+        let dir = scratch("selfparent");
+        let parent = StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.5).expect("parent");
+        std::fs::write(dir.join("parent.num"), parent.to_num_file()).expect("parent file");
+        let twin_fork = StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.5)
+            .expect("twin")
+            .with_descends(&parent.to_link())
+            .expect("descends");
+        std::fs::write(dir.join("twin.num"), twin_fork.to_num_file()).expect("twin file");
+
+        let panel = GalleryPanel::open(&dir);
+        assert_eq!(panel.len(), 2);
+        for (index, entry) in panel.entries.iter().enumerate() {
+            assert_ne!(
+                entry.parent,
+                Some(index),
+                "no entry may resolve itself as its own parent"
+            );
+        }
+        let fork_entry = panel
+            .entries
+            .iter()
+            .find(|entry| entry.creation.descends().is_some())
+            .expect("the fork");
+        assert!(
+            fork_entry.parent.is_some(),
+            "the fork resolves the other entry, not itself and not nothing"
+        );
+        assert_eq!(fork_entry.remixes, 0, "the remix credits the parent tile");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
