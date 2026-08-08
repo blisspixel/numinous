@@ -348,6 +348,36 @@ impl BuffonAha {
             .then_some("No circle on the floor, yet the crossings settle on pi.")
     }
 
+    /// The committed wager and its band, once a wager exists.
+    #[must_use]
+    pub fn wager(&self) -> Option<(f64, GuessBand)> {
+        match self.earn {
+            Some(EarnPath::Wager { guess, band }) => Some((guess, band)),
+            _ => None,
+        }
+    }
+
+    /// The wager graded against pi, spoken at consolidation.
+    ///
+    /// The commitment must meet the truth or the wager was theater. The
+    /// bands keep the language predict already speaks: a miss is fertile,
+    /// never punished.
+    #[must_use]
+    pub fn graded(&self) -> Option<String> {
+        if !matches!(self.beat, AhaBeat::Consolidated) {
+            return None;
+        }
+        let (guess, band) = self.wager()?;
+        let verdict = match band {
+            GuessBand::Nailed => "Nailed.",
+            GuessBand::Close => "Close: the fertile band.",
+            GuessBand::Wild => "A wild swing; the gap is the lesson.",
+        };
+        Some(format!(
+            "You wagered {guess:.2}; the crossings settle on pi, 3.14159. {verdict}"
+        ))
+    }
+
     /// Stable beat name for playtest notes and diagnostics (not player chrome).
     #[must_use]
     pub fn beat_label(&self) -> &'static str {
