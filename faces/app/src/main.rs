@@ -1247,7 +1247,10 @@ impl App {
                     &self.crash_log,
                     &format!("{success_label} failed: {error}\n"),
                 );
-                self.banner = Some(feedback::Banner::status(failure_line, 90));
+                self.banner = Some(feedback::Banner::status(
+                    failure_line,
+                    feedback::REFUSAL_FRAMES,
+                ));
             }
         }
     }
@@ -1420,7 +1423,7 @@ impl App {
     /// written a mystery.
     fn cancel_share_naming(&mut self) {
         if self.share_naming.take().is_some() {
-            self.banner = Some(feedback::Banner::status("SHARE CANCELLED", 60));
+            self.banner = Some(feedback::Banner::status("SHARE CANCELLED", 90));
         }
     }
 
@@ -1452,7 +1455,10 @@ impl App {
             Ok(Err(studio_panel::ShareRefusal::UnparsedFormula)) => {
                 // An unparsed edit has no curve to promise; the refusal names
                 // the way forward instead of silently sharing the last-good.
-                self.banner = Some(feedback::Banner::status("FIX THE FORMULA TO SHARE", 90));
+                self.banner = Some(feedback::Banner::status(
+                    "FIX THE FORMULA TO SHARE",
+                    feedback::REFUSAL_FRAMES,
+                ));
             }
             Ok(Err(studio_panel::ShareRefusal::LineageTooLarge)) => {
                 // A different refusal deserves a different sentence: telling
@@ -1460,7 +1466,7 @@ impl App {
                 // at the wrong cause.
                 self.banner = Some(feedback::Banner::status(
                     "FORK LINEAGE TOO LARGE TO SHARE",
-                    90,
+                    feedback::REFUSAL_FRAMES,
                 ));
             }
             Err(error) => {
@@ -1548,10 +1554,16 @@ impl App {
                 }
             }
             crate::gallery::ParentStatus::NoLineage => {
-                self.banner = Some(feedback::Banner::status(NO_LINEAGE, 90));
+                self.banner = Some(feedback::Banner::status(
+                    NO_LINEAGE,
+                    feedback::REFUSAL_FRAMES,
+                ));
             }
             crate::gallery::ParentStatus::Absent => {
-                self.banner = Some(feedback::Banner::status(PARENT_ABSENT, 90));
+                self.banner = Some(feedback::Banner::status(
+                    PARENT_ABSENT,
+                    feedback::REFUSAL_FRAMES,
+                ));
             }
         }
     }
@@ -1769,7 +1781,7 @@ impl App {
                     numinous_core::NumFileError::TooLarge => "THE .NUM FILE IS TOO LARGE",
                     numinous_core::NumFileError::Invalid(_) => "NOT A VALID .NUM CREATION",
                 };
-                self.banner = Some(feedback::Banner::status(line, 90));
+                self.banner = Some(feedback::Banner::status(line, feedback::REFUSAL_FRAMES));
             }
         }
     }
@@ -1784,7 +1796,10 @@ impl App {
             || self.arcade.is_some()
             || self.session_viewer.is_open()
         {
-            self.banner = Some(feedback::Banner::status("FINISH THE GAME FIRST", 90));
+            self.banner = Some(feedback::Banner::status(
+                "FINISH THE GAME FIRST",
+                feedback::REFUSAL_FRAMES,
+            ));
             return;
         }
         let is_num = path
@@ -1793,7 +1808,7 @@ impl App {
         if !is_num {
             self.banner = Some(feedback::Banner::status(
                 "ONLY .NUM CREATIONS OPEN HERE",
-                90,
+                feedback::REFUSAL_FRAMES,
             ));
             return;
         }
@@ -1809,7 +1824,10 @@ impl App {
                     self.banner = Some(feedback::Banner::status("REOPENED  ENTER: PLAY", 90));
                 }
                 Err(_) => {
-                    self.banner = Some(feedback::Banner::status("NOT A VALID NUMINOUS LINK", 90));
+                    self.banner = Some(feedback::Banner::status(
+                        "NOT A VALID NUMINOUS LINK",
+                        feedback::REFUSAL_FRAMES,
+                    ));
                 }
             }
             return;
@@ -7157,6 +7175,25 @@ mod tests {
         let _ = std::fs::remove_dir_all(dir);
         let _ = std::fs::remove_file(blocker);
         let _ = std::fs::remove_file(&app.journey_file);
+    }
+
+    #[test]
+    fn a_refusal_banner_lives_at_least_as_long_as_a_decorative_one() {
+        // Every refusal flashed for 90 frames while a level-up got 300, so
+        // "refused with a reason" was a flash a slow reader missed. The
+        // refusal constant now buys reading time, proved on the real path:
+        // an unparsed formula's share refusal outlives a share confirmation.
+        let mut app = headless("numinous_app_test_refusal_frames.txt");
+        app.enter_studio();
+        assert!(app.studio_panel.push_text("(((").is_none());
+        app.share_studio_creation(None, None);
+        let refusal = app.banner.as_ref().expect("refusal banner");
+        assert_eq!(refusal.lines()[0], "FIX THE FORMULA TO SHARE");
+        assert_eq!(refusal.frames_left(), super::feedback::REFUSAL_FRAMES);
+        assert!(
+            refusal.frames_left() >= 240,
+            "a refusal must not be briefer than the decorative banners"
+        );
     }
 
     #[test]
