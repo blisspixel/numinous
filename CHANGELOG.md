@@ -5,6 +5,21 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The rules that had drifted apart across the faces live in core now.
+  The veil gate was two doors wearing one name: the terminal admitted
+  the deep sayings at rank Mathematikos (10 sparks, the rule the
+  sayings themselves document) while the MCP face demanded 28, so a
+  listener with 15 sparks was inside the veil on one face and refused
+  on the other. Both faces now call one core rule, behind_the_veil,
+  and a parity test drives the exact 15-spark listener through the MCP
+  door. The Munch leaderboard identity moves with it: the score key
+  format and the clean-win rule were each restated inline in all three
+  faces, which is how a shared leaderboard stops being shared; both
+  are core functions now, pinned so the key format can only change
+  knowingly. The remaining structural debts (the shared-state file
+  resolution chain, gauntlet scoring, the god-file seams, the RoomMeta
+  data table, face-agnostic request types) stay scheduled in the
+  roadmap's Three Ceilings section with the drag report as their map.
 - Access disclosures now reach the player. The numinous access report
   names the rooms on the two known-limit lists itself, from the same
   public constants the registry tests enforce, so its counts can never

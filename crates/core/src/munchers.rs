@@ -189,6 +189,23 @@ pub fn build_board(seed: u64, round: u64) -> Board {
     }
 }
 
+/// The shared-board score key for a Munch deal. One key means one board for
+/// every mind on every face (the scoreboard's whole promise); this format
+/// was once rebuilt by hand in each face, which is how a shared leaderboard
+/// stops being shared.
+#[must_use]
+pub fn score_key(seed: impl std::fmt::Display, round: impl std::fmt::Display) -> String {
+    format!("munch seed:{seed} board:{round}")
+}
+
+/// Whether a graded run is a clean win: every fit eaten, nothing wrong
+/// bitten, and at least one real hit. The journey's win hangs on this rule,
+/// and three faces once each restated it inline.
+#[must_use]
+pub fn clean_win(outcome: &Munched) -> bool {
+    outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0
+}
+
 /// Grade a set of bites (indices into the board, duplicates ignored).
 #[must_use]
 pub fn grade(board: &Board, bites: &[usize]) -> Munched {
@@ -244,6 +261,39 @@ pub fn board_text(board: &Board) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn one_key_means_one_board_for_every_mind() {
+        // The scoreboard's promise, pinned at the source all three faces
+        // now share. If this format changes, every existing score file's
+        // keys orphan, so it changes here knowingly or not at all.
+        assert_eq!(super::score_key(7u64, 0usize), "munch seed:7 board:0");
+    }
+
+    #[test]
+    fn a_clean_win_eats_everything_and_only_what_fits() {
+        let graded = |hits: u32, bad_bites: u32, left_behind: u32| super::Munched {
+            hits,
+            bad_bites,
+            left_behind,
+            score: 0,
+            wrongly_eaten: Vec::new(),
+            missed: Vec::new(),
+        };
+        assert!(super::clean_win(&graded(3, 0, 0)));
+        assert!(
+            !super::clean_win(&graded(3, 1, 0)),
+            "a wrong bite spoils it"
+        );
+        assert!(
+            !super::clean_win(&graded(3, 0, 1)),
+            "a fit left behind spoils it"
+        );
+        assert!(
+            !super::clean_win(&graded(0, 0, 0)),
+            "an empty run is not a win"
+        );
+    }
+
     #[test]
     fn the_deeper_rules_judge_correctly() {
         use super::Rule;
