@@ -1389,7 +1389,7 @@ fn negotiate_protocol_version(params: Option<&Value>) -> &'static str {
 }
 
 fn server_instructions() -> &'static str {
-    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does before you ask for explanations. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true. Read structuredContent.engineeredAha for beat and earn. describe_room and reveal_room open explanation on purpose and can spoil generation-before-reveal, so prefer play_room first. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
+    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does before you ask for explanations. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile will peak) then aha_summon true. Read structuredContent.engineeredAha for beat and earn. describe_room and reveal_room open explanation on purpose and can spoil generation-before-reveal, so prefer play_room first. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
 }
 
 fn server_capabilities() -> Value {
@@ -1591,9 +1591,15 @@ fn build_tools_catalog() -> Value {
                             "maximum": 4.5,
                             "description": "Buffon's Needle engineered aha only: commit a finite number on 1.5..4.5 for the crossing ratio."
                         },
+                        "bin_wager": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 16,
+                            "description": "Galton Board engineered aha only: commit the bin (0..16 right turns) where the whole pile will peak. Graded against the binomial's true mode for the selected coin, not against one ball's luck."
+                        },
                         "aha_summon": {
                             "type": "boolean",
-                            "description": "After a generation act on Times Tables or Buffon, advance the engineered aha through morph to consolidated and unlock punchline reveal text. Stateless one-shot."
+                            "description": "After a generation act on Times Tables, Buffon, or the Galton Board, advance the engineered aha through morph to consolidated and unlock punchline reveal text. Stateless one-shot."
                         }
                     },
                     "required": ["id"],
@@ -3354,12 +3360,16 @@ fn play_room_tool(args: &Value) -> Value {
 struct FlagshipAhaRequest {
     place_wager: Option<numinous_core::rooms::times_tables_aha::CardioidHome>,
     number_wager: Option<f64>,
+    bin_wager: Option<usize>,
     summon: bool,
 }
 
 impl FlagshipAhaRequest {
     fn uses_generation_args(self) -> bool {
-        self.place_wager.is_some() || self.number_wager.is_some() || self.summon
+        self.place_wager.is_some()
+            || self.number_wager.is_some()
+            || self.bin_wager.is_some()
+            || self.summon
     }
 }
 
@@ -3419,16 +3429,46 @@ fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAha
         None
     };
 
-    if place_wager.is_some() && number_wager.is_some() {
-        return Err("Pass place_wager or number_wager, not both.".to_string());
+    let bin_raw = args.get("bin_wager");
+    let bin_wager = if let Some(value) = bin_raw {
+        let Some(bin) = value.as_u64() else {
+            return Err("Argument 'bin_wager' must be a whole number.".to_string());
+        };
+        if room_id != "galton-board" {
+            return Err(
+                "bin_wager is only valid on the Galton Board (id galton-board).".to_string(),
+            );
+        }
+        let last = numinous_core::rooms::galton_board::BOARD_ROWS as u64;
+        if bin > last {
+            return Err(format!("bin_wager must be in [0, {last}]."));
+        }
+        Some(bin as usize)
+    } else {
+        None
+    };
+
+    let wagers = usize::from(place_wager.is_some())
+        + usize::from(number_wager.is_some())
+        + usize::from(bin_wager.is_some());
+    if wagers > 1 {
+        return Err("Pass one wager: place_wager, number_wager, or bin_wager.".to_string());
     }
-    if summon && room_id != "times-tables" && room_id != "buffon-needle" {
-        return Err("aha_summon is only valid on Times Tables or Buffon's Needle.".to_string());
+    if summon
+        && room_id != "times-tables"
+        && room_id != "buffon-needle"
+        && room_id != "galton-board"
+    {
+        return Err(
+            "aha_summon is only valid on Times Tables, Buffon's Needle, or the Galton Board."
+                .to_string(),
+        );
     }
 
     Ok(FlagshipAhaRequest {
         place_wager,
         number_wager,
+        bin_wager,
         summon,
     })
 }
@@ -3548,15 +3588,68 @@ fn project_flagship_aha(
                 "graded": aha.graded(),
             })))
         }
+        "galton-board" => {
+            use numinous_core::rooms::galton_aha::{AhaBeat, GaltonAha, peak_bin_for_coin};
+            let mut aha = GaltonAha::new();
+            let waves = numinous_core::rooms::galton_board::wave_count_from_inputs(inputs);
+            aha.note_waves(waves);
+            // The wager grades against the coin the pile on screen is built
+            // from; with no waves yet the fair coin is the honest default.
+            let coin =
+                numinous_core::rooms::galton_board::selected_coin_from_inputs(inputs).unwrap_or(2);
+            if let Some(bin) = request.bin_wager {
+                let _ = aha.commit_wager(bin, coin);
+            }
+            if request.summon {
+                if !aha.earned() {
+                    return Err("aha_summon requires a bin_wager or four waves first.".to_string());
+                }
+                advance_galton_to_consolidated(&mut aha);
+            }
+            let room_status = None::<String>;
+            Ok(Some(json!({
+                "kind": "bin",
+                "beat": aha.beat_label(),
+                "status": keyless_aha_status(aha.status(room_status.as_deref())),
+                "earn": aha.earn_label(),
+                "allowReveal": aha.allow_reveal_text(),
+                "canSummon": aha.can_summon()
+                    || matches!(aha.beat(), AhaBeat::Morph { .. }),
+                "binMin": 0,
+                "binMax": numinous_core::rooms::galton_board::BOARD_ROWS,
+                "coin": coin,
+                "punchline": aha.punchline(),
+                // The keystone, typed: wager, band, and one graded sentence
+                // against the binomial's true peak, in the same non-punitive
+                // language predict speaks.
+                "wager": aha.wager().map(|(bin, _, _)| bin),
+                "band": aha.wager().map(|(_, _, band)| band.name().to_ascii_lowercase()),
+                "truth": peak_bin_for_coin(coin),
+                "graded": aha.graded(),
+            })))
+        }
         _ => {
             if request.uses_generation_args() {
                 return Err(
-                    "Engineered aha arguments are only valid on Times Tables or Buffon's Needle."
+                    "Engineered aha arguments are only valid on Times Tables, Buffon's                      Needle, or the Galton Board."
                         .to_string(),
                 );
             }
             Ok(None)
         }
+    }
+}
+
+fn advance_galton_to_consolidated(aha: &mut numinous_core::rooms::galton_aha::GaltonAha) {
+    use numinous_core::rooms::galton_aha::AhaBeat;
+    if matches!(aha.beat(), AhaBeat::Withheld) {
+        let _ = aha.summon();
+    }
+    if matches!(aha.beat(), AhaBeat::Morph { .. }) {
+        aha.set_morph_progress(1.0);
+    }
+    if matches!(aha.beat(), AhaBeat::Confirm) {
+        let _ = aha.summon();
     }
 }
 
@@ -9270,6 +9363,10 @@ plays 2
             json!({"id": "buffon-needle", "width": 40, "height": 20, "number_wager": 3.0}),
             json!({"id": "buffon-needle", "width": 40, "height": 20,
                    "number_wager": 3.2, "aha_summon": true}),
+            json!({"id": "galton-board", "width": 40, "height": 20,
+                   "pokes": [[0.5, 0.5]], "bin_wager": 8}),
+            json!({"id": "galton-board", "width": 40, "height": 20,
+                   "pokes": [[0.5, 0.5]], "bin_wager": 8, "aha_summon": true}),
         ];
         for arguments in calls {
             let reply = call("play_room", arguments.clone());
@@ -9281,6 +9378,74 @@ plays 2
                 );
             }
         }
+    }
+
+    #[test]
+    fn galton_bin_wager_gates_reveal_and_grades_against_the_binomial() {
+        // The third flagship aha: the wager is a model-level commitment
+        // (where the WHOLE pile peaks), graded against the binomial's true
+        // mode for the coin on screen, never against one ball's luck. A
+        // poke at x=0.5 selects the fair coin, whose peak is bin 8.
+        let wagered = call(
+            "play_room",
+            json!({
+                "id": "galton-board",
+                "width": 48,
+                "height": 24,
+                "pokes": [[0.5, 0.5]],
+                "bin_wager": 8
+            }),
+        );
+        let content = &wagered["result"]["structuredContent"];
+        assert_eq!(content["engineeredAha"]["beat"], "withheld");
+        assert_eq!(content["engineeredAha"]["kind"], "bin");
+        assert_eq!(content["engineeredAha"]["allowReveal"], false);
+        assert!(content["reveal"].is_null(), "the wager gates the reveal");
+
+        let consolidated = call(
+            "play_room",
+            json!({
+                "id": "galton-board",
+                "width": 48,
+                "height": 24,
+                "pokes": [[0.5, 0.5]],
+                "bin_wager": 8,
+                "aha_summon": true
+            }),
+        );
+        let done = &consolidated["result"]["structuredContent"];
+        assert_eq!(done["engineeredAha"]["beat"], "consolidated");
+        assert_eq!(done["engineeredAha"]["wager"], 8);
+        assert_eq!(done["engineeredAha"]["truth"], 8);
+        assert_eq!(done["engineeredAha"]["band"], "nailed");
+        let graded = done["engineeredAha"]["graded"]
+            .as_str()
+            .expect("a committed wager is answered");
+        assert!(graded.contains("bin 8"), "{graded}");
+        assert!(graded.contains("Nailed"), "{graded}");
+        assert!(
+            !done["reveal"].is_null(),
+            "consolidation unlocks the reveal"
+        );
+
+        // A wild wager on a loaded coin is graded, never punished. The poke
+        // at x=0.9 selects the p=0.7 coin, whose peak is bin 11.
+        let wild = call(
+            "play_room",
+            json!({
+                "id": "galton-board",
+                "width": 48,
+                "height": 24,
+                "pokes": [[0.9, 0.5]],
+                "bin_wager": 2,
+                "aha_summon": true
+            }),
+        );
+        let aha = &wild["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(aha["band"], "wild");
+        assert_eq!(aha["truth"], 11);
+        let graded = aha["graded"].as_str().expect("graded");
+        assert!(graded.contains("the gap is the lesson"), "{graded}");
     }
 
     #[test]

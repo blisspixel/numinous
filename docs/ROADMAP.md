@@ -238,8 +238,10 @@ object over MCP.
 2. **The Wager Wave rides with the arc (rock 3).** One App keybinding poses
    any room's prediction through `predict.rs`; the Galton aha machine
    (whose wager PEDAGOGY.md already names and whose toy layer is done)
-   becomes the third flagship, then Double Pendulum, Kepler, Parrondo, and
-   the nontransitive dice; the three dexterity goals become mathematical
+   becomes the third flagship (landed: five beats on App and MCP, the
+   binomial outline growing outward from the true peak, closed form
+   pinned against the mass itself), then Double Pendulum, Kepler,
+   Parrondo, and the nontransitive dice; the three dexterity goals become mathematical
    predictions; one persisted line per aha (room, wager, band) gives the
    second session a memory, grind-free. The reveal-leak policy (describe
    and reveal print every punchline ungated, asserted by test) is a named
