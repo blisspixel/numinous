@@ -222,11 +222,15 @@ impl GaltonAha {
     }
 
     /// Commit the peak wager on the selected coin. First generation act wins.
+    ///
+    /// Prime only, unlike Buffon's machine: pi exists before any needle is
+    /// thrown, but a peak wager about a pile that does not exist yet is
+    /// incoherent, so the first wave must land before the bet can.
     pub fn commit_wager(&mut self, bin: usize, coin: usize) -> bool {
         if self.earn.is_some() {
             return false;
         }
-        if !matches!(self.beat, AhaBeat::Prime | AhaBeat::Explore) {
+        if !matches!(self.beat, AhaBeat::Prime) {
             return false;
         }
         let bin = bin.min(BOARD_ROWS);
@@ -305,7 +309,7 @@ impl GaltonAha {
                     format!("EARNED BIN {bin} {}  PRESS E", band.name())
                 }
                 Some(EarnPath::Waves { count }) => {
-                    format!("EARNED {count} WAVE  PRESS E")
+                    format!("EARNED {count} WAVES  PRESS E")
                 }
                 None => "EARNED  PRESS E".to_string(),
             },
@@ -539,6 +543,11 @@ mod tests {
 
         aha.set_hover(Some(8));
         assert_eq!(aha.hover(), Some(8));
+
+        // No pile, no bet: a fresh machine refuses the commit outright.
+        let mut unprimed = GaltonAha::new();
+        assert!(!unprimed.commit_wager(8, 2), "explore cannot commit");
+        assert!(unprimed.earn().is_none());
 
         // Committing on the fair coin: the true peak is 8.
         assert!(aha.commit_wager(8, 2));
