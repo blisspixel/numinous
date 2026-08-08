@@ -5,6 +5,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- A second research fan-out asked what the product is missing as
+  mathematics and as a creative instrument. Four verified reports are
+  committed at `docs/evidence/math-creativity-2026-08.json` and
+  synthesized into the roadmap as The Mathematical Soul: the
+  wager-truth-grade arc is the product's soul and exists exactly twice
+  while the universal prediction mechanic sits built but wired to one
+  face; the catalog is mostly islands while its one supercluster proves
+  connection works; the Studio's ceiling is one parser change away and
+  a digital mind still cannot save, sign, or fork a creation over MCP;
+  and a handful of rooms carry real mathematical errors now queued as
+  truth debts. The findings fold into the existing rocks rather than
+  reordering them again.
 - The rules that had drifted apart across the faces live in core now.
   The veil gate was two doors wearing one name: the terminal admitted
   the deep sayings at rank Mathematikos (10 sparks, the rule the
