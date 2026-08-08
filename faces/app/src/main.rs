@@ -1388,6 +1388,32 @@ impl App {
         }
     }
 
+    /// Walk one step up the remix tree, or say exactly why the cursor
+    /// stayed: no lineage and an absent parent are different answers, and
+    /// a key that silently does nothing teaches players it is broken.
+    fn gallery_select_parent(&mut self) {
+        let Some(gallery) = &mut self.gallery else {
+            return;
+        };
+        match gallery.parent_status() {
+            crate::gallery::ParentStatus::Local(_) => {
+                let _ = gallery.select_parent();
+            }
+            crate::gallery::ParentStatus::NoLineage => {
+                self.banner = Some(feedback::Banner::status(
+                    "THIS ONE DESCENDS FROM NOTHING",
+                    90,
+                ));
+            }
+            crate::gallery::ParentStatus::Absent => {
+                self.banner = Some(feedback::Banner::status(
+                    "ITS PARENT IS NOT ON THIS WALL",
+                    90,
+                ));
+            }
+        }
+    }
+
     /// Fork the creation under the Gallery cursor: the wall closes and the
     /// Studio holds an editable, singing copy that remembers its parent, so
     /// the next share records the descent.
@@ -4120,6 +4146,9 @@ impl ApplicationHandler for App {
                         // held Shift or Caps Lock must not unplug it.
                         Key::Character(c) if c.as_str().eq_ignore_ascii_case("f") => {
                             self.gallery_fork_selected();
+                        }
+                        Key::Character(c) if c.as_str().eq_ignore_ascii_case("d") => {
+                            self.gallery_select_parent();
                         }
                         Key::Named(NamedKey::ArrowLeft) => self.gallery_move(-1, 0),
                         Key::Named(NamedKey::ArrowRight) => self.gallery_move(1, 0),

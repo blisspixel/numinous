@@ -70,7 +70,10 @@ badge that is a point of pride for the parent, and prose credit the forker can
 edit. Credit flows up the tree by construction, so remixing feels like honoring,
 not stealing. The record now exists: every fork's share carries a `descends`
 parent link, validated by reopening it, and the bundle README names the
-parent. The visible tree, the badge, and editable prose credit remain open.
+parent. The local tree is visible too: the Gallery wall resolves recorded
+links against its own capsules, a parent's tile wears a REMIXED count, the
+selected fork names its parent, and D walks one step up. Editable prose
+credit remains open, waiting on its own capsule field.
 
 That is the loop: reopen, share-bundle, gallery, fork, lineage. A non-programmer
 types `y = sin(a*x)`, drags `a` until it is beautiful, picks the 8-bit Era, names

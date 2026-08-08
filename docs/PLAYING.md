@@ -127,6 +127,12 @@ shows that title on its tile, a saved era travels with the file and is
 restored on reopen, and the terminal can name creations too:
 `numinous plot "sin(a*x)" --save mine.num --title "Slow Waves"`.
 
+The wall shows the remix tree it can prove. A creation that others on the
+wall descend from wears a REMIXED count on its tile, a selected fork names
+its parent in a line above the footer, and D walks one step up the tree.
+When D cannot walk, it says why: descending from nothing and descending from
+a creation that is not on this wall are different answers.
+
 **Power console (` or ~).** For hackery power users, not the first-time path.
 Press backtick or tilde to open a bottom command line (Esc or the same key
 closes it). Useful commands:
