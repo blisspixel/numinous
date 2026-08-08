@@ -1,7 +1,7 @@
 //! Cantor set and devil's staircase: remove middle thirds forever.
 //!
 //! Top: ternary Cantor dust construction. Bottom: Cantor function (devil's
-//! staircase). DRAG: SET THE DEPTH. See `docs/ROOMS.md`.
+//! staircase). See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -139,8 +139,7 @@ impl Room for CantorSet {
             id: "cantor-set",
             title: "The Devil's Staircase",
             wing: "Fractals",
-            blurb: "Middle-third Cantor dust above; Cantor function (devil's staircase) below. t \
-                    and DRAG: SET THE DEPTH.",
+            blurb: "Middle-third Cantor dust above; Cantor function (devil's staircase) below.",
             accent: [160, 40, 200],
         }
     }

@@ -98,7 +98,7 @@ impl Room for Borromean {
             id: "borromean",
             title: "Borromean Rings",
             wing: "Shape & Space",
-            blurb: "Three linked as one; no pair linked. t and DRAG: TUNE ANGLE.",
+            blurb: "Three linked as one; no pair linked.",
             accent: [160, 120, 30],
         }
     }

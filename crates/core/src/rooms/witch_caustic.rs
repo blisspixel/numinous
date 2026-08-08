@@ -1,6 +1,6 @@
 //! Circular caustic under parallel light (nephroid cousin sketch).
 //!
-//! Distinct from nephroid room: envelope of reflected rays. DRAG: TUNE ANGLE.
+//! Distinct from nephroid room: envelope of reflected rays.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -137,7 +137,7 @@ impl Room for CircularCaustic {
             id: "circular-caustic",
             title: "Circular Caustic",
             wing: "Shape & Space",
-            blurb: "Reflected parallel light envelopes a nephroid. t and DRAG: TUNE ANGLE.",
+            blurb: "Reflected parallel light envelopes a nephroid.",
             accent: [220, 180, 40],
         }
     }

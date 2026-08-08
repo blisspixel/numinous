@@ -106,7 +106,7 @@ impl Room for Coupon {
             id: "coupon",
             title: "Coupon Collector",
             wing: "Chance & Order",
-            blurb: "Expected waits n H_n to finish a set. t and DRAG: TUNE N.",
+            blurb: "Expected waits n H_n to finish a set.",
             accent: [100, 80, 30],
         }
     }

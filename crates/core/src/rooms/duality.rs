@@ -111,8 +111,7 @@ impl Room for Duality {
             id: "duality",
             title: "Two Descriptions, One Truth",
             wing: "Shape & Space",
-            blurb: "One polygon, two languages: faces become vertices in the dual. t and DRAG: \
-                    TOGGLE DUAL VIEW.",
+            blurb: "One polygon, two languages: faces become vertices in the dual.",
             accent: [180, 140, 255],
         }
     }

@@ -125,7 +125,7 @@ impl Room for Braess {
             title: "Braess Trap",
             wing: "Emergence",
             blurb: "Add a free shortcut and selfish drivers can all take longer. t toggles the \
-                    bridge; DRAG: BUILD A SHORTCUT.",
+                    bridge.",
             accent: [220, 80, 80],
         }
     }

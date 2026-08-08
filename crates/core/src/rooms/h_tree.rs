@@ -119,7 +119,7 @@ impl Room for HTree {
             id: "h-tree",
             title: "H-Tree",
             wing: "Fractals",
-            blurb: "Self-similar H strokes that tile the plane. t and DRAG: SET THE DEPTH.",
+            blurb: "Self-similar H strokes that tile the plane.",
             accent: [80, 140, 80],
         }
     }

@@ -96,7 +96,7 @@ impl Room for Superellipse {
             id: "superellipse",
             title: "Superellipse",
             wing: "Shape & Space",
-            blurb: "Lame curve |x|^n+|y|^n=1 from diamond to square. t and DRAG: TUNE N.",
+            blurb: "Lame curve |x|^n+|y|^n=1 from diamond to square.",
             accent: [70, 110, 90],
         }
     }

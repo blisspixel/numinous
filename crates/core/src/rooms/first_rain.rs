@@ -179,8 +179,7 @@ impl Room for FirstRain {
             title: "The First Rain",
             wing: "Emergence",
             blurb: "Sites open with probability p; clusters merge until one spans top to bottom. \
-                    That cliff sits near p=0.5927. t rains harder; DRAG: MAKE IT RAIN dials p under \
-                    the hand.",
+                    That cliff sits near p=0.5927. t rains harder.",
             accent: [80, 140, 220],
         }
     }

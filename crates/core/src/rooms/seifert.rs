@@ -103,7 +103,7 @@ impl Room for Seifert {
             id: "seifert",
             title: "Seifert Film",
             wing: "Shape & Space",
-            blurb: "A surface spanning a link. t and DRAG: TUNE TWIST.",
+            blurb: "A surface spanning a link.",
             accent: [80, 60, 140],
         }
     }

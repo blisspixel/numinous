@@ -1,6 +1,6 @@
 //! Hypotrochoid: roulette of a circle rolling inside a fixed circle (Spirograph).
 //!
-//! Ambient phase draws the roulette with a pen. DRAG: TUNE RATIO.
+//! Ambient phase draws the roulette with a pen.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -129,7 +129,7 @@ impl Room for Hypotrochoid {
             id: "hypotrochoid",
             title: "Hypotrochoid",
             wing: "Shape & Space",
-            blurb: "Spirograph draws itself. Watch the pen; DRAG: TUNE RATIO.",
+            blurb: "Spirograph draws itself. Watch the pen.",
             accent: [200, 60, 100],
         }
     }

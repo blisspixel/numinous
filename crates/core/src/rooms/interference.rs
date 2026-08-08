@@ -109,7 +109,7 @@ impl Room for Interference {
             id: "interference",
             title: "Interference",
             wing: "Waves & Sound",
-            blurb: "Two sources paint bright and dark fringes. t and DRAG: TUNE SPACING.",
+            blurb: "Two sources paint bright and dark fringes.",
             accent: [60, 80, 200],
         }
     }

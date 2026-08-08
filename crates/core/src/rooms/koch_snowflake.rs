@@ -1,7 +1,7 @@
 //! Koch snowflake: closed Koch curve as a polygonal island.
 //!
 //! Distinct from the existing Koch coast room (if open-path); this is the
-//! closed triangular snowflake. DRAG: SET THE ORDER. See `docs/ROOMS.md`.
+//! closed triangular snowflake. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -108,7 +108,7 @@ impl Room for KochSnowflake {
             id: "koch-snowflake",
             title: "Koch Snowflake",
             wing: "Fractals",
-            blurb: "Closed Koch curve: infinite coast, finite area. t and DRAG: SET THE ORDER.",
+            blurb: "Closed Koch curve: infinite coast, finite area.",
             accent: [100, 180, 220],
         }
     }

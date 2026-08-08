@@ -93,7 +93,7 @@ impl Room for Menger {
             id: "menger-carpet",
             title: "Menger Carpet",
             wing: "Fractals",
-            blurb: "Sierpinski carpet of removed center squares. t and DRAG: SET THE DEPTH.",
+            blurb: "Sierpinski carpet of removed center squares.",
             accent: [100, 100, 140],
         }
     }

@@ -1,7 +1,7 @@
 //! Prime Gap Weather: gaps as a landscape, not a lecture.
 //!
 //! Walk n along the integers; gap to the next prime is the weather. Twin primes
-//! are calm days. DRAG: ALONG N. See `docs/ROOMS.md`.
+//! are calm days. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -127,7 +127,7 @@ impl Room for PrimeGaps {
             id: "prime-gaps",
             title: "Prime Gap Weather",
             wing: "Number & Pattern",
-            blurb: "Gaps between primes as a landscape; twins are calm. t and DRAG: ALONG N. Open \
+            blurb: "Gaps between primes as a landscape; twins are calm. Open \
                     doors stay open.",
             accent: [100, 200, 140],
         }

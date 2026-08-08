@@ -145,7 +145,7 @@ impl Room for SoapFilm {
             title: "Soap Film",
             wing: "Shape & Space",
             blurb: "A film finds least length; Steiner junctions meet at 120 degrees. t wobbles \
-                    pins; CLICK: PIN A WIRE.",
+                    pins.",
             accent: [180, 220, 255],
         }
     }

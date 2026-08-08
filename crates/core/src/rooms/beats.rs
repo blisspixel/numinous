@@ -96,7 +96,7 @@ impl Room for Beats {
             id: "beats",
             title: "Beats",
             wing: "Waves & Sound",
-            blurb: "Two close tones pulse as one slow envelope. t and DRAG: TUNE DETUNE.",
+            blurb: "Two close tones pulse as one slow envelope.",
             accent: [200, 100, 40],
         }
     }

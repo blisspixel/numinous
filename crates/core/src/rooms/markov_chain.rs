@@ -148,7 +148,7 @@ impl Room for MarkovChain {
             id: "markov-chain",
             title: "Markov Chain",
             wing: "Chance & Noise",
-            blurb: "Memoryless walk on states. t and DRAG: TUNE P.",
+            blurb: "Memoryless walk on states.",
             accent: [90, 60, 100],
         }
     }

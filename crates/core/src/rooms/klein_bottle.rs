@@ -100,7 +100,7 @@ impl Room for KleinBottle {
             id: "klein-bottle",
             title: "Klein Bottle",
             wing: "Shape & Space",
-            blurb: "A bottle with no inside: non-orientable surface. t and DRAG: TUNE U.",
+            blurb: "A bottle with no inside: non-orientable surface.",
             accent: [80, 50, 120],
         }
     }

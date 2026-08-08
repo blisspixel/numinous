@@ -1,6 +1,6 @@
 //! Piriform (pear) curve: y^2 = x^3 (a-x)/b^2.
 //!
-//! Ambient phase draws the pear from stem to body. DRAG: TUNE A.
+//! Ambient phase draws the pear from stem to body.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -137,7 +137,7 @@ impl Room for Piriform {
             id: "piriform",
             title: "Piriform Curve",
             wing: "Shape & Space",
-            blurb: "Pear curve draws from stem to body. Watch the pen; DRAG: TUNE A.",
+            blurb: "Pear curve draws from stem to body. Watch the pen.",
             accent: [120, 100, 40],
         }
     }

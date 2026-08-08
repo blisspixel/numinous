@@ -108,7 +108,7 @@ impl Room for Kampyle {
             id: "kampyle",
             title: "Kampyle of Eudoxus",
             wing: "Shape & Space",
-            blurb: "Horn curve x^4 = a^2 (x^2+y^2). t and DRAG: TUNE A.",
+            blurb: "Horn curve x^4 = a^2 (x^2+y^2).",
             accent: [140, 100, 40],
         }
     }

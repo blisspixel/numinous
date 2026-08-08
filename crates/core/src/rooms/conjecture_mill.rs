@@ -2,7 +2,7 @@
 //!
 //! The room performs a complete deterministic search over primitive rational
 //! quadratic polynomials. Tests can refute a candidate, but only exact
-//! coefficient equality stamps an identity as proved. DRAG: STEER THE SEARCH.
+//! coefficient equality stamps an identity as proved.
 
 use crate::font;
 use crate::rng::SplitMix64;
@@ -592,7 +592,7 @@ impl Room for ConjectureMill {
             wing: "Number & Pattern",
             blurb: "Typed formulas crawl across a blackboard. Exact counterexamples erase the \
                     bad; coefficient proof stamps the survivor. Time runs a complete finite \
-                    search. DRAG: STEER THE SEARCH.",
+                    search.",
             accent: [120, 220, 170],
         }
     }

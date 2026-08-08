@@ -95,7 +95,7 @@ impl Room for Partition {
             id: "partition",
             title: "Partition Function",
             wing: "Number & Pattern",
-            blurb: "p(n): ways to write n as unordered sums. t and DRAG: TUNE N.",
+            blurb: "p(n): ways to write n as unordered sums.",
             accent: [140, 90, 40],
         }
     }

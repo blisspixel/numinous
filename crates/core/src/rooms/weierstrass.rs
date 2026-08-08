@@ -122,8 +122,7 @@ impl Room for Weierstrass {
             id: "weierstrass",
             title: "Nowhere Smooth",
             wing: "Fractals",
-            blurb: "Weierstrass sum: continuous everywhere, differentiable nowhere. t and DRAG: \
-                    TUNE A AND B.",
+            blurb: "Weierstrass sum: continuous everywhere, differentiable nowhere.",
             accent: [40, 120, 200],
         }
     }

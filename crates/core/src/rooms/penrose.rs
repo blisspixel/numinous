@@ -1,7 +1,7 @@
 //! Penrose kite and dart: aperiodic tiling from matching rules.
 //!
 //! Seed a kite; subdivide by Robinson triangle inflation. The pattern never
-//! repeats by translation. CLICK: INFLATE ONCE. See `docs/ROOMS.md`.
+//! repeats by translation. See `docs/ROOMS.md`.
 
 use std::f64::consts::TAU;
 
@@ -174,8 +174,7 @@ impl Room for Penrose {
             id: "penrose",
             title: "The Aperiodic Floor",
             wing: "Shape & Space",
-            blurb: "Penrose kites from Robinson triangles: inflation never yields a lattice. t and \
-                    CLICK: INFLATE ONCE.",
+            blurb: "Penrose kites from Robinson triangles: inflation never yields a lattice.",
             accent: [220, 180, 60],
         }
     }

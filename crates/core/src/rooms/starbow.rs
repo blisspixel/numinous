@@ -157,7 +157,7 @@ impl Room for Starbow {
             wing: "Shape & Space",
             blurb: "Burn toward lightspeed; relativistic aberration pours the whole sky into a \
                     burning ring ahead. One closed-form transform per star (McKinley 1979). t \
-                    burns ambient beta; HOLD: BURN under the hand.",
+                    burns ambient beta.",
             accent: [255, 200, 80],
         }
     }

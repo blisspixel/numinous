@@ -132,7 +132,7 @@ impl Room for WitchOfAgnesi {
             id: "witch-of-agnesi",
             title: "Witch of Agnesi",
             wing: "Shape & Space",
-            blurb: "Maria Agnesi's classical cubic bell curve. t and DRAG: TUNE A.",
+            blurb: "Maria Agnesi's classical cubic bell curve.",
             accent: [160, 80, 160],
         }
     }

@@ -1,6 +1,6 @@
 //! Smale horseshoe (toy): stretch, fold, and return a square strip.
 //!
-//! Discrete geometry of the horseshoe map. DRAG: SET THE ITERATIONS.
+//! Discrete geometry of the horseshoe map.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -118,8 +118,7 @@ impl Room for Horseshoe {
             id: "horseshoe",
             title: "Smale Horseshoe",
             wing: "Motion & Dynamics",
-            blurb: "Stretch and fold a square into a horseshoe: chaos geometry. t and DRAG: SET \
-                    THE ITERATIONS.",
+            blurb: "Stretch and fold a square into a horseshoe: chaos geometry.",
             accent: [200, 100, 40],
         }
     }

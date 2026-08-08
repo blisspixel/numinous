@@ -1,6 +1,6 @@
 //! Logistic map cobweb gallery variant: two r values side by side.
 //!
-//! Distinct from logistic-cobweb. DRAG: TUNE R. See `docs/ROOMS.md`.
+//! Distinct from logistic-cobweb. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -112,7 +112,7 @@ impl Room for DualCobweb {
             id: "dual-cobweb",
             title: "Dual Cobweb",
             wing: "Motion & Dynamics",
-            blurb: "Two logistic cobwebs at neighboring r. t and DRAG: TUNE R.",
+            blurb: "Two logistic cobwebs at neighboring r.",
             accent: [180, 100, 40],
         }
     }

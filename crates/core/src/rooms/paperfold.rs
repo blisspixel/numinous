@@ -107,7 +107,7 @@ impl Room for Paperfold {
             id: "paperfold",
             title: "Paperfold Sequence",
             wing: "Number & Pattern",
-            blurb: "Regular fold bits draw a dragon path. t and DRAG: TUNE LENGTH.",
+            blurb: "Regular fold bits draw a dragon path.",
             accent: [50, 90, 140],
         }
     }

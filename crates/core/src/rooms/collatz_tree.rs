@@ -138,7 +138,7 @@ impl Room for CollatzTree {
             id: "collatz-tree",
             title: "Collatz Tree",
             wing: "Number & Pattern",
-            blurb: "Inverse hailstone branches from a root. t and DRAG: SET THE ROOT AND DEPTH.",
+            blurb: "Inverse hailstone branches from a root.",
             accent: [180, 80, 40],
         }
     }

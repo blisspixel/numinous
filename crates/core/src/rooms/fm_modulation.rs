@@ -88,7 +88,7 @@ impl Room for FmModulation {
             id: "fm-modulation",
             title: "FM Modulation",
             wing: "Waves & Sound",
-            blurb: "Instantaneous frequency wiggles: radio FM. t and DRAG: TUNE BETA.",
+            blurb: "Instantaneous frequency wiggles: radio FM.",
             accent: [140, 60, 180],
         }
     }

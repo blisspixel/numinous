@@ -99,7 +99,7 @@ impl Room for Foucault {
             id: "foucault",
             title: "Foucault Pendulum",
             wing: "Motion & Dynamics",
-            blurb: "Swing plane precesses with sin(latitude). t and DRAG: TUNE LATITUDE.",
+            blurb: "Swing plane precesses with sin(latitude).",
             accent: [50, 90, 160],
         }
     }

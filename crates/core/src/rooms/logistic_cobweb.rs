@@ -1,6 +1,6 @@
 //! Logistic Cobweb: iteration as a staircase under the parabola.
 //!
-//! x -> r x (1-x) drawn as cobweb against y=x. DRAG: SET R. See `docs/ROOMS.md`.
+//! x -> r x (1-x) drawn as cobweb against y=x. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -116,8 +116,7 @@ impl Room for LogisticCobweb {
             id: "logistic-cobweb",
             title: "The Cobweb",
             wing: "Motion & Dynamics",
-            blurb: "Logistic map as cobweb: climb the parabola, slide to y=x. t and DRAG: SET R \
-                    through fixed point, period doubling, chaos.",
+            blurb: "Logistic map as cobweb: climb the parabola, slide to y=x.",
             accent: [255, 140, 80],
         }
     }

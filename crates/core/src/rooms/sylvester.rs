@@ -113,7 +113,7 @@ impl Room for Sylvester {
             id: "sylvester",
             title: "Sylvester Sequence",
             wing: "Number & Pattern",
-            blurb: "Double-exponential Egyptian fraction of 1. t and DRAG: TUNE TERMS.",
+            blurb: "Double-exponential Egyptian fraction of 1.",
             accent: [120, 60, 40],
         }
     }

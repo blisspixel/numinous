@@ -112,7 +112,7 @@ impl Room for Kolakoski {
             id: "kolakoski",
             title: "Kolakoski Sequence",
             wing: "Number & Pattern",
-            blurb: "Self-describing runs of 1 and 2. t and DRAG: TUNE LENGTH.",
+            blurb: "Self-describing runs of 1 and 2.",
             accent: [80, 100, 40],
         }
     }

@@ -1,7 +1,6 @@
 //! Pythagoras Tree: squares on the sides of a right triangle, forever.
 //!
-//! Each square sprouts two smaller squares at a right angle. CLICK: GROW A
-//! BRANCH. See `docs/ROOMS.md`.
+//! Each square sprouts two smaller squares at a right angle. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -164,8 +163,7 @@ impl Room for PythagorasTree {
             id: "pythagoras-tree",
             title: "The Pythagoras Tree",
             wing: "Fractals",
-            blurb: "Squares on the sides of right triangles branch forever. t and DRAG: GROW THE \
-                    BRANCH angle and depth.",
+            blurb: "Squares on the sides of right triangles branch forever.",
             accent: [80, 180, 100],
         }
     }

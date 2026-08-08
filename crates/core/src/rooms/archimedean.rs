@@ -1,6 +1,6 @@
 //! Archimedean spiral: arithmetic growth, r = a + b theta.
 //!
-//! Ambient phase unfurls the arm. DRAG: TUNE PITCH. See `docs/ROOMS.md`.
+//! Ambient phase unfurls the arm. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -127,7 +127,7 @@ impl Room for Archimedean {
             id: "archimedean",
             title: "Archimedean Spiral",
             wing: "Shape & Space",
-            blurb: "Arithmetic arm unfurls at constant gap. Watch the tip; DRAG: TUNE PITCH.",
+            blurb: "Arithmetic arm unfurls at constant gap. Watch the tip.",
             accent: [90, 120, 50],
         }
     }

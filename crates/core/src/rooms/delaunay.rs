@@ -135,7 +135,7 @@ impl Room for Delaunay {
             id: "delaunay",
             title: "Delaunay Mesh",
             wing: "Shape & Space",
-            blurb: "Empty-circle triangulation of scatter points. t and DRAG: SET THE COUNT.",
+            blurb: "Empty-circle triangulation of scatter points.",
             accent: [40, 140, 100],
         }
     }

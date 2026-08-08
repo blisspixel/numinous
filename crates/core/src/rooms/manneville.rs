@@ -108,8 +108,7 @@ impl Room for Manneville {
             id: "manneville",
             title: "Manneville Map",
             wing: "Motion & Dynamics",
-            blurb: "Intermittency: long laminar waits, then chaotic bursts. t and DRAG: TUNE \
-                    EPSILON.",
+            blurb: "Intermittency: long laminar waits, then chaotic bursts.",
             accent: [200, 140, 40],
         }
     }

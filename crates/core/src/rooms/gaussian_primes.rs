@@ -127,7 +127,7 @@ impl Room for GaussianPrimes {
             id: "gaussian-primes",
             title: "Gaussian Primes",
             wing: "Number & Pattern",
-            blurb: "Primes on the Z[i] lattice. t and DRAG: TUNE R.",
+            blurb: "Primes on the Z[i] lattice.",
             accent: [70, 90, 150],
         }
     }

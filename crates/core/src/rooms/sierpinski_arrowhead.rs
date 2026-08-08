@@ -1,6 +1,6 @@
 //! Sierpinski arrowhead curve: a path that limits to the gasket.
 //!
-//! L-system rewrite on 60-degree turns. DRAG: SET THE ORDER.
+//! L-system rewrite on 60-degree turns.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -146,8 +146,7 @@ impl Room for SierpinskiArrowhead {
             id: "sierpinski-arrowhead",
             title: "Sierpinski Arrowhead",
             wing: "Fractals",
-            blurb: "A continuous path whose limit is the Sierpinski gasket. t and DRAG: SET THE \
-                    ORDER.",
+            blurb: "A continuous path whose limit is the Sierpinski gasket.",
             accent: [200, 80, 40],
         }
     }

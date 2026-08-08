@@ -2,8 +2,7 @@
 //!
 //! Read a digit string aloud by runs: 1 becomes 11, 21 becomes 1211, 1211
 //! becomes 111221. Conway proved the process splits into 92 "atoms" and the
-//! length grows by a fixed constant lambda ≈ 1.303577 each step. CLICK: SPEAK
-//! THE NEXT LINE. See `docs/ROOMS.md`.
+//! length grows by a fixed constant lambda ≈ 1.303577 each step. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -161,7 +160,7 @@ impl Room for Audioactive {
             wing: "Number & Pattern",
             blurb: "Speak a digit string by runs and it mutates: look-and-say. Length grows by \
                     Conway's constant; the sequence shatters into 92 atoms. t advances generations; \
-                    CLICK: SPEAK THE NEXT LINE.",
+                    a click speaks the next line.",
             accent: [180, 100, 200],
         }
     }

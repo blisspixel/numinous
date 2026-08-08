@@ -3,7 +3,7 @@
 //! Each pebble is a monochromatic point source. At every plate point the
 //! amplitudes add; bright lanes are constructive interference, dead-calm lanes
 //! are destructive. Two sources make the double slit by hand. `t` ages the
-//! wave phase; CLICK: DROP A PEBBLE. See `docs/ROOMS.md`.
+//! wave phase. See `docs/ROOMS.md`.
 
 use std::f64::consts::TAU;
 
@@ -170,8 +170,7 @@ impl Room for Ripple {
             title: "The Ripple Tank",
             wing: "Waves & Sound",
             blurb: "Drop pebbles; circular waves interfere into bright fans and dead-calm lanes. \
-                    Two sources build the double slit by hand. t ages the phase; CLICK: DROP A \
-                    PEBBLE.",
+                    Two sources build the double slit by hand. t ages the phase.",
             accent: [70, 160, 220],
         }
     }

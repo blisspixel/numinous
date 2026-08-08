@@ -115,7 +115,7 @@ impl Room for Trisectrix {
             id: "trisectrix",
             title: "Maclaurin Trisectrix",
             wing: "Shape & Space",
-            blurb: "Classical curve that trisects angles. t and DRAG: TUNE A.",
+            blurb: "Classical curve that trisects angles.",
             accent: [150, 70, 100],
         }
     }

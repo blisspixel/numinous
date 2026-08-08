@@ -194,7 +194,7 @@ impl Room for PellPath {
             id: "pell-path",
             title: "Pell Path",
             wing: "Number & Pattern",
-            blurb: "Convergents of sqrt(d) chase the Pell hyperbola. t and DRAG: TUNE D.",
+            blurb: "Convergents of sqrt(d) chase the Pell hyperbola.",
             accent: [60, 120, 100],
         }
     }

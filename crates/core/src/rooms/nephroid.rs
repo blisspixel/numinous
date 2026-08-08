@@ -117,7 +117,7 @@ impl Room for Nephroid {
             id: "nephroid",
             title: "Nephroid",
             wing: "Shape & Space",
-            blurb: "Two-cusped kidney curve from a rolling circle. t and DRAG: TUNE SCALE.",
+            blurb: "Two-cusped kidney curve from a rolling circle.",
             accent: [180, 100, 60],
         }
     }

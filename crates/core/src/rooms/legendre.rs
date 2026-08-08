@@ -115,7 +115,7 @@ impl Room for Legendre {
             id: "legendre",
             title: "Legendre P_n",
             wing: "Number & Pattern",
-            blurb: "Orthogonal polynomials on [-1,1]. t and DRAG: TUNE N.",
+            blurb: "Orthogonal polynomials on [-1,1].",
             accent: [40, 120, 60],
         }
     }

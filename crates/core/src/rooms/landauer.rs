@@ -131,7 +131,7 @@ impl Room for Landauer {
             title: "Landauer's Price",
             wing: "Number & Pattern",
             blurb: "Erase a bit, pay heat: kT ln 2 per irreversible forget. t grows the register; \
-                    CLICK: FORGET ONE BIT.",
+                    a click forgets one bit.",
             accent: [255, 120, 60],
         }
     }

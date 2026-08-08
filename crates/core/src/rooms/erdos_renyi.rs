@@ -132,7 +132,7 @@ impl Room for ErdosRenyi {
             id: "erdos-renyi",
             title: "Erdos-Renyi Graph",
             wing: "Chance & Noise",
-            blurb: "Random edges with probability p. t and DRAG: TUNE P.",
+            blurb: "Random edges with probability p.",
             accent: [80, 110, 70],
         }
     }

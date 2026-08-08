@@ -98,7 +98,7 @@ impl Room for Serpentine {
             id: "serpentine",
             title: "Serpentine Curve",
             wing: "Shape & Space",
-            blurb: "Newton's snake y = a b x/(x^2+a^2). t and DRAG: TUNE A.",
+            blurb: "Newton's snake y = a b x/(x^2+a^2).",
             accent: [50, 120, 70],
         }
     }

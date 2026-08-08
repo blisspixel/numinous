@@ -134,7 +134,7 @@ impl Room for Poisson {
             id: "poisson",
             title: "Poisson Process",
             wing: "Chance & Order",
-            blurb: "Exponential waits build a living staircase. Watch it run; DRAG: TUNE RATE.",
+            blurb: "Exponential waits build a living staircase. Watch it run.",
             accent: [40, 120, 100],
         }
     }

@@ -169,7 +169,7 @@ impl Room for EllipticalBilliard {
             id: "elliptical-billiard",
             title: "Elliptical Billiard",
             wing: "Shape & Space",
-            blurb: "Bounces in an ellipse; caustics and foci. t and DRAG: SET THE LAUNCH.",
+            blurb: "Bounces in an ellipse; caustics and foci.",
             accent: [40, 140, 180],
         }
     }

@@ -1,6 +1,6 @@
 //! Chirikov standard map: kicked rotor chaos on a torus.
 //!
-//! p' = p + K sin(theta); theta' = theta + p'. DRAG: TUNE K. See `docs/ROOMS.md`.
+//! p' = p + K sin(theta); theta' = theta + p'. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -100,7 +100,7 @@ impl Room for StandardMap {
             id: "standard-map",
             title: "Chirikov Map",
             wing: "Motion & Dynamics",
-            blurb: "Kicked rotor on a torus: KAM curves break into chaos. t and DRAG: TUNE K.",
+            blurb: "Kicked rotor on a torus: KAM curves break into chaos.",
             accent: [160, 40, 160],
         }
     }

@@ -101,7 +101,7 @@ impl Room for Diffraction {
             id: "diffraction",
             title: "Diffraction",
             wing: "Waves & Sound",
-            blurb: "Single-slit sinc squared intensity pattern. t and DRAG: TUNE WIDTH.",
+            blurb: "Single-slit sinc squared intensity pattern.",
             accent: [100, 60, 180],
         }
     }

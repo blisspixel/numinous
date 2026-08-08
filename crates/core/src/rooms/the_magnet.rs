@@ -3,7 +3,7 @@
 //! Spins on a square lattice prefer neighbors that match. Heat fights order.
 //! Below a critical temperature the plate magnetizes; above it the field
 //! dissolves into noise. The cliff is universal: many microscopics share one
-//! shape. `t` sets ambient temperature; DRAG: TURN THE HEAT. See `docs/ROOMS.md`.
+//! shape. `t` sets ambient temperature. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -159,7 +159,7 @@ impl Room for TheMagnet {
             title: "The Magnet",
             wing: "Emergence",
             blurb: "Spins lock with their neighbors until heat wins. Cross the critical temperature \
-                    and order dissolves. t sets the heat; DRAG: TURN THE HEAT. Universality: one \
+                    and order dissolves. t sets the heat. Universality: one \
                     cliff for many microscopics.",
             accent: [200, 60, 80],
         }

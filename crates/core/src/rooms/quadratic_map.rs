@@ -1,6 +1,6 @@
 //! Real quadratic map family x -> x^2 + c on the line (Mandelbrot's 1D cousin).
 //!
-//! Orbit cobweb for real c. DRAG: TUNE C AND X0. See `docs/ROOMS.md`.
+//! Orbit cobweb for real c. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -111,8 +111,7 @@ impl Room for QuadraticMap {
             id: "quadratic-map",
             title: "Quadratic Map",
             wing: "Motion & Dynamics",
-            blurb: "Real map x -> x^2 + c: Mandelbrot's one-dimensional cousin. t and DRAG: TUNE \
-                    C AND X0.",
+            blurb: "Real map x -> x^2 + c: Mandelbrot's one-dimensional cousin.",
             accent: [60, 100, 200],
         }
     }

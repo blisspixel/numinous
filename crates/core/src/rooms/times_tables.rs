@@ -235,17 +235,16 @@ impl Room for TimesTables {
         Self::render_multiplier(canvas, K_MIN + K_SWEEP * self.phase_for(t));
     }
 
+    // Provenance: geometry and modular arithmetic (standard curriculum);
+    // core mechanism verified against geometric definitions, edge cases
+    // mathematically bounded, continuous mapping verified. The player-facing
+    // source rides `citations::for_room("times-tables")`; the reveal itself
+    // ends on the wonder, never on checkbox homework.
     fn reveal(&self) -> &'static str {
         "Set the dial to 2 and the chords wrap a cardioid. Up to scale and rotation, \
          that shape outlines the Mandelbrot set's main body, and Fourier Epicycles \
          draw it with only two rotating vectors: arithmetic, fractals, and waves \
-         meet in one heart.\n\n\
-         ---\n\
-         **Source Provenance:** Geometry and Modular Arithmetic (Standard Curriculum)\n\
-         **Math Review Checklist:**\n\
-         - [x] Core mechanism verified against geometric definitions\n\
-         - [x] Edge cases mathematically bounded\n\
-         - [x] Continuous mapping verified"
+         meet in one heart."
     }
 
     fn deep_cuts(&self) -> &'static [&'static str] {

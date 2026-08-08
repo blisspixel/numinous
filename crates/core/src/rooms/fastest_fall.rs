@@ -2,8 +2,7 @@
 //!
 //! Between two points at different heights, the curve of fastest descent under
 //! gravity is a cycloid, not a straight line (brachistochrone). Draw any other
-//! track and the bead on the cycloid wins. `t` runs the race; DRAG: DRAW YOUR
-//! TRACK. See `docs/ROOMS.md`.
+//! track and the bead on the cycloid wins. `t` runs the race. See `docs/ROOMS.md`.
 
 use std::f64::consts::PI;
 
@@ -235,7 +234,7 @@ impl Room for FastestFall {
             title: "The Fastest Fall",
             wing: "Change",
             blurb: "The fastest path down under gravity is a cycloid, not a straight line. Draw \
-                    any other track and lose the race. t runs the beads; DRAG: DRAW YOUR TRACK.",
+                    any other track and lose the race. t runs the beads.",
             accent: [100, 180, 220],
         }
     }

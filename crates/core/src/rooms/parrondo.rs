@@ -128,8 +128,7 @@ impl Room for Parrondo {
             id: "parrondo",
             title: "Parrondo's Trap",
             wing: "Number & Pattern",
-            blurb: "Two losing games, played in alternation, can win. t and DRAG: TOGGLE THE RULE \
-                    between A, B, and ABAB.",
+            blurb: "Two losing games, played in alternation, can win.",
             accent: [180, 100, 200],
         }
     }

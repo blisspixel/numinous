@@ -1,6 +1,6 @@
 //! Sierpinski triangle by recursive removal (not the chaos-game room).
 //!
-//! Midpoint subdivision removes centers. DRAG: SET THE DEPTH. See `docs/ROOMS.md`.
+//! Midpoint subdivision removes centers. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -90,7 +90,7 @@ impl Room for SierpinskiTri {
             id: "sierpinski-tri",
             title: "Sierpinski Triangle",
             wing: "Fractals",
-            blurb: "Recursive midpoint gasket (not the chaos game). t and DRAG: SET THE DEPTH.",
+            blurb: "Recursive midpoint gasket (not the chaos game).",
             accent: [200, 80, 60],
         }
     }

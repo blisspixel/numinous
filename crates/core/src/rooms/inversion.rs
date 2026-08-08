@@ -2,7 +2,7 @@
 //!
 //! Invert the plane in a circle of radius R: points fly to their inverse
 //! distance. Lines through the center stay lines; other lines become circles
-//! through the inverse of infinity. DRAG: MOVE THE MIRROR. See `docs/ROOMS.md`.
+//! through the inverse of infinity. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -141,7 +141,7 @@ impl Room for Inversion {
             title: "The Mirror That Bends",
             wing: "Shape & Space",
             blurb: "Circle inversion: lines become circles, infinity becomes a point. The hub of \
-                    Apollonian and Steiner geometry. t drifts props; DRAG: MOVE THE MIRROR.",
+                    Apollonian and Steiner geometry. t drifts props.",
             accent: [140, 180, 220],
         }
     }

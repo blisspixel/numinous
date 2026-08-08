@@ -90,7 +90,7 @@ impl Room for Zipf {
             id: "zipf",
             title: "Zipf Law",
             wing: "Chance & Order",
-            blurb: "Rank-frequency power law 1/k^s. t and DRAG: TUNE S.",
+            blurb: "Rank-frequency power law 1/k^s.",
             accent: [90, 50, 110],
         }
     }

@@ -113,7 +113,7 @@ impl Room for KeplerLaws {
             id: "kepler-laws",
             title: "Kepler Areas",
             wing: "Motion & Dynamics",
-            blurb: "Equal areas in equal times on an ellipse. t and DRAG: TUNE ECC.",
+            blurb: "Equal areas in equal times on an ellipse.",
             accent: [100, 70, 30],
         }
     }

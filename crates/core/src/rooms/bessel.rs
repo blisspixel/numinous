@@ -123,7 +123,7 @@ impl Room for Bessel {
             id: "bessel",
             title: "Bessel J0",
             wing: "Waves & Sound",
-            blurb: "Cylindrical wave zeros as rings. t and DRAG: TUNE SCALE.",
+            blurb: "Cylindrical wave zeros as rings.",
             accent: [50, 90, 150],
         }
     }

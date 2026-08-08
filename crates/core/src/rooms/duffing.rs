@@ -125,8 +125,7 @@ impl Room for Duffing {
             id: "duffing",
             title: "The Duffing Well",
             wing: "Motion & Dynamics",
-            blurb: "Driven cubic oscillator: double-well chaos under strong drive. t and DRAG: \
-                    TUNE DRIVE.",
+            blurb: "Driven cubic oscillator: double-well chaos under strong drive.",
             accent: [180, 80, 40],
         }
     }

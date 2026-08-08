@@ -118,7 +118,7 @@ impl Room for PoincareDisc {
             id: "poincare-disc",
             title: "Poincare Disc",
             wing: "Shape & Space",
-            blurb: "Hyperbolic plane inside a circle. t and DRAG: SET THE ORDER.",
+            blurb: "Hyperbolic plane inside a circle.",
             accent: [100, 60, 180],
         }
     }

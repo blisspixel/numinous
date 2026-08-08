@@ -140,8 +140,7 @@ impl Room for Nontransitive {
             id: "nontransitive",
             title: "Nontransitive Dice",
             wing: "Number & Pattern",
-            blurb: "A beats B, B beats C, C beats A: ranking collapses. t runs trials; CLICK: ROLL \
-                    THE TRIO.",
+            blurb: "A beats B, B beats C, C beats A: ranking collapses. t runs trials.",
             accent: [200, 140, 60],
         }
     }

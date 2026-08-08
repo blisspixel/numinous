@@ -112,7 +112,7 @@ impl Room for Coriolis {
             id: "coriolis",
             title: "Coriolis Path",
             wing: "Motion & Dynamics",
-            blurb: "Inertial straight line curves under frame spin. t and DRAG: TUNE SPIN.",
+            blurb: "Inertial straight line curves under frame spin.",
             accent: [30, 130, 100],
         }
     }

@@ -1,7 +1,7 @@
 //! Continued Fractions: best approximations fall out of a ladder.
 //!
 //! Walk the continued fraction of a real (ambient golden, or under the hand).
-//! Convergents are the best rational hits. DRAG: SET THE REAL. See `docs/ROOMS.md`.
+//! Convergents are the best rational hits. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -143,8 +143,7 @@ impl Room for ContinuedFrac {
             id: "continued-frac",
             title: "The Ladder of Approximations",
             wing: "Number & Pattern",
-            blurb: "Continued fractions peel best rationals from a real. Golden is the hardest. t \
-                    and DRAG: SET THE REAL.",
+            blurb: "Continued fractions peel best rationals from a real. Golden is the hardest.",
             accent: [160, 200, 100],
         }
     }

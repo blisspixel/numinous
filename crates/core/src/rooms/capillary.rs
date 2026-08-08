@@ -126,7 +126,7 @@ impl Room for Capillary {
             id: "capillary",
             title: "Capillary Meniscus",
             wing: "Motion & Dynamics",
-            blurb: "Young-Laplace rise vs contact angle. t and DRAG: TUNE CONTACT.",
+            blurb: "Young-Laplace rise vs contact angle.",
             accent: [40, 120, 180],
         }
     }

@@ -111,7 +111,7 @@ impl Room for PythagorasSpiral {
             id: "theodorus",
             title: "Spiral of Theodorus",
             wing: "Number & Pattern",
-            blurb: "Stacked right triangles build a root spiral. t and DRAG: SET THE STEPS.",
+            blurb: "Stacked right triangles build a root spiral.",
             accent: [160, 120, 40],
         }
     }

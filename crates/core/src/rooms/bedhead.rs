@@ -135,8 +135,7 @@ impl Room for Bedhead {
             id: "bedhead",
             title: "Bedhead Attractor",
             wing: "Motion & Dynamics",
-            blurb: "Soft pillow-shaped strange attractor from a trig map. t and DRAG: TUNE A AND \
-                    B.",
+            blurb: "Soft pillow-shaped strange attractor from a trig map.",
             accent: [180, 120, 80],
         }
     }

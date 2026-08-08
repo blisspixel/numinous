@@ -88,7 +88,7 @@ impl Room for TorusKnot {
             id: "torus-knot",
             title: "Torus Knot",
             wing: "Shape & Space",
-            blurb: "T(p,q) winds the torus both ways. t and DRAG: TUNE P.",
+            blurb: "T(p,q) winds the torus both ways.",
             accent: [120, 50, 100],
         }
     }

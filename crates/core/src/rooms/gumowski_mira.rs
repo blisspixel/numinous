@@ -108,8 +108,7 @@ impl Room for GumowskiMira {
             id: "gumowski-mira",
             title: "Gumowski-Mira",
             wing: "Motion & Dynamics",
-            blurb: "Accelerator beam map that paints butterfly-like attractors. t and DRAG: TUNE \
-                    MU.",
+            blurb: "Accelerator beam map that paints butterfly-like attractors.",
             accent: [100, 60, 180],
         }
     }

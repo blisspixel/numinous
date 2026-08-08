@@ -120,7 +120,7 @@ impl Room for DirichletEta {
             id: "dirichlet-eta",
             title: "Dirichlet Eta",
             wing: "Analysis",
-            blurb: "Alternating zeta: eta(s)=sum (-1)^{n-1}/n^s. t and DRAG: TUNE S.",
+            blurb: "Alternating zeta: eta(s)=sum (-1)^{n-1}/n^s.",
             accent: [70, 70, 110],
         }
     }

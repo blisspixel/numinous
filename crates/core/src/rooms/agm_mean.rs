@@ -106,7 +106,7 @@ impl Room for AgmMean {
             id: "agm-mean",
             title: "Arithmetic-Geometric Mean",
             wing: "Analysis",
-            blurb: "a,g converge by average and geometric mean. t and DRAG: TUNE R.",
+            blurb: "a,g converge by average and geometric mean.",
             accent: [80, 100, 70],
         }
     }

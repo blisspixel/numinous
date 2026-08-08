@@ -149,7 +149,7 @@ impl Room for Kuramoto {
             id: "kuramoto",
             title: "Kuramoto Sync",
             wing: "Motion & Dynamics",
-            blurb: "Coupled phase clocks find a shared beat. t and DRAG: TUNE COUPLING.",
+            blurb: "Coupled phase clocks find a shared beat.",
             accent: [40, 160, 200],
         }
     }

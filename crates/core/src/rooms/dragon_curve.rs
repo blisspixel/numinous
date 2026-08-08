@@ -1,6 +1,6 @@
 //! Dragon Curve: two folds, one paper, infinite dragon.
 //!
-//! Each generation: R then reverse-complement with L/R flip. DRAG: FOLD AGAIN.
+//! Each generation: R then reverse-complement with L/R flip.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -137,8 +137,7 @@ impl Room for DragonCurve {
             id: "dragon-curve",
             title: "The Paper Dragon",
             wing: "Fractals",
-            blurb: "Heighway dragon: fold paper right, then reverse-complement. t and DRAG: FOLD \
-                    AGAIN.",
+            blurb: "Heighway dragon: fold paper right, then reverse-complement.",
             accent: [220, 60, 80],
         }
     }

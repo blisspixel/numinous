@@ -115,7 +115,7 @@ impl Room for Clifford {
             id: "clifford",
             title: "Clifford Attractor",
             wing: "Motion & Dynamics",
-            blurb: "Sin/cos iterated map with dense organic attractors. t and DRAG: TUNE A AND B.",
+            blurb: "Sin/cos iterated map with dense organic attractors.",
             accent: [80, 200, 160],
         }
     }

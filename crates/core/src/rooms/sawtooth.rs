@@ -105,7 +105,7 @@ impl Room for Sawtooth {
             id: "sawtooth",
             title: "Sawtooth",
             wing: "Waves & Sound",
-            blurb: "Fourier partials of a ramp: all harmonics. t and DRAG: SET HARMONICS.",
+            blurb: "Fourier partials of a ramp: all harmonics.",
             accent: [180, 60, 80],
         }
     }

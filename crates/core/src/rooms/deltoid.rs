@@ -115,7 +115,7 @@ impl Room for Deltoid {
             id: "deltoid",
             title: "Deltoid",
             wing: "Shape & Space",
-            blurb: "Three-cusped hypocycloid draws itself. Watch the pen; DRAG: TUNE SCALE.",
+            blurb: "Three-cusped hypocycloid draws itself. Watch the pen.",
             accent: [80, 160, 200],
         }
     }

@@ -105,7 +105,7 @@ impl Room for SnellPrism {
             id: "snell-prism",
             title: "Prism Dispersion",
             wing: "Waves & Sound",
-            blurb: "n(lambda) splits white light in a prism. t and DRAG: TUNE ANGLE.",
+            blurb: "n(lambda) splits white light in a prism.",
             accent: [140, 40, 120],
         }
     }

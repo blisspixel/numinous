@@ -141,7 +141,7 @@ impl Room for PerfectNum {
             id: "perfect-num",
             title: "Perfect Numbers",
             wing: "Number & Pattern",
-            blurb: "Even perfects from Mersenne primes. t and DRAG: TUNE K.",
+            blurb: "Even perfects from Mersenne primes.",
             accent: [110, 90, 40],
         }
     }

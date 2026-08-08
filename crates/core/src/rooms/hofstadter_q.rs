@@ -98,7 +98,7 @@ impl Room for HofstadterQ {
             id: "hofstadter-q",
             title: "Hofstadter Q",
             wing: "Number & Pattern",
-            blurb: "Chaotic integer recursion as a skyline. t and DRAG: SET THE LENGTH.",
+            blurb: "Chaotic integer recursion as a skyline.",
             accent: [100, 40, 160],
         }
     }

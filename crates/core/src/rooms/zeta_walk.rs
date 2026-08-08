@@ -3,8 +3,7 @@
 //! Walk s = 1/2 + i t along the critical line by summing the alternating eta
 //! series term by term. The running sum is a spiral in the complex plane. At
 //! the heights where the Riemann zeta function vanishes, that spiral folds
-//! back toward the origin. `t` climbs the ambient height; DRAG: CLIMB THE LINE
-//! sets the imag part under the hand. See `docs/ROOMS.md`.
+//! back toward the origin. `t` climbs the ambient height. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::sound::SoundSpec;
@@ -175,8 +174,7 @@ impl Room for ZetaWalk {
             title: "The Zeta Walk",
             wing: "Number & Pattern",
             blurb: "Partial sums of the alternating eta series on the critical line draw a spiral \
-                    that folds home at Riemann zeros. t climbs the imag height; DRAG: CLIMB THE \
-                    LINE. The Prime Spirals egg, made playable.",
+                    that folds home at Riemann zeros. t climbs the imag height. The Prime Spirals egg, made playable.",
             accent: [140, 100, 220],
         }
     }

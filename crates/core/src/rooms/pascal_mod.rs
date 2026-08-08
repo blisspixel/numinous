@@ -114,7 +114,7 @@ impl Room for PascalMod {
             title: "The Divisor Fractal",
             wing: "Number & Pattern",
             blurb: "Pascal's triangle mod m: residue paints a fractal. mod 2 is Sierpinski; \
-                    Kummer ties carries to the pattern. t grows rows; DRAG: TURN THE MODULUS.",
+                    Kummer ties carries to the pattern. t grows rows.",
             accent: [160, 100, 180],
         }
     }

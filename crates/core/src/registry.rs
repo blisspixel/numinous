@@ -1037,6 +1037,46 @@ mod tests {
     }
 
     #[test]
+    fn no_reveal_carries_internal_qa_chrome() {
+        // The reveal is the payload: it ends on the idea, never on checkbox
+        // homework. Source provenance and review checklists live as code
+        // comments beside each reveal and as `citations::for_room` entries;
+        // if they leak back into player-facing prose, this test names the
+        // room that broke the voice.
+        const CHROME_TOKENS: &[&str] = &["Provenance", "Checklist", "- [x]", "\n---"];
+        for room in all_rooms() {
+            let reveal = room.reveal();
+            for token in CHROME_TOKENS {
+                assert!(
+                    !reveal.contains(token),
+                    "{} lets QA chrome ({token:?}) ride its reveal",
+                    room.meta().id
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn no_blurb_carries_a_lever_note_fragment() {
+        // A blurb describes the mathematics in prose; the touch verb rides
+        // `verb()` and each face renders it honestly for its own inputs.
+        // The old template tail (". t and DRAG: TUNE X.") read as broken
+        // copy to a stranger, so colon-caps lever fragments are banned from
+        // every blurb. Hand-written prose lever notes (Morley's "t wobbles
+        // vertices") remain welcome; the fragment grammar does not.
+        for room in all_rooms() {
+            let blurb = room.meta().blurb;
+            for fragment in ["DRAG:", "HOLD:", "CLICK:"] {
+                assert!(
+                    !blurb.contains(fragment),
+                    "{} still carries a lever-note fragment ({fragment:?}) in its blurb",
+                    room.meta().id
+                );
+            }
+        }
+    }
+
+    #[test]
     fn every_catalog_room_has_first_contact_status() {
         // The kid-principle invariant: first contact always names something
         // readable before the player acts. Empty status is not an invitation.

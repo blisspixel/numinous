@@ -125,7 +125,7 @@ impl Room for SimplePendulum {
             id: "simple-pendulum",
             title: "Simple Pendulum",
             wing: "Motion & Dynamics",
-            blurb: "Phase portrait: librations and rotations. t and DRAG: TUNE ENERGY.",
+            blurb: "Phase portrait: librations and rotations.",
             accent: [40, 80, 140],
         }
     }

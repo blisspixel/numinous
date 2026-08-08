@@ -149,7 +149,7 @@ impl Room for LambertW {
             id: "lambert-w",
             title: "Lambert W",
             wing: "Analysis",
-            blurb: "Inverse of w e^w, principal branch. t and DRAG: TUNE X.",
+            blurb: "Inverse of w e^w, principal branch.",
             accent: [90, 80, 60],
         }
     }

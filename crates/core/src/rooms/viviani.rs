@@ -117,7 +117,7 @@ impl Room for Viviani {
             id: "viviani",
             title: "Viviani Curve",
             wing: "Shape & Space",
-            blurb: "Sphere meets a tangent cylinder. t and DRAG: TUNE PHASE.",
+            blurb: "Sphere meets a tangent cylinder.",
             accent: [50, 120, 140],
         }
     }
