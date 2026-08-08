@@ -3057,8 +3057,10 @@ fn ansi_in_era(raster: &Raster, era: numinous_core::Era, color: bool) -> String 
 
 /// The touch verbs this face cannot hear. A terminal has no mouse route, so
 /// printing these is an advertisement with no way to act; the honest copy
-/// names this face's own hands instead (`--poke x,y` and `--t`).
-const UNHEARD_TOUCH_VERBS: [&str; 3] = ["DRAG", "CLICK", "HOLD"];
+/// names this face's own hands instead (`--poke x,y` and `--t`). MOVE rides
+/// along because at least one room (the Galton bet) advertises the pointer
+/// hover as its own lever.
+const UNHEARD_TOUCH_VERBS: [&str; 4] = ["DRAG", "CLICK", "HOLD", "MOVE"];
 
 /// Drop gesture fragments (DRAG:TUNE, CLICK: SEED A GAP) from a status
 /// readout. Fragments run from the verb to the next double-space column gap
@@ -3369,6 +3371,17 @@ fn tour_held(
         if show_step(answer) == ShowStep::Quit {
             break;
         }
+    }
+    // The held tour's designed exits (q and end of input) earn the same
+    // epilogue as the timer tour's Ctrl+C, so a reduced-motion player is
+    // not the one audience whose staircase stops short of the reveal.
+    // Ctrl+C itself stays die-on-signal here: a latch cannot be polled
+    // in the middle of a blocking line read, and a Ctrl+C that silently
+    // waits for Enter would read as a broken key.
+    if let Some(last) = shown.last()
+        && let Some(room) = rooms.iter().find(|room| room.meta().id == *last)
+    {
+        let _ = writeln!(out, "{}", viewing_epilogue(room.as_ref()));
     }
     shown
 }
@@ -8474,6 +8487,14 @@ mod tests {
             &mut out,
         );
         assert_eq!(shown, expected);
+        // Leaving on q earns the same staircase-completing epilogue the
+        // timer tour's Ctrl+C prints, for the room the player left on.
+        let printed = String::from_utf8_lossy(&out);
+        let last = rooms.last().expect("three rooms");
+        assert!(
+            printed.contains(&format!("The story: numinous describe {}", last.meta().id)),
+            "the held tour's exit must route to the story"
+        );
 
         // One room per answer, and no answers means one room. If this ever
         // returns more than the input allows, something is advancing on its
