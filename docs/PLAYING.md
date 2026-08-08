@@ -43,7 +43,9 @@ your hands already know it:
 | | |
 |---|---|
 | A / D or arrows | previous / next room |
-| 1 - 9 | jump straight to a room |
+| 1 - 9, 0 | jump straight to a room (0 is the tenth slot); on Times Tables and Buffon's Needle the digits place the aha wager instead |
+| K | keep the pack: still + loop + README in one share folder |
+| O | cycle the visualizer source |
 | W / S | run time faster / slower |
 | mouse drag or wheel | scrub time yourself |
 | Space | pause or resume while wandering |
@@ -169,7 +171,7 @@ show
 
 ```
 numinous                          the front door: today's room, your level, the verbs
-numinous play                     pick a game; numinous play munch deals today's board
+numinous play                     pick a game; numinous play munch deals a fresh board each run
 numinous watch julia              full-color animation, with sound
 numinous watch lorenz --era phosphor
 numinous play times-tables        classic ASCII
@@ -255,9 +257,11 @@ NUMINOUS_REDUCED_MOTION   Ambient motion stops: rooms hold a still frame rather
 NUMINOUS_MONO_AUDIO       Both channels carry the same sound, so nothing is
                           lost on one ear or one speaker.
 
-NO_COLOR                  No color anywhere: rooms, chrome and games alike.
-                          Shapes and letters carry the meaning instead. This is
-                          the shared convention from no-color.org, not ours.
+NO_COLOR                  No color in the terminal faces: rooms, chrome and
+                          games alike. Shapes and letters carry the meaning
+                          instead. This is the shared terminal convention from
+                          no-color.org, not one of ours; the windowed App keeps
+                          its Visual Eras instead.
 ```
 
 ```
@@ -265,10 +269,12 @@ NUMINOUS_REDUCED_MOTION=1 NO_COLOR=1 numinous show
 ```
 
 Two things are known to be wrong and are not fixed yet, so you can decide for
-yourself rather than find out the hard way. Three rooms flash faster than the
-WCAG 2.3.1 budget allows. Three more answer a touch in a way the color-free
-renderer cannot show, so under `NO_COLOR` they look like they ignored you. All
-six are named in `docs/ROADMAP.md` under 0.5 Sensory.
+yourself rather than find out the hard way. coupled-tent, gauss-map, and
+ricker flash faster than the WCAG 2.3.1 budget allows. hilbert,
+magnet-fractal, percolation, and wireworld answer a touch in a way the
+color-free renderer cannot show, so under `NO_COLOR` they look like they
+ignored you. `numinous access` prints this same list straight from the code
+that enforces it, so the two can never disagree.
 
 ---
 

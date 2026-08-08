@@ -14,16 +14,17 @@ content platforms botch: the safety model (the language is the sandbox,
 determinism is the validator) and the trust model (curate for beauty, sign for
 provenance, sandbox regardless). That is a decade of hard-won lessons pre-paid.
 
-The gap is not safety or format. It is that **the creative loop does not close
-yet.** Today you can `plot --save` a `.num` and open it back into the app
-exactly, paused until confirmed, but you cannot browse a gallery or fork
-someone's creation. Every thriving creator
-community (Scratch, PICO-8, Observable, Desmos, Baba Is You) is fundamentally a
-**fork loop with a taste layer**, and the fork loop comes first: make, share,
-others open and study and remix, make again. Numinous has the substrate and not
-the loop. The whole strategy reduces to one sentence: **close the make-share-
-remix loop on the `.num` capsule, and make human curation the taste layer on top
-of determinism-as-safety.**
+The gap is not safety or format, and it is no longer the local loop: today
+you can save a `.num`, reopen it exactly (paused until confirmed), browse the
+Gallery wall, and fork with recorded lineage on the App or the terminal, with
+the remix tree drawn on the wall. Every thriving creator community (Scratch,
+PICO-8, Observable, Desmos, Baba Is You) is fundamentally a **fork loop with
+a taste layer**, and the local fork loop now exists: make, share, others open
+and study and remix, make again. What does not exist yet is the community
+half: a place where strangers' creations meet, and the taste layer over it.
+The whole strategy still reduces to one sentence: **the make-share-remix loop
+lives on the `.num` capsule, and human curation is the taste layer on top of
+determinism-as-safety.**
 
 ## The Minimum Lovable Creator Surface (build first, in order)
 
