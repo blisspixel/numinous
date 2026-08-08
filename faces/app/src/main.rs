@@ -765,11 +765,11 @@ impl App {
         }
         let bites: Vec<usize> = play.bites.iter().copied().collect();
         let outcome = numinous_core::grade_munch(&play.board, &bites);
-        let clean = outcome.bad_bites == 0 && outcome.left_behind == 0 && outcome.hits > 0;
+        let clean = numinous_core::munch_clean_win(&outcome);
         let bad = outcome.bad_bites > 0;
         let (seed, round, score) = (play.seed, play.round, outcome.score);
         play.graded = Some(outcome);
-        self.post_score(&format!("munch seed:{seed} board:{round}"), score);
+        self.post_score(&numinous_core::munch_score_key(seed, round), score);
         if clean {
             self.journey.win();
             self.play_game_tick(true);
