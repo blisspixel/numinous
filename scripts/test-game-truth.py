@@ -16,7 +16,10 @@ from pathlib import Path
 SPEC = importlib.util.spec_from_file_location(
     "game_truth", Path(__file__).resolve().parent / "game-truth.py"
 )
-assert SPEC is not None and SPEC.loader is not None
+if SPEC is None or SPEC.loader is None:
+    # Not a bare assert: `python -O` strips asserts, and a self-test that can
+    # be stripped is a self-test that can silently stop testing.
+    raise RuntimeError("game-truth.py could not be loaded for its self-test")
 game_truth = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(game_truth)
 

@@ -178,10 +178,20 @@ def mcp_tool_text(mcp: Path, home: Path, tool: str, arguments: dict[str, Any]) -
             continue
         if message.get("id") != 1:
             continue
-        payload = message.get("result") or {}
+        # A JSON-RPC error or a missing result is the real failure; hiding it
+        # behind an empty string would make a later check fail with a
+        # misleading parse message instead of the actual refusal.
+        if "error" in message:
+            raise GameTruthError(f"MCP refused {tool}: {message['error']!r}")
+        payload = message.get("result")
+        if not isinstance(payload, dict):
+            raise GameTruthError(f"MCP returned no result for {tool}: {message!r}")
         content = payload.get("content") or [{}]
         return str(content[0].get("text", ""))
-    raise GameTruthError(f"MCP produced no reply for {tool}: {result.stderr[-300:]!r}")
+    raise GameTruthError(
+        f"MCP produced no reply for {tool} (exit {result.returncode}): "
+        f"{result.stderr[-300:]!r}"
+    )
 
 
 def check_fifteen_levels_the_same_on_both_faces(cli: Path, mcp: Path) -> None:
