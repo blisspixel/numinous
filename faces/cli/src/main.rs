@@ -2511,9 +2511,11 @@ fn access_settings(
         AccessSetting {
             variable: numinous_core::REDUCED_MOTION_VAR,
             what: &[
-                "Nothing moves unless you move it. Rooms hold a still frame",
-                "rather than stopping dead, and The Show waits for you instead",
-                "of changing rooms on a timer.",
+                "Ambient motion stops: rooms hold a still frame rather than",
+                "stopping dead, and The Show waits for you instead of changing",
+                "rooms on a timer. Short feedback beats in the App (banners,",
+                "aha morphs, arrival cards) still play; the terminal face",
+                "holds completely still.",
             ],
             on: numinous_core::setting_is_on(reduced_motion),
         },
@@ -2557,11 +2559,23 @@ fn access_report(settings: &[AccessSetting]) -> String {
         }
         out.push('\n');
     }
-    out.push_str(
+    // The counts and names come from the same public lists the tests
+    // enforce, so this report cannot drift from the code the way a prose
+    // count once did (it said three color-free offenders when the list held
+    // four), and it no longer points at a repository file installs do not
+    // ship.
+    out.push_str(&format!(
         "Known and not yet fixed, so you can decide for yourself:\n\
-         three rooms flash faster than the WCAG budget allows, and three answer\n\
-         a touch in a way the color-free renderer cannot show. All six are\n\
-         named in docs/ROADMAP.md under 0.5 Sensory.\n",
+         {} flash faster than the WCAG budget allows,\n\
+         and {} answer a touch\n\
+         in a way the color-free renderer cannot show.\n\n",
+        numinous_core::KNOWN_OVER_FLASH_BUDGET.join(", "),
+        numinous_core::RESPONSE_INVISIBLE_WITHOUT_COLOR.join(", "),
+    ));
+    out.push_str(
+        "One boundary, stated plainly: the keyboard reaches every menu, game,\n\
+         quiz, and formula on every face, but the hand verbs inside App rooms\n\
+         (drag, click, hold) need a mouse or a controller today.\n",
     );
     out
 }
@@ -8282,6 +8296,33 @@ mod tests {
         assert!(
             PLAYING.contains("numinous access"),
             "the docs never tell a player the access command exists"
+        );
+    }
+
+    #[test]
+    fn the_access_report_names_every_room_on_the_known_limit_lists() {
+        // The report once said "three" color-free offenders while the code's
+        // list held four, and pointed the player at a repository file that
+        // installs do not ship. Now the names come from the same public
+        // lists the registry tests enforce, and this proves the plumbing:
+        // every listed room appears in the report itself.
+        let report = super::access_report(&super::access_settings(None, None, None));
+        for room in numinous_core::KNOWN_OVER_FLASH_BUDGET
+            .iter()
+            .chain(numinous_core::RESPONSE_INVISIBLE_WITHOUT_COLOR.iter())
+        {
+            assert!(
+                report.contains(room),
+                "the access report no longer names {room}"
+            );
+        }
+        assert!(
+            !report.contains("ROADMAP"),
+            "the report points at a file installs do not ship"
+        );
+        assert!(
+            report.contains("need a mouse or a controller"),
+            "the keyboard-to-touch boundary must be stated"
         );
     }
 

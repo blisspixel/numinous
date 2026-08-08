@@ -118,7 +118,11 @@ The workstreams, in landing order:
    the tracked rooms itself instead of pointing at a file releases do not
    ship; its counts match the code's own lists; refusal banners live as
    long as decorative ones; the keyboard route to touch is designed or the
-   keyboard-complete claim is withdrawn where it overreaches.
+   keyboard-complete claim is withdrawn where it overreaches. Landed: the
+   report reads the two public known-limit constants the tests enforce,
+   the reduced-motion copy stops overclaiming on both surfaces, the
+   keyboard-to-touch boundary is stated in the report and PLAYING.md, and
+   refusal banners hold 240 frames, locked by test.
 6. **Docs match the binary.** The STUDIO.md boundary paragraph that
    declares shipped features unbuilt, the CREATOR.md self-contradiction,
    PLAYING.md's daily-board claim, and the key table's omissions.
