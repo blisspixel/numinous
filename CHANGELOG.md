@@ -5,6 +5,41 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- A third hunt read the game flows on the terminal and MCP faces and found
+  ten defects where the outcome shown did not depend on the play just made;
+  all are fixed, and a new `game-truth` gate holds the worst of them at the
+  process boundary in CI.
+
+  Score and progress integrity first. The bench rebuilt its composite from
+  the scoreboard's memory of a better day, so an entirely unplayed bench
+  could print a full historical number; it now sums exactly the five runs
+  just played and abandons loudly when one ends early. The full-motion tour
+  visited every room and persisted none of it, because its only exit is the
+  kill signal; each visit now persists as it happens. Fifteen dropped a
+  partial session's score on departure while its siblings kept theirs, and
+  the gauntlet's bomb stage burned one of five wires on a typo or the help
+  key that every other stage answers for free. The terminal's PNG writers
+  never surfaced a failed final flush, so a full disk could leave a
+  truncated file behind a "wrote" message; they finish explicitly now, as
+  the APNG and WAV writers always did.
+
+  Then the cross-face truths. The MCP fifteen graded only the calls sent
+  but reported and scored as if every requested round had been played,
+  counting rounds it never saw as misses under the shared board's key, and
+  it counted one play for a whole session while the terminal counts one per
+  round, so the same session leveled differently per face; both now match,
+  held by a gate that compares the two ledgers' XP for identical play. The
+  save-failure note rode the wrong reply, landing on the request after the
+  one that lost the write; it drains at response time now, after the writes
+  it reports on, proven end to end by a single-request session against an
+  unwritable score store. A share bundle's still ignored the requested
+  variation while its loop and README recorded it, so the picture beside
+  the loop was a different visit. And broadcast viewers of a level-gated
+  call that succeeded saw a level-lock refusal as its public result; the
+  projection now replays at the lowest level the arguments themselves
+  require, which a successful call already proves, so the play shows
+  without leaking how far past the gate the player is.
+
 - The remix tree is visible where creations live. The Gallery wall now
   resolves the lineage its capsules record: each entry's `descends` link is
   matched against every other entry's canonical link at discovery, so an

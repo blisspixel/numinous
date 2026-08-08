@@ -66,6 +66,8 @@ jobs:
           python3 scripts/test-am-soak.py
           python3 scripts/am-soak.py
           python3 scripts/catalog-scorecard.py
+          python3 scripts/test-game-truth.py
+          python3 scripts/game-truth.py
       - name: Understanding am-track dry-run auditors
         run: |
           python3 scripts/test-understanding-am.py
