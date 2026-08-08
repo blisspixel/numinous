@@ -3190,7 +3190,11 @@ fn tour_held(
     }
     for room in rooms.iter().cycle() {
         let meta = room.meta();
+        // Held tours can also end by Ctrl+C rather than q, so each visit
+        // persists as it happens, like the timer tour's.
+        let before = journey.clone();
         journey.visit(meta.id);
+        persist_progress_or_warn(&before, journey);
         shown.push(meta.id);
         // The postcard phase: the frame the room itself considers its best
         // face. A held room rests on a chosen picture rather than on whichever
@@ -3282,7 +3286,13 @@ fn tour(
 
     loop {
         for room in &rooms {
+            // The only exit from this loop is Ctrl+C, which never reaches
+            // finish_journey, so each visit persists as it happens or it
+            // never persists at all: a whole gallery watched and zero stars
+            // lit is a silent loss.
+            let before = journey.clone();
             journey.visit(room.meta().id);
+            persist_progress_or_warn(&before, journey);
             for frame in 0..frames_per_room {
                 let t = frame as f64 / frames_per_room as f64;
                 let screen = tour_screen(room.as_ref(), t, width, height, style);
@@ -3312,14 +3322,27 @@ const BENCH_SEEDS: [u64; 5] = [101, 102, 103, 104, 105];
 fn bench(journey: &mut Journey) -> ExitCode {
     println!("THE BENCH v1: five gauntlets, seeds 101 to 105, one number.");
     println!("Agents run the same five seeds over MCP. Compare minds kindly.\n");
+    let stdin = std::io::stdin();
+    let mut input = stdin.lock();
+    bench_with_input(journey, &mut input)
+}
+
+fn bench_with_input(journey: &mut Journey, input: &mut impl BufRead) -> ExitCode {
     let mut composite = 0i64;
     for (i, &seed) in BENCH_SEEDS.iter().enumerate() {
         println!("RUN {} OF 5", i + 1);
-        let _ = gauntlet(seed, journey);
-        let board = load_scores();
-        let key = format!("gauntlet seed:{seed}");
-        let run_total = board.entries.get(&key).copied().unwrap_or(0);
-        composite += run_total;
+        // The composite is the run just played, never the scoreboard's
+        // memory of a better day: an abandoned run ends the bench with its
+        // reason named instead of padding the number with history.
+        let (_, total) = gauntlet_run(seed, journey, input);
+        let Some(total) = total else {
+            println!(
+                "BENCH ABANDONED  run {} of 5 ended early; no composite posted",
+                i + 1
+            );
+            return ExitCode::SUCCESS;
+        };
+        composite += total;
         println!();
     }
     post_score("bench v1", composite);
@@ -3569,6 +3592,12 @@ fn write_png_to(file: File, raster: &Raster) -> Result<(), String> {
     writer
         .write_image_data(&raster.to_rgba())
         .map_err(|e| format!("png write failed: {e}"))?;
+    // Finish explicitly: the drop path swallows the IEND write and the final
+    // flush, and a truncated PNG announced as written is a lie with a
+    // filename. The APNG and WAV writers already surface this moment.
+    writer
+        .finish()
+        .map_err(|e| format!("png finish failed: {e}"))?;
     Ok(())
 }
 
@@ -3657,7 +3686,10 @@ fn render_share_bundle(
     era: numinous_core::Era,
     variation: u64,
 ) -> Result<String, String> {
-    let Some(room) = find_room(id, allow_hidden) else {
+    // The still, the loop, and the recorded metadata must be one visit: a
+    // postcard rendered from the base deal beside a loop of variation N is
+    // a bundle that disagrees with itself and can never be replayed.
+    let Some(room) = find_room_with_variation(id, allow_hidden, variation) else {
         return Err(not_found_message(id));
     };
     std::fs::create_dir_all(parent).map_err(|e| format!("could not create share parent: {e}"))?;
@@ -3736,6 +3768,11 @@ fn write_png_file(path: &Path, width: u32, height: u32, rgba: &[u8]) -> Result<(
     writer
         .write_image_data(rgba)
         .map_err(|e| format!("png write failed: {e}"))?;
+    // Finish explicitly, as write_png_to does: the drop path swallows the
+    // IEND write and the final flush.
+    writer
+        .finish()
+        .map_err(|e| format!("png finish failed: {e}"))?;
     Ok(())
 }
 
@@ -4783,6 +4820,15 @@ fn fifteen_with_input(
         );
         let verdict = loop {
             let Some(line) = read_game_line(input, "S or U > ") else {
+                // A departure mid-session keeps what it earned, exactly as
+                // seti, aliens, and quiz do on this same exit path: four
+                // correct calls that vanish from the board are a silent loss.
+                if completed > 0 {
+                    post_score(
+                        &format!("fifteen seed:{seed} rounds:{completed}"),
+                        called as i64,
+                    );
+                }
                 return ExitCode::SUCCESS;
             };
             if asked_why(&line, "fifteen") {
@@ -4912,6 +4958,17 @@ fn gauntlet(seed: u64, journey: &mut Journey) -> ExitCode {
 }
 
 fn gauntlet_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRead) -> ExitCode {
+    gauntlet_run(seed, journey, input).0
+}
+
+/// The gauntlet body, returning the completed run's posted total as well:
+/// `None` means the run was abandoned mid-stage and nothing was posted, so a
+/// caller like the Bench cannot mistake history for the run just played.
+fn gauntlet_run(
+    seed: u64,
+    journey: &mut Journey,
+    input: &mut impl BufRead,
+) -> (ExitCode, Option<i64>) {
     let mut stage_scores = Vec::new();
     let mut cleared = Vec::new();
     println!(
@@ -4925,7 +4982,7 @@ fn gauntlet_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRea
     print!("{}", numinous_core::board_text(&board));
     let line = loop {
         let Some(line) = read_game_line(input, "Your bites > ") else {
-            return ExitCode::SUCCESS;
+            return (ExitCode::SUCCESS, None);
         };
         if !asked_why(&line, "gauntlet") {
             break line;
@@ -4961,7 +5018,7 @@ fn gauntlet_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRea
     }
     let guess = loop {
         let Some(line) = read_game_line(input, "Your answer > ") else {
-            return ExitCode::SUCCESS;
+            return (ExitCode::SUCCESS, None);
         };
         if asked_why(&line, "gauntlet") {
             continue;
@@ -4999,7 +5056,7 @@ fn gauntlet_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRea
     }
     let guess = loop {
         let Some(line) = read_game_line(input, "Which is a mind > ") else {
-            return ExitCode::SUCCESS;
+            return (ExitCode::SUCCESS, None);
         };
         if asked_why(&line, "gauntlet") {
             continue;
@@ -5032,10 +5089,17 @@ fn gauntlet_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRea
     let mut points = 0i64;
     let mut clear = false;
     let mut played = false;
-    for attempt in 1..=5 {
+    let mut attempt: i64 = 1;
+    while attempt <= 5 {
         let Some(line) = read_game_line(input, &format!("Wire {attempt}/5 > ")) else {
-            return ExitCode::SUCCESS;
+            return (ExitCode::SUCCESS, None);
         };
+        // Help and typos are free here as they are in every other stage and
+        // in standalone crack: a wire only burns when a real four-digit
+        // guess actually tests the bomb.
+        if asked_why(&line, "gauntlet") {
+            continue;
+        }
         let guess: Vec<u8> = line
             .trim()
             .chars()
@@ -5053,13 +5117,14 @@ fn gauntlet_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRea
         let feedback = numinous_core::grade(&secret, &guess);
         if feedback.locked == 4 {
             clear = true;
-            points = 10 * (5 - i64::from(attempt as u8));
+            points = 10 * (5 - attempt);
             journey.win();
             word_in_lights("DEFUSED", [90, 230, 120], 5);
             println!("  +{points} points  CLEAN\n");
             break;
         }
         println!("  {} locked, {} loose.", feedback.locked, feedback.loose);
+        attempt += 1;
     }
     if !clear {
         let code: String = secret.iter().map(|&d| char::from(b'0' + d)).collect();
@@ -5074,7 +5139,7 @@ fn gauntlet_with_input(seed: u64, journey: &mut Journey, input: &mut impl BufRea
     let clears = cleared.iter().filter(|&&c| c).count();
     post_score(&format!("gauntlet seed:{seed}"), total);
     println!("RUN COMPLETE  {clears}/4 clean  TOTAL {total}  (gauntlet seed:{seed})");
-    ExitCode::SUCCESS
+    (ExitCode::SUCCESS, Some(total))
 }
 
 /// Play Munch: eat the numbers that fit the rule, round by round, scored.
@@ -8618,6 +8683,41 @@ mod tests {
         );
         assert_eq!(code, std::process::ExitCode::FAILURE);
         assert_eq!(journey.plays, 0);
+    }
+
+    #[test]
+    fn the_share_bundle_still_and_loop_are_the_same_visit() {
+        let parent =
+            std::env::temp_dir().join(format!("numinous-share-variation-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&parent);
+        let postcard_bytes = |variation: u64| {
+            let before: std::collections::BTreeSet<std::path::PathBuf> = std::fs::read_dir(&parent)
+                .map(|dir| dir.flatten().map(|entry| entry.path()).collect())
+                .unwrap_or_default();
+            super::render_share_bundle(
+                "buffon-needle",
+                &parent,
+                64,
+                0.3,
+                false,
+                numinous_core::Era::Modern,
+                variation,
+            )
+            .expect("share bundle");
+            let after: std::collections::BTreeSet<std::path::PathBuf> = std::fs::read_dir(&parent)
+                .expect("parent")
+                .flatten()
+                .map(|entry| entry.path())
+                .collect();
+            let fresh = after.difference(&before).next().expect("a new bundle");
+            std::fs::read(fresh.join("postcard.png")).expect("postcard bytes")
+        };
+        assert_ne!(
+            postcard_bytes(0),
+            postcard_bytes(9),
+            "the still must render the recorded variation, not the base deal"
+        );
+        let _ = std::fs::remove_dir_all(&parent);
     }
 
     #[test]

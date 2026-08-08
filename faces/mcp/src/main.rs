@@ -713,15 +713,20 @@ fn record_progress(request: &Value, path: &std::path::Path) {
             if let Some(calls) = args.get("calls").and_then(Value::as_array)
                 && !calls.is_empty()
             {
-                journey.play();
                 let seed = effective_seed(&args);
                 let rounds = args
                     .get("rounds")
                     .and_then(Value::as_u64)
                     .unwrap_or(5)
                     .clamp(1, 20);
+                // A play per graded round and a score key naming only the
+                // rounds actually graded, exactly as the terminal face
+                // counts: the same session must level the same on both
+                // faces, and wins can never outnumber plays.
+                let graded = rounds.min(calls.len() as u64);
                 let mut correct = 0i64;
-                for n in 0..rounds.min(calls.len() as u64) {
+                for n in 0..graded {
+                    journey.play();
                     let call_s = calls[n as usize]
                         .as_str()
                         .map(|c| c.trim().to_ascii_uppercase().starts_with('S'))
@@ -735,7 +740,7 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                 }
                 post_score(
                     &scores_path(),
-                    &format!("fifteen seed:{seed} rounds:{rounds}"),
+                    &format!("fifteen seed:{seed} rounds:{graded}"),
                     correct,
                 );
             }
@@ -902,7 +907,10 @@ fn handle_request_with_session(
     // Notifications carry no id and get no response.
     let id = id?;
     Some(match result {
-        Ok(value) => success_response(id, result_for_era(value, method, era)),
+        // The save-trouble note drains here, after record_progress has done
+        // the writes that can set it, so the note lands on the reply of
+        // exactly the request that lost something, never the next one.
+        Ok(value) => success_response(id, note_save_trouble(result_for_era(value, method, era))),
         Err((code, message)) => error_response(id, code, &message),
     })
 }
@@ -1292,6 +1300,36 @@ impl ViewerCall {
     }
 }
 
+/// The lowest journey level at which this exact call is allowed. The viewer
+/// replay uses it instead of the player's real level: a successful gated
+/// call already proves at least this much, so replaying here shows the
+/// viewer the play that actually happened without leaking how far past the
+/// gate the player is. Replaying at zero showed a level-lock refusal as the
+/// public result of a call that succeeded.
+fn level_the_arguments_require(tool: PublicTool, arguments: &Value) -> u32 {
+    match tool {
+        PublicTool::Crack => {
+            let digits = arguments.get("digits").and_then(Value::as_u64).unwrap_or(4);
+            if digits > 4 { 5 } else { 0 }
+        }
+        PublicTool::Seti => {
+            let channels = arguments
+                .get("channels")
+                .and_then(Value::as_u64)
+                .unwrap_or(4);
+            if channels > 4 { 7 } else { 0 }
+        }
+        PublicTool::Quiz => {
+            let choices = arguments
+                .get("choices")
+                .and_then(Value::as_u64)
+                .unwrap_or(4);
+            if choices > 4 { 3 } else { 0 }
+        }
+        _ => 0,
+    }
+}
+
 fn viewer_result(tool: PublicTool, arguments: &Value, result: &Value) -> Value {
     match tool {
         PublicTool::DescribeRoom => {
@@ -1300,9 +1338,15 @@ fn viewer_result(tool: PublicTool, arguments: &Value, result: &Value) -> Value {
         PublicTool::RevealRoom => {
             reveal_room_tool_for_journey(arguments, &numinous_core::Journey::default())
         }
-        PublicTool::Crack => crack_tool_at_level(arguments, 0),
-        PublicTool::Seti => seti_tool_at_level(arguments, 0),
-        PublicTool::Quiz => quiz_tool_at_level(arguments, 0),
+        PublicTool::Crack => {
+            crack_tool_at_level(arguments, level_the_arguments_require(tool, arguments))
+        }
+        PublicTool::Seti => {
+            seti_tool_at_level(arguments, level_the_arguments_require(tool, arguments))
+        }
+        PublicTool::Quiz => {
+            quiz_tool_at_level(arguments, level_the_arguments_require(tool, arguments))
+        }
         _ => result.clone(),
     }
 }
@@ -2409,12 +2453,7 @@ fn call_tool(
         "broadcast_session" => broadcast_session_tool(&domain_args, broadcast),
         other => return Err((-32602_i64, format!("Unknown tool: {other}"))),
     };
-    // After the mode projection, so the note survives compact responses too.
-    Ok(note_save_trouble(apply_response_mode(
-        name,
-        response_mode,
-        result,
-    )))
+    Ok(apply_response_mode(name, response_mode, result))
 }
 
 fn broadcast_session_tool(args: &Value, broadcast: &ConnectionBroadcast) -> Value {
@@ -5149,7 +5188,13 @@ fn fifteen_tool(args: &Value) -> Value {
             let mut lines = Vec::new();
             let mut verdicts = Vec::new();
             let mut correct = 0u64;
-            for n in 0..rounds.min(calls.len() as u64) {
+            // Only the calls actually made are graded, and only they are
+            // reported and scored: three correct calls out of three sent is
+            // not "3 of 5 called", and a partial run must not sit on the
+            // shared board under a complete run's key. The terminal face
+            // posts rounds:{completed} the same way on an early exit.
+            let graded = rounds.min(calls.len() as u64);
+            for n in 0..graded {
                 let call_s = calls[n as usize]
                     .as_str()
                     .map(|c| c.trim().to_ascii_uppercase().starts_with('S'))
@@ -5167,8 +5212,8 @@ fn fifteen_tool(args: &Value) -> Value {
                 verdicts.push(json!({ "round": n + 1, "correct": right, "solvable": truth, "why": ff::why(&tiles) }));
             }
             tool_structured(
-                &format!("{}\n{correct} of {rounds} called.", lines.join("\n")),
-                json!({ "game": "fifteen", "seed": seed, "correct": correct, "rounds": rounds, "verdicts": verdicts }),
+                &format!("{}\n{correct} of {graded} called.", lines.join("\n")),
+                json!({ "game": "fifteen", "seed": seed, "correct": correct, "rounds": graded, "verdicts": verdicts }),
             )
         }
     }
@@ -6060,6 +6105,48 @@ mod tests {
         response["result"]["content"][0]["text"]
             .as_str()
             .expect("tool error text")
+    }
+
+    #[test]
+    fn fifteen_grades_only_the_calls_actually_made() {
+        // Three correct calls out of three sent is not "3 of 5 called", and
+        // a partial run must not wear a complete run's numbers.
+        let resp = handle_request(&json!({
+            "jsonrpc":"2.0","id":60,"method":"tools/call",
+            "params":{"name":"fifteen","arguments":{"seed":7,"rounds":5,"calls":["S","S","S"]}}
+        }))
+        .expect("tools/call must respond");
+        let text = resp["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(text.contains("of 3 called"), "got: {text}");
+        assert!(!text.contains("of 5 called"), "got: {text}");
+        assert_eq!(resp["result"]["structuredContent"]["rounds"], 3);
+    }
+
+    #[test]
+    fn viewers_see_a_gated_success_as_the_play_that_happened() {
+        // The projection replays at the lowest level the arguments require:
+        // a successful gated call already proves at least that much, so
+        // nothing new leaks, and a watcher no longer sees a level-lock
+        // refusal as the public result of a call that succeeded.
+        let crack_args = json!({"seed": 3, "digits": 5, "guesses": ["12345"]});
+        let projected = super::viewer_result(super::PublicTool::Crack, &crack_args, &json!({}));
+        assert_ne!(
+            projected["isError"], true,
+            "a gated crack success must not project as a refusal: {projected}"
+        );
+        let seti_args = json!({"seed": 3, "channels": 6});
+        let projected = super::viewer_result(super::PublicTool::Seti, &seti_args, &json!({}));
+        assert_ne!(projected["isError"], true, "{projected}");
+        let quiz_args = json!({"seed": 3, "choices": 6});
+        let projected = super::viewer_result(super::PublicTool::Quiz, &quiz_args, &json!({}));
+        assert_ne!(projected["isError"], true, "{projected}");
+        // An ungated call still replays at level zero, leaking nothing.
+        assert_eq!(
+            super::level_the_arguments_require(super::PublicTool::Crack, &json!({"seed": 3})),
+            0
+        );
     }
 
     #[test]
