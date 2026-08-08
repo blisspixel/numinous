@@ -302,7 +302,14 @@ impl GaltonAha {
             AhaBeat::Explore => room_status.unwrap_or("CLICK: DROP 64").to_string(),
             AhaBeat::Prime => {
                 let hover = self.hover.map(|b| format!(" >{b}")).unwrap_or_default();
-                format!("WHERE WILL IT PEAK? BIN 0-{BOARD_ROWS}{hover}")
+                // The invite rides beside the pile readout, never instead of
+                // it: the frozen understanding-study contract (and plain
+                // honesty) require an interaction's status to keep showing
+                // what the interaction did.
+                match room_status {
+                    Some(s) => format!("{s}  PEAK?{hover}"),
+                    None => format!("WHERE WILL IT PEAK? BIN 0-{BOARD_ROWS}{hover}"),
+                }
             }
             AhaBeat::Withheld => match self.earn {
                 Some(EarnPath::Wager { bin, band, .. }) => {
