@@ -224,7 +224,10 @@ impl Journey {
         if self.streak == 0 || self.last_daily == 0 {
             return None;
         }
-        (today.saturating_sub(self.last_daily) <= 1).then_some(self.streak)
+        // A future last_daily, from a corrupt file or a clock that moved,
+        // is not an alive chain; a saturating difference would read it as
+        // today. Only a real today or yesterday counts.
+        (self.last_daily <= today && today - self.last_daily <= 1).then_some(self.streak)
     }
 
     /// Serialize to the journey file format (plain lines, stable order).
@@ -570,6 +573,22 @@ mod tests {
         assert_eq!(journey.sparks(), u32::MAX);
         assert_eq!(journey.record_daily(u64::MAX), None);
         assert_eq!(journey.record_daily(0), Some(1));
+    }
+
+    #[test]
+    fn a_streak_is_alive_only_for_a_real_today_or_yesterday() {
+        let journey = Journey {
+            streak: 6,
+            last_daily: 100,
+            ..Journey::default()
+        };
+        assert_eq!(journey.live_streak(100), Some(6), "today is alive");
+        assert_eq!(journey.live_streak(101), Some(6), "yesterday is alive");
+        assert_eq!(journey.live_streak(102), None, "two days cold is dead");
+        // A future last_daily, from corruption or a moved clock, is not an
+        // alive chain either.
+        assert_eq!(journey.live_streak(99), None, "the future is not alive");
+        assert_eq!(Journey::default().live_streak(100), None);
     }
 
     #[test]
