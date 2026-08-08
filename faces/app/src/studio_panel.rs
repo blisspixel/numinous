@@ -34,7 +34,7 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
     "TYPE: BUILD A CURVE  (Y = ...)",
     "F2: RANDOM RECIPE FROM THE BANK",
     "F3: AUTO SET  (~21S, PHRASE SAFE)",
-    "F4: SHARE  .NUM + LINK + PNG",
+    "F4: NAME + SHARE  .NUM + LINK + PNG",
     "F5: GALLERY  THE SAVED WALL",
     "F1: TOGGLE THIS HELP",
     "TAB / ESC: CLOSE STUDIO",
@@ -52,7 +52,8 @@ pub(crate) const STUDIO_HELP_LINES: &[&str] = &[
 /// window alone would silently strip them. It opens in a paused preview, the
 /// hostile-input posture for shared content: the curve is drawn, the voice
 /// waits for the player. Any edit releases the pin, because from the first
-/// keystroke the creation is theirs, not the file's.
+/// keystroke the creation is theirs, not the file's; the pin releases into
+/// lineage, so the edited work descends from what was opened.
 #[derive(Debug, Clone)]
 struct OpenedCreation {
     creation: StudioCreation,
@@ -273,7 +274,9 @@ impl StudioPanel {
         let index = (self.recipe_cursor % len) as usize;
         self.recipe_cursor = self.recipe_cursor.saturating_add(1);
         // A recipe draw replaces the whole creation, so any fork descent
-        // ends here: the bank's curve does not descend from the wall's.
+        // ends here: the bank's curve does not descend from the wall's,
+        // and a still-pinned reopen drops without becoming a parent.
+        self.opened = None;
         self.fork_of = None;
         self.source = STUDIO_RECIPES[index].to_string();
         self.auto_elapsed = 0.0;
@@ -317,13 +320,26 @@ impl StudioPanel {
         self.load_random_recipe()
     }
 
+    /// Release a reopened creation's pin into lineage. Taking over a
+    /// creation by editing it is the definition of a remix, so the edited
+    /// work descends from what was opened; a fork chosen on the wall keeps
+    /// the parent it already set.
+    fn release_pin_into_lineage(&mut self) {
+        if let Some(opened) = self.opened.take()
+            && self.fork_of.is_none()
+        {
+            self.fork_of = Some(opened.creation.to_link());
+        }
+    }
+
     /// Re-parse the Studio text, keeping the last good curve alive on errors.
     ///
     /// This is the edit door, so it releases a reopened creation's pin: from
-    /// the first keystroke the window and knob are the player's again.
+    /// the first keystroke the window and knob are the player's again, and
+    /// the opened creation becomes this work's parent.
     pub fn reparse(&mut self) -> Option<SoundSpec> {
         self.morph = None;
-        self.opened = None;
+        self.release_pin_into_lineage();
         match numinous_core::parse(&self.source) {
             Ok(expr) => {
                 let spec = sound_for_expression(&expr);
@@ -362,7 +378,7 @@ impl StudioPanel {
         if self.can_append(" ") {
             self.pause_auto();
             self.morph = None;
-            self.opened = None;
+            self.release_pin_into_lineage();
             self.source.push(' ');
             return true;
         }
@@ -456,13 +472,33 @@ impl StudioPanel {
     /// and the curve over the same window and knob a share would save.
     ///
     /// No footer, help, or cursor: a postcard is the creation, not the
-    /// editing session around it.
-    pub(crate) fn postcard_rgba(&self, t: f64, size: usize, era: numinous_core::Era) -> Vec<u8> {
+    /// editing session around it. The postcard is the object built to
+    /// escape the app, so when the creation carries a title it is the
+    /// headline with the formula beneath it smaller, and an author signs
+    /// the corner; identity rides the pixels, not only the capsule.
+    pub(crate) fn postcard_rgba(
+        &self,
+        t: f64,
+        size: usize,
+        era: numinous_core::Era,
+        title: Option<&str>,
+        author: Option<&str>,
+    ) -> Vec<u8> {
         let mut raster = Raster::new(size, size);
         let scale = studio_scale(size).max(2);
-        numinous_core::draw_text(&mut raster, "NUMINOUS STUDIO", 10, 10, scale, '#');
         let typed = format!("Y = {}", self.source.to_uppercase());
-        numinous_core::draw_text(&mut raster, &typed, 10, 10 + 12 * scale, scale + 1, '#');
+        if let Some(title) = title {
+            numinous_core::draw_text(&mut raster, &title.to_uppercase(), 10, 10, scale + 1, '#');
+            numinous_core::draw_text(&mut raster, &typed, 10, 10 + 12 * (scale + 1), scale, '#');
+        } else {
+            numinous_core::draw_text(&mut raster, "NUMINOUS STUDIO", 10, 10, scale, '#');
+            numinous_core::draw_text(&mut raster, &typed, 10, 10 + 12 * scale, scale + 1, '#');
+        }
+        if let Some(author) = author {
+            let credit = format!("BY {}", author.to_uppercase());
+            let credit_y = (size as i32 - 12 * scale).max(0);
+            numinous_core::draw_text(&mut raster, &credit, 10, credit_y, scale, '#');
+        }
         if let Some(expr) = &self.expr {
             let (xmin, xmax, a) = self.window_and_knob(t);
             // The postcard must match what creation.num reopens, so it
@@ -1059,12 +1095,27 @@ mod tests {
             "identity and lineage survive an untouched re-share"
         );
 
-        // The first edit makes it the player's: identity intentionally
-        // drops with the pin, and the descent does not follow an open.
+        // The first edit makes it the player's: the parent's title drops
+        // with the pin, but the pin releases into lineage, because taking
+        // over a creation by editing it is the definition of a remix. The
+        // edited share descends from what was opened, not from the
+        // grandparent the opened capsule itself descends from.
         assert!(panel.push_text("+0").is_some());
         let taken_over = panel.current_creation(0.25).expect("taken over");
         assert_eq!(taken_over.title(), None);
-        assert_eq!(taken_over.descends(), None);
+        assert_eq!(taken_over.descends(), Some(full.to_link().as_str()));
+    }
+
+    #[test]
+    fn a_recipe_draw_after_a_reopen_does_not_descend() {
+        // The bank's curve replaces the whole creation; a still-pinned
+        // reopen drops without becoming a parent.
+        let parent = numinous_core::StudioCreation::new("sin(x)", -1.0, 1.0, 0.0).expect("parent");
+        let mut panel = StudioPanel::default();
+        panel.open_creation(&parent);
+        assert!(panel.load_random_recipe().is_some());
+        let drawn = panel.current_creation(0.25).expect("recipe");
+        assert_eq!(drawn.descends(), None);
     }
 
     #[test]
@@ -1109,12 +1160,12 @@ mod tests {
         // does not record, so the postcard must ignore it.
         let mut morphing = StudioPanel::default();
         assert!(morphing.load_random_recipe().is_some());
-        let mid_morph = morphing.postcard_rgba(0.25, 240, numinous_core::Era::Modern);
+        let mid_morph = morphing.postcard_rgba(0.25, 240, numinous_core::Era::Modern, None, None);
 
         let mut settled = StudioPanel::default();
         assert!(settled.load_random_recipe().is_some());
         settled.advance_morph(RECIPE_MORPH_SECONDS);
-        let after = settled.postcard_rgba(0.25, 240, numinous_core::Era::Modern);
+        let after = settled.postcard_rgba(0.25, 240, numinous_core::Era::Modern, None, None);
 
         assert_eq!(
             mid_morph, after,
@@ -1133,7 +1184,7 @@ mod tests {
         let postcard = |creation: &numinous_core::StudioCreation| {
             let mut panel = StudioPanel::default();
             panel.open_creation(creation);
-            panel.postcard_rgba(0.25, 300, numinous_core::Era::Modern)
+            panel.postcard_rgba(0.25, 300, numinous_core::Era::Modern, None, None)
         };
         let narrow_rgba = postcard(&narrow);
         assert!(
@@ -1141,6 +1192,33 @@ mod tests {
             "a postcard has ink"
         );
         assert_ne!(narrow_rgba, postcard(&wide));
+    }
+
+    #[test]
+    fn the_postcard_carries_title_and_author_when_the_capsule_has_them() {
+        // The postcard is the object built to escape the app; identity must
+        // ride the pixels, not only the capsule. Title changes the headline,
+        // author signs the corner, and an anonymous card stays exactly the
+        // card it always was.
+        let panel = StudioPanel::default();
+        let plain = panel.postcard_rgba(0.25, 300, numinous_core::Era::Modern, None, None);
+        let titled = panel.postcard_rgba(
+            0.25,
+            300,
+            numinous_core::Era::Modern,
+            Some("Fading Wave"),
+            None,
+        );
+        let signed = panel.postcard_rgba(
+            0.25,
+            300,
+            numinous_core::Era::Modern,
+            Some("Fading Wave"),
+            Some("A Curious Mind"),
+        );
+        assert_ne!(plain, titled, "a title must change the headline");
+        assert_ne!(titled, signed, "an author must sign the card");
+        assert_ne!(plain, signed);
     }
 
     #[test]

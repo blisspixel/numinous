@@ -530,23 +530,41 @@ enum Command {
     },
     /// Sing a function: turn y = f(x) into a melody and write a WAV.
     Sing {
-        /// The expression in x.
+        /// The expression in x, a Studio .num file path, or a numinous:// link.
         expr: String,
-        /// Left edge of the x range.
-        #[arg(long, default_value_t = -std::f64::consts::TAU)]
-        xmin: f64,
-        /// Right edge of the x range.
-        #[arg(long, default_value_t = std::f64::consts::TAU)]
-        xmax: f64,
+        /// Left edge of the x range (default -tau; a Studio input supplies its own).
+        #[arg(long)]
+        xmin: Option<f64>,
+        /// Right edge of the x range (default tau; a Studio input supplies its own).
+        #[arg(long)]
+        xmax: Option<f64>,
         /// Number of notes.
         #[arg(long, default_value_t = 48)]
         notes: usize,
-        /// Value of the parameter a, matching what `plot` uses (default 1).
-        #[arg(long, default_value_t = 1.0)]
-        a: f64,
+        /// Value of the parameter a, matching what `plot` uses (default 1; a
+        /// Studio input supplies its own).
+        #[arg(long)]
+        a: Option<f64>,
         /// Write a WAV audio file to this path.
         #[arg(long)]
         out: PathBuf,
+    },
+    /// Remix a Studio creation: copy it, record its lineage, save the child.
+    Fork {
+        /// The parent: a Studio .num file path or a numinous:// link.
+        parent: String,
+        /// Write the forked .num here (never replaces an existing file).
+        #[arg(long)]
+        out: PathBuf,
+        /// Replace the expression in the fork (the remix itself).
+        #[arg(long)]
+        expr: Option<String>,
+        /// Title for the fork.
+        #[arg(long)]
+        title: Option<String>,
+        /// Author credit for the fork.
+        #[arg(long)]
+        author: Option<String>,
     },
 }
 
@@ -2134,7 +2152,27 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             out,
         } => {
             journey.play();
-            emit(sing_wav(&expr, xmin, xmax, notes, a, &out))
+            emit(
+                resolve_sing_input(&expr, xmin, xmax, a).and_then(|(source, xmin, xmax, a)| {
+                    sing_wav(&source, xmin, xmax, notes, a, &out)
+                }),
+            )
+        }
+        Command::Fork {
+            parent,
+            out,
+            expr,
+            title,
+            author,
+        } => {
+            journey.play();
+            emit(fork_studio_creation(
+                &parent,
+                expr.as_deref(),
+                title.as_deref(),
+                author.as_deref(),
+                &out,
+            ))
         }
     }
 }
@@ -2735,6 +2773,73 @@ fn save_studio_creation(
     ))
 }
 
+/// Whether a sing input names a Studio creation rather than raw math.
+fn names_a_studio_creation(input: &str) -> bool {
+    input.starts_with("numinous://") || input.to_ascii_lowercase().ends_with(".num")
+}
+
+/// A creation's voice travels through the terminal: sing accepts the same
+/// .num files and links the rest of the Studio surface speaks, and the
+/// capsule supplies its own window and knob unless flags override them.
+fn resolve_sing_input(
+    input: &str,
+    xmin: Option<f64>,
+    xmax: Option<f64>,
+    a: Option<f64>,
+) -> Result<(String, f64, f64, f64), String> {
+    if names_a_studio_creation(input) {
+        let creation = load_studio_creation(input)?;
+        return Ok((
+            creation.source().to_string(),
+            xmin.unwrap_or_else(|| creation.xmin()),
+            xmax.unwrap_or_else(|| creation.xmax()),
+            a.unwrap_or_else(|| creation.a()),
+        ));
+    }
+    Ok((
+        input.to_string(),
+        xmin.unwrap_or(-std::f64::consts::TAU),
+        xmax.unwrap_or(std::f64::consts::TAU),
+        a.unwrap_or(1.0),
+    ))
+}
+
+/// The terminal maker's remix verb. The fork copies the parent's expression,
+/// window, knob, and era, records the parent link as lineage, and takes its
+/// own title and author: the remix tree the Gallery wall renders is now
+/// reachable without the App.
+fn fork_studio_creation(
+    parent_input: &str,
+    expr: Option<&str>,
+    title: Option<&str>,
+    author: Option<&str>,
+    out: &Path,
+) -> Result<String, String> {
+    let parent = load_studio_creation(parent_input)?;
+    let source = expr.unwrap_or_else(|| parent.source());
+    let mut fork =
+        numinous_core::StudioCreation::new(source, parent.xmin(), parent.xmax(), parent.a())?;
+    if let Some(era) = parent.era() {
+        fork = fork.with_era(era);
+    }
+    if let Some(title) = title {
+        fork = fork.with_title(title).map_err(|e| format!("{e}\n"))?;
+    }
+    if let Some(author) = author {
+        fork = fork.with_author(author).map_err(|e| format!("{e}\n"))?;
+    }
+    fork = fork
+        .with_descends(&parent.to_link())
+        .map_err(|e| format!("{e}\n"))?;
+    write_create_new(out, fork.to_num_file().as_bytes())?;
+    Ok(format!(
+        "forked from {}\nsaved Studio creation: {}\nlink: {}\n",
+        parent.to_link(),
+        terminal_safe_path(out),
+        fork.to_link()
+    ))
+}
+
 fn load_studio_creation(input: &str) -> Result<numinous_core::StudioCreation, String> {
     if input.starts_with("numinous://") {
         return numinous_core::StudioCreation::from_link(input)
@@ -2786,7 +2891,22 @@ fn open_studio_report(input: &str, width: usize, height: usize) -> Result<String
         lines.push(format!("descends={}", terminal_safe(descends)));
     }
     lines.push(format!("link={}", creation.to_link()));
+    lines.push(format!(
+        "remix it: numinous fork {} --out my-remix.num",
+        creation.to_link()
+    ));
     Ok(format!("{}\n\n{}", lines.join("\n"), report))
+}
+
+/// The first sibling name (stem-2.num, stem-3.num, ...) not already taken,
+/// bounded so a hostile directory cannot spin this forever.
+fn next_free_sibling(path: &Path) -> Option<PathBuf> {
+    let stem = path.file_stem()?.to_str()?;
+    let extension = path.extension()?.to_str()?;
+    let parent = path.parent().unwrap_or_else(|| Path::new("."));
+    (2..=99)
+        .map(|n| parent.join(format!("{stem}-{n}.{extension}")))
+        .find(|candidate| !candidate.exists())
 }
 
 fn write_create_new(path: &Path, bytes: &[u8]) -> Result<(), String> {
@@ -2827,8 +2947,13 @@ fn write_create_new(path: &Path, bytes: &[u8]) -> Result<(), String> {
             Err(err) => {
                 let _ = std::fs::remove_file(&temp);
                 if path.exists() {
+                    // Never-clobber holds, but the refusal helps: name the
+                    // next free sibling instead of leaving a dead end.
+                    let hint = next_free_sibling(path)
+                        .map(|free| format!(" {} is free.", terminal_safe_path(&free)))
+                        .unwrap_or_default();
                     return Err(format!(
-                        "could not create {}: already exists\n",
+                        "could not create {}: already exists.{hint}\n",
                         terminal_safe_path(path)
                     ));
                 }
@@ -9044,6 +9169,113 @@ mod tests {
         );
         assert_eq!(code, std::process::ExitCode::FAILURE);
         assert_eq!(journey.plays, 0);
+    }
+
+    #[test]
+    fn sing_resolves_a_studio_capsule_with_its_own_window_and_knob() {
+        let path = std::env::temp_dir().join(format!(
+            "numinous_cli_sing_capsule_{}.num",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&path);
+        let creation =
+            numinous_core::StudioCreation::new("sin(a*x)", -2.0, 3.0, 0.5).expect("capsule");
+        std::fs::write(&path, creation.to_num_file()).expect("write capsule");
+
+        let (source, xmin, xmax, a) =
+            super::resolve_sing_input(&path.to_string_lossy(), None, None, None)
+                .expect("capsule resolves");
+        assert_eq!(source, "sin(a*x)");
+        assert_eq!((xmin, xmax, a), (-2.0, 3.0, 0.5));
+
+        // An explicit flag still overrides the capsule's own value.
+        let (_, _, _, a) =
+            super::resolve_sing_input(&path.to_string_lossy(), None, None, Some(2.0))
+                .expect("override resolves");
+        assert_eq!(a, 2.0);
+
+        // Raw math keeps the documented defaults.
+        let (source, xmin, xmax, a) =
+            super::resolve_sing_input("sin(x)", None, None, None).expect("math resolves");
+        assert_eq!(source, "sin(x)");
+        assert_eq!(
+            (xmin, xmax, a),
+            (-std::f64::consts::TAU, std::f64::consts::TAU, 1.0)
+        );
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn the_terminal_fork_records_lineage_and_never_clobbers() {
+        let dir = std::env::temp_dir().join(format!("numinous_cli_fork_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("fork dir");
+        let parent_path = dir.join("parent.num");
+        let parent = numinous_core::StudioCreation::new("sin(a*x)", -3.0, 3.0, 1.0)
+            .expect("parent")
+            .with_title("Wave")
+            .expect("title");
+        std::fs::write(&parent_path, parent.to_num_file()).expect("write parent");
+
+        let child_path = dir.join("child.num");
+        let message = super::fork_studio_creation(
+            &parent_path.to_string_lossy(),
+            Some("sin(a*x)+0.1"),
+            Some("Wave II"),
+            Some("A Friend"),
+            &child_path,
+        )
+        .expect("fork succeeds");
+        assert!(message.contains("forked from "), "{message}");
+
+        let child = numinous_core::StudioCreation::from_num_path(&child_path).expect("reload");
+        assert_eq!(child.source(), "sin(a*x)+0.1");
+        assert_eq!((child.xmin(), child.xmax(), child.a()), (-3.0, 3.0, 1.0));
+        assert_eq!(child.title(), Some("Wave II"));
+        assert_eq!(child.author(), Some("A Friend"));
+        assert_eq!(
+            child.descends(),
+            Some(parent.to_link().as_str()),
+            "the fork must record its parent"
+        );
+
+        // Never-clobber holds, and the refusal names the next free sibling.
+        let refusal = super::fork_studio_creation(
+            &parent_path.to_string_lossy(),
+            None,
+            None,
+            None,
+            &child_path,
+        )
+        .expect_err("second fork to the same path refuses");
+        assert!(refusal.contains("already exists"), "{refusal}");
+        assert!(refusal.contains("child-2.num"), "{refusal}");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn fork_refuses_a_missing_parent() {
+        let missing = std::env::temp_dir().join("numinous_cli_fork_missing_parent.num");
+        let _ = std::fs::remove_file(&missing);
+        let out = std::env::temp_dir().join("numinous_cli_fork_missing_out.num");
+        let _ = std::fs::remove_file(&out);
+        assert!(
+            super::fork_studio_creation(&missing.to_string_lossy(), None, None, None, &out)
+                .is_err()
+        );
+        assert!(!out.exists(), "a refused fork must write nothing");
+    }
+
+    #[test]
+    fn open_studio_names_the_remix_verb() {
+        let creation =
+            numinous_core::StudioCreation::new("cos(x)", -1.0, 1.0, 1.0).expect("capsule");
+        let report = super::open_studio_report(&creation.to_link(), 32, 10).expect("report");
+        assert!(
+            report.contains("remix it: numinous fork "),
+            "the open report must route to the next verb: {report}"
+        );
     }
 
     #[test]

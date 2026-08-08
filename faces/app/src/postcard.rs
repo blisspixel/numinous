@@ -197,9 +197,31 @@ pub(crate) fn write_studio_share_bundle(
     postcard_rgba: &[u8],
     parent: &Path,
 ) -> std::io::Result<PathBuf> {
-    write_bundle_all_or_nothing(parent, "studio", |dir| {
+    // A titled creation lends its slug to the folder, so a directory of
+    // shares reads as work instead of as indistinguishable nonces. The
+    // nonce stays for exclusivity, and the discovery prefix still holds
+    // because the label always starts with "studio".
+    let label = match creation.title().map(slug_of) {
+        Some(slug) if !slug.is_empty() => format!("studio-{slug}"),
+        _ => "studio".to_string(),
+    };
+    write_bundle_all_or_nothing(parent, &label, |dir| {
         fill_studio_share_bundle(dir, creation, postcard_rgba)
     })
+}
+
+/// A filesystem-safe slug of a creation title: lowercase alphanumerics with
+/// single dashes, bounded so a maximal title cannot bloat the path.
+fn slug_of(title: &str) -> String {
+    let mut slug = String::new();
+    for c in title.chars().take(24) {
+        if c.is_ascii_alphanumeric() {
+            slug.push(c.to_ascii_lowercase());
+        } else if !slug.ends_with('-') && !slug.is_empty() {
+            slug.push('-');
+        }
+    }
+    slug.trim_end_matches('-').to_string()
 }
 
 fn fill_studio_share_bundle(

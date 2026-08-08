@@ -318,6 +318,31 @@ const JOURNEY_SAVE_WARNING: &str = "PROGRESS IS NOT SAVING  SEE .NUMINOUS-CRASH.
 const SCORE_SAVE_WARNING: &str = "SCORES ARE NOT SAVING  SEE .NUMINOUS-CRASH.LOG";
 
 /// The application state driven by the winit event loop.
+/// Which naming field the keyboard currently feeds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NamingField {
+    Title,
+    Author,
+}
+
+/// The F4 naming step's editable state: one text line for the creation's
+/// name, one for its signature.
+#[derive(Debug, Clone)]
+struct ShareNaming {
+    title: String,
+    author: String,
+    field: NamingField,
+}
+
+impl ShareNaming {
+    fn active_field_mut(&mut self) -> &mut String {
+        match self.field {
+            NamingField::Title => &mut self.title,
+            NamingField::Author => &mut self.author,
+        }
+    }
+}
+
 struct App {
     /// How much the world may move on its own. Read once at construction, so
     /// every tick answers the same way and a test can pin it.
@@ -365,6 +390,12 @@ struct App {
     studio: bool,
     /// The typed Studio expression and its last-good parse state.
     studio_panel: studio_panel::StudioPanel,
+    /// The F4 naming step: a share waiting for its title and signature.
+    share_naming: Option<ShareNaming>,
+    /// The author name from the last named share, offered on the next one.
+    /// Names are the social currency of the fork loop; remembering the
+    /// signature makes signing the default instead of a chore.
+    remembered_author: String,
     /// The Gallery wall over the Studio, while the player is browsing it.
     gallery: Option<gallery::GalleryPanel>,
     /// Human-owned, read-only view of one explicitly paired MCP session.
@@ -517,6 +548,8 @@ impl App {
             show_crossfade_frames: 0,
             studio: false,
             studio_panel: studio_panel::StudioPanel::default(),
+            share_naming: None,
+            remembered_author: String::new(),
             gallery: None,
             session_viewer: SessionViewer::default(),
             session_audio: SessionAudio::default(),
@@ -1323,8 +1356,90 @@ impl App {
     /// the writer discards its own partial folder on failure, so the failure
     /// line stays short rather than promising a cleanup state it cannot
     /// fully guarantee.
-    fn share_studio_creation(&mut self) {
-        match self.share_studio_creation_to(&postcard::default_postcard_dir()) {
+    /// Open the F4 naming step. The title prefills from the creation being
+    /// shared (so an untouched re-share keeps its identity by default) and
+    /// the author from the last signature, because naming happens in the
+    /// instrument, not only in CLI flags.
+    fn begin_share_naming(&mut self) {
+        if self.share_naming.is_some() {
+            return;
+        }
+        let identity = self.studio_panel.current_creation(self.t).ok();
+        let title = identity
+            .as_ref()
+            .and_then(|creation| creation.title())
+            .unwrap_or_default()
+            .to_string();
+        let author = identity
+            .as_ref()
+            .and_then(|creation| creation.author())
+            .unwrap_or(&self.remembered_author)
+            .to_string();
+        self.share_naming = Some(ShareNaming {
+            title,
+            author,
+            field: NamingField::Title,
+        });
+    }
+
+    /// Append text to the active naming field, under the same printable
+    /// ASCII bound the capsule format enforces, so a name the editor
+    /// accepts is a name the share cannot refuse.
+    fn naming_push_text(&mut self, text: &str) {
+        let Some(naming) = self.share_naming.as_mut() else {
+            return;
+        };
+        let field = naming.active_field_mut();
+        for c in text.chars() {
+            if (' '..='~').contains(&c)
+                && field.chars().count() < numinous_core::MAX_META_TEXT_CHARS
+            {
+                field.push(c);
+            }
+        }
+    }
+
+    fn naming_backspace(&mut self) {
+        if let Some(naming) = self.share_naming.as_mut() {
+            naming.active_field_mut().pop();
+        }
+    }
+
+    fn naming_toggle_field(&mut self) {
+        if let Some(naming) = self.share_naming.as_mut() {
+            naming.field = match naming.field {
+                NamingField::Title => NamingField::Author,
+                NamingField::Author => NamingField::Title,
+            };
+        }
+    }
+
+    /// Cancel the naming step without sharing anything, and say so: a
+    /// closed prompt with no banner would leave whether anything was
+    /// written a mystery.
+    fn cancel_share_naming(&mut self) {
+        if self.share_naming.take().is_some() {
+            self.banner = Some(feedback::Banner::status("SHARE CANCELLED", 60));
+        }
+    }
+
+    /// Confirm the naming step: remember the signature and share the trio.
+    fn confirm_share_naming(&mut self) {
+        let Some(naming) = self.share_naming.take() else {
+            return;
+        };
+        self.remembered_author = naming.author.trim().to_string();
+        let title = Some(naming.title.trim())
+            .filter(|title| !title.is_empty())
+            .map(str::to_string);
+        let author = Some(naming.author.trim())
+            .filter(|author| !author.is_empty())
+            .map(str::to_string);
+        self.share_studio_creation(title.as_deref(), author.as_deref());
+    }
+
+    fn share_studio_creation(&mut self, title: Option<&str>, author: Option<&str>) {
+        match self.share_studio_creation_to(&postcard::default_postcard_dir(), title, author) {
             Ok(Ok(dir)) => {
                 self.report_export_outcome(
                     "studio share",
@@ -1362,11 +1477,26 @@ impl App {
     fn share_studio_creation_to(
         &self,
         parent: &std::path::Path,
+        title: Option<&str>,
+        author: Option<&str>,
     ) -> std::io::Result<Result<std::path::PathBuf, studio_panel::ShareRefusal>> {
-        let creation = match self.studio_panel.current_creation(self.t) {
+        let mut creation = match self.studio_panel.current_creation(self.t) {
             Ok(creation) => creation,
             Err(refusal) => return Ok(Err(refusal)),
         };
+        // The naming step's fields ride the capsule. The editor enforces
+        // the same printable ASCII bound the format validates, so a name
+        // that reaches here cannot be refused; if the two rules ever
+        // drift, the share fails loudly through the io path rather than
+        // silently shipping unnamed work.
+        if let Some(title) = title {
+            creation = creation.with_title(title).map_err(std::io::Error::other)?;
+        }
+        if let Some(author) = author {
+            creation = creation
+                .with_author(author)
+                .map_err(std::io::Error::other)?;
+        }
         // Record the era only when it says something: Modern is the default
         // look, and omitting it keeps a plain share a version 1 capsule that
         // older builds still open.
@@ -1375,9 +1505,13 @@ impl App {
         } else {
             creation.with_era(self.era)
         };
-        let rgba =
-            self.studio_panel
-                .postcard_rgba(self.t, postcard::POSTCARD_SIZE as usize, self.era);
+        let rgba = self.studio_panel.postcard_rgba(
+            self.t,
+            postcard::POSTCARD_SIZE as usize,
+            self.era,
+            creation.title(),
+            creation.author(),
+        );
         postcard::write_studio_share_bundle(&creation, &rgba, parent).map(Ok)
     }
 
@@ -3548,6 +3682,35 @@ impl App {
             height,
             self.t,
         );
+        if let Some(naming) = &self.share_naming {
+            let scale = ((width as i32) / 450).clamp(1, 3);
+            let cursor = |field: NamingField| if naming.field == field { "_" } else { "" };
+            let lines = [
+                "NAME YOUR SHARE".to_string(),
+                format!(
+                    "TITLE:  {}{}",
+                    naming.title.to_uppercase(),
+                    cursor(NamingField::Title)
+                ),
+                format!(
+                    "AUTHOR: {}{}",
+                    naming.author.to_uppercase(),
+                    cursor(NamingField::Author)
+                ),
+                "TAB: SWITCH  ENTER: SHARE  ESC: CANCEL".to_string(),
+            ];
+            let top = (height as i32 / 2 - 24 * scale).max(0);
+            for (row, line) in lines.iter().enumerate() {
+                numinous_core::draw_text(
+                    raster,
+                    line,
+                    10,
+                    top + 12 * scale * row as i32,
+                    scale,
+                    '#',
+                );
+            }
+        }
     }
 
     fn modal_frame(&self, width: usize, height: usize) -> Option<Raster> {
@@ -4163,6 +4326,18 @@ impl ApplicationHandler for App {
                         Key::Named(NamedKey::ArrowDown) => self.gallery_move(0, 1),
                         _ => {}
                     }
+                } else if self.studio && self.share_naming.is_some() {
+                    // The naming step owns the keyboard until the share is
+                    // named or abandoned; formula editing waits underneath.
+                    match logical_key {
+                        Key::Named(NamedKey::Enter) => self.confirm_share_naming(),
+                        Key::Named(NamedKey::Escape) => self.cancel_share_naming(),
+                        Key::Named(NamedKey::Tab) => self.naming_toggle_field(),
+                        Key::Named(NamedKey::Backspace) => self.naming_backspace(),
+                        Key::Named(NamedKey::Space) => self.naming_push_text(" "),
+                        Key::Character(s) => self.naming_push_text(&s),
+                        _ => {}
+                    }
                 } else if self.studio {
                     // Studio mode: the keyboard is a math keyboard.
                     match logical_key {
@@ -4195,13 +4370,14 @@ impl ApplicationHandler for App {
                             self.studio_panel.toggle_auto();
                         }
                         Key::Named(NamedKey::F4) => {
-                            // One action, the whole trio: .num, link, postcard.
+                            // The share trio starts with its name: F4 opens
+                            // the naming step, Enter there writes the bundle.
                             if self.save_gate.admit(
                                 save_gate::SaveKind::StudioShare,
                                 Instant::now(),
                                 repeat,
                             ) {
-                                self.share_studio_creation();
+                                self.begin_share_naming();
                             }
                         }
                         Key::Named(NamedKey::Backspace) => {
@@ -7365,7 +7541,7 @@ mod tests {
 
         // The next share records the descent and the non-default era.
         let bundle = app
-            .share_studio_creation_to(&shares)
+            .share_studio_creation_to(&shares, None, None)
             .expect("share io")
             .expect("the fork parses, so the trio writes");
         let saved = numinous_core::StudioCreation::from_num_path(&bundle.join("creation.num"))
@@ -7398,6 +7574,83 @@ mod tests {
     }
 
     #[test]
+    fn the_naming_step_edits_signs_and_slugs_the_share() {
+        let shares =
+            std::env::temp_dir().join(format!("numinous-naming-share-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&shares);
+        let mut app = headless("numinous_app_test_naming_step.txt");
+        app.enter_studio();
+
+        // F4 opens the naming step instead of sharing blind.
+        app.begin_share_naming();
+        assert!(app.share_naming.is_some());
+        app.naming_push_text("Fading Wave");
+        app.naming_toggle_field();
+        app.naming_push_text("A Curious Mind");
+        let naming = app.share_naming.as_ref().expect("naming open");
+        assert_eq!(naming.title, "Fading Wave");
+        assert_eq!(naming.author, "A Curious Mind");
+
+        // The editor enforces the capsule's own bounds: printable ASCII,
+        // capped, so a name it accepts is a name the share cannot refuse.
+        app.naming_push_text(&"x".repeat(200));
+        app.naming_push_text("\u{7f}\u{9}");
+        assert_eq!(
+            app.share_naming
+                .as_ref()
+                .expect("naming open")
+                .author
+                .chars()
+                .count(),
+            numinous_core::MAX_META_TEXT_CHARS
+        );
+
+        // Esc abandons the share and says so.
+        app.cancel_share_naming();
+        assert!(app.share_naming.is_none());
+        assert!(app.banner.is_some(), "a silent cancel is a mystery");
+
+        // The named share signs the capsule, the postcard identity rides,
+        // and a titled bundle folder wears the slug.
+        let bundle = app
+            .share_studio_creation_to(&shares, Some("Fading Wave"), Some("A Curious Mind"))
+            .expect("share io")
+            .expect("default formula parses");
+        let saved = numinous_core::StudioCreation::from_num_path(&bundle.join("creation.num"))
+            .expect("reopen");
+        assert_eq!(saved.title(), Some("Fading Wave"));
+        assert_eq!(saved.author(), Some("A Curious Mind"));
+        let folder = bundle
+            .file_name()
+            .expect("bundle name")
+            .to_string_lossy()
+            .to_string();
+        assert!(
+            folder.starts_with("numinous-share-studio-fading-wave-"),
+            "a titled share reads as work on disk: {folder}"
+        );
+
+        // Confirming remembers the signature for the next share even when
+        // the formula refuses, and the next naming step offers it back.
+        app.share_naming = Some(super::ShareNaming {
+            title: "Second".to_string(),
+            author: "A Curious Mind".to_string(),
+            field: super::NamingField::Title,
+        });
+        assert!(app.studio_panel.push_text("(((").is_none());
+        app.confirm_share_naming();
+        assert_eq!(app.remembered_author, "A Curious Mind");
+        app.begin_share_naming();
+        assert_eq!(
+            app.share_naming.as_ref().expect("reopened naming").author,
+            "A Curious Mind",
+            "the signature is offered on the next share"
+        );
+
+        let _ = std::fs::remove_dir_all(&shares);
+    }
+
+    #[test]
     fn one_action_shares_the_studio_trio_or_refuses_with_a_reason() {
         let app = headless("numinous_app_test_studio_share.txt");
         let parent =
@@ -7405,7 +7658,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&parent);
 
         let dir = app
-            .share_studio_creation_to(&parent)
+            .share_studio_creation_to(&parent, None, None)
             .expect("share io")
             .expect("default formula parses, so the trio writes");
         let num_path = dir.join("creation.num");
@@ -7433,7 +7686,7 @@ mod tests {
             .collect();
         assert_eq!(
             broken
-                .share_studio_creation_to(&parent)
+                .share_studio_creation_to(&parent, None, None)
                 .expect("refusal is not an io error"),
             Err(crate::studio_panel::ShareRefusal::UnparsedFormula),
             "an unparsed formula is its own refusal, named as such"

@@ -37,7 +37,7 @@ listening tests, not claimed from the design alone.
   rooms are native Rust today. A bounded pattern language can become a second
   authoring path only after it satisfies the safety and compatibility contracts
   in `EXTENSIBILITY.md`.
-- It is **infinitely replayable and endlessly shareable**: every creation is text plus deterministic parameters, so it exports as a clip and a `.num` file / `numinous://` link (native, no browser, see `ARCHITECTURE.md`). The first CLI `.num` save/open slice exists for expression plots, and the App reopens a saved capsule exactly, from a launch argument or a dropped file, paused until confirmed; gallery and fork/remix remain roadmap work.
+- It is **infinitely replayable and endlessly shareable**: every creation is text plus deterministic parameters, so it exports as a clip and a `.num` file / `numinous://` link (native, no browser, see `ARCHITECTURE.md`). Both faces speak the whole loop today: the CLI saves, opens, sings, and forks capsules (`plot --save`, `open-studio`, `sing`, `fork`, lineage recorded), and the App reopens a saved capsule exactly (launch argument, dropped file, or link, paused until confirmed), walls it in the F5 Gallery with its remix tree, forks it with one keystroke, and names and signs shares in the F4 naming step.
 
 ## The core idea: one expression, two senses
 

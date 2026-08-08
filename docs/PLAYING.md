@@ -103,16 +103,22 @@ A saved creation reopens exactly. Launch the App with a `.num` path or a
 `numinous://studio` link, or drop a `.num` file on the window, and the Studio
 opens with the saved formula, window, and knob pinned, paused: the exact curve
 is drawn, and Enter starts it singing. The first edit makes it yours again,
-window and all. Save one from the terminal with `numinous plot "sin(a*x)"
---save mine.num`. A drop never abandons a game in progress, and files that are
-not valid creations are refused with a reason, never half-opened.
+window and all, and your next share credits the creation you opened, because
+taking over a creation by editing it is a remix. Save one from the terminal
+with `numinous plot "sin(a*x)" --save mine.num`, and remix any capsule or
+link with `numinous fork parent.num --out mine.num`. A drop never abandons a
+game in progress, and files that are not valid creations are refused with a
+reason, never half-opened.
 
-F4 in the Studio shares the whole trio in one press: a fresh folder in your
-home directory holding `creation.num` (reopens exactly), `postcard.png` (the
-picture that travels), and a README carrying the `numinous://` link. What is
-shared is the exact curve on screen at that moment, knob and all. A formula
-that does not parse is refused with FIX THE FORMULA TO SHARE rather than
-shared as whatever last worked.
+F4 in the Studio opens the naming step: one line for a title, one for your
+signature (offered again on your next share), Tab to switch, Enter to share,
+Esc to cancel. Enter writes the whole trio into a fresh folder in your home
+directory: `creation.num` (reopens exactly), `postcard.png` (the picture that
+travels, wearing the title as its headline and the author in its corner),
+and a README carrying the `numinous://` link. A titled share's folder carries
+the title's slug in its name. What is shared is the exact curve on screen at
+that moment, knob and all. A formula that does not parse is refused with FIX
+THE FORMULA TO SHARE rather than shared as whatever last worked.
 
 F5 opens the Gallery: a wall of saved creations discovered from the same home
 folder and its share bundles, newest first, each drawn as its own exact curve
