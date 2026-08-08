@@ -5,6 +5,18 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The rock order is refined around a tension the two research syntheses
+  exposed when laid side by side: the Sensory Lift is for humans, and
+  the audience this product carries as its polish bar enters through
+  the one face the lift never touches. The Universal Wager goes first
+  (the soul, cheapest per line, both audiences the same day), then the
+  Mind's Seat (time, company, memory, and a hand that can sign its
+  work over MCP), then the Sensory Lift, which enters through a
+  parallel de-risk spike (GPU behind the Surface contract, a measured
+  bloom budget) rather than blocking the certain rocks while it fights
+  a performance cliff. The arc follows the lift so the authored
+  opening is built in the new light, and the fifteen connection edges
+  become continuous filler between rocks.
 - The Galton Board becomes the third flagship aha, the Wager Wave's
   first room. Drop a wave and the invite appears: where will the whole
   pile peak? Commit a bin on the wager band (or run four waves and earn
