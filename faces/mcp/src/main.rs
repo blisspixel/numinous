@@ -3427,6 +3427,20 @@ fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAha
     })
 }
 
+/// The stdio face has no keyboard. The aha chrome's key prompts translate
+/// into this face's own verbs before they reach a mind that cannot press
+/// them: E becomes aha_summon, and the wager digits become the place_wager
+/// values the tool schema already names.
+fn keyless_aha_status(status: String) -> String {
+    status
+        .replace(
+            "WHERE? 1=M 2=N 3=C",
+            "WHERE? place_wager: mandelbrot, nephroid, or circle",
+        )
+        .replace("E:WHY", "aha_summon:true opens why")
+        .replace("PRESS E", "SUMMON: aha_summon:true")
+}
+
 fn project_flagship_aha(
     room_id: &str,
     variation: u64,
@@ -3475,7 +3489,7 @@ fn project_flagship_aha(
             Ok(Some(json!({
                 "kind": "place",
                 "beat": aha.beat_label(),
-                "status": aha.status(dial.as_deref()),
+                "status": keyless_aha_status(aha.status(dial.as_deref())),
                 "earn": aha.earn_label(),
                 "allowReveal": aha.allow_reveal_text(),
                 "canSummon": aha.can_summon()
@@ -3510,7 +3524,7 @@ fn project_flagship_aha(
             Ok(Some(json!({
                 "kind": "number",
                 "beat": aha.beat_label(),
-                "status": aha.status(throw_status.as_deref()),
+                "status": keyless_aha_status(aha.status(throw_status.as_deref())),
                 "earn": aha.earn_label(),
                 "allowReveal": aha.allow_reveal_text(),
                 "canSummon": aha.can_summon()
@@ -9216,6 +9230,35 @@ plays 2
     }
 
     #[test]
+    fn no_keyboard_prompt_reaches_a_keyless_mind() {
+        // The App's aha chrome invites E and digit keys; this face's verbs
+        // are aha_summon and place_wager, and the docs promise every prompt
+        // names a verb the caller actually has. Whole-response sweep, so a
+        // prompt cannot hide in text content or structuredContent.
+        let calls = [
+            json!({"id": "times-tables", "width": 40, "height": 20, "place_wager": "circle"}),
+            json!({"id": "times-tables", "width": 40, "height": 20,
+                   "place_wager": "mandelbrot", "aha_summon": true}),
+            // x=0.0 lands K=2 exactly: the primed heart whose chrome asks
+            // WHERE? with digit keys on the App face.
+            json!({"id": "times-tables", "width": 40, "height": 20, "pokes": [[0.0, 0.5]]}),
+            json!({"id": "buffon-needle", "width": 40, "height": 20, "number_wager": 3.0}),
+            json!({"id": "buffon-needle", "width": 40, "height": 20,
+                   "number_wager": 3.2, "aha_summon": true}),
+        ];
+        for arguments in calls {
+            let reply = call("play_room", arguments.clone());
+            let text = reply.to_string();
+            for prompt in ["PRESS E", "E:WHY", "1=M 2=N 3=C"] {
+                assert!(
+                    !text.contains(prompt),
+                    "keyboard prompt {prompt:?} escaped for {arguments}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn times_tables_place_wager_gates_reveal_until_aha_summon() {
         let wagered = call(
             "play_room",
@@ -9234,7 +9277,9 @@ plays 2
         assert!(
             content["status"]
                 .as_str()
-                .is_some_and(|s| s.contains("PRESS E"))
+                .is_some_and(|s| s.contains("SUMMON: aha_summon:true")),
+            "the withheld beat must invite this face's own verb: {:?}",
+            content["status"]
         );
 
         let consolidated = call(

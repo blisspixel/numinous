@@ -21,6 +21,7 @@ numinous-broadcast = { version = "0.2.0-alpha.4", path = "crates/broadcast" }
 numinous-gpu = { version = "0.2.0-alpha.4", path = "crates/gpu" }
 # Shared third-party versions; Cargo.lock pins the resolved public baseline.
 clap = { version = "4", features = ["derive"] }
+ctrlc = "3"
 getrandom = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }

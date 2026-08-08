@@ -49,8 +49,8 @@ def valid_render() -> str:
     rows[0] = "*#*"
     rows.extend(
         (
-            "Status: DRAG:DIAL  K 4.00  CLOSED  3 LOBES  TARGET 4",
-            "Action: DRAG: TURN THE DIAL",
+            "Status: K 4.00  CLOSED  3 LOBES  TARGET 4",
+            "Action: TURN THE DIAL (the hand here: numinous room times-tables --poke x,y)",
             "Goal: LAND ON EXACTLY 4 LOBES",
         )
     )
@@ -150,7 +150,8 @@ class ReleaseEngagementSmokeTests(unittest.TestCase):
             SMOKE.validate_cli_render(valid_render().replace("Goal:", "Missing:"))
         with self.assertRaisesRegex(SMOKE.SmokeError, "too few rows"):
             SMOKE.validate_cli_render(
-                "Status:\nAction: DRAG: TURN THE DIAL\nGoal: LAND ON EXACTLY 4 LOBES\n"
+                "Status:\nAction: TURN THE DIAL (the hand here: numinous room "
+                "times-tables --poke x,y)\nGoal: LAND ON EXACTLY 4 LOBES\n"
             )
 
     def test_inventory_requires_exact_unique_tool_set(self) -> None:

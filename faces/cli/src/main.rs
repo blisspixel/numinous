@@ -588,15 +588,58 @@ fn run_on_command_stack(task: impl FnOnce() -> ExitCode + Send + 'static) -> Exi
 /// Windows' small process-entry stack is not a stable budget for that parser,
 /// so the public entry point gives it one explicit fixed allocation.
 fn cli_main() -> ExitCode {
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(error) => return report_cli_parse_error(error),
+    };
     let mut journey = load_journey();
     let before = journey.clone();
     let earned_before = earned_names(&before, &load_scores());
-    let code = match Cli::parse().command {
+    let code = match cli.command {
         Some(command) => run(command, &mut journey),
         None => home(&journey),
     };
     finish_journey(&before, &journey, &earned_before);
     code
+}
+
+/// A stranger's most natural move is typing the thing they want to see.
+/// When the unknown token names a room, or lands near one, answer in the
+/// house voice with the bridge to it instead of a stock parser error.
+fn room_bridge_message(token: &str) -> Option<String> {
+    let id = numinous_core::echoable_id(token);
+    if numinous_core::room_by_id(token).is_some() {
+        return Some(format!(
+            "{id} is a room, not a command. Step inside: numinous watch {id}\n\
+             The story: numinous describe {id}\n"
+        ));
+    }
+    let suggestions = numinous_core::nearest_room_ids(token, numinous_core::MAX_ROOM_SUGGESTIONS);
+    let first = suggestions.first()?;
+    Some(format!(
+        "No command or room named '{id}'. Near rooms: {}. Step inside: numinous watch {first}\n",
+        suggestions.join(", "),
+    ))
+}
+
+/// Route an unknown subcommand that names a room to the bridge; leave every
+/// other parse outcome (help, version, command typos with clap's own
+/// did-you-mean) exactly as clap prints it, stream and exit code included.
+fn report_cli_parse_error(error: clap::Error) -> ExitCode {
+    let clap_suggests_a_command = error
+        .get(clap::error::ContextKind::SuggestedSubcommand)
+        .is_some();
+    if error.kind() == clap::error::ErrorKind::InvalidSubcommand
+        && !clap_suggests_a_command
+        && let Some(clap::error::ContextValue::String(token)) =
+            error.get(clap::error::ContextKind::InvalidSubcommand)
+        && let Some(message) = room_bridge_message(token)
+    {
+        report_diagnostic(&message);
+        // clap's usage-error code, so scripts see the same contract.
+        return ExitCode::from(2);
+    }
+    error.exit()
 }
 
 fn managed_install_root(executable: &Path) -> Result<PathBuf, String> {
@@ -2955,10 +2998,11 @@ fn describe_report(
             .map(|c| format!("\n\n{c}"))
             .unwrap_or_default();
         format!(
-            "{} ({})\nWing: {}\nAction: {action}{goal}\n\n{}{concept}\n\nReveal: {}\n{cuts}{reading}",
+            "{} ({})\nWing: {}\nAction: {}{goal}\n\n{}{concept}\n\nReveal: {}\n{cuts}{reading}",
             m.title,
             m.id,
             m.wing,
+            terminal_action_line(room.as_ref()),
             m.blurb,
             room.reveal()
         )
@@ -3011,6 +3055,79 @@ fn ansi_in_era(raster: &Raster, era: numinous_core::Era, color: bool) -> String 
     numinous_core::to_terminal(&styled, color)
 }
 
+/// The touch verbs this face cannot hear. A terminal has no mouse route, so
+/// printing these is an advertisement with no way to act; the honest copy
+/// names this face's own hands instead (`--poke x,y` and `--t`).
+const UNHEARD_TOUCH_VERBS: [&str; 3] = ["DRAG", "CLICK", "HOLD"];
+
+/// Drop gesture fragments (DRAG:TUNE, CLICK: SEED A GAP) from a status
+/// readout. Fragments run from the verb to the next double-space column gap
+/// or the end of the line, matching how room statuses lay out their columns.
+fn scrub_touch_fragments(status: &str) -> String {
+    let mut out = status.to_string();
+    for verb in UNHEARD_TOUCH_VERBS {
+        let marker = format!("{verb}:");
+        while let Some(start) = out.find(&marker) {
+            let end = out[start..].find("  ").map_or(out.len(), |gap| start + gap);
+            out.replace_range(start..end, "");
+        }
+    }
+    let mut tidy = out.trim().to_string();
+    while tidy.contains("   ") {
+        tidy = tidy.replace("   ", "  ");
+    }
+    tidy
+}
+
+/// The Action line, translated for a keyboard face: the lever keeps its
+/// name, and the hand becomes the flag that actually moves it here.
+fn terminal_action_line(room: &dyn Room) -> String {
+    match room.verb() {
+        Some(verb) => {
+            let lever = verb.split_once(':').map_or(verb, |(_, lever)| lever.trim());
+            format!(
+                "{lever} (the hand here: numinous room {} --poke x,y)",
+                room.meta().id
+            )
+        }
+        None => numinous_core::room_action(room).to_string(),
+    }
+}
+
+/// Arm Ctrl+C to flip a latch instead of killing the process mid-frame.
+/// Installing can fail (a prior handler, an exotic host); the loops then
+/// keep the old die-on-signal behavior rather than refusing to run.
+fn interrupt_latch() -> Option<std::sync::Arc<std::sync::atomic::AtomicBool>> {
+    let latch = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let flag = std::sync::Arc::clone(&latch);
+    ctrlc::set_handler(move || flag.store(true, std::sync::atomic::Ordering::SeqCst))
+        .ok()
+        .map(|()| latch)
+}
+
+fn interrupted(latch: &Option<std::sync::Arc<std::sync::atomic::AtomicBool>>) -> bool {
+    latch
+        .as_ref()
+        .is_some_and(|flag| flag.load(std::sync::atomic::Ordering::SeqCst))
+}
+
+/// The two-line exit that completes the staircase when Ctrl+C ends a live
+/// view: the first sentence of the reveal as a tease, then the route to the
+/// whole story. Leaving is the player's verb here, not an error.
+fn viewing_epilogue(room: &dyn Room) -> String {
+    let reveal = room.reveal();
+    let tease = reveal
+        .split_inclusive('.')
+        .next()
+        .unwrap_or(reveal)
+        .trim()
+        .to_string();
+    format!(
+        "\n{tease}\nThe story: numinous describe {}\n",
+        room.meta().id
+    )
+}
+
 /// One truecolor frame of a room with a status line, for the watch loop.
 fn watch_frame(
     room: &dyn Room,
@@ -3023,7 +3140,7 @@ fn watch_frame(
     room.render(&mut raster, t);
     let readout = room
         .status(t)
-        .map(|line| format!("   {line}"))
+        .map(|line| format!("   {}", scrub_touch_fragments(&line)))
         .unwrap_or_default();
     format!(
         // Cursor home and erase-line are cursor control, not color, so they
@@ -3072,9 +3189,14 @@ fn watch(
     let mut stdout = std::io::stdout();
     // Clear once; frames then repaint in place (no flicker).
     let _ = write!(stdout, "\x1b[2J");
+    let latch = interrupt_latch();
     let mut t = 0.0f64;
     let mut frame = 0u64;
     loop {
+        if interrupted(&latch) {
+            println!("{}", viewing_epilogue(room.as_ref()));
+            return ExitCode::SUCCESS;
+        }
         let _ = write!(
             stdout,
             "{}[J",
@@ -3314,16 +3436,21 @@ fn tour(
         Advance::Timer(frames) => frames,
     };
 
+    let latch = interrupt_latch();
     loop {
         for room in &rooms {
-            // The only exit from this loop is Ctrl+C, which never reaches
-            // finish_journey, so each visit persists as it happens or it
-            // never persists at all: a whole gallery watched and zero stars
-            // lit is a silent loss.
+            // Ctrl+C now lands on the epilogue below, but a latch that could
+            // not install still dies on the signal, so each visit persists as
+            // it happens or it never persists at all: a whole gallery watched
+            // and zero stars lit is a silent loss.
             let before = journey.clone();
             journey.visit(room.meta().id);
             persist_progress_or_warn(&before, journey);
             for frame in 0..frames_per_room {
+                if interrupted(&latch) {
+                    println!("{}", viewing_epilogue(room.as_ref()));
+                    return ExitCode::SUCCESS;
+                }
                 let t = frame as f64 / frames_per_room as f64;
                 let screen = tour_screen(room.as_ref(), t, width, height, style);
                 let _ = write!(stdout, "{screen}\x1b[J");
@@ -3417,9 +3544,9 @@ fn render_guidance(room: &dyn Room, t: f64, input: RoomRenderInput<'_>) -> Strin
     let inputs = accepted_inputs(t, input);
     let mut guidance = String::new();
     if let Some(status) = visible_status(room, t, input) {
-        guidance.push_str(&format!("Status: {status}\n"));
+        guidance.push_str(&format!("Status: {}\n", scrub_touch_fragments(&status)));
     }
-    guidance.push_str(&format!("Action: {}\n", numinous_core::room_action(room)));
+    guidance.push_str(&format!("Action: {}\n", terminal_action_line(room)));
     if let Some(goal) = room.goal() {
         guidance.push_str(&format!("Goal: {goal}\n"));
         if input.has_interaction() && room.goal_met(t, &inputs) {
@@ -5347,14 +5474,14 @@ fn play_frame(room: &dyn Room, t: f64, width: usize, height: usize) -> String {
     room.render(&mut canvas, t);
     let status = room
         .status(t)
-        .map(|readout| format!("   {readout}"))
+        .map(|readout| format!("   {}", scrub_touch_fragments(&readout)))
         .unwrap_or_default();
     // \x1b[2J clears the screen, \x1b[H moves the cursor home.
     format!(
         "\x1b[2J\x1b[H{}\n[{}]  {}   t = {t:.2}{status}   (Ctrl+C to stop)\n",
         canvas.to_text(),
         room.meta().title,
-        numinous_core::room_action(room)
+        terminal_action_line(room)
     )
 }
 
@@ -5374,9 +5501,14 @@ fn play(
     };
     let frame_time = Duration::from_secs_f64(1.0 / fps.max(1.0));
     let motion = numinous_core::Motion::from_env();
+    let latch = interrupt_latch();
     let mut stdout = std::io::stdout();
     let mut t = 0.0f64;
     loop {
+        if interrupted(&latch) {
+            println!("{}", viewing_epilogue(room.as_ref()));
+            return ExitCode::SUCCESS;
+        }
         let _ = write!(stdout, "{}", play_frame(room.as_ref(), t, width, height));
         let _ = stdout.flush();
         std::thread::sleep(frame_time);
@@ -5990,7 +6122,9 @@ mod tests {
         )
         .expect("known room");
         assert!(text.contains("Number & Pattern"));
-        assert!(text.contains("Action: DRAG: TURN THE DIAL"));
+        assert!(text.contains(
+            "Action: TURN THE DIAL (the hand here: numinous room times-tables --poke x,y)"
+        ));
         assert!(text.contains("Goal: LAND ON EXACTLY 4 LOBES"));
     }
 
@@ -6056,7 +6190,9 @@ mod tests {
         let text = render_report("times-tables", 40, 20, 0.0, false, RoomRenderInput::plain())
             .expect("known room");
         assert!(text.contains('*'));
-        assert!(text.contains("Action: DRAG: TURN THE DIAL"));
+        assert!(text.contains(
+            "Action: TURN THE DIAL (the hand here: numinous room times-tables --poke x,y)"
+        ));
         assert!(text.contains("Goal: LAND ON EXACTLY 4 LOBES"));
         assert!(!text.contains("Aha earned:"));
     }
@@ -6091,7 +6227,7 @@ mod tests {
         )
         .expect("ambient target render");
 
-        assert!(report.contains("Status: DRAG:DIAL  K 5.00  CLOSED  4 LOBES  TARGET 4"));
+        assert!(report.contains("Status: K 5.00  CLOSED  4 LOBES  TARGET 4"));
         assert!(!report.contains("FOUND"));
         assert!(!report.contains("Aha earned:"));
     }
@@ -6213,16 +6349,19 @@ mod tests {
             )
             .expect("catalog room renders");
             assert!(
-                report.contains(&format!("Status: {status}")),
-                "{} must expose its shared-core readout",
+                report.contains(&format!(
+                    "Status: {}",
+                    super::scrub_touch_fragments(&status)
+                )),
+                "{} must expose its shared-core readout, gesture verbs scrubbed",
                 room.meta().id
             );
             assert!(
                 report.contains(&format!(
                     "Action: {}",
-                    numinous_core::room_action(room.as_ref())
+                    super::terminal_action_line(room.as_ref())
                 )),
-                "{} must expose its shared-core action",
+                "{} must expose its action translated for a keyboard face",
                 room.meta().id
             );
             if let Some(goal) = room.goal() {
@@ -6372,8 +6511,8 @@ mod tests {
         let expected = format!(
             "{}Status: {}\nAction: {}\n",
             canvas.to_text(),
-            session.status(),
-            numinous_core::room_action(room.as_ref())
+            super::scrub_touch_fragments(&session.status()),
+            super::terminal_action_line(room.as_ref())
         );
 
         assert_eq!(report, expected);
@@ -7199,8 +7338,140 @@ mod tests {
         let room = numinous_core::room_by_id("times-tables").expect("room");
         let frame = super::play_frame(room.as_ref(), 0.0, 30, 15);
         assert!(frame.contains("Times Tables"));
-        assert!(frame.contains(numinous_core::room_action(room.as_ref())));
+        assert!(frame.contains(&super::terminal_action_line(room.as_ref())));
         assert!(frame.contains('*'));
+    }
+
+    #[test]
+    fn scrub_touch_fragments_drops_gesture_columns_and_keeps_readings() {
+        assert_eq!(
+            super::scrub_touch_fragments("gamma=0.70  DRAG:TUNE"),
+            "gamma=0.70"
+        );
+        assert_eq!(
+            super::scrub_touch_fragments("HOLD: POUR SAND  PILE 12"),
+            "PILE 12"
+        );
+        assert_eq!(super::scrub_touch_fragments("CLICK: SEED A GAP"), "");
+        assert_eq!(
+            super::scrub_touch_fragments("r=1.41  DRAG:R  agm=1.19"),
+            "r=1.41  agm=1.19"
+        );
+        assert_eq!(
+            super::scrub_touch_fragments("plain reading"),
+            "plain reading"
+        );
+    }
+
+    #[test]
+    fn terminal_action_line_translates_the_hand_and_keeps_the_lever() {
+        let room = numinous_core::room_by_id("agm-mean").expect("room");
+        let line = super::terminal_action_line(room.as_ref());
+        assert!(line.contains("TUNE R"), "lever lost: {line}");
+        assert!(line.contains("--poke"), "no terminal hand: {line}");
+        assert!(!line.contains("DRAG"), "gesture verb survives: {line}");
+        if let Some(ambient) = numinous_core::all_rooms()
+            .into_iter()
+            .find(|room| room.verb().is_none())
+        {
+            assert_eq!(
+                super::terminal_action_line(ambient.as_ref()),
+                numinous_core::DEFAULT_ROOM_ACTION
+            );
+        }
+    }
+
+    #[test]
+    fn no_live_frame_advertises_a_gesture_this_face_cannot_hear() {
+        // The critique that set this lock: watch and tour printed DRAG:TUNE
+        // with no input handling at all. The terminal face translates or
+        // scrubs; it never advertises a verb it has no route for. Tour
+        // frames ride watch_frame, so this covers all three live loops.
+        let style = super::TerminalStyle {
+            era: numinous_core::Era::parse("modern").expect("era"),
+            color: false,
+        };
+        for room in numinous_core::all_rooms() {
+            for t in [0.0, 0.35, 0.7] {
+                let watch = super::watch_frame(room.as_ref(), t, 40, 20, style);
+                let play = super::play_frame(room.as_ref(), t, 40, 20);
+                for verb in super::UNHEARD_TOUCH_VERBS {
+                    let marker = format!("{verb}:");
+                    assert!(
+                        !watch.contains(&marker),
+                        "{} watch frame advertises {marker} at t={t}",
+                        room.meta().id
+                    );
+                    assert!(
+                        !play.contains(&marker),
+                        "{} play frame advertises {marker} at t={t}",
+                        room.meta().id
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_room_typed_as_a_command_gets_the_bridge_not_a_parser_error() {
+        let message = super::room_bridge_message("times-tables").expect("bridge");
+        assert!(message.contains("is a room, not a command"), "{message}");
+        assert!(message.contains("numinous watch times-tables"), "{message}");
+        assert!(
+            message.contains("numinous describe times-tables"),
+            "{message}"
+        );
+    }
+
+    #[test]
+    fn a_near_room_token_bridges_with_suggestions() {
+        let message = super::room_bridge_message("times-table").expect("bridge");
+        assert!(message.contains("times-tables"), "{message}");
+        assert!(message.contains("numinous watch"), "{message}");
+    }
+
+    #[test]
+    fn garbage_tokens_stay_with_the_parser_voice() {
+        assert!(super::room_bridge_message("qqqqzzzzxxxxwwww").is_none());
+    }
+
+    #[test]
+    fn an_unknown_subcommand_error_carries_the_token_the_bridge_needs() {
+        // report_cli_parse_error extracts the offending token from clap's
+        // error context; this pins that contract against clap upgrades.
+        let error = match super::Cli::try_parse_from(["numinous", "times-tables"]) {
+            Ok(_) => panic!("a room id parsed as a subcommand"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), clap::error::ErrorKind::InvalidSubcommand);
+        let Some(clap::error::ContextValue::String(token)) =
+            error.get(clap::error::ContextKind::InvalidSubcommand)
+        else {
+            panic!("clap no longer exposes the invalid subcommand token");
+        };
+        assert_eq!(token, "times-tables");
+    }
+
+    #[test]
+    fn the_viewing_epilogue_teases_the_reveal_and_routes_to_the_story() {
+        let room = numinous_core::room_by_id("times-tables").expect("room");
+        let epilogue = super::viewing_epilogue(room.as_ref());
+        let mut lines = epilogue.trim().lines();
+        let tease = lines.next().expect("tease line");
+        assert!(tease.ends_with('.'), "one sentence: {tease}");
+        assert!(room.reveal().starts_with(tease), "not the reveal: {tease}");
+        assert_eq!(
+            lines.next(),
+            Some("The story: numinous describe times-tables")
+        );
+        assert_eq!(lines.next(), None, "the epilogue is two lines");
+    }
+
+    #[test]
+    fn an_absent_latch_never_reads_as_interrupted() {
+        // A host where the Ctrl+C handler cannot install keeps the old
+        // die-on-signal behavior; it must never fake an interrupt.
+        assert!(!super::interrupted(&None));
     }
 
     #[test]
@@ -7300,10 +7571,11 @@ mod tests {
     #[test]
     fn play_frames_always_lead_with_the_verb() {
         // Every catalog room answers the hand now; live play frames carry
-        // the room's own verb, never the generic fallback.
+        // the room's own lever, translated for a keyboard face, never the
+        // generic fallback.
         let room = numinous_core::room_by_id("slope-rider").expect("room");
         let frame = super::play_frame(room.as_ref(), 0.0, 30, 15);
-        assert!(frame.contains(room.verb().expect("slope-rider has a verb")));
+        assert!(frame.contains(&super::terminal_action_line(room.as_ref())));
         assert!(!frame.contains(numinous_core::DEFAULT_ROOM_ACTION));
     }
 
