@@ -159,9 +159,25 @@ impl Room for Partition {
     }
 
     fn reveal(&self) -> &'static str {
-        "The partition function p(n) counts ways to write n as a sum of positive \
-         integers ignoring order. Euler's pentagonal-number theorem gives a \
-         recurrence; Hardy and Ramanujan later found its explosive asymptotic growth."
+        "The partition function p(n) counts ways to write n as a sum of \
+         positive integers ignoring order. Euler's pentagonal-number theorem \
+         gives a recurrence, and Hardy and Ramanujan found its explosive \
+         growth. Then Ramanujan noticed something nobody was looking for: \
+         p(5n+4) is always divisible by 5, p(7n+5) by 7, p(11n+6) by 11. Pure \
+         counting, and yet it keeps perfect time with 5, 7, and 11, the \
+         primes watching from inside a sum that never mentions them."
+    }
+
+    fn deep_cuts(&self) -> &'static [&'static str] {
+        &[
+            "The three congruences are not a family that continues the obvious \
+             way: no such rule exists for 13. Why 5, 7, and 11 are special \
+             took until Ken Ono and the theory of modular forms to see whole.",
+            "Dyson demanded a reason you could hold: he conjectured the rank, \
+             and later the crank, statistics that split the p(5n+4) partitions \
+             into 5 equal classes, so the divisibility is visible one partition \
+             at a time. The crank was found forty years after he asked.",
+        ]
     }
 }
 

@@ -231,8 +231,10 @@ object over MCP.
 1. **Truth debts in the mathematics, fixed first** (they are the honesty
    bar, not a rock): Basel's wrong history and missing coprimality gem, the
    Totient RSA confusion, Cat Map's "eventually" periodic, the Mertens and
-   Gamma and Partition undersells, one capsule singing three different
-   songs across the faces, and the stale ROOMS.md checklist.
+   Gamma and Partition undersells, and the stale ROOMS.md checklist. The
+   one capsule singing three different songs across the faces
+   (`DEFAULT_MELODY_NOTES_PER_FACE`) is already a recorded owner decision
+   and stays parked with the tie unbroken.
 2. **The Wager Wave rides with the arc (rock 3).** One App keybinding poses
    any room's prediction through `predict.rs`; the Galton aha machine
    (whose wager PEDAGOGY.md already names and whose toy layer is done)

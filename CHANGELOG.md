@@ -5,6 +5,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The mathematics tells the whole truth now. Basel stops crediting
+  Euler's 1735 triumph to Fourier series that came seventy years later,
+  tells the sine-product story straight, and gains the gem the sum was
+  hiding: 6/pi^2 is the chance two random integers are coprime. Euler
+  Totient stops calling (p-1)(q-1) the RSA key size and says what the
+  congruence actually locks. The Cat Map claims its full miracle: on a
+  finite grid the map is a bijection, so the scrambled cat returns
+  exactly, not eventually. Mertens now carries its best story, the
+  conjecture every computation supported and Odlyzko and te Riele
+  proved false anyway with no counterexample ever seen. Gamma shows
+  Gamma(1/2) = sqrt(pi), the factorial of one half knowing the circle.
+  Partition gains Ramanujan's congruences, the primes keeping perfect
+  time inside a sum that never mentions them. The ROOMS.md checklist
+  stops marking four built rooms as unbuilt.
 - A second research fan-out asked what the product is missing as
   mathematics and as a creative instrument. Four verified reports are
   committed at `docs/evidence/math-creativity-2026-08.json` and
