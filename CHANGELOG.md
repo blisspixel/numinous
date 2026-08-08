@@ -5,6 +5,28 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Seven independent critics read the product whole, and the polish wave
+  they set is now a tracked goal with its evidence committed at
+  `docs/evidence/polish-critique-2026-08.json`. Its first workstream, the
+  truth defects the panels proved, is fixed.
+
+  The journey file capped stored visited tokens at 256 while the catalog
+  grew to 354, so every load quietly destroyed up to 98 of a
+  completionist's visits and unearned the all-rooms trophy; the cap is
+  1024 now, and a test ties it to the live registry count so catalog
+  growth can never outrun it again. Records already truncated on disk
+  cannot be recovered, and that is stated here rather than glossed. The
+  engineered aha's keystone, meeting your own wager against the truth, was
+  collected and then discarded on the MCP face; both flagship rooms now
+  return typed wager, truth, and band fields plus one graded sentence at
+  consolidation, non-punitive on a miss because the miss that meets the
+  truth is the fertile one. A dead daily streak displayed as alive on all
+  three faces that show it; a live chain still reads Streak N, a dead one
+  becomes Best chain N, a record rather than a claim. Zero never announces
+  as NEW BEST, because an aborted run's nothing must not wear a
+  celebration. And money never moves silently: tune2 names its key source,
+  names the paid API, and spends nothing without --yes, while the radio's
+  invitation now says which engine is paid and which is free.
 - A third hunt read the game flows on the terminal and MCP faces and found
   ten defects where the outcome shown did not depend on the play just made;
   all are fixed, and a new `game-truth` gate holds the worst of them at the

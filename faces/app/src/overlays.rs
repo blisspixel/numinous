@@ -187,8 +187,12 @@ pub(crate) fn journey_lines_with_controller(
         ),
         format!("{} PLAYS IN THIS LOCAL JOURNEY", journey.plays),
     ];
-    if journey.streak > 1 {
-        lines.push(format!("DAILY STREAK {}", journey.streak));
+    // A dead chain is a record, not a claim: showing it as alive sets up a
+    // small betrayal at the exact moment of the next daily play.
+    match journey.live_streak(crate::play::daily_seed()) {
+        Some(chain) if chain > 1 => lines.push(format!("DAILY STREAK {chain}")),
+        _ if journey.streak > 1 => lines.push(format!("BEST CHAIN {}", journey.streak)),
+        _ => {}
     }
     let earned: Vec<&str> = numinous_core::trophies(journey, board)
         .into_iter()

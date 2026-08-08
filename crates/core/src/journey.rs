@@ -37,7 +37,15 @@ pub struct Journey {
 pub const MAX_LEVEL: u32 = 42;
 const MAX_CONSTELLATION_WIDTH: usize = 240;
 const MAX_CONSTELLATION_HEIGHT: usize = 120;
-const MAX_STORED_TOKEN_COUNT: usize = 256;
+/// The most visited or chosen tokens a journey file keeps. A bound against
+/// hostile or corrupt files, never against honest play: it must exceed the
+/// whole catalog plus hidden rooms with room to grow, because a completionist
+/// who has seen every room is exactly the player whose record must survive.
+/// It once sat at 256 while the catalog grew to 354, and every load silently
+/// destroyed up to 98 visits and unearned the all-rooms trophy; a test now
+/// ties this bound to the live catalog count so growth can never outrun it
+/// again.
+const MAX_STORED_TOKEN_COUNT: usize = 1024;
 const MAX_STORED_TOKEN_LEN: usize = 128;
 
 /// The unlocks: level, what opens, and how it reads on the wall.
@@ -203,6 +211,20 @@ impl Journey {
         };
         self.last_daily = day;
         Some(self.streak)
+    }
+
+    /// The streak as it stands on `today`: `Some(chain)` while the chain is
+    /// alive (the last daily was today or yesterday), `None` once it is
+    /// dead. The stored count stays untouched as the record; this is the
+    /// display truth, because showing a dead chain as alive is not
+    /// kindness, it is misinformation timed to become a small betrayal at
+    /// the exact moment of the next play.
+    #[must_use]
+    pub fn live_streak(&self, today: u64) -> Option<u32> {
+        if self.streak == 0 || self.last_daily == 0 {
+            return None;
+        }
+        (today.saturating_sub(self.last_daily) <= 1).then_some(self.streak)
     }
 
     /// Serialize to the journey file format (plain lines, stable order).
@@ -551,12 +573,30 @@ mod tests {
     }
 
     #[test]
+    fn the_stored_token_cap_holds_the_whole_catalog_with_headroom() {
+        // The cap guards against hostile files, never against honest play.
+        // It once sat at 256 below the 354-room catalog, and every load
+        // quietly destroyed up to 98 of a completionist's visits and
+        // unearned the all-rooms trophy. Tying it to the live registry
+        // means catalog growth fails this test long before it can eat
+        // anyone's record again.
+        let rooms = crate::registry::all_rooms().len();
+        assert!(
+            super::MAX_STORED_TOKEN_COUNT >= rooms + 128,
+            "the stored token cap ({}) must exceed the {rooms}-room catalog \
+             with headroom for hidden rooms and growth",
+            super::MAX_STORED_TOKEN_COUNT
+        );
+    }
+
+    #[test]
     fn malformed_large_token_sets_are_bounded() {
-        let visited = (0..1_000)
+        let overflow = super::MAX_STORED_TOKEN_COUNT + 100;
+        let visited = (0..overflow)
             .map(|i| format!("room-{i}"))
             .collect::<Vec<_>>()
             .join(" ");
-        let chosen = (0..1_000)
+        let chosen = (0..overflow)
             .map(|i| format!("cut:room-{i}:0"))
             .collect::<Vec<_>>()
             .join(" ");
