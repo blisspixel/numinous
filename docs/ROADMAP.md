@@ -130,7 +130,13 @@ The workstreams, in landing order:
    copies have already drifted into a real disagreement (a veil gate that
    admits on one face and refuses on another); leaderboard identity, gate
    levels, and gauntlet scoring move into core; the three god-files keep
-   shrinking along the module seams the App has already proved.
+   shrinking along the module seams the App has already proved. Landed
+   first: the veil gate is one core rule on both faces with the 15-spark
+   listener driven through the MCP door by test, and the Munch score key
+   and clean-win rule are core functions instead of three inline copies.
+   The rest (state-file resolution chain, gauntlet scoring, god-file
+   seams, the RoomMeta table, face-agnostic request types) continues
+   under the drag report's map alongside the Sensory Lift.
 
 ### The Three Ceilings (August 2026): what holds exceptional back
 

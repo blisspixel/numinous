@@ -128,7 +128,8 @@ pub use journey::{
 pub use motifs::{MAX_ROOM_BED_EVENTS, Motif, ROOM_BED_SOURCE_RATE};
 pub use motion::{Motion, REDUCED_MOTION_VAR, setting_is_on};
 pub use munchers::{
-    Board, FULL_DECK_ROUND, Munched, board_text, build_board, grade as grade_munch,
+    Board, FULL_DECK_ROUND, Munched, board_text, build_board, clean_win as munch_clean_win,
+    grade as grade_munch, score_key as munch_score_key,
 };
 pub use nim::{
     apply as nim_apply, finished as nim_finished, new_game as nim_new, order_move as nim_order,
@@ -167,7 +168,7 @@ pub use room::{
     pokes_from_inputs, renderable_poke_count, room_action, room_touch_action,
 };
 pub use scores::Scoreboard;
-pub use secret::{akousma, deep_akousma};
+pub use secret::{akousma, behind_the_veil, deep_akousma};
 pub use seti::{SetiChannel, SetiScan, build_scan};
 pub use share::{
     ShareBundleMeta, ShareKind, ShareMeta, StudioShareMeta, create_share_bundle_dir, sidecar_path,

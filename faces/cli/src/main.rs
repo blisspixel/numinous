@@ -17,7 +17,7 @@ use std::time::Duration;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use numinous_core::{
-    CUT_LEVELS, Canvas, Journey, Rank, Raster, Room, RoomMeta, Surface, all_rooms, all_rooms_with,
+    CUT_LEVELS, Canvas, Journey, Raster, Room, RoomMeta, Surface, all_rooms, all_rooms_with,
     draw_text, hidden_room_by_id, room_by_id,
 };
 
@@ -1595,7 +1595,7 @@ fn find_room_with_variation(id: &str, allow_hidden: bool, variation: u64) -> Opt
 
 /// Run one command, recording the journey as it goes.
 fn run(command: Command, journey: &mut Journey) -> ExitCode {
-    let allow_hidden = journey.rank() >= Rank::Mathematikos;
+    let allow_hidden = numinous_core::behind_the_veil(journey);
     match command {
         Command::Access => {
             print!(
@@ -5493,8 +5493,8 @@ fn munch_with_input(
             .map(|n| n - 1)
             .collect();
         let outcome = numinous_core::grade_munch(&board, &bites);
-        post_score(&format!("munch seed:{seed} board:{round}"), outcome.score);
-        if outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0 {
+        post_score(&numinous_core::munch_score_key(seed, round), outcome.score);
+        if numinous_core::munch_clean_win(&outcome) {
             journey.win();
             println!(
                 "PERFECT. {} eaten, nothing wasted. +{} points.\n",

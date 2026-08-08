@@ -87,6 +87,19 @@ const DEEP_AKOUSMATA: &[(&str, &str)] = &[
     ),
 ];
 
+/// Whether this journey is inside the veil: rank Mathematikos or better,
+/// the rule the deep sayings themselves state.
+///
+/// This rule lives here, next to the sayings it guards, because it was once
+/// composed per face and drifted: one face held the gate at the documented
+/// rank (10 sparks) while another held it at 28, so the same listener was
+/// inside the veil on one face and refused on the other. A gate that
+/// disagrees with itself is not a gate; it is two doors wearing one name.
+#[must_use]
+pub fn behind_the_veil(journey: &crate::journey::Journey) -> bool {
+    journey.rank() >= crate::journey::Rank::Mathematikos
+}
+
 /// A deeper whisper, for those the caller has judged ready.
 ///
 /// The caller enforces rank; this function only knows the words.
@@ -101,6 +114,33 @@ pub fn deep_akousma(query: &str) -> Option<&'static str> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_veil_admits_at_the_documented_rank_on_every_face() {
+        // The rule the deep sayings state: Mathematikos or better, which the
+        // journey reaches past 10 sparks. This is the one gate both faces
+        // call; the drift it retired had the MCP face demanding 28 sparks
+        // while the terminal admitted at the documented rank, so a listener
+        // with 15 sparks was inside the veil on one face and refused on the
+        // other.
+        let mut journey = crate::journey::Journey::default();
+        journey.visit("a");
+        assert!(
+            !super::behind_the_veil(&journey),
+            "one spark is a listener, not a learner"
+        );
+        journey.wins = 5;
+        assert_eq!(journey.sparks(), 11, "the fixture drifted");
+        assert!(
+            super::behind_the_veil(&journey),
+            "past ten sparks the learner is inside"
+        );
+        assert!(
+            super::behind_the_veil(&journey)
+                == (journey.rank() >= crate::journey::Rank::Mathematikos),
+            "the gate and the rank must be one rule"
+        );
+    }
+
     use super::akousma;
 
     #[test]

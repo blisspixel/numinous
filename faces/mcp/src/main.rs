@@ -445,7 +445,8 @@ fn record_progress(request: &Value, path: &std::path::Path) {
             if let Some(id) = args.get("id").and_then(Value::as_str)
                 && room_by_id(id).is_none()
                 && (numinous_core::akousma(id).is_some()
-                    || (journey.sparks() >= 28 && numinous_core::deep_akousma(id).is_some()))
+                    || (numinous_core::behind_the_veil(&journey)
+                        && numinous_core::deep_akousma(id).is_some()))
             {
                 journey.secret();
             }
@@ -503,10 +504,10 @@ fn record_progress(request: &Value, path: &std::path::Path) {
                 let outcome = numinous_core::grade_munch(&board, &bites);
                 post_score(
                     &scores_path(),
-                    &format!("munch seed:{seed} board:{round}"),
+                    &numinous_core::munch_score_key(seed, round),
                     outcome.score,
                 );
-                if outcome.left_behind == 0 && outcome.bad_bites == 0 && outcome.hits > 0 {
+                if numinous_core::munch_clean_win(&outcome) {
                     journey.win();
                 }
             }
@@ -2713,13 +2714,18 @@ fn describe_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey
                 whisper,
                 json!({ "kind": "whisper", "id": id, "text": whisper }),
             ),
-            None if journey.sparks() >= 28 => match numinous_core::deep_akousma(id) {
-                Some(whisper) => tool_structured(
-                    whisper,
-                    json!({ "kind": "whisper", "id": id, "text": whisper }),
-                ),
-                None => tool_error(&unknown_room(id)),
-            },
+            // The veil rule is core's: this face once held its own gate at
+            // 28 sparks while the terminal held the documented rank, and
+            // the same listener was inside on one face and refused here.
+            None if numinous_core::behind_the_veil(journey) => {
+                match numinous_core::deep_akousma(id) {
+                    Some(whisper) => tool_structured(
+                        whisper,
+                        json!({ "kind": "whisper", "id": id, "text": whisper }),
+                    ),
+                    None => tool_error(&unknown_room(id)),
+                }
+            }
             None => tool_error(&unknown_room(id)),
         },
     }
@@ -8917,6 +8923,25 @@ plays 2
         assert_eq!(super::note_name(880.0), "A5");
         assert_eq!(super::note_name(261.63), "C4");
         assert_eq!(super::note_name(0.0), "-");
+    }
+
+    #[test]
+    fn a_learner_of_fifteen_sparks_is_inside_the_veil_on_this_face_too() {
+        // The drift this retires: this face demanded 28 sparks for the deep
+        // whispers while the terminal admitted at rank Mathematikos (10
+        // sparks, the rule the sayings document), so a listener with 15
+        // sparks heard the saying on one face and was refused on the other.
+        // Both faces now call core's behind_the_veil.
+        let mut journey = numinous_core::Journey::default();
+        journey.visit("a");
+        journey.wins = 7;
+        assert_eq!(journey.sparks(), 15, "the fixture drifted");
+        let reply = super::describe_room_tool_for_journey(&json!({ "id": "curtain" }), &journey);
+        let text = reply["content"][0]["text"].as_str().unwrap_or_default();
+        assert!(
+            text.contains("veil"),
+            "the deep whisper must answer a learner: {reply}"
+        );
     }
 
     #[test]
