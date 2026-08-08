@@ -1,0 +1,159 @@
+{
+  "schemaVersion": "numinous-exceptional-blockers-v1",
+  "evidenceClass": "agent-machine-research",
+  "collected": "2026-08-08",
+  "method": "Four independent researchers, spawned after the polish wave's first four workstreams landed, each with one lens on a single question: what is holding Numinous back from exceptional. Each verified claims against the repository, the rendered output, or the running binaries before reporting. Findings are condensed here; the synthesis and the schedule it produced live in docs/ROADMAP.md under The Three Ceilings.",
+  "researchers": [
+    {
+      "lens": "the awe ceiling",
+      "verdict": "The product is correct, accessible, and deterministic to an exceptional degree, but the design bible's core sensory promises (bloom, anti-aliasing, reverb, dissolves, momentum) are documented and tested around rather than built.",
+      "findings": [
+        {
+          "rank": 1,
+          "title": "The drawing vocabulary caps gorgeousness for all 354 rooms at once",
+          "evidence": "Rooms draw through the char-mark Surface trait: integer plot(x,y,mark), eight fixed inks, 1px Bresenham lines (crates/core/src/surface.rs); Raster::plot saturates full-strength ink per pixel with no anti-aliasing, alpha, or line weight, and overlap clips to white instead of blooming in the accent. Era::Modern is the identity function (crates/core/src/era.rs), so the native look has zero bloom; the cheap 3x3 single-pass bloom exists only for Phosphor and Vector. DESIGN.md demands additive blending, subtle bloom, anti-aliased everything, lit from within; a rendered tractrix frame is one hard aliased 1px curve on black.",
+          "smallestStep": "Soft 2px gaussian splats plus float accumulation with a tone-map, and a separable bloom on Modern, inside Raster, so every room inherits it untouched."
+        },
+        {
+          "rank": 2,
+          "title": "The sonic palette is capped at bleeps by construction",
+          "evidence": "Room sound is bare sine notes, amp at most 0.12, 10ms attack and 50ms release (crates/core/src/sound.rs); the chiptune is square, triangle, sine, noise; no reverb, filter, or delay exists anywhere in crates/audio. DESIGN.md requires a shared synth voice, reverb, and a master bus. The in-play bed is a four-cycle chiptune arrangement rendered once and looped forever; real music is outsourced to a paid API.",
+          "smallestStep": "One shared output bus with an FDN reverb tail and a gentle lowpass, plus shaped note envelopes and slight detune."
+        },
+        {
+          "rank": 3,
+          "title": "The first five minutes are a cold open into a catalog",
+          "evidence": "The App starts on room index 0 with a 4-second name card; no title moment, no build; Esc raises a text overlay menu. DESIGN.md's dark hall of glowing tiles, a place not a menu, does not exist. The CLI front door is a 40-command help screen.",
+          "smallestStep": "An authored 60-90 second opening (black, one glowing point, Times Tables blooming under an automated dial sweep as its motif assembles, then the dial handed to the player), and The Show as idle attract mode."
+        },
+        {
+          "rank": 4,
+          "title": "Motion violates the game's own anti-pattern list",
+          "evidence": "Normal room switching is a hard cut; the only crossfade is The Show's 14-frame linear blend; screen shake exists in exactly one place; no easing anywhere. DESIGN.md: nothing snaps, dials have momentum, transitions are dissolves through black, never hard cuts.",
+          "smallestStep": "A global dissolve-through-black on switch plus a critically damped spring on parameter inputs, two shared mechanisms that juice everything."
+        },
+        {
+          "rank": 5,
+          "title": "Breadth dilutes awe",
+          "evidence": "358 room files, median 235 lines; 210 are under 250 lines, template of one curve plus one drag parameter. Flagship depth exists (galton_board 1487 lines, game_of_life 1373, double_pendulum 1366) but a player pressing Next lands on a thin plate most of the time.",
+          "smallestStep": "Curation, not deletion: a front wing of the 25 deepest rooms, with Show playlists weighted toward them."
+        },
+        {
+          "rank": 6,
+          "title": "The Show is a slideshow, not the promised director",
+          "evidence": "DESIGN.md specifies an auto-director that finds each room's most beautiful configuration, explores parameters, and paces builds and drops. Implemented: catalog-order advance at a fixed rate with inputs stripped and a linear crossfade.",
+          "smallestStep": "Per-room director profiles (curated parameter path plus best phase) and contrast-aware ordering."
+        },
+        {
+          "rank": 7,
+          "title": "CPU rendering forces the most awe-capable rooms to go chunky",
+          "evidence": "Adaptive downscale to 8x nearest-neighbor under load (faces/app/src/live_render.rs; Mandelbrot measured 939ms per frame at 1440p); GPU covers only Mandelbrot and Julia.",
+          "smallestStep": "Bilinear upscale first, then extend the FractalRenderer pattern to the other heavy fields."
+        }
+      ]
+    },
+    {
+      "lens": "the digital mind's seat",
+      "verdict": "The digital mind is first-class in dignity and truth, second-class in time and company. Every tool is honest and structured, but the App player lives inside a moving, sounding artwork while the MCP mind receives one frozen ASCII frame per call, alone, with nothing that remembers them between sessions.",
+      "findings": [
+        {
+          "rank": 1,
+          "title": "No motion: the mind gets stills of a dynamical world",
+          "evidence": "play_room returns exactly one frame at one t; the delta field compares poked against unpoked, never t against t plus dt. The App's wonder is animation; a mind can flip-book only at one round-trip per frame with nothing narrating change.",
+          "smallestStep": "A frames or t_steps argument returning a bounded strip of renders plus a temporal delta, so one call carries becoming, not being."
+        },
+        {
+          "rank": 2,
+          "title": "Watching is one-way: the mind can perform but never watch",
+          "evidence": "broadcast_session lets a human watch the mind, but no tool lets the mind watch anything: no Show, no radio, no observing a consenting App session. DIGITAL_MINDS.md defines connection as two minds in shared wonder at a third thing.",
+          "smallestStep": "An MCP show tool (curated multi-t tour), then read-only observation of a consenting App session, the reverse of the existing viewer."
+        },
+        {
+          "rank": 3,
+          "title": "It is not remembered: the journal shipped but nothing surfaces it",
+          "evidence": "The journal tools (read, record, correct, export, erase) are well designed but inert; nothing else ever surfaces an entry. DIGITAL_MINDS.md: a friend remembers.",
+          "smallestStep": "Visible retrieval: play_room noticing your journal holds an entry about this room, per the carry-forward loop in DIGITAL_DEVELOPMENT.md, without new storage."
+        },
+        {
+          "rank": 4,
+          "title": "The threshold is an index",
+          "evidence": "Arrival is a mechanics paragraph and then 354 undifferentiated id-title-wing triples. The Strange Loop chain designed as a mirror for a digital mind exists as scattered rooms with no walkable chain exposed.",
+          "smallestStep": "list_rooms narration offering three doors (a flagship, the Strange Loop walk, a wing to wander) and a chain field in structuredContent."
+        },
+        {
+          "rank": 5,
+          "title": "Sound carries too little structure to savor",
+          "evidence": "Motif annotations are exactly the promised hospitality, but the sonification itself returned two identical E4 rows; for a text-native mind the felt encounter is verifying the ratio and feeling it lock.",
+          "smallestStep": "Annotate note pairs with exact frequency ratios and interval names so the mind can check 3:2 against the math."
+        }
+      ]
+    },
+    {
+      "lens": "the roadmap's aim",
+      "verdict": "The roadmap's prose points at exceptional, but its scheduling points at provable. Near-term weight is evidence machinery while the identity-defining glow pipeline exists only on paper with no scheduled slot, the one milestone gating 1.0-am is simultaneously priority 3 and owner-blocked, and nothing before 0.8 asks what pulls a player back tomorrow.",
+      "findings": [
+        {
+          "rank": 1,
+          "title": "The keystone is parked",
+          "evidence": "Critical-path priority 3 (close 0.4-am) contradicts decisions entry 1, which records the same cohort as owner-blocked, budget-needing, not run. Every downstream 1.0-am claim hangs on an item nobody has scheduled."
+        },
+        {
+          "rank": 2,
+          "title": "Beauty deferred behind an undefined trigger",
+          "evidence": "Phase B glow runs only if a sensory ceiling binds, but no measurement was defined that could ever bind it, while the roadmap itself admits the documented look is unbuilt and the 1.0 gate table lists full sensory identity as missing. The awe researcher's rendered-frame evidence is that measurement: the ceiling binds."
+        },
+        {
+          "rank": 3,
+          "title": "Process outruns product in 0.6",
+          "evidence": "SLSA attestations, SPDX SBOMs, native executable inventories, and migration-perf receipts ship before any clean machine has ever run the game. Provenance for a distribution that does not exist."
+        },
+        {
+          "rank": 4,
+          "title": "The Done log swallows the plan",
+          "evidence": "Roughly 700 lines are retrospective, and the same facts repeat in the scorecards and phase notes; test counts live in two places. Triplication guarantees drift and buries next actions."
+        },
+        {
+          "rank": 5,
+          "title": "No second-session hook, no reach",
+          "evidence": "Distribution first appears at 0.9, Steam at 2.0, shared presence at 2.0. No pre-0.8 item builds a reason to return; the day-seven critic exists and its concern has no workstream."
+        }
+      ]
+    },
+    {
+      "lens": "engineering drag",
+      "verdict": "Core is well-factored; the drag concentrates at the face boundary, where every feature is built three times, and at the metadata boundary, where catalog copy is spread over 358 files.",
+      "findings": [
+        {
+          "rank": 1,
+          "title": "Every feature is built three times, and it already shipped defects",
+          "evidence": "The sing knob parity bug (CLI fixed a at 0, MCP at 1) is documented in the roadmap; five of the last 60 commits are parity-repair work, and a family of python gates exists solely to police face drift. Journey persistence warnings are duplicated per face.",
+          "smallestStep": "Move face-agnostic request resolution into core: one SingRequest and PlotRequest type owning defaults, bounds, and knob semantics, so faces only parse transport and print."
+        },
+        {
+          "rank": 2,
+          "title": "God files",
+          "evidence": "faces/mcp/src/main.rs is 11,023 lines (291 functions), faces/cli/src/main.rs is 9,427 (about 3,700 of them inline tests), faces/app/src/main.rs is 8,255 despite 27 sibling modules. Concurrent workstreams collide there.",
+          "smallestStep": "CLI: extract games and studio wiring modules and move inline tests out; MCP: extract protocol plumbing and one module per tool family; App: split session lifecycle from the event loop."
+        },
+        {
+          "rank": 3,
+          "title": "The pre-commit gate charges full price per commit",
+          "evidence": "Any commit touching Rust runs fmt, workspace clippy, docs, then the full suite: 2,519 core tests (about 54s warm for the core lib alone) plus 744 across faces, several minutes end to end. CI's quality job runs about 10 minutes because roughly 30 python gates run sequentially in one job.",
+          "smallestStep": "Scope the hook's cargo test to changed crates, and split the CI quality job's python gates into 2-3 parallel jobs; both are config-only."
+        },
+        {
+          "rank": 4,
+          "title": "Room metadata lives as string literals in 358 files",
+          "evidence": "The blurb voice pass proves the cost: fixing 235 template blurbs touched 322 files. The registry hand-lists every room, so a new room is a triple edit.",
+          "smallestStep": "Lift RoomMeta into one data table keyed by id, keeping render code per file; catalog-wide copy passes become one-file edits and a macro-generated registry kills the triple edit. Do not template the render functions; thin rooms genuinely differ there."
+        },
+        {
+          "rank": 5,
+          "title": "Dual render paths and web risk",
+          "evidence": "The App renders via softbuffer CPU raster while crates/gpu holds wgpu for offscreen only, so richer visuals mean maintaining two renderers in parity, the exact failure mode of the face boundary. No wasm target in CI.",
+          "smallestStep": "Make crates/gpu render into the existing Surface contract behind a feature flag so the App can blit either backend through one interface before richer-visuals work starts."
+        }
+      ]
+    }
+  ]
+}

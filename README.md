@@ -71,9 +71,14 @@ Studio, controllers, and Watch Agent (consented local MCP session viewing).
 Package version stays alpha until the am-track exits land; capability is
 already past early 0.2 on that track. **0.2** and **0.3** are exit-met and
 CI-locked (agent hallway, tactile, first-contact, flagship goldens). Active
-product work is **0.4 Understanding Alpha** (method dry-run and dual automated
-auditors are in CI; calibrated cohort not run). Creator save/reopen and
-multi-room soak are automated. Nightly am-QA re-runs the full agent suite.
+product work is the **Polish Wave** (seven independent critics, seven
+workstreams; truth defects, reveal voice, per-face verb honesty, and the
+creator thread have landed) with the **Sensory Lift** scheduled next; the
+0.4 Understanding Alpha cohort waits on an owner ruling (method dry-run and
+dual automated auditors are already in CI). The creator loop is built end to
+end: save, exact paused reopen, one-key named share trio, Gallery wall with
+the remix tree, and fork with recorded lineage on both the App and the
+terminal. Nightly am-QA re-runs the full agent suite.
 Humans may play; product exits do not wait on human QA panels. Map:
 [`docs/ROADMAP.md`](docs/ROADMAP.md). Gates: [`VERIFY.md`](VERIFY.md). History:
 [`CHANGELOG.md`](CHANGELOG.md).

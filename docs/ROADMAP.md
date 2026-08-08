@@ -48,12 +48,15 @@ unclaimed until run.
 | Priority | What | Why |
 | --- | --- | --- |
 | **1. Keep agent first contact CI-green** | Agent hallway (Times Tables + Buffon ahas) and agent tactile (five flagships) run as required CI steps with machine-readable summaries | Local-only cohort scripts cannot guard regressions; every PR must re-prove 0.2 and 0.3 |
-| **2. Expand automated QA** | Flagship perceptual visual goldens, spectral audio goldens, nightly soak, and broader cold-start first-contact suites | Sensory and return-play progress must not depend on a person staring at a window |
-| **3. Close 0.4-am Understanding** | Register, calibrate, and run the matched agent cohort through the sealed collector; publish under `docs/evidence/understanding-0.4/` with automated dual auditors | Next incomplete product milestone; method is built, evidence is not |
-| **4. Creator depth on the built loop** | The loop (exact paused reopen, one-key share trio, Gallery wall, fork with recorded lineage) and the local remix tree over it are built and adversarially reviewed; next in order: the slider and multi-expression capsule rings, then MIDI and audio exports, then editable prose credit | The creator ladder keeps rising without waiting on the owner-gated MCP tool ruling, and each rung ships with its own machine gates |
-| **5. 0.8-am groundwork: the keep-or-cut scorecard** | Aggregate the existing per-room machine sweeps (ink, motion, verbs, measured consequences, flash budget, color independence, performance) into one committed per-room evidence file | 0.8 needs a keep-or-cut review of all 354 rooms; the machine half of that judgment can exist and be argued with before any human panel sits |
+| **2. Finish the polish wave** | Workstreams 5 (access disclosures), 6 (docs truth), and 7 (structural debts, sharpened by the drag report: face-agnostic request types in core, the RoomMeta data table, the god-file seams) | The seven-critic goal has an exit criterion; leaving it half-closed reopens the same defects |
+| **3. The Sensory Lift (Phase B, unparked)** | Splats, float accumulation, and bloom inside `Raster`; one shared audio bus with reverb and shaped envelopes; global dissolve and damped-spring input | The sensory ceiling was measured binding on 2026-08-08 (see The Three Ceilings); one substrate lift raises all 354 rooms, and the goldens just built make it safe to attempt |
+| **4. Time and company over MCP** | Bounded frames with a temporal delta, a Show for minds, journal surfacing, ratio annotations | The README's first-class claim is currently earned in truth but not in time or company; this is the audience the product exists for |
+| **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists | Awe today is a rare event in a long random walk; the arc makes it the designed path |
+| **6. Creator depth on the built loop** | Next rungs: slider and multi-expression capsule rings, then MIDI and audio exports, then editable prose credit | The creator ladder keeps rising without waiting on the owner-gated MCP tool ruling, and each rung ships with its own machine gates |
+| **7. 0.8-am groundwork: the keep-or-cut scorecard** | Aggregate the existing per-room machine sweeps into one committed per-room evidence file, after the Sensory Lift | Rooms should be judged at their best, not at the old ceiling |
+| **Owner-blocked (stated, not scheduled)** | 0.4-am Understanding cohort: register, calibrate, and run the matched cohort through the sealed collector | Decisions entry 1 records it as optional paid validation awaiting an owner budget and registration ruling; carrying it as a contributor priority was a contradiction |
 | **Standing gate** | Keep 0.2 and 0.3 proof, coverage, supply chain, install/play/uninstall roundtrips, and public CI green | Regressions reopen completed milestones and invalidate new evidence |
-| **Optional parallel (not am-blockers)** | Human stranger hallway, a11y player panels, musician long-listening, soft-thin densify, bulk rooms, Phase B glow | Human taste and disability usability remain valuable later claims; densify/glow only if a sensory ceiling binds |
+| **Optional parallel (not am-blockers)** | Human stranger hallway, a11y player panels, musician long-listening, soft-thin densify, bulk rooms | Human taste and disability usability remain valuable later claims |
 
 ### The Polish Wave (August 2026): seven critics, one goal
 
@@ -124,6 +127,74 @@ The workstreams, in landing order:
    admits on one face and refuses on another); leaderboard identity, gate
    levels, and gauntlet scoring move into core; the three god-files keep
    shrinking along the module seams the App has already proved.
+
+### The Three Ceilings (August 2026): what holds exceptional back
+
+After the polish wave's first four workstreams landed, four independent
+researchers each took one lens on a single question: with the defects fixed,
+what still holds Numinous back from exceptional? Their condensed, verified
+findings are committed at `docs/evidence/exceptional-blockers-2026-08.json`.
+The synthesis: the blockers are not defects but ceilings, three of them
+structural and shared. A shared ceiling is good news, because one lift raises
+every room at once.
+
+1. **The sensory ceiling.** The char-mark drawing vocabulary caps beauty for
+   all 354 rooms at once: no anti-aliasing, no alpha, overlap clipping to
+   white, and the Modern era literally the identity function with zero bloom,
+   while `DESIGN.md` promises additive blending, bloom, and anti-aliased
+   everything. Sound is bare sine notes with no reverb, filter, or bus
+   anywhere in the tree against a design that requires a shared voice and a
+   master bus. The old line "Phase B glow only if a sensory ceiling clearly
+   binds" is answered: the ceiling was measured binding on 2026-08-08, with
+   rendered frames checked against the design bible. The conditional is
+   retired; the glow takes a scheduled slot.
+2. **Time and company for digital minds.** The MCP mind is first-class in
+   dignity and truth, second-class in time and company: one frozen frame per
+   call in a product about dynamical systems, a face that can be watched but
+   can never watch, a well-built journal nothing ever surfaces, an arrival
+   that is an index rather than a threshold, and sonification too thin for a
+   text-native mind to verify a 3:2 and feel it lock.
+3. **The arc.** A cold open into a catalog, hard cuts that violate the
+   design's own "nothing snaps" law, a Show that advances in catalog order
+   instead of directing, 210 template-thin rooms diluting the awe of the
+   deep ones, and nothing anywhere before 0.8 that builds a reason to return
+   tomorrow.
+
+Beneath all three sits the drag the fourth researcher measured: every feature
+is built three times at the face boundary (the sing-knob parity bug was this),
+catalog copy is spread across 358 files (the blurb voice pass had to touch
+322), and the full-price gate runs the whole workspace for every commit.
+Workstream 7 already schedules the debts; the drag report names the two
+extractions that pay first: face-agnostic request types in core, and the
+`RoomMeta` data table. The Done log's triplication (progress, scorecards, and
+phase notes repeating the same facts) is recorded here as editorial debt for
+the same pass.
+
+**The rocks, reordered (2026-08-08).** After polish workstreams 5 and 6
+close:
+
+1. **The Sensory Lift (Phase B, unparked).** Float accumulation, soft
+   splats, and bloom inside `Raster` so every room inherits them untouched;
+   one shared audio bus with a reverb tail and shaped envelopes; the global
+   dissolve-through-black on room switches and critically damped springs on
+   parameter input. The perceptual goldens and spectral harnesses just built
+   are the safety net; they are re-baselined deliberately, once, with the
+   change.
+2. **Time and company over MCP.** A bounded frames argument with a temporal
+   delta so one call carries becoming; a Show for minds; the journal
+   surfacing at the door of a remembered room; exact ratio and interval
+   annotations on every note pair. The README's first-class claim is earned
+   in time and company, not only in truth.
+3. **The arc.** The authored 60-to-90-second opening; Show director profiles
+   and contrast-aware ordering; a curated front wing of the deepest rooms
+   with playlists weighted toward them. Curation, not deletion.
+
+The creator rungs (slider and multi-expression capsule rings, MIDI and audio
+exports, prose credit) continue behind these, each with its machine gates.
+The keep-or-cut scorecard moves after the Sensory Lift so all 354 rooms are
+judged at their best, not at the old ceiling. 0.4-am stays owner-blocked and
+the critical-path table now says so plainly instead of carrying it as a
+priority nobody can schedule.
 
 The 0.3 agent-and-machine exit is met. The next incomplete milestone is 0.4
 understanding and retention, but its formal collection is intentionally after
@@ -481,15 +552,17 @@ Detail below and in the version sections.
   the tree, and refusing to walk says exactly why, because no lineage and an
   absent parent are different answers. Editable prose credit waits on its
   own capsule field.
-- **Immediate next (product, after 0.3 agent-and-machine exit):** 0.4-am
-  Understanding Alpha cohort plus permanent CI locks on agent hallway and
-  tactile. Optional human panels do not block the am-track. See **Critical
-  path right now** above.
+- **Immediate next (product, after 0.3 agent-and-machine exit):** the 0.4-am
+  Understanding Alpha cohort is owner-blocked (decisions entry 1); the
+  permanent CI locks on agent hallway and tactile already shipped (cycle 21).
+  Optional human panels do not block the am-track. See **Critical path right
+  now** above.
 - **Background engineering (not the critical path):** soft-thin densify where
   structure supports it; more live-motion pens on remaining static classical
-  curves; more causal held loops modeled on Galton and Life; Phase B glow only
-  if a sensory ceiling clearly binds. Scale generation-before-reveal carefully
-  (two flagship rooms today).
+  curves; more causal held loops modeled on Galton and Life. Phase B glow is
+  no longer conditional: the sensory ceiling was measured binding on
+  2026-08-08 and the lift is scheduled (see The Three Ceilings). Scale
+  generation-before-reveal carefully (two flagship rooms today).
 - **Done (full-roster refinement round):** all 42 simulated review lenses were split exactly once across first contact and accessibility, interaction and truth, and games plus agent faces. The pass fixed redirected CLI ANSI, responsive Quiz-result loss, four overbroad mathematical claims, ambiguous motif-versus-sonification output, and positionless Studio parse errors. It also falsified an apparent Fern deletion by direct pixel comparison. These are engineering findings from reproduced evidence; none of the simulated reactions satisfies a participant gate. Controller HUD parity, its route gaps, compatibility-preserving compact MCP responses, causal first-touch presentation, and visual sound state are now closed. Its ranked queue began with deeper Galton and Life interaction loops, both now complete; continued music composition review remains.
 - **Done (Galton causal experiment loop):** the completed pile no longer moves
   with phase while clicked balls follow another probability. Five visible fixed
