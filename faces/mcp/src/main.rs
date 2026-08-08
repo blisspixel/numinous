@@ -3615,7 +3615,15 @@ fn project_flagship_aha(
                 }
                 advance_galton_to_consolidated(&mut aha);
             }
-            let room_status = None::<String>;
+            // Unlike Buffon's compact footer, the pile readout must ride
+            // every beat: an interaction's status keeps showing what the
+            // interaction did (the frozen understanding-study contract
+            // checks exactly this), and the invite appends to it instead
+            // of replacing it.
+            let galton: Box<dyn numinous_core::Room> = Box::new(
+                numinous_core::rooms::galton_board::GaltonBoard::new_with(variation),
+            );
+            let room_status = galton.status_input(t, inputs).or_else(|| galton.status(t));
             Ok(Some(json!({
                 "kind": "bin",
                 "beat": aha.beat_label(),
@@ -9405,6 +9413,27 @@ plays 2
                 "bin_wager": 8
             }),
         );
+        // The interaction shape the frozen study drives: pokes with no
+        // wager. The top-level status must keep the pile readout even while
+        // the prime invite rides beside it.
+        let primed = call(
+            "play_room",
+            json!({"id": "galton-board", "width": 48, "height": 24, "t": 0.25,
+                   "pokes": [[0.5, 0.5]]}),
+        );
+        let status = primed["result"]["structuredContent"]["status"]
+            .as_str()
+            .expect("status")
+            .to_string();
+        assert!(
+            status.contains("P.50"),
+            "the pile readout must survive prime: {status}"
+        );
+        assert!(
+            status.contains("PEAK?"),
+            "the invite rides beside it: {status}"
+        );
+
         let content = &wagered["result"]["structuredContent"];
         assert_eq!(content["engineeredAha"]["beat"], "withheld");
         assert_eq!(content["engineeredAha"]["kind"], "bin");
