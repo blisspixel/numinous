@@ -5,14 +5,15 @@ instrument and a shader toy. You type a little math, and it instantly *draws*
 and *sings*. This is the "Create" posture (see `DESIGN.md`), and it is a core
 part of the experience rather than a bonus feature.
 
-**Implementation boundary, 2026-07-13:** 0.2.0-alpha.4 ships a bounded scalar
+**Implementation boundary, 2026-08-08:** 0.2.0-alpha.4 ships a bounded scalar
 expression parser and evaluator, animated plots, deterministic melody mapping,
-an editable app panel, CLI and MCP operations, and first-version `.num` plus
-link round trips in the CLI. Parse diagnostics use one-based source columns and
-name the expected expression input across every face. Pattern algebra, tracker,
-step grid, piano roll,
-MIDI, raw shader authoring, app reopen, gallery, remix, and community rooms are
-design targets. `ROADMAP.md` is the status authority.
+an editable app panel, CLI and MCP operations, `.num` plus link round trips on
+both faces, exact app reopen (launch argument, dropped file, or link), the F5
+Gallery wall with its remix tree, fork with recorded lineage on the App and
+the terminal, and the F4 naming step. Parse diagnostics use one-based source
+columns and name the expected expression input across every face. Pattern
+algebra, tracker, step grid, piano roll, MIDI, raw shader authoring, and
+community rooms are design targets. `ROADMAP.md` is the status authority.
 
 ## The one-liner
 
@@ -344,7 +345,7 @@ proven by the future pattern implementation, not assumed from the design.
 
 ## Sharing and safety
 
-- **Native sharing:** a creation is text plus deterministic parameters, exported as a clip and a `.num` file / `numinous://` link that reopens it exactly in the app. The first CLI `.num` file/link save and `open-studio` path now exists for expression plots, and the app reopens a capsule exactly from a `.num` file or link; clips and gallery flow still need to land before this promise is complete (see `ARCHITECTURE.md`, `ROADMAP.md`).
+- **Native sharing:** a creation is text plus deterministic parameters, exported as a `.num` file / `numinous://` link that reopens it exactly in the app, a signed postcard, and a share bundle. Save, reopen, gallery, and fork all ship on both faces; the animated clip export is the piece of this promise still to land (see `ARCHITECTURE.md`, `ROADMAP.md`).
 - **Sandboxing (important):** community Studio code is untrusted and must run sandboxed, no filesystem, no network, resource/time limits, GPU work through the safe pipeline only. This is a hard requirement for the mod SDK and a `QUALITY.md` concern (fault injection and fuzzing of untrusted patterns).
 
 ## Roadmap position

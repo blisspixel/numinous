@@ -2530,9 +2530,10 @@ fn access_settings(
         AccessSetting {
             variable: "NO_COLOR",
             what: &[
-                "No color anywhere: rooms, chrome and games alike. Shapes and",
-                "letters carry the meaning instead. This is the shared",
-                "convention from no-color.org, not one of ours.",
+                "No color in the terminal faces: rooms, chrome and games",
+                "alike. Shapes and letters carry the meaning instead. This is",
+                "the shared terminal convention from no-color.org, not one of",
+                "ours; the windowed App keeps its Visual Eras instead.",
             ],
             on: !color_allowed_for(no_color),
         },
@@ -8307,6 +8308,7 @@ mod tests {
         // lists the registry tests enforce, and this proves the plumbing:
         // every listed room appears in the report itself.
         let report = super::access_report(&super::access_settings(None, None, None));
+        const PLAYING: &str = include_str!("../../../docs/PLAYING.md");
         for room in numinous_core::KNOWN_OVER_FLASH_BUDGET
             .iter()
             .chain(numinous_core::RESPONSE_INVISIBLE_WITHOUT_COLOR.iter())
@@ -8314,6 +8316,10 @@ mod tests {
             assert!(
                 report.contains(room),
                 "the access report no longer names {room}"
+            );
+            assert!(
+                PLAYING.contains(room),
+                "docs/PLAYING.md's disclosure no longer names {room}"
             );
         }
         assert!(
