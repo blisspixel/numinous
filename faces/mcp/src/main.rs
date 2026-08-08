@@ -1594,8 +1594,11 @@ fn build_tools_catalog() -> Value {
                         "bin_wager": {
                             "type": "integer",
                             "minimum": 0,
-                            "maximum": 16,
-                            "description": "Galton Board engineered aha only: commit the bin (0..16 right turns) where the whole pile will peak. Graded against the binomial's true mode for the selected coin, not against one ball's luck."
+                            "maximum": numinous_core::rooms::galton_board::BOARD_ROWS,
+                            "description": format!(
+                                "Galton Board engineered aha only: commit the bin (0..{} right turns) where the whole pile will peak, after at least one wave of pokes. Graded against the binomial's true mode for the selected coin, not against one ball's luck.",
+                                numinous_core::rooms::galton_board::BOARD_ROWS
+                            )
                         },
                         "aha_summon": {
                             "type": "boolean",
@@ -3597,8 +3600,14 @@ fn project_flagship_aha(
             // from; with no waves yet the fair coin is the honest default.
             let coin =
                 numinous_core::rooms::galton_board::selected_coin_from_inputs(inputs).unwrap_or(2);
-            if let Some(bin) = request.bin_wager {
-                let _ = aha.commit_wager(bin, coin);
+            if let Some(bin) = request.bin_wager
+                && !aha.commit_wager(bin, coin)
+                && !aha.earned()
+            {
+                return Err(
+                    "bin_wager needs a pile to bet on: drop at least one wave of pokes first."
+                        .to_string(),
+                );
             }
             if request.summon {
                 if !aha.earned() {
@@ -3631,7 +3640,7 @@ fn project_flagship_aha(
         _ => {
             if request.uses_generation_args() {
                 return Err(
-                    "Engineered aha arguments are only valid on Times Tables, Buffon's                      Needle, or the Galton Board."
+                    "Engineered aha arguments are only valid on Times Tables, Buffon's Needle, or the Galton Board."
                         .to_string(),
                 );
             }

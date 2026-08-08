@@ -2316,7 +2316,6 @@ impl App {
                     && matches!(
                         self.galton_aha.beat(),
                         numinous_core::rooms::galton_aha::AhaBeat::Prime
-                            | numinous_core::rooms::galton_aha::AhaBeat::Explore
                     )
                 {
                     let bin = numinous_core::rooms::galton_board::bin_from_unit_x(point.0);
