@@ -5,6 +5,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Access disclosures now reach the player. The numinous access report
+  names the rooms on the two known-limit lists itself, from the same
+  public constants the registry tests enforce, so its counts can never
+  drift from the code again (it once said three color-free offenders
+  while the list held four) and it no longer points at a repository
+  file installs do not ship. The reduced-motion copy stops overclaiming:
+  ambient motion stops, short App feedback beats still play, the
+  terminal face holds completely still, in the report and in
+  PLAYING.md alike. The keyboard-to-touch boundary is stated plainly in
+  both places: the keyboard reaches every menu, game, quiz, and
+  formula, and the hand verbs inside App rooms need a mouse or a
+  controller today. And every refusal banner in the App now lives 240
+  frames instead of 90, at least as long as the decorative banners,
+  because a refusal carries a reason the player must actually read.
 - Four researchers took one lens each on a single question: with the
   polish wave's first four workstreams landed, what still holds
   Numinous back from exceptional? Their verified findings are committed at

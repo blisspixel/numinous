@@ -98,6 +98,10 @@ names and use generic compass names for unknown pads. Those legends describe
 the default layout; custom button routing is documented in `../PLAY.md` and
 does not rewrite the on-screen copy. The Studio can be entered and left with a controller,
 but formula entry requires a keyboard and the footer states that boundary.
+The reverse boundary holds too, stated rather than implied: the keyboard
+reaches every menu, game, quiz, and formula, but the hand verbs inside App
+rooms (drag, click, hold) need a mouse or a controller today. `numinous
+access` states both boundaries.
 
 A saved creation reopens exactly. Launch the App with a `.num` path or a
 `numinous://studio` link, or drop a `.num` file on the window, and the Studio
@@ -242,9 +246,11 @@ list and shows which of them are on right now, which is the quickest way to
 check that a switch took.
 
 ```
-NUMINOUS_REDUCED_MOTION   Nothing moves unless you move it. Rooms hold a still
-                          frame rather than stopping dead, and The Show waits
-                          for you instead of changing rooms on a timer.
+NUMINOUS_REDUCED_MOTION   Ambient motion stops: rooms hold a still frame rather
+                          than stopping dead, and The Show waits for you instead
+                          of changing rooms on a timer. Short feedback beats in
+                          the App (banners, aha morphs, arrival cards) still
+                          play; the terminal face holds completely still.
 
 NUMINOUS_MONO_AUDIO       Both channels carry the same sound, so nothing is
                           lost on one ear or one speaker.

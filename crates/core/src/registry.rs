@@ -417,6 +417,29 @@ pub fn room_by_id(id: &str) -> Option<Box<dyn Room>> {
     all_rooms().into_iter().find(|room| room.meta().id == id)
 }
 
+/// Rooms measured over the WCAG 2.3.1 flash budget on 2026-08-05.
+///
+/// This list is a record of a real defect, not a permission slip. It exists
+/// so the budget can be enforced on the other rooms today instead of waiting
+/// for these to be redesigned, and tests fail if the list grows, if an entry
+/// stops violating and is not removed, or if a room outside it starts
+/// flashing. It is public so the accessibility report can name these rooms
+/// to the player from the same list the tests enforce: a count that lives
+/// in prose drifts, a count that lives here cannot.
+pub const KNOWN_OVER_FLASH_BUDGET: [&str; 3] = ["coupled-tent", "gauss-map", "ricker"];
+
+/// Rooms whose answer to a touch the color-free renderer cannot show,
+/// measured 2026-08-05.
+///
+/// The first three need the room to answer with shape rather than only
+/// brightness; `magnet-fractal` changes both-lit cells by too little
+/// luminance to survive the block-character floor. A record of a real
+/// defect, not a permission slip, public for the same reason as
+/// [`KNOWN_OVER_FLASH_BUDGET`]: the player-facing report and the enforcing
+/// tests must read one list.
+pub const RESPONSE_INVISIBLE_WITHOUT_COLOR: [&str; 4] =
+    ["hilbert", "magnet-fractal", "percolation", "wireworld"];
+
 /// The longest rejected id a not-found message will echo back. Beyond this the
 /// tail is dropped, so a hostile or accidental megabyte cannot become the
 /// message.
@@ -835,20 +858,12 @@ mod tests {
         assert_eq!(unique, ids.len(), "room ids must be unique");
     }
 
-    /// Rooms measured over the WCAG 2.3.1 flash budget on 2026-08-05, at the
-    /// declared reference size below.
-    ///
-    /// This list is a record of a real defect, not a permission slip. It exists
-    /// so the budget can be enforced on the other 351 rooms today instead of
-    /// waiting for these to be redesigned, and the test below fails if the list
-    /// grows, if an entry stops violating and is not removed, or if a room
-    /// outside it starts flashing.
-    ///
-    /// Each of these renders a chaotic map whose point density changes sharply
-    /// with phase. Fixing them means changing what they draw, which is a
-    /// mathematical-truth decision and not something to rush inside an
-    /// accessibility cycle. Tracked in `docs/ROADMAP.md` under 0.5 Sensory.
-    const KNOWN_OVER_FLASH_BUDGET: [&str; 3] = ["coupled-tent", "gauss-map", "ricker"];
+    /// Each of these renders a chaotic map whose point density changes
+    /// sharply with phase. Fixing them means changing what they draw, which
+    /// is a mathematical-truth decision and not something to rush inside an
+    /// accessibility cycle. Tracked in `docs/ROADMAP.md` under 0.5 Sensory;
+    /// the list itself is the public one the access report prints.
+    use super::KNOWN_OVER_FLASH_BUDGET;
 
     #[test]
     fn every_room_waiting_on_a_decision_is_named_where_the_owner_reads() {
@@ -1151,9 +1166,9 @@ mod tests {
     /// The list is a record of a real defect, not a permission slip. The test
     /// below fails if it grows, if an entry starts responding and is not
     /// removed, or if a room outside it goes quiet. Tracked in
-    /// `docs/ROADMAP.md` under 0.5 Sensory.
-    const RESPONSE_INVISIBLE_WITHOUT_COLOR: [&str; 4] =
-        ["hilbert", "magnet-fractal", "percolation", "wireworld"];
+    /// `docs/ROADMAP.md` under 0.5 Sensory; the list itself is the public
+    /// one the access report prints.
+    use super::RESPONSE_INVISIBLE_WITHOUT_COLOR;
 
     /// Rooms whose picture does not change at all under a center poke,
     /// measured 2026-08-05 at 120 by 70. They still answer on the status line,
