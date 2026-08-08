@@ -131,8 +131,8 @@ The workstreams, in landing order:
 ### The Three Ceilings (August 2026): what holds exceptional back
 
 After the polish wave's first four workstreams landed, four independent
-researchers each took one lens on a single question: with the defects fixed,
-what still holds Numinous back from exceptional? Their condensed, verified
+researchers each took one lens on a single question: with the first four
+workstreams landed, what still holds Numinous back from exceptional? Their condensed, verified
 findings are committed at `docs/evidence/exceptional-blockers-2026-08.json`.
 The synthesis: the blockers are not defects but ceilings, three of them
 structural and shared. A shared ceiling is good news, because one lift raises
@@ -170,7 +170,7 @@ extractions that pay first: face-agnostic request types in core, and the
 phase notes repeating the same facts) is recorded here as editorial debt for
 the same pass.
 
-**The rocks, reordered (2026-08-08).** After polish workstreams 5 and 6
+**The rocks, reordered (2026-08-08).** After polish workstreams 5 to 7
 close:
 
 1. **The Sensory Lift (Phase B, unparked).** Float accumulation, soft
