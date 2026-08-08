@@ -102,8 +102,8 @@ does not rewrite the on-screen copy. The Studio can be entered and left with a c
 but formula entry requires a keyboard and the footer states that boundary.
 The reverse boundary holds too, stated rather than implied: the keyboard
 reaches every menu, game, quiz, and formula, but the hand verbs inside App
-rooms (drag, click, hold) need a mouse or a controller today. `numinous
-access` states both boundaries.
+rooms (drag, click, hold) need a mouse or a controller today. The
+`numinous access` report states both boundaries.
 
 A saved creation reopens exactly. Launch the App with a `.num` path or a
 `numinous://studio` link, or drop a `.num` file on the window, and the Studio
