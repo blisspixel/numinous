@@ -102,7 +102,7 @@ impl Room for Lissajous3d {
             id: "lissajous-3d",
             title: "Lissajous 3D",
             wing: "Waves & Sound",
-            blurb: "Three orthogonal sines draw a space knot. t and DRAG: TUNE RATIO.",
+            blurb: "Three orthogonal sines draw a space knot.",
             accent: [30, 140, 120],
         }
     }

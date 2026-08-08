@@ -1,7 +1,7 @@
 //! Pickover attractor: nested trig map with a characteristic swirl.
 //!
 //! x' = sin(a y) - z cos(b x); y' = z sin(c x) - cos(d y); z' = sin(x).
-//! Projected to xy. DRAG: TUNE A AND B. See `docs/ROOMS.md`.
+//! Projected to xy. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -144,7 +144,7 @@ impl Room for Pickover {
             id: "pickover",
             title: "Pickover Attractor",
             wing: "Motion & Dynamics",
-            blurb: "Clifford Pickover's nested trig map, projected. t and DRAG: TUNE A AND B.",
+            blurb: "Clifford Pickover's nested trig map, projected.",
             accent: [220, 100, 60],
         }
     }

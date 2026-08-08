@@ -2,8 +2,7 @@
 //!
 //! A 2-symbol Turing machine with n states has a champion that writes the most
 //! 1s before halting. BB(5) = 47,176,870 (bbchallenge 2024). This room runs a
-//! tiny toy champion path for small n so the stop is felt; CLICK: FLIP ONE RULE
-//! mutates a transition. See `docs/ROOMS.md`.
+//! tiny toy champion path for small n so the stop is felt. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -182,8 +181,7 @@ impl Room for BusyBeaver {
             title: "The Busy Beaver",
             wing: "Number & Pattern",
             blurb: "A tiny Turing machine races to write ones then halt. BB(5)=47,176,870 is proven; \
-                    here a toy champion stops on purpose. t extends the step budget; CLICK: FLIP \
-                    ONE RULE.",
+                    here a toy champion stops on purpose. t extends the step budget.",
             accent: [120, 80, 200],
         }
     }

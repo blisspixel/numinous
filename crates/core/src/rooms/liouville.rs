@@ -115,7 +115,7 @@ impl Room for Liouville {
             id: "liouville",
             title: "Liouville Function",
             wing: "Number & Pattern",
-            blurb: "lambda(n) by total prime factors; L(n) sum. t and DRAG: TUNE N.",
+            blurb: "lambda(n) by total prime factors; L(n) sum.",
             accent: [100, 40, 100],
         }
     }

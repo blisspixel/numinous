@@ -107,7 +107,7 @@ impl Room for Stirling {
             id: "stirling",
             title: "Stirling Approx",
             wing: "Number & Pattern",
-            blurb: "n! vs sqrt(2 pi n)(n/e)^n on a log scale. t and DRAG: TUNE N.",
+            blurb: "n! vs sqrt(2 pi n)(n/e)^n on a log scale.",
             accent: [80, 60, 140],
         }
     }

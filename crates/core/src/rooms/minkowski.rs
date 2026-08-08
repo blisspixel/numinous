@@ -1,6 +1,6 @@
 //! Minkowski sausage (question-mark related polycurve toy): alternating Koch.
 //!
-//! A quadratic Koch variant with alternating turns. DRAG: SET THE ORDER.
+//! A quadratic Koch variant with alternating turns.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -119,7 +119,7 @@ impl Room for Minkowski {
             id: "minkowski-sausage",
             title: "Minkowski Sausage",
             wing: "Fractals",
-            blurb: "Quadratic Koch sausage: a thick fractal polyline. t and DRAG: SET THE ORDER.",
+            blurb: "Quadratic Koch sausage: a thick fractal polyline.",
             accent: [160, 120, 40],
         }
     }

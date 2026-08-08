@@ -1,6 +1,6 @@
 //! Folium of Descartes: the classical cubic x^3 + y^3 = 3 a x y.
 //!
-//! Ambient phase draws the leaf with a pen. DRAG: TUNE A.
+//! Ambient phase draws the leaf with a pen.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -157,7 +157,7 @@ impl Room for Folium {
             id: "folium",
             title: "Folium",
             wing: "Shape & Space",
-            blurb: "Descartes leaf draws its loop and asymptote. Watch the pen; DRAG: TUNE A.",
+            blurb: "Descartes leaf draws its loop and asymptote. Watch the pen.",
             accent: [60, 140, 80],
         }
     }

@@ -114,7 +114,7 @@ impl Room for Multibrot {
             id: "multibrot",
             title: "Multibrot",
             wing: "Fractals",
-            blurb: "z^d + c: Mandelbrot power raised. t and DRAG: TUNE POWER AND WINDOW.",
+            blurb: "z^d + c: Mandelbrot power raised.",
             accent: [160, 40, 180],
         }
     }

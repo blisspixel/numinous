@@ -93,7 +93,7 @@ impl Room for Vicsek {
             id: "vicsek",
             title: "Vicsek Fractal",
             wing: "Fractals",
-            blurb: "Plus-shaped IFS: crosses at every scale. t and DRAG: SET THE DEPTH.",
+            blurb: "Plus-shaped IFS: crosses at every scale.",
             accent: [160, 160, 40],
         }
     }

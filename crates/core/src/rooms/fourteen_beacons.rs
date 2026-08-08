@@ -1,8 +1,7 @@
 //! Fourteen Beacons: the Pioneer pulsar map as a polyrhythm.
 //!
 //! Fourteen radial ticks mark pulsars relative to the Sun; one longer mark
-//! is the galactic center direction (toy of the Pioneer plaque). DRAG: GUESS
-//! WHERE HOME IS. See `docs/ROOMS.md`.
+//! is the galactic center direction (toy of the Pioneer plaque). See `docs/ROOMS.md`.
 
 use std::f64::consts::TAU;
 
@@ -123,7 +122,7 @@ impl Room for FourteenBeacons {
             title: "Fourteen Beacons",
             wing: "Shape & Space",
             blurb: "Fourteen pulsar ticks around the Sun, one longer home mark: a toy of the \
-                    Pioneer plaque. t pulses the periods; DRAG: GUESS WHERE HOME IS.",
+                    Pioneer plaque. t pulses the periods.",
             accent: [200, 200, 120],
         }
     }

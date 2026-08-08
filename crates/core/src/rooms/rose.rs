@@ -1,6 +1,6 @@
 //! Rhodonea (rose) curves: r = cos(k theta) polar flowers.
 //!
-//! Ambient phase draws the petals with a traveling pen. DRAG: TUNE PETALS.
+//! Ambient phase draws the petals with a traveling pen.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -120,7 +120,7 @@ impl Room for Rose {
             id: "rose",
             title: "Rose Curve",
             wing: "Shape & Space",
-            blurb: "Rhodonea petals draw themselves. Watch the pen; DRAG: TUNE PETALS.",
+            blurb: "Rhodonea petals draw themselves. Watch the pen.",
             accent: [220, 40, 100],
         }
     }

@@ -118,8 +118,7 @@ impl Room for LotkaVolterra {
             id: "lotka-volterra",
             title: "Lotka-Volterra",
             wing: "Motion & Dynamics",
-            blurb: "Predator and prey chase each other in closed orbits. t and DRAG: TUNE PREY \
-                    RATE.",
+            blurb: "Predator and prey chase each other in closed orbits.",
             accent: [80, 160, 40],
         }
     }

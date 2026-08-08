@@ -113,7 +113,7 @@ impl Room for WhitneyUmbrella {
             id: "whitney-umbrella",
             title: "Whitney Umbrella",
             wing: "Shape & Space",
-            blurb: "Cross-cap singularity x=uv, y=u, z=v^2. t and DRAG: TUNE SLICE.",
+            blurb: "Cross-cap singularity x=uv, y=u, z=v^2.",
             accent: [90, 70, 40],
         }
     }

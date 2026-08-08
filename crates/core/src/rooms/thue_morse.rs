@@ -1,7 +1,7 @@
 //! Thue-Morse sequence: overlap-free binary weather.
 //!
 //! t_n = sum of binary digits of n mod 2. Cube-free, overlap-free. Drawn as a
-//! staircase and beat tape. DRAG: SET THE WINDOW. See `docs/ROOMS.md`.
+//! staircase and beat tape. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -96,8 +96,7 @@ impl Room for ThueMorse {
             id: "thue-morse",
             title: "Thue-Morse Weather",
             wing: "Number & Pattern",
-            blurb: "Parity of binary digit sum: cube-free automatic sequence. t and DRAG: SET THE \
-                    WINDOW.",
+            blurb: "Parity of binary digit sum: cube-free automatic sequence.",
             accent: [80, 180, 120],
         }
     }

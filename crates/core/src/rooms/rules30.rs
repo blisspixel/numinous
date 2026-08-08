@@ -1,7 +1,6 @@
 //! Rule 30: elementary CA chaos from one black cell.
 //!
-//! Wolfram Rule 30 from a single seed: structured randomness. DRAG: SET THE
-//! RULE BYTE. See `docs/ROOMS.md`.
+//! Wolfram Rule 30 from a single seed: structured randomness. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -115,7 +114,7 @@ impl Room for Rules30 {
             title: "Rule 30",
             wing: "Emergence",
             blurb: "Elementary cellular automaton Rule 30: one black cell becomes structured \
-                    chaos. t and DRAG: SET THE RULE BYTE.",
+                    chaos.",
             accent: [40, 40, 40],
         }
     }

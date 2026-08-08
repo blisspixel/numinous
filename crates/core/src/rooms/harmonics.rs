@@ -1,7 +1,7 @@
 //! Spherical Harmonics / Hydrogen: the singing sphere and the shape of the atom.
 //!
 //! Real spherical harmonics Y_lm lobed patterns (toy sampling on a sphere
-//! projection). DRAG: RAISE l AND m. See `docs/ROOMS.md`.
+//! projection). See `docs/ROOMS.md`.
 
 use std::f64::consts::PI;
 
@@ -155,7 +155,7 @@ impl Room for Harmonics {
             title: "The Singing Sphere",
             wing: "Waves & Sound",
             blurb: "Real spherical harmonics Y_lm: the lobes of atomic orbitals and of a ringing \
-                    sphere. t lifts l; DRAG: RAISE l AND m.",
+                    sphere. t lifts l.",
             accent: [100, 160, 255],
         }
     }

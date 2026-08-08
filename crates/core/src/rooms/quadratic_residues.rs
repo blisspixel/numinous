@@ -148,7 +148,7 @@ impl Room for QuadraticResidues {
             id: "quadratic-residues",
             title: "Quadratic Residues",
             wing: "Number & Pattern",
-            blurb: "Legendre symbol checkerboard mod p. t and DRAG: TUNE P.",
+            blurb: "Legendre symbol checkerboard mod p.",
             accent: [120, 80, 60],
         }
     }

@@ -1,6 +1,6 @@
 //! Logistic Lyapunov exponent vs r: chaos meter of the logistic map.
 //!
-//! Distinct from orbit/cobweb rooms: plots lambda(r). DRAG: SET R WINDOW.
+//! Distinct from orbit/cobweb rooms: plots lambda(r).
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -105,8 +105,7 @@ impl Room for Lyapunov {
             id: "lyapunov",
             title: "Lyapunov Weather",
             wing: "Motion & Dynamics",
-            blurb: "Logistic Lyapunov exponent lambda(r): chaos when positive. t and DRAG: SET R \
-                    WINDOW.",
+            blurb: "Logistic Lyapunov exponent lambda(r): chaos when positive.",
             accent: [200, 40, 120],
         }
     }

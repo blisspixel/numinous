@@ -3,7 +3,7 @@
 //! A fixed sun, a flung moon. Newton gives a conic; for bound orbits the path
 //! is an ellipse with the sun at one focus. Equal areas in equal times is the
 //! metronome: near periapsis the craft races, near apoapsis it crawls. `t`
-//! advances the ambient orbit; DRAG: FLING A MOON. See `docs/ROOMS.md`.
+//! advances the ambient orbit. See `docs/ROOMS.md`.
 
 use std::f64::consts::TAU;
 
@@ -176,7 +176,7 @@ impl Room for KeplerLoom {
             wing: "Motion & Dynamics",
             blurb: "Fling a moon around a sun: every bound path is an ellipse with the sun at a \
                     focus. Equal areas in equal times is the metronome. t advances the orbit; \
-                    DRAG: FLING A MOON.",
+                    a drag flings a moon.",
             accent: [220, 200, 100],
         }
     }

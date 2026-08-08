@@ -107,7 +107,7 @@ impl Room for Unknot {
             id: "unknot",
             title: "Unknot",
             wing: "Shape & Space",
-            blurb: "A tangled circle that is still the unknot. t and DRAG: TUNE K.",
+            blurb: "A tangled circle that is still the unknot.",
             accent: [50, 80, 100],
         }
     }

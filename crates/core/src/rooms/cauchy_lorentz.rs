@@ -104,7 +104,7 @@ impl Room for CauchyLorentz {
             id: "cauchy-lorentz",
             title: "Cauchy Lorentz",
             wing: "Chance & Order",
-            blurb: "Heavy-tailed density with no mean. t and DRAG: TUNE WIDTH.",
+            blurb: "Heavy-tailed density with no mean.",
             accent: [120, 40, 100],
         }
     }

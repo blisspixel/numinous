@@ -113,7 +113,7 @@ impl Room for Ising {
             id: "ising",
             title: "Ising Lattice",
             wing: "Chance & Order",
-            blurb: "Spins freeze or melt across a critical heat. t and DRAG: TUNE TEMPERATURE.",
+            blurb: "Spins freeze or melt across a critical heat.",
             accent: [180, 40, 40],
         }
     }

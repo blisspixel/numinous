@@ -88,7 +88,7 @@ impl Room for Benford {
             id: "benford",
             title: "Benford Law",
             wing: "Chance & Order",
-            blurb: "Leading digits: log law P(d)=log(1+1/d). t and DRAG: TUNE BASE.",
+            blurb: "Leading digits: log law P(d)=log(1+1/d).",
             accent: [40, 90, 120],
         }
     }

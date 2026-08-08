@@ -137,7 +137,7 @@ impl Room for Nova {
             id: "nova",
             title: "Nova Fractal",
             wing: "Fractals",
-            blurb: "Newton-style rational map as an escape portrait. t and DRAG: TUNE POWER.",
+            blurb: "Newton-style rational map as an escape portrait.",
             accent: [200, 80, 160],
         }
     }

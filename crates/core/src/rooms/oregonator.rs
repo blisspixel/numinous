@@ -119,7 +119,7 @@ impl Room for Oregonator {
             id: "oregonator",
             title: "Oregonator",
             wing: "Motion & Dynamics",
-            blurb: "BZ chemical clock reduced to three variables. t and DRAG: TUNE F.",
+            blurb: "BZ chemical clock reduced to three variables.",
             accent: [200, 40, 140],
         }
     }

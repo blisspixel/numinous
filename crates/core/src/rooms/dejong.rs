@@ -103,7 +103,7 @@ impl Room for DeJong {
             id: "dejong",
             title: "Peter de Jong",
             wing: "Motion & Dynamics",
-            blurb: "Sin/cos map pair that paints dense filament clouds. t and DRAG: TUNE A AND B.",
+            blurb: "Sin/cos map pair that paints dense filament clouds.",
             accent: [200, 160, 40],
         }
     }

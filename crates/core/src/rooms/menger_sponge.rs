@@ -1,6 +1,6 @@
 //! Menger sponge face projection: 3D cross-section style carpet with depth cue.
 //!
-//! Distinct from menger-carpet and menger-slice. DRAG: SET THE DEPTH.
+//! Distinct from menger-carpet and menger-slice.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -108,7 +108,7 @@ impl Room for MengerSponge {
             id: "menger-sponge",
             title: "Menger Sponge",
             wing: "Fractals",
-            blurb: "3D cross-removal fractal in twin slices. t and DRAG: SET THE DEPTH.",
+            blurb: "3D cross-removal fractal in twin slices.",
             accent: [100, 100, 120],
         }
     }

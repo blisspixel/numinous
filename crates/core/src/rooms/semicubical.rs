@@ -104,7 +104,7 @@ impl Room for Semicubical {
             id: "semicubical",
             title: "Semicubical",
             wing: "Shape & Space",
-            blurb: "Cuspidal cubic y squared equals x cubed. t and DRAG: TUNE SCALE.",
+            blurb: "Cuspidal cubic y squared equals x cubed.",
             accent: [180, 120, 40],
         }
     }

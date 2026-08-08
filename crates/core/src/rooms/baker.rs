@@ -1,6 +1,6 @@
 //! Baker's map: stretch, stack, and fold the unit square.
 //!
-//! The classic chaotic map on `[0, 1]^2`. DRAG: SET THE STEPS. See `docs/ROOMS.md`.
+//! The classic chaotic map on `[0, 1]^2`. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -109,8 +109,7 @@ impl Room for Baker {
             id: "baker",
             title: "Baker's Map",
             wing: "Motion & Dynamics",
-            blurb: "Stretch the square, cut, and stack: classic chaos on [0,1]^2. t and DRAG: SET \
-                    THE STEPS.",
+            blurb: "Stretch the square, cut, and stack: classic chaos on [0,1]^2.",
             accent: [180, 120, 40],
         }
     }

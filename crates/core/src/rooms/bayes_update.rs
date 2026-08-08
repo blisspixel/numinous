@@ -103,7 +103,7 @@ impl Room for BayesUpdate {
             id: "bayes-update",
             title: "Bayes Update",
             wing: "Chance & Noise",
-            blurb: "Prior times likelihood becomes posterior. t and DRAG: TUNE L.",
+            blurb: "Prior times likelihood becomes posterior.",
             accent: [100, 80, 120],
         }
     }

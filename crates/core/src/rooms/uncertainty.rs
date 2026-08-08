@@ -111,8 +111,7 @@ impl Room for Uncertainty {
             id: "uncertainty",
             title: "The Uncertainty Dial",
             wing: "Waves & Sound",
-            blurb: "Narrower in time, wider in frequency: you cannot own both. t and DRAG: SQUEEZE \
-                    THE WINDOW.",
+            blurb: "Narrower in time, wider in frequency: you cannot own both.",
             accent: [255, 200, 80],
         }
     }

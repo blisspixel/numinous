@@ -118,7 +118,7 @@ impl Room for Sprott {
             id: "sprott",
             title: "Sprott Attractor",
             wing: "Motion & Dynamics",
-            blurb: "Minimal quadratic chaos in three dimensions. t and DRAG: TUNE A.",
+            blurb: "Minimal quadratic chaos in three dimensions.",
             accent: [120, 80, 160],
         }
     }

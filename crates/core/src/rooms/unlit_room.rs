@@ -118,7 +118,7 @@ impl Room for UnlitRoom {
             title: "The Unlit Room",
             wing: "Shape & Space",
             blurb: "Most rooms light everywhere from any lamp; Tokarsky built one that does not. \
-                    A marked dark point stays unlit. t turns the beam; DRAG: CRANK THE LANTERN.",
+                    A marked dark point stays unlit. t turns the beam.",
             accent: [80, 80, 120],
         }
     }

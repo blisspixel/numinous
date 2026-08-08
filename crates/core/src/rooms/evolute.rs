@@ -104,7 +104,7 @@ impl Room for Evolute {
             id: "evolute",
             title: "Ellipse Evolute",
             wing: "Shape & Space",
-            blurb: "Envelope of normals to an ellipse. t and DRAG: TUNE ECCENTRICITY.",
+            blurb: "Envelope of normals to an ellipse.",
             accent: [80, 100, 180],
         }
     }

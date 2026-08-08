@@ -131,7 +131,7 @@ impl Room for ThreeScroll {
             id: "three-scroll",
             title: "Three-Scroll Chaos",
             wing: "Motion & Dynamics",
-            blurb: "Continuous multi-scroll chaotic flow, projected. t and DRAG: TUNE C.",
+            blurb: "Continuous multi-scroll chaotic flow, projected.",
             accent: [100, 80, 220],
         }
     }

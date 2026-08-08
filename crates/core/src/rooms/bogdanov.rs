@@ -1,6 +1,6 @@
 //! Bogdanov map: planar discrete chaos with a classic parameter gallery.
 //!
-//! x' = y; y' = x + e y + k y (1-y) + mu x (x-1). DRAG: TUNE K.
+//! x' = y; y' = x + e y + k y (1-y) + mu x (x-1).
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -102,7 +102,7 @@ impl Room for Bogdanov {
             id: "bogdanov",
             title: "Bogdanov Map",
             wing: "Motion & Dynamics",
-            blurb: "Planar discrete map with a classic chaotic gallery. t and DRAG: TUNE K.",
+            blurb: "Planar discrete map with a classic chaotic gallery.",
             accent: [180, 60, 100],
         }
     }

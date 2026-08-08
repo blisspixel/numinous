@@ -99,7 +99,7 @@ impl Room for HarmonicSeries {
             id: "harmonic-series",
             title: "Harmonic Series",
             wing: "Number & Pattern",
-            blurb: "H_n grows like ln n + gamma. t and DRAG: TUNE N.",
+            blurb: "H_n grows like ln n + gamma.",
             accent: [50, 100, 140],
         }
     }

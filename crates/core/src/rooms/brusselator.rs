@@ -130,7 +130,7 @@ impl Room for Brusselator {
             id: "brusselator",
             title: "Brusselator",
             wing: "Motion & Dynamics",
-            blurb: "Chemical oscillator waves in space-time. t and DRAG: TUNE A.",
+            blurb: "Chemical oscillator waves in space-time.",
             accent: [160, 80, 200],
         }
     }

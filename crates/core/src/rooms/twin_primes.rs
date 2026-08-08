@@ -134,7 +134,7 @@ impl Room for TwinPrimes {
             id: "twin-primes",
             title: "Twin Primes",
             wing: "Number & Pattern",
-            blurb: "Primes that come in pairs (p, p+2). t and DRAG: TUNE N.",
+            blurb: "Primes that come in pairs (p, p+2).",
             accent: [90, 70, 50],
         }
     }

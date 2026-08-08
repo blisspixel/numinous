@@ -98,7 +98,7 @@ impl Room for Brownian {
             id: "brownian",
             title: "Brownian Motion",
             wing: "Chance & Order",
-            blurb: "Wiener path from Gaussian steps. t and DRAG: TUNE STEPS.",
+            blurb: "Wiener path from Gaussian steps.",
             accent: [80, 80, 40],
         }
     }

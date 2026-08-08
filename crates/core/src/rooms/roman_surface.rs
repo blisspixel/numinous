@@ -98,7 +98,7 @@ impl Room for RomanSurface {
             id: "roman-surface",
             title: "Roman Surface",
             wing: "Shape & Space",
-            blurb: "Steiner immersion of the projective plane. t and DRAG: TUNE VIEW.",
+            blurb: "Steiner immersion of the projective plane.",
             accent: [140, 40, 80],
         }
     }

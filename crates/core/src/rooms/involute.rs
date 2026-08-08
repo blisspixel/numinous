@@ -106,7 +106,7 @@ impl Room for Involute {
             id: "involute",
             title: "Involute",
             wing: "Shape & Space",
-            blurb: "Unwrapping a taut string from a circle. t and DRAG: TUNE TURNS.",
+            blurb: "Unwrapping a taut string from a circle.",
             accent: [100, 140, 80],
         }
     }

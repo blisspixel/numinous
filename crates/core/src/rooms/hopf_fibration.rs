@@ -96,7 +96,7 @@ impl Room for HopfFibration {
             id: "hopf-fibration",
             title: "Hopf Fibration",
             wing: "Shape & Space",
-            blurb: "S3 fibers as linked circles. t and DRAG: TUNE FIBER.",
+            blurb: "S3 fibers as linked circles.",
             accent: [40, 80, 160],
         }
     }

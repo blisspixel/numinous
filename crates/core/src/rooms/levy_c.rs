@@ -1,6 +1,6 @@
 //! Levy C curve: right-angle dragon cousin via L-system F+F--F+F style.
 //!
-//! Each segment becomes two at 45 degrees. DRAG: SET THE ORDER.
+//! Each segment becomes two at 45 degrees.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -154,7 +154,7 @@ impl Room for LevyC {
             id: "levy-c",
             title: "The Levy C Curve",
             wing: "Fractals",
-            blurb: "Self-similar C from the rewrite F -> +F--F+. t and DRAG: SET THE ORDER.",
+            blurb: "Self-similar C from the rewrite F -> +F--F+.",
             accent: [40, 160, 220],
         }
     }

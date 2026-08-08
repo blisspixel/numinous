@@ -106,7 +106,7 @@ impl Room for CoupledOsc {
             id: "coupled-osc",
             title: "Coupled Oscillators",
             wing: "Motion & Dynamics",
-            blurb: "Two masses, three springs: normal modes. t and DRAG: TUNE K.",
+            blurb: "Two masses, three springs: normal modes.",
             accent: [80, 100, 50],
         }
     }

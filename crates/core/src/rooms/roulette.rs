@@ -1,6 +1,6 @@
 //! Roulette gallery: a circle rolling on a fixed circle, both epi and hypo paths.
 //!
-//! Distinct from pure hypotrochoid/epitrochoid rooms: dual overlay. DRAG: TUNE K.
+//! Distinct from pure hypotrochoid/epitrochoid rooms: dual overlay.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -112,7 +112,7 @@ impl Room for Roulette {
             id: "roulette",
             title: "Roulette Gallery",
             wing: "Shape & Space",
-            blurb: "Epi and hypo rolling paths overlaid. t and DRAG: TUNE K.",
+            blurb: "Epi and hypo rolling paths overlaid.",
             accent: [180, 40, 100],
         }
     }

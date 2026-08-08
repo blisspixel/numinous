@@ -1,6 +1,6 @@
 //! Arnold cat map: linear toral automorphism, classic chaos toy.
 //!
-//! (x,y) -> (x+y, x+2y) mod 1. DRAG: SET THE ITERS. See `docs/ROOMS.md`.
+//! (x,y) -> (x+y, x+2y) mod 1. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -93,7 +93,7 @@ impl Room for CatMap {
             id: "cat-map",
             title: "Arnold Cat Map",
             wing: "Motion & Dynamics",
-            blurb: "Toral shear that shreds then rebuilds a face. t and DRAG: SET THE ITERS.",
+            blurb: "Toral shear that shreds then rebuilds a face.",
             accent: [180, 100, 40],
         }
     }

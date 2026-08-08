@@ -129,7 +129,7 @@ impl Room for SolidTorus {
             id: "solid-torus",
             title: "Solid Torus",
             wing: "Shape & Space",
-            blurb: "Meridian disk spinning inside a doughnut. t and DRAG: TUNE PHI.",
+            blurb: "Meridian disk spinning inside a doughnut.",
             accent: [70, 100, 90],
         }
     }

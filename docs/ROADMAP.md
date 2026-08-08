@@ -82,12 +82,16 @@ The workstreams, in landing order:
    flagship wager over MCP is never graded. Zero scores post as NEW BEST.
    The streak display claims a chain that is dead. `tune2` spends paid API
    credit through a silently discovered `.env` key with no consent line, and
-   the panel proved it by accidentally spending some.
+   the panel proved it by accidentally spending some. Landed: all five
+   defects fixed with locks; see the changelog entry.
 2. **The reveal is the payload.** The QA provenance checklist rides the end
    of the four flagship reveals; it moves to evidence, because a punchline
    that ends in checkbox homework is the textbook feel the vision bans. The
    227 template blurbs whose lever note reads as broken copy get one
    voice-true pass. `sing --help` stops narrating a fixed bug's history.
+   Landed: provenance now anchors from code comments and `citations`, the
+   blurbs describe the mathematics and leave the verb to each face's
+   Action line, and two registry sweeps lock reveals and blurbs clean.
 3. **Each face speaks only verbs it can hear.** The terminal stops
    advertising DRAG and CLICK it cannot receive; affordance copy translates
    per face; the MCP face stops telling minds to press keys. Ctrl+C from
@@ -725,7 +729,7 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   PNG/APNG (GIF/MP4); physical cross-platform controller certification; full
   MCP Apps room surface under 0.5's sensory and accessibility gates; human
   hallway and a11y gates.
-- **Done (0.4 Understanding Alpha prep):** added Source Provenance and Math Review Checklist fields to the Times Tables, Game of Life, Galton Board, and Double Pendulum flagships to anchor their learning claims.
+- **Done (0.4 Understanding Alpha prep):** added source provenance and a math-review checklist to the Times Tables, Game of Life, Galton Board, and Double Pendulum flagships to anchor their learning claims. The polish wave later moved that QA chrome out of the player-facing reveal text: the provenance and checklist now live as code comments beside each reveal and as `citations` entries, the reveal ends on the idea, and a registry sweep locks every reveal free of internal chrome.
 - **Done (0.4 Understanding Alpha prep):** added an opt-in, player-owned MCP experience journal. The `Journal` tracks timestamped room encounters, creations, and connections. It is fully integrated into persistence and backed by new `read_journal`, `record_journal`, and `erase_journal` tools for MCP agents. The journal is explicitly disjoint from `forget` tool erasure, providing its own dedicated `erase_journal` path to maintain player ownership over when its contents are destroyed.
 
 ## Pre-1.0 (the 0.x line): earning the right to 1.0
@@ -1165,7 +1169,8 @@ read-only App viewer, with no private host or protocol data in the stream.
   notes, fixture probes, and scripted conclusions do not satisfy this evidence
   gate.
 - **Done (cycle 152):** Add source provenance and an independent math-review checklist to every
-  flagship Reveal.
+  flagship Reveal. Reframed in the polish wave: the checklist anchors the claim
+  from code comments and `citations`, not from inside the player's reveal.
 - **Done (architectural invariant):** Keep progression subordinate to autonomy: no streak loss, required grind, or
   reward that gates the mathematical toy.
 - **Done (cycle 152, prototype slice):** Add an opt-in, player-owned MCP

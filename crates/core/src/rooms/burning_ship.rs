@@ -1,6 +1,6 @@
 //! Burning Ship fractal: Mandelbrot variant with absolute values.
 //!
-//! z -> (|Re z| + i |Im z|)^2 + c. DRAG: AIM THE WINDOW. See `docs/ROOMS.md`.
+//! z -> (|Re z| + i |Im z|)^2 + c. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -113,8 +113,7 @@ impl Room for BurningShip {
             id: "burning-ship",
             title: "Burning Ship",
             wing: "Fractals",
-            blurb: "Absolute-value Mandelbrot cousin with a ship silhouette. t and DRAG: AIM THE \
-                    WINDOW.",
+            blurb: "Absolute-value Mandelbrot cousin with a ship silhouette.",
             accent: [200, 40, 40],
         }
     }

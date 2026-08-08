@@ -2,8 +2,7 @@
 //!
 //! Stereographic projection from the north pole maps the unit sphere (minus that
 //! pole) onto the complex plane. The south pole is z = 0, the equator is the
-//! unit circle, and the north pole is infinity. DRAG: PLACE z on the plane; the
-//! bead lifts onto the sphere. Phase walks ambient |z| toward infinity. See
+//! unit circle, and the north pole is infinity. Phase walks ambient |z| toward infinity. See
 //! `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -318,7 +317,7 @@ impl Room for RiemannSphere {
             title: "Riemann Sphere",
             wing: "Shape & Space",
             blurb: "One sphere holds every complex number and infinity. \
-                    Stereographic projection; DRAG: PLACE z; phase walks |z| out.",
+                    Stereographic projection.",
             accent: [180, 140, 255],
         }
     }

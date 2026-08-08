@@ -3,7 +3,7 @@
 //! Every pure state of a qubit is a direction on S^2. The north pole is |0>,
 //! the south pole is |1>, and the equator is equal superpositions with a free
 //! relative phase. Stereographic labels from the north pole recover a complex
-//! coordinate for the pure-state ray. DRAG: PLACE STATE. Phase precesses around
+//! coordinate for the pure-state ray. Phase precesses around
 //! the Z axis (Larmor-style). See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -284,7 +284,7 @@ impl Room for BlochSphere {
             title: "Bloch Sphere",
             wing: "Shape & Space",
             blurb: "Every pure qubit state is a point on a sphere. |0> and |1> \
-                    are poles; the equator is equal superpositions. DRAG: PLACE STATE.",
+                    are poles; the equator is equal superpositions.",
             accent: [100, 200, 255],
         }
     }

@@ -101,7 +101,7 @@ impl Room for MexicanHat {
             id: "mexican-hat",
             title: "Mexican Hat",
             wing: "Waves & Sound",
-            blurb: "Ricker wavelet: second Gaussian derivative. t and DRAG: TUNE SCALE.",
+            blurb: "Ricker wavelet: second Gaussian derivative.",
             accent: [160, 100, 40],
         }
     }

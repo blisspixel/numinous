@@ -154,7 +154,7 @@ impl Room for Cissoid {
             id: "cissoid",
             title: "Cissoid",
             wing: "Shape & Space",
-            blurb: "Diocles' ivy curve for doubling the cube. t and DRAG: TUNE SCALE.",
+            blurb: "Diocles' ivy curve for doubling the cube.",
             accent: [80, 140, 60],
         }
     }

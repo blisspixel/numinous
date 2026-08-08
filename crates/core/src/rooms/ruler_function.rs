@@ -98,7 +98,7 @@ impl Room for RulerFunction {
             id: "ruler-function",
             title: "Ruler Function",
             wing: "Number & Pattern",
-            blurb: "2-adic height of n: paper ruler marks. t and DRAG: TUNE N.",
+            blurb: "2-adic height of n: paper ruler marks.",
             accent: [40, 90, 70],
         }
     }

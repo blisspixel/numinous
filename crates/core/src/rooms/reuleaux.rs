@@ -140,7 +140,7 @@ impl Room for Reuleaux {
             id: "reuleaux",
             title: "Reuleaux Triangle",
             wing: "Shape & Space",
-            blurb: "Constant-width curve of three arcs. t and DRAG: TUNE WIDTH.",
+            blurb: "Constant-width curve of three arcs.",
             accent: [180, 90, 40],
         }
     }

@@ -162,7 +162,7 @@ impl Room for CausalDoors {
             title: "Causal Doors",
             wing: "Number & Pattern",
             blurb: "Watching is not intervening. Force rain or the sprinkler and wetness answers \
-                    differently. t and DRAG: OPEN A VALVE.",
+                    differently.",
             accent: [100, 160, 200],
         }
     }

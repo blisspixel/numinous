@@ -126,7 +126,7 @@ impl Room for Bifolium {
             id: "bifolium",
             title: "Bifolium",
             wing: "Shape & Space",
-            blurb: "Two-leaf curve r = a sin th cos^2 th. t and DRAG: TUNE A.",
+            blurb: "Two-leaf curve r = a sin th cos^2 th.",
             accent: [90, 140, 50],
         }
     }

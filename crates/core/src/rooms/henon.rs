@@ -1,6 +1,6 @@
 //! Henon Map: the classic 2D strange attractor.
 //!
-//! (x,y) -> (1 - a x^2 + y, b x). DRAG: TUNE A AND B. See `docs/ROOMS.md`.
+//! (x,y) -> (1 - a x^2 + y, b x). See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -108,8 +108,7 @@ impl Room for Henon {
             id: "henon",
             title: "The Henon Map",
             wing: "Fractals",
-            blurb: "Henon attractor: one quadratic map, a folded horseshoe of chaos. t and DRAG: \
-                    TUNE A AND B.",
+            blurb: "Henon attractor: one quadratic map, a folded horseshoe of chaos.",
             accent: [180, 100, 200],
         }
     }

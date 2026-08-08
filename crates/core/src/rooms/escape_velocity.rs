@@ -95,7 +95,7 @@ impl Room for EscapeVelocity {
             id: "escape-velocity",
             title: "Escape Velocity",
             wing: "Motion & Dynamics",
-            blurb: "v_esc = sqrt(2GM/r); circular is slower by sqrt(2). t and DRAG: TUNE R.",
+            blurb: "v_esc = sqrt(2GM/r); circular is slower by sqrt(2).",
             accent: [50, 50, 120],
         }
     }

@@ -128,7 +128,7 @@ impl Room for Bragg {
             id: "bragg",
             title: "Bragg Diffraction",
             wing: "Waves & Sound",
-            blurb: "n lambda = 2 d sin theta on crystal planes. t and DRAG: TUNE ANGLE.",
+            blurb: "n lambda = 2 d sin theta on crystal planes.",
             accent: [40, 100, 160],
         }
     }

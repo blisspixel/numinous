@@ -113,7 +113,7 @@ impl Room for Helicoid {
             id: "helicoid",
             title: "Helicoid",
             wing: "Shape & Space",
-            blurb: "Ruled minimal screw surface. t and DRAG: TUNE PITCH.",
+            blurb: "Ruled minimal screw surface.",
             accent: [80, 140, 90],
         }
     }

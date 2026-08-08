@@ -118,7 +118,7 @@ impl Room for GammaFunc {
             id: "gamma-func",
             title: "Gamma Function",
             wing: "Analysis",
-            blurb: "log|Gamma| with poles at nonpositive integers. t and DRAG: TUNE X.",
+            blurb: "log|Gamma| with poles at nonpositive integers.",
             accent: [100, 70, 50],
         }
     }

@@ -1,7 +1,7 @@
 //! The Message That Heals: Hamming codes repair wounds mid-flight.
 //!
 //! A binary string is sent through noise; Hamming(7,4) parity bits heal single
-//! flips until the noise cliff overwhelms them. DRAG: RAISE THE NOISE. See
+//! flips until the noise cliff overwhelms them. See
 //! `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
@@ -184,8 +184,7 @@ impl Room for MessageHeals {
             id: "message-heals",
             title: "The Message That Heals",
             wing: "Number & Pattern",
-            blurb: "Hamming(7,4) parity bits heal single flips mid-flight until noise wins. t and \
-                    DRAG: RAISE THE NOISE walk the cliff.",
+            blurb: "Hamming(7,4) parity bits heal single flips mid-flight until noise wins.",
             accent: [100, 200, 140],
         }
     }

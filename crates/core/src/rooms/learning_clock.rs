@@ -129,8 +129,7 @@ impl Room for LearningClock {
             id: "learning-clock",
             title: "The Learning Clock",
             wing: "Number & Pattern",
-            blurb: "Train task A, then B: does A survive? Continual learning as a felt trade. t and \
-                    DRAG: TRAIN A THEN B.",
+            blurb: "Train task A, then B: does A survive? Continual learning as a felt trade.",
             accent: [80, 200, 160],
         }
     }

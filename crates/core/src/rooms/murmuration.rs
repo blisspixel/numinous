@@ -1,7 +1,7 @@
 //! Murmuration: boids with seven neighbors; the shape exists in no bird's head.
 //!
 //! Each bird steers by separation, alignment, and cohesion among its nearest
-//! neighbors. HOLD: BE THE FALCON inserts a predator the flock flees. `t`
+//! neighbors. `t`
 //! advances the flight. See `docs/ROOMS.md`.
 
 use crate::rng::SplitMix64;
@@ -190,7 +190,7 @@ impl Room for Murmuration {
             title: "Murmuration",
             wing: "Emergence",
             blurb: "Boids with seven neighbors: separate, align, cohere. The flock shape lives in \
-                    no single bird. t flies the cloud; HOLD: BE THE FALCON and they part.",
+                    no single bird. t flies the cloud.",
             accent: [80, 100, 160],
         }
     }

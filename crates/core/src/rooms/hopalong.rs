@@ -128,8 +128,7 @@ impl Room for Hopalong {
             id: "hopalong",
             title: "Hopalong Attractor",
             wing: "Motion & Dynamics",
-            blurb: "Martin hopalong map: absolute-value folds into a hoppy cloud. t and DRAG: TUNE \
-                    A AND B.",
+            blurb: "Martin hopalong map: absolute-value folds into a hoppy cloud.",
             accent: [40, 180, 100],
         }
     }

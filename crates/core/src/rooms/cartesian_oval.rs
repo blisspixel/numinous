@@ -119,7 +119,7 @@ impl Room for CartesianOval {
             id: "cartesian-oval",
             title: "Cartesian Oval",
             wing: "Shape & Space",
-            blurb: "Weighted sum of distances to two foci. t and DRAG: TUNE WEIGHT.",
+            blurb: "Weighted sum of distances to two foci.",
             accent: [50, 110, 90],
         }
     }

@@ -144,7 +144,7 @@ impl Room for Geodesic {
             id: "geodesic",
             title: "Sphere Geodesics",
             wing: "Shape & Space",
-            blurb: "Great-circle arcs follow sphere geodesics. t and DRAG: TUNE TILT.",
+            blurb: "Great-circle arcs follow sphere geodesics.",
             accent: [30, 100, 140],
         }
     }

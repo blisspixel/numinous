@@ -1,7 +1,7 @@
 //! Sphere Eversion: turn a sphere inside out without creases (smoothed).
 //!
 //! A guided morph of a circle (2D shadow of the famous eversion): phases show
-//! the halfway model collapsing through itself smoothly. HOLD: PUSH THROUGH.
+//! the halfway model collapsing through itself smoothly.
 //! See `docs/ROOMS.md`.
 
 use std::f64::consts::TAU;
@@ -120,7 +120,7 @@ impl Room for SphereEversion {
             title: "Sphere Eversion",
             wing: "Shape & Space",
             blurb: "A sphere can turn inside out without creases if you allow it to pass through \
-                    itself smoothly. t and HOLD: PUSH THROUGH the stages.",
+                    itself smoothly.",
             accent: [120, 180, 255],
         }
     }

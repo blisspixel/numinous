@@ -1,7 +1,7 @@
 //! Peano curve: space-filling path that visits every square.
 //!
 //! Recursive nine-subdivision (Hilbert is already a room; this is Peano's
-//! original idea). DRAG: SET THE ORDER. See `docs/ROOMS.md`.
+//! original idea). See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -127,8 +127,7 @@ impl Room for PeanoCurve {
             id: "peano-curve",
             title: "Peano's Path",
             wing: "Fractals",
-            blurb: "A continuous curve that fills the square (order recursion). t and DRAG: SET \
-                    THE ORDER.",
+            blurb: "A continuous curve that fills the square (order recursion).",
             accent: [100, 200, 80],
         }
     }

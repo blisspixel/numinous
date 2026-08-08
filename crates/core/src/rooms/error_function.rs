@@ -108,7 +108,7 @@ impl Room for ErrorFunction {
             id: "error-function",
             title: "Error Function",
             wing: "Analysis",
-            blurb: "erf(x): signed Gaussian mass. t and DRAG: TUNE X.",
+            blurb: "erf(x): signed Gaussian mass.",
             accent: [60, 100, 80],
         }
     }

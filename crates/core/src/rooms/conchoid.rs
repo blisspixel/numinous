@@ -1,6 +1,6 @@
 //! Conchoid of Nicomedes: classical curve for trisecting angles.
 //!
-//! Ambient phase draws both branches with pens. DRAG: TUNE K.
+//! Ambient phase draws both branches with pens.
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -145,7 +145,7 @@ impl Room for Conchoid {
             id: "conchoid",
             title: "Conchoid",
             wing: "Shape & Space",
-            blurb: "Nicomedes shell draws both branches. Watch the pen; DRAG: TUNE K.",
+            blurb: "Nicomedes shell draws both branches. Watch the pen.",
             accent: [40, 120, 160],
         }
     }

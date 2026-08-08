@@ -146,7 +146,7 @@ impl Room for SphericalHarmonic {
             id: "spherical-harmonic",
             title: "Spherical Harmonic",
             wing: "Waves & Sound",
-            blurb: "Y_lm nodal lines on the sphere. t and DRAG: TUNE L.",
+            blurb: "Y_lm nodal lines on the sphere.",
             accent: [40, 100, 160],
         }
     }

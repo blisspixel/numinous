@@ -116,7 +116,7 @@ impl Room for Cochleoid {
             id: "cochleoid",
             title: "Cochleoid",
             wing: "Shape & Space",
-            blurb: "Snail curve unfurls: r = a sin(th)/th. DRAG: TUNE A.",
+            blurb: "Snail curve unfurls: r = a sin(th)/th.",
             accent: [140, 80, 50],
         }
     }

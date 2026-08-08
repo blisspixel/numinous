@@ -1,6 +1,6 @@
 //! Ikeda map: complex dissipative chaos from laser optics.
 //!
-//! z_{n+1} = a + b z_n exp(i (c - d/(1+|z|^2))). DRAG: TUNE A AND B.
+//! z_{n+1} = a + b z_n exp(i (c - d/(1+|z|^2))).
 //! See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
@@ -118,8 +118,7 @@ impl Room for Ikeda {
             id: "ikeda",
             title: "The Ikeda Map",
             wing: "Motion & Dynamics",
-            blurb: "Dissipative complex map from laser cavities: a curly strange attractor. t and \
-                    DRAG: TUNE A AND B.",
+            blurb: "Dissipative complex map from laser cavities: a curly strange attractor.",
             accent: [60, 180, 200],
         }
     }

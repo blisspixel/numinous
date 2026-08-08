@@ -110,7 +110,7 @@ impl Room for Doppler {
             id: "doppler",
             title: "Doppler",
             wing: "Waves & Sound",
-            blurb: "Moving source packs wavefronts ahead. t and DRAG: TUNE SPEED.",
+            blurb: "Moving source packs wavefronts ahead.",
             accent: [200, 100, 60],
         }
     }

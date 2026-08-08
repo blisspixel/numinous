@@ -2,7 +2,7 @@
 //!
 //! On y^2 = x^3 + a x + b, the sum of two points is the third intersection of
 //! their chord (or tangent) reflected across the x-axis: the group law that
-//! locks credit cards. CLICK: PLACE A POINT. See `docs/ROOMS.md`.
+//! locks credit cards. See `docs/ROOMS.md`.
 
 use crate::room::{MAX_ROOM_POKES, Room, RoomInput, RoomMeta};
 use crate::surface::Surface;
@@ -167,7 +167,7 @@ impl Room for ChordGame {
             title: "The Chord Game",
             wing: "Number & Pattern",
             blurb: "Elliptic addition: chord two points on y^2 = x^3 + a x + b, flip the third \
-                    intersection. The group law behind public-key crypto. CLICK: PLACE A POINT.",
+                    intersection. The group law behind public-key crypto.",
             accent: [180, 160, 100],
         }
     }

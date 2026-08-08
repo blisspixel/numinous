@@ -135,8 +135,7 @@ impl Room for UlamSpiral {
             id: "ulam-spiral",
             title: "The Ulam Spiral",
             wing: "Number & Pattern",
-            blurb: "Naturals on a square spiral; primes light diagonals. t and DRAG: ZOOM THE \
-                    SPIRAL.",
+            blurb: "Naturals on a square spiral; primes light diagonals.",
             accent: [100, 140, 255],
         }
     }

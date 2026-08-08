@@ -158,7 +158,7 @@ impl Room for Cardioid {
             id: "cardioid",
             title: "Cardioid",
             wing: "Shape & Space",
-            blurb: "One-cusped heart from a rolling circle. Watch it draw; DRAG: TUNE SCALE.",
+            blurb: "One-cusped heart from a rolling circle. Watch it draw.",
             accent: [220, 60, 80],
         }
     }

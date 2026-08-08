@@ -113,7 +113,7 @@ impl Room for BoySurface {
             id: "boy-surface",
             title: "Boy Surface",
             wing: "Shape & Space",
-            blurb: "RP2 immersed without a free boundary. t and DRAG: TUNE T.",
+            blurb: "RP2 immersed without a free boundary.",
             accent: [60, 90, 110],
         }
     }
