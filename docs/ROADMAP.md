@@ -55,6 +55,63 @@ unclaimed until run.
 | **Standing gate** | Keep 0.2 and 0.3 proof, coverage, supply chain, install/play/uninstall roundtrips, and public CI green | Regressions reopen completed milestones and invalidate new evidence |
 | **Optional parallel (not am-blockers)** | Human stranger hallway, a11y player panels, musician long-listening, soft-thin densify, bulk rooms, Phase B glow | Human taste and disability usability remain valuable later claims; densify/glow only if a sensory ceiling binds |
 
+### The Polish Wave (August 2026): seven critics, one goal
+
+Seven independent agent critics read the product whole, as a first-contact
+stranger, a digital mind over MCP, a maker, an accessibility skeptic, the
+engineer who inherits the code, a careful docs reader, and a day-seven
+returning player. Each was required to verify every claim against the
+repository or the built binaries in an isolated profile before reporting it.
+Their 51 ranked critiques are committed verbatim, lightly normalized to house
+style, at `docs/evidence/polish-critique-2026-08.json`; every claim is
+re-verified again at fix time before anything changes.
+
+**The goal, stated as an exit:** every high critique closed; every medium
+closed or converted into a tracked owner decision carrying its evidence;
+every low fixed or recorded beside the decision lists; then the same seven
+panels re-run, finding no high critiques. Nothing on this list waits on an
+owner ruling unless it lands in the decisions section by the same rules as
+everything else there.
+
+The workstreams, in landing order:
+
+1. **Truth defects first, because taste-led reading found bugs.** The
+   journey file caps stored visited tokens at 256 in a 354-room catalog
+   (verified: `MAX_STORED_TOKEN_COUNT` in `journey.rs`), destroying the
+   completionist record and making the all-rooms trophy unearnable. The
+   flagship wager over MCP is never graded. Zero scores post as NEW BEST.
+   The streak display claims a chain that is dead. `tune2` spends paid API
+   credit through a silently discovered `.env` key with no consent line, and
+   the panel proved it by accidentally spending some.
+2. **The reveal is the payload.** The QA provenance checklist rides the end
+   of the four flagship reveals; it moves to evidence, because a punchline
+   that ends in checkbox homework is the textbook feel the vision bans. The
+   227 template blurbs whose lever note reads as broken copy get one
+   voice-true pass. `sing --help` stops narrating a fixed bug's history.
+3. **Each face speaks only verbs it can hear.** The terminal stops
+   advertising DRAG and CLICK it cannot receive; affordance copy translates
+   per face; the MCP face stops telling minds to press keys. Ctrl+C from
+   watch and tour earns a two-line epilogue that finishes the staircase to
+   the reveal. `numinous mandelbrot` answers in the house voice instead of
+   a stock parser error.
+4. **The creator loop keeps its thread.** The bundle README stops routing
+   recipients down the one path that loses lineage; the postcard carries
+   title and author; naming happens in the instrument, not only in flags;
+   the terminal gains the fork verb; `sing` learns to read a `.num`.
+5. **Access disclosures that reach the player.** `numinous access` names
+   the tracked rooms itself instead of pointing at a file releases do not
+   ship; its counts match the code's own lists; refusal banners live as
+   long as decorative ones; the keyboard route to touch is designed or the
+   keyboard-complete claim is withdrawn where it overreaches.
+6. **Docs match the binary.** The STUDIO.md boundary paragraph that
+   declares shipped features unbuilt, the CREATOR.md self-contradiction,
+   PLAYING.md's daily-board claim, and the key table's omissions.
+7. **The structural debts, scheduled rather than deplored.** Cross-face
+   copies have already drifted into a real disagreement (a veil gate that
+   admits on one face and refuses on another); leaderboard identity, gate
+   levels, and gauntlet scoring move into core; the three god-files keep
+   shrinking along the module seams the App has already proved.
+
 The 0.3 agent-and-machine exit is met. The next incomplete milestone is 0.4
 understanding and retention, but its formal collection is intentionally after
 an exploratory release-and-play loop. Its protocol, deterministic analysis,

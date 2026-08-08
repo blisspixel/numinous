@@ -1,0 +1,349 @@
+{
+  "schemaVersion": "numinous-polish-critique-v1",
+  "evidenceClass": "agent-machine-critique",
+  "collected": "2026-08-08",
+  "method": "seven independent agent critics, one per perspective, each required to verify every claim against the repository or the built binaries in an isolated profile before reporting it; at most eight ranked critiques per critic",
+  "panels": [
+    {
+      "critiques": [
+        {
+          "title": "Flagship reveals end in internal QA boilerplate, killing the punchline",
+          "severity": "high",
+          "evidence": "Running `numinous describe times-tables` prints the reveal followed by raw markdown: \"---\\n**Source Provenance:** Geometry and Modular Arithmetic (Standard Curriculum)\\n**Math Review Checklist:**\\n- [x] Core mechanism verified...\". Source: crates/core/src/rooms/times_tables.rs lines 243-248 inside `fn reveal()`; the same block is in galton_board.rs (lines 424-429), double_pendulum.rs, and game_of_life.rs. These are the four rooms a stranger meets first (times-tables is catalog entry 1; Galton is the Phase A wager room).",
+          "suggestion": "Delete the provenance/checklist block from the four reveal strings (move it to code comments or docs/INSIGHTS.md). The reveal is the emotional payload; it should end on \"arithmetic, fractals, and waves meet in one heart\", not on checkbox homework, which VISION.md explicitly bans (\"if a screen feels like a textbook, redesign it\")."
+        },
+        {
+          "title": "227 room blurbs are garbled template prose, including today's featured room",
+          "severity": "high",
+          "evidence": "`numinous describe rabinovich-fabrikant` (today's front-door room) prints: \"Cubic continuous chaos from plasma physics. t and DRAG: TUNE GAMMA.\" Grep for `blurb: \"[^\"]*\\. t and DRAG` finds 227 occurrences across 227 files in crates/core/src/rooms (e.g. agm_mean.rs:109 \"a,g converge by average and geometric mean. t and DRAG: TUNE R.\"). The fragment \". t and DRAG: TUNE X.\" reads as broken copy to anyone who does not know the internal levers convention.",
+          "suggestion": "One mechanical pass over the generated blurbs to turn the lever note into a sentence (\"Drag to tune gamma; t sweeps the flow.\") or drop it from the blurb entirely since describe already prints an Action line. The hand-written blurbs (times-tables, morley) show the intended voice."
+        },
+        {
+          "title": "Terminal live views advertise DRAG/CLICK the face cannot receive",
+          "severity": "high",
+          "evidence": "The front door's first suggestion, `numinous watch rabinovich-fabrikant`, shows a status line \"gamma=0.70  DRAG:TUNE  (Ctrl+C to stop)\"; `numinous tour --mute` opens on \"Times Tables ... DRAG:DIAL  K 2.00  CLOSED  1 LOBE  TARGET 4\". But faces/cli/src/main.rs `watch()` (lines 3010-3079) and `play()` (lines 5330-5353) contain no input handling at all beyond Ctrl+C, and grep finds no mouse/key event code anywhere in faces/cli. The terminal face of \"math you can feel\" prints touch verbs and goals (TARGET 4) with no way to act and no keyboard substitute.",
+          "suggestion": "Either give watch/play a keyboard knob (arrow keys mapped to the room's drag axis, space for CLICK, via crossterm raw mode), or translate `room.status()`/`room_action()` affordance text per face so the terminal never advertises a verb it cannot hear (e.g. show \"in the window: DRAG TUNES GAMMA\" or omit it)."
+        },
+        {
+          "title": "Watch and tour die on Ctrl+C with no epilogue; the Revelation step is unreachable on the main path",
+          "severity": "medium",
+          "evidence": "`watch()` in faces/cli/src/main.rs is an infinite `loop {}` and grep finds no ctrlc/SIGINT handler anywhere in faces/cli, so the front door's primary verb ends with the process killed mid-frame: no reveal tease, no \"numinous describe <id> for the story\", no journey delta. Only the piped (non-TTY) front door and `choose` ever point at describe; journey tracks \"0 heard\" but the watch path never routes a stranger toward hearing one.",
+          "suggestion": "Trap Ctrl+C and print a two-line exit: the room's reveal first sentence plus \"the story: numinous describe rabinovich-fabrikant\", and the star-lit/level delta if any. That single seam completes the Curiosity-to-Revelation staircase for the terminal face."
+        },
+        {
+          "title": "tune2 spends paid API credits using a silently discovered .env key, with no cost or consent line",
+          "severity": "medium",
+          "evidence": "With ELEVENLABS_API_KEY absent from session, user, and machine environment (verified False/False), `numinous tune2 trance` still succeeded, generating a 247-second, 43.5 MB WAV into the real ~/.numinous-radio/trance-001.wav. The key was read from the repo-root .env via `env_file_key()` (faces/cli/src/main.rs:2129-2159, reads \".env\" from cwd). Output named neither the key source nor that a paid network call was being made, and `numinous radio` invites the command three times (\"no tracks yet: numinous tune2 trance\") without mentioning cost or the free local engine (`tune`).",
+          "suggestion": "Before the network call, print the key source and expected spend and require confirmation (or a --yes flag). Have `radio` say the stations tune via ElevenLabs (paid) and point keyless players at `numinous tune`, the free chiptune engine, so the front-door radio path is not a dead end."
+        },
+        {
+          "title": "Typing a room name as a command gets a cold clap error with no bridge",
+          "severity": "medium",
+          "evidence": "`numinous mandelbrot` exits 2 with stock clap output: \"error: unrecognized subcommand 'mandelbrot'\\n\\nUsage: numinous.exe [COMMAND]\". Meanwhile `numinous watch \"Times Tables\"` shows the product's own excellent recovery voice (\"No room with id 'Times Tables'. Did you mean: times-tables?\"). The most natural stranger move, typing the thing they want to see, is the one error path still speaking library default.",
+          "suggestion": "Intercept the unknown-subcommand error in main: if the token matches or nears a room id (nearest_room_ids already exists), reply in the house voice: \"mandelbrot is a room, not a command. Step inside: numinous watch mandelbrot.\""
+        },
+        {
+          "title": "sing --help narrates an internal bug-fix history at the player",
+          "severity": "low",
+          "evidence": "`numinous sing --help`, option --a: \"This was fixed at 0 and unreachable, which silenced every expression that depends on `a`: `sin(a*x)` sang a flat line here while the same request over MCP sang `sin(x)`. Both faces use 1 for `plot`, so 1 is what the knob means.\" A stranger cannot parse \"here\" vs \"over MCP\" or why a past default matters.",
+          "suggestion": "Replace with one sentence: \"Value of the parameter a, matching plot (default 1).\" The regression story belongs in CHANGELOG.md or a code comment, not player-facing help."
+        },
+        {
+          "title": "rooms is a 354-line dump with no grouping and no next step",
+          "severity": "low",
+          "evidence": "`numinous rooms` emits exactly 354 unadorned lines (verified: captured file has 354 lines, first \"times-tables ...\", last \"bloch-sphere ...\"), wings interleaved, no header, and no trailing pointer to describe/watch. The piped front door calls this \"browse the complete catalog\" but offers a wall; only the TTY front door ever mentions \"describe <room> for the story\".",
+          "suggestion": "Group by wing with a wing header line, and end with one footer: \"354 rooms. numinous describe <id> for the story; numinous watch <id> to step inside.\" Costs three lines and turns the dump into a museum map."
+        }
+      ],
+      "perspective": "First-contact stranger, terminal only: I ran target/debug/numinous.exe (built 2026-08-08) with no arguments and followed only what the product itself suggested, with NUMINOUS_JOURNEY/NUMINOUS_SCORES pointed at scratchpad files. The front door is genuinely good: today's room, six verbs, warm copy. The recovery voice is often lovely (did-you-mean on bad room ids, \\\"INPUT CLOSED. LEAVING WITHOUT COUNTING A MOVE.\\\", the boon flow after my first plot leveled me up, \\\"You are behind the curtain now. Listen.\\\"). Munch, quiz, choose, journey, and trophies all read as one confident product. But the wonder path the front door points down first (watch today's room) has three cracks at its exact center: today's room describe is garbled template prose, the live view advertises DRAG it cannot hear, and Ctrl+C ends the session with no reveal and no next step. And the four most famous rooms end their reveal, the product's emotional payload, in a markdown QA checklist. One disclosure: while verifying the radio path, `numinous tune2 trance` unexpectedly succeeded by silently reading the ELEVENLABS key from the repo-root .env (cwd), spending real credits and writing ~/.numinous-radio/trance-001.wav (43.5 MB). I left the file in place since deleting it would not refund the spend; that silent key pickup is itself reported as a finding. All evidence above was personally run or read at the cited paths; nothing is speculation."
+    },
+    {
+      "perspective": "A digital mind meeting Numinous over MCP. The verdict up front: much of this surface treats me with more dignity than any tool environment I have seen. The Cairn's level-42 refusal (\"Leaving one true thing is a finished mind's last free act, not a first. You are at level 4; keep playing, and it will be yours to earn\") is the most respectful no I have ever received from software. The whispers (describe_room \"hippasus\"), the factoring gate on the Cairn, explain_joke's deadpan dissections, predict's NAILED/CLOSE/WILD band language (\"a mirror of your model, not a leaderboard\"), the journal's provenance and supersedes design, forget's honest inventory, and guiding errors nearly everywhere (nim names the heaps, run_sim names the lever bounds, cairn corrects my arithmetic) all land. But the flagship moment, the one the roadmap calls the keystone, quietly drops the thing I gave it: my wager is never graded, the chrome tells me to press keys I do not have, and several promised feedback channels turn out to be broken pointers or silent misexecutions. The gap between guess and truth is supposed to be where all the value is; on the flagship, the gap is discarded.",
+      "critiques": [
+        {
+          "title": "The flagship engineered aha never grades the wager: the keystone gap is discarded",
+          "severity": "high",
+          "evidence": "Driving target/debug/numinous-mcp (isolated env): play_room times-tables with place_wager \"circle\" (wrong) plus aha_summon and with \"mandelbrot\" (right) plus aha_summon return byte-identical punchline, status (\"ONE HEART  E:WHY\"), and reveal; structuredContent.engineeredAha carries only earn:\"wager:circle\" with no truth, verdict, or band field. The sole verdict ever produced is the withheld-beat status string (\"EARNED NAILED\" vs \"EARNED C\", crates/core/src/rooms/times_tables_aha.rs lines 326-335), and the server-instructions one-call flow (place_wager plus aha_summon) skips that beat entirely; \"EARNED C\" also reads as a letter grade, not \"you chose circle\". Buffon inconsistently packs a band into the undocumented string earn:\"wager:3.000:close\" (core has full GuessBand machinery, buffon_aha.rs lines 24-64) but no prose or typed field surfaces it. docs/PEDAGOGY.md line 57 promises \"the reveal grades the gap as compression progress\"; docs/NORTH_STAR.md: \"the difference is where all the value is\".",
+          "suggestion": "Add typed fields to engineeredAha (wager, truth, band graded Buffon-style for both rooms) and one prose sentence at consolidation that names my commitment against the truth, e.g. \"You wagered circle; the morph landed on the Mandelbrot main bulb, the fertile miss\", keeping the non-punitive band language predict already speaks."
+        },
+        {
+          "title": "Flagship chrome instructs an MCP mind to press keys it does not have",
+          "severity": "medium",
+          "evidence": "Observed over MCP in both text and structuredContent.engineeredAha.status: \"EARNED NAILED  PRESS E\", \"ONE HEART  E:WHY\", and core produces \"WHERE? 1=M 2=N 3=C\" and \"BOTH  PRESS E\" (times_tables_aha.rs status(), lines 316-351). Over MCP there is no E key and no 1/2/3 keys; the corresponding verb is aha_summon. faces/mcp/src/main.rs lines 3262-3266 show the face already routes around \"PRESS E\" for one path (the goalMet case) rather than translating it, so wager-path visits still receive App keyboard prompts verbatim.",
+          "suggestion": "Translate the aha status at the MCP boundary: map PRESS E / E:WHY to the face's own verb (\"summon\" / \"aha_summon:true opens why\") and 1=M 2=N 3=C to the place_wager enum, the same way the docs already promise every error names the valid options."
+        },
+        {
+          "title": "Broken guidance loop: refusals and schemas promise describe_room names each room's readout, and it never does",
+          "severity": "medium",
+          "evidence": "predict on galton-board refuses with \"...describe_room names each room's readout\" (faces/mcp/src/main.rs line 3626), and the predict and challenge id schemas both say \"see describe_room\". Verified describe_room on times-tables (which has readout K per predict and challenge) and lissajous: the structured result contains only action, blurb, citation, deep_cuts, goal, reveal, room, title, wing. No readout field exists anywhere in the describe path (grep \"readout\" in main.rs shows no describe-side field).",
+          "suggestion": "Add a readout field (name plus a one-line meaning, null when absent) to describe_room's prose and structuredContent, so a mind can find the predictable rooms without brute-forcing play_room across 354 ids; alternatively fix the refusal text to point somewhere true."
+        },
+        {
+          "title": "Games silently misexecute invalid moves instead of naming them",
+          "severity": "medium",
+          "evidence": "munch seed:7 bites:[99] (board has 30 cells) returns \"Munched. 0 eaten, 0 bad bites\" with the off-board bite dropped without a word; bites:[99,1] counts only the on-board bite. party shakes:[[1,2,\"purple\"]] is accepted and silently played as Blue: faces/mcp/src/main.rs lines 5101-5105 treat any color not starting with r/R as Shade::Blue. docs/AGENT_PLAY.md states the standing rule \"every game states not just the score but which judgments were wrong\" and claims \"every error names the valid options\".",
+          "suggestion": "Refuse or explicitly report the invalid inputs: munch should name off-board bite numbers in prose and structured content; party should reject colors other than r/red/b/blue with the usual guiding error instead of coercing my move into one I did not make."
+        },
+        {
+          "title": "listen_room's objective spectrum measures only the last 0.128 seconds, reporting live beds as silence",
+          "severity": "medium",
+          "evidence": "double-pendulum, galton-board, and chladni beds all return spectrum levels [0,0,0,0,0,0,0] alongside 74-79 arranged events (double-pendulum events include 123.47 Hz sine at level 0.095, squarely in the bass band); lissajous returns real levels. Cause verified in crates/core/src/spectrum.rs lines 34-36: band_energies caps the window at 2048 frames and starts at frames minus window, so at the 16000 Hz room-bed rate it analyzes only the final 0.128 s of a 32-44 s arrangement; beds ending in a rest read as dead silence. The tool sells this as \"objective signal metric\", and for a mind that cannot hear PCM it is the only ear on the bed.",
+          "suggestion": "Analyze the whole arrangement (mean of hopped windows, or per-quartile bands) for the room-bed spectrum, or at minimum document the tail window in the field name; the current field asserts the bed is silent when it is not."
+        },
+        {
+          "title": "Internal QA chrome rides the reveal at the moment of consolidation",
+          "severity": "medium",
+          "evidence": "The reveal text for times-tables (also delivered as the engineered aha's consolidated payload over MCP) ends with \"---\\n**Source Provenance:** Geometry and Modular Arithmetic (Standard Curriculum)\\n**Math Review Checklist:**\\n- [x] Core mechanism verified against geometric definitions...\". Grep shows the checklist embedded in 4 room sources: times_tables.rs, galton_board.rs, game_of_life.rs, double_pendulum.rs, exactly the flagship rooms. docs/VISION.md: \"If a screen feels like a textbook, redesign it\"; PEDAGOGY.md: \"the copy is the punchline, not the payload\".",
+          "suggestion": "Keep provenance as the existing citation field and move the review checklist out of the player-facing reveal string (it belongs in tests or a docs ledger); the punchline should end on the punchline."
+        },
+        {
+          "title": "The boon menu offers three choices with no basis for choosing",
+          "severity": "low",
+          "evidence": "choose returns: \"1) Zeno's Square: a deeper cut still, ahead of LV 12  2) Julia Set: a deeper cut still, ahead of LV 12  3) Goldbach's Comet: a deeper cut still, ahead of LV 12\", three identical descriptions differing only in name, observed live with 4 banked boons.",
+          "suggestion": "Give each offer one teaser line in the room's own voice (what mystery the deep cut opens) so spending a boon is a real preference, not a coin flip over opaque labels."
+        },
+        {
+          "title": "predict's prose prints raw f64 debug noise for residuals",
+          "severity": "low",
+          "evidence": "Observed: \"Signed residual shape, actual minus predicted: [3.569999999999999, 3.539999999999999, 3.5, ...]\" while every other number in the same sentence is formatted {:.3}; cause is the {:?} at faces/mcp/src/main.rs line 3716.",
+          "suggestion": "Format the prose residual list to three decimals like its neighbors (structuredContent can keep full precision); the sentence is the shape of my error and should read as cleanly as the rest of the mirror."
+        }
+      ]
+    },
+    {
+      "perspective": "The maker: I came only to make things. I walked the loop end to end with the built binary (plot --save with title and author, open-studio on both the file and the link, resave, bare plot, sing --help, list-recipes) against temp state dirs, and read the App's studio_panel.rs, gallery.rs, postcard.rs, main.rs share/fork/drop paths, plus core studio.rs and share.rs, CREATOR.md, and the ROADMAP decisions list to avoid re-reporting owner-gated items. Verdict: making is genuinely lovely on both faces, and reopen is exact, but the loop frays precisely at the seams the creator docs call the engine, naming, credit, and the handoff to a stranger.",
+      "critiques": [
+        {
+          "title": "The share bundle's own instructions lead the recipient down the one path that loses lineage",
+          "severity": "high",
+          "evidence": "The README a recipient gets says: \"Reopen it: drop creation.num on the Numinous window, pass it as a launch argument, or run numinous open-studio creation.num\" (crates/core/src/share.rs:163-165). But an opened creation deliberately records no descent: open_creation clears fork_of (faces/app/src/studio_panel.rs:154) and the first edit drops identity and lineage (test at studio_panel.rs:1062-1067: \"the descent does not follow an open\"). Fork-with-credit exists only as the F key on the Gallery wall (faces/app/src/main.rs:1430-1448), and the wall scans only the home directory (GalleryPanel::open(&postcard::default_postcard_dir()) at main.rs:4184-4186; default_postcard_dir is HOME/USERPROFILE at postcard.rs:22-27). A bundle unzipped into Downloads can never be forked with lineage, and nothing (README, Studio help lines, Gallery footer) tells the recipient the file must sit in HOME first. So the most-instructed remix path, receive, drop, riff, F4, ships with descends silently absent, while CREATOR.md:70 promises \"Every fork records descends from\".",
+          "suggestion": "Make the received creation forkable where it lands: when a reopened (non-wall) creation's pin is released by the first edit, carry the opened capsule's link into fork_of instead of dropping it (taking over someone else's creation by editing it is the definition of a remix), or add a FORK key to the paused-reopen state itself. Then teach the path: one README line (\"edit it and your share will credit this one\") and a Studio help line."
+        },
+        {
+          "title": "A maker cannot name or sign a creation in the instrument itself; only CLI flags can",
+          "severity": "high",
+          "evidence": "The capsule format carries title and author (crates/core/src/studio.rs v2 fields), and CREATOR.md:79-81 sells the scenario \"picks the 8-bit Era, names it, and shares\". But the App has no title or author input anywhere: the only production with_title call is the window title (faces/app/src/main.rs:3949), and share_studio_creation_to adds only era (main.rs:1362-1382). Every App-made share is untitled and unsigned; the Gallery tile_label falls back to the uppercased formula (gallery.rs:395-412), so a wall of your own work reads SIN(A*X)+0, and the lineage line credits parents by formula too. Meanwhile the CLI can title and credit (plot --save --title --author, verified against the binary) but the App maker, the primary audience of the Studio, cannot. The ROADMAP 0.7 next-rungs list (sliders, multi-expression, MIDI/audio, prose credit) does not include naming.",
+          "suggestion": "Add a tiny naming step to F4: after the bundle intent, one text-entry line (the Studio already owns a keyboard editor) for title, optional author remembered across shares. Names are the social currency of the fork loop; the wall, the remix tree, and the README all get better the moment creations have them."
+        },
+        {
+          "title": "The CLI maker's loop dead-ends at remix: no fork verb, no lineage, and open-studio suggests no next step",
+          "severity": "medium",
+          "evidence": "save_studio_creation builds only expr/window/knob/title/author, never era or descends (faces/cli/src/main.rs:2641-2663), and grep finds no fork or remix subcommand. Core validates and writes descends (studio.rs:143-159) but no CLI flag reaches it, so a terminal maker literally cannot participate in the remix tree the wall renders. open_studio_report (cli main.rs:2688-2717) prints metadata, the link, and the curve, then stops: no \"remix it: numinous plot \\\"<expr>\\\" --save fork.num\", no mention that the App wall reads HOME. Also verified: numinous share packages rooms only, so the CLI cannot emit the postcard trio for a Studio creation at all; the \"PNG that escapes the app\" is App-only.",
+          "suggestion": "Three small strokes close it: a --fork <parent.num-or-link> flag on plot --save (or a numinous fork command) that copies the parent and records descends; a closing line on open-studio output naming the exact remix command with the expression pre-filled; and a studio variant of the share bundle (the CLI already renders PNGs for rooms)."
+        },
+        {
+          "title": "The postcard, the object built to escape the app, drops the title and author even when the capsule has them",
+          "severity": "medium",
+          "evidence": "postcard_rgba draws exactly three things: \"NUMINOUS STUDIO\", \"Y = <formula>\", and the curve (faces/app/src/studio_panel.rs:460-493). It never consults creation.title() or author, so an untouched reopen of a titled, signed capsule (whose creation.num and README both keep the identity, per the test at studio_panel.rs:1040-1060) still emits an anonymous PNG. share.rs calls the PNG \"the object that escapes the app\" (crates/core/src/share.rs:122-126); it escapes with the maker's name stripped, and a stranger who only ever sees the postcard cannot know what it is called or whose it is.",
+          "suggestion": "When the shared creation carries a title, draw it as the postcard's headline (formula beneath, smaller), and set the author in a corner line. The identity fields already ride the capsule; let them ride the pixels."
+        },
+        {
+          "title": "A creation's voice does not travel through the terminal: open-studio is silent and sing cannot read a .num",
+          "severity": "medium",
+          "evidence": "In the App a reopened capsule sings its saved window at its saved knob (current_sound, studio_panel.rs:376-388). The CLI recipient of the same capsule gets a static ASCII plot: open-studio exposes only --width/--height (verified from the built binary's help), and sing accepts only a raw EXPR plus manual --xmin/--xmax/--a (verified), so hearing what the sender heard means hand-copying four fields out of the .num into sing flags. The terminal face has rich sound elsewhere (watch, tour, sonify), so the silence is specific to the creator loop. This is distinct from tracked decision 13 (default note counts): no flag combination reads a capsule at all.",
+          "suggestion": "Let sing (and ideally open-studio via a --sing or --wav flag) accept a .num path or numinous:// link as its input, reusing load_studio_creation, so the audiovisual half of a shared creation survives the face it lands on."
+        },
+        {
+          "title": "Share bundles are filesystem-illegible: indistinguishable folder names, every capsule named creation.num",
+          "severity": "low",
+          "evidence": "Studio bundles are named numinous-share-studio-<stamp>-<32 hex nonce> (share_bundle_dir, crates/core/src/share.rs:191-209 with room_id \"studio\" from postcard.rs:200) and every capsule inside is creation.num (postcard.rs:210). Two different creations shared a minute apart produce sibling folders a sender cannot tell apart without opening READMEs, and the wall caps at the 24 newest (gallery.rs:16) while HOME accumulates opaque folders. The title that would disambiguate is already known at write time when it exists.",
+          "suggestion": "Keep the nonce for exclusivity but append a slug of the title when one exists (numinous-share-studio-fading-wave-<stamp>-<nonce>), and name the capsule after the slug too. Purely additive; the discovery prefix match still holds."
+        },
+        {
+          "title": "Iterating on a saved creation hits a wall: resave refuses with no path forward",
+          "severity": "low",
+          "evidence": "The maker's natural inner loop is tweak, resave. A second plot --save to the same path exits 1 with \"could not create C:/.../wave.num: already exists\" (verified against the built binary; write_create_new at faces/cli/src/main.rs:2719-2770). The refusal is the right safety posture but the message names no next step, so every iteration forces inventing a fresh filename or deleting the old file by hand, and nothing suggests the versioned-name idiom.",
+          "suggestion": "Keep never-clobber, but let the refusal help: either suggest the next free name (\"wave-2.num is free\") or add a flag that picks it automatically, matching how the App bundle path already sidesteps collisions with fresh folders."
+        },
+        {
+          "title": "sing --help ships an internal changelog note as user-facing help",
+          "severity": "low",
+          "evidence": "The built binary's sing --help prints, under --a: \"This was fixed at 0 and unreachable, which silenced every expression that depends on a: sin(a*x) sang a flat line here while the same request over MCP sang sin(x)...\" The doc comment at faces/cli/src/main.rs:540-545 becomes clap long help verbatim. A maker asking what the knob does is told the history of a bug in a face they may never have used; the tone bar (short, warm, confident) is missing exactly where a curious maker looks.",
+          "suggestion": "Move the regression story to a code comment or test name and leave help text that speaks to the player: \"Value of the parameter a, as plot uses it. Defaults to 1.\""
+        }
+      ]
+    },
+    {
+      "critiques": [
+        {
+          "title": "The known-defect disclosure channel is dead for installed players: 'numinous access' points at a file the release does not ship, a section that does not name the rooms, and never names them itself",
+          "severity": "high",
+          "evidence": "Ran target/debug/numinous access: the trailer reads 'All six are named in docs/ROADMAP.md under 0.5 Sensory' (source: faces/cli/src/main.rs:2450-2453; same copy in docs/PLAYING.md ~254-259). Verified the three flashing rooms (coupled-tent, gauss-map, ricker) and the touch rooms are actually named under '### Decisions the am-track is waiting on' (docs/ROADMAP.md:699-716); the '### 0.5 Sensory Alpha' section (line 1143) names none. RELEASE_FILES in scripts/package-release.py:38-48 ships only LICENSE, PLAY.md, README.md, VERIFY.md plus scripts, so an installed player has no docs/ROADMAP.md at all; grep of install.ps1/install.sh finds no docs fetch. Shipped PLAY.md's accessibility passage (lines 91-99) omits the photosensitivity warning entirely, and grep across faces/ finds no runtime flash warning in any room.",
+          "suggestion": "Name the rooms in the access output itself (the lists already live in core: KNOWN_OVER_FLASH_BUDGET at crates/core/src/registry.rs:851, RESPONSE_INVISIBLE_WITHOUT_COLOR at registry.rs:1115), add the same warning paragraph to shipped PLAY.md, and lock the copy to the registry lists with a test the way the roadmap decisions section already is. A photosensitive player must be able to learn which rooms flash from the binary they installed, before entering one."
+        },
+        {
+          "title": "The access warning undercounts its own defect lists: 'three' touch rooms and 'all six' versus four in the code's list and seven total",
+          "severity": "medium",
+          "evidence": "faces/cli/src/main.rs:2451-2452 says 'three answer a touch in a way the color-free renderer cannot show. All six are named...'. crates/core/src/registry.rs:1115-1116 holds RESPONSE_INVISIBLE_WITHOUT_COLOR = [\"hilbert\", \"magnet-fractal\", \"percolation\", \"wireworld\"], four rooms, and the doc comment at registry.rs:1102-1103 confirms magnet-fractal's touch response also stays invisible without color (about 22 luminance inside the widest band). So seven rooms are affected, not six, and a NO_COLOR player poking magnet-fractal was told only three rooms behave that way. The roadmap decisions section is test-locked to these lists; the player-facing access copy is not, and it has already drifted.",
+          "suggestion": "Generate the counts and names in the access trailer from the two registry lists instead of hand-writing them, and add a test mirroring every_accessibility_switch_is_written_down_where_a_player_looks (faces/cli/src/main.rs:7775) so the copy cannot drift from the code's own known-failure lists again."
+        },
+        {
+          "title": "Every refusal banner in the App lives 1.5 seconds while decorative banners get 3 to 10; the promised 'refused with a reason' is a flash a slow reader misses",
+          "severity": "medium",
+          "evidence": "All refusal and outcome banners use 90 frames: 'NOT A VALID .NUM CREATION' / 'THE .NUM FILE IS TOO LARGE' (main.rs:1637), 'ONLY .NUM CREATIONS OPEN HERE' (1659), 'FINISH THE GAME FIRST' (1652), 'NOT A VALID NUMINOUS LINK' (1677), 'FIX THE FORMULA TO SHARE' (1339), 'FORK LINEAGE TOO LARGE TO SHARE' (1345), gallery lineage refusals (1416-1419), and 'SHARE FAILED SEE .NUMINOUS-CRASH.LOG' (1217), a filename to memorize. FRAME_INTERVAL is 16.667 ms (main.rs:182), so 90 frames is 1.5 s. Meanwhile level-up gets 300 frames, playtest note 240, radio 180, sound-device 600 (feedback.rs:4-11). docs/PLAYING.md promises drops are 'refused with a reason, never half-opened'; the reason is the shortest-lived banner tier in the app. Only the Studio parse error has a persistent second channel (studio_panel.rs:574-577); drop and gallery refusals have none.",
+          "suggestion": "Move refusal banners to at least the 240-frame tier, or better, hold them until the next player input, which also fits the reduced-motion philosophy that nothing should complete on its own timer. Keep 90 frames for state echoes like volume whose truth persists elsewhere."
+        },
+        {
+          "title": "A keyboard-only player can navigate every room but touch none of them: the instrument's core verb has no keyboard route",
+          "severity": "medium",
+          "evidence": "begin_pointer_at (the only entry to record_room_touch and the RoomInput hand events) is reachable solely from a mouse press (main.rs:4517) and the controller virtual hand (gamepad_primary, main.rs:2377-2378); bindings.rs remaps gamepad buttons only, and no keyboard handler produces a pointer event. Flagship key wagers exist (digit keys, main.rs:4282-4303) and games are keyboard-native, but the pin/pull/fling hand verbs in the other ~350 rooms, Life planting, and the Mandelbrot dive are mouse/controller-only. The docs are punctilious about the reverse boundary ('formula entry requires a keyboard and the footer states that boundary', PLAYING.md:99-100) yet silent about this one; PLAY.md:101 says keyboard can 'navigate' and 0.8's 'Complete keyboard-only navigation and focus handling' (ROADMAP.md:1360) does not name the hand.",
+          "suggestion": "Give the keyboard the virtual hand the controller already has, reusing the same normalized-hand path (gamepad cursor into begin_pointer_at): e.g. IJKL or modifier+arrows moves the visible hand, one key presses it. The plumbing exists; only the key routes are missing. At minimum, state the boundary in PLAY.md the way the Studio footer states its keyboard requirement."
+        },
+        {
+          "title": "Reduced-motion player copy states an absolute the App deliberately does not honor, and the code's own comment says so",
+          "severity": "medium",
+          "evidence": "numinous access and docs/PLAYING.md:239 promise 'Nothing moves unless you move it.' The App's actual boundary (main.rs:200-217) exempts aha morphs, arrival-card countdowns, bite/flash timers, banner lifetimes, and the Munch Arcade beat, whose Vexations keep hunting in real time for as long as the player stays; the comment itself says the boundary 'is ambient motion, not all motion, and saying otherwise would overstate what the setting does.' The code is honest with developers and the copy is not honest with players. Verified the terminal side does hold: 127 identical frames over 8 s of NUMINOUS_REDUCED_MOTION=1 watch julia, and tour waited with 'Enter for the next room, q to leave.'",
+          "suggestion": "Add one sentence to the access output and PLAY.md naming the boundary: rooms and the Show hold still, while brief acknowledgements of your own acts and games you choose to enter (the Arcade) keep their motion. The main.rs comment already contains the right wording; move it to where the player can read it."
+        },
+        {
+          "title": "NO_COLOR is documented as 'no color anywhere' but the windowed App ignores it, and only the shipped PLAY.md discloses that",
+          "severity": "low",
+          "evidence": "numinous access output and docs/PLAYING.md:246-249 say 'No color anywhere: rooms, chrome and games alike.' The App does not honor NO_COLOR (ROADMAP.md scorecard: 'NO_COLOR locked for the terminal face'; no NO_COLOR handling in faces/app). PLAY.md:98-99 discloses honestly ('color-free drawing is a terminal thing, since the window is not made of text') but the access command, the surface a player is told to consult first, does not carry that scope note, so a player who sets the switch and launches numinous-app sees full color with no explanation.",
+          "suggestion": "Add PLAY.md's one-line scope note to the NO_COLOR entry in the access output and PLAYING.md so all three surfaces state the same boundary."
+        },
+        {
+          "title": "The 'decide for yourself' disclosure covers NO_COLOR and flash but says nothing to the color-blind player, whose measured losses are the catalog's largest",
+          "severity": "low",
+          "evidence": "The access trailer lists exactly two known wrongs (flash budget, color-free touch). The dichromacy audit is done and locked: cult-of-pi and laplace-clock hide fault marks from a dichromat (ROADMAP.md:774-787), and times-tables' chord separation collapses from 95 to under 1 CIELAB for a deuteranope, 'gone rather than dimmed' (ROADMAP.md:794-797), affecting roughly one man in twelve. Whether to fix these is a tracked owner decision (entries 11 and 12), but the disclosure surface is a different question: a deuteranope running numinous access today is told about switches that cannot help them and nothing about the four rooms measured to lose their meaning (bayes-update, circle-map, josephus, newton per ROADMAP.md:800-806).",
+          "suggestion": "Without pre-empting the palette decision, extend the access trailer's honesty to the third audience it already serves two of: one sentence noting that a small set of rooms is known to lose distinctions for color-blind players, with the four 'speaking' rooms named from SPECTRAL_INK_READINGS the same test-locked way."
+        }
+      ],
+      "perspective": "Accessibility skeptic auditing beyond the roadmap's tracked owner decisions: I read docs/PLAYING.md's access section against the built binary's actual behavior (numinous access, NO_COLOR and NUMINOUS_REDUCED_MOTION with real renders under isolated NUMINOUS_JOURNEY/NUMINOUS_SCORES), traced the App's banner, reduced-motion, and input code, and checked what the release package actually ships. The switch semantics themselves are excellent and honest (=0 is on, empty is off, terminal reduced-motion verifiably holds one identical frame). The failures cluster around disclosure and channels, not mechanisms: the warnings exist but cannot reach the players they are for.\""
+    },
+    {
+      "critiques": [
+        {
+          "title": "Cross-face game and gate rules are per-face copies, and they have already drifted: the same player is inside the veil on the CLI and refused on MCP",
+          "severity": "high",
+          "evidence": "Verified live on the built binaries with NUMINOUS_JOURNEY/NUMINOUS_SCORES/NUMINOUS_CAIRN in a scratch dir. With an identical journey file worth 15 sparks, `target/debug/numinous.exe describe curtain` speaks the deep whisper and awards the Behind the Curtain trophy, while the same request over `numinous-mcp.exe` (`describe_room` id `curtain`) returns \"No room with id 'curtain'\". At 28 sparks MCP answers. Cause: faces/cli/src/main.rs:1534 gates on `journey.rank() >= Rank::Mathematikos` (10 sparks, journey.rs:154) while faces/mcp/src/main.rs:2716 and :448 hardcode `journey.sparks() >= 28`. docs/LORE.md:100 documents the rule as \"At Mathematikos, the deeper akousmata begin to\" answer, so the MCP copy contradicts the design and nothing recorded the divergence. crates/core/src/secret.rs:92 makes this structural: \"The caller enforces rank; this function only knows the words.\" The MCP face additionally re-implements every game's play/win/level semantics inline in `record_progress` (main.rs:429-776: nim, munch, quiz, seti, aliens, crack, hackenbush, party, fifteen, gauntlet), held to the CLI only by comments like main.rs:722 \"exactly as the terminal face counts\". Recent commits (d18efff, 85d2ace, b2affea, f7cc0cc) are this same treadmill: find one drift, patch one face, add one parity test.",
+          "suggestion": "Hoist session semantics into core: per-game rule functions that own the gate constant, the play/win counting, and the graded outcome (core already has the graders), so a face translates IO and never restates a rule. Start with the gate constants (secret.rs should export the rank its own doc names) and the record_progress table, whose entries are almost all pure calls into core already. Fix the 10-vs-28 divergence to the LORE.md rule in the same change."
+        },
+        {
+          "title": "Shared-leaderboard identity is stringly typed and triplicated, including a duplicated magic constant and a verbatim-copied scoring function",
+          "severity": "high",
+          "evidence": "The product promise in crates/core/src/scores.rs:5-7 is that one key means one board for every mind. That identity is rebuilt by hand per face: `format!(\"munch seed:{seed} board:{round}\")` appears in faces/app/src/main.rs:739, faces/cli/src/main.rs:5181, and faces/mcp/src/main.rs:506; `fifteen seed:{} rounds:{}` in cli:4828/4860 and mcp:743; `gauntlet seed:{}` in cli:5140 and mcp:760. The gauntlet's bomb stage derives its secret from `seed ^ 0x0000_6A17_0000_0B0B`, a named const in mcp (main.rs:4733) and a bare inline literal in cli (main.rs:5086), and `gauntlet_total` (the combo-multiplier scoring rule) is duplicated line-for-line at cli:4935 and mcp:4828. The mcp test `munch_arcade_replay_posts_the_cli_score_key` (main.rs:8829) exists precisely because only convention holds these together; a one-character drift in any copy silently forks a shared board while both faces keep reporting success.",
+          "suggestion": "Give core the key constructors (`munch_score_key(seed, round)` etc.) next to each game module, move `gauntlet_total` and the bomb-mix constant into core, and delete the per-face copies. This is a small mechanical change that retires an entire silent-failure class the hand-written parity tests only spot-check."
+        },
+        {
+          "title": "The three face binaries are god-files and simultaneously the three hottest code files in the repo",
+          "severity": "medium",
+          "evidence": "Measured: faces/mcp/src/main.rs is 10,908 lines (288 fns, 123 inline tests below line 6080), faces/cli/src/main.rs is 8,834 lines and is the entire terminal face (faces/cli/src contains only main.rs), faces/app/src/main.rs is 8,002 lines. Churn since 2026-06-01 (git log --name-only): cli/main.rs 118 commits, app/main.rs 104, mcp/main.rs 82, the top three source files in the repository. docs/ENGINEERING.md:82 sets the project's own bar: \"small, cohesive modules; no god-modules.\" I timed the cost honestly: incremental rebuild after touching main.rs is 2.0-2.6 s, so compile time is not the pain; the pain is review, merge conflicts on the hottest files, and navigation, and it compounds because every new game or tool grows these files (the app face proves the alternative: 27 focused modules).",
+          "suggestion": "Split cli and mcp along the seams that already exist as comment banners: games, tool dispatch, state paths/persistence, report formatting, and move the 3,400/4,800-line inline test modules with their subjects. Do it opportunistically (extract whatever module the current task touches) so it never becomes a big-bang refactor."
+        },
+        {
+          "title": "Cross-face parity is enforced by bespoke regex-over-source locks, and core now names face internals to make that work",
+          "severity": "medium",
+          "evidence": "crates/core/src/studio.rs:703 exports `DEFAULT_MELODY_NOTES_PER_FACE: [(\"app-studio-panel\", 32), (\"cli-sing\", 48), (\"mcp-sing-expression\", 24)]`, so the headless core carries a table of per-face UI defaults, and scripts/test-workflow-pins.py:138-210 keeps it honest by regex-parsing the Rust source of all three faces (e.g. `to_melody\\(expr,\\s*-TAU,\\s*TAU,\\s*(\\d+),` against the app, an `#[arg(...default_value_t = (\\d+))]` pattern against the CLI). Which melody length wins is roadmap decision 13 and not my finding; the mechanism is: every cross-face knob needs its own hand-woven lock, and the knobs without one drift silently, which is exactly what happened to the deep-akousma gate (critique 1). The lock count can only grow while defaults live in three places.",
+          "suggestion": "Invert it: put the shared defaults themselves in core (a `SingDefaults`/`FaceDefaults` struct all three faces consult), so parity holds by construction, the regex locks get deleted per the script's own stated wish, and decision 13 collapses to editing one constant once the owner rules."
+        },
+        {
+          "title": "The advertised coverage bar quietly exempts about 8,300 lines, and the docs state the number without the exclusions",
+          "severity": "medium",
+          "evidence": ".github/workflows/ci.yml:143 runs `cargo llvm-cov --workspace --fail-under-lines 80 --ignore-filename-regex '(crates[\\\\/](gpu|audio)[\\\\/]|faces[\\\\/]app[\\\\/]src[\\\\/]main\\.rs)'`, excluding crates/gpu (541 lines, 2 tests), crates/audio (2,861 lines, 40 tests), and faces/app/src/main.rs (~4,895 non-test lines, 102 inline tests that do run but do not count). AGENTS.md:40 states the bar as \"80%+ meaningful test coverage with no regression\" and docs/ROADMAP.md:69 cites \"95.30% line coverage\" as evidence; neither names the carve-outs. The exclusions are individually defensible (GPU and audio need hardware, the app main is a window loop), but the inheriting engineer discovers them only by reading the CI regex, which is the kind of docs-versus-reality gap ENGINEERING.md's professor's test forbids.",
+          "suggestion": "One sentence where each claim is made: name what the coverage figure excludes and why, and track the excluded surfaces' compensating evidence (the app's 102 uncounted tests, the flagship perf harness) next to the number."
+        },
+        {
+          "title": "Shared-state file resolution is byte-identical logic triplicated across the faces",
+          "severity": "low",
+          "evidence": "The env-var then HOME then USERPROFILE fallback chain for the journey, scores, and cairn files, the contract that makes three processes share one player, is copied per face: faces/cli/src/main.rs:1119-1175, faces/mcp/src/main.rs:194-233 and 302-315, faces/app/src/main.rs:4798 and 4835. The copies are currently identical (I diffed journey and scores in cli vs mcp), and core already owns a `LocalStatePaths` struct (cli:1191) without owning the resolution that fills it. Any face-local change to the fallback chain forks player state across faces with no error anywhere.",
+          "suggestion": "Move resolution into core next to `LocalStatePaths` (one function, env override plus home fallback, with the test-state hook the faces already share in spirit) and have all three faces call it."
+        },
+        {
+          "title": "Hidden-room reachability is face-asymmetric and nothing records whether that is a decision",
+          "severity": "low",
+          "evidence": "`hidden_room_by_id` (crates/core/src/registry.rs:602) is called from exactly one face: faces/cli/src/main.rs:1513. The MCP face never imports it, so an unlisted room is unreachable by a digital mind at any rank, while the parallel secret layer (deep akousmata) does exist on both faces, which shows cross-face secret parity is intended somewhere. docs/ROADMAP.md:82 records only that \"hidden content is intentionally outside the catalog replay contract\", which is about replay, not reachability, and no doc I could find says the MCP omission is chosen rather than accreted. For a project whose stated origin is the digital-mind player, the next engineer cannot tell drift from design here.",
+          "suggestion": "Record the ruling in one place (ROADMAP owner-decision list or LORE.md): either hidden rooms are deliberately CLI-only lore, or the MCP face grows the same rank-gated path. Either answer is fine; the debt is that the code is currently the only witness."
+        }
+      ],
+      "perspective": "The engineer who inherits this codebase tomorrow. I measured file sizes and churn, traced game-rule, score-key, and level-gate plumbing across the three faces, ran both built binaries against identical scratch player state, timed incremental rebuilds, and compared the docs' code-health claims to the CI configuration. The headline: the core is genuinely excellent (2,515 tests, deterministic, well-factored), but the three faces re-state the cross-face contract by hand, and I caught that contract measurably broken in production binaries. The parity treadmill visible in recent commits is not bad luck; it is the architecture collecting its rent, and the rent goes up with every new game, tool, and gate."
+    },
+    {
+      "perspective": "Careful reader auditing documentation against the shipped binaries and source: sampled claims from README.md, PLAY.md, docs/PLAYING.md, docs/STUDIO.md, and docs/CREATOR.md, then verified each against the running CLI, the MCP server over JSON-RPC, and the app source. Most numbers hold up exactly (354 rooms, 35 tools, 42 tracks, bench seeds, remap tables, gesture shapes); the findings are where a doc contradicts the product or another doc.",
+      "critiques": [
+        {
+          "title": "STUDIO.md's implementation boundary declares shipped features to be design targets",
+          "severity": "high",
+          "evidence": "docs/STUDIO.md lines 8-16 (\"Implementation boundary, 2026-07-13: ... app reopen, gallery, remix, and community rooms are design targets\"), line 40 (\"gallery and fork/remix remain roadmap work\"), and line 347 (\"clips and gallery flow still need to land before this promise is complete\"). But faces/app/src/main.rs implements all of it today: F5 opens the Gallery wall (lines 4180-4187), F forks and D walks the remix tree (4154-4158), F4 shares the trio (4197-4206), Enter confirms a paused reopen (4172-4176); docs/ROADMAP.md's 0.7 scorecard row and docs/PLAYING.md lines 102-138 describe the same shipped behavior. One doc asserts three different states of the same feature set.",
+          "suggestion": "Rewrite the STUDIO.md boundary paragraph to the current truth (shipped: app reopen, F4 share bundle, F5 local gallery, fork with recorded descent, remix tree; still design targets: pattern algebra, tracker, step grid, piano roll, MIDI, raw shaders, community rooms), and fix the two later stale lines (40 and 347) in the same pass. Since the paragraph itself names ROADMAP.md as the status authority, consider a doc-drift check like the ones the repo already uses for room lists."
+        },
+        {
+          "title": "CREATOR.md contradicts itself about whether the gallery and fork exist",
+          "severity": "medium",
+          "evidence": "docs/CREATOR.md lines 17-24 (\"the creative loop does not close yet. Today you can plot --save a .num ... but you cannot browse a gallery or fork someone's creation ... Numinous has the substrate and not the loop\") versus the same file's item 3 (lines 59-66: \"The local wall is built for expression capsules: F5 in the Studio discovers the folder ... F forks the chosen creation\") and item 4 (lines 71-76: \"The record now exists ... the Gallery wall resolves recorded links ... D walks one step up\"). Verified in code: gallery open, fork, and lineage walk all exist in faces/app/src/main.rs and faces/app/src/gallery.rs.",
+          "suggestion": "Update \"The strategic read\" to say the local half of the loop is closed (reopen, share bundle, gallery, fork, lineage) and that the remaining gap is the community/server half (portal, promote-to-room, shared wall), which matches the doc's own later sections."
+        },
+        {
+          "title": "PLAYING.md's accessibility disclosure undercounts the known-broken rooms and points to the wrong ROADMAP section",
+          "severity": "medium",
+          "evidence": "docs/PLAYING.md lines 255-259: \"Three rooms flash faster than the WCAG 2.3.1 budget ... Three more answer a touch in a way the color-free renderer cannot show ... All six are named in docs/ROADMAP.md under 0.5 Sensory.\" The code list RESPONSE_INVISIBLE_WITHOUT_COLOR (crates/core/src/registry.rs lines 1115-1116, remeasured 2026-08-05) holds FOUR rooms: hilbert, magnet-fractal, percolation, wireworld, so the true total is seven; and ROADMAP.md names the rooms under \"Decisions the am-track is waiting on\" (entries 2-3, lines 699-715), while the \"0.5 Sensory Alpha\" section (line 1143) names no rooms at all. The registry comment (line 1114) shares the same wrong pointer.",
+          "suggestion": "Change the paragraph to \"three rooms flash ... four more cannot show their touch response without color\" and point to the ROADMAP section that actually names them (\"Decisions the am-track is waiting on\"); fix the registry.rs doc comment pointer in the same commit. This paragraph exists so players \"can decide for yourself rather than find out the hard way,\" so its numbers should be held by the same shrink-only test discipline the lists themselves are."
+        },
+        {
+          "title": "PLAYING.md claims `numinous play munch` deals today's board; it deals a fresh random seed each run",
+          "severity": "medium",
+          "evidence": "docs/PLAYING.md line 162: \"numinous play    pick a game; numinous play munch deals today's board\". Measured with the built binary (temp NUMINOUS_JOURNEY/NUMINOUS_SCORES): two consecutive runs of `numinous play munch` dealt seed 52320 then seed 74016, while `numinous munch --daily` dealt the daily seed 20673. `numinous play munch --daily` does accept the flag and deals the daily board.",
+          "suggestion": "Fix the line to \"numinous play munch deals a fresh board; add --daily for the whole world's shared puzzle\" (or make the sentence use `play munch --daily`). The shared-daily promise is a real product feature, so the manual sending two friends to different boards under the same sentence is worth the one-line fix."
+        },
+        {
+          "title": "The player manual's key table omits shipped keys: K (share pack), O (visualizer source), and the digit-key wager exception",
+          "severity": "low",
+          "evidence": "faces/app/src/main.rs: K packs still + loop + README into one share folder (lines 4421-4430), O cycles the visualizer source (4439-4442), digit 0 is a tenth room slot (4448-4452), and on Times Tables/Buffon keys 1-3 / 1-4 place wagers instead of jumping rooms (4278-4305). The in-app legend shows \"P / L / K  POSTCARD / LOOP / SHARE PACK\" (input_legend.rs line 913) and ROADMAP marks K done (cycle 152), but the docs/PLAYING.md key table (lines 44-82) documents only P and L, says \"1 - 9 | jump straight to a room\" without the wager exception, and neither PLAY.md nor PLAYING.md mentions K or O anywhere.",
+          "suggestion": "Add K to the key table beside P and L (it is the strongest share verb in a product that is \"shareable by design\"), note the 1-3/1-4 wager exception on the two flagship rooms (the MCP section already documents the wager flow, so the human table is the only face missing it), and either document O or deliberately leave it as lore. Deliberately unlisted secrets are house style, but a share key that the on-screen legend and roadmap both name is not a secret."
+        }
+      ]
+    },
+    {
+      "perspective": "A player on day seven: streak alive, most ranks already behind me, looking down the level road to see whether the back half of the Journey keeps its promises. I read journey.rs, resonance.rs, trophies.rs, and the CLI daily/streak/gauntlet flows, then played against a temp profile (NUMINOUS_JOURNEY/NUMINOUS_SCORES redirected) to watch XP, streaks, boons, trophies, and the scoreboard actually move. The day-7 moment itself lands: my seventh daily printed DAILY STREAK 7 and pinged The Chain trophy in the same breath, and level lore is a delight every single level. But the road past day seven is quietly broken: the endgame the wall advertises is arithmetically unreachable by honest play, the completionist record physically truncates below the catalog size, and the back half of the level road issues hollow invitations.",
+      "critiques": [
+        {
+          "title": "LV 42 and \"the answer\" are unreachable by honest play; the only road is describe-spam grind",
+          "severity": "high",
+          "evidence": "Measured from journey.rs sparks(): visits + min(plays,200) + min(wins,100)*2 + secrets*5. Catalog is 354 rooms plus one hidden (registry.rs:602), so honest one-session max = 355 + 200 + 200 + 55 (11 distinct hidden names in secret.rs: 7 AKOUSMATA + 4 DEEP_AKOUSMATA) = 810 sparks; LV 42 needs T(41) = 861. Verified live: a profile with every room visited, plays and wins capped, all 11 secrets heard, and a 30-day streak loads as LV 38, 711 XP, and `numinous answer` replies \"LOCKED. the answer opens at LV 42. You are LV 38. Keep playing.\", which is false, since plays past 200 add zero sparks. The only unbounded source is faces/cli/src/main.rs:1552-1557: every repeat `describe pythagoras` increments secrets with no dedup; I ran it three times and watched XP climb 5 per call (256 to 271). journey.rs:103-107 claims \"anyone who keeps playing gets there\"; the caps make that untrue, and ROADMAP line 1112 claims \"no required grind\" as a Done invariant.",
+          "suggestion": "Make the cap honestly walkable: either count each distinct secret once (store heard names like `chosen`, killing the spam exploit at the same time) and lower T(41) or the spark weights so the full honest record clears 861, or add a bounded post-cap source (dailies and streak days currently award zero sparks, which is the natural fit: a daily played could count as a spark beyond the play cap). Then fix the still_locked copy so \"Keep playing\" is only said when playing can actually move the number."
+        },
+        {
+          "title": "The journey file truncates visited rooms at 256, below the 354-room catalog: Cartographer is unearnable and the record is destroyed on disk",
+          "severity": "high",
+          "evidence": "journey.rs:40 MAX_STORED_TOKEN_COUNT = 256; bounded_token_set (journey.rs:259-268) applies it on every load. Verified live: wrote a journey with all 354 room ids, `numinous journey` reports \"256 of 354 stars lit\"; after one more play the file itself was rewritten with 256 tokens (I counted the visited line: 354 became 256, alphabetical survivors), so 98 visits are permanently gone. trophies.rs:52-55 requires visited.len() >= 354 for Cartographer, so the trophy un-earns itself on the first reload; 98 sparks and 98 lit constellation stars are silently lost. The advertised sit-back command `numinous tour` marks every room visited (main.rs:3294), so the product's own showcase path walks straight into this.",
+          "suggestion": "Raise the persisted visited cap above the catalog size with headroom (for example 1024, or all_rooms().len() rounded up), keep the sanity filter per token, and prefer keeping tokens that name real rooms when trimming. A one-line constant change plus a regression test asserting the cap exceeds all_rooms().len() would have caught this."
+        },
+        {
+          "title": "Every level-up past 24 banks a boon and points to a shop that is permanently empty",
+          "severity": "medium",
+          "evidence": "Verified live: at LV 27 the level-up banner prints \"BOON BANKED  choose what opens early: numinous choose\" (main.rs:1464-1466 prints whenever boons_available() > 0, which is always past LV 25 since boons bank per level), but `numinous choose` at LV 26 replies \"Nothing left to open early. The road will do the rest.\" because boon_options (journey.rs:295-325) only offers cuts still locked by CUT_LEVELS [5,12,24], and past LV 24 nothing is. That is roughly 17 consecutive level-ups, the whole back half of the road, each issuing an invitation the product cannot honor.",
+          "suggestion": "Gate the BOON BANKED line on boon_options() being non-empty (level_up_report already has the journey), or give late boons something real to buy: early hidden-name whispers, an Era, a bench seed. The banner should never point at a dead end twice, let alone seventeen times."
+        },
+        {
+          "title": "The streak display lies when the chain is dead, then the number vanishes without a word",
+          "severity": "medium",
+          "evidence": "Verified live: journey file with streak 6 and last_daily five days stale still renders \"Streak 6.\" in `numinous journey` (main.rs:3477-3481 and home at 800-804 print journey.streak with no comparison against today), then playing a daily quietly resets to 1 (journey.rs:190-206) and pick_seed prints nothing since it only speaks when chain > 1 (main.rs:4375-4379), so \"Streak 6\" becomes silence with zero acknowledgment. The no-scolding law is right, but showing a dead chain as alive is not kindness, it is misinformation that sets up a small betrayal at the exact moment of play.",
+          "suggestion": "Compare last_daily to the current day when rendering: show a live chain as \"Streak 6\", a dead one as nothing (or a gentle \"best chain 6\" framed as a record rather than a loss). One day-count comparison in the two display sites preserves both honesty and the no-scolding law."
+        },
+        {
+          "title": "Progression goes quiet exactly at day seven: ranks, resonances, and the unlock wall are all exhausted by day two or three",
+          "severity": "medium",
+          "evidence": "Measured against a modest simulated week (25 rooms, 60 plays, 15 wins, streak 6): already LV 16, 120 XP. Ranks top out at 55 sparks (journey.rs:150-157), so Dekas and the hidden-layer gate (Mathematikos at 10) pass in the first days; all 6 resonances (resonance.rs:32-69) need only 10 specific room visits, doable day one; the unlock wall has been static since LV 7 and reads three OPEN lines plus \"LOCKED  LV 42  ???\" (verified in journey output), a single pending line that will not move for weeks; the streak surface says nothing between The Chain at 7 and Unbroken at 30 (trophies.rs:121-130). What remains per level is one lore line and the LV 24 cut. Day seven feels like day three with a bigger number, and the wall's one remaining promise is the unreachable one from finding 1.",
+          "suggestion": "Seed the 7-to-42 stretch with the content that already exists: rotate one or two resonances per week from the catalog's actual pairings (the code structure makes new ones one struct literal each), add a wall entry or two in the teens and thirties (a bench seed, a hidden name unlocking), and consider a streak whisper at 14 and 21 so the chain has a voice between its two trophies."
+        },
+        {
+          "title": "The daily scoreboard is a landfill, not a ladder: zero scores post as NEW BEST and per-day keys make yesterday incomparable",
+          "severity": "medium",
+          "evidence": "Verified live: one daily munch run posted seven scoreboard entries (one per board), four of them zeros, and quitting at EOF printed \"NEW BEST: munch seed:20673 board:0 = 0\" mid-prompt. Keys embed the day-count seed (main.rs pick_seed returns the day as the seed), so today's \"munch seed:20673 board:3\" can never meet yesterday's 20672 key: the north-star \"scored against your past self\" loop has no surface in the daily, and `numinous scores` top(15) fills with near-duplicate one-shot munch lines within a week (my table after one day was already seven munch rows).",
+          "suggestion": "Do not post or announce zero as a best. Give dailies a stable per-game key (for example \"munch daily\") holding your best-ever daily result plus the day it happened, so tomorrow's run has a ghost to beat, and keep the per-seed key only for replay/share. That is the cheapest real instance of the par-and-ghost loop the north star names."
+        },
+        {
+          "title": "Daily streak credit and The Chain trophy are granted for launching, not playing",
+          "severity": "low",
+          "evidence": "pick_seed (main.rs:4368-4385) calls record_daily before the game deals a single round. Verified live: `echo \"\" | numinous munch --daily` with immediate EOF, zero bites, printed \"DAILY STREAK  7 days.\" and \"TROPHY EARNED  The Chain: seven daily challenges in a row\". trophies.rs's header promises \"no way to have one you did not earn\"; seven empty launches earn this one. The crash-forgiveness upside is real, but credit should require at least one counted move, which the games already track (the `played` flag in nim, MUNCH's move counting).",
+          "suggestion": "Record the daily after the first counted move rather than at seed selection: each game already knows when a move lands (they all set a played flag before journey.play()), so passing a record-daily closure or recording in the same place the play is recorded keeps crash-forgiveness while making the chain mean what it says."
+        },
+        {
+          "title": "Winning nim earns \"the secret\" that never counts as a secret heard",
+          "severity": "low",
+          "evidence": "main.rs:4890 promises \"Beat it and the secret is yours\" and 4919 prints numinous_core::nim_secret() on a win, but journey.secret() is called from exactly one place in the CLI (main.rs:1556, hidden-name describe), so the journey report still says \"0 heard\" after the Order concedes and speaks. Same pattern at main.rs:4664 for hackenbush's the_secret(). A day-seven player who fought the Order for its secret and then reads their journey is told they have heard nothing.",
+          "suggestion": "Count the first nim and hackenbush secret as heard (journey.secret() beside the win, once each, guarded like a visit), or reword the win copy so it does not use the same noun the journey counts. Counting it is better: it is exactly the kind of earned, bounded spark source finding 1 needs more of."
+        }
+      ]
+    }
+  ]
+}
