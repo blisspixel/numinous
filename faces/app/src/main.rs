@@ -1390,11 +1390,12 @@ impl App {
             return;
         };
         let field = naming.active_field_mut();
+        let mut remaining =
+            numinous_core::MAX_META_TEXT_CHARS.saturating_sub(field.chars().count());
         for c in text.chars() {
-            if (' '..='~').contains(&c)
-                && field.chars().count() < numinous_core::MAX_META_TEXT_CHARS
-            {
+            if remaining > 0 && (' '..='~').contains(&c) {
                 field.push(c);
+                remaining -= 1;
             }
         }
     }
