@@ -18,7 +18,7 @@ const SEED: u64 = 0x6A17_0B04_5EED_ABCD;
 /// early noise that repeated sampling gradually settles.
 const BALLS_PER_WAVE: usize = 64;
 /// A physical board has one stable geometry at every viewport size.
-const BOARD_ROWS: usize = 16;
+pub const BOARD_ROWS: usize = 16;
 /// Exact newest-wave mass at every reachable row and right-turn count.
 /// Each cell fits in `u8` because one wave contains exactly 64 balls.
 type WaveProfile = [[u8; BOARD_ROWS + 1]; BOARD_ROWS + 1];
@@ -44,7 +44,7 @@ fn drawing_dims(canvas: &dyn Surface) -> Option<(usize, usize)> {
 
 /// Five deliberately coarse coins keep each experiment repeatable. The fixed
 /// probability within a run is part of the binomial model, not presentation.
-const COIN_PROBABILITIES: [f64; 5] = [0.30, 0.40, 0.50, 0.60, 0.70];
+pub const COIN_PROBABILITIES: [f64; 5] = [0.30, 0.40, 0.50, 0.60, 0.70];
 const COIN_LABELS: [&str; 5] = [".3", ".4", ".5", ".6", ".7"];
 /// C, D, E, G, A: one ordered major-pentatonic root for each fixed coin.
 const COIN_ROOT_STEPS: [i32; 5] = [0, 2, 4, 7, 9];
@@ -62,6 +62,14 @@ fn coin_at(x: f64) -> usize {
 }
 
 /// Map a horizontal hand position onto a landing bin (rights count 0..=rows).
+///
+/// Public because the engineered aha's wager band reads the same mapping
+/// the room's own bet lever uses; two copies of this arithmetic would be
+/// two opinions about where a hand is pointing.
+pub fn bin_from_unit_x(x: f64) -> usize {
+    bet_bin_at(x)
+}
+
 fn bet_bin_at(x: f64) -> usize {
     let bins = BOARD_ROWS + 1;
     ((unit(x, 0.5) * bins as f64).floor() as usize).min(bins - 1)
@@ -80,6 +88,24 @@ fn drop_waves(pokes: &[(f64, f64)]) -> Vec<DropWave> {
         })
         .map(|(px, _py)| DropWave { coin: coin_at(px) })
         .collect()
+}
+
+/// How many waves the given inputs drop, for the engineered aha's staging.
+///
+/// Counts through the same wave grading the room itself uses, so the aha
+/// machine and the pile can never disagree about how much experiment ran.
+#[must_use]
+pub fn wave_count_from_inputs(inputs: &[RoomInput]) -> usize {
+    drop_waves_from_inputs(inputs).len()
+}
+
+/// The coin selected by the newest wave, if any wave has landed.
+///
+/// The engineered aha grades the peak wager against this coin, the same
+/// one the pile on screen is actually built from.
+#[must_use]
+pub fn selected_coin_from_inputs(inputs: &[RoomInput]) -> Option<usize> {
+    selected_run(&drop_waves_from_inputs(inputs)).map(|(coin, _)| coin)
 }
 
 fn drop_waves_from_inputs(inputs: &[RoomInput]) -> Vec<DropWave> {

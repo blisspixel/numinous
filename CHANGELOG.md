@@ -5,6 +5,19 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The Galton Board becomes the third flagship aha, the Wager Wave's
+  first room. Drop a wave and the invite appears: where will the whole
+  pile peak? Commit a bin on the wager band (or run four waves and earn
+  the withheld beat by experiment), summon, and the exact binomial
+  outline grows over the pile outward from the true peak, the truth the
+  wager was about arriving first. One graded sentence answers the
+  commitment against the binomial's mode for the coin on screen, in
+  predict's own non-punitive bands: the room's old one-ball bet graded
+  luck, and a model deserves a model-level wager. Same five beats on
+  the App and over MCP (new bin_wager argument, typed wager, truth,
+  band, and graded fields), reveal gated behind consolidation on both,
+  and the outline's closed form is pinned against the probability mass
+  itself.
 - The mathematics tells the whole truth now. Basel stops crediting
   Euler's 1735 triumph to Fourier series that came seventy years later,
   tells the sine-product story straight, and gains the gem the sum was
