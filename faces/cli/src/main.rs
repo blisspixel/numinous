@@ -511,6 +511,10 @@ enum Command {
         /// paid API call; briefs vary per track).
         #[arg(long, default_value_t = 1)]
         count: usize,
+        /// Confirm the paid API spend. Without this flag the command names
+        /// the key source and the cost, spends nothing, and stops.
+        #[arg(long)]
+        yes: bool,
     },
     /// Compose a seeded chiptune and write it as a WAV (Music Engine A).
     Tune {
@@ -797,10 +801,11 @@ fn home_report(journey: &Journey, stdout_is_terminal: bool, color: bool) -> Stri
         numinous_core::insight(day + u64::from(journey.plays)),
         journey.level(),
         journey.level_bar(16),
-        if journey.streak > 1 {
-            format!("   streak {}", journey.streak)
-        } else {
-            String::new()
+        match journey.live_streak(day) {
+            // A dead chain is not shown as alive; the ambient home stays
+            // quiet about records and lets the journey report hold them.
+            Some(chain) if chain > 1 => format!("   streak {chain}"),
+            _ => String::new(),
         },
         room.meta().id
     )
@@ -1392,7 +1397,10 @@ fn persist_progress_or_warn(before: &Journey, journey: &Journey) {
 /// fails rather than wearing the "not a new best" costume.
 fn post_score(key: &str, score: i64) {
     match numinous_core::record_score_file(&scores_path(), key, score) {
-        Ok(true) => println!("NEW BEST: {key} = {score}"),
+        // Zero is never a best worth announcing: an aborted run's nothing
+        // must not wear a celebration.
+        Ok(true) if score > 0 => println!("NEW BEST: {key} = {score}"),
+        Ok(true) => {}
         Ok(false) => {}
         Err(error) => warn_progress_unsaved("score", &error),
     }
@@ -1846,7 +1854,7 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             ExitCode::SUCCESS
         }
         Command::Journey => {
-            print!("{}", journey_report(journey, &load_scores()));
+            print!("{}", journey_report(journey, &load_scores(), pick_day()));
             ExitCode::SUCCESS
         }
         Command::Choose => choose(journey),
@@ -2055,7 +2063,10 @@ Or name a room to watch it as ASCII: numinous play lorenz"
                     st.id,
                     st.name,
                     if tracks == 0 {
-                        format!("no tracks yet: numinous tune2 {}", st.id)
+                        format!(
+                            "no tracks yet: numinous tune2 {} (paid API; free: numinous tune)",
+                            st.id
+                        )
                     } else {
                         format!("{tracks} track(s) on rotation")
                     }
@@ -2070,7 +2081,8 @@ Or name a room to watch it as ASCII: numinous play lorenz"
             station,
             seconds,
             count,
-        } => radio_tune(&station, seconds, count.clamp(1, 10)),
+            yes,
+        } => radio_tune(&station, seconds, count.clamp(1, 10), yes),
         Command::Tune { seed, bars, out } => {
             journey.play();
             emit(tune_wav(seed, bars, &out))
@@ -2170,7 +2182,7 @@ fn radio_dir() -> PathBuf {
 
 /// Tune a station: call ElevenLabs Music with the station's brief, receive
 /// raw PCM, and cache it as a WAV the app and CLI can loop.
-fn radio_tune(station_id: &str, seconds: Option<u64>, count: usize) -> ExitCode {
+fn radio_tune(station_id: &str, seconds: Option<u64>, count: usize, yes: bool) -> ExitCode {
     let Some(station) = numinous_core::station(station_id) else {
         eprintln!(
             "No station '{}' on the dial. See: numinous radio",
@@ -2178,12 +2190,35 @@ fn radio_tune(station_id: &str, seconds: Option<u64>, count: usize) -> ExitCode 
         );
         return ExitCode::FAILURE;
     };
-    let Ok(key) = std::env::var("ELEVENLABS_API_KEY").or_else(|_| env_file_key()) else {
-        eprintln!(
-            "Set ELEVENLABS_API_KEY to tune the radio. The station briefs are ready;\n             see docs/MUSIC.md for the pipeline and pricing notes."
-        );
-        return ExitCode::FAILURE;
+    // Money never moves silently: the player is told where the key came
+    // from and what will be spent, and nothing happens without --yes. A key
+    // quietly discovered in a .env file once funded a track the player
+    // never knowingly ordered.
+    let (key, key_source) = match std::env::var("ELEVENLABS_API_KEY") {
+        Ok(key) => (key, "the ELEVENLABS_API_KEY environment variable"),
+        Err(_) => match env_file_key() {
+            Ok(key) => (key, "the .env file in this directory"),
+            Err(_) => {
+                eprintln!(
+                    "Set ELEVENLABS_API_KEY to tune the radio. The station briefs are ready;
+             see docs/MUSIC.md for the pipeline and pricing notes.
+             The free local engine needs no key: numinous tune"
+                );
+                return ExitCode::FAILURE;
+            }
+        },
     };
+    println!(
+        "Tuning {count} track(s) for {} via ElevenLabs, a paid API call per track.",
+        station.name
+    );
+    println!("Key source: {key_source}.");
+    if !yes {
+        println!(
+            "Nothing was spent. Add --yes to proceed, or compose free and local instead: numinous tune"
+        );
+        return ExitCode::SUCCESS;
+    }
     let dir = radio_dir();
     let _ = std::fs::create_dir_all(&dir);
     let existing = std::fs::read_dir(&dir)
@@ -3455,7 +3490,7 @@ fn choose_with_input(journey: &mut Journey, input: &mut impl BufRead) -> ExitCod
 }
 
 /// Your constellation and standing, shown plainly and explained never.
-fn journey_report(journey: &Journey, board: &numinous_core::Scoreboard) -> String {
+fn journey_report(journey: &Journey, board: &numinous_core::Scoreboard, today: u64) -> String {
     let mut wall = String::new();
     for &(level, name, what) in numinous_core::UNLOCKS {
         if journey.level() >= level {
@@ -3474,10 +3509,12 @@ fn journey_report(journey: &Journey, board: &numinous_core::Scoreboard) -> Strin
         all_rooms().len(),
         journey.wins,
         journey.secrets,
-        if journey.streak > 1 {
-            format!(" Streak {}.", journey.streak)
-        } else {
-            String::new()
+        match journey.live_streak(today) {
+            Some(chain) if chain > 1 => format!(" Streak {chain}."),
+            // A dead chain becomes a record, not a claim: honesty and the
+            // no-scolding law can hold the same line.
+            _ if journey.streak > 1 => format!(" Best chain {}.", journey.streak),
+            _ => String::new(),
         },
         journey.rank().name()
     ) + &{
@@ -5496,8 +5533,11 @@ mod tests {
 
     #[test]
     fn interactive_home_report_keeps_the_full_color_cabinet() {
+        // The chain must be alive to show: a streak with no recorded daily
+        // is exactly the dead-chain claim the display no longer makes.
         let journey = numinous_core::Journey {
             streak: 3,
+            last_daily: super::pick_day(),
             ..Default::default()
         };
         let report = super::home_report(&journey, true, true);
@@ -7498,11 +7538,11 @@ mod tests {
     #[test]
     fn journey_report_shows_the_sky_and_the_rank() {
         let mut journey = numinous_core::Journey::default();
-        let fresh = super::journey_report(&journey, &numinous_core::Scoreboard::default());
+        let fresh = super::journey_report(&journey, &numinous_core::Scoreboard::default(), 0);
         assert!(fresh.contains("0 of"));
         assert!(fresh.contains("Outsider"));
         journey.visit("lorenz");
-        let one = super::journey_report(&journey, &numinous_core::Scoreboard::default());
+        let one = super::journey_report(&journey, &numinous_core::Scoreboard::default(), 0);
         assert!(one.contains("1 of"));
         assert!(one.contains("Akousmatikos"));
         assert!(one.contains('#'), "a lit star");
@@ -7521,9 +7561,42 @@ mod tests {
         let mut journey = numinous_core::Journey::default();
         journey.visit("mandelbrot");
         journey.visit("julia");
-        let report = super::journey_report(&journey, &numinous_core::Scoreboard::default());
+        let report = super::journey_report(&journey, &numinous_core::Scoreboard::default(), 0);
         assert!(report.contains("RESONANCE  The Atlas"));
         assert!(report.contains("atlas"), "the lore line rides along");
+    }
+
+    #[test]
+    fn tune2_requires_explicit_consent_to_spend() {
+        // The flag exists and defaults to off: without it the command names
+        // the key source and the cost, spends nothing, and stops.
+        let cli = Cli::try_parse_from(["numinous", "tune2", "trance"]).expect("parse");
+        let Some(Command::Tune2 { yes, .. }) = cli.command else {
+            panic!("tune2 parsed to something else");
+        };
+        assert!(!yes, "spending must be opt-in, never the default");
+        let cli = Cli::try_parse_from(["numinous", "tune2", "trance", "--yes"]).expect("parse");
+        let Some(Command::Tune2 { yes, .. }) = cli.command else {
+            panic!("tune2 parsed to something else");
+        };
+        assert!(yes);
+    }
+
+    #[test]
+    fn a_dead_streak_is_a_record_not_a_claim() {
+        let journey = numinous_core::Journey {
+            streak: 6,
+            last_daily: 100,
+            ..numinous_core::Journey::default()
+        };
+        let alive = super::journey_report(&journey, &numinous_core::Scoreboard::default(), 101);
+        assert!(alive.contains("Streak 6."), "yesterday's chain is alive");
+        let dead = super::journey_report(&journey, &numinous_core::Scoreboard::default(), 105);
+        assert!(
+            dead.contains("Best chain 6."),
+            "a chain five days cold is a record, not a claim: {dead}"
+        );
+        assert!(!dead.contains("Streak 6."), "{dead}");
     }
 
     #[test]

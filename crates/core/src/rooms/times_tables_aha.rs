@@ -357,6 +357,40 @@ impl TimesTablesAha {
             .then_some("Same cardioid: times-2 chords and the Mandelbrot main bulb.")
     }
 
+    /// The committed wager, once one exists.
+    #[must_use]
+    pub fn wager(&self) -> Option<CardioidHome> {
+        match self.earn {
+            Some(EarnPath::Wager { guess }) => Some(guess),
+            _ => None,
+        }
+    }
+
+    /// The wager graded against the truth, spoken at consolidation.
+    ///
+    /// The keystone of the engineered aha is meeting your own commitment
+    /// against the answer; a flow that discards the wager after collecting
+    /// it turns the wager into theater. Non-punitive on a miss, because the
+    /// miss that meets the truth is the fertile one.
+    #[must_use]
+    pub fn graded(&self) -> Option<String> {
+        if !matches!(self.beat, AhaBeat::Consolidated) {
+            return None;
+        }
+        match self.earn {
+            Some(EarnPath::Wager { guess }) if guess.is_truth() => Some(
+                "You wagered MANDELBROT; the cardioid is the Mandelbrot main bulb. Nailed."
+                    .to_string(),
+            ),
+            Some(EarnPath::Wager { guess }) => Some(format!(
+                "You wagered {}; the cardioid is the Mandelbrot main bulb. The miss that \
+                 meets the truth is the fertile one.",
+                guess.label()
+            )),
+            _ => None,
+        }
+    }
+
     /// Stable beat name for playtest notes and diagnostics (not player chrome).
     #[must_use]
     pub fn beat_label(&self) -> &'static str {

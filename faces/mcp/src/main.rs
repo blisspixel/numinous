@@ -3482,6 +3482,12 @@ fn project_flagship_aha(
                     || matches!(aha.beat(), AhaBeat::Morph { .. }),
                 "placeOptions": ["mandelbrot", "nephroid", "circle"],
                 "punchline": aha.punchline(),
+                // The keystone: the committed wager meets the truth in typed
+                // fields and one graded sentence, so a mind that made a
+                // commitment is answered rather than having it discarded.
+                "wager": aha.wager().map(|home| home.label().to_ascii_lowercase()),
+                "truth": "mandelbrot",
+                "graded": aha.graded(),
             })))
         }
         "buffon-needle" => {
@@ -3512,6 +3518,14 @@ fn project_flagship_aha(
                 "guessMin": numinous_core::rooms::buffon_aha::GUESS_MIN,
                 "guessMax": numinous_core::rooms::buffon_aha::GUESS_MAX,
                 "punchline": aha.punchline(),
+                // The keystone, typed: wager, band, and one graded sentence
+                // against pi, in the same non-punitive language predict
+                // speaks. A collected wager that is never answered is
+                // theater.
+                "wager": aha.wager().map(|(guess, _)| guess),
+                "band": aha.wager().map(|(_, band)| band.name().to_ascii_lowercase()),
+                "truth": std::f64::consts::PI,
+                "graded": aha.graded(),
             })))
         }
         _ => {
@@ -9242,6 +9256,62 @@ plays 2
                 .is_some_and(|reveal| reveal.contains("Mandelbrot"))
         );
         assert_eq!(done["engineeredAha"]["earn"], "wager:mandelbrot");
+    }
+
+    #[test]
+    fn the_wager_is_graded_against_the_truth_not_discarded() {
+        // The keystone of the engineered aha is meeting your own commitment
+        // against the answer. A right wager and a wrong wager must come back
+        // as different graded truths, or the wager was theater.
+        let grade = |place: &str| {
+            let done = call(
+                "play_room",
+                json!({
+                    "id": "times-tables",
+                    "width": 40,
+                    "height": 20,
+                    "place_wager": place,
+                    "aha_summon": true
+                }),
+            );
+            let aha = done["result"]["structuredContent"]["engineeredAha"].clone();
+            assert_eq!(aha["truth"], "mandelbrot");
+            assert_eq!(aha["wager"], place);
+            aha["graded"]
+                .as_str()
+                .expect("a graded sentence")
+                .to_string()
+        };
+        let nailed = grade("mandelbrot");
+        let missed = grade("circle");
+        assert!(nailed.contains("Nailed"), "{nailed}");
+        assert!(missed.contains("CIRCLE"), "{missed}");
+        assert!(
+            missed.contains("fertile"),
+            "a miss is met, not punished: {missed}"
+        );
+        assert_ne!(nailed, missed);
+
+        // Buffon grades in the same typed shape, band and all.
+        let buffon = call(
+            "play_room",
+            json!({
+                "id": "buffon-needle",
+                "width": 40,
+                "height": 20,
+                "number_wager": 3.0,
+                "aha_summon": true
+            }),
+        );
+        let aha = &buffon["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(aha["wager"], 3.0);
+        assert_eq!(aha["band"], "close");
+        assert!(
+            aha["graded"]
+                .as_str()
+                .is_some_and(|graded| graded.contains("3.00") && graded.contains("pi")),
+            "{aha}"
+        );
     }
 
     #[test]
