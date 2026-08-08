@@ -5,6 +5,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The creator loop keeps its thread. Editing a reopened creation now
+  releases the pin into lineage: your share credits the creation you
+  opened, because taking over a creation by editing it is the definition
+  of a remix, and the bundle README teaches exactly that path instead of
+  routing recipients down the one road that lost it. F4 opens a naming
+  step in the instrument itself, one line for a title and one for a
+  signature that is offered again on the next share; the postcard draws
+  the title as its headline and signs the author in the corner, so
+  identity rides the pixels, not only the capsule, and a titled share's
+  folder carries the title's slug. The terminal gained the same loop:
+  numinous fork remixes any .num or link with lineage recorded, sing
+  accepts a capsule or link so a creation's voice travels through the
+  terminal, open-studio closes by naming the remix verb, and a refused
+  resave now names the next free filename instead of dead-ending.
 - Each face now speaks only verbs it can hear. The terminal's live views
   (watch, tour, play) printed DRAG:TUNE and CLICK fragments with no input
   handling at all; those frames now scrub gesture fragments from every

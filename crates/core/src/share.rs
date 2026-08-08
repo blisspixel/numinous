@@ -162,6 +162,8 @@ impl StudioShareMeta {
             String::new(),
             "Reopen it: drop creation.num on the Numinous window, pass it as a".to_string(),
             "launch argument, or run numinous open-studio creation.num.".to_string(),
+            "Remix it: edit after reopening and your share credits this one,".to_string(),
+            "or run numinous fork creation.num --out my-remix.num.".to_string(),
             "This link reopens the same creation, paused until confirmed:".to_string(),
             self.link.clone(),
         ]);

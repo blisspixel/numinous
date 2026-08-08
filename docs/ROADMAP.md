@@ -106,6 +106,11 @@ The workstreams, in landing order:
    recipients down the one path that loses lineage; the postcard carries
    title and author; naming happens in the instrument, not only in flags;
    the terminal gains the fork verb; `sing` learns to read a `.num`.
+   Landed: the reopen pin releases into lineage on first edit, F4 opens
+   the in-instrument naming step with a remembered signature, postcards
+   wear title and author, bundle folders carry the title slug, the README
+   teaches the remix path, and the terminal speaks fork and sings
+   capsules; the resave refusal names the next free name.
 5. **Access disclosures that reach the player.** `numinous access` names
    the tracked rooms itself instead of pointing at a file releases do not
    ship; its counts match the code's own lists; refusal banners live as
