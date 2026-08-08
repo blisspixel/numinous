@@ -5,6 +5,22 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Four researchers took one lens each on a single question: with the
+  polish wave's defects fixed, what still holds Numinous back from
+  exceptional? Their verified findings are committed at
+  `docs/evidence/exceptional-blockers-2026-08.json`, and the synthesis
+  is written into the roadmap as The Three Ceilings: the shared sensory
+  substrate (no bloom, no anti-aliasing, no audio bus, by construction,
+  for all 354 rooms at once), time and company for digital minds (one
+  frozen frame per call, a face that can be watched but never watches,
+  a journal nothing surfaces), and the missing arc (a cold open, hard
+  cuts, a slideshow where a director was promised). The critical path
+  is reordered around them: finish the polish wave, then the Sensory
+  Lift (Phase B glow unparked, since the old "only if a sensory ceiling
+  binds" conditional was measured binding), then time and company over
+  MCP, then the arc. The 0.4-am cohort is now stated plainly as
+  owner-blocked instead of carried as a priority nobody can schedule,
+  and the README status paragraph tells the same story the roadmap does.
 - The creator loop keeps its thread. Editing a reopened creation now
   releases the pin into lineage: your share credits the creation you
   opened, because taking over a creation by editing it is the definition
