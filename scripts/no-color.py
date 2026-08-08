@@ -103,6 +103,7 @@ PROBES: tuple[Probe, ...] = (
     Probe(["bench"]),
     Probe(["help"]),
     Probe(["open-studio", "no-such-file.num"]),
+    Probe(["fork", "no-such-file.num", "--out", "unused-fork.num"]),
     # The games, which are where the escapes actually were.
     Probe(["arcade"]),
     Probe(["hackenbush"]),
