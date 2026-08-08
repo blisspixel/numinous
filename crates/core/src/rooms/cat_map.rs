@@ -145,8 +145,11 @@ impl Room for CatMap {
 
     fn reveal(&self) -> &'static str {
         "Arnold's cat map is a linear map of the torus: stretch, shear, fold \
-         back mod 1. Area is preserved; nearby points diverge exponentially, \
-         yet the map is invertible and eventually periodic on rational grids."
+         back mod 1. Area is preserved and nearby points diverge \
+         exponentially, yet on any finite pixel grid the map is a bijection, \
+         so it is exactly periodic: scramble the cat long enough and the \
+         unharmed cat must walk back, whole, as if nothing happened. Chaos \
+         and perfect recurrence in the same innocent-looking shear."
     }
 }
 

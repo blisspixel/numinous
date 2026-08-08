@@ -395,7 +395,7 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 - [x] **Number bases** - the aliens count on eight tentacles.
 - [x] **Open conjectures as toys** - Collatz: play with an unsolved problem; Goldbach: choose an even number and one prime-pair witness to see the proof bracket.
 - [ ] **Cardinality of infinities** - Hilbert's Hotel as a management game: always room for one more bus, until the reals check in and the front desk breaks. You feel the difference between countable and not.
-- [ ] **Benford's law** - a fraud-detective game: two ledgers, one cooked; the leading digits snitch.
+- [x] **Benford's law** (built: `benford`) - a fraud-detective game: two ledgers, one cooked; the leading digits snitch.
 - [ ] **RSA in miniature** - extend Crack the Code: multiply two primes and watch why the bomb squad cannot reverse it.
 
 ## Algebra and symmetry
@@ -426,10 +426,10 @@ Status marks: [x] built, [~] partially built, [ ] queued.
 ## Chance
 - [x] **Central limit theorem** - the Galton board's bell.
 - [x] **Monte Carlo** - Buffon's needles estimate pi with no circle in sight.
-- [ ] **Bayes** - a lie-detector game: update your suspicion die-roll by die-roll; feel evidence accumulate instead of computing it.
+- [x] **Bayes** (built: `bayes-update`) - a lie-detector game: update your suspicion die-roll by die-roll; feel evidence accumulate instead of computing it.
 - [x] **Random walks** - the drunkard: stumble n steps, end up sqrt(n) from the bar, every time, on average.
-- [ ] **Birthday paradox** - a party-filling toy: watch the collision arrive absurdly early; bet against it and lose.
-- [ ] **Markov chains** - a weather machine with dials: today decides tomorrow; find the steady state by feel.
+- [x] **Birthday paradox** (built: `birthday`) - a party-filling toy: watch the collision arrive absurdly early; bet against it and lose.
+- [x] **Markov chains** (built: `markov-chain`) - a weather machine with dials: today decides tomorrow; find the steady state by feel.
 
 ## Structure (discrete)
 - [ ] **Graph theory** - the Bridges of Konigsberg as a walking puzzle; fail, then learn you were always going to fail, and why (degree parity, never named).
