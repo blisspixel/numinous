@@ -175,7 +175,7 @@ impl Room for Mertens {
     fn reveal(&self) -> &'static str {
         "The Mertens function M(n) is the sum of the Mobius function up to n, \
          and its size is tied to the Riemann hypothesis. For a century the \
-         Mertens conjecture said M(n) never exceeds sqrt(n), and every \
+         Mertens conjecture said |M(n)| never exceeds sqrt(n), and every \
          computation ever run agreed. In 1985 Odlyzko and te Riele proved it \
          false anyway, without finding a single counterexample; to this day \
          nobody has seen one. All the evidence in the world agreed, and the \
