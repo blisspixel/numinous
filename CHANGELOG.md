@@ -6,8 +6,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 ## [Unreleased]
 
 - Four researchers took one lens each on a single question: with the
-  polish wave's defects fixed, what still holds Numinous back from
-  exceptional? Their verified findings are committed at
+  polish wave's first four workstreams landed, what still holds
+  Numinous back from exceptional? Their verified findings are committed at
   `docs/evidence/exceptional-blockers-2026-08.json`, and the synthesis
   is written into the roadmap as The Three Ceilings: the shared sensory
   substrate (no bloom, no anti-aliasing, no audio bus, by construction,
