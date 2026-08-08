@@ -374,6 +374,8 @@ struct App {
     times_tables_aha: numinous_core::rooms::times_tables_aha::TimesTablesAha,
     /// Buffon five-beat engineered aha for the ordinary App visit.
     buffon_aha: numinous_core::rooms::buffon_aha::BuffonAha,
+    /// Staged Galton aha (third flagship): wager the pile's peak bin.
+    galton_aha: numinous_core::rooms::galton_aha::GaltonAha,
     rooms: Vec<Box<dyn Room>>,
     current: usize,
     t: f64,
@@ -537,6 +539,7 @@ impl App {
             life_accumulator: 0.0,
             times_tables_aha: numinous_core::rooms::times_tables_aha::TimesTablesAha::new(),
             buffon_aha: numinous_core::rooms::buffon_aha::BuffonAha::new(),
+            galton_aha: numinous_core::rooms::galton_aha::GaltonAha::new(),
             rooms: all_rooms_with(0),
             current: 0,
             t: 0.0,
@@ -1691,6 +1694,17 @@ impl App {
                 aha_plate: aha.uses_circle_overlay(),
             });
         }
+        if self.current_room_is_galton() {
+            let aha = &self.galton_aha;
+            return Some(playtest::FlagshipAhaNote {
+                beat: aha.beat_label().to_string(),
+                status: aha.status(None),
+                earn: aha.earn_label().unwrap_or_else(|| "none".to_string()),
+                allow_reveal: aha.allow_reveal_text(),
+                can_summon: aha.can_summon(),
+                aha_plate: aha.uses_outline_overlay(),
+            });
+        }
         None
     }
 
@@ -2295,10 +2309,27 @@ impl App {
                         return;
                     }
                 }
+                // Galton bottom band: commit the peak wager without a drop.
+                if self.current_room_is_galton()
+                    && !self.the_show
+                    && point.1 >= numinous_core::rooms::galton_aha::WAGER_BAND_Y
+                    && matches!(
+                        self.galton_aha.beat(),
+                        numinous_core::rooms::galton_aha::AhaBeat::Prime
+                            | numinous_core::rooms::galton_aha::AhaBeat::Explore
+                    )
+                {
+                    let bin = numinous_core::rooms::galton_board::bin_from_unit_x(point.0);
+                    if self.commit_galton_wager(bin) {
+                        self.poking = false;
+                        return;
+                    }
+                }
                 self.poking = true;
                 self.record_room_touch(point);
                 self.sync_times_tables_aha();
                 self.sync_buffon_aha();
+                self.sync_galton_aha();
                 if self.rooms[self.current].meta().id == "mandelbrot"
                     && let Some(window) = &self.window
                 {
@@ -2350,11 +2381,27 @@ impl App {
                 self.buffon_aha.set_hover(None);
             }
         }
+        if self.current_room_is_galton()
+            && !self.the_show
+            && matches!(
+                self.galton_aha.beat(),
+                numinous_core::rooms::galton_aha::AhaBeat::Prime
+            )
+        {
+            if point.1 >= numinous_core::rooms::galton_aha::WAGER_BAND_Y {
+                self.galton_aha.set_hover(Some(
+                    numinous_core::rooms::galton_board::bin_from_unit_x(point.0),
+                ));
+            } else {
+                self.galton_aha.set_hover(None);
+            }
+        }
         if held && self.poking && room_input::extend_poke_trail(&mut self.pokes, point) {
             let accepted = room_input::record_pointer_move(&mut self.inputs, point, self.t);
             self.maybe_announce_room_goal();
             self.sync_times_tables_aha();
             self.sync_buffon_aha();
+            self.sync_galton_aha();
             self.sync_room_parameter_voice();
             self.play_room_interaction_audio(accepted);
         }
@@ -2378,6 +2425,7 @@ impl App {
         self.maybe_announce_room_goal();
         self.sync_times_tables_aha();
         self.sync_buffon_aha();
+        self.sync_galton_aha();
         self.sync_room_parameter_voice();
         self.play_room_interaction_audio(accepted);
     }
@@ -3277,6 +3325,7 @@ impl App {
         self.reset_life_session();
         self.reset_times_tables_aha();
         self.reset_buffon_aha();
+        self.reset_galton_aha();
         self.goal_announced = false;
     }
 
@@ -3394,6 +3443,10 @@ impl App {
         self.rooms[self.current].meta().id == "times-tables"
     }
 
+    fn current_room_is_galton(&self) -> bool {
+        self.rooms[self.current].meta().id == "galton-board"
+    }
+
     fn current_room_is_buffon(&self) -> bool {
         self.rooms[self.current].meta().id == "buffon-needle"
     }
@@ -3420,6 +3473,13 @@ impl App {
                 .or_else(|| self.rooms[self.current].status(phase));
             return Some(self.buffon_aha.status(throws.as_deref()));
         }
+        if self.current_room_is_galton() && !self.the_show {
+            let phase = effective_room_phase("galton-board", self.t, &self.inputs, self.the_show);
+            let pile = self.rooms[self.current]
+                .status_input(phase, &self.inputs)
+                .or_else(|| self.rooms[self.current].status(phase));
+            return Some(self.galton_aha.status(pile.as_deref()));
+        }
         None
     }
 
@@ -3439,6 +3499,13 @@ impl App {
     fn reset_buffon_aha(&mut self) {
         self.buffon_aha = numinous_core::rooms::buffon_aha::BuffonAha::new();
         if self.current_room_is_buffon() {
+            self.show_info = false;
+        }
+    }
+
+    fn reset_galton_aha(&mut self) {
+        self.galton_aha = numinous_core::rooms::galton_aha::GaltonAha::new();
+        if self.current_room_is_galton() {
             self.show_info = false;
         }
     }
@@ -3466,6 +3533,15 @@ impl App {
         }
         let throws = numinous_core::rooms::buffon_needle::BuffonNeedle::throw_count(&self.inputs);
         self.buffon_aha.note_throws(throws);
+    }
+
+    /// Keep the Galton aha in step with the waves the pile is built from.
+    fn sync_galton_aha(&mut self) {
+        if !self.current_room_is_galton() || self.the_show {
+            return;
+        }
+        let waves = numinous_core::rooms::galton_board::wave_count_from_inputs(&self.inputs);
+        self.galton_aha.note_waves(waves);
     }
 
     /// E / Inspect: summon staged aha on flagship rooms; elsewhere toggle reveal.
@@ -3501,6 +3577,23 @@ impl App {
                 || matches!(self.buffon_aha.beat(), AhaBeat::Morph { .. })
             {
                 if self.buffon_aha.summon() {
+                    self.show_info = false;
+                }
+                return;
+            }
+            self.show_info = false;
+            return;
+        }
+        if self.current_room_is_galton() {
+            use numinous_core::rooms::galton_aha::AhaBeat;
+            if self.galton_aha.allow_reveal_text() {
+                self.show_info = !self.show_info;
+                return;
+            }
+            if self.galton_aha.can_summon()
+                || matches!(self.galton_aha.beat(), AhaBeat::Morph { .. })
+            {
+                if self.galton_aha.summon() {
                     self.show_info = false;
                 }
                 return;
@@ -3575,6 +3668,38 @@ impl App {
         }
         let delta = elapsed / BUFFON_MORPH_SECONDS;
         self.buffon_aha.advance_morph(delta);
+    }
+
+    fn commit_galton_wager(&mut self, bin: usize) -> bool {
+        if !self.current_room_is_galton() || self.the_show {
+            return false;
+        }
+        let coin = numinous_core::rooms::galton_board::selected_coin_from_inputs(&self.inputs)
+            .unwrap_or(2);
+        if self.galton_aha.commit_wager(bin, coin) {
+            self.show_info = false;
+            self.banner = Some(feedback::Banner::status(format!("GUESSED BIN {bin}"), 90));
+            true
+        } else {
+            false
+        }
+    }
+
+    fn advance_galton_morph(&mut self, elapsed: f64) {
+        if !self.current_room_is_galton() || self.the_show || self.paused {
+            return;
+        }
+        if !matches!(
+            self.galton_aha.beat(),
+            numinous_core::rooms::galton_aha::AhaBeat::Morph { .. }
+        ) {
+            return;
+        }
+        if !elapsed.is_finite() || elapsed <= 0.0 {
+            return;
+        }
+        let delta = elapsed / BUFFON_MORPH_SECONDS;
+        self.galton_aha.advance_morph(delta);
     }
 
     fn record_room_touch(&mut self, point: (f64, f64)) -> bool {
@@ -3890,6 +4015,34 @@ impl App {
                         numinous_core::rooms::buffon_aha::render_circle_overlay(
                             &mut raster,
                             progress,
+                        );
+                    }
+                }
+                if room.meta().id == "galton-board" && !self.the_show {
+                    if matches!(
+                        self.galton_aha.beat(),
+                        numinous_core::rooms::galton_aha::AhaBeat::Prime
+                    ) {
+                        numinous_core::rooms::galton_aha::render_bin_band(
+                            &mut raster,
+                            self.galton_aha.hover(),
+                        );
+                    }
+                    if self.galton_aha.uses_outline_overlay() {
+                        let progress = match self.galton_aha.beat() {
+                            numinous_core::rooms::galton_aha::AhaBeat::Morph { progress } => {
+                                progress
+                            }
+                            _ => 1.0,
+                        };
+                        let coin = numinous_core::rooms::galton_board::selected_coin_from_inputs(
+                            &self.inputs,
+                        )
+                        .unwrap_or(2);
+                        numinous_core::rooms::galton_aha::render_outline_overlay(
+                            &mut raster,
+                            progress,
+                            coin,
                         );
                     }
                 }
@@ -4836,6 +4989,7 @@ impl ApplicationHandler for App {
             self.advance_life_if_active(ambient);
             self.advance_times_tables_morph(elapsed);
             self.advance_buffon_morph(elapsed);
+            self.advance_galton_morph(elapsed);
         }
         if !(self.paused || self.dragging || self.show_help && self.modal_mode_active()) {
             let motion = self.time_scale * self.visualizer_scale;
@@ -5476,6 +5630,63 @@ mod tests {
         app.reset_current_room();
         assert_eq!(app.buffon_aha.beat(), AhaBeat::Explore);
         assert!(!app.show_info);
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
+    fn galton_aha_gates_reveal_and_grades_the_peak_wager() {
+        use numinous_core::rooms::galton_aha::AhaBeat;
+
+        let mut app = headless("numinous_app_test_galton_aha.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "galton-board")
+            .expect("galton-board in catalog");
+        app.reset_galton_aha();
+        app.show_help = false;
+        app.show_info = false;
+
+        app.toggle_inspect();
+        assert!(!app.show_info, "no punchline before generation");
+        assert_eq!(app.galton_aha.beat(), AhaBeat::Explore);
+
+        // One wave on the fair coin (x=0.5) primes the peak invite.
+        app.begin_pointer_at((0.5, 0.4));
+        app.end_pointer_at((0.5, 0.4));
+        app.sync_galton_aha();
+        assert_eq!(app.galton_aha.beat(), AhaBeat::Prime);
+
+        // A press in the wager band commits the hovered bin instead of
+        // dropping a wave; bin 8 is the fair coin's true peak.
+        let waves_before = numinous_core::rooms::galton_board::wave_count_from_inputs(&app.inputs);
+        app.begin_pointer_at((0.5, 0.95));
+        assert_eq!(app.galton_aha.beat(), AhaBeat::Withheld);
+        assert_eq!(
+            numinous_core::rooms::galton_board::wave_count_from_inputs(&app.inputs),
+            waves_before,
+            "the wager press must not drop a wave"
+        );
+        let (bin, coin, band) = app.galton_aha.wager().expect("wager recorded");
+        assert_eq!((bin, coin), (8, 2));
+        assert_eq!(band, numinous_core::rooms::galton_aha::GuessBand::Nailed);
+        assert!(!app.galton_aha.allow_reveal_text());
+
+        app.toggle_inspect();
+        assert!(matches!(app.galton_aha.beat(), AhaBeat::Morph { .. }));
+        app.advance_galton_morph(super::BUFFON_MORPH_SECONDS);
+        assert_eq!(app.galton_aha.beat(), AhaBeat::Confirm);
+
+        app.toggle_inspect();
+        assert_eq!(app.galton_aha.beat(), AhaBeat::Consolidated);
+        assert!(app.galton_aha.allow_reveal_text());
+        let graded = app.galton_aha.graded().expect("graded sentence");
+        assert!(graded.contains("bin 8"), "{graded}");
+
+        app.reset_current_room();
+        assert_eq!(app.galton_aha.beat(), AhaBeat::Explore);
 
         let _ = std::fs::remove_file(&app.journey_file);
         let _ = std::fs::remove_file(&app.scores_file);

@@ -127,6 +127,7 @@ pub mod fourier_square;
 pub mod fourteen_beacons;
 pub mod fresnel_int;
 pub mod function_painter;
+pub mod galton_aha;
 pub mod galton_board;
 pub mod gamblers_ruin;
 pub mod game_of_life;
