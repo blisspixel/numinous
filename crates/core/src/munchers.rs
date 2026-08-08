@@ -192,9 +192,11 @@ pub fn build_board(seed: u64, round: u64) -> Board {
 /// The shared-board score key for a Munch deal. One key means one board for
 /// every mind on every face (the scoreboard's whole promise); this format
 /// was once rebuilt by hand in each face, which is how a shared leaderboard
-/// stops being shared.
+/// stops being shared. The parameters are the same concrete types
+/// [`build_board`] takes, so a caller cannot smuggle a differently
+/// formatted value into the persisted identity.
 #[must_use]
-pub fn score_key(seed: impl std::fmt::Display, round: impl std::fmt::Display) -> String {
+pub fn score_key(seed: u64, round: u64) -> String {
     format!("munch seed:{seed} board:{round}")
 }
 
@@ -266,7 +268,7 @@ mod tests {
         // The scoreboard's promise, pinned at the source all three faces
         // now share. If this format changes, every existing score file's
         // keys orphan, so it changes here knowingly or not at all.
-        assert_eq!(super::score_key(7u64, 0usize), "munch seed:7 board:0");
+        assert_eq!(super::score_key(7, 0), "munch seed:7 board:0");
     }
 
     #[test]
