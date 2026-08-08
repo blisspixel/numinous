@@ -2775,7 +2775,10 @@ fn save_studio_creation(
 
 /// Whether a sing input names a Studio creation rather than raw math.
 fn names_a_studio_creation(input: &str) -> bool {
-    input.starts_with("numinous://") || input.to_ascii_lowercase().ends_with(".num")
+    input.starts_with("numinous://")
+        || Path::new(input)
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("num"))
 }
 
 /// A creation's voice travels through the terminal: sing accepts the same
@@ -9256,9 +9259,15 @@ mod tests {
 
     #[test]
     fn fork_refuses_a_missing_parent() {
-        let missing = std::env::temp_dir().join("numinous_cli_fork_missing_parent.num");
+        let missing = std::env::temp_dir().join(format!(
+            "numinous_cli_fork_missing_parent_{}.num",
+            std::process::id()
+        ));
         let _ = std::fs::remove_file(&missing);
-        let out = std::env::temp_dir().join("numinous_cli_fork_missing_out.num");
+        let out = std::env::temp_dir().join(format!(
+            "numinous_cli_fork_missing_out_{}.num",
+            std::process::id()
+        ));
         let _ = std::fs::remove_file(&out);
         assert!(
             super::fork_studio_creation(&missing.to_string_lossy(), None, None, None, &out)
