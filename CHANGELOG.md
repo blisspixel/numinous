@@ -5,6 +5,25 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Each face now speaks only verbs it can hear. The terminal's live views
+  (watch, tour, play) printed DRAG:TUNE and CLICK fragments with no input
+  handling at all; those frames now scrub gesture fragments from every
+  status readout, and the Action line translates the lever for a keyboard
+  face: the lever keeps its name and the hand becomes the flag that
+  actually moves it here (`numinous room <id> --poke x,y`). A sweep test
+  across the whole catalog locks all live frames free of unheard gesture
+  verbs. Ctrl+C no longer kills watch, play, and tour mid-frame: the
+  interrupt lands on a two-line epilogue, the first sentence of the
+  reveal and the route to the whole story, which completes the
+  curiosity-to-revelation staircase for the terminal face and lets the
+  journey ledger finish properly instead of dying with the process.
+  Typing a room as a command (`numinous mandelbrot`) now answers in the
+  house voice with the bridge to `numinous watch` instead of a stock
+  parser error, while command typos keep clap's own did-you-mean. And
+  the MCP face stops telling minds to press keys they do not have: the
+  aha chrome's PRESS E, E:WHY, and 1=M 2=N 3=C prompts translate at the
+  boundary into aha_summon and the place_wager values the tool schema
+  already names, locked by a whole-response sweep over the wager paths.
 - The reveal is the payload again. The four flagship rooms (Times Tables,
   Game of Life, Galton Board, Double Pendulum) ended their reveals with a
   QA block: a horizontal rule, a Source Provenance line, and a checkbox
