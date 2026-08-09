@@ -256,6 +256,16 @@ def check_an_unreadable_journey_is_named_not_faked(cli: Path) -> None:
                 "a run that cannot see the journey announced a crossing "
                 f"anyway: {outcome.stdout!r}"
             )
+        if "could not be saved" in said:
+            raise GameTruthError(
+                "one cause was told twice: the run explained the unreadable "
+                "journey and then tried the write anyway, which can only fail "
+                f"against the same condition; stderr held: {said!r}"
+            )
+        if "  " in said:
+            raise GameTruthError(
+                f"the player's copy carries a run of spaces: {said!r}"
+            )
         after = journey.read_bytes()
         if b"plays 40" not in after:
             raise GameTruthError(
