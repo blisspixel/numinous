@@ -5,6 +5,17 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The call reaches the terminal. `numinous call <room>` poses the same
+  deterministic question the App's U key poses and the MCP predict tool
+  answers, in the terminal's own grammar: ask once to hear it, answer
+  with a number, and the truth is named whichever way the call went.
+  Both halves are stateless and seeded, so the question keeps its
+  answer between the two runs, and the seed defaults to the day, which
+  gives a day one call worth comparing across players and faces. The
+  posed question is written for this face rather than forwarded from
+  the tool prompt, which offers a rate commitment this command does not
+  accept: advertising a verb a face cannot hear is the defect this
+  cycle spent a workstream removing.
 - The veil opens the same rooms on every face, and a sibling fork is no
   longer mistaken for a parent. The gate that decides who is inside the
   veil was already shared, but the door was not: a learner the terminal

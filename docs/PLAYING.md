@@ -175,6 +175,7 @@ show
 ```
 numinous                          the front door: today's room, your level, the verbs
 numinous play                     pick a game; numinous play munch deals a fresh board each run
+numinous call lorenz              name the readout before you look, then meet it
 numinous watch julia              full-color animation, with sound
 numinous watch lorenz --era phosphor
 numinous play times-tables        classic ASCII
