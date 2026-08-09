@@ -1965,6 +1965,10 @@ impl App {
         if self.the_show {
             self.show_help = false;
             self.show_journey = false;
+            // The Show is watching, not playing: it strips inputs, so a
+            // call left posed would sit there with a live band and no
+            // hand able to aim it.
+            self.room_wager = None;
             self.clear_transient_audio();
         }
         self.paused = false;
@@ -2360,7 +2364,8 @@ impl App {
                 }
                 // A posed call owns its band: a press there commits the
                 // call instead of touching the room underneath.
-                if self.room_wager.as_ref().is_some_and(wager::RoomWager::open)
+                if !self.the_show
+                    && self.room_wager.as_ref().is_some_and(wager::RoomWager::open)
                     && point.1 >= wager::WAGER_BAND_Y
                 {
                     if let Some(posed) = self.room_wager.as_mut() {
@@ -2441,7 +2446,8 @@ impl App {
                 self.buffon_aha.set_hover(None);
             }
         }
-        if self.room_wager.as_ref().is_some_and(wager::RoomWager::open)
+        if !self.the_show
+            && self.room_wager.as_ref().is_some_and(wager::RoomWager::open)
             && point.1 >= wager::WAGER_BAND_Y
             && let Some(posed) = self.room_wager.as_mut()
         {
@@ -4148,7 +4154,9 @@ impl App {
                         );
                     }
                 }
-                if let Some(posed) = &self.room_wager {
+                if !self.the_show
+                    && let Some(posed) = &self.room_wager
+                {
                     posed.draw(&mut raster);
                 }
                 if room.meta().id == "galton-board" && !self.the_show {
@@ -5852,6 +5860,21 @@ mod tests {
         // Leaving the room ends the call: a wager is about one readout.
         app.switch(1);
         assert!(app.room_wager.is_none());
+
+        // The Show is watching, not playing: it takes no posed call with
+        // it, so a click in the band cannot commit one behind the tour.
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "lorenz")
+            .expect("lorenz in catalog");
+        app.toggle_room_wager();
+        assert!(app.room_wager.is_some());
+        app.toggle_show();
+        assert!(app.room_wager.is_none(), "the tour inherits no wager");
+        app.begin_pointer_at((0.5, 0.95));
+        assert!(app.room_wager.is_none(), "and cannot start one");
+        app.toggle_show();
 
         let _ = std::fs::remove_file(&app.journey_file);
         let _ = std::fs::remove_file(&app.scores_file);
