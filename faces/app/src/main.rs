@@ -39,6 +39,7 @@ mod room_input;
 mod save_gate;
 mod session_audio;
 mod studio_panel;
+mod wager;
 
 use crate::audio_state::Program as AudioProgram;
 use crate::session_audio::SessionAudio;
@@ -404,6 +405,8 @@ struct App {
     buffon_aha: numinous_core::rooms::buffon_aha::BuffonAha,
     /// Staged Galton aha (third flagship): wager the pile's peak bin.
     galton_aha: numinous_core::rooms::galton_aha::GaltonAha,
+    /// The universal readout wager, while one is posed on this room.
+    room_wager: Option<wager::RoomWager>,
     rooms: Vec<Box<dyn Room>>,
     current: usize,
     t: f64,
@@ -568,6 +571,7 @@ impl App {
             times_tables_aha: numinous_core::rooms::times_tables_aha::TimesTablesAha::new(),
             buffon_aha: numinous_core::rooms::buffon_aha::BuffonAha::new(),
             galton_aha: numinous_core::rooms::galton_aha::GaltonAha::new(),
+            room_wager: None,
             rooms: all_rooms_with(0),
             current: 0,
             t: 0.0,
@@ -2339,6 +2343,18 @@ impl App {
                         return;
                     }
                 }
+                // A posed call owns its band: a press there commits the
+                // call instead of touching the room underneath.
+                if self.room_wager.as_ref().is_some_and(wager::RoomWager::open)
+                    && point.1 >= wager::WAGER_BAND_Y
+                {
+                    if let Some(posed) = self.room_wager.as_mut() {
+                        posed.aim_at(point.0);
+                    }
+                    self.commit_room_wager();
+                    self.poking = false;
+                    return;
+                }
                 // Galton bottom band: commit the peak wager without a drop.
                 if self.current_room_is_galton()
                     && !self.the_show
@@ -2409,6 +2425,12 @@ impl App {
             } else {
                 self.buffon_aha.set_hover(None);
             }
+        }
+        if self.room_wager.as_ref().is_some_and(wager::RoomWager::open)
+            && point.1 >= wager::WAGER_BAND_Y
+            && let Some(posed) = self.room_wager.as_mut()
+        {
+            posed.aim_at(point.0);
         }
         if self.current_room_is_galton()
             && !self.the_show
@@ -3355,6 +3377,9 @@ impl App {
         self.reset_times_tables_aha();
         self.reset_buffon_aha();
         self.reset_galton_aha();
+        // A call is about one room's readout; carrying it across the
+        // doorway would grade the wrong number.
+        self.room_wager = None;
         self.goal_announced = false;
     }
 
@@ -3502,6 +3527,9 @@ impl App {
                 .or_else(|| self.rooms[self.current].status(phase));
             return Some(self.buffon_aha.status(throws.as_deref()));
         }
+        if let Some(posed) = &self.room_wager {
+            return Some(posed.status());
+        }
         if self.current_room_is_galton() && !self.the_show {
             let phase = effective_room_phase("galton-board", self.t, &self.inputs, self.the_show);
             let pile = self.rooms[self.current]
@@ -3530,6 +3558,61 @@ impl App {
         if self.current_room_is_buffon() {
             self.show_info = false;
         }
+    }
+
+    /// U poses the room's own prediction, or closes an open one.
+    ///
+    /// Every room with a moving numeric readout can be called, which is
+    /// most of the catalog; the two flagship rooms keep their hand-staged
+    /// ahas instead, because a bespoke five-beat arc outranks the generic
+    /// one where it exists.
+    fn toggle_room_wager(&mut self) {
+        if self.the_show || self.studio || self.arcade.is_some() {
+            return;
+        }
+        if self.room_wager.take().is_some() {
+            return;
+        }
+        if self.current_room_is_times_tables()
+            || self.current_room_is_buffon()
+            || self.current_room_is_galton()
+        {
+            self.banner = Some(feedback::Banner::status(
+                "THIS ROOM STAGES ITS OWN WAGER",
+                feedback::REFUSAL_FRAMES,
+            ));
+            return;
+        }
+        let room = self.rooms[self.current].as_ref();
+        match wager::RoomWager::pose(room, self.variation) {
+            Some(posed) => {
+                self.show_info = false;
+                self.room_wager = Some(posed);
+            }
+            None => {
+                self.banner = Some(feedback::Banner::status(
+                    "THIS ROOM READS NO NUMBER TO CALL",
+                    feedback::REFUSAL_FRAMES,
+                ));
+            }
+        }
+    }
+
+    /// Commit the posed call and meet the truth.
+    fn commit_room_wager(&mut self) {
+        let Some(mut posed) = self.room_wager.take() else {
+            return;
+        };
+        let room = self.rooms[self.current].as_ref();
+        if posed.commit(room).is_some()
+            && let Some(verdict) = posed.verdict()
+        {
+            self.banner = Some(feedback::Banner::status(
+                verdict.to_uppercase(),
+                feedback::REFUSAL_FRAMES,
+            ));
+        }
+        self.room_wager = Some(posed);
     }
 
     fn reset_galton_aha(&mut self) {
@@ -4046,6 +4129,9 @@ impl App {
                             progress,
                         );
                     }
+                }
+                if let Some(posed) = &self.room_wager {
+                    posed.draw(&mut raster);
                 }
                 if room.meta().id == "galton-board" && !self.the_show {
                     if matches!(
@@ -4602,6 +4688,11 @@ impl ApplicationHandler for App {
                 } else {
                     let logical_key = controls::normalized_command_key(&logical_key);
                     match logical_key {
+                        // A posed call takes Esc first: dismissing the band
+                        // is a smaller step back than opening the menu.
+                        Key::Named(NamedKey::Escape) if self.room_wager.is_some() => {
+                            self.room_wager = None;
+                        }
                         // Esc is the menu, like every game since Doom. Quit from
                         // the window's close button.
                         Key::Named(NamedKey::Escape) => {
@@ -4611,6 +4702,33 @@ impl ApplicationHandler for App {
                             } else {
                                 self.show_help = !self.show_help;
                             }
+                        }
+                        // A posed call owns the aiming keys until it is
+                        // committed or dismissed: the arrows are the
+                        // keyboard's only route to a hand verb inside a
+                        // room, so they aim here instead of changing rooms.
+                        Key::Named(NamedKey::ArrowRight)
+                            if self.room_wager.as_ref().is_some_and(wager::RoomWager::open) =>
+                        {
+                            if let Some(posed) = self.room_wager.as_mut() {
+                                posed.nudge(1);
+                            }
+                        }
+                        Key::Named(NamedKey::ArrowLeft)
+                            if self.room_wager.as_ref().is_some_and(wager::RoomWager::open) =>
+                        {
+                            if let Some(posed) = self.room_wager.as_mut() {
+                                posed.nudge(-1);
+                            }
+                        }
+                        Key::Named(NamedKey::Enter)
+                            if self.room_wager.as_ref().is_some_and(wager::RoomWager::open) =>
+                        {
+                            self.commit_room_wager();
+                        }
+                        // U calls the readout: the universal wager.
+                        Key::Character(c) if c.as_str() == "u" => {
+                            self.toggle_room_wager();
                         }
                         // Enter is the front-door start: into The Show (the room
                         // tour). Same toggle as B, including from the open menu.
@@ -5659,6 +5777,84 @@ mod tests {
         app.reset_current_room();
         assert_eq!(app.buffon_aha.beat(), AhaBeat::Explore);
         assert!(!app.show_info);
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
+    fn the_universal_wager_reaches_an_ordinary_room_and_meets_its_truth() {
+        // The Wager Wave's engine, on the App's hands: an ordinary catalog
+        // room with a readout can be called, aimed with the keyboard alone,
+        // and answered against the room's own number.
+        let mut app = headless("numinous_app_test_room_wager.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "lorenz")
+            .expect("lorenz in catalog");
+        app.show_help = false;
+
+        app.toggle_room_wager();
+        assert!(app.room_wager.is_some(), "an ordinary room poses a call");
+        assert!(
+            app.current_status_override(80)
+                .is_some_and(|s| s.contains("CALL")),
+            "the footer carries the invite"
+        );
+
+        // The keyboard alone can aim: this is the only hand verb inside a
+        // room a keyboard player has.
+        let opened = app.room_wager.as_ref().expect("posed").aimed_value();
+        for _ in 0..5 {
+            if let Some(posed) = app.room_wager.as_mut() {
+                posed.nudge(1);
+            }
+        }
+        let aimed = app.room_wager.as_ref().expect("posed").aimed_value();
+        assert!(aimed > opened, "arrows move the aim");
+
+        app.commit_room_wager();
+        let posed = app.room_wager.as_ref().expect("still posed after the call");
+        assert!(!posed.open(), "a call is committed once");
+        let grade = posed.graded().expect("the truth arrived");
+        assert!(
+            (grade.guess - aimed).abs() < 1e-9,
+            "it graded what was aimed"
+        );
+        let status = app.current_status_override(80).expect("footer");
+        assert!(status.contains("TRUTH"), "the truth is named: {status}");
+        let banner = app.banner.as_ref().expect("the verdict speaks");
+        assert!(
+            banner.lines()[0].contains("READS"),
+            "the verdict names the truth: {:?}",
+            banner.lines()
+        );
+
+        // Leaving the room ends the call: a wager is about one readout.
+        app.switch(1);
+        assert!(app.room_wager.is_none());
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
+    fn a_flagship_room_keeps_its_own_staged_wager() {
+        // The generic call must not shadow the hand-built five-beat arcs.
+        let mut app = headless("numinous_app_test_wager_flagship.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "times-tables")
+            .expect("times-tables in catalog");
+        app.show_help = false;
+        app.toggle_room_wager();
+        assert!(
+            app.room_wager.is_none(),
+            "a flagship stages its own wager instead"
+        );
+        assert!(app.banner.is_some(), "and says so");
 
         let _ = std::fs::remove_file(&app.journey_file);
         let _ = std::fs::remove_file(&app.scores_file);
