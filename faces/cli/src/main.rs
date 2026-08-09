@@ -1213,14 +1213,17 @@ fn journey_path() -> PathBuf {
 /// risk of being written over it: the delta writer fails against the same
 /// condition rather than replacing a file it could not read.
 fn load_journey() -> (Journey, bool) {
-    match numinous_core::read_journey_file(&journey_path()) {
+    let path = journey_path();
+    match numinous_core::read_journey_file(&path) {
         Ok(journey) => (journey, true),
         Err(error) => {
+            let where_it_lives = terminal_safe_path(&path);
             report_diagnostic(&terminal_safe(&format!(
-                "your progress file could not be read, so this run cannot see                  your journey: {error}
-Nothing will be written over it. Fix or                  move {}, then play on.",
-                terminal_safe_path(&journey_path())
+                "your progress file could not be read, so this run cannot see your journey: {error}"
             )));
+            report_diagnostic(&format!(
+                "nothing will be written over it. Fix or move {where_it_lives}, then play on."
+            ));
             (Journey::default(), false)
         }
     }
@@ -1574,6 +1577,13 @@ fn finish_journey(
     if before == after {
         return;
     }
+    // A run that could not read the ledger has already said so, once, at the
+    // door. Writing now could only fail against the same condition and would
+    // repeat that news in different words, so this stops here: one cause,
+    // one telling.
+    if !readable {
+        return;
+    }
     // The play still happened; if the ledger refuses, say so and stop. The
     // banners below would otherwise celebrate a level the disk never
     // received, and because nothing was written they would celebrate the
@@ -1587,11 +1597,7 @@ fn finish_journey(
             return;
         }
     };
-    if !readable {
-        // The comparison below is against a journey this run could not see.
-        // Nothing here is a real crossing, so nothing is announced.
-        return;
-    }
+
     for ping in trophy_pings(earned_before, &saved, &load_scores()) {
         println!(
             "
