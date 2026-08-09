@@ -108,17 +108,36 @@ arrive last and confirm what the player already felt.
   generation-before-reveal pattern. Prime: after the first throw, status and a
   bottom number line invite a guess on 1.5..4.5 (MCP `number_wager`). Withhold,
   morph, confirm, consolidate mirror Times Tables. Core: `rooms/buffon_aha.rs`.
-- **Galton Board to the binomial and its normal approximation.** Prime: "Drop
-  your bet: where does this one ball land?" Restructure: 64-ball waves build an
-  empirical pile against a distinct exact `Binomial(16, p)` outline without
-  pretending finite samples are identical. The built Toy provides five fixed
-  probabilities, contiguous deterministic runs, exact totals, and reset. The
-  one-ball prediction wager is live as a move-committed bin bet graded against
-  the highlighted last ball of the next wave (Toy-layer status, not a separate
-  Puzzle face). More waves make the empirical frequencies estimate the fixed
-  binomial; the Central Limit Theorem connection is the separate many-row
-  normal approximation, not a claim that sample count changes the landing
-  distribution.
+- **Galton Board to the binomial (the third flagship).** The room's older
+  one-ball bet is still there in the Toy layer, and it grades luck: one
+  stochastic landing tells a player nothing about their model. The staged aha
+  above it asks a model-level question instead. Prime: after the first wave,
+  "where will the whole pile peak?" with a bin ruler along the bottom (MCP
+  `bin_wager`). Withhold, morph, confirm, consolidate mirror the other two:
+  the exact `Binomial(16, p)` outline grows over the pile outward from the
+  true peak, so the answer to the call arrives first, and consolidation
+  speaks one graded sentence against the binomial's mode in predict's
+  non-punitive bands. Four waves earn the withheld beat without a call, for
+  the player who would rather run the experiment than name its answer.
+  A call belongs to an experiment: waves on the same coin are more evidence
+  for it, waves on another coin are a different experiment, so the curve is
+  drawn only over the pile it explains and every sentence names the pile it
+  read. Core: `rooms/galton_aha.rs`. More waves make the empirical
+  frequencies estimate the fixed binomial; the Central Limit Theorem
+  connection is the separate many-row normal approximation, not a claim that
+  sample count changes the landing distribution.
+
+- **Every other room, through one shared engine.** The three staged ahas are
+  hand-built beat by beat, and they should be: a bespoke arc outranks a
+  generic one where it exists. But the commitment mechanic itself is not
+  bespoke. `predict` poses a deterministic question for any room with a
+  moving numeric readout and grades the answer in the same bands, which is
+  nearly the whole catalog. The App's U key poses that question in the
+  flagships' own gesture, a band along the bottom aimed by hand or by arrow
+  key and committed with Enter, and speaks one sentence naming what the room
+  actually read. The truth is named whichever way the call went. The
+  flagship rooms refuse the generic call and say so. This is how the wager
+  arc stops being three rooms and starts being the product's grammar.
 
 ## The mechanic library
 
