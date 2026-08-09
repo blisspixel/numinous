@@ -2419,7 +2419,7 @@ fn call_tool(
         "list_rooms" => list_rooms_tool(),
         "describe_room" => describe_room_tool(&domain_args, journey_file),
         "reveal_room" => reveal_room_tool(&domain_args, journey_file),
-        "play_room" => play_room_tool(&domain_args),
+        "play_room" => play_room_tool(&domain_args, journey_file),
         "challenge" => challenge_tool(&domain_args),
         "predict" => predict_tool(&domain_args),
         "cairn" => cairn_tool(&domain_args, journey_file, &cairn_path()),
@@ -2650,11 +2650,29 @@ fn describe_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
     describe_room_tool_for_journey(args, &load_journey(journey_file))
 }
 
+/// Find a room the way the terminal does: the catalog always, and the
+/// unlisted ones for a journey the veil admits.
+///
+/// The gate itself lives in core so both faces read one rule, but this face
+/// used to skip the second half entirely: a learner who could open the
+/// hidden room from the terminal was told over MCP that it does not exist.
+/// One player, one standing, two answers.
+fn find_room_for(
+    id: &str,
+    journey: &numinous_core::Journey,
+) -> Option<Box<dyn numinous_core::Room>> {
+    room_by_id(id).or_else(|| {
+        numinous_core::behind_the_veil(journey)
+            .then(|| numinous_core::hidden_room_by_id(id))
+            .flatten()
+    })
+}
+
 fn describe_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) -> Value {
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'id'.");
     };
-    match room_by_id(id) {
+    match find_room_for(id, journey) {
         Some(room) => {
             let m = room.meta();
             // Deep cuts open by level or by a spent boon, exactly as in the
@@ -2983,7 +3001,7 @@ fn reveal_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) 
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'id'.");
     };
-    match room_by_id(id) {
+    match find_room_for(id, journey) {
         Some(room) => {
             let cut0_by_boon = journey.chosen.contains(&format!("cut:{id}:0"));
             let citation = numinous_core::room_citation_unlocked(id, journey.level(), cut0_by_boon);
@@ -3175,7 +3193,11 @@ fn gesture_json(gesture: &[numinous_core::RoomInput]) -> Value {
     )
 }
 
-fn play_room_tool(args: &Value) -> Value {
+fn play_room_tool(args: &Value, journey_file: &std::path::Path) -> Value {
+    play_room_tool_for_journey(args, &load_journey(journey_file))
+}
+
+fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) -> Value {
     let Some(id) = args.get("id").and_then(Value::as_str) else {
         return tool_error("Missing required string argument 'id'.");
     };
@@ -3212,7 +3234,11 @@ fn play_room_tool(args: &Value) -> Value {
             .into_iter()
             .find(|r| r.meta().id == id)
     } else {
-        room_by_id(id)
+        // The same veil door describe and reveal use: a hidden room is
+        // unlisted, not nonexistent, and a learner the terminal admits is
+        // the same learner here. Variation stays a catalog contract, which
+        // is the terminal's rule too.
+        find_room_for(id, journey)
     };
 
     match room {
@@ -9033,6 +9059,41 @@ plays 2
         assert_eq!(super::note_name(880.0), "A5");
         assert_eq!(super::note_name(261.63), "C4");
         assert_eq!(super::note_name(0.0), "-");
+    }
+
+    #[test]
+    fn the_veil_opens_the_same_rooms_on_this_face_as_on_the_terminal() {
+        // The gate was shared; the door was not. A learner the terminal
+        // admits to an unlisted room was told here that the room does not
+        // exist, so one player with one standing got two answers depending
+        // on which face they asked through.
+        let mut journey = numinous_core::Journey::default();
+        journey.visit("a");
+        journey.wins = 7;
+        assert!(numinous_core::behind_the_veil(&journey));
+
+        let hidden = numinous_core::hidden_room_by_id("tetractys").expect("an unlisted room");
+        let id = hidden.meta().id;
+
+        let described = super::describe_room_tool_for_journey(&json!({ "id": id }), &journey);
+        assert_eq!(described["isError"], false, "{described}");
+        let played = super::play_room_tool_for_journey(
+            &json!({ "id": id, "width": 24, "height": 12 }),
+            &journey,
+        );
+        assert_eq!(played["isError"], false, "{played}");
+        let revealed = super::reveal_room_tool_for_journey(&json!({ "id": id }), &journey);
+        assert_eq!(revealed["isError"], false, "{revealed}");
+
+        // Outside the veil the room stays unlisted on this face too: the
+        // fix opens the same door, not a wider one.
+        let outsider = numinous_core::Journey::default();
+        assert!(!numinous_core::behind_the_veil(&outsider));
+        let refused = super::play_room_tool_for_journey(
+            &json!({ "id": id, "width": 24, "height": 12 }),
+            &outsider,
+        );
+        assert_eq!(refused["isError"], true, "{refused}");
     }
 
     #[test]
