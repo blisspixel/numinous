@@ -3677,7 +3677,9 @@ impl App {
             return;
         }
         let waves = numinous_core::rooms::galton_board::wave_count_from_inputs(&self.inputs);
-        self.galton_aha.note_waves(waves);
+        let coin = numinous_core::rooms::galton_board::selected_coin_from_inputs(&self.inputs)
+            .unwrap_or(2);
+        self.galton_aha.note_waves(waves, coin);
     }
 
     /// E / Inspect: summon staged aha on flagship rooms; elsewhere toggle reveal.
