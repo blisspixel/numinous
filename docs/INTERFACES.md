@@ -233,11 +233,17 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   EXACTLY 4 LOBES`. `play_room` returns `goal`, `goalMet`, and a null reveal
   until accepted K=5 input closes four lobes. The earned response then includes
   the same reveal the App points to. Ambient phase alone cannot earn it.
-- **Engineered aha wagers, MCP slice (built):** on Times Tables and Buffon's
-  Needle, `play_room` always includes `structuredContent.engineeredAha` with
-  beat, status, earn, allowReveal, and canSummon. Optional `place_wager`
-  (`mandelbrot` | `nephroid` | `circle`) or `number_wager` (finite, 1.5..4.5)
-  is a generation act. Optional `aha_summon: true` advances through morph to
+- **Engineered aha wagers, MCP slice (built):** on Times Tables, Buffon's
+  Needle, and the Galton Board, `play_room` always includes
+  `structuredContent.engineeredAha` with beat, status, earn, allowReveal, and
+  canSummon. Optional `place_wager` (`mandelbrot` | `nephroid` | `circle`),
+  `number_wager` (finite, 1.5..4.5), or `bin_wager` (0..16) is a generation
+  act. Each committed wager comes back typed beside its truth, its band, and
+  one graded sentence, because a commitment that is collected and never
+  answered is theater. The Galton call is about the pile the request's pokes
+  build, which is the newest coin's run; this face is stateless, so a longer
+  poke history is honestly a different question, and every reply names the
+  coin it answered. Optional `aha_summon: true` advances through morph to
   consolidated and unlocks punchline reveal when generation has occurred.
   Generation args withhold `reveal` until consolidation; the established K5
   goal path still unlocks reveal without those args. Stateless and

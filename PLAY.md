@@ -100,7 +100,10 @@ color-free drawing is a terminal thing, since the window is not made of text.
 
 Mouse, keyboard, and controller can all navigate the App. Hover and click any
 opening-menu destination, press its displayed key, or use the controller D-pad
-and South. Letter commands remain active with Shift or Caps Lock. During play,
+and South. Letter commands remain active with Shift or Caps Lock. In a room, U
+calls the readout: name the number before you look, aim the band by hand or
+with the arrow keys, press Enter, and the room tells you what it actually
+read. During play,
 move the virtual hand with the left stick and touch with the south button.
 The bumpers change rooms, the D-pad drives games, the triggers change speed,
 the right stick scrubs time, Start opens or closes the menu, Select inspects,
