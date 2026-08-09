@@ -5,6 +5,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The veil opens the same rooms on every face, and a sibling fork is no
+  longer mistaken for a parent. The gate that decides who is inside the
+  veil was already shared, but the door was not: a learner the terminal
+  admitted to an unlisted room was told over MCP that the room does not
+  exist, so one player with one standing got two answers depending on
+  which face they asked through. describe, reveal, and play now open
+  through one door on both faces, and a player outside the veil still
+  finds the room unlisted, because the fix opens the same door rather
+  than a wider one. On the Gallery wall, two unedited forks of the same
+  untitled creation carry identical links and identical descents, so
+  matching on the link alone let each adopt the other: both wore a
+  remix badge, the real parent went uncredited, and D walked a circle
+  between them forever. A candidate that descends from the same
+  creation stands beside this one, not above it.
 - A progress file that cannot be read is no longer treated as a player
   who has none. An existing journey that fails to load (invalid UTF-8,
   oversized, permission denied) came back as a default, which is
