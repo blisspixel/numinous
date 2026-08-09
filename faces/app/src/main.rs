@@ -325,6 +325,22 @@ enum NamingField {
     Author,
 }
 
+/// The naming step's fields, exactly as the player left them.
+///
+/// Two levels of optionality, because two different questions are being
+/// asked. Whether a share carries this at all answers "was the player
+/// asked"; each field answers "what did they leave". Collapsing those into
+/// one `Option` per field is what made a player who deleted a reopened
+/// creation's name watch the old name ship anyway: the form said unnamed
+/// while the capsule, the README, the postcard headline, and the folder
+/// slug all said otherwise. An emptied field is a clearing, not an
+/// absence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ShareIdentity {
+    title: Option<String>,
+    author: Option<String>,
+}
+
 /// The F4 naming step's editable state: one text line for the creation's
 /// name, one for its signature.
 #[derive(Debug, Clone)]
@@ -335,6 +351,18 @@ struct ShareNaming {
 }
 
 impl ShareNaming {
+    /// The identity decision these fields carry, clearings included.
+    fn identity(&self) -> Option<ShareIdentity> {
+        let field = |value: &str| {
+            let value = value.trim();
+            (!value.is_empty()).then(|| value.to_string())
+        };
+        Some(ShareIdentity {
+            title: field(&self.title),
+            author: field(&self.author),
+        })
+    }
+
     fn active_field_mut(&mut self) -> &mut String {
         match self.field {
             NamingField::Title => &mut self.title,
@@ -1436,17 +1464,13 @@ impl App {
             return;
         };
         self.remembered_author = naming.author.trim().to_string();
-        let title = Some(naming.title.trim())
-            .filter(|title| !title.is_empty())
-            .map(str::to_string);
-        let author = Some(naming.author.trim())
-            .filter(|author| !author.is_empty())
-            .map(str::to_string);
-        self.share_studio_creation(title.as_deref(), author.as_deref());
+        // An emptied field is the player clearing the name, which the share
+        // must honor; it is not the same as never having been asked.
+        self.share_studio_creation(naming.identity());
     }
 
-    fn share_studio_creation(&mut self, title: Option<&str>, author: Option<&str>) {
-        match self.share_studio_creation_to(&postcard::default_postcard_dir(), title, author) {
+    fn share_studio_creation(&mut self, identity: Option<ShareIdentity>) {
+        match self.share_studio_creation_to(&postcard::default_postcard_dir(), identity) {
             Ok(Ok(dir)) => {
                 self.report_export_outcome(
                     "studio share",
@@ -1487,25 +1511,31 @@ impl App {
     fn share_studio_creation_to(
         &self,
         parent: &std::path::Path,
-        title: Option<&str>,
-        author: Option<&str>,
+        identity: Option<ShareIdentity>,
     ) -> std::io::Result<Result<std::path::PathBuf, studio_panel::ShareRefusal>> {
         let mut creation = match self.studio_panel.current_creation(self.t) {
             Ok(creation) => creation,
             Err(refusal) => return Ok(Err(refusal)),
         };
-        // The naming step's fields ride the capsule. The editor enforces
-        // the same printable ASCII bound the format validates, so a name
-        // that reaches here cannot be refused; if the two rules ever
-        // drift, the share fails loudly through the io path rather than
-        // silently shipping unnamed work.
-        if let Some(title) = title {
-            creation = creation.with_title(title).map_err(std::io::Error::other)?;
-        }
-        if let Some(author) = author {
-            creation = creation
-                .with_author(author)
-                .map_err(std::io::Error::other)?;
+        // The naming step's fields ride the capsule, clearings included: an
+        // untouched reopen carries the opened capsule's own title and author,
+        // so a share that ignored an emptied field would ship a name the
+        // player had just deleted. The editor enforces the same printable
+        // ASCII bound the format validates, so a name that reaches here
+        // cannot be refused; if the two rules ever drift, the share fails
+        // loudly through the io path rather than silently shipping wrong
+        // identity.
+        if let Some(ShareIdentity { title, author }) = identity {
+            creation = match title {
+                Some(title) => creation.with_title(&title).map_err(std::io::Error::other)?,
+                None => creation.without_title(),
+            };
+            creation = match author {
+                Some(author) => creation
+                    .with_author(&author)
+                    .map_err(std::io::Error::other)?,
+                None => creation.without_author(),
+            };
         }
         // Record the era only when it says something: Modern is the default
         // look, and omitting it keeps a plain share a version 1 capsule that
@@ -7396,7 +7426,7 @@ mod tests {
         let mut app = headless("numinous_app_test_refusal_frames.txt");
         app.enter_studio();
         assert!(app.studio_panel.push_text("(((").is_none());
-        app.share_studio_creation(None, None);
+        app.share_studio_creation(None);
         let refusal = app.banner.as_ref().expect("refusal banner");
         assert_eq!(refusal.lines()[0], "FIX THE FORMULA TO SHARE");
         assert_eq!(refusal.frames_left(), super::feedback::REFUSAL_FRAMES);
@@ -7789,7 +7819,7 @@ mod tests {
 
         // The next share records the descent and the non-default era.
         let bundle = app
-            .share_studio_creation_to(&shares, None, None)
+            .share_studio_creation_to(&shares, None)
             .expect("share io")
             .expect("the fork parses, so the trio writes");
         let saved = numinous_core::StudioCreation::from_num_path(&bundle.join("creation.num"))
@@ -7818,6 +7848,91 @@ mod tests {
         );
 
         let _ = std::fs::remove_dir_all(&wall);
+        let _ = std::fs::remove_dir_all(&shares);
+    }
+
+    #[test]
+    fn clearing_a_prefilled_name_clears_it_everywhere_the_share_lands() {
+        // The defect this pins: the naming step prefills a reopened
+        // creation's title and author, and an untouched reopen re-shares
+        // that very capsule. Deleting the prefill therefore had to travel,
+        // or the form said unnamed while the capsule, the README, the
+        // postcard headline, and the folder slug all kept the old name.
+        let shares =
+            std::env::temp_dir().join(format!("numinous-cleared-name-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&shares);
+        let mut app = headless("numinous_app_test_cleared_name.txt");
+        app.enter_studio();
+
+        let named = numinous_core::StudioCreation::new("sin(a*x)", 0.0, 2.0, 0.5)
+            .expect("creation")
+            .with_title("Slow Waves")
+            .expect("title")
+            .with_author("A Curious Mind")
+            .expect("author");
+        app.studio_panel.open_creation(&named);
+
+        // The step opens on the capsule's own identity.
+        app.begin_share_naming();
+        {
+            let naming = app.share_naming.as_ref().expect("naming open");
+            assert_eq!(naming.title, "Slow Waves");
+            assert_eq!(naming.author, "A Curious Mind");
+        }
+
+        // Clear both fields the only way a player can.
+        for _ in 0.."Slow Waves".len() {
+            app.naming_backspace();
+        }
+        app.naming_toggle_field();
+        for _ in 0.."A Curious Mind".len() {
+            app.naming_backspace();
+        }
+        let naming = app.share_naming.as_ref().expect("naming open");
+        assert!(naming.title.is_empty() && naming.author.is_empty());
+        assert_eq!(
+            naming.identity(),
+            Some(super::ShareIdentity {
+                title: None,
+                author: None
+            }),
+            "an emptied field is a clearing, not an absence"
+        );
+
+        let identity = naming.identity();
+        let bundle = app
+            .share_studio_creation_to(&shares, identity)
+            .expect("share io")
+            .expect("the reopened formula parses");
+        let saved = numinous_core::StudioCreation::from_num_path(&bundle.join("creation.num"))
+            .expect("reopen");
+        assert_eq!(saved.title(), None, "the deleted name must not ship");
+        assert_eq!(saved.author(), None, "the deleted signature must not ship");
+        let readme = std::fs::read_to_string(bundle.join("README.share.txt")).expect("readme");
+        assert!(!readme.contains("Slow Waves"), "{readme}");
+        assert!(!readme.contains("A Curious Mind"), "{readme}");
+        let folder = bundle
+            .file_name()
+            .expect("bundle name")
+            .to_string_lossy()
+            .to_string();
+        assert!(
+            !folder.contains("slow-waves"),
+            "the folder wears a name that was deleted: {folder}"
+        );
+
+        // A share that never opened the step still keeps what the capsule
+        // carries: the two cases must stay distinguishable.
+        app.studio_panel.open_creation(&named);
+        let untouched = app
+            .share_studio_creation_to(&shares, None)
+            .expect("share io")
+            .expect("parses");
+        let kept = numinous_core::StudioCreation::from_num_path(&untouched.join("creation.num"))
+            .expect("reopen");
+        assert_eq!(kept.title(), Some("Slow Waves"));
+        assert_eq!(kept.author(), Some("A Curious Mind"));
+
         let _ = std::fs::remove_dir_all(&shares);
     }
 
@@ -7861,7 +7976,13 @@ mod tests {
         // The named share signs the capsule, the postcard identity rides,
         // and a titled bundle folder wears the slug.
         let bundle = app
-            .share_studio_creation_to(&shares, Some("Fading Wave"), Some("A Curious Mind"))
+            .share_studio_creation_to(
+                &shares,
+                Some(super::ShareIdentity {
+                    title: Some("Fading Wave".to_string()),
+                    author: Some("A Curious Mind".to_string()),
+                }),
+            )
             .expect("share io")
             .expect("default formula parses");
         let saved = numinous_core::StudioCreation::from_num_path(&bundle.join("creation.num"))
@@ -7906,7 +8027,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&parent);
 
         let dir = app
-            .share_studio_creation_to(&parent, None, None)
+            .share_studio_creation_to(&parent, None)
             .expect("share io")
             .expect("default formula parses, so the trio writes");
         let num_path = dir.join("creation.num");
@@ -7934,7 +8055,7 @@ mod tests {
             .collect();
         assert_eq!(
             broken
-                .share_studio_creation_to(&parent, None, None)
+                .share_studio_creation_to(&parent, None)
                 .expect("refusal is not an io error"),
             Err(crate::studio_panel::ShareRefusal::UnparsedFormula),
             "an unparsed formula is its own refusal, named as such"
