@@ -528,6 +528,17 @@ enum Command {
         #[arg(long)]
         out: PathBuf,
     },
+    /// Call a room's readout: name the number before you look, then meet it.
+    Call {
+        /// Room id, e.g. "lorenz".
+        id: String,
+        /// Your call. Omit to hear the question first, then answer it.
+        #[arg(long)]
+        guess: Option<f64>,
+        /// Which question. Defaults to today's, so a day has one call.
+        #[arg(long)]
+        seed: Option<u64>,
+    },
     /// Sing a function: turn y = f(x) into a melody and write a WAV.
     Sing {
         /// The expression in x, a Studio .num file path, or a numinous:// link.
@@ -2185,6 +2196,10 @@ Or name a room to watch it as ASCII: numinous play lorenz"
         Command::Tune { seed, bars, out } => {
             journey.play();
             emit(tune_wav(seed, bars, &out))
+        }
+        Command::Call { id, guess, seed } => {
+            journey.play();
+            emit(call_report(&id, guess, seed.unwrap_or_else(pick_day)))
         }
         Command::Sing {
             expr,
@@ -5764,6 +5779,69 @@ fn play(
     }
 }
 
+/// The universal call, on the terminal's own terms.
+///
+/// The App aims a band with a hand or an arrow key; a terminal has neither,
+/// so the same commitment is made the way a terminal makes commitments: ask
+/// once to hear the question, answer with a number. Both halves are
+/// deterministic and stateless, so the question keeps its answer between the
+/// two runs, and the day's seed means a day has one call worth comparing.
+fn call_report(id: &str, guess: Option<f64>, seed: u64) -> Result<String, String> {
+    let Some(room) = find_room(id, false) else {
+        return Err(not_found_message(id));
+    };
+    let Some(posed) = numinous_core::pose_prediction(room.as_ref(), seed) else {
+        return Err(format!(
+            "{} reads no moving number to call. Rooms with a readout can be              called; this one answers in shape alone.
+",
+            terminal_safe(room.meta().title)
+        ));
+    };
+    let (lo, hi) = posed.span;
+    let Some(guess) = guess else {
+        // The shared prompt is written for a tool caller and offers a rate
+        // commitment this command does not accept; printing it here would
+        // advertise a verb this face cannot hear. The question is the same
+        // question, said in the terminal's own words.
+        let label = terminal_safe(&posed.label);
+        let title = terminal_safe(room.meta().title);
+        let phase = posed.phase;
+        return Ok([
+            format!(
+                "Call it before you look. What does {label} read at phase {phase:.3} in {title}?"
+            ),
+            format!("Across the sweep it runs {lo} to {hi}."),
+            format!("Answer with: numinous call {id} --guess <number> --seed {seed}"),
+            String::new(),
+        ]
+        .join(
+            "
+",
+        ));
+    };
+    let Some(grade) = numinous_core::grade_prediction(room.as_ref(), &posed, guess) else {
+        return Err(format!(
+            "{} lost its readout at that phase.
+",
+            terminal_safe(id)
+        ));
+    };
+    // The bands predict already speaks: a miss is fertile, never punished,
+    // and the truth is named whichever way the call went.
+    let verdict = match grade.band {
+        numinous_core::Band::Nailed => "Nailed.",
+        numinous_core::Band::Close => "Close: the fertile band.",
+        numinous_core::Band::Wild => "A wild swing; the gap is the lesson.",
+    };
+    Ok(format!(
+        "You called {} for {}; it reads {}. {verdict}
+",
+        grade.guess,
+        terminal_safe(&posed.label),
+        grade.actual,
+    ))
+}
+
 /// Answer an unknown room id with the rooms it was probably meant to be, then
 /// one pointer to the browse command. Listing the whole catalog would both bury
 /// the answer and hand over the map this project deliberately withholds
@@ -7588,6 +7666,57 @@ mod tests {
         assert!(frame.contains("Times Tables"));
         assert!(frame.contains(&super::terminal_action_line(room.as_ref())));
         assert!(frame.contains('*'));
+    }
+
+    #[test]
+    fn the_call_poses_a_question_and_then_answers_it() {
+        // The terminal's half of the universal wager: ask once to hear the
+        // question, answer with a number, and the truth is named whichever
+        // way the call went. Both halves are deterministic and stateless,
+        // so the same seed keeps the same question between two runs.
+        let posed = super::call_report("lorenz", None, 7).expect("lorenz reads a number");
+        assert!(posed.contains("Call it before you look"), "{posed}");
+        assert!(
+            posed.contains("--guess"),
+            "the answer route is named: {posed}"
+        );
+        assert!(
+            !posed.contains("rate"),
+            "no verb this command cannot hear: {posed}"
+        );
+        for line in posed.lines() {
+            assert!(!line.contains("  "), "no space runs in player copy: {line}");
+        }
+
+        // The graded half names the truth and speaks a band.
+        let graded = super::call_report("lorenz", Some(10.0), 7).expect("graded");
+        assert!(graded.contains("You called 10"), "{graded}");
+        assert!(
+            graded.contains("Nailed") || graded.contains("fertile") || graded.contains("gap"),
+            "{graded}"
+        );
+
+        // Aiming the truth lands the top band, so the grading is real and
+        // not merely spoken.
+        let room = numinous_core::room_by_id("lorenz").expect("room");
+        let prediction = numinous_core::pose_prediction(room.as_ref(), 7).expect("posed");
+        let truth = numinous_core::grade_prediction(room.as_ref(), &prediction, 0.0)
+            .expect("truth")
+            .actual;
+        let exact = super::call_report("lorenz", Some(truth), 7).expect("graded");
+        assert!(exact.contains("Nailed"), "{exact}");
+    }
+
+    #[test]
+    fn a_room_with_no_number_says_so_instead_of_inventing_one() {
+        let silent = numinous_core::all_rooms()
+            .into_iter()
+            .find(|room| numinous_core::pose_prediction(room.as_ref(), 1).is_none());
+        if let Some(room) = silent {
+            let refusal = super::call_report(room.meta().id, None, 1)
+                .expect_err("a room with no readout refuses the call");
+            assert!(refusal.contains("no moving number"), "{refusal}");
+        }
     }
 
     #[test]
