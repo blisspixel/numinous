@@ -909,6 +909,7 @@ pub fn help_lines_with_controller(
                     "A / D      PREV / NEXT ROOM    1-9 JUMP",
                     "W / S      TIME SPEED   MOUSE SCRUB",
                     "E / ?      EXPLAIN    Q ERA    R RESET",
+                    "U          CALL THE READOUT BEFORE YOU LOOK",
                     "F          FULLSCREEN    Y RADIO",
                     "P / L / K  POSTCARD / LOOP / SHARE PACK",
                     "F9         PLAYTEST NOTE",
@@ -1259,7 +1260,7 @@ mod tests {
     fn keyboard_mouse_menu_exposes_every_clickable_destination() {
         for (index, choice) in MenuChoice::ALL.into_iter().enumerate() {
             let lines = help_lines(InputMode::KeyboardMouse, Some(index), false);
-            assert_eq!(lines.len(), 22);
+            assert_eq!(lines.len(), 23);
             assert!(
                 lines[index + 1].starts_with('>'),
                 "selected destination {index} must be visible"
