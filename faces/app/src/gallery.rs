@@ -81,14 +81,19 @@ fn resolve_lineage(entries: &mut [GalleryEntry]) {
         let Some(descends) = entries[index].creation.descends() else {
             continue;
         };
-        // Never match an entry to itself: an unedited fork of an untitled
-        // creation carries its parent's exact canonical link as its own, and
+        // Neither itself nor a sibling. An unedited fork of an untitled
+        // creation carries its parent's exact canonical link as its own, so
         // a self-parent would credit the remix to the wrong tile and give D
-        // a step that goes nowhere.
-        let parent = links
-            .iter()
-            .enumerate()
-            .position(|(candidate, link)| candidate != index && link == descends);
+        // a step that goes nowhere, and two such forks on one wall would
+        // adopt each other: both wearing a remix badge, the real parent
+        // uncredited, and D walking a circle between them forever. A
+        // candidate that descends from the same creation stands beside this
+        // one, not above it.
+        let parent = links.iter().enumerate().position(|(candidate, link)| {
+            candidate != index
+                && link == descends
+                && entries[candidate].creation.descends() != Some(descends)
+        });
         entries[index].parent = parent;
         if let Some(parent_index) = parent {
             entries[parent_index].remixes += 1;
@@ -682,6 +687,59 @@ mod tests {
             "the fork resolves the other entry, not itself and not nothing"
         );
         assert_eq!(fork_entry.remixes, 0, "the remix credits the parent tile");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn two_twin_forks_do_not_adopt_each_other() {
+        // Two unedited forks of the same untitled creation carry identical
+        // links and identical descents. Matching on the link alone let each
+        // adopt the other: both wore a remix badge, the real parent went
+        // uncredited, and D walked in a circle between them forever. A
+        // sibling stands beside, not above.
+        let dir = scratch("twins");
+        let parent = StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.5).expect("parent");
+        std::fs::write(dir.join("parent.num"), parent.to_num_file()).expect("parent file");
+        for name in ["twin-a.num", "twin-b.num"] {
+            let fork = StudioCreation::new("sin(a*x)", -2.0, 2.0, 0.5)
+                .expect("twin")
+                .with_descends(&parent.to_link())
+                .expect("descends");
+            std::fs::write(dir.join(name), fork.to_num_file()).expect("twin file");
+        }
+
+        let panel = GalleryPanel::open(&dir);
+        assert_eq!(panel.len(), 3);
+        let parent_index = panel
+            .entries
+            .iter()
+            .position(|entry| entry.creation.descends().is_none())
+            .expect("the parent is on the wall");
+
+        for (index, entry) in panel.entries.iter().enumerate() {
+            if entry.creation.descends().is_none() {
+                continue;
+            }
+            assert_eq!(
+                entry.parent,
+                Some(parent_index),
+                "a fork must credit the parent, never its sibling"
+            );
+            assert_eq!(entry.remixes, 0, "a sibling is not a remix of a sibling");
+            // No cycle: walking up from either fork ends at the parent.
+            let mut walker = index;
+            for _ in 0..4 {
+                match panel.entries[walker].parent {
+                    Some(next) => walker = next,
+                    None => break,
+                }
+            }
+            assert_eq!(walker, parent_index, "the walk must end, at the parent");
+        }
+        assert_eq!(
+            panel.entries[parent_index].remixes, 2,
+            "both forks credit the one creation they came from"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 
