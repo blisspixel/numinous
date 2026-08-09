@@ -352,15 +352,15 @@ struct ShareNaming {
 
 impl ShareNaming {
     /// The identity decision these fields carry, clearings included.
-    fn identity(&self) -> Option<ShareIdentity> {
+    fn identity(&self) -> ShareIdentity {
         let field = |value: &str| {
             let value = value.trim();
             (!value.is_empty()).then(|| value.to_string())
         };
-        Some(ShareIdentity {
+        ShareIdentity {
             title: field(&self.title),
             author: field(&self.author),
-        })
+        }
     }
 
     fn active_field_mut(&mut self) -> &mut String {
@@ -1466,7 +1466,7 @@ impl App {
         self.remembered_author = naming.author.trim().to_string();
         // An emptied field is the player clearing the name, which the share
         // must honor; it is not the same as never having been asked.
-        self.share_studio_creation(naming.identity());
+        self.share_studio_creation(Some(naming.identity()));
     }
 
     fn share_studio_creation(&mut self, identity: Option<ShareIdentity>) {
@@ -7892,14 +7892,14 @@ mod tests {
         assert!(naming.title.is_empty() && naming.author.is_empty());
         assert_eq!(
             naming.identity(),
-            Some(super::ShareIdentity {
+            super::ShareIdentity {
                 title: None,
                 author: None
-            }),
+            },
             "an emptied field is a clearing, not an absence"
         );
 
-        let identity = naming.identity();
+        let identity = Some(naming.identity());
         let bundle = app
             .share_studio_creation_to(&shares, identity)
             .expect("share io")
