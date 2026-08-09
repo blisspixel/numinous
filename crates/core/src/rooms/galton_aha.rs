@@ -221,16 +221,18 @@ impl GaltonAha {
         self.hover = bin.map(|b| b.min(BOARD_ROWS));
     }
 
-    /// Commit the peak wager on the selected coin. First generation act wins.
+    /// Commit the peak wager on the coin the pile is built from.
     ///
-    /// Prime only, unlike Buffon's machine: pi exists before any needle is
-    /// thrown, but a peak wager about a pile that does not exist yet is
-    /// incoherent, so the first wave must land before the bet can.
+    /// A pile must exist to bet on, unlike Buffon's machine where pi is
+    /// there before any needle is thrown, so Explore refuses. A visit that
+    /// already earned by running four waves does not refuse: naming a bin
+    /// is the stronger commitment, and a caller who does both must not
+    /// have the call silently dropped. Only another wager closes the door.
     pub fn commit_wager(&mut self, bin: usize, coin: usize) -> bool {
-        if self.earn.is_some() {
+        if matches!(self.earn, Some(EarnPath::Wager { .. })) {
             return false;
         }
-        if !matches!(self.beat, AhaBeat::Prime) {
+        if !matches!(self.beat, AhaBeat::Prime | AhaBeat::Withheld) {
             return false;
         }
         let bin = bin.min(BOARD_ROWS);
@@ -343,6 +345,23 @@ impl GaltonAha {
         )
     }
 
+    /// The coin the truth is about: the wager's own, once one is
+    /// committed, and nothing before that.
+    ///
+    /// A player who changes coins after calling a bin has started a
+    /// different experiment; the call still stands for the one it was
+    /// made about, so the curve that answers it must be that coin's and
+    /// the sentence must name it. Faces read this instead of the live
+    /// selection, which is how the outline on screen and the sentence
+    /// under it stopped disagreeing.
+    #[must_use]
+    pub fn coin(&self) -> Option<usize> {
+        match self.earn {
+            Some(EarnPath::Wager { coin, .. }) => Some(coin),
+            _ => None,
+        }
+    }
+
     /// The committed wager, its coin, and its band, once a wager exists.
     #[must_use]
     pub fn wager(&self) -> Option<(usize, usize, GuessBand)> {
@@ -369,8 +388,9 @@ impl GaltonAha {
             GuessBand::Close => "Close: the fertile band.",
             GuessBand::Wild => "A wild swing; the gap is the lesson.",
         };
+        let p = COIN_PROBABILITIES[coin.min(COIN_PROBABILITIES.len() - 1)];
         Some(format!(
-            "You wagered bin {bin}; the binomial peaks at bin {truth}. {verdict}"
+            "You wagered bin {bin}; for the {p:.2} coin the binomial peaks at bin {truth}. {verdict}"
         ))
     }
 
@@ -451,6 +471,17 @@ pub fn render_outline_overlay(canvas: &mut dyn Surface, progress: f64, coin: usi
     let bottom = height as f64 * 0.74;
     let peak = peak_bin_for_coin(coin) as f64;
     let reach = (BOARD_ROWS as f64).max(1.0) * progress;
+    // Bins map to columns through the pile's own geometry, or the curve
+    // would land beside the bars it claims to explain.
+    let column = |bin: f64| {
+        let low = super::galton_board::GaltonBoard::bin_column(width, bin.floor() as usize);
+        let high = super::galton_board::GaltonBoard::bin_column(
+            width,
+            (bin.ceil() as usize).min(BOARD_ROWS),
+        );
+        let t = bin - bin.floor();
+        (f64::from(low) * (1.0 - t) + f64::from(high) * t).round() as i32
+    };
     // One mark throughout: against this room's accent, the hash and the
     // at-sign collapse for a color-blind player (the dichromacy sweep
     // proved it), so the outline does not switch marks as it lands.
@@ -463,7 +494,7 @@ pub fn render_outline_overlay(canvas: &mut dyn Surface, progress: f64, coin: usi
         let high = (bin.ceil() as usize).min(BOARD_ROWS);
         let t = bin - low as f64;
         let m = mass[low] * (1.0 - t) + mass[high] * t;
-        let x = ((bin + 0.5) / (BOARD_ROWS as f64 + 1.0) * width as f64).round() as i32;
+        let x = column(bin);
         let y = (bottom - (bottom - top) * (m / peak_mass)).round() as i32;
         let visible = (bin - peak).abs() <= reach;
         if visible {
@@ -485,21 +516,22 @@ pub fn render_bin_band(canvas: &mut dyn Surface, hover: Option<usize>) {
     }
     let y = (height as f64 * 0.92).round() as i32;
     let y = y.clamp(1, height as i32 - 2);
-    let left = (width as f64 * 0.04).round() as i32;
-    let right = (width as f64 * 0.96).round() as i32;
-    canvas.line(left, y, right, y, '-');
-    // Tick every fourth bin so the ruler reads without clutter.
+    canvas.line(0, y, width.saturating_sub(1) as i32, y, '-');
+    // Ticks sit where a press on them actually lands, which is the same
+    // full-width mapping the face reads a hand through: a ruler that
+    // compressed its ends would take a click on the bin 0 tick and
+    // commit bin 1.
+    let at = |bin: usize| {
+        let bins = BOARD_ROWS + 1;
+        let unit = (bin.min(BOARD_ROWS) as f64 + 0.5) / bins as f64;
+        (unit * width as f64).round() as i32
+    };
     for bin in (0..=BOARD_ROWS).step_by(4) {
-        let phase = (bin as f64 + 0.5) / (BOARD_ROWS as f64 + 1.0);
-        let x = left as f64 + (right - left) as f64 * phase;
-        let x = x.round() as i32;
+        let x = at(bin);
         canvas.line(x, y - 1, x, y + 1, '*');
     }
     if let Some(bin) = hover {
-        let bin = bin.min(BOARD_ROWS);
-        let phase = (bin as f64 + 0.5) / (BOARD_ROWS as f64 + 1.0);
-        let x = left as f64 + (right - left) as f64 * phase;
-        let x = x.round() as i32;
+        let x = at(bin);
         canvas.line(x, y - 3, x, y + 1, '#');
     }
 }
@@ -580,6 +612,75 @@ mod tests {
         let graded = aha.graded().expect("consolidated wager is graded");
         assert!(graded.contains("bin 8"), "{graded}");
         assert!(graded.contains("Nailed"), "{graded}");
+    }
+
+    #[test]
+    fn the_wager_owns_its_coin_and_the_sentence_names_it() {
+        // Call a bin on the fair coin, then wander to a loaded one. The
+        // call still stands for the experiment it was made about, so the
+        // coin the faces draw and the coin the sentence names must both
+        // be the committed one, not whatever the hand touched last.
+        let mut aha = GaltonAha::new();
+        aha.note_waves(1);
+        assert!(aha.commit_wager(8, 2));
+        assert_eq!(aha.coin(), Some(2), "the wager keeps its own coin");
+
+        aha.note_waves(6);
+        assert_eq!(aha.coin(), Some(2), "more waves do not move the call");
+
+        assert!(aha.summon());
+        aha.set_morph_progress(1.0);
+        assert!(aha.summon());
+        let graded = aha.graded().expect("graded");
+        assert!(graded.contains("0.50 coin"), "{graded}");
+        assert!(graded.contains("bin 8"), "{graded}");
+        assert!(graded.contains("Nailed"), "{graded}");
+    }
+
+    #[test]
+    fn a_call_still_lands_after_the_experiment_earned_the_beat() {
+        // Four waves earn the withheld beat on their own. A caller who then
+        // names a bin (the documented stateless pattern resends the whole
+        // history plus the wager) must not have the call silently dropped.
+        let mut aha = GaltonAha::new();
+        aha.note_waves(4);
+        assert!(matches!(aha.beat(), AhaBeat::Withheld));
+        assert!(matches!(aha.earn(), Some(EarnPath::Waves { .. })));
+
+        assert!(aha.commit_wager(8, 2), "the stronger commitment lands");
+        assert!(matches!(aha.earn(), Some(EarnPath::Wager { .. })));
+        assert_eq!(aha.wager().map(|(bin, _, _)| bin), Some(8));
+
+        // A second wager still refuses: the first call is the commitment.
+        assert!(!aha.commit_wager(0, 0));
+    }
+
+    #[test]
+    fn the_outline_lands_on_the_pile_it_explains() {
+        // The curve is drawn through the room's own bin geometry, so the
+        // peak column must be the pile's peak column, not a second
+        // opinion about where bin 8 lives.
+        use crate::rooms::galton_board::GaltonBoard;
+        let width = 96;
+        let mut canvas = Canvas::new(width, 40);
+        super::render_outline_overlay(&mut canvas, 1.0, 2);
+        let peak_column = GaltonBoard::bin_column(width, peak_bin_for_coin(2));
+        let text = canvas.to_text();
+        let inked: Vec<usize> = text
+            .lines()
+            .filter_map(|line| line.find(|c: char| c != ' '))
+            .collect();
+        assert!(!inked.is_empty(), "the outline drew something");
+        let drawn_left = *inked.iter().min().expect("ink");
+        let drawn_right = text
+            .lines()
+            .filter_map(|line| line.rfind(|c: char| c != ' '))
+            .max()
+            .expect("ink");
+        assert!(
+            (drawn_left as i32) <= peak_column && peak_column <= drawn_right as i32,
+            "the curve must cover the pile's peak column {peak_column}, drew {drawn_left}..{drawn_right}"
+        );
     }
 
     #[test]

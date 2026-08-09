@@ -5,6 +5,24 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- The Galton call and the picture over it now agree about which coin
+  they are discussing. Four defects, one root: the wager knew its coin
+  and nothing else did. Four clicks that each picked a different coin
+  claimed four waves of evidence while the pile showed one, because the
+  earn counted every drop ever made and the picture counts only the
+  current coin's run. A call committed on the fair coin then watched
+  the morph draw a loaded coin's curve while the sentence underneath
+  named the fair coin's peak. Over MCP the same call was re-answered
+  against whichever coin the newest poke picked, so nailed could become
+  wild with nothing saying why. And the outline was drawn on its own
+  full-width scale rather than the pile's, so away from the center the
+  curve sat beside the bars it claimed to explain, as did the wager
+  ruler's end ticks, which meant a click on the drawn tick for bin 0
+  committed bin 1. The wager owns its coin now, both faces draw and
+  speak that coin, every answer names the pile it is about, the curve
+  and the ruler ride the room's own geometry, and a call still lands
+  after four waves have already earned the beat instead of being
+  silently dropped.
 - A hunt round read the surfaces this cycle shipped and found nine real
   defects in them, six fixed here, three of them mine from this week.
   The Action line that was supposed to be the terminal's honest hand
