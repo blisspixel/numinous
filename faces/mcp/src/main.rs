@@ -3595,11 +3595,11 @@ fn project_flagship_aha(
             use numinous_core::rooms::galton_aha::{AhaBeat, GaltonAha, peak_bin_for_coin};
             let mut aha = GaltonAha::new();
             let waves = numinous_core::rooms::galton_board::wave_count_from_inputs(inputs);
-            aha.note_waves(waves);
-            // The wager grades against the coin the pile on screen is built
-            // from; with no waves yet the fair coin is the honest default.
+            // Both the earn and the call belong to the pile these pokes
+            // build; with no waves yet the fair coin is the honest default.
             let coin =
                 numinous_core::rooms::galton_board::selected_coin_from_inputs(inputs).unwrap_or(2);
+            aha.note_waves(waves, coin);
             if let Some(bin) = request.bin_wager
                 && !aha.commit_wager(bin, coin)
                 && !aha.earned()
