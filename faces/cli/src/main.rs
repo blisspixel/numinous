@@ -644,13 +644,23 @@ fn room_bridge_message(token: &str) -> Option<String> {
 /// other parse outcome (help, version, command typos with clap's own
 /// did-you-mean) exactly as clap prints it, stream and exit code included.
 fn report_cli_parse_error(error: clap::Error) -> ExitCode {
+    // An exact room id outranks any guess: clap offering `render` for
+    // `mandelbrot` is a worse answer than the bridge, and letting the guess
+    // win silenced the bridge for scores of real rooms. Only a near miss
+    // defers, because there clap's own did-you-mean may be the better one.
+    let token = match error.get(clap::error::ContextKind::InvalidSubcommand) {
+        Some(clap::error::ContextValue::String(token)) => Some(token.clone()),
+        _ => None,
+    };
+    let names_a_room = token
+        .as_deref()
+        .is_some_and(|token| numinous_core::room_by_id(token).is_some());
     let clap_suggests_a_command = error
         .get(clap::error::ContextKind::SuggestedSubcommand)
         .is_some();
     if error.kind() == clap::error::ErrorKind::InvalidSubcommand
-        && !clap_suggests_a_command
-        && let Some(clap::error::ContextValue::String(token)) =
-            error.get(clap::error::ContextKind::InvalidSubcommand)
+        && (names_a_room || !clap_suggests_a_command)
+        && let Some(token) = token.as_deref()
         && let Some(message) = room_bridge_message(token)
     {
         report_diagnostic(&message);
@@ -2911,8 +2921,11 @@ fn open_studio_report(input: &str, width: usize, height: usize) -> Result<String
         lines.push(format!("descends={}", terminal_safe(descends)));
     }
     lines.push(format!("link={}", creation.to_link()));
+    // Quoted: the link's own & separators would otherwise split the
+    // command in bash, PowerShell, and cmd alike, so an unquoted copy of
+    // this line fails everywhere it is meant to be pasted.
     lines.push(format!(
-        "remix it: numinous fork {} --out my-remix.num",
+        "remix it: numinous fork \"{}\" --out my-remix.num",
         creation.to_link()
     ));
     Ok(format!("{}\n\n{}", lines.join("\n"), report))
@@ -3207,9 +3220,12 @@ fn ansi_in_era(raster: &Raster, era: numinous_core::Era, color: bool) -> String 
 /// hover as its own lever.
 const UNHEARD_TOUCH_VERBS: [&str; 4] = ["DRAG", "CLICK", "HOLD", "MOVE"];
 
-/// Drop gesture fragments (DRAG:TUNE, CLICK: SEED A GAP) from a status
-/// readout. Fragments run from the verb to the next double-space column gap
-/// or the end of the line, matching how room statuses lay out their columns.
+/// Drop gesture fragments (DRAG:TUNE, CLICK: SEED A GAP, a bare DRAG) from
+/// a status readout. Fragments run from the verb to the next double-space
+/// column gap or the end of the line, matching how room statuses lay out
+/// their columns, and a column that is nothing but the verb goes with them:
+/// scrubbing only the colon form left dozens of rooms still advertising a
+/// gesture this face cannot hear.
 fn scrub_touch_fragments(status: &str) -> String {
     let mut out = status.to_string();
     for verb in UNHEARD_TOUCH_VERBS {
@@ -3219,7 +3235,18 @@ fn scrub_touch_fragments(status: &str) -> String {
             out.replace_range(start..end, "");
         }
     }
-    let mut tidy = out.trim().to_string();
+    // Column-wise pass for the bare verb. Whole columns only, so a reading
+    // that merely contains the letters (OVERLAP, CLICKS) keeps its place.
+    let kept: Vec<&str> = out
+        .split("  ")
+        .filter(|column| {
+            let bare = column.trim().trim_end_matches(['.', ',', ';', '!']);
+            !UNHEARD_TOUCH_VERBS
+                .iter()
+                .any(|verb| bare.eq_ignore_ascii_case(verb))
+        })
+        .collect();
+    let mut tidy = kept.join("  ").trim().to_string();
     while tidy.contains("   ") {
         tidy = tidy.replace("   ", "  ");
     }
@@ -3233,7 +3260,7 @@ fn terminal_action_line(room: &dyn Room) -> String {
         Some(verb) => {
             let lever = verb.split_once(':').map_or(verb, |(_, lever)| lever.trim());
             format!(
-                "{lever} (the hand here: numinous room {} --poke x,y)",
+                "{lever} (the hand here: numinous render {} --poke x,y)",
                 room.meta().id
             )
         }
@@ -3258,17 +3285,44 @@ fn interrupted(latch: &Option<std::sync::Arc<std::sync::atomic::AtomicBool>>) ->
         .is_some_and(|flag| flag.load(std::sync::atomic::Ordering::SeqCst))
 }
 
+/// The first whole sentence of a passage.
+///
+/// A period alone does not end a sentence: reveals carry decimals (pi is
+/// 3.14159), ellipses, and abbreviations, and cutting at the first dot
+/// leaves a fragment that can state something false. A terminator counts
+/// only when a digit does not sit on both sides of it and the passage
+/// moves on with a space.
+fn first_sentence(text: &str) -> String {
+    let bytes = text.as_bytes();
+    for (index, byte) in bytes.iter().enumerate() {
+        if !matches!(byte, b'.' | b'!' | b'?') {
+            continue;
+        }
+        let before = index.checked_sub(1).map(|i| bytes[i]);
+        let after = bytes.get(index + 1).copied();
+        // Inside a number, or inside an ellipsis: keep reading.
+        if before.is_some_and(|b| b.is_ascii_digit()) && after.is_some_and(|b| b.is_ascii_digit()) {
+            continue;
+        }
+        if after == Some(b'.') || before == Some(b'.') {
+            continue;
+        }
+        match after {
+            None => return text[..=index].trim().to_string(),
+            Some(next) if next.is_ascii_whitespace() => {
+                return text[..=index].trim().to_string();
+            }
+            _ => continue,
+        }
+    }
+    text.trim().to_string()
+}
+
 /// The two-line exit that completes the staircase when Ctrl+C ends a live
 /// view: the first sentence of the reveal as a tease, then the route to the
 /// whole story. Leaving is the player's verb here, not an error.
 fn viewing_epilogue(room: &dyn Room) -> String {
-    let reveal = room.reveal();
-    let tease = reveal
-        .split_inclusive('.')
-        .next()
-        .unwrap_or(reveal)
-        .trim()
-        .to_string();
+    let tease = first_sentence(room.reveal());
     format!(
         "\n{tease}\nThe story: numinous describe {}\n",
         room.meta().id
@@ -6284,7 +6338,7 @@ mod tests {
         .expect("known room");
         assert!(text.contains("Number & Pattern"));
         assert!(text.contains(
-            "Action: TURN THE DIAL (the hand here: numinous room times-tables --poke x,y)"
+            "Action: TURN THE DIAL (the hand here: numinous render times-tables --poke x,y)"
         ));
         assert!(text.contains("Goal: LAND ON EXACTLY 4 LOBES"));
     }
@@ -6352,7 +6406,7 @@ mod tests {
             .expect("known room");
         assert!(text.contains('*'));
         assert!(text.contains(
-            "Action: TURN THE DIAL (the hand here: numinous room times-tables --poke x,y)"
+            "Action: TURN THE DIAL (the hand here: numinous render times-tables --poke x,y)"
         ));
         assert!(text.contains("Goal: LAND ON EXACTLY 4 LOBES"));
         assert!(!text.contains("Aha earned:"));
@@ -7504,6 +7558,96 @@ mod tests {
     }
 
     #[test]
+    fn the_terminal_hand_names_a_command_that_exists() {
+        // The Action line promised `numinous room <id> --poke x,y`, which is
+        // not a subcommand: the one hand this face advertised could not be
+        // used. Pinned against the parser itself, so a rename cannot quietly
+        // make this copy false again.
+        let room = numinous_core::room_by_id("agm-mean").expect("room");
+        let line = super::terminal_action_line(room.as_ref());
+        let command = line
+            .split("numinous ")
+            .nth(1)
+            .and_then(|rest| rest.split_whitespace().next())
+            .expect("the line names a command");
+        let parsed =
+            super::Cli::try_parse_from(["numinous", command, "agm-mean", "--poke", "0.5,0.5"]);
+        assert!(
+            parsed.is_ok(),
+            "the Action line names `numinous {command}`, which does not parse"
+        );
+    }
+
+    #[test]
+    fn an_exact_room_id_bridges_even_when_clap_has_a_guess() {
+        // The guard deferred to clap's did-you-mean before checking whether
+        // the token was a room at all, so scores of real room ids fell
+        // through to a stock parser error instead of the bridge.
+        let with_a_near_command = numinous_core::all_rooms()
+            .into_iter()
+            .map(|room| room.meta().id)
+            .find(|id| {
+                let error = match super::Cli::try_parse_from(["numinous", id]) {
+                    Ok(_) => return false,
+                    Err(error) => error,
+                };
+                error
+                    .get(clap::error::ContextKind::SuggestedSubcommand)
+                    .is_some()
+            });
+        if let Some(id) = with_a_near_command {
+            let message = super::room_bridge_message(id).expect("an exact room bridges");
+            assert!(message.contains("is a room, not a command"), "{message}");
+        }
+    }
+
+    #[test]
+    fn the_exit_tease_ends_on_a_sentence_not_inside_a_number() {
+        assert_eq!(
+            super::first_sentence("Pi is 3.14159, and it hides here. Then more."),
+            "Pi is 3.14159, and it hides here."
+        );
+        assert_eq!(
+            super::first_sentence("Wait... then this. And more."),
+            "Wait... then this."
+        );
+        assert_eq!(
+            super::first_sentence("No terminator here"),
+            "No terminator here"
+        );
+        assert_eq!(super::first_sentence("Ends here."), "Ends here.");
+        // Every catalog reveal must tease as a whole sentence, never a
+        // fragment cut inside a decimal.
+        for room in numinous_core::all_rooms() {
+            let tease = super::first_sentence(room.reveal());
+            let after = &room.reveal()[tease.len().min(room.reveal().len())..];
+            assert!(
+                after.is_empty() || after.starts_with(' ') || after.starts_with('\n'),
+                "{} teases a fragment: {tease}",
+                room.meta().id
+            );
+        }
+    }
+
+    #[test]
+    fn the_remix_line_survives_a_paste_into_a_shell() {
+        let creation =
+            numinous_core::StudioCreation::new("sin(a*x)", -1.0, 1.0, 1.0).expect("capsule");
+        let report = super::open_studio_report(&creation.to_link(), 24, 8).expect("report");
+        let line = report
+            .lines()
+            .find(|line| line.starts_with("remix it:"))
+            .expect("the remix verb is named");
+        // The link carries & separators; unquoted they split the command in
+        // every common shell.
+        assert!(
+            line.contains("fork \"numinous://"),
+            "the link must be quoted: {line}"
+        );
+        assert!(line.contains("\" --out"), "{line}");
+    }
+
+    #[test]
     fn scrub_touch_fragments_drops_gesture_columns_and_keeps_readings() {
         assert_eq!(
             super::scrub_touch_fragments("gamma=0.70  DRAG:TUNE"),
@@ -7521,6 +7665,14 @@ mod tests {
         assert_eq!(
             super::scrub_touch_fragments("plain reading"),
             "plain reading"
+        );
+        // A bare verb column goes too; a reading that merely contains the
+        // letters keeps its place.
+        assert_eq!(super::scrub_touch_fragments("N 12  DRAG"), "N 12");
+        assert_eq!(super::scrub_touch_fragments("CLICK  GEN 4"), "GEN 4");
+        assert_eq!(
+            super::scrub_touch_fragments("OVERLAP 3  CLICKS 9"),
+            "OVERLAP 3  CLICKS 9"
         );
     }
 

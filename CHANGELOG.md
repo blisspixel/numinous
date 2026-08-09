@@ -5,6 +5,29 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- A hunt round read the surfaces this cycle shipped and found nine real
+  defects in them, six fixed here, three of them mine from this week.
+  The Action line that was supposed to be the terminal's honest hand
+  named `numinous room`, a subcommand that has never existed; it names
+  `numinous render`, which is the one that actually takes a poke, and a
+  test now runs the line's own command through the parser so the copy
+  cannot go false again. The room-as-command bridge deferred to clap's
+  did-you-mean before checking whether the token was a room at all, so
+  dozens of exact room names fell through to a stock parser error; an
+  exact room outranks any guess now. The status scrub only stripped
+  colon fragments, so rooms whose readout ends in a bare DRAG kept
+  advertising a gesture the terminal cannot hear. The Ctrl+C exit tease
+  cut at the first period, which lands inside decimals and ellipses; it
+  ends on a real sentence now, checked across the whole catalog. The
+  remix command printed an unquoted `numinous://` link, whose own
+  separators break the paste in every common shell.
+  In the App, the naming step could not receive M or the brackets
+  because the global audio shortcuts took them first, so MANDELBROT was
+  unspellable in a fractal instrument and every attempt flipped mute; a
+  text field owns the whole printable range while it is open. And a
+  creation arriving underneath an open prompt (a dropped capsule, a
+  wall pick) now ends the prompt, instead of leaving Enter to share a
+  stranger's work under the name still on screen.
 - Every room can be called now. The wager arc that makes the flagship
   rooms feel different was hand-built three times, once per room, while
   the engine that could pose it anywhere sat finished and wired to a
