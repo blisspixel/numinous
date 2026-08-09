@@ -314,8 +314,16 @@ impl GaltonAha {
                 }
             }
             AhaBeat::Withheld => match self.earn {
-                Some(EarnPath::Wager { bin, band, .. }) => {
-                    format!("EARNED BIN {bin} {}  PRESS E", band.name())
+                // The call names its own pile from here on. The room's
+                // readout beside it names the pile on screen, so a player
+                // who wandered to another coin reads two plain facts
+                // instead of one contradiction.
+                Some(EarnPath::Wager { bin, band, coin }) => {
+                    format!(
+                        "EARNED BIN {bin} {} ON {}  PRESS E",
+                        band.name(),
+                        coin_label(coin)
+                    )
                 }
                 Some(EarnPath::Waves { count }) => {
                     format!("EARNED {count} WAVES  PRESS E")
@@ -326,14 +334,28 @@ impl GaltonAha {
                 let pct = (progress * 100.0).round() as i32;
                 format!("BINOMIAL {pct}%")
             }
-            AhaBeat::Confirm => match room_status {
-                Some(s) => format!("THE CURVE WAS WAITING  PRESS E  {s}"),
-                None => "THE CURVE WAS WAITING  PRESS E".to_string(),
-            },
-            AhaBeat::Consolidated => match room_status {
-                Some(s) => format!("CHANCE KEEPS SHAPE  {s}"),
-                None => "CHANCE KEEPS SHAPE  E:WHY".to_string(),
-            },
+            AhaBeat::Confirm => {
+                let called = self.called_pile_note();
+                match room_status {
+                    Some(s) => format!("THE CURVE WAS WAITING{called}  PRESS E  {s}"),
+                    None => format!("THE CURVE WAS WAITING{called}  PRESS E"),
+                }
+            }
+            AhaBeat::Consolidated => {
+                let called = self.called_pile_note();
+                match room_status {
+                    Some(s) => format!("CHANCE KEEPS SHAPE{called}  {s}"),
+                    None => format!("CHANCE KEEPS SHAPE{called}  E:WHY"),
+                }
+            }
+        }
+    }
+
+    /// The pile the call was about, for the beats after it is made.
+    fn called_pile_note(&self) -> String {
+        match self.coin() {
+            Some(coin) => format!(" ON {}", coin_label(coin)),
+            None => String::new(),
         }
     }
 
@@ -360,6 +382,19 @@ impl GaltonAha {
             Some(EarnPath::Wager { coin, .. }) => Some(coin),
             _ => None,
         }
+    }
+
+    /// Whether the pile the player is looking at is the one the call was
+    /// made about.
+    ///
+    /// A wager belongs to an experiment. Waves on the same coin are more
+    /// evidence for it; waves on another coin are a different experiment,
+    /// and nothing may quietly carry the commitment across. Faces ask this
+    /// before drawing a curve or speaking a verdict, because a curve over
+    /// a pile it does not explain is a lie told in pictures.
+    #[must_use]
+    pub fn answers_pile(&self, live_coin: usize) -> bool {
+        self.coin().is_none_or(|called| called == live_coin)
     }
 
     /// The committed wager, its coin, and its band, once a wager exists.
@@ -390,7 +425,7 @@ impl GaltonAha {
         };
         let p = COIN_PROBABILITIES[coin.min(COIN_PROBABILITIES.len() - 1)];
         Some(format!(
-            "You wagered bin {bin}; for the {p:.2} coin the binomial peaks at bin {truth}. {verdict}"
+            "You called bin {bin} for the {p:.2} coin; its binomial peaks at bin {truth}. {verdict}"
         ))
     }
 
@@ -419,6 +454,14 @@ impl GaltonAha {
             None => None,
         }
     }
+}
+
+/// A coin named the way the room's own readout names it.
+fn coin_label(coin: usize) -> String {
+    let p = COIN_PROBABILITIES[coin.min(COIN_PROBABILITIES.len() - 1)];
+    // The room writes its coins without the leading zero (P.50), and the
+    // two readouts sit side by side, so this matches rather than invents.
+    format!("P{}", format!("{p:.2}").trim_start_matches('0'))
 }
 
 /// Exact Binomial(`BOARD_ROWS`, p) probability mass for every bin.
@@ -635,6 +678,51 @@ mod tests {
         assert!(graded.contains("0.50 coin"), "{graded}");
         assert!(graded.contains("bin 8"), "{graded}");
         assert!(graded.contains("Nailed"), "{graded}");
+    }
+
+    #[test]
+    fn a_call_never_speaks_for_a_pile_it_was_not_made_about() {
+        // The three surfaces are the pile, the curve, and the sentence.
+        // Making any two agree while the third contradicts them is not a
+        // fix, so the machine answers one question plainly: is the pile in
+        // front of the player the one this call was about?
+        let mut aha = GaltonAha::new();
+        aha.note_waves(1);
+        assert!(
+            aha.answers_pile(4),
+            "before a call there is nothing to contradict"
+        );
+        assert!(aha.commit_wager(8, 2));
+        assert!(aha.answers_pile(2), "its own pile");
+        assert!(
+            !aha.answers_pile(4),
+            "a different coin is a different experiment"
+        );
+
+        // The sentence states which pile it read and never claims the
+        // player bet on one they did not call.
+        assert!(aha.summon());
+        aha.set_morph_progress(1.0);
+        assert!(aha.summon());
+        let graded = aha.graded().expect("graded");
+        assert!(
+            graded.starts_with("You called bin 8 for the 0.50 coin"),
+            "{graded}"
+        );
+        assert!(
+            !graded.contains("wagered"),
+            "no bet attributed elsewhere: {graded}"
+        );
+
+        // And the footer names the pile the call was about, so a wandering
+        // player reads two plain facts beside each other rather than one
+        // contradiction: the room's own readout names the pile on screen.
+        let footer = aha.status(Some("DROP 1x64=64 L9R P.70"));
+        assert!(footer.contains("ON P.50"), "{footer}");
+        assert!(
+            footer.contains("P.70"),
+            "the pile still speaks too: {footer}"
+        );
     }
 
     #[test]

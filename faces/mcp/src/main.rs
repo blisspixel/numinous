@@ -1389,7 +1389,7 @@ fn negotiate_protocol_version(params: Option<&Value>) -> &'static str {
 }
 
 fn server_instructions() -> &'static str {
-    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does before you ask for explanations. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile will peak) then aha_summon true. Read structuredContent.engineeredAha for beat and earn. describe_room and reveal_room open explanation on purpose and can spoil generation-before-reveal, so prefer play_room first. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
+    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does before you ask for explanations. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. Read structuredContent.engineeredAha for beat and earn. describe_room and reveal_room open explanation on purpose and can spoil generation-before-reveal, so prefer play_room first. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
 }
 
 fn server_capabilities() -> Value {
@@ -1596,7 +1596,7 @@ fn build_tools_catalog() -> Value {
                             "minimum": 0,
                             "maximum": numinous_core::rooms::galton_board::BOARD_ROWS,
                             "description": format!(
-                                "Galton Board engineered aha only: commit the bin (0..{} right turns) where the whole pile will peak, after at least one wave of pokes. Graded against the binomial's true mode for the selected coin, not against one ball's luck.",
+                                "Galton Board engineered aha only: commit the bin (0..{} right turns) where the pile these pokes build will peak, after at least one wave. That pile is the newest coin's run, so pokes that wander to another coin ask about a different pile and get a different answer; every reply names the coin it read. Graded against that binomial's true mode, never against one ball's luck.",
                                 numinous_core::rooms::galton_board::BOARD_ROWS
                             )
                         },
