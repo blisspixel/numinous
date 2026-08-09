@@ -5792,8 +5792,7 @@ fn call_report(id: &str, guess: Option<f64>, seed: u64) -> Result<String, String
     };
     let Some(posed) = numinous_core::pose_prediction(room.as_ref(), seed) else {
         return Err(format!(
-            "{} reads no moving number to call. Rooms with a readout can be              called; this one answers in shape alone.
-",
+            "{} reads no moving number to call. Rooms with a readout can be called; this one answers in shape alone.\n",
             terminal_safe(room.meta().title)
         ));
     };
@@ -5814,10 +5813,7 @@ fn call_report(id: &str, guess: Option<f64>, seed: u64) -> Result<String, String
             format!("Answer with: numinous call {id} --guess <number> --seed {seed}"),
             String::new(),
         ]
-        .join(
-            "
-",
-        ));
+        .join("\n"));
     };
     let Some(grade) = numinous_core::grade_prediction(room.as_ref(), &posed, guess) else {
         return Err(format!(
@@ -7666,6 +7662,63 @@ mod tests {
         assert!(frame.contains("Times Tables"));
         assert!(frame.contains(&super::terminal_action_line(room.as_ref())));
         assert!(frame.contains('*'));
+    }
+
+    /// Prose the player reads.
+    ///
+    /// Only the surfaces that are sentences: the access report pads a
+    /// two-column table on purpose and is pinned by its own tests, so it
+    /// would fail this rule for the right reasons.
+    ///
+    /// Status lines lay out columns with two spaces on purpose. A run of
+    /// three or more inside a sentence is the tell of a wrapped string
+    /// literal, and a trailing space is the tell of the same thing at a
+    /// line end. That mistake has shipped four times in one cycle, twice
+    /// inside fixes for itself, so it gets a lock rather than more care.
+    fn assert_reads_as_prose(label: &str, text: &str) {
+        for line in text.lines() {
+            // Leading indentation is layout (the access report indents its
+            // explanations); a run after the first word is the tell.
+            assert!(
+                !line.trim_start().contains("   "),
+                "{label} carries a run of spaces: {line:?}"
+            );
+            assert_eq!(
+                line.trim_end(),
+                line,
+                "{label} carries trailing whitespace: {line:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_copy_a_player_reads_never_carries_a_wrapped_literal() {
+        let room = numinous_core::room_by_id("lorenz").expect("room");
+        assert_reads_as_prose(
+            "the posed call",
+            &super::call_report("lorenz", None, 7).expect("posed"),
+        );
+        assert_reads_as_prose(
+            "the graded call",
+            &super::call_report("lorenz", Some(1.0), 7).expect("graded"),
+        );
+        assert_reads_as_prose("the not-found message", &super::not_found_message("qqzz"));
+        assert_reads_as_prose("the exit tease", &super::viewing_epilogue(room.as_ref()));
+        assert_reads_as_prose(
+            "the action line",
+            &super::terminal_action_line(room.as_ref()),
+        );
+        assert_reads_as_prose(
+            "the room bridge",
+            &super::room_bridge_message("times-tables").expect("bridge"),
+        );
+        let silent = numinous_core::all_rooms()
+            .into_iter()
+            .find(|room| numinous_core::pose_prediction(room.as_ref(), 1).is_none());
+        if let Some(room) = silent {
+            let refusal = super::call_report(room.meta().id, None, 1).expect_err("refusal");
+            assert_reads_as_prose("the call refusal", &refusal);
+        }
     }
 
     #[test]
