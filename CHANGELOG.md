@@ -23,6 +23,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
   and the ruler ride the room's own geometry, and a call still lands
   after four waves have already earned the beat instead of being
   silently dropped.
+
+  The rule underneath all of it, worth stating because the first pass at
+  this fix got it wrong: three surfaces carry the claim, the pile, the
+  curve over it, and the sentence under it, and making any two agree
+  while the third contradicts them is not honesty. A wager belongs to an
+  experiment. Waves on the same coin are more evidence for it; waves on
+  another coin are a different experiment. So the curve is drawn only
+  while the pile is the one the call was about, the footer names that
+  pile beside the room's own readout naming the pile on screen, and the
+  graded sentence says which pile it read instead of attributing the bet
+  to one the player never called. Over MCP, where the protocol is
+  stateless by contract and a longer poke history honestly is a
+  different question, the tool schema and the server instructions now
+  say so plainly, and every reply names the coin it answered.
 - A hunt round read the surfaces this cycle shipped and found nine real
   defects in them, six fixed here, three of them mine from this week.
   The Action line that was supposed to be the terminal's honest hand
