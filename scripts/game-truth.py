@@ -230,6 +230,40 @@ def check_fifteen_levels_the_same_on_both_faces(cli: Path, mcp: Path) -> None:
                 )
 
 
+def check_an_unreadable_journey_is_named_not_faked(cli: Path) -> None:
+    """A journey that exists and cannot be read is not a fresh player.
+
+    Treating it as one silently demoted the rank, closed the veil, and
+    re-announced the same level on every run, forever, because nothing was
+    ever written. The run must say what happened and must not celebrate a
+    crossing it cannot see.
+    """
+    with tempfile.TemporaryDirectory(prefix="numinous-game-truth-") as raw:
+        home = Path(raw)
+        journey = home / "journey"
+        # Not text: readable bytes that are not valid UTF-8, which is the
+        # shape a truncated or clobbered file actually takes.
+        journey.write_bytes(b"plays 40\nwins 30\n\xff\xfe not text\n")
+        outcome = run_game(cli, home, ["plot", "sin(x)", "--width", "20", "--height", "8"], "")
+        said = outcome.stderr
+        if "could not be read" not in said:
+            raise GameTruthError(
+                "an unreadable journey was treated as a fresh player with no "
+                f"word to the player; stderr held: {said!r}"
+            )
+        if "LEVEL UP" in outcome.stdout or "TROPHY" in outcome.stdout:
+            raise GameTruthError(
+                "a run that cannot see the journey announced a crossing "
+                f"anyway: {outcome.stdout!r}"
+            )
+        after = journey.read_bytes()
+        if b"plays 40" not in after:
+            raise GameTruthError(
+                "the unreadable journey was overwritten; the player's history "
+                "must survive a run that could not read it"
+            )
+
+
 def check_the_save_note_rides_the_reply_that_lost(mcp: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="numinous-game-truth-") as raw:
         home = Path(raw)
@@ -265,6 +299,10 @@ def main() -> int:
         (
             "a lost save is named on the reply that lost it",
             lambda: check_the_save_note_rides_the_reply_that_lost(mcp),
+        ),
+        (
+            "an unreadable journey is named, never faked",
+            lambda: check_an_unreadable_journey_is_named_not_faked(cli),
         ),
     )
     for label, check in checks:

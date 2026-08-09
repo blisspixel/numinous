@@ -5,6 +5,22 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- A progress file that cannot be read is no longer treated as a player
+  who has none. An existing journey that fails to load (invalid UTF-8,
+  oversized, permission denied) came back as a default, which is
+  indistinguishable from a first run: the rank fell, the veil closed on
+  a player who had crossed it, earned trophies vanished, and because
+  nothing could be written either, the same level-up and the same
+  trophy were announced again on every single run. Nothing was ever at
+  risk of being overwritten (the delta writer fails against the same
+  condition, and a test now proves the bytes survive), but the silence
+  was its own defect. The run says what happened, names the file, says
+  plainly that nothing will be written over it, and announces no
+  crossing it cannot see. When a save is refused mid-run, the refusal
+  is the whole story now: a trophy that arrives every time is not a
+  trophy. Core grew the fallible read the faces needed to tell a first
+  run from an unreadable one, and the process-boundary gate holds it,
+  mutation-verified.
 - The Galton call and the picture over it now agree about which coin
   they are discussing. Four defects, one root: the wager knew its coin
   and nothing else did. Four clicks that each picked a different coin
