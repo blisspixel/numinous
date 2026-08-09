@@ -119,9 +119,12 @@ For automation, pipelines, CI, power users, and agents through a shell:
   scriptable instead of tied to an interactive session.
 - **Current command families:** `rooms`, `describe`, `render`, `gallery`, and
   `contact-sheet` cover the catalog and images; `tour`, `watch`, `play`, games,
-  sims, and Journey commands cover live play; `plot`, `open-studio`, `sing`,
-  `tune`, and `sonify` cover creation and audio. `bench` is the fixed game
-  gauntlet, not the planned performance harness.
+  sims, and Journey commands cover live play; `plot`, `open-studio`, `fork`,
+  `sing`, `tune`, and `sonify` cover creation and audio. `call` poses the
+  universal wager on any room with a moving readout and grades a committed
+  number against the truth, the same engine the App's U key and the MCP
+  `predict` tool speak. `bench` is the fixed game gauntlet, not the planned
+  performance harness.
 
 ### Tier B: live terminal modes
 
