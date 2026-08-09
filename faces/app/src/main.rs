@@ -1796,6 +1796,12 @@ impl App {
         // over the newly opened Studio; scored runs are guarded at the door
         // in open_dropped_file instead of being silently abandoned here.
         self.quiz = None;
+        // The wall and the naming step were both about the creation that
+        // was here a moment ago. A new one arriving ends them, or Enter
+        // would share a stranger's capsule under the name still on screen,
+        // and the REOPENED banner would promise a key the wall had taken.
+        self.gallery = None;
+        self.share_naming = None;
         // A capsule that recorded its Visual Era reopens in that era: the
         // look is part of what was saved.
         if let Some(era) = creation.era() {
@@ -2128,6 +2134,15 @@ impl App {
         let Key::Character(text) = key else {
             return false;
         };
+        // A text field owns the whole printable range while it is open, or
+        // the letters the global shortcuts claim cannot be typed: M made
+        // MANDELBROT unspellable in a fractal instrument, and every press
+        // flipped mute besides. The formula editor already carved out its
+        // own minus and equals for the same reason; a name is free prose,
+        // so it needs the carve-out entire.
+        if self.share_naming.is_some() {
+            return false;
+        }
         if text.eq_ignore_ascii_case("m") {
             self.input_mode = input_legend::InputMode::KeyboardMouse;
             if !repeat {
@@ -3049,9 +3064,12 @@ impl App {
 
     fn exit_studio(&mut self) {
         self.studio = false;
-        // Any route out of the Studio also leaves the Gallery, so a menu exit
-        // cannot strand the wall over a room.
+        // Any route out of the Studio also leaves the Gallery and any open
+        // naming step, so a menu or controller exit cannot strand either
+        // one: naming state that survives invisibly comes back holding the
+        // keyboard over a creation it was never about.
         self.gallery = None;
+        self.share_naming = None;
         if self.radio.is_none() || !self.sync_radio_to_wall_clock() {
             self.update_audio();
         }
@@ -8045,6 +8063,71 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&wall);
         let _ = std::fs::remove_dir_all(&shares);
+    }
+
+    #[test]
+    fn a_name_can_hold_every_printable_character_the_capsule_accepts() {
+        // M toggled mute, and the brackets moved the volume, so MANDELBROT
+        // was unspellable in a fractal instrument and every attempt flipped
+        // the sound. A text field owns the whole printable range while it
+        // is open; this drives the real key route to prove it.
+        let mut app = headless("numinous_app_test_naming_keys.txt");
+        app.enter_studio();
+        app.begin_share_naming();
+        let muted_before = app.muted;
+        let volume_before = app.volume;
+        for c in "Mandelbrot [m]".chars() {
+            let key = Key::Character(c.to_string().into());
+            assert!(
+                !app.handle_global_audio_key(&key, false),
+                "the naming step owns {c:?} while it is open"
+            );
+            app.naming_push_text(&c.to_string());
+        }
+        assert_eq!(
+            app.share_naming.as_ref().expect("naming open").title,
+            "Mandelbrot [m]"
+        );
+        assert_eq!(app.muted, muted_before, "typing a name must not flip mute");
+        assert!((app.volume - volume_before).abs() < f32::EPSILON);
+
+        // With no prompt open the shortcuts are global again.
+        app.cancel_share_naming();
+        let key = Key::Character("m".to_string().into());
+        assert!(app.handle_global_audio_key(&key, false));
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
+    fn a_creation_arriving_under_the_prompt_ends_it() {
+        // A dropped capsule swapped the creation while the prompt kept
+        // typing, so Enter shared a stranger's work under the local name,
+        // and the REOPENED banner promised a key the prompt had taken.
+        let mut app = headless("numinous_app_test_drop_under_prompt.txt");
+        app.enter_studio();
+        app.begin_share_naming();
+        app.naming_push_text("Mine");
+
+        let stranger = numinous_core::StudioCreation::new("cos(x)", -1.0, 1.0, 1.0)
+            .expect("capsule")
+            .with_title("Theirs")
+            .expect("title");
+        app.open_studio_creation(&stranger);
+        assert!(
+            app.share_naming.is_none(),
+            "a new creation ends the prompt that was about the old one"
+        );
+        assert!(app.gallery.is_none(), "and the wall it may have come from");
+
+        // Leaving the Studio ends an open prompt too, on every route out.
+        app.begin_share_naming();
+        app.exit_studio();
+        assert!(app.share_naming.is_none(), "no invisible naming state");
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
     }
 
     #[test]
