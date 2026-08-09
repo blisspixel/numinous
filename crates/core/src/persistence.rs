@@ -700,9 +700,29 @@ pub fn erase_local_state(
 }
 
 /// Load a Journey file, repairing malformed text through [`Journey::from_text`].
+///
+/// A file that cannot be read at all comes back as a default journey, which
+/// is indistinguishable from a first run. Faces that speak to the player
+/// about their progress should call [`read_journey_file`] instead and say
+/// what happened: a silent default closes the veil, hides earned trophies,
+/// and re-announces the same level every run.
 #[must_use]
 pub fn load_journey_file(path: &Path) -> Journey {
     try_load_journey_file(path).unwrap_or_default()
+}
+
+/// Load a Journey file, distinguishing a first run from an unreadable one.
+///
+/// A missing file is a fresh player and returns a default journey. Anything
+/// else (invalid UTF-8, oversized, permission denied) is an error the caller
+/// must decide how to speak about, because the player behind that file has a
+/// history and this process cannot see it. Writes fail closed against the
+/// same condition, so nothing here risks overwriting what could not be read.
+///
+/// # Errors
+/// Propagates the read failure for every case except a missing file.
+pub fn read_journey_file(path: &Path) -> io::Result<Journey> {
+    try_load_journey_file(path)
 }
 
 /// Load a score file, repairing malformed text through [`Scoreboard::from_text`].

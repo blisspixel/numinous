@@ -610,14 +610,14 @@ fn cli_main() -> ExitCode {
         Ok(cli) => cli,
         Err(error) => return report_cli_parse_error(error),
     };
-    let mut journey = load_journey();
+    let (mut journey, readable) = load_journey();
     let before = journey.clone();
     let earned_before = earned_names(&before, &load_scores());
     let code = match cli.command {
         Some(command) => run(command, &mut journey),
         None => home(&journey),
     };
-    finish_journey(&before, &journey, &earned_before);
+    finish_journey(&before, &journey, &earned_before, readable);
     code
 }
 
@@ -1205,8 +1205,25 @@ fn journey_path() -> PathBuf {
 }
 
 /// Load the journey, or start a fresh one.
-fn load_journey() -> Journey {
-    numinous_core::load_journey_file(&journey_path())
+///
+/// A file that exists and cannot be read is not a fresh player. Treating it
+/// as one silently demotes a rank, closes the veil, hides earned trophies,
+/// and re-announces the same level every run, so this says what happened
+/// once, on stderr, and returns a default marked unreadable. Nothing is at
+/// risk of being written over it: the delta writer fails against the same
+/// condition rather than replacing a file it could not read.
+fn load_journey() -> (Journey, bool) {
+    match numinous_core::read_journey_file(&journey_path()) {
+        Ok(journey) => (journey, true),
+        Err(error) => {
+            report_diagnostic(&terminal_safe(&format!(
+                "your progress file could not be read, so this run cannot see                  your journey: {error}
+Nothing will be written over it. Fix or                  move {}, then play on.",
+                terminal_safe_path(&journey_path())
+            )));
+            (Journey::default(), false)
+        }
+    }
 }
 
 /// Where the high-score table lives: `NUMINOUS_SCORES` if set, else home.
@@ -1552,19 +1569,29 @@ fn finish_journey(
     before: &Journey,
     after: &Journey,
     earned_before: &std::collections::BTreeSet<&'static str>,
+    readable: bool,
 ) {
     if before == after {
         return;
     }
-    // The play still happened; if the ledger refuses, say so rather than
-    // letting the banners below celebrate progress the disk never received.
+    // The play still happened; if the ledger refuses, say so and stop. The
+    // banners below would otherwise celebrate a level the disk never
+    // received, and because nothing was written they would celebrate the
+    // same one again on the next run, and the next: a trophy that arrives
+    // every time is not a trophy, it is noise wearing one.
     let saved = match numinous_core::persist_journey_delta(&journey_path(), before, after) {
         Ok(saved) => saved,
         Err(error) => {
             warn_progress_unsaved("progress", &error);
-            after.clone()
+            report_diagnostic("what you earned this run was not recorded, so it is not announced.");
+            return;
         }
     };
+    if !readable {
+        // The comparison below is against a journey this run could not see.
+        // Nothing here is a real crossing, so nothing is announced.
+        return;
+    }
     for ping in trophy_pings(earned_before, &saved, &load_scores()) {
         println!(
             "
