@@ -419,6 +419,33 @@ fn divergence_gap(first: f64, second: f64, w1: f64, w2: f64, steps: usize) -> f6
     divergence_gaps(first, second, w1, w2, [steps])[0]
 }
 
+/// How far the twin has drifted at a fraction of the room's own sweep.
+///
+/// The aha's morph draws this curve, so it reads the same integration the
+/// room draws from: flat, then a wall.
+#[must_use]
+pub fn divergence_at_sweep_fraction(variation: u64, fraction: f64) -> f64 {
+    let fraction = if fraction.is_finite() {
+        fraction.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let start = 2.0 + (variation % 1000) as f64 * 0.0001;
+    let steps = (fraction * MAX_STEPS as f64).round() as usize;
+    divergence_gap(start, 2.0, 0.0, 0.0, steps.max(1))
+}
+
+/// How far the twin has drifted by the end of the room's own sweep.
+///
+/// The engineered aha's whole question is this number, so it is computed
+/// through the same integration the room draws from rather than a second
+/// opinion about the same physics. `variation` is the room's seed.
+#[must_use]
+pub fn divergence_at_full_sweep(variation: u64) -> f64 {
+    let start = 2.0 + (variation % 1000) as f64 * 0.0001;
+    divergence_gap(start, 2.0, 0.0, 0.0, MAX_STEPS)
+}
+
 fn divergence_status(first: f64, second: f64, w1: f64, w2: f64, steps: usize) -> String {
     let gap = divergence_gap(first, second, w1, w2, steps);
     format!("TWINS {gap:.3} (from {SHADOW_OFFSET:.0e})")
