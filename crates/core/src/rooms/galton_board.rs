@@ -90,13 +90,15 @@ fn drop_waves(pokes: &[(f64, f64)]) -> Vec<DropWave> {
         .collect()
 }
 
-/// How many waves the given inputs drop, for the engineered aha's staging.
+/// How many waves stand behind the pile on screen.
 ///
-/// Counts through the same wave grading the room itself uses, so the aha
-/// machine and the pile can never disagree about how much experiment ran.
+/// The trailing same-coin run, not every drop ever made: the pile itself
+/// shows only the current coin's experiment, so counting across coin
+/// changes would let four clicks on four different coins claim four waves
+/// of evidence the picture never had.
 #[must_use]
 pub fn wave_count_from_inputs(inputs: &[RoomInput]) -> usize {
-    drop_waves_from_inputs(inputs).len()
+    selected_run(&drop_waves_from_inputs(inputs)).map_or(0, |(_, count)| count)
 }
 
 /// The coin selected by the newest wave, if any wave has landed.
@@ -258,6 +260,15 @@ impl GaltonBoard {
             );
         }
         profile
+    }
+
+    /// Where a landing bin sits horizontally, in the pile's own geometry.
+    ///
+    /// Public because the engineered aha's outline overlays that pile: two
+    /// mappings would put the curve beside the bars it claims to explain.
+    #[must_use]
+    pub fn bin_column(width: usize, bin: usize) -> i32 {
+        Self::board_point(width, 0.0, 1.0, BOARD_ROWS, bin.min(BOARD_ROWS), BOARD_ROWS).0
     }
 
     fn board_point(
@@ -580,6 +591,24 @@ impl GaltonBoard {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_wave_count_means_the_pile_on_screen() {
+        // Four clicks on four different coins are not four waves of
+        // evidence: the pile shows only the trailing same-coin run, so the
+        // aha's earn must count the same thing the picture does.
+        use crate::room::RoomInput;
+        let poke = |x: f64| RoomInput::PointerDown { x, y: 0.5, t: 0.0 };
+        let wandering = [poke(0.05), poke(0.3), poke(0.5), poke(0.9)];
+        assert_eq!(
+            super::wave_count_from_inputs(&wandering),
+            1,
+            "only the newest coin's run stands behind the pile"
+        );
+        let settled = [poke(0.5), poke(0.52), poke(0.48), poke(0.5)];
+        assert_eq!(super::wave_count_from_inputs(&settled), 4);
+        assert_eq!(super::wave_count_from_inputs(&[]), 0);
+    }
+
     use super::{
         BALLS_PER_WAVE, BOARD_ROWS, BOARD_TOP, COIN_PROBABILITIES, COIN_ROOT_STEPS, DropWave,
         GaltonBoard, VOICE_ROOT_HZ, bet_bin_at, coin_at, drop_waves, drop_waves_from_inputs,

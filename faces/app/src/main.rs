@@ -4176,10 +4176,16 @@ impl App {
                             }
                             _ => 1.0,
                         };
-                        let coin = numinous_core::rooms::galton_board::selected_coin_from_inputs(
-                            &self.inputs,
-                        )
-                        .unwrap_or(2);
+                        // The wager's own coin once one is committed: the
+                        // curve that answers a call must be the curve the
+                        // call was about, or the picture and the sentence
+                        // under it say different things.
+                        let coin = self.galton_aha.coin().unwrap_or_else(|| {
+                            numinous_core::rooms::galton_board::selected_coin_from_inputs(
+                                &self.inputs,
+                            )
+                            .unwrap_or(2)
+                        });
                         numinous_core::rooms::galton_aha::render_outline_overlay(
                             &mut raster,
                             progress,
