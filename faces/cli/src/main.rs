@@ -2576,7 +2576,9 @@ fn access_report(settings: &[AccessSetting]) -> String {
     out.push_str(
         "One boundary, stated plainly: the keyboard reaches every menu, game,\n\
          quiz, and formula on every face, but the hand verbs inside App rooms\n\
-         (drag, click, hold) need a mouse or a controller today.\n",
+         (drag, click, hold) need a mouse or a controller today. One exception\n\
+         narrows it: U calls a room's readout, aimed with the arrow keys and\n\
+         committed with Enter.\n",
     );
     out
 }

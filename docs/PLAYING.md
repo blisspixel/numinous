@@ -50,6 +50,7 @@ your hands already know it:
 | mouse drag or wheel | scrub time yourself |
 | Space | pause or resume while wandering |
 | E | inspect: why this matters |
+| U | call the readout: wager the number before you look, then meet it |
 | H | bring the help overlay back after it is dismissed |
 | Q | swap the visual era (phosphor, 8-bit, vector, modern) |
 | R | reset the current room, including its clock and interactions |
@@ -102,7 +103,9 @@ does not rewrite the on-screen copy. The Studio can be entered and left with a c
 but formula entry requires a keyboard and the footer states that boundary.
 The reverse boundary holds too, stated rather than implied: the keyboard
 reaches every menu, game, quiz, and formula, but the hand verbs inside App
-rooms (drag, click, hold) need a mouse or a controller today. The
+rooms (drag, click, hold) need a mouse or a controller today, with one
+exception that narrows the gap: U calls the room's readout, and the call
+is aimed with the arrow keys and committed with Enter. The
 `numinous access` report states both boundaries.
 
 A saved creation reopens exactly. Launch the App with a `.num` path or a

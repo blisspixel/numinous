@@ -5,6 +5,20 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Every room can be called now. The wager arc that makes the flagship
+  rooms feel different was hand-built three times, once per room, while
+  the engine that could pose it anywhere sat finished and wired to a
+  single face: `predict` already asks a deterministic question of any
+  room with a moving numeric readout and grades the answer in the same
+  non-punitive bands. U poses that question on the App, a band along
+  the bottom aims it, Enter meets the truth, and one sentence names
+  what the room actually read. The truth is spoken whichever way the
+  call went, because a wager that never meets the truth was theater.
+  The two flagship rooms keep their own staged arcs and say so.
+  The band is aimed by the arrow keys as well as by hand, which makes
+  it the first hand verb inside a room a keyboard-only player can
+  reach; `numinous access` and the manual both narrow their boundary
+  statement by exactly that much, no more.
 - Deleting a name in the share step now deletes it everywhere the share
   lands. The naming step prefills a reopened creation's title and
   signature, and an untouched reopen re-shares that very capsule, so
