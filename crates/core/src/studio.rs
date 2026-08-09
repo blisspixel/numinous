@@ -124,6 +124,25 @@ impl StudioCreation {
         Ok(self)
     }
 
+    /// Take the name off, leaving the creation unnamed.
+    ///
+    /// Deleting a name is a decision, not an error, and it needs its own
+    /// verb: [`Self::with_title`] refuses an empty string, so a face that
+    /// mapped "the player cleared the field" onto "no title given" would
+    /// silently keep the old name on a creation whose form showed none.
+    #[must_use]
+    pub fn without_title(mut self) -> Self {
+        self.title = None;
+        self
+    }
+
+    /// Take the signature off, leaving the creation unsigned.
+    #[must_use]
+    pub fn without_author(mut self) -> Self {
+        self.author = None;
+        self
+    }
+
     /// Record the Visual Era the creation was made in.
     #[must_use]
     pub fn with_era(mut self, era: crate::era::Era) -> Self {

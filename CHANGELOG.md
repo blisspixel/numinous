@@ -5,6 +5,16 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Deleting a name in the share step now deletes it everywhere the share
+  lands. The naming step prefills a reopened creation's title and
+  signature, and an untouched reopen re-shares that very capsule, so
+  backspacing the prefill away and pressing Enter used to ship the old
+  name anyway: the form said unnamed while `creation.num`, the README,
+  the postcard headline, and the folder slug all still carried it. An
+  emptied field and a share that never opened the step are opposite
+  decisions, and they now have opposite types instead of one Option
+  standing for both; core gained the verbs for taking a name back off.
+  Found by a bug hunt whose adversarial verifier traced it end to end.
 - The rock order is refined around a tension the two research syntheses
   exposed when laid side by side: the Sensory Lift is for humans, and
   the audience this product carries as its polish bar enters through
