@@ -4169,23 +4169,25 @@ impl App {
                             self.galton_aha.hover(),
                         );
                     }
-                    if self.galton_aha.uses_outline_overlay() {
+                    // The curve answers the call, so it is the called
+                    // coin's curve, and it is drawn only while the pile
+                    // underneath is that same experiment. A player who
+                    // wanders to another coin gets no curve over the wrong
+                    // pile; the footer says which pile the call was about,
+                    // and the curve returns when they do.
+                    let live_coin =
+                        numinous_core::rooms::galton_board::selected_coin_from_inputs(&self.inputs)
+                            .unwrap_or(2);
+                    if self.galton_aha.uses_outline_overlay()
+                        && self.galton_aha.answers_pile(live_coin)
+                    {
                         let progress = match self.galton_aha.beat() {
                             numinous_core::rooms::galton_aha::AhaBeat::Morph { progress } => {
                                 progress
                             }
                             _ => 1.0,
                         };
-                        // The wager's own coin once one is committed: the
-                        // curve that answers a call must be the curve the
-                        // call was about, or the picture and the sentence
-                        // under it say different things.
-                        let coin = self.galton_aha.coin().unwrap_or_else(|| {
-                            numinous_core::rooms::galton_board::selected_coin_from_inputs(
-                                &self.inputs,
-                            )
-                            .unwrap_or(2)
-                        });
+                        let coin = self.galton_aha.coin().unwrap_or(live_coin);
                         numinous_core::rooms::galton_aha::render_outline_overlay(
                             &mut raster,
                             progress,
@@ -5902,6 +5904,53 @@ mod tests {
             "a flagship stages its own wager instead"
         );
         assert!(app.banner.is_some(), "and says so");
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
+    fn the_curve_is_never_drawn_over_a_pile_it_does_not_explain() {
+        // Three surfaces carry the claim: the pile, the curve over it, and
+        // the sentence under it. Making two agree while the third
+        // contradicts them is not honesty, so the curve appears only while
+        // the pile is the experiment the call was about.
+        let mut app = headless("numinous_app_test_galton_wander.txt");
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "galton-board")
+            .expect("galton-board in catalog");
+        app.reset_galton_aha();
+        app.show_help = false;
+
+        // A wave on the fair coin, then the call, then the truth.
+        app.begin_pointer_at((0.5, 0.4));
+        app.end_pointer_at((0.5, 0.4));
+        app.sync_galton_aha();
+        app.begin_pointer_at((0.5, 0.95));
+        app.toggle_inspect();
+        app.advance_galton_morph(super::BUFFON_MORPH_SECONDS);
+        app.toggle_inspect();
+        assert_eq!(app.galton_aha.coin(), Some(2));
+        assert!(app.galton_aha.answers_pile(2), "its own pile");
+
+        // Wander to the loaded coin: the pile is a different experiment.
+        app.begin_pointer_at((0.95, 0.4));
+        app.end_pointer_at((0.95, 0.4));
+        app.sync_galton_aha();
+        let live = numinous_core::rooms::galton_board::selected_coin_from_inputs(&app.inputs)
+            .expect("a wave landed");
+        assert_ne!(live, 2, "the hand moved to another coin");
+        assert!(
+            !app.galton_aha.answers_pile(live),
+            "the call does not speak for this pile"
+        );
+
+        // The footer says which pile the call was about, beside the room's
+        // own readout naming the pile on screen.
+        let footer = app.current_status_override(80).expect("footer");
+        assert!(footer.contains("ON P.50"), "{footer}");
 
         let _ = std::fs::remove_file(&app.journey_file);
         let _ = std::fs::remove_file(&app.scores_file);
