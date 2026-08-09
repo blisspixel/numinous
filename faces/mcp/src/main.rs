@@ -9398,6 +9398,59 @@ plays 2
     }
 
     #[test]
+    fn every_answer_names_the_coin_it_is_about() {
+        // This face is stateless by contract: the same inputs give the same
+        // result, and different inputs are a different question. A wave on
+        // another coin therefore does change the answer, and that is
+        // correct; what was wrong was that nothing said which pile the
+        // verdict was about, so a mind saw nailed become wild for what
+        // looked like the same call. Now every reply's truth, band, and
+        // sentence agree about one named coin.
+        for (pokes, coin, truth) in [
+            (vec![[0.5, 0.5]], 2, 8),
+            (vec![[0.5, 0.5], [0.9, 0.5]], 4, 11),
+        ] {
+            let reply = call(
+                "play_room",
+                json!({"id": "galton-board", "width": 48, "height": 24,
+                       "pokes": pokes, "bin_wager": 8, "aha_summon": true}),
+            );
+            let aha = &reply["result"]["structuredContent"]["engineeredAha"];
+            assert_eq!(aha["coin"], coin, "{aha}");
+            assert_eq!(aha["truth"], truth, "{aha}");
+            let graded = aha["graded"].as_str().expect("graded");
+            let named = format!("{:.2} coin", if coin == 2 { 0.50 } else { 0.70 });
+            assert!(
+                graded.contains(&named),
+                "the sentence names the pile: {graded}"
+            );
+            assert!(
+                !graded.contains("  "),
+                "no space runs in player copy: {graded}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_call_after_four_waves_is_not_silently_discarded() {
+        // Four waves earn the withheld beat on their own; a caller who
+        // follows the documented flow and also names a bin used to have
+        // the bin thrown away with no error and no wager in the reply.
+        let reply = call(
+            "play_room",
+            json!({"id": "galton-board", "width": 48, "height": 24,
+                   "pokes": [[0.5, 0.5], [0.5, 0.5], [0.5, 0.5], [0.5, 0.5]],
+                   "bin_wager": 3, "aha_summon": true}),
+        );
+        let aha = &reply["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(aha["wager"], 3, "the call must land: {aha}");
+        assert!(
+            aha["graded"].as_str().is_some_and(|g| g.contains("bin 3")),
+            "and be answered: {aha}"
+        );
+    }
+
+    #[test]
     fn galton_bin_wager_gates_reveal_and_grades_against_the_binomial() {
         // The third flagship aha: the wager is a model-level commitment
         // (where the WHOLE pile peaks), graded against the binomial's true
