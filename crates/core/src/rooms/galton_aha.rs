@@ -91,6 +91,9 @@ pub enum EarnPath {
     Waves {
         /// How many waves earned the path.
         count: usize,
+        /// The coin those waves were run on. An earn belongs to an
+        /// experiment for the same reason a call does.
+        coin: usize,
     },
 }
 
@@ -200,14 +203,19 @@ impl GaltonAha {
         )
     }
 
-    /// Note the current wave count from the room's own input grading.
-    pub fn note_waves(&mut self, waves: usize) {
+    /// Note the pile's wave count and the coin it was built from.
+    ///
+    /// The count is the pile on screen, so it falls when the hand moves to
+    /// another coin: that is a new experiment, not lost progress. Nothing
+    /// here assumes it only rises. An earn already made keeps the moment
+    /// and the coin it was made on.
+    pub fn note_waves(&mut self, waves: usize, coin: usize) {
         self.waves = waves;
         if waves >= MIN_WAVES_TO_PRIME && matches!(self.beat, AhaBeat::Explore) {
             self.beat = AhaBeat::Prime;
         }
         if self.earn.is_none() && waves >= MIN_WAVES_TO_EARN {
-            self.earn = Some(EarnPath::Waves { count: waves });
+            self.earn = Some(EarnPath::Waves { count: waves, coin });
             self.hover = None;
             self.beat = AhaBeat::Withheld;
         }
@@ -325,8 +333,8 @@ impl GaltonAha {
                         coin_label(coin)
                     )
                 }
-                Some(EarnPath::Waves { count }) => {
-                    format!("EARNED {count} WAVES  PRESS E")
+                Some(EarnPath::Waves { count, coin }) => {
+                    format!("EARNED {count} WAVES ON {}  PRESS E", coin_label(coin))
                 }
                 None => "EARNED  PRESS E".to_string(),
             },
@@ -379,8 +387,8 @@ impl GaltonAha {
     #[must_use]
     pub fn coin(&self) -> Option<usize> {
         match self.earn {
-            Some(EarnPath::Wager { coin, .. }) => Some(coin),
-            _ => None,
+            Some(EarnPath::Wager { coin, .. } | EarnPath::Waves { coin, .. }) => Some(coin),
+            None => None,
         }
     }
 
@@ -450,7 +458,7 @@ impl GaltonAha {
                 "wager:{bin}:coin{coin}:{}",
                 band.name().to_ascii_lowercase()
             )),
-            Some(EarnPath::Waves { count }) => Some(format!("waves:{count}")),
+            Some(EarnPath::Waves { count, coin }) => Some(format!("waves:{count}:coin{coin}")),
             None => None,
         }
     }
@@ -564,10 +572,15 @@ pub fn render_bin_band(canvas: &mut dyn Surface, hover: Option<usize>) {
     // full-width mapping the face reads a hand through: a ruler that
     // compressed its ends would take a click on the bin 0 tick and
     // commit bin 1.
+    let last = width.saturating_sub(1) as i32;
     let at = |bin: usize| {
         let bins = BOARD_ROWS + 1;
         let unit = (bin.min(BOARD_ROWS) as f64 + 0.5) / bins as f64;
-        (unit * width as f64).round() as i32
+        // The cell centers of the same full-width mapping the face reads a
+        // press through, clamped to the canvas: at narrow widths the last
+        // bin's center rounds to one past the final column, and a tick
+        // drawn off the plate is a tick the player cannot aim at.
+        ((unit * width as f64).round() as i32).clamp(0, last)
     };
     for bin in (0..=BOARD_ROWS).step_by(4) {
         let x = at(bin);
@@ -620,7 +633,7 @@ mod tests {
         assert!(!aha.can_summon());
 
         // The first wave primes the wager invite.
-        aha.note_waves(1);
+        aha.note_waves(1, 2);
         assert!(matches!(aha.beat(), AhaBeat::Prime));
 
         aha.set_hover(Some(8));
@@ -664,11 +677,11 @@ mod tests {
         // coin the faces draw and the coin the sentence names must both
         // be the committed one, not whatever the hand touched last.
         let mut aha = GaltonAha::new();
-        aha.note_waves(1);
+        aha.note_waves(1, 2);
         assert!(aha.commit_wager(8, 2));
         assert_eq!(aha.coin(), Some(2), "the wager keeps its own coin");
 
-        aha.note_waves(6);
+        aha.note_waves(6, 2);
         assert_eq!(aha.coin(), Some(2), "more waves do not move the call");
 
         assert!(aha.summon());
@@ -687,7 +700,7 @@ mod tests {
         // fix, so the machine answers one question plainly: is the pile in
         // front of the player the one this call was about?
         let mut aha = GaltonAha::new();
-        aha.note_waves(1);
+        aha.note_waves(1, 2);
         assert!(
             aha.answers_pile(4),
             "before a call there is nothing to contradict"
@@ -726,12 +739,53 @@ mod tests {
     }
 
     #[test]
+    fn an_earn_by_waves_belongs_to_its_experiment_too() {
+        // The count is the pile on screen, so it falls when the hand moves
+        // to another coin. That is a new experiment, not lost progress, and
+        // nothing may treat the count as only rising. The earn keeps the
+        // moment and the coin it was made on, exactly as a call does.
+        let mut aha = GaltonAha::new();
+        aha.note_waves(4, 2);
+        assert!(matches!(aha.beat(), AhaBeat::Withheld));
+        assert_eq!(aha.coin(), Some(2), "the earn names its own pile");
+
+        aha.note_waves(1, 4);
+        assert!(matches!(aha.beat(), AhaBeat::Withheld), "the earn stands");
+        assert_eq!(aha.coin(), Some(2), "and keeps the coin it was run on");
+        assert!(!aha.answers_pile(4), "it does not speak for the new pile");
+        assert_eq!(aha.earn_label().as_deref(), Some("waves:4:coin2"));
+
+        let footer = aha.status(Some("DROP 1x64=64 L9R P.70"));
+        assert!(footer.contains("ON P.50"), "{footer}");
+    }
+
+    #[test]
+    fn the_ruler_stays_on_the_plate_at_every_width() {
+        // A tick drawn one column past the plate is a tick the player
+        // cannot aim at, which narrow windows produced for the last bin.
+        for width in [16_usize, 24, 40, 96, 240] {
+            let mut canvas = Canvas::new(width, 12);
+            super::render_bin_band(&mut canvas, Some(BOARD_ROWS));
+            assert!(
+                canvas.ink_count() > 0,
+                "the ruler and its marker must be visible at width {width}"
+            );
+            for line in canvas.to_text().lines() {
+                assert!(
+                    line.chars().count() <= width,
+                    "the ruler overran the plate at width {width}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn a_call_still_lands_after_the_experiment_earned_the_beat() {
         // Four waves earn the withheld beat on their own. A caller who then
         // names a bin (the documented stateless pattern resends the whole
         // history plus the wager) must not have the call silently dropped.
         let mut aha = GaltonAha::new();
-        aha.note_waves(4);
+        aha.note_waves(4, 2);
         assert!(matches!(aha.beat(), AhaBeat::Withheld));
         assert!(matches!(aha.earn(), Some(EarnPath::Waves { .. })));
 
@@ -774,14 +828,14 @@ mod tests {
     #[test]
     fn four_waves_earn_without_a_wager_and_are_never_graded() {
         let mut aha = GaltonAha::new();
-        aha.note_waves(4);
+        aha.note_waves(4, 2);
         assert!(matches!(aha.beat(), AhaBeat::Withheld));
-        assert!(matches!(aha.earn(), Some(EarnPath::Waves { count: 4 })));
+        assert!(matches!(aha.earn(), Some(EarnPath::Waves { count: 4, .. })));
         assert!(aha.summon());
         aha.set_morph_progress(1.0);
         assert!(aha.summon());
         assert!(aha.graded().is_none(), "no wager, nothing to grade");
-        assert_eq!(aha.earn_label().as_deref(), Some("waves:4"));
+        assert_eq!(aha.earn_label().as_deref(), Some("waves:4:coin2"));
     }
 
     #[test]
@@ -820,7 +874,7 @@ mod tests {
         let mut aha = GaltonAha::new();
         aha.set_hover(Some(3));
         assert_eq!(aha.hover(), None, "explore has no bet band");
-        aha.note_waves(1);
+        aha.note_waves(1, 2);
         aha.set_hover(Some(usize::MAX));
         assert_eq!(aha.hover(), Some(super::BOARD_ROWS));
     }
