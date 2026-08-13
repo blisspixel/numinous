@@ -5,6 +5,27 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.3.0-alpha.3] - 2026-08-13
+
+- Parrondo's Trap now carries the sixth room-owned Universal Wager across the
+  App and MCP. A player tries a rule, calls A, B, or ABB, then watches all
+  three exact expected-capital paths arrive before the wager meets its truth.
+  Four completed selections provide an observation path without forcing a
+  prediction.
+- A mathematical defect in the original room is corrected. Its probabilities
+  do not make strict ABAB win in expectation. The room now uses the periodic
+  ABB policy, and a three-residue Markov calculation proves after 120 turns
+  that A and B lose alone while ABB wins. Random walks remain part of the room
+  texture but never grade the player.
+- MCP exposes strict `policy_wager` discovery, validation, typed expected ends,
+  graded truth, and a color-independent consolidated overlay. The zero-cost
+  local agent hallway now exercises Parrondo through real MCP stdio for five
+  fixed participation lenses and fails closed if the typed or visible proof
+  disappears.
+- The roadmap, pedagogy, interfaces, room catalog, playing guide, package
+  metadata, plugin manifest, citations, and release evidence now agree on the
+  corrected mathematics and sixth staged room.
+
 ## [0.3.0-alpha.2] - 2026-08-13
 
 - Kepler Areas now carries the fifth room-owned Universal Wager across the App

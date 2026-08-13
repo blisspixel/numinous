@@ -89,6 +89,7 @@ class AgentHallwayTests(unittest.TestCase):
             {"passed": True, "findings": []},
             {"passed": False, "findings": ["summon did not consolidate"]},
             {"passed": True, "findings": []},
+            {"passed": True, "findings": []},
         )
         self.assertFalse(summary["passed"])
         self.assertEqual(summary["suite"], "agent-hallway")
@@ -98,6 +99,7 @@ class AgentHallwayTests(unittest.TestCase):
     def test_cohort_summary_passes_when_all_green(self) -> None:
         summary = hallway.cohort_summary(
             {"ok": True},
+            {"passed": True, "findings": []},
             {"passed": True, "findings": []},
             {"passed": True, "findings": []},
             {"passed": True, "findings": []},
@@ -127,6 +129,33 @@ class AgentHallwayTests(unittest.TestCase):
         score = hallway.score_kepler(steps)
         self.assertFalse(score["passed"])
         self.assertTrue(any("equal-time" in finding for finding in score["findings"]))
+
+    def test_score_parrondo_requires_exact_typed_truth_and_three_paths(self) -> None:
+        steps = [
+            aha_step("explore", kind="policy"),
+            aha_step("withheld", kind="policy"),
+            aha_step(
+                "consolidated",
+                earn="call:abb:right",
+                reveal="Two losing games can combine",
+                kind="policy",
+            ),
+        ]
+        steps[2]["structured"]["engineeredAha"].update(
+            {
+                "truth": "abb",
+                "wager": "abb",
+                "expectedEnd": {"a": -1.2, "b": -1.5, "abb": 7.0},
+            }
+        )
+        steps[2]["structured"]["render"] = "A B O"
+        score = hallway.score_parrondo(steps)
+        self.assertTrue(score["passed"], score["findings"])
+
+        steps[2]["structured"]["engineeredAha"]["expectedEnd"]["abb"] = -0.1
+        score = hallway.score_parrondo(steps)
+        self.assertFalse(score["passed"])
+        self.assertTrue(any("expectations" in finding for finding in score["findings"]))
 
 
 class AgentTactileTests(unittest.TestCase):

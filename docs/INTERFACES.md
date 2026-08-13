@@ -11,7 +11,7 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
 **Implementation boundary, 2026-07-18:** all three faces are shipped from the
-same headless core in 0.3.0-alpha.2. Descriptions below mix current behavior
+same headless core in 0.3.0-alpha.3. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
 
@@ -250,13 +250,13 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   until accepted K=5 input closes four lobes. The earned response then includes
   the same reveal the App points to. Ambient phase alone cannot earn it.
 - **Engineered aha wagers, MCP slice (built):** on Times Tables, Buffon's
-  Needle, the Galton Board, Double Pendulum, and Kepler Areas, `play_room`
+  Needle, the Galton Board, Double Pendulum, Kepler Areas, and Parrondo's Trap, `play_room`
   always includes
   `structuredContent.engineeredAha` with beat, status, earn, allowReveal, and
   canSummon. Optional `place_wager` (`mandelbrot` | `nephroid` | `circle`),
   `number_wager` (finite, 1.5..4.5), `bin_wager` (0..16), `ending_wager`
   (`together` | `drifted` | `lost`), or `speed_wager` (`faster` | `slower` |
-  `same`) is a generation act. Each committed wager
+  `same`), or `policy_wager` (`a` | `b` | `abb`) is a generation act. Each committed wager
   comes back typed beside its truth and one graded sentence, with a band where
   the room's model uses one, because a commitment that is collected and never
   answered is theater. Double Pendulum requires a completed release event and
@@ -273,6 +273,8 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   facilitators and agent cohorts; agent notes are not a human stranger gate.
   Kepler requires a chosen ellipse, answers the circular limit as same, and
   otherwise returns faster plus the exact perihelion-to-aphelion speed ratio.
+  Parrondo requires a tried policy and returns exact 120-turn expectations for
+  A, B, and ABB. Those typed values, not the sampled room walk, grade the call.
 - **Compatibility-preserving compact output (built):** every play-tool schema
   accepts `response_mode: "full" | "compact"`; the local broadcast consent
   control intentionally does not. The argument is stripped before domain
@@ -628,7 +630,7 @@ scripts exercise the same surface in local validation.
 
 ## Roadmap position
 
-- **Built by 0.3.0-alpha.2:** the headless core, full-color CLI, native app, and
+- **Built by 0.3.0-alpha.3:** the headless core, full-color CLI, native app, and
   bounded MCP server expose the shared catalog, play, creation, prediction,
   challenge, learning, progression, and export foundations.
 - **0.3 through 0.6:** deepen tactile behavior, understanding, sensory polish,

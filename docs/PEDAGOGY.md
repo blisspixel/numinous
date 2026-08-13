@@ -147,8 +147,17 @@ arrive last and confirm what the player already felt.
   equation, so spacing rather than prose reveals the speed change. Four
   completed tunings earn the observation path without forcing a prediction.
   Core: `rooms/kepler_aha.rs` and `rooms/kepler_laws.rs`.
+- **Parrondo's Trap to residue steering (the sixth flagship).** One completed
+  rule selection primes A, B, or ABB. The App maps those policies to keys and
+  a bottom band; MCP uses `policy_wager` after a poke or completed gesture.
+  The morph draws exact expected-capital paths from a three-state Markov chain,
+  not a fortunate sample. At the room's established probabilities, A and B
+  each lose after 120 turns while ABB wins. The room previously named ABAB as
+  its winning policy, but exact expectation disproved that claim, so ABB is now
+  the canonical schedule. Four selections earn observation without demanding
+  a prediction. Core: `rooms/parrondo.rs` and `rooms/parrondo_aha.rs`.
 
-- **Every other room, through one shared engine.** The five staged ahas are
+- **Every other room, through one shared engine.** The six staged ahas are
   hand-built beat by beat, and they should be: a bespoke arc outranks a
   generic one where it exists. But the commitment mechanic itself is not
   bespoke. `predict` poses a deterministic question for any room with a

@@ -262,7 +262,10 @@ pub fn for_room(id: &str) -> &'static str {
         "witch-of-agnesi" | "witch-caustic" => {
             "See also: the witch of Agnesi; classical cubic curves."
         }
-        "nontransitive" | "parrondo" => "See also: nontransitive dice; Parrondo's paradox papers.",
+        "nontransitive" => "See also: nontransitive dice and intransitive relations.",
+        "parrondo" => {
+            "See also: Harmer and Abbott, Losing strategies can win by Parrondo's paradox, Nature 402 (1999)."
+        }
         "braess" => "See also: Braess's paradox; network routing counterexamples.",
         "josephus" => {
             "See also: Josephus problem; concrete mathematics (Graham, Knuth, Patashnik)."
