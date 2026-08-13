@@ -379,8 +379,9 @@ fn returning_journal_survives_two_processes_then_leaves_zero_managed_residue() {
                 }),
             ),
             call(6, "export_journal", json!({"limit":100})),
-            call(7, "erase_journal", json!({"confirm":true})),
-            call(8, "read_journal", json!({})),
+            call(7, "export_journal", json!({"limit":2,"format":"okf-0.2"})),
+            call(8, "erase_journal", json!({"confirm":true})),
+            call(9, "read_journal", json!({})),
         ],
         &journal,
     );
@@ -423,12 +424,34 @@ fn returning_journal_survives_two_processes_then_leaves_zero_managed_residue() {
             .contains(&root.display().to_string()),
         "portable export must not expose its host path"
     );
-    let erased = &second_by_id(7)["result"]["structuredContent"];
+    let okf = &second_by_id(7)["result"]["structuredContent"];
+    assert_eq!(okf["schema"], "open-knowledge-format");
+    assert_eq!(okf["schemaVersion"], "0.2");
+    assert_eq!(okf["sourceSchema"], "numinous.experience-journal");
+    assert_eq!(okf["page"]["returned"], 2);
+    assert_eq!(okf["page"]["hasMore"], true);
+    assert_eq!(okf["page"]["nextAfterEntryId"], 2);
+    assert_eq!(okf["files"][0]["path"], "index.md");
+    assert_eq!(okf["files"][1]["path"], "entries/00000000000000000001.md");
+    assert_eq!(okf["createdFile"], false);
+    assert_eq!(okf["containsHostPath"], false);
+    assert!(
+        okf["files"][0]["content"]
+            .as_str()
+            .is_some_and(|content| content.starts_with("---\nokf_version: \"0.2\"\n---"))
+    );
+    assert!(
+        !serde_json::to_string(okf)
+            .expect("OKF export JSON")
+            .contains(&root.display().to_string()),
+        "OKF export must not expose its host path"
+    );
+    let erased = &second_by_id(8)["result"]["structuredContent"];
     assert_eq!(erased["recoverableManagedResidue"], 0);
     assert_eq!(erased["managedSidecarFiles"], 0);
     assert_eq!(erased["projectControlledExportFiles"], 0);
     assert_eq!(
-        second_by_id(8)["result"]["structuredContent"]["totalEntries"],
+        second_by_id(9)["result"]["structuredContent"]["totalEntries"],
         0
     );
 

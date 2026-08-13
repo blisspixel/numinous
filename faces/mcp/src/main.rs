@@ -1389,7 +1389,7 @@ fn negotiate_protocol_version(params: Option<&Value>) -> &'static str {
 }
 
 fn server_instructions() -> &'static str {
-    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does before you ask for explanations. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. Read structuredContent.engineeredAha for beat and earn. describe_room and reveal_room open explanation on purpose and can spoil generation-before-reveal, so prefer play_room first. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
+    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does before you ask for explanations. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. Read structuredContent.engineeredAha for beat and earn. describe_room and reveal_room open explanation on purpose and can spoil generation-before-reveal, so prefer play_room first. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
 }
 
 fn server_capabilities() -> Value {
@@ -1569,7 +1569,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "play_room",
-                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. When you supply pokes or a gesture, the structured result includes a delta (cells changed, ink added/removed/reshaped, changed region) measuring exactly how the math answered your hand. This call is stateless: replay the same inputs for the same result. On Times Tables and Buffon's Needle, optional place_wager or number_wager plus aha_summon walk the engineered aha without App session state; structuredContent.engineeredAha reports the beat.",
+                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. When you supply pokes or a gesture, the structured result includes a delta (cells changed, ink added/removed/reshaped, changed region) measuring exactly how the math answered your hand. This call is stateless: replay the same inputs for the same result. Times Tables, Buffon's Needle, the Galton Board, and Double Pendulum accept a room-owned wager plus aha_summon to walk an engineered aha without App session state; structuredContent.engineeredAha reports the beat.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -1600,9 +1600,14 @@ fn build_tools_catalog() -> Value {
                                 numinous_core::rooms::galton_board::BOARD_ROWS
                             )
                         },
+                        "ending_wager": {
+                            "type": "string",
+                            "enum": ["together", "drifted", "lost"],
+                            "description": "Double Pendulum engineered aha only: after at least one completed release, call where its deterministic shadow twin ends."
+                        },
                         "aha_summon": {
                             "type": "boolean",
-                            "description": "After a generation act on Times Tables, Buffon, or the Galton Board, advance the engineered aha through morph to consolidated and unlock punchline reveal text. Stateless one-shot."
+                            "description": "After a generation act on Times Tables, Buffon, the Galton Board, or Double Pendulum, advance the engineered aha through morph to consolidated and unlock punchline reveal text. Stateless one-shot."
                         }
                     },
                     "required": ["id"],
@@ -1720,12 +1725,13 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "export_journal",
-                "description": "Export a bounded page of your journal as a portable, versioned structured record. Paginate with after_entry_id; no file is created and no host path is returned.",
+                "description": "Export a bounded page of your journal as its native versioned record or an in-memory Open Knowledge Format v0.2 bundle. Paginate with after_entry_id; no file is created and no host path is returned.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "after_entry_id": { "type": "integer", "minimum": 0, "description": "Return entries after this stable identifier (default 0)." },
-                        "limit": { "type": "integer", "minimum": 1, "maximum": MAX_JOURNAL_PAGE_ENTRIES, "default": DEFAULT_JOURNAL_PAGE_ENTRIES, "description": "Maximum entries to return, from 1 through 100." }
+                        "limit": { "type": "integer", "minimum": 1, "maximum": MAX_JOURNAL_PAGE_ENTRIES, "default": DEFAULT_JOURNAL_PAGE_ENTRIES, "description": "Maximum entries to return, from 1 through 100." },
+                        "format": { "type": "string", "enum": ["native", "okf-0.2"], "default": "native", "description": "Return the native structured journal page or named UTF-8 files forming an OKF v0.2 bundle page." }
                     },
                     "additionalProperties": false
                 }
@@ -3384,12 +3390,13 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
     }
 }
 
-/// Optional engineered-aha arguments for the two Phase A flagship rooms.
+/// Optional engineered-aha arguments for the staged flagship rooms.
 #[derive(Debug, Clone, Copy, Default)]
 struct FlagshipAhaRequest {
     place_wager: Option<numinous_core::rooms::times_tables_aha::CardioidHome>,
     number_wager: Option<f64>,
     bin_wager: Option<usize>,
+    ending_wager: Option<numinous_core::rooms::pendulum_aha::Ending>,
     summon: bool,
 }
 
@@ -3398,6 +3405,7 @@ impl FlagshipAhaRequest {
         self.place_wager.is_some()
             || self.number_wager.is_some()
             || self.bin_wager.is_some()
+            || self.ending_wager.is_some()
             || self.summon
     }
 }
@@ -3405,6 +3413,7 @@ impl FlagshipAhaRequest {
 fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAhaRequest, String> {
     let place_raw = args.get("place_wager");
     let number_raw = args.get("number_wager");
+    let ending_raw = args.get("ending_wager");
     let summon = args
         .get("aha_summon")
         .and_then(Value::as_bool)
@@ -3477,19 +3486,46 @@ fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAha
         None
     };
 
+    let ending_wager = if let Some(value) = ending_raw {
+        let Some(name) = value.as_str() else {
+            return Err("Argument 'ending_wager' must be a string.".to_string());
+        };
+        if room_id != "double-pendulum" {
+            return Err(
+                "ending_wager is only valid on Double Pendulum (id double-pendulum).".to_string(),
+            );
+        }
+        Some(match name {
+            "together" => numinous_core::rooms::pendulum_aha::Ending::Together,
+            "drifted" => numinous_core::rooms::pendulum_aha::Ending::Drifted,
+            "lost" => numinous_core::rooms::pendulum_aha::Ending::Lost,
+            other => {
+                return Err(format!(
+                    "ending_wager must be together, drifted, or lost; got '{other}'."
+                ));
+            }
+        })
+    } else {
+        None
+    };
+
     let wagers = usize::from(place_wager.is_some())
         + usize::from(number_wager.is_some())
-        + usize::from(bin_wager.is_some());
+        + usize::from(bin_wager.is_some())
+        + usize::from(ending_wager.is_some());
     if wagers > 1 {
-        return Err("Pass one wager: place_wager, number_wager, or bin_wager.".to_string());
+        return Err(
+            "Pass one wager: place_wager, number_wager, bin_wager, or ending_wager.".to_string(),
+        );
     }
     if summon
         && room_id != "times-tables"
         && room_id != "buffon-needle"
         && room_id != "galton-board"
+        && room_id != "double-pendulum"
     {
         return Err(
-            "aha_summon is only valid on Times Tables, Buffon's Needle, or the Galton Board."
+            "aha_summon is only valid on Times Tables, Buffon's Needle, the Galton Board, or Double Pendulum."
                 .to_string(),
         );
     }
@@ -3498,19 +3534,25 @@ fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAha
         place_wager,
         number_wager,
         bin_wager,
+        ending_wager,
         summon,
     })
 }
 
 /// The stdio face has no keyboard. The aha chrome's key prompts translate
 /// into this face's own verbs before they reach a mind that cannot press
-/// them: E becomes aha_summon, and the wager digits become the place_wager
-/// values the tool schema already names.
+/// them: E becomes aha_summon, and wager digits become the named values in
+/// the room's wager field.
 fn keyless_aha_status(status: String) -> String {
     status
+        .replace(" (from 1e-4)", "")
         .replace(
             "WHERE? 1=M 2=N 3=C",
             "WHERE? place_wager: mandelbrot, nephroid, or circle",
+        )
+        .replace(
+            "AT THE END? 1=TOGETHER 2=DRIFTED 3=LOST",
+            "END? use ending_wager",
         )
         .replace("E:WHY", "aha_summon:true opens why")
         .replace("PRESS E", "SUMMON: aha_summon:true")
@@ -3671,10 +3713,66 @@ fn project_flagship_aha(
                 "graded": aha.graded(),
             })))
         }
+        "double-pendulum" => {
+            use numinous_core::rooms::pendulum_aha::{AhaBeat, PendulumAha};
+            let mut aha = PendulumAha::new(variation);
+            // A full gesture counts only releases, so a held bob cannot prime
+            // or earn the question before the player lets it go. Compact
+            // pokes remain static hand points and do not pretend to be lifts.
+            let drops = inputs
+                .iter()
+                .filter(|input| matches!(input, numinous_core::RoomInput::PointerUp { .. }))
+                .count();
+            let pendulum =
+                numinous_core::rooms::double_pendulum::DoublePendulum::new_with(variation);
+            if let Some(gap) = pendulum.divergence_at_full_sweep_for_inputs(inputs) {
+                let _ = aha.bind_truth_gap(gap);
+            }
+            aha.note_drops(drops);
+            if let Some(ending) = request.ending_wager
+                && !aha.commit_call(ending)
+                && !aha.earned()
+            {
+                return Err(
+                    "ending_wager needs a completed run: release the pendulum at least once first."
+                        .to_string(),
+                );
+            }
+            if request.summon {
+                if !aha.earned() {
+                    return Err(
+                        "aha_summon requires an ending_wager or four completed releases first."
+                            .to_string(),
+                    );
+                }
+                advance_pendulum_to_consolidated(&mut aha);
+            }
+            let room: Box<dyn numinous_core::Room> = Box::new(pendulum);
+            let room_status = room.status_input(t, inputs).or_else(|| room.status(t));
+            let (gap, truth) = aha.truth();
+            let wager = aha.call();
+            Ok(Some(json!({
+                "kind": "ending",
+                "beat": aha.beat_label(),
+                "status": keyless_aha_status(aha.status(room_status.as_deref())),
+                "earn": aha.earn_label(),
+                "allowReveal": aha.allow_reveal_text(),
+                "canSummon": aha.can_summon()
+                    || matches!(aha.beat(), AhaBeat::Morph { .. }),
+                "endingOptions": ["together", "drifted", "lost"],
+                "drops": drops,
+                "punchline": aha.punchline(),
+                "wager": wager.map(|ending| ending.name().to_ascii_lowercase()),
+                "truth": truth.name().to_ascii_lowercase(),
+                "gap": gap,
+                "right": wager.map(|ending| ending == truth),
+                "graded": aha.graded(),
+            })))
+        }
         _ => {
             if request.uses_generation_args() {
                 return Err(
-                    "Engineered aha arguments are only valid on Times Tables, Buffon's Needle, or the Galton Board."
+                    "Engineered aha arguments are only valid on Times Tables, Buffon's Needle, the Galton Board, or Double Pendulum."
                         .to_string(),
                 );
             }
@@ -3685,6 +3783,19 @@ fn project_flagship_aha(
 
 fn advance_galton_to_consolidated(aha: &mut numinous_core::rooms::galton_aha::GaltonAha) {
     use numinous_core::rooms::galton_aha::AhaBeat;
+    if matches!(aha.beat(), AhaBeat::Withheld) {
+        let _ = aha.summon();
+    }
+    if matches!(aha.beat(), AhaBeat::Morph { .. }) {
+        aha.set_morph_progress(1.0);
+    }
+    if matches!(aha.beat(), AhaBeat::Confirm) {
+        let _ = aha.summon();
+    }
+}
+
+fn advance_pendulum_to_consolidated(aha: &mut numinous_core::rooms::pendulum_aha::PendulumAha) {
+    use numinous_core::rooms::pendulum_aha::AhaBeat;
     if matches!(aha.beat(), AhaBeat::Withheld) {
         let _ = aha.summon();
     }
@@ -4335,6 +4446,50 @@ fn export_journal_tool(args: &Value, path: &std::path::Path) -> Value {
         Err(error) => return tool_error(&format!("Failed to export journal: {error}")),
     };
     let (after_entry_id, limit) = journal_page_args(args);
+    let format = args
+        .get("format")
+        .and_then(Value::as_str)
+        .unwrap_or("native");
+    if format == "okf-0.2" {
+        let page = numinous_core::export_journal_okf(&journal, after_entry_id, limit);
+        let files = page
+            .files
+            .into_iter()
+            .map(|file| {
+                json!({
+                    "path": file.path,
+                    "content": file.content,
+                })
+            })
+            .collect::<Vec<_>>();
+        return tool_structured(
+            &format!(
+                "Exported {} journal entries as an in-memory OKF {} bundle page. No file was created.",
+                page.returned,
+                numinous_core::OKF_VERSION
+            ),
+            json!({
+                "schema": numinous_core::OKF_BUNDLE_SCHEMA,
+                "schemaVersion": numinous_core::OKF_VERSION,
+                "sourceSchema": "numinous.experience-journal",
+                "sourceSchemaVersion": numinous_core::JOURNAL_SCHEMA_VERSION,
+                "files": files,
+                "page": {
+                    "afterEntryId": page.after_entry_id,
+                    "limit": limit,
+                    "returned": page.returned,
+                    "hasMore": page.has_more,
+                    "nextAfterEntryId": page.next_after_entry_id,
+                },
+                "totalEntries": page.total_entries,
+                "createdFile": false,
+                "containsHostPath": false,
+            }),
+        );
+    }
+    if format != "native" {
+        return tool_error("format must be native or okf-0.2.");
+    }
     let mut structured = journal_page_json(&journal, after_entry_id, limit);
     if let Some(object) = structured.as_object_mut() {
         object.insert("schema".to_string(), json!("numinous.experience-journal"));
@@ -7225,6 +7380,39 @@ mod tests {
         assert_eq!(data["entries"][2]["source"], "self-authored");
         assert_eq!(data["entries"][1]["text"], "Nine means nine lobes.");
 
+        let okf = super::export_journal_tool(
+            &json!({"after_entry_id": 0, "limit": 2, "format": "okf-0.2"}),
+            &path,
+        );
+        let okf_data = &okf["structuredContent"];
+        assert_eq!(okf_data["schema"], numinous_core::OKF_BUNDLE_SCHEMA);
+        assert_eq!(okf_data["schemaVersion"], numinous_core::OKF_VERSION);
+        assert_eq!(okf_data["sourceSchema"], "numinous.experience-journal");
+        assert_eq!(okf_data["page"]["returned"], 2);
+        assert_eq!(okf_data["page"]["hasMore"], true);
+        assert_eq!(okf_data["files"].as_array().map(Vec::len), Some(3));
+        assert_eq!(okf_data["files"][0]["path"], "index.md");
+        assert!(
+            okf_data["files"][0]["content"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("okf_version: \"0.2\"")
+        );
+        assert_eq!(
+            okf_data["files"][1]["path"],
+            "entries/00000000000000000001.md"
+        );
+        assert_eq!(okf_data["createdFile"], false);
+        assert_eq!(okf_data["containsHostPath"], false);
+        assert!(
+            !serde_json::to_string(okf_data)
+                .expect("serialize OKF export")
+                .contains(path.to_str().expect("journal path is UTF-8"))
+        );
+
+        let invalid = super::export_journal_tool(&json!({"format": "future"}), &path);
+        assert_eq!(invalid["isError"], true);
+
         let preview = super::erase_journal_tool(&json!({"confirm": false}), &path);
         assert_eq!(preview["isError"], false);
         assert!(path.exists());
@@ -9445,11 +9633,26 @@ plays 2
                    "pokes": [[0.5, 0.5]], "bin_wager": 8}),
             json!({"id": "galton-board", "width": 40, "height": 20,
                    "pokes": [[0.5, 0.5]], "bin_wager": 8, "aha_summon": true}),
+            json!({"id": "double-pendulum", "width": 40, "height": 20,
+            "gesture": [
+                {"kind": "down", "x": 0.6, "y": 0.3, "t": 0.1},
+                {"kind": "up", "x": 0.6, "y": 0.3, "t": 0.2}
+            ]}),
+            json!({"id": "double-pendulum", "width": 40, "height": 20,
+                   "gesture": [
+                       {"kind": "down", "x": 0.6, "y": 0.3, "t": 0.1},
+                       {"kind": "up", "x": 0.6, "y": 0.3, "t": 0.2}
+                   ], "ending_wager": "together", "aha_summon": true}),
         ];
         for arguments in calls {
             let reply = call("play_room", arguments.clone());
             let text = reply.to_string();
-            for prompt in ["PRESS E", "E:WHY", "1=M 2=N 3=C"] {
+            for prompt in [
+                "PRESS E",
+                "E:WHY",
+                "1=M 2=N 3=C",
+                "1=TOGETHER 2=DRIFTED 3=LOST",
+            ] {
                 assert!(
                     !text.contains(prompt),
                     "keyboard prompt {prompt:?} escaped for {arguments}"
@@ -9598,6 +9801,110 @@ plays 2
         assert_eq!(aha["truth"], 11);
         let graded = aha["graded"].as_str().expect("graded");
         assert!(graded.contains("the gap is the lesson"), "{graded}");
+    }
+
+    #[test]
+    fn double_pendulum_call_meets_the_measured_ending() {
+        let open = call(
+            "play_room",
+            json!({"id": "double-pendulum", "width": 48, "height": 24}),
+        );
+        let open_aha = &open["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(open_aha["kind"], "ending");
+        assert_eq!(open_aha["beat"], "explore");
+        assert_eq!(open_aha["drops"], 0);
+
+        let gesture = json!([
+            {"kind": "down", "x": 7.0 / 12.0, "y": 0.5, "t": 0.1},
+            {"kind": "up", "x": 7.0 / 12.0, "y": 0.5, "t": 0.2}
+        ]);
+        let primed = call(
+            "play_room",
+            json!({"id": "double-pendulum", "width": 48, "height": 24,
+                   "gesture": gesture}),
+        );
+        let prime_aha = &primed["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(prime_aha["beat"], "prime");
+        assert_eq!(prime_aha["drops"], 1);
+        assert!(
+            prime_aha["status"]
+                .as_str()
+                .is_some_and(|status| status.contains("END? use ending_wager")),
+            "the keyless face names its own wager field: {prime_aha}"
+        );
+        assert_eq!(
+            prime_aha["endingOptions"],
+            json!(["together", "drifted", "lost"])
+        );
+
+        let done = call(
+            "play_room",
+            json!({
+                "id": "double-pendulum",
+                "width": 48,
+                "height": 24,
+                "gesture": gesture,
+                "ending_wager": "together",
+                "aha_summon": true
+            }),
+        );
+        let content = &done["result"]["structuredContent"];
+        let aha = &content["engineeredAha"];
+        assert_eq!(aha["beat"], "consolidated");
+        assert_eq!(aha["wager"], "together");
+        assert_eq!(aha["truth"], "lost");
+        assert_eq!(aha["right"], false);
+        assert!(aha["gap"].as_f64().is_some_and(|gap| gap > 1.0));
+        assert!(
+            aha["graded"]
+                .as_str()
+                .is_some_and(|graded| graded.contains("deterministic")),
+            "the reasonable miss receives the room's lesson: {aha}"
+        );
+        assert_eq!(aha["allowReveal"], true);
+        assert!(!content["reveal"].is_null());
+    }
+
+    #[test]
+    fn double_pendulum_requires_release_and_allows_four_completed_redrops() {
+        let held = call(
+            "play_room",
+            json!({
+                "id": "double-pendulum",
+                "gesture": [{"kind": "down", "x": 0.5, "y": 0.3, "t": 0.1}],
+                "ending_wager": "lost"
+            }),
+        );
+        assert_eq!(held["result"]["isError"], true);
+        assert!(
+            held["result"]["content"][0]["text"]
+                .as_str()
+                .is_some_and(|text| text.contains("release"))
+        );
+
+        let done = call(
+            "play_room",
+            json!({
+                "id": "double-pendulum",
+                "gesture": [
+                    {"kind": "down", "x": 0.2, "y": 0.3, "t": 0.1},
+                    {"kind": "up", "x": 0.2, "y": 0.3, "t": 0.15},
+                    {"kind": "down", "x": 0.4, "y": 0.4, "t": 0.3},
+                    {"kind": "up", "x": 0.4, "y": 0.4, "t": 0.35},
+                    {"kind": "down", "x": 0.6, "y": 0.5, "t": 0.5},
+                    {"kind": "up", "x": 0.6, "y": 0.5, "t": 0.55},
+                    {"kind": "down", "x": 0.8, "y": 0.6, "t": 0.7},
+                    {"kind": "up", "x": 0.8, "y": 0.6, "t": 0.75}
+                ],
+                "aha_summon": true
+            }),
+        );
+        let aha = &done["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(aha["beat"], "consolidated");
+        assert_eq!(aha["drops"], 4);
+        assert_eq!(aha["earn"], "drops:4");
+        assert!(aha["wager"].is_null());
+        assert!(aha["graded"].is_null());
     }
 
     #[test]
@@ -9776,6 +10083,14 @@ plays 2
             json!({"id": "times-tables", "aha_summon": true}),
         );
         assert_eq!(summon_alone["result"]["isError"], true);
+        let pendulum_wrong_room =
+            call("play_room", json!({"id": "lorenz", "ending_wager": "lost"}));
+        assert_eq!(pendulum_wrong_room["result"]["isError"], true);
+        let pendulum_bad_ending = call(
+            "play_room",
+            json!({"id": "double-pendulum", "ending_wager": "elsewhere"}),
+        );
+        assert_eq!(pendulum_bad_ending["result"]["isError"], true);
     }
 
     #[test]

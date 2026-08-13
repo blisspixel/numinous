@@ -62,6 +62,7 @@ pub mod humor;
 pub mod insights;
 pub use insights::{INSIGHTS, insight};
 pub mod journal;
+pub mod journal_okf;
 pub mod journey;
 pub mod life_sound;
 pub mod motifs;
@@ -121,6 +122,10 @@ pub use journal::{
     JOURNAL_SOURCE_PLAYER_PROVIDED, JOURNAL_SOURCE_SELF_AUTHORED, Journal, JournalEntry,
     JournalError, JournalRecord, MAX_JOURNAL_AFFECT_CHARS, MAX_JOURNAL_ENTRIES,
     MAX_JOURNAL_KIND_CHARS, MAX_JOURNAL_SUBJECT_CHARS, MAX_JOURNAL_TEXT_CHARS,
+};
+pub use journal_okf::{
+    MAX_OKF_EXPORT_ENTRIES, OKF_BUNDLE_SCHEMA, OKF_VERSION, OkfBundlePage, OkfFile,
+    export_journal_okf,
 };
 pub use journey::{
     Boon, CUT_LEVELS, Journey, MAX_LEVEL, Rank, UNLOCKS, boon_options, constellation, level_lore,

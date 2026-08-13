@@ -31,7 +31,7 @@ Run the full gate and regenerate every artifact:
 - macOS / Linux: `bash scripts/verify.sh`
 
 It runs format, clippy and rustdoc with warnings denied, Rust, 0.4 study runner
-and collector, and deterministic release-packaging tests, locked build,
+and collector, portable Agent Plugins, and deterministic release-packaging tests, locked build,
 coverage (if `cargo-llvm-cov` is present), supply-chain policy (if `cargo-deny`
 is present), the house-style guard, and the native installer safety self-test,
 then writes images and audio into `renders/`.
@@ -64,6 +64,8 @@ python scripts/test-understanding-collect.py        # Windows
 python3 scripts/test-understanding-collect.py       # macOS / Linux
 python scripts/test-package-release.py              # Windows
 python3 scripts/test-package-release.py             # macOS / Linux
+python scripts/test-agent-plugin.py                 # Windows
+python3 scripts/test-agent-plugin.py                # macOS / Linux
 python scripts/test-release-engagement-smoke.py     # Windows
 python3 scripts/test-release-engagement-smoke.py    # macOS / Linux
 python scripts/test-input-hardware-session.py       # Windows
@@ -84,13 +86,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -SelfTes
 ```
 
 
-Expected right now: **format and clippy clean, 3,213 all-target Rust test cases,
+Expected right now: **format and clippy clean, 3,487 all-target Rust test cases,
 agent hallway, tactile, and first-contact live MCP cohorts PASS as CI gates,
 flagship visual and room-bed audio goldens PASS, agent cohort contract unit
 tests pass, 105 study runner and collector regressions, and 15
 physical input contract regressions plus fifteen release-package, sixteen SBOM,
 and ten release workflow regressions pass, one screenshot diagnostic is
-ignored, 95.15% region coverage, and 95.30% line coverage**. The `gpu` and
+ignored, 93.56% region coverage, and 93.57% line coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Physical

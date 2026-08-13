@@ -60,6 +60,8 @@ echo "== understanding study collector =="
 python3 scripts/test-understanding-collect.py
 echo "== release packaging =="
 python3 scripts/test-package-release.py
+echo "== portable agent plugin =="
+python3 scripts/test-agent-plugin.py
 echo "== release engagement contract =="
 python3 scripts/test-release-engagement-smoke.py
 echo "== physical input session contract =="

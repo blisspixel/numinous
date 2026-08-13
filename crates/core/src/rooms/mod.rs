@@ -245,6 +245,7 @@ pub mod pascal_mod;
 pub mod peano_curve;
 pub mod pedal;
 pub mod pell_path;
+pub mod pendulum_aha;
 pub mod penrose;
 pub mod percolation;
 pub mod perfect_num;

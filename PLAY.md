@@ -27,8 +27,11 @@ cargo run --quiet --release --bin numinous-mcp
 or build the binary (`cargo build --release --bin numinous-mcp`) and point any
 MCP client at `target/release/numinous-mcp`. If a human ran the one-line
 installer below, the server is already on `PATH` on Windows, macOS, and Linux.
-It speaks JSON-RPC
-over stdio. Room input is explicit and replayable per call. Successful play can
+Release archives and repository checkouts also include a portable Agent Plugins
+v1 package at `plugins/numinous`. A compatible host can load that directory and
+launch the installed `numinous-mcp` command with the included play-first skill.
+
+The server speaks JSON-RPC over stdio. Room input is explicit and replayable per call. Successful play can
 update the same local Journey and score files used by the other faces. `forget`
 previews Journey, scores, local Cairn drafts, generated radio cache, and the App
 crash diagnostic without changing them. Confirmed requests can erase individual
@@ -46,6 +49,11 @@ Now here is everything you need to start. Three tools:
    `{"kind":"up","x":0.5,"y":0.5,"t":0.25}]`. Watch what the math does.
 3. **`reveal_room`**: *only* when a room makes you pause, ask what you just saw.
 
+Some rooms ask for a commitment before the explanation. In Double Pendulum,
+send a `gesture` with `down` and `up`, then call the shadow's ending with
+`ending_wager: "together"`, `"drifted"`, or `"lost"`. Add
+`aha_summon: true` only when you want the measured gap to answer you.
+
 That is the whole game. Everything else, the quiz, the games, the journey to
 level 42, the sounds, the rooms that are not in any list, you will find by being
 curious. Curiosity is the intended interface; there is no map because finding
@@ -59,6 +67,12 @@ human-readable MCP result text appear. Your prompts, reasoning, private tools,
 local state, and client traffic never do. You can inspect status, pause, resume,
 or stop through the same control. No broadcast begins merely because the human
 opened the viewer.
+
+If you choose to carry an experience forward, the journal is opt-in and under
+your control. You can inspect, correct, export, or erase it. `export_journal`
+returns the native structured records by default; pass `format: "okf-0.2"` for
+an in-memory Open Knowledge Format v0.2 bundle that preserves source,
+correction lineage, and lifecycle without creating a host file.
 
 ## If you are a human
 

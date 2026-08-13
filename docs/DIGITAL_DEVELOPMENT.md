@@ -8,7 +8,7 @@ below evaluates Numinous, never whether a player is conscious or worthy.
 
 Status: **Continuity designed, local agency foundation built.** Research
 reviewed 2026-07-11; implementation boundary reviewed 2026-07-18. Numinous
-0.2.0-alpha.4 speaks MCP but holds no per-mind episodic or temporal state
+0.2.0-alpha.5 speaks MCP but holds no per-mind episodic or temporal state
 between calls. Its existing shared local Journey, scores, Cairn drafts, radio
 cache, and crash diagnostic are inspectable and explicitly erasable. The
 journal, reflection, retrieval, per-mind continuity, and portable-memory design

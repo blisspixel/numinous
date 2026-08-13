@@ -210,6 +210,7 @@ numinous/
 │   └── mcp/             # bounded stdio JSON-RPC surface for digital minds
 ├── assets/              # shipped radio and tracked screenshots
 ├── data/                # canonical shared Cairn
+├── plugins/             # portable Agent Plugins discovery package and play skill
 ├── scripts/             # install, verification, hooks, and local utilities
 └── docs/
 ```
@@ -256,6 +257,9 @@ in core.
   archive and closed payload manifest before replacing a managed install. A
   separate stable soundtrack content checksum covers only the licensed radio
   files, so binary-only releases do not force another large audio download.
+  Every binary archive also carries the pinned portable Agent Plugins package;
+  its MCP declaration launches the installed `numinous-mcp` executable and does
+  not duplicate runtime or domain logic.
   `numinous update` stages the matching installer, waits for the running CLI to
   exit, and installs the latest published release. The release SBOM joins the
   exact locked Rust graph with hashes, formats, architectures, and direct

@@ -216,6 +216,9 @@ Nothing merges red. On every PR, blocking:
     output and binary identities, machine details, guards, and the exact runner
     source. CI verifies the evidence structure and conclusions; it does not
     rerun the physical Windows measurement.
+18. The portable Agent Plugins package passes strict schema, identity, command,
+    skill-boundary, inventory, and release-version regressions. Release-package
+    tests require the complete package in every binary archive.
 
 Hardening targets not yet enforced in CI: embedded per-binary Rust reachability,
 cryptographic release signing, the visual and audio regression loops, and
@@ -242,7 +245,8 @@ mediator, or their test files run the focused Python regressions. The installed
 release packaging, installed engagement, physical input session, tag
 provenance workflow regressions, and dependency-migration performance receipt,
 including SBOM generation and verification, likewise run whenever their
-drivers, tests, evidence, or the release workflow change.
+drivers, tests, evidence, or the release workflow change. Agent Plugins package
+or validator changes run the portable plugin regressions.
 Coverage, the locked build, and artifact
 regeneration stay in
 `scripts/verify.sh` (the release gate); they are too slow for every commit.
