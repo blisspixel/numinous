@@ -90,6 +90,7 @@ class AgentHallwayTests(unittest.TestCase):
             {"passed": False, "findings": ["summon did not consolidate"]},
             {"passed": True, "findings": []},
             {"passed": True, "findings": []},
+            {"passed": True, "findings": []},
         )
         self.assertFalse(summary["passed"])
         self.assertEqual(summary["suite"], "agent-hallway")
@@ -99,6 +100,7 @@ class AgentHallwayTests(unittest.TestCase):
     def test_cohort_summary_passes_when_all_green(self) -> None:
         summary = hallway.cohort_summary(
             {"ok": True},
+            {"passed": True, "findings": []},
             {"passed": True, "findings": []},
             {"passed": True, "findings": []},
             {"passed": True, "findings": []},
@@ -156,6 +158,40 @@ class AgentHallwayTests(unittest.TestCase):
         score = hallway.score_parrondo(steps)
         self.assertFalse(score["passed"])
         self.assertTrue(any("expectations" in finding for finding in score["findings"]))
+
+    def test_score_nontransitive_requires_exact_cycle_and_outcome_grid(self) -> None:
+        steps = [
+            aha_step("explore", kind="counter"),
+            aha_step("withheld", kind="counter"),
+            aha_step(
+                "consolidated",
+                earn="call:c:right",
+                reveal="No best die",
+                kind="counter",
+            ),
+        ]
+        steps[2]["structured"]["engineeredAha"].update(
+            {
+                "chosen": "a",
+                "truth": "c",
+                "wager": "c",
+                "counterWins": 20,
+                "exactCycle": {
+                    "aOverB": 24,
+                    "bOverC": 24,
+                    "cOverA": 20,
+                    "outcomesPerPair": 36,
+                },
+            }
+        )
+        steps[2]["structured"]["render"] = "C vs A\n20 W / 16 L"
+        score = hallway.score_nontransitive(steps)
+        self.assertTrue(score["passed"], score["findings"])
+
+        steps[2]["structured"]["engineeredAha"]["counterWins"] = 19
+        score = hallway.score_nontransitive(steps)
+        self.assertFalse(score["passed"])
+        self.assertTrue(any("C beats A" in finding for finding in score["findings"]))
 
 
 class AgentTactileTests(unittest.TestCase):

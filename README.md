@@ -72,7 +72,7 @@ with the install. Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 
 ## Status
 
-**0.3.0-alpha.3** is playable today: 354 catalog rooms, games, Journey,
+**0.3.0-alpha.4** is playable today: 354 catalog rooms, games, Journey,
 Studio, controllers, and Watch Agent (consented local MCP session viewing).
 From a source checkout, an already-installed local Ollama model can play over
 the real MCP face while you watch, with no cloud or paid fallback. See
@@ -85,11 +85,11 @@ tactile, first-contact, flagship goldens). The
 player-facing **Polish Wave** work landed across all seven workstreams, while
 scheduled structural cleanup continues. Active work is the **Universal
 Wager**: every room with a moving readout can be called before you look,
-through the same engine the flagship ahas use. Six rooms now carry their own
-staged arc across the App and MCP. Parrondo's Trap asks a player to try a rule,
-call A, B, or ABB, then meet exact expected-capital paths proving that A and B
-lose alone while ABB wins. Nontransitive dice is next. The
-**Mind's Seat** (time, company, and memory over MCP) follows, with
+through the same engine the flagship ahas use. Seven rooms now carry their own
+staged arc across the App and MCP. Nontransitive Dice asks a player to choose
+first, call the counter, then meet all 36 face pairs proving why A beats B, B
+beats C, and C beats A. That planned room-owned wave is complete. The next
+product rock is the **Mind's Seat** (time, company, and memory over MCP), with
 the **Sensory Lift** entering behind a de-risk spike; the 0.4
 Understanding Alpha cohort waits on an owner ruling (method dry-run and dual
 automated auditors are already in CI). The creator loop is built end to end:

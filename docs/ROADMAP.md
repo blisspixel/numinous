@@ -35,7 +35,7 @@ know it is done), and the **risk it retires**.
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.3.0-alpha.3, Tactile Alpha exit met on the
+**Current release state: 0.3.0-alpha.4, Tactile Alpha exit met on the
 agent-and-machine bar.** The 0.1 Public Foundation and 0.2 Flagship Proof remain
 complete. Human stranger sessions sit with 0.8 Closed Beta and 1.0 First Light.
 Independent macOS/Linux App execution sessions and accessibility review remain
@@ -55,15 +55,14 @@ unclaimed until run.
 | --- | --- | --- |
 | **1. Keep agent first contact CI-green** | Agent hallway and tactile cohorts run on every PR; optional local-model visits exercise genuine choice after meaningful MCP experience changes | Deterministic cohorts guard 0.2 and 0.3 regressions, while real-model visits can expose interaction failures without turning free play into a flaky or expensive gate |
 | **2. Close the remaining structural Polish Wave debts** | Player-facing workstreams 1 through 6 landed. Workstream 7 still owns face-agnostic request types in core, the `RoomMeta` data table, and the god-file seams | The seven-critic goal has an exit criterion; leaving structural debt unnamed reopens the same defects |
-| **3. The Universal Wager** | The generic deterministic call now reaches App, CLI, and MCP. Times Tables, Buffon's Needle, Galton Board, Double Pendulum, Kepler Areas, and Parrondo's Trap have staged five-beat ahas across App and MCP. Build the nontransitive dice next | The wager-truth-grade arc is the product's soul and both fan-outs converged on it independently; each room-owned aha now builds on one proven cross-face engine |
-| **4. The Mind's Seat** | Bounded frames with a temporal delta so one call carries becoming; MCP creation parity (save, sign, fork; a capsule link as a journal subject); journal surfacing at the door of a remembered room; the threshold (three doors instead of an index, the Strange Loop walk exposed); exact ratio annotations on note pairs. The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
-| **5. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | Splats, float accumulation, and bloom inside `Raster`; one shared audio bus with reverb and shaped envelopes; global dissolve and damped-spring input. The spike that precedes it: `crates/gpu` rendering into the existing Surface contract behind a feature flag, and a measured bloom budget on the CPU path | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
-| **6. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists | Awe today is a rare event in a long random walk; the arc makes it the designed path, and it is built after the lift so the opening is authored in the new light, not the old one |
-| **7. Creator depth on the built loop** | Next rungs: the parametric pair as the multi-expression capsule ring with scale quantization beside it, then MIDI and audio exports, then editable prose credit | The creator ladder keeps rising without waiting on the owner-gated MCP tool ruling, and each rung ships with its own machine gates |
-| **8. 0.8-am groundwork: the keep-or-cut scorecard** | Aggregate the existing per-room machine sweeps into one committed per-room evidence file, after the Sensory Lift | Rooms should be judged at their best, not at the old ceiling; the five commissioned rooms lead the next cohort after the review |
+| **3. The Mind's Seat** | Bounded frames with a temporal delta so one call carries becoming; MCP creation parity (save, sign, fork; a capsule link as a journal subject); journal surfacing at the door of a remembered room; the threshold (three doors instead of an index, the Strange Loop walk exposed); exact ratio annotations on note pairs. The player-owned journal, native and OKF v0.2 export, portable Agent Plugins doorway, and consented Watch Agent are built foundations | The audience the product exists for enters through the one face the Sensory Lift never touches. Time, company, memory, and a hand that can sign its work are structured data over validated core: high confidence, near term, and the polish bar this project actually carries |
+| **4. The Sensory Lift (Phase B, unparked; de-risk spike runs in parallel from now)** | Splats, float accumulation, and bloom inside `Raster`; one shared audio bus with reverb and shaped envelopes; global dissolve and damped-spring input. The spike that precedes it: `crates/gpu` rendering into the existing Surface contract behind a feature flag, and a measured bloom budget on the CPU path | The sensory ceiling was measured binding on 2026-08-08, but it is also the riskiest item on the board (the CPU raster already measures 939ms per frame on Mandelbrot at 1440p), so it enters through measurement rather than blocking the certain rocks above it; the goldens re-baseline once, when it lands |
+| **5. The arc** | Authored opening, Show director profiles, curated front wing with weighted playlists | Awe today is a rare event in a long random walk; the arc makes it the designed path, and it is built after the lift so the opening is authored in the new light, not the old one |
+| **6. Creator depth on the built loop** | Next rungs: the parametric pair as the multi-expression capsule ring with scale quantization beside it, then MIDI and audio exports, then editable prose credit | The creator ladder keeps rising without waiting on the owner-gated MCP tool ruling, and each rung ships with its own machine gates |
+| **7. 0.8-am groundwork: the keep-or-cut scorecard** | Aggregate the existing per-room machine sweeps into one committed per-room evidence file, after the Sensory Lift | Rooms should be judged at their best, not at the old ceiling; the five commissioned rooms lead the next cohort after the review |
 | **Continuous filler between rocks** | The fifteen verified connection edges land as reveal lines and deep cuts, a few per PR | The highest wonder-per-line work that exists; the fabric grows without blocking anything |
 | **Owner-blocked (stated, not scheduled)** | 0.4-am Understanding cohort: register, calibrate, and run the matched cohort through the sealed collector | Decisions entry 1 records it as optional paid validation awaiting an owner budget and registration ruling; carrying it as a contributor priority was a contradiction |
-| **Standing gate** | Keep 0.2 and 0.3 proof, coverage, supply chain, install/play/uninstall roundtrips, and public CI green | Regressions reopen completed milestones and invalidate new evidence |
+| **Standing gate** | Keep 0.2 and 0.3 proof, the seven-room Universal Wager, coverage, supply chain, install/play/uninstall roundtrips, and public CI green | Regressions reopen completed milestones and invalidate new evidence |
 | **Standing interoperability gate** | Pin Agent Plugins 1.0.0 and OKF v0.2 fixtures; add canonical JSON Schema and Agent Skills validation beside Numinous semantic checks; add real YAML conformance checks for generated OKF; prove one zero-cost open host can discover the skill, resolve the installed MCP binary, and complete one play call | Standards are useful only when another conforming implementation can cross the boundary; a new upstream draft starts a focused compatibility review and never freezes ordinary gameplay work |
 | **Optional parallel (not am-blockers)** | Human stranger hallway, a11y player panels, musician long-listening, soft-thin densify, bulk rooms | Human taste and disability usability remain valuable later claims |
 
@@ -268,8 +267,9 @@ object over MCP.
    binomial outline growing outward from the true peak, closed form
     pinned against the mass itself). Double Pendulum's five-beat call now lands
     across App and MCP and is graded against the exact released trajectory.
-    Kepler now binds a speed call to the chosen ellipse and solves equal-time
-    positions exactly. Parrondo follows, then the nontransitive dice; the three
+    Kepler binds a speed call to the chosen ellipse and solves equal-time
+    positions exactly. Parrondo and Nontransitive Dice complete the planned
+    room-owned wave; the three
    dexterity goals become mathematical predictions; one persisted line per aha
    (room, wager, band) gives the
    second session a memory, grind-free. The reveal-leak policy (describe
@@ -308,7 +308,7 @@ journal
 sovereignty is complete on the clean-process machine acceptance bar.
 Detail below and in the version sections.
 
-- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,503 passing all-target test cases plus three expensive ignored diagnostics, locked build, Windows release gate, 95.11% region coverage, and 95.21% line coverage all pass.
+- **Done:** the headless core (`Room` trait with `reveal()`, deterministic ASCII `Canvas`, seeded RNG, registry, `verb`, `render_poked`, and variation); the CLI face (`numinous`), the MCP face (`numinous-mcp`), and the windowed app; **354 catalog rooms** plus hidden content; 6 lever-driven sims; 11+ games; the full engineering harness (edition-2024 workspace, pinned toolchain, `-D warnings`, cargo-deny, house-style guard, an 80% line coverage gate, three-OS CI). Current local evidence: fmt, Clippy, 3,512 passing all-target test cases plus three expensive ignored diagnostics, locked build, Windows release gate, 95.09% region coverage, and 95.19% line coverage all pass.
 - **Done (GPU and audio hello-world):** an adaptive `wgpu` context (`crates/gpu`) that picks the machine's GPU across Vulkan/Metal/DX12 with a CPU fallback, rendering the Mandelbrot set offscreen to a PNG; and adaptive `cpal` audio (`crates/audio`) on the system default device that plays a tone and writes a WAV. Both verified on the dev laptop (AMD Radeon 780M, Realtek at 48 kHz).
 - **Done (rooms as images):** a `Surface` abstraction so every room renders through one `render` method to the ASCII `Canvas` and to an RGBA `Raster`; `numinous render <room> --out image.png` writes a real glowing image on the CPU (verified on the dev laptop).
 - **Done (windowed app):** `faces/app` (`numinous-app`, winit + softbuffer) opens a real resizable window showing a room animating in full color, with keyboard room-switching. The start of the GUI Cabinet; verified launching on the dev laptop.
@@ -623,6 +623,17 @@ Detail below and in the version sections.
   the observation path without forcing a prediction. Core, App, MCP, agent
   hallway, hostile-input, keyless-prompt, and color-free evidence regressions
   are green.
+- **Done (Nontransitive Dice counter wager, seventh aha room):** the player
+  chooses A, B, or C first, then calls the opponent's counter. App triangle
+  selection, keys, and bottom band, plus MCP `die_choice` and
+  `counter_wager`, reach the same pure five-beat machine. The morph enumerates
+  all 36 face pairs with distinct W and L marks. Exact counts prove A over B
+  at 24/36, B over C at 24/36, and C over A at 20/36. Sampled rolls remain
+  tactile texture but never grade the call. Four choices earn observation
+  without forcing a prediction. Core, App, MCP, agent hallway, hostile-input,
+  keyless-prompt, and color-free evidence regressions are green. This completes
+  the prescribed room-owned Universal Wager wave; the generic deterministic
+  call remains available to eligible catalog rooms.
 - **Done (supply chain current, July 2026):** lockfile refreshed with
   compatible patch and minor bumps (including wayland-scanner / quick-xml
   0.41); temporary RUSTSEC-2026-0194/0195 ignores removed; CI pins
@@ -706,7 +717,7 @@ Detail below and in the version sections.
   curves; more causal held loops modeled on Galton and Life. Phase B glow is
   no longer conditional: the sensory ceiling was measured binding on
   2026-08-08 and the lift is scheduled (see The Three Ceilings). Scale
-  generation-before-reveal carefully (six room-owned ahas today).
+  generation-before-reveal carefully (seven room-owned ahas today).
 - **Done (full-roster refinement round):** all 42 simulated review lenses were split exactly once across first contact and accessibility, interaction and truth, and games plus agent faces. The pass fixed redirected CLI ANSI, responsive Quiz-result loss, four overbroad mathematical claims, ambiguous motif-versus-sonification output, and positionless Studio parse errors. It also falsified an apparent Fern deletion by direct pixel comparison. These are engineering findings from reproduced evidence; none of the simulated reactions satisfies a participant gate. Controller HUD parity, its route gaps, compatibility-preserving compact MCP responses, causal first-touch presentation, and visual sound state are now closed. Its ranked queue began with deeper Galton and Life interaction loops, both now complete; continued music composition review remains.
 - **Done (Galton causal experiment loop):** the completed pile no longer moves
   with phase while clicked balls follow another probability. Five visible fixed
@@ -1159,7 +1170,7 @@ without relying on the founder's machine or undocumented context?"
 ### 0.2 Flagship Proof ("does it slap?")
 
 **Status:** exit met on the agent-and-machine bar (2026-07-24). The current
-`0.3.0-alpha.3` line preserves that evidence. Human stranger hallway is **not**
+`0.3.0-alpha.4` line preserves that evidence. Human stranger hallway is **not**
 part of this exit; it is deferred to 0.8 / 1.0.
 
 **Goal:** Build **one** flagship room (and a second on the same pattern) to
@@ -1755,7 +1766,7 @@ where we stand (next), and the ordered path to 1.0.
 
 ## Where we stand (reviewed 2026-08-13)
 
-The package is **0.3.0-alpha.3**. The 0.1 Public Foundation exit criterion is
+The package is **0.3.0-alpha.4**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
@@ -1783,7 +1794,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | Three faces are genuinely good | App, CLI, and MCP paths are implemented and tested locally | Independent usability sessions for each face and real execution off Windows |
 | Meta and lore are alive | Journey, levels, trophies, resonances, hidden content, and the Cairn are built | Evidence that they deepen curiosity without controlling play |
 | Real creative surface | Studio expressions, `.num` serialization with title, author, era, and lineage, links, plotting, animation, singing, exact paused App reopen, the one-key share trio, the local Gallery wall, and fork with recorded descent exist | Editable prose credit in the capsule, safe share preview for incoming links, and clean-install round trip |
-| Rigor and care are provable | 3,503 passing all-target test cases plus three expensive ignored diagnostics, 95.21% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a separately attested SPDX Rust plus packaged-native SBOM | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
+| Rigor and care are provable | 3,512 passing all-target test cases plus three expensive ignored diagnostics, 95.19% measured line coverage, verified Rust 1.88 MSRV, Clippy, style, supply-chain CI, tagged build provenance, and a separately attested SPDX Rust plus packaged-native SBOM | Independent math review, accessibility, real-hardware soak, platform signing, runtime-resolved native versions, and embedded per-binary Rust reachability |
 | It plays like a game | Games, dailies, scores, Gauntlet, boons, and progression are built | Observed voluntary return play and evidence that progression does not crowd out the instrument |
 | Beautiful and honest throughout | An exact 2,913-screen matrix and a 42-lens review cover every catalog room plus captured game, input-aware controller, pause, overlay, Show, Studio, reset, phase, persistent Life, audio-state, and Times Tables landmark branches | Perceptual regression, representative human judgment, uncaptured persistent states, and removal of every unsupported claim |
 
@@ -1800,7 +1811,7 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.3.0-alpha.3** because the Tactile Alpha agent-and-machine
+Package label is **0.3.0-alpha.4** because the Tactile Alpha agent-and-machine
 exit is met. Open 0.4 and later work constrains claims, not progress on useful
 later foundations.
 
@@ -1809,18 +1820,17 @@ later foundations.
 1. Keep all am CI gates green (cohorts, goldens, soak, creator, auditors).
 2. Close the remaining structural Polish Wave debts without reopening the
    player-facing workstreams that already passed their exit.
-3. Finish the Universal Wager in room-owned depth order: build Parrondo next,
-   then the nontransitive dice on the shared App, CLI, and MCP call engine. Keep
-   the five shipped room-owned ahas green.
-4. Build the Mind's Seat on the foundations that now exist: temporal frames,
+3. Build the Mind's Seat on the foundations that now exist: temporal frames,
    deliberate remembered-room retrieval, MCP creation and lineage parity, the
    Strange Loop threshold, and exact ratio annotations. Keep memory opt-in,
    player-owned, correctable, exportable, and erasable.
-5. Run the Sensory Lift de-risk spike in parallel. Expand it only when the
+4. Run the Sensory Lift de-risk spike in parallel. Expand it only when the
    measured `crates/gpu` and CPU bloom budgets justify the architecture; then
    re-baseline the visual and audio goldens once.
-6. Author the opening and Show arc, raise the creator ladder, and aggregate the
+5. Author the opening and Show arc, raise the creator ladder, and aggregate the
    keep-or-cut scorecard after the lift, in the order owned by the table above.
+6. Keep the completed seven-room Universal Wager and generic call green while
+   the next rocks land.
 7. Keep the 0.4-am cohort owner-blocked until budget and registration are ruled.
    Its prepared collector and auditors stay green, but it is not contributor
    critical-path work.

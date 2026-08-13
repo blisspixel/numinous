@@ -1389,7 +1389,7 @@ fn negotiate_protocol_version(params: Option<&Value>) -> &'static str {
 }
 
 fn server_instructions() -> &'static str {
-    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does before you ask for explanations. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. Read structuredContent.engineeredAha for beat and earn. describe_room and reveal_room open explanation on purpose and can spoil generation-before-reveal, so prefer play_room first. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
+    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does before you ask for explanations. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. On Parrondo's Trap try a policy with a poke or completed gesture, pass policy_wager (a, b, or abb), then aha_summon true. On Nontransitive Dice choose first with die_choice (a, b, or c), pass counter_wager (a, b, or c), then aha_summon true. Read structuredContent.engineeredAha for beat and earn. describe_room and reveal_room open explanation on purpose and can spoil generation-before-reveal, so prefer play_room first. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
 }
 
 fn server_capabilities() -> Value {
@@ -1569,7 +1569,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "play_room",
-                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. When you supply pokes or a gesture, the structured result includes a delta (cells changed, ink added/removed/reshaped, changed region) measuring exactly how the math answered your hand. This call is stateless: replay the same inputs for the same result. Times Tables, Buffon's Needle, the Galton Board, Double Pendulum, Kepler Areas, and Parrondo's Trap accept a room-owned wager plus aha_summon to walk an engineered aha without App session state; structuredContent.engineeredAha reports the beat.",
+                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. When you supply pokes or a gesture, the structured result includes a delta (cells changed, ink added/removed/reshaped, changed region) measuring exactly how the math answered your hand. This call is stateless: replay the same inputs for the same result. Times Tables, Buffon's Needle, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice accept a room-owned wager plus aha_summon to walk an engineered aha without App session state; structuredContent.engineeredAha reports the beat.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -1615,9 +1615,19 @@ fn build_tools_catalog() -> Value {
                             "enum": ["a", "b", "abb"],
                             "description": "Parrondo's Trap engineered aha only: after trying a policy, call which policy wins in exact expectation after 120 turns."
                         },
+                        "die_choice": {
+                            "type": "string",
+                            "enum": ["a", "b", "c"],
+                            "description": "Nontransitive Dice engineered aha only: choose your die first. Use this typed action instead of pokes or a gesture."
+                        },
+                        "counter_wager": {
+                            "type": "string",
+                            "enum": ["a", "b", "c"],
+                            "description": "Nontransitive Dice engineered aha only: after choosing A, B, or C, call which die beats it across all 36 face pairs."
+                        },
                         "aha_summon": {
                             "type": "boolean",
-                            "description": "After a generation act on Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, or Parrondo's Trap, advance the engineered aha through morph to consolidated and unlock punchline reveal text. Stateless one-shot."
+                            "description": "After a generation act on Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, or Nontransitive Dice, advance the engineered aha through morph to consolidated and unlock punchline reveal text. Stateless one-shot."
                         }
                     },
                     "required": ["id"],
@@ -3420,6 +3430,8 @@ struct FlagshipAhaRequest {
     ending_wager: Option<numinous_core::rooms::pendulum_aha::Ending>,
     speed_wager: Option<numinous_core::rooms::kepler_aha::SpeedRelation>,
     policy_wager: Option<numinous_core::rooms::parrondo::Policy>,
+    die_choice: Option<numinous_core::rooms::nontransitive::Die>,
+    counter_wager: Option<numinous_core::rooms::nontransitive::Die>,
     summon: bool,
 }
 
@@ -3431,6 +3443,8 @@ impl FlagshipAhaRequest {
             || self.ending_wager.is_some()
             || self.speed_wager.is_some()
             || self.policy_wager.is_some()
+            || self.die_choice.is_some()
+            || self.counter_wager.is_some()
             || self.summon
     }
 }
@@ -3441,6 +3455,8 @@ fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAha
     let ending_raw = args.get("ending_wager");
     let speed_raw = args.get("speed_wager");
     let policy_raw = args.get("policy_wager");
+    let die_choice_raw = args.get("die_choice");
+    let counter_raw = args.get("counter_wager");
     let summon = args
         .get("aha_summon")
         .and_then(Value::as_bool)
@@ -3576,15 +3592,49 @@ fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAha
         None
     };
 
+    let parse_die = |name: &str, field: &str| match name {
+        "a" => Ok(numinous_core::rooms::nontransitive::Die::A),
+        "b" => Ok(numinous_core::rooms::nontransitive::Die::B),
+        "c" => Ok(numinous_core::rooms::nontransitive::Die::C),
+        other => Err(format!("{field} must be a, b, or c; got '{other}'.")),
+    };
+    let die_choice = if let Some(value) = die_choice_raw {
+        let Some(name) = value.as_str() else {
+            return Err("Argument 'die_choice' must be a string.".to_string());
+        };
+        if room_id != "nontransitive" {
+            return Err(
+                "die_choice is only valid on Nontransitive Dice (id nontransitive).".to_string(),
+            );
+        }
+        Some(parse_die(name, "die_choice")?)
+    } else {
+        None
+    };
+    let counter_wager = if let Some(value) = counter_raw {
+        let Some(name) = value.as_str() else {
+            return Err("Argument 'counter_wager' must be a string.".to_string());
+        };
+        if room_id != "nontransitive" {
+            return Err(
+                "counter_wager is only valid on Nontransitive Dice (id nontransitive).".to_string(),
+            );
+        }
+        Some(parse_die(name, "counter_wager")?)
+    } else {
+        None
+    };
+
     let wagers = usize::from(place_wager.is_some())
         + usize::from(number_wager.is_some())
         + usize::from(bin_wager.is_some())
         + usize::from(ending_wager.is_some())
         + usize::from(speed_wager.is_some())
-        + usize::from(policy_wager.is_some());
+        + usize::from(policy_wager.is_some())
+        + usize::from(counter_wager.is_some());
     if wagers > 1 {
         return Err(
-            "Pass one wager: place_wager, number_wager, bin_wager, ending_wager, speed_wager, or policy_wager."
+            "Pass one wager: place_wager, number_wager, bin_wager, ending_wager, speed_wager, policy_wager, or counter_wager."
                 .to_string(),
         );
     }
@@ -3595,9 +3645,10 @@ fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAha
         && room_id != "double-pendulum"
         && room_id != "kepler-laws"
         && room_id != "parrondo"
+        && room_id != "nontransitive"
     {
         return Err(
-            "aha_summon is only valid on Times Tables, Buffon's Needle, the Galton Board, Double Pendulum, Kepler Areas, or Parrondo's Trap."
+            "aha_summon is only valid on Times Tables, Buffon's Needle, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, or Nontransitive Dice."
                 .to_string(),
         );
     }
@@ -3609,6 +3660,8 @@ fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAha
         ending_wager,
         speed_wager,
         policy_wager,
+        die_choice,
+        counter_wager,
         summon,
     })
 }
@@ -3633,6 +3686,7 @@ fn keyless_aha_status(status: String) -> String {
             "NEAR SUN? use speed_wager",
         )
         .replace("WHICH WINS? 1=A 2=B 3=ABB", "WHICH WINS? use policy_wager")
+        .replace("1=A 2=B 3=C", "use counter_wager: a, b, or c")
         .replace("E:WHY", "aha_summon:true opens why")
         .replace("PRESS E", "SUMMON: aha_summon:true")
 }
@@ -3952,10 +4006,87 @@ fn project_flagship_aha(
                 "graded": aha.graded(),
             })))
         }
+        "nontransitive" => {
+            use numinous_core::rooms::nontransitive::{Die, exact_wins, win_rate};
+            use numinous_core::rooms::nontransitive_aha::{AhaBeat, NontransitiveAha};
+            if request.die_choice.is_some() && completed_actions > 0 {
+                return Err(
+                    "Choose the first die with either die_choice or room hand inputs, not both."
+                        .to_string(),
+                );
+            }
+            let chosen = request
+                .die_choice
+                .or_else(|| numinous_core::rooms::nontransitive::selected_die_from_inputs(inputs));
+            let choices = if request.die_choice.is_some() {
+                1
+            } else {
+                completed_actions
+            };
+            let mut aha = NontransitiveAha::new();
+            aha.note_choices(chosen, choices);
+            if let Some(counter) = request.counter_wager
+                && !aha.commit_call(counter)
+                && !aha.earned()
+            {
+                return Err(
+                    "counter_wager needs a chosen die: pass die_choice a, b, or c, or select one with at least one poke or completed gesture first."
+                        .to_string(),
+                );
+            }
+            if request.summon {
+                if !aha.earned() {
+                    return Err(
+                        "aha_summon requires a counter_wager or four completed die choices first."
+                            .to_string(),
+                    );
+                }
+                advance_nontransitive_to_consolidated(&mut aha);
+            }
+            let room: Box<dyn numinous_core::Room> =
+                Box::new(numinous_core::rooms::nontransitive::Nontransitive::new_with(variation));
+            let room_status = room.status_input(t, inputs).or_else(|| room.status(t));
+            let truth = aha.truth();
+            let wager = aha.call();
+            let chosen_wins = |left: Die, right: Die| exact_wins(left, right);
+            Ok(Some(json!({
+                "kind": "counter",
+                "beat": aha.beat_label(),
+                "status": keyless_aha_status(aha.status(room_status.as_deref())),
+                "earn": aha.earn_label(),
+                "allowReveal": aha.allow_reveal_text(),
+                "canSummon": aha.can_summon()
+                    || matches!(aha.beat(), AhaBeat::Morph { .. }),
+                "dieOptions": ["a", "b", "c"],
+                "counterOptions": ["a", "b", "c"],
+                "choices": choices,
+                "chosen": chosen.map(|die| die.name().to_ascii_lowercase()),
+                "faces": {
+                    "a": Die::A.faces(),
+                    "b": Die::B.faces(),
+                    "c": Die::C.faces(),
+                },
+                "exactCycle": {
+                    "aOverB": chosen_wins(Die::A, Die::B),
+                    "bOverC": chosen_wins(Die::B, Die::C),
+                    "cOverA": chosen_wins(Die::C, Die::A),
+                    "outcomesPerPair": 36,
+                },
+                "counterWins": chosen.zip(truth).map(|(chosen, truth)| exact_wins(truth, chosen)),
+                "counterLosses": chosen.zip(truth).map(|(chosen, truth)| 36 - exact_wins(truth, chosen)),
+                "counterRate": chosen.zip(truth).map(|(chosen, truth)| win_rate(truth, chosen)),
+                "punchline": aha.punchline(),
+                "wager": wager.map(|die| die.name().to_ascii_lowercase()),
+                "wagerWins": chosen.zip(wager).map(|(chosen, wager)| exact_wins(wager, chosen)),
+                "truth": truth.map(|die| die.name().to_ascii_lowercase()),
+                "right": wager.zip(truth).map(|(wager, truth)| wager == truth),
+                "graded": aha.graded(),
+            })))
+        }
         _ => {
             if request.uses_generation_args() {
                 return Err(
-                    "Engineered aha arguments are only valid on Times Tables, Buffon's Needle, the Galton Board, Double Pendulum, Kepler Areas, or Parrondo's Trap."
+                    "Engineered aha arguments are only valid on Times Tables, Buffon's Needle, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, or Nontransitive Dice."
                         .to_string(),
                 );
             }
@@ -3998,11 +4129,42 @@ fn render_engineered_aha_overlay(room_id: &str, aha: Option<&Value>, canvas: &mu
             }
             _ => {}
         },
+        "nontransitive" => match beat {
+            Some("prime") => {
+                numinous_core::rooms::nontransitive_aha::render_counter_band(canvas, None);
+            }
+            Some("confirm" | "consolidated") => {
+                if let Some(chosen) =
+                    aha.get("chosen")
+                        .and_then(Value::as_str)
+                        .and_then(|name| match name {
+                            "a" => Some(numinous_core::rooms::nontransitive::Die::A),
+                            "b" => Some(numinous_core::rooms::nontransitive::Die::B),
+                            "c" => Some(numinous_core::rooms::nontransitive::Die::C),
+                            _ => None,
+                        })
+                {
+                    numinous_core::rooms::nontransitive_aha::render_outcome_grid(
+                        canvas, 1.0, chosen,
+                    );
+                }
+            }
+            _ => {}
+        },
         _ => {}
     }
 }
 
 fn advance_parrondo_to_consolidated(aha: &mut numinous_core::rooms::parrondo_aha::ParrondoAha) {
+    if aha.summon() {
+        aha.set_morph_progress(1.0);
+        let _ = aha.summon();
+    }
+}
+
+fn advance_nontransitive_to_consolidated(
+    aha: &mut numinous_core::rooms::nontransitive_aha::NontransitiveAha,
+) {
     if aha.summon() {
         aha.set_morph_progress(1.0);
         let _ = aha.summon();
@@ -6815,7 +6977,9 @@ mod tests {
         assert!(
             instructions.contains("place_wager")
                 && instructions.contains("number_wager")
-                && instructions.contains("policy_wager"),
+                && instructions.contains("policy_wager")
+                && instructions.contains("die_choice")
+                && instructions.contains("counter_wager"),
             "instructions teach flagship aha args: {instructions}"
         );
         assert!(
@@ -7386,6 +7550,14 @@ mod tests {
         assert_eq!(
             play_properties["policy_wager"]["enum"],
             json!(["a", "b", "abb"])
+        );
+        assert_eq!(
+            play_properties["die_choice"]["enum"],
+            json!(["a", "b", "c"])
+        );
+        assert_eq!(
+            play_properties["counter_wager"]["enum"],
+            json!(["a", "b", "c"])
         );
         let listen = tools
             .iter()
@@ -10355,6 +10527,105 @@ plays 2
     }
 
     #[test]
+    fn nontransitive_counter_call_meets_all_36_outcomes_and_draws_them() {
+        let open = call(
+            "play_room",
+            json!({"id": "nontransitive", "width": 64, "height": 28}),
+        );
+        let open_aha = &open["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(open_aha["kind"], "counter");
+        assert_eq!(open_aha["beat"], "explore");
+        assert_eq!(open_aha["choices"], 0);
+
+        let primed = call(
+            "play_room",
+            json!({
+                "id": "nontransitive",
+                "width": 64,
+                "height": 28,
+                "die_choice": "a"
+            }),
+        );
+        let prime = &primed["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(prime["beat"], "prime");
+        assert_eq!(prime["chosen"], "a");
+        assert_eq!(prime["counterOptions"], json!(["a", "b", "c"]));
+        assert!(
+            prime["status"]
+                .as_str()
+                .is_some_and(|status| status.contains("counter_wager")),
+            "the keyless face names its own call field: {prime}"
+        );
+
+        let done = call(
+            "play_room",
+            json!({
+                "id": "nontransitive",
+                "width": 64,
+                "height": 28,
+                "die_choice": "a",
+                "counter_wager": "b",
+                "aha_summon": true
+            }),
+        );
+        let content = &done["result"]["structuredContent"];
+        let aha = &content["engineeredAha"];
+        assert_eq!(aha["beat"], "consolidated");
+        assert_eq!(aha["chosen"], "a");
+        assert_eq!(aha["wager"], "b");
+        assert_eq!(aha["truth"], "c");
+        assert_eq!(aha["right"], false);
+        assert_eq!(aha["counterWins"], 20);
+        assert_eq!(aha["exactCycle"]["aOverB"], 24);
+        assert_eq!(aha["exactCycle"]["bOverC"], 24);
+        assert_eq!(aha["exactCycle"]["cOverA"], 20);
+        assert_eq!(aha["faces"]["a"], json!([4, 4, 4, 4, 0, 0]));
+        assert!(
+            aha["graded"]
+                .as_str()
+                .is_some_and(|graded| graded.contains("counter is C")),
+            "{aha}"
+        );
+        let render = content["render"].as_str().expect("render");
+        assert!(render.contains("C vs A"));
+        assert!(render.contains("20 W / 16 L"));
+        assert!(content["reveal"].is_string());
+    }
+
+    #[test]
+    fn nontransitive_accepts_a_hand_choice_and_four_choice_observation() {
+        let hand = call(
+            "play_room",
+            json!({
+                "id": "nontransitive",
+                "pokes": [[0.82, 0.78]],
+                "counter_wager": "b",
+                "aha_summon": true
+            }),
+        );
+        let hand_aha = &hand["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(hand_aha["chosen"], "c");
+        assert_eq!(hand_aha["truth"], "b");
+        assert_eq!(hand_aha["right"], true);
+        assert_eq!(hand_aha["counterWins"], 24);
+
+        let observed = call(
+            "play_room",
+            json!({
+                "id": "nontransitive",
+                "pokes": [[0.5, 0.18], [0.18, 0.78], [0.82, 0.78], [0.5, 0.18]],
+                "aha_summon": true
+            }),
+        );
+        let observed_aha = &observed["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(observed_aha["beat"], "consolidated");
+        assert_eq!(observed_aha["earn"], "choices:4");
+        assert_eq!(observed_aha["chosen"], "a");
+        assert!(observed_aha["wager"].is_null());
+        assert!(observed_aha["graded"].is_null());
+    }
+
+    #[test]
     fn times_tables_place_wager_gates_reveal_until_aha_summon() {
         let wagered = call(
             "play_room",
@@ -10570,6 +10841,33 @@ plays 2
         assert_eq!(parrondo_bad_policy["result"]["isError"], true);
         let parrondo_wrong_type = call("play_room", json!({"id": "parrondo", "policy_wager": 3}));
         assert_eq!(parrondo_wrong_type["result"]["isError"], true);
+        let dice_without_choice = call(
+            "play_room",
+            json!({"id": "nontransitive", "counter_wager": "c"}),
+        );
+        assert_eq!(dice_without_choice["result"]["isError"], true);
+        let dice_wrong_room = call("play_room", json!({"id": "lorenz", "die_choice": "a"}));
+        assert_eq!(dice_wrong_room["result"]["isError"], true);
+        let dice_bad_counter = call(
+            "play_room",
+            json!({
+                "id": "nontransitive",
+                "die_choice": "a",
+                "counter_wager": "d"
+            }),
+        );
+        assert_eq!(dice_bad_counter["result"]["isError"], true);
+        let dice_wrong_type = call("play_room", json!({"id": "nontransitive", "die_choice": 1}));
+        assert_eq!(dice_wrong_type["result"]["isError"], true);
+        let dice_two_choices = call(
+            "play_room",
+            json!({
+                "id": "nontransitive",
+                "die_choice": "a",
+                "pokes": [[0.5, 0.18]]
+            }),
+        );
+        assert_eq!(dice_two_choices["result"]["isError"], true);
         let multiple_wagers = call(
             "play_room",
             json!({

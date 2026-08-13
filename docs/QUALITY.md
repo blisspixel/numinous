@@ -9,11 +9,11 @@ built, so an aspiration is never mistaken for a result.
 ## Evidence snapshot, 2026-08-13
 
 - **Enforced now:** formatting, Clippy and rustdoc with warnings denied,
-  doctests, 3,503 passing all-target test cases plus three expensive ignored
+  doctests, 3,512 passing all-target test cases plus three expensive ignored
   diagnostics, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 95.11%
-  regions and 95.21% lines under the documented exclusions. Each of the four
+  three-OS test-and-build matrix. The current measured coverage is 95.09%
+  regions and 95.19% lines under the documented exclusions. Each of the four
   packaged release targets installs into a disposable root, renders Times
   Tables through the installed CLI, and completes modern MCP discovery, the
   exact 35-tool inventory, and a real `play_room` call from an isolated profile.

@@ -262,7 +262,9 @@ pub fn for_room(id: &str) -> &'static str {
         "witch-of-agnesi" | "witch-caustic" => {
             "See also: the witch of Agnesi; classical cubic curves."
         }
-        "nontransitive" => "See also: nontransitive dice and intransitive relations.",
+        "nontransitive" => {
+            "See also: Martin Gardner, The paradox of the nontransitive dice and the elusive principle of indifference, Scientific American 223(6), 110-115 (1970)."
+        }
         "parrondo" => {
             "See also: Harmer and Abbott, Losing strategies can win by Parrondo's paradox, Nature 402 (1999)."
         }

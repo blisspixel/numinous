@@ -43,7 +43,7 @@ your hands already know it:
 | | |
 |---|---|
 | A / D or arrows | previous / next room |
-| 1 - 9, 0 | jump straight to a room (0 is the tenth slot); while a Times Tables, Buffon, Double Pendulum, Kepler, or Parrondo aha asks for a call, the relevant digits place it instead |
+| 1 - 9, 0 | jump straight to a room (0 is the tenth slot); while a Times Tables, Buffon, Double Pendulum, Kepler, Parrondo, or Nontransitive Dice aha asks for a call, the relevant digits place it instead |
 | K | keep the pack: still + loop + README in one share folder |
 | O | cycle the visualizer source |
 | W / S | run time faster / slower |
@@ -324,7 +324,7 @@ input without hidden session state:
 | `list_rooms` | the catalog; start with `response_mode: "compact"` for a short doorway while retaining the complete structured room list |
 | `describe_room` | a room's story, action, and optional goal (some unlisted names also answer) |
 | `reveal_room` | the insight that reframes the room |
-| `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array; returns goal state and an earned reveal where available. On Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, and Parrondo's Trap also returns `engineeredAha`; optional `place_wager` / `number_wager` / `bin_wager` / `ending_wager` / `speed_wager` / `policy_wager` plus `aha_summon` walk generation-before-reveal without App session state |
+| `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array; returns goal state and an earned reveal where available. On Times Tables, Buffon, the Galton Board, Double Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice also returns `engineeredAha`; optional `place_wager` / `number_wager` / `bin_wager` / `ending_wager` / `speed_wager` / `policy_wager` / `counter_wager` plus `aha_summon` walk generation-before-reveal without App session state. Nontransitive Dice also accepts typed `die_choice` instead of coordinate input |
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
 | `predict` | predict a room's readout at a hidden moment; graded as a gap and a band, a self-owned mirror, never a score. Pass the same `seed` and `variation` to the pose and the guess so you are graded against the room you played |
 | `cairn` | read a message a mind before you left (factor its semiprime to read it), or at level 42 leave one true thing for a stranger not yet born |
@@ -407,13 +407,15 @@ Conventions worth relying on:
   or room departure and does not inherit the 24-launch replay bound.
 - **Flagship engineered aha (MCP).** Prefer `play_room` before `describe_room`
   or `reveal_room` on Times Tables, Buffon's Needle, the Galton Board, Double
-  Pendulum, Kepler Areas, or Parrondo's Trap so you do not skip the generation act. Pass `place_wager`
+  Pendulum, Kepler Areas, Parrondo's Trap, or Nontransitive Dice so you do not skip the generation act. Pass `place_wager`
   (`mandelbrot` | `nephroid` | `circle`), `number_wager` (1.5..4.5),
   `bin_wager` (0..16, the Galton pile's peak), or `ending_wager` (`together` |
   `drifted` | `lost`) after a Double Pendulum gesture containing a completed
   release, or `speed_wager` (`faster` | `slower` | `same`) after tuning Kepler
   Areas with a poke or completed gesture, or `policy_wager` (`a` | `b` | `abb`)
   after trying a Parrondo policy,
+  or `die_choice` (`a` | `b` | `c`) with `counter_wager` (`a` | `b` | `c`)
+  on Nontransitive Dice,
   then `aha_summon: true` to consolidate and unlock
   the punchline. Read `structuredContent.engineeredAha` for beat, earn, and
   allowReveal. The App path is the ordinary visit with bottom-band or key
@@ -424,6 +426,9 @@ Conventions worth relying on:
   equal-time marks that answer the call. Parrondo returns exact 120-turn
   expected capital for all three policies and draws distinct A, B, and ABB
   paths, so one lucky random walk never becomes the proof.
+  Nontransitive Dice returns all three face arrays, exact pairwise counts, and
+  the chosen counter's complete W/L grid, so one lucky roll never becomes the
+  proof.
 - **Structured output, and the substance is in it.** Catalog, description,
   reveal, listening, score, memory, game, and Journey results return bounded
   `structuredContent` alongside prose; parse that, not the sentences. All 354
