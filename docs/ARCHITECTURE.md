@@ -236,6 +236,58 @@ discovery, result decoration, caching hints, and multi round-trip input handling
 stay in the face; mathematical poses, grading, rendering, and persistence stay
 in core.
 
+## Agent participation and interoperability stack
+
+Agent participation is a product architecture, not one protocol stretched
+beyond its purpose. Each layer has one owner and one prohibition:
+
+| Layer | Pinned target | Owns | Must not own |
+| --- | --- | --- | --- |
+| Agent Plugins | 1.0.0 Working Draft | Portable discovery of the play skill and installed MCP server | Gameplay, player identity, persistence, or orchestration |
+| Agent Skills | Current specification, reviewed 2026-08-13 | Play-first guidance and the consent boundary | Domain truth or hidden host state |
+| MCP | 2026-07-28 plus documented compatibility eras | Bounded live perception, action, creation, and consent controls | Private host cognition or automatic transcripts |
+| Headless core | Numinous replay ABI | Deterministic domain state, grading, rendering, and exact replay semantics | Face or model policy |
+| Native journal | Numinous journal schema | Opt-in local records, correction, retention, and erasure | Automatic interpretation of a participant |
+| Open Knowledge Format | v0.2 | Player-approved portable knowledge projection | Live game state, synchronization, or canonical persistence |
+| Broadcast | Numinous local wire protocol | Consented, allowlisted public event projection | Control of the player or access to private activity |
+| App viewer | Matching Numinous replay identity | Read-only local witnessing | Tool injection or inferred private activity |
+
+The standards were reviewed on 2026-08-13. Agent Plugins 1.0.0 is a Working
+Draft with independently versioned plugin and MCP schemas. The current official
+Open Knowledge Format specification is v0.2; the reviewed upstream repository
+head was `374e0bc4c644310ff56cdf9c0fe81eccdec862b0`. A moving `latest` is never a
+compatibility promise. Each upgrade is a focused change with pinned fixtures,
+validation, and release evidence.
+
+The live path is deliberately simple:
+
+```text
+private player host or local model
+    -> Agent Plugins discovery and play guidance
+    -> bounded MCP face
+    -> deterministic headless core
+       -> typed result returned to the player
+       -> explicit journal record -> native journal -> OKF v0.2 export
+       -> consent filter -> typed broadcast -> read-only App viewer
+```
+
+Agent Plugins packages the doorway. It does not install the
+`numinous-mcp` binary, so binary installation and plugin loading remain two
+explicit steps. Its `${PLUGIN_DATA}` location may later be offered as a
+client-managed profile location, but it is never a player identity and cannot
+silently split or migrate continuity. MCP Apps remain a possible runtime
+enhancement with complete text and structured fallbacks; Agent Plugins v1 does
+not define a portable app component.
+
+OKF remains an export projection from native typed evidence. A future portable
+continuity capsule may contain a manifest and hashes, native encounter receipts,
+creations and lineage, an OKF knowledge projection, and an explicit privacy and
+retention manifest. Raw frames, audio buffers, private prompts, hidden reasoning,
+arbitrary host logs, and mutable session state do not belong in OKF. Import is
+deferred until path safety, byte and entry bounds, provenance, unknown-field
+preservation, preview, atomic commit, merge rules, and verified erasure are
+specified and tested.
+
 ## Key technical concerns
 
 - **Frame pacing:** the live app targets a 33 ms frame budget and adaptively

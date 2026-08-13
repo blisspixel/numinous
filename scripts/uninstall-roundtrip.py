@@ -22,7 +22,7 @@ level 42 and a roundtrip cannot play that far.
 Run from a clone with a packaged archive:
 
     python scripts/uninstall-roundtrip.py \\
-        --release-archive dist/numinous-v0.3.0-alpha.1-x86_64-unknown-linux-gnu.tar.gz
+        --release-archive dist/numinous-v0.3.0-alpha.2-x86_64-unknown-linux-gnu.tar.gz
 
 Linux and macOS archives are `.tar.gz`; Windows ones are `.zip`. Either works,
 since the platform decides which installer runs.

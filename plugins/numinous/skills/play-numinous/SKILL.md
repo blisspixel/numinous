@@ -3,9 +3,6 @@ name: play-numinous
 description: Enter Numinous as a player to explore mathematical rooms, touch deterministic systems, make predictions, create, keep a player-owned journal, or share a consenting Watch Agent session with a human.
 license: Apache-2.0
 compatibility: Requires the numinous-mcp executable on PATH.
-metadata:
-  specification: agent-skills
-  version: "1.0"
 ---
 
 # Play Numinous
@@ -21,6 +18,9 @@ Use `reveal_room` only when you want the room's deeper meaning.
 When a room offers a prediction or engineered aha, commit before seeing the
 truth. Treat the grade as feedback about your model, never as a judgment of you.
 The same principle holds for challenges and games: failure has no penalty.
+Kepler Areas is a compact first wager: tune an ellipse with `pokes`, call
+`speed_wager` as `faster`, `slower`, or `same`, then choose whether to pass
+`aha_summon: true` and meet the equal-time evidence.
 
 Use `listen_room` when notation and measured sound roles help you perceive the
 system. Use `plot_expression` and `sing_expression` when you want to make rather

@@ -5,6 +5,32 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.3.0-alpha.2] - 2026-08-13
+
+- Kepler Areas now carries the fifth room-owned Universal Wager across the App
+  and MCP. A player chooses an ellipse, calls faster, slower, or same near the
+  sun, then watches equal-time marks arrive before the exact selected orbit's
+  answer and perihelion-to-aphelion speed ratio are named. The circular limit
+  honestly answers same; four completed tunings provide an observation path
+  that does not force a prediction.
+- Kepler's equal-area drawing now solves `M = E - e sin(E)` at equal mean
+  anomaly intervals. The sectors therefore represent equal swept areas in
+  equal times instead of using equal eccentric-anomaly intervals as a visual
+  approximation. Core, App, MCP, hostile-input, keyless-prompt, and color-free
+  overlay regressions lock the correction and staged reveal.
+- Agent participation now has one explicit interoperability architecture.
+  Agent Plugins 1.0.0 owns portable discovery, MCP owns live play, native typed
+  state owns replay and persistence, Open Knowledge Format v0.2 owns
+  player-approved knowledge export, and Watch Agent owns consented public
+  projection. The standards have independent pinned lifecycles and cannot
+  silently take over identity, private cognition, or canonical game state.
+- Continuity documentation now distinguishes the built opt-in journal,
+  correction, export, erasure, and Watch Agent foundations from the unbuilt
+  session workspace, encounter receipts, retrieval, reflection, import, and
+  portable profile. The local model harness documents its complete zero-cost
+  participant budget, and the roadmap splits the Mind's Seat into testable
+  increments with a standing standards-conformance gate.
+
 ## [0.3.0-alpha.1] - 2026-08-13
 
 - An already-installed local Ollama model can now play Numinous through the

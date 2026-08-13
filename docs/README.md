@@ -5,7 +5,7 @@ The map of the blueprint. Use the reading paths to find your way in, and the
 that owns it; every other doc links to that home rather than restating it. If
 you find yourself duplicating a concept, stop and link instead.
 
-Status: **0.3.0-alpha.1.** The 0.1 Public Foundation is complete, and the 0.2
+Status: **0.3.0-alpha.2.** The 0.1 Public Foundation is complete, and the 0.2
 Flagship Proof and 0.3 Tactile Alpha agent-and-machine exits are met. The
 headless core, CLI, MCP server, windowed App, GPU and audio adapters, 354 catalog
 rooms plus hidden content, 6 sims, 11+ games, Journey, standard-controller
@@ -21,9 +21,10 @@ Open Knowledge Format v0.2 export, and confirmed erase.
 
 **Critical path now:** finish the Universal Wager and its flagship ahas. The
 generic call is available through all three faces; Times Tables, Buffon's
-Needle, Galton Board, and Double Pendulum carry staged five-beat ahas across the
-App and MCP. The pendulum wager is graded against the exact released trajectory,
-not a default stand-in. Kepler is next, then Parrondo and the nontransitive dice.
+Needle, Galton Board, Double Pendulum, and Kepler Areas carry staged five-beat
+ahas across the App and MCP. Kepler binds its speed call to the ellipse the
+player chose and draws positions spaced by equal time. Parrondo is next, then
+the nontransitive dice.
 Mind's Seat presence and retrieval follow, then the measured Sensory Lift spike. The 0.4
 Understanding Alpha cohort waits on an owner ruling; its method dry-run and
 dual automated auditors are already in CI. Soft-thin densify, bulk new rooms,

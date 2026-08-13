@@ -11,7 +11,7 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
 **Implementation boundary, 2026-07-18:** all three faces are shipped from the
-same headless core in 0.3.0-alpha.1. Descriptions below mix current behavior
+same headless core in 0.3.0-alpha.2. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
 
@@ -250,11 +250,13 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   until accepted K=5 input closes four lobes. The earned response then includes
   the same reveal the App points to. Ambient phase alone cannot earn it.
 - **Engineered aha wagers, MCP slice (built):** on Times Tables, Buffon's
-  Needle, the Galton Board, and Double Pendulum, `play_room` always includes
+  Needle, the Galton Board, Double Pendulum, and Kepler Areas, `play_room`
+  always includes
   `structuredContent.engineeredAha` with beat, status, earn, allowReveal, and
   canSummon. Optional `place_wager` (`mandelbrot` | `nephroid` | `circle`),
-  `number_wager` (finite, 1.5..4.5), `bin_wager` (0..16), or `ending_wager`
-  (`together` | `drifted` | `lost`) is a generation act. Each committed wager
+  `number_wager` (finite, 1.5..4.5), `bin_wager` (0..16), `ending_wager`
+  (`together` | `drifted` | `lost`), or `speed_wager` (`faster` | `slower` |
+  `same`) is a generation act. Each committed wager
   comes back typed beside its truth and one graded sentence, with a band where
   the room's model uses one, because a commitment that is collected and never
   answered is theater. Double Pendulum requires a completed release event and
@@ -269,6 +271,8 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   fail-closed on wrong rooms or hostile values. App F9 notes and
   `scripts/agent-hallway.py` exercise the same five-beat story for human
   facilitators and agent cohorts; agent notes are not a human stranger gate.
+  Kepler requires a chosen ellipse, answers the circular limit as same, and
+  otherwise returns faster plus the exact perihelion-to-aphelion speed ratio.
 - **Compatibility-preserving compact output (built):** every play-tool schema
   accepts `response_mode: "full" | "compact"`; the local broadcast consent
   control intentionally does not. The argument is stripped before domain
@@ -295,6 +299,34 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   today.
 - **Interactive surfaces, planned:** an MCP App panel can later carry a rendered
   room where hosts support it. No app resource or interactive panel ships now.
+
+### Interoperability standards boundary
+
+The agent-facing standards are complementary. They do not share one release
+clock, and Numinous pins each compatibility target instead of promising an
+unqualified latest version.
+
+| Standard | Current use | Not used for |
+| --- | --- | --- |
+| Agent Plugins 1.0.0 Working Draft | Portable package discovery, installed MCP launch declaration, and play guidance | Gameplay, identity, journal ownership, model orchestration, or MCP Apps |
+| MCP 2026-07-28 plus retained compatibility | Live bounded play, creation, journal tools, and consent controls | Hidden memory, host cognition, or automatic transcripts |
+| Open Knowledge Format v0.2 | Player-approved journal and knowledge export | Live game state, replay protocol, private reasoning, or binary media |
+| Native Numinous schemas | Deterministic replay, authoritative journal records, erasure, and creation lineage | Cross-product plugin discovery |
+| Watch Agent protocol | Consented one-way public projection to a local observer | Player control, private activity, or transcript capture |
+
+The portable plugin and the executable have separate installation lifecycles.
+The plugin's bare `numinous-mcp` command requires the matching installed binary
+on `PATH`. Client-managed `${PLUGIN_DATA}` storage is not an identity and is not
+used until profile sharing, migration, export, uninstall, and erase semantics
+are designed. MCP Apps are an MCP runtime extension, not an Agent Plugins v1
+component, and every future interactive surface must retain full text and
+structured fallbacks.
+
+The Open Knowledge Format v0.2 target was reviewed on 2026-08-13 against
+upstream repository head `374e0bc4c644310ff56cdf9c0fe81eccdec862b0`.
+Numinous's native journal remains the source of truth. A new OKF revision gets a
+new explicit export value and compatibility change; `okf-0.2` never changes
+meaning in place.
 
 ### Local MCP session broadcast, native room, Studio, Nim, and sound replay, and subprocess proof built
 
@@ -369,6 +401,14 @@ Describe Room, Crack, SETI, or Quiz would reveal private Journey level or boon
 choices; those four already use a deterministic baseline projection instead.
 The viewer never receives the guest's prompts, private reasoning, host logs,
 client metadata, environment, or arbitrary JSON-RPC traffic.
+
+There are two distinct witnessing surfaces. Native Watch Agent receives only
+allowlisted Numinous actions and results after the player consents. The local
+agent playtest terminal may display words the player deliberately makes visible
+to that facilitator harness. It is not the native broadcast and does not expand
+Watch Agent's policy. Opening the viewer is not player consent, pausing the
+human display is not pausing the player's broadcast, and observer silence
+cannot reveal whether private activity occurred.
 
 The implementation has these hard boundaries:
 
@@ -588,7 +628,7 @@ scripts exercise the same surface in local validation.
 
 ## Roadmap position
 
-- **Built by 0.3.0-alpha.1:** the headless core, full-color CLI, native app, and
+- **Built by 0.3.0-alpha.2:** the headless core, full-color CLI, native app, and
   bounded MCP server expose the shared catalog, play, creation, prediction,
   challenge, learning, progression, and export foundations.
 - **0.3 through 0.6:** deepen tactile behavior, understanding, sensory polish,

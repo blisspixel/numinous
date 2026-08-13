@@ -137,8 +137,18 @@ arrive last and confirm what the player already felt.
   without demanding a prediction. The fertile miss is together: determinism
   is real, yet it does not grant a useful forecast. Core:
   `rooms/pendulum_aha.rs` and `rooms/double_pendulum.rs`.
+- **Kepler Areas to equal time (the fifth flagship).** One completed tuning
+  primes faster, slower, or same near the sun. The App maps those relations to
+  keys and a bottom band; MCP uses `speed_wager` after a poke or completed
+  gesture. The call binds to the selected eccentricity. A circle truthfully
+  answers same because it has no nearer side; a noncircular ellipse answers
+  faster and reports the exact perihelion-to-aphelion speed ratio. The morph
+  places positions at equal mean-anomaly intervals, found by solving Kepler's
+  equation, so spacing rather than prose reveals the speed change. Four
+  completed tunings earn the observation path without forcing a prediction.
+  Core: `rooms/kepler_aha.rs` and `rooms/kepler_laws.rs`.
 
-- **Every other room, through one shared engine.** The four staged ahas are
+- **Every other room, through one shared engine.** The five staged ahas are
   hand-built beat by beat, and they should be: a bespoke arc outranks a
   generic one where it exists. But the commitment mechanic itself is not
   bespoke. `predict` poses a deterministic question for any room with a
@@ -148,7 +158,7 @@ arrive last and confirm what the player already felt.
   key and committed with Enter, and speaks one sentence naming what the room
   actually read. The truth is named whichever way the call went. The
   flagship rooms refuse the generic call and say so. This is how the wager
-  arc stops being three rooms and starts being the product's grammar.
+  arc stops being a few rooms and becomes the product's grammar.
 
 ## The mechanic library
 

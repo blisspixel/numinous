@@ -42,7 +42,7 @@ def sample_release(target: str | None = None) -> dict[str, Any]:
         "archiveSha256": "a" * 64,
         "commit": "b" * 40,
         "target": target or SESSION.expected_target(),
-        "version": "0.3.0-alpha.1",
+        "version": "0.3.0-alpha.2",
         "binaries": binary_hashes,
     }
 
@@ -87,7 +87,7 @@ def sample_receipt(
             "archiveVerified": True,
             "installedPayloadMatch": True,
             "cliMcpEngagement": True,
-            "cliMcpVersion": "0.3.0-alpha.1",
+            "cliMcpVersion": "0.3.0-alpha.2",
         },
         "appLifecycle": {
             "firstLaunchExitCode": 0,
@@ -172,7 +172,7 @@ class InputHardwareSessionTests(unittest.TestCase):
                     f"binary-{index}".encode("ascii")
                 )
             archive, checksum = SESSION.PACKAGE.build_archive(
-                "0.3.0-alpha.1",
+                "0.3.0-alpha.2",
                 SESSION.expected_target(),
                 "binaries",
                 binary_dir,
@@ -214,7 +214,7 @@ class InputHardwareSessionTests(unittest.TestCase):
                     f"replacement-{name}".encode("ascii")
                 )
             original_archive, original_checksum = SESSION.PACKAGE.build_archive(
-                "0.3.0-alpha.1",
+                "0.3.0-alpha.2",
                 SESSION.expected_target(),
                 "binaries",
                 original_bin,
@@ -223,7 +223,7 @@ class InputHardwareSessionTests(unittest.TestCase):
                 ROOT,
             )
             replacement_archive, _replacement_checksum = SESSION.PACKAGE.build_archive(
-                "0.3.0-alpha.1",
+                "0.3.0-alpha.2",
                 SESSION.expected_target(),
                 "binaries",
                 installed_bin,
@@ -285,7 +285,7 @@ class InputHardwareSessionTests(unittest.TestCase):
                 with mock.patch.object(
                     SESSION.SMOKE,
                     "run_engagement_smoke",
-                    return_value="0.3.0-alpha.1",
+                    return_value="0.3.0-alpha.2",
                 ) as smoke:
                     with mock.patch.object(
                         SESSION.SMOKE,
