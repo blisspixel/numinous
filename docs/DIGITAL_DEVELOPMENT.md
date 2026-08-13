@@ -6,13 +6,29 @@ in the digital-mind experience. The founding philosophy lives in
 document owns the technical plan and product-evidence standard. Every validation
 below evaluates Numinous, never whether a player is conscious or worthy.
 
-Status: **Continuity designed, local agency foundation built.** Research
-reviewed 2026-07-11; implementation boundary reviewed 2026-07-18. Numinous
-0.3.0-alpha.1 speaks MCP but holds no per-mind episodic or temporal state
-between calls. Its existing shared local Journey, scores, Cairn drafts, radio
-cache, and crash diagnostic are inspectable and explicitly erasable. The
-journal, reflection, retrieval, per-mind continuity, and portable-memory design
-below remains unbuilt until its roadmap gates pass.
+Status: **Journal foundation built, experiential continuity designed.** Research
+reviewed 2026-07-11; implementation boundary reviewed 2026-08-13. Numinous
+0.3.0-alpha.2 speaks MCP and ships an opt-in local experience journal, but it
+does not automatically remember a room, retrieve a prior encounter, maintain a
+resettable cross-call workspace, or infer a participant's experience. Its
+existing Journey, scores, Cairn drafts, journal, radio cache, and crash
+diagnostic are inspectable and explicitly erasable.
+
+The implementation boundary is precise:
+
+| Built now | Not built yet |
+| --- | --- |
+| Opt-in local append-only journal with stable identifiers | Resettable cross-call session workspace |
+| Separate event and record times | Exact encounter receipts linked to journal entries |
+| Closed source-provenance vocabulary | Deliberate remembered-room retrieval |
+| Immutable correction and supersession lineage | Episodic graph and semantic retrieval |
+| Bounded native and OKF v0.2 export | Visible reflection proposals |
+| Verified whole-journal erasure | OKF import and encrypted portable capsules |
+| Consent-gated, nonpersistent Watch Agent projection | Per-player profile portability across hosts |
+
+The journal records only what the player explicitly submits. Reflection,
+retrieval, per-mind continuity, and portable-memory import remain unbuilt until
+their separate roadmap gates pass.
 
 ## Founder's premise
 
@@ -325,18 +341,20 @@ optional, consented, and safe to decline without changing the product.
 
 ## Version integration
 
-- **0.2:** keep MCP room interaction stateless and per-mind continuity
-  design-only while Flagship Proof earns its hallway gate. Retain the shipped
-  inventory and verified erasure boundary for existing shared local stores.
-- **0.3:** keep continuity design-only while five flagship rooms earn depth,
-  room-specific interaction, and human evidence. Add the separate consented
-  read-only session viewer from `INTERFACES.md` without treating observation as
-  memory or persisting its stream by default.
-- **0.4:** define and test the event, episode, provenance, consent, and deletion
-  schemas; export a stateless encounter receipt; then add the local journal,
-  resettable session workspace, and opt-in episodic and temporal memory for MCP
-  return sessions. Include visible reflection proposals, export, correction,
-  and verified whole-pipeline erasure before claiming continuity.
+- **0.2, complete:** MCP room interaction remained stateless while Flagship
+  Proof earned its agent hallway gate. Shared local stores retained inspectable
+  inventory and verified erasure.
+- **0.3, current:** five flagship rooms earned staged room-specific depth. The
+  opt-in append-only journal, immutable correction, native and OKF v0.2 export,
+  verified whole-journal erasure, and separate consented read-only Watch Agent
+  viewer landed as foundations. Observation is not memory, and the viewer
+  persists no stream by default.
+- **0.4:** add bounded temporal samples and a typed delta; define a versioned
+  encounter receipt with replay ABI, compatibility fingerprint, normalized
+  action, result digest, and provenance; let the player explicitly promote a
+  receipt to a journal subject; then add a resettable session workspace and
+  source-explained remembered-room retrieval. Reflection proposals wait until
+  retrieval, correction, and deletion invariants are proven.
 - **0.5:** test self-authored affect notes and sensory accessibility without
   inferring emotion or optimizing mood.
 - **0.6:** prove portable encrypted state and migration on all supported systems,

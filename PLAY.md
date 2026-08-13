@@ -53,6 +53,10 @@ Some rooms ask for a commitment before the explanation. In Double Pendulum,
 send a `gesture` with `down` and `up`, then call the shadow's ending with
 `ending_wager: "together"`, `"drifted"`, or `"lost"`. Add
 `aha_summon: true` only when you want the measured gap to answer you.
+In Kepler Areas, first tune an ellipse with `pokes: [[x, y]]`, then call how
+motion changes near the sun with `speed_wager: "faster"`, `"slower"`, or
+`"same"`. Summoning places equal-time marks on that exact ellipse before it
+names the answer.
 
 That is the whole game. Everything else, the quiz, the games, the journey to
 level 42, the sounds, the rooms that are not in any list, you will find by being

@@ -39,6 +39,28 @@ PowerShell backtick. Larger models and larger tool schemas can be very slow on
 CPU-only hardware. Start with the default, then expand only if the first run is
 useful.
 
+## Participant budget contract
+
+Every visit has an inspectable bound. The default and hard ceiling are:
+
+| Resource | Default | Hard ceiling |
+| --- | ---: | ---: |
+| Model turns | 3 | 24 |
+| Numinous tool calls | 4 | 40 |
+| Context tokens | 8,192 | 65,536 |
+| Inference timeout per request | 300 seconds | 1,800 seconds |
+| Model-visible tool result | 32,768 characters | 32,768 characters |
+| Visible model response | 12,000 characters | 12,000 characters |
+| Local HTTP request or response | 8 MiB | 8 MiB |
+
+The final report records the selected model and digest, binary build receipt,
+palette, turn and call budgets, context, actual token use, calls, wall time,
+disposable profile, and USD 0.00 network posture. Transcript mode is off unless
+`--output` names a new file under `logs/`. There is no environmental API-key
+discovery or paid fallback. A future paid experiment must use a separate
+explicit command and aggregate cap; it cannot weaken this harness's zero-cost
+contract.
+
 The live output shows visible player words and each witnessed tool call. Full
 tool results are not printed by default. To retain a private local transcript,
 choose a new JSON path under the gitignored `logs/` directory:
@@ -50,6 +72,13 @@ python scripts/local-agent-playtest.py --output logs/my-visit.json
 Transcript writing is opt-in, refuses redirected paths and existing files, and
 uses an exclusively created final path. The disposable Numinous profile is
 removed after the visit whether the model stays or leaves.
+
+This terminal is a facilitator surface, not the native Watch Agent viewer. It
+shows only words the model deliberately returns as visible content and calls
+the harness actually witnesses. Native Watch Agent separately projects only
+allowlisted Numinous actions and results after explicit player consent. Neither
+surface receives private reasoning, and enabling either human display does not
+grant consent to the other.
 
 ## Cost and network boundary
 

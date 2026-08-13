@@ -72,7 +72,7 @@ with the install. Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 
 ## Status
 
-**0.3.0-alpha.1** is playable today: 354 catalog rooms, games, Journey,
+**0.3.0-alpha.2** is playable today: 354 catalog rooms, games, Journey,
 Studio, controllers, and Watch Agent (consented local MCP session viewing).
 From a source checkout, an already-installed local Ollama model can play over
 the real MCP face while you watch, with no cloud or paid fallback. See
@@ -85,11 +85,11 @@ tactile, first-contact, flagship goldens). The
 player-facing **Polish Wave** work landed across all seven workstreams, while
 scheduled structural cleanup continues. Active work is the **Universal
 Wager**: every room with a moving readout can be called before you look,
-through the same engine the flagship ahas use, with the Galton Board joining
-Times Tables and Buffon's Needle as a staged five-beat aha. Double Pendulum now
-joins them across the App and MCP: release the arms, call where the deterministic
-shadow ends, then meet the gap measured from that exact release. Kepler is the
-next room-owned aha, followed by Parrondo and the nontransitive dice. The
+through the same engine the flagship ahas use. Five rooms now carry their own
+staged arc across the App and MCP. Kepler Areas lets a player choose an ellipse,
+call faster, slower, or same near the sun, then meet equal-time marks and the
+exact apsidal speed ratio for that orbit. Parrondo is next, followed by the
+nontransitive dice. The
 **Mind's Seat** (time, company, and memory over MCP) follows, with
 the **Sensory Lift** entering behind a de-risk spike; the 0.4
 Understanding Alpha cohort waits on an owner ruling (method dry-run and dual

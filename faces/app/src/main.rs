@@ -57,6 +57,8 @@ const TIMES_TABLES_MORPH_SECONDS: f64 = 1.6;
 const BUFFON_MORPH_SECONDS: f64 = 1.6;
 /// Wall time for the Double Pendulum divergence-curve morph beat.
 const PENDULUM_MORPH_SECONDS: f64 = 1.6;
+/// Wall time for the Kepler equal-time-mark morph beat.
+const KEPLER_MORPH_SECONDS: f64 = 1.6;
 
 /// Blend `prev` into `dest` with `weight` of the previous frame in [0, 1].
 fn blend_rgba(dest: &mut [u8], prev: &[u8], weight: f32) {
@@ -409,6 +411,8 @@ struct App {
     galton_aha: numinous_core::rooms::galton_aha::GaltonAha,
     /// Staged Double Pendulum aha: call where the deterministic twin ends.
     pendulum_aha: numinous_core::rooms::pendulum_aha::PendulumAha,
+    /// Staged Kepler aha: call how speed changes near the sun.
+    kepler_aha: numinous_core::rooms::kepler_aha::KeplerAha,
     /// The universal readout wager, while one is posed on this room.
     room_wager: Option<wager::RoomWager>,
     rooms: Vec<Box<dyn Room>>,
@@ -576,6 +580,7 @@ impl App {
             buffon_aha: numinous_core::rooms::buffon_aha::BuffonAha::new(),
             galton_aha: numinous_core::rooms::galton_aha::GaltonAha::new(),
             pendulum_aha: numinous_core::rooms::pendulum_aha::PendulumAha::new(0),
+            kepler_aha: numinous_core::rooms::kepler_aha::KeplerAha::new(0.0),
             room_wager: None,
             rooms: all_rooms_with(0),
             current: 0,
@@ -1755,6 +1760,17 @@ impl App {
                 aha_plate: aha.uses_curve_overlay(),
             });
         }
+        if self.current_room_is_kepler() {
+            let aha = &self.kepler_aha;
+            return Some(playtest::FlagshipAhaNote {
+                beat: aha.beat_label().to_string(),
+                status: aha.status(None),
+                earn: aha.earn_label().unwrap_or_else(|| "none".to_string()),
+                allow_reveal: aha.allow_reveal_text(),
+                can_summon: aha.can_summon(),
+                aha_plate: aha.uses_time_overlay(),
+            });
+        }
         None
     }
 
@@ -2394,6 +2410,23 @@ impl App {
                         return;
                     }
                 }
+                // Kepler bottom band: call the near-sun speed relation without
+                // changing the ellipse underneath the commitment.
+                if self.current_room_is_kepler()
+                    && !self.the_show
+                    && point.1 >= numinous_core::rooms::kepler_aha::WAGER_BAND_Y
+                    && matches!(
+                        self.kepler_aha.beat(),
+                        numinous_core::rooms::kepler_aha::AhaBeat::Prime
+                    )
+                {
+                    let relation =
+                        numinous_core::rooms::kepler_aha::SpeedRelation::from_unit_x(point.0);
+                    if self.commit_kepler_call(relation) {
+                        self.poking = false;
+                        return;
+                    }
+                }
                 // A posed call owns its band: a press there commits the
                 // call instead of touching the room underneath.
                 if !self.the_show
@@ -2428,6 +2461,7 @@ impl App {
                 self.sync_buffon_aha();
                 self.sync_galton_aha();
                 self.sync_pendulum_aha();
+                self.sync_kepler_aha();
                 if self.rooms[self.current].meta().id == "mandelbrot"
                     && let Some(window) = &self.window
                 {
@@ -2494,6 +2528,21 @@ impl App {
                 self.pendulum_aha.set_hover(None);
             }
         }
+        if self.current_room_is_kepler()
+            && !self.the_show
+            && matches!(
+                self.kepler_aha.beat(),
+                numinous_core::rooms::kepler_aha::AhaBeat::Prime
+            )
+        {
+            if point.1 >= numinous_core::rooms::kepler_aha::WAGER_BAND_Y {
+                self.kepler_aha.set_hover(Some(
+                    numinous_core::rooms::kepler_aha::SpeedRelation::from_unit_x(point.0),
+                ));
+            } else {
+                self.kepler_aha.set_hover(None);
+            }
+        }
         if !self.the_show
             && self.room_wager.as_ref().is_some_and(wager::RoomWager::open)
             && point.1 >= wager::WAGER_BAND_Y
@@ -2523,6 +2572,7 @@ impl App {
             self.sync_buffon_aha();
             self.sync_galton_aha();
             self.sync_pendulum_aha();
+            self.sync_kepler_aha();
             self.sync_room_parameter_voice();
             self.play_room_interaction_audio(accepted);
         }
@@ -2548,6 +2598,7 @@ impl App {
         self.sync_buffon_aha();
         self.sync_galton_aha();
         self.sync_pendulum_aha();
+        self.sync_kepler_aha();
         self.sync_room_parameter_voice();
         self.play_room_interaction_audio(accepted);
     }
@@ -3452,6 +3503,7 @@ impl App {
         self.reset_buffon_aha();
         self.reset_galton_aha();
         self.reset_pendulum_aha();
+        self.reset_kepler_aha();
         // A call is about one room's readout; carrying it across the
         // doorway would grade the wrong number.
         self.room_wager = None;
@@ -3584,6 +3636,10 @@ impl App {
         self.rooms[self.current].meta().id == "double-pendulum"
     }
 
+    fn current_room_is_kepler(&self) -> bool {
+        self.rooms[self.current].meta().id == "kepler-laws"
+    }
+
     fn current_status_override(&self, width: usize) -> Option<String> {
         if self.current_room_is_life() {
             return Some(if width <= 400 {
@@ -3613,6 +3669,13 @@ impl App {
                 .status_input(phase, &self.inputs)
                 .or_else(|| self.rooms[self.current].status(phase));
             return Some(self.pendulum_aha.status(readout.as_deref()));
+        }
+        if self.current_room_is_kepler() && !self.the_show {
+            let phase = effective_room_phase("kepler-laws", self.t, &self.inputs, self.the_show);
+            let readout = self.rooms[self.current]
+                .status_input(phase, &self.inputs)
+                .or_else(|| self.rooms[self.current].status(phase));
+            return Some(self.kepler_aha.status(readout.as_deref()));
         }
         if let Some(posed) = &self.room_wager {
             return Some(posed.status());
@@ -3654,6 +3717,18 @@ impl App {
         }
     }
 
+    fn reset_kepler_aha(&mut self) {
+        let eccentricity = numinous_core::rooms::kepler_laws::eccentricity_for_inputs(
+            self.t,
+            &self.inputs,
+            self.variation,
+        );
+        self.kepler_aha = numinous_core::rooms::kepler_aha::KeplerAha::new(eccentricity);
+        if self.current_room_is_kepler() {
+            self.show_info = false;
+        }
+    }
+
     /// U poses the room's own prediction, or closes an open one.
     ///
     /// Every room with a moving numeric readout can be called, which is
@@ -3671,6 +3746,7 @@ impl App {
             || self.current_room_is_buffon()
             || self.current_room_is_galton()
             || self.current_room_is_pendulum()
+            || self.current_room_is_kepler()
         {
             self.banner = Some(feedback::Banner::status(
                 "THIS ROOM STAGES ITS OWN WAGER",
@@ -3770,6 +3846,25 @@ impl App {
         self.pendulum_aha.note_drops(drops);
     }
 
+    /// Keep the Kepler aha bound to the ellipse chosen by completed drags.
+    fn sync_kepler_aha(&mut self) {
+        if !self.current_room_is_kepler() || self.the_show {
+            return;
+        }
+        let eccentricity = numinous_core::rooms::kepler_laws::eccentricity_for_inputs(
+            self.t,
+            &self.inputs,
+            self.variation,
+        );
+        let _ = self.kepler_aha.bind_eccentricity(eccentricity);
+        let tunings = self
+            .inputs
+            .iter()
+            .filter(|input| matches!(input, numinous_core::RoomInput::PointerUp { .. }))
+            .count();
+        self.kepler_aha.note_tunings(tunings);
+    }
+
     /// E / Inspect: summon staged aha on flagship rooms; elsewhere toggle reveal.
     fn toggle_inspect(&mut self) {
         if self.the_show || self.studio {
@@ -3837,6 +3932,23 @@ impl App {
                 || matches!(self.pendulum_aha.beat(), AhaBeat::Morph { .. })
             {
                 if self.pendulum_aha.summon() {
+                    self.show_info = false;
+                }
+                return;
+            }
+            self.show_info = false;
+            return;
+        }
+        if self.current_room_is_kepler() {
+            use numinous_core::rooms::kepler_aha::AhaBeat;
+            if self.kepler_aha.allow_reveal_text() {
+                self.show_info = !self.show_info;
+                return;
+            }
+            if self.kepler_aha.can_summon()
+                || matches!(self.kepler_aha.beat(), AhaBeat::Morph { .. })
+            {
+                if self.kepler_aha.summon() {
                     self.show_info = false;
                 }
                 return;
@@ -3976,6 +4088,42 @@ impl App {
         }
         self.pendulum_aha
             .advance_morph(elapsed / PENDULUM_MORPH_SECONDS);
+    }
+
+    fn commit_kepler_call(
+        &mut self,
+        relation: numinous_core::rooms::kepler_aha::SpeedRelation,
+    ) -> bool {
+        if !self.current_room_is_kepler() || self.the_show {
+            return false;
+        }
+        if self.kepler_aha.commit_call(relation) {
+            self.show_info = false;
+            self.banner = Some(feedback::Banner::status(
+                format!("CALLED {}", relation.name()),
+                90,
+            ));
+            true
+        } else {
+            false
+        }
+    }
+
+    fn advance_kepler_morph(&mut self, elapsed: f64) {
+        if !self.current_room_is_kepler() || self.the_show || self.paused {
+            return;
+        }
+        if !matches!(
+            self.kepler_aha.beat(),
+            numinous_core::rooms::kepler_aha::AhaBeat::Morph { .. }
+        ) {
+            return;
+        }
+        if !elapsed.is_finite() || elapsed <= 0.0 {
+            return;
+        }
+        self.kepler_aha
+            .advance_morph(elapsed / KEPLER_MORPH_SECONDS);
     }
 
     fn record_room_touch(&mut self, point: (f64, f64)) -> bool {
@@ -4319,6 +4467,30 @@ impl App {
                         );
                     }
                 }
+                if room.meta().id == "kepler-laws" && !self.the_show {
+                    if matches!(
+                        self.kepler_aha.beat(),
+                        numinous_core::rooms::kepler_aha::AhaBeat::Prime
+                    ) {
+                        numinous_core::rooms::kepler_aha::render_speed_band(
+                            &mut raster,
+                            self.kepler_aha.hover(),
+                        );
+                    }
+                    if self.kepler_aha.uses_time_overlay() {
+                        let progress = match self.kepler_aha.beat() {
+                            numinous_core::rooms::kepler_aha::AhaBeat::Morph { progress } => {
+                                progress
+                            }
+                            _ => 1.0,
+                        };
+                        numinous_core::rooms::kepler_aha::render_equal_time_overlay(
+                            &mut raster,
+                            progress,
+                            self.kepler_aha.eccentricity(),
+                        );
+                    }
+                }
                 if !self.the_show
                     && let Some(posed) = &self.room_wager
                 {
@@ -4390,11 +4562,15 @@ impl App {
             && (self.the_show
                 || (!self.current_room_is_times_tables()
                     && !self.current_room_is_buffon()
-                    && !self.current_room_is_pendulum())
+                    && !self.current_room_is_galton()
+                    && !self.current_room_is_pendulum()
+                    && !self.current_room_is_kepler())
                 || (self.current_room_is_times_tables()
                     && self.times_tables_aha.allow_reveal_text())
                 || (self.current_room_is_buffon() && self.buffon_aha.allow_reveal_text())
-                || (self.current_room_is_pendulum() && self.pendulum_aha.allow_reveal_text()));
+                || (self.current_room_is_galton() && self.galton_aha.allow_reveal_text())
+                || (self.current_room_is_pendulum() && self.pendulum_aha.allow_reveal_text())
+                || (self.current_room_is_kepler() && self.kepler_aha.allow_reveal_text()));
         hud::draw_room_chrome(
             raster,
             room,
@@ -5013,6 +5189,21 @@ impl ApplicationHandler for App {
                                 let _ = self.commit_pendulum_call(ending);
                             }
                         }
+                        // Kepler speed call: 1 faster, 2 slower, 3 same.
+                        Key::Character(c)
+                            if matches!(c.as_str(), "1" | "2" | "3")
+                                && self.current_room_is_kepler()
+                                && !self.the_show =>
+                        {
+                            let digit = c.as_str().as_bytes()[0].saturating_sub(b'0');
+                            if let Some(relation) =
+                                numinous_core::rooms::kepler_aha::SpeedRelation::from_key_digit(
+                                    digit,
+                                )
+                            {
+                                let _ = self.commit_kepler_call(relation);
+                            }
+                        }
                         // Q swaps the era, like swapping weapons.
                         Key::Character(c) if c.as_str() == "q" => {
                             self.era = self.era.next();
@@ -5353,6 +5544,7 @@ impl ApplicationHandler for App {
             self.advance_buffon_morph(elapsed);
             self.advance_galton_morph(elapsed);
             self.advance_pendulum_morph(elapsed);
+            self.advance_kepler_morph(elapsed);
         }
         if !(self.paused || self.dragging || self.show_help && self.modal_mode_active()) {
             let motion = self.time_scale * self.visualizer_scale;
@@ -5818,6 +6010,16 @@ mod tests {
         app.reset_pendulum_aha();
     }
 
+    fn select_kepler(app: &mut App) {
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "kepler-laws")
+            .expect("Kepler Areas room");
+        app.show_help = false;
+        app.reset_kepler_aha();
+    }
+
     #[test]
     fn times_tables_holds_its_cardioid_until_input_but_the_show_keeps_sweeping() {
         assert_eq!(effective_room_phase("times-tables", 0.73, &[], false), 0.0);
@@ -6057,6 +6259,52 @@ mod tests {
 
         app.reset_current_room();
         assert_eq!(app.pendulum_aha.beat(), AhaBeat::Explore);
+        assert!(!app.show_info);
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
+    fn kepler_aha_calls_speed_on_the_chosen_orbit_before_reveal() {
+        use numinous_core::rooms::kepler_aha::{AhaBeat, SpeedRelation};
+
+        let mut app = headless("numinous_app_test_kepler_aha.txt");
+        select_kepler(&mut app);
+
+        app.toggle_inspect();
+        assert!(!app.show_info, "no answer before choosing an orbit");
+        assert_eq!(app.kepler_aha.beat(), AhaBeat::Explore);
+
+        app.begin_pointer_at((0.8, 0.4));
+        app.end_pointer_at((0.8, 0.4));
+        assert_eq!(app.kepler_aha.beat(), AhaBeat::Prime);
+        assert!((app.kepler_aha.eccentricity() - 0.68).abs() < 1.0e-12);
+
+        let input_count = app.inputs.len();
+        app.begin_pointer_at((0.1, 0.95));
+        assert_eq!(app.kepler_aha.beat(), AhaBeat::Withheld);
+        assert_eq!(app.kepler_aha.call(), Some(SpeedRelation::Faster));
+        assert_eq!(
+            app.inputs.len(),
+            input_count,
+            "the call band must not retune the ellipse"
+        );
+
+        app.toggle_inspect();
+        assert!(matches!(app.kepler_aha.beat(), AhaBeat::Morph { .. }));
+        app.advance_kepler_morph(super::KEPLER_MORPH_SECONDS);
+        assert_eq!(app.kepler_aha.beat(), AhaBeat::Confirm);
+        app.toggle_inspect();
+        assert_eq!(app.kepler_aha.beat(), AhaBeat::Consolidated);
+        let grade = app.kepler_aha.graded().expect("the call is answered");
+        assert!(grade.contains("called FASTER"), "{grade}");
+        assert!(grade.contains("Nailed"), "{grade}");
+        app.toggle_inspect();
+        assert!(app.show_info);
+
+        app.reset_current_room();
+        assert_eq!(app.kepler_aha.beat(), AhaBeat::Explore);
         assert!(!app.show_info);
 
         let _ = std::fs::remove_file(&app.journey_file);

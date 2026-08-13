@@ -88,6 +88,7 @@ class AgentHallwayTests(unittest.TestCase):
             {"ok": True},
             {"passed": True, "findings": []},
             {"passed": False, "findings": ["summon did not consolidate"]},
+            {"passed": True, "findings": []},
         )
         self.assertFalse(summary["passed"])
         self.assertEqual(summary["suite"], "agent-hallway")
@@ -99,9 +100,33 @@ class AgentHallwayTests(unittest.TestCase):
             {"ok": True},
             {"passed": True, "findings": []},
             {"passed": True, "findings": []},
+            {"passed": True, "findings": []},
         )
         self.assertTrue(summary["passed"])
         self.assertEqual(summary["findings"], [])
+
+    def test_score_kepler_requires_typed_truth_and_visual_evidence(self) -> None:
+        steps = [
+            aha_step("explore", kind="speed"),
+            aha_step("withheld", kind="speed"),
+            aha_step(
+                "consolidated",
+                earn="call:faster:right",
+                reveal="Equal areas",
+                kind="speed",
+            ),
+        ]
+        steps[2]["structured"]["engineeredAha"].update(
+            {"truth": "faster", "wager": "faster"}
+        )
+        steps[2]["structured"]["render"] = "orbit O O O"
+        score = hallway.score_kepler(steps)
+        self.assertTrue(score["passed"], score["findings"])
+
+        steps[2]["structured"]["render"] = "orbit only"
+        score = hallway.score_kepler(steps)
+        self.assertFalse(score["passed"])
+        self.assertTrue(any("equal-time" in finding for finding in score["findings"]))
 
 
 class AgentTactileTests(unittest.TestCase):
