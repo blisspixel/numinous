@@ -49,7 +49,7 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
 fi
 
 if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \
-    | grep -zqE '^scripts/(mcp-play\.py|agent-(hallway|tactile|first-contact)\.py|flagship-goldens\.py|understanding-(source|study|collect)\.py|understanding-(encounters|probes\.fixture)\.json|test-(mcp-play|agent-cohort|understanding-(study|collect))\.py)$|^docs/evidence/goldens/'; then
+    | grep -zqE '^scripts/(mcp-play\.py|local-agent-playtest\.py|agent-(hallway|tactile|first-contact)\.py|flagship-goldens\.py|understanding-(source|study|collect)\.py|understanding-(encounters|probes\.fixture)\.json|test-(mcp-play|local-agent-playtest|agent-cohort|understanding-(study|collect))\.py)$|^docs/evidence/goldens/'; then
   if command -v python3 >/dev/null 2>&1; then
     study_python=python3
   elif command -v python >/dev/null 2>&1; then
@@ -60,6 +60,8 @@ if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z 
   fi
   echo "== MCP play driver =="
   "$study_python" scripts/test-mcp-play.py
+  echo "== local agent playtest contract =="
+  "$study_python" scripts/test-local-agent-playtest.py
   echo "== agent cohort contracts =="
   "$study_python" scripts/test-agent-cohort.py
   if git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMRD -z \

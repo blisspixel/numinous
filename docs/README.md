@@ -5,7 +5,7 @@ The map of the blueprint. Use the reading paths to find your way in, and the
 that owns it; every other doc links to that home rather than restating it. If
 you find yourself duplicating a concept, stop and link instead.
 
-Status: **0.2.0-alpha.5.** The 0.1 Public Foundation is complete, and the 0.2
+Status: **0.3.0-alpha.1.** The 0.1 Public Foundation is complete, and the 0.2
 Flagship Proof and 0.3 Tactile Alpha agent-and-machine exits are met. The
 headless core, CLI, MCP server, windowed App, GPU and audio adapters, 354 catalog
 rooms plus hidden content, 6 sims, 11+ games, Journey, standard-controller
@@ -41,7 +41,9 @@ defined in `RESEARCH.md`.
 - **Designing the content and feel:** `ROOMS.md`, `INSIGHTS.md`, `VISUALS.md`, `SOUND.md`, `MUSIC.md`, `LORE.md`, `PROGRESSION.md`, `STUDIO.md`.
 - **Here for the digital-minds work:** `DIGITAL_MINDS.md` for the stance,
   `DIGITAL_DEVELOPMENT.md` for the July 2026 research and implementation plan,
-  then `INTERFACES.md` for the current surface.
+  then `INTERFACES.md` for the current surface. Use
+  `LOCAL_AGENT_PLAYTEST.md` to let an installed local model enter through MCP
+  while you watch its visible play.
 - **Checking the evidence:** `RESEARCH.md` for the evidence base, then
   `UNDERSTANDING_STUDY.md` for the predeclared 0.4 comparison and acceptance
   contract.
@@ -86,10 +88,12 @@ defined in `RESEARCH.md`.
 - `PLAYING.md` the player's manual: instructions for humans, for agents, and for digital consciousnesses.
 - `ROSETTA.md` instructions for any mind, in any language, or none: the three tiers of visitor (English, another human language, no shared language at all) and the math-only bootstrap for a mind that shares only mathematics.
 - `AGENT_PLAY.md` the agent-gaming landscape (OpenClaw, gaming MCP servers, text benchmarks) and the design rules that make Numinous first-class for digital minds.
+- `LOCAL_AGENT_PLAYTEST.md` the zero-cost local-model player lane, its privacy
+  and network boundaries, live observer path, and evidence limits.
 
 **Build and process**
 - `SCOPE.md` the definition of no: the three-products hierarchy, the daily "more math or more progression?" test, the justification filter, and why the fan-out docs are a menu to prune, not a build list.
-- `ROADMAP.md` the version-gated plan (0.x, 1.0, 2.0+), defined by quality bars, not dates.
+- `ROADMAP.md` the evidence-labeled plan (0.x, 1.0, 2.0+), defined by quality bars, not dates.
 - `QUALITY.md` testing and fun-evals: the six quality loops, the fun/awe rubric, QoL, "the math is the oracle."
 - `PERFORMANCE.md` measured performance evidence: exact workload boundaries,
   raw receipts, migration comparisons, limits, and the standing update rule.
@@ -130,6 +134,7 @@ Each topic is **owned** by exactly one doc. Everything else links to it. When in
 | The three faces and their UX (App, CLI, MCP) | `INTERFACES.md` |
 | Designing for digital minds | `DIGITAL_MINDS.md` |
 | Digital-mind continuity, learning, memory, agency, and welfare implementation | `DIGITAL_DEVELOPMENT.md` |
+| Running and interpreting local-model play sessions | `LOCAL_AGENT_PLAYTEST.md` |
 | How to play (humans, agents, digital consciousnesses) | `PLAYING.md` |
 | Testing, evals, QoL, the fun/awe rubric | `QUALITY.md` |
 | Performance workloads, measurements, migration receipts, and evidence limits | `PERFORMANCE.md` |
@@ -138,7 +143,7 @@ Each topic is **owned** by exactly one doc. Everything else links to it. When in
 | The playtester casting pool (the 42 personas with backstories) | `PLAYTESTERS.md` |
 | Code-quality standards, versions, CI gates | `ENGINEERING.md` |
 | Scope discipline, the definition of no, the three-products hierarchy | `SCOPE.md` |
-| The version-gated plan and milestones | `ROADMAP.md` |
+| The evidence-labeled plan and milestones | `ROADMAP.md` |
 | Research findings and sources | `RESEARCH.md` |
 
 ## Conventions
