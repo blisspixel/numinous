@@ -15,6 +15,13 @@ columns and name the expected expression input across every face. Pattern
 algebra, tracker, step grid, piano roll, MIDI, raw shader authoring, and
 community rooms are design targets. `ROADMAP.md` is the status authority.
 
+CLI and MCP plot and melody calls resolve through core `PlotRequest` and
+`SingRequest` types. Those types own curated discovery, expression parsing,
+the default `[-tau, tau]` window, the default `a = 1` knob, bounds, and the
+undefined-function refusal. All three faces use a 32-note default melody. A
+face still owns transport parsing and presentation, but it does not resample or
+reinterpret the formula.
+
 ## The one-liner
 
 > **A live, forgiving audiovisual math playground where one expression can be
