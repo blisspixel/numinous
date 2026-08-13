@@ -241,6 +241,7 @@ pub mod nova;
 pub mod oregonator;
 pub mod paperfold;
 pub mod parrondo;
+pub mod parrondo_aha;
 pub mod partition;
 pub mod pascal_mod;
 pub mod peano_curve;
