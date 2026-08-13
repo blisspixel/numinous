@@ -324,7 +324,7 @@ compression-progress theory of fun). Sketches:
 
 ## Roadmap fit
 
-- **Built by 0.2.0-alpha.4:** Guess the Shape across all three faces, daily
+- **Built by 0.2.0-alpha.5:** Guess the Shape across all three faces, daily
   seeds, shared scores, The Show, and the Studio expression slice with sound.
 - **0.3 through 0.5:** deepen tactile game feel, understanding evidence, visual
   identity, sound, performance, and accessibility.

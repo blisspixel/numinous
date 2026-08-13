@@ -5,6 +5,8 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.2.0-alpha.5] - 2026-08-12
+
 - Double Pendulum now asks the player to call where its deterministic shadow
   twin ends. One completed release primes together, drifted, or lost in the
   App's bottom band or keys and through MCP `ending_wager`; four releases earn

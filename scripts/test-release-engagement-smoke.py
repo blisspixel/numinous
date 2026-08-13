@@ -67,7 +67,7 @@ def valid_responses() -> list[dict[str, Any]]:
                 "_meta": {
                     "io.modelcontextprotocol/serverInfo": {
                         "name": "numinous",
-                        "version": "0.2.0-alpha.4",
+                        "version": "0.2.0-alpha.5",
                     }
                 },
                 "resultType": "complete",
@@ -81,7 +81,7 @@ def valid_responses() -> list[dict[str, Any]]:
                 "_meta": {
                     "io.modelcontextprotocol/serverInfo": {
                         "name": "numinous",
-                        "version": "0.2.0-alpha.4",
+                        "version": "0.2.0-alpha.5",
                     }
                 },
                 "resultType": "complete",
@@ -95,7 +95,7 @@ def valid_responses() -> list[dict[str, Any]]:
                 "_meta": {
                     "io.modelcontextprotocol/serverInfo": {
                         "name": "numinous",
-                        "version": "0.2.0-alpha.4",
+                        "version": "0.2.0-alpha.5",
                     }
                 },
                 "resultType": "complete",
@@ -117,12 +117,12 @@ def valid_responses() -> list[dict[str, Any]]:
 
 class ReleaseEngagementSmokeTests(unittest.TestCase):
     def test_valid_contract_accepts_discovery_inventory_and_play(self) -> None:
-        SMOKE.validate_mcp_responses(valid_responses(), "0.2.0-alpha.4")
+        SMOKE.validate_mcp_responses(valid_responses(), "0.2.0-alpha.5")
 
     def test_cli_version_requires_one_well_formed_version(self) -> None:
         self.assertEqual(
-            SMOKE.validate_cli_version("numinous 0.2.0-alpha.4\n"),
-            "0.2.0-alpha.4",
+            SMOKE.validate_cli_version("numinous 0.2.0-alpha.5\n"),
+            "0.2.0-alpha.5",
         )
         for invalid in (
             "",
@@ -136,11 +136,11 @@ class ReleaseEngagementSmokeTests(unittest.TestCase):
 
     def test_binary_versions_must_match_across_faces(self) -> None:
         with self.assertRaisesRegex(SMOKE.SmokeError, "versions do not match"):
-            SMOKE.validate_mcp_responses(valid_responses(), "0.2.0-alpha.5")
+            SMOKE.validate_mcp_responses(valid_responses(), "0.2.0-alpha.6")
         inconsistent = valid_responses()
         inconsistent[2]["result"]["_meta"]["io.modelcontextprotocol/serverInfo"][
             "version"
-        ] = "0.2.0-alpha.5"
+        ] = "0.2.0-alpha.6"
         with self.assertRaisesRegex(SMOKE.SmokeError, "disagree"):
             SMOKE.validate_mcp_responses(inconsistent)
 

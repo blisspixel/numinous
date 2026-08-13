@@ -72,7 +72,7 @@ with the install. Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 
 ## Status
 
-**0.2.0-alpha.4** is playable today: 354 catalog rooms, games, Journey,
+**0.2.0-alpha.5** is playable today: 354 catalog rooms, games, Journey,
 Studio, controllers, and Watch Agent (consented local MCP session viewing).
 
 Package version stays alpha until the am-track exits land; capability is

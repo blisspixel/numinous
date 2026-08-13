@@ -29,7 +29,7 @@ A version-gated plan from empty repo to a living world. Each milestone has a **g
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.2.0-alpha.4, Flagship Proof exit met on the
+**Current release state: 0.2.0-alpha.5, Flagship Proof exit met on the
 agent-and-machine bar (2026-07-24).** The 0.1 Public Foundation remains
 complete. Product 0.2 no longer waits on human stranger sessions: those sit
 with 0.8 Closed Beta and 1.0 First Light. Independent macOS/Linux App execution
@@ -341,7 +341,7 @@ Detail below and in the version sections.
   playhead. CLI render and sonify plus MCP play and listen accept the same
   bounded input, and all three faces agree on action, goal, status, sound, and
   earned reveal. The real stranger hallway and musician-led listening gates
-  remain open, so the package stays `0.2.0-alpha.4`.
+  remain open, so the package stays `0.2.0-alpha.5`.
 - **Done (Cycle 100 audio-state truth):** the App now owns exactly one explicit
   room-score, Studio, or radio program. Studio keeps formula audio through
   focus returns and radio boundaries, selected radio rejoins live only after
@@ -499,7 +499,7 @@ Detail below and in the version sections.
   invite tokens, Times Tables technical flagship path, Share still PNG and
   short-loop APNG (App L and CLI loop), and local security gates are green on
   this branch. Product 0.2 still requires the stranger hallway and other human
-  evidence listed above; the prerelease label remains `0.2.0-alpha.4`.
+  evidence listed above; the prerelease label remains `0.2.0-alpha.5`.
 - **Done (mouse for every window game and launch destination):** pointer hover
   selects and left-click opens all nine launch-menu destinations through the
   same semantic dispatcher as controller input. Left-click also hits Quiz
@@ -700,7 +700,7 @@ The full build design lives in `ARCADE.md` (the Muncher, the Vexations, the poke
   Wave and classical cards into dynamics, number theory, probability,
   topology, analysis, theory formation, and closing gems. MCP `list_rooms` count is 354; every
   catalog room keeps motif, verb, poke, first-contact status, and reveal.
-  Version remains `0.2.0-alpha.4`; product 0.2 is not claimed complete. See
+  Version remains `0.2.0-alpha.5`; product 0.2 is not claimed complete. See
   `CHANGELOG.md` Unreleased and `ROOMS.md` Built now.
 - **Done (Conjecture Mill, cycle 122):** a deterministic blackboard enumerates
   one complete finite grammar of primitive rational quadratic formulas. Every
@@ -1101,9 +1101,9 @@ without relying on the founder's machine or undocumented context?"
 
 ### 0.2 Flagship Proof ("does it slap?")
 
-**Status:** exit met on the agent-and-machine bar (2026-07-24). Package label
-remains `0.2.0-alpha.4` until a deliberate release cut. Human stranger hallway
-is **not** part of this exit; it is deferred to 0.8 / 1.0.
+**Status:** exit met on the agent-and-machine bar (2026-07-24). The deliberate
+2026-08-12 release cut advances the package label to `0.2.0-alpha.5`. Human
+stranger hallway is **not** part of this exit; it is deferred to 0.8 / 1.0.
 
 **Goal:** Build **one** flagship room (and a second on the same pattern) to
 high quality, plus enough shell to frame it, proved on all three faces without
@@ -1696,9 +1696,9 @@ The cycle-by-cycle build log has moved to `CHANGELOG.md`, which records every
 increment in full. This roadmap stays forward-looking: what is done (above),
 where we stand (next), and the ordered path to 1.0.
 
-## Where we stand (reviewed 2026-08-02)
+## Where we stand (reviewed 2026-08-12)
 
-The package is **0.2.0-alpha.4**. The 0.1 Public Foundation exit criterion is
+The package is **0.2.0-alpha.5**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
@@ -1743,9 +1743,9 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label remains **0.2.0-alpha.4** until deliberate cut. Am-track
-capability is ahead of that label; do not read the package version as the
-am-track position.
+Package label is **0.2.0-alpha.5** following the deliberate 2026-08-12 cut.
+Am-track capability is ahead of that label; do not read the package version as
+the am-track position.
 
 **Immediate critical path** (same order as **Critical path right now** above):
 

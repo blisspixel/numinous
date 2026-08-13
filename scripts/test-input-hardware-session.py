@@ -42,7 +42,7 @@ def sample_release(target: str | None = None) -> dict[str, Any]:
         "archiveSha256": "a" * 64,
         "commit": "b" * 40,
         "target": target or SESSION.expected_target(),
-        "version": "0.2.0-alpha.4",
+        "version": "0.2.0-alpha.5",
         "binaries": binary_hashes,
     }
 
@@ -87,7 +87,7 @@ def sample_receipt(
             "archiveVerified": True,
             "installedPayloadMatch": True,
             "cliMcpEngagement": True,
-            "cliMcpVersion": "0.2.0-alpha.4",
+            "cliMcpVersion": "0.2.0-alpha.5",
         },
         "appLifecycle": {
             "firstLaunchExitCode": 0,
@@ -172,7 +172,7 @@ class InputHardwareSessionTests(unittest.TestCase):
                     f"binary-{index}".encode("ascii")
                 )
             archive, checksum = SESSION.PACKAGE.build_archive(
-                "0.2.0-alpha.4",
+                "0.2.0-alpha.5",
                 SESSION.expected_target(),
                 "binaries",
                 binary_dir,
@@ -214,7 +214,7 @@ class InputHardwareSessionTests(unittest.TestCase):
                     f"replacement-{name}".encode("ascii")
                 )
             original_archive, original_checksum = SESSION.PACKAGE.build_archive(
-                "0.2.0-alpha.4",
+                "0.2.0-alpha.5",
                 SESSION.expected_target(),
                 "binaries",
                 original_bin,
@@ -223,7 +223,7 @@ class InputHardwareSessionTests(unittest.TestCase):
                 ROOT,
             )
             replacement_archive, _replacement_checksum = SESSION.PACKAGE.build_archive(
-                "0.2.0-alpha.4",
+                "0.2.0-alpha.5",
                 SESSION.expected_target(),
                 "binaries",
                 installed_bin,
@@ -285,7 +285,7 @@ class InputHardwareSessionTests(unittest.TestCase):
                 with mock.patch.object(
                     SESSION.SMOKE,
                     "run_engagement_smoke",
-                    return_value="0.2.0-alpha.4",
+                    return_value="0.2.0-alpha.5",
                 ) as smoke:
                     with mock.patch.object(
                         SESSION.SMOKE,
@@ -391,8 +391,8 @@ class InputHardwareSessionTests(unittest.TestCase):
             SESSION.validate_matrix(one_model)
 
         mixed_release = copy.deepcopy(receipts)
-        mixed_release[0]["release"]["version"] = "0.2.0-alpha.5"
-        mixed_release[0]["automated"]["cliMcpVersion"] = "0.2.0-alpha.5"
+        mixed_release[0]["release"]["version"] = "0.2.0-alpha.6"
+        mixed_release[0]["automated"]["cliMcpVersion"] = "0.2.0-alpha.6"
         mixed_release[0] = reidentify(mixed_release[0])
         with self.assertRaisesRegex(SESSION.SessionError, "release identities"):
             SESSION.validate_matrix(mixed_release)
