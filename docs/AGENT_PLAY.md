@@ -180,6 +180,14 @@ interpretable, and recoverable.
 
 ## Next for agent play
 
+- Local-model free play, built: `scripts/local-agent-playtest.py` lets one
+  already-installed tool-capable model enter through the real MCP server while
+  an observer watches its visible words and witnessed calls. It is local-only,
+  zero-cost under enforced network and model boundaries, disposable by default,
+  and tested in CI without running inference. The first real run exposed a
+  model narrating calls that never occurred; the harness now records that
+  distinction and offers one factual retry. See `LOCAL_AGENT_PLAYTEST.md`.
+
 - Challenge gradients, v2 built: the `challenge` tool poses two kinds of
   seeded goal. Touch goals (any room with a verb) grade attempts as spatial
   metrics (cells in target, threshold fraction, centroid distance, 0-100

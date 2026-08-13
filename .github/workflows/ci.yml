@@ -35,9 +35,10 @@ jobs:
           cargo test --workspace --doc --locked
       - name: Tests
         run: cargo test --workspace --all-targets --locked
-      - name: MCP driver and Understanding study tests
+      - name: MCP drivers and Understanding study tests
         run: |
           python3 scripts/test-mcp-play.py
+          python3 scripts/test-local-agent-playtest.py
           python3 scripts/test-agent-cohort.py
           python3 scripts/test-understanding-study.py
           python3 scripts/test-understanding-collect.py
@@ -162,6 +163,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           python scripts/test-mcp-play.py
+          python scripts/test-local-agent-playtest.py
           python scripts/test-understanding-study.py
           python scripts/test-understanding-collect.py
           python scripts/test-input-hardware-session.py
@@ -173,6 +175,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           python3 scripts/test-mcp-play.py
+          python3 scripts/test-local-agent-playtest.py
           python3 scripts/test-understanding-study.py
           python3 scripts/test-understanding-collect.py
           python3 scripts/test-input-hardware-session.py

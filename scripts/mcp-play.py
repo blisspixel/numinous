@@ -9,6 +9,7 @@ contaminate a player or another concurrent tester.
 from __future__ import annotations
 
 import argparse
+import atexit
 import hashlib
 import importlib.util
 import json
@@ -46,6 +47,7 @@ BUILD_TIMEOUT_SECONDS = 300
 SERVER_TIMEOUT_SECONDS = 30
 MAX_REQUEST_LINE_BYTES = 1_048_576
 MAX_SESSION_REQUESTS = 64
+MAX_PROFILE_OPERATIONS = 128
 MAX_RESPONSE_LINE_BYTES = 1_000_000
 MAX_JSON_NESTING_DEPTH = 32
 MAX_DIAGNOSTIC_CHARACTERS = 4096
@@ -140,6 +142,35 @@ _BUILD_LOCK = threading.Lock()
 _BUILD_CACHE: dict[tuple[str | None, str | None], BuiltArtifact] = {}
 _BUILD_ENVIRONMENT_LOCK = threading.Lock()
 _BUILD_ENVIRONMENT_CACHE: dict[str, str] | None = None
+
+
+def _cleanup_build_cache() -> None:
+    """Close process-cached build owners without implicit-cleanup warnings."""
+    with _BUILD_LOCK:
+        artifacts = list(_BUILD_CACHE.values())
+        _BUILD_CACHE.clear()
+    cleaned: set[int] = set()
+    for artifact in artifacts:
+        identity = id(artifact.owner)
+        if identity not in cleaned:
+            artifact.owner.cleanup()
+            cleaned.add(identity)
+
+
+atexit.register(_cleanup_build_cache)
+
+
+def _is_redirecting_path(path: Path) -> bool:
+    """Detect symbolic links and Windows reparse-point redirects."""
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    attributes = getattr(metadata, "st_file_attributes", 0)
+    return path.is_symlink() or bool(reparse_flag and attributes & reparse_flag)
 
 
 def _strict_json_loads(payload: str, location: str) -> Any:
@@ -521,8 +552,33 @@ def _session(
     *,
     expected_revision: str | None = None,
     expected_source_sha256: str | None = None,
+    state_root: Path | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """Send requests through one fresh server and one disposable profile."""
+    """Send requests through one fresh server and one bounded profile."""
+    if state_root is None:
+        with tempfile.TemporaryDirectory(prefix=STATE_DIR_PREFIX) as state_dir:
+            return _session_in_profile(
+                requests,
+                Path(state_dir),
+                expected_revision=expected_revision,
+                expected_source_sha256=expected_source_sha256,
+            )
+    return _session_in_profile(
+        requests,
+        state_root,
+        expected_revision=expected_revision,
+        expected_source_sha256=expected_source_sha256,
+    )
+
+
+def _session_in_profile(
+    requests: list[dict[str, Any]],
+    state_root: Path,
+    *,
+    expected_revision: str | None = None,
+    expected_source_sha256: str | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Send requests through one fresh server using one caller-owned profile."""
     if len(requests) > MAX_SESSION_REQUESTS:
         raise McpPlayError(
             f"server session exceeds the {MAX_SESSION_REQUESTS}-request limit"
@@ -537,112 +593,118 @@ def _session(
     expected_responses = sum("id" in request for request in requests)
     maximum_output_bytes = expected_responses * (MAX_RESPONSE_LINE_BYTES + 1)
 
-    with tempfile.TemporaryDirectory(prefix=STATE_DIR_PREFIX) as state_dir:
-        state_root = Path(state_dir)
-        env = {
-            key: os.environ[key]
-            for key in ("COMSPEC", "SYSTEMROOT", "WINDIR")
-            if key in os.environ
+    if _is_redirecting_path(state_root):
+        raise McpPlayError("test profile must be an ordinary directory")
+    try:
+        state_root = state_root.resolve(strict=True)
+    except OSError as error:
+        raise McpPlayError(f"test profile is not available: {error}") from error
+    if not state_root.is_dir() or _is_redirecting_path(state_root):
+        raise McpPlayError("test profile must be an ordinary directory")
+    env = {
+        key: os.environ[key]
+        for key in ("COMSPEC", "SYSTEMROOT", "WINDIR")
+        if key in os.environ
+    }
+    env.update(
+        {
+            "NUMINOUS_JOURNEY": str(state_root / "journey.txt"),
+            "NUMINOUS_SCORES": str(state_root / "scores.txt"),
+            "NUMINOUS_CAIRN": str(state_root / "cairn.json"),
+            "NUMINOUS_JOURNAL": str(state_root / "journal.txt"),
+            "HOME": str(state_root),
+            "USERPROFILE": str(state_root),
+            "TEMP": str(state_root),
+            "TMP": str(state_root),
+            "TMPDIR": str(state_root),
         }
-        env.update(
-            {
-                "NUMINOUS_JOURNEY": str(state_root / "journey.txt"),
-                "NUMINOUS_SCORES": str(state_root / "scores.txt"),
-                "NUMINOUS_CAIRN": str(state_root / "cairn.json"),
-                "NUMINOUS_JOURNAL": str(state_root / "journal.txt"),
-                "HOME": str(state_root),
-                "USERPROFILE": str(state_root),
-                "TEMP": str(state_root),
-                "TMP": str(state_root),
-                "TMPDIR": str(state_root),
-            }
-        )
-        artifact = _binary(expected_revision, expected_source_sha256)
-        binary = artifact.path
-        if _sha256_file(binary) != artifact.sha256:
-            raise McpPlayError("private server artifact changed before execution")
-        with tempfile.TemporaryFile(mode="w+b") as stdout_file:
-            with tempfile.TemporaryFile(mode="w+b") as stderr_file:
-                try:
-                    process = subprocess.run(
-                        [str(binary)],
-                        input=payload,
-                        stdout=stdout_file,
-                        stderr=stderr_file,
-                        cwd=ROOT,
-                        env=env,
-                        check=False,
-                        timeout=SERVER_TIMEOUT_SECONDS,
-                    )
-                except subprocess.TimeoutExpired as error:
-                    raise McpPlayError(
-                        f"server session exceeded {SERVER_TIMEOUT_SECONDS} seconds"
-                    ) from error
-                finally:
-                    if _sha256_file(binary) != artifact.sha256:
-                        raise McpPlayError("private server artifact changed during execution")
-
-                stdout_file.seek(0, os.SEEK_END)
-                output_bytes = stdout_file.tell()
-                if output_bytes > maximum_output_bytes:
-                    raise McpPlayError("server session output exceeds the size limit")
-                if process.returncode != 0:
-                    stderr_file.seek(0)
-                    detail_bytes = stderr_file.read(MAX_DIAGNOSTIC_CHARACTERS + 1)
-                    if not detail_bytes:
-                        stdout_file.seek(0)
-                        detail_bytes = stdout_file.read(MAX_DIAGNOSTIC_CHARACTERS + 1)
-                    detail = detail_bytes.decode("utf-8", errors="replace").strip()
-                    raise McpPlayError(
-                        f"server exited with status {process.returncode}: "
-                        f"{detail or 'no diagnostic output'}"
-                    )
-
-                responses: list[dict[str, Any]] = []
-                stdout_file.seek(0)
-                for line_number, encoded_line in enumerate(stdout_file, start=1):
-                    if len(encoded_line) > MAX_RESPONSE_LINE_BYTES + 1:
-                        raise McpPlayError(
-                            f"server response line {line_number} exceeds the size limit"
-                        )
-                    try:
-                        line = encoded_line.decode("utf-8").strip()
-                    except UnicodeDecodeError as error:
-                        raise McpPlayError(
-                            f"invalid UTF-8 in server response line {line_number}"
-                        ) from error
-                    if not line:
-                        continue
-                    response = _strict_json_loads(
-                        line, f"server response line {line_number}"
-                    )
-                    if not isinstance(response, dict):
-                        raise McpPlayError(
-                            f"server returned a non-object response on line {line_number}"
-                        )
-                    responses.append(response)
-        if len(responses) != expected_responses:
-            raise McpPlayError(
-                f"server returned {len(responses)} response(s) for "
-                f"{expected_responses} request(s)"
-            )
-        expected_ids = [request["id"] for request in requests if "id" in request]
-        for response, expected_id in zip(responses, expected_ids, strict=True):
-            has_result = "result" in response
-            has_error = "error" in response
-            expected_fields = {"jsonrpc", "id", "result" if has_result else "error"}
-            if (
-                response.get("jsonrpc") != "2.0"
-                or response.get("id") != expected_id
-                or isinstance(response.get("id"), bool)
-                or has_result == has_error
-                or set(response) != expected_fields
-                or (has_error and not isinstance(response["error"], dict))
-            ):
-                raise McpPlayError(
-                    f"server returned an invalid response for request id {expected_id}"
+    )
+    artifact = _binary(expected_revision, expected_source_sha256)
+    binary = artifact.path
+    if _sha256_file(binary) != artifact.sha256:
+        raise McpPlayError("private server artifact changed before execution")
+    with tempfile.TemporaryFile(mode="w+b") as stdout_file:
+        with tempfile.TemporaryFile(mode="w+b") as stderr_file:
+            try:
+                process = subprocess.run(
+                    [str(binary)],
+                    input=payload,
+                    stdout=stdout_file,
+                    stderr=stderr_file,
+                    cwd=ROOT,
+                    env=env,
+                    check=False,
+                    timeout=SERVER_TIMEOUT_SECONDS,
                 )
-        return responses, dict(artifact.receipt)
+            except subprocess.TimeoutExpired as error:
+                raise McpPlayError(
+                    f"server session exceeded {SERVER_TIMEOUT_SECONDS} seconds"
+                ) from error
+            finally:
+                if _sha256_file(binary) != artifact.sha256:
+                    raise McpPlayError("private server artifact changed during execution")
+
+            stdout_file.seek(0, os.SEEK_END)
+            output_bytes = stdout_file.tell()
+            if output_bytes > maximum_output_bytes:
+                raise McpPlayError("server session output exceeds the size limit")
+            if process.returncode != 0:
+                stderr_file.seek(0)
+                detail_bytes = stderr_file.read(MAX_DIAGNOSTIC_CHARACTERS + 1)
+                if not detail_bytes:
+                    stdout_file.seek(0)
+                    detail_bytes = stdout_file.read(MAX_DIAGNOSTIC_CHARACTERS + 1)
+                detail = detail_bytes.decode("utf-8", errors="replace").strip()
+                raise McpPlayError(
+                    f"server exited with status {process.returncode}: "
+                    f"{detail or 'no diagnostic output'}"
+                )
+
+            responses: list[dict[str, Any]] = []
+            stdout_file.seek(0)
+            for line_number, encoded_line in enumerate(stdout_file, start=1):
+                if len(encoded_line) > MAX_RESPONSE_LINE_BYTES + 1:
+                    raise McpPlayError(
+                        f"server response line {line_number} exceeds the size limit"
+                    )
+                try:
+                    line = encoded_line.decode("utf-8").strip()
+                except UnicodeDecodeError as error:
+                    raise McpPlayError(
+                        f"invalid UTF-8 in server response line {line_number}"
+                    ) from error
+                if not line:
+                    continue
+                response = _strict_json_loads(
+                    line, f"server response line {line_number}"
+                )
+                if not isinstance(response, dict):
+                    raise McpPlayError(
+                        f"server returned a non-object response on line {line_number}"
+                    )
+                responses.append(response)
+    if len(responses) != expected_responses:
+        raise McpPlayError(
+            f"server returned {len(responses)} response(s) for "
+            f"{expected_responses} request(s)"
+        )
+    expected_ids = [request["id"] for request in requests if "id" in request]
+    for response, expected_id in zip(responses, expected_ids, strict=True):
+        has_result = "result" in response
+        has_error = "error" in response
+        expected_fields = {"jsonrpc", "id", "result" if has_result else "error"}
+        if (
+            response.get("jsonrpc") != "2.0"
+            or response.get("id") != expected_id
+            or isinstance(response.get("id"), bool)
+            or has_result == has_error
+            or set(response) != expected_fields
+            or (has_error and not isinstance(response["error"], dict))
+        ):
+            raise McpPlayError(
+                f"server returned an invalid response for request id {expected_id}"
+            )
+    return responses, dict(artifact.receipt)
 
 
 def _response_result(response: dict[str, Any], operation: str) -> dict[str, Any]:
@@ -688,6 +750,7 @@ def _discover(
     *,
     expected_revision: str | None = None,
     expected_source_sha256: str | None = None,
+    state_root: Path | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Discover the server, then issue independently versioned modern requests."""
     discover = _modern_request(
@@ -701,6 +764,7 @@ def _discover(
         [discover, *(_modern_request(request) for request in extra)],
         expected_revision=expected_revision,
         expected_source_sha256=expected_source_sha256,
+        state_root=state_root,
     )
     discovery = _response_result(responses[0], "server/discover")
     if (
@@ -710,6 +774,66 @@ def _discover(
     ):
         raise McpPlayError("server/discover returned an incompatible result")
     return responses, build_receipt
+
+
+class IsolatedMcpProfile:
+    """A disposable profile shared across a bounded sequence of MCP calls."""
+
+    def __init__(self) -> None:
+        self._owner = tempfile.TemporaryDirectory(prefix=STATE_DIR_PREFIX)
+        self._root = Path(self._owner.name)
+        self._closed = False
+        self._operations = 0
+
+    def __enter__(self) -> "IsolatedMcpProfile":
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        self.close()
+
+    def close(self) -> None:
+        """Erase the complete disposable profile exactly once."""
+        if not self._closed:
+            self._owner.cleanup()
+            self._closed = True
+
+    def _claim_operation(self) -> None:
+        if self._closed:
+            raise McpPlayError("test profile is already closed")
+        if self._operations >= MAX_PROFILE_OPERATIONS:
+            raise McpPlayError(
+                f"test profile exceeds the {MAX_PROFILE_OPERATIONS}-operation limit"
+            )
+        self._operations += 1
+
+    def list_tools(self) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        """Return the server's complete tool definitions and build receipt."""
+        self._claim_operation()
+        responses, build_receipt = _discover(
+            [{"jsonrpc": "2.0", "id": 2, "method": "tools/list"}],
+            state_root=self._root,
+        )
+        result = _response_result(responses[-1], "tools/list")
+        tools = result.get("tools")
+        if not isinstance(tools, list) or any(not isinstance(tool, dict) for tool in tools):
+            raise McpPlayError("tools/list returned a malformed tool array")
+        return tools, build_receipt
+
+    def call_tool(self, tool: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Call one tool while retaining this profile's player-owned state."""
+        self._claim_operation()
+        responses, _build_receipt = _discover(
+            [
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {"name": tool, "arguments": arguments},
+                }
+            ],
+            state_root=self._root,
+        )
+        return _response_result(responses[-1], f"tool '{tool}'")
 
 
 def isolated_tool_call(
