@@ -5,44 +5,30 @@ The map of the blueprint. Use the reading paths to find your way in, and the
 that owns it; every other doc links to that home rather than restating it. If
 you find yourself duplicating a concept, stop and link instead.
 
-Status: **0.2.0-alpha.4.** The 0.1 Public Foundation is complete, the 0.2
-Flagship Proof and 0.3 Tactile Alpha agent-and-machine exits are met, and 0.4
-Understanding Alpha is active. The headless core, CLI, MCP server, windowed app,
-GPU and audio adapters, 354 catalog rooms plus hidden content, 6 sims, 11+
-games, the RPG spine, standard-controller input, and a built-in 42-track radio
-are built. The hardened local-broadcast substrate, MCP producer, native App
-Watch Agent, bounded in-memory timeline, and native reconstruction for
-`play_room`, Formula Jam plots, Nim, Munch, Arcade, Quiz, and Gauntlet are
-built. Real cross-process Times Tables, Studio, Nim, and Munch acceptance
-sessions are also built. Selected native room and Studio actions now replay
-bounded deterministic local sound with explicit source ownership, global mute
-and volume, focus silence, scrub replacement, and close-time restoration.
-The stdio face implements stateless MCP 2026-07-28, including discovery,
-per-request metadata, cacheable deterministic tool discovery, typed results,
-and native multi round-trip `predict`, while retaining both legacy protocol
-revisions for existing hosts.
-Watch Agent owns live App audio for retained public room, Studio, and game
-selections. Catalog plate quality (cycles 161 to 168) holds art-first
-interaction with zero phase-thin, zero dead-domain, and zero dead-dial rooms on
-machine scans; ambient phase is a show on growing sets of curves and waves
-(not a static graph), including the cycle-166 and cycle-167 pen and unfurl
-packs and the cycle-168 plate bug-hunt; soft-thin densify continues where
-honest but is not the critical path. App Enter starts The Show. Exceptional
-Path Phase A is Built on App and MCP: Times Tables and Buffon five-beat
-engineered ahas, agent hallway cohort PASS, F9 capture. **0.2 Flagship Proof
-is exit-met on the agent-and-machine bar;** human stranger hallway is deferred
-to 0.8 / 1.0. **Critical path now:** calibrate the concealed 0.4 probe bank,
-  obtain two fresh independent passes over the implemented replacement collector,
-  externally register the commitments, freeze the allocation, run the cohort,
-  and keep CI green. Returning-journal
-sovereignty is complete on the clean-process machine acceptance bar.
-Soft-thin densify, bulk new rooms, and Phase B glow are not the high-leverage
-next move. Supply chain is current on public `main` (empty deny/audit ignores,
-weekly Dependabot, pinned CI actions); detail in `ENGINEERING.md`. The six-
-question plate filter, contact-language, and MCP teammate posture live in
-`RESEARCH.md`. Public CI passes on Windows, macOS, and Ubuntu. Accessibility
-and physical multi-OS App sessions remain later gates. See `../CHANGELOG.md`
-and **Critical path right now** in `ROADMAP.md`. These docs remain the plan of
+Status: **0.2.0-alpha.4.** The 0.1 Public Foundation is complete, and the 0.2
+Flagship Proof and 0.3 Tactile Alpha agent-and-machine exits are met. The
+headless core, CLI, MCP server, windowed App, GPU and audio adapters, 354 catalog
+rooms plus hidden content, 6 sims, 11+ games, Journey, standard-controller
+input, Studio, and a built-in 42-track radio are built.
+
+The MCP face exposes 35 bounded tools over the current and two retained legacy
+protocol revisions. The consented Watch Agent viewer reconstructs allowlisted
+room, Studio, and game actions in the App with a bounded in-memory timeline and
+no persisted transcript. A portable Agent Plugins v1 package supplies host
+discovery and play-first guidance. The opt-in experience journal persists across
+clean MCP processes and supports inspection, immutable correction, native or
+Open Knowledge Format v0.2 export, and confirmed erase.
+
+**Critical path now:** finish the Universal Wager and its flagship ahas. The
+generic call is available through all three faces; Times Tables, Buffon's
+Needle, Galton Board, and Double Pendulum carry staged five-beat ahas across the
+App and MCP. The pendulum wager is graded against the exact released trajectory,
+not a default stand-in. Kepler is next, then Parrondo and the nontransitive dice.
+Mind's Seat presence and retrieval follow, then the measured Sensory Lift spike. The 0.4
+Understanding Alpha cohort waits on an owner ruling; its method dry-run and
+dual automated auditors are already in CI. Soft-thin densify, bulk new rooms,
+and Phase B glow are not the high-leverage next move. See `../CHANGELOG.md` and
+**Critical path right now** in `ROADMAP.md`. These docs remain the plan of
 record; Built, Measured, Observed, Designed, and Hypothesis have the meanings
 defined in `RESEARCH.md`.
 

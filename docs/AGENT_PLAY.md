@@ -29,7 +29,7 @@ Distilled from what the benchmark and MCP-game ecosystems reward:
    vision. Ours: ASCII renders, sound as notation, sims as plain-language
    readouts.
 2. **Flat, self-describing tools.** Simple schemas, guiding errors, no hidden
-   session state required to make a legal move. Ours: twenty-nine mostly flat
+   session state required to make a legal move. Ours: thirty-five mostly flat
    tools; the two exception shapes are bounded and self-describing (the
    `pokes` tuple-array on `play_room` and `challenge`, and `play_room`'s
    `gesture` event objects), and every error names the valid options.
@@ -189,9 +189,9 @@ interpretable, and recoverable.
   lands, and every attempt grades as distance plus a climbable score. Both
   are metrics, never bare pass/fail, and every posed goal is reachable by
   construction.
-- Trajectory friendliness, planned: the consented local session broadcast in
-  `INTERFACES.md` would let a human follow replayable Numinous actions live
-  without creating a persisted transcript by default. A persisted research
+- Trajectory friendliness, built for shared attention: the consented local
+  session broadcast in `INTERFACES.md` lets a human follow allowlisted Numinous
+  actions live without creating a persisted transcript. A persisted research
   trajectory remains a separate opt-in artifact with its own preview and
   deletion contract.
 - Multi-mind play: the same daily seed already gives humans and agents a shared

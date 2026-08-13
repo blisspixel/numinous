@@ -178,6 +178,15 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
    Safety remains part of the UX through bounded inputs and explicit limits.
 
 ### What it exposes (shaped by the above)
+- **Portable agent discovery (built):** release archives and repository
+  checkouts contain `plugins/numinous`, a package pinned to the
+  [Agent Plugins v1 Working Draft](https://agent-plugins.org/). Its manifest
+  declares the installed `numinous-mcp` stdio server, and its Agent Skill teaches
+  a play-first path plus the Watch Agent consent and privacy boundaries. The
+  package is discovery metadata, not a second protocol or owner of game logic.
+  MCP remains the authoritative runtime surface. A strict local validator pins
+  the schema, product identity, bare executable command, closed package
+  inventory, and release version.
 - **Current protocol surface:** modern clients use `server/discover`,
   `tools/list`, and `tools/call` over stdio with version and client capability
   metadata on every request. Legacy 2025-11-25 and 2025-06-18 clients retain
@@ -188,8 +197,12 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   (`read_journal`, `record_journal`, `correct_journal`, `export_journal`,
   `erase_journal`), and the shared games. Journal entries have stable local
   identifiers, separate event and record times, declared provenance, immutable
-  corrections, and bounded versioned export pages. `PLAYING.md`
-  carries the complete user-facing list.
+  corrections, and bounded versioned export pages. `export_journal` returns the
+  native journal schema by default or, when asked for `format: "okf-0.2"`, an
+  in-memory [Open Knowledge Format v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
+  bundle page with named UTF-8 files, explicit provenance, correction lineage,
+  and lifecycle state. Neither export mode creates a file or exposes a host
+  path. `PLAYING.md` carries the complete user-facing list.
 - **Current room input shape:** `play_room` and `listen_room` accept `variation`
   plus optional normalized `pokes: [[x, y], ...]`, newest last and bounded to 24
   points. Both also accept a `gesture` array of phase-stamped pointer events,
@@ -237,13 +250,16 @@ This section covers the *mechanism* (the UX of the tool surface). The *spirit*, 
   until accepted K=5 input closes four lobes. The earned response then includes
   the same reveal the App points to. Ambient phase alone cannot earn it.
 - **Engineered aha wagers, MCP slice (built):** on Times Tables, Buffon's
-  Needle, and the Galton Board, `play_room` always includes
+  Needle, the Galton Board, and Double Pendulum, `play_room` always includes
   `structuredContent.engineeredAha` with beat, status, earn, allowReveal, and
   canSummon. Optional `place_wager` (`mandelbrot` | `nephroid` | `circle`),
-  `number_wager` (finite, 1.5..4.5), or `bin_wager` (0..16) is a generation
-  act. Each committed wager comes back typed beside its truth, its band, and
-  one graded sentence, because a commitment that is collected and never
-  answered is theater. The Galton call is about the pile the request's pokes
+  `number_wager` (finite, 1.5..4.5), `bin_wager` (0..16), or `ending_wager`
+  (`together` | `drifted` | `lost`) is a generation act. Each committed wager
+  comes back typed beside its truth and one graded sentence, with a band where
+  the room's model uses one, because a commitment that is collected and never
+  answered is theater. Double Pendulum requires a completed release event and
+  measures truth from that exact release's angles and velocity; a held bob does
+  not count. The Galton call is about the pile the request's pokes
   build, which is the newest coin's run; this face is stateless, so a longer
   poke history is honestly a different question, and every reply names the
   coin it answered. Optional `aha_summon: true` advances through morph to

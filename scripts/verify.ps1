@@ -65,6 +65,7 @@ Step "understanding am registration audit" { python scripts/understanding-am-pip
 Step "understanding study runner" { python scripts/test-understanding-study.py }
 Step "understanding study collector" { python scripts/test-understanding-collect.py }
 Step "release packaging" { python scripts/test-package-release.py }
+Step "portable agent plugin" { python scripts/test-agent-plugin.py }
 Step "release engagement contract" { python scripts/test-release-engagement-smoke.py }
 Step "physical input session contract" { python scripts/test-input-hardware-session.py }
 Step "release SBOM contract" { python scripts/test-release-sbom.py }

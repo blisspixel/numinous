@@ -27,6 +27,8 @@ const TOGETHER_GAP: f64 = 0.05;
 const DRIFTED_GAP: f64 = 1.0;
 /// How many points trace the divergence curve overlay.
 const CURVE_STEPS: usize = 80;
+/// Samples include both ends of the divergence curve.
+const CURVE_POINTS: usize = CURVE_STEPS + 1;
 
 /// Where the shadow twin ends up, as a player would say it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,6 +93,27 @@ impl Ending {
     }
 }
 
+/// Draw the three ending calls along the same bottom-band mapping the faces
+/// use for pointer input.
+pub fn render_ending_band(canvas: &mut dyn Surface, hover: Option<Ending>) {
+    let (width, height) = canvas.draw_bounds();
+    if width < 16 || height < 6 {
+        return;
+    }
+    let y = (height as f64 * 0.92).round() as i32;
+    let y = y.clamp(1, height as i32 - 2);
+    canvas.line(0, y, width.saturating_sub(1) as i32, y, '-');
+    for (index, ending) in [Ending::Together, Ending::Drifted, Ending::Lost]
+        .iter()
+        .enumerate()
+    {
+        let x = ((index as f64 + 0.5) / 3.0 * width as f64).round() as i32;
+        let mark = if hover == Some(*ending) { '#' } else { '+' };
+        canvas.line(x, y - 2, x, y + 1, mark);
+        canvas.plot(x, y + 2, ending.name().chars().next().unwrap_or('?'));
+    }
+}
+
 /// The truth this room's call is graded against, for a given variation.
 #[must_use]
 pub fn truth_for(variation: u64) -> (f64, Ending) {
@@ -139,7 +162,7 @@ pub enum AhaBeat {
 #[derive(Debug, Clone, PartialEq)]
 pub struct PendulumAha {
     beat: AhaBeat,
-    variation: u64,
+    truth_gap: f64,
     drops: usize,
     hover: Option<Ending>,
     earn: Option<EarnPath>,
@@ -150,9 +173,10 @@ impl PendulumAha {
     /// A fresh visit of the room at this variation.
     #[must_use]
     pub fn new(variation: u64) -> Self {
+        let truth_gap = truth_for(variation).0;
         Self {
             beat: AhaBeat::Explore,
-            variation,
+            truth_gap,
             drops: 0,
             hover: None,
             earn: None,
@@ -188,6 +212,24 @@ impl PendulumAha {
     #[must_use]
     pub fn earned(&self) -> bool {
         self.earn.is_some()
+    }
+
+    /// Bind the call to the exact release trajectory the room rendered.
+    ///
+    /// A face may update the measurement while the player is still
+    /// exploring. Once a generation act lands, its truth is immutable.
+    pub fn bind_truth_gap(&mut self, gap: f64) -> bool {
+        if self.earned() || !gap.is_finite() || gap < 0.0 {
+            return false;
+        }
+        self.truth_gap = gap;
+        true
+    }
+
+    /// The measured gap and its player-facing ending.
+    #[must_use]
+    pub fn truth(&self) -> (f64, Ending) {
+        (self.truth_gap, Ending::of_gap(self.truth_gap))
     }
 
     /// Full reveal text may open only after the morph has consolidated.
@@ -242,7 +284,7 @@ impl PendulumAha {
         if !matches!(self.beat, AhaBeat::Prime | AhaBeat::Withheld) {
             return false;
         }
-        let right = called == truth_for(self.variation).1;
+        let right = called == self.truth().1;
         self.earn = Some(EarnPath::Call { called, right });
         self.hover = None;
         self.beat = AhaBeat::Withheld;
@@ -370,7 +412,7 @@ impl PendulumAha {
             return None;
         }
         let called = self.call()?;
-        let (gap, truth) = truth_for(self.variation);
+        let (gap, truth) = self.truth();
         let verdict = if called == truth {
             "Nailed."
         } else if called == Ending::Together {
@@ -419,6 +461,16 @@ impl PendulumAha {
 /// Flat, then a wall. That shape is the answer to the call, so the morph
 /// reveals it left to right as the truth arrives.
 pub fn render_gap_curve(canvas: &mut dyn Surface, progress: f64, variation: u64) {
+    render_gap_curve_for_inputs(canvas, progress, variation, &[]);
+}
+
+/// Draw the divergence curve from the exact newest release in `inputs`.
+pub fn render_gap_curve_for_inputs(
+    canvas: &mut dyn Surface,
+    progress: f64,
+    variation: u64,
+    inputs: &[crate::RoomInput],
+) {
     let (width, height) = canvas.draw_bounds();
     if width < 12 || height < 8 {
         return;
@@ -431,14 +483,17 @@ pub fn render_gap_curve(canvas: &mut dyn Surface, progress: f64, variation: u64)
     if progress < 0.02 {
         return;
     }
-    let peak = divergence_at_full_sweep(variation).max(1e-6);
+    let room = super::double_pendulum::DoublePendulum::new_with(variation);
+    let horizons: [usize; CURVE_POINTS] =
+        std::array::from_fn(|step| step * super::double_pendulum::MAX_STEPS / CURVE_STEPS);
+    let gaps = room.divergence_gaps_for_inputs(inputs, horizons);
+    let peak = gaps[CURVE_STEPS].max(1e-6);
     let top = height as f64 * 0.08;
     let bottom = height as f64 * 0.34;
     let mut prev: Option<(i32, i32)> = None;
     let reach = (CURVE_STEPS as f64 * progress).round() as usize;
-    for step in 0..=reach.min(CURVE_STEPS) {
+    for (step, &gap) in gaps.iter().enumerate().take(reach.min(CURVE_STEPS) + 1) {
         let unit = step as f64 / CURVE_STEPS as f64;
-        let gap = super::double_pendulum::divergence_at_sweep_fraction(variation, unit);
         let x = (unit * (width.saturating_sub(1)) as f64).round() as i32;
         let y = (bottom - (bottom - top) * (gap / peak).clamp(0.0, 1.0)).round() as i32;
         if let Some((px, py)) = prev {
@@ -452,6 +507,7 @@ pub fn render_gap_curve(canvas: &mut dyn Surface, progress: f64, variation: u64)
 mod tests {
     use super::{AhaBeat, EarnPath, Ending, PendulumAha, truth_for};
     use crate::canvas::Canvas;
+    use crate::surface::Surface;
 
     #[test]
     fn the_twin_really_does_end_up_lost() {
@@ -513,6 +569,24 @@ mod tests {
     }
 
     #[test]
+    fn a_release_binds_the_truth_before_the_call_and_then_locks_it() {
+        let mut aha = PendulumAha::new(0);
+        assert!(aha.bind_truth_gap(0.25));
+        assert_eq!(aha.truth(), (0.25, Ending::Drifted));
+        aha.note_drops(1);
+        assert!(aha.commit_call(Ending::Drifted));
+        assert!(!aha.bind_truth_gap(1.5), "a committed truth cannot move");
+        assert_eq!(aha.truth(), (0.25, Ending::Drifted));
+        assert!(aha.summon());
+        aha.set_morph_progress(1.0);
+        assert!(aha.summon());
+        let graded = aha.graded().expect("graded");
+        assert!(graded.contains("0.25"), "{graded}");
+        assert!(graded.contains("DRIFTED"), "{graded}");
+        assert!(graded.contains("Nailed"), "{graded}");
+    }
+
+    #[test]
     fn four_drops_earn_the_beat_without_a_call() {
         let mut aha = PendulumAha::new(0);
         aha.note_drops(4);
@@ -542,6 +616,18 @@ mod tests {
         assert_eq!(Ending::from_key_digit(2), Some(Ending::Drifted));
         assert_eq!(Ending::from_key_digit(3), Some(Ending::Lost));
         assert_eq!(Ending::from_key_digit(4), None);
+    }
+
+    #[test]
+    fn the_ending_band_marks_all_three_calls_and_the_hover() {
+        let mut plain = Canvas::new(72, 30);
+        super::render_ending_band(&mut plain, None);
+        let mut hovered = Canvas::new(72, 30);
+        super::render_ending_band(&mut hovered, Some(Ending::Drifted));
+        assert!(plain.ink_count() > 0);
+        assert_eq!(plain.width(), hovered.width());
+        assert_eq!(plain.height(), hovered.height());
+        assert_ne!(plain.to_text(), hovered.to_text());
     }
 
     #[test]

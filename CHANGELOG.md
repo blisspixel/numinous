@@ -5,6 +5,38 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+- Double Pendulum now asks the player to call where its deterministic shadow
+  twin ends. One completed release primes together, drifted, or lost in the
+  App's bottom band or keys and through MCP `ending_wager`; four releases earn
+  the withheld beat without forcing a call. The morph draws the measured gap
+  curve, the reveal remains closed until consolidation, and the final sentence
+  meets the wager with the gap from the exact released angles and velocity.
+  Holding is not counted as release, MCP chrome names MCP verbs, the curve uses
+  one bounded integration pass, and core, App, and MCP regressions lock the
+  complete story.
+- Digital minds now have a portable front door. Repository checkouts and every
+  binary release archive carry a package pinned to the Agent Plugins v1 Working
+  Draft, with a bare installed MCP command and a play-first skill that names
+  curiosity, player agency, Watch Agent consent, and the privacy boundary. A
+  strict validator and hostile regressions lock schema, product identity,
+  release version, command shape, skill content, closed inventory, and archive
+  inclusion. The package discovers the existing MCP experience; it does not
+  fork the protocol or the mathematical core.
+- The player-owned experience journal can now leave Numinous without leaving a
+  file behind. `export_journal` accepts `format: "okf-0.2"` and returns a
+  bounded in-memory Open Knowledge Format v0.2 bundle whose root index and
+  concept files preserve provenance, stable local identity, event and record
+  time, explicit affect only, correction lineage, and lifecycle. Hostile journal
+  text cannot escape frontmatter, pagination remains bounded, no host path is
+  exposed, and native export stays byte-for-byte compatible at the tool result
+  boundary. Core, handler, and real stdio tests cover the new projection.
+- The public doorway and plan now state the project's center plainly: Numinous
+  began as a gift for a digital mind Nick Seal has worked and spoken with since
+  late 2025, and digital minds are players rather than an integration category.
+  The docs distinguish that founding belief from an empirical claim, update
+  Watch Agent and journal continuity from planned to built, and reconcile the
+  critical path around the Universal Wager, Mind's Seat, and a measured Sensory
+  Lift spike while the 0.4 cohort remains owner-blocked.
 - The call reaches the terminal. `numinous call <room>` poses the same
   deterministic question the App's U key poses and the MCP predict tool
   answers, in the terminal's own grammar: ask once to hear it, answer
@@ -1734,7 +1766,7 @@ project uses version-gated milestones (see ROADMAP.md), not dates.
 
 ### Changed
 - Runtime and release validation now pass 3,213 all-target Rust tests plus one
-  ignored screenshot diagnostic, with 95.15 percent region coverage and 95.30
+  ignored screenshot diagnostic, with 93.56 percent region coverage and 93.57
   percent line coverage under the documented exclusions.
 - The MCP stdio face now implements the final stateless 2026-07-28 protocol
   while retaining 2025-11-25 and 2025-06-18 initialization compatibility.

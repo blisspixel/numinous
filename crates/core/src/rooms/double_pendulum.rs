@@ -17,7 +17,7 @@ const G: f64 = 9.81;
 /// Integration time step.
 const DT: f64 = 0.0025;
 /// The most integration steps `t` reaches.
-const MAX_STEPS: usize = 6_000;
+pub(crate) const MAX_STEPS: usize = 6_000;
 /// The breath of difference the shadow starts with, in radians.
 const SHADOW_OFFSET: f64 = 1e-4;
 
@@ -294,6 +294,49 @@ impl DoublePendulum {
             .into_iter()
             .all(f64::is_finite)
             .then_some(state)
+    }
+
+    /// Measure the final twin gap from the newest hand state in `inputs`.
+    ///
+    /// This is the room's own full-sweep integration from the exact angles
+    /// and release velocity it renders. `None` means no finite hand state was
+    /// supplied, so callers can retain the visit's default truth.
+    #[must_use]
+    pub fn divergence_at_full_sweep_for_inputs(
+        &self,
+        inputs: &[crate::room::RoomInput],
+    ) -> Option<f64> {
+        let state = self.interaction_state(0.0, inputs)?;
+        Some(divergence_gap(
+            state.first,
+            state.second,
+            state.w1,
+            state.w2,
+            MAX_STEPS,
+        ))
+    }
+
+    /// Measure ordered divergence horizons from the newest hand state.
+    ///
+    /// The staged aha supplies sorted, bounded horizons. Keeping this inside
+    /// the room lets its curve use one integration pass and the same initial
+    /// state as the visible pendulum.
+    pub(crate) fn divergence_gaps_for_inputs<const N: usize>(
+        &self,
+        inputs: &[crate::room::RoomInput],
+        horizons: [usize; N],
+    ) -> [f64; N] {
+        let state = self
+            .interaction_state(0.0, inputs)
+            .unwrap_or(InteractionState {
+                first: 2.0 + self.seed_offset(),
+                second: 2.0,
+                w1: 0.0,
+                w2: 0.0,
+                steps: 0,
+                label: "RE-DROP",
+            });
+        divergence_gaps(state.first, state.second, state.w1, state.w2, horizons)
     }
 
     fn interaction_voice(&self, state: InteractionState) -> ParametricSound {
@@ -1356,6 +1399,35 @@ mod tests {
         );
         assert!((super::elapsed_phase(0.10, 0.95) - 0.15).abs() < 1e-12);
         assert_eq!(super::elapsed_phase(f64::NAN, 0.5), 0.0);
+    }
+
+    #[test]
+    fn the_aha_measurement_reuses_the_exact_released_state() {
+        let room = DoublePendulum::new();
+        let classic = [
+            RoomInput::PointerDown {
+                x: 7.0 / 12.0,
+                y: 0.5,
+                t: 0.10,
+            },
+            RoomInput::PointerUp {
+                x: 7.0 / 12.0,
+                y: 0.5,
+                t: 0.20,
+            },
+        ];
+        let measured = room
+            .divergence_at_full_sweep_for_inputs(&classic)
+            .expect("a released state has a final gap");
+        let default = super::divergence_at_full_sweep(0);
+        assert!(
+            (measured - default).abs() < 1e-10,
+            "the classic hand release and default integration agree: {measured} vs {default}"
+        );
+        assert!(
+            room.divergence_at_full_sweep_for_inputs(&[]).is_none(),
+            "no hand state leaves the visit's default truth alone"
+        );
     }
 
     #[test]
