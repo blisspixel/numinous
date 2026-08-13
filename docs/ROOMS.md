@@ -1016,7 +1016,7 @@ A candidate survives only if:
 | **Banach-Tarski Shadow** | Two spheres from one, via non-measurable pieces (honest "axiom of choice" label). | SPLIT: FOLLOW THE PIECES | Philosophy-grade gasp; careful copy. Build 3-4. |
 | **Hilbert's Hotel** | Full hotel, room for one more bus, until the reals check in. | ADMIT: THE NEXT GUEST | **built** (`hilbert-hotel`) |
 | **Braess Trap** | Add a road; average travel time rises. | BUILD: A SHORTCUT | **built** (`braess`) |
-| **Nontransitive Dice** | A beats B, B beats C, C beats A. | ROLL: THE TRIO | **built** (`nontransitive`) |
+| **Nontransitive Dice** | A beats B, B beats C, C beats A. | ROLL: THE TRIO | **built** (`nontransitive`); all 36 face pairs grade the staged counter wager |
 | **Parrondo's Trap** | Two losing games, scheduled as ABB, win. | TOGGLE: THE RULE | **built** (`parrondo`); exact Markov expectation grades the staged policy wager |
 | **The Illumination Flaw** | One dark point no light reaches (Tokarsky-style room). | DRAG: THE LANTERN | Already persona-named as Unlit Room; keep priority. |
 | **Linked Rings (Hopf)** | Circles all linked, none touching; qubit shadow. | SPIN: THE FIBER | Awe Engine quantum wing; build 3-4. |

@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gate_cli import build_and_locate  # noqa: E402
 DRIVER = ROOT / "scripts" / "mcp-play.py"
-OUT = ROOT / ".agent" / "tester-cohort" / "round-07-flagship-aha"
+OUT = ROOT / ".agent" / "tester-cohort" / "round-08-flagship-aha"
 
 
 @dataclass(frozen=True)
@@ -125,6 +125,8 @@ def initialize_script() -> dict[str, Any]:
             and "number_wager" in instructions
             and "speed_wager" in instructions
             and "policy_wager" in instructions
+            and "die_choice" in instructions
+            and "counter_wager" in instructions
             and "prefer play_room first" in instructions
         )
         return {
@@ -133,6 +135,8 @@ def initialize_script() -> dict[str, Any]:
             "has_number_wager": "number_wager" in instructions,
             "has_speed_wager": "speed_wager" in instructions,
             "has_policy_wager": "policy_wager" in instructions,
+            "has_die_choice": "die_choice" in instructions,
+            "has_counter_wager": "counter_wager" in instructions,
             "prefer_play_first": "prefer play_room first" in instructions,
         }
 
@@ -262,6 +266,39 @@ def parrondo_script() -> list[dict[str, Any]]:
         },
     )
     steps.append({"step": "policy_wager_truth_summon", **summon})
+    return steps
+
+
+def nontransitive_script() -> list[dict[str, Any]]:
+    steps = []
+    open_call = call_tool(
+        "play_room",
+        {"id": "nontransitive", "width": 48, "height": 24},
+    )
+    steps.append({"step": "open", **open_call})
+    wager = call_tool(
+        "play_room",
+        {
+            "id": "nontransitive",
+            "width": 48,
+            "height": 24,
+            "die_choice": "a",
+            "counter_wager": "b",
+        },
+    )
+    steps.append({"step": "counter_wager_wrong", **wager})
+    summon = call_tool(
+        "play_room",
+        {
+            "id": "nontransitive",
+            "width": 48,
+            "height": 24,
+            "die_choice": "a",
+            "counter_wager": "c",
+            "aha_summon": True,
+        },
+    )
+    steps.append({"step": "counter_wager_truth_summon", **summon})
     return steps
 
 
@@ -395,16 +432,68 @@ def score_parrondo(steps: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def score_nontransitive(steps: list[dict[str, Any]]) -> dict[str, Any]:
+    findings = []
+    open_s = (steps[0].get("structured") or {}) if steps[0].get("ok") else {}
+    aha0 = open_s.get("engineeredAha") or {}
+    if aha0.get("kind") != "counter":
+        findings.append("open missing engineeredAha.counter")
+    if open_s.get("reveal"):
+        findings.append("cold open leaked reveal text")
+    wager = steps[1] if len(steps) > 1 else {}
+    wager_s = wager.get("structured") or {}
+    aha1 = wager_s.get("engineeredAha") or {}
+    if aha1.get("beat") != "withheld":
+        findings.append(f"wrong wager beat: {aha1.get('beat')}")
+    if wager_s.get("reveal"):
+        findings.append("wager without summon revealed early")
+    done = steps[2] if len(steps) > 2 else {}
+    done_s = done.get("structured") or {}
+    aha2 = done_s.get("engineeredAha") or {}
+    if aha2.get("beat") != "consolidated":
+        findings.append(f"summon did not consolidate: {aha2.get('beat')}")
+    if (
+        aha2.get("chosen") != "a"
+        or aha2.get("truth") != "c"
+        or aha2.get("wager") != "c"
+    ):
+        findings.append("chosen die did not answer the counter call")
+    cycle = aha2.get("exactCycle") or {}
+    if cycle != {
+        "aOverB": 24,
+        "bOverC": 24,
+        "cOverA": 20,
+        "outcomesPerPair": 36,
+    }:
+        findings.append("typed outcome counts do not prove the exact cycle")
+    if aha2.get("counterWins") != 20:
+        findings.append("typed counter does not prove C beats A in 20 of 36 outcomes")
+    render = str(done_s.get("render") or "")
+    if "C vs A" not in render or "20 W / 16 L" not in render:
+        findings.append("consolidated render lacks the exact outcome grid")
+    if not done_s.get("reveal"):
+        findings.append("summon did not unlock reveal")
+    return {
+        "room": "nontransitive",
+        "passed": not findings,
+        "findings": findings,
+        "final_beat": aha2.get("beat"),
+        "final_earn": aha2.get("earn"),
+    }
+
+
 def write_persona_note(
     persona: Persona,
     times: dict[str, Any],
     buffon: dict[str, Any],
     kepler: dict[str, Any],
     parrondo: dict[str, Any],
+    nontransitive: dict[str, Any],
     times_steps: list[dict[str, Any]],
     buffon_steps: list[dict[str, Any]],
     kepler_steps: list[dict[str, Any]],
     parrondo_steps: list[dict[str, Any]],
+    nontransitive_steps: list[dict[str, Any]],
 ) -> Path:
     OUT.mkdir(parents=True, exist_ok=True)
     path = OUT / f"{persona.slug}.md"
@@ -448,6 +537,13 @@ def write_persona_note(
         f"- Final earn: {parrondo.get('final_earn')}",
         f"- Findings: {', '.join(parrondo['findings']) if parrondo['findings'] else 'none'}",
         "",
+        "## Nontransitive Dice",
+        "",
+        f"- Passed machine script: {nontransitive['passed']}",
+        f"- Final beat: {nontransitive.get('final_beat')}",
+        f"- Final earn: {nontransitive.get('final_earn')}",
+        f"- Findings: {', '.join(nontransitive['findings']) if nontransitive['findings'] else 'none'}",
+        "",
         "## Lens notes",
         "",
     ]
@@ -490,6 +586,7 @@ def write_persona_note(
                     and buffon["passed"]
                     and kepler["passed"]
                     and parrondo["passed"]
+                    and nontransitive["passed"]
                 ),
                 "- Status after wrong guess stays short: "
                 + str(
@@ -515,6 +612,8 @@ def write_persona_note(
                 + str(kepler.get("final_beat") == "consolidated"),
                 "- Parrondo exact policy path consolidates: "
                 + str(parrondo.get("final_beat") == "consolidated"),
+                "- Nontransitive exact counter path consolidates: "
+                + str(nontransitive.get("final_beat") == "consolidated"),
             ]
         )
     lines.extend(["", "## Raw beats", "", "### Times Tables steps", ""])
@@ -541,6 +640,12 @@ def write_persona_note(
         lines.append(
             f"- {step.get('step')}: ok={step.get('ok')} beat={aha.get('beat')} earn={aha.get('earn')}"
         )
+    lines.extend(["", "### Nontransitive Dice steps", ""])
+    for step in nontransitive_steps:
+        aha = ((step.get("structured") or {}).get("engineeredAha")) or {}
+        lines.append(
+            f"- {step.get('step')}: ok={step.get('ok')} beat={aha.get('beat')} earn={aha.get('earn')}"
+        )
     lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")
     return path
@@ -548,15 +653,26 @@ def write_persona_note(
 
 def write_synthesis(
     results: list[
-        tuple[Persona, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]
+        tuple[
+            Persona,
+            dict[str, Any],
+            dict[str, Any],
+            dict[str, Any],
+            dict[str, Any],
+            dict[str, Any],
+        ]
     ],
     initialize: dict[str, Any],
 ) -> Path:
     path = OUT / "SYNTHESIS.md"
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     all_pass = all(
-        times["passed"] and buffon["passed"] and kepler["passed"] and parrondo["passed"]
-        for _, times, buffon, kepler, parrondo in results
+        times["passed"]
+        and buffon["passed"]
+        and kepler["passed"]
+        and parrondo["passed"]
+        and nontransitive["passed"]
+        for _, times, buffon, kepler, parrondo, nontransitive in results
     ) and initialize.get("ok")
     lines = [
         "# Round 07 synthesis: flagship aha over MCP",
@@ -576,20 +692,24 @@ def write_synthesis(
         f"- number_wager taught: {initialize.get('has_number_wager')}",
         f"- speed_wager taught: {initialize.get('has_speed_wager')}",
         f"- policy_wager taught: {initialize.get('has_policy_wager')}",
+        f"- die_choice taught: {initialize.get('has_die_choice')}",
+        f"- counter_wager taught: {initialize.get('has_counter_wager')}",
         f"- prefer play_room first: {initialize.get('prefer_play_first')}",
         "",
     ]
-    for persona, times, buffon, kepler, parrondo in results:
+    for persona, times, buffon, kepler, parrondo, nontransitive in results:
         combined = (
             times["findings"]
             + buffon["findings"]
             + kepler["findings"]
             + parrondo["findings"]
+            + nontransitive["findings"]
         )
         lines.append(
             f"- {persona.title}: times={times['passed']} buffon={buffon['passed']} "
             f"kepler={kepler['passed']} "
             f"parrondo={parrondo['passed']} "
+            f"nontransitive={nontransitive['passed']} "
             f"findings={combined if combined else ['none']}"
         )
     lines.extend(
@@ -597,10 +717,10 @@ def write_synthesis(
             "",
             "## Convergent engineering claims (if PASS)",
             "",
-            "1. Cold open does not leak Times Tables, Buffon, Kepler, or Parrondo reveal text.",
+            "1. Cold open does not leak sampled flagship reveal text.",
             "2. Named wager fields withhold reveal until aha_summon.",
             "3. Truth summon consolidates and unlocks punchline reveal.",
-            "4. engineeredAha is present for agent discovery on all four sampled flagships.",
+            "4. engineeredAha is present for agent discovery on all five sampled flagships.",
             "5. initialize teaches play-first aha discovery for digital minds.",
             "",
         ]
@@ -615,6 +735,7 @@ def cohort_summary(
     buffon_score: dict[str, Any],
     kepler_score: dict[str, Any],
     parrondo_score: dict[str, Any],
+    nontransitive_score: dict[str, Any],
 ) -> dict[str, Any]:
     """Return a machine-readable pass/fail summary for CI and audits."""
     passed = bool(
@@ -623,10 +744,13 @@ def cohort_summary(
         and buffon_score.get("passed")
         and kepler_score.get("passed")
         and parrondo_score.get("passed")
+        and nontransitive_score.get("passed")
     )
     findings = list(times_score.get("findings") or []) + list(
         buffon_score.get("findings") or []
-    ) + list(kepler_score.get("findings") or []) + list(parrondo_score.get("findings") or [])
+    ) + list(kepler_score.get("findings") or []) + list(
+        parrondo_score.get("findings") or []
+    ) + list(nontransitive_score.get("findings") or [])
     return {
         "suite": "agent-hallway",
         "passed": passed,
@@ -635,6 +759,7 @@ def cohort_summary(
         "buffon_passed": bool(buffon_score.get("passed")),
         "kepler_passed": bool(kepler_score.get("passed")),
         "parrondo_passed": bool(parrondo_score.get("passed")),
+        "nontransitive_passed": bool(nontransitive_score.get("passed")),
         "findings": findings,
         "personas": len(PERSONAS),
         "evidence_class": "agent-mcp-machine",
@@ -643,7 +768,14 @@ def cohort_summary(
 
 def main() -> int:
     results: list[
-        tuple[Persona, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]
+        tuple[
+            Persona,
+            dict[str, Any],
+            dict[str, Any],
+            dict[str, Any],
+            dict[str, Any],
+            dict[str, Any],
+        ]
     ] = []
     # One shared script per room; personas re-score the same machine evidence
     # through different lenses (cheap, deterministic cohort).
@@ -652,10 +784,12 @@ def main() -> int:
     buffon_steps = buffon_script()
     kepler_steps = kepler_script()
     parrondo_steps = parrondo_script()
+    nontransitive_steps = nontransitive_script()
     times_score = score_times(times_steps)
     buffon_score = score_buffon(buffon_steps)
     kepler_score = score_kepler(kepler_steps)
     parrondo_score = score_parrondo(parrondo_steps)
+    nontransitive_score = score_nontransitive(nontransitive_steps)
     for persona in PERSONAS:
         write_persona_note(
             persona,
@@ -663,15 +797,31 @@ def main() -> int:
             buffon_score,
             kepler_score,
             parrondo_score,
+            nontransitive_score,
             times_steps,
             buffon_steps,
             kepler_steps,
             parrondo_steps,
+            nontransitive_steps,
         )
-        results.append((persona, times_score, buffon_score, kepler_score, parrondo_score))
+        results.append(
+            (
+                persona,
+                times_score,
+                buffon_score,
+                kepler_score,
+                parrondo_score,
+                nontransitive_score,
+            )
+        )
     synthesis = write_synthesis(results, initialize)
     summary = cohort_summary(
-        initialize, times_score, buffon_score, kepler_score, parrondo_score
+        initialize,
+        times_score,
+        buffon_score,
+        kepler_score,
+        parrondo_score,
+        nontransitive_score,
     )
     summary_path = OUT / "summary.json"
     OUT.mkdir(parents=True, exist_ok=True)
@@ -689,11 +839,14 @@ def main() -> int:
         kepler_score["passed"],
         "parrondo",
         parrondo_score["passed"],
+        "nontransitive",
+        nontransitive_score["passed"],
         "findings",
         times_score["findings"]
         + buffon_score["findings"]
         + kepler_score["findings"]
-        + parrondo_score["findings"],
+        + parrondo_score["findings"]
+        + nontransitive_score["findings"],
     )
     print("--- summary.json ---")
     print(json.dumps(summary, sort_keys=True))

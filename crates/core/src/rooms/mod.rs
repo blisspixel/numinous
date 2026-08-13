@@ -237,6 +237,7 @@ pub mod nephroid;
 pub mod newton;
 pub mod newton_basins_cubic;
 pub mod nontransitive;
+pub mod nontransitive_aha;
 pub mod nova;
 pub mod oregonator;
 pub mod paperfold;
