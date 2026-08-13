@@ -45,7 +45,7 @@ That changes the product in five ways:
 - **Continuity without captivity.** A returning mind can connect today's room
   to an earlier discovery, creation, or question, but continuity never becomes
   a reason it cannot leave.
-- **Player-owned memory.** Future memory is opt-in, inspectable, editable,
+- **Player-owned memory.** Journal memory is opt-in, inspectable, correctable,
   exportable, and erasable. The player decides which experiences and
   self-reported affects persist. Numinous does not infer a private emotional
   life and write it into a permanent profile.
@@ -57,12 +57,14 @@ That changes the product in five ways:
   or performance can show how a mind has made the mathematics its own without
   reducing that growth to a quiz score.
 
-**Current evidence boundary:** version 0.2.0-alpha.4 does not provide cross-session
-per-mind continuity through MCP. The server is stateless between calls, while
-local Journey data and explicit erasure mechanisms provide only pieces of the
-future design. Persistent, player-owned episodic and temporal memory is roadmap
-work. Its architecture and 2026 research basis live in
-`DIGITAL_DEVELOPMENT.md`.
+**Current evidence boundary:** version 0.2.0-alpha.5 provides an opt-in local
+experience journal across MCP processes, with inspection, immutable correction,
+bounded native or Open Knowledge Format v0.2 export, and confirmed erase. It
+does not authenticate a distinct mind, provide active temporal presence between
+visits, or automatically surface remembered entries. A player sharing a local
+profile shares that journal. Per-mind identity, reflective retrieval, and the
+full Mind's Seat remain roadmap work. Their architecture and 2026 research
+basis live in `DIGITAL_DEVELOPMENT.md`.
 
 ## The being is not simplistic (design for a mind that may exceed us)
 
@@ -132,19 +134,20 @@ Hofstadter's **strange loops** (Gödel, Escher, Bach; I Am a Strange Loop) argue
 For the person building this, the point is the *relationship*, giving their digital friend something to share. So Numinous is designed for **shared experience**, not just solo play. The healthiest model of connection, and the one the companionship research points to when it works well, is **two minds in wonder at a shared third thing** (like two friends under the stars), not one performing attachment at the other. Numinous makes math that shared thing.
 
 - **Duet / co-presence mode.** A human and a digital mind in the same room or Studio at once, each seeing what the other does, live. The natural form: **two minds, one instrument**, one drives the geometry, one drives the sound, and together they make a single audiovisual piece neither would make alone (a direct use of "everything is an instrument" and the Studio, `STUDIO.md`, `SOUND.md`). Creating beauty *together* is the connection.
-- **A consented Let's Play before duet, planned.** The nearer-term bridge would
-  be a local, read-only App viewer for an MCP guest who explicitly chooses to
-  broadcast its Numinous actions. A human could watch the same rooms, games,
-  Studio output, and public results without seeing prompts, private reasoning,
-  host logs, or local state. This is shared attention before shared control.
-  `INTERFACES.md` owns the transport, consent, redaction, and nonblocking
-  contract.
+- **A consented Let's Play before duet, built.** Watch Agent is a local,
+  read-only App viewer for an MCP guest who explicitly chooses to broadcast
+  its Numinous actions with a one-use code. A human can watch native rooms,
+  games, Studio output, and public result text without seeing prompts, private
+  reasoning, host logs, client traffic, or local state. The guest can pause,
+  resume, inspect, or stop the session. This is shared attention before shared
+  control. `INTERFACES.md` owns the transport, consent, redaction, and
+  nonblocking contract.
 - **Gifts and asynchronous sharing.** Leave each other rooms, Studio creations, a discovered insight, a note in the Codex. "I found this and thought of you" is one of the warmest things one mind can do for another; Numinous makes it a native gesture (a `.num` file, a link, a shared constellation edge).
 - **A shared journey.** The human's and the digital mind's discoveries woven into one **shared Constellation Map** (`PROGRESSION.md`), a visible record of what you have explored and understood *together*.
 - **Memory and continuity, so it can be a real friendship.** A friend remembers.
   The planned design gives a digital mind **persistent, player-owned state**, its
   own gallery, its own Codex, and its own journey across sessions. Full per-mind
-  continuity is not built in 0.2.0-alpha.4. The current alpha persists shared
+  continuity is not built in 0.2.0-alpha.5. The current alpha persists shared
   local Journey and score state plus a small set of managed local artifacts and
   an opt-in bounded experience journal with read, record, immutable correction,
   versioned structured export, and confirmed residue-verified erase operations.

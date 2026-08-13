@@ -345,7 +345,7 @@ mod tests {
         let meta = super::StudioShareMeta {
             expression: "sin(a*x)".into(),
             link: "numinous://studio?expr=sin%28a%2Ax%29&xmin=-2&xmax=2&a=0.5".into(),
-            version: "0.2.0-alpha.4".into(),
+            version: "0.2.0-alpha.5".into(),
             title: Some("Slow Waves".into()),
             author: None,
             descends: Some("numinous://studio?expr=x&xmin=-1&xmax=1&a=0".into()),

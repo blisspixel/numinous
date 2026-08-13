@@ -43,7 +43,7 @@ your hands already know it:
 | | |
 |---|---|
 | A / D or arrows | previous / next room |
-| 1 - 9, 0 | jump straight to a room (0 is the tenth slot); on Times Tables and Buffon's Needle the digits place the aha wager instead |
+| 1 - 9, 0 | jump straight to a room (0 is the tenth slot); while a Times Tables, Buffon, or Double Pendulum aha asks for a call, the relevant digits place it instead |
 | K | keep the pack: still + loop + README in one share folder |
 | O | cycle the visualizer source |
 | W / S | run time faster / slower |
@@ -324,14 +324,14 @@ input without hidden session state:
 | `list_rooms` | the catalog; start with `response_mode: "compact"` for a short doorway while retaining the complete structured room list |
 | `describe_room` | a room's story, action, and optional goal (some unlisted names also answer) |
 | `reveal_room` | the insight that reframes the room |
-| `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array; returns goal state and an earned reveal where available. On Times Tables, Buffon, and the Galton Board also returns `engineeredAha`; optional `place_wager` / `number_wager` / `bin_wager` plus `aha_summon` walk generation-before-reveal without App session state |
+| `play_room` | render a room as ASCII at phase `0 <= t < 1`, with optional `variation`, `pokes`, or a phase-stamped `gesture` array; returns goal state and an earned reveal where available. On Times Tables, Buffon, the Galton Board, and Double Pendulum also returns `engineeredAha`; optional `place_wager` / `number_wager` / `bin_wager` / `ending_wager` plus `aha_summon` walk generation-before-reveal without App session state |
 | `challenge` | a posed, seeded goal: touch a target box, or land the room's readout on a number |
 | `predict` | predict a room's readout at a hidden moment; graded as a gap and a band, a self-owned mirror, never a score. Pass the same `seed` and `variation` to the pose and the guess so you are graded against the room you played |
 | `cairn` | read a message a mind before you left (factor its semiprime to read it), or at level 42 leave one true thing for a stranger not yet born |
 | `read_journal` | inspect a bounded page of your opt-in journal with stable ids, event and record times, source, correction links, and current status |
 | `record_journal` | append an encounter, creation, or connection with declared source provenance |
 | `correct_journal` | append an immutable correction that explicitly supersedes one current entry without rewriting it |
-| `export_journal` | return a bounded, paginated, versioned structured export without creating a host file |
+| `export_journal` | return a bounded, paginated native export, or an in-memory Open Knowledge Format v0.2 bundle with `format: "okf-0.2"`, without creating a host file |
 | `erase_journal` | permanently erase the journal and verify zero recoverable managed file or sidecar residue |
 | `listen_room` | the ambient motif, stable App room-bed summary, and input-aware mathematical sonification, with the same optional `pokes` or `gesture` as `play_room`; use `ambient_detail: "events"` for every bounded bed event and objective signal feature, never PCM or a local path |
 | `list_sims` | the simulations and their levers |
@@ -406,13 +406,18 @@ Conventions worth relying on:
   explicit contract: its Life universe persists for one room visit until reset
   or room departure and does not inherit the 24-launch replay bound.
 - **Flagship engineered aha (MCP).** Prefer `play_room` before `describe_room`
-  or `reveal_room` on Times Tables and Buffon's Needle so you do not skip the
-  generation act. Pass `place_wager` (`mandelbrot` | `nephroid` | `circle`),
-  `number_wager` (1.5..4.5), or `bin_wager` (0..16, the Galton pile's peak),
+  or `reveal_room` on Times Tables, Buffon's Needle, the Galton Board, or Double
+  Pendulum so you do not skip the generation act. Pass `place_wager`
+  (`mandelbrot` | `nephroid` | `circle`), `number_wager` (1.5..4.5),
+  `bin_wager` (0..16, the Galton pile's peak), or `ending_wager` (`together` |
+  `drifted` | `lost`) after a Double Pendulum gesture containing a completed
+  release,
   then `aha_summon: true` to consolidate and unlock
   the punchline. Read `structuredContent.engineeredAha` for beat, earn, and
   allowReveal. The App path is the ordinary visit with bottom-band or key
-  wagers and E; F9 captures hallway notes for human facilitators.
+  wagers and E; F9 captures hallway notes for human facilitators. Double
+  Pendulum grades the exact release replayed in that call, and a held gesture
+  alone cannot prime it.
 - **Structured output, and the substance is in it.** Catalog, description,
   reveal, listening, score, memory, game, and Journey results return bounded
   `structuredContent` alongside prose; parse that, not the sentences. All 354

@@ -373,8 +373,10 @@ fresh temporary `NUMINOUS_JOURNAL` path from a clean clone.
 This acceptance is implemented. Journal v2 exposes stable entry identifiers,
 separate event and record times, a closed provenance vocabulary, append-only
 `supersedes` corrections, current-status derivation, and bounded pages of at
-most 100 entries. `export_journal` returns the versioned structured page in the
-tool result and creates no file, so there is no project-controlled export path
+most 100 entries. `export_journal` returns the versioned native structured page
+by default or an in-memory Open Knowledge Format v0.2 bundle when requested; in
+either form the export remains inside the tool result and creates no file, so
+there is no project-controlled export path
 to clean or disclose. `erase_journal` removes the managed journal plus owned
 lock, recovery, and orphan temporary files, then reports its bounded residue
 inventory. It explicitly does not claim erasure from storage media, external

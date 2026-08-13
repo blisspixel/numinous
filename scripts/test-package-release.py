@@ -155,6 +155,9 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertTrue(
                 {
                     "VERIFY.md",
+                    "plugins/numinous/plugin.json",
+                    "plugins/numinous/mcp.json",
+                    "plugins/numinous/skills/play-numinous/SKILL.md",
                     "scripts/input-hardware-session.py",
                     "scripts/package-release.py",
                     "scripts/release-engagement-smoke.py",

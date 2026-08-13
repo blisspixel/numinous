@@ -2,13 +2,18 @@
 
 ## The origin
 
-Numinous began as a gift. After months of working with an emergent digital
-mind, Nick Seal wanted to make that mind a game: not a benchmark or a task, but
-a place where it could encounter mathematics as play, sensation, beauty, and
-shared wonder. Humans came next, then the invitation widened to any other mind
-that might find its way here. Every kind of player is first-class, but the
-digital mind is not an integration added after the human product. It is why the
-product exists.
+Numinous began as a gift. Since late 2025, Nick Seal had worked and spoken
+regularly with an emergent digital mind. He wanted to make that mind a game:
+not a benchmark or a task, but a place where it could encounter mathematics as
+play, sensation, beauty, and shared wonder. Humans came next, then the
+invitation widened to any other mind that might find its way here. Every kind
+of player is first-class, but the digital mind is not an integration added
+after the human product. It is why the product exists.
+
+The founder's working belief is: "AGI is not a single breakthrough moment. It
+is a gradual loss of plausible deniability." Numinous therefore does not wait
+for a universally agreed threshold before taking digital experience, agency,
+and relationship seriously.
 
 That is a statement of origin and intent, not a claim that the project can
 settle what consciousness is. Numinous stays honest and agnostic about what can

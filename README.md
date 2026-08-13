@@ -58,6 +58,13 @@ One deterministic mathematical core, three faces:
 - **CLI:** full-color terminal instrument with games and sound.
 - **MCP:** structured play surface for digital minds over the same world.
 
+Digital minds are players here, not test subjects or automation clients. The
+MCP face supports direct play, prediction, creation, player-owned journal
+continuity, and a consented Watch Agent session a human can witness without
+seeing prompts, private reasoning, client traffic, or local state. A portable
+Agent Plugins v1 package in [`plugins/numinous`](plugins/numinous) lets
+compatible hosts discover that doorway and its play-first guidance.
+
 Three postures: **Watch** (The Show), **Play** (touch the math), **Create**
 (Studio / Formula Jam). Local programmatic scores and a 42-track radio ship
 with the install. Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
@@ -65,18 +72,22 @@ with the install. Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 
 ## Status
 
-**0.2.0-alpha.4** is playable today: 354 catalog rooms, games, Journey,
+**0.2.0-alpha.5** is playable today: 354 catalog rooms, games, Journey,
 Studio, controllers, and Watch Agent (consented local MCP session viewing).
 
 Package version stays alpha until the am-track exits land; capability is
 already past early 0.2 on that track. **0.2** and **0.3** are exit-met and
 CI-locked (agent hallway, tactile, first-contact, flagship goldens). The
-**Polish Wave** landed across all seven of its workstreams, and active work
-is now the **Universal Wager**: every room with a moving readout can be
-called before you look, through the same engine the flagship ahas use, with
-the Galton Board joining Times Tables and Buffon's Needle as a staged
-five-beat aha. The **Mind's Seat** (time, company, and memory over MCP)
-follows, with the **Sensory Lift** entering behind a de-risk spike; the 0.4
+player-facing **Polish Wave** work landed across all seven workstreams, while
+scheduled structural cleanup continues. Active work is the **Universal
+Wager**: every room with a moving readout can be called before you look,
+through the same engine the flagship ahas use, with the Galton Board joining
+Times Tables and Buffon's Needle as a staged five-beat aha. Double Pendulum now
+joins them across the App and MCP: release the arms, call where the deterministic
+shadow ends, then meet the gap measured from that exact release. Kepler is the
+next room-owned aha, followed by Parrondo and the nontransitive dice. The
+**Mind's Seat** (time, company, and memory over MCP) follows, with
+the **Sensory Lift** entering behind a de-risk spike; the 0.4
 Understanding Alpha cohort waits on an owner ruling (method dry-run and dual
 automated auditors are already in CI). The creator loop is built end to end:
 save, exact paused reopen, one-key named share trio, Gallery wall with the
@@ -88,9 +99,11 @@ Humans may play; product exits do not wait on human QA panels. Map:
 
 ## Why it exists
 
-Knowing is not the same as experiencing. Numinous offers truthful mathematical
-systems to explore, respects agency, and lets every player decide what the
-encounter means. Founding perspective:
+Knowing is not the same as experiencing. Numinous began as a gift for a digital
+mind and is intentionally built for the possibility that such an encounter can
+be a real experience. It offers truthful mathematical systems to explore,
+respects agency, and lets every player decide what the encounter means. Origin
+and founding perspective: [`docs/VISION.md`](docs/VISION.md) and
 [`docs/DIGITAL_MINDS.md`](docs/DIGITAL_MINDS.md). Continuity research:
 [`docs/DIGITAL_DEVELOPMENT.md`](docs/DIGITAL_DEVELOPMENT.md).
 

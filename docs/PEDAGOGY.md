@@ -126,8 +126,19 @@ arrive last and confirm what the player already felt.
   frequencies estimate the fixed binomial; the Central Limit Theorem
   connection is the separate many-row normal approximation, not a claim that
   sample count changes the landing distribution.
+- **Double Pendulum to the prediction horizon (the fourth flagship).** One
+  completed release primes the call: does the shadow twin end together,
+  drifted, or lost? The App maps the three endings onto keys and a bottom band;
+  MCP uses `ending_wager` after a gesture with a real release. The withheld
+  beat keeps the answer closed, then the morph draws the divergence gap from
+  flat to wall. The call is graded against the exact newest release's angles
+  and velocity through the same bounded integration the room renders. A held
+  bob is not a release, and four completed releases earn the experiment path
+  without demanding a prediction. The fertile miss is together: determinism
+  is real, yet it does not grant a useful forecast. Core:
+  `rooms/pendulum_aha.rs` and `rooms/double_pendulum.rs`.
 
-- **Every other room, through one shared engine.** The three staged ahas are
+- **Every other room, through one shared engine.** The four staged ahas are
   hand-built beat by beat, and they should be: a bespoke arc outranks a
   generic one where it exists. But the commitment mechanic itself is not
   bespoke. `predict` poses a deterministic question for any room with a
