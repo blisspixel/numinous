@@ -61,6 +61,7 @@ const PENDULUM_MORPH_SECONDS: f64 = 1.6;
 const KEPLER_MORPH_SECONDS: f64 = 1.6;
 /// Wall time for the Parrondo exact-expectation morph beat.
 const PARRONDO_MORPH_SECONDS: f64 = 1.6;
+const NONTRANSITIVE_MORPH_SECONDS: f64 = 1.6;
 
 /// Blend `prev` into `dest` with `weight` of the previous frame in [0, 1].
 fn blend_rgba(dest: &mut [u8], prev: &[u8], weight: f32) {
@@ -417,6 +418,8 @@ struct App {
     kepler_aha: numinous_core::rooms::kepler_aha::KeplerAha,
     /// Staged Parrondo aha: call which policy wins in expectation.
     parrondo_aha: numinous_core::rooms::parrondo_aha::ParrondoAha,
+    /// Staged Nontransitive Dice aha: choose first, then call the counter.
+    nontransitive_aha: numinous_core::rooms::nontransitive_aha::NontransitiveAha,
     /// The universal readout wager, while one is posed on this room.
     room_wager: Option<wager::RoomWager>,
     rooms: Vec<Box<dyn Room>>,
@@ -586,6 +589,7 @@ impl App {
             pendulum_aha: numinous_core::rooms::pendulum_aha::PendulumAha::new(0),
             kepler_aha: numinous_core::rooms::kepler_aha::KeplerAha::new(0.0),
             parrondo_aha: numinous_core::rooms::parrondo_aha::ParrondoAha::new(),
+            nontransitive_aha: numinous_core::rooms::nontransitive_aha::NontransitiveAha::new(),
             room_wager: None,
             rooms: all_rooms_with(0),
             current: 0,
@@ -1787,6 +1791,17 @@ impl App {
                 aha_plate: aha.uses_expectation_overlay(),
             });
         }
+        if self.current_room_is_nontransitive() {
+            let aha = &self.nontransitive_aha;
+            return Some(playtest::FlagshipAhaNote {
+                beat: aha.beat_label().to_string(),
+                status: aha.status(None),
+                earn: aha.earn_label().unwrap_or_else(|| "none".to_string()),
+                allow_reveal: aha.allow_reveal_text(),
+                can_summon: aha.can_summon(),
+                aha_plate: aha.uses_outcome_grid(),
+            });
+        }
         None
     }
 
@@ -2459,6 +2474,22 @@ impl App {
                         return;
                     }
                 }
+                // Nontransitive Dice bottom band: call the counter without
+                // choosing a different die underneath the commitment.
+                if self.current_room_is_nontransitive()
+                    && !self.the_show
+                    && point.1 >= numinous_core::rooms::nontransitive_aha::WAGER_BAND_Y
+                    && matches!(
+                        self.nontransitive_aha.beat(),
+                        numinous_core::rooms::nontransitive_aha::AhaBeat::Prime
+                    )
+                {
+                    let die = numinous_core::rooms::nontransitive::Die::from_unit_x(point.0);
+                    if self.commit_nontransitive_call(die) {
+                        self.poking = false;
+                        return;
+                    }
+                }
                 // A posed call owns its band: a press there commits the
                 // call instead of touching the room underneath.
                 if !self.the_show
@@ -2495,6 +2526,7 @@ impl App {
                 self.sync_pendulum_aha();
                 self.sync_kepler_aha();
                 self.sync_parrondo_aha();
+                self.sync_nontransitive_aha();
                 if self.rooms[self.current].meta().id == "mandelbrot"
                     && let Some(window) = &self.window
                 {
@@ -2591,6 +2623,21 @@ impl App {
                 self.parrondo_aha.set_hover(None);
             }
         }
+        if self.current_room_is_nontransitive()
+            && !self.the_show
+            && matches!(
+                self.nontransitive_aha.beat(),
+                numinous_core::rooms::nontransitive_aha::AhaBeat::Prime
+            )
+        {
+            if point.1 >= numinous_core::rooms::nontransitive_aha::WAGER_BAND_Y {
+                self.nontransitive_aha.set_hover(Some(
+                    numinous_core::rooms::nontransitive::Die::from_unit_x(point.0),
+                ));
+            } else {
+                self.nontransitive_aha.set_hover(None);
+            }
+        }
         if !self.the_show
             && self.room_wager.as_ref().is_some_and(wager::RoomWager::open)
             && point.1 >= wager::WAGER_BAND_Y
@@ -2622,6 +2669,7 @@ impl App {
             self.sync_pendulum_aha();
             self.sync_kepler_aha();
             self.sync_parrondo_aha();
+            self.sync_nontransitive_aha();
             self.sync_room_parameter_voice();
             self.play_room_interaction_audio(accepted);
         }
@@ -2649,6 +2697,7 @@ impl App {
         self.sync_pendulum_aha();
         self.sync_kepler_aha();
         self.sync_parrondo_aha();
+        self.sync_nontransitive_aha();
         self.sync_room_parameter_voice();
         self.play_room_interaction_audio(accepted);
     }
@@ -3555,6 +3604,7 @@ impl App {
         self.reset_pendulum_aha();
         self.reset_kepler_aha();
         self.reset_parrondo_aha();
+        self.reset_nontransitive_aha();
         // A call is about one room's readout; carrying it across the
         // doorway would grade the wrong number.
         self.room_wager = None;
@@ -3695,6 +3745,10 @@ impl App {
         self.rooms[self.current].meta().id == "parrondo"
     }
 
+    fn current_room_is_nontransitive(&self) -> bool {
+        self.rooms[self.current].meta().id == "nontransitive"
+    }
+
     fn current_status_override(&self, width: usize) -> Option<String> {
         if self.current_room_is_life() {
             return Some(if width <= 400 {
@@ -3738,6 +3792,13 @@ impl App {
                 .status_input(phase, &self.inputs)
                 .or_else(|| self.rooms[self.current].status(phase));
             return Some(self.parrondo_aha.status(readout.as_deref()));
+        }
+        if self.current_room_is_nontransitive() && !self.the_show {
+            let phase = effective_room_phase("nontransitive", self.t, &self.inputs, self.the_show);
+            let readout = self.rooms[self.current]
+                .status_input(phase, &self.inputs)
+                .or_else(|| self.rooms[self.current].status(phase));
+            return Some(self.nontransitive_aha.status(readout.as_deref()));
         }
         if let Some(posed) = &self.room_wager {
             return Some(posed.status());
@@ -3798,6 +3859,13 @@ impl App {
         }
     }
 
+    fn reset_nontransitive_aha(&mut self) {
+        self.nontransitive_aha = numinous_core::rooms::nontransitive_aha::NontransitiveAha::new();
+        if self.current_room_is_nontransitive() {
+            self.show_info = false;
+        }
+    }
+
     /// U poses the room's own prediction, or closes an open one.
     ///
     /// Every room with a moving numeric readout can be called, which is
@@ -3817,6 +3885,7 @@ impl App {
             || self.current_room_is_pendulum()
             || self.current_room_is_kepler()
             || self.current_room_is_parrondo()
+            || self.current_room_is_nontransitive()
         {
             self.banner = Some(feedback::Banner::status(
                 "THIS ROOM STAGES ITS OWN WAGER",
@@ -3948,6 +4017,20 @@ impl App {
         self.parrondo_aha.note_selections(selections);
     }
 
+    /// Keep the dice aha bound to the newest completed die choice.
+    fn sync_nontransitive_aha(&mut self) {
+        if !self.current_room_is_nontransitive() || self.the_show {
+            return;
+        }
+        let choices = self
+            .inputs
+            .iter()
+            .filter(|input| matches!(input, numinous_core::RoomInput::PointerUp { .. }))
+            .count();
+        let chosen = numinous_core::rooms::nontransitive::selected_die_from_inputs(&self.inputs);
+        self.nontransitive_aha.note_choices(chosen, choices);
+    }
+
     /// E / Inspect: summon staged aha on flagship rooms; elsewhere toggle reveal.
     fn toggle_inspect(&mut self) {
         if self.the_show || self.studio {
@@ -4049,6 +4132,23 @@ impl App {
                 || matches!(self.parrondo_aha.beat(), AhaBeat::Morph { .. })
             {
                 if self.parrondo_aha.summon() {
+                    self.show_info = false;
+                }
+                return;
+            }
+            self.show_info = false;
+            return;
+        }
+        if self.current_room_is_nontransitive() {
+            use numinous_core::rooms::nontransitive_aha::AhaBeat;
+            if self.nontransitive_aha.allow_reveal_text() {
+                self.show_info = !self.show_info;
+                return;
+            }
+            if self.nontransitive_aha.can_summon()
+                || matches!(self.nontransitive_aha.beat(), AhaBeat::Morph { .. })
+            {
+                if self.nontransitive_aha.summon() {
                     self.show_info = false;
                 }
                 return;
@@ -4257,6 +4357,39 @@ impl App {
         }
         self.parrondo_aha
             .advance_morph(elapsed / PARRONDO_MORPH_SECONDS);
+    }
+
+    fn commit_nontransitive_call(&mut self, die: numinous_core::rooms::nontransitive::Die) -> bool {
+        if !self.current_room_is_nontransitive() || self.the_show {
+            return false;
+        }
+        if self.nontransitive_aha.commit_call(die) {
+            self.show_info = false;
+            self.banner = Some(feedback::Banner::status(
+                format!("CALLED {}", die.name()),
+                90,
+            ));
+            true
+        } else {
+            false
+        }
+    }
+
+    fn advance_nontransitive_morph(&mut self, elapsed: f64) {
+        if !self.current_room_is_nontransitive() || self.the_show || self.paused {
+            return;
+        }
+        if !matches!(
+            self.nontransitive_aha.beat(),
+            numinous_core::rooms::nontransitive_aha::AhaBeat::Morph { .. }
+        ) {
+            return;
+        }
+        if !elapsed.is_finite() || elapsed <= 0.0 {
+            return;
+        }
+        self.nontransitive_aha
+            .advance_morph(elapsed / NONTRANSITIVE_MORPH_SECONDS);
     }
 
     fn record_room_touch(&mut self, point: (f64, f64)) -> bool {
@@ -4647,6 +4780,32 @@ impl App {
                         );
                     }
                 }
+                if room.meta().id == "nontransitive" && !self.the_show {
+                    if matches!(
+                        self.nontransitive_aha.beat(),
+                        numinous_core::rooms::nontransitive_aha::AhaBeat::Prime
+                    ) {
+                        numinous_core::rooms::nontransitive_aha::render_counter_band(
+                            &mut raster,
+                            self.nontransitive_aha.hover(),
+                        );
+                    }
+                    if self.nontransitive_aha.uses_outcome_grid()
+                        && let Some(chosen) = self.nontransitive_aha.chosen()
+                    {
+                        let progress = match self.nontransitive_aha.beat() {
+                            numinous_core::rooms::nontransitive_aha::AhaBeat::Morph {
+                                progress,
+                            } => progress,
+                            _ => 1.0,
+                        };
+                        numinous_core::rooms::nontransitive_aha::render_outcome_grid(
+                            &mut raster,
+                            progress,
+                            chosen,
+                        );
+                    }
+                }
                 if !self.the_show
                     && let Some(posed) = &self.room_wager
                 {
@@ -4721,14 +4880,17 @@ impl App {
                     && !self.current_room_is_galton()
                     && !self.current_room_is_pendulum()
                     && !self.current_room_is_kepler()
-                    && !self.current_room_is_parrondo())
+                    && !self.current_room_is_parrondo()
+                    && !self.current_room_is_nontransitive())
                 || (self.current_room_is_times_tables()
                     && self.times_tables_aha.allow_reveal_text())
                 || (self.current_room_is_buffon() && self.buffon_aha.allow_reveal_text())
                 || (self.current_room_is_galton() && self.galton_aha.allow_reveal_text())
                 || (self.current_room_is_pendulum() && self.pendulum_aha.allow_reveal_text())
                 || (self.current_room_is_kepler() && self.kepler_aha.allow_reveal_text())
-                || (self.current_room_is_parrondo() && self.parrondo_aha.allow_reveal_text()));
+                || (self.current_room_is_parrondo() && self.parrondo_aha.allow_reveal_text())
+                || (self.current_room_is_nontransitive()
+                    && self.nontransitive_aha.allow_reveal_text()));
         hud::draw_room_chrome(
             raster,
             room,
@@ -5375,6 +5537,19 @@ impl ApplicationHandler for App {
                                 let _ = self.commit_parrondo_call(policy);
                             }
                         }
+                        // Nontransitive counter call: 1 A, 2 B, 3 C.
+                        Key::Character(c)
+                            if matches!(c.as_str(), "1" | "2" | "3")
+                                && self.current_room_is_nontransitive()
+                                && !self.the_show =>
+                        {
+                            let digit = c.as_str().as_bytes()[0].saturating_sub(b'0');
+                            if let Some(die) =
+                                numinous_core::rooms::nontransitive::Die::from_key_digit(digit)
+                            {
+                                let _ = self.commit_nontransitive_call(die);
+                            }
+                        }
                         // Q swaps the era, like swapping weapons.
                         Key::Character(c) if c.as_str() == "q" => {
                             self.era = self.era.next();
@@ -5717,6 +5892,7 @@ impl ApplicationHandler for App {
             self.advance_pendulum_morph(elapsed);
             self.advance_kepler_morph(elapsed);
             self.advance_parrondo_morph(elapsed);
+            self.advance_nontransitive_morph(elapsed);
         }
         if !(self.paused || self.dragging || self.show_help && self.modal_mode_active()) {
             let motion = self.time_scale * self.visualizer_scale;
@@ -6202,6 +6378,16 @@ mod tests {
         app.reset_parrondo_aha();
     }
 
+    fn select_nontransitive(app: &mut App) {
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "nontransitive")
+            .expect("Nontransitive Dice room");
+        app.show_help = false;
+        app.reset_nontransitive_aha();
+    }
+
     #[test]
     fn times_tables_holds_its_cardioid_until_input_but_the_show_keeps_sweeping() {
         assert_eq!(effective_room_phase("times-tables", 0.73, &[], false), 0.0);
@@ -6540,6 +6726,60 @@ mod tests {
     }
 
     #[test]
+    fn nontransitive_aha_turns_first_choice_into_an_exact_counter() {
+        use numinous_core::rooms::nontransitive::Die;
+        use numinous_core::rooms::nontransitive_aha::AhaBeat;
+
+        let mut app = headless("numinous_app_test_nontransitive_aha.txt");
+        select_nontransitive(&mut app);
+
+        app.toggle_inspect();
+        assert!(!app.show_info, "no answer before choosing a die");
+        assert_eq!(app.nontransitive_aha.beat(), AhaBeat::Explore);
+
+        app.begin_pointer_at((0.5, 0.18));
+        app.end_pointer_at((0.5, 0.18));
+        assert_eq!(app.nontransitive_aha.beat(), AhaBeat::Prime);
+        assert_eq!(app.nontransitive_aha.chosen(), Some(Die::A));
+
+        let input_count = app.inputs.len();
+        app.begin_pointer_at((0.9, 0.95));
+        assert_eq!(app.nontransitive_aha.beat(), AhaBeat::Withheld);
+        assert_eq!(app.nontransitive_aha.call(), Some(Die::C));
+        assert_eq!(
+            app.inputs.len(),
+            input_count,
+            "the call band must not choose another die"
+        );
+
+        app.toggle_inspect();
+        assert!(matches!(
+            app.nontransitive_aha.beat(),
+            AhaBeat::Morph { .. }
+        ));
+        app.advance_nontransitive_morph(super::NONTRANSITIVE_MORPH_SECONDS);
+        assert_eq!(app.nontransitive_aha.beat(), AhaBeat::Confirm);
+        app.toggle_inspect();
+        assert_eq!(app.nontransitive_aha.beat(), AhaBeat::Consolidated);
+        let grade = app
+            .nontransitive_aha
+            .graded()
+            .expect("the counter is answered");
+        assert!(grade.contains("counter is C"), "{grade}");
+        assert!(grade.contains("20/36"), "{grade}");
+        assert!(grade.contains("Nailed"), "{grade}");
+        app.toggle_inspect();
+        assert!(app.show_info);
+
+        app.reset_current_room();
+        assert_eq!(app.nontransitive_aha.beat(), AhaBeat::Explore);
+        assert!(!app.show_info);
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
     fn the_universal_wager_reaches_an_ordinary_room_and_meets_its_truth() {
         // The Wager Wave's engine, on the App's hands: an ordinary catalog
         // room with a readout can be called, aimed with the keyboard alone,
@@ -6623,6 +6863,7 @@ mod tests {
             "double-pendulum",
             "kepler-laws",
             "parrondo",
+            "nontransitive",
         ] {
             app.current = app
                 .rooms

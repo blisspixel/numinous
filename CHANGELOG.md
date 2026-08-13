@@ -5,6 +5,25 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+## [0.3.0-alpha.4] - 2026-08-13
+
+- Nontransitive Dice now carries the seventh room-owned Universal Wager across
+  the App and MCP. A player chooses A, B, or C first, calls the counter, then
+  watches the complete 6 by 6 outcome space arrive before the wager meets its
+  truth. Four completed choices provide an observation path without forcing a
+  prediction.
+- Typed dice and exact enumeration now prove the complete cycle: A beats B in
+  24 of 36 face pairs, B beats C in 24 of 36, and C beats A in 20 of 36.
+  Sampled rolls remain tactile texture but never grade the player.
+- MCP exposes strict `die_choice` and `counter_wager` discovery, validation,
+  typed face arrays, exact cycle counts, graded truth, and a color-independent
+  W/L grid. The zero-cost local agent hallway now exercises the counter wager
+  through real MCP stdio for five fixed participation lenses and fails closed
+  if the typed or visible proof disappears.
+- The prescribed seven-room Universal Wager wave is complete. The roadmap now
+  advances to the remaining structural cleanup and the Mind's Seat while the
+  generic deterministic call and all seven staged rooms remain standing gates.
+
 ## [0.3.0-alpha.3] - 2026-08-13
 
 - Parrondo's Trap now carries the sixth room-owned Universal Wager across the

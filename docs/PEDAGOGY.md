@@ -156,8 +156,16 @@ arrive last and confirm what the player already felt.
   its winning policy, but exact expectation disproved that claim, so ABB is now
   the canonical schedule. Four selections earn observation without demanding
   a prediction. Core: `rooms/parrondo.rs` and `rooms/parrondo_aha.rs`.
+- **Nontransitive Dice to contextual advantage (the seventh flagship).** The
+  player chooses A, B, or C first, then calls which die can beat it. The App
+  maps the displayed triangle and a bottom counter band onto that wager; MCP
+  gives a digital player the typed `die_choice` and `counter_wager` actions.
+  The morph enumerates all 36 equally likely face pairs with W and L marks.
+  Exact counts prove A over B at 24/36, B over C at 24/36, and C over A at
+  20/36. Four choices earn observation without demanding a prediction. Core:
+  `rooms/nontransitive.rs` and `rooms/nontransitive_aha.rs`.
 
-- **Every other room, through one shared engine.** The six staged ahas are
+- **Every other room, through one shared engine.** The seven staged ahas are
   hand-built beat by beat, and they should be: a bespoke arc outranks a
   generic one where it exists. But the commitment mechanic itself is not
   bespoke. `predict` poses a deterministic question for any room with a
