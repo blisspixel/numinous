@@ -59,6 +59,8 @@ const BUFFON_MORPH_SECONDS: f64 = 1.6;
 const PENDULUM_MORPH_SECONDS: f64 = 1.6;
 /// Wall time for the Kepler equal-time-mark morph beat.
 const KEPLER_MORPH_SECONDS: f64 = 1.6;
+/// Wall time for the Parrondo exact-expectation morph beat.
+const PARRONDO_MORPH_SECONDS: f64 = 1.6;
 
 /// Blend `prev` into `dest` with `weight` of the previous frame in [0, 1].
 fn blend_rgba(dest: &mut [u8], prev: &[u8], weight: f32) {
@@ -413,6 +415,8 @@ struct App {
     pendulum_aha: numinous_core::rooms::pendulum_aha::PendulumAha,
     /// Staged Kepler aha: call how speed changes near the sun.
     kepler_aha: numinous_core::rooms::kepler_aha::KeplerAha,
+    /// Staged Parrondo aha: call which policy wins in expectation.
+    parrondo_aha: numinous_core::rooms::parrondo_aha::ParrondoAha,
     /// The universal readout wager, while one is posed on this room.
     room_wager: Option<wager::RoomWager>,
     rooms: Vec<Box<dyn Room>>,
@@ -581,6 +585,7 @@ impl App {
             galton_aha: numinous_core::rooms::galton_aha::GaltonAha::new(),
             pendulum_aha: numinous_core::rooms::pendulum_aha::PendulumAha::new(0),
             kepler_aha: numinous_core::rooms::kepler_aha::KeplerAha::new(0.0),
+            parrondo_aha: numinous_core::rooms::parrondo_aha::ParrondoAha::new(),
             room_wager: None,
             rooms: all_rooms_with(0),
             current: 0,
@@ -1711,7 +1716,7 @@ impl App {
         playtest::write_report(dir, now, &report)
     }
 
-    /// Capture Times Tables / Buffon aha state for hallway F9 notes.
+    /// Capture room-owned aha state for hallway F9 notes.
     fn flagship_aha_playtest_note(&self) -> Option<playtest::FlagshipAhaNote> {
         if self.the_show {
             return None;
@@ -1769,6 +1774,17 @@ impl App {
                 allow_reveal: aha.allow_reveal_text(),
                 can_summon: aha.can_summon(),
                 aha_plate: aha.uses_time_overlay(),
+            });
+        }
+        if self.current_room_is_parrondo() {
+            let aha = &self.parrondo_aha;
+            return Some(playtest::FlagshipAhaNote {
+                beat: aha.beat_label().to_string(),
+                status: aha.status(None),
+                earn: aha.earn_label().unwrap_or_else(|| "none".to_string()),
+                allow_reveal: aha.allow_reveal_text(),
+                can_summon: aha.can_summon(),
+                aha_plate: aha.uses_expectation_overlay(),
             });
         }
         None
@@ -2427,6 +2443,22 @@ impl App {
                         return;
                     }
                 }
+                // Parrondo bottom band: call the winning policy without
+                // changing the sampled walk underneath the commitment.
+                if self.current_room_is_parrondo()
+                    && !self.the_show
+                    && point.1 >= numinous_core::rooms::parrondo_aha::WAGER_BAND_Y
+                    && matches!(
+                        self.parrondo_aha.beat(),
+                        numinous_core::rooms::parrondo_aha::AhaBeat::Prime
+                    )
+                {
+                    let policy = numinous_core::rooms::parrondo::Policy::from_unit_x(point.0);
+                    if self.commit_parrondo_call(policy) {
+                        self.poking = false;
+                        return;
+                    }
+                }
                 // A posed call owns its band: a press there commits the
                 // call instead of touching the room underneath.
                 if !self.the_show
@@ -2462,6 +2494,7 @@ impl App {
                 self.sync_galton_aha();
                 self.sync_pendulum_aha();
                 self.sync_kepler_aha();
+                self.sync_parrondo_aha();
                 if self.rooms[self.current].meta().id == "mandelbrot"
                     && let Some(window) = &self.window
                 {
@@ -2543,6 +2576,21 @@ impl App {
                 self.kepler_aha.set_hover(None);
             }
         }
+        if self.current_room_is_parrondo()
+            && !self.the_show
+            && matches!(
+                self.parrondo_aha.beat(),
+                numinous_core::rooms::parrondo_aha::AhaBeat::Prime
+            )
+        {
+            if point.1 >= numinous_core::rooms::parrondo_aha::WAGER_BAND_Y {
+                self.parrondo_aha.set_hover(Some(
+                    numinous_core::rooms::parrondo::Policy::from_unit_x(point.0),
+                ));
+            } else {
+                self.parrondo_aha.set_hover(None);
+            }
+        }
         if !self.the_show
             && self.room_wager.as_ref().is_some_and(wager::RoomWager::open)
             && point.1 >= wager::WAGER_BAND_Y
@@ -2573,6 +2621,7 @@ impl App {
             self.sync_galton_aha();
             self.sync_pendulum_aha();
             self.sync_kepler_aha();
+            self.sync_parrondo_aha();
             self.sync_room_parameter_voice();
             self.play_room_interaction_audio(accepted);
         }
@@ -2599,6 +2648,7 @@ impl App {
         self.sync_galton_aha();
         self.sync_pendulum_aha();
         self.sync_kepler_aha();
+        self.sync_parrondo_aha();
         self.sync_room_parameter_voice();
         self.play_room_interaction_audio(accepted);
     }
@@ -3504,6 +3554,7 @@ impl App {
         self.reset_galton_aha();
         self.reset_pendulum_aha();
         self.reset_kepler_aha();
+        self.reset_parrondo_aha();
         // A call is about one room's readout; carrying it across the
         // doorway would grade the wrong number.
         self.room_wager = None;
@@ -3640,6 +3691,10 @@ impl App {
         self.rooms[self.current].meta().id == "kepler-laws"
     }
 
+    fn current_room_is_parrondo(&self) -> bool {
+        self.rooms[self.current].meta().id == "parrondo"
+    }
+
     fn current_status_override(&self, width: usize) -> Option<String> {
         if self.current_room_is_life() {
             return Some(if width <= 400 {
@@ -3676,6 +3731,13 @@ impl App {
                 .status_input(phase, &self.inputs)
                 .or_else(|| self.rooms[self.current].status(phase));
             return Some(self.kepler_aha.status(readout.as_deref()));
+        }
+        if self.current_room_is_parrondo() && !self.the_show {
+            let phase = effective_room_phase("parrondo", self.t, &self.inputs, self.the_show);
+            let readout = self.rooms[self.current]
+                .status_input(phase, &self.inputs)
+                .or_else(|| self.rooms[self.current].status(phase));
+            return Some(self.parrondo_aha.status(readout.as_deref()));
         }
         if let Some(posed) = &self.room_wager {
             return Some(posed.status());
@@ -3729,6 +3791,13 @@ impl App {
         }
     }
 
+    fn reset_parrondo_aha(&mut self) {
+        self.parrondo_aha = numinous_core::rooms::parrondo_aha::ParrondoAha::new();
+        if self.current_room_is_parrondo() {
+            self.show_info = false;
+        }
+    }
+
     /// U poses the room's own prediction, or closes an open one.
     ///
     /// Every room with a moving numeric readout can be called, which is
@@ -3747,6 +3816,7 @@ impl App {
             || self.current_room_is_galton()
             || self.current_room_is_pendulum()
             || self.current_room_is_kepler()
+            || self.current_room_is_parrondo()
         {
             self.banner = Some(feedback::Banner::status(
                 "THIS ROOM STAGES ITS OWN WAGER",
@@ -3865,6 +3935,19 @@ impl App {
         self.kepler_aha.note_tunings(tunings);
     }
 
+    /// Keep the Parrondo aha in step with completed policy selections.
+    fn sync_parrondo_aha(&mut self) {
+        if !self.current_room_is_parrondo() || self.the_show {
+            return;
+        }
+        let selections = self
+            .inputs
+            .iter()
+            .filter(|input| matches!(input, numinous_core::RoomInput::PointerUp { .. }))
+            .count();
+        self.parrondo_aha.note_selections(selections);
+    }
+
     /// E / Inspect: summon staged aha on flagship rooms; elsewhere toggle reveal.
     fn toggle_inspect(&mut self) {
         if self.the_show || self.studio {
@@ -3949,6 +4032,23 @@ impl App {
                 || matches!(self.kepler_aha.beat(), AhaBeat::Morph { .. })
             {
                 if self.kepler_aha.summon() {
+                    self.show_info = false;
+                }
+                return;
+            }
+            self.show_info = false;
+            return;
+        }
+        if self.current_room_is_parrondo() {
+            use numinous_core::rooms::parrondo_aha::AhaBeat;
+            if self.parrondo_aha.allow_reveal_text() {
+                self.show_info = !self.show_info;
+                return;
+            }
+            if self.parrondo_aha.can_summon()
+                || matches!(self.parrondo_aha.beat(), AhaBeat::Morph { .. })
+            {
+                if self.parrondo_aha.summon() {
                     self.show_info = false;
                 }
                 return;
@@ -4124,6 +4224,39 @@ impl App {
         }
         self.kepler_aha
             .advance_morph(elapsed / KEPLER_MORPH_SECONDS);
+    }
+
+    fn commit_parrondo_call(&mut self, policy: numinous_core::rooms::parrondo::Policy) -> bool {
+        if !self.current_room_is_parrondo() || self.the_show {
+            return false;
+        }
+        if self.parrondo_aha.commit_call(policy) {
+            self.show_info = false;
+            self.banner = Some(feedback::Banner::status(
+                format!("CALLED {}", policy.name()),
+                90,
+            ));
+            true
+        } else {
+            false
+        }
+    }
+
+    fn advance_parrondo_morph(&mut self, elapsed: f64) {
+        if !self.current_room_is_parrondo() || self.the_show || self.paused {
+            return;
+        }
+        if !matches!(
+            self.parrondo_aha.beat(),
+            numinous_core::rooms::parrondo_aha::AhaBeat::Morph { .. }
+        ) {
+            return;
+        }
+        if !elapsed.is_finite() || elapsed <= 0.0 {
+            return;
+        }
+        self.parrondo_aha
+            .advance_morph(elapsed / PARRONDO_MORPH_SECONDS);
     }
 
     fn record_room_touch(&mut self, point: (f64, f64)) -> bool {
@@ -4491,6 +4624,29 @@ impl App {
                         );
                     }
                 }
+                if room.meta().id == "parrondo" && !self.the_show {
+                    if matches!(
+                        self.parrondo_aha.beat(),
+                        numinous_core::rooms::parrondo_aha::AhaBeat::Prime
+                    ) {
+                        numinous_core::rooms::parrondo_aha::render_policy_band(
+                            &mut raster,
+                            self.parrondo_aha.hover(),
+                        );
+                    }
+                    if self.parrondo_aha.uses_expectation_overlay() {
+                        let progress = match self.parrondo_aha.beat() {
+                            numinous_core::rooms::parrondo_aha::AhaBeat::Morph { progress } => {
+                                progress
+                            }
+                            _ => 1.0,
+                        };
+                        numinous_core::rooms::parrondo_aha::render_expectation_overlay(
+                            &mut raster,
+                            progress,
+                        );
+                    }
+                }
                 if !self.the_show
                     && let Some(posed) = &self.room_wager
                 {
@@ -4564,13 +4720,15 @@ impl App {
                     && !self.current_room_is_buffon()
                     && !self.current_room_is_galton()
                     && !self.current_room_is_pendulum()
-                    && !self.current_room_is_kepler())
+                    && !self.current_room_is_kepler()
+                    && !self.current_room_is_parrondo())
                 || (self.current_room_is_times_tables()
                     && self.times_tables_aha.allow_reveal_text())
                 || (self.current_room_is_buffon() && self.buffon_aha.allow_reveal_text())
                 || (self.current_room_is_galton() && self.galton_aha.allow_reveal_text())
                 || (self.current_room_is_pendulum() && self.pendulum_aha.allow_reveal_text())
-                || (self.current_room_is_kepler() && self.kepler_aha.allow_reveal_text()));
+                || (self.current_room_is_kepler() && self.kepler_aha.allow_reveal_text())
+                || (self.current_room_is_parrondo() && self.parrondo_aha.allow_reveal_text()));
         hud::draw_room_chrome(
             raster,
             room,
@@ -5204,6 +5362,19 @@ impl ApplicationHandler for App {
                                 let _ = self.commit_kepler_call(relation);
                             }
                         }
+                        // Parrondo policy call: 1 A, 2 B, 3 ABB.
+                        Key::Character(c)
+                            if matches!(c.as_str(), "1" | "2" | "3")
+                                && self.current_room_is_parrondo()
+                                && !self.the_show =>
+                        {
+                            let digit = c.as_str().as_bytes()[0].saturating_sub(b'0');
+                            if let Some(policy) =
+                                numinous_core::rooms::parrondo::Policy::from_key_digit(digit)
+                            {
+                                let _ = self.commit_parrondo_call(policy);
+                            }
+                        }
                         // Q swaps the era, like swapping weapons.
                         Key::Character(c) if c.as_str() == "q" => {
                             self.era = self.era.next();
@@ -5545,6 +5716,7 @@ impl ApplicationHandler for App {
             self.advance_galton_morph(elapsed);
             self.advance_pendulum_morph(elapsed);
             self.advance_kepler_morph(elapsed);
+            self.advance_parrondo_morph(elapsed);
         }
         if !(self.paused || self.dragging || self.show_help && self.modal_mode_active()) {
             let motion = self.time_scale * self.visualizer_scale;
@@ -6020,6 +6192,16 @@ mod tests {
         app.reset_kepler_aha();
     }
 
+    fn select_parrondo(app: &mut App) {
+        app.current = app
+            .rooms
+            .iter()
+            .position(|room| room.meta().id == "parrondo")
+            .expect("Parrondo room");
+        app.show_help = false;
+        app.reset_parrondo_aha();
+    }
+
     #[test]
     fn times_tables_holds_its_cardioid_until_input_but_the_show_keeps_sweeping() {
         assert_eq!(effective_room_phase("times-tables", 0.73, &[], false), 0.0);
@@ -6312,6 +6494,52 @@ mod tests {
     }
 
     #[test]
+    fn parrondo_aha_calls_the_policy_then_opens_exact_expectations() {
+        use numinous_core::rooms::parrondo::Policy;
+        use numinous_core::rooms::parrondo_aha::AhaBeat;
+
+        let mut app = headless("numinous_app_test_parrondo_aha.txt");
+        select_parrondo(&mut app);
+
+        app.toggle_inspect();
+        assert!(!app.show_info, "no answer before trying a policy");
+        assert_eq!(app.parrondo_aha.beat(), AhaBeat::Explore);
+
+        app.begin_pointer_at((0.5, 0.4));
+        app.end_pointer_at((0.5, 0.4));
+        assert_eq!(app.parrondo_aha.beat(), AhaBeat::Prime);
+
+        let input_count = app.inputs.len();
+        app.begin_pointer_at((0.9, 0.95));
+        assert_eq!(app.parrondo_aha.beat(), AhaBeat::Withheld);
+        assert_eq!(app.parrondo_aha.call(), Some(Policy::CycleAbb));
+        assert_eq!(
+            app.inputs.len(),
+            input_count,
+            "the call band must not select another sampled policy"
+        );
+
+        app.toggle_inspect();
+        assert!(matches!(app.parrondo_aha.beat(), AhaBeat::Morph { .. }));
+        app.advance_parrondo_morph(super::PARRONDO_MORPH_SECONDS);
+        assert_eq!(app.parrondo_aha.beat(), AhaBeat::Confirm);
+        app.toggle_inspect();
+        assert_eq!(app.parrondo_aha.beat(), AhaBeat::Consolidated);
+        let grade = app.parrondo_aha.graded().expect("the call is answered");
+        assert!(grade.contains("winner is ABB"), "{grade}");
+        assert!(grade.contains("Nailed"), "{grade}");
+        app.toggle_inspect();
+        assert!(app.show_info);
+
+        app.reset_current_room();
+        assert_eq!(app.parrondo_aha.beat(), AhaBeat::Explore);
+        assert!(!app.show_info);
+
+        let _ = std::fs::remove_file(&app.journey_file);
+        let _ = std::fs::remove_file(&app.scores_file);
+    }
+
+    #[test]
     fn the_universal_wager_reaches_an_ordinary_room_and_meets_its_truth() {
         // The Wager Wave's engine, on the App's hands: an ordinary catalog
         // room with a readout can be called, aimed with the keyboard alone,
@@ -6387,18 +6615,27 @@ mod tests {
     fn a_flagship_room_keeps_its_own_staged_wager() {
         // The generic call must not shadow the hand-built five-beat arcs.
         let mut app = headless("numinous_app_test_wager_flagship.txt");
-        app.current = app
-            .rooms
-            .iter()
-            .position(|room| room.meta().id == "times-tables")
-            .expect("times-tables in catalog");
         app.show_help = false;
-        app.toggle_room_wager();
-        assert!(
-            app.room_wager.is_none(),
-            "a flagship stages its own wager instead"
-        );
-        assert!(app.banner.is_some(), "and says so");
+        for id in [
+            "times-tables",
+            "buffon-needle",
+            "galton-board",
+            "double-pendulum",
+            "kepler-laws",
+            "parrondo",
+        ] {
+            app.current = app
+                .rooms
+                .iter()
+                .position(|room| room.meta().id == id)
+                .expect("staged room in catalog");
+            app.toggle_room_wager();
+            assert!(
+                app.room_wager.is_none(),
+                "{id} stages its own wager instead"
+            );
+            assert!(app.banner.is_some(), "{id} says so");
+        }
 
         let _ = std::fs::remove_file(&app.journey_file);
         let _ = std::fs::remove_file(&app.scores_file);

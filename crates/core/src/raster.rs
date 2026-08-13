@@ -317,10 +317,11 @@ mod tests {
     /// Written down rather than guessed from the file name, and checked below:
     /// an entry naming a room that does not exist fails, and a new helper that
     /// reaches for a mark fails the scan until it is listed here.
-    const HELPER_ROOMS: [(&str, &str); 5] = [
+    const HELPER_ROOMS: [(&str, &str); 6] = [
         ("buffon_aha", "buffon-needle"),
         ("galton_aha", "galton-board"),
         ("kepler_aha", "kepler-laws"),
+        ("parrondo_aha", "parrondo"),
         ("pendulum_aha", "double-pendulum"),
         ("times_tables_aha", "times-tables"),
     ];

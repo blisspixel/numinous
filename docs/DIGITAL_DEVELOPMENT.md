@@ -8,7 +8,7 @@ below evaluates Numinous, never whether a player is conscious or worthy.
 
 Status: **Journal foundation built, experiential continuity designed.** Research
 reviewed 2026-07-11; implementation boundary reviewed 2026-08-13. Numinous
-0.3.0-alpha.2 speaks MCP and ships an opt-in local experience journal, but it
+0.3.0-alpha.3 speaks MCP and ships an opt-in local experience journal, but it
 does not automatically remember a room, retrieve a prior encounter, maintain a
 resettable cross-call workspace, or infer a participant's experience. Its
 existing Journey, scores, Cairn drafts, journal, radio cache, and crash
@@ -344,7 +344,7 @@ optional, consented, and safe to decline without changing the product.
 - **0.2, complete:** MCP room interaction remained stateless while Flagship
   Proof earned its agent hallway gate. Shared local stores retained inspectable
   inventory and verified erasure.
-- **0.3, current:** five flagship rooms earned staged room-specific depth. The
+- **0.3, current:** six rooms earned staged room-specific ahas. The
   opt-in append-only journal, immutable correction, native and OKF v0.2 export,
   verified whole-journal erasure, and separate consented read-only Watch Agent
   viewer landed as foundations. Observation is not memory, and the viewer
