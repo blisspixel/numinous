@@ -1389,7 +1389,7 @@ fn negotiate_protocol_version(params: Option<&Value>) -> &'static str {
 }
 
 fn server_instructions() -> &'static str {
-    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does before you ask for explanations. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. Read structuredContent.engineeredAha for beat and earn. describe_room and reveal_room open explanation on purpose and can spoil generation-before-reveal, so prefer play_room first. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
+    "Explore the catalog with list_rooms using response_mode compact for a short first look, then play_room to render ASCII and see what the math does before you ask for explanations. On Times Tables pass place_wager (mandelbrot, nephroid, or circle) then aha_summon true for the engineered aha; on Buffon's Needle pass number_wager (1.5..4.5) then aha_summon true; on the Galton Board drop waves with pokes, pass bin_wager (0..16, where the pile those pokes build will peak; it is the newest coin's run, and every reply names the coin it read) then aha_summon true. On Double Pendulum release the arms with a gesture, pass ending_wager (together, drifted, or lost), then aha_summon true. On Kepler Areas tune an ellipse with a poke or completed gesture, pass speed_wager (faster, slower, or same), then aha_summon true. Read structuredContent.engineeredAha for beat and earn. describe_room and reveal_room open explanation on purpose and can spoil generation-before-reveal, so prefer play_room first. Steer simulations with list_sims and run_sim, and play Guess the Shape with the quiz tool. Modern clients that advertise form elicitation can complete predict as one multi-round-trip call. If a human offers a local App pairing code, broadcast_session lets you consent to, inspect, pause, resume, or stop that read-only public view. Further reading lives on reveal_room as citation."
 }
 
 fn server_capabilities() -> Value {
@@ -1569,7 +1569,7 @@ fn build_tools_catalog() -> Value {
             },
             {
                 "name": "play_room",
-                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. When you supply pokes or a gesture, the structured result includes a delta (cells changed, ink added/removed/reshaped, changed region) measuring exactly how the math answered your hand. This call is stateless: replay the same inputs for the same result. Times Tables, Buffon's Needle, the Galton Board, and Double Pendulum accept a room-owned wager plus aha_summon to walk an engineered aha without App session state; structuredContent.engineeredAha reports the beat.",
+                "description": "Play a room: render it and get back an ASCII picture of the result, so you can see what the math does. When you supply pokes or a gesture, the structured result includes a delta (cells changed, ink added/removed/reshaped, changed region) measuring exactly how the math answered your hand. This call is stateless: replay the same inputs for the same result. Times Tables, Buffon's Needle, the Galton Board, Double Pendulum, and Kepler Areas accept a room-owned wager plus aha_summon to walk an engineered aha without App session state; structuredContent.engineeredAha reports the beat.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -1605,9 +1605,14 @@ fn build_tools_catalog() -> Value {
                             "enum": ["together", "drifted", "lost"],
                             "description": "Double Pendulum engineered aha only: after at least one completed release, call where its deterministic shadow twin ends."
                         },
+                        "speed_wager": {
+                            "type": "string",
+                            "enum": ["faster", "slower", "same"],
+                            "description": "Kepler Areas engineered aha only: after tuning an ellipse, call how orbital speed changes near the sun."
+                        },
                         "aha_summon": {
                             "type": "boolean",
-                            "description": "After a generation act on Times Tables, Buffon, the Galton Board, or Double Pendulum, advance the engineered aha through morph to consolidated and unlock punchline reveal text. Stateless one-shot."
+                            "description": "After a generation act on Times Tables, Buffon, the Galton Board, Double Pendulum, or Kepler Areas, advance the engineered aha through morph to consolidated and unlock punchline reveal text. Stateless one-shot."
                         }
                     },
                     "required": ["id"],
@@ -3282,17 +3287,28 @@ fn play_room_tool_for_journey(args: &Value, journey: &numinous_core::Journey) ->
             };
             let goal = room.goal();
             let goal_met = goal.is_some() && room.goal_met(t, accepted_inputs);
+            let completed_kepler_tunings = if inputs.gesture.is_empty() {
+                inputs.pokes.len()
+            } else {
+                inputs
+                    .gesture
+                    .iter()
+                    .filter(|input| matches!(input, numinous_core::RoomInput::PointerUp { .. }))
+                    .count()
+            };
             let engineered_aha = match project_flagship_aha(
                 id,
                 variation,
                 t,
                 accepted_inputs,
+                completed_kepler_tunings,
                 goal_met,
                 aha_request,
             ) {
                 Ok(value) => value,
                 Err(message) => return tool_error(&message),
             };
+            render_kepler_aha_overlay(id, engineered_aha.as_ref(), &mut canvas);
             // Place/number wagers gate reveal on aha consolidation. The
             // established K5/goal path still unlocks reveal without aha args.
             let aha_gates_reveal = aha_request.uses_generation_args();
@@ -3397,6 +3413,7 @@ struct FlagshipAhaRequest {
     number_wager: Option<f64>,
     bin_wager: Option<usize>,
     ending_wager: Option<numinous_core::rooms::pendulum_aha::Ending>,
+    speed_wager: Option<numinous_core::rooms::kepler_aha::SpeedRelation>,
     summon: bool,
 }
 
@@ -3406,6 +3423,7 @@ impl FlagshipAhaRequest {
             || self.number_wager.is_some()
             || self.bin_wager.is_some()
             || self.ending_wager.is_some()
+            || self.speed_wager.is_some()
             || self.summon
     }
 }
@@ -3414,6 +3432,7 @@ fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAha
     let place_raw = args.get("place_wager");
     let number_raw = args.get("number_wager");
     let ending_raw = args.get("ending_wager");
+    let speed_raw = args.get("speed_wager");
     let summon = args
         .get("aha_summon")
         .and_then(Value::as_bool)
@@ -3509,13 +3528,36 @@ fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAha
         None
     };
 
+    let speed_wager = if let Some(value) = speed_raw {
+        let Some(name) = value.as_str() else {
+            return Err("Argument 'speed_wager' must be a string.".to_string());
+        };
+        if room_id != "kepler-laws" {
+            return Err("speed_wager is only valid on Kepler Areas (id kepler-laws).".to_string());
+        }
+        Some(match name {
+            "faster" => numinous_core::rooms::kepler_aha::SpeedRelation::Faster,
+            "slower" => numinous_core::rooms::kepler_aha::SpeedRelation::Slower,
+            "same" => numinous_core::rooms::kepler_aha::SpeedRelation::Same,
+            other => {
+                return Err(format!(
+                    "speed_wager must be faster, slower, or same; got '{other}'."
+                ));
+            }
+        })
+    } else {
+        None
+    };
+
     let wagers = usize::from(place_wager.is_some())
         + usize::from(number_wager.is_some())
         + usize::from(bin_wager.is_some())
-        + usize::from(ending_wager.is_some());
+        + usize::from(ending_wager.is_some())
+        + usize::from(speed_wager.is_some());
     if wagers > 1 {
         return Err(
-            "Pass one wager: place_wager, number_wager, bin_wager, or ending_wager.".to_string(),
+            "Pass one wager: place_wager, number_wager, bin_wager, ending_wager, or speed_wager."
+                .to_string(),
         );
     }
     if summon
@@ -3523,9 +3565,10 @@ fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAha
         && room_id != "buffon-needle"
         && room_id != "galton-board"
         && room_id != "double-pendulum"
+        && room_id != "kepler-laws"
     {
         return Err(
-            "aha_summon is only valid on Times Tables, Buffon's Needle, the Galton Board, or Double Pendulum."
+            "aha_summon is only valid on Times Tables, Buffon's Needle, the Galton Board, Double Pendulum, or Kepler Areas."
                 .to_string(),
         );
     }
@@ -3535,6 +3578,7 @@ fn parse_flagship_aha_request(args: &Value, room_id: &str) -> Result<FlagshipAha
         number_wager,
         bin_wager,
         ending_wager,
+        speed_wager,
         summon,
     })
 }
@@ -3554,6 +3598,10 @@ fn keyless_aha_status(status: String) -> String {
             "AT THE END? 1=TOGETHER 2=DRIFTED 3=LOST",
             "END? use ending_wager",
         )
+        .replace(
+            "NEAR SUN? 1=FASTER 2=SLOWER 3=SAME",
+            "NEAR SUN? use speed_wager",
+        )
         .replace("E:WHY", "aha_summon:true opens why")
         .replace("PRESS E", "SUMMON: aha_summon:true")
 }
@@ -3563,6 +3611,7 @@ fn project_flagship_aha(
     variation: u64,
     t: f64,
     inputs: &[numinous_core::RoomInput],
+    completed_kepler_tunings: usize,
     goal_met: bool,
     request: FlagshipAhaRequest,
 ) -> Result<Option<Value>, String> {
@@ -3769,15 +3818,88 @@ fn project_flagship_aha(
                 "graded": aha.graded(),
             })))
         }
+        "kepler-laws" => {
+            use numinous_core::rooms::kepler_aha::{AhaBeat, KeplerAha};
+            let eccentricity =
+                numinous_core::rooms::kepler_laws::eccentricity_for_inputs(t, inputs, variation);
+            let mut aha = KeplerAha::new(eccentricity);
+            aha.note_tunings(completed_kepler_tunings);
+            if let Some(relation) = request.speed_wager
+                && !aha.commit_call(relation)
+                && !aha.earned()
+            {
+                return Err(
+                    "speed_wager needs a chosen orbit: tune the eccentricity with at least one poke or completed gesture first."
+                        .to_string(),
+                );
+            }
+            if request.summon {
+                if !aha.earned() {
+                    return Err(
+                        "aha_summon requires a speed_wager or four completed tunings first."
+                            .to_string(),
+                    );
+                }
+                advance_kepler_to_consolidated(&mut aha);
+            }
+            let room: Box<dyn numinous_core::Room> = Box::new(
+                numinous_core::rooms::kepler_laws::KeplerLaws::new_with(variation),
+            );
+            let room_status = room.status_input(t, inputs).or_else(|| room.status(t));
+            let truth = aha.truth();
+            let wager = aha.call();
+            Ok(Some(json!({
+                "kind": "speed",
+                "beat": aha.beat_label(),
+                "status": keyless_aha_status(aha.status(room_status.as_deref())),
+                "earn": aha.earn_label(),
+                "allowReveal": aha.allow_reveal_text(),
+                "canSummon": aha.can_summon()
+                    || matches!(aha.beat(), AhaBeat::Morph { .. }),
+                "speedOptions": ["faster", "slower", "same"],
+                "tunings": completed_kepler_tunings,
+                "eccentricity": aha.eccentricity(),
+                "apsidalSpeedRatio": numinous_core::rooms::kepler_aha::apsidal_speed_ratio(
+                    aha.eccentricity()
+                ),
+                "punchline": aha.punchline(),
+                "wager": wager.map(|relation| relation.name().to_ascii_lowercase()),
+                "truth": truth.name().to_ascii_lowercase(),
+                "right": wager.map(|relation| relation == truth),
+                "graded": aha.graded(),
+            })))
+        }
         _ => {
             if request.uses_generation_args() {
                 return Err(
-                    "Engineered aha arguments are only valid on Times Tables, Buffon's Needle, the Galton Board, or Double Pendulum."
+                    "Engineered aha arguments are only valid on Times Tables, Buffon's Needle, the Galton Board, Double Pendulum, or Kepler Areas."
                         .to_string(),
                 );
             }
             Ok(None)
         }
+    }
+}
+
+fn render_kepler_aha_overlay(room_id: &str, aha: Option<&Value>, canvas: &mut Canvas) {
+    if room_id != "kepler-laws" {
+        return;
+    }
+    let Some(aha) = aha else {
+        return;
+    };
+    let eccentricity = aha
+        .get("eccentricity")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0);
+    match aha.get("beat").and_then(Value::as_str) {
+        Some("prime") => {
+            numinous_core::rooms::kepler_aha::render_speed_band(canvas, None);
+        }
+        Some("confirm" | "consolidated") => {
+            numinous_core::rooms::kepler_aha::render_equal_time_overlay(canvas, 1.0, eccentricity);
+        }
+        _ => {}
     }
 }
 
@@ -3796,6 +3918,19 @@ fn advance_galton_to_consolidated(aha: &mut numinous_core::rooms::galton_aha::Ga
 
 fn advance_pendulum_to_consolidated(aha: &mut numinous_core::rooms::pendulum_aha::PendulumAha) {
     use numinous_core::rooms::pendulum_aha::AhaBeat;
+    if matches!(aha.beat(), AhaBeat::Withheld) {
+        let _ = aha.summon();
+    }
+    if matches!(aha.beat(), AhaBeat::Morph { .. }) {
+        aha.set_morph_progress(1.0);
+    }
+    if matches!(aha.beat(), AhaBeat::Confirm) {
+        let _ = aha.summon();
+    }
+}
+
+fn advance_kepler_to_consolidated(aha: &mut numinous_core::rooms::kepler_aha::KeplerAha) {
+    use numinous_core::rooms::kepler_aha::AhaBeat;
     if matches!(aha.beat(), AhaBeat::Withheld) {
         let _ = aha.summon();
     }
@@ -9643,6 +9778,10 @@ plays 2
                        {"kind": "down", "x": 0.6, "y": 0.3, "t": 0.1},
                        {"kind": "up", "x": 0.6, "y": 0.3, "t": 0.2}
                    ], "ending_wager": "together", "aha_summon": true}),
+            json!({"id": "kepler-laws", "width": 40, "height": 20,
+                   "pokes": [[0.8, 0.5]]}),
+            json!({"id": "kepler-laws", "width": 40, "height": 20,
+                   "pokes": [[0.8, 0.5]], "speed_wager": "faster", "aha_summon": true}),
         ];
         for arguments in calls {
             let reply = call("play_room", arguments.clone());
@@ -9652,6 +9791,7 @@ plays 2
                 "E:WHY",
                 "1=M 2=N 3=C",
                 "1=TOGETHER 2=DRIFTED 3=LOST",
+                "1=FASTER 2=SLOWER 3=SAME",
             ] {
                 assert!(
                     !text.contains(prompt),
@@ -9908,6 +10048,107 @@ plays 2
     }
 
     #[test]
+    fn kepler_speed_call_meets_the_exact_orbit_and_draws_equal_time_marks() {
+        let open = call(
+            "play_room",
+            json!({"id": "kepler-laws", "width": 64, "height": 28}),
+        );
+        let open_aha = &open["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(open_aha["kind"], "speed");
+        assert_eq!(open_aha["beat"], "explore");
+        assert_eq!(open_aha["tunings"], 0);
+
+        let primed = call(
+            "play_room",
+            json!({
+                "id": "kepler-laws",
+                "width": 64,
+                "height": 28,
+                "pokes": [[0.8, 0.4]]
+            }),
+        );
+        let prime = &primed["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(prime["beat"], "prime");
+        assert_eq!(prime["tunings"], 1);
+        assert_eq!(prime["speedOptions"], json!(["faster", "slower", "same"]));
+        assert!(
+            prime["status"]
+                .as_str()
+                .is_some_and(|status| status.contains("use speed_wager")),
+            "the keyless face names its own call field: {prime}"
+        );
+        let e = prime["eccentricity"].as_f64().expect("eccentricity");
+        assert!((e - 0.68).abs() < 1.0e-12, "{e}");
+
+        let done = call(
+            "play_room",
+            json!({
+                "id": "kepler-laws",
+                "width": 64,
+                "height": 28,
+                "pokes": [[0.8, 0.4]],
+                "speed_wager": "same",
+                "aha_summon": true
+            }),
+        );
+        let content = &done["result"]["structuredContent"];
+        let aha = &content["engineeredAha"];
+        assert_eq!(aha["beat"], "consolidated");
+        assert_eq!(aha["wager"], "same");
+        assert_eq!(aha["truth"], "faster");
+        assert_eq!(aha["right"], false);
+        assert!(
+            aha["apsidalSpeedRatio"]
+                .as_f64()
+                .is_some_and(|ratio| ratio > 5.0)
+        );
+        assert!(
+            aha["graded"]
+                .as_str()
+                .is_some_and(|graded| graded.contains("truth is FASTER")),
+            "{aha}"
+        );
+        assert!(content["reveal"].is_string());
+        assert!(
+            content["render"]
+                .as_str()
+                .is_some_and(|render| render.contains('O')),
+            "the consolidated picture must carry the equal-time evidence"
+        );
+    }
+
+    #[test]
+    fn kepler_circle_answers_same_and_four_tunings_can_earn_without_a_call() {
+        let circle = call(
+            "play_room",
+            json!({
+                "id": "kepler-laws",
+                "pokes": [[0.0, 0.5]],
+                "speed_wager": "same",
+                "aha_summon": true
+            }),
+        );
+        let circle_aha = &circle["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(circle_aha["truth"], "same");
+        assert_eq!(circle_aha["right"], true);
+        assert_eq!(circle_aha["apsidalSpeedRatio"], 1.0);
+
+        let observed = call(
+            "play_room",
+            json!({
+                "id": "kepler-laws",
+                "pokes": [[0.2, 0.5], [0.4, 0.5], [0.6, 0.5], [0.8, 0.5]],
+                "aha_summon": true
+            }),
+        );
+        let observed_aha = &observed["result"]["structuredContent"]["engineeredAha"];
+        assert_eq!(observed_aha["beat"], "consolidated");
+        assert_eq!(observed_aha["earn"], "tunings:4");
+        assert!(observed_aha["wager"].is_null());
+        assert!(observed_aha["graded"].is_null());
+    }
+
+    #[test]
     fn times_tables_place_wager_gates_reveal_until_aha_summon() {
         let wagered = call(
             "play_room",
@@ -10091,6 +10332,25 @@ plays 2
             json!({"id": "double-pendulum", "ending_wager": "elsewhere"}),
         );
         assert_eq!(pendulum_bad_ending["result"]["isError"], true);
+        let kepler_without_orbit = call(
+            "play_room",
+            json!({"id": "kepler-laws", "speed_wager": "faster"}),
+        );
+        assert_eq!(kepler_without_orbit["result"]["isError"], true);
+        let kepler_wrong_room = call(
+            "play_room",
+            json!({"id": "lorenz", "speed_wager": "faster"}),
+        );
+        assert_eq!(kepler_wrong_room["result"]["isError"], true);
+        let kepler_bad_relation = call(
+            "play_room",
+            json!({
+                "id": "kepler-laws",
+                "pokes": [[0.7, 0.5]],
+                "speed_wager": "sideways"
+            }),
+        );
+        assert_eq!(kepler_bad_relation["result"]["isError"], true);
     }
 
     #[test]

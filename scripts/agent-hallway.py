@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Agent-cohort flagship hallway over MCP (Times Tables and Buffon ahas).
+"""Agent-cohort flagship hallway over MCP room-owned ahas.
 
 This is engineering and digital-mind evidence, not a human stranger gate.
 Each persona runs a short cold-start MCP script through mcp-play isolation
@@ -123,12 +123,14 @@ def initialize_script() -> dict[str, Any]:
         ok = (
             "place_wager" in instructions
             and "number_wager" in instructions
+            and "speed_wager" in instructions
             and "prefer play_room first" in instructions
         )
         return {
             "ok": ok,
             "has_place_wager": "place_wager" in instructions,
             "has_number_wager": "number_wager" in instructions,
+            "has_speed_wager": "speed_wager" in instructions,
             "prefer_play_first": "prefer play_room first" in instructions,
         }
 
@@ -195,6 +197,39 @@ def buffon_script() -> list[dict[str, Any]]:
     return steps
 
 
+def kepler_script() -> list[dict[str, Any]]:
+    steps = []
+    open_call = call_tool(
+        "play_room",
+        {"id": "kepler-laws", "width": 48, "height": 24},
+    )
+    steps.append({"step": "open", **open_call})
+    wager = call_tool(
+        "play_room",
+        {
+            "id": "kepler-laws",
+            "width": 48,
+            "height": 24,
+            "pokes": [[0.8, 0.5]],
+            "speed_wager": "same",
+        },
+    )
+    steps.append({"step": "speed_wager_wrong", **wager})
+    summon = call_tool(
+        "play_room",
+        {
+            "id": "kepler-laws",
+            "width": 48,
+            "height": 24,
+            "pokes": [[0.8, 0.5]],
+            "speed_wager": "faster",
+            "aha_summon": True,
+        },
+    )
+    steps.append({"step": "speed_wager_truth_summon", **summon})
+    return steps
+
+
 def score_times(steps: list[dict[str, Any]]) -> dict[str, Any]:
     findings = []
     open_s = (steps[0].get("structured") or {}) if steps[0].get("ok") else {}
@@ -251,12 +286,49 @@ def score_buffon(steps: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def score_kepler(steps: list[dict[str, Any]]) -> dict[str, Any]:
+    findings = []
+    open_s = (steps[0].get("structured") or {}) if steps[0].get("ok") else {}
+    aha0 = open_s.get("engineeredAha") or {}
+    if aha0.get("kind") != "speed":
+        findings.append("open missing engineeredAha.speed")
+    if open_s.get("reveal"):
+        findings.append("cold open leaked reveal text")
+    wager = steps[1] if len(steps) > 1 else {}
+    wager_s = wager.get("structured") or {}
+    aha1 = wager_s.get("engineeredAha") or {}
+    if aha1.get("beat") != "withheld":
+        findings.append(f"wrong wager beat: {aha1.get('beat')}")
+    if wager_s.get("reveal"):
+        findings.append("wager without summon revealed early")
+    done = steps[2] if len(steps) > 2 else {}
+    done_s = done.get("structured") or {}
+    aha2 = done_s.get("engineeredAha") or {}
+    if aha2.get("beat") != "consolidated":
+        findings.append(f"summon did not consolidate: {aha2.get('beat')}")
+    if aha2.get("truth") != "faster" or aha2.get("wager") != "faster":
+        findings.append("selected ellipse did not answer the speed call")
+    if "O" not in str(done_s.get("render") or ""):
+        findings.append("consolidated render lacks equal-time marks")
+    if not done_s.get("reveal"):
+        findings.append("summon did not unlock reveal")
+    return {
+        "room": "kepler-laws",
+        "passed": not findings,
+        "findings": findings,
+        "final_beat": aha2.get("beat"),
+        "final_earn": aha2.get("earn"),
+    }
+
+
 def write_persona_note(
     persona: Persona,
     times: dict[str, Any],
     buffon: dict[str, Any],
+    kepler: dict[str, Any],
     times_steps: list[dict[str, Any]],
     buffon_steps: list[dict[str, Any]],
+    kepler_steps: list[dict[str, Any]],
 ) -> Path:
     OUT.mkdir(parents=True, exist_ok=True)
     path = OUT / f"{persona.slug}.md"
@@ -285,6 +357,13 @@ def write_persona_note(
         f"- Final beat: {buffon.get('final_beat')}",
         f"- Final earn: {buffon.get('final_earn')}",
         f"- Findings: {', '.join(buffon['findings']) if buffon['findings'] else 'none'}",
+        "",
+        "## Kepler Areas",
+        "",
+        f"- Passed machine script: {kepler['passed']}",
+        f"- Final beat: {kepler.get('final_beat')}",
+        f"- Final earn: {kepler.get('final_earn')}",
+        f"- Findings: {', '.join(kepler['findings']) if kepler['findings'] else 'none'}",
         "",
         "## Lens notes",
         "",
@@ -322,7 +401,8 @@ def write_persona_note(
     elif persona.slug == "math-anxious":
         lines.extend(
             [
-                "- Reveal absent until summon: " + str(times["passed"] and buffon["passed"]),
+                "- Reveal absent until summon: "
+                + str(times["passed"] and buffon["passed"] and kepler["passed"]),
                 "- Status after wrong guess stays short: "
                 + str(
                     len(
@@ -343,6 +423,8 @@ def write_persona_note(
                     in str((times_steps[2].get("structured") or {}).get("reveal") or "")
                 ),
                 "- Buffon pi path consolidates: " + str(buffon.get("final_beat") == "consolidated"),
+                "- Kepler speed path consolidates: "
+                + str(kepler.get("final_beat") == "consolidated"),
             ]
         )
     lines.extend(["", "## Raw beats", "", "### Times Tables steps", ""])
@@ -357,20 +439,27 @@ def write_persona_note(
         lines.append(
             f"- {step.get('step')}: ok={step.get('ok')} beat={aha.get('beat')} earn={aha.get('earn')}"
         )
+    lines.extend(["", "### Kepler Areas steps", ""])
+    for step in kepler_steps:
+        aha = ((step.get("structured") or {}).get("engineeredAha")) or {}
+        lines.append(
+            f"- {step.get('step')}: ok={step.get('ok')} beat={aha.get('beat')} earn={aha.get('earn')}"
+        )
     lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")
     return path
 
 
 def write_synthesis(
-    results: list[tuple[Persona, dict[str, Any], dict[str, Any]]],
+    results: list[tuple[Persona, dict[str, Any], dict[str, Any], dict[str, Any]]],
     initialize: dict[str, Any],
 ) -> Path:
     path = OUT / "SYNTHESIS.md"
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    all_pass = all(t["passed"] and b["passed"] for _, t, b in results) and initialize.get(
-        "ok"
-    )
+    all_pass = all(
+        times["passed"] and buffon["passed"] and kepler["passed"]
+        for _, times, buffon, kepler in results
+    ) and initialize.get("ok")
     lines = [
         "# Round 07 synthesis: flagship aha over MCP",
         "",
@@ -387,13 +476,15 @@ def write_synthesis(
         f"- initialize instructions: {initialize.get('ok')}",
         f"- place_wager taught: {initialize.get('has_place_wager')}",
         f"- number_wager taught: {initialize.get('has_number_wager')}",
+        f"- speed_wager taught: {initialize.get('has_speed_wager')}",
         f"- prefer play_room first: {initialize.get('prefer_play_first')}",
         "",
     ]
-    for persona, times, buffon in results:
-        combined = times["findings"] + buffon["findings"]
+    for persona, times, buffon, kepler in results:
+        combined = times["findings"] + buffon["findings"] + kepler["findings"]
         lines.append(
             f"- {persona.title}: times={times['passed']} buffon={buffon['passed']} "
+            f"kepler={kepler['passed']} "
             f"findings={combined if combined else ['none']}"
         )
     lines.extend(
@@ -401,10 +492,10 @@ def write_synthesis(
             "",
             "## Convergent engineering claims (if PASS)",
             "",
-            "1. Cold open does not leak Times Tables or Buffon reveal text.",
-            "2. place_wager / number_wager withhold reveal until aha_summon.",
+            "1. Cold open does not leak Times Tables, Buffon, or Kepler reveal text.",
+            "2. place_wager / number_wager / speed_wager withhold reveal until aha_summon.",
             "3. Truth summon consolidates and unlocks punchline reveal.",
-            "4. engineeredAha is present for agent discovery on both flagships.",
+            "4. engineeredAha is present for agent discovery on all three sampled flagships.",
             "5. initialize teaches play-first aha discovery for digital minds.",
             "",
         ]
@@ -417,20 +508,25 @@ def cohort_summary(
     initialize: dict[str, Any],
     times_score: dict[str, Any],
     buffon_score: dict[str, Any],
+    kepler_score: dict[str, Any],
 ) -> dict[str, Any]:
     """Return a machine-readable pass/fail summary for CI and audits."""
     passed = bool(
-        initialize.get("ok") and times_score.get("passed") and buffon_score.get("passed")
+        initialize.get("ok")
+        and times_score.get("passed")
+        and buffon_score.get("passed")
+        and kepler_score.get("passed")
     )
     findings = list(times_score.get("findings") or []) + list(
         buffon_score.get("findings") or []
-    )
+    ) + list(kepler_score.get("findings") or [])
     return {
         "suite": "agent-hallway",
         "passed": passed,
         "initialize_ok": bool(initialize.get("ok")),
         "times_tables_passed": bool(times_score.get("passed")),
         "buffon_passed": bool(buffon_score.get("passed")),
+        "kepler_passed": bool(kepler_score.get("passed")),
         "findings": findings,
         "personas": len(PERSONAS),
         "evidence_class": "agent-mcp-machine",
@@ -438,19 +534,29 @@ def cohort_summary(
 
 
 def main() -> int:
-    results: list[tuple[Persona, dict[str, Any], dict[str, Any]]] = []
+    results: list[tuple[Persona, dict[str, Any], dict[str, Any], dict[str, Any]]] = []
     # One shared script per room; personas re-score the same machine evidence
     # through different lenses (cheap, deterministic cohort).
     initialize = initialize_script()
     times_steps = times_tables_script()
     buffon_steps = buffon_script()
+    kepler_steps = kepler_script()
     times_score = score_times(times_steps)
     buffon_score = score_buffon(buffon_steps)
+    kepler_score = score_kepler(kepler_steps)
     for persona in PERSONAS:
-        write_persona_note(persona, times_score, buffon_score, times_steps, buffon_steps)
-        results.append((persona, times_score, buffon_score))
+        write_persona_note(
+            persona,
+            times_score,
+            buffon_score,
+            kepler_score,
+            times_steps,
+            buffon_steps,
+            kepler_steps,
+        )
+        results.append((persona, times_score, buffon_score, kepler_score))
     synthesis = write_synthesis(results, initialize)
-    summary = cohort_summary(initialize, times_score, buffon_score)
+    summary = cohort_summary(initialize, times_score, buffon_score, kepler_score)
     summary_path = OUT / "summary.json"
     OUT.mkdir(parents=True, exist_ok=True)
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
@@ -463,8 +569,10 @@ def main() -> int:
         times_score["passed"],
         "buffon",
         buffon_score["passed"],
+        "kepler",
+        kepler_score["passed"],
         "findings",
-        times_score["findings"] + buffon_score["findings"],
+        times_score["findings"] + buffon_score["findings"] + kepler_score["findings"],
     )
     print("--- summary.json ---")
     print(json.dumps(summary, sort_keys=True))

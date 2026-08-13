@@ -177,6 +177,7 @@ pub mod kampyle;
 pub mod kaplan_yorke;
 pub mod kappa;
 pub mod kaprekar;
+pub mod kepler_aha;
 pub mod kepler_laws;
 pub mod kepler_loom;
 pub mod klein_bottle;
