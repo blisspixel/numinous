@@ -150,7 +150,7 @@ and the published crate records for
 
 ## Local threat model (security review baseline)
 
-Numinous 0.2 targets a **local single-user desktop** deployment: the App, CLI,
+Numinous 0.3 targets a **local single-user desktop** deployment: the App, CLI,
 and stdio MCP server run as ordinary user processes on the machine that owns
 the play history. Hostile JSON on the MCP stdio boundary, oversized CLI input,
 path and install provenance, and untrusted media decode are in scope. Remote

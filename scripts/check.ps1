@@ -29,6 +29,7 @@ Invoke-Step "docs"        {
 }
 Invoke-Step "test"        { cargo test --workspace --all-targets --locked }
 Invoke-Step "MCP play driver" { python scripts/test-mcp-play.py }
+Invoke-Step "local agent playtest contract" { python scripts/test-local-agent-playtest.py }
 Invoke-Step "agent cohort contracts" { python scripts/test-agent-cohort.py }
 Invoke-Step "agent hallway cohort" { python scripts/agent-hallway.py }
 Invoke-Step "agent tactile cohort" { python scripts/agent-tactile.py }

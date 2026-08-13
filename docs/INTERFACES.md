@@ -11,7 +11,7 @@ The frame that makes the whole thing coherent: **one experience, three sensoria.
 Each face has its own UX, deliberately designed for its user, not a lowest-common-denominator port. This doc specifies the UX we are going for in each.
 
 **Implementation boundary, 2026-07-18:** all three faces are shipped from the
-same headless core in 0.2.0-alpha.5. Descriptions below mix current behavior
+same headless core in 0.3.0-alpha.1. Descriptions below mix current behavior
 with the intended mature UX. `ROADMAP.md` and each section's explicit status
 notes decide what is built.
 
@@ -588,7 +588,7 @@ scripts exercise the same surface in local validation.
 
 ## Roadmap position
 
-- **Built by 0.2.0-alpha.5:** the headless core, full-color CLI, native app, and
+- **Built by 0.3.0-alpha.1:** the headless core, full-color CLI, native app, and
   bounded MCP server expose the shared catalog, play, creation, prediction,
   challenge, learning, progression, and export foundations.
 - **0.3 through 0.6:** deepen tactile behavior, understanding, sensory polish,

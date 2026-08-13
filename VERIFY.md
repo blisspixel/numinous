@@ -92,7 +92,7 @@ flagship visual and room-bed audio goldens PASS, agent cohort contract unit
 tests pass, 105 study runner and collector regressions, and 15
 physical input contract regressions plus fifteen release-package, sixteen SBOM,
 and ten release workflow regressions pass, one screenshot diagnostic is
-ignored, 93.56% region coverage, and 93.57% line coverage**. The `gpu` and
+ignored, 95.12% region coverage, and 95.25% line coverage**. The `gpu` and
 `audio` crates plus the app event
 loop are excluded from the coverage gate and have dev-machine integration
 evidence, see `docs/QUALITY.md`. Controller routing is pure-tested. Physical
@@ -484,7 +484,7 @@ before JSON decoding.
 - `crates/gpu` adaptive wgpu rendering; `crates/audio` adaptive cpal output.
 - `faces/cli` the `numinous` binary; `faces/mcp` the `numinous-mcp` server.
 - `docs/` the full design and plan (start at `docs/README.md`); `CHANGELOG.md` the
-  running record of what shipped; `docs/ROADMAP.md` the version-gated plan.
+  running record of what shipped; `docs/ROADMAP.md` the evidence-labeled plan.
 - `.agent/` (gitignored) the working log; `renders/` (gitignored) generated output.
 
 ## 6. What is done vs pending

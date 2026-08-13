@@ -12,8 +12,8 @@ built, so an aspiration is never mistaken for a result.
   doctests, 3,487 passing all-target test cases plus one ignored screenshot
   diagnostic, locked
   builds, house style, `cargo-deny` in CI, an 80% line-coverage floor, and a
-  three-OS test-and-build matrix. The current measured coverage is 93.56%
-  regions and 93.57% lines under the documented exclusions. Each of the four
+  three-OS test-and-build matrix. The current measured coverage is 95.12%
+  regions and 95.25% lines under the documented exclusions. Each of the four
   packaged release targets installs into a disposable root, renders Times
   Tables through the installed CLI, and completes modern MCP discovery, the
   exact 35-tool inventory, and a real `play_room` call from an isolated profile.
@@ -61,6 +61,12 @@ built, so an aspiration is never mistaken for a result.
   protocol framing, source-bound artifact selection, external Cargo-config
   rejection, ignored source rejection, hidden-index rejection, and replacement
   detection.
+  A separate local-model player harness can give an already-installed
+  tool-capable model a bounded visit through the same MCP face. CI tests its
+  literal-loopback, local-weight, closed-palette, privacy, transcript, and
+  witnessed-call contracts without invoking a model. Real local runs are
+  exploratory synthetic evidence, never a consciousness, welfare, enjoyment,
+  or release-gate result. See `LOCAL_AGENT_PLAYTEST.md`.
   Catalog-wide sound admission, fixed-rate allocation bounds, semantic source
   replacement, App ownership, global controls, and radio restoration are
   directly tested. Unsupported or mismatched replay remains typed text and is

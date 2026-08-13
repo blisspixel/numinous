@@ -20,6 +20,8 @@ echo "== tests =="
 cargo test --workspace --all-targets --locked
 echo "== MCP play driver =="
 python3 scripts/test-mcp-play.py
+echo "== local agent playtest contract =="
+python3 scripts/test-local-agent-playtest.py
 echo "== agent cohort contracts =="
 python3 scripts/test-agent-cohort.py
 echo "== agent hallway cohort =="

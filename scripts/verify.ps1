@@ -44,6 +44,7 @@ Step "documentation" {
 }
 Step "tests"  { cargo test --workspace --all-targets --locked }
 Step "MCP play driver" { python scripts/test-mcp-play.py }
+Step "local agent playtest contract" { python scripts/test-local-agent-playtest.py }
 Step "agent cohort contracts" { python scripts/test-agent-cohort.py }
 Step "agent hallway cohort" { python scripts/agent-hallway.py }
 Step "agent tactile cohort" { python scripts/agent-tactile.py }

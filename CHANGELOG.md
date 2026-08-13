@@ -1,9 +1,41 @@
 # Changelog
 
 All notable changes to Numinous. The format follows Keep a Changelog, and the
-project uses version-gated milestones (see ROADMAP.md), not dates.
+project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
+
+## [0.3.0-alpha.1] - 2026-08-13
+
+- An already-installed local Ollama model can now play Numinous through the
+  real MCP server while an observer watches visible words and witnessed calls.
+  The dependency-free harness accepts only a literal loopback endpoint, ignores
+  proxies, forbids cloud selectors and implicit downloads, requires local model
+  weights and native tool support, uses a disposable Numinous profile, and
+  reports an enforced estimated inference cost of zero.
+- Local play remains play rather than a benchmark. The prompt gives the model
+  room to choose, stay, or leave; destructive and session-control tools stay
+  outside the palette; private reasoning is never printed or retained; and a
+  transcript is written only to a new path under gitignored `logs/` when the
+  caller opts in. Redirected directories, racing paths, oversized results, and
+  malformed model or MCP responses fail closed.
+- Witnessed action is distinct from narration. A real local 8B session claimed
+  several Numinous calls and invented their results without executing them.
+  The harness now records unexecuted tool claims, offers one factual retry, and
+  proved the recovery with a real `list_rooms` call. A later local inference
+  timeout exposed a second defect: partial witnessed play now survives model
+  failure in the summary and optional transcript while the process remains
+  nonzero.
+- The MCP play driver now offers a caller-owned isolated profile for a sequence
+  of fresh server processes, preserving player state only for that visit and
+  cleaning both state and cached private build artifacts explicitly. Focused
+  tests exercise real cross-process journal persistence, cleanup, hostile
+  profile roots, and the local-model tool loop on every supported CI operating
+  system without invoking inference.
+- The package advances to `0.3.0-alpha.1`. Tactile Alpha already met its
+  agent-and-machine exit, so the version now describes that proven capability.
+  Roadmap milestones guide priority and bound claims; open later evidence no
+  longer freezes useful releases or work that can safely land early.
 
 ## [0.2.0-alpha.5] - 2026-08-12
 

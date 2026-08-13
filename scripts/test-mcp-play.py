@@ -101,6 +101,31 @@ def fake_artifact(driver, path: Path):
 
 
 class McpPlayLifecycleTests(unittest.TestCase):
+    def test_windows_reparse_points_count_as_redirects(self) -> None:
+        driver = load_driver()
+        reparse_flag = 1024
+
+        class ReparsePath:
+            @staticmethod
+            def lstat():
+                return type(
+                    "Metadata",
+                    (),
+                    {"st_file_attributes": reparse_flag},
+                )()
+
+            @staticmethod
+            def is_symlink():
+                return False
+
+        with mock.patch.object(
+            driver.stat,
+            "FILE_ATTRIBUTE_REPARSE_POINT",
+            reparse_flag,
+            create=True,
+        ):
+            self.assertTrue(driver._is_redirecting_path(ReparsePath()))
+
     def test_cargo_artifact_uses_explicit_fresh_target_and_json_path(self) -> None:
         driver = load_driver()
         with tempfile.TemporaryDirectory() as temporary:
@@ -419,6 +444,26 @@ class McpPlayLifecycleTests(unittest.TestCase):
                     ):
                         driver._session([request])
 
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
+    def test_caller_owned_profile_rejects_a_symlink_root(self) -> None:
+        driver = load_driver()
+        request = {"jsonrpc": "2.0", "id": 1, "method": "ping"}
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            target = root / "target"
+            target.mkdir()
+            link = root / "link"
+            try:
+                link.symlink_to(target, target_is_directory=True)
+            except OSError:
+                self.skipTest("this account cannot create directory symlinks")
+            with (
+                mock.patch.object(driver, "_binary") as binary,
+                self.assertRaisesRegex(driver.McpPlayError, "ordinary directory"),
+            ):
+                driver._session([request], state_root=link)
+            binary.assert_not_called()
+
 
 class McpPlayCommandTests(unittest.TestCase):
     @staticmethod
@@ -473,6 +518,36 @@ class McpPlayCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("totals.", result.stdout)
         self.assertIn("35 tools.", result.stdout)
+
+    def test_disposable_profile_retains_state_across_server_processes(self) -> None:
+        driver = load_driver()
+        with driver.IsolatedMcpProfile() as profile:
+            tools, receipt = profile.list_tools()
+            names = {tool["name"] for tool in tools}
+            self.assertIn("record_journal", names)
+            self.assertRegex(receipt["binarySha256"], r"^[0-9a-f]{64}$")
+            recorded = profile.call_tool(
+                "record_journal",
+                {
+                    "kind": "encounter",
+                    "subject": "double-pendulum",
+                    "text": "The second process should be able to read this.",
+                    "source": "self-authored",
+                },
+            )
+            self.assertFalse(recorded.get("isError", False))
+            page = profile.call_tool("read_journal", {})
+            self.assertEqual(page["structuredContent"]["totalEntries"], 1)
+            self.assertIn("second process", driver._tool_text(page))
+        with self.assertRaisesRegex(driver.McpPlayError, "already closed"):
+            profile.call_tool("read_journal", {})
+
+    def test_disposable_profile_has_an_operation_ceiling(self) -> None:
+        driver = load_driver()
+        with driver.IsolatedMcpProfile() as profile:
+            profile._operations = driver.MAX_PROFILE_OPERATIONS
+            with self.assertRaisesRegex(driver.McpPlayError, "operation limit"):
+                profile.list_tools()
 
 
 class FixtureIsolationTests(unittest.TestCase):
