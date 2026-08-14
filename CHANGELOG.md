@@ -5,6 +5,33 @@ project uses evidence-labeled milestones (see ROADMAP.md), not dates.
 
 ## [Unreleased]
 
+### Fixed
+
+- `engineeredAha.truth`, `engineeredAha.graded`, and `engineeredAha.punchline`
+  now appear only after the aha reaches consolidated beat, not during explore or
+  prime phases. Leaking truth on explore/prime made the aha loop a lookup table
+  for any structured client. Times Tables, Buffon's Needle, Galton Board, Double
+  Pendulum, Kepler Areas, Parrondo's Trap, and Nontransitive Dice all hide these
+  fields until after a real wager plus aha summon.
+- `kepler-areas` now resolves as an alias for `kepler-laws`. The room was always
+  named `kepler-laws` in the catalog, but `PLAY.md` and MCP initialize text
+  referred to it as Kepler Areas. The alias routes both names to the same room.
+- CLI `describe` and `numinous describe` no longer dump room reveals before the
+  player has visited the room. Reveals now display only after the journey records
+  a visit, matching the earned-reveal principle.
+- CLI terminal action line for `times-tables` now instructs `--t <phase>` to turn
+  the dial instead of suggesting `--poke x,y`. The dial is controlled by phase,
+  not hand input.
+- MCP `list_rooms` compact mode now provides starter room IDs
+  (times-tables, double-pendulum, kepler-laws, mandelbrot) as a doorway instead
+  of only the count and a generic read-structuredContent instruction.
+- `install.sh` zsh detection now safely checks if `SHELL` is set before attempting
+  parameter expansion, preventing failure when `SHELL` is unset after binaries are
+  already installed.
+- Times Tables `goalMet` now checks the actual multiplier (from either pokes or t)
+  instead of only pokes. At t=0.375, when the status shows "CLOSED 4 LOBES TARGET
+  4", `goalMet` correctly returns true.
+
 ## [0.4.0-alpha.1] - 2026-08-14
 
 - The development line advances to `0.4.0-alpha.1`. The package minor now
