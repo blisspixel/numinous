@@ -73,16 +73,16 @@ with the install. Design notes: [`docs/DESIGN.md`](docs/DESIGN.md),
 
 ## Status
 
-**0.3.0-alpha.7** is playable today: 354 catalog rooms, games, Journey,
+**0.4.0-alpha.1** is playable today: 354 catalog rooms, games, Journey,
 Studio, controllers, and Watch Agent (consented local MCP session viewing).
 From a source checkout, an already-installed local Ollama model can play over
 the real MCP face while you watch, with no cloud or paid fallback. See
 [`docs/LOCAL_AGENT_PLAYTEST.md`](docs/LOCAL_AGENT_PLAYTEST.md).
 
-Package version stays prerelease while later am-track exits remain open; its
-minor line follows the strongest completed exit instead of waiting for every
-later gate. **0.2** and **0.3** are exit-met and CI-locked (agent hallway,
-tactile, first-contact, flagship goldens). The
+The package minor names the active milestone, and its alpha suffix says that
+milestone's exit remains open. **0.2** and **0.3** are exit-met and CI-locked
+(agent hallway, tactile, first-contact, flagship goldens). **0.4 Understanding
+Alpha is active, not complete.** The
 player-facing **Polish Wave** work landed across all seven workstreams, while
 scheduled structural cleanup continues. The **Universal Wager** is complete:
 seven rooms now carry their own staged arc across the App and MCP, using the

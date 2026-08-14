@@ -9,9 +9,10 @@ know it is done), and the **risk it retires**.
 - **We ship by quality gates, not calendars.** There are deliberately **no time estimates** in this document. A milestone is done when it clears its bar, not when a date arrives. "How long will this take" is the wrong question; "is it exceptional yet" is the right one.
 - **Versions are defined by what is true, not when.** Each version below is a *state the product has reached*, a set of things that are real and hold their quality bar, not a sprint.
 - **Milestones guide work; they do not hold it hostage.** A later idea may land
-  early when it is the highest-leverage move. The package version follows the
-  strongest completed milestone, while open later gates bound claims rather
-  than blocking releases or useful work.
+  early when it is the highest-leverage move. The package minor names the
+  active milestone. An `alpha` prerelease means that milestone is underway and
+  its exit remains open; a release without a prerelease suffix means the exit
+  is met. Open gates bound claims rather than blocking releases or useful work.
 - **1.0 is a high bar, not a minimum viable product.** Because the whole point is to do this *exceptionally well*, 1.0 means "a complete, coherent, genuinely exceptional experience," not "the least we could ship." The MVP-shaped thinking lives in the 0.x line; 1.0 is where it becomes worthy of the name.
 - **Guiding rule, at every version: feel before features.** We build depth-first. One unforgettable thing beats ten mediocre ones. A pretty menu of boring toys is failure.
 
@@ -19,8 +20,8 @@ know it is done), and the **risk it retires**.
 
 - **0.1 Public Foundation** reproducible source, honest docs, green CI, and a safe public repository. Complete.
 - **0.2 Flagship Proof** one room earns its agent-and-machine bar. Complete.
-- **0.3 Tactile Alpha** the best five rooms answer the hand deeply and clearly. Current alpha line, exit met on the agent-and-machine bar.
-- **0.4 Understanding Alpha** predict, generate, reveal, and retention are tested as a learning loop.
+- **0.3 Tactile Alpha** the best five rooms answer the hand deeply and clearly. Complete on the agent-and-machine bar.
+- **0.4 Understanding Alpha** predict, generate, reveal, and retention are tested as a learning loop. Current alpha line, exit open.
 - **0.5 Sensory Alpha** the visual and sonic identity lands with accessibility and performance budgets.
 - **0.6 Portable Alpha** packaged builds run on all three operating systems and representative hardware.
 - **0.7 Creator Alpha** make, save, reopen, export, and remix form one local loop.
@@ -35,11 +36,12 @@ know it is done), and the **risk it retires**.
 
 ## Progress (updated as we build; see CHANGELOG.md for detail)
 
-**Current release state: 0.3.0-alpha.7, Tactile Alpha exit met on the
-agent-and-machine bar.** The 0.1 Public Foundation and 0.2 Flagship Proof remain
-complete. Human stranger sessions sit with 0.8 Closed Beta and 1.0 First Light.
+**Current release state: 0.4.0-alpha.1, Understanding Alpha active with its exit
+open.** The 0.1 Public Foundation, 0.2 Flagship Proof, and 0.3 Tactile Alpha
+agent-and-machine exits are complete. Human stranger sessions sit with 0.8
+Closed Beta and 1.0 First Light.
 Independent macOS/Linux App execution sessions and accessibility review remain
-later gates, not 0.3 blockers.
+later gates, not Understanding Alpha blockers.
 
 ### Critical path right now (read this first)
 
@@ -1209,7 +1211,7 @@ without relying on the founder's machine or undocumented context?"
 ### 0.2 Flagship Proof ("does it slap?")
 
 **Status:** exit met on the agent-and-machine bar (2026-07-24). The current
-`0.3.0-alpha.7` line preserves that evidence. Human stranger hallway is **not**
+`0.4.0-alpha.1` line preserves that evidence. Human stranger hallway is **not**
 part of this exit; it is deferred to 0.8 / 1.0.
 
 **Goal:** Build **one** flagship room (and a second on the same pattern) to
@@ -1805,7 +1807,7 @@ where we stand (next), and the ordered path to 1.0.
 
 ## Where we stand (reviewed 2026-08-14)
 
-The package is **0.3.0-alpha.7**. The 0.1 Public Foundation exit criterion is
+The package is **0.4.0-alpha.1**. The 0.1 Public Foundation exit criterion is
 complete. **0.2 Flagship Proof is exit-met on the agent-and-machine bar:** Times
 Tables and Buffon engineered ahas, MCP wager path, agent hallway cohort PASS as
 a required CI gate, F9 capture, three faces, and green public CI. **0.3 Tactile
@@ -1850,9 +1852,11 @@ subjective human taste gates, so this scorecard records evidence instead.
 | 0.8 Coherence | Open | soak + nightly; keep/cut scorecard not complete |
 | 1.0-am First Light | Open | requires 0.4 cohort + remaining am exits |
 
-Package label is **0.3.0-alpha.7** because the Tactile Alpha agent-and-machine
-exit is met. Open 0.4 and later work constrains claims, not progress on useful
-later foundations.
+Package label is **0.4.0-alpha.1** because Understanding Alpha is the active
+milestone. The alpha suffix says its exit remains open. External registration,
+calibration, fresh independent review, allocation freeze, and the qualifying
+cohort constrain 0.4 claims and block stable `0.4.0`; they do not force active
+0.4 work to carry a 0.3 package number.
 
 **Immediate critical path** (same order as **Critical path right now** above):
 
