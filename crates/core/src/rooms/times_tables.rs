@@ -253,10 +253,10 @@ impl Room for TimesTables {
         Some("LAND ON EXACTLY 4 LOBES")
     }
 
-    fn goal_met(&self, _t: f64, inputs: &[RoomInput]) -> bool {
+    fn goal_met(&self, t: f64, inputs: &[RoomInput]) -> bool {
         let pokes = Self::pokes(inputs);
-        self.input_multiplier(&pokes)
-            .is_some_and(|k| (k - TARGET_K).abs() < f64::EPSILON)
+        let k = self.multiplier(t, &pokes);
+        (k - TARGET_K).abs() < f64::EPSILON
     }
 
     fn parameter_sound(&self, t: f64, inputs: &[RoomInput]) -> Option<ParametricSound> {

@@ -1745,7 +1745,7 @@ fn apply_response_mode(name: &str, response_mode: Option<&str>, mut result: Valu
 fn compact_result_summary(name: &str, structured: &Value) -> Option<String> {
     match name {
         "list_rooms" => Some(format!(
-            "{} rooms. Read structuredContent.rooms for every id, title, and wing.",
+            "{} rooms. Starters: times-tables, double-pendulum, kepler-laws, mandelbrot. Read structuredContent.rooms for every id, title, and wing.",
             structured.get("count")?.as_u64()?
         )),
         "describe_room" => Some(format!(
@@ -2992,7 +2992,7 @@ fn project_flagship_aha(
             }
             // Footer aha status uses its own compact lines; dial detail is optional.
             let dial = None::<String>;
-            Ok(Some(json!({
+            let mut aha_obj = json!({
                 "kind": "place",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(dial.as_deref())),
@@ -3001,14 +3001,14 @@ fn project_flagship_aha(
                 "canSummon": aha.can_summon()
                     || matches!(aha.beat(), AhaBeat::Morph { .. }),
                 "placeOptions": ["mandelbrot", "nephroid", "circle"],
-                "punchline": aha.punchline(),
-                // The keystone: the committed wager meets the truth in typed
-                // fields and one graded sentence, so a mind that made a
-                // commitment is answered rather than having it discarded.
                 "wager": aha.wager().map(|home| home.label().to_ascii_lowercase()),
-                "truth": "mandelbrot",
-                "graded": aha.graded(),
-            })))
+            });
+            if matches!(aha.beat(), AhaBeat::Consolidated) {
+                aha_obj["punchline"] = json!(aha.punchline());
+                aha_obj["truth"] = json!("mandelbrot");
+                aha_obj["graded"] = json!(aha.graded());
+            }
+            Ok(Some(aha_obj))
         }
         "buffon-needle" => {
             use numinous_core::rooms::buffon_aha::{AhaBeat, BuffonAha};
@@ -3027,7 +3027,7 @@ fn project_flagship_aha(
                 advance_buffon_to_consolidated(&mut aha);
             }
             let throw_status = None::<String>;
-            Ok(Some(json!({
+            let mut aha_obj = json!({
                 "kind": "number",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(throw_status.as_deref())),
@@ -3037,16 +3037,15 @@ fn project_flagship_aha(
                     || matches!(aha.beat(), AhaBeat::Morph { .. }),
                 "guessMin": numinous_core::rooms::buffon_aha::GUESS_MIN,
                 "guessMax": numinous_core::rooms::buffon_aha::GUESS_MAX,
-                "punchline": aha.punchline(),
-                // The keystone, typed: wager, band, and one graded sentence
-                // against pi, in the same non-punitive language predict
-                // speaks. A collected wager that is never answered is
-                // theater.
                 "wager": aha.wager().map(|(guess, _)| guess),
                 "band": aha.wager().map(|(_, band)| band.name().to_ascii_lowercase()),
-                "truth": std::f64::consts::PI,
-                "graded": aha.graded(),
-            })))
+            });
+            if matches!(aha.beat(), AhaBeat::Consolidated) {
+                aha_obj["punchline"] = json!(aha.punchline());
+                aha_obj["truth"] = json!(std::f64::consts::PI);
+                aha_obj["graded"] = json!(aha.graded());
+            }
+            Ok(Some(aha_obj))
         }
         "galton-board" => {
             use numinous_core::rooms::galton_aha::{AhaBeat, GaltonAha, peak_bin_for_coin};
@@ -3081,7 +3080,7 @@ fn project_flagship_aha(
                 numinous_core::rooms::galton_board::GaltonBoard::new_with(variation),
             );
             let room_status = galton.status_input(t, inputs).or_else(|| galton.status(t));
-            Ok(Some(json!({
+            let mut aha_obj = json!({
                 "kind": "bin",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(room_status.as_deref())),
@@ -3092,15 +3091,15 @@ fn project_flagship_aha(
                 "binMin": 0,
                 "binMax": numinous_core::rooms::galton_board::BOARD_ROWS,
                 "coin": coin,
-                "punchline": aha.punchline(),
-                // The keystone, typed: wager, band, and one graded sentence
-                // against the binomial's true peak, in the same non-punitive
-                // language predict speaks.
                 "wager": aha.wager().map(|(bin, _, _)| bin),
                 "band": aha.wager().map(|(_, _, band)| band.name().to_ascii_lowercase()),
-                "truth": peak_bin_for_coin(coin),
-                "graded": aha.graded(),
-            })))
+            });
+            if matches!(aha.beat(), AhaBeat::Consolidated) {
+                aha_obj["punchline"] = json!(aha.punchline());
+                aha_obj["truth"] = json!(peak_bin_for_coin(coin));
+                aha_obj["graded"] = json!(aha.graded());
+            }
+            Ok(Some(aha_obj))
         }
         "double-pendulum" => {
             use numinous_core::rooms::pendulum_aha::{AhaBeat, PendulumAha};
@@ -3140,7 +3139,7 @@ fn project_flagship_aha(
             let room_status = room.status_input(t, inputs).or_else(|| room.status(t));
             let (gap, truth) = aha.truth();
             let wager = aha.call();
-            Ok(Some(json!({
+            let mut aha_obj = json!({
                 "kind": "ending",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(room_status.as_deref())),
@@ -3150,13 +3149,16 @@ fn project_flagship_aha(
                     || matches!(aha.beat(), AhaBeat::Morph { .. }),
                 "endingOptions": ["together", "drifted", "lost"],
                 "drops": drops,
-                "punchline": aha.punchline(),
                 "wager": wager.map(|ending| ending.name().to_ascii_lowercase()),
-                "truth": truth.name().to_ascii_lowercase(),
-                "gap": gap,
-                "right": wager.map(|ending| ending == truth),
-                "graded": aha.graded(),
-            })))
+            });
+            if matches!(aha.beat(), AhaBeat::Consolidated) {
+                aha_obj["punchline"] = json!(aha.punchline());
+                aha_obj["truth"] = json!(truth.name().to_ascii_lowercase());
+                aha_obj["gap"] = json!(gap);
+                aha_obj["right"] = json!(wager.map(|ending| ending == truth));
+                aha_obj["graded"] = json!(aha.graded());
+            }
+            Ok(Some(aha_obj))
         }
         "kepler-laws" => {
             use numinous_core::rooms::kepler_aha::{AhaBeat, KeplerAha};
@@ -3188,7 +3190,7 @@ fn project_flagship_aha(
             let room_status = room.status_input(t, inputs).or_else(|| room.status(t));
             let truth = aha.truth();
             let wager = aha.call();
-            Ok(Some(json!({
+            let mut aha_obj = json!({
                 "kind": "speed",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(room_status.as_deref())),
@@ -3202,12 +3204,15 @@ fn project_flagship_aha(
                 "apsidalSpeedRatio": numinous_core::rooms::kepler_aha::apsidal_speed_ratio(
                     aha.eccentricity()
                 ),
-                "punchline": aha.punchline(),
                 "wager": wager.map(|relation| relation.name().to_ascii_lowercase()),
-                "truth": truth.name().to_ascii_lowercase(),
-                "right": wager.map(|relation| relation == truth),
-                "graded": aha.graded(),
-            })))
+            });
+            if matches!(aha.beat(), AhaBeat::Consolidated) {
+                aha_obj["punchline"] = json!(aha.punchline());
+                aha_obj["truth"] = json!(truth.name().to_ascii_lowercase());
+                aha_obj["right"] = json!(wager.map(|relation| relation == truth));
+                aha_obj["graded"] = json!(aha.graded());
+            }
+            Ok(Some(aha_obj))
         }
         "parrondo" => {
             use numinous_core::rooms::parrondo::{DEMONSTRATION_STEPS, Policy};
@@ -3238,7 +3243,7 @@ fn project_flagship_aha(
             let room_status = room.status_input(t, inputs).or_else(|| room.status(t));
             let truth = aha.truth();
             let wager = aha.call();
-            Ok(Some(json!({
+            let mut aha_obj = json!({
                 "kind": "policy",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(room_status.as_deref())),
@@ -3254,12 +3259,15 @@ fn project_flagship_aha(
                     "b": aha.expected_end(Policy::OnlyB),
                     "abb": aha.expected_end(Policy::CycleAbb),
                 },
-                "punchline": aha.punchline(),
                 "wager": wager.map(|policy| policy.name().to_ascii_lowercase()),
-                "truth": truth.name().to_ascii_lowercase(),
-                "right": wager.map(|policy| policy == truth),
-                "graded": aha.graded(),
-            })))
+            });
+            if matches!(aha.beat(), AhaBeat::Consolidated) {
+                aha_obj["punchline"] = json!(aha.punchline());
+                aha_obj["truth"] = json!(truth.name().to_ascii_lowercase());
+                aha_obj["right"] = json!(wager.map(|policy| policy == truth));
+                aha_obj["graded"] = json!(aha.graded());
+            }
+            Ok(Some(aha_obj))
         }
         "nontransitive" => {
             use numinous_core::rooms::nontransitive::{Die, exact_wins, win_rate};
@@ -3304,7 +3312,7 @@ fn project_flagship_aha(
             let truth = aha.truth();
             let wager = aha.call();
             let chosen_wins = |left: Die, right: Die| exact_wins(left, right);
-            Ok(Some(json!({
+            let mut aha_obj = json!({
                 "kind": "counter",
                 "beat": aha.beat_label(),
                 "status": keyless_aha_status(aha.status(room_status.as_deref())),
@@ -3330,13 +3338,16 @@ fn project_flagship_aha(
                 "counterWins": chosen.zip(truth).map(|(chosen, truth)| exact_wins(truth, chosen)),
                 "counterLosses": chosen.zip(truth).map(|(chosen, truth)| 36 - exact_wins(truth, chosen)),
                 "counterRate": chosen.zip(truth).map(|(chosen, truth)| win_rate(truth, chosen)),
-                "punchline": aha.punchline(),
                 "wager": wager.map(|die| die.name().to_ascii_lowercase()),
                 "wagerWins": chosen.zip(wager).map(|(chosen, wager)| exact_wins(wager, chosen)),
-                "truth": truth.map(|die| die.name().to_ascii_lowercase()),
-                "right": wager.zip(truth).map(|(wager, truth)| wager == truth),
-                "graded": aha.graded(),
-            })))
+            });
+            if matches!(aha.beat(), AhaBeat::Consolidated) {
+                aha_obj["punchline"] = json!(aha.punchline());
+                aha_obj["truth"] = json!(truth.map(|die| die.name().to_ascii_lowercase()));
+                aha_obj["right"] = json!(wager.zip(truth).map(|(wager, truth)| wager == truth));
+                aha_obj["graded"] = json!(aha.graded());
+            }
+            Ok(Some(aha_obj))
         }
         _ => {
             if request.uses_generation_args() {

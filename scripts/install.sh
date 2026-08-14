@@ -1138,7 +1138,7 @@ if [ "$MODIFY_PATH" -eq 1 ]; then
             add_path_line "$profile" "$path_line"
         fi
     done
-    if [ -f "$HOME/.zshrc" ] || [ "${SHELL##*/}" = "zsh" ]; then
+    if [ -f "$HOME/.zshrc" ] || { [ -n "${SHELL:-}" ] && [ "${SHELL##*/}" = "zsh" ]; }; then
         add_path_line "$HOME/.zshrc" "$path_line"
     fi
     if [ -d "$HOME/.config/fish" ]; then

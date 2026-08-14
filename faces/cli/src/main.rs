@@ -2971,13 +2971,16 @@ fn describe_report(
     let goal = room.goal();
     let cut0_by_boon = journey.chosen.contains(&format!("cut:{id}:0"));
     let citation = numinous_core::room_citation_unlocked(id, level, cut0_by_boon);
+    let has_visited = journey.visited.contains(m.id);
     Ok(if json {
         let mut value = meta_json(&m);
         value["action"] = serde_json::Value::String(action.to_string());
         if let Some(goal) = goal {
             value["goal"] = serde_json::Value::String(goal.to_string());
         }
-        value["reveal"] = serde_json::Value::String(room.reveal().to_string());
+        if has_visited {
+            value["reveal"] = serde_json::Value::String(room.reveal().to_string());
+        }
         if let Some(concept) = room.concept() {
             value["concept"] = serde_json::Value::String(concept.to_string());
         }
@@ -2998,14 +3001,18 @@ fn describe_report(
             .concept()
             .map(|c| format!("\n\n{c}"))
             .unwrap_or_default();
+        let reveal = if has_visited {
+            format!("\n\nReveal: {}", room.reveal())
+        } else {
+            String::new()
+        };
         format!(
-            "{} ({})\nWing: {}\nAction: {}{goal}\n\n{}{concept}\n\nReveal: {}\n{cuts}{reading}",
+            "{} ({})\nWing: {}\nAction: {}{goal}\n\n{}{concept}{reveal}\n{cuts}{reading}",
             m.title,
             m.id,
             m.wing,
             terminal_action_line(room.as_ref()),
             m.blurb,
-            room.reveal()
         )
     })
 }
@@ -3102,10 +3109,15 @@ fn terminal_action_line(room: &dyn Room) -> String {
     match room.verb() {
         Some(verb) => {
             let lever = verb.split_once(':').map_or(verb, |(_, lever)| lever.trim());
-            format!(
-                "{lever} (the hand here: numinous render {} --poke x,y)",
-                room.meta().id
-            )
+            // Times Tables dial is controlled by phase (--t), not hand input
+            if room.meta().id == "times-tables" {
+                format!("{lever} (numinous render times-tables --t <phase>)")
+            } else {
+                format!(
+                    "{lever} (the hand here: numinous render {} --poke x,y)",
+                    room.meta().id
+                )
+            }
         }
         None => numinous_core::room_action(room).to_string(),
     }

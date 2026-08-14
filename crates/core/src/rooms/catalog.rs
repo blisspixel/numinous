@@ -4114,9 +4114,14 @@ pub(crate) fn construct_all(variation: u64) -> Vec<Box<dyn Room>> {
 }
 
 pub(crate) fn construct_by_id(id: &str, variation: u64) -> Option<Box<dyn Room>> {
+    // Resolve known aliases to canonical IDs
+    let canonical_id = match id {
+        "kepler-areas" => "kepler-laws",
+        _ => id,
+    };
     ROOM_CATALOG
         .iter()
-        .position(|metadata| metadata.id == id)
+        .position(|metadata| metadata.id == canonical_id)
         .map(|index| CATALOG_CONSTRUCTORS[index](variation))
 }
 
